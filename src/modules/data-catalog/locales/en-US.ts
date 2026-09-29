@@ -600,6 +600,8 @@ export const dataCatalogEnUS = {
       filter: "Filter rows",
       applyFilter: "Apply filter",
       clearFilter: "Clear filter",
+      filterUnavailableForSource:
+        "The selected query source does not support the applied filter. Adjust the conditions and apply again.",
       binaryContent: "Binary content ({{count}} bytes)",
       binaryContentUnavailable: "Binary content not loaded",
       fieldContentUnavailable: "Field content not loaded",

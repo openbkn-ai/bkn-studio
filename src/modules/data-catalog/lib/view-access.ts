@@ -6,8 +6,9 @@
  */
 
 import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import type { EntitlementView } from "@/framework/entitlement/types";
 
 export function canManageDerivedViews(snapshot: EntitlementView | null): boolean {
-  return capabilitySatisfied("logic_view", snapshot, "professional", false);
+  return capabilitySatisfied(CAPABILITIES.VEGA_LOGIC_VIEW, snapshot, "professional", false);
 }

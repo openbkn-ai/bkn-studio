@@ -13,6 +13,7 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 const previewCatalogResourceMock = vi.hoisted(() => vi.fn());
 const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+const testFilterRule = vi.hoisted(() => ({ field: "id", operation: ">", value: "10" }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -47,7 +48,7 @@ vi.mock("@/modules/data-catalog/components/FilterTreeEditor", () => ({
         onChange({
           kind: "group",
           operation: "and",
-          children: [{ kind: "rule", field: "id", operation: ">", value: "10" }],
+          children: [{ kind: "rule", ...testFilterRule }],
         })
       }
       type="button"
@@ -78,6 +79,7 @@ const resource: CatalogResource = {
 describe("ResourcePreviewPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.assign(testFilterRule, { field: "id", operation: ">", value: "10" });
   });
 
   it("shows type, display name, and field name together in Table and View headers", () => {
@@ -150,6 +152,53 @@ describe("ResourcePreviewPanel", () => {
       unmount();
       previewCatalogResourceMock.mockClear();
     }
+  });
+
+  it("drops an applied source Text filter before switching back to an index without keyword Feature", async () => {
+    Object.assign(testFilterRule, { field: "notes", operation: "==", value: "open" });
+    previewCatalogResourceMock.mockImplementation(
+      (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+        Promise.resolve({
+          querySource: query.ignoreLocalIndex ? "source" : "local_index",
+          rows: [],
+          total: 0,
+        }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          localIndexName: "idx_orders",
+          localIndexStatus: "available",
+          schema: [{ name: "notes", type: "text" }],
+        }}
+      />,
+    );
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
+    await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+    await waitFor(() => {
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toEqual({
+        filterCondition: {
+          operation: "and",
+          sub_conditions: [{ field: "notes", operation: "==", value: "open" }],
+        },
+        ignoreLocalIndex: true,
+        limit: 10,
+        offset: 0,
+      });
+    });
+    fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
+    await waitFor(() => {
+      const query = previewCatalogResourceMock.mock.lastCall?.[1] as Record<string, unknown>;
+      expect(query).not.toHaveProperty("filterCondition");
+      expect(query).not.toHaveProperty("ignoreLocalIndex");
+    });
+    expect(await screen.findByText("dataCatalog.preview.filterUnavailableForSource")).toBeTruthy();
   });
 
   it("uses the shared warning alert for a permission-disabled preview", () => {

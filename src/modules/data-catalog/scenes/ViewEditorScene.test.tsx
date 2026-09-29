@@ -681,6 +681,31 @@ describe("ViewEditorScene", () => {
     );
   });
 
+  it("marks a stored Text equality filter unsupported when its source uses an index without keyword Feature", async () => {
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logicview",
+      logicType: "derived",
+      name: "orders_view",
+      logicDefinition: {
+        sourceResourceId: "source-1",
+        filterCondition: { field: "notes", operation: "==", value: "open" },
+      },
+    } as CatalogResource;
+    const indexedSource = {
+      ...source,
+      localIndexName: "idx_orders",
+      localIndexStatus: "available",
+      schema: [{ name: "notes", type: "text" }],
+    } as CatalogResource;
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : indexedSource),
+    );
+    renderEditor({ resourceId: "view-1" });
+    expect(await screen.findByText("dataCatalog.viewEditor.unsupportedFilter")).toBeTruthy();
+  });
+
   it("keeps an unsupported filter blocked after its source schema changes", async () => {
     const view = {
       ...source,

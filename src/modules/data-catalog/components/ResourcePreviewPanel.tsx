@@ -21,6 +21,7 @@ import {
   filterToBackend,
   filterValidationError,
   type FilterGroup,
+  type FilterQueryPath,
 } from "@/modules/data-catalog/lib/filter-tree";
 import {
   resourceCountAsBigInt,
@@ -46,6 +47,7 @@ type ResourcePreviewPanelProps = {
 const DEFAULT_PAGE_SIZE = 10;
 const INDEX_PREVIEW_PAGE_LIMIT = 10_000;
 const PREVIEW_CONTENT_LENGTH = 20;
+const EMPTY_APPLIED_FILTER = emptyFilterGroup();
 
 function isNumericType(type: string) {
   const lowered = type.toLowerCase();
@@ -192,6 +194,16 @@ export function ResourcePreviewPanel({
     resource.category === "table" &&
     resource.schema.some((field) => field.type.trim().toLowerCase() === "binary");
   const queriesSource = !hasLocalIndex || ignoreLocalIndex;
+  const queryPath: FilterQueryPath =
+    resource.category === "index" ||
+    (resource.category === "table" && !queriesSource) ||
+    (resource.category === "logicview" && result?.querySource === "local_index")
+      ? "local_index"
+      : "source";
+  const activeFilter =
+    filterValidationError(appliedFilter, resource.schema, queryPath) === null
+      ? appliedFilter
+      : EMPTY_APPLIED_FILTER;
 
   const load = useCallback(
     async (nextOffset: number, nextLimit: number) => {
@@ -206,8 +218,8 @@ export function ResourcePreviewPanel({
             ? { binaryMode: binaryContent ? "content" : "metadata" }
             : {}),
           ...(ignoreLocalIndex ? { ignoreLocalIndex: true } : {}),
-          ...(appliedFilter.children.length
-            ? { filterCondition: filterToBackend(appliedFilter, resource.schema) }
+          ...(activeFilter.children.length
+            ? { filterCondition: filterToBackend(activeFilter, resource.schema) }
             : {}),
           limit: nextLimit,
           offset: nextOffset,
@@ -242,7 +254,7 @@ export function ResourcePreviewPanel({
       binaryContent,
       hasBinaryField,
       queriesSource,
-      appliedFilter,
+      activeFilter,
     ],
   );
 
@@ -261,6 +273,13 @@ export function ResourcePreviewPanel({
     setAppliedFilter(emptyFilterGroup());
     setFilterOpen(false);
   }, [active]);
+
+  useEffect(() => {
+    if (!appliedFilter.children.length || activeFilter.children.length) return;
+    setAppliedFilter(emptyFilterGroup());
+    setFilterError(t("dataCatalog.preview.filterUnavailableForSource"));
+    setFilterOpen(true);
+  }, [activeFilter.children.length, appliedFilter.children.length, t]);
 
   useEffect(() => {
     if (!active || disabled || previewUnavailable || !canQueryData) {
@@ -369,7 +388,7 @@ export function ResourcePreviewPanel({
         <div className={styles.previewControls}>
           <Button onClick={() => setFilterOpen((open) => !open)}>
             {t("dataCatalog.preview.filter")}
-            {appliedFilter.children.length ? ` (${appliedFilter.children.length})` : ""}
+            {activeFilter.children.length ? ` (${activeFilter.children.length})` : ""}
           </Button>
           {hasLocalIndex ? (
             <Checkbox
@@ -408,6 +427,7 @@ export function ResourcePreviewPanel({
         <div className={styles.filterPanel}>
           <FilterTreeEditor
             fields={resource.schema}
+            queryPath={queryPath}
             onChange={(next) => {
               setFilterDraft(next);
               setFilterError(null);
@@ -419,7 +439,7 @@ export function ResourcePreviewPanel({
             <Button
               type="primary"
               onClick={() => {
-                const validation = filterValidationError(filterDraft, resource.schema);
+                const validation = filterValidationError(filterDraft, resource.schema, queryPath);
                 if (validation) {
                   setFilterError(t(`dataCatalog.filter.errors.${validation}`));
                   return;

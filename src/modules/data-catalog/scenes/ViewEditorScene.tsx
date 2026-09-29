@@ -29,6 +29,7 @@ import {
   emptyFilterGroup,
   filterToBackend,
   filterValidationError,
+  type FilterQueryPath,
   parseFilterCondition,
   type FilterGroup,
 } from "@/modules/data-catalog/lib/filter-tree";
@@ -65,6 +66,15 @@ function isUsableSource(resource: CatalogResource) {
     resource.lastDiscoverStatus !== "missing" &&
     hasCatalogResourceOperation(resource, "query_data")
   );
+}
+
+function sourceFilterQueryPath(resource: CatalogResource | null): FilterQueryPath {
+  return resource?.category === "index" ||
+    (resource?.category === "table" &&
+      resource.localIndexStatus === "available" &&
+      resource.localIndexName)
+    ? "local_index"
+    : "source";
 }
 
 function draftField(field: ResourceSchemaField): ResourceSchemaField {
@@ -175,7 +185,11 @@ export function ViewEditorScene({
           Boolean(existingFilter) &&
           (parsed === null ||
             !currentSource ||
-            filterValidationError(parsed, currentSource.schema) !== null);
+            filterValidationError(
+              parsed,
+              currentSource.schema,
+              sourceFilterQueryPath(currentSource),
+            ) !== null);
         setFilter(parsed ?? emptyFilterGroup());
         setUnsupportedFilter(cannotEditFilter);
         initialDraft.current = JSON.stringify({
@@ -365,7 +379,9 @@ export function ViewEditorScene({
       setError(t("dataCatalog.viewEditor.invalidFields"));
       return;
     }
-    const filterError = unsupportedFilter ? null : filterValidationError(filter, sourceFields);
+    const filterError = unsupportedFilter
+      ? null
+      : filterValidationError(filter, sourceFields, sourceFilterQueryPath(source));
     if (filterError) {
       setError(t(`dataCatalog.filter.errors.${filterError}`));
       return;
@@ -401,7 +417,11 @@ export function ViewEditorScene({
             const latest = latestFields.get(field.originalName || field.name);
             return !latest || latest.type !== field.type;
           })
-        : filterValidationError(filter, latestSource.schema) !== null;
+        : filterValidationError(
+            filter,
+            latestSource.schema,
+            sourceFilterQueryPath(latestSource),
+          ) !== null;
       if (outputBindingChanged || filterBindingChanged) {
         if (!unsupportedFilter) setSource(latestSource);
         setError(t("dataCatalog.viewEditor.sourceSchemaChanged"));
@@ -839,7 +859,12 @@ export function ViewEditorScene({
                         type="warning"
                       />
                     ) : (
-                      <FilterTreeEditor fields={sourceFields} onChange={setFilter} value={filter} />
+                      <FilterTreeEditor
+                        fields={sourceFields}
+                        onChange={setFilter}
+                        queryPath={sourceFilterQueryPath(source)}
+                        value={filter}
+                      />
                     )}
                   </section>
                 </div>

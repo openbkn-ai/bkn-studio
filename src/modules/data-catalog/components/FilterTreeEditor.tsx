@@ -11,11 +11,11 @@ import { useTranslation } from "react-i18next";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import {
-  isFilterableFieldType,
-  isNumericFilterType,
+  filterOperationsForField,
   type FilterGroup,
   type FilterNode,
   type FilterOperation,
+  type FilterQueryPath,
 } from "@/modules/data-catalog/lib/filter-tree";
 import type { ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 
@@ -24,21 +24,27 @@ import styles from "./FilterTreeEditor.module.css";
 type Props = {
   value: FilterGroup;
   fields: ResourceSchemaField[];
+  queryPath?: FilterQueryPath;
 } & (
   | { readOnly: true; onChange?: never }
   | { readOnly?: false; onChange: (value: FilterGroup) => void }
 );
 
-export function FilterTreeEditor({ value, onChange, fields, readOnly = false }: Props) {
+export function FilterTreeEditor({
+  value,
+  onChange,
+  fields,
+  queryPath = "source",
+  readOnly = false,
+}: Props) {
   const { t } = useTranslation();
   const fieldOptions = fields
-    .filter((field) => isFilterableFieldType(field.type))
+    .filter((field) => filterOperationsForField(field, queryPath).length > 0)
     .map((field) => ({
       label: <FieldIdentity field={field} layout="inline" name={field.name} showNameWhenSame />,
       searchText: `${field.displayName ?? ""} ${field.name} ${field.type}`,
       value: field.name,
     }));
-  const operationOptions: FilterOperation[] = ["==", "!=", ">", "<"];
 
   const updateAt = (path: number[], update: (node: FilterNode) => FilterNode | null) => {
     const replace = (group: FilterGroup, depth: number): FilterGroup => {
@@ -119,17 +125,18 @@ export function FilterTreeEditor({ value, onChange, fields, readOnly = false }: 
                   <Select
                     aria-label={t("dataCatalog.filter.field")}
                     className={styles.fieldSelect}
-                    onChange={(field: string) =>
+                    onChange={(field: string) => {
+                      const nextField = fields.find((item) => item.name === field);
+                      if (!nextField) return;
+                      const operations = filterOperationsForField(nextField, queryPath);
                       updateAt(childPath, () => ({
                         ...child,
                         field,
-                        operation: isNumericFilterType(
-                          fields.find((item) => item.name === field)?.type ?? "",
-                        )
+                        operation: operations.includes(child.operation)
                           ? child.operation
-                          : "==",
-                      }))
-                    }
+                          : (operations[0] ?? "=="),
+                      }));
+                    }}
                     options={fieldOptions}
                     placeholder={t("dataCatalog.filter.field")}
                     showSearch
@@ -141,14 +148,10 @@ export function FilterTreeEditor({ value, onChange, fields, readOnly = false }: 
                     onChange={(operation: FilterOperation) =>
                       updateAt(childPath, () => ({ ...child, operation }))
                     }
-                    options={operationOptions
-                      .filter(
-                        (operation) =>
-                          isNumericFilterType(
-                            fields.find((field) => field.name === child.field)?.type ?? "",
-                          ) || ["==", "!="].includes(operation),
-                      )
-                      .map((operation) => ({ label: operation, value: operation }))}
+                    options={(selectedField
+                      ? filterOperationsForField(selectedField, queryPath)
+                      : []
+                    ).map((operation) => ({ label: operation, value: operation }))}
                     value={child.operation}
                   />
                   <Input
@@ -170,7 +173,7 @@ export function FilterTreeEditor({ value, onChange, fields, readOnly = false }: 
         {!readOnly ? (
           <div className={styles.actions}>
             <AppButton
-              disabled={group.children.length >= 100 || !fields.length}
+              disabled={group.children.length >= 100 || !fieldOptions.length}
               onClick={() => add({ kind: "rule", field: "", operation: "==", value: "" })}
             >
               {t("dataCatalog.filter.addRule")}

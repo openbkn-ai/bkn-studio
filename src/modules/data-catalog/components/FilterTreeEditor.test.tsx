@@ -29,6 +29,22 @@ const filter: FilterGroup = {
 };
 
 describe("FilterTreeEditor field labels", () => {
+  it("omits Text fields without keyword Feature when the query uses a local index", () => {
+    render(
+      <FilterTreeEditor
+        fields={[...fields, { name: "notes", displayName: "备注", type: "text" }]}
+        onChange={vi.fn()}
+        queryPath="local_index"
+        value={filter}
+      />,
+    );
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "dataCatalog.filter.field" }));
+    const dropdown = document.querySelector(
+      ".ant-select-dropdown:not(.ant-select-dropdown-hidden)",
+    )!;
+    expect(within(dropdown as HTMLElement).queryByText("备注")).toBeNull();
+  });
+
   it("shows a type badge, display name, and field name in the view detail", () => {
     render(<FilterTreeEditor fields={fields} readOnly value={filter} />);
 

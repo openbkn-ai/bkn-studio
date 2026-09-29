@@ -257,6 +257,27 @@ describe("resource.service · previewCatalogResource", () => {
     expect(result.total).toBe("9007199254740993");
   });
 
+  it("preserves numeric types in an unsupported stored view filter", async () => {
+    const rawResponse =
+      '{"entries":[{"id":"view-1","catalog_id":"catalog-1","name":"view",' +
+      '"category":"logicview","logic_type":"derived","logic_definition":{' +
+      '"source_resource_id":"source-1","filter_condition":{' +
+      '"field":"id","operation":"in","value":[9007199254740993,"9007199254740995"]}}}]}';
+    getMock.mockImplementation(
+      (_url: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+        Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
+    );
+    const { getCatalogResource } = await import("@/modules/data-catalog/services/resource.service");
+    const { transformPrecisionSafeJSONRequest } =
+      await import("@/framework/request/precision-safe-json");
+
+    const view = await getCatalogResource("view-1");
+
+    expect(transformPrecisionSafeJSONRequest(view?.logicDefinition?.filterCondition)).toContain(
+      '"value":[9007199254740993,"9007199254740995"]',
+    );
+  });
+
   it("requests Binary content only when the caller forces the original source", async () => {
     postMock.mockResolvedValue({ data: { query_source: "source", entries: [], total_count: 0 } });
     const { previewCatalogResource } =
@@ -787,15 +808,10 @@ describe("resource.service · getCatalogResources", () => {
     );
     const { getCatalogResources } =
       await import("@/modules/data-catalog/services/resource.service");
-    const { transformPrecisionSafeJSONResponse } =
-      await import("@/framework/request/precision-safe-json");
 
     const [resource] = await getCatalogResources(["res-1"]);
 
-    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/resources/res-1", {
-      skipErrorToast: true,
-      transformResponse: transformPrecisionSafeJSONResponse,
-    });
+    expect(getMock.mock.calls[0]?.[0]).toBe("/vega-backend/v1/resources/res-1");
     expect(resource?.rowCount).toBe(rowCount);
   });
 

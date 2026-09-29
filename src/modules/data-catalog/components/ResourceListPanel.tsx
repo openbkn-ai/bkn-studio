@@ -49,7 +49,7 @@ import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceListPanel.module.css";
 
-const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
+const CATEGORY_FILTERS = ["table", "index", "logicview", "dataset"] as const;
 const RESOURCE_STATUS_FILTERS = ["active", "deprecated", "stale"] as const;
 const DISCOVER_STATUS_FILTERS = [
   "error",

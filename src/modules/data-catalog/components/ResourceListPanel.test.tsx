@@ -147,6 +147,35 @@ describe("ResourceListPanel", () => {
     );
   });
 
+  it("offers Index as a resource category filter", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "index",
+          id: "index-1",
+          name: "orders_index",
+          sourceIdentifier: "orders_index",
+          operations: ["view_detail"],
+          schema: [],
+        },
+      ],
+      total: 1,
+    });
+    renderPanel(catalog);
+    fireEvent.click(
+      (await screen.findByText("dataCatalog.resource.moreFilters")).closest("button")!,
+    );
+    fireEvent.mouseDown(screen.getAllByText("common.all")[0]);
+    fireEvent.click(screen.getAllByText("dataCatalog.categories.index").at(-1)!);
+
+    await waitFor(() =>
+      expect(listCatalogResourcePageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ category: "index" }),
+      ),
+    );
+  });
+
   it("sorts resource names ascending by default and supports descending order", async () => {
     listCatalogResourcePageMock.mockResolvedValue({
       items: [

@@ -15,9 +15,11 @@ import {
   transformPrecisionSafeJSONRequest,
   transformPrecisionSafeJSONResponse,
 } from "@/framework/request/precision-safe-json";
+import JSONBig from "json-bigint";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-count";
+import { parseFilterCondition } from "@/modules/data-catalog/lib/filter-tree";
 import {
   emitMockChange,
   formatMockTimestamp,
@@ -265,6 +267,34 @@ type BackendResourceDetailFields = {
 };
 
 type BackendResource = BackendResourceSummary & BackendResourceDetailFields;
+
+function transformResourceDetailResponse(data: unknown): unknown {
+  const response = transformPrecisionSafeJSONResponse(data);
+  if (typeof data !== "string" || !response || typeof response !== "object") return response;
+
+  const safeEntries = (response as { entries?: BackendResource[] }).entries;
+  if (
+    !safeEntries?.some(
+      (entry) =>
+        entry.logic_definition?.filter_condition &&
+        parseFilterCondition(entry.logic_definition.filter_condition) === null,
+    )
+  ) {
+    return response;
+  }
+
+  // The display parser turns unsafe JSON numbers into strings. For an unsupported
+  // filter, retain the original numeric types so a complete PUT can preserve it.
+  const preciseEntries = (JSONBig().parse(data) as { entries?: BackendResource[] }).entries;
+  safeEntries.forEach((entry, index) => {
+    const condition = entry.logic_definition?.filter_condition;
+    if (!condition || parseFilterCondition(condition) !== null) return;
+    const preciseCondition = preciseEntries?.[index]?.logic_definition?.filter_condition;
+    if (!preciseCondition || !entry.logic_definition) return;
+    entry.logic_definition.filter_condition = preciseCondition;
+  });
+  return response;
+}
 
 type ListResponse<T> = {
   entries: T[];
@@ -550,7 +580,7 @@ export async function getCatalogResources(ids: string[]) {
       `/vega-backend/v1/resources/${chunk.join(",")}`,
       {
         skipErrorToast: true,
-        transformResponse: transformPrecisionSafeJSONResponse,
+        transformResponse: transformResourceDetailResponse,
       },
     );
     resources.push(...(response.data.entries ?? []).map(mapResource));

@@ -12,6 +12,7 @@ export type FilterOperation = "==" | "!=" | ">" | "<";
 export type FilterRule = { kind: "rule"; field: string; operation: FilterOperation; value: string };
 export type FilterGroup = { kind: "group"; operation: "and" | "or"; children: FilterNode[] };
 export type FilterNode = FilterGroup | FilterRule;
+export type FilterQueryPath = "source" | "local_index";
 
 const FILTER_OPERATIONS = new Set<string>(["==", "!=", ">", "<"]);
 const numericLiteral = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
@@ -63,6 +64,7 @@ export function parseFilterCondition(raw: unknown): FilterGroup | null {
 export function filterValidationError(
   group: FilterGroup,
   fields: ResourceSchemaField[],
+  path: FilterQueryPath = "source",
 ): "emptyGroup" | "tooMany" | "invalidField" | "missingValue" | "invalidNumber" | null {
   const fieldMap = new Map(fields.map((field) => [field.name, field]));
   const validate = (node: FilterNode, root: boolean): ReturnType<typeof filterValidationError> => {
@@ -76,8 +78,7 @@ export function filterValidationError(
       return null;
     }
     const field = fieldMap.get(node.field);
-    if (!field || !isFilterableFieldType(field.type)) return "invalidField";
-    if ((node.operation === ">" || node.operation === "<") && !isNumericFilterType(field.type))
+    if (!field || !filterOperationsForField(field, path).includes(node.operation))
       return "invalidField";
     if (!node.value.trim()) return "missingValue";
     if (
@@ -100,6 +101,23 @@ export function isFilterableFieldType(type: string) {
   return (
     isNumericFilterType(type) || ["string", "text", "boolean"].includes(type.trim().toLowerCase())
   );
+}
+
+/** The editor exposes only operations supported by both the field and the selected query path. */
+export function filterOperationsForField(
+  field: ResourceSchemaField,
+  path: FilterQueryPath = "source",
+): FilterOperation[] {
+  if (!isFilterableFieldType(field.type)) return [];
+  if (isNumericFilterType(field.type)) return ["==", "!=", ">", "<"];
+  const { features: propertyFeatures } = field;
+  if (
+    path === "local_index" &&
+    field.type.trim().toLowerCase() === "text" &&
+    !propertyFeatures?.some((feature) => feature.featureType === "keyword")
+  )
+    return [];
+  return ["==", "!="];
 }
 
 export function filterToBackend(

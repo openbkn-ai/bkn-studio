@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AxiosAdapter } from "axios";
 
 import { http, setRequestErrorHandler } from "@/framework/request/http";
+import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
 
 const adapter = vi.fn<AxiosAdapter>((config) =>
@@ -57,6 +58,47 @@ describe("http request headers", () => {
 
     expect(adapter.mock.calls[0]?.[0].headers?.get("Accept-Language")).toBe("en-US");
     expect(adapter.mock.calls[1]?.[0].headers?.get("Accept-Language")).toBe("zh-CN");
+  });
+
+  it("retries a precision-safe JSON request with the original body after token refresh", async () => {
+    const refreshAccessToken = vi.fn().mockResolvedValue("refreshed-token");
+    setRuntimeConfig(
+      createRuntimeConfig({
+        auth: {
+          tokenManager: {
+            getAccessToken: () => "expired-token",
+            refreshAccessToken,
+          },
+        },
+      }),
+    );
+    const sentBodies: string[] = [];
+    const retryAdapter: AxiosAdapter = (config) => {
+      sentBodies.push(config.data as string);
+      if (sentBodies.length === 1) {
+        return Promise.reject(
+          Object.assign(new Error("Request failed with status code 401"), {
+            config,
+            isAxiosError: true,
+            response: { status: 401 },
+          }),
+        );
+      }
+      return Promise.resolve({ config, data: {}, headers: {}, status: 200, statusText: "OK" });
+    };
+
+    await http.post(
+      "/vega-backend/v1/resources/view-1/data",
+      { need_total: true },
+      {
+        adapter: retryAdapter,
+        headers: { "Content-Type": "application/json" },
+        transformRequest: transformPrecisionSafeJSONRequest,
+      },
+    );
+
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(sentBodies).toEqual(['{"need_total":true}', '{"need_total":true}']);
   });
 
   it("does not notify globally when an expected request error opts out", async () => {

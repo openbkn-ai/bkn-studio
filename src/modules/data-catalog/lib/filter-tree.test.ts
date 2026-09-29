@@ -7,7 +7,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { filterToBackend, filterValidationError, parseFilterCondition } from "./filter-tree";
+import {
+  filterOperationsForField,
+  filterToBackend,
+  filterValidationError,
+  parseFilterCondition,
+} from "./filter-tree";
 
 const fields = [
   { name: "age", type: "integer" },
@@ -15,6 +20,18 @@ const fields = [
 ];
 
 describe("filter-tree", () => {
+  it("uses keyword Feature for exact Text filters on the local index path", () => {
+    const text = { name: "description", type: "text" };
+    const rule = parseFilterCondition({ field: "description", operation: "==", value: "open" })!;
+    expect(filterOperationsForField(text, "source")).toEqual(["==", "!="]);
+    expect(filterValidationError(rule, [text], "source")).toBeNull();
+    expect(filterOperationsForField(text, "local_index")).toEqual([]);
+    expect(filterValidationError(rule, [text], "local_index")).toBe("invalidField");
+    const indexed = { ...text, features: [{ featureType: "keyword" as const }] };
+    expect(filterOperationsForField(indexed, "local_index")).toEqual(["==", "!="]);
+    expect(filterValidationError(rule, [indexed], "local_index")).toBeNull();
+  });
+
   it("round-trips nested AND/OR groups and keeps numeric values numeric", () => {
     const raw = {
       operation: "and",

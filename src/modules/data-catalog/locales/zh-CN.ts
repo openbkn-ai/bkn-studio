@@ -570,6 +570,8 @@ export const dataCatalogZhCN = {
       filter: "筛选数据",
       applyFilter: "应用筛选",
       clearFilter: "清空筛选",
+      filterUnavailableForSource:
+        "当前查询来源不支持已应用的筛选条件，筛选已取消。请调整条件后重新应用。",
       binaryContent: "二进制内容（{{count}} 字节）",
       binaryContentUnavailable: "二进制内容未加载",
       fieldContentUnavailable: "字段内容未加载",

@@ -26,6 +26,7 @@ export function formatPrecisionSafeJSON(data: string): string {
 
 /** Axios request transformer for bodies containing precise numeric literals. */
 export function transformPrecisionSafeJSONRequest(data: unknown): string {
+  if (typeof data === "string") return data;
   return precisionPreservingJSON.stringify(data);
 }
 
