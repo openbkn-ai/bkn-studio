@@ -89,6 +89,7 @@ import {
 } from "@/modules/execution-factory/utils/capability-ux";
 import { supportsCategoryFilter } from "@/modules/execution-factory/utils/capability-parity";
 import { hasExecutionUnitRecordOperation } from "@/modules/execution-factory/utils/record-operations";
+import { formatUpdatedAuditUserDisplay } from "@/modules/execution-factory/utils/updated-audit-user-display";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./execution-unit-list.module.css";
@@ -239,10 +240,7 @@ function mapOperator(item: OperatorRecord): ExecutionUnitCardItem {
     categoryName: item.categoryName,
     isInternal: item.isInternal,
     releaseUser: mapAuditUser(item.releaseUser, item.releaseUserName),
-    updateUser: mapAuditUser(
-      item.updateUser ?? item.createUser,
-      item.updateUserName ?? item.createUserName,
-    ),
+    updateUser: formatUpdatedAuditUserDisplay(item),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
@@ -262,10 +260,7 @@ function mapToolbox(item: ToolboxRecord): ExecutionUnitCardItem {
     isInternal: item.isInternal,
     toolCount: item.toolCount ?? item.tools?.length ?? 0,
     releaseUser: mapAuditUser(item.releaseUser, item.releaseUserName),
-    updateUser: mapAuditUser(
-      item.updateUser ?? item.createUser,
-      item.updateUserName ?? item.createUserName,
-    ),
+    updateUser: formatUpdatedAuditUserDisplay(item),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
@@ -282,10 +277,7 @@ function mapMcp(item: McpRecord): ExecutionUnitCardItem {
     mode: item.mode,
     isInternal: item.isInternal,
     releaseUser: mapAuditUser(item.releaseUser, item.releaseUserName),
-    updateUser: mapAuditUser(
-      item.updateUser ?? item.createUser,
-      item.updateUserName ?? item.createUserName,
-    ),
+    updateUser: formatUpdatedAuditUserDisplay(item),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
@@ -301,10 +293,7 @@ function mapSkill(item: SkillRecord): ExecutionUnitCardItem {
     category: item.category,
     categoryName: item.categoryName,
     releaseUser: mapAuditUser(item.releaseUser, item.releaseUserName),
-    updateUser: mapAuditUser(
-      item.updateUser ?? item.createUser,
-      item.updateUserName ?? item.createUserName,
-    ),
+    updateUser: formatUpdatedAuditUserDisplay(item),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
