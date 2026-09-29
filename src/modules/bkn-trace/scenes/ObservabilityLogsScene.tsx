@@ -25,6 +25,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
+import { useAppServices } from "@/framework/context/use-app-services";
 import { LogDetailDrawer } from "@/modules/bkn-trace/components/LogDetailDrawer";
 import {
   presentLogAction,
@@ -46,7 +48,6 @@ import {
   type TraceAccessProfile,
 } from "@/modules/bkn-trace/services/trace.service";
 import { readAuditLogDrilldown } from "@/modules/bkn-trace/utils/audit-log-drilldown";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 const BUSINESS_MODULES: BusinessModule[] = [
   "domain_knowledge_network",
@@ -74,7 +75,7 @@ type Filters = {
 
 export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsSceneProps) {
   const { t } = useTranslation();
-  const userDirectory = useAuditUserDirectory();
+  const { runtimeConfig } = useAppServices();
   const [associatedScope] = useState(readAssociatedLogScope);
   const [profile, setProfile] = useState<TraceAccessProfile>();
   const [filters, setFilters] = useState<Filters>(() => readInitialFilters(mode));
@@ -184,7 +185,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         title: t("bknTrace.logs.columns.actor"),
         width: "18%",
         render: (_actor: LogRecord["actor"], record) => {
-          const value = presentLogActor(record, t, userDirectory);
+          const value = presentLogActor(record, t, runtimeConfig.currentUser);
           return <ClampedText secondary={value.secondary} value={value.primary} />;
         },
       },
@@ -207,7 +208,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         ),
       },
     ],
-    [t, userDirectory],
+    [runtimeConfig.currentUser, t],
   );
 
   const submit = useCallback(() => {
@@ -275,7 +276,11 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       {result?.partial ? <SourceFailures sources={result.sourceStatus} t={t} /> : null}
       {associated ? (
         <div className={styles.sourceStrip}>
-          <AssociatedScopeTag scope={associatedScope} t={t} userDirectory={userDirectory} />
+          <AssociatedScopeTag
+            currentUser={runtimeConfig.currentUser}
+            scope={associatedScope}
+            t={t}
+          />
         </div>
       ) : null}
 
@@ -476,20 +481,24 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 function AssociatedScopeTag({
+  currentUser,
   scope,
   t,
-  userDirectory,
 }: {
+  currentUser: { id?: string | null; name?: string | null };
   scope: AssociatedLogScope;
   t: Translate;
-  userDirectory: Map<string, string>;
 }) {
   if (scope.targetId) {
     const displayType = scope.targetType === "user" ? "user" : "resource";
     return (
       <Tag color="blue">
         <span>{t(`bknTrace.logs.associatedTarget.${displayType}`)}</span>{" "}
-        <span>{userDirectory.get(scope.targetId) ?? scope.targetId}</span>
+        <span>
+          {scope.targetType === "user"
+            ? formatAuditUserDisplay({ currentUser, id: scope.targetId })
+            : scope.targetId}
+        </span>
       </Tag>
     );
   }
@@ -497,7 +506,7 @@ function AssociatedScopeTag({
     return (
       <Tag color="blue">
         <span>{t("bknTrace.logs.associatedTarget.user")}</span>{" "}
-        <span>{userDirectory.get(scope.actorId) ?? scope.actorId}</span>
+        <span>{formatAuditUserDisplay({ currentUser, id: scope.actorId })}</span>
       </Tag>
     );
   }

@@ -177,7 +177,7 @@ export const executionFactoryLabZhCN = {
       "启用编排后，该 HTTP 能力会注册为流程算子，编排画布中即可作为节点使用。",
     orchestrationEnabledTitle: "已可作为流程算子使用",
     orchestrationEnabledDescription: "该能力已注册为流程算子。请在流程调用前配置运行时行为。",
-    orchestrationOperatorId: "算子 ID",
+    orchestrationOperatorId: "算子",
     orchestrationTimeoutMs: "超时（毫秒）",
     orchestrationRetryPolicy: "重试策略",
     orchestrationMaxAttempts: "最大重试次数",

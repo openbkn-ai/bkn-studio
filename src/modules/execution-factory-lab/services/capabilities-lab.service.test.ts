@@ -8,18 +8,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const postMock = vi.hoisted(() => vi.fn());
+const getMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
   http: {
+    get: getMock,
     post: postMock,
   },
 }));
 
-import { executePython } from "@/modules/execution-factory-lab/services/capabilities-lab.service";
+import {
+  executePython,
+  getOrchestrationDetail,
+} from "@/modules/execution-factory-lab/services/capabilities-lab.service";
 
 describe("capabilities-lab.service", () => {
   beforeEach(() => {
     postMock.mockReset();
+    getMock.mockReset();
     vi.spyOn(Date, "now").mockReturnValue(1_783_000_000_000);
     postMock.mockResolvedValue({
       data: {
@@ -58,6 +64,38 @@ describe("capabilities-lab.service", () => {
         skipErrorToast: true,
         timeout: 60_000,
       },
+    );
+  });
+
+  it("maps orchestration operator and audit user names from the business API", async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        enabled: true,
+        operator_id: "operator-a",
+        operator_name: "Inventory Operator",
+        audit: {
+          create_user: "user-a",
+          create_user_name: "Alice",
+          update_user: "user-b",
+          update_user_name: "Bob",
+        },
+      },
+    });
+
+    await expect(getOrchestrationDetail("capability-a")).resolves.toMatchObject({
+      enabled: true,
+      operatorId: "operator-a",
+      operatorName: "Inventory Operator",
+      audit: {
+        createUser: "user-a",
+        createUserName: "Alice",
+        updateUser: "user-b",
+        updateUserName: "Bob",
+      },
+    });
+    expect(getMock).toHaveBeenCalledWith(
+      "/capabilities-lab/v1/capabilities/capability-a/orchestration",
+      {},
     );
   });
 });

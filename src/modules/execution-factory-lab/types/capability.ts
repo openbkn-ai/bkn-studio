@@ -120,6 +120,7 @@ export type DebugCapabilityResult = {
 export type OrchestrationDetail = {
   enabled: boolean;
   operatorId?: string;
+  operatorName?: string;
   toolId?: string;
   boxId?: string;
   audit?: CapabilityAudit;

@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { listOperatorHistory } from "@/modules/execution-factory/services/operator.service";
 import type { OperatorHistoryRecord } from "@/modules/execution-factory/types/operator";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
@@ -91,6 +92,8 @@ export function OperatorHistoryDrawer({
             {
               dataIndex: "releaseUser",
               key: "releaseUser",
+              render: (value: string | undefined, record: OperatorHistoryRecord) =>
+                formatAuditUserDisplay({ id: value, name: record.releaseUserName }),
               title: t("executionFactory.releaseUser"),
             },
             {

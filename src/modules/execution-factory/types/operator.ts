@@ -61,8 +61,11 @@ export type OperatorRecord = {
   createTime?: number;
   updateTime?: number;
   createUser?: string;
+  createUserName?: string;
   updateUser?: string;
+  updateUserName?: string;
   releaseUser?: string;
+  releaseUserName?: string;
   releaseTime?: number;
   isInternal?: boolean;
 };
@@ -104,6 +107,7 @@ export type OperatorHistoryRecord = {
   version: string;
   status?: OperatorStatus;
   releaseUser?: string;
+  releaseUserName?: string;
   releaseTime?: number;
   updateTime?: number;
 };

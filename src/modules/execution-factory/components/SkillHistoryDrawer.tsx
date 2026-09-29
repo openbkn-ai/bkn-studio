@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -133,7 +134,8 @@ export function SkillHistoryDrawer({ onClose, onUpdated, open, skillId }: SkillH
     {
       dataIndex: "releaseUser",
       title: t("executionFactory.releaseUser"),
-      render: (value?: string) => value ?? "-",
+      render: (value: string | undefined, record) =>
+        formatAuditUserDisplay({ id: value, name: record.releaseUserName }),
     },
     {
       dataIndex: "releaseTime",

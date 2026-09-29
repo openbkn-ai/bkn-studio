@@ -34,6 +34,7 @@ import type { ToolGlobalParameter } from "@/modules/execution-factory/types/tool
 type BackendToolInfo = {
   create_time?: number;
   create_user?: string;
+  create_user_name?: string;
   description?: string;
   global_parameters?: {
     description?: string;
@@ -57,6 +58,7 @@ type BackendToolInfo = {
   tool_id: string;
   update_time?: number;
   update_user?: string;
+  update_user_name?: string;
   use_rule?: string;
 };
 
@@ -144,7 +146,9 @@ function mapTool(item: BackendToolInfo): ToolRecord {
     createTime: normalizeTimestamp(item.create_time),
     updateTime: normalizeTimestamp(item.update_time),
     createUser: item.create_user,
+    createUserName: item.create_user_name,
     updateUser: item.update_user,
+    updateUserName: item.update_user_name,
   };
 }
 

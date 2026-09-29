@@ -66,7 +66,9 @@ export type ToolRecord = {
   createTime?: number;
   updateTime?: number;
   createUser?: string;
+  createUserName?: string;
   updateUser?: string;
+  updateUserName?: string;
 };
 
 export type ToolListQuery = {
