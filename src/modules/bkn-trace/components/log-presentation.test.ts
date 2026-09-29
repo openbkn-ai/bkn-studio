@@ -113,6 +113,45 @@ describe("log presentation", () => {
     expect(presentLogActor(record, translateZhCN).primary).toBe("系统服务");
   });
 
+  it("presents the compact security producer decision record from the live log", () => {
+    const record = {
+      action: "check",
+      actor: { id: "anonymous", name: "anonymous", type: "anonymous" },
+      businessModule: "system_management",
+      logCategory: "audit.security",
+      target: {
+        id: "decision:decision-1",
+        name: "decision:decision-1",
+        type: "resource",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("鉴权判定");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "授权决策",
+      secondary: "decision:decision-1",
+    });
+  });
+
+  it("presents the compact permission-request read record from the live log", () => {
+    const record = {
+      action: "get",
+      businessModule: "system_management",
+      logCategory: "audit.admin",
+      target: {
+        id: "permission_request:request-1",
+        name: "permission_request:request-1",
+        type: "resource",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("查询权限请求");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "权限请求",
+      secondary: "permission_request:request-1",
+    });
+  });
+
   it("uses the semantic target label when an authorization decision has no name snapshot", () => {
     const record = {
       target: { id: "decision-1", name: "", type: "authorization_decision" },
