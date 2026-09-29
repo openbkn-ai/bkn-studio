@@ -11,6 +11,7 @@ import {
   validateMockExpectedUpdateTime,
 } from "@/framework/request/mock-error";
 import {
+  parsePrecisionSafeJSON,
   transformPrecisionSafeJSONRequest,
   transformPrecisionSafeJSONResponse,
 } from "@/framework/request/precision-safe-json";
@@ -423,6 +424,14 @@ function mapDerivedDefinition(
   };
 }
 
+function mockResponseFilterCondition(condition?: Record<string, unknown> | null) {
+  if (condition == null) return condition;
+  return parsePrecisionSafeJSON(transformPrecisionSafeJSONRequest(condition)) as Record<
+    string,
+    unknown
+  >;
+}
+
 function filterResources(items: CatalogResource[], query: ResourceListQuery) {
   const keyword = (query.keyword ?? "").trim().toLowerCase();
 
@@ -697,7 +706,7 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
       localIndexStatus: "unavailable",
       logicDefinition: {
         sourceResourceId: input.sourceResourceId,
-        filterCondition: input.filterCondition,
+        filterCondition: mockResponseFilterCondition(input.filterCondition),
       },
       logicType: "derived",
       name: input.name,
@@ -760,7 +769,7 @@ export async function updateDerivedView(
       expectedUpdateTime: timestamp,
       logicDefinition: {
         sourceResourceId: input.sourceResourceId,
-        filterCondition: input.filterCondition,
+        filterCondition: mockResponseFilterCondition(input.filterCondition),
       },
       name: input.name,
       schema: input.schema,
@@ -984,7 +993,6 @@ export async function previewCatalogResource(
       return wait({ rows: [], total: 0 });
     }
 
-    const total = resourceCountForPagination(resource.rowCount);
     const usesLocalIndex =
       !query.ignoreLocalIndex &&
       resource.category === "table" &&
@@ -993,20 +1001,25 @@ export async function previewCatalogResource(
     const source = resource.logicDefinition?.sourceResourceId
       ? mockResources.find((item) => item.id === resource.logicDefinition?.sourceResourceId)
       : null;
+    const total = resourceCountForPagination(source?.rowCount ?? resource.rowCount);
     const makeRow = (rowIndex: number) => {
-      const sourceRow = source
+      const sourceCells = source?.schema.map((field) => ({
+        field,
+        value: mockResourcePreviewCell(source, field, rowIndex, query, false),
+      }));
+      const sourceRow = sourceCells
+        ? Object.fromEntries(sourceCells.map(({ field, value }) => [field.name, value]))
+        : null;
+      const sourceBindings = sourceCells
         ? Object.fromEntries(
-            source.schema.map((field) => [
-              field.name,
-              mockResourcePreviewCell(source, field, rowIndex, query, false),
-            ]),
+            sourceCells.map(({ field, value }) => [field.originalName || field.name, value]),
           )
         : null;
       const row = Object.fromEntries(
         resource.schema.map((field) => [
           field.name,
-          sourceRow
-            ? sourceRow[field.originalName || field.name]
+          sourceBindings
+            ? sourceBindings[field.originalName || field.name]
             : mockResourcePreviewCell(resource, field, rowIndex, query, usesLocalIndex),
         ]),
       );

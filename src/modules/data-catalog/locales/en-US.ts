@@ -338,9 +338,11 @@ export const dataCatalogEnUS = {
       noAccess: "This catalog cannot create or edit views. Check access and catalog status.",
       unsupported: "Only derived views can be edited.",
       invalidSource: "Select an available Table or Index with query access.",
+      sourceSchemaChanged:
+        "Source fields changed. Review output fields and fixed filters before saving.",
       invalidName: "Enter a view name.",
       invalidFields:
-        "Keep at least one field. Output names must be nonempty and unique; display names cannot be empty.",
+        "Keep at least one field. Output names must be nonempty, unique, and at most 255 characters; display names must be nonempty and at most 255 characters.",
       invalidTags: "Use up to 5 nonempty tags of at most 40 characters each.",
       saveError: "Could not save the view. Check your input and try again.",
       saved: "View saved",
@@ -608,6 +610,8 @@ export const dataCatalogEnUS = {
       queryOriginalSource: "Query original data",
       loadBinaryContent: "Load Binary content",
       dataSourceIndex: "Source: local index",
+      indexPageLimit:
+        "{{total}} rows total. Only the first {{limit}} can be previewed from the local index.",
       dataSourceOriginal: "Source: original data",
       noQueryPermission: "No permission to read this data",
       sourceReadForbidden: "The data source account cannot read data for {{source}}",

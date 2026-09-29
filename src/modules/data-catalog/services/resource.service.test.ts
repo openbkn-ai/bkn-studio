@@ -117,6 +117,129 @@ describe("resource.service · previewCatalogResource", () => {
     }
   });
 
+  it("maps mock derived rows by the source field originalName", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { mockResources } = await import("@/modules/data-catalog/services/mock-db");
+    const source = mockResources.find((item) => item.id === "res-customers")!;
+    const field = source.schema.find((item) => item.name === "customer_id")!;
+    const originalName = field.originalName;
+    field.originalName = "db_customer_id";
+    const { createDerivedView, deleteCatalogResource, previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    let createdId: string | undefined;
+    try {
+      const created = await createDerivedView({
+        catalogId: source.catalogId,
+        description: "",
+        enabled: true,
+        name: "mock_original_name_view",
+        sourceResourceId: source.id,
+        filterCondition: { field: "customer_id", operation: "==", value: 100000 },
+        tags: [],
+        schema: [{ name: "customer_id", originalName: "db_customer_id", type: field.type }],
+      });
+      createdId = created.id;
+      const result = await previewCatalogResource(created.id, { limit: 1, offset: 0 });
+      expect(result.total).toBe(1);
+      expect(result.rows[0]?.customer_id).toBe(100000);
+    } finally {
+      field.originalName = originalName;
+      if (createdId) await deleteCatalogResource(createdId);
+    }
+  });
+
+  it("previews rows from a newly created mock derived view", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { createDerivedView, deleteCatalogResource, previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const created = await createDerivedView({
+      catalogId: "cat-001",
+      description: "",
+      enabled: true,
+      name: "mock_customers_view",
+      sourceResourceId: "res-customers",
+      tags: [],
+      schema: [
+        { name: "customer_id", originalName: "customer_id", type: "integer", displayName: "ID" },
+      ],
+    });
+
+    try {
+      const result = await previewCatalogResource(created.id, { limit: 2, offset: 0 });
+      expect(result.total).toBeGreaterThan(0);
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]).toHaveProperty("customer_id");
+    } finally {
+      await deleteCatalogResource(created.id);
+    }
+  });
+
+  it("round-trips a mock view's unsafe integer fixed filter", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { filterToBackend, parseFilterCondition } =
+      await import("@/modules/data-catalog/lib/filter-tree");
+    const { createDerivedView, deleteCatalogResource, getCatalogResource, updateDerivedView } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const filterCondition = filterToBackend(
+      {
+        kind: "group",
+        operation: "and",
+        children: [
+          { kind: "rule", field: "customer_id", operation: ">", value: "9007199254740993" },
+        ],
+      },
+      [{ name: "customer_id", type: "integer" }],
+    );
+    const created = await createDerivedView({
+      catalogId: "cat-001",
+      description: "",
+      enabled: true,
+      name: "mock_large_integer_view",
+      sourceResourceId: "res-customers",
+      filterCondition,
+      tags: [],
+      schema: [
+        { name: "customer_id", originalName: "customer_id", type: "integer", displayName: "ID" },
+      ],
+    });
+
+    try {
+      const saved = await getCatalogResource(created.id);
+      const parsed = parseFilterCondition(saved?.logicDefinition?.filterCondition);
+      expect(parsed?.children[0]).toMatchObject({ value: "9007199254740993" });
+
+      const updatedFilter = filterToBackend(
+        {
+          kind: "group",
+          operation: "and",
+          children: [
+            { kind: "rule", field: "customer_id", operation: ">", value: "9007199254740995" },
+          ],
+        },
+        [{ name: "customer_id", type: "integer" }],
+      );
+      const updated = await updateDerivedView(created.id, {
+        catalogId: created.catalogId,
+        description: created.description,
+        enabled: true,
+        expectedUpdateTime: created.expectedUpdateTime,
+        filterCondition: updatedFilter,
+        name: created.name,
+        schema: created.schema,
+        sourceResourceId: "res-customers",
+        tags: [],
+      });
+      expect(
+        parseFilterCondition(updated?.logicDefinition?.filterCondition)?.children[0],
+      ).toMatchObject({ value: "9007199254740995" });
+    } finally {
+      await deleteCatalogResource(created.id);
+    }
+  });
+
   it("preserves an unsafe int64 preview total", async () => {
     postMock.mockImplementation(
       (_url: string, _body: unknown, config: { transformResponse?: (data: unknown) => unknown }) =>

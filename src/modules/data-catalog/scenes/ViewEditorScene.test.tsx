@@ -414,6 +414,54 @@ describe("ViewEditorScene", () => {
     expect(createViewMock).not.toHaveBeenCalled();
   });
 
+  it("limits output names by Unicode characters rather than UTF-16 units", async () => {
+    renderEditor({ catalogId: "cat-1" });
+    await screen.findByText("dataCatalog.viewEditor.typeTitle");
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog.viewEditor.derivedType/ }));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.name"), {
+      target: { value: "orders_view" },
+    });
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" }),
+    );
+    fireEvent.click(await screen.findByText("public.orders"));
+    const outputName = await screen.findByLabelText("dataCatalog.viewEditor.outputName 1");
+    fireEvent.change(outputName, { target: { value: "a".repeat(256) } });
+    expect(outputName).toHaveValue("a".repeat(255));
+    fireEvent.change(outputName, { target: { value: "😀".repeat(255) } });
+    expect(outputName).toHaveValue("😀".repeat(255));
+    fireEvent.change(outputName, { target: { value: "😀".repeat(256) } });
+    expect(outputName).toHaveValue("😀".repeat(255));
+    const displayName = screen.getByLabelText("dataCatalog.viewEditor.displayName 1");
+    fireEvent.change(displayName, { target: { value: "😀".repeat(255) } });
+    expect(displayName).toHaveValue("😀".repeat(255));
+    fireEvent.change(displayName, { target: { value: "😀".repeat(256) } });
+    expect(displayName).toHaveValue("😀".repeat(255));
+  });
+
+  it("rejects a persisted output name above the backend limit on save", async () => {
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logicview",
+      logicType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      schema: [{ ...source.schema[0], name: "a".repeat(256) }],
+      logicDefinition: { sourceResourceId: "source-1" },
+    } as CatalogResource;
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : source),
+    );
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue("orders_view");
+
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    expect(await screen.findByText("dataCatalog.viewEditor.invalidFields")).toBeTruthy();
+    expect(updateViewMock).not.toHaveBeenCalled();
+  });
+
   it("rejects a source moved out of the view Catalog before saving", async () => {
     const view = {
       ...source,
@@ -435,6 +483,34 @@ describe("ViewEditorScene", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
     expect(await screen.findByText("dataCatalog.viewEditor.invalidSource")).toBeTruthy();
+    expect(updateViewMock).not.toHaveBeenCalled();
+  });
+
+  it("refreshes source fields and blocks a stale output binding before saving", async () => {
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logicview",
+      logicType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      logicDefinition: { sourceResourceId: "source-1" },
+    } as CatalogResource;
+    let sourceReads = 0;
+    getResourceMock.mockImplementation((id: string) => {
+      if (id === "view-1") return Promise.resolve(view);
+      sourceReads += 1;
+      return Promise.resolve(
+        sourceReads === 1
+          ? source
+          : { ...source, schema: [{ ...source.schema[0], type: "string" }] },
+      );
+    });
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue("orders_view");
+
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    expect(await screen.findByText("dataCatalog.viewEditor.sourceSchemaChanged")).toBeTruthy();
     expect(updateViewMock).not.toHaveBeenCalled();
   });
 
@@ -603,5 +679,35 @@ describe("ViewEditorScene", () => {
         }),
       ),
     );
+  });
+
+  it("keeps an unsupported filter blocked after its source schema changes", async () => {
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logicview",
+      logicType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      logicDefinition: {
+        sourceResourceId: "source-1",
+        filterCondition: { field: "id", operation: "in", value: [1, 2] },
+      },
+    } as CatalogResource;
+    let sourceReads = 0;
+    getResourceMock.mockImplementation((id: string) => {
+      if (id === "view-1") return Promise.resolve(view);
+      sourceReads += 1;
+      return Promise.resolve(sourceReads === 1 ? source : { ...source, schema: [] });
+    });
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue("orders_view");
+
+    const saveButton = screen.getByRole("button", { name: "dataCatalog.viewEditor.save" });
+    fireEvent.click(saveButton);
+    expect(await screen.findByText("dataCatalog.viewEditor.sourceSchemaChanged")).toBeTruthy();
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(sourceReads).toBe(3));
+    expect(updateViewMock).not.toHaveBeenCalled();
   });
 });

@@ -44,6 +44,7 @@ type ResourcePreviewPanelProps = {
 };
 
 const DEFAULT_PAGE_SIZE = 10;
+const INDEX_PREVIEW_PAGE_LIMIT = 10_000;
 const PREVIEW_CONTENT_LENGTH = 20;
 
 function isNumericType(type: string) {
@@ -333,10 +334,16 @@ export function ResourcePreviewPanel({
   const rows = result?.rows ?? [];
   const fetched = offset + rows.length;
   const totalUnreliable =
-    rows.length === pageSize && resourceCountAsBigInt(backendTotal) <= BigInt(fetched);
+    !appliedFilter.children.length &&
+    !resource.logicDefinition?.filterCondition &&
+    rows.length === pageSize &&
+    resourceCountAsBigInt(backendTotal) < BigInt(fetched);
   const total = totalUnreliable
     ? resourceCountForPagination(backendTotal, resource.rowCount, fetched)
     : resourceCountForPagination(backendTotal, fetched);
+  const indexWindowLimited =
+    result?.querySource === "local_index" && total > INDEX_PREVIEW_PAGE_LIMIT;
+  const paginationTotal = indexWindowLimited ? INDEX_PREVIEW_PAGE_LIMIT : total;
   const columns = resource.schema;
 
   const handlePaginationChange = (nextPage: number, nextPageSize: number) => {
@@ -547,14 +554,24 @@ export function ResourcePreviewPanel({
           </div>
         </Spin>
       )}
-      {total > 0 ? (
+      {indexWindowLimited ? (
+        <Alert
+          message={t("dataCatalog.preview.indexPageLimit", {
+            limit: INDEX_PREVIEW_PAGE_LIMIT,
+            total,
+          })}
+          showIcon
+          type="info"
+        />
+      ) : null}
+      {paginationTotal > 0 ? (
         <TablePaginationBar
           current={page}
           onChange={handlePaginationChange}
           pageSize={pageSize}
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
-          total={total}
+          total={paginationTotal}
         />
       ) : null}
       <Modal

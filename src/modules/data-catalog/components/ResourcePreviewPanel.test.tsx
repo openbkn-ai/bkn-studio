@@ -271,6 +271,67 @@ describe("ResourcePreviewPanel", () => {
     );
   });
 
+  it("uses the exact filtered total when the result fills one page", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: Array.from({ length: 10 }, (_, index) => ({ id: index + 1 })),
+      total: 10,
+    });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          columnCount: 1,
+          rowCount: 100,
+          schema: [{ name: "id", type: "integer" }],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+
+    await waitFor(() => {
+      expect(previewCatalogResourceMock).toHaveBeenLastCalledWith("resource-1", {
+        filterCondition: {
+          operation: "and",
+          sub_conditions: [{ field: "id", operation: ">", value: 10 }],
+        },
+        limit: 10,
+        offset: 0,
+      });
+      expect(screen.getByTestId("pagination-total").textContent).toBe("10");
+    });
+  });
+
+  it("does not replace a derived view's fixed-filter total with its row count", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: Array.from({ length: 10 }, (_, index) => ({ id: index + 1 })),
+      total: 10,
+    });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          category: "logicview",
+          columnCount: 1,
+          logicDefinition: {
+            sourceResourceId: "source-1",
+            filterCondition: { field: "id", operation: ">", value: 10 },
+          },
+          rowCount: 100,
+          schema: [{ name: "id", type: "integer" }],
+        }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("pagination-total").textContent).toBe("10"));
+  });
+
   it("does not request Binary data or expose its controls for datasets", async () => {
     previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
 
@@ -516,6 +577,36 @@ describe("ResourcePreviewPanel", () => {
         offset: 0,
       });
     });
+  });
+
+  it("limits index preview pages to the backend result window while showing the actual total", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      querySource: "local_index",
+      rows: Array.from({ length: 10 }, (_, id) => ({ id })),
+      total: 12000,
+    });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+
+    expect(await screen.findByTestId("pagination-total")).toHaveTextContent("10000");
+    expect(screen.getByText("dataCatalog.preview.indexPageLimit")).toBeTruthy();
+  });
+
+  it("keeps source preview pages accessible beyond the index result window", async () => {
+    previewCatalogResourceMock.mockResolvedValue({ querySource: "source", rows: [], total: 12000 });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+
+    expect(await screen.findByTestId("pagination-total")).toHaveTextContent("12000");
+    expect(screen.queryByText("dataCatalog.preview.indexPageLimit")).toBeNull();
   });
 
   it("ignores a late source Binary-content response after returning to the local index", async () => {

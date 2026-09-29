@@ -49,6 +49,13 @@ import { getCatalog, hasCatalogOperation, type CatalogRecord } from "@/shared/ca
 import styles from "./ViewEditorScene.module.css";
 
 const SOURCE_PAGE_SIZE = 30;
+const MAX_OUTPUT_NAME_LENGTH = 255;
+const fieldNameCount = {
+  max: MAX_OUTPUT_NAME_LENGTH,
+  strategy: (value: string) => Array.from(value).length,
+  exceedFormatter: (value: string, { max }: { max: number }) =>
+    Array.from(value).slice(0, max).join(""),
+};
 
 function isUsableSource(resource: CatalogResource) {
   return (
@@ -346,10 +353,14 @@ export function ViewEditorScene({
     const displayNames = fields.map((field) => field.displayName?.trim() ?? "");
     if (
       !fields.length ||
-      names.some((field) => !field) ||
+      names.some((field) => !field || Array.from(field).length > MAX_OUTPUT_NAME_LENGTH) ||
       new Set(names).size !== names.length ||
       new Set(displayNames).size !== displayNames.length ||
-      fields.some((field) => !field.displayName?.trim() || field.displayName.length > 255)
+      fields.some(
+        (field) =>
+          !field.displayName?.trim() ||
+          Array.from(field.displayName).length > MAX_OUTPUT_NAME_LENGTH,
+      )
     ) {
       setError(t("dataCatalog.viewEditor.invalidFields"));
       return;
@@ -378,6 +389,24 @@ export function ViewEditorScene({
         setError(t("dataCatalog.viewEditor.invalidSource"));
         return;
       }
+      const latestFields = new Map(
+        latestSource.schema.map((field) => [field.originalName || field.name, field]),
+      );
+      const outputBindingChanged = fields.some((field) => {
+        const latest = latestFields.get(field.originalName || field.name);
+        return !latest || latest.type !== field.type;
+      });
+      const filterBindingChanged = unsupportedFilter
+        ? sourceFields.some((field) => {
+            const latest = latestFields.get(field.originalName || field.name);
+            return !latest || latest.type !== field.type;
+          })
+        : filterValidationError(filter, latestSource.schema) !== null;
+      if (outputBindingChanged || filterBindingChanged) {
+        if (!unsupportedFilter) setSource(latestSource);
+        setError(t("dataCatalog.viewEditor.sourceSchemaChanged"));
+        return;
+      }
       const input = {
         catalogId: target.id,
         description: description.trim(),
@@ -392,7 +421,7 @@ export function ViewEditorScene({
         sourceResourceId: source.id,
         filterCondition: unsupportedFilter
           ? view?.logicDefinition?.filterCondition
-          : filterToBackend(filter, sourceFields),
+          : filterToBackend(filter, latestSource.schema),
         tags: tags.map((tag) => tag.trim()),
       };
       const saved =
@@ -728,6 +757,7 @@ export function ViewEditorScene({
                                 <td>
                                   <Input
                                     aria-label={`${t("dataCatalog.viewEditor.outputName")} ${index + 1}`}
+                                    count={fieldNameCount}
                                     onChange={(event) =>
                                       updateField(index, { name: event.target.value })
                                     }
@@ -737,7 +767,7 @@ export function ViewEditorScene({
                                 <td>
                                   <Input
                                     aria-label={`${t("dataCatalog.viewEditor.displayName")} ${index + 1}`}
-                                    maxLength={255}
+                                    count={fieldNameCount}
                                     onChange={(event) =>
                                       updateField(index, { displayName: event.target.value })
                                     }
