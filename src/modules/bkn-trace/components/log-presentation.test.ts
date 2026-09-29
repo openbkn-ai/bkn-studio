@@ -67,6 +67,52 @@ describe("log presentation", () => {
     expect(presentLogAction(record, translateZhCN)).toBe("用户登录");
   });
 
+  it("presents an authorization decision with a business-readable action and target", () => {
+    const record = {
+      action: "check",
+      actor: { id: "anonymous", name: "anonymous", type: "anonymous" },
+      authMethod: "unknown",
+      businessModule: "system_management",
+      eventName: "authorization.decided",
+      logCategory: "audit.security",
+      target: {
+        id: "decision:decision-1",
+        name: "decision:decision-1",
+        type: "authorization_decision",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("鉴权判定");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "授权决策",
+      secondary: "decision:decision-1",
+    });
+    expect(presentLogActor(record, translateZhCN).primary).toBe("未识别调用方");
+  });
+
+  it("presents a permission request without exposing its technical identifier as the name", () => {
+    const record = {
+      action: "get",
+      actor: { id: "system:access", name: "system:access", type: "service_account" },
+      authMethod: "oauth",
+      businessModule: "system_management",
+      eventName: "resource.read",
+      logCategory: "audit.admin",
+      target: {
+        id: "permission_request:request-1",
+        name: "permission_request:request-1",
+        type: "permission_request",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("查询权限请求");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "权限请求",
+      secondary: "permission_request:request-1",
+    });
+    expect(presentLogActor(record, translateZhCN).primary).toBe("系统服务");
+  });
+
   it("uses the current authenticated username when an old event only contains its user id", () => {
     const record = {
       actor: {

@@ -881,6 +881,10 @@ export const bknTraceEnUS = {
         startAgentConversation: "Start Agent business conversation",
       },
       accessActions: { login: "User login", logout: "User logout" },
+      semanticActions: {
+        authorization_decided: "Authorization decision",
+        permission_request_read: "View permission request",
+      },
       systemManagementActions: {
         createUser: "Create user",
         updateUser: "Update user",
@@ -892,6 +896,7 @@ export const bknTraceEnUS = {
         deleteApiKey: "Delete API key",
       },
       authenticatedUser: "Authenticated user",
+      actorTypes: { anonymous: "Unidentified caller", service: "System service" },
       authMethods: {
         api_key: "Via API key",
         oauth: "Via OAuth",
@@ -1011,7 +1016,10 @@ export const bknTraceEnUS = {
         object_type: "object type",
         relation_type: "relation type",
         risk_type: "risk type",
+        authorization_decision: "authorization decision",
+        permission_request: "permission request",
       },
+      unnamedTarget: "Unnamed object",
       title: "Log Search",
       unnamedAgent: "Unnamed Agent",
     },
