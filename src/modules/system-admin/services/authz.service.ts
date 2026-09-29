@@ -12,6 +12,7 @@ import {
   listDomainObjectsPage,
   resolveGrantNames,
 } from "@/modules/system-admin/services/authz-objects.service";
+import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type {
   AuthorizableObject,
@@ -751,12 +752,22 @@ export async function listGrantableUsersForObject(
   objId: string,
   search: string,
 ): Promise<AdminUser[]> {
-  if (useMock) {
+  const normalizedSearch = search.trim();
+  if (!normalizedSearch) {
     return [];
+  }
+  if (useMock) {
+    const result = await listUsersPage({
+      enabled: true,
+      limit: 50,
+      offset: 0,
+      search: normalizedSearch,
+    });
+    return result.users;
   }
   const response = await http.get<{ users?: { account?: string; id?: string; name?: string }[] }>(
     "/safe/v1/me/grantable-users",
-    { params: { resource_id: objId, resource_type: objType, search: search.trim() } },
+    { params: { resource_id: objId, resource_type: objType, search: normalizedSearch } },
   );
   return (response.data.users ?? [])
     .filter((user) => user.id)

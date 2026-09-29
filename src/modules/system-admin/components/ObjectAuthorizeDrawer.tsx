@@ -25,7 +25,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Drawer, Empty, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -152,6 +152,15 @@ export function ObjectAuthorizeDrawer({
   const [candidate, setCandidate] = useState<string>();
   const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
   const [sourceAccessorId, setSourceAccessorId] = useState<string>();
+  const [loadedResourceKey, setLoadedResourceKey] = useState<string>();
+  const loadRequestId = useRef(0);
+  const resourceKey = `${objType}\u0000${objId}`;
+  const resourceLoaded = loadedResourceKey === resourceKey;
+  const scopedGrants = useMemo(() => (resourceLoaded ? grants : []), [grants, resourceLoaded]);
+  const scopedGrantUsers = useMemo(
+    () => (resourceLoaded ? grantUsers : []),
+    [grantUsers, resourceLoaded],
+  );
 
   // `authorize` is offered only to platform administrators. bkn-safe refuses it from anyone else —
   // a delegate that could pass `authorize` on would mint further delegates, and only an
@@ -206,32 +215,52 @@ export function ObjectAuthorizeDrawer({
 
   const loadRemote = useCallback(
     async (signal?: AbortSignal) => {
+      const requestId = ++loadRequestId.current;
       setLoading(true);
       setLoadError(undefined);
       try {
         const { accounts, grants: grantList } = await listObjectGrantsForObject(objType, objId);
-        if (signal?.aborted) {
+        if (signal?.aborted || requestId !== loadRequestId.current) {
           return;
         }
         setGrants(grantList);
         setGrantUsers(accounts);
+        setLoadedResourceKey(resourceKey);
       } catch (error) {
+        if (signal?.aborted || requestId !== loadRequestId.current) {
+          return;
+        }
+        setGrants([]);
+        setGrantUsers([]);
+        setLoadedResourceKey(undefined);
         const errorMessage = extractRequestErrorMessage(error);
         setLoadError(errorMessage);
         void message.error(errorMessage);
       } finally {
-        if (!signal?.aborted) {
+        if (!signal?.aborted && requestId === loadRequestId.current) {
           setLoading(false);
         }
       }
     },
-    [message, objId, objType],
+    [message, objId, objType, resourceKey],
   );
 
   useEffect(() => {
     if (!open) {
+      loadRequestId.current += 1;
+      setGrants([]);
+      setGrantUsers([]);
+      setLoadedResourceKey(undefined);
+      setLoadError(undefined);
+      setLoading(false);
+      setCandidate(undefined);
+      setCandidateOperations([]);
+      setSourceAccessorId(undefined);
       return;
     }
+    setGrants([]);
+    setGrantUsers([]);
+    setLoadedResourceKey(undefined);
     setCandidate(prefillGranteeId);
     setCandidateOperations([]);
     setSourceAccessorId(undefined);
@@ -241,8 +270,8 @@ export function ObjectAuthorizeDrawer({
   }, [loadRemote, open, prefillGranteeId]);
 
   const grantUserMap = useMemo(
-    () => new Map(grantUsers.map((user) => [user.id, user])),
-    [grantUsers],
+    () => new Map(scopedGrantUsers.map((user) => [user.id, user])),
+    [scopedGrantUsers],
   );
 
   const resolveGrantee = useCallback(
@@ -309,15 +338,15 @@ export function ObjectAuthorizeDrawer({
   const visibleGrants = useMemo(
     () =>
       fineGrained
-        ? grants
-        : grants.filter(
+        ? scopedGrants
+        : scopedGrants.filter(
             (grant) =>
               grant.bundle === FULL_BUSINESS_ACCESS ||
               (grant.grants ?? []).some(
                 (source) => source.active && source.policySource === "community_bundle",
               ),
           ),
-    [fineGrained, grants],
+    [fineGrained, scopedGrants],
   );
 
   const hasProtectedGrant = useMemo(
@@ -326,6 +355,9 @@ export function ObjectAuthorizeDrawer({
   );
 
   const handleAdd = async () => {
+    if (!resourceLoaded || loading) {
+      return;
+    }
     if (!candidate) {
       void message.error(t("systemAdmin.objectGrants.pickGranteeFirst"));
       return;
@@ -492,7 +524,7 @@ export function ObjectAuthorizeDrawer({
     });
   };
 
-  const sourceGrant = grants.find((grant) => grant.accessorId === sourceAccessorId);
+  const sourceGrant = scopedGrants.find((grant) => grant.accessorId === sourceAccessorId);
   const grantColumns: ColumnsType<ObjectGrant> = [
     {
       dataIndex: "accessorId",
@@ -631,7 +663,12 @@ export function ObjectAuthorizeDrawer({
       render: (_value, grant) => {
         const protection = grantProtection(grant);
         const deleteDisabled =
-          busy || !canRevoke || protection.eraseLocked || !revocableSourcesForGrant(grant).length;
+          busy ||
+          loading ||
+          !resourceLoaded ||
+          !canRevoke ||
+          protection.eraseLocked ||
+          !revocableSourcesForGrant(grant).length;
         return (
           <div className={styles.authzRowActions}>
             <AppButton
@@ -895,7 +932,7 @@ export function ObjectAuthorizeDrawer({
               <GrantableUserPicker
                 ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
                 id="object-grant-user"
-                initialUsers={grantUsers}
+                initialUsers={scopedGrantUsers}
                 loading={loading}
                 onChange={setCandidate}
                 onUsersChange={(users) => {
@@ -921,7 +958,11 @@ export function ObjectAuthorizeDrawer({
                   <div className={styles.authzGrantFieldActions}>
                     <AppButton
                       disabled={
-                        catalogLoading || !ops.length || candidateOperations.length === ops.length
+                        catalogLoading ||
+                        loading ||
+                        !resourceLoaded ||
+                        !ops.length ||
+                        candidateOperations.length === ops.length
                       }
                       onClick={selectAllCandidateOperations}
                       size="small"
@@ -930,7 +971,9 @@ export function ObjectAuthorizeDrawer({
                       {t("systemAdmin.objectGrants.selectAllOperations")}
                     </AppButton>
                     <AppButton
-                      disabled={catalogLoading || !candidateOperations.length}
+                      disabled={
+                        catalogLoading || loading || !resourceLoaded || !candidateOperations.length
+                      }
                       onClick={clearCandidateOperations}
                       size="small"
                       type="link"
@@ -962,7 +1005,7 @@ export function ObjectAuthorizeDrawer({
                               : styles.authzGrantOperation
                           }
                           onClick={() => toggleCandidateOperation(operation.key)}
-                          disabled={catalogLoading}
+                          disabled={catalogLoading || loading || !resourceLoaded}
                           type="button"
                         >
                           {operation.label}
@@ -996,6 +1039,7 @@ export function ObjectAuthorizeDrawer({
                             current.includes(FULL_BUSINESS_ACCESS) ? [] : [FULL_BUSINESS_ACCESS],
                           )
                         }
+                        disabled={catalogLoading || loading || !resourceLoaded}
                         type="button"
                       >
                         {t("systemAdmin.objectGrants.fullBundleName")}
@@ -1025,7 +1069,13 @@ export function ObjectAuthorizeDrawer({
                       : t("systemAdmin.objectGrants.grantBundleReady")}
               </span>
               <AppButton
-                disabled={catalogLoading || !candidate || !candidateOperations.length}
+                disabled={
+                  catalogLoading ||
+                  loading ||
+                  !resourceLoaded ||
+                  !candidate ||
+                  !candidateOperations.length
+                }
                 icon={<PlusOutlined />}
                 loading={busy}
                 onClick={() => void handleAdd()}

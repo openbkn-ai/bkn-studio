@@ -35,14 +35,18 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/system-admin", () => ({
-  DirectoryUserPicker: ({
+  GrantableUserPicker: ({
     onChange,
     onUsersChange,
+    resourceId,
+    resourceType,
   }: {
     onChange: (id: string) => void;
     onUsersChange?: (users: Array<{ id: string; name: string }>) => void;
+    resourceId: string;
+    resourceType: string;
   }) => (
-    <div>
+    <div data-resource-id={resourceId} data-resource-type={resourceType} data-testid="user-picker">
       <button
         onClick={() => {
           onUsersChange?.([{ id: "user-a", name: "Selected user A" }]);
@@ -165,6 +169,14 @@ describe("RowFilterAuthorizationPanel", () => {
     expect(parseRowFilterValues("aa,bb，cc\ndd,", "string")).toEqual(["aa", "bb", "cc", "dd"]);
   });
 
+  it("uses the object-scoped candidate picker for user row-filter subjects", () => {
+    renderPanel({ allowRoleSubjects: false });
+
+    const picker = screen.getByTestId("user-picker");
+    expect(picker).toHaveAttribute("data-resource-id", "network-1/object-1");
+    expect(picker).toHaveAttribute("data-resource-type", "object_type");
+  });
+
   it("configures only fixed conditions and does not expose automatic matching", async () => {
     const value = emptySnapshot("user-a");
     mocks.getSnapshot.mockResolvedValue(value);
@@ -202,9 +214,7 @@ describe("RowFilterAuthorizationPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "select-user-a" }));
 
-    const addCondition = (await screen.findByText(
-      "knowledgeNetwork.rowFilterAddCondition",
-    )) as HTMLElement;
+    const addCondition = await screen.findByText("knowledgeNetwork.rowFilterAddCondition");
     expect(addCondition.closest("button")).toBeDisabled();
     expect(screen.queryByText("knowledgeNetwork.propertyAuthorizationRole")).toBeNull();
     expect(mocks.patch).not.toHaveBeenCalled();

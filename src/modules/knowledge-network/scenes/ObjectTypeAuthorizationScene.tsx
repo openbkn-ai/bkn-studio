@@ -185,9 +185,11 @@ export function ObjectTypeAuthorizationScene() {
     currentPermissions,
     requiredPermissions: authzPoints.rolePermissions,
   });
-  const canUseRoleSubjects = canWriteRoleRowFilters;
+  // The management write endpoint accepts admin-role:permissions, but the UI also has to enumerate
+  // roles through GET /admin/roles, which is deliberately protected by admin-role:view.
+  const canUseRoleSubjects = canReadRoleRowFilters && canWriteRoleRowFilters;
   const canReadAnyRowFilters = canReadUserRowFilters || canReadRoleRowFilters;
-  const shouldLoadRoles = canReadRoleRowFilters || canUseRoleSubjects;
+  const shouldLoadRoles = canReadRoleRowFilters;
 
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [loading, setLoading] = useState(true);

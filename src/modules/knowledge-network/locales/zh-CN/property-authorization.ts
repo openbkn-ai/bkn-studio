@@ -179,7 +179,7 @@ export const propertyAuthorizationPart = {
   rowFilterSubjectDescription: "选择要配置的用户或角色。",
   rowFilterSubjectHelp: "仅支持按用户或角色配置。组织仅用于筛选用户列表，不作为授权主体。",
   rowFilterSelectUser: "选择要配置行过滤的用户",
-  rowFilterUserOrganizationFilter: "按组织筛选用户",
+  rowFilterUserOrganizationFilter: "搜索用户",
   rowFilterSelectSubject: "请选择一个用户或角色",
   rowFilterSelectSubjectDescription: "选择主体后，可查看并配置该主体在当前对象类上的行过滤策略。",
   rowFilterBoundary: "行过滤只会在基础查询权限通过后收窄实例结果，不能单独授予对象类查询权限。",

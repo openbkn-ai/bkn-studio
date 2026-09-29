@@ -127,6 +127,16 @@ function grant(records: GrantRecord[], overrides: Partial<ObjectGrant> = {}): Ob
   };
 }
 
+function deferred<T>() {
+  let reject!: (reason?: unknown) => void;
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
+
 function rowDeleteButton(accessorId: string) {
   const row = screen.getByText(accessorId).closest("tr");
   if (!row) {
@@ -175,6 +185,51 @@ describe("ObjectAuthorizeDrawer source records", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
     await waitFor(() => expect(mocks.listObjectGrantsForObject).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByText("object grants unavailable")).toBeNull());
+  });
+
+  it("never exposes grants from the previous resource while the next resource is loading or fails", async () => {
+    const nextResource = deferred<{ accounts: []; grants: [] }>();
+    mocks.listObjectGrantsForObject
+      .mockResolvedValueOnce({
+        accounts: [],
+        grants: [
+          grant([source({ accessorId: "old-user" })], {
+            accessorId: "old-user",
+            objId: "catalog-old",
+            objName: "Old catalog",
+          }),
+        ],
+      })
+      .mockImplementationOnce(() => nextResource.promise);
+
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-old"
+        objName="Old catalog"
+        objType="catalog"
+        onClose={onClose}
+        open
+      />,
+    );
+    expect(await screen.findByText("old-user")).not.toBeNull();
+
+    rerender(
+      <ObjectAuthorizeDrawer
+        objId="catalog-new"
+        objName="New catalog"
+        objType="catalog"
+        onClose={onClose}
+        open
+      />,
+    );
+    await waitFor(() => expect(mocks.listObjectGrantsForObject).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("old-user")).toBeNull();
+
+    act(() => nextResource.reject(new Error("new resource unavailable")));
+    expect(await screen.findByText("new resource unavailable")).not.toBeNull();
+    expect(screen.queryByText("old-user")).toBeNull();
+    expect(mocks.revokeObjectGrantsForObject).not.toHaveBeenCalled();
   });
 
   it("renders the backend effective decision instead of merging source operations", async () => {

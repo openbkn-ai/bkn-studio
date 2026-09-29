@@ -21,7 +21,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { DirectoryUserPicker } from "@/modules/system-admin";
+import { GrantableUserPicker } from "@/modules/system-admin";
 import type { AdminRole, AdminUser } from "@/modules/system-admin/types/admin";
 import {
   explainRowFilter,
@@ -436,7 +436,7 @@ export function RowFilterAuthorizationPanel({
         {subjectType === "user" ? (
           <div className={styles.userPickerSection}>
             <span>{t("knowledgeNetwork.rowFilterUserOrganizationFilter")}</span>
-            <DirectoryUserPicker
+            <GrantableUserPicker
               ariaLabel={t("knowledgeNetwork.rowFilterSelectUser")}
               className={styles.userPicker}
               initialUsers={users}
@@ -449,6 +449,8 @@ export function RowFilterAuthorizationPanel({
                 })
               }
               presentation="inline"
+              resourceId={objectTypeRef}
+              resourceType="object_type"
               value={subjectId}
             />
           </div>

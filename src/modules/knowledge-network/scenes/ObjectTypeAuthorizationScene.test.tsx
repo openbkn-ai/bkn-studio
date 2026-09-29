@@ -245,6 +245,34 @@ describe("ObjectTypeAuthorizationScene", () => {
     );
   }, 20_000);
 
+  it("does not expose role subjects when role write exists without role read", async () => {
+    mocks.appServices.runtimeConfig.currentUser.permissions = ["admin-role:permissions"];
+    mocks.getDetail.mockResolvedValue({
+      color: "#356af6",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Customer",
+      operations: ["view_detail"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "",
+      updaterName: "",
+    });
+
+    render(<ObjectTypeAuthorizationScene />);
+
+    fireEvent.click(await screen.findByText("knowledgeNetwork.propertyAuthorizationTabProperty"));
+    expect(screen.queryByText("knowledgeNetwork.propertyAuthorizationRole")).toBeNull();
+    expect(mocks.listRoles).not.toHaveBeenCalled();
+  });
+
   it("uses the public subject label in the source drawer", async () => {
     mocks.getDetail.mockResolvedValue({
       color: "#356af6",
