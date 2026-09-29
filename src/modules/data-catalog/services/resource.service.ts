@@ -10,7 +10,10 @@ import {
   throwMockRequestError,
   validateMockExpectedUpdateTime,
 } from "@/framework/request/mock-error";
-import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
+import {
+  transformPrecisionSafeJSONRequest,
+  transformPrecisionSafeJSONResponse,
+} from "@/framework/request/precision-safe-json";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-count";
@@ -723,6 +726,10 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
       schema_definition: input.schema.map(mapDerivedViewSchema),
       tags: input.tags,
     },
+    {
+      headers: { "Content-Type": "application/json" },
+      transformRequest: transformPrecisionSafeJSONRequest,
+    },
   );
   const created = response.data.id ? await getCatalogResource(response.data.id) : null;
   if (!created) {
@@ -765,18 +772,25 @@ export async function updateDerivedView(
     return wait(next);
   }
 
-  await http.put(`/vega-backend/v1/resources/${id}`, {
-    catalog_id: input.catalogId,
-    category: "logicview",
-    description: input.description,
-    enabled: input.enabled,
-    expected_update_time: input.expectedUpdateTime,
-    logic_type: "derived",
-    logic_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
-    name: input.name,
-    schema_definition: input.schema.map(mapDerivedViewSchema),
-    tags: input.tags,
-  });
+  await http.put(
+    `/vega-backend/v1/resources/${id}`,
+    {
+      catalog_id: input.catalogId,
+      category: "logicview",
+      description: input.description,
+      enabled: input.enabled,
+      expected_update_time: input.expectedUpdateTime,
+      logic_type: "derived",
+      logic_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
+      name: input.name,
+      schema_definition: input.schema.map(mapDerivedViewSchema),
+      tags: input.tags,
+    },
+    {
+      headers: { "Content-Type": "application/json" },
+      transformRequest: transformPrecisionSafeJSONRequest,
+    },
+  );
   return getCatalogResource(id);
 }
 
@@ -895,6 +909,19 @@ function mockPreviewCell(
   return { byte_length: byteLength, mode: "metadata" };
 }
 
+function mockResourcePreviewCell(
+  resource: CatalogResource,
+  field: ResourceSchemaField,
+  row: number,
+  query: ResourcePreviewQuery,
+  usesLocalIndex: boolean,
+) {
+  if (resource.id === "res-orders" && field.name === "customer_id") {
+    return 101 + (row % 2);
+  }
+  return mockPreviewCell(field, row, query, usesLocalIndex);
+}
+
 function mockOtherContent(field: ResourceSchemaField, row: number) {
   const originalType = field.originalType ?? "unknown";
   switch (originalType.toLowerCase()) {
@@ -912,6 +939,41 @@ function mockBinaryContent(row: number, byteLength: number) {
   return btoa(String.fromCharCode(...bytes));
 }
 
+function mockFilterMatches(condition: unknown, row: Record<string, unknown>): boolean {
+  if (!condition || typeof condition !== "object" || Array.isArray(condition)) return true;
+  const node = condition as Record<string, unknown>;
+  if (node.operation === "and" || node.operation === "or") {
+    const children = Array.isArray(node.sub_conditions) ? node.sub_conditions : [];
+    return node.operation === "and"
+      ? children.every((child) => mockFilterMatches(child, row))
+      : children.some((child) => mockFilterMatches(child, row));
+  }
+  if (typeof node.field !== "string") return false;
+  const actual = row[node.field];
+  if (actual === null || actual === undefined) return false;
+  const expected = node.value;
+  const left =
+    typeof actual === "number"
+      ? actual
+      : typeof actual === "string" || typeof actual === "boolean"
+        ? String(actual)
+        : null;
+  if (left === null) return false;
+  const right = typeof actual === "number" ? Number(expected) : String(expected);
+  switch (node.operation) {
+    case "==":
+      return left === right;
+    case "!=":
+      return left !== right;
+    case ">":
+      return left > right;
+    case "<":
+      return left < right;
+    default:
+      return false;
+  }
+}
+
 export async function previewCatalogResource(
   id: string,
   query: ResourcePreviewQuery,
@@ -923,27 +985,56 @@ export async function previewCatalogResource(
     }
 
     const total = resourceCountForPagination(resource.rowCount);
-    const count = Math.max(0, Math.min(query.limit, total - query.offset));
     const usesLocalIndex =
       !query.ignoreLocalIndex &&
       resource.category === "table" &&
       resource.localIndexStatus === "available" &&
       Boolean(resource.localIndexName);
-    const rows = Array.from({ length: count }, (_, index) => {
-      const rowIndex = query.offset + index;
-      return Object.fromEntries(
+    const source = resource.logicDefinition?.sourceResourceId
+      ? mockResources.find((item) => item.id === resource.logicDefinition?.sourceResourceId)
+      : null;
+    const makeRow = (rowIndex: number) => {
+      const sourceRow = source
+        ? Object.fromEntries(
+            source.schema.map((field) => [
+              field.name,
+              mockResourcePreviewCell(source, field, rowIndex, query, false),
+            ]),
+          )
+        : null;
+      const row = Object.fromEntries(
         resource.schema.map((field) => [
           field.name,
-          mockPreviewCell(field, rowIndex, query, usesLocalIndex),
+          sourceRow
+            ? sourceRow[field.originalName || field.name]
+            : mockResourcePreviewCell(resource, field, rowIndex, query, usesLocalIndex),
         ]),
       );
-    });
+      return { row, sourceRow };
+    };
+    const fixed = resource.logicDefinition?.filterCondition;
+    const dynamic = query.filterCondition;
+    let rows: Record<string, unknown>[] = [];
+    let matchingTotal = total;
+    if (!fixed && !dynamic) {
+      const count = Math.max(0, Math.min(query.limit, total - query.offset));
+      rows = Array.from({ length: count }, (_, index) => makeRow(query.offset + index).row);
+    } else {
+      matchingTotal = 0;
+      for (let rowIndex = 0; rowIndex < total; rowIndex++) {
+        const { row, sourceRow } = makeRow(rowIndex);
+        if (!mockFilterMatches(fixed, sourceRow ?? row) || !mockFilterMatches(dynamic, row))
+          continue;
+        if (matchingTotal >= query.offset && rows.length < query.limit) rows.push(row);
+        matchingTotal++;
+      }
+    }
 
     return wait(
       {
         querySource: usesLocalIndex ? "local_index" : "source",
         rows,
-        total,
+        total: matchingTotal,
       },
       260,
     );
@@ -968,8 +1059,9 @@ export async function previewCatalogResource(
       },
     },
     {
-      headers: { "X-HTTP-Method-Override": "GET" },
+      headers: { "Content-Type": "application/json", "X-HTTP-Method-Override": "GET" },
       skipErrorToast: true,
+      transformRequest: transformPrecisionSafeJSONRequest,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );

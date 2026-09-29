@@ -23,6 +23,7 @@ import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -31,6 +32,7 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
+import { canManageDerivedViews } from "@/modules/data-catalog/lib/view-access";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
@@ -133,6 +135,7 @@ export function ResourceListPanel({
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
   const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
+  const { snapshot } = useEntitlementContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeSchema = searchParams.get("schema")?.trim() || "";
@@ -157,7 +160,11 @@ export function ResourceListPanel({
   const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
   const canManageResources = hasCatalogOperation(catalog, "resource_manage");
   const canCreateView =
-    !catalog.builtin && catalog.enabled && catalog.status === "enabled" && canManageResources;
+    canManageDerivedViews(snapshot) &&
+    !catalog.builtin &&
+    catalog.enabled &&
+    catalog.status === "enabled" &&
+    canManageResources;
   const activeFilterCount = [
     categoryFilter,
     statusFilter,

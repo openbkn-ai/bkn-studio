@@ -6,6 +6,7 @@
  */
 
 import type { ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
+import JSONBig from "json-bigint";
 
 export type FilterOperation = "==" | "!=" | ">" | "<";
 export type FilterRule = { kind: "rule"; field: string; operation: FilterOperation; value: string };
@@ -13,6 +14,8 @@ export type FilterGroup = { kind: "group"; operation: "and" | "or"; children: Fi
 export type FilterNode = FilterGroup | FilterRule;
 
 const FILTER_OPERATIONS = new Set<string>(["==", "!=", ">", "<"]);
+const numericLiteral = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+const preciseJSON = JSONBig();
 
 export function emptyFilterGroup(): FilterGroup {
   return { kind: "group", operation: "and", children: [] };
@@ -77,7 +80,10 @@ export function filterValidationError(
     if ((node.operation === ">" || node.operation === "<") && !isNumericFilterType(field.type))
       return "invalidField";
     if (!node.value.trim()) return "missingValue";
-    if (isNumericFilterType(field.type) && !Number.isFinite(Number(node.value)))
+    if (
+      isNumericFilterType(field.type) &&
+      (!numericLiteral.test(node.value.trim()) || !Number.isFinite(Number(node.value)))
+    )
       return "invalidNumber";
     if (field.type.trim().toLowerCase() === "boolean" && !["true", "false"].includes(node.value))
       return "invalidField";
@@ -114,7 +120,7 @@ export function filterToBackend(
       operation: node.operation,
       value:
         field && isNumericFilterType(field.type)
-          ? Number(node.value)
+          ? preciseJSON.parse(node.value.trim())
           : field?.type.trim().toLowerCase() === "boolean"
             ? node.value === "true"
             : node.value,

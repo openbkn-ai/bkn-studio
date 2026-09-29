@@ -17,6 +17,7 @@ import { Alert, Form, Input, Select, Spin, Steps, Switch, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -42,6 +43,7 @@ import type {
   ResourceSchemaField,
 } from "@/modules/data-catalog/types/data-catalog";
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
+import { canManageDerivedViews } from "@/modules/data-catalog/lib/view-access";
 import { getCatalog, hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ViewEditorScene.module.css";
@@ -77,6 +79,7 @@ export function ViewEditorScene({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
+  const { snapshot } = useEntitlementContext();
   const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
   const [view, setView] = useState<CatalogResource | null>(null);
   const [source, setSource] = useState<CatalogResource | null>(null);
@@ -100,6 +103,7 @@ export function ViewEditorScene({
   const [selectedType, setSelectedType] = useState<"derived" | null>(null);
   const initialDraft = useRef("");
   const searchGeneration = useRef(0);
+  const sourceGeneration = useRef(0);
 
   const sourceLocked = unsupportedFilter;
   const sourceFields = useMemo(() => source?.schema ?? [], [source]);
@@ -152,7 +156,12 @@ export function ViewEditorScene({
         setDescription(currentView?.description ?? "");
         setEnabled(currentView?.enabled !== false);
         setTags(currentView?.tags ?? []);
-        setFields(currentView?.schema ?? []);
+        const viewFields =
+          currentView?.schema.map((field) => ({
+            ...field,
+            displayName: field.displayName || field.name,
+          })) ?? [];
+        setFields(viewFields);
         const existingFilter = currentView?.logicDefinition?.filterCondition;
         const parsed = parseFilterCondition(existingFilter);
         const cannotEditFilter =
@@ -168,7 +177,7 @@ export function ViewEditorScene({
           enabled: currentView?.enabled !== false,
           tags: currentView?.tags ?? [],
           sourceId: currentSource?.id,
-          fields: currentView?.schema ?? [],
+          fields: viewFields,
           filter: parsed ?? emptyFilterGroup(),
         });
       } catch (cause) {
@@ -242,8 +251,10 @@ export function ViewEditorScene({
         sourceLocked
       )
         return;
+      const generation = ++sourceGeneration.current;
       try {
         const detail = await getCatalogResource(candidate.id);
+        if (generation !== sourceGeneration.current) return;
         if (
           !detail ||
           detail.catalogId !== catalog?.id ||
@@ -254,6 +265,7 @@ export function ViewEditorScene({
           return;
         }
         const apply = () => {
+          if (generation !== sourceGeneration.current) return;
           setSource(detail);
           setFields(detail.schema.slice(0, 3).map(draftField));
           setFilter(emptyFilterGroup());
@@ -268,7 +280,7 @@ export function ViewEditorScene({
           });
         } else apply();
       } catch (cause) {
-        setError(extractRequestErrorMessage(cause));
+        if (generation === sourceGeneration.current) setError(extractRequestErrorMessage(cause));
       }
     },
     [catalog?.id, fields.length, modal, source, sourceLocked, t],
@@ -314,6 +326,10 @@ export function ViewEditorScene({
   };
 
   const save = async () => {
+    if (!canManageDerivedViews(snapshot)) {
+      setError(t("dataCatalog.viewEditor.noAccess"));
+      return;
+    }
     if (!name.trim()) {
       setError(t("dataCatalog.viewEditor.invalidName"));
       return;
@@ -403,6 +419,7 @@ export function ViewEditorScene({
       </section>
     );
   if (
+    !canManageDerivedViews(snapshot) ||
     !catalog ||
     catalog.builtin ||
     !catalog.enabled ||

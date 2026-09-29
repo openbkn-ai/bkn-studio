@@ -11,6 +11,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -24,6 +25,7 @@ import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEd
 import { parseFilterCondition } from "@/modules/data-catalog/lib/filter-tree";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import { isResourceIndexReadOnly } from "@/modules/data-catalog/lib/resource-index-access";
+import { canManageDerivedViews } from "@/modules/data-catalog/lib/view-access";
 import {
   getCatalogResource,
   updateCatalogResource,
@@ -58,6 +60,7 @@ export function ResourceDetailPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
+  const { snapshot } = useEntitlementContext();
   const [schemaPage, setSchemaPage] = useState(1);
   const [schemaPageSize, setSchemaPageSize] = useState(10);
   const [editing, setEditing] = useState(false);
@@ -65,6 +68,7 @@ export function ResourceDetailPanel({
   const [resource, setResource] = useState(resourceProp);
   const [descriptionDraft, setDescriptionDraft] = useState(resourceProp.description);
   const [schemaDraft, setSchemaDraft] = useState<ResourceSchemaField[]>(resourceProp.schema);
+  const [filterSourceFields, setFilterSourceFields] = useState<ResourceSchemaField[]>([]);
   const resourceIdentityKey = `${resourceProp.id}:${resourceProp.expectedUpdateTime}`;
   const resourceIdentityRef = useRef(resourceIdentityKey);
   resourceIdentityRef.current = resourceIdentityKey;
@@ -104,6 +108,24 @@ export function ResourceDetailPanel({
   useEffect(() => {
     setSchemaPage(1);
   }, [resource.id]);
+
+  useEffect(() => {
+    const sourceId = resource.logicDefinition?.sourceResourceId;
+    let cancelled = false;
+    setFilterSourceFields([]);
+    if (resource.category === "logicview" && sourceId) {
+      void getCatalogResource(sourceId)
+        .then((source) => {
+          if (!cancelled) setFilterSourceFields(source?.schema ?? []);
+        })
+        .catch(() => {
+          // The raw source field name remains visible when source detail is unavailable.
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [resource.category, resource.logicDefinition?.sourceResourceId]);
 
   useEffect(() => {
     setEditing(false);
@@ -388,6 +410,7 @@ export function ResourceDetailPanel({
               resource.logicType === "derived" &&
               !catalog?.builtin &&
               canEdit &&
+              canManageDerivedViews(snapshot) &&
               resource.logicDefinition?.sourceResourceId ? (
               <AppButton
                 onClick={() => {
@@ -771,7 +794,7 @@ export function ResourceDetailPanel({
         <div className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.viewFixedFilter")}</h3>
           {fixedFilter?.children.length ? (
-            <FilterTreeEditor fields={resource.schema} readOnly value={fixedFilter} />
+            <FilterTreeEditor fields={filterSourceFields} readOnly value={fixedFilter} />
           ) : resource.logicDefinition?.filterCondition ? (
             <Alert message={t("dataCatalog.resource.filterUnsupported")} showIcon type="warning" />
           ) : (

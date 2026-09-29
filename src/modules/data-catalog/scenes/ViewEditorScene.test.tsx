@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,6 +17,20 @@ const getResourceMock = vi.hoisted(() => vi.fn());
 const listResourcesMock = vi.hoisted(() => vi.fn());
 const createViewMock = vi.hoisted(() => vi.fn());
 const updateViewMock = vi.hoisted(() => vi.fn());
+const editionMock = vi.hoisted(() => ({ value: "professional" }));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useEntitlementContext: () => ({
+    snapshot: {
+      edition: editionMock.value,
+      licensed: editionMock.value !== "community",
+      capabilities: [],
+      extensions: [],
+      limits: {},
+      state: "valid",
+    },
+  }),
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -86,6 +100,7 @@ function renderEditor(props: { catalogId?: string; resourceId?: string }) {
 describe("ViewEditorScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    editionMock.value = "professional";
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       addListener: vi.fn(),
@@ -331,6 +346,44 @@ describe("ViewEditorScene", () => {
     expect(screen.queryByText("other_orders")).toBeNull();
   });
 
+  it("keeps the latest source when detail requests finish out of order", async () => {
+    let finishFirst!: (value: CatalogResource) => void;
+    let finishSecond!: (value: CatalogResource) => void;
+    const first = new Promise<CatalogResource>((resolve) => {
+      finishFirst = resolve;
+    });
+    const second = new Promise<CatalogResource>((resolve) => {
+      finishSecond = resolve;
+    });
+    const alpha = { ...source, id: "source-a", name: "Alpha", sourceIdentifier: "public.alpha" };
+    const beta = { ...source, id: "source-b", name: "Beta", sourceIdentifier: "public.beta" };
+    listResourcesMock.mockImplementation(({ category }: { category: string }) =>
+      Promise.resolve({
+        items: category === "table" ? [alpha, beta] : [],
+        total: category === "table" ? 2 : 0,
+      }),
+    );
+    getResourceMock.mockImplementation((id: string) =>
+      id === "source-a" ? first : id === "source-b" ? second : Promise.resolve(null),
+    );
+    renderEditor({ catalogId: "cat-1" });
+    await screen.findByText("dataCatalog.viewEditor.typeTitle");
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog.viewEditor.derivedType/ }));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    const picker = screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" });
+    fireEvent.mouseDown(picker);
+    fireEvent.click(await screen.findByText("public.alpha"));
+    fireEvent.mouseDown(picker);
+    fireEvent.click(await screen.findByText("public.beta"));
+    finishSecond(beta);
+    await waitFor(() =>
+      expect(document.querySelector(".ant-select-selection-item")?.textContent).toContain("Beta"),
+    );
+    finishFirst(alpha);
+    await act(async () => {});
+    expect(document.querySelector(".ant-select-selection-item")?.textContent).toContain("Beta");
+  });
+
   it("rejects duplicate output display names before creating a view", async () => {
     const sourceWithTwoFields = {
       ...source,
@@ -487,6 +540,38 @@ describe("ViewEditorScene", () => {
       schema: Array<Record<string, unknown>>;
     };
     expect(updatePayload.schema[0]).not.toHaveProperty("features");
+  });
+
+  it("fills a missing display name from the output field name when editing", async () => {
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logicview",
+      logicType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      schema: [{ ...source.schema[0], displayName: undefined, features: [] }],
+      logicDefinition: { sourceResourceId: "source-1" },
+    } as CatalogResource;
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : source),
+    );
+    renderEditor({ resourceId: "view-1" });
+    expect(await screen.findByLabelText("dataCatalog.viewEditor.displayName 1")).toHaveValue("id");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    await waitFor(() =>
+      expect(updateViewMock).toHaveBeenCalledWith(
+        "view-1",
+        expect.objectContaining({ schema: [expect.objectContaining({ displayName: "id" })] }),
+      ),
+    );
+  });
+
+  it("blocks the direct View editor route without a professional license", async () => {
+    editionMock.value = "community";
+    renderEditor({ catalogId: "cat-1" });
+    expect(await screen.findByText("dataCatalog.viewEditor.noAccess")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /dataCatalog.viewEditor.derivedType/ })).toBeNull();
   });
 
   it("preserves an unsupported existing filter while editing display names", async () => {

@@ -44,4 +44,18 @@ describe("filter-tree", () => {
     parsed.children[0] = { kind: "rule", field: "age", operation: ">", value: "NaN" };
     expect(filterValidationError(parsed, fields)).toBe("invalidNumber");
   });
+
+  it("keeps an unsafe bigint literal exact for the request serializer", async () => {
+    const parsed = parseFilterCondition({
+      field: "age",
+      operation: ">",
+      value: "9007199254740993",
+    })!;
+    expect(filterValidationError(parsed, fields)).toBeNull();
+    const { transformPrecisionSafeJSONRequest } =
+      await import("@/framework/request/precision-safe-json");
+    expect(transformPrecisionSafeJSONRequest(filterToBackend(parsed, fields))).toContain(
+      '"value":9007199254740993',
+    );
+  });
 });

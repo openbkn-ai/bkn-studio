@@ -15,6 +15,28 @@ import type { CatalogRecord } from "@/shared/catalog";
 const listCatalogResourcePageMock = vi.hoisted(() => vi.fn());
 const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
 const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
+const editionMock = vi.hoisted(() => ({ value: "professional" }));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useEntitlement: () => ({
+    edition: editionMock.value,
+    licensed: editionMock.value !== "community",
+    capabilities: [],
+    extensions: ["enterprise"],
+    limits: {},
+    state: "valid",
+  }),
+  useEntitlementContext: () => ({
+    snapshot: {
+      edition: editionMock.value,
+      licensed: editionMock.value !== "community",
+      capabilities: [],
+      extensions: ["enterprise"],
+      limits: {},
+      state: "valid",
+    },
+  }),
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -87,6 +109,7 @@ function renderPanel(record: CatalogRecord, onOpenResource = vi.fn(), initialEnt
 describe("ResourceListPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    editionMock.value = "professional";
     currentPermissions.value = [];
     drawerProps.value = null;
     listCatalogResourcePageMock.mockResolvedValue({ items: [], total: 0 });
@@ -223,6 +246,13 @@ describe("ResourceListPanel", () => {
     expect(
       authorization.compareDocumentPosition(create) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("hides View creation without a professional license", async () => {
+    editionMock.value = "community";
+    renderPanel({ ...catalog, operations: ["resource_manage"] });
+    await act(async () => {});
+    expect(screen.queryByText("dataCatalog.viewEditor.create")).toBeNull();
   });
 
   it("does not offer View creation on built-in or disabled Catalogs", async () => {

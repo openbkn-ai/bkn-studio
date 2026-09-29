@@ -14,6 +14,20 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
 const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+const editionMock = vi.hoisted(() => ({ value: "professional" }));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useEntitlementContext: () => ({
+    snapshot: {
+      edition: editionMock.value,
+      licensed: editionMock.value !== "community",
+      capabilities: [],
+      extensions: [],
+      limits: {},
+      state: "valid",
+    },
+  }),
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -73,6 +87,8 @@ const resource: CatalogResource = {
 describe("ResourceDetailPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    editionMock.value = "professional";
+    getCatalogResourceMock.mockResolvedValue(null);
     updateCatalogResourceMock.mockResolvedValue(undefined);
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
@@ -366,6 +382,37 @@ describe("ResourceDetailPanel", () => {
     expect(filterCard.getByText("1000")).toBeTruthy();
     expect(filterCard.queryByRole("textbox")).toBeNull();
     expect(filterCard.queryByRole("button")).toBeNull();
+  });
+
+  it("uses source schema labels for fixed filters on hidden source fields", async () => {
+    getCatalogResourceMock.mockResolvedValue({
+      ...resource,
+      id: "source-orders",
+      schema: [{ name: "internal_score", displayName: "Source Score", type: "integer" }],
+    });
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logicview",
+            logicType: "derived",
+            schema: [{ name: "score_alias", displayName: "Output Score", type: "string" }],
+            logicDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: { field: "internal_score", operation: ">", value: 10 },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const filterCard = screen.getByText("dataCatalog.resource.viewFixedFilter").parentElement!;
+    expect(await within(filterCard).findByText("Source Score")).toBeTruthy();
+    expect(within(filterCard).getByText("internal_score")).toBeTruthy();
+    expect(within(filterCard).queryByText("Output Score")).toBeNull();
   });
 
   it("keeps discovery status visible for a table", () => {

@@ -34,7 +34,7 @@ describe("resource.service · previewCatalogResource", () => {
     });
     const { previewCatalogResource } =
       await import("@/modules/data-catalog/services/resource.service");
-    const { transformPrecisionSafeJSONResponse } =
+    const { transformPrecisionSafeJSONRequest, transformPrecisionSafeJSONResponse } =
       await import("@/framework/request/precision-safe-json");
 
     const result = await previewCatalogResource("r-1", { limit: 10, offset: 20 });
@@ -46,8 +46,9 @@ describe("resource.service · previewCatalogResource", () => {
         paging: { limit: 10, mode: "single", offset: 20 },
       },
       {
-        headers: { "X-HTTP-Method-Override": "GET" },
+        headers: { "Content-Type": "application/json", "X-HTTP-Method-Override": "GET" },
         skipErrorToast: true,
+        transformRequest: transformPrecisionSafeJSONRequest,
         transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
@@ -61,6 +62,59 @@ describe("resource.service · previewCatalogResource", () => {
     const filterCondition = { field: "id", operation: ">", value: 10 };
     await previewCatalogResource("r-1", { filterCondition, limit: 10, offset: 0 });
     expect(postMock.mock.calls[0]?.[1]).toMatchObject({ filter_condition: filterCondition });
+  });
+
+  it("applies mock preview filters before pagination and total counting", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const filterCondition = {
+      operation: "and",
+      sub_conditions: [
+        { field: "customer_id", operation: ">", value: 99999 },
+        {
+          operation: "or",
+          sub_conditions: [
+            { field: "customer_id", operation: "==", value: 100000 },
+            { field: "customer_id", operation: "==", value: 100007 },
+          ],
+        },
+      ],
+    };
+    const result = await previewCatalogResource("res-customers", {
+      filterCondition,
+      limit: 10,
+      offset: 0,
+    });
+    expect(result.total).toBe(2);
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0]?.customer_id).toBe(100000);
+    expect(result.rows[1]?.customer_id).toBe(100007);
+    const nextPage = await previewCatalogResource("res-customers", {
+      filterCondition,
+      limit: 10,
+      offset: 2,
+    });
+    expect(nextPage.rows).toHaveLength(0);
+    expect(nextPage.total).toBe(2);
+  });
+
+  it("applies a mock derived View's fixed filter to its source rows", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const result = await previewCatalogResource("res-high-value-orders-view", {
+      limit: 20,
+      offset: 0,
+    });
+    expect(result.total).toBeGreaterThan(0);
+    expect(result.rows.length).toBeGreaterThan(0);
+    for (const row of result.rows) {
+      expect(Number(row.amount)).toBeGreaterThan(1000);
+      expect([101, 102]).toContain(row.customer_id);
+    }
   });
 
   it("preserves an unsafe int64 preview total", async () => {
