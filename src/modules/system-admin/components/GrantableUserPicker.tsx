@@ -79,17 +79,17 @@ export function GrantableUserPicker({
   const [searchFailed, setSearchFailed] = useState(false);
   const requestSequence = useRef(0);
   const active = inline || open;
-  const disabledIdSet = useMemo(() => new Set(disabledUserIds), [disabledUserIds]);
-
-  useEffect(() => {
-    setKnownUsers((current) => mergeUsers(current, initialUsers));
-  }, [initialUsers]);
-
   const disabledUserIdsKey = disabledUserIds.join("\u0000");
   const disabledIdSet = useMemo(
     () => new Set(disabledUserIdsKey ? disabledUserIdsKey.split("\u0000") : []),
     [disabledUserIdsKey],
   );
+
+  useEffect(() => {
+    setKnownUsers((current) => mergeUsers(current, initialUsers));
+  }, [initialUsers]);
+
+  useEffect(() => {
     const sequence = ++requestSequence.current;
     if (!active || !debouncedSearch || !resourceId || !resourceType) {
       setVisibleUsers([]);
