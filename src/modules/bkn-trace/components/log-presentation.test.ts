@@ -161,6 +161,7 @@ describe("log presentation", () => {
       target: { id: "material", name: "物料", type: "object_type" },
     } as LogRecord;
 
+    expect(presentLogAction(record, translateZhCN)).toBe("鉴权判定");
     expect(presentLogTarget(record, translateZhCN)).toEqual({
       primary: "物料",
       secondary: "material",

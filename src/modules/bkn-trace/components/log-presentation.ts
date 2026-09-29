@@ -121,7 +121,7 @@ export function presentLogActor(
 
 function semanticActionKey(record: LogRecord) {
   const semanticTarget = semanticTargetKey(record);
-  if (semanticTarget === "authorization_decision") {
+  if (record.eventName === "authorization.decided" || semanticTarget === "authorization_decision") {
     return "authorization_decided";
   }
   if (semanticTarget === "permission_request" && record.action === "get") {
