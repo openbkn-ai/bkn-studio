@@ -37,4 +37,11 @@ describe("checkPermissionRequestResource", () => {
 
     await expect(checkPermissionRequestResource(request)).resolves.toBe("exists");
   });
+
+  it("identifies a request marked as resource deleted without reading the resource", async () => {
+    await expect(
+      checkPermissionRequestResource({ ...request, status: "resource_deleted" }),
+    ).resolves.toBe("not_found");
+    expect(getMock).not.toHaveBeenCalled();
+  });
 });

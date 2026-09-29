@@ -146,8 +146,29 @@
   display: inline-flex;
   height: auto;
   line-height: 22px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
   padding: 0 8px;
+  text-overflow: ellipsis;
   vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.resourcePillAction {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.resourcePillAction:hover {
+  background: var(--color-primary-100);
+}
+
+.resourceReferenceInline {
+  display: inline-flex;
+  max-width: min(100%, 240px);
+  min-width: 0;
 }
 
 .sectionTitle {

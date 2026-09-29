@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { isRequestForbidden } from "@/framework/request/error-message";
+import { isRequestForbidden, isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { type SingleEntryResponse, unwrapSingleEntryResponse } from "@/framework/request/normalize";
 import type { PermissionRequest } from "@/modules/account/services/permission-requests.service";
@@ -46,6 +46,7 @@ function resourceReadPath(request: PermissionRequest) {
 export async function checkPermissionRequestResource(
   request: PermissionRequest,
 ): Promise<PermissionRequestResourceCheck> {
+  if (request.status === "resource_deleted") return "not_found";
   const path = resourceReadPath(request);
   if (!path) return "unsupported";
 
@@ -56,6 +57,7 @@ export async function checkPermissionRequestResource(
     // authoritative for reporting that the resource was deleted.
     return unwrapSingleEntryResponse(response.data) ? "exists" : "unavailable";
   } catch (error) {
+    if (isRequestNotFound(error)) return "not_found";
     if (isRequestForbidden(error)) return "forbidden";
     return "unavailable";
   }

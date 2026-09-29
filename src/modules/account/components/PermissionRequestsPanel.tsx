@@ -190,6 +190,12 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
       .join(t("account.permissionRequests.operationSeparator"));
   const resourceName = (request: PermissionRequest) =>
     request.resource_name || `${request.resource_type}:${request.resource_id}`;
+  const resourceCheckMessageKey = (result: ResourceCheckState["result"]) => {
+    if (result === "not_found") return "account.permissionRequests.resourceDeletedNotice";
+    if (result === "forbidden") return "account.permissionRequests.resourceDetailsForbidden";
+    if (result === "unsupported") return "account.permissionRequests.resourceDetailsUnavailable";
+    return "account.permissionRequests.resourceCheckFailed";
+  };
   const requestContentText = (request: PermissionRequest) =>
     t("account.permissionRequests.contentTextValue", {
       resource: resourceName(request),
@@ -285,37 +291,68 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
       return null;
     }
   }
-  const requestContent = (request: PermissionRequest) => (
-    <div className={styles.requestContent}>
-      <div className={styles.requestContentRow}>
-        <span className={styles.resourceIcon}>{resourceIcon(request.resource_type)}</span>
-        <span className={styles.requestContentLabel}>
-          {t("account.permissionRequests.resource")}：
-        </span>
-        <span className={styles.resourcePill}>{resourceName(request)}</span>
-      </div>
-      {(!request.proposal_kind || request.proposal_kind === "grant") && (
+  const requestContent = (request: PermissionRequest, linkResource = false) => {
+    const result = resourceCheck?.id === request.id ? resourceCheck.result : "checking";
+    const resourceLink = linkResource ? (
+      <button
+        className={`${styles.resourcePill} ${styles.resourcePillAction}`}
+        onClick={() => {
+          const path = resourceDetailPath(request);
+          if (result === "exists" && path) {
+            openResourceDetail(request);
+            return;
+          }
+          if (result === "checking") {
+            void message.info(t("account.permissionRequests.resourceChecking"));
+            return;
+          }
+          void message.warning(t(resourceCheckMessageKey(result)));
+        }}
+        title={resourceName(request)}
+        type="button"
+      >
+        {resourceName(request)}
+      </button>
+    ) : (
+      <span className={styles.resourcePill} title={resourceName(request)}>
+        {resourceName(request)}
+      </span>
+    );
+
+    return (
+      <div className={styles.requestContent}>
         <div className={styles.requestContentRow}>
+          <span className={styles.resourceIcon}>{resourceIcon(request.resource_type)}</span>
           <span className={styles.requestContentLabel}>
-            {t("account.permissionRequests.operations")}：
+            {t("account.permissionRequests.resource")}：
           </span>
-          <span className={styles.operationList}>
-            {requestOperationNames(request).map(({ id, name }) => (
-              <Tag
-                color={
-                  ["delete", "authorize", "full_business_access"].includes(id) ? "volcano" : "blue"
-                }
-                key={id}
-              >
-                {name}
-              </Tag>
-            ))}
-          </span>
+          <div className={styles.resourceReferenceInline}>{resourceLink}</div>
         </div>
-      )}
-      {proposalContent(request)}
-    </div>
-  );
+        {(!request.proposal_kind || request.proposal_kind === "grant") && (
+          <div className={styles.requestContentRow}>
+            <span className={styles.requestContentLabel}>
+              {t("account.permissionRequests.operations")}：
+            </span>
+            <span className={styles.operationList}>
+              {requestOperationNames(request).map(({ id, name }) => (
+                <Tag
+                  color={
+                    ["delete", "authorize", "full_business_access"].includes(id)
+                      ? "volcano"
+                      : "blue"
+                  }
+                  key={id}
+                >
+                  {name}
+                </Tag>
+              ))}
+            </span>
+          </div>
+        )}
+        {proposalContent(request)}
+      </div>
+    );
+  };
   const approveConfirmDescription = (request: PermissionRequest) => {
     if (request.proposal_kind === "row_filter") {
       return t("account.permissionRequests.rowFilterApprovalConfirmDescription");
@@ -339,34 +376,6 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
       // Fall through to the safe generic description for malformed legacy data.
     }
     return t("account.permissionRequests.approveConfirmDescription");
-  };
-  const resourceDetailsAction = (request: PermissionRequest) => {
-    const result = resourceCheck?.id === request.id ? resourceCheck.result : "checking";
-    if (result === "checking")
-      return (
-        <span className={styles.resourceCheckPending}>
-          {t("account.permissionRequests.resourceChecking")}
-        </span>
-      );
-    if (result === "exists")
-      return (
-        <Button
-          className={styles.detailLink}
-          onClick={() => openResourceDetail(request)}
-          type="link"
-        >
-          {t("account.permissionRequests.viewResourceDetails")}
-        </Button>
-      );
-    const messageKey =
-      result === "not_found"
-        ? "account.permissionRequests.resourceDeletedNotice"
-        : result === "forbidden"
-          ? "account.permissionRequests.resourceDetailsForbidden"
-          : result === "unsupported"
-            ? "account.permissionRequests.resourceDetailsUnavailable"
-            : "account.permissionRequests.resourceCheckFailed";
-    return <span className={styles.resourceCheckUnavailable}>{t(messageKey)}</span>;
   };
   const configureRowFilter = (request: PermissionRequest) => {
     const [networkId, objectTypeId] = request.resource_id.split("/", 2);
@@ -917,7 +926,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
                     <span className={styles.summaryLabel}>
                       {t("account.permissionRequests.content")}：
                     </span>
-                    <span className={styles.summaryValue}>{requestContent(detail)}</span>
+                    <span className={styles.summaryValue}>{requestContent(detail, true)}</span>
                   </div>
                   <div className={styles.summaryRow}>
                     <span className={styles.summaryLabel}>
@@ -944,12 +953,6 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
                     <span className={styles.summaryValue}>
                       {formatRequestTime(detail.created_at)}
                     </span>
-                  </div>
-                  <div className={styles.summaryRow}>
-                    <span className={styles.summaryLabel}>
-                      {t("account.permissionRequests.resourceDetails")}：
-                    </span>
-                    <span className={styles.summaryValue}>{resourceDetailsAction(detail)}</span>
                   </div>
                   {canConfigureRowFilter(detail) ? (
                     <Button onClick={() => configureRowFilter(detail)} type="primary">
