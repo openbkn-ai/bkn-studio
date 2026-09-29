@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
@@ -13,6 +13,7 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 const previewCatalogResourceMock = vi.hoisted(() => vi.fn());
 const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+const testFilterRule = vi.hoisted(() => ({ field: "id", operation: ">", value: "10" }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -40,6 +41,23 @@ vi.mock("@/framework/ui/common/TablePaginationBar", () => ({
   ),
 }));
 
+vi.mock("@/modules/data-catalog/components/FilterTreeEditor", () => ({
+  FilterTreeEditor: ({ onChange }: { onChange: (value: unknown) => void }) => (
+    <button
+      onClick={() =>
+        onChange({
+          kind: "group",
+          operation: "and",
+          children: [{ kind: "rule", ...testFilterRule }],
+        })
+      }
+      type="button"
+    >
+      set-test-filter
+    </button>
+  ),
+}));
+
 import { ResourcePreviewPanel } from "./ResourcePreviewPanel";
 
 const resource: CatalogResource = {
@@ -61,6 +79,126 @@ const resource: CatalogResource = {
 describe("ResourcePreviewPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.assign(testFilterRule, { field: "id", operation: ">", value: "10" });
+  });
+
+  it("shows type, display name, and field name together in Table and View headers", () => {
+    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
+    for (const category of ["table", "logicview"] as const) {
+      const { unmount } = render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            category,
+            schema: [
+              { name: "amount", displayName: "订单金额", type: "decimal(18,2)" },
+              { name: "status", type: "string" },
+            ],
+          }}
+        />,
+      );
+
+      const amount = screen.getByRole("columnheader", { name: /订单金额/ });
+      expect(within(amount).getByText("dec").closest("[title]")).toHaveAttribute(
+        "title",
+        "decimal(18,2)",
+      );
+      expect(within(amount).getByText("amount").parentElement?.className).not.toContain(
+        "namesInline",
+      );
+      const status = screen.getByRole("columnheader", { name: /status/ });
+      expect(within(status).getByText("[Str]")).toBeTruthy();
+      expect(within(status).getAllByText("status")).toHaveLength(1);
+      unmount();
+    }
+  });
+
+  it("applies and clears a temporary filter for both Table and View previews", async () => {
+    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
+    for (const category of ["table", "logicview"] as const) {
+      const { unmount } = render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, category, schema: [{ name: "id", type: "integer" }] }}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      await waitFor(() =>
+        expect(previewCatalogResourceMock).toHaveBeenCalledWith(
+          "resource-1",
+          expect.objectContaining({
+            filterCondition: {
+              operation: "and",
+              sub_conditions: [{ field: "id", operation: ">", value: 10 }],
+            },
+            offset: 0,
+          }),
+        ),
+      );
+      previewCatalogResourceMock.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.clearFilter" }));
+      await waitFor(() => {
+        expect(previewCatalogResourceMock).toHaveBeenCalledWith(
+          "resource-1",
+          expect.objectContaining({ offset: 0 }),
+        );
+        const latestQuery = previewCatalogResourceMock.mock.lastCall?.[1] as
+          Record<string, unknown> | undefined;
+        expect(latestQuery).not.toHaveProperty("filterCondition");
+      });
+      unmount();
+      previewCatalogResourceMock.mockClear();
+    }
+  });
+
+  it("drops an applied source Text filter before switching back to an index without keyword Feature", async () => {
+    Object.assign(testFilterRule, { field: "notes", operation: "==", value: "open" });
+    previewCatalogResourceMock.mockImplementation(
+      (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+        Promise.resolve({
+          querySource: query.ignoreLocalIndex ? "source" : "local_index",
+          rows: [],
+          total: 0,
+        }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          localIndexName: "idx_orders",
+          localIndexStatus: "available",
+          schema: [{ name: "notes", type: "text" }],
+        }}
+      />,
+    );
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
+    await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+    await waitFor(() => {
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toEqual({
+        filterCondition: {
+          operation: "and",
+          sub_conditions: [{ field: "notes", operation: "==", value: "open" }],
+        },
+        ignoreLocalIndex: true,
+        limit: 10,
+        offset: 0,
+      });
+    });
+    fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
+    await waitFor(() => {
+      const query = previewCatalogResourceMock.mock.lastCall?.[1] as Record<string, unknown>;
+      expect(query).not.toHaveProperty("filterCondition");
+      expect(query).not.toHaveProperty("ignoreLocalIndex");
+    });
+    expect(await screen.findByText("dataCatalog.preview.filterUnavailableForSource")).toBeTruthy();
   });
 
   it("uses the shared warning alert for a permission-disabled preview", () => {
@@ -180,6 +318,67 @@ describe("ResourcePreviewPanel", () => {
     expect((await screen.findByTestId("pagination-total")).textContent).toBe(
       String(Number.MAX_SAFE_INTEGER),
     );
+  });
+
+  it("uses the exact filtered total when the result fills one page", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: Array.from({ length: 10 }, (_, index) => ({ id: index + 1 })),
+      total: 10,
+    });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          columnCount: 1,
+          rowCount: 100,
+          schema: [{ name: "id", type: "integer" }],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+
+    await waitFor(() => {
+      expect(previewCatalogResourceMock).toHaveBeenLastCalledWith("resource-1", {
+        filterCondition: {
+          operation: "and",
+          sub_conditions: [{ field: "id", operation: ">", value: 10 }],
+        },
+        limit: 10,
+        offset: 0,
+      });
+      expect(screen.getByTestId("pagination-total").textContent).toBe("10");
+    });
+  });
+
+  it("does not replace a derived view's fixed-filter total with its row count", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: Array.from({ length: 10 }, (_, index) => ({ id: index + 1 })),
+      total: 10,
+    });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          category: "logicview",
+          columnCount: 1,
+          logicDefinition: {
+            sourceResourceId: "source-1",
+            filterCondition: { field: "id", operation: ">", value: 10 },
+          },
+          rowCount: 100,
+          schema: [{ name: "id", type: "integer" }],
+        }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("pagination-total").textContent).toBe("10"));
   });
 
   it("does not request Binary data or expose its controls for datasets", async () => {
@@ -427,6 +626,36 @@ describe("ResourcePreviewPanel", () => {
         offset: 0,
       });
     });
+  });
+
+  it("limits index preview pages to the backend result window while showing the actual total", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      querySource: "local_index",
+      rows: Array.from({ length: 10 }, (_, id) => ({ id })),
+      total: 12000,
+    });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+
+    expect(await screen.findByTestId("pagination-total")).toHaveTextContent("10000");
+    expect(screen.getByText("dataCatalog.preview.indexPageLimit")).toBeTruthy();
+  });
+
+  it("keeps source preview pages accessible beyond the index result window", async () => {
+    previewCatalogResourceMock.mockResolvedValue({ querySource: "source", rows: [], total: 12000 });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+
+    expect(await screen.findByTestId("pagination-total")).toHaveTextContent("12000");
+    expect(screen.queryByText("dataCatalog.preview.indexPageLimit")).toBeNull();
   });
 
   it("ignores a late source Binary-content response after returning to the local index", async () => {

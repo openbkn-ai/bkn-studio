@@ -44,6 +44,11 @@ export const subscriptionEnUS = {
           "Certified and advanced source connectors (SQL Server and other commercial databases). Community ships the basic connectors only.",
         name: "Advanced data connectivity",
       },
+      vega_logic_view: {
+        description:
+          "Create derived logical views from tables or indexes with selected fields and fixed filters.",
+        name: "Logical views",
+      },
       graph_explorer: {
         bullets: {
           b1: "Find instances by semantic search, filter, browsing or Cypher, then expand along relations hop by hop",

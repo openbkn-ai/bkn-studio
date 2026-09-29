@@ -190,7 +190,13 @@ export function DataConnectConfigForm({
               rows={2}
             />
           </InlineField>
-          <InlineField label={t("dataConnect.tags")} name="tags" rules={tagRules} span="full">
+          <InlineField
+            extra={t("dataConnect.tagsHint")}
+            label={t("dataConnect.tags")}
+            name="tags"
+            rules={tagRules}
+            span="full"
+          >
             <Select mode="tags" open={false} placeholder={t("dataConnect.tagsPlaceholder")} />
           </InlineField>
         </div>

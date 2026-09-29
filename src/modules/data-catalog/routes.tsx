@@ -22,6 +22,11 @@ const ResourceWorkspacePage = lazy(async () => {
   return { default: module.ResourceWorkspacePage };
 });
 
+const ViewEditorPage = lazy(async () => {
+  const module = await import("@/modules/data-catalog/pages/ViewEditorPage");
+  return { default: module.ViewEditorPage };
+});
+
 const TaskManagementPage = lazy(async () => {
   const module = await import("@/modules/data-catalog/pages/TaskManagementPage");
   return { default: module.TaskManagementPage };
@@ -70,6 +75,16 @@ export const dataCatalogRoutes: RouteObject[] = [
         },
       },
     ],
+  },
+  {
+    path: "data-catalog/catalog/:catalogId/views/new",
+    handle: { console: dataCatalogConsole },
+    element: withRouteLoading("catalog:resource_manage", <ViewEditorPage />),
+  },
+  {
+    path: "data-catalog/resource/:resourceId/edit",
+    handle: { console: dataCatalogConsole },
+    element: withRouteLoading("catalog:resource_manage", <ViewEditorPage />),
   },
   {
     path: "data-catalog/resource/:resourceId",

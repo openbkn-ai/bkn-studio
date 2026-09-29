@@ -45,6 +45,10 @@ export const subscriptionZhCN = {
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",
       },
+      vega_logic_view: {
+        description: "基于数据表或索引创建衍生逻辑视图，配置输出字段与固定过滤条件",
+        name: "逻辑视图",
+      },
       graph_explorer: {
         bullets: {
           b1: "语义检索、条件、浏览或 Cypher 找到实例,沿关系逐跳展开",

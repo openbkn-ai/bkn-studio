@@ -11,6 +11,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -20,8 +21,11 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
+import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
+import { parseFilterCondition } from "@/modules/data-catalog/lib/filter-tree";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import { isResourceIndexReadOnly } from "@/modules/data-catalog/lib/resource-index-access";
+import { canManageDerivedViews } from "@/modules/data-catalog/lib/view-access";
 import {
   getCatalogResource,
   updateCatalogResource,
@@ -56,6 +60,7 @@ export function ResourceDetailPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
+  const { snapshot } = useEntitlementContext();
   const [schemaPage, setSchemaPage] = useState(1);
   const [schemaPageSize, setSchemaPageSize] = useState(10);
   const [editing, setEditing] = useState(false);
@@ -63,6 +68,7 @@ export function ResourceDetailPanel({
   const [resource, setResource] = useState(resourceProp);
   const [descriptionDraft, setDescriptionDraft] = useState(resourceProp.description);
   const [schemaDraft, setSchemaDraft] = useState<ResourceSchemaField[]>(resourceProp.schema);
+  const [filterSourceFields, setFilterSourceFields] = useState<ResourceSchemaField[]>([]);
   const resourceIdentityKey = `${resourceProp.id}:${resourceProp.expectedUpdateTime}`;
   const resourceIdentityRef = useRef(resourceIdentityKey);
   resourceIdentityRef.current = resourceIdentityKey;
@@ -72,6 +78,7 @@ export function ResourceDetailPanel({
     isResourceIndexReadOnly(catalog) || !canEdit || resource.category === "logicview";
   const schemaOffset = (schemaPage - 1) * schemaPageSize;
   const rowCount = resource.rowCount ?? resource.estimatedRowCount;
+  const fixedFilter = parseFilterCondition(resource.logicDefinition?.filterCondition);
   const rowCountDisplay =
     rowCount === null || rowCount === undefined
       ? "-"
@@ -101,6 +108,24 @@ export function ResourceDetailPanel({
   useEffect(() => {
     setSchemaPage(1);
   }, [resource.id]);
+
+  useEffect(() => {
+    const sourceId = resource.logicDefinition?.sourceResourceId;
+    let cancelled = false;
+    setFilterSourceFields([]);
+    if (resource.category === "logicview" && sourceId) {
+      void getCatalogResource(sourceId)
+        .then((source) => {
+          if (!cancelled) setFilterSourceFields(source?.schema ?? []);
+        })
+        .catch(() => {
+          // The raw source field name remains visible when source detail is unavailable.
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [resource.category, resource.logicDefinition?.sourceResourceId]);
 
   useEffect(() => {
     setEditing(false);
@@ -351,7 +376,7 @@ export function ResourceDetailPanel({
         </div>
       ) : null}
 
-      {resource.category === "logicview" ? (
+      {resource.category === "logicview" && resource.logicType !== "derived" ? (
         <Alert message={t("dataCatalog.resource.logicViewReadOnly")} showIcon type="info" />
       ) : null}
 
@@ -381,6 +406,19 @@ export function ResourceDetailPanel({
                   {t("common.save")}
                 </AppButton>
               </>
+            ) : resource.category === "logicview" &&
+              resource.logicType === "derived" &&
+              !catalog?.builtin &&
+              canEdit &&
+              canManageDerivedViews(snapshot) &&
+              resource.logicDefinition?.sourceResourceId ? (
+              <AppButton
+                onClick={() => {
+                  void navigate(`/data-catalog/resource/${resource.id}/edit`);
+                }}
+              >
+                {t("dataCatalog.viewEditor.edit")}
+              </AppButton>
             ) : !readOnly ? (
               <AppButton onClick={() => setEditing(true)}>
                 {t("dataCatalog.resource.editFields")}
@@ -439,13 +477,17 @@ export function ResourceDetailPanel({
             </span>
           </div>
 
-          <div className={styles.basicInfoItem}>
+          <div
+            className={`${styles.basicInfoItem} ${resource.category === "logicview" ? styles.basicInfoHalf : ""}`}
+          >
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.category")}</span>
             <span className={styles.basicInfoValue}>
               {t(`dataCatalog.categories.${resource.category}`)}
             </span>
           </div>
-          <div className={styles.basicInfoItem}>
+          <div
+            className={`${styles.basicInfoItem} ${resource.category === "logicview" ? styles.basicInfoHalf : ""}`}
+          >
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.enabledStatus")}</span>
             <span className={styles.basicInfoValue}>
               <Tag
@@ -457,57 +499,65 @@ export function ResourceDetailPanel({
               </Tag>
             </span>
           </div>
-          <div className={styles.basicInfoItem}>
-            <span className={styles.basicInfoLabel}>
-              {t("dataCatalog.resource.discoverStatus")}
-            </span>
-            <span className={styles.basicInfoValue}>
-              {resource.lastDiscoverStatus ? (
-                <Tag
-                  className={
-                    resource.lastDiscoverStatus === "error" ||
-                    resource.lastDiscoverStatus === "missing"
-                      ? styles.statusTagError
-                      : resource.lastDiscoverStatus === "new" ||
-                          resource.lastDiscoverStatus === "updated"
-                        ? styles.statusTagProcessing
-                        : styles.statusTagSuccess
-                  }
-                >
-                  {t(`dataCatalog.discoverStatuses.${resource.lastDiscoverStatus}`)}
-                </Tag>
-              ) : (
-                "-"
-              )}
-            </span>
-          </div>
+          {resource.category !== "logicview" ? (
+            <div className={styles.basicInfoItem}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.discoverStatus")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.lastDiscoverStatus ? (
+                  <Tag
+                    className={
+                      resource.lastDiscoverStatus === "error" ||
+                      resource.lastDiscoverStatus === "missing"
+                        ? styles.statusTagError
+                        : resource.lastDiscoverStatus === "new" ||
+                            resource.lastDiscoverStatus === "updated"
+                          ? styles.statusTagProcessing
+                          : styles.statusTagSuccess
+                    }
+                  >
+                    {t(`dataCatalog.discoverStatuses.${resource.lastDiscoverStatus}`)}
+                  </Tag>
+                ) : (
+                  "-"
+                )}
+              </span>
+            </div>
+          ) : null}
 
-          <div className={styles.basicInfoItem}>
-            <span className={styles.basicInfoLabel}>
-              {t("dataCatalog.resource.resourceStatus")}
-            </span>
-            <span className={styles.basicInfoValue}>
-              {resource.status ? (
-                <Tag
-                  className={
-                    resource.status === "active"
-                      ? styles.statusTagSuccess
-                      : resource.status === "stale"
-                        ? styles.statusTagWarning
-                        : styles.statusTagNeutral
-                  }
-                >
-                  {t(`dataCatalog.resourceStatuses.${resource.status}`)}
-                </Tag>
-              ) : (
-                "-"
-              )}
-            </span>
-          </div>
-          <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.statusMessage")}</span>
-            <span className={styles.basicInfoValue}>{resource.statusMessage || "-"}</span>
-          </div>
+          {resource.category !== "logicview" ? (
+            <>
+              <div className={styles.basicInfoItem}>
+                <span className={styles.basicInfoLabel}>
+                  {t("dataCatalog.resource.resourceStatus")}
+                </span>
+                <span className={styles.basicInfoValue}>
+                  {resource.status ? (
+                    <Tag
+                      className={
+                        resource.status === "active"
+                          ? styles.statusTagSuccess
+                          : resource.status === "stale"
+                            ? styles.statusTagWarning
+                            : styles.statusTagNeutral
+                      }
+                    >
+                      {t(`dataCatalog.resourceStatuses.${resource.status}`)}
+                    </Tag>
+                  ) : (
+                    "-"
+                  )}
+                </span>
+              </div>
+              <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
+                <span className={styles.basicInfoLabel}>
+                  {t("dataCatalog.resource.statusMessage")}
+                </span>
+                <span className={styles.basicInfoValue}>{resource.statusMessage || "-"}</span>
+              </div>
+            </>
+          ) : null}
 
           <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
             <span className={styles.basicInfoLabel}>
@@ -529,28 +579,37 @@ export function ResourceDetailPanel({
             <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
           </div>
 
-          <div className={styles.basicInfoItem}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.indexState")}</span>
-            <span className={styles.basicInfoValue}>
-              <Tag
-                className={
-                  resource.localIndexStatus === "available"
-                    ? styles.statusTagSuccess
-                    : resource.localIndexStatus === "stale"
-                      ? styles.statusTagWarning
-                      : styles.statusTagNeutral
-                }
-              >
-                {t(`dataCatalog.resource.localIndexStatuses.${resource.localIndexStatus}`)}
-              </Tag>
-            </span>
-          </div>
-          <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.indexName")}</span>
-            <span className={styles.basicInfoValue}>
-              {renderCopyableValue(t("dataCatalog.resource.indexName"), resource.localIndexName)}
-            </span>
-          </div>
+          {resource.category !== "logicview" ? (
+            <>
+              <div className={styles.basicInfoItem}>
+                <span className={styles.basicInfoLabel}>
+                  {t("dataCatalog.resource.indexState")}
+                </span>
+                <span className={styles.basicInfoValue}>
+                  <Tag
+                    className={
+                      resource.localIndexStatus === "available"
+                        ? styles.statusTagSuccess
+                        : resource.localIndexStatus === "stale"
+                          ? styles.statusTagWarning
+                          : styles.statusTagNeutral
+                    }
+                  >
+                    {t(`dataCatalog.resource.localIndexStatuses.${resource.localIndexStatus}`)}
+                  </Tag>
+                </span>
+              </div>
+              <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
+                <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.indexName")}</span>
+                <span className={styles.basicInfoValue}>
+                  {renderCopyableValue(
+                    t("dataCatalog.resource.indexName"),
+                    resource.localIndexName,
+                  )}
+                </span>
+              </div>
+            </>
+          ) : null}
 
           <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.creator")}</span>
@@ -575,6 +634,30 @@ export function ResourceDetailPanel({
         <div className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.sourceMetadata")}</h3>
           <div className={styles.basicInfo}>
+            {resource.category === "logicview" ? (
+              <div className={styles.basicInfoItem}>
+                <span className={styles.basicInfoLabel}>
+                  {t("dataCatalog.resource.viewSource")}
+                </span>
+                <span className={styles.basicInfoValue}>
+                  {resource.logicDefinition?.sourceResourceId ? (
+                    <button
+                      className={styles.textLink}
+                      onClick={() => {
+                        void navigate(
+                          `/data-catalog/resource/${resource.logicDefinition?.sourceResourceId}`,
+                        );
+                      }}
+                      type="button"
+                    >
+                      {resource.logicDefinition.sourceResourceId}
+                    </button>
+                  ) : (
+                    "-"
+                  )}
+                </span>
+              </div>
+            ) : null}
             <div className={styles.basicInfoItem}>
               <span className={styles.basicInfoLabel}>
                 {t("dataCatalog.resource.originalName")}
@@ -583,20 +666,24 @@ export function ResourceDetailPanel({
                 {resource.sourceMetadata?.originalName || "-"}
               </span>
             </div>
-            <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
-              <span className={styles.basicInfoLabel}>
-                {t("dataCatalog.resource.originalDescription")}
-              </span>
-              <span className={styles.basicInfoValue}>
-                <span
-                  className={styles.basicInfoDescription}
-                  title={resource.sourceMetadata?.originalDescription || undefined}
-                >
-                  {resource.sourceMetadata?.originalDescription || "-"}
+            {resource.category !== "logicview" ? (
+              <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
+                <span className={styles.basicInfoLabel}>
+                  {t("dataCatalog.resource.originalDescription")}
                 </span>
-              </span>
-            </div>
-            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                <span className={styles.basicInfoValue}>
+                  <span
+                    className={styles.basicInfoDescription}
+                    title={resource.sourceMetadata?.originalDescription || undefined}
+                  >
+                    {resource.sourceMetadata?.originalDescription || "-"}
+                  </span>
+                </span>
+              </div>
+            ) : null}
+            <div
+              className={`${styles.basicInfoItem} ${resource.category === "logicview" ? "" : styles.basicInfoQuarter}`}
+            >
               <span className={styles.basicInfoLabel}>
                 {t("dataCatalog.resource.sourceObjectType")}
               </span>
@@ -609,52 +696,62 @@ export function ResourceDetailPanel({
                   : "-"}
               </span>
             </div>
-            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-              <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.schemaName")}</span>
-              <span className={styles.basicInfoValue}>{resource.schemaName || "-"}</span>
-            </div>
-            <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
-              <span className={styles.basicInfoLabel}>
-                {t("dataCatalog.resource.sourcePrimaryKeys")}
-              </span>
-              <span className={styles.basicInfoValue}>
-                {resource.sourceMetadata?.primaryKeys?.length ? (
-                  <Space size={[8, 8]} wrap>
-                    {resource.sourceMetadata.primaryKeys.map((key) => (
-                      <Tag className={styles.resourceTag} key={key}>
-                        {key}
-                      </Tag>
-                    ))}
-                  </Space>
-                ) : (
-                  "-"
-                )}
-              </span>
-            </div>
-            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-              <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.fieldCount")}</span>
-              <span className={styles.basicInfoValue}>{resource.columnCount ?? "-"}</span>
-            </div>
-            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-              <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}</span>
-              <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
-            </div>
-            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-              <span className={styles.basicInfoLabel}>
-                {t("dataCatalog.resource.sourceIndexCount")}
-              </span>
-              <span className={styles.basicInfoValue}>
-                {resource.sourceMetadata?.indexCount ?? "-"}
-              </span>
-            </div>
-            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-              <span className={styles.basicInfoLabel}>
-                {t("dataCatalog.resource.sourceForeignKeyCount")}
-              </span>
-              <span className={styles.basicInfoValue}>
-                {resource.sourceMetadata?.foreignKeyCount ?? "-"}
-              </span>
-            </div>
+            {resource.category !== "logicview" ? (
+              <>
+                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.schemaName")}
+                  </span>
+                  <span className={styles.basicInfoValue}>{resource.schemaName || "-"}</span>
+                </div>
+                <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.sourcePrimaryKeys")}
+                  </span>
+                  <span className={styles.basicInfoValue}>
+                    {resource.sourceMetadata?.primaryKeys?.length ? (
+                      <Space size={[8, 8]} wrap>
+                        {resource.sourceMetadata.primaryKeys.map((key) => (
+                          <Tag className={styles.resourceTag} key={key}>
+                            {key}
+                          </Tag>
+                        ))}
+                      </Space>
+                    ) : (
+                      "-"
+                    )}
+                  </span>
+                </div>
+                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.fieldCount")}
+                  </span>
+                  <span className={styles.basicInfoValue}>{resource.columnCount ?? "-"}</span>
+                </div>
+                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.rowCount")}
+                  </span>
+                  <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
+                </div>
+                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.sourceIndexCount")}
+                  </span>
+                  <span className={styles.basicInfoValue}>
+                    {resource.sourceMetadata?.indexCount ?? "-"}
+                  </span>
+                </div>
+                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.sourceForeignKeyCount")}
+                  </span>
+                  <span className={styles.basicInfoValue}>
+                    {resource.sourceMetadata?.foreignKeyCount ?? "-"}
+                  </span>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -692,6 +789,19 @@ export function ResourceDetailPanel({
           />
         ) : null}
       </div>
+
+      {resource.category === "logicview" ? (
+        <div className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.viewFixedFilter")}</h3>
+          {fixedFilter?.children.length ? (
+            <FilterTreeEditor fields={filterSourceFields} readOnly value={fixedFilter} />
+          ) : resource.logicDefinition?.filterCondition ? (
+            <Alert message={t("dataCatalog.resource.filterUnsupported")} showIcon type="warning" />
+          ) : (
+            <span className={styles.basicInfoValue}>-</span>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

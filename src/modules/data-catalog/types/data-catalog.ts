@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type ResourceCategory = "dataset" | "logicview" | "table";
+export type ResourceCategory = "dataset" | "index" | "logicview" | "table";
 
 export type ResourceDiscoverStatus =
   "error" | "missing" | "new" | "restored" | "unchanged" | "updated";
@@ -85,6 +85,9 @@ export type CatalogResource = {
   localIndexName?: string;
   /** Authoritative query availability of the Resource's local index. */
   localIndexStatus: ResourceLocalIndexStatus;
+  /** Present on a logic view detail response. List results may only carry logicType. */
+  logicDefinition?: DerivedLogicDefinition;
+  logicType?: "derived" | "composite";
   name: string;
   /** Effective operations for the current account on this Resource. */
   operations?: string[];
@@ -138,7 +141,29 @@ export type ResourceUpdateInput = ResourceCreateInput & {
   expectedUpdateTime: number;
 };
 
+export type DerivedLogicDefinition = {
+  sourceResourceId: string;
+  filterCondition?: Record<string, unknown> | null;
+};
+
+export type DerivedViewInput = {
+  catalogId: string;
+  description: string;
+  enabled: boolean;
+  name: string;
+  schema: ResourceSchemaField[];
+  sourceResourceId: string;
+  filterCondition?: Record<string, unknown> | null;
+  tags: string[];
+};
+
+export type DerivedViewUpdateInput = DerivedViewInput & {
+  expectedUpdateTime: number;
+  filterCondition?: Record<string, unknown> | null;
+};
+
 export type ResourcePreviewQuery = {
+  filterCondition?: Record<string, unknown> | null;
   /** Bypass the local index and query the original data source. */
   ignoreLocalIndex?: boolean;
   /** Only valid when querying the original source. */

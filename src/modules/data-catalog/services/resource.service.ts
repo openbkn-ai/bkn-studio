@@ -10,10 +10,16 @@ import {
   throwMockRequestError,
   validateMockExpectedUpdateTime,
 } from "@/framework/request/mock-error";
-import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
+import {
+  parsePrecisionSafeJSON,
+  transformPrecisionSafeJSONRequest,
+  transformPrecisionSafeJSONResponse,
+} from "@/framework/request/precision-safe-json";
+import JSONBig from "json-bigint";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-count";
+import { parseFilterCondition } from "@/modules/data-catalog/lib/filter-tree";
 import {
   emitMockChange,
   formatMockTimestamp,
@@ -27,6 +33,9 @@ import {
 import type {
   CatalogResource,
   CatalogDiscoverRecord,
+  DerivedLogicDefinition,
+  DerivedViewInput,
+  DerivedViewUpdateInput,
   ResourceCategory,
   ResourceCreateInput,
   ResourceDiscoverStatus,
@@ -238,6 +247,10 @@ type BackendResourceDetailFields = {
   row_count?: number | string;
   estimated_row_count?: number | string;
   schema_definition?: BackendSchemaField[] | null;
+  logic_definition?: {
+    source_resource_id?: string;
+    filter_condition?: Record<string, unknown> | null;
+  } | null;
   source_metadata?: {
     foreign_keys?: unknown[];
     indices?: unknown[];
@@ -254,6 +267,34 @@ type BackendResourceDetailFields = {
 };
 
 type BackendResource = BackendResourceSummary & BackendResourceDetailFields;
+
+function transformResourceDetailResponse(data: unknown): unknown {
+  const response = transformPrecisionSafeJSONResponse(data);
+  if (typeof data !== "string" || !response || typeof response !== "object") return response;
+
+  const safeEntries = (response as { entries?: BackendResource[] }).entries;
+  if (
+    !safeEntries?.some(
+      (entry) =>
+        entry.logic_definition?.filter_condition &&
+        parseFilterCondition(entry.logic_definition.filter_condition) === null,
+    )
+  ) {
+    return response;
+  }
+
+  // The display parser turns unsafe JSON numbers into strings. For an unsupported
+  // filter, retain the original numeric types so a complete PUT can preserve it.
+  const preciseEntries = (JSONBig().parse(data) as { entries?: BackendResource[] }).entries;
+  safeEntries.forEach((entry, index) => {
+    const condition = entry.logic_definition?.filter_condition;
+    if (!condition || parseFilterCondition(condition) !== null) return;
+    const preciseCondition = preciseEntries?.[index]?.logic_definition?.filter_condition;
+    if (!preciseCondition || !entry.logic_definition) return;
+    entry.logic_definition.filter_condition = preciseCondition;
+  });
+  return response;
+}
 
 type ListResponse<T> = {
   entries: T[];
@@ -276,7 +317,7 @@ function formatTimestamp(value?: number) {
 }
 
 function normalizeCategory(value?: string, logicType?: string): ResourceCategory {
-  if (value === "logicview" || value === "dataset") {
+  if (value === "logicview" || value === "dataset" || value === "index") {
     return value;
   }
   if (logicType) {
@@ -361,6 +402,16 @@ function mapResource(
     lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
     localIndexName: item.index_name?.trim() || undefined,
     localIndexStatus: normalizeLocalIndexStatus(item.local_status),
+    logicType:
+      item.logic_type === "derived" || item.logic_type === "composite"
+        ? item.logic_type
+        : undefined,
+    logicDefinition: item.logic_definition?.source_resource_id
+      ? {
+          sourceResourceId: item.logic_definition.source_resource_id,
+          filterCondition: item.logic_definition.filter_condition,
+        }
+      : undefined,
     sourceMetadata: mapSourceMetadata(item.source_metadata),
     // Scale fields and schema_definition are detail-only; list resources map them to null and an empty schema.
     columnCount: item.column_count ?? item.schema_definition?.length ?? null,
@@ -375,6 +426,40 @@ function mapResource(
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id,
   };
+}
+
+function mapDerivedViewSchema(field: ResourceSchemaField): BackendSchemaField {
+  return {
+    name: field.name,
+    original_name: field.originalName,
+    type: field.type,
+    display_name: field.displayName?.trim(),
+    ...(field.features === undefined
+      ? {}
+      : {
+          features: field.features.map((feature) =>
+            mapFeatureToBackend(feature, field.originalName ?? field.name),
+          ),
+        }),
+  };
+}
+
+function mapDerivedDefinition(
+  sourceResourceId: string,
+  filterCondition?: DerivedLogicDefinition["filterCondition"],
+) {
+  return {
+    source_resource_id: sourceResourceId,
+    ...(filterCondition == null ? {} : { filter_condition: filterCondition }),
+  };
+}
+
+function mockResponseFilterCondition(condition?: Record<string, unknown> | null) {
+  if (condition == null) return condition;
+  return parsePrecisionSafeJSON(transformPrecisionSafeJSONRequest(condition)) as Record<
+    string,
+    unknown
+  >;
 }
 
 function filterResources(items: CatalogResource[], query: ResourceListQuery) {
@@ -495,7 +580,7 @@ export async function getCatalogResources(ids: string[]) {
       `/vega-backend/v1/resources/${chunk.join(",")}`,
       {
         skipErrorToast: true,
-        transformResponse: transformPrecisionSafeJSONResponse,
+        transformResponse: transformResourceDetailResponse,
       },
     );
     resources.push(...(response.data.entries ?? []).map(mapResource));
@@ -632,6 +717,122 @@ export async function updateCatalogResource(id: string, input: ResourceUpdateInp
   return getCatalogResource(id);
 }
 
+/** Derived views use a dedicated write path so generic resource field mapping cannot lose source bindings. */
+export async function createDerivedView(input: DerivedViewInput): Promise<CatalogResource> {
+  if (useMock) {
+    const source = mockResources.find((item) => item.id === input.sourceResourceId);
+    if (!source || (source.category !== "table" && source.category !== "index")) {
+      throwMockRequestError(400, "VegaBackend.LogicView.InvalidSource", "Invalid source resource.");
+    }
+    const timestamp = Date.now();
+    const resource: CatalogResource = {
+      catalogId: input.catalogId,
+      category: "logicview",
+      columnCount: input.schema.length,
+      description: input.description,
+      enabled: input.enabled,
+      expectedUpdateTime: timestamp,
+      id: `res-${mockSlug(10)}`,
+      localIndexStatus: "unavailable",
+      logicDefinition: {
+        sourceResourceId: input.sourceResourceId,
+        filterCondition: mockResponseFilterCondition(input.filterCondition),
+      },
+      logicType: "derived",
+      name: input.name,
+      operations: ["view_detail", "query_data"],
+      rowCount: null,
+      schema: input.schema,
+      sourceIdentifier: "",
+      tags: input.tags,
+      updateTime: formatMockTimestamp(timestamp),
+    };
+    mockResources.unshift(resource);
+    emitMockChange();
+    return wait(resource);
+  }
+
+  const response = await http.post<{ id?: string } & BackendResource>(
+    "/vega-backend/v1/resources",
+    {
+      catalog_id: input.catalogId,
+      category: "logicview",
+      description: input.description,
+      enabled: input.enabled,
+      logic_type: "derived",
+      logic_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
+      name: input.name,
+      schema_definition: input.schema.map(mapDerivedViewSchema),
+      tags: input.tags,
+    },
+    {
+      headers: { "Content-Type": "application/json" },
+      transformRequest: transformPrecisionSafeJSONRequest,
+    },
+  );
+  const created = response.data.id ? await getCatalogResource(response.data.id) : null;
+  if (!created) {
+    throw new Error("Created view detail is unavailable.");
+  }
+  return created;
+}
+
+export async function updateDerivedView(
+  id: string,
+  input: DerivedViewUpdateInput,
+): Promise<CatalogResource | null> {
+  if (useMock) {
+    const index = mockResources.findIndex((item) => item.id === id);
+    const current = mockResources[index];
+    if (!current || current.category !== "logicview" || current.logicType !== "derived") {
+      throwMockRequestError(404, "VegaBackend.Resource.NotFound", "View not found.");
+    }
+    validateMockExpectedUpdateTime(input.expectedUpdateTime);
+    if (current.expectedUpdateTime !== input.expectedUpdateTime) {
+      throwMockRequestError(409, "VegaBackend.Resource.UpdateConflict", "View has changed.");
+    }
+    const timestamp = Date.now();
+    const next: CatalogResource = {
+      ...current,
+      description: input.description,
+      enabled: input.enabled,
+      expectedUpdateTime: timestamp,
+      logicDefinition: {
+        sourceResourceId: input.sourceResourceId,
+        filterCondition: mockResponseFilterCondition(input.filterCondition),
+      },
+      name: input.name,
+      schema: input.schema,
+      tags: input.tags,
+      updateTime: formatMockTimestamp(timestamp),
+    };
+    mockResources[index] = next;
+    emitMockChange();
+    return wait(next);
+  }
+
+  await http.put(
+    `/vega-backend/v1/resources/${id}`,
+    {
+      catalog_id: input.catalogId,
+      category: "logicview",
+      description: input.description,
+      enabled: input.enabled,
+      expected_update_time: input.expectedUpdateTime,
+      logic_type: "derived",
+      logic_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
+      name: input.name,
+      schema_definition: input.schema.map(mapDerivedViewSchema),
+      tags: input.tags,
+    },
+    {
+      headers: { "Content-Type": "application/json" },
+      transformRequest: transformPrecisionSafeJSONRequest,
+    },
+  );
+  return getCatalogResource(id);
+}
+
 export async function deleteCatalogResource(id: string) {
   if (useMock) {
     const index = mockResources.findIndex((item) => item.id === id);
@@ -747,6 +948,19 @@ function mockPreviewCell(
   return { byte_length: byteLength, mode: "metadata" };
 }
 
+function mockResourcePreviewCell(
+  resource: CatalogResource,
+  field: ResourceSchemaField,
+  row: number,
+  query: ResourcePreviewQuery,
+  usesLocalIndex: boolean,
+) {
+  if (resource.id === "res-orders" && field.name === "customer_id") {
+    return 101 + (row % 2);
+  }
+  return mockPreviewCell(field, row, query, usesLocalIndex);
+}
+
 function mockOtherContent(field: ResourceSchemaField, row: number) {
   const originalType = field.originalType ?? "unknown";
   switch (originalType.toLowerCase()) {
@@ -764,6 +978,41 @@ function mockBinaryContent(row: number, byteLength: number) {
   return btoa(String.fromCharCode(...bytes));
 }
 
+function mockFilterMatches(condition: unknown, row: Record<string, unknown>): boolean {
+  if (!condition || typeof condition !== "object" || Array.isArray(condition)) return true;
+  const node = condition as Record<string, unknown>;
+  if (node.operation === "and" || node.operation === "or") {
+    const children = Array.isArray(node.sub_conditions) ? node.sub_conditions : [];
+    return node.operation === "and"
+      ? children.every((child) => mockFilterMatches(child, row))
+      : children.some((child) => mockFilterMatches(child, row));
+  }
+  if (typeof node.field !== "string") return false;
+  const actual = row[node.field];
+  if (actual === null || actual === undefined) return false;
+  const expected = node.value;
+  const left =
+    typeof actual === "number"
+      ? actual
+      : typeof actual === "string" || typeof actual === "boolean"
+        ? String(actual)
+        : null;
+  if (left === null) return false;
+  const right = typeof actual === "number" ? Number(expected) : String(expected);
+  switch (node.operation) {
+    case "==":
+      return left === right;
+    case "!=":
+      return left !== right;
+    case ">":
+      return left > right;
+    case "<":
+      return left < right;
+    default:
+      return false;
+  }
+}
+
 export async function previewCatalogResource(
   id: string,
   query: ResourcePreviewQuery,
@@ -774,28 +1023,61 @@ export async function previewCatalogResource(
       return wait({ rows: [], total: 0 });
     }
 
-    const total = resourceCountForPagination(resource.rowCount);
-    const count = Math.max(0, Math.min(query.limit, total - query.offset));
     const usesLocalIndex =
       !query.ignoreLocalIndex &&
       resource.category === "table" &&
       resource.localIndexStatus === "available" &&
       Boolean(resource.localIndexName);
-    const rows = Array.from({ length: count }, (_, index) => {
-      const rowIndex = query.offset + index;
-      return Object.fromEntries(
+    const source = resource.logicDefinition?.sourceResourceId
+      ? mockResources.find((item) => item.id === resource.logicDefinition?.sourceResourceId)
+      : null;
+    const total = resourceCountForPagination(source?.rowCount ?? resource.rowCount);
+    const makeRow = (rowIndex: number) => {
+      const sourceCells = source?.schema.map((field) => ({
+        field,
+        value: mockResourcePreviewCell(source, field, rowIndex, query, false),
+      }));
+      const sourceRow = sourceCells
+        ? Object.fromEntries(sourceCells.map(({ field, value }) => [field.name, value]))
+        : null;
+      const sourceBindings = sourceCells
+        ? Object.fromEntries(
+            sourceCells.map(({ field, value }) => [field.originalName || field.name, value]),
+          )
+        : null;
+      const row = Object.fromEntries(
         resource.schema.map((field) => [
           field.name,
-          mockPreviewCell(field, rowIndex, query, usesLocalIndex),
+          sourceBindings
+            ? sourceBindings[field.originalName || field.name]
+            : mockResourcePreviewCell(resource, field, rowIndex, query, usesLocalIndex),
         ]),
       );
-    });
+      return { row, sourceRow };
+    };
+    const fixed = resource.logicDefinition?.filterCondition;
+    const dynamic = query.filterCondition;
+    let rows: Record<string, unknown>[] = [];
+    let matchingTotal = total;
+    if (!fixed && !dynamic) {
+      const count = Math.max(0, Math.min(query.limit, total - query.offset));
+      rows = Array.from({ length: count }, (_, index) => makeRow(query.offset + index).row);
+    } else {
+      matchingTotal = 0;
+      for (let rowIndex = 0; rowIndex < total; rowIndex++) {
+        const { row, sourceRow } = makeRow(rowIndex);
+        if (!mockFilterMatches(fixed, sourceRow ?? row) || !mockFilterMatches(dynamic, row))
+          continue;
+        if (matchingTotal >= query.offset && rows.length < query.limit) rows.push(row);
+        matchingTotal++;
+      }
+    }
 
     return wait(
       {
         querySource: usesLocalIndex ? "local_index" : "source",
         rows,
-        total,
+        total: matchingTotal,
       },
       260,
     );
@@ -811,6 +1093,7 @@ export async function previewCatalogResource(
     {
       ...(query.ignoreLocalIndex ? { ignore_local_index: true } : {}),
       ...(query.binaryMode ? { binary_mode: query.binaryMode } : {}),
+      ...(query.filterCondition ? { filter_condition: query.filterCondition } : {}),
       need_total: true,
       paging: {
         limit: query.limit,
@@ -819,8 +1102,9 @@ export async function previewCatalogResource(
       },
     },
     {
-      headers: { "X-HTTP-Method-Override": "GET" },
+      headers: { "Content-Type": "application/json", "X-HTTP-Method-Override": "GET" },
       skipErrorToast: true,
+      transformRequest: transformPrecisionSafeJSONRequest,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );

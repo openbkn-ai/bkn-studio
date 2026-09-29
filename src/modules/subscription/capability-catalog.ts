@@ -85,6 +85,13 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.1.3",
   },
   {
+    category: "dataConnect",
+    key: CAPABILITIES.VEGA_LOGIC_VIEW,
+    // 由 EE Vega 登记，不经 bkn-safe 的能力端点报告。
+    reportedByEndpoint: false,
+    minEdition: "professional",
+  },
+  {
     // 实现在企业版前端镜像,bkn-safe-ee 登记进装配表,端点报得出。
     category: "semantic",
     key: CAPABILITIES.GRAPH_EXPLORER,
