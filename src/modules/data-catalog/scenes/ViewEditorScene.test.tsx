@@ -630,6 +630,37 @@ describe("ViewEditorScene", () => {
     expect(updatePayload.schema[0]).not.toHaveProperty("features");
   });
 
+  it("shows specific validation instead of a source compatibility warning while editing a filter", async () => {
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logicview",
+      logicType: "derived",
+      name: "orders_view",
+      logicDefinition: {
+        sourceResourceId: "source-1",
+        filterCondition: { field: "id", operation: "==", value: 1 },
+      },
+    } as CatalogResource;
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : source),
+    );
+    renderEditor({ resourceId: "view-1" });
+    const value = await screen.findByRole("textbox", { name: "dataCatalog.filter.value" });
+
+    fireEvent.change(value, { target: { value: "" } });
+    expect(screen.queryByText("dataCatalog.viewEditor.filterNeedsReview")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    expect(await screen.findByText("dataCatalog.filter.errors.missingValue")).toBeTruthy();
+
+    fireEvent.change(value, { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.addRule" }));
+    expect(screen.queryByText("dataCatalog.viewEditor.filterNeedsReview")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    expect(await screen.findByText("dataCatalog.filter.errors.invalidField")).toBeTruthy();
+    expect(updateViewMock).not.toHaveBeenCalled();
+  });
+
   it("fills a missing display name from the output field name when editing", async () => {
     const view = {
       ...source,

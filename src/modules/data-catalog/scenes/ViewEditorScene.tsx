@@ -107,6 +107,7 @@ export function ViewEditorScene({
   const [fields, setFields] = useState<ResourceSchemaField[]>([]);
   const [filter, setFilter] = useState<FilterGroup>(emptyFilterGroup);
   const [unsupportedFilter, setUnsupportedFilter] = useState(false);
+  const [filterNeedsReview, setFilterNeedsReview] = useState(false);
   const [fieldToAdd, setFieldToAdd] = useState("");
   const [keyword, setKeyword] = useState("");
   const [sourcePage, setSourcePage] = useState(0);
@@ -124,11 +125,6 @@ export function ViewEditorScene({
 
   const sourceLocked = unsupportedFilter;
   const sourceFields = useMemo(() => source?.schema ?? [], [source]);
-  const filterNeedsReview =
-    !unsupportedFilter &&
-    Boolean(view?.logicDefinition?.filterCondition) &&
-    (!source ||
-      filterValidationError(filter, sourceFields, sourceFilterQueryPath(source)) !== null);
   const sourceIdentity = (resource: CatalogResource) => (
     <span className={styles.sourceIdentity}>
       <strong>{resource.name}</strong>
@@ -189,6 +185,16 @@ export function ViewEditorScene({
         const cannotEditFilter = Boolean(existingFilter) && parsed === null;
         setFilter(parsed ?? emptyFilterGroup());
         setUnsupportedFilter(cannotEditFilter);
+        setFilterNeedsReview(
+          Boolean(existingFilter) &&
+            parsed !== null &&
+            (!currentSource ||
+              filterValidationError(
+                parsed,
+                currentSource.schema,
+                sourceFilterQueryPath(currentSource),
+              ) === "invalidField"),
+        );
         initialDraft.current = JSON.stringify({
           name: currentView?.name ?? "",
           description: currentView?.description ?? "",
@@ -287,6 +293,7 @@ export function ViewEditorScene({
           setSource(detail);
           setFields(detail.schema.slice(0, 3).map(draftField));
           setFilter(emptyFilterGroup());
+          setFilterNeedsReview(false);
           setFieldToAdd("");
           setError(null);
         };
@@ -866,7 +873,10 @@ export function ViewEditorScene({
                         ) : null}
                         <FilterTreeEditor
                           fields={sourceFields}
-                          onChange={setFilter}
+                          onChange={(next) => {
+                            setFilter(next);
+                            setFilterNeedsReview(false);
+                          }}
                           queryPath={sourceFilterQueryPath(source)}
                           value={filter}
                         />
