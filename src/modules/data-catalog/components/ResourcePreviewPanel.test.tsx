@@ -566,7 +566,8 @@ describe("ResourcePreviewPanel", () => {
           status: 403,
           data: {
             error_code: "VegaBackend.Resource.SourceReadForbidden",
-            description: "The data source account cannot read this resource",
+            description: "The underlying view depends on APP.BASE_TABLE",
+            solution: "Grant SELECT on APP.BASE_TABLE",
           },
         },
       }),
@@ -590,6 +591,8 @@ describe("ResourcePreviewPanel", () => {
     expect(
       screen.getByText("dataCatalog.preview.sourceReadForbiddenDescription"),
     ).toBeInTheDocument();
+    expect(screen.getByText("The underlying view depends on APP.BASE_TABLE")).toBeInTheDocument();
+    expect(screen.getByText("Grant SELECT on APP.BASE_TABLE")).toBeInTheDocument();
     expect(screen.queryByText("dataCatalog.preview.noQueryPermission")).toBeNull();
   });
 

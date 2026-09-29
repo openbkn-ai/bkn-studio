@@ -12,11 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
-import {
-  extractRequestErrorDetails,
-  extractRequestErrorMessage,
-  isRequestForbidden,
-} from "@/framework/request/error-message";
+import { extractRequestErrorDetails, isRequestForbidden } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import {
   resourceCountAsBigInt,
@@ -175,7 +171,10 @@ export function ResourcePreviewPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
-  const [sourceReadForbidden, setSourceReadForbidden] = useState(false);
+  const [sourceReadDetails, setSourceReadDetails] = useState<{
+    description: string;
+    solution?: string;
+  } | null>(null);
   const [ignoreLocalIndex, setIgnoreLocalIndex] = useState(false);
   const [binaryContent, setBinaryContent] = useState(false);
   const requestVersionRef = useRef(0);
@@ -200,7 +199,7 @@ export function ResourcePreviewPanel({
       setLoading(true);
       setError(null);
       setForbidden(false);
-      setSourceReadForbidden(false);
+      setSourceReadDetails(null);
       try {
         const data = await previewCatalogResource(resource.id, {
           ...(hasBinaryField && queriesSource
@@ -221,11 +220,11 @@ export function ResourcePreviewPanel({
         // Reading rows is granted separately from seeing the table's structure. The panel loads on
         // its own, so a bare 403 leaves the user guessing whether the table, the connection or
         // their own access is the problem — name it instead.
-        const sourceDenied =
-          extractRequestErrorDetails(loadError).code === "VegaBackend.Resource.SourceReadForbidden";
-        setSourceReadForbidden(sourceDenied);
+        const details = extractRequestErrorDetails(loadError);
+        const sourceDenied = details.code === "VegaBackend.Resource.SourceReadForbidden";
+        setSourceReadDetails(sourceDenied ? details : null);
         setForbidden(!sourceDenied && isRequestForbidden(loadError));
-        setError(extractRequestErrorMessage(loadError));
+        setError(details.description);
         setResult(null);
       } finally {
         if (requestVersion === requestVersionRef.current) {
@@ -368,13 +367,21 @@ export function ResourcePreviewPanel({
           ) : null}
         </div>
       </div>
-      {sourceReadForbidden ? (
+      {sourceReadDetails ? (
         <Alert
-          description={t(
-            resource.category === "table"
-              ? "dataCatalog.preview.sourceReadForbiddenDescription"
-              : "dataCatalog.preview.sourceReadForbiddenGenericDescription",
-          )}
+          description={
+            <>
+              <div>
+                {t(
+                  resource.category === "table"
+                    ? "dataCatalog.preview.sourceReadForbiddenDescription"
+                    : "dataCatalog.preview.sourceReadForbiddenGenericDescription",
+                )}
+              </div>
+              <div>{sourceReadDetails.description}</div>
+              {sourceReadDetails.solution ? <div>{sourceReadDetails.solution}</div> : null}
+            </>
+          }
           message={
             resource.category === "table"
               ? t("dataCatalog.preview.sourceReadForbidden", {

@@ -520,9 +520,9 @@ export const dataCatalogEnUS = {
       dataSourceIndex: "Source: local index",
       dataSourceOriginal: "Source: original data",
       noQueryPermission: "No permission to read this data",
-      sourceReadForbidden: "The data source account cannot read {{source}}",
+      sourceReadForbidden: "The data source account cannot read data for {{source}}",
       sourceReadForbiddenDescription:
-        "Check the connection's schema scope or grant SELECT on this table.",
+        "Check SELECT permission on the requested object and any underlying objects.",
       sourceReadForbiddenGeneric: "The data source account cannot read the underlying source",
       sourceReadForbiddenGenericDescription:
         "Check the connection account's read permission on the source used by this resource.",
