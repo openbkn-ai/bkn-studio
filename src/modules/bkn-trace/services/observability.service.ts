@@ -14,8 +14,7 @@ export type LogCategory =
   | "audit.admin"
   | "audit.security"
   | "runtime.business"
-  | "runtime.model"
-  | "runtime.system";
+  | "runtime.model";
 
 type BackendLogRecord = {
   actor_id: string;
