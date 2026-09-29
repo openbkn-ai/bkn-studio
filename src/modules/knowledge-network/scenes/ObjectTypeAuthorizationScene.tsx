@@ -44,7 +44,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { DirectoryUserPicker } from "@/modules/system-admin";
+import { GrantableUserPicker } from "@/modules/system-admin";
 import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
 import { ObjectTypeDataAttributeFormDrawer } from "@/modules/knowledge-network/components/object-type/data-attribute/ObjectTypeDataAttributeFormDrawer";
 import { RowFilterAuthorizationPanel } from "@/modules/knowledge-network/components/object-type/row-filter/RowFilterAuthorizationPanel";
@@ -74,7 +74,7 @@ import {
   propertyAccessRowState,
   summarizePropertyGrantChanges,
 } from "@/modules/knowledge-network/utils/property-authorization";
-import { listRoles, listUsersPage } from "@/modules/system-admin/services/admin.service";
+import { listRoles } from "@/modules/system-admin/services/admin.service";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import {
   listObjectGrantsForObject,
@@ -83,20 +83,12 @@ import {
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminRole, AdminUser } from "@/modules/system-admin/types/admin";
 import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
-import {
-  getCachedUserSync,
-  hydrateUserLookupDetails,
-  isDeletedUserSync,
-  isUserLookupId,
-  primeUserLookupCache,
-} from "@/modules/system-admin/utils/audit-lookup-cache";
 import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
 import {
   canManageGrantSource,
   grantCreatorUserId,
   PUBLIC_ACCESSOR_ID,
   isRoleGrantSubject,
-  isUserDirectorySubject,
   isDelegateProtectedGrant,
   isSelfAuthorizeLockout,
 } from "@/modules/system-admin/utils/object-grant-guards";
@@ -171,6 +163,31 @@ export function ObjectTypeAuthorizationScene() {
   const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
   const configurationSearch = useMemo(() => new URLSearchParams(window.location.search), []);
   const configurationRequesterID = configurationSearch.get("requester_id") ?? undefined;
+  const currentPermissions = runtimeConfig.currentUser.permissions;
+  const isAdminGrantor = hasPermissions({
+    currentPermissions,
+    requiredPermissions: authzPoints.grant,
+  });
+  const isAdminRevoker = hasPermissions({
+    currentPermissions,
+    requiredPermissions: authzPoints.revoke,
+  });
+  const canReadUserRowFilters = hasPermissions({
+    currentPermissions,
+    requiredPermissions: authzPoints.review,
+  });
+  const canWriteUserRowFilters = isAdminGrantor && isAdminRevoker;
+  const canReadRoleRowFilters = hasPermissions({
+    currentPermissions,
+    requiredPermissions: "admin-role:view",
+  });
+  const canWriteRoleRowFilters = hasPermissions({
+    currentPermissions,
+    requiredPermissions: authzPoints.rolePermissions,
+  });
+  const canUseRoleSubjects = canWriteRoleRowFilters;
+  const canReadAnyRowFilters = canReadUserRowFilters || canReadRoleRowFilters;
+  const shouldLoadRoles = canReadRoleRowFilters || canUseRoleSubjects;
 
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -178,14 +195,12 @@ export function ObjectTypeAuthorizationScene() {
   const [baseBusy, setBaseBusy] = useState(false);
   const [objectGrants, setObjectGrants] = useState<ObjectGrant[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [pendingUserIds, setPendingUserIds] = useState<Set<string>>(() => new Set());
-  const [userLookupRevision, setUserLookupRevision] = useState(0);
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [candidateUserId, setCandidateUserId] = useState<string>();
   const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
   const [sourceAccessorId, setSourceAccessorId] = useState<string>();
   const [activeTab, setActiveTab] = useState<AuthorizationTab>(
-    configurationRequesterID ? "row-filter" : "base",
+    configurationRequesterID && canReadUserRowFilters ? "row-filter" : "base",
   );
   const [subjectType, setSubjectType] = useState<PropertyGrantSubjectType>("user");
   const [subjectId, setSubjectId] = useState<string>();
@@ -201,51 +216,20 @@ export function ObjectTypeAuthorizationScene() {
   const [rowFilterDirty, setRowFilterDirty] = useState(false);
   const [rowFilterDiscardNonce, setRowFilterDiscardNonce] = useState(0);
 
-  const syncUserLookup = useCallback(async (rawIds: string[], signal?: AbortSignal) => {
-    const ids = [...new Set(rawIds.filter(isUserLookupId))];
-    setPendingUserIds((current) => new Set([...current, ...ids]));
-    try {
-      await hydrateUserLookupDetails(ids, { signal });
-    } catch {
-      // The source rows remain readable with an unavailable-user fallback.
-    } finally {
-      if (!signal?.aborted) {
-        setPendingUserIds((current) => {
-          const next = new Set(current);
-          ids.forEach((id) => next.delete(id));
-          return next;
-        });
-        setUserLookupRevision((revision) => revision + 1);
-      }
-    }
-  }, []);
-
   const loadBase = useCallback(
     async (signal?: AbortSignal) => {
       setBaseLoading(true);
       try {
-        const [grantResult, userResult, roleResult] = await Promise.all([
+        const [grantResult, roleResult] = await Promise.all([
           listObjectGrantsForObject("object_type", objectTypeRef),
-          listUsersPage({ limit: 500 }, { skipErrorToast: true }).catch(() => null),
-          listRoles({ withMembers: true }).catch(() => null),
+          shouldLoadRoles ? listRoles({ withMembers: true }).catch(() => null) : null,
         ]);
         if (signal?.aborted) {
           return;
         }
-        const directoryUsers = mergeUsers(userResult?.users ?? [], grantResult.accounts);
-        primeUserLookupCache(directoryUsers);
         setObjectGrants(grantResult.grants);
-        setUsers(directoryUsers);
+        setUsers(grantResult.accounts);
         setRoles(roleResult ?? []);
-        // Authorization data is ready now; enrich user labels without making
-        // the page wait for every historic grantor directory lookup.
-        void syncUserLookup(
-          grantResult.grants.flatMap((grant) => [
-            ...(isUserDirectorySubject(grant) ? [grant.accessorId] : []),
-            ...(grant.grants ?? []).flatMap((source) => grantCreatorUserId(source) ?? []),
-          ]),
-          signal,
-        );
       } catch (error) {
         void message.error(extractRequestErrorMessage(error));
       } finally {
@@ -254,7 +238,7 @@ export function ObjectTypeAuthorizationScene() {
         }
       }
     },
-    [message, objectTypeRef, syncUserLookup],
+    [message, objectTypeRef, shouldLoadRoles],
   );
 
   useEffect(() => {
@@ -362,13 +346,7 @@ export function ObjectTypeAuthorizationScene() {
   );
 
   const userMap = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
-  const directoryUser = useCallback(
-    (id: string) => {
-      void userLookupRevision;
-      return userMap.get(id) ?? getCachedUserSync(id);
-    },
-    [userLookupRevision, userMap],
-  );
+  const directoryUser = useCallback((id: string) => userMap.get(id), [userMap]);
   const resolveGrantSubject = useCallback(
     (grant: ObjectGrant) => {
       const id = grant.accessorId;
@@ -384,16 +362,12 @@ export function ObjectTypeAuthorizationScene() {
             ? t("systemAdmin.objectGrants.publicSubject")
             : roleSubject
               ? t("systemAdmin.objectGrants.roleSubject")
-              : pendingUserIds.has(id)
-                ? t("systemAdmin.objectGrants.granteeLoading")
-                : isDeletedUserSync(id)
-                  ? t("systemAdmin.objectGrants.deletedUser")
-                  : t("systemAdmin.objectGrants.granteeUnresolved")),
+              : id),
         publicSubject,
         roleSubject,
       };
     },
-    [directoryUser, pendingUserIds, t],
+    [directoryUser, t],
   );
   const roleMap = useMemo(() => new Map(roles.map((role) => [role.id, role])), [roles]);
   const currentSubjectRecord =
@@ -493,7 +467,13 @@ export function ObjectTypeAuthorizationScene() {
   const tooManyChanges = draft.size > MAX_PROPERTY_GRANT_CHANGES;
 
   const savePropertyChanges = () => {
-    if (!selectedSubject || !draft.size || invalidMaskedProperties.length || tooManyChanges) {
+    if (
+      !canManageSelectedPropertySubject ||
+      !selectedSubject ||
+      !draft.size ||
+      invalidMaskedProperties.length ||
+      tooManyChanges
+    ) {
       return;
     }
     const summary = summarizePropertyGrantChanges(baseLevel, entryMap, draft);
@@ -682,16 +662,11 @@ export function ObjectTypeAuthorizationScene() {
     );
   }, [roles, subjectKeyword]);
 
-  const isAdminGrantor = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: authzPoints.grant,
-  });
-  const isAdminRevoker = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: authzPoints.revoke,
-  });
   const canGrant = networkAuthorized || isAdminGrantor;
   const canRevoke = networkAuthorized || isAdminRevoker;
+  const canManageUserPropertyGrants = networkAuthorized || canWriteUserRowFilters;
+  const canManageSelectedPropertySubject =
+    subjectType === "user" ? canManageUserPropertyGrants : canUseRoleSubjects;
   const isPlatformAuthzRevoker = isAdminRevoker;
   const baseOps = useMemo(
     () =>
@@ -892,13 +867,7 @@ export function ObjectTypeAuthorizationScene() {
     if (user) {
       return { name: user.name, sub: user.account };
     }
-    if (pendingUserIds.has(id)) {
-      return { name: t("systemAdmin.objectGrants.granteeLoading") };
-    }
-    if (isDeletedUserSync(id)) {
-      return { name: t("systemAdmin.objectGrants.deletedUser") };
-    }
-    return { name: t("systemAdmin.objectGrants.granteeUnresolved") };
+    return { name: id };
   };
 
   const allowedOperationsForGrant = (grant: ObjectGrant) =>
@@ -1276,12 +1245,14 @@ export function ObjectTypeAuthorizationScene() {
             <label htmlFor="object-type-grant-user">
               {t("systemAdmin.objectGrants.grantUserLabel")}
             </label>
-            <DirectoryUserPicker
+            <GrantableUserPicker
               ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
               id="object-type-grant-user"
               initialUsers={users}
               onChange={selectCandidateUser}
               placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
+              resourceId={objectTypeRef}
+              resourceType="object_type"
               value={candidateUserId}
             />
           </div>
@@ -1472,20 +1443,25 @@ export function ObjectTypeAuthorizationScene() {
               label: t("knowledgeNetwork.propertyAuthorizationUser"),
               value: "user",
             },
-            {
-              icon: <TeamOutlined />,
-              label: t("knowledgeNetwork.propertyAuthorizationRole"),
-              value: "role",
-            },
+            ...(canUseRoleSubjects
+              ? [
+                  {
+                    icon: <TeamOutlined />,
+                    label: t("knowledgeNetwork.propertyAuthorizationRole"),
+                    value: "role",
+                  },
+                ]
+              : []),
           ]}
           value={subjectType}
         />
         {subjectType === "user" ? (
           <div className={styles.subjectUserPickerSection}>
             <span>{t("knowledgeNetwork.propertyAuthorizationUserOrganizationFilter")}</span>
-            <DirectoryUserPicker
+            <GrantableUserPicker
               ariaLabel={t("knowledgeNetwork.propertyAuthorizationSelectUser")}
               className={styles.subjectUserPicker}
+              initialUsers={users}
               onChange={(nextUserId) => confirmDiscard(() => setSubjectId(nextUserId))}
               onUsersChange={(selectedUsers) => {
                 if (selectedUsers.length) {
@@ -1493,6 +1469,8 @@ export function ObjectTypeAuthorizationScene() {
                 }
               }}
               presentation="inline"
+              resourceId={objectTypeRef}
+              resourceType="object_type"
               value={subjectId}
             />
           </div>
@@ -1730,7 +1708,11 @@ export function ObjectTypeAuthorizationScene() {
             >
               <span>
                 <AppButton
-                  disabled={Boolean(invalidMaskedProperties.length) || tooManyChanges}
+                  disabled={
+                    !canManageSelectedPropertySubject ||
+                    Boolean(invalidMaskedProperties.length) ||
+                    tooManyChanges
+                  }
                   loading={propertySaving}
                   onClick={savePropertyChanges}
                   type="primary"
@@ -1775,39 +1757,50 @@ export function ObjectTypeAuthorizationScene() {
                 </span>
               ),
             },
-            {
-              children: (
-                <RequireEdition capability={CAPABILITIES.PERM_OBJECT_LEVEL} minEdition="enterprise">
-                  <RowFilterAuthorizationPanel
-                    discardNonce={rowFilterDiscardNonce}
-                    initialSubjectId={configurationRequesterID}
-                    objectTypeRef={objectTypeRef}
-                    onBeforeSubjectChange={confirmDiscard}
-                    onDirtyChange={setRowFilterDirty}
-                    roles={roles}
-                    users={users}
-                  />
-                </RequireEdition>
-              ),
-              key: "row-filter",
-              label: (
-                <span className="console-tab-with-tier">
-                  {t("knowledgeNetwork.rowFilterTab")}
-                  <Tooltip title={t("knowledgeNetwork.rowFilterBoundary")}>
-                    <InfoCircleOutlined
-                      aria-label={t("knowledgeNetwork.rowFilterBoundary")}
-                      className={styles.columnHelpIcon}
-                      tabIndex={0}
-                    />
-                  </Tooltip>
-                  <EditionBadge
-                    alwaysShow
-                    capability={CAPABILITIES.PERM_OBJECT_LEVEL}
-                    edition="enterprise"
-                  />
-                </span>
-              ),
-            },
+            ...(canReadAnyRowFilters
+              ? [
+                  {
+                    children: (
+                      <RequireEdition
+                        capability={CAPABILITIES.PERM_OBJECT_LEVEL}
+                        minEdition="enterprise"
+                      >
+                        <RowFilterAuthorizationPanel
+                          allowRoleSubjects={canReadRoleRowFilters}
+                          allowUserSubjects={canReadUserRowFilters}
+                          canWriteRole={canWriteRoleRowFilters}
+                          canWriteUser={canWriteUserRowFilters}
+                          discardNonce={rowFilterDiscardNonce}
+                          initialSubjectId={configurationRequesterID}
+                          objectTypeRef={objectTypeRef}
+                          onBeforeSubjectChange={confirmDiscard}
+                          onDirtyChange={setRowFilterDirty}
+                          roles={roles}
+                          users={users}
+                        />
+                      </RequireEdition>
+                    ),
+                    key: "row-filter",
+                    label: (
+                      <span className="console-tab-with-tier">
+                        {t("knowledgeNetwork.rowFilterTab")}
+                        <Tooltip title={t("knowledgeNetwork.rowFilterBoundary")}>
+                          <InfoCircleOutlined
+                            aria-label={t("knowledgeNetwork.rowFilterBoundary")}
+                            className={styles.columnHelpIcon}
+                            tabIndex={0}
+                          />
+                        </Tooltip>
+                        <EditionBadge
+                          alwaysShow
+                          capability={CAPABILITIES.PERM_OBJECT_LEVEL}
+                          edition="enterprise"
+                        />
+                      </span>
+                    ),
+                  },
+                ]
+              : []),
             {
               children: (
                 <RequireEdition capability={CAPABILITIES.PERM_OBJECT_LEVEL} minEdition="enterprise">

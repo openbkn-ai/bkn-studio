@@ -599,21 +599,6 @@ export const systemAdminZhCN = {
         "将撤销 {{name}} 的 {{effect}} / {{operation}}，来源 {{source}}，grant_id={{grantId}}。同一对象上的其他来源不受影响。",
       readOnlySource: "只读来源",
       legacySourceUnavailable: "旧版本数据未返回来源记录，当前只能查看汇总，不能安全撤销。",
-      enterpriseRulesTitle: "企业对象规则 · 只读兼容层",
-      enterpriseRulesDescription:
-        "只展示服务端激活状态和运行时资格；休眠、实验性、无效或降档规则不会参与最终权限。编辑请使用 API / CLI。",
-      enterpriseRulesEmpty: "当前对象没有企业兼容规则",
-      runtimeEligible: "运行时生效",
-      runtimeInactive: "不参与运行时",
-      enterpriseState: {
-        activated: "已激活",
-        expired: "已过期",
-        downgraded_inactive: "降档后停用",
-        deleted: "已删除",
-        dormant: "休眠",
-        experimental: "实验性",
-        invalid: "无效",
-      },
       blockedBy: "受 {{operation}} 拒绝阻断",
       basis: {
         direct: "直接配置",

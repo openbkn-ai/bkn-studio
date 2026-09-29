@@ -121,9 +121,20 @@ function explain(value: RowFilterSnapshot): RowFilterExplain {
   };
 }
 
-function renderPanel() {
+function renderPanel(
+  access: Partial<{
+    allowRoleSubjects: boolean;
+    allowUserSubjects: boolean;
+    canWriteRole: boolean;
+    canWriteUser: boolean;
+  }> = {},
+) {
   return render(
     <RowFilterAuthorizationPanel
+      allowRoleSubjects={access.allowRoleSubjects ?? true}
+      allowUserSubjects={access.allowUserSubjects ?? true}
+      canWriteRole={access.canWriteRole ?? true}
+      canWriteUser={access.canWriteUser ?? true}
       discardNonce={0}
       objectTypeRef="network-1/object-1"
       onBeforeSubjectChange={(next) => next()}
@@ -181,6 +192,22 @@ describe("RowFilterAuthorizationPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "select-user-a" }));
 
     expect(await screen.findByText("User: Selected user A")).not.toBeNull();
+  });
+
+  it("keeps an administrator review-only user policy non-editable", async () => {
+    const value = snapshot("user-a");
+    mocks.getSnapshot.mockResolvedValue(value);
+    mocks.explain.mockResolvedValue(explain(value));
+    renderPanel({ allowRoleSubjects: false, canWriteUser: false });
+
+    fireEvent.click(screen.getByRole("button", { name: "select-user-a" }));
+
+    const addCondition = (await screen.findByText(
+      "knowledgeNetwork.rowFilterAddCondition",
+    )) as HTMLElement;
+    expect(addCondition.closest("button")).toBeDisabled();
+    expect(screen.queryByText("knowledgeNetwork.propertyAuthorizationRole")).toBeNull();
+    expect(mocks.patch).not.toHaveBeenCalled();
   });
 
   it("shows a retryable error instead of spinning forever when loading fails", async () => {

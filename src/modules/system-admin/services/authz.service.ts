@@ -17,7 +17,6 @@ import type {
   AuthorizableObject,
   AuthzSummary,
   EffectiveDecision,
-  EnterpriseObjectGrant,
   GrantRecord,
   ObjectGrant,
   ObjectGrantInput,
@@ -771,55 +770,4 @@ export async function listGrantableUsersForObject(
       roleIds: [],
       telephone: "",
     }));
-}
-
-/** Read-only Enterprise compatibility inventory. Runtime eligibility is supplied by the server. */
-export async function listEnterpriseObjectGrants(
-  query: {
-    accessorId?: string;
-    resourceId?: string;
-    resourceType?: string;
-  } = {},
-): Promise<EnterpriseObjectGrant[]> {
-  if (useMock) {
-    return wait([]);
-  }
-  const response = await http.get<{
-    entries?: Array<{
-      activation_state?: EnterpriseObjectGrant["activationState"];
-      accessor_id?: string;
-      classification?: string;
-      effect?: EnterpriseObjectGrant["effect"];
-      expires_at?: string;
-      grant_id?: string;
-      inactive_reason?: string;
-      operation?: string;
-      resource_id?: string;
-      resource_type?: string;
-      rule_id?: string;
-      runtime_eligible?: boolean;
-      subject_type?: EnterpriseObjectGrant["subjectType"];
-    }>;
-  }>(`${ADMIN}/enterprise-object-grants`, {
-    params: {
-      accessor_id: query.accessorId,
-      resource_id: query.resourceId,
-      resource_type: query.resourceType,
-    },
-  });
-  return (response.data.entries ?? []).map((entry) => ({
-    activationState: entry.activation_state ?? "invalid",
-    accessorId: entry.accessor_id ?? "",
-    classification: entry.classification ?? "",
-    effect: entry.effect ?? "deny",
-    expiresAt: entry.expires_at,
-    grantId: entry.grant_id ?? "",
-    inactiveReason: entry.inactive_reason,
-    operation: entry.operation ?? "",
-    resourceId: entry.resource_id ?? "",
-    resourceType: entry.resource_type ?? "",
-    ruleId: entry.rule_id ?? "",
-    runtimeEligible: entry.runtime_eligible === true,
-    subjectType: entry.subject_type ?? "unknown",
-  }));
 }

@@ -123,28 +123,3 @@ export type ObjectGrantListResult = {
   total: number;
   summary?: AuthzSummary;
 };
-
-export type EnterpriseGrantActivationState =
-  | "activated"
-  | "expired"
-  | "downgraded_inactive"
-  | "deleted"
-  | "dormant"
-  | "experimental"
-  | "invalid";
-
-export type EnterpriseObjectGrant = {
-  activationState: EnterpriseGrantActivationState;
-  accessorId: string;
-  classification: string;
-  effect: GrantEffect;
-  expiresAt?: string;
-  grantId: string;
-  inactiveReason?: string;
-  operation: string;
-  resourceId: string;
-  resourceType: string;
-  ruleId: string;
-  runtimeEligible: boolean;
-  subjectType: "user" | "role" | "department" | "unknown";
-};

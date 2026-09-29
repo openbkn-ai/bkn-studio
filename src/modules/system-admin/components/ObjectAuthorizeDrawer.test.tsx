@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,11 +13,8 @@ import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/auth
 import { PUBLIC_ACCESSOR_ID } from "@/modules/system-admin/utils/object-grant-guards";
 
 const mocks = vi.hoisted(() => ({
-  getCachedUserSync: vi.fn(),
-  hydrateUserLookupDetails: vi.fn(),
-  isDeletedUserSync: vi.fn(),
+  listGrantableUsersForObject: vi.fn(),
   listObjectGrantsForObject: vi.fn(),
-  listUsersPage: vi.fn(),
   revokeObjectGrantForObject: vi.fn(),
   revokeObjectGrantsForObject: vi.fn(),
   upsertObjectGrantForObject: vi.fn(),
@@ -73,24 +70,12 @@ vi.mock("@/framework/entitlement/RequireEdition", () => ({
   RequireEdition: ({ children }: { children: ReactNode }) =>
     mocks.useCapability() === "available" ? children : <div>professional-edition-gate</div>,
 }));
-vi.mock("@/modules/system-admin/services/admin.service", () => ({
-  listUsersPage: mocks.listUsersPage,
-}));
 vi.mock("@/modules/system-admin/services/authz.service", () => ({
-  listEnterpriseObjectGrants: vi.fn(() => Promise.resolve([])),
+  listGrantableUsersForObject: mocks.listGrantableUsersForObject,
   listObjectGrantsForObject: mocks.listObjectGrantsForObject,
   revokeObjectGrantForObject: mocks.revokeObjectGrantForObject,
   revokeObjectGrantsForObject: mocks.revokeObjectGrantsForObject,
   upsertObjectGrantForObject: mocks.upsertObjectGrantForObject,
-}));
-vi.mock("@/modules/system-admin/utils/audit-lookup-cache", () => ({
-  getCachedDepartments: vi.fn(() => Promise.resolve([])),
-  getCachedUserSync: mocks.getCachedUserSync,
-  hydrateUserLookup: vi.fn(() => Promise.resolve([])),
-  hydrateUserLookupDetails: mocks.hydrateUserLookupDetails,
-  isDeletedUserSync: mocks.isDeletedUserSync,
-  isUserLookupId: (id: string) => Boolean(id) && !id.startsWith("system:"),
-  primeUserLookupCache: vi.fn(),
 }));
 vi.mock("@/modules/system-admin/hooks/use-authorization-registry", () => ({
   useAuthorizationRegistry: () => ({
@@ -156,21 +141,9 @@ describe("ObjectAuthorizeDrawer source records", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.useCapability.mockReturnValue("available");
-    mocks.getCachedUserSync.mockImplementation((id: string) => ({
-      account: "",
-      accountType: "local",
-      email: "",
-      enabled: true,
-      id,
-      name: id,
-      roleIds: [],
-      telephone: "",
-    }));
-    mocks.hydrateUserLookupDetails.mockResolvedValue({ deleted: [], unavailable: [] });
-    mocks.isDeletedUserSync.mockReturnValue(false);
+    mocks.listGrantableUsersForObject.mockResolvedValue([]);
     appServices.runtimeConfig.currentUser.id = "u-admin";
     appServices.runtimeConfig.currentUser.permissions = ["admin-authz:grant", "admin-authz:revoke"];
-    mocks.listUsersPage.mockResolvedValue({ total: 0, users: [] });
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       addListener: vi.fn(),
@@ -181,6 +154,27 @@ describe("ObjectAuthorizeDrawer source records", () => {
       removeEventListener: vi.fn(),
       removeListener: vi.fn(),
     }));
+  });
+
+  it("shows a retryable main error when object grants fail to load", async () => {
+    mocks.listObjectGrantsForObject
+      .mockRejectedValueOnce(new Error("object grants unavailable"))
+      .mockResolvedValueOnce({ accounts: [], grants: [] });
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+
+    expect(await screen.findByText("object grants unavailable")).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(mocks.listObjectGrantsForObject).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByText("object grants unavailable")).toBeNull());
   });
 
   it("renders the backend effective decision instead of merging source operations", async () => {
@@ -253,23 +247,19 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(screen.queryByText("u-mate")).toBeNull();
   });
 
-  it("shows the actual grantor name for each independent source", async () => {
-    mocks.getCachedUserSync.mockImplementation((id: string) =>
-      id === "u-grantor"
-        ? {
-            account: "grantor.account",
-            accountType: "local",
-            email: "",
-            enabled: true,
-            id,
-            name: "Grantor B",
-            roleIds: [],
-            telephone: "",
-          }
-        : undefined,
-    );
+  it("shows a grantor name when it is present in the object-scoped response", async () => {
+    const grantor = {
+      account: "grantor.account",
+      accountType: "local",
+      email: "",
+      enabled: true,
+      id: "u-grantor",
+      name: "Grantor B",
+      roleIds: [],
+      telephone: "",
+    };
     mocks.listObjectGrantsForObject.mockResolvedValue({
-      accounts: [],
+      accounts: [grantor],
       grants: [
         grant([source({ createdBy: "u-grantor" })], {
           accessorName: "Grantee C",
@@ -294,10 +284,7 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(screen.getByText("grantor.account")).not.toBeNull();
   });
 
-  it("labels a deleted grantee without exposing its internal ID or retrying a 404", async () => {
-    mocks.getCachedUserSync.mockReturnValue(undefined);
-    mocks.isDeletedUserSync.mockImplementation((id: string) => id === "u-mate");
-    mocks.hydrateUserLookupDetails.mockResolvedValue({ deleted: ["u-mate"], unavailable: [] });
+  it("falls back to the raw grantee id without querying the administrator directory", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
       grants: [grant([source({})])],
@@ -314,14 +301,11 @@ describe("ObjectAuthorizeDrawer source records", () => {
     );
     await act(async () => {});
 
-    expect(screen.getByText("systemAdmin.objectGrants.deletedUser")).not.toBeNull();
-    expect(screen.queryByText("u-mate")).toBeNull();
+    expect(screen.getByText("u-mate")).not.toBeNull();
     expect(screen.queryByText("systemAdmin.objectGrants.retryGranteeLookup")).toBeNull();
   });
 
-  it("renders a role subject without looking it up as a deleted user", async () => {
-    mocks.getCachedUserSync.mockReturnValue(undefined);
-    mocks.isDeletedUserSync.mockImplementation((id: string) => id === "role-readers");
+  it("renders a role subject from the object-scoped response", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
       grants: [
@@ -346,12 +330,9 @@ describe("ObjectAuthorizeDrawer source records", () => {
 
     expect(screen.getByText("Readers")).not.toBeNull();
     expect(screen.queryByText("systemAdmin.objectGrants.deletedUser")).toBeNull();
-    expect(mocks.hydrateUserLookupDetails).toHaveBeenCalledWith([], expect.any(Object));
   });
 
-  it("renders the public subject without looking it up as a deleted user", async () => {
-    mocks.getCachedUserSync.mockReturnValue(undefined);
-    mocks.isDeletedUserSync.mockImplementation((id: string) => id === PUBLIC_ACCESSOR_ID);
+  it("renders the public subject from the object-scoped response", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
       grants: [
@@ -375,7 +356,6 @@ describe("ObjectAuthorizeDrawer source records", () => {
 
     expect(screen.getByText("systemAdmin.objectGrants.publicSubject")).not.toBeNull();
     expect(screen.queryByText("systemAdmin.objectGrants.deletedUser")).toBeNull();
-    expect(mocks.hydrateUserLookupDetails).toHaveBeenCalledWith([], expect.any(Object));
   });
 
   it("revokes one direct source by stable grant_id", async () => {
@@ -404,23 +384,19 @@ describe("ObjectAuthorizeDrawer source records", () => {
   });
 
   it("allows ordinary direct grants for a built-in administrator to be revoked", async () => {
-    mocks.getCachedUserSync.mockImplementation((id: string) =>
-      id === "u-admin"
-        ? {
-            account: "local-admin",
-            accountType: "local",
-            builtin: true,
-            email: "",
-            enabled: true,
-            id,
-            name: "Local Admin",
-            roleIds: [],
-            telephone: "",
-          }
-        : undefined,
-    );
+    const administrator = {
+      account: "local-admin",
+      accountType: "local",
+      builtin: true,
+      email: "",
+      enabled: true,
+      id: "u-admin",
+      name: "Local Admin",
+      roleIds: [],
+      telephone: "",
+    };
     mocks.listObjectGrantsForObject.mockResolvedValue({
-      accounts: [],
+      accounts: [administrator],
       grants: [
         grant([source({ accessorId: "u-admin", grantId: "grant-admin-view" })], {
           accessorId: "u-admin",
