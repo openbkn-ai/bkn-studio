@@ -10,11 +10,7 @@ import { http } from "@/framework/request/http";
 const OBSERVABILITY_API_PREFIX = "/observability/v1";
 
 export type LogCategory =
-  | "access.user"
-  | "audit.admin"
-  | "audit.security"
-  | "runtime.business"
-  | "runtime.model";
+  "access.user" | "audit.admin" | "audit.security" | "runtime.business" | "runtime.model";
 
 type BackendLogRecord = {
   actor_id: string;
