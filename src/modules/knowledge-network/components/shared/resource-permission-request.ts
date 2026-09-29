@@ -37,6 +37,31 @@ export type RequestablePermissionOperation = {
 
 export type PermissionRequestProposalKind = "grant" | "row_filter" | "property_grants";
 
+// Initial values from a deep link may only be applied after the asynchronous
+// data for the current dialog resource has returned. Comparing resource IDs
+// prevents a reopened dialog from consuming state left by the previous one.
+export function isPermissionRequestPrefillReady({
+  initialProposalKind,
+  pendingRequestsResourceID,
+  proposalPreviewResourceID,
+  requestOpen,
+  resourceID,
+  target,
+}: {
+  initialProposalKind: PermissionRequestProposalKind;
+  pendingRequestsResourceID: string | null;
+  proposalPreviewResourceID: string | null;
+  requestOpen: boolean;
+  resourceID: string;
+  target: "operations" | "properties";
+}) {
+  if (!requestOpen) return false;
+  if (target === "operations") {
+    return initialProposalKind === "grant" && pendingRequestsResourceID === resourceID;
+  }
+  return initialProposalKind === "property_grants" && proposalPreviewResourceID === resourceID;
+}
+
 // Row and property proposals depend on the policy preview to carry the
 // current policy/revision. Do not let a deep link submit either proposal while
 // that preview is still resolving.

@@ -48,6 +48,7 @@ import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-ty
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
   deleteKnowledgeNetworkObjectType,
+  getKnowledgeNetwork,
   getKnowledgeNetworkObjectTypeDetail,
   getObjectTypeSampleData,
   listKnowledgeNetworkActionTypePage,
@@ -169,6 +170,17 @@ function estimatePreviewTextWidth(value: string | number | undefined) {
   return textWidth + PREVIEW_COLUMN_PADDING_WIDTH;
 }
 
+function parsePermissionRequestValues(value: string | null) {
+  return [
+    ...new Set(
+      (value ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
 export function ObjectTypeDetailScene() {
   const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   const { t } = useTranslation();
@@ -188,6 +200,15 @@ export function ObjectTypeDetailScene() {
       : requestPermissionTarget === "3"
         ? "property_grants"
         : "grant";
+  const initialPermissionRequestOperations = requestPermissionFromURL
+    ? parsePermissionRequestValues(searchParams.get("operations"))
+    : [];
+  const initialPermissionRequestProperties = requestPermissionFromURL
+    ? parsePermissionRequestValues(searchParams.get("properties"))
+    : [];
+  const initialPermissionRequestReason = requestPermissionFromURL
+    ? (searchParams.get("reason") ?? "").slice(0, 512)
+    : "";
   const activeTab = parseObjectTypeDetailTab(searchParams.get("tab"));
   const selectedTrialMetricId = searchParams.get("metricId");
   const selectedLogicPropertyName = searchParams.get("logicProperty");
@@ -205,6 +226,7 @@ export function ObjectTypeDetailScene() {
       ? parseObjectTypeRelatedSection(searchParams.get("relatedSection"))
       : "relations";
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
+  const [knowledgeNetworkName, setKnowledgeNetworkName] = useState(networkId);
   const [permissionRequestOpen, setPermissionRequestOpen] = useState(false);
   const [policyScopeRequestable, setPolicyScopeRequestable] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -399,8 +421,12 @@ export function ObjectTypeDetailScene() {
     setError(null);
 
     try {
-      const result = await getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId);
+      const [result, network] = await Promise.all([
+        getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId),
+        getKnowledgeNetwork(networkId).catch(() => null),
+      ]);
       setDetail(result);
+      setKnowledgeNetworkName(network?.name || networkId);
     } catch (nextError) {
       setError(extractRequestErrorMessage(nextError));
     } finally {
@@ -452,7 +478,9 @@ export function ObjectTypeDetailScene() {
         setSearchParams(
           (current) => {
             const next = new URLSearchParams(current);
-            next.delete("requestPermission");
+            ["requestPermission", "operations", "properties", "reason"].forEach((key) =>
+              next.delete(key),
+            );
             return next;
           },
           { replace: true },
@@ -2075,12 +2103,15 @@ export function ObjectTypeDetailScene() {
           <>
             {canRequestPermission ? (
               <ResourcePermissionRequestAction
+                initialOperations={initialPermissionRequestOperations}
                 initialProposalKind={initialPermissionRequestKind}
+                initialPropertyNames={initialPermissionRequestProperties}
+                initialReason={initialPermissionRequestReason}
                 onOpenChange={handlePermissionRequestOpenChange}
                 open={permissionRequestOpen}
                 operations={detail.operations}
                 resourceID={`${networkId}/${detail.id}`}
-                resourceName={detail.name}
+                resourceName={`${knowledgeNetworkName} / ${detail.name}`}
                 resourceType="object_type"
                 trigger="button"
               />

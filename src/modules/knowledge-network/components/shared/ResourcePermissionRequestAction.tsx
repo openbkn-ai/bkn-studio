@@ -32,6 +32,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type KeyboardEvent,
   type MouseEvent,
@@ -58,6 +59,7 @@ import {
   getMissingResourcePermissionOperations,
   hasRequestableObjectTypePermission,
   isPermissionRequestProposalReady,
+  isPermissionRequestPrefillReady,
   togglePermissionRequestOperation,
 } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
@@ -88,7 +90,10 @@ type ProposalPreview = {
 };
 
 type ResourcePermissionRequestActionProps = {
+  initialOperations?: string[];
   initialProposalKind?: ProposalKind;
+  initialPropertyNames?: string[];
+  initialReason?: string;
   operations?: string[];
   resourceType: string;
   resourceID: string;
@@ -108,7 +113,10 @@ function requestResourceIcon(resourceType: string) {
 }
 
 export function ResourcePermissionRequestAction({
+  initialOperations = [],
   initialProposalKind = "grant",
+  initialPropertyNames = [],
+  initialReason = "",
   operations,
   resourceType,
   resourceID,
@@ -134,12 +142,18 @@ export function ResourcePermissionRequestAction({
   const [proposalKind, setProposalKind] = useState<ProposalKind>("grant");
   const [proposalPreview, setProposalPreview] = useState<ProposalPreview>();
   const [proposalPreviewResolved, setProposalPreviewResolved] = useState(false);
+  const [proposalPreviewResourceID, setProposalPreviewResourceID] = useState<string | null>(null);
+  const [pendingRequestsResourceID, setPendingRequestsResourceID] = useState<string | null>(null);
   const [selectedPropertyNames, setSelectedPropertyNames] = useState<string[]>([]);
   const [objectProperties, setObjectProperties] = useState<
     Array<{ displayName?: string; name: string }>
   >([]);
+  const initialOperationsAppliedFor = useRef<string | null>(null);
+  const initialPropertiesAppliedFor = useRef<string | null>(null);
   const [form] = Form.useForm<RequestForm>();
   const requestOpen = open ?? internalOpen;
+  const currentProposalPreviewResolved =
+    proposalPreviewResolved && proposalPreviewResourceID === resourceID;
   const hasRowFilter = Boolean(proposalPreview?.row_filter?.policy?.conditions.length);
   const restrictedProperties = useMemo(
     () =>
@@ -184,11 +198,14 @@ export function ResourcePermissionRequestAction({
     [selectableOperations, selectedOperations],
   );
 
-  const setOperations = (next: string[]) => {
-    const normalized = [...new Set(next)];
-    setSelectedOperations(normalized);
-    form.setFieldValue("operations", normalized);
-  };
+  const setOperations = useCallback(
+    (next: string[]) => {
+      const normalized = [...new Set(next)];
+      setSelectedOperations(normalized);
+      form.setFieldValue("operations", normalized);
+    },
+    [form],
+  );
   const toggleOperation = (operationKey: string) => {
     setSelectedOperations((current) => {
       const next = togglePermissionRequestOperation(current, operationKey, selectableOperations);
@@ -211,18 +228,32 @@ export function ResourcePermissionRequestAction({
   };
 
   useEffect(() => {
+    if (requestOpen) return;
+    initialOperationsAppliedFor.current = null;
+    initialPropertiesAppliedFor.current = null;
+    setPendingRequestsResourceID(null);
+    setProposalPreviewResourceID(null);
+    setProposalPreviewResolved(false);
+  }, [requestOpen]);
+
+  useEffect(() => {
     if (!requestOpen) return;
     let active = true;
     setLoading(true);
     form.resetFields();
+    form.setFieldValue("reason", initialReason);
     setPending(false);
     setPendingOperations([]);
     setPendingProposalKinds([]);
+    setPendingRequestsResourceID(null);
     setSelectedOperations([]);
+    initialOperationsAppliedFor.current = null;
     setProposalKind(initialProposalKind);
     setProposalPreview(undefined);
     setProposalPreviewResolved(resourceType !== "object_type");
+    setProposalPreviewResourceID(resourceType !== "object_type" ? resourceID : null);
     setSelectedPropertyNames([]);
+    initialPropertiesAppliedFor.current = null;
     setObjectProperties([]);
     void listPermissionRequests("mine", 20, 0, {
       resourceID,
@@ -259,12 +290,44 @@ export function ResourcePermissionRequestAction({
         void message.error(extractRequestErrorMessage(error));
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) {
+          setPendingRequestsResourceID(resourceID);
+          setLoading(false);
+        }
       });
     return () => {
       active = false;
     };
-  }, [form, initialProposalKind, message, requestOpen, resourceID, resourceType]);
+  }, [form, initialProposalKind, initialReason, message, requestOpen, resourceID, resourceType]);
+
+  useEffect(() => {
+    const prefillKey = `${resourceID}\u0000${initialOperations.join("\u0000")}`;
+    if (
+      !isPermissionRequestPrefillReady({
+        initialProposalKind,
+        pendingRequestsResourceID,
+        proposalPreviewResourceID,
+        requestOpen,
+        resourceID,
+        target: "operations",
+      }) ||
+      initialOperationsAppliedFor.current === prefillKey
+    )
+      return;
+    initialOperationsAppliedFor.current = prefillKey;
+    setOperations(
+      initialOperations.filter((operation) => selectableOperationKeys.includes(operation)),
+    );
+  }, [
+    initialOperations,
+    initialProposalKind,
+    pendingRequestsResourceID,
+    proposalPreviewResourceID,
+    requestOpen,
+    resourceID,
+    selectableOperationKeys,
+    setOperations,
+  ]);
 
   useEffect(() => {
     if (!requestOpen || resourceType !== "object_type") return;
@@ -281,7 +344,10 @@ export function ResourcePermissionRequestAction({
         }
       })
       .finally(() => {
-        if (active) setProposalPreviewResolved(true);
+        if (active) {
+          setProposalPreviewResourceID(resourceID);
+          setProposalPreviewResolved(true);
+        }
       });
     const [networkId, objectTypeId] = resourceID.split("/", 2);
     if (networkId && objectTypeId) {
@@ -303,7 +369,39 @@ export function ResourcePermissionRequestAction({
   }, [requestOpen, resourceID, resourceType]);
 
   useEffect(() => {
-    if (!requestOpen || resourceType !== "object_type" || !proposalPreviewResolved) return;
+    if (
+      !requestOpen ||
+      !isPermissionRequestPrefillReady({
+        initialProposalKind,
+        pendingRequestsResourceID,
+        proposalPreviewResourceID,
+        requestOpen,
+        resourceID,
+        target: "properties",
+      })
+    )
+      return;
+    const prefillKey = `${resourceID}\u0000${initialPropertyNames.join("\u0000")}`;
+    if (initialPropertiesAppliedFor.current === prefillKey) return;
+    initialPropertiesAppliedFor.current = prefillKey;
+    const requestableProperties = new Set(
+      restrictedProperties.map((property) => property.property_name),
+    );
+    setSelectedPropertyNames(
+      initialPropertyNames.filter((property) => requestableProperties.has(property)),
+    );
+  }, [
+    initialPropertyNames,
+    initialProposalKind,
+    pendingRequestsResourceID,
+    proposalPreviewResourceID,
+    requestOpen,
+    resourceID,
+    restrictedProperties,
+  ]);
+
+  useEffect(() => {
+    if (!requestOpen || resourceType !== "object_type" || !currentProposalPreviewResolved) return;
     if (proposalKind === "row_filter" && !hasRowFilter) {
       setProposalKind("grant");
       return;
@@ -314,14 +412,19 @@ export function ResourcePermissionRequestAction({
   }, [
     hasRowFilter,
     proposalKind,
-    proposalPreviewResolved,
+    currentProposalPreviewResolved,
     requestOpen,
     resourceType,
     restrictedProperties.length,
   ]);
 
   useEffect(() => {
-    if (!requestOpen || resourceType !== "object_type" || !proposalPreviewResolved || loading)
+    if (
+      !requestOpen ||
+      resourceType !== "object_type" ||
+      !currentProposalPreviewResolved ||
+      pendingRequestsResourceID !== resourceID
+    )
       return;
     const hasPendingRequest = pendingOperations.length > 0 || pendingProposalKinds.length > 0;
     const hasRequestableContent = hasRequestableObjectTypePermission({
@@ -336,12 +439,13 @@ export function ResourcePermissionRequestAction({
     void message.info(t("knowledgeNetwork.permissionRequestNothingAvailable"));
   }, [
     hasRowFilter,
-    loading,
     message,
     pendingOperations.length,
     pendingProposalKinds.length,
-    proposalPreviewResolved,
+    currentProposalPreviewResolved,
+    pendingRequestsResourceID,
     requestOpen,
+    resourceID,
     resourceType,
     restrictedProperties.length,
     selectableOperationKeys.length,
@@ -359,7 +463,7 @@ export function ResourcePermissionRequestAction({
       !isPermissionRequestProposalReady({
         proposalKind,
         resourceType,
-        previewResolved: proposalPreviewResolved,
+        previewResolved: currentProposalPreviewResolved,
       })
     ) {
       void message.warning(t("knowledgeNetwork.permissionRequestPolicyPreviewPending"));
@@ -461,7 +565,7 @@ export function ResourcePermissionRequestAction({
             !isPermissionRequestProposalReady({
               proposalKind,
               resourceType,
-              previewResolved: proposalPreviewResolved,
+              previewResolved: currentProposalPreviewResolved,
             }) ||
             (proposalKind !== "grant" && pendingProposalKinds.includes(proposalKind)) ||
             (proposalKind === "grant" && selectedOperations.length === 0) ||

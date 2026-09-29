@@ -16,6 +16,7 @@ type SetSearchParams = (
 
 const mocks = vi.hoisted(() => ({
   getKnowledgeNetworkActionTypeDetail: vi.fn(),
+  getKnowledgeNetwork: vi.fn(),
   getKnowledgeNetworkMetric: vi.fn(),
   getKnowledgeNetworkObjectTypeDetail: vi.fn(),
   getKnowledgeNetworkRelationTypeDetail: vi.fn(),
@@ -52,17 +53,29 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 
 vi.mock("@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction", () => ({
   ResourcePermissionRequestAction: ({
+    initialOperations,
     initialProposalKind,
+    initialPropertyNames,
+    initialReason,
     onOpenChange,
     open,
+    resourceName,
   }: {
+    initialOperations?: string[];
     initialProposalKind?: string;
+    initialPropertyNames?: string[];
+    initialReason?: string;
     onOpenChange?: (open: boolean) => void;
     open?: boolean;
+    resourceName: string;
   }) => (
     <button
       data-open={String(open)}
+      data-operations={initialOperations?.join(",")}
       data-proposal-kind={initialProposalKind}
+      data-properties={initialPropertyNames?.join(",")}
+      data-reason={initialReason}
+      data-resource-name={resourceName}
       data-testid="permission-request-action"
       onClick={() => onOpenChange?.(false)}
     >
@@ -120,6 +133,7 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   deleteKnowledgeNetworkObjectType: vi.fn(),
   deleteKnowledgeNetworkRelationType: vi.fn(),
   getKnowledgeNetworkActionTypeDetail: mocks.getKnowledgeNetworkActionTypeDetail,
+  getKnowledgeNetwork: mocks.getKnowledgeNetwork,
   getKnowledgeNetworkMetric: mocks.getKnowledgeNetworkMetric,
   getKnowledgeNetworkObjectTypeDetail: mocks.getKnowledgeNetworkObjectTypeDetail,
   getKnowledgeNetworkRelationTypeDetail: mocks.getKnowledgeNetworkRelationTypeDetail,
@@ -173,6 +187,7 @@ beforeEach(() => {
   mocks.listKnowledgeNetworkRelationTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
   mocks.listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
   mocks.getObjectTypeSampleData.mockResolvedValue({ columns: [], rows: [] });
+  mocks.getKnowledgeNetwork.mockResolvedValue({ id: "network-1", name: "Customer network" });
   mocks.searchParams.current = "";
   mocks.setSearchParams.mockReset();
 });
@@ -262,7 +277,7 @@ describe("knowledge network detail scene headers", () => {
 
   it("opens the permission request dialog from the requestPermission query and clears it on close", async () => {
     mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
-    mocks.searchParams.current = "requestPermission=1";
+    mocks.searchParams.current = "requestPermission=1&operations=query_data&reason=Need%20access";
     mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
       color: "#126ee3",
       conceptGroupIds: [],
@@ -292,11 +307,12 @@ describe("knowledge network detail scene headers", () => {
     const [update, options] = mocks.setSearchParams.mock.calls.at(-1) ?? [];
     expect(options).toEqual({ replace: true });
     expect(update).toBeTypeOf("function");
-    expect(
-      (update as (current: URLSearchParams) => URLSearchParams)(
-        new URLSearchParams("requestPermission=1"),
-      ).has("requestPermission"),
-    ).toBe(false);
+    const nextParams = (update as (current: URLSearchParams) => URLSearchParams)(
+      new URLSearchParams("requestPermission=1&operations=query_data&reason=Need%20access"),
+    );
+    expect(nextParams.has("requestPermission")).toBe(false);
+    expect(nextParams.has("operations")).toBe(false);
+    expect(nextParams.has("reason")).toBe(false);
   });
 
   it.each([
@@ -329,6 +345,39 @@ describe("knowledge network detail scene headers", () => {
     const action = await screen.findByTestId("permission-request-action");
     await vi.waitFor(() => expect(action.dataset.open).toBe("true"));
     expect(action.dataset.proposalKind).toBe(proposalKind);
+  });
+
+  it("prefills agent-provided operations, properties, and reason", async () => {
+    mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
+    mocks.searchParams.current =
+      "requestPermission=3&operations=query_data,view_detail&properties=phone,id_card&reason=Need%20identity%20verification";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      color: "#126ee3",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "Object description",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Order",
+      operations: [],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "2026-08-20 16:09:36",
+      updaterName: "admin",
+    });
+
+    render(<ObjectTypeDetailScene />);
+
+    const action = await screen.findByTestId("permission-request-action");
+    await vi.waitFor(() => expect(action.dataset.open).toBe("true"));
+    expect(action.dataset.operations).toBe("query_data,view_detail");
+    expect(action.dataset.properties).toBe("phone,id_card");
+    expect(action.dataset.reason).toBe("Need identity verification");
+    expect(action.dataset.resourceName).toBe("Customer network / Order");
   });
 
   it("shows a fail-closed proxy dependency error and retries the sample request", async () => {
