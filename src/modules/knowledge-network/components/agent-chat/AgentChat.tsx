@@ -428,11 +428,6 @@ export function AgentChat({
   return (
     <div ref={pageScrollRef} className={styles.root}>
       <header className={styles.agentHeader}>
-        <div className={styles.headerLeft}>
-          <span className={styles.paneTitle}>
-            {t("knowledgeNetwork.agentChat.profiles.knTitle")}
-          </span>
-        </div>
         <div className={styles.headerActions}>
           <button
             type="button"

@@ -39,7 +39,6 @@ export const agentChatPart = {
       'Only output a JSON array, for example ["question1","question2","question3"]. Do not output any other text or code fences.',
     profiles: {
       soloEmptyTitle: "Start Validation",
-      knTitle: "Business Knowledge Network",
     },
     errors: {
       modelBusy: "The model service is busy. Try again later.",

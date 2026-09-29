@@ -39,7 +39,6 @@ export const agentChatPart = {
       '只输出 JSON 数组，形如 ["问题1","问题2","问题3"]，不要任何其他文字，不要代码块标记。',
     profiles: {
       soloEmptyTitle: "开始验证",
-      knTitle: "业务知识网络",
     },
     errors: {
       modelBusy: "模型服务繁忙，请稍后重试",
