@@ -277,7 +277,9 @@ export async function parseMcpSse(input: McpParseSseInput): Promise<McpParseSseR
       mode: input.mode ?? "stream",
       url: input.url,
     },
-    {},
+    // Callers report the failure themselves, and a failed first transport is often retried with
+    // the other one, so a global toast would announce errors the user never needs to act on.
+    { skipErrorToast: true },
   );
 
   return {

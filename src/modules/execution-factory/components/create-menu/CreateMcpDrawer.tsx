@@ -16,14 +16,12 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
 import {
   getMcpDetail,
-  parseMcpSse,
   registerMcp,
   updateMcp,
 } from "@/modules/execution-factory/services/mcp.service";
 import type {
   McpCreationType,
   McpMode,
-  McpParseSseResult,
   McpParseSseTool,
   McpToolConfigInput,
 } from "@/modules/execution-factory/types/mcp";
@@ -32,7 +30,9 @@ import { CAPABILITY_NAME_PATTERN } from "@/modules/execution-factory/utils/capab
 import { CapabilityBusinessIntro } from "@/modules/execution-factory/components/CapabilityBusinessIntro";
 
 import styles from "./create-menu.module.css";
+import { McpJsonImportModal, type McpJsonImportFill } from "./McpJsonImportModal";
 import { McpToolImportedSection } from "./McpToolImportedSection";
+import { discoverMcpTools } from "./mcp-tool-discovery";
 
 type CreateMcpDrawerProps = {
   embedded?: boolean;
@@ -74,6 +74,7 @@ export function CreateMcpDrawer({
   const [categories, setCategories] = useState<Array<{ value: string; label: string }>>([]);
   const [tools, setTools] = useState<McpParseSseTool[]>([]);
   const [importedTools, setImportedTools] = useState<McpToolConfigInput[]>([]);
+  const [jsonImportOpen, setJsonImportOpen] = useState(false);
   const creationType = Form.useWatch("creationType", form);
   const isEditMode = Boolean(mcpId);
 
@@ -159,25 +160,19 @@ export function CreateMcpDrawer({
         }
         return acc;
       }, {});
-      const url = values.url ?? "";
-      const mode: McpMode = values.mode ?? "stream";
-      let result: McpParseSseResult;
+      const result = await discoverMcpTools({
+        url: values.url ?? "",
+        mode: values.mode ?? "stream",
+        headers,
+      });
 
-      try {
-        result = await parseMcpSse({ url, mode, headers });
-      } catch (error) {
-        // Streamable HTTP and SSE endpoints reject each other's handshake, and
-        // the URL alone rarely says which one it is. Retry with the other mode
-        // and keep the form in sync so the registered MCP can actually connect.
-        const fallbackMode: McpMode = mode === "sse" ? "stream" : "sse";
-        result = await parseMcpSse({ url, mode: fallbackMode, headers }).catch(() => {
-          throw error;
-        });
-        form.setFieldValue("mode", fallbackMode);
+      if (result.fallbackFrom) {
+        // Keep the form in sync so the registered MCP can actually connect.
+        form.setFieldValue("mode", result.mode);
         void message.warning(
           t("executionFactory.mcpParseFallback", {
-            from: t(`executionFactory.mcpModes.${mode}`),
-            to: t(`executionFactory.mcpModes.${fallbackMode}`),
+            from: t(`executionFactory.mcpModes.${result.fallbackFrom}`),
+            to: t(`executionFactory.mcpModes.${result.mode}`),
           }),
         );
       }
@@ -274,6 +269,28 @@ export function CreateMcpDrawer({
     }
   };
 
+  const handleJsonFill = (value: McpJsonImportFill) => {
+    form.setFieldsValue({
+      name: value.name,
+      mode: value.mode,
+      url: value.url,
+      headers: mapHeadersToFormList(value.headers),
+    });
+    setTools([]);
+    setJsonImportOpen(false);
+  };
+
+  const handleJsonImportClose = (registeredIds: string[]) => {
+    setJsonImportOpen(false);
+
+    const [firstId] = registeredIds;
+
+    if (firstId) {
+      onClose();
+      onCreated?.(firstId);
+    }
+  };
+
   const formContent = loading ? (
     <div style={{ padding: 48, textAlign: "center" }}>
       <Spin />
@@ -334,6 +351,13 @@ export function CreateMcpDrawer({
 
       {creationType === "custom" ? (
         <>
+          {!isEditMode ? (
+            <div style={{ marginBottom: 16 }}>
+              <AppButton onClick={() => setJsonImportOpen(true)}>
+                {t("executionFactory.mcpJsonImport.button")}
+              </AppButton>
+            </div>
+          ) : null}
           <Form.Item
             extra={t("executionFactory.mcpModeHint")}
             label={t("executionFactory.mcpMode")}
@@ -410,6 +434,15 @@ export function CreateMcpDrawer({
     </Form>
   );
 
+  const jsonImportModal = jsonImportOpen ? (
+    <McpJsonImportModal
+      category={(form.getFieldValue("category") as string | undefined) ?? "other_category"}
+      onClose={handleJsonImportClose}
+      onFill={handleJsonFill}
+      open
+    />
+  ) : null;
+
   const actionBar = (
     <Space style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
       {!embedded ? <AppButton onClick={onClose}>{t("common.cancel")}</AppButton> : null}
@@ -428,6 +461,7 @@ export function CreateMcpDrawer({
       <>
         {formContent}
         {actionBar}
+        {jsonImportModal}
       </>
     );
   }
@@ -446,6 +480,7 @@ export function CreateMcpDrawer({
       width={800}
     >
       {formContent}
+      {jsonImportModal}
     </Drawer>
   );
 }

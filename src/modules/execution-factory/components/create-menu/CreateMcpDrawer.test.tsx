@@ -152,6 +152,42 @@ describe("CreateMcpDrawer", () => {
     expect(messageWarning).not.toHaveBeenCalled();
   }, 10_000);
 
+  it("fills the form from a pasted mcpServers config", async () => {
+    renderDrawer();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "executionFactory.mcpJsonImport.button" }),
+    );
+    fireEvent.change(await screen.findByLabelText("mcpServers JSON"), {
+      target: {
+        value: JSON.stringify({
+          mcpServers: {
+            "Bazi-MCP": {
+              type: "sse",
+              url: "https://bazi.test/sse",
+              headers: { "X-Tenant": "t1" },
+            },
+          },
+        }),
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "executionFactory.mcpJsonImport.parse" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "executionFactory.mcpJsonImport.fillForm" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText<HTMLInputElement>("https://example.com/mcp").value).toBe(
+        "https://bazi.test/sse",
+      );
+    });
+    expect(screen.getByLabelText<HTMLInputElement>("MCP name").value).toBe("Bazi_MCP");
+    expect(screen.getByTitle("SSE")).toBeTruthy();
+    expect(screen.getByDisplayValue<HTMLInputElement>("X-Tenant").value).toBe("X-Tenant");
+    expect(screen.getByDisplayValue("t1")).toBeTruthy();
+    expect(registerMcp).not.toHaveBeenCalled();
+  }, 10_000);
+
   it("blocks names the backend rejects before sending the request", async () => {
     renderDrawer();
 
