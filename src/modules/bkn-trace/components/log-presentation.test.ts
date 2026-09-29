@@ -113,6 +113,17 @@ describe("log presentation", () => {
     expect(presentLogActor(record, translateZhCN).primary).toBe("系统服务");
   });
 
+  it("uses the semantic target label when an authorization decision has no name snapshot", () => {
+    const record = {
+      target: { id: "decision-1", name: "", type: "authorization_decision" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "授权决策",
+      secondary: "decision-1",
+    });
+  });
+
   it("keeps the target id as the fallback for ordinary records without a name snapshot", () => {
     const record = {
       target: { id: "user-1", name: "", type: "user" },

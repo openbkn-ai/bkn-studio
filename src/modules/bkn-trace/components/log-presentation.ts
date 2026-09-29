@@ -76,7 +76,7 @@ export function presentLogTarget(record: LogRecord, t: Translate): LogText {
     const targetID = record.target.id.trim();
     if (
       isSemanticTechnicalTarget(record) &&
-      isTechnicalTargetName(targetName, targetID, record.target.type)
+      (!targetName || isTechnicalTargetName(targetName, targetID, record.target.type))
     ) {
       const label = t(`bknTrace.logs.targetTypes.${record.target.type}`, {
         defaultValue: record.target.type || t("bknTrace.logs.unnamedTarget"),
