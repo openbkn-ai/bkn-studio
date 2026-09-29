@@ -113,6 +113,17 @@ describe("log presentation", () => {
     expect(presentLogActor(record, translateZhCN).primary).toBe("系统服务");
   });
 
+  it("keeps the target id as the fallback for ordinary records without a name snapshot", () => {
+    const record = {
+      target: { id: "user-1", name: "", type: "user" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "user-1",
+      secondary: "user-1",
+    });
+  });
+
   it("uses the current authenticated username when an old event only contains its user id", () => {
     const record = {
       actor: {

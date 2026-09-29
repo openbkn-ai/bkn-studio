@@ -74,13 +74,16 @@ export function presentLogTarget(record: LogRecord, t: Translate): LogText {
   if (!isAgentConversationCreated(record)) {
     const targetName = record.target.name.trim();
     const targetID = record.target.id.trim();
-    if (!targetName || isTechnicalTargetName(targetName, targetID, record.target.type)) {
+    if (
+      isSemanticTechnicalTarget(record) &&
+      isTechnicalTargetName(targetName, targetID, record.target.type)
+    ) {
       const label = t(`bknTrace.logs.targetTypes.${record.target.type}`, {
         defaultValue: record.target.type || t("bknTrace.logs.unnamedTarget"),
       });
       return { primary: label, secondary: targetID || undefined };
     }
-    return { primary: targetName, secondary: targetID };
+    return { primary: targetName || targetID, secondary: targetID };
   }
   const agentName = conversationAgentName(record) || t("bknTrace.logs.unnamedAgent");
   return {
@@ -134,6 +137,12 @@ function isTechnicalTargetName(name: string, id: string, targetType: string) {
     name.startsWith(`${targetType}:`) ||
     name.startsWith("decision:") ||
     name.startsWith("permission_request:")
+  );
+}
+
+function isSemanticTechnicalTarget(record: LogRecord) {
+  return (
+    record.target.type === "authorization_decision" || record.target.type === "permission_request"
   );
 }
 
