@@ -8,12 +8,26 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  listGrantableUsersForObject,
   listObjectGrants,
   mapObjectGrantEntry,
   upsertObjectGrant,
 } from "@/modules/system-admin/services/authz.service";
 
 describe("object-grant backend contract", () => {
+  it("returns searchable enabled candidates in mock mode", async () => {
+    const candidates = await listGrantableUsersForObject(
+      "knowledge_network",
+      "kn-customer-360",
+      "yanqiu",
+    );
+
+    expect(candidates.map((candidate) => candidate.id)).toEqual(["u-chen"]);
+    expect(await listGrantableUsersForObject("knowledge_network", "kn-customer-360", "  ")).toEqual(
+      [],
+    );
+  });
+
   it("keeps repeated mock writes for the same operation idempotent", async () => {
     const input = {
       accessorId: "test-idempotent-user",

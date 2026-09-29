@@ -18,5 +18,7 @@ export { LicenseManagementScene } from "@/modules/system-admin/scenes/LicenseMan
 export { OAuthAccessOriginsScene } from "@/modules/system-admin/scenes/OAuthAccessOriginsScene";
 export { DirectoryUserPicker } from "@/modules/system-admin/components/DirectoryUserPicker";
 export type { DirectoryUserPickerProps } from "@/modules/system-admin/components/DirectoryUserPicker";
+export { GrantableUserPicker } from "@/modules/system-admin/components/GrantableUserPicker";
+export type { GrantableUserPickerProps } from "@/modules/system-admin/components/GrantableUserPicker";
 export type * from "@/modules/system-admin/types/admin";
 export type * from "@/modules/system-admin/types/oauth-access-origin";

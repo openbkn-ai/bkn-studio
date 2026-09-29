@@ -12,12 +12,12 @@ import {
   listDomainObjectsPage,
   resolveGrantNames,
 } from "@/modules/system-admin/services/authz-objects.service";
+import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type {
   AuthorizableObject,
   AuthzSummary,
   EffectiveDecision,
-  EnterpriseObjectGrant,
   GrantRecord,
   ObjectGrant,
   ObjectGrantInput,
@@ -752,12 +752,22 @@ export async function listGrantableUsersForObject(
   objId: string,
   search: string,
 ): Promise<AdminUser[]> {
-  if (useMock) {
+  const normalizedSearch = search.trim();
+  if (!normalizedSearch) {
     return [];
+  }
+  if (useMock) {
+    const result = await listUsersPage({
+      enabled: true,
+      limit: 50,
+      offset: 0,
+      search: normalizedSearch,
+    });
+    return result.users;
   }
   const response = await http.get<{ users?: { account?: string; id?: string; name?: string }[] }>(
     "/safe/v1/me/grantable-users",
-    { params: { resource_id: objId, resource_type: objType, search: search.trim() } },
+    { params: { resource_id: objId, resource_type: objType, search: normalizedSearch } },
   );
   return (response.data.users ?? [])
     .filter((user) => user.id)
@@ -771,55 +781,4 @@ export async function listGrantableUsersForObject(
       roleIds: [],
       telephone: "",
     }));
-}
-
-/** Read-only Enterprise compatibility inventory. Runtime eligibility is supplied by the server. */
-export async function listEnterpriseObjectGrants(
-  query: {
-    accessorId?: string;
-    resourceId?: string;
-    resourceType?: string;
-  } = {},
-): Promise<EnterpriseObjectGrant[]> {
-  if (useMock) {
-    return wait([]);
-  }
-  const response = await http.get<{
-    entries?: Array<{
-      activation_state?: EnterpriseObjectGrant["activationState"];
-      accessor_id?: string;
-      classification?: string;
-      effect?: EnterpriseObjectGrant["effect"];
-      expires_at?: string;
-      grant_id?: string;
-      inactive_reason?: string;
-      operation?: string;
-      resource_id?: string;
-      resource_type?: string;
-      rule_id?: string;
-      runtime_eligible?: boolean;
-      subject_type?: EnterpriseObjectGrant["subjectType"];
-    }>;
-  }>(`${ADMIN}/enterprise-object-grants`, {
-    params: {
-      accessor_id: query.accessorId,
-      resource_id: query.resourceId,
-      resource_type: query.resourceType,
-    },
-  });
-  return (response.data.entries ?? []).map((entry) => ({
-    activationState: entry.activation_state ?? "invalid",
-    accessorId: entry.accessor_id ?? "",
-    classification: entry.classification ?? "",
-    effect: entry.effect ?? "deny",
-    expiresAt: entry.expires_at,
-    grantId: entry.grant_id ?? "",
-    inactiveReason: entry.inactive_reason,
-    operation: entry.operation ?? "",
-    resourceId: entry.resource_id ?? "",
-    resourceType: entry.resource_type ?? "",
-    ruleId: entry.rule_id ?? "",
-    runtimeEligible: entry.runtime_eligible === true,
-    subjectType: entry.subject_type ?? "unknown",
-  }));
 }

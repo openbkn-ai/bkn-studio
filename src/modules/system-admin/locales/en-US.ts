@@ -646,21 +646,6 @@ export const systemAdminEnUS = {
       readOnlySource: "Read-only source",
       legacySourceUnavailable:
         "This legacy response has no source records. The summary is visible, but it cannot be revoked safely.",
-      enterpriseRulesTitle: "Enterprise object rules · read-only compatibility",
-      enterpriseRulesDescription:
-        "Displays server activation state and runtime eligibility only. Dormant, experimental, invalid or downgraded rules never affect the final decision. Use the API or CLI to edit.",
-      enterpriseRulesEmpty: "No Enterprise compatibility rules for this object",
-      runtimeEligible: "Runtime active",
-      runtimeInactive: "Runtime inactive",
-      enterpriseState: {
-        activated: "Activated",
-        expired: "Expired",
-        downgraded_inactive: "Inactive after downgrade",
-        deleted: "Deleted",
-        dormant: "Dormant",
-        experimental: "Experimental",
-        invalid: "Invalid",
-      },
       blockedBy: "blocked by denied {{operation}}",
       basis: {
         direct: "Direct",

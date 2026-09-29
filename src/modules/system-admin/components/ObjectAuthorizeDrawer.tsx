@@ -23,9 +23,9 @@ import {
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Drawer, Empty, Table, Tag, Tooltip } from "antd";
+import { Alert, Drawer, Empty, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -39,27 +39,16 @@ import { hasPermissions } from "@/framework/permission/has-permissions";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import {
   listObjectGrantsForObject,
-  listEnterpriseObjectGrants,
   revokeObjectGrantForObject,
   revokeObjectGrantsForObject,
   upsertObjectGrantForObject,
 } from "@/modules/system-admin/services/authz.service";
-import type { AdminDepartment } from "@/modules/system-admin/types/admin";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type {
   EffectiveDecision,
-  EnterpriseObjectGrant,
   GrantRecord,
   ObjectGrant,
 } from "@/modules/system-admin/types/authz";
-import {
-  getCachedDepartments,
-  getCachedUserSync,
-  hydrateUserLookup,
-  hydrateUserLookupDetails,
-  isDeletedUserSync,
-  isUserLookupId,
-  primeUserLookupCache,
-} from "@/modules/system-admin/utils/audit-lookup-cache";
 import {
   HIDDEN_INSTANCE_OPS,
   isCommunityObjectGrantType,
@@ -69,7 +58,6 @@ import {
   grantCreatorUserId,
   PUBLIC_ACCESSOR_ID,
   isRoleGrantSubject,
-  isUserDirectorySubject,
   isDelegateProtectedGrant,
   isSelfAuthorizeLockout,
 } from "@/modules/system-admin/utils/object-grant-guards";
@@ -78,7 +66,7 @@ import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-autho
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
-import { DirectoryUserPicker } from "./DirectoryUserPicker";
+import { GrantableUserPicker } from "./GrantableUserPicker";
 
 type ObjectAuthorizeDrawerProps = {
   /**
@@ -131,7 +119,6 @@ export function ObjectAuthorizeDrawer({
     useAuthorizationRegistry();
   const fineGrainedState = useCapability(CAPABILITIES.PERM_FINE_GRAINED);
   const fineGrained = fineGrainedState === "available";
-  const enterpriseAvailable = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL) === "available";
   // The drawer is a complete write panel for grants, operation changes, and revocation, but seeing
   // who has access to an object is legitimate for read-only reviewers. Guard each write control,
   // rather than blocking access to the drawer.
@@ -158,16 +145,22 @@ export function ObjectAuthorizeDrawer({
   const canRevoke = objectAuthorized || isAdminRevoker;
   const canManageGrants = canGrant || canRevoke;
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
-  const [enterpriseGrants, setEnterpriseGrants] = useState<EnterpriseObjectGrant[]>([]);
-  const [departments, setDepartments] = useState<AdminDepartment[]>([]);
-  const [pendingLookupIds, setPendingLookupIds] = useState<Set<string>>(() => new Set());
-  const [unresolvedLookupIds, setUnresolvedLookupIds] = useState<Set<string>>(() => new Set());
-  const [lookupRevision, setLookupRevision] = useState(0);
+  const [grantUsers, setGrantUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [candidate, setCandidate] = useState<string>();
   const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
   const [sourceAccessorId, setSourceAccessorId] = useState<string>();
+  const [loadedResourceKey, setLoadedResourceKey] = useState<string>();
+  const loadRequestId = useRef(0);
+  const resourceKey = `${objType}\u0000${objId}`;
+  const resourceLoaded = loadedResourceKey === resourceKey;
+  const scopedGrants = useMemo(() => (resourceLoaded ? grants : []), [grants, resourceLoaded]);
+  const scopedGrantUsers = useMemo(
+    () => (resourceLoaded ? grantUsers : []),
+    [grantUsers, resourceLoaded],
+  );
 
   // `authorize` is offered only to platform administrators. bkn-safe refuses it from anyone else —
   // a delegate that could pass `authorize` on would mint further delegates, and only an
@@ -220,84 +213,54 @@ export function ObjectAuthorizeDrawer({
     setCandidateOperations([]);
   };
 
-  // The object-scoped grants endpoint is the primary source of grantee names. These best-effort
-  // lookups only enrich older responses that lack a display name; one failed lookup must never
-  // prevent the other from completing.
-  const syncLookup = useCallback(async (accessorIds: string[], signal?: AbortSignal) => {
-    const ids = [...new Set(accessorIds.filter(isUserLookupId))];
-    setPendingLookupIds((current) => new Set([...current, ...ids]));
-    const [departmentsResult, usersResult] = await Promise.allSettled([
-      getCachedDepartments({ skipErrorToast: true }),
-      hydrateUserLookupDetails(ids, { signal }),
-    ]);
-    if (signal?.aborted) {
-      return;
-    }
-    if (departmentsResult.status === "fulfilled") {
-      setDepartments(departmentsResult.value);
-    }
-    const unresolved = usersResult.status === "fulfilled" ? usersResult.value.unavailable : ids;
-    setUnresolvedLookupIds((current) => {
-      const next = new Set(current);
-      ids.forEach((id) => next.delete(id));
-      unresolved.forEach((id) => next.add(id));
-      return next;
-    });
-    setPendingLookupIds((current) => {
-      const next = new Set(current);
-      ids.forEach((id) => next.delete(id));
-      return next;
-    });
-    setLookupRevision((revision) => revision + 1);
-  }, []);
-
   const loadRemote = useCallback(
     async (signal?: AbortSignal) => {
+      const requestId = ++loadRequestId.current;
       setLoading(true);
+      setLoadError(undefined);
       try {
         const { accounts, grants: grantList } = await listObjectGrantsForObject(objType, objId);
-        if (signal?.aborted) {
+        if (signal?.aborted || requestId !== loadRequestId.current) {
           return;
         }
-        // Prime first: these accounts are the only source of names an owner has.
-        primeUserLookupCache(accounts);
         setGrants(grantList);
-        setUnresolvedLookupIds(new Set());
-        // Grant rows are usable before user-directory enrichment finishes. Keep
-        // the drawer interactive and fill creator labels in the background.
-        void syncLookup(
-          grantList.flatMap((grant) => [
-            ...(isUserDirectorySubject(grant) ? [grant.accessorId] : []),
-            ...(grant.grants ?? []).flatMap((source) => grantCreatorUserId(source) ?? []),
-          ]),
-          signal,
-        );
-        if (enterpriseAvailable) {
-          const enterpriseGrants = await listEnterpriseObjectGrants({
-            resourceId: objId,
-            resourceType: objType,
-          });
-          if (!signal?.aborted) {
-            setEnterpriseGrants(enterpriseGrants);
-          }
-        } else {
-          setEnterpriseGrants([]);
-        }
+        setGrantUsers(accounts);
+        setLoadedResourceKey(resourceKey);
       } catch (error) {
-        void message.error(extractRequestErrorMessage(error));
+        if (signal?.aborted || requestId !== loadRequestId.current) {
+          return;
+        }
+        setGrants([]);
+        setGrantUsers([]);
+        setLoadedResourceKey(undefined);
+        const errorMessage = extractRequestErrorMessage(error);
+        setLoadError(errorMessage);
+        void message.error(errorMessage);
       } finally {
-        if (!signal?.aborted) {
+        if (!signal?.aborted && requestId === loadRequestId.current) {
           setLoading(false);
         }
       }
     },
-    [enterpriseAvailable, message, objId, objType, syncLookup],
+    [message, objId, objType, resourceKey],
   );
 
   useEffect(() => {
     if (!open) {
+      loadRequestId.current += 1;
+      setGrants([]);
+      setGrantUsers([]);
+      setLoadedResourceKey(undefined);
+      setLoadError(undefined);
+      setLoading(false);
+      setCandidate(undefined);
+      setCandidateOperations([]);
+      setSourceAccessorId(undefined);
       return;
     }
+    setGrants([]);
+    setGrantUsers([]);
+    setLoadedResourceKey(undefined);
     setCandidate(prefillGranteeId);
     setCandidateOperations([]);
     setSourceAccessorId(undefined);
@@ -306,14 +269,13 @@ export function ObjectAuthorizeDrawer({
     return () => controller.abort();
   }, [loadRemote, open, prefillGranteeId]);
 
-  const deptMap = useMemo(
-    () => new Map(departments.map((department) => [department.id, department])),
-    [departments],
+  const grantUserMap = useMemo(
+    () => new Map(scopedGrantUsers.map((user) => [user.id, user])),
+    [scopedGrantUsers],
   );
 
   const resolveGrantee = useCallback(
     (grant: ObjectGrant) => {
-      void lookupRevision;
       const id = grant.accessorId;
       if (grant.accessorType === "public" || id === PUBLIC_ACCESSOR_ID) {
         return { id, name: t("systemAdmin.objectGrants.publicSubject"), type: "public" as const };
@@ -325,51 +287,19 @@ export function ObjectAuthorizeDrawer({
           type: "role" as const,
         };
       }
-      if (grant.accessorName || grant.accessorAccount) {
-        return {
-          id,
-          name: grant.accessorName || grant.accessorAccount || id,
-          sub: grant.accessorAccount,
-          type: "user" as const,
-        };
-      }
-      const user = getCachedUserSync(id);
-      if (user) {
-        return { id, name: user.name, sub: user.account, type: "user" as const };
-      }
-      const dept = deptMap.get(id);
-      if (dept) {
-        return { id, name: dept.name, sub: undefined, type: "department" as const };
-      }
-      if (pendingLookupIds.has(id)) {
-        return {
-          id,
-          loading: true,
-          name: t("systemAdmin.objectGrants.granteeLoading"),
-          type: "user" as const,
-        };
-      }
-      if (isDeletedUserSync(id)) {
-        return {
-          deleted: true,
-          id,
-          name: t("systemAdmin.objectGrants.deletedUser"),
-          type: "user" as const,
-        };
-      }
+      const user = grantUserMap.get(id);
       return {
         id,
-        name: t("systemAdmin.objectGrants.granteeUnresolved"),
+        name: grant.accessorName || grant.accessorAccount || user?.name || user?.account || id,
+        sub: grant.accessorAccount || user?.account,
         type: "user" as const,
-        unresolved: unresolvedLookupIds.has(id),
       };
     },
-    [deptMap, lookupRevision, pendingLookupIds, t, unresolvedLookupIds],
+    [grantUserMap, t],
   );
 
   const resolveGrantCreator = useCallback(
     (source: GrantRecord) => {
-      void lookupRevision;
       const id = grantCreatorUserId(source);
       if (!id) {
         return {
@@ -378,19 +308,13 @@ export function ObjectAuthorizeDrawer({
             : t("systemAdmin.objectGrants.creatorNotRecorded"),
         };
       }
-      const user = getCachedUserSync(id);
+      const user = grantUserMap.get(id);
       if (user) {
         return { name: user.name, sub: user.account };
       }
-      if (pendingLookupIds.has(id)) {
-        return { name: t("systemAdmin.objectGrants.granteeLoading") };
-      }
-      if (isDeletedUserSync(id)) {
-        return { name: t("systemAdmin.objectGrants.deletedUser") };
-      }
-      return { name: t("systemAdmin.objectGrants.granteeUnresolved") };
+      return { name: id };
     },
-    [lookupRevision, pendingLookupIds, t],
+    [grantUserMap, t],
   );
 
   const grantProtection = useCallback(
@@ -414,15 +338,15 @@ export function ObjectAuthorizeDrawer({
   const visibleGrants = useMemo(
     () =>
       fineGrained
-        ? grants
-        : grants.filter(
+        ? scopedGrants
+        : scopedGrants.filter(
             (grant) =>
               grant.bundle === FULL_BUSINESS_ACCESS ||
               (grant.grants ?? []).some(
                 (source) => source.active && source.policySource === "community_bundle",
               ),
           ),
-    [fineGrained, grants],
+    [fineGrained, scopedGrants],
   );
 
   const hasProtectedGrant = useMemo(
@@ -431,6 +355,9 @@ export function ObjectAuthorizeDrawer({
   );
 
   const handleAdd = async () => {
+    if (!resourceLoaded || loading) {
+      return;
+    }
     if (!candidate) {
       void message.error(t("systemAdmin.objectGrants.pickGranteeFirst"));
       return;
@@ -454,8 +381,6 @@ export function ObjectAuthorizeDrawer({
       setCandidate(undefined);
       setCandidateOperations([]);
       await loadRemote();
-      await hydrateUserLookup([candidate]);
-      setLookupRevision((revision) => revision + 1);
       onChanged?.();
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
@@ -599,7 +524,7 @@ export function ObjectAuthorizeDrawer({
     });
   };
 
-  const sourceGrant = grants.find((grant) => grant.accessorId === sourceAccessorId);
+  const sourceGrant = scopedGrants.find((grant) => grant.accessorId === sourceAccessorId);
   const grantColumns: ColumnsType<ObjectGrant> = [
     {
       dataIndex: "accessorId",
@@ -607,13 +532,10 @@ export function ObjectAuthorizeDrawer({
       render: (_accessorId: string, grant: ObjectGrant) => {
         const grantee = resolveGrantee(grant);
         const protection = grantProtection(grant);
-        const granteeIsUnresolved = "unresolved" in grantee && grantee.unresolved;
         return (
           <div className={styles.authzSubjectCell}>
             <span className={styles.authzAvatar}>
-              {grantee.type === "department" ? (
-                <AppstoreOutlined />
-              ) : grantee.type === "role" ? (
+              {grantee.type === "role" ? (
                 <TeamOutlined />
               ) : grantee.type === "public" ? (
                 <GlobalOutlined />
@@ -625,17 +547,6 @@ export function ObjectAuthorizeDrawer({
               <strong>{grantee.name}</strong>
               {grantee.sub ? <small>{grantee.sub}</small> : null}
             </span>
-            {granteeIsUnresolved ? (
-              <AppButton
-                onClick={() => {
-                  void syncLookup([grantee.id]);
-                }}
-                size="small"
-                type="link"
-              >
-                {t("systemAdmin.objectGrants.retryGranteeLookup")}
-              </AppButton>
-            ) : null}
             {protection?.eraseLocked ? (
               <Tooltip title={protection.reason}>
                 <LockOutlined />
@@ -752,7 +663,12 @@ export function ObjectAuthorizeDrawer({
       render: (_value, grant) => {
         const protection = grantProtection(grant);
         const deleteDisabled =
-          busy || !canRevoke || protection.eraseLocked || !revocableSourcesForGrant(grant).length;
+          busy ||
+          loading ||
+          !resourceLoaded ||
+          !canRevoke ||
+          protection.eraseLocked ||
+          !revocableSourcesForGrant(grant).length;
         return (
           <div className={styles.authzRowActions}>
             <AppButton
@@ -981,6 +897,16 @@ export function ObjectAuthorizeDrawer({
         </div>
       </div>
 
+      {loadError ? (
+        <Alert
+          action={<AppButton onClick={() => void loadRemote()}>{t("common.retry")}</AppButton>}
+          description={loadError}
+          message={t("common.requestFailed")}
+          showIcon
+          type="error"
+        />
+      ) : null}
+
       {!canManageGrants ? (
         <div className={[styles.calloutBox, styles.sectionCalloutBottom].join(" ")}>
           <span>{t("systemAdmin.objectGrants.drawerReadOnly")}</span>
@@ -1003,13 +929,23 @@ export function ObjectAuthorizeDrawer({
               <label htmlFor="object-grant-user">
                 {t("systemAdmin.objectGrants.grantUserLabel")}
               </label>
-              <DirectoryUserPicker
+              <GrantableUserPicker
                 ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
-                departments={departments}
                 id="object-grant-user"
+                initialUsers={scopedGrantUsers}
                 loading={loading}
                 onChange={setCandidate}
+                onUsersChange={(users) => {
+                  if (!users.length) return;
+                  setGrantUsers((current) => {
+                    const byId = new Map(current.map((user) => [user.id, user]));
+                    users.forEach((user) => byId.set(user.id, user));
+                    return [...byId.values()];
+                  });
+                }}
                 placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
+                resourceId={objId}
+                resourceType={objType}
                 value={candidate}
               />
             </div>
@@ -1022,7 +958,11 @@ export function ObjectAuthorizeDrawer({
                   <div className={styles.authzGrantFieldActions}>
                     <AppButton
                       disabled={
-                        catalogLoading || !ops.length || candidateOperations.length === ops.length
+                        catalogLoading ||
+                        loading ||
+                        !resourceLoaded ||
+                        !ops.length ||
+                        candidateOperations.length === ops.length
                       }
                       onClick={selectAllCandidateOperations}
                       size="small"
@@ -1031,7 +971,9 @@ export function ObjectAuthorizeDrawer({
                       {t("systemAdmin.objectGrants.selectAllOperations")}
                     </AppButton>
                     <AppButton
-                      disabled={catalogLoading || !candidateOperations.length}
+                      disabled={
+                        catalogLoading || loading || !resourceLoaded || !candidateOperations.length
+                      }
                       onClick={clearCandidateOperations}
                       size="small"
                       type="link"
@@ -1063,7 +1005,7 @@ export function ObjectAuthorizeDrawer({
                               : styles.authzGrantOperation
                           }
                           onClick={() => toggleCandidateOperation(operation.key)}
-                          disabled={catalogLoading}
+                          disabled={catalogLoading || loading || !resourceLoaded}
                           type="button"
                         >
                           {operation.label}
@@ -1097,6 +1039,7 @@ export function ObjectAuthorizeDrawer({
                             current.includes(FULL_BUSINESS_ACCESS) ? [] : [FULL_BUSINESS_ACCESS],
                           )
                         }
+                        disabled={catalogLoading || loading || !resourceLoaded}
                         type="button"
                       >
                         {t("systemAdmin.objectGrants.fullBundleName")}
@@ -1126,7 +1069,13 @@ export function ObjectAuthorizeDrawer({
                       : t("systemAdmin.objectGrants.grantBundleReady")}
               </span>
               <AppButton
-                disabled={catalogLoading || !candidate || !candidateOperations.length}
+                disabled={
+                  catalogLoading ||
+                  loading ||
+                  !resourceLoaded ||
+                  !candidate ||
+                  !candidateOperations.length
+                }
                 icon={<PlusOutlined />}
                 loading={busy}
                 onClick={() => void handleAdd()}
@@ -1191,41 +1140,6 @@ export function ObjectAuthorizeDrawer({
           </div>
         )}
       </section>
-
-      {enterpriseAvailable && enterpriseGrants.length ? (
-        <section className={[styles.createPanel, styles.sectionCallout].join(" ")}>
-          <div className={styles.createPanelHead}>
-            <h3 className={styles.createPanelTitle}>
-              {t("systemAdmin.objectGrants.enterpriseRulesTitle")}
-            </h3>
-            <p className={styles.createPanelDesc}>
-              {t("systemAdmin.objectGrants.enterpriseRulesDescription")}
-            </p>
-          </div>
-          <div className={styles.createPanelBody}>
-            <div className={styles.sourceList}>
-              {enterpriseGrants.map((rule) => (
-                <div className={styles.sourceRow} key={rule.grantId}>
-                  <Tag color={rule.effect === "allow" ? "green" : "red"}>
-                    {t(`systemAdmin.objectGrants.effect.${rule.effect}`)}
-                  </Tag>
-                  <span className={styles.sourceOperation}>{rule.operation}</span>
-                  <span>{rule.classification}</span>
-                  <span>
-                    {t(`systemAdmin.objectGrants.enterpriseState.${rule.activationState}`)}
-                  </span>
-                  <code>{rule.ruleId}</code>
-                  <span className={styles.sourceReadOnly}>
-                    {rule.runtimeEligible
-                      ? t("systemAdmin.objectGrants.runtimeEligible")
-                      : t("systemAdmin.objectGrants.runtimeInactive")}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
     </>
   );
 

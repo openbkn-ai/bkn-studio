@@ -183,7 +183,7 @@ export const propertyAuthorizationPart = {
   rowFilterSubjectHelp:
     "Only users and roles can be configured. Organizations filter the user list only; they are not authorization subjects.",
   rowFilterSelectUser: "Select a user for row filtering",
-  rowFilterUserOrganizationFilter: "Filter users by organization",
+  rowFilterUserOrganizationFilter: "Search users",
   rowFilterSelectSubject: "Select a user or role",
   rowFilterSelectSubjectDescription:
     "Select a subject to inspect and configure its row-filter policy for this object type.",
