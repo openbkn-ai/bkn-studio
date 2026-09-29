@@ -147,10 +147,9 @@ function semanticTargetKey(record: LogRecord) {
     targetID.startsWith(prefix) || targetName.startsWith(prefix);
 
   if (
-    record.eventName === "authorization.decided" ||
     targetType === "authorization_decision" ||
-    (record.logCategory === "audit.security" &&
-      record.action === "check" &&
+    ((record.eventName === "authorization.decided" ||
+      (record.logCategory === "audit.security" && record.action === "check")) &&
       hasTargetPrefix("decision:"))
   ) {
     return "authorization_decision";

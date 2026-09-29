@@ -152,6 +152,22 @@ describe("log presentation", () => {
     });
   });
 
+  it("does not relabel an authorization event whose target is a real business resource", () => {
+    const record = {
+      action: "check",
+      businessModule: "system_management",
+      eventName: "authorization.decided",
+      logCategory: "audit.security",
+      target: { id: "material", name: "物料", type: "object_type" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "物料",
+      secondary: "material",
+    });
+    expect(presentTargetType(record, translateZhCN)).toBe("对象类");
+  });
+
   it("uses the semantic target label when an authorization decision has no name snapshot", () => {
     const record = {
       target: { id: "decision-1", name: "", type: "authorization_decision" },
