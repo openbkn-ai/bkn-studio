@@ -1009,10 +1009,13 @@ export const systemAdminZhCN = {
       },
       metrics: {
         edition: "授权档位",
-        licensedUntil: "授权有效期",
+        certificateExpiresAt: "本证有效期",
+        contractExpiresAt: "合同截止",
         activation: "激活状态",
         activationBound: "已绑定",
         activationPending: "待绑定",
+        activation_unbound: "已在签发中心解绑",
+        activation_revoked: "已吊销",
         scope: "授权范围",
         scopeValue: "{{features}} 项能力 / {{limits}} 项限额",
       },
@@ -1020,7 +1023,7 @@ export const systemAdminZhCN = {
         state: "状态",
         edition: "授权档位",
         licId: "授权 ID",
-        contractExpiresAt: "授权至",
+        contractExpiresAt: "合同截止",
         customer: "客户",
         project: "项目",
         email: "邮箱",
@@ -1054,6 +1057,8 @@ export const systemAdminZhCN = {
         unlicensed: "未导入授权",
         valid: "授权有效",
         validUnbound: "待激活绑定",
+        unbound: "授权已解绑",
+        revoked: "授权已吊销",
         grace: "授权宽限期",
         fallback_community: "商业授权回落",
         invalid: "未激活或授权无效",
@@ -1068,6 +1073,10 @@ export const systemAdminZhCN = {
         invalid:
           "当前没有可用授权。请到授权平台申请 .lic 授权文件，或复制设备指纹兑换离线激活证书后导入。",
         renewError: "自动续期失败：{{reason}}。系统将持续重试，当前授权不降档。",
+        unbound:
+          "签发中心已解除本授权与当前集群的绑定，当前运行社区能力集，数据完整保留。如为误操作，点击「导入并在线激活」重新绑定；如已迁移到新集群，可删除本证。",
+        revoked:
+          "签发中心已吊销本授权，当前运行社区能力集，数据完整保留。请联系商务获取新的授权。",
       },
       placeholders: {
         license: "粘贴完整授权文本，例如 v1.xxx.yyy",
