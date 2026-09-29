@@ -124,6 +124,11 @@ export function ViewEditorScene({
 
   const sourceLocked = unsupportedFilter;
   const sourceFields = useMemo(() => source?.schema ?? [], [source]);
+  const filterNeedsReview =
+    !unsupportedFilter &&
+    Boolean(view?.logicDefinition?.filterCondition) &&
+    (!source ||
+      filterValidationError(filter, sourceFields, sourceFilterQueryPath(source)) !== null);
   const sourceIdentity = (resource: CatalogResource) => (
     <span className={styles.sourceIdentity}>
       <strong>{resource.name}</strong>
@@ -181,15 +186,7 @@ export function ViewEditorScene({
         setFields(viewFields);
         const existingFilter = currentView?.logicDefinition?.filterCondition;
         const parsed = parseFilterCondition(existingFilter);
-        const cannotEditFilter =
-          Boolean(existingFilter) &&
-          (parsed === null ||
-            !currentSource ||
-            filterValidationError(
-              parsed,
-              currentSource.schema,
-              sourceFilterQueryPath(currentSource),
-            ) !== null);
+        const cannotEditFilter = Boolean(existingFilter) && parsed === null;
         setFilter(parsed ?? emptyFilterGroup());
         setUnsupportedFilter(cannotEditFilter);
         initialDraft.current = JSON.stringify({
@@ -859,12 +856,21 @@ export function ViewEditorScene({
                         type="warning"
                       />
                     ) : (
-                      <FilterTreeEditor
-                        fields={sourceFields}
-                        onChange={setFilter}
-                        queryPath={sourceFilterQueryPath(source)}
-                        value={filter}
-                      />
+                      <>
+                        {filterNeedsReview ? (
+                          <Alert
+                            message={t("dataCatalog.viewEditor.filterNeedsReview")}
+                            showIcon
+                            type="warning"
+                          />
+                        ) : null}
+                        <FilterTreeEditor
+                          fields={sourceFields}
+                          onChange={setFilter}
+                          queryPath={sourceFilterQueryPath(source)}
+                          value={filter}
+                        />
+                      </>
                     )}
                   </section>
                 </div>

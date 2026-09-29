@@ -335,6 +335,8 @@ export const dataCatalogEnUS = {
       fixedFilter: "Fixed Filter",
       unsupportedFilter:
         "This filter contains operations the editor cannot change. Saving other edits preserves it unchanged.",
+      filterNeedsReview:
+        "The fixed filter is incompatible with the current query path or source fields. Update it or change the view source.",
       noAccess: "This catalog cannot create or edit views. Check access and catalog status.",
       unsupported: "Only derived views can be edited.",
       invalidSource: "Select an available Table or Index with query access.",

@@ -318,6 +318,7 @@ export const dataCatalogZhCN = {
       moveDown: "下移",
       fixedFilter: "固定过滤条件",
       unsupportedFilter: "现有过滤条件包含此编辑器不支持的操作。保存其他修改时将原样保留该条件。",
+      filterNeedsReview: "固定过滤条件不适用于当前查询路径或源字段，请调整条件或切换视图来源。",
       noAccess: "当前目录不可创建或编辑视图，请检查权限与目录状态。",
       unsupported: "仅支持编辑衍生视图。",
       invalidSource: "请选择具备查询权限的可用 Table 或 Index。",

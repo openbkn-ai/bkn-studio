@@ -125,7 +125,7 @@ describe("ViewEditorScene", () => {
     updateViewMock.mockResolvedValue({ id: "view-1" });
   });
 
-  it("creates a view from a searched source with an editable display name", async () => {
+  it("shows the view wizard and searchable source and field identities", async () => {
     renderEditor({ catalogId: "cat-1" });
     expect(
       await screen.findByRole("heading", {
@@ -227,6 +227,18 @@ describe("ViewEditorScene", () => {
     expect(
       within(fieldPicker.closest(".ant-select") as HTMLElement).getByText("Order ID"),
     ).toBeTruthy();
+  });
+
+  it("creates a view with an editable display name and source fields", async () => {
+    renderEditor({ catalogId: "cat-1" });
+    await screen.findByRole("heading", { name: "dataCatalog.viewEditor.typeTitle" });
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog.viewEditor.derivedType/ }));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" }),
+    );
+    fireEvent.click(await screen.findByText("public.orders"));
+    await screen.findByLabelText("dataCatalog.viewEditor.outputName 1");
 
     fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.name"), {
       target: { value: "orders_view" },
@@ -681,13 +693,14 @@ describe("ViewEditorScene", () => {
     );
   });
 
-  it("marks a stored Text equality filter unsupported when its source uses an index without keyword Feature", async () => {
+  it("lets an existing view repair a Text filter after its table gains an index", async () => {
     const view = {
       ...source,
       id: "view-1",
       category: "logicview",
       logicType: "derived",
       name: "orders_view",
+      schema: [{ name: "notes", originalName: "notes", type: "text", displayName: "Notes" }],
       logicDefinition: {
         sourceResourceId: "source-1",
         filterCondition: { field: "notes", operation: "==", value: "open" },
@@ -697,13 +710,29 @@ describe("ViewEditorScene", () => {
       ...source,
       localIndexName: "idx_orders",
       localIndexStatus: "available",
-      schema: [{ name: "notes", type: "text" }],
+      schema: [{ name: "notes", originalName: "notes", type: "text", displayName: "Notes" }],
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : indexedSource),
     );
     renderEditor({ resourceId: "view-1" });
-    expect(await screen.findByText("dataCatalog.viewEditor.unsupportedFilter")).toBeTruthy();
+    expect(await screen.findByText("dataCatalog.viewEditor.filterNeedsReview")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" }),
+    ).not.toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    expect(await screen.findByText("dataCatalog.filter.errors.invalidField")).toBeTruthy();
+    expect(updateViewMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeRule" }));
+    expect(screen.queryByText("dataCatalog.viewEditor.filterNeedsReview")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    await waitFor(() =>
+      expect(updateViewMock).toHaveBeenCalledWith(
+        "view-1",
+        expect.objectContaining({ filterCondition: null }),
+      ),
+    );
   });
 
   it("keeps an unsupported filter blocked after its source schema changes", async () => {
