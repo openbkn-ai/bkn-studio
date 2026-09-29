@@ -135,6 +135,19 @@ describe("log presentation", () => {
     });
   });
 
+  it("degrades safely when a producer omits nullable target or actor snapshots", () => {
+    const record = {
+      actor: { id: null, name: null, type: "user" },
+      target: { id: "user-1", name: null, type: "user" },
+    } as unknown as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "user-1",
+      secondary: "user-1",
+    });
+    expect(presentLogActor(record, translateZhCN).primary).toBe("-");
+  });
+
   it("uses the current authenticated username when an old event only contains its user id", () => {
     const record = {
       actor: {
