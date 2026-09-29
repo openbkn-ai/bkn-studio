@@ -359,7 +359,15 @@ export function KnowledgeNetworkWorkspaceScene({
           {section === "overview" ? (
             renderSectionContent()
           ) : (
-            <div className={styles.workspaceSectionPage}>{renderSectionContent()}</div>
+            <div
+              className={
+                section === "experience-agent"
+                  ? `${styles.workspaceSectionPage} ${styles.workspaceSectionFlush}`
+                  : styles.workspaceSectionPage
+              }
+            >
+              {renderSectionContent()}
+            </div>
           )}
         </main>
       </div>
