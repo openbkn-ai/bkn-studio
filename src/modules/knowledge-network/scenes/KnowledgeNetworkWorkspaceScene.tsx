@@ -35,6 +35,7 @@ import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/component
 import { SkillsSparkIcon } from "@/modules/knowledge-network/components/shared/SkillsSparkIcon";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
+import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
 import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -309,6 +310,7 @@ export function KnowledgeNetworkWorkspaceScene({
               </div>
             )}
             {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+            <WorkspaceExtensionNavItems collapsed={sideCollapsed} networkId={activeNetworkId} />
             <div className={styles.sideDivider} />
             {sideCollapsed ? null : (
               <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceConceptModel")}</div>

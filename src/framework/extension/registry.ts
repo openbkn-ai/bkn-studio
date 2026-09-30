@@ -39,6 +39,12 @@ export type StudioExtension = {
   standaloneRoutes?: RouteObject[];
   /** Buttons on the knowledge-network workspace overview, beside Authorize and Edit. */
   workspaceActions?: WorkspaceAction[];
+  /**
+   * Entries in the knowledge-network workspace sidebar, under ability verification after the
+   * built-in Q&A and MCP entries. Separate from workspaceActions, so the extension decides where
+   * each of its pages is offered.
+   */
+  workspaceNavItems?: WorkspaceNavEntry[];
   /** Copy merged into the translation resources, by locale. */
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
 };
@@ -53,6 +59,21 @@ export type WorkspaceAction = {
   id: string;
   icon?: ReactNode;
   /** Translation key of the button label. */
+  labelKey: string;
+  /** Path inside the app, without the basename, for the given network. */
+  path: (networkId: string) => string;
+};
+
+/**
+ * A sidebar entry that opens one of the extension's pages for the network on screen, in a new
+ * tab: such a page stands on its own, without the workspace sidebar to come back through. Like a
+ * workspace action, it is shown whatever the licence says and the page carries the guard.
+ */
+export type WorkspaceNavEntry = {
+  /** Unique within the extension. */
+  id: string;
+  icon?: ReactNode;
+  /** Translation key of the entry label. */
   labelKey: string;
   /** Path inside the app, without the basename, for the given network. */
   path: (networkId: string) => string;
@@ -103,6 +124,15 @@ export function extensionWorkspaceActions(): (WorkspaceAction & { key: string })
     (extension.workspaceActions ?? []).map((action) => ({
       ...action,
       key: `${extension.id}:${action.id}`,
+    })),
+  );
+}
+
+export function extensionWorkspaceNavItems(): (WorkspaceNavEntry & { key: string })[] {
+  return installed.flatMap((extension) =>
+    (extension.workspaceNavItems ?? []).map((item) => ({
+      ...item,
+      key: `${extension.id}:${item.id}`,
     })),
   );
 }
