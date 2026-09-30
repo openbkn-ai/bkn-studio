@@ -41,6 +41,7 @@ describe("importKnowledgeNetwork", () => {
           validate_dependency: false,
         },
         skipErrorToast: true,
+        timeout: 60_000,
       },
     );
   });
@@ -61,7 +62,22 @@ describe("importKnowledgeNetwork", () => {
           validate_dependency: false,
         },
         skipErrorToast: true,
+        timeout: 60_000,
       },
+    );
+  });
+
+  it("uses the configured import timeout without changing the shared client", async () => {
+    vi.stubEnv("VITE_KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS", "75000");
+    const { importKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
+
+    await importKnowledgeNetwork({ id: "orders" });
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/bkn-backend/v1/knowledge-networks",
+      expect.any(Object),
+      expect.objectContaining({ timeout: 75_000 }),
     );
   });
 

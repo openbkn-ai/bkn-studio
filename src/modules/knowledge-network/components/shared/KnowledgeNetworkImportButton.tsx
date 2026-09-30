@@ -35,6 +35,16 @@ type KnowledgeNetworkImportButtonProps = {
 type ImportPayload = Record<string, unknown>;
 type ImportSubmitAction = "create" | "import" | "overwrite";
 
+const DEFAULT_IMPORT_MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
+const configuredImportMaxFileSizeBytes = Number(
+  import.meta.env.VITE_KNOWLEDGE_NETWORK_IMPORT_MAX_FILE_SIZE_BYTES,
+);
+const IMPORT_MAX_FILE_SIZE_BYTES =
+  Number.isFinite(configuredImportMaxFileSizeBytes) && configuredImportMaxFileSizeBytes > 0
+    ? configuredImportMaxFileSizeBytes
+    : DEFAULT_IMPORT_MAX_FILE_SIZE_BYTES;
+const IMPORT_MAX_FILE_SIZE_MB = Math.floor(IMPORT_MAX_FILE_SIZE_BYTES / (1024 * 1024));
+
 function isKnowledgeNetworkBindingPolicy(value: unknown): value is KnowledgeNetworkBindingPolicy {
   return value === "detach" || value === "preserve";
 }
@@ -124,6 +134,12 @@ export function KnowledgeNetworkImportButton({
       <Upload
         accept=".json"
         beforeUpload={(file) => {
+          if (file.size > IMPORT_MAX_FILE_SIZE_BYTES) {
+            void message.error(
+              t("knowledgeNetwork.importFileTooLarge", { maxSizeMB: IMPORT_MAX_FILE_SIZE_MB }),
+            );
+            return false;
+          }
           parseUploadFile(file);
           return false;
         }}

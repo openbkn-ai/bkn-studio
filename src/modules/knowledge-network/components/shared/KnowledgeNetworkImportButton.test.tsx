@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   importKnowledgeNetwork: vi.fn(),
   messageError: vi.fn(),
   messageSuccess: vi.fn(),
+  uploadFileSize: 2,
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -110,7 +111,12 @@ vi.mock("antd", () => {
     }) => (
       <div>
         <button
-          onClick={() => beforeUpload(new File(["{}"], "knowledge-network.json"))}
+          onClick={() =>
+            beforeUpload({
+              name: "knowledge-network.json",
+              size: mocks.uploadFileSize,
+            } as File)
+          }
           type="button"
         >
           upload-file
@@ -172,6 +178,7 @@ describe("KnowledgeNetworkImportButton", () => {
     mocks.importKnowledgeNetwork.mockReset();
     mocks.messageError.mockReset();
     mocks.messageSuccess.mockReset();
+    mocks.uploadFileSize = 2;
     mocks.importKnowledgeNetwork.mockRejectedValue(
       new KnowledgeNetworkImportConflictError("Knowledge network ID already exists."),
     );
@@ -189,6 +196,28 @@ describe("KnowledgeNetworkImportButton", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("rejects files larger than the configured gateway limit before reading them", async () => {
+    mocks.uploadFileSize = 500 * 1024 * 1024 + 1;
+    const readAsText = vi.fn();
+    vi.stubGlobal(
+      "FileReader",
+      class {
+        onload: ((event: { target: { result: string } }) => void) | null = null;
+
+        readAsText = readAsText;
+      },
+    );
+    render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
+
+    await waitFor(() => {
+      expect(mocks.messageError).toHaveBeenCalledWith("knowledgeNetwork.importFileTooLarge");
+    });
+    expect(readAsText).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("keeps the binding selection and ID/name conflict resolution in one dialog", async () => {
