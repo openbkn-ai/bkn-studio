@@ -10,10 +10,47 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const postMock = vi.hoisted(() => vi.fn());
 const getMock = vi.hoisted(() => vi.fn());
 const putMock = vi.hoisted(() => vi.fn());
+const deleteMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock, post: postMock, put: putMock },
+  http: { delete: deleteMock, get: getMock, post: postMock, put: putMock },
 }));
+
+describe("resource.service · deleteCatalogResource", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    deleteMock.mockReset();
+    deleteMock.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("lets a caller handle delete errors without the global toast", async () => {
+    const { deleteCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    await deleteCatalogResource("resource-1", { skipErrorToast: true });
+
+    expect(deleteMock).toHaveBeenCalledWith("/vega-backend/v1/resources/resource-1", {
+      skipErrorToast: true,
+    });
+  });
+
+  it("uses a conditional DELETE only when requested", async () => {
+    const { deleteCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    await deleteCatalogResource("resource-1", { onlyIfStale: true, skipErrorToast: true });
+
+    expect(deleteMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/resources/resource-1?only_if_stale=true",
+      { skipErrorToast: true },
+    );
+  });
+});
 
 describe("resource.service · previewCatalogResource", () => {
   beforeEach(() => {
@@ -994,7 +1031,61 @@ describe("resource.service · mock update boundaries", () => {
 
     const resource = await getCatalogResource("res-orders");
 
-    expect(resource?.operations).toEqual(["view_detail", "query_data"]);
+    expect(resource?.operations).toEqual(["view_detail", "query_data", "delete"]);
+  });
+
+  it("grants delete on newly created index resources in mock mode", async () => {
+    const { createCatalogResource, deleteCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const created = await createCatalogResource({
+      catalogId: "cat-001",
+      category: "index",
+      description: "",
+      name: "mock-index-delete-permission",
+      schema: [],
+      sourceIdentifier: "mock-index-delete-permission",
+    });
+
+    try {
+      expect(created.operations).toContain("delete");
+    } finally {
+      await deleteCatalogResource(created.id);
+    }
+  });
+
+  it("rejects deleting a resource with a running build task without changing mock data", async () => {
+    const { deleteCatalogResource, getCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const { mockBuildTasks } = await import("@/modules/data-catalog/services/mock-db");
+    const taskIds = mockBuildTasks
+      .filter((task) => task.resourceId === "res-orders")
+      .map((task) => task.id);
+
+    await expect(deleteCatalogResource("res-orders")).rejects.toMatchObject({
+      response: {
+        status: 409,
+        data: { error_code: "VegaBackend.BuildTask.HasRunningExecution" },
+      },
+    });
+    expect(await getCatalogResource("res-orders")).not.toBeNull();
+    expect(
+      mockBuildTasks.filter((task) => task.resourceId === "res-orders").map((task) => task.id),
+    ).toEqual(taskIds);
+  });
+
+  it("keeps an active mock resource when missing-state deletion is required", async () => {
+    const { deleteCatalogResource, getCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    await expect(
+      deleteCatalogResource("res-customers", { onlyIfStale: true }),
+    ).rejects.toMatchObject({
+      response: {
+        status: 409,
+        data: { error_code: "VegaBackend.Resource.DeleteConflict" },
+      },
+    });
+    expect(await getCatalogResource("res-customers")).not.toBeNull();
   });
 
   it("returns an HTTP-shaped 404 for a missing resource", async () => {

@@ -16,8 +16,10 @@ const getCatalogMock = vi.hoisted(() => vi.fn());
 const listBuildTaskPageMock = vi.hoisted(() => vi.fn());
 const subscribeMockDbMock = vi.hoisted(() => vi.fn());
 const discoverCatalogResourceMock = vi.hoisted(() => vi.fn());
+const deleteCatalogResourceMock = vi.hoisted(() => vi.fn());
 const setCatalogResourceEnabledMock = vi.hoisted(() => vi.fn());
 const modalConfirmMock = vi.hoisted(() => vi.fn());
+const navigateMock = vi.hoisted(() => vi.fn());
 const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
 const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
 const indexPanelProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
@@ -40,7 +42,9 @@ vi.mock("antd", () => ({
       {action}
     </div>
   ),
-  Space: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  Space: ({ children, wrap }: { children?: React.ReactNode; wrap?: boolean }) => (
+    <div data-wrap={wrap ? "true" : undefined}>{children}</div>
+  ),
   Spin: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="workspace-spin">{children}</div>
   ),
@@ -71,7 +75,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("react-router-dom", () => ({
   useLocation: () => ({ pathname: "/data-catalog/resource/resource-1", search: "" }),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigateMock,
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -136,6 +140,7 @@ vi.mock("@/modules/system-admin/components/ObjectAuthorizeDrawer", () => ({
 }));
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
+  deleteCatalogResource: deleteCatalogResourceMock,
   discoverCatalogResource: discoverCatalogResourceMock,
   getCatalogResource: getCatalogResourceMock,
   setCatalogResourceEnabled: setCatalogResourceEnabledMock,
@@ -205,8 +210,74 @@ describe("ResourceWorkspaceScene", () => {
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
     subscribeMockDbMock.mockImplementation(() => () => {});
     discoverCatalogResourceMock.mockReset();
+    deleteCatalogResourceMock.mockReset();
+    deleteCatalogResourceMock.mockResolvedValue(undefined);
     setCatalogResourceEnabledMock.mockReset();
     modalConfirmMock.mockReset();
+  });
+
+  it.each([
+    ["missing table", { category: "table", status: "stale", lastDiscoverStatus: "missing" }, true],
+    ["active table", { category: "table", status: "active" }, false],
+    ["dataset", { category: "dataset", status: "active" }, true],
+    ["view", { category: "logicview", status: "active" }, true],
+    [
+      "without permission",
+      { category: "dataset", status: "active", operations: ["view_detail"] },
+      false,
+    ],
+  ])("shows detail delete for %s when eligible", async (_, overrides, visible) => {
+    getCatalogResourceMock.mockResolvedValue({
+      ...staleResource,
+      operations: ["view_detail", "delete"],
+      ...overrides,
+    });
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await screen.findByText("orders");
+    expect(screen.queryByRole("button", { name: "common.delete" }) !== null).toBe(visible);
+  });
+
+  it("deletes an eligible resource and returns to its catalog", async () => {
+    getCatalogResourceMock.mockResolvedValue({
+      ...staleResource,
+      category: "logicview",
+      operations: ["view_detail", "delete"],
+      status: "active",
+    });
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    const deleteButton = await screen.findByRole("button", { name: "common.delete" });
+    expect(deleteButton.parentElement).toHaveAttribute("data-wrap", "true");
+    fireEvent.click(deleteButton);
+    expect(deleteCatalogResourceMock).not.toHaveBeenCalled();
+    const options = modalConfirmMock.mock.lastCall?.[0] as { onOk: () => Promise<void> };
+    await act(async () => {
+      await options.onOk();
+    });
+
+    expect(deleteCatalogResourceMock).toHaveBeenCalledWith("resource-1", {
+      onlyIfStale: false,
+      skipErrorToast: true,
+    });
+    expect(navigateMock).toHaveBeenCalledWith("/data-catalog/catalog/catalog-1");
   });
 
   it("loads only the latest build task for the resource status", async () => {

@@ -149,6 +149,7 @@ export function DataCatalogScene({ selection, suppressAutoSelect = false }: Data
     open: boolean;
   }>({ open: false });
   const [resourceTotal, setResourceTotal] = useState(0);
+  const resourceTotalRequestId = useRef(0);
   const initialLoadRef = useRef(false);
   const catalogQueryGeneration = useRef(0);
   const hydratedCatalogIds = useRef(new Set<string>());
@@ -261,7 +262,11 @@ export function DataCatalogScene({ selection, suppressAutoSelect = false }: Data
   );
 
   const refreshResourceTotal = useCallback(async () => {
-    setResourceTotal(await countCatalogResources());
+    const requestId = ++resourceTotalRequestId.current;
+    const total = await countCatalogResources();
+    if (requestId === resourceTotalRequestId.current) {
+      setResourceTotal(total);
+    }
   }, []);
 
   const loadAll = useCallback(async () => {
@@ -565,6 +570,10 @@ export function DataCatalogScene({ selection, suppressAutoSelect = false }: Data
             catalog={selectedCatalog}
             onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
             onOpenResource={openResourceWorkspace}
+            onResourceDeleted={() => {
+              void refreshResourceTotal().catch(() => undefined);
+              setResourceTotal((current) => Math.max(0, current - 1));
+            }}
           />
         </Suspense>
       );

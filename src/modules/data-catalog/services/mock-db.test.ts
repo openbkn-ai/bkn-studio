@@ -22,6 +22,28 @@ import {
 } from "./mock-db";
 
 describe("data catalog discover-status mocks", () => {
+  it("grants delete on ordinary resource categories and keeps restricted examples read-only", () => {
+    const restrictedIds = new Set([
+      "res-permission-limited-orders",
+      "res-summary-only-orders",
+      "adp_bkn_concept_dataset",
+    ]);
+    for (const resource of mockResources) {
+      if (restrictedIds.has(resource.id)) {
+        expect(resource.operations).not.toContain("delete");
+      } else {
+        expect(resource.operations).toContain("delete");
+      }
+    }
+
+    const missing = mockResources.find((item) => item.id === "res-source-missing");
+    expect(missing).toMatchObject({
+      status: "stale",
+      lastDiscoverStatus: "missing",
+    });
+    expect(missing?.operations).toContain("delete");
+  });
+
   it("populates every Property field required by the resource contract", () => {
     for (const resource of mockResources) {
       for (const field of resource.schema) {
@@ -141,7 +163,7 @@ describe("data catalog discover-status mocks", () => {
       category: "logicview",
       enabled: true,
       logicType: "derived",
-      operations: ["view_detail", "query_data"],
+      operations: ["view_detail", "query_data", "delete"],
       status: "active",
       sourceIdentifier: "res-high-value-orders-view",
       sourceMetadata: { objectType: "table", originalName: "crm_core.orders" },

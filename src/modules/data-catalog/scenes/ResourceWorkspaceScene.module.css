@@ -41,6 +41,11 @@
   overflow: hidden;
 }
 
+.pageHeaderActions {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .contextBar {
   display: inline-flex;
   align-items: center;

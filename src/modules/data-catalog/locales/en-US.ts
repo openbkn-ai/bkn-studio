@@ -504,6 +504,13 @@ export const dataCatalogEnUS = {
       create: "New Resource",
       createTitle: "New Data Resource",
       created: "Resource created: {{name}}",
+      deleted: "Resource deleted: {{name}}",
+      deleteTitle: "Delete resource?",
+      deleteImpact:
+        "This removes the resource record and related information in OpenBKN and may affect indexes, tasks, and grants. It does not delete or modify source database tables or data.",
+      deleteUnknownReferences:
+        "References from other business objects cannot be checked here. Confirm that you have reviewed them. Deletion may be irreversible.",
+      deleteStateChanged: "The resource state or delete permission changed. Refresh and try again.",
       description: "Description",
       originalName: "Original Name",
       originalDescription: "Original Description",

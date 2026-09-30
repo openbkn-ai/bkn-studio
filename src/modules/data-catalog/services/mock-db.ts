@@ -81,7 +81,7 @@ function makeResource(
     columnCount: input.schema.length,
     enabled: input.enabled ?? true,
     localIndexStatus: input.localIndexStatus ?? "unavailable",
-    operations: input.operations ?? ["view_detail", "query_data"],
+    operations: input.operations ?? ["view_detail", "query_data", "delete"],
     sourceMetadata,
     updateTime: formatMockTimestamp(input.expectedUpdateTime),
   };
@@ -287,7 +287,7 @@ export const mockResources: CatalogResource[] = [
     createTime: formatMockTimestamp(daysAgo(3)),
     updaterName: "Data Steward",
     status: "active",
-    operations: ["view_detail", "query_data"],
+    operations: ["view_detail", "query_data", "delete"],
     schema: [
       {
         name: "order_id",
@@ -657,6 +657,7 @@ export const mockResources: CatalogResource[] = [
     sourceIdentifier: "crm_core.archived_orders",
     description: "用于验证源端资源消失后，即使保留旧字段也禁止查询和预览。",
     lastDiscoverStatus: "missing",
+    status: "stale",
     statusMessage: "The resource was not found during the latest discovery.",
     schema: [
       {
@@ -932,6 +933,7 @@ export const mockResources: CatalogResource[] = [
     category: "dataset",
     sourceIdentifier: "",
     description: "BKN的概念存储数据集",
+    operations: ["view_detail", "query_data"],
     schema: [
       {
         name: "module_type",
