@@ -600,7 +600,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       description: input.description,
       enabled: true,
       localIndexStatus: "unavailable",
-      operations: ["view_detail", "query_data"],
+      operations: ["view_detail", "query_data", "delete"],
       schema:
         input.schema.length > 0
           ? input.schema
@@ -740,7 +740,7 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
       },
       logicType: "derived",
       name: input.name,
-      operations: ["view_detail", "query_data"],
+      operations: ["view_detail", "query_data", "delete"],
       rowCount: null,
       schema: input.schema,
       sourceIdentifier: "",
@@ -833,9 +833,38 @@ export async function updateDerivedView(
   return getCatalogResource(id);
 }
 
-export async function deleteCatalogResource(id: string) {
+export async function deleteCatalogResource(
+  id: string,
+  options: { onlyIfStale?: boolean; skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
+    if (
+      mockBuildTasks.some(
+        (task) =>
+          task.resourceId === id && (task.status === "running" || task.status === "stopping"),
+      )
+    ) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.BuildTask.HasRunningExecution",
+        "Resource has a running build task; wait until it finishes.",
+      );
+    }
     const index = mockResources.findIndex((item) => item.id === id);
+    if (options.onlyIfStale && index < 0) {
+      throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
+    }
+    if (
+      options.onlyIfStale &&
+      (mockResources[index].status !== "stale" ||
+        mockResources[index].lastDiscoverStatus !== "missing")
+    ) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.Resource.DeleteConflict",
+        "Resource is no longer stale and missing.",
+      );
+    }
     if (index >= 0) {
       mockResources.splice(index, 1);
     }
@@ -849,7 +878,10 @@ export async function deleteCatalogResource(id: string) {
     return;
   }
 
-  await http.delete(`/vega-backend/v1/resources/${id}`);
+  const url = `/vega-backend/v1/resources/${id}${options.onlyIfStale ? "?only_if_stale=true" : ""}`;
+  await http.delete(url, {
+    skipErrorToast: options.skipErrorToast,
+  });
 }
 
 /** Trigger asynchronous metadata refresh for one Resource. */

@@ -81,7 +81,7 @@ function makeResource(
     columnCount: input.schema.length,
     enabled: input.enabled ?? true,
     localIndexStatus: input.localIndexStatus ?? "unavailable",
-    operations: input.operations ?? ["view_detail", "query_data"],
+    operations: input.operations ?? ["view_detail", "query_data", "delete"],
     sourceMetadata,
     updateTime: formatMockTimestamp(input.expectedUpdateTime),
   };
@@ -287,7 +287,7 @@ export const mockResources: CatalogResource[] = [
     createTime: formatMockTimestamp(daysAgo(3)),
     updaterName: "Data Steward",
     status: "active",
-    operations: ["view_detail", "query_data"],
+    operations: ["view_detail", "query_data", "delete"],
     schema: [
       {
         name: "order_id",
@@ -682,6 +682,31 @@ export const mockResources: CatalogResource[] = [
     expectedUpdateTime: minutesAgo(30),
   }),
   makeResource({
+    id: "res-stale-source-missing",
+    catalogId: "cat-001",
+    name: "stale_archived_orders",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.stale_archived_orders",
+    description: "用于验证已失效且源端缺失的资源可删除。",
+    status: "stale",
+    lastDiscoverStatus: "missing",
+    statusMessage: "The resource was not found during the latest discovery.",
+    schema: [
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 12_480,
+    expectedUpdateTime: minutesAgo(31),
+  }),
+  makeResource({
     id: "res-discovery-error",
     catalogId: "cat-001",
     name: "discover_error_orders",
@@ -932,6 +957,7 @@ export const mockResources: CatalogResource[] = [
     category: "dataset",
     sourceIdentifier: "",
     description: "BKN的概念存储数据集",
+    operations: ["view_detail", "query_data"],
     schema: [
       {
         name: "module_type",

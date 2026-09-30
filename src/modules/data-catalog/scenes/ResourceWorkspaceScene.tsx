@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined, KeyOutlined, ReloadOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, DeleteOutlined, KeyOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Alert, Space, Spin, Tabs } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +20,10 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ResourceDetailPanel } from "@/modules/data-catalog/components/ResourceDetailPanel";
+import {
+  isResourceDeletionEligible,
+  useResourceDeletion,
+} from "@/modules/data-catalog/hooks/use-resource-deletion";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { authzPoints } from "@/modules/system-admin/permissions";
@@ -69,6 +73,7 @@ export function ResourceWorkspaceScene({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal, runtimeConfig } = useAppServices();
+  const { confirmDeleteResource } = useResourceDeletion();
   const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   // Reading this table's rows is granted on the table itself; its management verbs live on the
   // owning catalog (openbkn-ai/bkn-foundry#986). Shown to whoever may issue grants at all.
@@ -509,7 +514,7 @@ export function ResourceWorkspaceScene({
               ) : null}
             </div>
           </div>
-          <Space>
+          <Space className={styles.pageHeaderActions} wrap>
             {canManageCatalogTasks && resource.category !== "logicview" ? (
               <AppButton
                 disabled={detailEditing}
@@ -531,6 +536,20 @@ export function ResourceWorkspaceScene({
                 variant={resource.enabled === false ? "solid" : undefined}
               >
                 {t(resource.enabled === false ? "common.enable" : "common.disable")}
+              </AppButton>
+            ) : null}
+            {catalog && !catalog.builtin && isResourceDeletionEligible(resource) ? (
+              <AppButton
+                danger
+                disabled={detailEditing || resourceAction !== null}
+                icon={<DeleteOutlined />}
+                onClick={() =>
+                  confirmDeleteResource(resource, catalog, () => {
+                    void navigate(backTarget);
+                  })
+                }
+              >
+                {t("common.delete")}
               </AppButton>
             ) : null}
             {canAuthorizeResource ? (

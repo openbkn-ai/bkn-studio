@@ -31,6 +31,10 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
+import {
+  isResourceDeletionEligible,
+  useResourceDeletion,
+} from "@/modules/data-catalog/hooks/use-resource-deletion";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { canManageDerivedViews } from "@/modules/data-catalog/lib/view-access";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
@@ -120,6 +124,7 @@ function getResourceNameTooltip(
 type ResourceListPanelProps = {
   catalog: CatalogRecord;
   onCreateResource: (catalogId: string) => void;
+  onResourceDeleted: () => void;
   onOpenResource: (
     resourceId: string,
     tab?: "detail" | "index" | "preview" | "semantic-understanding",
@@ -131,9 +136,11 @@ export function ResourceListPanel({
   catalog,
   onCreateResource,
   onOpenResource,
+  onResourceDeleted,
 }: ResourceListPanelProps) {
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
+  const { confirmDeleteResource } = useResourceDeletion();
   const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   const { snapshot } = useEntitlementContext();
   const navigate = useNavigate();
@@ -153,6 +160,7 @@ export function ResourceListPanel({
   const [resources, setResources] = useState<CatalogResource[]>([]);
   const [resourceTotal, setResourceTotal] = useState(0);
   const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [resourceRevision, setResourceRevision] = useState(0);
   const [resourceLoadError, setResourceLoadError] = useState<string | null>(null);
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [authorizeResource, setAuthorizeResource] = useState<CatalogResource | null>(null);
@@ -260,6 +268,7 @@ export function ResourceListPanel({
     page,
     pageSize,
     resourceKeyword,
+    resourceRevision,
     statusFilter,
   ]);
 
@@ -478,6 +487,9 @@ export function ResourceListPanel({
             label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
           });
         }
+        if (!catalog.builtin && isResourceDeletionEligible(record)) {
+          moreItems.push({ danger: true, key: "delete", label: t("common.delete") });
+        }
         if (
           canRequestResourcePermission("resource", record.operations, permissionRequestsEnabled)
         ) {
@@ -519,6 +531,14 @@ export function ResourceListPanel({
                   }
                   if (key === "semantic-understanding") {
                     onOpenResource(record.id, "semantic-understanding");
+                    return;
+                  }
+                  if (key === "delete") {
+                    confirmDeleteResource(record, catalog, () => {
+                      onResourceDeleted();
+                      setPage(1);
+                      setResourceRevision((value) => value + 1);
+                    });
                   }
                 },
               }}

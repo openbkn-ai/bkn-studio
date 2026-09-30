@@ -484,6 +484,13 @@ export const dataCatalogZhCN = {
       create: "新建资源",
       createTitle: "新建数据资源",
       created: "资源已创建:{{name}}",
+      deleted: "资源已删除:{{name}}",
+      deleteTitle: "删除资源？",
+      deleteImpact:
+        "删除会清理 OpenBKN 中的资源记录及其关联信息，可能影响索引、任务和授权；不会删除或修改源数据库中的表和数据。",
+      deleteUnknownReferences:
+        "其他业务对象对该资源的引用无法在此自动核实，请确认已自行检查。删除后可能无法恢复。",
+      deleteStateChanged: "资源状态或删除权限已变化，请刷新后重试。",
       description: "描述",
       originalName: "原始名称",
       originalDescription: "原始描述",
