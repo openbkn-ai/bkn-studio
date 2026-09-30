@@ -28,7 +28,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, vars?: Record<string, unknown>) =>
+      vars ? `${key}:${JSON.stringify(vars)}` : key,
+  }),
 }));
 
 vi.mock("antd", () => {
@@ -214,7 +217,9 @@ describe("KnowledgeNetworkImportButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
 
     await waitFor(() => {
-      expect(mocks.messageError).toHaveBeenCalledWith("knowledgeNetwork.importFileTooLarge");
+      expect(mocks.messageError).toHaveBeenCalledWith(
+        'knowledgeNetwork.importFileTooLarge:{"maxSizeMB":500}',
+      );
     });
     expect(readAsText).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

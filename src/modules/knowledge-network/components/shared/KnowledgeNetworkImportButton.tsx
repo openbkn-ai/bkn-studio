@@ -35,6 +35,7 @@ type KnowledgeNetworkImportButtonProps = {
 type ImportPayload = Record<string, unknown>;
 type ImportSubmitAction = "create" | "import" | "overwrite";
 
+// This matches the bundled gateway body limit, not a guaranteed browser parsing limit.
 const DEFAULT_IMPORT_MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
 const configuredImportMaxFileSizeBytes = Number(
   import.meta.env.VITE_KNOWLEDGE_NETWORK_IMPORT_MAX_FILE_SIZE_BYTES,
