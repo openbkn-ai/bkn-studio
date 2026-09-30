@@ -959,6 +959,7 @@ export const bknTraceZhCN = {
         risk_type: "风险类型",
         authorization_decision: "授权决策",
         permission_request: "权限请求",
+        session: "登录会话",
       },
       unnamedTarget: "未命名对象",
       title: "日志检索",

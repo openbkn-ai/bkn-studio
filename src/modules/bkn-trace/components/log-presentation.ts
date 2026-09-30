@@ -157,6 +157,9 @@ function semanticTargetKey(record: LogRecord) {
   if (targetType === "permission_request" || hasTargetPrefix("permission_request:")) {
     return "permission_request";
   }
+  if (targetType === "session" && record.logCategory === "access.user") {
+    return "session";
+  }
   return "";
 }
 
