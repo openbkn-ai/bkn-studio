@@ -229,6 +229,43 @@ describe("ViewEditorScene", () => {
     ).toBeTruthy();
   });
 
+  it("stops at five view tags and reports an attempted sixth tag", async () => {
+    renderEditor({ catalogId: "cat-1" });
+    await screen.findByRole("heading", { name: "dataCatalog.viewEditor.typeTitle" });
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog.viewEditor.derivedType/ }));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+
+    const tagsField = screen.getByText("dataCatalog.viewEditor.tagsHint").closest("label");
+    const input = tagsField?.querySelector(".ant-select input");
+    expect(input).not.toBeNull();
+    if (!input) return;
+
+    for (const tag of ["one", "two", "three", "four", "five", "six"]) {
+      fireEvent.change(input, { target: { value: tag } });
+      fireEvent.keyDown(input, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+    }
+
+    expect(tagsField?.querySelectorAll(".ant-select-selection-item")).toHaveLength(5);
+    expect(screen.getByRole("alert").textContent).toBe("dataCatalog.viewEditor.tagErrors.count");
+    fireEvent.click(tagsField?.querySelector(".ant-select-selection-item-remove") as HTMLElement);
+    for (const [tag, error] of [
+      ["bad/tag", "characters"],
+      ["😀".repeat(41), "length"],
+      ["   ", "empty"],
+    ]) {
+      fireEvent.change(input, { target: { value: tag } });
+      fireEvent.keyDown(input, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+      expect(tagsField?.querySelectorAll(".ant-select-selection-item")).toHaveLength(4);
+      expect(screen.getByRole("alert").textContent).toBe(
+        `dataCatalog.viewEditor.tagErrors.${error}`,
+      );
+    }
+    fireEvent.change(input, { target: { value: `  ${"😀".repeat(40)}  ` } });
+    fireEvent.keyDown(input, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+    expect(tagsField?.querySelectorAll(".ant-select-selection-item")).toHaveLength(5);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("creates a view with an editable display name and source fields", async () => {
     renderEditor({ catalogId: "cat-1" });
     await screen.findByRole("heading", { name: "dataCatalog.viewEditor.typeTitle" });
@@ -450,6 +487,42 @@ describe("ViewEditorScene", () => {
     expect(displayName).toHaveValue("😀".repeat(255));
     fireEvent.change(displayName, { target: { value: "😀".repeat(256) } });
     expect(displayName).toHaveValue("😀".repeat(255));
+    const viewName = screen.getByLabelText("dataCatalog.viewEditor.name");
+    fireEvent.change(viewName, { target: { value: "😀".repeat(255) } });
+    expect(viewName).toHaveValue("😀".repeat(255));
+    fireEvent.change(viewName, { target: { value: "😀".repeat(256) } });
+    expect(viewName).toHaveValue("😀".repeat(255));
+    const description = screen.getByLabelText("dataCatalog.viewEditor.description");
+    fireEvent.change(description, { target: { value: "😀".repeat(1000) } });
+    expect(description).toHaveValue("😀".repeat(1000));
+    fireEvent.change(description, { target: { value: "😀".repeat(1001) } });
+    expect(description).toHaveValue("😀".repeat(1000));
+  });
+
+  it.each([
+    ["name", { name: "n".repeat(256) }, "nameLengthLimit"],
+    ["description", { description: "d".repeat(1001) }, "descriptionLengthLimit"],
+    ["tag content", { tags: ["bad/tag"] }, "tagErrors.characters"],
+  ])("rejects a persisted view with invalid %s before saving", async (_, fields, errorKey) => {
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logicview",
+      logicType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      logicDefinition: { sourceResourceId: "source-1" },
+      ...fields,
+    } as CatalogResource;
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : source),
+    );
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue(view.name);
+
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    expect(await screen.findByText(`dataCatalog.viewEditor.${errorKey}`)).toBeTruthy();
+    expect(updateViewMock).not.toHaveBeenCalled();
   });
 
   it("rejects a persisted output name above the backend limit on save", async () => {

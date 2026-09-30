@@ -314,6 +314,12 @@ export const dataCatalogEnUS = {
       description: "Description",
       tags: "Tags",
       tagsHint: "Up to 5 tags, with at most 40 characters each",
+      tagErrors: {
+        count: "At most 5 tags are allowed.",
+        empty: "Tags cannot be empty.",
+        length: "Each tag must be at most 40 characters.",
+        characters: "Tags contain unsupported special characters.",
+      },
       source: "View Source",
       sourceSearch: "Search Tables or Indexes by resource name",
       sourceEmpty: "No matching source resources",
@@ -343,9 +349,10 @@ export const dataCatalogEnUS = {
       sourceSchemaChanged:
         "Source fields changed. Review output fields and fixed filters before saving.",
       invalidName: "Enter a view name.",
+      nameLengthLimit: "View names must be at most 255 characters.",
+      descriptionLengthLimit: "Descriptions must be at most 1000 characters.",
       invalidFields:
         "Keep at least one field. Output names must be nonempty, unique, and at most 255 characters; display names must be nonempty and at most 255 characters.",
-      invalidTags: "Use up to 5 nonempty tags of at most 40 characters each.",
       saveError: "Could not save the view. Check your input and try again.",
       saved: "View saved",
       discardTitle: "Discard unsaved changes?",

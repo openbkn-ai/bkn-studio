@@ -10,6 +10,16 @@ import type { Rule } from "antd/es/form";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { LimitedTagsSelect } from "@/framework/ui/common/LimitedTagsSelect";
+import {
+  normalizeVegaTag,
+  validateVegaTag,
+  validateVegaTags,
+  VEGA_TAG_MAX_LENGTH,
+  VEGA_TAGS_MAX_NUMBER,
+  type VegaTagError,
+} from "@/shared/catalog/vega-tags";
+
 import {
   getConnectorFieldHint,
   getConnectorFieldPlaceholder,
@@ -39,42 +49,11 @@ type SafeNamePath = string | number | Array<string | number>;
 
 const NAME_MAX_LENGTH = 255;
 const DESCRIPTION_MAX_LENGTH = 1000;
-const TAG_MAX_LENGTH = 40;
-const TAGS_MAX_NUMBER = 5;
-const TAG_INVALID_CHARACTERS = [
-  "/",
-  ":",
-  "?",
-  "\\",
-  '"',
-  "<",
-  ">",
-  "|",
-  "：",
-  "？",
-  "‘",
-  "’",
-  "“",
-  "”",
-  "！",
-  "《",
-  "》",
-  ",",
-  "#",
-  "[",
-  "]",
-  "{",
-  "}",
-  "%",
-  "&",
-  "*",
-  "$",
-  "^",
-  "!",
-  "=",
-  ".",
-  "'",
-];
+const unicodeCount = (max: number) => ({
+  max,
+  strategy: (value: string) => Array.from(value).length,
+  exceedFormatter: (value: string) => Array.from(value).slice(0, max).join(""),
+});
 
 export function DataConnectConfigForm({
   isEdit = false,
@@ -93,34 +72,26 @@ export function DataConnectConfigForm({
     ? getConnectorTemplateMeta(selectedConnectorType)
     : null;
 
+  const tagErrorMessage = (error: VegaTagError) => {
+    switch (error) {
+      case "count":
+        return t("dataConnect.tagsMaxLength", { count: VEGA_TAGS_MAX_NUMBER });
+      case "empty":
+        return t("dataConnect.tagRequired");
+      case "length":
+        return t("dataConnect.tagLengthLimit", { count: VEGA_TAG_MAX_LENGTH });
+      case "characters":
+        return t("dataConnect.tagInvalidCharacters");
+    }
+  };
+
   const tagRules: Rule[] = [
     {
       validator: (_: unknown, value?: string[]) => {
         const tags = value ?? [];
 
-        if (tags.length > TAGS_MAX_NUMBER) {
-          return Promise.reject(
-            new Error(t("dataConnect.tagsMaxLength", { count: TAGS_MAX_NUMBER })),
-          );
-        }
-
-        for (const tag of tags) {
-          if (tag.trim().length === 0) {
-            return Promise.reject(new Error(t("dataConnect.tagRequired")));
-          }
-
-          if (tag.length > TAG_MAX_LENGTH) {
-            return Promise.reject(
-              new Error(t("dataConnect.tagLengthLimit", { count: TAG_MAX_LENGTH })),
-            );
-          }
-
-          if (tag.split("").some((character) => TAG_INVALID_CHARACTERS.includes(character))) {
-            return Promise.reject(new Error(t("dataConnect.tagInvalidCharacters")));
-          }
-        }
-
-        return Promise.resolve();
+        const error = validateVegaTags(tags);
+        return error ? Promise.reject(new Error(tagErrorMessage(error))) : Promise.resolve();
       },
     },
   ];
@@ -150,13 +121,20 @@ export function DataConnectConfigForm({
             rules={[
               { message: t("common.required"), required: true },
               {
-                max: NAME_MAX_LENGTH,
-                message: t("dataConnect.nameLengthLimit", { count: NAME_MAX_LENGTH }),
+                validator: (_, value?: string) =>
+                  value && Array.from(value).length > NAME_MAX_LENGTH
+                    ? Promise.reject(
+                        new Error(t("dataConnect.nameLengthLimit", { count: NAME_MAX_LENGTH })),
+                      )
+                    : Promise.resolve(),
               },
             ]}
             span="half"
           >
-            <Input maxLength={NAME_MAX_LENGTH} placeholder={t("dataConnect.namePlaceholder")} />
+            <Input
+              count={unicodeCount(NAME_MAX_LENGTH)}
+              placeholder={t("dataConnect.namePlaceholder")}
+            />
           </InlineField>
           <InlineField
             label={t("common.status")}
@@ -176,16 +154,22 @@ export function DataConnectConfigForm({
             name="description"
             rules={[
               {
-                max: DESCRIPTION_MAX_LENGTH,
-                message: t("dataConnect.descriptionLengthLimit", {
-                  count: DESCRIPTION_MAX_LENGTH,
-                }),
+                validator: (_, value?: string) =>
+                  value && Array.from(value).length > DESCRIPTION_MAX_LENGTH
+                    ? Promise.reject(
+                        new Error(
+                          t("dataConnect.descriptionLengthLimit", {
+                            count: DESCRIPTION_MAX_LENGTH,
+                          }),
+                        ),
+                      )
+                    : Promise.resolve(),
               },
             ]}
             span="full"
           >
             <Input.TextArea
-              maxLength={DESCRIPTION_MAX_LENGTH}
+              count={unicodeCount(DESCRIPTION_MAX_LENGTH)}
               placeholder={t("dataConnect.descriptionPlaceholder")}
               rows={2}
             />
@@ -197,7 +181,17 @@ export function DataConnectConfigForm({
             rules={tagRules}
             span="full"
           >
-            <Select mode="tags" open={false} placeholder={t("dataConnect.tagsPlaceholder")} />
+            <LimitedTagsSelect
+              limit={VEGA_TAGS_MAX_NUMBER}
+              limitMessage={tagErrorMessage("count")}
+              normalizeTag={normalizeVegaTag}
+              open={false}
+              placeholder={t("dataConnect.tagsPlaceholder")}
+              validateTag={(tag) => {
+                const error = validateVegaTag(tag);
+                return error ? tagErrorMessage(error) : null;
+              }}
+            />
           </InlineField>
         </div>
       </section>
