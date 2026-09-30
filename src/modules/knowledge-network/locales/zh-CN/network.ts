@@ -126,6 +126,7 @@ export const networkPart = {
   networkIdOrNameExists: "知识网络 ID 或名称已存在。",
   importIgnore: "忽略",
   importInvalidJson: "导入文件不是有效的 JSON。",
+  importFileTooLarge: "导入文件超过网关 {{maxSizeMB}} MB 的大小限制。",
   importOverwrite: "覆盖",
   importPending: "导入流程会在后续切片中按旧 Vega 体验继续补齐。",
   importSuccess: "导入成功",

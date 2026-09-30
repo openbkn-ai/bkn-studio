@@ -135,6 +135,7 @@ export const networkPart = {
   networkIdOrNameExists: "Knowledge network ID or name already exists.",
   importIgnore: "Ignore",
   importInvalidJson: "The import file is not valid JSON.",
+  importFileTooLarge: "The import file exceeds the {{maxSizeMB}} MB gateway limit.",
   importOverwrite: "Overwrite",
   importPending:
     "The import flow will be aligned with the legacy Vega experience in a later slice.",

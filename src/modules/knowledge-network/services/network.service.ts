@@ -53,10 +53,19 @@ import {
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
 
-// The backend assembles the whole network while the request is open, which
-// outlasts the client's 30s default on a large network. Keep every export
-// format on the same one-minute request budget.
+// Whole-network import and export can outlast the client's 30s default while
+// the backend processes a large model. Keep both operations on an explicit
+// one-minute request budget without changing the global HTTP timeout.
 const KNOWLEDGE_NETWORK_EXPORT_TIMEOUT_MS = 60_000;
+const DEFAULT_KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS = 60_000;
+const configuredKnowledgeNetworkImportTimeout = Number(
+  import.meta.env.VITE_KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS,
+);
+const KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS =
+  Number.isFinite(configuredKnowledgeNetworkImportTimeout) &&
+  configuredKnowledgeNetworkImportTimeout > 0
+    ? configuredKnowledgeNetworkImportTimeout
+    : DEFAULT_KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS;
 
 const MOCK_KNOWLEDGE_NETWORK_OPERATIONS = [
   "view_detail",
@@ -407,6 +416,7 @@ export async function importKnowledgeNetwork(
         validate_dependency: false,
       },
       skipErrorToast: true,
+      timeout: KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS,
     });
   } catch (error) {
     const response = (
