@@ -55,14 +55,16 @@ export function TopBar() {
   const { snapshot } = useEntitlementContext();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const [networkName, setNetworkName] = useState<string | null>(null);
-  const [pendingPermissionRequestCount, setPendingPermissionRequestCount] = useState(0);
+  const [pendingPermissionRequestCount, setPendingPermissionRequestCount] = useState<number | null>(
+    null,
+  );
   const isKnowledgeNetworkRoute =
     routeHandle?.console?.menuKey?.startsWith("domain-knowledge-network") ?? false;
   const permissionRequestsAvailable = !isCommunityBuild(entitlement);
 
   useEffect(() => {
     if (!permissionRequestsAvailable) {
-      setPendingPermissionRequestCount(0);
+      setPendingPermissionRequestCount(null);
       return;
     }
     let disposed = false;
@@ -72,9 +74,11 @@ export function TopBar() {
       loading = true;
       void getPermissionRequestTodoSummary()
         .then((summary) => {
-          if (!disposed) setPendingPermissionRequestCount(summary.pending_count);
+          if (!disposed) setPendingPermissionRequestCount(summary?.pending_count ?? null);
         })
-        .catch(() => undefined)
+        .catch(() => {
+          if (!disposed) setPendingPermissionRequestCount(null);
+        })
         .finally(() => {
           loading = false;
         });
@@ -318,7 +322,9 @@ export function TopBar() {
       </div>
 
       <div className="console-topbar-actions">
-        {permissionRequestsAvailable && pendingPermissionRequestCount > 0 ? (
+        {permissionRequestsAvailable &&
+        pendingPermissionRequestCount !== null &&
+        pendingPermissionRequestCount > 0 ? (
           <Badge count={pendingPermissionRequestCount} overflowCount={99} size="small">
             <button
               aria-label={t("shell.items.pendingPermissionRequests", {

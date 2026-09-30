@@ -9,7 +9,8 @@ import { http } from "@/framework/request/http";
 import { isRequestNotFound } from "@/framework/request/error-message";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-let todoSummaryUnavailable = false;
+const todoSummaryNotFoundRetryMs = 2 * 60 * 1000;
+let todoSummaryRetryAfter = 0;
 
 type PermissionRequestErrorResponse = {
   error_code?: string;
@@ -86,21 +87,23 @@ export async function listPermissionRequests(
   return response.data;
 }
 
-export async function getPermissionRequestTodoSummary() {
-  if (useMock || todoSummaryUnavailable) {
+export async function getPermissionRequestTodoSummary(): Promise<PermissionRequestTodoSummary | null> {
+  if (useMock) {
     return { pending_count: 0 };
   }
+  if (Date.now() < todoSummaryRetryAfter) return null;
 
   try {
     const response = await http.get<PermissionRequestTodoSummary>(
       "/safe/v1/me/permission-requests/todo/summary",
       { skipErrorToast: true },
     );
+    todoSummaryRetryAfter = 0;
     return response.data;
   } catch (error) {
     if (!isRequestNotFound(error)) throw error;
-    todoSummaryUnavailable = true;
-    return { pending_count: 0 };
+    todoSummaryRetryAfter = Date.now() + todoSummaryNotFoundRetryMs;
+    return null;
   }
 }
 

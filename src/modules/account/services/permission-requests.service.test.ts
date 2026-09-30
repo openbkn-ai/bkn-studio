@@ -34,7 +34,10 @@ describe("getPermissionRequestTodoSummary", () => {
     httpState.calls = [];
     httpState.get = () => Promise.resolve({ data: { pending_count: 0 } });
   });
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
 
   it("does not request an unproxied API in mock mode", async () => {
     const getSummary = await importSummary("true");
@@ -53,15 +56,22 @@ describe("getPermissionRequestTodoSummary", () => {
     ]);
   });
 
-  it("stops retrying when an older backend does not have the summary route", async () => {
+  it("retries a missing summary route after two minutes and recovers", async () => {
     const getSummary = await importSummary("false");
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_000);
     const error = new AxiosError("not found");
     error.response = { status: 404 } as typeof error.response;
     httpState.get = () => Promise.reject(error);
 
-    expect(await getSummary()).toEqual({ pending_count: 0 });
-    expect(await getSummary()).toEqual({ pending_count: 0 });
+    expect(await getSummary()).toBeNull();
+    now.mockReturnValue(120_999);
+    expect(await getSummary()).toBeNull();
     expect(httpState.calls).toHaveLength(1);
+
+    httpState.get = () => Promise.resolve({ data: { pending_count: 2 } });
+    now.mockReturnValue(121_000);
+    expect(await getSummary()).toEqual({ pending_count: 2 });
+    expect(httpState.calls).toHaveLength(2);
   });
 
   it("preserves other request failures", async () => {

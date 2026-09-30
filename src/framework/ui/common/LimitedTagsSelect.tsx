@@ -32,11 +32,14 @@ export function LimitedTagsSelect({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleChange = (nextTags: string[]) => {
-    if (nextTags.length > limit) {
+    const normalize = normalizeTag ?? ((tag: string) => tag);
+    const normalizedTags = Array.from(new Set(nextTags.map(normalize)));
+    if (normalizedTags.length > limit) {
       setErrorMessage(limitMessage);
       return;
     }
-    const addedTags = nextTags.filter((tag) => !value?.includes(tag));
+    const currentTags = new Set((value ?? []).map(normalize));
+    const addedTags = nextTags.filter((tag) => !currentTags.has(normalize(tag)));
     for (const tag of addedTags) {
       const error = validateTag?.(tag);
       if (error) {
@@ -45,7 +48,7 @@ export function LimitedTagsSelect({
       }
     }
     setErrorMessage(null);
-    onChange?.(normalizeTag ? nextTags.map(normalizeTag) : nextTags);
+    onChange?.(normalizedTags);
   };
 
   return (
