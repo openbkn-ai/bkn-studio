@@ -77,7 +77,7 @@ export function IssueApiKeyModal({
       confirmLoading={submitting}
       onOk={() => void handleSubmit()}
       onCancel={handleClose}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

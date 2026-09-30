@@ -244,7 +244,7 @@ export function MetricDataQueryPanel({
   return (
     <div>
       <Card
-        bordered={embedded ? false : undefined}
+        variant={embedded ? "borderless" : undefined}
         title={t("knowledgeNetwork.metricQueryFormTitle")}
       >
         <Form

@@ -104,7 +104,7 @@ export function OperatorDebugModal({
   return (
     <Modal
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t("executionFactory.runDebug")}
       onCancel={onClose}
       onOk={() => {

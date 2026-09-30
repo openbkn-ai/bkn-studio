@@ -88,7 +88,7 @@ export function InstallFromCatalogModal({
   return (
     <Modal
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t(
         alreadyInstalled ? "executionFactory.syncConfirm" : "executionFactory.introduceConfirm",
       )}

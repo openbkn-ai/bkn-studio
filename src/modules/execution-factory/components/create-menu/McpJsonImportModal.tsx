@@ -219,7 +219,7 @@ export function McpJsonImportModal({ open, category, onClose, onFill }: McpJsonI
 
   return (
     <Modal
-      destroyOnClose
+      destroyOnHidden
       footer={
         <Space>
           <AppButton disabled={registering} onClick={() => onClose(registeredIds)}>

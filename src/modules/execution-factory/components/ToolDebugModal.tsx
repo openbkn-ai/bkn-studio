@@ -110,7 +110,7 @@ export function ToolDebugModal({
       */
       className={styles.modal}
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t("executionFactory.runDebug")}
       onCancel={onClose}
       onOk={() => {
