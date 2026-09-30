@@ -1064,10 +1064,8 @@ export const bknTraceZhCN = {
       notReturned: "接口未返回",
       overview: "运行概览",
       policies: "保留与存储策略",
-      readOnlyNotice:
-        "本页只展示服务端已返回的维护事实；各来源覆盖须按 Trace、日志、Audit 和 Evidence 分别验收。",
       recentArchives: "最近归档",
-      sources: "业务模块查询来源（不代表完整采集覆盖）",
+      sources: "业务模块查询来源",
       inventory: {
         title: "注册来源清单",
         explanation:
@@ -1099,6 +1097,7 @@ export const bknTraceZhCN = {
         coverage: { unverified: "未完成覆盖验收" },
       },
       sourceLabels: {
+        "audit-ledger": "BKN Safe 审计日志",
         "bkn-backend": "领域知识网络服务",
         "bkn-safe-admin": "系统管理服务",
         "bkn-trace-core": "Agent 业务会话",
@@ -1123,7 +1122,7 @@ export const bknTraceZhCN = {
         source_health_check_failed: "来源健康探测失败，请检查服务连通性和接口响应。",
         source_not_configured: "未配置采集来源。",
         source_not_integrated: "尚无可验证的采集来源，不能判断采集是否正常。",
-        source_not_listed: "未列入独立查询来源；请对照下方注册清单，不能据此判断模块完全没有采集。",
+        source_not_listed: "尚未接入独立查询来源。",
         source_not_requested: "当前账号未查询来源状态。",
         source_query_failed: "来源状态查询失败。",
         source_timeout: "来源探测超时。",
@@ -1134,7 +1133,7 @@ export const bknTraceZhCN = {
         healthy: "查询可用",
         known: "已返回",
         not_integrated: "未接入",
-        not_listed: "未列入独立查询来源",
+        not_listed: "未接入",
         unavailable: "不可用",
         unconfigured: "未接入",
         unknown: "接口未返回",

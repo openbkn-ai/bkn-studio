@@ -1129,10 +1129,8 @@ export const bknTraceEnUS = {
       notReturned: "Not returned by API",
       overview: "Runtime overview",
       policies: "Retention and storage policies",
-      readOnlyNotice:
-        "This page shows maintenance facts returned by the server. Trace, logs, Audit, and Evidence coverage require separate verification.",
       recentArchives: "Recent archives",
-      sources: "Business-module query sources (not full collection coverage)",
+      sources: "Business-module query sources",
       inventory: {
         title: "Registered source inventory",
         explanation:
@@ -1165,6 +1163,7 @@ export const bknTraceEnUS = {
         coverage: { unverified: "Coverage unverified" },
       },
       sourceLabels: {
+        "audit-ledger": "BKN Safe audit logs",
         "bkn-backend": "Domain knowledge network service",
         "bkn-safe-admin": "System management service",
         "bkn-trace-core": "Agent business conversation",
@@ -1192,8 +1191,7 @@ export const bknTraceEnUS = {
         source_not_configured: "Collection source is not configured.",
         source_not_integrated:
           "No verifiable collection source is integrated; collection health cannot be determined.",
-        source_not_listed:
-          "Not listed as an independent query source. Check the registry below; this does not prove that the module has no collection.",
+        source_not_listed: "No independent query source is integrated.",
         source_not_requested: "The current account did not query source status.",
         source_query_failed: "Source status query failed.",
         source_timeout: "Source health check timed out.",
@@ -1204,7 +1202,7 @@ export const bknTraceEnUS = {
         healthy: "Queryable",
         known: "Returned",
         not_integrated: "Not integrated",
-        not_listed: "Not an independent query source",
+        not_listed: "Not integrated",
         unavailable: "Unavailable",
         unconfigured: "Not integrated",
         unknown: "Not returned",
