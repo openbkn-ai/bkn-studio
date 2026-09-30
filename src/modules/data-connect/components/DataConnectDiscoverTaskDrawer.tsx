@@ -157,7 +157,7 @@ export function DataConnectDiscoverTaskDrawer({
   return (
     <Drawer
       className={styles.drawer}
-      destroyOnClose
+      destroyOnHidden
       loading={loading}
       onClose={onClose}
       open={open}

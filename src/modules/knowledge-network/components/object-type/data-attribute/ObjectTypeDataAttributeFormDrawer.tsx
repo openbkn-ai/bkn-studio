@@ -313,7 +313,7 @@ export function ObjectTypeDataAttributeFormDrawer({
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       footer={
         <div className={styles.footer}>
           <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>

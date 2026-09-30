@@ -140,7 +140,7 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
     return (
       <Drawer
         className={styles.drawer}
-        destroyOnClose
+        destroyOnHidden
         loading={loading}
         onClose={onClose}
         open={open}
@@ -195,7 +195,7 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
   return (
     <Drawer
       className={styles.drawer}
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}

@@ -156,7 +156,7 @@ export function DataConnectDetailDrawer({
         }
       }}
       className={styles.drawer}
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       styles={{

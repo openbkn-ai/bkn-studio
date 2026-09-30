@@ -70,7 +70,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
   return (
     <Drawer
       className={styles.compactDrawer}
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={Boolean(logId)}
       rootClassName={styles.compactDrawerRoot}

@@ -103,7 +103,7 @@ export function RegisterMcpDrawer({ open, onClose, onRegistered }: RegisterMcpDr
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       title={t("executionFactoryLab.registerMcpTitle")}
