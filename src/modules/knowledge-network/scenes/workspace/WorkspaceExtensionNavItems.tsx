@@ -8,15 +8,14 @@
 import { useTranslation } from "react-i18next";
 import { useHref } from "react-router-dom";
 
-import { extensionWorkspaceActions, type WorkspaceAction } from "@/framework/extension/registry";
+import { extensionWorkspaceNavItems, type WorkspaceNavEntry } from "@/framework/extension/registry";
 
 import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
 
 /**
- * Pages another build registered for this network (see registry.ts), listed under ability
- * verification beside the Q&A and MCP entries. They open in a new tab like the overview buttons
- * do: such a page stands on its own, without this sidebar to come back through. The community
- * build registers none, so nothing renders.
+ * Sidebar entries another build registered for this network (see registry.ts), listed under
+ * ability verification after the Q&A and MCP entries. The community build registers none, so
+ * nothing renders.
  */
 export function WorkspaceExtensionNavItems({
   collapsed,
@@ -25,39 +24,34 @@ export function WorkspaceExtensionNavItems({
   collapsed: boolean;
   networkId: string;
 }) {
-  return extensionWorkspaceActions().map((action) => (
-    <ExtensionNavItem
-      action={action}
-      collapsed={collapsed}
-      key={action.key}
-      networkId={networkId}
-    />
+  return extensionWorkspaceNavItems().map((item) => (
+    <ExtensionNavItem collapsed={collapsed} item={item} key={item.key} networkId={networkId} />
   ));
 }
 
 function ExtensionNavItem({
-  action,
   collapsed,
+  item,
   networkId,
 }: {
-  action: WorkspaceAction;
   collapsed: boolean;
+  item: WorkspaceNavEntry;
   networkId: string;
 }) {
   const { t } = useTranslation();
-  const href = useHref(action.path(networkId));
-  const label = t(action.labelKey);
+  const href = useHref(item.path(networkId));
+  const label = t(item.labelKey);
 
   return (
     <button
       className={styles.sideItem}
-      data-testid={`workspace-nav-${action.id}`}
+      data-testid={`workspace-nav-${item.id}`}
       onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
       title={label}
       type="button"
     >
       <span className={styles.sideItemMeta}>
-        {action.icon}
+        {item.icon}
         {collapsed ? null : <span>{label}</span>}
       </span>
     </button>

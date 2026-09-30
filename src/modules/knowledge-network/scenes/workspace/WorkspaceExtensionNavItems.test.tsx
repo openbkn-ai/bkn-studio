@@ -21,7 +21,7 @@ function registerGraphExplorer() {
   registerExtension({
     capability: "graph_explorer",
     id: "graph-explorer",
-    workspaceActions: [
+    workspaceNavItems: [
       {
         icon: <span data-testid="graph-explorer-icon" />,
         id: "graph-explorer",
@@ -42,6 +42,23 @@ function renderItems(collapsed = false) {
 
 describe("WorkspaceExtensionNavItems", () => {
   it("renders nothing when no build registered a page", () => {
+    renderItems();
+
+    expect(screen.queryByTestId(/^workspace-nav-/)).toBeNull();
+  });
+
+  it("leaves out overview buttons the extension did not also offer here", () => {
+    registerExtension({
+      capability: "graph_explorer",
+      id: "graph-explorer",
+      workspaceActions: [
+        {
+          id: "graph-explorer",
+          labelKey: "knowledgeNetwork.graphExplorer.openAction",
+          path: (networkId) => `/knowledge-network/workspace/${networkId}/graph-explorer`,
+        },
+      ],
+    });
     renderItems();
 
     expect(screen.queryByTestId(/^workspace-nav-/)).toBeNull();
