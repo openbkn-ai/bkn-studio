@@ -433,7 +433,7 @@ describe("ViewEditorScene", () => {
     expect(document.querySelector(".ant-select-selection-item")?.textContent).toContain("Beta");
   });
 
-  it("rejects duplicate output display names before creating a view", async () => {
+  it("rejects duplicate output and display names before creating a view", async () => {
     const sourceWithTwoFields = {
       ...source,
       schema: [
@@ -484,6 +484,34 @@ describe("ViewEditorScene", () => {
       "true",
     );
     expect(screen.queryByText("dataCatalog.viewEditor.duplicateDisplayName")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.outputName 2"), {
+      target: { value: " id " },
+    });
+    expect(screen.getByLabelText("dataCatalog.viewEditor.outputName 1")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByLabelText("dataCatalog.viewEditor.outputName 2")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getAllByText("dataCatalog.viewEditor.duplicateOutputName")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
+    expect(createViewMock).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.outputName 2"), {
+      target: { value: "order_no" },
+    });
+    expect(screen.getByLabelText("dataCatalog.viewEditor.outputName 1")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByLabelText("dataCatalog.viewEditor.outputName 2")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.queryByText("dataCatalog.viewEditor.duplicateOutputName")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
     await waitFor(() => expect(createViewMock).toHaveBeenCalledOnce());

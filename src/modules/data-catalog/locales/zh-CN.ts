@@ -333,6 +333,7 @@ export const dataCatalogZhCN = {
       nameLengthLimit: "视图名称不能超过 255 个字符。",
       descriptionLengthLimit: "描述不能超过 1000 个字符。",
       invalidFields: "至少保留一个输出字段；输出名和字段显示名均须非空、唯一且不超过 255 个字符。",
+      duplicateOutputName: "输出名“{{name}}”重复，请修改。",
       duplicateDisplayName: "字段显示名“{{name}}”重复，请修改。",
       saveError: "保存视图失败，请检查输入后重试。",
       saved: "视图已保存",

@@ -353,6 +353,7 @@ export const dataCatalogEnUS = {
       descriptionLengthLimit: "Descriptions must be at most 1000 characters.",
       invalidFields:
         "Keep at least one field. Output names and display names must be nonempty, unique, and at most 255 characters.",
+      duplicateOutputName: 'Output name "{{name}}" is duplicated. Change it.',
       duplicateDisplayName: 'Display name "{{name}}" is duplicated. Change it.',
       saveError: "Could not save the view. Check your input and try again.",
       saved: "View saved",

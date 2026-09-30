@@ -166,16 +166,22 @@ export function ViewEditorScene({
     () => new Map(sourceFields.map((field) => [field.originalName || field.name, field])),
     [sourceFields],
   );
-  const duplicateDisplayNames = useMemo(() => {
-    const seen = new Set<string>();
-    const duplicates = new Set<string>();
-    for (const field of fields) {
-      const displayName = field.displayName?.trim();
-      if (!displayName) continue;
-      if (seen.has(displayName)) duplicates.add(displayName);
-      seen.add(displayName);
-    }
-    return duplicates;
+  const duplicateNames = useMemo(() => {
+    const findDuplicates = (getName: (field: ResourceSchemaField) => string | undefined) => {
+      const seen = new Set<string>();
+      const duplicates = new Set<string>();
+      for (const field of fields) {
+        const name = getName(field)?.trim();
+        if (!name) continue;
+        if (seen.has(name)) duplicates.add(name);
+        seen.add(name);
+      }
+      return duplicates;
+    };
+    return {
+      output: findDuplicates((field) => field.name),
+      display: findDuplicates((field) => field.displayName),
+    };
   }, [fields]);
   const dirty =
     initialDraft.current !==
@@ -810,7 +816,10 @@ export function ViewEditorScene({
                         <tbody>
                           {fields.map((field, index) => {
                             const sourceField = sourceByName.get(field.originalName || field.name);
-                            const duplicateDisplayName = duplicateDisplayNames.has(
+                            const duplicateOutputName = duplicateNames.output.has(
+                              field.name.trim(),
+                            );
+                            const duplicateDisplayName = duplicateNames.display.has(
                               field.displayName?.trim() ?? "",
                             );
                             return (
@@ -825,13 +834,31 @@ export function ViewEditorScene({
                                 </td>
                                 <td>
                                   <Input
+                                    aria-describedby={
+                                      duplicateOutputName
+                                        ? `view-output-name-error-${index}`
+                                        : undefined
+                                    }
+                                    aria-invalid={duplicateOutputName || undefined}
                                     aria-label={`${t("dataCatalog.viewEditor.outputName")} ${index + 1}`}
                                     count={fieldNameCount}
                                     onChange={(event) =>
                                       updateField(index, { name: event.target.value })
                                     }
+                                    status={duplicateOutputName ? "error" : undefined}
                                     value={field.name}
                                   />
+                                  {duplicateOutputName ? (
+                                    <small
+                                      className={styles.fieldError}
+                                      id={`view-output-name-error-${index}`}
+                                      role="alert"
+                                    >
+                                      {t("dataCatalog.viewEditor.duplicateOutputName", {
+                                        name: field.name.trim(),
+                                      })}
+                                    </small>
+                                  ) : null}
                                 </td>
                                 <td>
                                   <Input
