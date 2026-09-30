@@ -37,14 +37,17 @@ export type StudioExtension = {
   routes?: RouteObject[];
   /** Routes without the shell, like the knowledge-network workspace pages. */
   standaloneRoutes?: RouteObject[];
-  /** Buttons on the knowledge-network workspace overview, beside Authorize and Edit. */
+  /**
+   * Pages for the network on screen: a button on the workspace overview, beside Authorize and
+   * Edit, and an entry in the workspace sidebar under ability verification.
+   */
   workspaceActions?: WorkspaceAction[];
   /** Copy merged into the translation resources, by locale. */
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
 };
 
 /**
- * A button that opens one of the extension's pages for the network on screen, in a new tab.
+ * An entry that opens one of the extension's pages for the network on screen, in a new tab.
  * It is shown whatever the licence says: the page it opens is behind the extension's
  * capability guard, which is where a licence that falls short gets the upgrade page.
  */
