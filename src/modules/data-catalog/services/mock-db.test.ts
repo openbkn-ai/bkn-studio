@@ -8,6 +8,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { isIncrementalField, isPrimaryKeyField } from "@/modules/data-catalog/lib/build-guards";
+import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import {
   filterValidationError,
   parseFilterCondition,
@@ -38,10 +39,17 @@ describe("data catalog discover-status mocks", () => {
 
     const missing = mockResources.find((item) => item.id === "res-source-missing");
     expect(missing).toMatchObject({
-      status: "stale",
       lastDiscoverStatus: "missing",
     });
     expect(missing?.operations).toContain("delete");
+    expect(missing && resourceQueryBlockReason(missing)).toBe("missing");
+
+    const staleMissing = mockResources.find((item) => item.id === "res-stale-source-missing");
+    expect(staleMissing).toMatchObject({
+      status: "stale",
+      lastDiscoverStatus: "missing",
+    });
+    expect(staleMissing?.operations).toContain("delete");
   });
 
   it("populates every Property field required by the resource contract", () => {

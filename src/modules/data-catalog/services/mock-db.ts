@@ -657,7 +657,6 @@ export const mockResources: CatalogResource[] = [
     sourceIdentifier: "crm_core.archived_orders",
     description: "用于验证源端资源消失后，即使保留旧字段也禁止查询和预览。",
     lastDiscoverStatus: "missing",
-    status: "stale",
     statusMessage: "The resource was not found during the latest discovery.",
     schema: [
       {
@@ -681,6 +680,31 @@ export const mockResources: CatalogResource[] = [
     ],
     rowCount: 12_480,
     expectedUpdateTime: minutesAgo(30),
+  }),
+  makeResource({
+    id: "res-stale-source-missing",
+    catalogId: "cat-001",
+    name: "stale_archived_orders",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.stale_archived_orders",
+    description: "用于验证已失效且源端缺失的资源可删除。",
+    status: "stale",
+    lastDiscoverStatus: "missing",
+    statusMessage: "The resource was not found during the latest discovery.",
+    schema: [
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 12_480,
+    expectedUpdateTime: minutesAgo(31),
   }),
   makeResource({
     id: "res-discovery-error",
