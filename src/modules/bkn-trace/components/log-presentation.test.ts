@@ -67,6 +67,26 @@ describe("log presentation", () => {
     expect(presentLogAction(record, translateZhCN)).toBe("用户登录");
   });
 
+  it("presents a technical access session as a readable login session", () => {
+    const record = {
+      action: "login",
+      eventName: "login.succeeded",
+      logCategory: "access.user",
+      businessModule: "system_management",
+      target: {
+        id: "session:38afbb4fc86703514e2bf16ede39a327",
+        name: "session:38afbb4fc86703514e2bf16ede39a327",
+        type: "session",
+      },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "登录会话",
+      secondary: "session:38afbb4fc86703514e2bf16ede39a327",
+    });
+    expect(presentTargetType(record, translateZhCN)).toBe("登录会话");
+  });
+
   it("presents an authorization decision with a business-readable action and target", () => {
     const record = {
       action: "check",

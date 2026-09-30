@@ -1018,6 +1018,7 @@ export const bknTraceEnUS = {
         risk_type: "risk type",
         authorization_decision: "authorization decision",
         permission_request: "permission request",
+        session: "Login session",
       },
       unnamedTarget: "Unnamed object",
       title: "Log Search",
