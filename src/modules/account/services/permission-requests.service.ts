@@ -6,6 +6,10 @@
  */
 
 import { http } from "@/framework/request/http";
+import { isRequestNotFound } from "@/framework/request/error-message";
+
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+let todoSummaryUnavailable = false;
 
 type PermissionRequestErrorResponse = {
   error_code?: string;
@@ -83,10 +87,21 @@ export async function listPermissionRequests(
 }
 
 export async function getPermissionRequestTodoSummary() {
-  const response = await http.get<PermissionRequestTodoSummary>(
-    "/safe/v1/me/permission-requests/todo/summary",
-  );
-  return response.data;
+  if (useMock || todoSummaryUnavailable) {
+    return { pending_count: 0 };
+  }
+
+  try {
+    const response = await http.get<PermissionRequestTodoSummary>(
+      "/safe/v1/me/permission-requests/todo/summary",
+      { skipErrorToast: true },
+    );
+    return response.data;
+  } catch (error) {
+    if (!isRequestNotFound(error)) throw error;
+    todoSummaryUnavailable = true;
+    return { pending_count: 0 };
+  }
 }
 
 export async function getPermissionRequestProposalPreview(resourceID: string) {

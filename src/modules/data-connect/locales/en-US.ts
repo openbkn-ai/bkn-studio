@@ -84,6 +84,10 @@ export const dataConnectEnUS = {
     discardChangesDescription:
       "The connection information you entered has not been saved and will be lost if you go back.",
     discardChangesConfirm: "Discard and go back",
+    changeConnectorTitle: "Change connector type?",
+    changeConnectorDescription:
+      "Continuing to the new connector's configuration will clear the current settings and apply the new defaults.",
+    changeConnectorConfirm: "Change connector",
     jsonObjectInvalid: "Enter a valid JSON object.",
     categoryAll: "All",
     selectConnectorTypeRequired: "Please select a connector type first.",
@@ -415,7 +419,7 @@ export const dataConnectEnUS = {
         server: "For example: db.example.internal",
         oracleOptions: 'For example: {"timeout":30,"charset":"UTF8"}',
         hanaDatabase: "For example: TENANT_DB",
-        hanaOptions: 'For example: {"tls":true}',
+        hanaOptions: 'For example: {"timeout":30}',
         hanaSchemas:
           "Leave empty to discover accessible non-system schemas; enter a name and press Enter",
         oracleSchemas:
@@ -445,7 +449,7 @@ export const dataConnectEnUS = {
         mysql: "For example: 3306",
         opensearch: "For example: 9200",
         oracle: "For example: 1521",
-        hana: "For example: 443",
+        hana: "For example: 30015",
         postgresql: "For example: 5432",
         sqlserver: "For example: 1433",
       },

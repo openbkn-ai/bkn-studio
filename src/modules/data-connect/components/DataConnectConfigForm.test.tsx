@@ -138,6 +138,91 @@ describe("DataConnectConfigForm", () => {
       expect(getLastConnectorConfig(onFinish).databases).toEqual(["sales", "reporting"]),
     );
   });
+
+  it("stops at five catalog tags and reports an attempted sixth tag", async () => {
+    const onFinish = vi.fn();
+    render(
+      <Form
+        initialValues={{
+          connectorConfig: {
+            host: "db.example.internal",
+            password: "secret",
+            port: 3306,
+            username: "reader",
+          },
+          healthCheckSchedule: { mode: "inherit" },
+          name: "Catalog",
+        }}
+        onFinish={onFinish}
+      >
+        <DataConnectConfigForm selectedConnectorType={mariaDbConnector} />
+        <button type="submit">Submit</button>
+      </Form>,
+    );
+
+    const tagsField = screen
+      .getByText("最多 5 个标签，每个不超过 40 个字符")
+      .closest(".ant-form-item");
+    const input = tagsField?.querySelector(".ant-select input");
+    expect(input).not.toBeNull();
+    if (!input) return;
+
+    for (const tag of ["one", "two", "three", "four", "five", "six"]) {
+      fireEvent.change(input, { target: { value: tag } });
+      fireEvent.keyDown(input, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+    }
+
+    expect(tagsField?.querySelectorAll(".ant-select-selection-item")).toHaveLength(5);
+    expect(screen.getByRole("alert").textContent).toContain("标签最多只能填写 5 个");
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() =>
+      expect(onFinish).toHaveBeenCalledWith(
+        expect.objectContaining({ tags: ["one", "two", "three", "four", "five"] }),
+      ),
+    );
+
+    fireEvent.click(tagsField?.querySelector(".ant-select-selection-item-remove") as HTMLElement);
+    expect(screen.queryByRole("alert")).toBeNull();
+    for (const [tag, message] of [
+      ["bad/tag", "标签不能包含"],
+      ["😀".repeat(41), "单个标签不能超过 40 个字符"],
+      ["   ", "标签不能为空"],
+    ]) {
+      fireEvent.change(input, { target: { value: tag } });
+      fireEvent.keyDown(input, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+      expect(tagsField?.querySelectorAll(".ant-select-selection-item")).toHaveLength(4);
+      expect(screen.getByRole("alert").textContent).toContain(message);
+    }
+    fireEvent.change(input, { target: { value: `  ${"😀".repeat(40)}  ` } });
+    fireEvent.keyDown(input, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+    expect(tagsField?.querySelectorAll(".ant-select-selection-item")).toHaveLength(5);
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() =>
+      expect(onFinish).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tags: ["two", "three", "four", "five", "😀".repeat(40)] }),
+      ),
+    );
+  });
+
+  it("limits catalog name and description by Unicode characters", () => {
+    render(
+      <Form>
+        <DataConnectConfigForm selectedConnectorType={mariaDbConnector} />
+      </Form>,
+    );
+    const name = screen.getByPlaceholderText("例如 供应链主库");
+    fireEvent.change(name, { target: { value: "😀".repeat(255) } });
+    expect(name).toHaveValue("😀".repeat(255));
+    fireEvent.change(name, { target: { value: "😀".repeat(256) } });
+    expect(name).toHaveValue("😀".repeat(255));
+
+    const description = screen.getByPlaceholderText("简要说明用途（可选）");
+    fireEvent.change(description, { target: { value: "😀".repeat(1000) } });
+    expect(description).toHaveValue("😀".repeat(1000));
+    fireEvent.change(description, { target: { value: "😀".repeat(1001) } });
+    expect(description).toHaveValue("😀".repeat(1000));
+  });
 });
 
 function getLastConnectorConfig(onFinish: ReturnType<typeof vi.fn>) {

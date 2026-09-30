@@ -121,6 +121,37 @@ describe("connector-template · SQL Server", () => {
     expect(advancedFields?.fields.map(([name]) => name)).toEqual(["options", "schemas"]);
   });
 
+  it.each(["mariadb", "mysql"])("groups %s database lists with advanced settings", (type) => {
+    const groups = groupConnectorFields({
+      type,
+      fieldConfig: {
+        host: field("Host", "string", true),
+        databases: field("Database list", "array", false),
+        options: field("Connection options", "object", false),
+      },
+    });
+
+    expect(groups.map((group) => [group.key, group.fields.map(([name]) => name)])).toEqual([
+      ["connection", ["host"]],
+      ["advanced", ["databases", "options"]],
+    ]);
+  });
+
+  it("groups the OpenSearch index pattern with advanced settings", () => {
+    const groups = groupConnectorFields({
+      type: "opensearch",
+      fieldConfig: {
+        host: field("Host", "string", true),
+        index_pattern: field("Index pattern", "string", false),
+      },
+    });
+
+    expect(groups.map((group) => [group.key, group.fields.map(([name]) => name)])).toEqual([
+      ["connection", ["host"]],
+      ["advanced", ["index_pattern"]],
+    ]);
+  });
+
   it("accepts only JSON objects for object connector fields", () => {
     expect(isValidJSONObject(undefined)).toBe(true);
     expect(isValidJSONObject("")).toBe(true);
@@ -340,12 +371,11 @@ describe("connector-template · SQL Server", () => {
 
   it("provides HANA tenant defaults and schema guidance", async () => {
     expect(getConnectorConfigDefaults(hanaConnector)).toEqual({
-      port: 443,
-      options: '{"tls":true}',
+      port: 30015,
     });
-    expect(getConnectorFieldPlaceholder("port", "integer", "hana")).toBe("例如 443");
+    expect(getConnectorFieldPlaceholder("port", "integer", "hana")).toBe("例如 30015");
     expect(getConnectorFieldPlaceholder("database", "string", "hana")).toBe("例如 TENANT_DB");
-    expect(getConnectorFieldPlaceholder("options", "object", "hana")).toBe('例如 {"tls":true}');
+    expect(getConnectorFieldPlaceholder("options", "object", "hana")).toBe('例如 {"timeout":30}');
     expect(getConnectorFieldPlaceholder("schemas", "array", "hana")).toContain("非系统 Schema");
     expect(getConnectorFieldHint("schemas", "hana")).toContain("未加引号的名称通常为大写");
     expect(humanizeConnectorFieldLabel("host", "hana")).toBe("主机地址");
@@ -367,7 +397,10 @@ describe("connector-template · SQL Server", () => {
     await i18n.changeLanguage("en-US");
     expect(humanizeConnectorFieldLabel("database", "hana")).toBe("Tenant database");
     expect(humanizeConnectorFieldLabel("host", "hana")).toBe("Host");
-    expect(getConnectorFieldPlaceholder("port", "integer", "hana")).toBe("For example: 443");
+    expect(getConnectorFieldPlaceholder("port", "integer", "hana")).toBe("For example: 30015");
+    expect(getConnectorFieldPlaceholder("options", "object", "hana")).toBe(
+      'For example: {"timeout":30}',
+    );
     expect(getConnectorFieldHint("schemas", "hana")).toContain(
       "unquoted names are usually uppercase",
     );

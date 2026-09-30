@@ -148,8 +148,7 @@ const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
     port: 1521,
   },
   hana: {
-    port: 443,
-    options: '{"tls":true}',
+    port: 30015,
   },
   opensearch: {
     port: 9200,
@@ -162,7 +161,7 @@ const TYPE_PORT_PLACEHOLDER: Record<string, string> = {
   postgresql: "For example: 5432",
   sqlserver: "For example: 1433",
   oracle: "For example: 1521",
-  hana: "For example: 443",
+  hana: "For example: 30015",
   opensearch: "For example: 9200",
 };
 
@@ -241,7 +240,7 @@ const CONNECTOR_FIELD_TEMPLATES: Record<string, Record<string, ConnectorFieldTem
     port: { label: "Port" },
     username: { group: "auth", label: "Username" },
     password: { group: "auth", label: "Password" },
-    databases: { label: "Database list" },
+    databases: { group: "advanced", label: "Database list" },
     options: { group: "advanced", label: "Connection options" },
   },
   mysql: {
@@ -249,7 +248,7 @@ const CONNECTOR_FIELD_TEMPLATES: Record<string, Record<string, ConnectorFieldTem
     port: { label: "Port" },
     username: { group: "auth", label: "Username" },
     password: { group: "auth", label: "Password" },
-    databases: { label: "Database list" },
+    databases: { group: "advanced", label: "Database list" },
     options: { group: "advanced", label: "Connection options" },
   },
   postgresql: {
@@ -293,7 +292,7 @@ const CONNECTOR_FIELD_TEMPLATES: Record<string, Record<string, ConnectorFieldTem
     port: { label: "Port" },
     username: { group: "auth", label: "Username" },
     password: { group: "auth", label: "Password" },
-    index_pattern: { label: "Index pattern" },
+    index_pattern: { group: "advanced", label: "Index pattern" },
   },
   anyshare: {
     protocol: {
@@ -655,7 +654,7 @@ export function getConnectorFieldPlaceholder(
   if (normalized === "options" && typeKey === "hana") {
     return dataConnectText(
       "connectorTemplates.placeholders.hanaOptions",
-      'For example: {"tls":true}',
+      'For example: {"timeout":30}',
     );
   }
 

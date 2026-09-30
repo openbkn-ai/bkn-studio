@@ -23,6 +23,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
+import { LimitedTagsSelect } from "@/framework/ui/common/LimitedTagsSelect";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import {
@@ -46,13 +47,27 @@ import type {
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import { canManageDerivedViews } from "@/modules/data-catalog/lib/view-access";
 import { getCatalog, hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
+import {
+  normalizeVegaTag,
+  validateVegaTag,
+  validateVegaTags,
+  VEGA_TAGS_MAX_NUMBER,
+  type VegaTagError,
+} from "@/shared/catalog/vega-tags";
 
 import styles from "./ViewEditorScene.module.css";
 
 const SOURCE_PAGE_SIZE = 30;
 const MAX_OUTPUT_NAME_LENGTH = 255;
+const MAX_DESCRIPTION_LENGTH = 1000;
 const fieldNameCount = {
   max: MAX_OUTPUT_NAME_LENGTH,
+  strategy: (value: string) => Array.from(value).length,
+  exceedFormatter: (value: string, { max }: { max: number }) =>
+    Array.from(value).slice(0, max).join(""),
+};
+const descriptionCount = {
+  max: MAX_DESCRIPTION_LENGTH,
   strategy: (value: string) => Array.from(value).length,
   exceedFormatter: (value: string, { max }: { max: number }) =>
     Array.from(value).slice(0, max).join(""),
@@ -104,6 +119,7 @@ export function ViewEditorScene({
   const [description, setDescription] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
+  const tagErrorMessage = (error: VegaTagError) => t(`dataCatalog.viewEditor.tagErrors.${error}`);
   const [fields, setFields] = useState<ResourceSchemaField[]>([]);
   const [filter, setFilter] = useState<FilterGroup>(emptyFilterGroup);
   const [unsupportedFilter, setUnsupportedFilter] = useState(false);
@@ -359,12 +375,21 @@ export function ViewEditorScene({
       setError(t("dataCatalog.viewEditor.invalidName"));
       return;
     }
+    if (Array.from(name.trim()).length > MAX_OUTPUT_NAME_LENGTH) {
+      setError(t("dataCatalog.viewEditor.nameLengthLimit"));
+      return;
+    }
+    if (Array.from(description.trim()).length > MAX_DESCRIPTION_LENGTH) {
+      setError(t("dataCatalog.viewEditor.descriptionLengthLimit"));
+      return;
+    }
     if (!catalog || !source || source.catalogId !== catalog.id || !isUsableSource(source)) {
       setError(t("dataCatalog.viewEditor.invalidSource"));
       return;
     }
-    if (tags.length > 5 || tags.some((tag) => !tag.trim() || tag.length > 40)) {
-      setError(t("dataCatalog.viewEditor.invalidTags"));
+    const tagError = validateVegaTags(tags);
+    if (tagError) {
+      setError(tagErrorMessage(tagError));
       return;
     }
     const names = fields.map((field) => field.name.trim());
@@ -446,7 +471,7 @@ export function ViewEditorScene({
         filterCondition: unsupportedFilter
           ? view?.logicDefinition?.filterCondition
           : filterToBackend(filter, latestSource.schema),
-        tags: tags.map((tag) => tag.trim()),
+        tags: tags.map(normalizeVegaTag),
       };
       const saved =
         view && resourceId
@@ -616,7 +641,7 @@ export function ViewEditorScene({
                         <span className={styles.basicControl}>
                           <Input
                             aria-label={t("dataCatalog.viewEditor.name")}
-                            maxLength={255}
+                            count={fieldNameCount}
                             onChange={(event) => setName(event.target.value)}
                             required
                             value={name}
@@ -643,7 +668,7 @@ export function ViewEditorScene({
                         <span className={styles.basicControl}>
                           <Input.TextArea
                             autoSize={{ minRows: 2, maxRows: 4 }}
-                            maxLength={1000}
+                            count={descriptionCount}
                             onChange={(event) => setDescription(event.target.value)}
                             value={description}
                           />
@@ -654,12 +679,18 @@ export function ViewEditorScene({
                           {t("dataCatalog.viewEditor.tags")}
                         </span>
                         <span className={styles.basicControl}>
-                          <Select
-                            mode="tags"
+                          <LimitedTagsSelect
+                            limit={VEGA_TAGS_MAX_NUMBER}
+                            limitMessage={tagErrorMessage("count")}
+                            normalizeTag={normalizeVegaTag}
                             onChange={setTags}
                             open={false}
                             tokenSeparators={[","]}
                             value={tags}
+                            validateTag={(tag) => {
+                              const error = validateVegaTag(tag);
+                              return error ? tagErrorMessage(error) : null;
+                            }}
                           />
                           <small>{t("dataCatalog.viewEditor.tagsHint")}</small>
                         </span>
