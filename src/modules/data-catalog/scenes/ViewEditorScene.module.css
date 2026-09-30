@@ -503,6 +503,13 @@
   min-width: 140px;
 }
 
+.fieldError {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-error-text);
+  font-size: 12px;
+}
+
 .fieldActions {
   white-space: nowrap;
 }
