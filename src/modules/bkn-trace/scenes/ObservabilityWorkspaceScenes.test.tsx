@@ -18,7 +18,6 @@ import {
   listArchiveJobs,
   listLogPolicies,
   listLogs,
-  listLogSourceInventory,
   listLogSources,
 } from "@/modules/bkn-trace/services/observability.service";
 import {
@@ -30,9 +29,6 @@ import {
 import { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
 
 const translate = (key: string, options?: Record<string, unknown>) => {
-  if (key === "bknTrace.settings.inventory.coverage.verified") {
-    return typeof options?.defaultValue === "string" ? options.defaultValue : key;
-  }
   const value =
     {
       "bknTrace.logs.authenticatedUser": "已认证用户",
@@ -45,6 +41,7 @@ const translate = (key: string, options?: Record<string, unknown>) => {
       "bknTrace.logs.domainAuditActions.create": "创建",
       "bknTrace.logs.targetTypes.object_type": "对象类",
       "bknTrace.settings.status.healthy": "已接入",
+      "bknTrace.settings.sourceLabels.audit-ledger": "BKN Safe 审计日志",
       "bknTrace.settings.capturePolicy.dataUnavailable": "不可用（当前合同未提供）",
       "bknTrace.settings.capturePolicy.noActiveOperation": "无活动操作",
       "bknTrace.settings.capturePolicy.operationUnavailable":
@@ -91,7 +88,6 @@ vi.mock("@/modules/bkn-trace/services/observability.service", async (importOrigi
     listArchiveJobs: vi.fn(),
     listLogPolicies: vi.fn(),
     listLogs: vi.fn(),
-    listLogSourceInventory: vi.fn(),
     listLogSources: vi.fn(),
   };
 });
@@ -147,7 +143,6 @@ describe("observability workspace scenes", () => {
       }),
     );
     vi.mocked(listArchiveJobs).mockResolvedValue([]);
-    vi.mocked(listLogSourceInventory).mockResolvedValue({ registryVersion: "0.3.15", data: [] });
     window.history.replaceState({}, "", "/observability/logs");
     vi.mocked(getAccessProfile).mockResolvedValue(profile);
     vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
@@ -709,7 +704,7 @@ describe("observability workspace scenes", () => {
         coveredModules: ["system_management"],
         collectionMethod: "source_api",
         reliability: "best_effort",
-        sourceId: "bkn-safe-admin",
+        sourceId: "audit-ledger",
         status: "healthy",
       },
     ]);
@@ -724,8 +719,15 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.logs.modules.execution_factory")).not.toBeNull();
     expect(screen.getByText("bknTrace.logs.modules.model_management")).not.toBeNull();
     expect(screen.getByText("bknTrace.logs.modules.system_management")).not.toBeNull();
+    const systemManagementRow = screen
+      .getByText("bknTrace.logs.modules.system_management")
+      .closest("tr");
+    expect(systemManagementRow).not.toBeNull();
+    expect(within(systemManagementRow!).getByText("BKN Safe 审计日志")).not.toBeNull();
+    expect(within(systemManagementRow!).getByText("已接入")).not.toBeNull();
     expect(screen.getByText("bknTrace.logs.modules.observability")).not.toBeNull();
     expect(screen.getByText("bknTrace.settings.sourceLabels.bkn-backend")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.settings.inventory.title")).toBeNull();
     expect(screen.getByText("bknTrace.settings.status.not_listed")).not.toBeNull();
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
@@ -735,7 +737,6 @@ describe("observability workspace scenes", () => {
     expect(within(observabilityRow!).getByText("bknTrace.settings.sourceNotListed")).not.toBeNull();
     expect(within(observabilityRow!).queryByText("bknTrace.settings.noIssueReturned")).toBeNull();
     expect(screen.getByText("7 bknTrace.settings.days")).not.toBeNull();
-    expect(screen.getByText("bknTrace.settings.readOnlyNotice")).not.toBeNull();
   });
 
   it("按冻结合同分别读取配置快照和活动操作", async () => {
@@ -1136,69 +1137,6 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("当前没有可读取的活动操作；操作详情不在配置快照中。")).toBeNull();
   });
 
-  it("设置页区分完整注册来源、查询可用性和未验证的端到端覆盖", async () => {
-    vi.mocked(listLogSourceInventory).mockResolvedValue({
-      registryVersion: "0.3.15",
-      data: [
-        {
-          sourceId: "model-manager",
-          owner: "Model Platform",
-          modules: ["Model Manager"],
-          declaredCollectionMethod: "kafka_audit",
-          declaredReliability: "best_effort",
-          queryStatus: "not_listed",
-          coverageStatus: "unverified",
-        },
-        {
-          sourceId: "agent-retrieval",
-          owner: "BKN Agent",
-          modules: ["Agent Retrieval"],
-          declaredCollectionMethod: "not_integrated",
-          declaredReliability: "best_effort",
-          queryStatus: "not_listed",
-          coverageStatus: "unverified",
-        },
-      ],
-    });
-    render(<ObservabilitySettingsScene />);
-
-    expect(await screen.findByText("bknTrace.settings.inventory.title")).not.toBeNull();
-    expect(screen.getByText("model-manager")).not.toBeNull();
-    expect(screen.getByText("agent-retrieval")).not.toBeNull();
-    const modelRow = screen.getByText("model-manager").closest("tr");
-    expect(modelRow).not.toBeNull();
-    expect(
-      within(modelRow!).getByText("bknTrace.settings.inventory.coverage.unverified"),
-    ).not.toBeNull();
-    expect(
-      within(modelRow!).getByText("bknTrace.settings.inventory.query.not_listed"),
-    ).not.toBeNull();
-    expect(within(modelRow!).getByText("Model Platform")).not.toBeNull();
-    expect(within(modelRow!).getByText("Model Manager")).not.toBeNull();
-  });
-
-  it("注册来源缺少模块映射且出现新覆盖状态时仍可显示", async () => {
-    vi.mocked(listLogSourceInventory).mockResolvedValue({
-      registryVersion: "0.3.19",
-      data: [
-        {
-          sourceId: "future-source",
-          owner: "Future Component",
-          declaredCollectionMethod: "kafka_audit",
-          declaredReliability: "best_effort",
-          queryStatus: "not_listed",
-          coverageStatus: "verified",
-        },
-      ],
-    });
-    render(<ObservabilitySettingsScene />);
-
-    const row = (await screen.findByText("future-source")).closest("tr");
-    expect(row).not.toBeNull();
-    expect(within(row!).getByText("Future Component")).not.toBeNull();
-    expect(within(row!).getByText("verified")).not.toBeNull();
-  });
-
   it("已返回但未接入的来源不会显示为采集正常", async () => {
     vi.mocked(listLogSources).mockResolvedValue([
       {
@@ -1294,24 +1232,6 @@ describe("observability workspace scenes", () => {
     render(<ObservabilitySettingsScene />);
 
     expect(await screen.findByText("bknTrace.settings.status.unavailable")).not.toBeNull();
-  });
-
-  it("设置页说明被排除的非操作日志来源", async () => {
-    vi.mocked(listLogSources).mockResolvedValue([
-      {
-        coveredModules: ["openbkn"],
-        collectionMethod: "direct_otlp",
-        reliability: "best_effort",
-        sourceId: "otel-ss4o",
-        status: "healthy",
-      },
-    ]);
-
-    render(<ObservabilitySettingsScene />);
-
-    expect(
-      await screen.findByText("bknTrace.settings.excludedOperationAuditSources"),
-    ).not.toBeNull();
   });
 
   it("点击立即归档先显示不可逆清理确认，而不直接创建归档任务", async () => {

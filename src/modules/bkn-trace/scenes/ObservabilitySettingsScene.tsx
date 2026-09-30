@@ -19,7 +19,6 @@ import {
   getArchiveOverview,
   listArchiveJobs,
   listLogPolicies,
-  listLogSourceInventory,
   listLogSources,
   retryArchiveCleanup,
   type ArchiveJob,
@@ -27,9 +26,7 @@ import {
   type ArchiveOverview,
   type BusinessModule,
   type LogPolicy,
-  type LogSourceInventory,
   type LogSourceStatus,
-  type RegisteredLogSource,
 } from "@/modules/bkn-trace/services/observability.service";
 import {
   changeTraceEvidenceConfiguration,
@@ -58,8 +55,6 @@ type ModuleSourceRow = {
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
-  const [inventory, setInventory] = useState<LogSourceInventory>();
-  const [inventoryUnavailable, setInventoryUnavailable] = useState(false);
   const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
   const [archives, setArchives] = useState<ArchiveOverview[]>([]);
@@ -94,7 +89,6 @@ export function ObservabilitySettingsScene() {
         setCapturePolicyWrite(profile.traceEvidenceConfigurationWrite);
         const [
           sourceResult,
-          inventoryResult,
           policyResult,
           logArchiveResult,
           traceArchiveResult,
@@ -103,9 +97,6 @@ export function ObservabilitySettingsScene() {
           capturePolicyResult,
         ] = await Promise.allSettled([
           profile.globalLogSearch ? listLogSources() : Promise.resolve([]),
-          profile.globalLogSearch
-            ? listLogSourceInventory()
-            : Promise.resolve<LogSourceInventory | undefined>(undefined),
           profile.logPolicyRead ? listLogPolicies() : Promise.resolve([]),
           profile.observabilityArchiveManage
             ? getArchiveOverview("log")
@@ -129,12 +120,6 @@ export function ObservabilitySettingsScene() {
           setSourceLoadState(profile.globalLogSearch ? "loaded" : "not_requested");
         } else {
           setSourceLoadState("unavailable");
-        }
-        if (inventoryResult.status === "fulfilled" && inventoryResult.value) {
-          setInventory(inventoryResult.value);
-          setInventoryUnavailable(false);
-        } else if (profile.globalLogSearch) {
-          setInventoryUnavailable(true);
         }
         if (policyResult.status === "fulfilled") setPolicies(policyResult.value);
         const archiveData = [logArchiveResult, traceArchiveResult].flatMap((result) =>
@@ -270,17 +255,6 @@ export function ObservabilitySettingsScene() {
     [sourceLoadState, sources],
   );
 
-  const excludedOperationAuditSources = useMemo(
-    () =>
-      sources.filter(
-        (source) =>
-          !source.coveredModules.some((module) =>
-            BUSINESS_MODULES.includes(module as BusinessModule),
-          ),
-      ),
-    [sources],
-  );
-
   const overview = useMemo(() => {
     const healthy = moduleSources.filter((source) => source.status === "healthy").length;
     const unavailable = moduleSources.filter((source) => source.status === "unavailable").length;
@@ -335,43 +309,6 @@ export function ObservabilitySettingsScene() {
       key: "reason",
       title: t("bknTrace.settings.columns.dataState"),
       render: (value?: string) => sourceStateLabel(value, t),
-    },
-  ];
-
-  const inventoryColumns: ColumnsType<RegisteredLogSource> = [
-    { dataIndex: "sourceId", key: "sourceId", title: t("bknTrace.settings.inventory.sourceId") },
-    {
-      dataIndex: "owner",
-      key: "owner",
-      title: t("bknTrace.settings.inventory.owner"),
-    },
-    {
-      dataIndex: "modules",
-      key: "modules",
-      title: t("bknTrace.settings.inventory.modules"),
-      render: (modules?: string[]) => (modules?.length ? modules.join("、") : "—"),
-    },
-    {
-      dataIndex: "declaredCollectionMethod",
-      key: "declaredCollectionMethod",
-      title: t("bknTrace.settings.inventory.declaredMethod"),
-      render: (method: string) =>
-        t(`bknTrace.settings.inventory.methods.${method}`, { defaultValue: method }),
-    },
-    {
-      dataIndex: "queryStatus",
-      key: "queryStatus",
-      title: t("bknTrace.settings.inventory.queryStatus"),
-      render: (status: string) =>
-        t(`bknTrace.settings.inventory.query.${status}`, { defaultValue: status }),
-    },
-    {
-      dataIndex: "coverageStatus",
-      key: "coverageStatus",
-      title: t("bknTrace.settings.inventory.coverageStatus"),
-      render: (status: RegisteredLogSource["coverageStatus"]) => (
-        <Tag>{t(`bknTrace.settings.inventory.coverage.${status}`, { defaultValue: status })}</Tag>
-      ),
     },
   ];
 
@@ -433,7 +370,6 @@ export function ObservabilitySettingsScene() {
           <Typography.Text type="secondary">{t("bknTrace.settings.description")}</Typography.Text>
         </div>
       </header>
-      <Alert message={t("bknTrace.settings.readOnlyNotice")} showIcon type="info" />
       {error ? <Alert message={error} showIcon type="error" /> : null}
 
       {capturePolicy || capturePolicyUnavailable ? (
@@ -480,43 +416,6 @@ export function ObservabilitySettingsScene() {
           rowKey="module"
           tableLayout="fixed"
         />
-        {excludedOperationAuditSources.length ? (
-          <Typography.Paragraph type="secondary">
-            {t("bknTrace.settings.excludedOperationAuditSources", {
-              count: excludedOperationAuditSources.length,
-            })}
-          </Typography.Paragraph>
-        ) : null}
-      </SettingsSection>
-
-      <SettingsSection title={t("bknTrace.settings.inventory.title")}>
-        <Typography.Paragraph type="secondary">
-          {t("bknTrace.settings.inventory.explanation")}
-        </Typography.Paragraph>
-        {inventory ? (
-          <>
-            <Typography.Text type="secondary">
-              {t("bknTrace.settings.inventory.version", { version: inventory.registryVersion })}
-            </Typography.Text>
-            <Table
-              columns={inventoryColumns}
-              dataSource={inventory.data}
-              pagination={{ pageSize: 20 }}
-              rowKey="sourceId"
-              tableLayout="fixed"
-            />
-          </>
-        ) : (
-          <Alert
-            message={t(
-              inventoryUnavailable
-                ? "bknTrace.settings.inventory.unavailable"
-                : "bknTrace.settings.inventory.notRequested",
-            )}
-            showIcon
-            type="warning"
-          />
-        )}
       </SettingsSection>
 
       <SettingsSection title={t("bknTrace.settings.storageRetention")}>
