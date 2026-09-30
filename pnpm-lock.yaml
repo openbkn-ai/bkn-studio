@@ -33,7 +33,7 @@ importers:
         specifier: ^7.0.4
         version: 7.0.4(zod@4.4.3)
       antd:
-        specifier: ^5.28.0
+        specifier: ^5.29.2
         version: 5.29.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       axios:
         specifier: ^1.20.0
