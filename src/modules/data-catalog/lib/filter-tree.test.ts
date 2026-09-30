@@ -49,7 +49,19 @@ describe("filter-tree", () => {
     const parsed = parseFilterCondition(raw);
     expect(parsed).not.toBeNull();
     expect(filterValidationError(parsed!, fields)).toBeNull();
-    expect(filterToBackend(parsed!, fields)).toEqual(raw);
+    expect(filterToBackend(parsed!, fields)).toEqual({
+      operation: "and",
+      sub_conditions: [
+        { field: "age", operation: ">", value_from: "const", value: 18 },
+        {
+          operation: "or",
+          sub_conditions: [
+            { field: "state", operation: "==", value_from: "const", value: "active" },
+            { field: "state", operation: "==", value_from: "const", value: "pending" },
+          ],
+        },
+      ],
+    });
   });
 
   it("rejects invalid or unsupported filters before submission", () => {
