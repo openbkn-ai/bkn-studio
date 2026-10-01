@@ -359,7 +359,10 @@ export function ObservabilitySettingsScene() {
         <>
           <SettingsSection title={t("bknTrace.settings.overview")}>
             <div className={styles.metricGrid}>
-              <Metric label={t("bknTrace.settings.metrics.integrated")} value={overview.integrated} />
+              <Metric
+                label={t("bknTrace.settings.metrics.integrated")}
+                value={overview.integrated}
+              />
               <Metric
                 label={t("bknTrace.settings.metrics.notIntegrated")}
                 value={overview.notIntegrated}

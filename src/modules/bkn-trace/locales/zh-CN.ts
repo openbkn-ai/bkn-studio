@@ -1054,6 +1054,7 @@ export const bknTraceZhCN = {
       },
       days: "天",
       description: "查看采集来源、存储保留和历史归档状态，支持日常维护排查。",
+      notReturned: "未返回",
       metrics: {
         integrated: "已接入模块",
         notIntegrated: "未接入模块",

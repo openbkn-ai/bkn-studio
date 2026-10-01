@@ -42,6 +42,7 @@ const translate = (key: string, options?: Record<string, unknown>) => {
       "bknTrace.logs.targetTypes.object_type": "对象类",
       "bknTrace.settings.integration.integrated": "已接入",
       "bknTrace.settings.integration.not_integrated": "未接入",
+      "bknTrace.settings.notReturned": "未返回",
       "bknTrace.settings.sourceLabels.audit-ledger": "BKN Safe 审计日志",
       "bknTrace.settings.capturePolicy.dataUnavailable": "不可用（当前合同未提供）",
       "bknTrace.settings.capturePolicy.noActiveOperation": "无活动操作",
@@ -719,7 +720,9 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("bknTrace.settings.inventory.title")).toBeNull();
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
-    expect(within(observabilityRow!).getByText("bknTrace.settings.sourceNotIntegrated")).not.toBeNull();
+    expect(
+      within(observabilityRow!).getByText("bknTrace.settings.sourceNotIntegrated"),
+    ).not.toBeNull();
     expect(within(observabilityRow!).getByText("未接入")).not.toBeNull();
     expect(screen.getByText("7 bknTrace.settings.days")).not.toBeNull();
   });
@@ -1137,7 +1140,9 @@ describe("observability workspace scenes", () => {
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
     expect(within(observabilityRow!).getByText("未接入")).not.toBeNull();
-    expect(within(observabilityRow!).getByText("bknTrace.settings.sourceNotIntegrated")).not.toBeNull();
+    expect(
+      within(observabilityRow!).getByText("bknTrace.settings.sourceNotIntegrated"),
+    ).not.toBeNull();
   });
 
   it("非超级管理员仍按服务端能力访问设置页", async () => {
@@ -1156,6 +1161,15 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.settings.storage.auditLogs")).not.toBeNull();
     expect(screen.queryByText("bknTrace.settings.storage.traceIndex")).toBeNull();
     expect(screen.queryByText("bknTrace.settings.storage.interactionFacts")).toBeNull();
+  });
+
+  it("服务端未返回保留策略时展示本地化的中性值", async () => {
+    vi.mocked(listLogPolicies).mockResolvedValueOnce([]);
+
+    render(<ObservabilitySettingsScene />);
+
+    expect(await screen.findAllByText("未返回")).toHaveLength(2);
+    expect(screen.queryByText("bknTrace.settings.notReturned")).toBeNull();
   });
 
   it("设置页不展示来源覆盖范围或运行分级", async () => {
@@ -1211,7 +1225,9 @@ describe("observability workspace scenes", () => {
 
     render(<ObservabilitySettingsScene />);
 
-    const row = (await screen.findByText("bknTrace.logs.modules.domain_knowledge_network")).closest("tr");
+    const row = (await screen.findByText("bknTrace.logs.modules.domain_knowledge_network")).closest(
+      "tr",
+    );
     expect(row).not.toBeNull();
     expect(within(row!).getByText("已接入")).not.toBeNull();
     expect(

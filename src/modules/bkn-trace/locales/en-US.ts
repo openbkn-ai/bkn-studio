@@ -1119,6 +1119,7 @@ export const bknTraceEnUS = {
       days: "days",
       description:
         "Inspect collection sources, storage retention, and archive state for routine maintenance.",
+      notReturned: "Not returned",
       metrics: {
         integrated: "Integrated modules",
         notIntegrated: "Modules not integrated",
