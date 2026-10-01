@@ -47,9 +47,8 @@ type StorageRow = {
 type SourceLoadState = "loaded" | "not_requested" | "unavailable";
 type ModuleSourceRow = {
   module: BusinessModule;
-  reason?: string;
   sourceIds: string[];
-  status: "healthy" | "not_integrated" | "not_listed" | "unavailable" | "unknown";
+  status: "integrated" | "not_integrated";
 };
 
 export function ObservabilitySettingsScene() {
@@ -218,55 +217,31 @@ export function ObservabilitySettingsScene() {
 
   const moduleSources = useMemo<ModuleSourceRow[]>(
     () =>
-      BUSINESS_MODULES.map((module) => {
-        if (sourceLoadState === "not_requested")
-          return { module, reason: "source_not_requested", sourceIds: [], status: "unknown" };
-        if (sourceLoadState === "unavailable")
-          return { module, reason: "source_query_failed", sourceIds: [], status: "unavailable" };
-        const matching = sources.filter((source) => source.coveredModules.includes(module));
-        if (!matching.length)
-          return { module, reason: "source_not_listed", sourceIds: [], status: "not_listed" };
-        const unavailable = matching.find(
-          (source) => !["available", "healthy", "not_integrated"].includes(source.status),
-        );
-        if (unavailable) {
-          return {
-            module,
-            reason: unavailable.reason,
-            sourceIds: matching.map((source) => source.sourceId),
-            status: "unavailable",
-          };
-        }
-        if (matching.some((source) => ["available", "healthy"].includes(source.status))) {
-          return {
-            module,
-            reason: matching.map((source) => source.reason).find(Boolean),
-            sourceIds: matching.map((source) => source.sourceId),
-            status: "healthy",
-          };
-        }
-        return {
-          module,
-          reason: matching.map((source) => source.reason).find(Boolean) ?? "source_not_integrated",
-          sourceIds: matching.map((source) => source.sourceId),
-          status: "not_integrated",
-        };
-      }),
+      sourceLoadState === "loaded"
+        ? BUSINESS_MODULES.map((module) => {
+            const sourceIds = sources
+              .filter(
+                (source) =>
+                  source.coveredModules.includes(module) && source.status !== "not_integrated",
+              )
+              .map((source) => source.sourceId);
+            return {
+              module,
+              sourceIds,
+              status: sourceIds.length ? "integrated" : "not_integrated",
+            };
+          })
+        : [],
     [sourceLoadState, sources],
   );
 
-  const overview = useMemo(() => {
-    const healthy = moduleSources.filter((source) => source.status === "healthy").length;
-    const unavailable = moduleSources.filter((source) => source.status === "unavailable").length;
-    return {
-      healthy,
-      registered: moduleSources.length,
-      unavailable,
-      unconfigured: moduleSources.filter((source) =>
-        ["not_integrated", "not_listed"].includes(source.status),
-      ).length,
-    };
-  }, [moduleSources]);
+  const overview = useMemo(
+    () => ({
+      integrated: moduleSources.filter((source) => source.status === "integrated").length,
+      notIntegrated: moduleSources.filter((source) => source.status === "not_integrated").length,
+    }),
+    [moduleSources],
+  );
 
   const sourceColumns: ColumnsType<ModuleSourceRow> = [
     {
@@ -279,36 +254,24 @@ export function ObservabilitySettingsScene() {
       dataIndex: "sourceIds",
       key: "sourceIds",
       title: t("bknTrace.settings.independentQuerySource"),
-      render: (sourceIds: string[], row) =>
+      render: (sourceIds: string[]) =>
         sourceIds.length
           ? sourceIds
               .map((sourceId) =>
                 t(`bknTrace.settings.sourceLabels.${sourceId}`, { defaultValue: sourceId }),
               )
               .join("、")
-          : t(
-              row.status === "not_listed"
-                ? "bknTrace.settings.sourceNotListed"
-                : row.status === "not_integrated"
-                  ? "bknTrace.settings.sourceNotIntegrated"
-                  : "bknTrace.settings.sourceNotReturned",
-            ),
+          : t("bknTrace.settings.sourceNotIntegrated"),
     },
     {
       dataIndex: "status",
       key: "status",
-      title: t("bknTrace.settings.querySourceStatus"),
+      title: t("bknTrace.settings.integrationStatus"),
       render: (value: ModuleSourceRow["status"]) => (
-        <Tag color={value === "healthy" ? "green" : value === "unavailable" ? "orange" : "default"}>
-          {t(`bknTrace.settings.status.${value}`)}
+        <Tag color={value === "integrated" ? "green" : "default"}>
+          {t(`bknTrace.settings.integration.${value}`)}
         </Tag>
       ),
-    },
-    {
-      dataIndex: "reason",
-      key: "reason",
-      title: t("bknTrace.settings.columns.dataState"),
-      render: (value?: string) => sourceStateLabel(value, t),
     },
   ];
 
@@ -392,31 +355,29 @@ export function ObservabilitySettingsScene() {
         />
       ) : null}
 
-      <SettingsSection title={t("bknTrace.settings.overview")}>
-        <div className={styles.metricGrid}>
-          <Metric label={t("bknTrace.settings.metrics.registered")} value={overview.registered} />
-          <Metric label={t("bknTrace.settings.metrics.healthy")} value={overview.healthy} />
-          <Metric label={t("bknTrace.settings.metrics.unavailable")} value={overview.unavailable} />
-          <Metric
-            label={t("bknTrace.settings.metrics.unconfigured")}
-            value={overview.unconfigured}
-          />
-          <Metric
-            label={t("bknTrace.settings.metrics.updatedAt")}
-            value={t("bknTrace.settings.notReturned")}
-          />
-        </div>
-      </SettingsSection>
+      {sourceLoadState === "loaded" ? (
+        <>
+          <SettingsSection title={t("bknTrace.settings.overview")}>
+            <div className={styles.metricGrid}>
+              <Metric label={t("bknTrace.settings.metrics.integrated")} value={overview.integrated} />
+              <Metric
+                label={t("bknTrace.settings.metrics.notIntegrated")}
+                value={overview.notIntegrated}
+              />
+            </div>
+          </SettingsSection>
 
-      <SettingsSection title={t("bknTrace.settings.sources")}>
-        <Table
-          columns={sourceColumns}
-          dataSource={moduleSources}
-          pagination={false}
-          rowKey="module"
-          tableLayout="fixed"
-        />
-      </SettingsSection>
+          <SettingsSection title={t("bknTrace.settings.sources")}>
+            <Table
+              columns={sourceColumns}
+              dataSource={moduleSources}
+              pagination={false}
+              rowKey="module"
+              tableLayout="fixed"
+            />
+          </SettingsSection>
+        </>
+      ) : null}
 
       <SettingsSection title={t("bknTrace.settings.storageRetention")}>
         <div className={styles.storageLayout}>
@@ -805,12 +766,4 @@ function Metric({ label, value }: { label: string; value: number | string }) {
       <Typography.Text strong>{value}</Typography.Text>
     </div>
   );
-}
-
-function sourceStateLabel(
-  reason: string | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-) {
-  if (!reason) return t("bknTrace.settings.noIssueReturned");
-  return t(`bknTrace.settings.sourceState.${reason}`, { defaultValue: reason });
 }

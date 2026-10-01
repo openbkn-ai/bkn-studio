@@ -1120,14 +1120,9 @@ export const bknTraceEnUS = {
       description:
         "Inspect collection sources, storage retention, and archive state for routine maintenance.",
       metrics: {
-        healthy: "Queryable",
-        registered: "Business-module view rows",
-        unavailable: "Unavailable",
-        unconfigured: "No query source",
-        updatedAt: "Last updated",
+        integrated: "Integrated modules",
+        notIntegrated: "Modules not integrated",
       },
-      noIssueReturned: "This query source reports no issue; end-to-end coverage is not implied.",
-      notReturned: "Not returned by API",
       overview: "Runtime overview",
       policies: "Retention and storage policies",
       recentArchives: "Recent archives",
@@ -1173,30 +1168,16 @@ export const bknTraceEnUS = {
         "model-manager": "Model management service",
         vega: "Data resource service",
       },
-      sourceNotIntegrated: "No collection source integrated",
-      sourceNotListed: "No independent query source",
-      sourceNotReturned: "Source status not returned",
-      independentQuerySource: "Independent query source",
-      querySourceStatus: "Query status",
+      sourceNotIntegrated: "Not integrated",
+      independentQuerySource: "Integrated source",
+      integrationStatus: "Integration",
+      integration: { integrated: "Integrated", not_integrated: "Not integrated" },
       excludedOperationAuditSources:
         "{{count}} sources are not mapped to the six business-module rows above; review their semantics in the registered inventory rather than treating them as out of scope.",
       excludedOperationAuditSources_one:
         "{{count}} source is not mapped to the six business-module rows above; review its semantics in the registered inventory rather than treating it as out of scope.",
       excludedOperationAuditSources_other:
         "{{count}} sources are not mapped to the six business-module rows above; review their semantics in the registered inventory rather than treating them as out of scope.",
-      sourceState: {
-        partial_management_audit_coverage:
-          "Some management operations are integrated; remaining operations are not yet audited.",
-        source_health_check_failed:
-          "Source health check failed. Verify service connectivity and the endpoint response.",
-        source_not_configured: "Collection source is not configured.",
-        source_not_integrated:
-          "No verifiable collection source is integrated; collection health cannot be determined.",
-        source_not_listed: "No independent query source is integrated.",
-        source_not_requested: "The current account did not query source status.",
-        source_query_failed: "Source status query failed.",
-        source_timeout: "Source health check timed out.",
-      },
       status: {
         available: "Queryable",
         error: "Error",
