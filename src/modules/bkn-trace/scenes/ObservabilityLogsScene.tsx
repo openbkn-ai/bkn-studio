@@ -270,10 +270,12 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       </header>
 
       {error ? <Alert message={error} showIcon type="error" /> : null}
-      {result?.partial ? (
+      {hasSourceQueryFailure(result?.sourceStatus) ? (
         <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" />
       ) : null}
-      {result?.partial ? <SourceFailures sources={result.sourceStatus} t={t} /> : null}
+      {hasSourceQueryFailure(result?.sourceStatus) ? (
+        <SourceFailures sources={result?.sourceStatus ?? []} t={t} />
+      ) : null}
       {associated ? (
         <div className={styles.sourceStrip}>
           <AssociatedScopeTag
@@ -348,15 +350,6 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
                 ? t("bknTrace.logs.resultCountUnknown")
                 : t("bknTrace.logs.resultCount", { count: result.count.value })}
             </Typography.Text>
-            {result.sourceStatus.length ? (
-              <Space size={4} wrap>
-                {result.sourceStatus.map((source) => (
-                  <Tag color={sourceStatusColor(source.status)} key={source.sourceId}>
-                    {source.sourceId} · {sourceStatusLabel(source.status, t)}
-                  </Tag>
-                ))}
-              </Space>
-            ) : null}
           </div>
 
           <Spin spinning={loading}>
@@ -513,11 +506,12 @@ function AssociatedScopeTag({
   return <Tag color="blue">{scope.conversationId || scope.traceId || scope.requestId}</Tag>;
 }
 
+function hasSourceQueryFailure(sources: LogListResult["sourceStatus"] | undefined) {
+  return sources?.some((source) => source.status === "unavailable") ?? false;
+}
+
 function SourceFailures({ sources, t }: { sources: LogListResult["sourceStatus"]; t: Translate }) {
-  const failed = sources.filter(
-    (source) =>
-      source.reason && !isHealthySource(source.status) && source.status !== "not_integrated",
-  );
+  const failed = sources.filter((source) => source.reason && source.status === "unavailable");
   if (!failed.length) return null;
   return (
     <div className={styles.sourceStrip}>
@@ -533,12 +527,6 @@ function SourceFailures({ sources, t }: { sources: LogListResult["sourceStatus"]
 
 function isHealthySource(status: string) {
   return status === "available" || status === "healthy";
-}
-
-function sourceStatusColor(status: string) {
-  if (isHealthySource(status)) return "green";
-  if (status === "unavailable") return "orange";
-  return undefined;
 }
 
 function sourceStatusLabel(status: string, t: Translate) {

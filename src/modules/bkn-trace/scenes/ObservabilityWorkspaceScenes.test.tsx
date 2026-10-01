@@ -40,14 +40,14 @@ const translate = (key: string, options?: Record<string, unknown>) => {
       "bknTrace.logs.domainAction": "{{action}}{{target}}",
       "bknTrace.logs.domainAuditActions.create": "创建",
       "bknTrace.logs.targetTypes.object_type": "对象类",
-      "bknTrace.settings.status.healthy": "已接入",
+      "bknTrace.settings.integration.integrated": "已接入",
+      "bknTrace.settings.integration.not_integrated": "未接入",
+      "bknTrace.settings.notReturned": "未返回",
       "bknTrace.settings.sourceLabels.audit-ledger": "BKN Safe 审计日志",
       "bknTrace.settings.capturePolicy.dataUnavailable": "不可用（当前合同未提供）",
       "bknTrace.settings.capturePolicy.noActiveOperation": "无活动操作",
       "bknTrace.settings.capturePolicy.operationUnavailable":
         "当前没有可读取的活动操作；操作详情不在配置快照中。",
-      "bknTrace.settings.sourceState.partial_management_audit_coverage":
-        "已接入部分管理操作；其余操作尚未纳入审计。",
     }[key] ?? key;
   return value.replace(/{{(\w+)}}/g, (_match, name: string) =>
     typeof options?.[name] === "string" ? options[name] : "",
@@ -320,7 +320,7 @@ describe("observability workspace scenes", () => {
     expect(new URLSearchParams(window.location.search).has("actor_id")).toBe(false);
   });
 
-  it("将可用来源标为正常并为未知失败原因提供本地化兜底", async () => {
+  it("只在当前查询失败时显示来源错误，不显示来源运行状态", async () => {
     vi.mocked(listLogs).mockResolvedValueOnce({
       count: { accuracy: "partial", value: 0 },
       data: [],
@@ -336,27 +336,22 @@ describe("observability workspace scenes", () => {
           coveredModules: [],
           reason: "network_timeout",
           reliability: "best_effort",
-          sourceId: "degraded-source",
-          status: "degraded",
+          sourceId: "unavailable-source",
+          status: "unavailable",
         },
       ],
     });
     render(<ObservabilityLogsScene />);
 
+    expect(screen.queryByText(/available-source ·/)).toBeNull();
     expect(
       await screen.findAllByText(
-        (_content, element) =>
-          element?.textContent === "available-source · bknTrace.logs.sourceStatus.healthy",
-      ),
-    ).not.toHaveLength(0);
-    expect(
-      screen.getAllByText(
         (_content, element) => element?.textContent?.includes("network_timeout") ?? false,
       ),
     ).not.toHaveLength(0);
   });
 
-  it("将未接入来源与实际查询故障区分展示", async () => {
+  it("未接入来源不会被显示为查询故障", () => {
     vi.mocked(listLogs).mockResolvedValueOnce({
       count: { accuracy: "partial", value: 0 },
       data: [],
@@ -373,13 +368,8 @@ describe("observability workspace scenes", () => {
     });
     render(<ObservabilityLogsScene />);
 
-    expect(
-      await screen.findAllByText(
-        (_content, element) =>
-          element?.textContent ===
-          "not-integrated-source · bknTrace.logs.sourceStatus.notIntegrated",
-      ),
-    ).not.toHaveLength(0);
+    expect(screen.queryByText(/not-integrated-source ·/)).toBeNull();
+    expect(screen.queryByText("bknTrace.logs.partialWarning")).toBeNull();
     expect(
       screen.queryByText(
         (_content, element) =>
@@ -728,14 +718,12 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.logs.modules.observability")).not.toBeNull();
     expect(screen.getByText("bknTrace.settings.sourceLabels.bkn-backend")).not.toBeNull();
     expect(screen.queryByText("bknTrace.settings.inventory.title")).toBeNull();
-    expect(screen.getByText("bknTrace.settings.status.not_listed")).not.toBeNull();
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
     expect(
-      within(observabilityRow!).getByText("bknTrace.settings.sourceState.source_not_listed"),
+      within(observabilityRow!).getByText("bknTrace.settings.sourceNotIntegrated"),
     ).not.toBeNull();
-    expect(within(observabilityRow!).getByText("bknTrace.settings.sourceNotListed")).not.toBeNull();
-    expect(within(observabilityRow!).queryByText("bknTrace.settings.noIssueReturned")).toBeNull();
+    expect(within(observabilityRow!).getByText("未接入")).not.toBeNull();
     expect(screen.getByText("7 bknTrace.settings.days")).not.toBeNull();
   });
 
@@ -1137,7 +1125,7 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("当前没有可读取的活动操作；操作详情不在配置快照中。")).toBeNull();
   });
 
-  it("已返回但未接入的来源不会显示为采集正常", async () => {
+  it("设置页将已声明但未接入的来源显示为未接入", async () => {
     vi.mocked(listLogSources).mockResolvedValue([
       {
         coveredModules: ["observability"],
@@ -1151,10 +1139,10 @@ describe("observability workspace scenes", () => {
     await waitFor(() => expect(listLogSources).toHaveBeenCalled());
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
+    expect(within(observabilityRow!).getByText("未接入")).not.toBeNull();
     expect(
-      within(observabilityRow!).getByText("bknTrace.settings.sourceState.source_not_integrated"),
+      within(observabilityRow!).getByText("bknTrace.settings.sourceNotIntegrated"),
     ).not.toBeNull();
-    expect(within(observabilityRow!).queryByText("bknTrace.settings.noIssueReturned")).toBeNull();
   });
 
   it("非超级管理员仍按服务端能力访问设置页", async () => {
@@ -1175,7 +1163,16 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("bknTrace.settings.storage.interactionFacts")).toBeNull();
   });
 
-  it("设置页将部分管理审计覆盖说明为可读状态", async () => {
+  it("服务端未返回保留策略时展示本地化的中性值", async () => {
+    vi.mocked(listLogPolicies).mockResolvedValueOnce([]);
+
+    render(<ObservabilitySettingsScene />);
+
+    expect(await screen.findAllByText("未返回")).toHaveLength(2);
+    expect(screen.queryByText("bknTrace.settings.notReturned")).toBeNull();
+  });
+
+  it("设置页不展示来源覆盖范围或运行分级", async () => {
     vi.mocked(listLogSources).mockResolvedValueOnce([
       {
         coveredModules: ["data_resource_knowledge_network"],
@@ -1183,16 +1180,18 @@ describe("observability workspace scenes", () => {
         reason: "partial_management_audit_coverage",
         reliability: "best_effort",
         sourceId: "vega",
-        status: "healthy",
+        status: "degraded",
       },
     ]);
 
     render(<ObservabilitySettingsScene />);
 
-    expect(await screen.findByText("已接入部分管理操作；其余操作尚未纳入审计。")).not.toBeNull();
+    expect(await screen.findByText("已接入")).not.toBeNull();
+    expect(screen.queryByText("partial_management_audit_coverage")).toBeNull();
+    expect(screen.queryByText("bknTrace.settings.querySourceStatus")).toBeNull();
   });
 
-  it("设置页在未请求来源状态时不将模块显示为未接入", async () => {
+  it("设置页未获来源查询权限时不伪造模块状态", async () => {
     vi.mocked(getAccessProfile).mockResolvedValue({
       ...profile,
       globalLogSearch: false,
@@ -1201,22 +1200,17 @@ describe("observability workspace scenes", () => {
 
     render(<ObservabilitySettingsScene />);
 
-    expect(
-      (await screen.findAllByText("bknTrace.settings.status.unknown")).length,
-    ).toBeGreaterThanOrEqual(6);
-    expect(
-      screen.getAllByText("bknTrace.settings.sourceState.source_not_requested").length,
-    ).toBeGreaterThanOrEqual(6);
-    expect(screen.queryByText("bknTrace.settings.status.not_integrated")).toBeNull();
+    await waitFor(() => expect(getAccessProfile).toHaveBeenCalled());
+    expect(screen.queryByText("bknTrace.settings.sources")).toBeNull();
   });
 
-  it("设置页在同一业务模块有不可用来源时不掩盖该状态", async () => {
+  it("设置页将 Trace 会话和操作来源作为领域知识网络的已接入来源", async () => {
     vi.mocked(listLogSources).mockResolvedValue([
       {
         coveredModules: ["domain_knowledge_network"],
         collectionMethod: "source_adapter",
         reliability: "best_effort",
-        sourceId: "bkn-backend",
+        sourceId: "bkn-trace-runtime",
         status: "healthy",
       },
       {
@@ -1231,7 +1225,16 @@ describe("observability workspace scenes", () => {
 
     render(<ObservabilitySettingsScene />);
 
-    expect(await screen.findByText("bknTrace.settings.status.unavailable")).not.toBeNull();
+    const row = (await screen.findByText("bknTrace.logs.modules.domain_knowledge_network")).closest(
+      "tr",
+    );
+    expect(row).not.toBeNull();
+    expect(within(row!).getByText("已接入")).not.toBeNull();
+    expect(
+      within(row!).getByText(
+        "bknTrace.settings.sourceLabels.bkn-trace-runtime、bknTrace.settings.sourceLabels.bkn-trace-core",
+      ),
+    ).not.toBeNull();
   });
 
   it("点击立即归档先显示不可逆清理确认，而不直接创建归档任务", async () => {
