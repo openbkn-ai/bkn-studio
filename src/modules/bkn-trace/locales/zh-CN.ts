@@ -1097,6 +1097,7 @@ export const bknTraceZhCN = {
         "bkn-backend": "领域知识网络服务",
         "bkn-safe-admin": "系统管理服务",
         "bkn-trace-core": "Agent 业务会话",
+        "bkn-trace-runtime": "Agent 操作执行",
         "bkn-trace-archive": "归档维护服务",
         "execution-factory": "执行工厂服务",
         "model-manager": "模型管理服务",

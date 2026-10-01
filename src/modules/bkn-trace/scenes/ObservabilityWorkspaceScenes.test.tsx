@@ -1190,13 +1190,13 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("bknTrace.settings.sources")).toBeNull();
   });
 
-  it("设置页将同一模块的多个已声明来源都作为接入来源", async () => {
+  it("设置页将 Trace 会话和操作来源作为领域知识网络的已接入来源", async () => {
     vi.mocked(listLogSources).mockResolvedValue([
       {
         coveredModules: ["domain_knowledge_network"],
         collectionMethod: "source_adapter",
         reliability: "best_effort",
-        sourceId: "bkn-backend",
+        sourceId: "bkn-trace-runtime",
         status: "healthy",
       },
       {
@@ -1216,7 +1216,7 @@ describe("observability workspace scenes", () => {
     expect(within(row!).getByText("已接入")).not.toBeNull();
     expect(
       within(row!).getByText(
-        "bknTrace.settings.sourceLabels.bkn-backend、bknTrace.settings.sourceLabels.bkn-trace-core",
+        "bknTrace.settings.sourceLabels.bkn-trace-runtime、bknTrace.settings.sourceLabels.bkn-trace-core",
       ),
     ).not.toBeNull();
   });

@@ -1163,6 +1163,7 @@ export const bknTraceEnUS = {
         "bkn-backend": "Domain knowledge network service",
         "bkn-safe-admin": "System management service",
         "bkn-trace-core": "Agent business conversation",
+        "bkn-trace-runtime": "Agent operation execution",
         "bkn-trace-archive": "Archive maintenance service",
         "execution-factory": "Execution Factory service",
         "model-manager": "Model management service",
