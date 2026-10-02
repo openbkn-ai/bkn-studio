@@ -97,11 +97,9 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
           timeFrom: nextFilters.timeRange[0].toISOString(),
           timeTo: nextFilters.timeRange[1].toISOString(),
           ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
-          ...(mode === "audit"
-            ? { businessModule: "system_management" as const, sourceId: "bkn-safe-admin" }
-            : nextFilters.businessModule
-              ? { businessModule: nextFilters.businessModule }
-              : {}),
+          ...(mode !== "audit" && nextFilters.businessModule
+            ? { businessModule: nextFilters.businessModule }
+            : {}),
           ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
           ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
           ...(associatedScope.actorId ? { actorId: associatedScope.actorId } : {}),
