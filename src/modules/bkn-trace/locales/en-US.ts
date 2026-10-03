@@ -1168,7 +1168,7 @@ export const bknTraceEnUS = {
         coverage: { unverified: "Coverage unverified" },
       },
       sourceLabels: {
-        "audit-ledger": "BKN Safe audit logs",
+        "audit-ledger": "Management operation audit",
         "bkn-backend": "Domain knowledge network service",
         "bkn-safe-admin": "System management service",
         "bkn-trace-core": "Agent business conversation",
@@ -1177,7 +1177,6 @@ export const bknTraceEnUS = {
         "execution-factory": "Execution Factory service",
         "model-manager": "Model management service",
         "otel-runtime": "Unified log service",
-        "observability-maintenance": "Trace and archive maintenance",
         vega: "Data resource service",
       },
       sourceNotIntegrated: "Not integrated",

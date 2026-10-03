@@ -52,13 +52,11 @@ type ModuleSourceRow = {
 };
 
 const SHARED_LOG_SOURCE_ID = "otel-runtime";
-const OBSERVABILITY_MAINTENANCE_SOURCE_ID = "observability-maintenance";
+const MANAGEMENT_AUDIT_SOURCE_ID = "audit-ledger";
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
-  const [observabilityMaintenanceIntegrated, setObservabilityMaintenanceIntegrated] =
-    useState(false);
   const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
   const [archives, setArchives] = useState<ArchiveOverview[]>([]);
@@ -119,15 +117,6 @@ export function ObservabilitySettingsScene() {
             : Promise.resolve<CapturePolicyConfiguration | undefined>(undefined),
         ]);
         if (!active) return;
-        setObservabilityMaintenanceIntegrated(
-          (profile.traceEvidenceConfigurationRead &&
-            capturePolicyResult.status === "fulfilled" &&
-            capturePolicyResult.value !== undefined) ||
-            (profile.observabilityArchiveManage &&
-              [logArchiveResult, traceArchiveResult].some(
-                (result) => result.status === "fulfilled" && result.value !== undefined,
-              )),
-        );
         if (sourceResult.status === "fulfilled") {
           setSources(sourceResult.value);
           setSourceLoadState(profile.globalLogSearch ? "loaded" : "not_requested");
@@ -250,8 +239,14 @@ export function ObservabilitySettingsScene() {
                     )
                     .map((source) => source.sourceId);
             const maintenanceSourceIds =
-              module === "observability" && observabilityMaintenanceIntegrated
-                ? [OBSERVABILITY_MAINTENANCE_SOURCE_ID]
+              module === "observability"
+                ? sources
+                    .filter(
+                      (source) =>
+                        source.sourceId === MANAGEMENT_AUDIT_SOURCE_ID &&
+                        source.status !== "not_integrated",
+                    )
+                    .map((source) => source.sourceId)
                 : [];
             const sourceIds = [
               ...new Set([...directSourceIds, ...sharedSourceIds, ...maintenanceSourceIds]),
@@ -263,7 +258,7 @@ export function ObservabilitySettingsScene() {
             };
           })
         : [],
-    [observabilityMaintenanceIntegrated, sourceLoadState, sources],
+    [sourceLoadState, sources],
   );
 
   const overview = useMemo(

@@ -1102,7 +1102,7 @@ export const bknTraceZhCN = {
         coverage: { unverified: "未完成覆盖验收" },
       },
       sourceLabels: {
-        "audit-ledger": "BKN Safe 审计日志",
+        "audit-ledger": "管理操作审计",
         "bkn-backend": "领域知识网络服务",
         "bkn-safe-admin": "系统管理服务",
         "bkn-trace-core": "Agent 业务会话",
@@ -1111,7 +1111,6 @@ export const bknTraceZhCN = {
         "execution-factory": "执行工厂服务",
         "model-manager": "模型管理服务",
         "otel-runtime": "统一日志服务",
-        "observability-maintenance": "Trace 与归档维护",
         vega: "数据资源服务",
       },
       sourceNotIntegrated: "未接入",
