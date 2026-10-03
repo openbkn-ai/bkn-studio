@@ -84,7 +84,14 @@ export function presentLogTarget(record: LogRecord, t: Translate): LogText {
       });
       return { primary: label, secondary: targetID || undefined };
     }
-    return { primary: targetName || targetID, secondary: targetID };
+    const targetType = presentTargetType(record, t);
+    const readableType =
+      targetType && targetType !== normalizedText(record.target.type) ? targetType : "";
+    return {
+      primary:
+        targetName && readableType ? `${readableType}: ${targetName}` : targetName || targetID,
+      secondary: targetID,
+    };
   }
   const agentName = conversationAgentName(record) || t("bknTrace.logs.unnamedAgent");
   return {
