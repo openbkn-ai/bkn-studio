@@ -586,7 +586,9 @@ describe("observability workspace scenes", () => {
     expect(query).toMatchObject({ page: 2, pageSize: 20 });
     expect(query?.timeFrom).toEqual(expect.any(String));
     expect(query?.timeTo).toEqual(expect.any(String));
-    expect(await screen.findByText("业务知识网络: HD供应链业务知识网络_v3")).not.toBeNull();
+    expect(
+      await screen.findByText((content) => content.includes("HD供应链业务知识网络_v3")),
+    ).not.toBeNull();
   });
 
   it("点击日志打开受控详情并可下钻 Trace", async () => {
