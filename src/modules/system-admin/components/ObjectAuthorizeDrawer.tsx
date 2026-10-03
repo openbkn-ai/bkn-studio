@@ -23,7 +23,7 @@ import {
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Drawer, Empty, Table, Tag, Tooltip } from "antd";
+import { Alert, Drawer, Empty, Segmented, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -67,6 +67,7 @@ import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-autho
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 import { GrantableUserPicker } from "./GrantableUserPicker";
+import { GrantableRolePicker } from "./GrantableRolePicker";
 
 type ObjectAuthorizeDrawerProps = {
   /**
@@ -150,6 +151,7 @@ export function ObjectAuthorizeDrawer({
   const [loadError, setLoadError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [candidate, setCandidate] = useState<string>();
+  const [candidateType, setCandidateType] = useState<"user" | "role">("user");
   const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
   const [sourceAccessorId, setSourceAccessorId] = useState<string>();
   const [loadedResourceKey, setLoadedResourceKey] = useState<string>();
@@ -254,6 +256,7 @@ export function ObjectAuthorizeDrawer({
       setLoadError(undefined);
       setLoading(false);
       setCandidate(undefined);
+      setCandidateType("user");
       setCandidateOperations([]);
       setSourceAccessorId(undefined);
       return;
@@ -262,6 +265,7 @@ export function ObjectAuthorizeDrawer({
     setGrantUsers([]);
     setLoadedResourceKey(undefined);
     setCandidate(prefillGranteeId);
+    setCandidateType("user");
     setCandidateOperations([]);
     setSourceAccessorId(undefined);
     const controller = new AbortController();
@@ -369,6 +373,7 @@ export function ObjectAuthorizeDrawer({
     try {
       await upsertObjectGrantForObject({
         accessorId: candidate,
+        accessorType: candidateType,
         ...(fineGrained
           ? { effect: "allow" as const, operations: candidateOperations }
           : { bundle: FULL_BUSINESS_ACCESS }),
@@ -929,25 +934,57 @@ export function ObjectAuthorizeDrawer({
               <label htmlFor="object-grant-user">
                 {t("systemAdmin.objectGrants.grantUserLabel")}
               </label>
-              <GrantableUserPicker
-                ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
-                id="object-grant-user"
-                initialUsers={scopedGrantUsers}
-                loading={loading}
-                onChange={setCandidate}
-                onUsersChange={(users) => {
-                  if (!users.length) return;
-                  setGrantUsers((current) => {
-                    const byId = new Map(current.map((user) => [user.id, user]));
-                    users.forEach((user) => byId.set(user.id, user));
-                    return [...byId.values()];
-                  });
+              <Segmented
+                block
+                onChange={(value) => {
+                  setCandidateType(value as "user" | "role");
+                  setCandidate(undefined);
                 }}
-                placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
-                resourceId={objId}
-                resourceType={objType}
-                value={candidate}
+                options={[
+                  {
+                    icon: <UserOutlined />,
+                    label: t("knowledgeNetwork.propertyAuthorizationUser"),
+                    value: "user",
+                  },
+                  {
+                    icon: <TeamOutlined />,
+                    label: t("knowledgeNetwork.propertyAuthorizationRole"),
+                    value: "role",
+                  },
+                ]}
+                value={candidateType}
               />
+              {candidateType === "user" ? (
+                <GrantableUserPicker
+                  ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
+                  id="object-grant-user"
+                  initialUsers={scopedGrantUsers}
+                  loading={loading}
+                  onChange={setCandidate}
+                  onUsersChange={(users) => {
+                    if (!users.length) return;
+                    setGrantUsers((current) => {
+                      const byId = new Map(current.map((user) => [user.id, user]));
+                      users.forEach((user) => byId.set(user.id, user));
+                      return [...byId.values()];
+                    });
+                  }}
+                  placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
+                  resourceId={objId}
+                  resourceType={objType}
+                  value={candidate}
+                />
+              ) : (
+                <GrantableRolePicker
+                  ariaLabel={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+                  loading={loading}
+                  onChange={setCandidate}
+                  placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+                  resourceId={objId}
+                  resourceType={objType}
+                  value={candidate}
+                />
+              )}
             </div>
             <div className={styles.authzGrantField}>
               <div className={styles.authzGrantFieldHead}>

@@ -203,7 +203,7 @@
   border-bottom: 1px solid var(--color-border-secondary);
   display: flex;
   justify-content: space-between;
-  min-height: 52px;
+  min-height: 48px;
   padding: 0 20px;
 }
 
@@ -215,25 +215,53 @@
 
 .baseGrantForm {
   display: grid;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 12px 14px;
+  padding: 14px 20px 18px;
 }
 
-.baseGrantUserField {
-  display: grid;
-  gap: 8px;
-  max-width: 440px;
-}
-
-.baseGrantUserField label,
-.baseGrantFieldHead > span {
-  color: var(--authz-ink);
-  font-weight: 600;
-}
-
+.baseGrantUserField,
 .baseGrantOperationsField {
+  align-content: start;
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 10px;
   display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.baseGrantStepTitle {
+  align-items: center;
+  color: var(--authz-ink);
+  display: flex;
   gap: 8px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.baseGrantStepIndex {
+  align-items: center;
+  background: color-mix(in srgb, var(--authz-accent) 10%, var(--color-bg-raised));
+  border: 1px solid color-mix(in srgb, var(--authz-accent) 24%, var(--color-border-secondary));
+  border-radius: 999px;
+  color: var(--authz-accent);
+  display: inline-flex;
+  flex: 0 0 22px;
+  font-size: 12px;
+  font-weight: 700;
+  height: 22px;
+  justify-content: center;
+  line-height: 1;
+  width: 22px;
+}
+
+.baseGrantOperationCount {
+  color: var(--authz-muted);
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 2px;
+  white-space: nowrap;
 }
 
 .baseGrantFieldHead {
@@ -248,9 +276,9 @@
 }
 
 .baseGrantOperations {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px;
+  grid-template-columns: repeat(4, minmax(112px, 1fr));
 }
 
 .baseGrantOperation,
@@ -262,12 +290,11 @@
   color: var(--authz-ink);
   cursor: pointer;
   display: inline-flex;
-  flex: 0 1 136px;
   font: inherit;
   gap: 7px;
   justify-content: center;
   min-height: 36px;
-  min-width: 112px;
+  min-width: 0;
   padding: 6px 14px;
   transition:
     border-color 150ms ease,
@@ -278,6 +305,13 @@
 .baseGrantOperation:hover {
   border-color: var(--authz-accent);
   color: var(--authz-accent);
+}
+
+.baseGrantOperation:focus-visible,
+.baseGrantOperationSelected:focus-visible {
+  border-color: var(--authz-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--authz-accent) 18%, transparent);
+  outline: none;
 }
 
 .baseGrantOperationSelected {
@@ -296,15 +330,18 @@
 
 .baseGrantFooter {
   align-items: center;
-  border-top: 1px solid var(--color-border-secondary);
+  background: color-mix(in srgb, var(--authz-accent) 4%, var(--color-bg-raised));
+  border: 1px solid color-mix(in srgb, var(--authz-accent) 13%, var(--color-border-secondary));
+  border-radius: 10px;
   display: flex;
   justify-content: space-between;
-  padding-top: 12px;
+  min-height: 52px;
+  padding: 8px 10px 8px 14px;
 }
 
 @media (min-width: 1101px) {
   .baseGrantForm {
-    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
     align-items: start;
   }
 
@@ -317,7 +354,14 @@
   }
 }
 
-.baseGrantFooter > span {
+.baseGrantSubmitSummary {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+  min-width: 0;
+}
+
+.baseGrantSubmitSummary > span:last-child {
   color: var(--authz-muted);
   font-size: 12px;
 }
@@ -854,7 +898,11 @@
 
   .baseGrantOperation,
   .baseGrantOperationSelected {
-    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .baseGrantOperations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .baseGrantFooter,

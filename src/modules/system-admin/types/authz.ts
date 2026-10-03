@@ -80,6 +80,7 @@ export type AuthorizableObject = {
 
 type ObjectGrantTargetInput = {
   accessorId: string;
+  accessorType?: "user" | "role";
   objId: string;
   objName: string;
   objSub?: string;
