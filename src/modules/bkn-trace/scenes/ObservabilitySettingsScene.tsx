@@ -52,6 +52,7 @@ type ModuleSourceRow = {
 };
 
 const SHARED_LOG_SOURCE_ID = "otel-runtime";
+const MANAGEMENT_AUDIT_SOURCE_ID = "audit-ledger";
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
@@ -237,7 +238,19 @@ export function ObservabilitySettingsScene() {
                         source.status !== "not_integrated",
                     )
                     .map((source) => source.sourceId);
-            const sourceIds = [...new Set([...directSourceIds, ...sharedSourceIds])];
+            const maintenanceSourceIds =
+              module === "observability"
+                ? sources
+                    .filter(
+                      (source) =>
+                        source.sourceId === MANAGEMENT_AUDIT_SOURCE_ID &&
+                        source.status !== "not_integrated",
+                    )
+                    .map((source) => source.sourceId)
+                : [];
+            const sourceIds = [
+              ...new Set([...directSourceIds, ...sharedSourceIds, ...maintenanceSourceIds]),
+            ];
             return {
               module,
               sourceIds,

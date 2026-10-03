@@ -1168,7 +1168,7 @@ export const bknTraceEnUS = {
         coverage: { unverified: "Coverage unverified" },
       },
       sourceLabels: {
-        "audit-ledger": "BKN Safe audit logs",
+        "audit-ledger": "Management operation audit",
         "bkn-backend": "Domain knowledge network service",
         "bkn-safe-admin": "System management service",
         "bkn-trace-core": "Agent business conversation",
