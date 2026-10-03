@@ -453,8 +453,6 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     });
     fireEvent.change(screen.getByPlaceholderText("Agent / 应用"), { target: { value: "Cursor" } });
     fireEvent.change(screen.getByPlaceholderText("知识网络"), { target: { value: "supply" } });
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "会话状态" }));
-    fireEvent.click(await screen.findByText("可继续对话"));
     expect(getConversations).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: /查\s*询/ }));
@@ -464,10 +462,13 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
           agentOrApp: "Cursor",
           keyword: "采购",
           knowledgeNetwork: "supply",
-          status: "active",
         }),
       ),
     );
+    expect(
+      getConversations.mock.calls[getConversations.mock.calls.length - 1]?.[0],
+    ).not.toHaveProperty("status");
+    expect(screen.queryByRole("combobox", { name: "会话状态" })).toBeNull();
     expect(screen.queryByLabelText("开始时间")).toBeNull();
     expect(screen.queryByLabelText("结束时间")).toBeNull();
   });

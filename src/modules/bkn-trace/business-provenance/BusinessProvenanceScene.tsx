@@ -720,7 +720,6 @@ export function BusinessProvenanceScene() {
   const [conversationKeyword, setConversationKeyword] = useState("");
   const [conversationAgent, setConversationAgent] = useState("");
   const [conversationKnowledgeNetwork, setConversationKnowledgeNetwork] = useState("");
-  const [conversationStatus, setConversationStatus] = useState<string>();
   const [conversationEvidence, setConversationEvidence] = useState<string>();
   const [conversationQuery, setConversationQuery] = useState<
     Parameters<typeof getBusinessProvenanceConversations>[0]
@@ -987,16 +986,9 @@ export function BusinessProvenanceScene() {
       keyword: conversationKeyword,
       agentOrApp: conversationAgent,
       knowledgeNetwork: conversationKnowledgeNetwork,
-      status: conversationStatus,
       recordIntegrity: conversationEvidence,
     });
-  }, [
-    conversationAgent,
-    conversationEvidence,
-    conversationKeyword,
-    conversationKnowledgeNetwork,
-    conversationStatus,
-  ]);
+  }, [conversationAgent, conversationEvidence, conversationKeyword, conversationKnowledgeNetwork]);
 
   const conversationColumns: ColumnsType<BusinessProvenanceConversation> = [
     {
@@ -1048,12 +1040,6 @@ export function BusinessProvenanceScene() {
       title: "Agent",
       width: "14%",
       render: (value?: string) => <ClampedText value={value || bpText("agentNotRecorded")} />,
-    },
-    {
-      dataIndex: "status",
-      title: bpText("columns.status"),
-      width: "8%",
-      render: (value?: string) => <span className={styles.statusText}>{statusLabel(value)}</span>,
     },
     {
       title: bpText("columns.evidence"),
@@ -1148,18 +1134,6 @@ export function BusinessProvenanceScene() {
               placeholder={bpText("filters.network")}
             />
             <Select
-              aria-label={bpText("filters.status")}
-              allowClear
-              placeholder={bpText("filters.status")}
-              value={conversationStatus}
-              options={[
-                { value: "completed", label: statusLabel("completed") },
-                { value: "failed", label: statusLabel("failed") },
-                { value: "active", label: statusLabel("active") },
-              ]}
-              onChange={setConversationStatus}
-            />
-            <Select
               allowClear
               placeholder={bpText("filters.evidence")}
               value={conversationEvidence}
@@ -1179,7 +1153,6 @@ export function BusinessProvenanceScene() {
                 setConversationKeyword("");
                 setConversationAgent("");
                 setConversationKnowledgeNetwork("");
-                setConversationStatus(undefined);
                 setConversationEvidence(undefined);
                 setConversationPage(1);
                 setConversationQuery({});
