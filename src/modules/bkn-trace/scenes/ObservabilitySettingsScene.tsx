@@ -51,6 +51,8 @@ type ModuleSourceRow = {
   status: "integrated" | "not_integrated";
 };
 
+const SHARED_LOG_SOURCE_ID = "otel-runtime";
+
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
@@ -219,12 +221,23 @@ export function ObservabilitySettingsScene() {
     () =>
       sourceLoadState === "loaded"
         ? BUSINESS_MODULES.map((module) => {
-            const sourceIds = sources
+            const directSourceIds = sources
               .filter(
                 (source) =>
                   source.coveredModules.includes(module) && source.status !== "not_integrated",
               )
               .map((source) => source.sourceId);
+            const sharedSourceIds =
+              module === "observability"
+                ? []
+                : sources
+                    .filter(
+                      (source) =>
+                        source.sourceId === SHARED_LOG_SOURCE_ID &&
+                        source.status !== "not_integrated",
+                    )
+                    .map((source) => source.sourceId);
+            const sourceIds = [...new Set([...directSourceIds, ...sharedSourceIds])];
             return {
               module,
               sourceIds,
