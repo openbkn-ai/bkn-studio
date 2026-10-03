@@ -107,13 +107,13 @@ async function openDerivedEditorWithTwoFields() {
   });
   renderEditor({ catalogId: "cat-1" });
   await screen.findByText("dataCatalog.viewEditor.typeTitle");
-  fireEvent.click(screen.getByRole("button", { name: /dataCatalog.viewEditor.derivedType/ }));
-  fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+  fireEvent.click(screen.getByText("dataCatalog.viewEditor.derivedType"));
+  fireEvent.click(screen.getByText("common.next"));
   fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.name"), {
     target: { value: "orders_view" },
   });
   fireEvent.mouseDown(
-    screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" }),
+    screen.getByLabelText("dataCatalog.viewEditor.sourceSearch", { selector: "input" }),
   );
   fireEvent.click(await screen.findByText("public.orders"));
   await screen.findByLabelText("dataCatalog.viewEditor.displayName 2");
@@ -471,7 +471,7 @@ describe("ViewEditorScene", () => {
     );
     expect(screen.getAllByText("dataCatalog.viewEditor.duplicateDisplayName")).toHaveLength(2);
 
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
+    fireEvent.click(screen.getByText("dataCatalog.viewEditor.create"));
     expect(await screen.findByText("dataCatalog.viewEditor.invalidFields")).toBeTruthy();
     expect(createViewMock).not.toHaveBeenCalled();
 
@@ -488,7 +488,7 @@ describe("ViewEditorScene", () => {
     );
     expect(screen.queryByText("dataCatalog.viewEditor.duplicateDisplayName")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
+    fireEvent.click(screen.getByText("dataCatalog.viewEditor.create"));
     await waitFor(() => expect(createViewMock).toHaveBeenCalledOnce());
   });
 
@@ -507,7 +507,8 @@ describe("ViewEditorScene", () => {
       "true",
     );
     expect(screen.getAllByText("dataCatalog.viewEditor.duplicateOutputName")).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
+    fireEvent.click(screen.getByText("dataCatalog.viewEditor.create"));
+    expect(await screen.findByText("dataCatalog.viewEditor.invalidFields")).toBeTruthy();
     expect(createViewMock).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.outputName 2"), {
@@ -523,7 +524,7 @@ describe("ViewEditorScene", () => {
     );
     expect(screen.queryByText("dataCatalog.viewEditor.duplicateOutputName")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
+    fireEvent.click(screen.getByText("dataCatalog.viewEditor.create"));
     await waitFor(() => expect(createViewMock).toHaveBeenCalledOnce());
   });
 
