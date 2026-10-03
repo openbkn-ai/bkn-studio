@@ -1064,7 +1064,7 @@
 }
 .listCard :global(.ant-table),
 .listCard :global(table) {
-  min-width: 1180px;
+  min-width: 0;
   width: 100%;
 }
 .listCard :global(.ant-table-container),
@@ -1094,9 +1094,12 @@
   .analysisPane {
     padding: 12px;
   }
+}
+
+@container (max-width: 1080px) {
   .listCard :global(.ant-table),
   .listCard :global(table) {
-    min-width: 1080px;
+    min-width: 900px;
   }
 }
 
