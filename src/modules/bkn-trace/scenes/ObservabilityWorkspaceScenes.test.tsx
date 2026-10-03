@@ -287,9 +287,9 @@ describe("observability workspace scenes", () => {
     expect(query).toMatchObject({
       actorId: "user-a",
       categories: ["audit.admin"],
-      businessModule: "system_management",
-      sourceId: "bkn-safe-admin",
     });
+    expect(query).not.toHaveProperty("businessModule");
+    expect(query).not.toHaveProperty("sourceId");
     expect(await screen.findByText("bknTrace.logs.associatedTarget.user")).not.toBeNull();
     expect(screen.getByText("Current Administrator")).not.toBeNull();
     expect(
