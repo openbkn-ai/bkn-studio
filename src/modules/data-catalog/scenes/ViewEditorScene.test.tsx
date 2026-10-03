@@ -97,6 +97,28 @@ function renderEditor(props: { catalogId?: string; resourceId?: string }) {
   );
 }
 
+async function openDerivedEditorWithTwoFields() {
+  getResourceMock.mockResolvedValue({
+    ...source,
+    schema: [
+      ...source.schema,
+      { name: "order_no", originalName: "order_no", displayName: "Order Number", type: "string" },
+    ],
+  });
+  renderEditor({ catalogId: "cat-1" });
+  await screen.findByText("dataCatalog.viewEditor.typeTitle");
+  fireEvent.click(screen.getByRole("button", { name: /dataCatalog.viewEditor.derivedType/ }));
+  fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+  fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.name"), {
+    target: { value: "orders_view" },
+  });
+  fireEvent.mouseDown(
+    screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" }),
+  );
+  fireEvent.click(await screen.findByText("public.orders"));
+  await screen.findByLabelText("dataCatalog.viewEditor.displayName 2");
+}
+
 describe("ViewEditorScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -433,27 +455,8 @@ describe("ViewEditorScene", () => {
     expect(document.querySelector(".ant-select-selection-item")?.textContent).toContain("Beta");
   });
 
-  it("rejects duplicate output and display names before creating a view", async () => {
-    const sourceWithTwoFields = {
-      ...source,
-      schema: [
-        ...source.schema,
-        { name: "order_no", originalName: "order_no", displayName: "Order Number", type: "string" },
-      ],
-    };
-    getResourceMock.mockResolvedValue(sourceWithTwoFields);
-    renderEditor({ catalogId: "cat-1" });
-    await screen.findByText("dataCatalog.viewEditor.typeTitle");
-    fireEvent.click(screen.getByRole("button", { name: /dataCatalog.viewEditor.derivedType/ }));
-    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
-    fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.name"), {
-      target: { value: "orders_view" },
-    });
-    fireEvent.mouseDown(
-      screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" }),
-    );
-    fireEvent.click(await screen.findByText("public.orders"));
-    await screen.findByLabelText("dataCatalog.viewEditor.displayName 2");
+  it("rejects duplicate display names before creating a view", async () => {
+    await openDerivedEditorWithTwoFields();
     fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.displayName 2"), {
       target: { value: " Order ID " },
     });
@@ -484,6 +487,13 @@ describe("ViewEditorScene", () => {
       "true",
     );
     expect(screen.queryByText("dataCatalog.viewEditor.duplicateDisplayName")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
+    await waitFor(() => expect(createViewMock).toHaveBeenCalledOnce());
+  });
+
+  it("rejects duplicate output names before creating a view", async () => {
+    await openDerivedEditorWithTwoFields();
 
     fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.outputName 2"), {
       target: { value: " id " },
