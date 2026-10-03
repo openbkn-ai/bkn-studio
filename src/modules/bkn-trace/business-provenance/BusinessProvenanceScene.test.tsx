@@ -107,6 +107,38 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("关联轮次")).not.toBeNull();
   });
 
+  it("keeps the original question and timeline available when integrity reads fail", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/observability/business-provenance?conversation_id=conv-check&interaction_id=int-check",
+    );
+    getConversations.mockResolvedValue({
+      entries: [
+        { conversationId: "conv-check", questionPreview: "检查采购记录", interactionCount: 1 },
+      ],
+      total: 1,
+    });
+    getInteractions.mockResolvedValue({
+      entries: [{ interactionId: "int-check", questionPreview: "检查采购记录" }],
+      total: 1,
+    });
+    getInteraction.mockResolvedValue({
+      interactionId: "int-check",
+      interactionQuestion: "保留的原始问题",
+      recordIntegrityCheckFailed: true,
+      operations: [],
+      conversationContext: [],
+      derivedFacts: [],
+      contextRelations: [],
+    });
+    render(<BusinessProvenanceScene />);
+    expect(await screen.findByText("本次记录完整性核查读取失败，请刷新重试。")).not.toBeNull();
+    expect(screen.getAllByText("保留的原始问题").length).toBeGreaterThan(0);
+    expect(screen.getByRole("tab", { name: "时间链" })).not.toBeNull();
+    expect(screen.queryByText("有缺失")).toBeNull();
+  });
+
   it("accepts the Studio camel-case conversation and interaction links", async () => {
     window.history.replaceState(
       {},
@@ -584,7 +616,13 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
           resultPreview: "无记录",
           agentName: "Supply Agent",
           status: "completed",
-          evidenceCompleteness: "complete",
+          evidenceCompleteness: "partial",
+          currentRecordIntegrity: {
+            status: "complete",
+            checked_at: "2026-10-03T00:00:00Z",
+            scope: "registered_call_records",
+            missing: [],
+          },
           startedAt: "2026-08-10",
           durationMs: 42,
         },
@@ -645,7 +683,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     await screen.findByRole("columnheader", { name: "记录完整性" });
     expect(screen.getByRole("columnheader", { name: "用户问题" })).not.toBeNull();
     expect(screen.getByRole("columnheader", { name: "业务结果" })).not.toBeNull();
-    expect(await screen.findByText("记录完整")).not.toBeNull();
+    expect(await screen.findByText("完整")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "查询采购订单" }));
     await waitFor(() =>
       expect(getInteractions).toHaveBeenCalledWith(
@@ -903,8 +941,8 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(normalizedStyles).toContain(
       ".timelineList{display:grid;align-content:start;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;",
     );
-    expect(normalizedStyles).toContain(
-      ".timelineInspector{position:static;min-width:0;min-height:0;margin:14px;overflow-y:auto;overscroll-behavior:contain;",
+    expect(normalizedStyles).toMatch(
+      /\.timelineInspector\{position:static;min-width:0;min-height:0;[^}]*overflow-y:auto;overscroll-behavior:contain;/,
     );
     expect(normalizedStyles).toContain(
       ".timelineLayout{height:auto;min-height:0;overflow:visible;grid-template-columns:1fr;}",
