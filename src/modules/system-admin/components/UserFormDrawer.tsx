@@ -199,7 +199,7 @@ export function UserFormDrawer({ departments, onClose, onSaved, open, user }: Us
   return (
     <Drawer
       className={drawerStyles.drawer}
-      destroyOnClose
+      destroyOnHidden
       footer={
         <div className={drawerStyles.drawerFooter}>
           {!isEdit ? (

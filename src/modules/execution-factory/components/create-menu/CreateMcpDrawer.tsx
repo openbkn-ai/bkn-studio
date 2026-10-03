@@ -468,7 +468,7 @@ export function CreateMcpDrawer({
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       extra={actionBar}
       onClose={onClose}
       open={open}

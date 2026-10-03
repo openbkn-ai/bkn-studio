@@ -132,7 +132,7 @@ describe("ResourcePreviewPanel", () => {
           expect.objectContaining({
             filterCondition: {
               operation: "and",
-              sub_conditions: [{ field: "id", operation: ">", value: 10 }],
+              sub_conditions: [{ field: "id", operation: ">", value: 10, value_from: "const" }],
             },
             offset: 0,
           }),
@@ -185,7 +185,7 @@ describe("ResourcePreviewPanel", () => {
       expect(previewCatalogResourceMock.mock.lastCall?.[1]).toEqual({
         filterCondition: {
           operation: "and",
-          sub_conditions: [{ field: "notes", operation: "==", value: "open" }],
+          sub_conditions: [{ field: "notes", operation: "==", value: "open", value_from: "const" }],
         },
         ignoreLocalIndex: true,
         limit: 10,
@@ -346,7 +346,7 @@ describe("ResourcePreviewPanel", () => {
       expect(previewCatalogResourceMock).toHaveBeenLastCalledWith("resource-1", {
         filterCondition: {
           operation: "and",
-          sub_conditions: [{ field: "id", operation: ">", value: 10 }],
+          sub_conditions: [{ field: "id", operation: ">", value: 10, value_from: "const" }],
         },
         limit: 10,
         offset: 0,

@@ -54,7 +54,7 @@ export function ImportImpexDrawer({ open, onClose, onImported }: ImportImpexDraw
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       onClose={() => {
         setFileList([]);
         setError(null);

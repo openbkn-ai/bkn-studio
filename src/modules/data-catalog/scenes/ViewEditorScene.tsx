@@ -166,6 +166,23 @@ export function ViewEditorScene({
     () => new Map(sourceFields.map((field) => [field.originalName || field.name, field])),
     [sourceFields],
   );
+  const duplicateNames = useMemo(() => {
+    const findDuplicates = (getName: (field: ResourceSchemaField) => string | undefined) => {
+      const seen = new Set<string>();
+      const duplicates = new Set<string>();
+      for (const field of fields) {
+        const name = getName(field)?.trim();
+        if (!name) continue;
+        if (seen.has(name)) duplicates.add(name);
+        seen.add(name);
+      }
+      return duplicates;
+    };
+    return {
+      output: findDuplicates((field) => field.name),
+      display: findDuplicates((field) => field.displayName),
+    };
+  }, [fields]);
   const dirty =
     initialDraft.current !==
     JSON.stringify({ name, description, enabled, tags, sourceId: source?.id, fields, filter });
@@ -799,6 +816,12 @@ export function ViewEditorScene({
                         <tbody>
                           {fields.map((field, index) => {
                             const sourceField = sourceByName.get(field.originalName || field.name);
+                            const duplicateOutputName = duplicateNames.output.has(
+                              field.name.trim(),
+                            );
+                            const duplicateDisplayName = duplicateNames.display.has(
+                              field.displayName?.trim() ?? "",
+                            );
                             return (
                               <tr key={`${field.originalName || field.name}-${index}`}>
                                 <td>
@@ -811,23 +834,59 @@ export function ViewEditorScene({
                                 </td>
                                 <td>
                                   <Input
+                                    aria-describedby={
+                                      duplicateOutputName
+                                        ? `view-output-name-error-${index}`
+                                        : undefined
+                                    }
+                                    aria-invalid={duplicateOutputName || undefined}
                                     aria-label={`${t("dataCatalog.viewEditor.outputName")} ${index + 1}`}
                                     count={fieldNameCount}
                                     onChange={(event) =>
                                       updateField(index, { name: event.target.value })
                                     }
+                                    status={duplicateOutputName ? "error" : undefined}
                                     value={field.name}
                                   />
+                                  {duplicateOutputName ? (
+                                    <small
+                                      className={styles.fieldError}
+                                      id={`view-output-name-error-${index}`}
+                                      role="alert"
+                                    >
+                                      {t("dataCatalog.viewEditor.duplicateOutputName", {
+                                        name: field.name.trim(),
+                                      })}
+                                    </small>
+                                  ) : null}
                                 </td>
                                 <td>
                                   <Input
+                                    aria-describedby={
+                                      duplicateDisplayName
+                                        ? `view-display-name-error-${index}`
+                                        : undefined
+                                    }
+                                    aria-invalid={duplicateDisplayName || undefined}
                                     aria-label={`${t("dataCatalog.viewEditor.displayName")} ${index + 1}`}
                                     count={fieldNameCount}
                                     onChange={(event) =>
                                       updateField(index, { displayName: event.target.value })
                                     }
+                                    status={duplicateDisplayName ? "error" : undefined}
                                     value={field.displayName}
                                   />
+                                  {duplicateDisplayName ? (
+                                    <small
+                                      className={styles.fieldError}
+                                      id={`view-display-name-error-${index}`}
+                                      role="alert"
+                                    >
+                                      {t("dataCatalog.viewEditor.duplicateDisplayName", {
+                                        name: field.displayName?.trim(),
+                                      })}
+                                    </small>
+                                  ) : null}
                                 </td>
                                 <td>{field.type}</td>
                                 <td className={styles.fieldActions}>

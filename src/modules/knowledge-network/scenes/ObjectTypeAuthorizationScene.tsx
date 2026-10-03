@@ -1457,7 +1457,7 @@ export function ObjectTypeAuthorizationScene() {
       </section>
 
       <Drawer
-        destroyOnClose
+        destroyOnHidden
         onClose={() => setSourceAccessorId(undefined)}
         open={Boolean(sourceGrant)}
         rootClassName={styles.baseSourceDrawer}

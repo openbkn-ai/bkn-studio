@@ -1204,7 +1204,7 @@ export function ObjectAuthorizeDrawer({
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       rootClassName={styles.adminOverlay}

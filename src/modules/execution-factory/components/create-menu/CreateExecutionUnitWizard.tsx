@@ -196,7 +196,7 @@ export function CreateExecutionUnitWizard({
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       footer={<div className={styles.wizardFooter}>{renderFooter()}</div>}
       onClose={handleClose}
       open={open}

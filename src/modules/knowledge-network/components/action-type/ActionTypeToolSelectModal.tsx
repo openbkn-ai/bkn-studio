@@ -635,7 +635,7 @@ export function ActionTypeToolSelectModal({
 
   return (
     <Modal
-      destroyOnClose
+      destroyOnHidden
       footer={
         <div className={styles.footerActions}>
           <AppButton onClick={onCancel}>{t("common.cancel")}</AppButton>

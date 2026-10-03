@@ -164,7 +164,7 @@ export function SkillHistoryDrawer({ onClose, onUpdated, open, skillId }: SkillH
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       title={t("executionFactory.skillHistoryTitle")}

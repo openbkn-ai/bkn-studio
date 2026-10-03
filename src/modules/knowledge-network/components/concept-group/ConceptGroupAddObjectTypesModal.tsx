@@ -187,7 +187,7 @@ export function ConceptGroupAddObjectTypesModal({
   return (
     <Modal
       className={styles.modal}
-      destroyOnClose
+      destroyOnHidden
       footer={null}
       onCancel={onCancel}
       open={open}

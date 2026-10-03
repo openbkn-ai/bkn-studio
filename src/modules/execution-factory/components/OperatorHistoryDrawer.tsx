@@ -55,7 +55,7 @@ export function OperatorHistoryDrawer({
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       title={t("executionFactory.operatorHistoryTitle", {

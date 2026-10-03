@@ -58,7 +58,7 @@ export function McpParseSseModal({ onClose, onParsed, open }: McpParseSseModalPr
   return (
     <Modal
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t("executionFactory.parseSse")}
       onCancel={onClose}
       onOk={() => {

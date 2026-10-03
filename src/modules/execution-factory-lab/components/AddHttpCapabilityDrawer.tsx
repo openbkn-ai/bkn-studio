@@ -86,7 +86,7 @@ export function AddHttpCapabilityDrawer({
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       title={t("executionFactoryLab.addDrawerTitle")}

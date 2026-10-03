@@ -136,6 +136,7 @@ export function filterToBackend(
     return {
       field: node.field,
       operation: node.operation,
+      value_from: "const",
       value:
         field && isNumericFilterType(field.type)
           ? preciseJSON.parse(node.value.trim())

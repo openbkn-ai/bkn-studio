@@ -342,7 +342,7 @@ export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiForm
         <CapabilityBusinessIntro messageKey="executionFactory.businessIntro.quickApiTop" />
         <Tabs
           activeKey={inputMode}
-          destroyInactiveTabPane
+          destroyOnHidden
           items={[
             {
               key: "curl",

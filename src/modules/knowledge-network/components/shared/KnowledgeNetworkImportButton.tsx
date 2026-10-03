@@ -155,7 +155,7 @@ export function KnowledgeNetworkImportButton({
         closable={!isSubmitting}
         cancelButtonProps={{ disabled: isSubmitting }}
         confirmLoading={submittingAction === "import"}
-        destroyOnClose
+        destroyOnHidden
         footer={
           conflictMessage
             ? [

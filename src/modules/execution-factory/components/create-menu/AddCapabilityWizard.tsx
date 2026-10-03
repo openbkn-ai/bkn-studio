@@ -640,7 +640,7 @@ export function AddCapabilityWizard({
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
 
       footer={<div className={styles.wizardFooter}>{renderFooter()}</div>}
 

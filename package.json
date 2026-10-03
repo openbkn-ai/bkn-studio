@@ -33,7 +33,7 @@
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@monaco-editor/react": "^4.7.0",
     "ai": "^7.0.4",
-    "antd": "^5.28.0",
+    "antd": "^5.29.2",
     "axios": "^1.20.0",
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.21",

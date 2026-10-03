@@ -76,7 +76,7 @@ export function InstallSkillFromCatalogModal({
   return (
     <Modal
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t(
         alreadyInstalled ? "executionFactory.syncConfirm" : "executionFactory.introduceConfirm",
       )}

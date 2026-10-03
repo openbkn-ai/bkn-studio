@@ -48,7 +48,7 @@ export function ExecutionUnitDetailDrawerLayout({
   return (
     <Drawer
       className={[styles.drawer, marketMode ? styles.drawerMarket : ""].filter(Boolean).join(" ")}
-      destroyOnClose
+      destroyOnHidden
       extra={headerExtra}
       footer={
         hasFooter ? (

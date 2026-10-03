@@ -68,7 +68,7 @@ export function KnowledgeNetworkFormModal({
   return (
     <Modal
       cancelText={t("common.cancel")}
-      destroyOnClose
+      destroyOnHidden
       okText={mode === "create" ? t("common.create") : t("common.save")}
       onCancel={handleCancel}
       onOk={() => {

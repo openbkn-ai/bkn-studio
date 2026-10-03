@@ -22,7 +22,7 @@ export function CreateSkillModal({ open, onClose, onImported }: CreateSkillModal
 
   return (
     <Modal
-      destroyOnClose
+      destroyOnHidden
       footer={
         <AppButton form="create-skill-modal-form" htmlType="submit" type="primary">
           {t("common.confirm")}

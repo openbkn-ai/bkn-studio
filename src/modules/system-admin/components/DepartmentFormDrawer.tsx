@@ -110,7 +110,7 @@ export function DepartmentFormDrawer({
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       footer={
         <div className={styles.drawerFooter}>
           <span style={{ flex: 1 }} />
