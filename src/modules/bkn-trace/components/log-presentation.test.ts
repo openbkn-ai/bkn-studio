@@ -183,7 +183,7 @@ describe("log presentation", () => {
 
     expect(presentLogAction(record, translateZhCN)).toBe("鉴权判定");
     expect(presentLogTarget(record, translateZhCN)).toEqual({
-      primary: "物料",
+      primary: "对象类：物料",
       secondary: "material",
     });
     expect(presentTargetType(record, translateZhCN)).toBe("对象类");
@@ -208,6 +208,19 @@ describe("log presentation", () => {
     expect(presentLogTarget(record, translateZhCN)).toEqual({
       primary: "user-1",
       secondary: "user-1",
+    });
+  });
+
+  it("shows the object type together with the producer snapshot", () => {
+    const record = {
+      action: "update",
+      businessModule: "data_resource_knowledge_network",
+      target: { id: "catalog-a", name: "audit-e2e-vega-20260928", type: "catalog" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "数据目录：audit-e2e-vega-20260928",
+      secondary: "catalog-a",
     });
   });
 
@@ -259,7 +272,10 @@ describe("log presentation", () => {
 
       expect(presentLogAction(record, translateZhCN)).toBe(expectedAction);
       expect(presentTargetType(record, translateZhCN)).toBe(expectedType);
-      expect(presentLogTarget(record, translateZhCN)).toEqual({ primary: name, secondary: id });
+      expect(presentLogTarget(record, translateZhCN)).toEqual({
+        primary: `${expectedType}：${name}`,
+        secondary: id,
+      });
     },
   );
 
