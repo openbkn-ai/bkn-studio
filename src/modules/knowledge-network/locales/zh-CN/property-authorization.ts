@@ -113,6 +113,8 @@ export const propertyAuthorizationPart = {
     "修改该角色可能影响 {{count}} 名成员；用户直配、其他角色及基础权限仍会参与最终计算。",
   propertyAuthorizationRoleImpact_other:
     "修改该角色可能影响 {{count}} 名成员；用户直配、其他角色及基础权限仍会参与最终计算。",
+  propertyAuthorizationRoleImpactUnknown:
+    "本次修改将对该角色的全部成员生效；用户直配、其他角色及基础权限仍会参与最终计算。",
   propertyAuthorizationSearchProperty: "搜索属性名称",
   propertyAuthorizationFilterAll: "全部状态",
   propertyAuthorizationFilterExplicit: "已配置",

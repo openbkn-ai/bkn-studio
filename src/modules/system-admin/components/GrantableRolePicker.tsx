@@ -6,7 +6,7 @@
  */
 
 import { CheckOutlined, SearchOutlined, TeamOutlined } from "@ant-design/icons";
-import { Avatar, Empty, Input, Select, Spin } from "antd";
+import { Alert, Avatar, Empty, Input, Select, Spin } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -24,6 +24,7 @@ export type GrantableRolePickerProps = {
   ariaLabel?: string;
   className?: string;
   disabled?: boolean;
+  id?: string;
   initialRoles?: GrantableRole[];
   loading?: boolean;
   onChange?: (value: string | undefined) => void;
@@ -47,6 +48,7 @@ export function GrantableRolePicker({
   ariaLabel,
   className,
   disabled = false,
+  id,
   initialRoles = EMPTY_ROLES,
   loading = false,
   onChange,
@@ -149,15 +151,22 @@ export function GrantableRolePicker({
           <div className={styles.memberPaneHead}>
             <div>
               <strong>{t("knowledgeNetwork.propertyAuthorizationRole")}</strong>
-              <span>{t("systemAdmin.userPicker.resultCount", { count: visibleRoles.length })}</span>
+              <span>
+                {t("systemAdmin.userPicker.resultCount", {
+                  count: debouncedSearch ? visibleRoles.length : panelRoles.length,
+                })}
+              </span>
             </div>
           </div>
+          {searchFailed && !debouncedSearch ? (
+            <Alert message={t("common.requestFailed")} showIcon type="warning" />
+          ) : null}
           <div aria-busy={busy} className={styles.memberList} role="listbox">
             {busy ? (
               <div className={styles.loadingState}>
                 <Spin size="small" />
               </div>
-            ) : searchFailed ? (
+            ) : searchFailed && debouncedSearch ? (
               <Empty description={t("common.requestFailed")} image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : panelRoles.length ? (
               panelRoles.map((role) => (
@@ -198,6 +207,7 @@ export function GrantableRolePicker({
       className={className}
       disabled={disabled}
       filterOption={false}
+      id={id}
       loading={loading}
       notFoundContent={<span aria-hidden />}
       onChange={selectRole}

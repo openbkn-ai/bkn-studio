@@ -171,6 +171,27 @@ describe("isRoleGrantSubject", () => {
     ).toBe(true);
     expect(isRoleGrantSubject(ordinary)).toBe(false);
   });
+
+  it("lets an explicit user type override inherited role permission sources", () => {
+    const ordinary = grant("u-mate", ["view_detail"]);
+    expect(
+      isRoleGrantSubject({
+        ...ordinary,
+        accessorType: "user",
+        grants: [{ ...source(), inherited: true, policySource: "role_permission" }],
+      }),
+    ).toBe(false);
+  });
+
+  it("does not treat a legacy user grant with inherited role access as a role subject", () => {
+    const ordinary = grant("u-mate", ["view_detail"]);
+    expect(
+      isRoleGrantSubject({
+        ...ordinary,
+        grants: [{ ...source(), inherited: true, policySource: "role_permission" }],
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("isUserDirectorySubject", () => {

@@ -977,6 +977,7 @@ export function ObjectAuthorizeDrawer({
               ) : (
                 <GrantableRolePicker
                   ariaLabel={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+                  id="object-grant-user"
                   loading={loading}
                   onChange={setCandidate}
                   placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}

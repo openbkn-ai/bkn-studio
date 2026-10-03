@@ -124,6 +124,20 @@ function grantGranteeLabel(grant: ObjectGrant, user?: AdminUser) {
   return grant.accessorName || grant.accessorAccount || user?.name;
 }
 
+function grantMatchesSubject(
+  grant: ObjectGrant,
+  accessorId: string | undefined,
+  subjectType: "user" | "role",
+) {
+  if (!accessorId || grant.accessorId !== accessorId) return false;
+  if (subjectType === "role") return isRoleGrantSubject(grant);
+  return (
+    !isRoleGrantSubject(grant) &&
+    grant.accessorType !== "public" &&
+    grant.accessorId !== PUBLIC_ACCESSOR_ID
+  );
+}
+
 function collapseGrantSources(records: GrantRecord[]): GrantSourceRow[] {
   const grouped = new Map<string, GrantSourceRow>();
   for (const record of records) {
@@ -384,9 +398,8 @@ export function ObjectTypeAuthorizationScene() {
       return [];
     }
     return (
-      objectGrants.find(
-        (grant) => grant.accessorId === subjectId && (grant.accessorType ?? "user") === subjectType,
-      )?.effectiveDecisions ?? []
+      objectGrants.find((grant) => grantMatchesSubject(grant, subjectId, subjectType))
+        ?.effectiveDecisions ?? []
     )
       .filter((decision) => decision.decision === "allow")
       .map((decision) => decision.operation);
@@ -492,6 +505,13 @@ export function ObjectTypeAuthorizationScene() {
       content: (
         <div className={styles.confirmContent}>
           <p>{t("knowledgeNetwork.propertyAuthorizationConfirmSummary", summary)}</p>
+          {subjectType === "role" ? (
+            <Alert
+              message={t("knowledgeNetwork.propertyAuthorizationRoleImpactUnknown")}
+              showIcon
+              type="warning"
+            />
+          ) : null}
           {summary.full ? (
             <Alert
               message={t("knowledgeNetwork.propertyAuthorizationFullRisk", {
@@ -694,10 +714,8 @@ export function ObjectTypeAuthorizationScene() {
       isAdminGrantor,
     });
 
-  const candidateGrant = objectGrants.find(
-    (grant) =>
-      grant.accessorId === candidateUserId &&
-      (grant.accessorType ?? "user") === candidateSubjectType,
+  const candidateGrant = objectGrants.find((grant) =>
+    grantMatchesSubject(grant, candidateUserId, candidateSubjectType),
   );
   // `POST /me/object-grants` replaces one professional-rule source slice. The server derives the
   // authority source from the current grantor, so an owner must not submit an administrator's
@@ -728,10 +746,8 @@ export function ObjectTypeAuthorizationScene() {
 
   const selectCandidateSubject = (accessorId?: string) => {
     setCandidateUserId(accessorId);
-    const grant = objectGrants.find(
-      (candidate) =>
-        candidate.accessorId === accessorId &&
-        (candidate.accessorType ?? "user") === candidateSubjectType,
+    const grant = objectGrants.find((candidate) =>
+      grantMatchesSubject(candidate, accessorId, candidateSubjectType),
     );
     const directOperations = [
       ...new Set(
@@ -1284,6 +1300,7 @@ export function ObjectTypeAuthorizationScene() {
             ) : (
               <GrantableRolePicker
                 ariaLabel={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+                id="object-type-grant-user"
                 initialRoles={roles}
                 onChange={selectCandidateSubject}
                 placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}

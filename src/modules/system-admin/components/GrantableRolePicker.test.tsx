@@ -12,7 +12,10 @@ const mocks = vi.hoisted(() => ({ listGrantableRolesForObject: vi.fn() }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { count?: number }) =>
+      typeof options?.count === "number" ? `${key}:${options.count}` : key,
+  }),
 }));
 vi.mock("@/modules/system-admin/services/authz.service", () => ({
   listGrantableRolesForObject: mocks.listGrantableRolesForObject,
@@ -76,5 +79,49 @@ describe("GrantableRolePicker", () => {
     );
     fireEvent.click(await screen.findByRole("option", { name: /Readers/ }));
     expect(onChange).toHaveBeenCalledWith("role-readers");
+  });
+
+  it("keeps initial roles selectable when the empty search request fails", async () => {
+    mocks.listGrantableRolesForObject.mockRejectedValue(new Error("temporary failure"));
+    render(
+      <GrantableRolePicker
+        initialRoles={[{ id: "role-readers", name: "Readers" }]}
+        presentation="inline"
+        resourceId="network-1/object-1"
+        resourceType="object_type"
+      />,
+    );
+
+    expect(await screen.findByText("common.requestFailed")).not.toBeNull();
+    expect(screen.getByRole("option", { name: /Readers/ })).not.toBeNull();
+    expect(screen.getByText("systemAdmin.userPicker.resultCount:1")).not.toBeNull();
+
+    fireEvent.change(
+      screen.getByRole("textbox", {
+        name: "knowledgeNetwork.propertyAuthorizationSearchRole",
+      }),
+      { target: { value: "missing" } },
+    );
+    await waitFor(() =>
+      expect(mocks.listGrantableRolesForObject).toHaveBeenLastCalledWith(
+        "object_type",
+        "network-1/object-1",
+        "missing",
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole("option", { name: /Readers/ })).toBeNull());
+  });
+
+  it("forwards the id to the select control", () => {
+    mocks.listGrantableRolesForObject.mockResolvedValue([]);
+    render(
+      <GrantableRolePicker
+        id="object-grant-subject"
+        resourceId="network-1/object-1"
+        resourceType="object_type"
+      />,
+    );
+
+    expect(document.getElementById("object-grant-subject")).not.toBeNull();
   });
 });
