@@ -90,7 +90,7 @@ export function presentLogTarget(record: LogRecord, t: Translate): LogText {
     return {
       primary:
         targetName && readableType ? `${readableType}: ${targetName}` : targetName || targetID,
-      secondary: targetID,
+      secondary: targetID && targetID !== targetName ? targetID : undefined,
     };
   }
   const agentName = conversationAgentName(record) || t("bknTrace.logs.unnamedAgent");
