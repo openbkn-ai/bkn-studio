@@ -44,6 +44,7 @@ const translate = (key: string, options?: Record<string, unknown>) => {
       "bknTrace.settings.integration.not_integrated": "未接入",
       "bknTrace.settings.notReturned": "未返回",
       "bknTrace.settings.sourceLabels.audit-ledger": "BKN Safe 审计日志",
+      "bknTrace.settings.sourceLabels.observability-maintenance": "Trace 与归档维护",
       "bknTrace.settings.capturePolicy.dataUnavailable": "不可用（当前合同未提供）",
       "bknTrace.settings.capturePolicy.noActiveOperation": "无活动操作",
       "bknTrace.settings.capturePolicy.operationUnavailable":
@@ -722,10 +723,8 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("bknTrace.settings.inventory.title")).toBeNull();
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
-    expect(
-      within(observabilityRow!).getByText("bknTrace.settings.sourceNotIntegrated"),
-    ).not.toBeNull();
-    expect(within(observabilityRow!).getByText("未接入")).not.toBeNull();
+    expect(within(observabilityRow!).getByText("Trace 与归档维护")).not.toBeNull();
+    expect(within(observabilityRow!).getByText("已接入")).not.toBeNull();
     expect(screen.getByText("7 bknTrace.settings.days")).not.toBeNull();
   });
 
@@ -753,7 +752,8 @@ describe("observability workspace scenes", () => {
 
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
-    expect(within(observabilityRow!).getByText("未接入")).not.toBeNull();
+    expect(within(observabilityRow!).getByText("Trace 与归档维护")).not.toBeNull();
+    expect(within(observabilityRow!).getByText("已接入")).not.toBeNull();
   });
 
   it("按冻结合同分别读取配置快照和活动操作", async () => {
@@ -1155,6 +1155,10 @@ describe("observability workspace scenes", () => {
   });
 
   it("设置页将已声明但未接入的来源显示为未接入", async () => {
+    vi.mocked(getTraceEvidenceConfiguration).mockRejectedValue(
+      new Error("configuration unavailable"),
+    );
+    vi.mocked(getArchiveOverview).mockRejectedValue(new Error("archive unavailable"));
     vi.mocked(listLogSources).mockResolvedValue([
       {
         coveredModules: ["observability"],
@@ -1215,7 +1219,7 @@ describe("observability workspace scenes", () => {
 
     render(<ObservabilitySettingsScene />);
 
-    expect(await screen.findByText("已接入")).not.toBeNull();
+    expect(await screen.findAllByText("已接入")).not.toHaveLength(0);
     expect(screen.queryByText("partial_management_audit_coverage")).toBeNull();
     expect(screen.queryByText("bknTrace.settings.querySourceStatus")).toBeNull();
   });

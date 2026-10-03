@@ -52,10 +52,13 @@ type ModuleSourceRow = {
 };
 
 const SHARED_LOG_SOURCE_ID = "otel-runtime";
+const OBSERVABILITY_MAINTENANCE_SOURCE_ID = "observability-maintenance";
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
+  const [observabilityMaintenanceIntegrated, setObservabilityMaintenanceIntegrated] =
+    useState(false);
   const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
   const [archives, setArchives] = useState<ArchiveOverview[]>([]);
@@ -116,6 +119,15 @@ export function ObservabilitySettingsScene() {
             : Promise.resolve<CapturePolicyConfiguration | undefined>(undefined),
         ]);
         if (!active) return;
+        setObservabilityMaintenanceIntegrated(
+          (profile.traceEvidenceConfigurationRead &&
+            capturePolicyResult.status === "fulfilled" &&
+            capturePolicyResult.value !== undefined) ||
+            (profile.observabilityArchiveManage &&
+              [logArchiveResult, traceArchiveResult].some(
+                (result) => result.status === "fulfilled" && result.value !== undefined,
+              )),
+        );
         if (sourceResult.status === "fulfilled") {
           setSources(sourceResult.value);
           setSourceLoadState(profile.globalLogSearch ? "loaded" : "not_requested");
@@ -237,7 +249,13 @@ export function ObservabilitySettingsScene() {
                         source.status !== "not_integrated",
                     )
                     .map((source) => source.sourceId);
-            const sourceIds = [...new Set([...directSourceIds, ...sharedSourceIds])];
+            const maintenanceSourceIds =
+              module === "observability" && observabilityMaintenanceIntegrated
+                ? [OBSERVABILITY_MAINTENANCE_SOURCE_ID]
+                : [];
+            const sourceIds = [
+              ...new Set([...directSourceIds, ...sharedSourceIds, ...maintenanceSourceIds]),
+            ];
             return {
               module,
               sourceIds,
@@ -245,7 +263,7 @@ export function ObservabilitySettingsScene() {
             };
           })
         : [],
-    [sourceLoadState, sources],
+    [observabilityMaintenanceIntegrated, sourceLoadState, sources],
   );
 
   const overview = useMemo(

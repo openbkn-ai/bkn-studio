@@ -1111,6 +1111,7 @@ export const bknTraceZhCN = {
         "execution-factory": "执行工厂服务",
         "model-manager": "模型管理服务",
         "otel-runtime": "统一日志服务",
+        "observability-maintenance": "Trace 与归档维护",
         vega: "数据资源服务",
       },
       sourceNotIntegrated: "未接入",
