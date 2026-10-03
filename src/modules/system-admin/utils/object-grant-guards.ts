@@ -30,9 +30,9 @@ export function grantCreatorUserId(source: GrantRecord): string | undefined {
  * bkn-safe: direct role permissions always carry the protected role source.
  */
 export function isRoleGrantSubject(grant: ObjectGrant) {
-  return (
-    grant.accessorType === "role" ||
-    (grant.grants ?? []).some((source) => source.policySource === "role_permission")
+  if (grant.accessorType) return grant.accessorType === "role";
+  return (grant.grants ?? []).some(
+    (source) => source.policySource === "role_permission" && !source.inherited,
   );
 }
 

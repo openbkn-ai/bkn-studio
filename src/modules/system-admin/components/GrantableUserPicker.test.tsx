@@ -45,7 +45,7 @@ describe("GrantableUserPicker", () => {
 
   beforeEach(() => vi.clearAllMocks());
 
-  it("searches only through the object-scoped candidate endpoint", async () => {
+  it("loads a first page and searches through the object-scoped candidate endpoint", async () => {
     const alice = {
       account: "alice",
       accountType: "local",
@@ -56,7 +56,11 @@ describe("GrantableUserPicker", () => {
       roleIds: [],
       telephone: "",
     };
-    mocks.listGrantableUsersForObject.mockResolvedValue([alice]);
+    const bob = { ...alice, account: "bob", id: "user-2", name: "Bob" };
+    mocks.listGrantableUsersForObject.mockImplementation(
+      (_resourceType: string, _resourceId: string, search: string) =>
+        Promise.resolve(search ? [alice] : [bob]),
+    );
     const onChange = vi.fn();
 
     render(
@@ -68,7 +72,13 @@ describe("GrantableUserPicker", () => {
       />,
     );
 
-    expect(mocks.listGrantableUsersForObject).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mocks.listGrantableUsersForObject).toHaveBeenCalledWith(
+        "object_type",
+        "network-1/object-1",
+        "",
+      ),
+    );
     fireEvent.change(
       screen.getByRole("textbox", { name: "systemAdmin.userPicker.searchAllUsers" }),
       { target: { value: "alice" } },
@@ -83,6 +93,19 @@ describe("GrantableUserPicker", () => {
     );
     fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
     expect(onChange).toHaveBeenCalledWith("user-1");
+
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "systemAdmin.userPicker.searchAllUsers" }),
+      { target: { value: "" } },
+    );
+    await waitFor(() =>
+      expect(mocks.listGrantableUsersForObject).toHaveBeenLastCalledWith(
+        "object_type",
+        "network-1/object-1",
+        "",
+      ),
+    );
+    expect(await screen.findByRole("option", { name: /Bob/ })).not.toBeNull();
   });
 
   it("contains a failed search inside the picker", async () => {

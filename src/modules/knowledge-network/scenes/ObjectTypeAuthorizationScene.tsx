@@ -44,7 +44,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { GrantableUserPicker } from "@/modules/system-admin";
+import { GrantableRolePicker, GrantableUserPicker } from "@/modules/system-admin";
 import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
 import { ObjectTypeDataAttributeFormDrawer } from "@/modules/knowledge-network/components/object-type/data-attribute/ObjectTypeDataAttributeFormDrawer";
 import { RowFilterAuthorizationPanel } from "@/modules/knowledge-network/components/object-type/row-filter/RowFilterAuthorizationPanel";
@@ -74,14 +74,15 @@ import {
   propertyAccessRowState,
   summarizePropertyGrantChanges,
 } from "@/modules/knowledge-network/utils/property-authorization";
-import { listRoles } from "@/modules/system-admin/services/admin.service";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import {
+  type GrantableRole,
+  listGrantableRolesForObject,
   listObjectGrantsForObject,
   revokeObjectGrantsForObject,
   upsertObjectGrantForObject,
 } from "@/modules/system-admin/services/authz.service";
-import type { AdminRole, AdminUser } from "@/modules/system-admin/types/admin";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
 import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
 import {
@@ -121,6 +122,20 @@ function mergeUsers(primary: AdminUser[], secondary: AdminUser[]) {
 
 function grantGranteeLabel(grant: ObjectGrant, user?: AdminUser) {
   return grant.accessorName || grant.accessorAccount || user?.name;
+}
+
+function grantMatchesSubject(
+  grant: ObjectGrant,
+  accessorId: string | undefined,
+  subjectType: "user" | "role",
+) {
+  if (!accessorId || grant.accessorId !== accessorId) return false;
+  if (subjectType === "role") return isRoleGrantSubject(grant);
+  return (
+    !isRoleGrantSubject(grant) &&
+    grant.accessorType !== "public" &&
+    grant.accessorId !== PUBLIC_ACCESSOR_ID
+  );
 }
 
 function collapseGrantSources(records: GrantRecord[]): GrantSourceRow[] {
@@ -172,24 +187,27 @@ export function ObjectTypeAuthorizationScene() {
     currentPermissions,
     requiredPermissions: authzPoints.revoke,
   });
-  const canReadUserRowFilters = hasPermissions({
-    currentPermissions,
-    requiredPermissions: authzPoints.review,
-  });
-  const canWriteUserRowFilters = isAdminGrantor && isAdminRevoker;
-  const canReadRoleRowFilters = hasPermissions({
-    currentPermissions,
-    requiredPermissions: "admin-role:view",
-  });
-  const canWriteRoleRowFilters = hasPermissions({
-    currentPermissions,
-    requiredPermissions: authzPoints.rolePermissions,
-  });
-  // The management write endpoint accepts admin-role:permissions, but the UI also has to enumerate
-  // roles through GET /admin/roles, which is deliberately protected by admin-role:view.
+  const canReadUserRowFilters =
+    networkAuthorized ||
+    hasPermissions({
+      currentPermissions,
+      requiredPermissions: authzPoints.review,
+    });
+  const canWriteUserRowFilters = networkAuthorized || (isAdminGrantor && isAdminRevoker);
+  const canReadRoleRowFilters =
+    networkAuthorized ||
+    hasPermissions({
+      currentPermissions,
+      requiredPermissions: "admin-role:view",
+    });
+  const canWriteRoleRowFilters =
+    networkAuthorized ||
+    hasPermissions({
+      currentPermissions,
+      requiredPermissions: authzPoints.rolePermissions,
+    });
   const canUseRoleSubjects = canReadRoleRowFilters && canWriteRoleRowFilters;
   const canReadAnyRowFilters = canReadUserRowFilters || canReadRoleRowFilters;
-  const shouldLoadRoles = canReadRoleRowFilters;
 
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -197,8 +215,9 @@ export function ObjectTypeAuthorizationScene() {
   const [baseBusy, setBaseBusy] = useState(false);
   const [objectGrants, setObjectGrants] = useState<ObjectGrant[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [roles, setRoles] = useState<AdminRole[]>([]);
+  const [roles, setRoles] = useState<GrantableRole[]>([]);
   const [candidateUserId, setCandidateUserId] = useState<string>();
+  const [candidateSubjectType, setCandidateSubjectType] = useState<"user" | "role">("user");
   const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
   const [sourceAccessorId, setSourceAccessorId] = useState<string>();
   const [activeTab, setActiveTab] = useState<AuthorizationTab>(
@@ -206,7 +225,6 @@ export function ObjectTypeAuthorizationScene() {
   );
   const [subjectType, setSubjectType] = useState<PropertyGrantSubjectType>("user");
   const [subjectId, setSubjectId] = useState<string>();
-  const [subjectKeyword, setSubjectKeyword] = useState("");
   const [propertyKeyword, setPropertyKeyword] = useState("");
   const [propertyFilter, setPropertyFilter] = useState<PropertyFilter>("all");
   const [selectedProperties, setSelectedProperties] = useState<Key[]>([]);
@@ -224,7 +242,7 @@ export function ObjectTypeAuthorizationScene() {
       try {
         const [grantResult, roleResult] = await Promise.all([
           listObjectGrantsForObject("object_type", objectTypeRef),
-          shouldLoadRoles ? listRoles({ withMembers: true }).catch(() => null) : null,
+          listGrantableRolesForObject("object_type", objectTypeRef).catch(() => null),
         ]);
         if (signal?.aborted) {
           return;
@@ -240,7 +258,7 @@ export function ObjectTypeAuthorizationScene() {
         }
       }
     },
-    [message, objectTypeRef, shouldLoadRoles],
+    [message, objectTypeRef],
   );
 
   useEffect(() => {
@@ -376,10 +394,13 @@ export function ObjectTypeAuthorizationScene() {
     subjectType === "user" ? userMap.get(subjectId ?? "") : roleMap.get(subjectId ?? "");
 
   const subjectOperations = useMemo(() => {
-    if (!subjectId || subjectType === "role") {
+    if (!subjectId) {
       return [];
     }
-    return (objectGrants.find((grant) => grant.accessorId === subjectId)?.effectiveDecisions ?? [])
+    return (
+      objectGrants.find((grant) => grantMatchesSubject(grant, subjectId, subjectType))
+        ?.effectiveDecisions ?? []
+    )
       .filter((decision) => decision.decision === "allow")
       .map((decision) => decision.operation);
   }, [objectGrants, subjectId, subjectType]);
@@ -484,6 +505,13 @@ export function ObjectTypeAuthorizationScene() {
       content: (
         <div className={styles.confirmContent}>
           <p>{t("knowledgeNetwork.propertyAuthorizationConfirmSummary", summary)}</p>
+          {subjectType === "role" ? (
+            <Alert
+              message={t("knowledgeNetwork.propertyAuthorizationRoleImpactUnknown")}
+              showIcon
+              type="warning"
+            />
+          ) : null}
           {summary.full ? (
             <Alert
               message={t("knowledgeNetwork.propertyAuthorizationFullRisk", {
@@ -491,15 +519,6 @@ export function ObjectTypeAuthorizationScene() {
               })}
               showIcon
               type="warning"
-            />
-          ) : null}
-          {subjectType === "role" ? (
-            <Alert
-              message={t("knowledgeNetwork.propertyAuthorizationRoleImpact", {
-                count: (currentSubjectRecord as AdminRole | undefined)?.accessorIds.length ?? 0,
-              })}
-              showIcon
-              type="info"
             />
           ) : null}
         </div>
@@ -657,13 +676,6 @@ export function ObjectTypeAuthorizationScene() {
     },
   ];
 
-  const visibleRoles = useMemo(() => {
-    const keyword = subjectKeyword.trim().toLowerCase();
-    return roles.filter((role) =>
-      `${role.name} ${role.description}`.toLowerCase().includes(keyword),
-    );
-  }, [roles, subjectKeyword]);
-
   const canGrant = networkAuthorized || isAdminGrantor;
   const canRevoke = networkAuthorized || isAdminRevoker;
   const canManageUserPropertyGrants = networkAuthorized || canWriteUserRowFilters;
@@ -702,7 +714,9 @@ export function ObjectTypeAuthorizationScene() {
       isAdminGrantor,
     });
 
-  const candidateGrant = objectGrants.find((grant) => grant.accessorId === candidateUserId);
+  const candidateGrant = objectGrants.find((grant) =>
+    grantMatchesSubject(grant, candidateUserId, candidateSubjectType),
+  );
   // `POST /me/object-grants` replaces one professional-rule source slice. The server derives the
   // authority source from the current grantor, so an owner must not submit an administrator's
   // operations (and vice versa) as part of its own replacement set.
@@ -730,9 +744,11 @@ export function ObjectTypeAuthorizationScene() {
     candidateOperations.length !== candidateManagedOperations.size ||
     candidateOperations.some((operation) => !candidateManagedOperations.has(operation));
 
-  const selectCandidateUser = (accessorId?: string) => {
+  const selectCandidateSubject = (accessorId?: string) => {
     setCandidateUserId(accessorId);
-    const grant = objectGrants.find((candidate) => candidate.accessorId === accessorId);
+    const grant = objectGrants.find((candidate) =>
+      grantMatchesSubject(candidate, accessorId, candidateSubjectType),
+    );
     const directOperations = [
       ...new Set(
         (grant?.grants ?? [])
@@ -783,6 +799,7 @@ export function ObjectTypeAuthorizationScene() {
     try {
       await upsertObjectGrantForObject({
         accessorId: candidateUserId,
+        accessorType: candidateSubjectType,
         effect: "allow",
         objId: objectTypeRef,
         objName: detail.name,
@@ -1235,32 +1252,78 @@ export function ObjectTypeAuthorizationScene() {
       <section className={styles.baseGrantComposer}>
         <header className={styles.baseGrantComposerHead}>
           <strong>{t("systemAdmin.objectGrants.newGrantTitle")}</strong>
-          <span>
-            {t("systemAdmin.objectGrants.selectedOperationCount", {
-              selected: candidateOperations.length,
-              total: baseOps.length,
-            })}
-          </span>
         </header>
         <div className={styles.baseGrantForm}>
           <div className={styles.baseGrantUserField}>
-            <label htmlFor="object-type-grant-user">
-              {t("systemAdmin.objectGrants.grantUserLabel")}
+            <label
+              className={styles.baseGrantStepTitle}
+              htmlFor="object-type-grant-user"
+              id="base-grant-subject-label"
+            >
+              <span aria-hidden className={styles.baseGrantStepIndex}>
+                1
+              </span>
+              <span>{t("systemAdmin.objectGrants.grantUserLabel")}</span>
             </label>
-            <GrantableUserPicker
-              ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
-              id="object-type-grant-user"
-              initialUsers={users}
-              onChange={selectCandidateUser}
-              placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
-              resourceId={objectTypeRef}
-              resourceType="object_type"
-              value={candidateUserId}
+            <Segmented
+              block
+              onChange={(value) => {
+                setCandidateSubjectType(value as "user" | "role");
+                setCandidateUserId(undefined);
+                setCandidateOperations([]);
+              }}
+              options={[
+                {
+                  icon: <UserOutlined />,
+                  label: t("knowledgeNetwork.propertyAuthorizationUser"),
+                  value: "user",
+                },
+                {
+                  icon: <TeamOutlined />,
+                  label: t("knowledgeNetwork.propertyAuthorizationRole"),
+                  value: "role",
+                },
+              ]}
+              value={candidateSubjectType}
             />
+            {candidateSubjectType === "user" ? (
+              <GrantableUserPicker
+                ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
+                id="object-type-grant-user"
+                initialUsers={users}
+                onChange={selectCandidateSubject}
+                placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
+                resourceId={objectTypeRef}
+                resourceType="object_type"
+                value={candidateUserId}
+              />
+            ) : (
+              <GrantableRolePicker
+                ariaLabel={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+                id="object-type-grant-user"
+                initialRoles={roles}
+                onChange={selectCandidateSubject}
+                placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+                resourceId={objectTypeRef}
+                resourceType="object_type"
+                value={candidateUserId}
+              />
+            )}
           </div>
           <div className={styles.baseGrantOperationsField}>
             <div className={styles.baseGrantFieldHead}>
-              <span>{t("systemAdmin.objectGrants.grantOperationsLabel")}</span>
+              <div className={styles.baseGrantStepTitle} id="base-grant-operations-label">
+                <span aria-hidden className={styles.baseGrantStepIndex}>
+                  2
+                </span>
+                <span>{t("systemAdmin.objectGrants.grantOperationsLabel")}</span>
+                <small className={styles.baseGrantOperationCount}>
+                  {t("systemAdmin.objectGrants.selectedOperationCount", {
+                    selected: candidateOperations.length,
+                    total: baseOps.length,
+                  })}
+                </small>
+              </div>
               <div>
                 <AppButton
                   disabled={catalogLoading || candidateOperations.length === baseOps.length}
@@ -1280,7 +1343,11 @@ export function ObjectTypeAuthorizationScene() {
                 </AppButton>
               </div>
             </div>
-            <div className={styles.baseGrantOperations} role="group">
+            <div
+              aria-labelledby="base-grant-operations-label"
+              className={styles.baseGrantOperations}
+              role="group"
+            >
               {baseOps.map((operation) => {
                 const selected = candidateOperations.includes(operation.key);
                 const required = candidateRequirements.some(
@@ -1307,20 +1374,25 @@ export function ObjectTypeAuthorizationScene() {
             </div>
           </div>
           <footer className={styles.baseGrantFooter}>
-            <span aria-live="polite">
-              {t(
-                !candidateUserId
-                  ? "systemAdmin.objectGrants.grantNeedsUser"
-                  : candidateWriteLocked
-                    ? "systemAdmin.objectGrants.delegateLocked"
-                    : !candidateOperations.length
-                      ? "systemAdmin.objectGrants.grantNeedsOperation"
-                      : !candidateHasChanges
-                        ? "systemAdmin.objectGrants.grantNoChanges"
-                        : "systemAdmin.objectGrants.grantReady",
-                { count: candidateOperations.length },
-              )}
-            </span>
+            <div className={styles.baseGrantSubmitSummary}>
+              <span aria-hidden className={styles.baseGrantStepIndex}>
+                3
+              </span>
+              <span aria-live="polite">
+                {t(
+                  !candidateUserId
+                    ? "systemAdmin.objectGrants.grantNeedsUser"
+                    : candidateWriteLocked
+                      ? "systemAdmin.objectGrants.delegateLocked"
+                      : !candidateOperations.length
+                        ? "systemAdmin.objectGrants.grantNeedsOperation"
+                        : !candidateHasChanges
+                          ? "systemAdmin.objectGrants.grantNoChanges"
+                          : "systemAdmin.objectGrants.grantReady",
+                  { count: candidateOperations.length },
+                )}
+              </span>
+            </div>
             <AppButton
               disabled={
                 !candidateUserId ||
@@ -1435,7 +1507,6 @@ export function ObjectTypeAuthorizationScene() {
             confirmDiscard(() => {
               setSubjectType(value as PropertyGrantSubjectType);
               setSubjectId(undefined);
-              setSubjectKeyword("");
               setDraft(new Map());
             })
           }
@@ -1477,41 +1548,24 @@ export function ObjectTypeAuthorizationScene() {
             />
           </div>
         ) : (
-          <>
-            <Input
-              allowClear
-              onChange={(event) => setSubjectKeyword(event.target.value)}
-              placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
-              prefix={<SearchOutlined />}
-              value={subjectKeyword}
-            />
-            <div className={styles.subjectList}>
-              {visibleRoles.length ? (
-                visibleRoles.map((role) => {
-                  const selected = role.id === subjectId;
-                  return (
-                    <button
-                      className={selected ? styles.subjectItemSelected : styles.subjectItem}
-                      key={role.id}
-                      onClick={() => confirmDiscard(() => setSubjectId(role.id))}
-                      type="button"
-                    >
-                      <Avatar icon={<TeamOutlined />} size={34} />
-                      <span>
-                        <strong>{role.name || role.id}</strong>
-                      </span>
-                    </button>
-                  );
-                })
-              ) : (
-                <Empty
-                  className={styles.subjectListEmpty}
-                  description={t("knowledgeNetwork.propertyAuthorizationRoleEmpty")}
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              )}
-            </div>
-          </>
+          <GrantableRolePicker
+            ariaLabel={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+            className={styles.subjectUserPicker}
+            initialRoles={roles}
+            onChange={(nextRoleId) => confirmDiscard(() => setSubjectId(nextRoleId))}
+            onRolesChange={(selectedRoles) => {
+              if (!selectedRoles.length) return;
+              setRoles((current) => {
+                const byId = new Map(current.map((role) => [role.id, role]));
+                selectedRoles.forEach((role) => byId.set(role.id, role));
+                return [...byId.values()];
+              });
+            }}
+            presentation="inline"
+            resourceId={objectTypeRef}
+            resourceType="object_type"
+            value={subjectId}
+          />
         )}
       </aside>
 
@@ -1538,24 +1592,6 @@ export function ObjectTypeAuthorizationScene() {
                         ? t("knowledgeNetwork.propertyAuthorizationRole")
                         : (currentSubjectRecord as AdminUser | undefined)?.account}
                     </small>
-                    {subjectType === "role" ? (
-                      <Tooltip
-                        title={t("knowledgeNetwork.propertyAuthorizationRoleImpact", {
-                          count:
-                            (currentSubjectRecord as AdminRole | undefined)?.accessorIds.length ??
-                            0,
-                        })}
-                      >
-                        <span className={styles.roleImpactHint} tabIndex={0}>
-                          <WarningOutlined />
-                          {t("knowledgeNetwork.propertyAuthorizationRoleImpactCompact", {
-                            count:
-                              (currentSubjectRecord as AdminRole | undefined)?.accessorIds.length ??
-                              0,
-                          })}
-                        </span>
-                      </Tooltip>
-                    ) : null}
                   </span>
                 </span>
               </div>

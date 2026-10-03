@@ -12,7 +12,7 @@ import {
   listDomainObjectsPage,
   resolveGrantNames,
 } from "@/modules/system-admin/services/authz-objects.service";
-import { listUsersPage } from "@/modules/system-admin/services/admin.service";
+import { listRoles, listUsersPage } from "@/modules/system-admin/services/admin.service";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type {
   AuthorizableObject,
@@ -462,11 +462,13 @@ export async function upsertObjectGrant(
     "bundle" in input
       ? {
           accessor_id: input.accessorId,
+          accessor_type: input.accessorType ?? "user",
           bundle: input.bundle,
           resource: { type: input.objType, id: input.objId },
         }
       : {
           accessor_id: input.accessorId,
+          accessor_type: input.accessorType ?? "user",
           effect: input.effect ?? "allow",
           operations: input.operations,
           resource: { type: input.objType, id: input.objId },
@@ -705,11 +707,13 @@ export async function upsertObjectGrantForObject(input: ObjectGrantInput): Promi
     "bundle" in input
       ? {
           accessor_id: input.accessorId,
+          accessor_type: input.accessorType ?? "user",
           bundle: input.bundle,
           resource: { id: input.objId, type: input.objType },
         }
       : {
           accessor_id: input.accessorId,
+          accessor_type: input.accessorType ?? "user",
           effect: input.effect ?? "allow",
           operations: input.operations,
           resource: { id: input.objId, type: input.objType },
@@ -750,12 +754,9 @@ export async function revokeObjectGrantsForObject(grantIds: string[]): Promise<v
 export async function listGrantableUsersForObject(
   objType: string,
   objId: string,
-  search: string,
+  search = "",
 ): Promise<AdminUser[]> {
   const normalizedSearch = search.trim();
-  if (!normalizedSearch) {
-    return [];
-  }
   if (useMock) {
     const result = await listUsersPage({
       enabled: true,
@@ -781,4 +782,33 @@ export async function listGrantableUsersForObject(
       roleIds: [],
       telephone: "",
     }));
+}
+
+export type GrantableRole = {
+  description: string;
+  id: string;
+  name: string;
+};
+
+/** Existing roles this exact object may be shared with; membership is intentionally unavailable. */
+export async function listGrantableRolesForObject(
+  objType: string,
+  objId: string,
+  search = "",
+): Promise<GrantableRole[]> {
+  const normalizedSearch = search.trim();
+  if (useMock) {
+    const all = await listRoles();
+    const keyword = normalizedSearch.toLowerCase();
+    return all
+      .filter((role) =>
+        keyword ? `${role.name} ${role.description}`.toLowerCase().includes(keyword) : true,
+      )
+      .slice(0, 50)
+      .map(({ description, id, name }) => ({ description, id, name }));
+  }
+  const response = await http.get<{ roles?: GrantableRole[] }>("/safe/v1/me/grantable-roles", {
+    params: { resource_id: objId, resource_type: objType, search: normalizedSearch || undefined },
+  });
+  return (response.data.roles ?? []).filter((role) => role.id);
 }

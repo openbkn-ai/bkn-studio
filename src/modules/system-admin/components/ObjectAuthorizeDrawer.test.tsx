@@ -13,6 +13,7 @@ import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/auth
 import { PUBLIC_ACCESSOR_ID } from "@/modules/system-admin/utils/object-grant-guards";
 
 const mocks = vi.hoisted(() => ({
+  listGrantableRolesForObject: vi.fn(),
   listGrantableUsersForObject: vi.fn(),
   listObjectGrantsForObject: vi.fn(),
   revokeObjectGrantForObject: vi.fn(),
@@ -71,6 +72,7 @@ vi.mock("@/framework/entitlement/RequireEdition", () => ({
     mocks.useCapability() === "available" ? children : <div>professional-edition-gate</div>,
 }));
 vi.mock("@/modules/system-admin/services/authz.service", () => ({
+  listGrantableRolesForObject: mocks.listGrantableRolesForObject,
   listGrantableUsersForObject: mocks.listGrantableUsersForObject,
   listObjectGrantsForObject: mocks.listObjectGrantsForObject,
   revokeObjectGrantForObject: mocks.revokeObjectGrantForObject,
@@ -152,6 +154,7 @@ describe("ObjectAuthorizeDrawer source records", () => {
     vi.clearAllMocks();
     mocks.useCapability.mockReturnValue("available");
     mocks.listGrantableUsersForObject.mockResolvedValue([]);
+    mocks.listGrantableRolesForObject.mockResolvedValue([]);
     appServices.runtimeConfig.currentUser.id = "u-admin";
     appServices.runtimeConfig.currentUser.permissions = ["admin-authz:grant", "admin-authz:revoke"];
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -575,12 +578,53 @@ describe("ObjectAuthorizeDrawer source records", () => {
 
     expect(mocks.upsertObjectGrantForObject).toHaveBeenCalledWith({
       accessorId: "u-new",
+      accessorType: "user",
       bundle: "full_business_access",
       objId: "catalog-1",
       objName: "Customer catalog",
       objSub: undefined,
       objType: "catalog",
     });
+  });
+
+  it("grants the current resource to an existing role without loading role members", async () => {
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
+    mocks.listGrantableRolesForObject.mockResolvedValue([
+      { description: "Reads catalogs", id: "role-readers", name: "Readers" },
+    ]);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await screen.findByText("systemAdmin.objectGrants.newGrantTitle");
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.propertyAuthorizationRole"));
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", {
+        name: "knowledgeNetwork.propertyAuthorizationSearchRole",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: /Readers/ }));
+    fireEvent.click(screen.getByRole("button", { name: /view_detail/ }));
+    fireEvent.click(screen.getByRole("button", { name: /systemAdmin\.objectGrants\.addGrant/ }));
+
+    await waitFor(() =>
+      expect(mocks.upsertObjectGrantForObject).toHaveBeenCalledWith({
+        accessorId: "role-readers",
+        accessorType: "role",
+        effect: "allow",
+        objId: "catalog-1",
+        objName: "Customer catalog",
+        objSub: undefined,
+        objType: "catalog",
+        operations: ["view_detail"],
+      }),
+    );
   });
 
   it("does not downgrade an unknown capability snapshot to the Community bundle", async () => {

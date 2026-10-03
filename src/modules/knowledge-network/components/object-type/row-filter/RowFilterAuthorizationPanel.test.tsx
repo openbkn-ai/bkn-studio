@@ -35,6 +35,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/system-admin", () => ({
+  GrantableRolePicker: () => <div data-testid="role-picker" />,
   GrantableUserPicker: ({
     onChange,
     onUsersChange,

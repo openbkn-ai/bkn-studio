@@ -23,9 +23,9 @@ describe("object-grant backend contract", () => {
     );
 
     expect(candidates.map((candidate) => candidate.id)).toEqual(["u-chen"]);
-    expect(await listGrantableUsersForObject("knowledge_network", "kn-customer-360", "  ")).toEqual(
-      [],
-    );
+    expect(
+      (await listGrantableUsersForObject("knowledge_network", "kn-customer-360", "  ")).length,
+    ).toBeGreaterThan(0);
   });
 
   it("keeps repeated mock writes for the same operation idempotent", async () => {

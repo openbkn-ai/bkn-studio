@@ -91,7 +91,7 @@ export function GrantableUserPicker({
 
   useEffect(() => {
     const sequence = ++requestSequence.current;
-    if (!active || !debouncedSearch || !resourceId || !resourceType) {
+    if (!active || !resourceId || !resourceType) {
       setVisibleUsers([]);
       setSearching(false);
       setSearchFailed(false);
@@ -127,10 +127,11 @@ export function GrantableUserPicker({
   );
   const panelUsers = useMemo(
     () =>
-      (debouncedSearch ? visibleUsers : Object.values(knownUsers)).filter(
-        (user) => !disabledIdSet.has(user.id),
-      ),
-    [debouncedSearch, disabledIdSet, knownUsers, visibleUsers],
+      (debouncedSearch
+        ? visibleUsers
+        : Object.values(mergeUsers(mergeUsers({}, initialUsers), visibleUsers))
+      ).filter((user) => !disabledIdSet.has(user.id)),
+    [debouncedSearch, disabledIdSet, initialUsers, visibleUsers],
   );
 
   const selectUser = (userId: string | undefined) => {
@@ -257,7 +258,7 @@ export function GrantableUserPicker({
       filterOption={false}
       id={id}
       loading={loading}
-      notFoundContent={null}
+      notFoundContent={<span aria-hidden />}
       onChange={(nextValue) => selectUser(nextValue)}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);

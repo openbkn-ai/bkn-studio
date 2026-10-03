@@ -17,9 +17,9 @@ const mocks = vi.hoisted(() => ({
   },
   getDetail: vi.fn(),
   listGrantableUsersForObject: vi.fn(),
+  listGrantableRolesForObject: vi.fn(),
   listObjectGrantsForObject: vi.fn(),
   listPropertyGrantSnapshot: vi.fn(),
-  listRoles: vi.fn(),
   navigate: vi.fn(),
   networkAuthorized: true,
   propertyCapability: "available",
@@ -84,11 +84,8 @@ vi.mock("@/modules/knowledge-network/services/property-authorization.service", (
   patchPropertyGrants: vi.fn(),
 }));
 
-vi.mock("@/modules/system-admin/services/admin.service", () => ({
-  listRoles: mocks.listRoles,
-}));
-
 vi.mock("@/modules/system-admin/services/authz.service", () => ({
+  listGrantableRolesForObject: mocks.listGrantableRolesForObject,
   listGrantableUsersForObject: mocks.listGrantableUsersForObject,
   listObjectGrantsForObject: mocks.listObjectGrantsForObject,
   revokeObjectGrantForObject: mocks.revokeObjectGrantForObject,
@@ -162,12 +159,12 @@ describe("ObjectTypeAuthorizationScene", () => {
     mocks.getDetail.mockImplementation(() => new Promise(() => undefined));
     mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
     mocks.listGrantableUsersForObject.mockResolvedValue([]);
+    mocks.listGrantableRolesForObject.mockResolvedValue([]);
     mocks.listPropertyGrantSnapshot.mockResolvedValue({
       accessor: { id: "user-1", type: "user" },
       entries: [],
       objectTypeRef: "network-1/object-1",
     });
-    mocks.listRoles.mockResolvedValue([]);
   });
 
   it("uses the standard page loading indicator while the initial detail is loading", () => {
@@ -217,8 +214,11 @@ describe("ObjectTypeAuthorizationScene", () => {
     expect(await screen.findByText("systemAdmin.objectGrants.newGrantTitle")).not.toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByText("systemAdmin.objectGrants.grantDetails")).not.toBeNull();
-    expect(screen.queryByText("knowledgeNetwork.rowFilterTab")).toBeNull();
-    expect(mocks.listRoles).not.toHaveBeenCalled();
+    expect(screen.getByText("knowledgeNetwork.rowFilterTab")).not.toBeNull();
+    expect(mocks.listGrantableRolesForObject).toHaveBeenCalledWith(
+      "object_type",
+      "network-1/object-1",
+    );
     fireEvent.mouseDown(
       screen.getByRole("combobox", {
         name: "systemAdmin.objectGrants.grantUserLabel",
@@ -235,6 +235,7 @@ describe("ObjectTypeAuthorizationScene", () => {
     await waitFor(() =>
       expect(mocks.upsertObjectGrantForObject).toHaveBeenCalledWith({
         accessorId: "user-1",
+        accessorType: "user",
         effect: "allow",
         objId: "network-1/object-1",
         objName: "Customer",
@@ -246,6 +247,7 @@ describe("ObjectTypeAuthorizationScene", () => {
   }, 20_000);
 
   it("does not expose role subjects when role write exists without role read", async () => {
+    mocks.networkAuthorized = false;
     mocks.appServices.runtimeConfig.currentUser.permissions = ["admin-role:permissions"];
     mocks.getDetail.mockResolvedValue({
       color: "#356af6",
@@ -269,8 +271,8 @@ describe("ObjectTypeAuthorizationScene", () => {
     render(<ObjectTypeAuthorizationScene />);
 
     fireEvent.click(await screen.findByText("knowledgeNetwork.propertyAuthorizationTabProperty"));
-    expect(screen.queryByText("knowledgeNetwork.propertyAuthorizationRole")).toBeNull();
-    expect(mocks.listRoles).not.toHaveBeenCalled();
+    expect(screen.getAllByText("knowledgeNetwork.propertyAuthorizationRole")).toHaveLength(1);
+    expect(mocks.listGrantableRolesForObject).toHaveBeenCalled();
   });
 
   it("uses the public subject label in the source drawer", async () => {
@@ -528,6 +530,7 @@ describe("ObjectTypeAuthorizationScene", () => {
 
     expect(mocks.upsertObjectGrantForObject).toHaveBeenCalledWith({
       accessorId: "user-1",
+      accessorType: "user",
       effect: "allow",
       objId: "network-1/object-1",
       objName: "Customer",
@@ -803,6 +806,7 @@ describe("ObjectTypeAuthorizationScene", () => {
     await waitFor(() =>
       expect(mocks.upsertObjectGrantForObject).toHaveBeenCalledWith({
         accessorId: "user-1",
+        accessorType: "user",
         effect: "allow",
         objId: "network-1/object-1",
         objName: "Customer",
@@ -918,12 +922,18 @@ describe("ObjectTypeAuthorizationScene", () => {
         name: "knowledgeNetwork.propertyAuthorizationSelectUser",
       }),
     ).not.toBeNull();
-    expect(screen.queryByText("knowledgeNetwork.propertyAuthorizationRole")).toBeNull();
+    expect(screen.getAllByText("knowledgeNetwork.propertyAuthorizationRole")).toHaveLength(2);
 
     const search = await screen.findByRole("textbox", {
       name: "systemAdmin.userPicker.searchAllUsers",
     });
-    expect(mocks.listGrantableUsersForObject).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mocks.listGrantableUsersForObject).toHaveBeenCalledWith(
+        "object_type",
+        "network-1/object-1",
+        "",
+      ),
+    );
     fireEvent.change(search, { target: { value: "alice" } });
     await waitFor(() =>
       expect(mocks.listGrantableUsersForObject).toHaveBeenCalledWith(
@@ -1090,6 +1100,11 @@ describe("ObjectTypeAuthorizationScene", () => {
     );
     fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
     await waitFor(() => expect(mocks.listPropertyGrantSnapshot).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: /Alice/ }).getAttribute("aria-selected")).toBe(
+        "true",
+      ),
+    );
     fireEvent.click(await screen.findByRole("option", { name: /Bob/ }));
     await waitFor(() => expect(mocks.listPropertyGrantSnapshot).toHaveBeenCalledTimes(2));
 

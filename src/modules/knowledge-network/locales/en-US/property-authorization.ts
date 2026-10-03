@@ -112,6 +112,8 @@ export const propertyAuthorizationPart = {
     "Changing this role may affect {{count}} member. Direct user grants, other roles, and base permissions still participate in the final decision.",
   propertyAuthorizationRoleImpact_other:
     "Changing this role may affect {{count}} members. Direct user grants, other roles, and base permissions still participate in the final decision.",
+  propertyAuthorizationRoleImpactUnknown:
+    "This change applies to every member of the role. Direct user grants, other roles, and base permissions still participate in the final decision.",
   propertyAuthorizationSearchProperty: "Search properties",
   propertyAuthorizationFilterAll: "All states",
   propertyAuthorizationFilterExplicit: "Configured",

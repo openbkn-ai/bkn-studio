@@ -13,7 +13,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Avatar, Empty, Input, Segmented, Select, Spin, Tooltip } from "antd";
+import { Alert, Input, Segmented, Select, Spin, Tooltip } from "antd";
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,8 +21,9 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { GrantableUserPicker } from "@/modules/system-admin";
-import type { AdminRole, AdminUser } from "@/modules/system-admin/types/admin";
+import { GrantableRolePicker, GrantableUserPicker } from "@/modules/system-admin";
+import type { GrantableRole } from "@/modules/system-admin/services/authz.service";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 import {
   explainRowFilter,
   getRowFilterSnapshot,
@@ -58,7 +59,7 @@ type Props = {
   objectTypeRef: string;
   onBeforeSubjectChange: (next: () => void) => void;
   onDirtyChange: (dirty: boolean) => void;
-  roles: AdminRole[];
+  roles: GrantableRole[];
   users: AdminUser[];
 };
 
@@ -172,7 +173,7 @@ export function RowFilterAuthorizationPanel({
   );
   const [subjectId, setSubjectId] = useState<string>();
   const [pickedUsers, setPickedUsers] = useState<AdminUser[]>([]);
-  const [roleKeyword, setRoleKeyword] = useState("");
+  const [pickedRoles, setPickedRoles] = useState<GrantableRole[]>([]);
   const [snapshot, setSnapshot] = useState<RowFilterSnapshot>();
   const [explain, setExplain] = useState<RowFilterExplain>();
   const [loading, setLoading] = useState(false);
@@ -260,7 +261,10 @@ export function RowFilterAuthorizationPanel({
             pickedUsers.find((item) => item.id === subjectId);
           return user?.name?.trim() || user?.account?.trim() || subjectId;
         })()
-      : roles.find((item) => item.id === subjectId)?.name || subjectId;
+      : (
+          roles.find((item) => item.id === subjectId) ??
+          pickedRoles.find((item) => item.id === subjectId)
+        )?.name || subjectId;
   const effectiveSources: EffectiveRuleSource[] = [];
   if (directPolicy) {
     effectiveSources.push({
@@ -275,7 +279,11 @@ export function RowFilterAuthorizationPanel({
     });
   }
   (explain?.rolePolicies ?? []).forEach((source) => {
-    const roleName = roles.find((role) => role.id === source.subject.id)?.name || source.subject.id;
+    const roleName =
+      (
+        roles.find((role) => role.id === source.subject.id) ??
+        pickedRoles.find((role) => role.id === source.subject.id)
+      )?.name || source.subject.id;
     effectiveSources.push({
       effect: policySummary(source.policy, t, snapshot?.availableFields ?? []),
       id: `${source.subject.type}:${source.subject.id}`,
@@ -341,17 +349,10 @@ export function RowFilterAuthorizationPanel({
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [dirty]);
 
-  const visibleRoles = useMemo(() => {
-    const keyword = roleKeyword.trim().toLowerCase();
-    return roles.filter((role) =>
-      `${role.name} ${role.description}`.toLowerCase().includes(keyword),
-    );
-  }, [roleKeyword, roles]);
   const changeSubjectType = (nextType: RowFilterSubjectType) =>
     onBeforeSubjectChange(() => {
       setSubjectType(nextType);
       setSubjectId(undefined);
-      setRoleKeyword("");
     });
   const save = async () => {
     if (!subject || !snapshot || !canSave) return;
@@ -455,30 +456,23 @@ export function RowFilterAuthorizationPanel({
             />
           </div>
         ) : (
-          <>
-            <Input
-              allowClear
-              onChange={(event) => setRoleKeyword(event.target.value)}
-              placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
-              value={roleKeyword}
-            />
-            <div className={styles.roleList}>
-              {visibleRoles.map((role) => (
-                <button
-                  className={role.id === subjectId ? styles.subjectSelected : styles.subjectItem}
-                  key={role.id}
-                  onClick={() => onBeforeSubjectChange(() => setSubjectId(role.id))}
-                  type="button"
-                >
-                  <Avatar icon={<TeamOutlined />} size={32} />
-                  <span>
-                    <strong>{role.name || role.id}</strong>
-                  </span>
-                </button>
-              ))}
-              {!visibleRoles.length ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : null}
-            </div>
-          </>
+          <GrantableRolePicker
+            ariaLabel={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+            className={styles.userPicker}
+            initialRoles={roles}
+            onChange={(nextRoleId) => onBeforeSubjectChange(() => setSubjectId(nextRoleId))}
+            onRolesChange={(nextRoles) =>
+              setPickedRoles((current) => {
+                const byId = new Map(current.map((role) => [role.id, role]));
+                nextRoles.forEach((role) => byId.set(role.id, role));
+                return [...byId.values()];
+              })
+            }
+            presentation="inline"
+            resourceId={objectTypeRef}
+            resourceType="object_type"
+            value={subjectId}
+          />
         )}
       </aside>
       <section className={styles.content}>

@@ -20,5 +20,7 @@ export { DirectoryUserPicker } from "@/modules/system-admin/components/Directory
 export type { DirectoryUserPickerProps } from "@/modules/system-admin/components/DirectoryUserPicker";
 export { GrantableUserPicker } from "@/modules/system-admin/components/GrantableUserPicker";
 export type { GrantableUserPickerProps } from "@/modules/system-admin/components/GrantableUserPicker";
+export { GrantableRolePicker } from "@/modules/system-admin/components/GrantableRolePicker";
+export type { GrantableRolePickerProps } from "@/modules/system-admin/components/GrantableRolePicker";
 export type * from "@/modules/system-admin/types/admin";
 export type * from "@/modules/system-admin/types/oauth-access-origin";
