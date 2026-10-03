@@ -85,7 +85,7 @@ describe("GrantableRolePicker", () => {
     mocks.listGrantableRolesForObject.mockRejectedValue(new Error("temporary failure"));
     render(
       <GrantableRolePicker
-        initialRoles={[{ id: "role-readers", name: "Readers" }]}
+        initialRoles={[{ description: "Reads data", id: "role-readers", name: "Readers" }]}
         presentation="inline"
         resourceId="network-1/object-1"
         resourceType="object_type"
