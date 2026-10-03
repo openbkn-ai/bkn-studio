@@ -729,6 +729,35 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("7 bknTrace.settings.days")).not.toBeNull();
   });
 
+  it("设置页将统一 OTEL 日志来源显示为业务模块已接入", async () => {
+    vi.mocked(listLogSources).mockResolvedValue([
+      {
+        coveredModules: ["openbkn"],
+        collectionMethod: "direct_otlp",
+        reliability: "best_effort",
+        sourceId: "otel-runtime",
+        status: "healthy",
+      },
+    ]);
+
+    render(<ObservabilitySettingsScene />);
+
+    const dataResourceRow = (
+      await screen.findByText("bknTrace.logs.modules.data_resource_knowledge_network")
+    ).closest("tr");
+    expect(dataResourceRow).not.toBeNull();
+    expect(
+      within(dataResourceRow!).getByText("bknTrace.settings.sourceLabels.otel-runtime"),
+    ).not.toBeNull();
+    expect(within(dataResourceRow!).getByText("已接入")).not.toBeNull();
+
+    const observabilityRow = screen
+      .getByText("bknTrace.logs.modules.observability")
+      .closest("tr");
+    expect(observabilityRow).not.toBeNull();
+    expect(within(observabilityRow!).getByText("未接入")).not.toBeNull();
+  });
+
   it("按冻结合同分别读取配置快照和活动操作", async () => {
     vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
       kind: "configuration_get",

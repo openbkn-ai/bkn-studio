@@ -1176,6 +1176,7 @@ export const bknTraceEnUS = {
         "bkn-trace-archive": "Archive maintenance service",
         "execution-factory": "Execution Factory service",
         "model-manager": "Model management service",
+        "otel-runtime": "Unified log service",
         vega: "Data resource service",
       },
       sourceNotIntegrated: "Not integrated",
