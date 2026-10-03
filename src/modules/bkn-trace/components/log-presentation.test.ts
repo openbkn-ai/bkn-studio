@@ -224,6 +224,17 @@ describe("log presentation", () => {
     });
   });
 
+  it("does not repeat an id when the producer snapshot is the id", () => {
+    const record = {
+      target: { id: "catalog-a", name: "catalog-a", type: "catalog" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "数据目录: catalog-a",
+      secondary: undefined,
+    });
+  });
+
   it("degrades safely when a producer omits nullable target or actor snapshots", () => {
     const record = {
       actor: { id: null, name: null, type: "user" },

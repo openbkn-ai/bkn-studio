@@ -1018,6 +1018,7 @@ export const bknTraceEnUS = {
         knowledge_network: "business knowledge network",
         metric: "metric",
         model: "model",
+        model_instance: "model",
         object_type: "object type",
         relation_type: "relation type",
         risk_type: "risk type",

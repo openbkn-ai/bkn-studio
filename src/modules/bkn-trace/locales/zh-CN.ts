@@ -959,6 +959,7 @@ export const bknTraceZhCN = {
         knowledge_network: "业务知识网络",
         metric: "指标",
         model: "模型",
+        model_instance: "模型",
         object_type: "对象类",
         relation_type: "关系类",
         risk_type: "风险类型",
