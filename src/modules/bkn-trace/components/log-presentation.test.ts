@@ -183,7 +183,7 @@ describe("log presentation", () => {
 
     expect(presentLogAction(record, translateZhCN)).toBe("鉴权判定");
     expect(presentLogTarget(record, translateZhCN)).toEqual({
-      primary: "对象类：物料",
+      primary: "对象类: 物料",
       secondary: "material",
     });
     expect(presentTargetType(record, translateZhCN)).toBe("对象类");
@@ -219,7 +219,7 @@ describe("log presentation", () => {
     } as LogRecord;
 
     expect(presentLogTarget(record, translateZhCN)).toEqual({
-      primary: "数据目录：audit-e2e-vega-20260928",
+      primary: "数据目录: audit-e2e-vega-20260928",
       secondary: "catalog-a",
     });
   });
@@ -273,7 +273,7 @@ describe("log presentation", () => {
       expect(presentLogAction(record, translateZhCN)).toBe(expectedAction);
       expect(presentTargetType(record, translateZhCN)).toBe(expectedType);
       expect(presentLogTarget(record, translateZhCN)).toEqual({
-        primary: `${expectedType}：${name}`,
+        primary: `${expectedType}: ${name}`,
         secondary: id,
       });
     },

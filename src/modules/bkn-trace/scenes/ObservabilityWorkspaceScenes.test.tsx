@@ -420,7 +420,7 @@ describe("observability workspace scenes", () => {
     render(<ObservabilityLogsScene />);
 
     expect(await screen.findByText("创建对象类")).not.toBeNull();
-    expect(screen.getByText("物料")).not.toBeNull();
+    expect(screen.getByText("对象类: 物料")).not.toBeNull();
     expect(screen.getByText("供应链管理员")).not.toBeNull();
   });
 
@@ -586,7 +586,7 @@ describe("observability workspace scenes", () => {
     expect(query).toMatchObject({ page: 2, pageSize: 20 });
     expect(query?.timeFrom).toEqual(expect.any(String));
     expect(query?.timeTo).toEqual(expect.any(String));
-    expect(await screen.findByText("HD供应链业务知识网络_v3")).not.toBeNull();
+    expect(await screen.findByText("业务知识网络: HD供应链业务知识网络_v3")).not.toBeNull();
   });
 
   it("点击日志打开受控详情并可下钻 Trace", async () => {
