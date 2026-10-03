@@ -946,6 +946,9 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       /\.timelineInspector\{position:static;min-width:0;min-height:0;[^}]*overflow-y:auto;overscroll-behavior:contain;/,
     );
     expect(normalizedStyles).toContain(
+      ".listCard:global(.ant-table),.listCard:global(table){min-width:0;width:100%;}",
+    );
+    expect(normalizedStyles).toContain(
       ".timelineLayout{height:auto;min-height:0;overflow:visible;grid-template-columns:1fr;}",
     );
   });
