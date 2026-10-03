@@ -1219,7 +1219,7 @@ describe("observability workspace scenes", () => {
 
     render(<ObservabilitySettingsScene />);
 
-    expect(await screen.findAllByText("已接入")).not.toHaveLength(0);
+    expect(await screen.findAllByText("已接入")).toHaveLength(2);
     expect(screen.queryByText("partial_management_audit_coverage")).toBeNull();
     expect(screen.queryByText("bknTrace.settings.querySourceStatus")).toBeNull();
   });
