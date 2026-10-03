@@ -751,9 +751,7 @@ describe("observability workspace scenes", () => {
     ).not.toBeNull();
     expect(within(dataResourceRow!).getByText("已接入")).not.toBeNull();
 
-    const observabilityRow = screen
-      .getByText("bknTrace.logs.modules.observability")
-      .closest("tr");
+    const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
     expect(within(observabilityRow!).getByText("未接入")).not.toBeNull();
   });
