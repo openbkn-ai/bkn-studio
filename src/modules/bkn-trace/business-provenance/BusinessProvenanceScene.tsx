@@ -33,6 +33,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RecordMissingDetails } from "./RecordMissingDetails";
 import { TimeRailView } from "../evidence-chain/BusinessProvenance016";
 import { CurrentExplanationPanel } from "../evidence-chain/CurrentExplanationPanel";
 import i18n from "@/app/locales/i18n";
@@ -586,9 +587,10 @@ function ClampedText({ value }: { value: string }) {
 }
 
 function evidenceLabel(conversation: BusinessProvenanceConversation) {
-  if (conversation.evidenceCompleteness === "complete") return bpText("evidence.complete");
-  if (conversation.evidenceCompleteness === "partial") return bpText("evidence.partial");
-  return conversation.evidenceCompleteness || bpText("evidence.byRound");
+  if (conversation.currentRecordIntegrity?.status === "complete")
+    return bpText("evidence.complete");
+  if (conversation.currentRecordIntegrity?.status === "missing") return bpText("evidence.partial");
+  return "—";
 }
 
 function textValue(value: unknown): string | undefined {
@@ -986,7 +988,7 @@ export function BusinessProvenanceScene() {
       agentOrApp: conversationAgent,
       knowledgeNetwork: conversationKnowledgeNetwork,
       status: conversationStatus,
-      evidenceCompleteness: conversationEvidence,
+      recordIntegrity: conversationEvidence,
     });
   }, [
     conversationAgent,
@@ -1056,7 +1058,17 @@ export function BusinessProvenanceScene() {
     {
       title: bpText("columns.evidence"),
       width: "9%",
-      render: (_, item) => <span className={styles.evidence}>{evidenceLabel(item)}</span>,
+      render: (_, item) => (
+        <span
+          className={
+            item.currentRecordIntegrity?.status === "missing"
+              ? styles.evidenceMissing
+              : styles.evidence
+          }
+        >
+          {evidenceLabel(item)}
+        </span>
+      ),
     },
     {
       dataIndex: "durationMs",
@@ -1153,7 +1165,7 @@ export function BusinessProvenanceScene() {
               value={conversationEvidence}
               options={[
                 { value: "complete", label: bpText("evidence.complete") },
-                { value: "partial", label: bpText("evidence.partial") },
+                { value: "missing", label: bpText("evidence.partial") },
               ]}
               onChange={setConversationEvidence}
             />
@@ -1436,12 +1448,31 @@ export function BusinessProvenanceScene() {
                   {bpText("views.evidence")}
                 </button>
               </div>
+              {projection.currentRecordIntegrity ? (
+                <Typography.Text type="secondary" className={styles.integrityCheckedAt}>
+                  {bpText("integrity.checkedAt")}{" "}
+                  {formatTime(projection.currentRecordIntegrity.checked_at)}
+                </Typography.Text>
+              ) : null}
+              {projection.recordIntegrityCheckFailed ? (
+                <Alert type="warning" message={bpText("integrity.checkFailed")} />
+              ) : null}
+              <RecordMissingDetails
+                items={projection.currentRecordIntegrity?.missing.filter(
+                  (item) =>
+                    !projection.operations.some(
+                      (op) =>
+                        op.operationId === item.operation_id && (op.attempt ?? 1) === item.attempt,
+                    ),
+                )}
+              />
               {view === "timeline" ? (
                 projection.timeRail?.some(
                   (item) => item.capability?.evidence_contract === "managed_function_execution/v1",
                 ) ? (
                   <TimeRailView
                     items={projection.timeRail}
+                    recordIntegrity={projection.currentRecordIntegrity}
                     summaries={Object.fromEntries(
                       projection.operations.map((operation) => [
                         operation.operationId,
@@ -1590,6 +1621,13 @@ export function BusinessProvenanceScene() {
                                   {statusLabel(detailOperation.callStatus)}
                                 </span>
                               </header>
+                              <RecordMissingDetails
+                                items={projection.currentRecordIntegrity?.missing.filter(
+                                  (item) =>
+                                    item.operation_id === detailOperation.operationId &&
+                                    item.attempt === (detailOperation.attempt ?? 1),
+                                )}
+                              />
                               <dl>
                                 <OperationSummaryRows
                                   operation={detailOperation}

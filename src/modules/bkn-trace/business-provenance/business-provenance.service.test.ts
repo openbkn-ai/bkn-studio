@@ -258,3 +258,40 @@ describe("EE business provenance service", () => {
     ]);
   });
 });
+
+describe("current record integrity", () => {
+  it("maps the independent assessment and sends its own filter", async () => {
+    const report = {
+      status: "missing",
+      checked_at: "2026-10-03T00:00:00Z",
+      scope: "registered_call_records",
+      missing: [
+        {
+          operation_id: "op",
+          attempt: 1,
+          reason: "business_target_missing",
+          field: "business_refs",
+        },
+      ],
+    };
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            conversation_id: "conv",
+            evidence_completeness: "complete",
+            current_record_integrity: report,
+          },
+        ],
+        total: 1,
+      },
+    });
+    const { getBusinessProvenanceConversations } = await import("./business-provenance.service");
+    const page = await getBusinessProvenanceConversations({ recordIntegrity: "missing" });
+    expect(page.entries[0].currentRecordIntegrity).toEqual(report);
+    expect(getMock).toHaveBeenLastCalledWith(
+      "/agent-observability/v1/business-provenance/conversations",
+      expect.objectContaining({ params: { record_integrity: "missing" } }),
+    );
+  });
+});

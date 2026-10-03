@@ -957,7 +957,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  padding: 16px 18px;
+  padding: 12px 14px;
   border-bottom: 1px solid #e4e9ef;
 }
 .timeIntro h2 {
@@ -1168,7 +1168,7 @@
   overflow: auto;
   border-left: 1px solid #e4e9ef;
   background: #f8fafc;
-  padding: 18px;
+  padding: 12px;
 }
 .timeInspector h3 {
   margin: 5px 0;
