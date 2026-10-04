@@ -59,10 +59,11 @@ export function isDelegateProtectedGrant(grant: ObjectGrant) {
 }
 
 /**
- * A delegated writer can manage only source records it created. Older records
- * without a concrete creator are deliberately read-only for delegates: their
- * ownership cannot be reconstructed safely. Platform authorization admins may
- * manage every source through the administrator route.
+ * A delegated writer can manage only source records it created, including an
+ * ordinary authorization it approved through the permission-request workflow.
+ * Older records without a concrete creator are deliberately read-only for
+ * delegates: their ownership cannot be reconstructed safely. Platform
+ * authorization admins may manage every source through the administrator route.
  */
 export function canManageGrantSource({
   currentUserId,
@@ -77,8 +78,11 @@ export function canManageGrantSource({
     isPlatformAuthzAdmin ||
     (Boolean(currentUserId) &&
       source.createdBy === currentUserId &&
-      source.policySource === "professional_rule" &&
-      source.authoritySource === "owner_delegate" &&
+      ((source.authoritySource === "owner_delegate" &&
+        source.policySource === "professional_rule") ||
+        (source.authoritySource === "permission_request" &&
+          (source.policySource === "professional_rule" ||
+            source.policySource === "community_bundle"))) &&
       source.effect === "allow" &&
       source.operation !== "authorize")
   );
