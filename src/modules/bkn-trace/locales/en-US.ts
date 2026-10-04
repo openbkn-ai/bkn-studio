@@ -615,6 +615,7 @@ export const bknTraceEnUS = {
           requiredRecord: "Required record",
           checkFailed: "The record integrity check could not read its sources. Refresh to retry.",
           fields: {
+            request_id: "Call request",
             artifact: "Evidence content",
             evidence: "Evidence event",
             outcome: "Call outcome",
