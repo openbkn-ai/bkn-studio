@@ -1007,7 +1007,8 @@ export function BusinessProvenanceScene() {
       title: bpText("columns.question"),
       width: "20%",
       render: (value: string | undefined, item) => {
-        const text = value || bpText("questionNotRecorded");
+        const text =
+          value || bpText(item.previewUnavailable ? "summaryUnavailable" : "questionNotRecorded");
         return (
           <Tooltip title={text}>
             <Button
@@ -1278,7 +1279,12 @@ export function BusinessProvenanceScene() {
                     {item.roundNumber && item.roundNumber > 0 ? item.roundNumber : "•"}
                   </span>
                   <b>{roundLabel(item)}</b>
-                  <strong>{item.questionPreview || bpText("questionNotRecorded")}</strong>
+                  <strong>
+                    {item.questionPreview ||
+                      bpText(
+                        item.previewUnavailable ? "summaryUnavailable" : "questionNotRecorded",
+                      )}
+                  </strong>
                   <small>
                     {formatClock(item.startedAt)} · {formatDuration(item.durationMs)} ·{" "}
                     {statusLabel(item.status)}

@@ -55,6 +55,8 @@ export type BusinessProvenanceConversation = {
   conversationId: string;
   agentName?: string;
   questionPreview?: string;
+  /** The list query did not finish reading all preview evidence. */
+  previewUnavailable?: boolean;
   resultPreview?: string;
   startedAt?: string;
   status?: string;
@@ -71,6 +73,8 @@ export type BusinessProvenanceInteractionListItem = {
   /** Chronological position within the conversation; the API list is newest first. */
   roundNumber?: number;
   questionPreview?: string;
+  /** The list query did not finish reading all preview evidence. */
+  previewUnavailable?: boolean;
   resultPreview?: string;
   startedAt?: string;
   status?: string;
@@ -78,6 +82,9 @@ export type BusinessProvenanceInteractionListItem = {
 };
 
 export type BusinessProvenancePage<T> = {
+  partial?: boolean;
+  truncated?: boolean;
+  partialReasons?: string[];
   entries: T[];
   total: number;
   page?: number;
@@ -174,6 +181,9 @@ export async function getBusinessProvenanceConversations(
     total?: number;
     page?: number;
     page_size?: number;
+    partial?: boolean;
+    truncated?: boolean;
+    partial_reasons?: string[];
   }>(`${EE_PROVENANCE_PREFIX}/conversations`, {
     params: provenanceParams(query),
     skipErrorToast: true,
@@ -183,6 +193,7 @@ export async function getBusinessProvenanceConversations(
       conversationId: entry.conversation_id ?? "",
       agentName: entry.agent_name,
       questionPreview: entry.question_preview,
+      previewUnavailable: response.data.partial === true || response.data.truncated === true,
       resultPreview: entry.result_preview,
       startedAt: entry.started_at,
       status: entry.status,
@@ -195,6 +206,9 @@ export async function getBusinessProvenanceConversations(
     total: response.data.total ?? 0,
     page: response.data.page,
     pageSize: response.data.page_size,
+    partial: response.data.partial,
+    truncated: response.data.truncated,
+    partialReasons: response.data.partial_reasons ?? [],
   };
 }
 
@@ -217,6 +231,9 @@ export async function getBusinessProvenanceInteractions(
     total?: number;
     page?: number;
     page_size?: number;
+    partial?: boolean;
+    truncated?: boolean;
+    partial_reasons?: string[];
   }>(`${EE_PROVENANCE_PREFIX}/interactions`, { params: provenanceParams(query) });
   return {
     entries: (response.data.entries ?? []).map((entry) => ({
@@ -226,6 +243,7 @@ export async function getBusinessProvenanceInteractions(
       conversationId: entry.conversation_id,
       roundNumber: entry.round_number,
       questionPreview: entry.question_preview,
+      previewUnavailable: response.data.partial === true || response.data.truncated === true,
       resultPreview: entry.result_preview,
       startedAt: entry.started_at,
       status: entry.status,
@@ -234,6 +252,9 @@ export async function getBusinessProvenanceInteractions(
     total: response.data.total ?? 0,
     page: response.data.page,
     pageSize: response.data.page_size,
+    partial: response.data.partial,
+    truncated: response.data.truncated,
+    partialReasons: response.data.partial_reasons ?? [],
   };
 }
 
