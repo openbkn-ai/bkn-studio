@@ -815,13 +815,14 @@ function declaredFormatQuery(inputSchema: unknown): OpQueryParam[] {
 
 export function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
   const body = exampleBodyFromSchema(tool.inputSchema);
-  // The format selector owns this generated value; an edited body still wins.
-  delete body.response_format;
+  const query = declaredFormatQuery(tool.inputSchema);
+  // Remove the generated value only when a selector owns it; edited bodies still win.
+  if (query.length > 0) delete body.response_format;
   return {
     id: tool.name,
     summary: tool.description ?? tool.name,
     path: `${REST_PREFIX}/kn/${tool.name}`,
-    query: declaredFormatQuery(tool.inputSchema),
+    query,
     body,
     mcpArgs: body,
   };

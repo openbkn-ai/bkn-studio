@@ -68,6 +68,7 @@ describe("mcpOpsFrom", () => {
     expect(op.id).toBe(curated.id);
     expect(op.mcpArgs).toEqual(curated.mcpArgs);
     expect(op.body).toEqual(curated.body);
+    expect(op.query.some((param) => param.name === "response_format")).toBe(false);
   });
 
   it.each([
@@ -122,6 +123,20 @@ describe("mcpOpsFrom", () => {
     expect(op.mcpArgs).not.toHaveProperty("response_format");
     expect(op.body).not.toHaveProperty("response_format");
   });
+
+  it.each([{ enum: ["toon", "json"] }, { type: ["string", "null"], enum: ["toon", "json"] }])(
+    "preserves declared body formats without a recognized selector",
+    (declaration) => {
+      const [op] = mcpOpsFrom([
+        {
+          name: "new_tool",
+          inputSchema: { type: "object", properties: { response_format: declaration } },
+        },
+      ]);
+      expect(op.query.some((param) => param.name === "response_format")).toBe(false);
+      expect(op.mcpArgs).toHaveProperty("response_format", "toon");
+    },
+  );
 
   // The retired tool must not come back through the curated catalogue (#1401).
   it("carries no entry for the retired recall tools", () => {
