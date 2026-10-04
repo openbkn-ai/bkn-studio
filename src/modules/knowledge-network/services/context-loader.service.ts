@@ -749,7 +749,14 @@ export function mcpOpsFrom(toolDefs: McpToolDef[] | null): ContextLoaderOp[] {
   if (!toolDefs) return [];
   return toolDefs.map((tool) => {
     const curated = CONTEXT_LOADER_OPS.find((op) => op.id === tool.name);
-    return curated ? withDeclaredExample(curated, tool.inputSchema) : synthesizeOp(tool);
+    const op = curated ? withDeclaredExample(curated, tool.inputSchema) : synthesizeOp(tool);
+    return {
+      ...op,
+      query: [
+        ...op.query.filter((param) => param.name !== "response_format"),
+        ...declaredFormatQuery(tool.inputSchema),
+      ],
+    };
   });
 }
 
@@ -785,13 +792,37 @@ function declaredArgs(
   return Object.fromEntries(keys.filter((key) => declared.has(key)).map((k) => [k, args[k]]));
 }
 
+/** Only tools that publish a string format parameter receive a selector. */
+function declaredFormatQuery(inputSchema: unknown): OpQueryParam[] {
+  if (!inputSchema || typeof inputSchema !== "object") return [];
+  const properties = (inputSchema as { properties?: Record<string, unknown> }).properties;
+  const declaration = properties?.response_format;
+  if (!declaration || typeof declaration !== "object") return [];
+  const format = declaration as { type?: unknown; enum?: unknown; default?: unknown };
+  if (format.type !== "string") return [];
+  const options = Array.isArray(format.enum)
+    ? format.enum.filter((value): value is string => typeof value === "string")
+    : ["json", "toon"];
+  if (options.length === 0) return [];
+  const value =
+    typeof format.default === "string" && options.includes(format.default)
+      ? format.default
+      : options.includes("json")
+        ? "json"
+        : options[0];
+  return [{ name: "response_format", value, options }];
+}
+
 export function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
   const body = exampleBodyFromSchema(tool.inputSchema);
+  const query = declaredFormatQuery(tool.inputSchema);
+  // Remove the generated value only when a selector owns it; edited bodies still win.
+  if (query.length > 0) delete body.response_format;
   return {
     id: tool.name,
     summary: tool.description ?? tool.name,
     path: `${REST_PREFIX}/kn/${tool.name}`,
-    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    query,
     body,
     mcpArgs: body,
   };
@@ -857,7 +888,7 @@ function strictBodyObject(bodyText: string): Record<string, unknown> {
 
 /**
  * Builds MCP tools/call arguments from request-body JSON and injects the
- * response_format selector because MCP has no query string. The compact
+ * declared response_format selector because MCP has no query string. The compact
  * endpoint does not publish response_format and rejects it as undeclared.
  */
 function mcpCallArgs(
@@ -869,7 +900,14 @@ function mcpCallArgs(
 ): Record<string, unknown> {
   const args = parseBodyObject(bodyText);
   const responseFormat = queryValues.response_format;
-  if (env.mcpProfile !== "compact" && responseFormat && !("response_format" in args)) {
+  const format = op.query.find((param) => param.name === "response_format");
+  if (
+    env.mcpProfile !== "compact" &&
+    format &&
+    responseFormat &&
+    (!format.options || format.options.includes(responseFormat)) &&
+    !("response_format" in args)
+  ) {
     args.response_format = responseFormat;
   }
   return withOperationContext(op, args, bknContext);
