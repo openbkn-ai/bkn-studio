@@ -556,7 +556,6 @@ export const bknTraceEnUS = {
           question: "User question",
           result: "Business result",
           startedAt: "Started",
-          status: "Conversation status",
         },
         conditionSeparator: "; ",
         conversation: {
@@ -637,7 +636,6 @@ export const bknTraceEnUS = {
           keyword: "Search question, result, or conversation ID",
           network: "Knowledge network",
           startedAt: "Start time",
-          status: "Conversation status",
         },
         inputNotRecorded: "User input not recorded",
         interactionCount: "{{count}} interactions",
