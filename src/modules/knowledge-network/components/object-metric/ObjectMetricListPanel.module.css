@@ -1,0 +1,129 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  padding: 18px 24px 40px;
+  container-name: metric-page;
+  container-type: inline-size;
+}
+.layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+  min-height: max(580px, calc(100dvh - 166px));
+  align-items: stretch;
+}
+.sidebar,
+.content {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+.sidebar {
+  padding: 14px;
+}
+.groupTitle {
+  margin: 14px 4px 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.objectButton {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  text-align: left;
+}
+.selected {
+  background: var(--color-primary-bg) !important;
+  color: var(--color-text-link) !important;
+}
+.content {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.content > :last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+.toolbarLeft,
+.toolbarRight {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.toolbarLeft {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.toolbarLeft > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toolbarRight {
+  flex: 0 0 auto;
+}
+.nameCell strong,
+.nameCell span {
+  display: block;
+}
+.nameCell span {
+  margin-top: 3px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.empty {
+  padding: 72px 24px;
+}
+@container metric-page (max-width: 1050px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    max-height: 260px;
+    overflow: auto;
+  }
+}
+
+@container metric-page (max-width: 720px) {
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .toolbarRight {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    max-height: 280px;
+    overflow: auto;
+  }
+  .toolbar {
+    flex-direction: column;
+  }
+}

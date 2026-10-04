@@ -1,0 +1,170 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 28px 32px 140px;
+  scrollbar-gutter: stable;
+  background: var(--color-bg-layout);
+  color: var(--color-text-primary);
+}
+
+.loading {
+  display: grid;
+  min-height: 320px;
+  place-items: center;
+}
+
+.header,
+.content {
+  width: min(920px, 100%);
+  margin-inline: auto;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.identity {
+  min-width: 0;
+}
+
+.identity h1 {
+  margin: 12px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 24px;
+  line-height: 1.35;
+}
+
+.identity p {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.versionSelect {
+  width: 150px;
+}
+
+.actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.content {
+  display: grid;
+  gap: 14px;
+}
+
+.sectionCard {
+  border-color: var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.sectionCard :global(.ant-card-head) {
+  min-height: 50px;
+  padding-inline: 20px;
+}
+
+.sectionCard :global(.ant-card-head-title) {
+  font-size: 15px;
+}
+
+.sectionCard :global(.ant-card-body) {
+  padding: 18px 20px 20px;
+}
+
+.sectionCard :global(.ant-descriptions-item-label),
+.sectionCard :global(.ant-descriptions-item-content) {
+  padding: 12px 14px;
+}
+
+.usageGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.usageItem {
+  display: flex;
+  min-height: 112px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-container);
+}
+
+.usageItem strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-text-primary);
+}
+
+.usageItem p {
+  max-width: 260px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.drawer :global(.ant-drawer-content),
+.drawer :global(.ant-drawer-header),
+.drawer :global(.ant-drawer-body) {
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.drawer :global(.ant-drawer-header) {
+  border-bottom-color: var(--color-border);
+}
+
+.drawer :global(.ant-drawer-content) {
+  box-shadow: -16px 0 42px rgb(2 8 23 / 28%);
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 22px 16px 112px;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .sectionCard :global(.ant-card-body) {
+    padding: 14px;
+  }
+
+  .usageGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .usageItem {
+    flex-direction: column;
+  }
+}

@@ -12,25 +12,20 @@ import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/k
 
 import { useWorkspaceData } from "./useWorkspaceData";
 
-const {
-  getKnowledgeNetwork,
-  getKnowledgeNetworkStatistics,
-  getMetricApiAvailability,
-  listKnowledgeNetworkMetrics,
-} = vi.hoisted(() => ({
-  getKnowledgeNetwork: vi.fn<() => Promise<KnowledgeNetworkRecord | null>>(),
-  getKnowledgeNetworkStatistics: vi.fn(),
-  getMetricApiAvailability: vi.fn(() => "ready"),
-  listKnowledgeNetworkMetrics: vi.fn(),
-}));
+const { getKnowledgeNetwork, getKnowledgeNetworkStatistics, listObjectMetricsV1 } = vi.hoisted(
+  () => ({
+    getKnowledgeNetwork: vi.fn<() => Promise<KnowledgeNetworkRecord | null>>(),
+    getKnowledgeNetworkStatistics: vi.fn(),
+    listObjectMetricsV1: vi.fn(),
+  }),
+);
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
   getKnowledgeNetwork,
   getKnowledgeNetworkStatistics,
-  getMetricApiAvailability,
   listKnowledgeNetworkActionTypes: vi.fn(() => []),
   listKnowledgeNetworkConceptGroups: vi.fn(() => []),
-  listKnowledgeNetworkMetrics,
+  listObjectMetricsV1,
   listKnowledgeNetworkObjectTypes: vi.fn(() => []),
   listKnowledgeNetworkRecentObjects: vi.fn(() => []),
   listKnowledgeNetworkRelationTypes: vi.fn(() => []),
@@ -75,16 +70,16 @@ describe("useWorkspaceData metrics sidebar count", () => {
     });
 
     getKnowledgeNetwork.mockReturnValue(detailPromise);
-    listKnowledgeNetworkMetrics.mockResolvedValue({
+    listObjectMetricsV1.mockResolvedValue({
       entries: [],
-      totalCount: 12,
+      total_count: 12,
     });
     getKnowledgeNetworkStatistics.mockResolvedValue(createDetail(0).statistics);
 
     const { result } = renderHook(() => useWorkspaceData("kn-1", "metrics"));
 
     await waitFor(() => {
-      expect(listKnowledgeNetworkMetrics).toHaveBeenCalled();
+      expect(listObjectMetricsV1).toHaveBeenCalled();
     });
 
     resolveDetail(createDetail(0));

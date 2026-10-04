@@ -106,7 +106,7 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
       : undefined,
     indexStatus: item.index_status?.state
       ? { state: item.index_status.state, sourceStatus: item.index_status.source_status }
-      : undefined,
+      : { state: item.data_source ? "unknown" : "not_applicable" },
     // The UI still keeps a boolean for graph rendering, but it is derived exclusively from the
     // current BKN index_status; there is no persisted-status fallback.
     hasIndex: item.index_status?.state === "available",

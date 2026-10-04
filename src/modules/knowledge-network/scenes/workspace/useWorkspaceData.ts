@@ -12,9 +12,8 @@ import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-netwo
 import {
   getKnowledgeNetwork,
   getKnowledgeNetworkStatistics,
-  getMetricApiAvailability,
-  listKnowledgeNetworkMetrics,
   listKnowledgeNetworkRecentObjects,
+  listObjectMetricsV1,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
 import {
@@ -24,10 +23,10 @@ import {
 import type {
   CapabilityBindingListResult,
   CapabilityType,
-  KnowledgeNetworkMetricRecord,
   KnowledgeNetworkRecord,
   KnowledgeNetworkRecentObject,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 
 import {
   clearMetricsTotalPending,
@@ -124,7 +123,7 @@ function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSe
 export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
   const [detail, setDetail] = useState<KnowledgeNetworkRecord | null>(null);
   const [recentObjects, setRecentObjects] = useState<KnowledgeNetworkRecentObject[]>([]);
-  const [metrics, setMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
+  const [metrics, setMetrics] = useState<ObjectMetricRecordV1[]>([]);
   const [functions, setFunctions] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [apis, setApis] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [mcpTools, setMcpTools] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
@@ -200,7 +199,7 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
     setDetailError(null);
 
     try {
-      const fetched = await getKnowledgeNetwork(networkId);
+      const fetched = await getKnowledgeNetwork(networkId, { skipErrorToast: true });
       if (detailRequestRef.current !== requestId) {
         return;
       }
@@ -297,10 +296,10 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
             break;
           case "metrics":
             if (integrateWorkspaceMetrics) {
-              const metricResult = await listKnowledgeNetworkMetrics(networkId);
+              const metricResult = await listObjectMetricsV1(networkId, { limit: 500 });
               setMetrics(metricResult.entries);
-              applyMetricsTotalToDetail(metricResult.totalCount);
-              setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
+              applyMetricsTotalToDetail(metricResult.total_count);
+              setMetricApiUnavailable(false);
             }
             break;
           default:
@@ -372,10 +371,10 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
     }
 
     loadedSectionsRef.current.delete(sectionCacheKey(networkId, "metrics"));
-    const metricResult = await listKnowledgeNetworkMetrics(networkId);
+    const metricResult = await listObjectMetricsV1(networkId, { limit: 500 });
     setMetrics(metricResult.entries);
-    applyMetricsTotalToDetail(metricResult.totalCount);
-    setMetricApiUnavailable(getMetricApiAvailability() === "unsupported");
+    applyMetricsTotalToDetail(metricResult.total_count);
+    setMetricApiUnavailable(false);
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "metrics"));
   }, [networkId, applyMetricsTotalToDetail]);
 

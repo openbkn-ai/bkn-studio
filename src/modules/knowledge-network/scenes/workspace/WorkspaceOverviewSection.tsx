@@ -161,6 +161,16 @@ export function WorkspaceOverviewSection({
     void loadRecentObjects();
   }, [loadRecentObjects, networkId, recentExpanded]);
 
+  if (detailLoading && !detail) {
+    return (
+      <div className={styles.overviewBox} aria-busy="true" aria-label="loading">
+        <div className={styles.loadingState}>
+          <Spin />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.overviewBox}>
       <Spin spinning={detailLoading}>

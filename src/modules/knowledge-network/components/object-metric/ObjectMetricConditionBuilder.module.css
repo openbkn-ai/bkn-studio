@@ -1,0 +1,130 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.conditionList {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.conditionRow {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(210px, 1.1fr) 132px minmax(240px, 2fr) 32px;
+  min-width: 0;
+}
+
+.fieldSelect,
+.operationSelect,
+.valueArea,
+.valueControl {
+  min-width: 0;
+  width: 100%;
+}
+
+.valueArea {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.rangeValue {
+  align-items: center;
+  display: flex;
+  flex: 1 1 0;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rangeValue > span {
+  color: var(--color-text-secondary);
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.propertyValue {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.propertyValue .fieldSelect {
+  flex: 1 1 auto;
+}
+
+.deleteButton {
+  height: 32px;
+  width: 32px;
+}
+
+.conditionGroup {
+  background: color-mix(in srgb, var(--color-interface-panel-bg) 78%, transparent);
+  border-left: 2px solid var(--color-primary-border);
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.nestedGroup {
+  margin-left: 16px;
+}
+
+.groupHeader {
+  align-items: center;
+  background: var(--color-primary-100);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 2px;
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  font-size: 13px;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 6px 0 10px;
+  width: max-content;
+}
+
+.groupSelect {
+  width: 84px;
+}
+
+.groupChildren {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.conditionActions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 980px) {
+  .conditionRow {
+    grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr) 32px;
+  }
+}
+
+@media (max-width: 760px) {
+  .conditionRow {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .deleteButton {
+    justify-self: end;
+  }
+
+  .valueArea {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

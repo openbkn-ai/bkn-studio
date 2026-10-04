@@ -13,6 +13,8 @@ export type * from "./metric";
 export { createDefaultMetricCalculationFormula } from "./metric";
 export type * from "./network";
 export type * from "./object-type";
+export type * from "./object-metric";
+export { inferObjectMetricOutputShapeV1 } from "./object-metric";
 export type * from "./property-authorization";
 export type * from "./row-filter-authorization";
 export type * from "./relation-type";

@@ -93,6 +93,8 @@ export function KnowledgeNetworkWorkspaceScene({
 
   const [networkFormOpen, setNetworkFormOpen] = useState(false);
   const [sideCollapsed, setSideCollapsed] = useState(false);
+  const childMetricDetailHandlesLoadState =
+    section === "metrics" && /\/metrics\/[^/]+\/detail\/?$/.test(location.pathname);
   const canModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
   const canDelete = hasKnowledgeNetworkRecordOperation(detail, "delete");
   const experienceNetwork = useMemo(
@@ -345,10 +347,10 @@ export function KnowledgeNetworkWorkspaceScene({
               : styles.workspaceContent
           }
         >
-          {detailError ? (
+          {detailError && !childMetricDetailHandlesLoadState ? (
             <Alert className={styles.workspaceAlert} message={detailError} showIcon type="error" />
           ) : null}
-          {sectionError ? (
+          {sectionError && !childMetricDetailHandlesLoadState ? (
             <Alert
               className={styles.workspaceAlert}
               message={sectionError}

@@ -1,0 +1,242 @@
+.builder {
+  display: grid;
+  gap: 16px;
+}
+
+.functionLabel {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.basicEditor {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-bg-surface) 64%, transparent);
+}
+
+.modeGroup {
+  justify-self: start;
+}
+
+.modeGroup :global(.ant-radio-button-wrapper) {
+  min-width: 104px;
+  text-align: center;
+}
+
+.functionEditor {
+  display: grid;
+  gap: 18px;
+}
+
+.functionHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.functionSelect {
+  width: 220px;
+  margin-top: 7px;
+}
+
+.functionSummary {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.parameterGrid {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 84%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--color-bg-container) 64%, transparent);
+}
+
+.parameterRow {
+  display: grid;
+  grid-template-columns: minmax(132px, 172px) minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 34px;
+}
+
+.parameterLabel {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.required {
+  margin-right: 4px;
+  color: var(--color-error);
+}
+
+.helpButton {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--color-text-tertiary);
+}
+
+.parameterControlRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.compactControl {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+.sourceControl {
+  flex: 0 0 112px;
+}
+
+.typeControl {
+  flex: 0 0 92px;
+}
+
+.propertyControl,
+.valueControl {
+  flex: 1;
+  min-width: 180px;
+}
+
+.operatorControl {
+  width: 180px;
+}
+
+.compactControl :global(.ant-select-selector),
+.compactControl :global(.ant-input-number),
+.compactControl :global(.ant-input) {
+  border-radius: 0;
+}
+
+.compactControl > :first-child :global(.ant-select-selector),
+.compactControl > :first-child:global(.ant-input),
+.compactControl > :first-child:global(.ant-input-number) {
+  border-start-start-radius: 6px;
+  border-end-start-radius: 6px;
+}
+
+.compactControl > :last-child :global(.ant-select-selector),
+.compactControl > :last-child:global(.ant-input),
+.compactControl > :last-child:global(.ant-input-number) {
+  border-start-end-radius: 6px;
+  border-end-end-radius: 6px;
+}
+
+.addParameterButton {
+  justify-self: start;
+  margin-left: 186px;
+}
+
+.previewBar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-bg-container));
+}
+
+.previewLabel {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.previewBar code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-primary);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .functionHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .functionSummary {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .parameterRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .addParameterButton {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .modeGroup {
+    display: flex;
+    width: 100%;
+  }
+
+  .modeGroup :global(.ant-radio-button-wrapper) {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+
+  .compactControl {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sourceControl,
+  .typeControl,
+  .propertyControl,
+  .valueControl,
+  .functionSelect,
+  .operatorControl {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .compactControl :global(.ant-select-selector),
+  .compactControl :global(.ant-input-number),
+  .compactControl :global(.ant-input) {
+    border-radius: 6px;
+  }
+
+  .previewBar {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

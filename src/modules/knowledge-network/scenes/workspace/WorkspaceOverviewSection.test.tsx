@@ -95,6 +95,22 @@ function renderOverview(basename?: string) {
   );
 }
 
+function renderLoadingOverview() {
+  render(
+    <MemoryRouter>
+      <WorkspaceOverviewSection
+        canModify={false}
+        detail={null}
+        detailLoading
+        loadRecentObjects={vi.fn().mockResolvedValue(undefined)}
+        networkId="network-1"
+        onEdit={vi.fn()}
+        recentObjects={[]}
+      />
+    </MemoryRouter>,
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -116,6 +132,13 @@ afterEach(() => {
 });
 
 describe("WorkspaceOverviewSection clipboard fallback", () => {
+  it("shows a loading state instead of transient zero counts before detail arrives", () => {
+    renderLoadingOverview();
+
+    expect(screen.getByLabelText("loading")).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByText("knowledgeNetwork.objectTypes")).toBeNull();
+  });
+
   it("copies the knowledge-network identifier and reports success on HTTP", async () => {
     const copiedTexts = installHttpClipboardFallback(true);
     renderOverview();

@@ -5,13 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { MetricDetailScene } from "@/modules/knowledge-network/scenes/MetricDetailScene";
+import { ObjectMetricDetailScene } from "@/modules/knowledge-network/scenes/ObjectMetricDetailScene";
 import { KnowledgeNetworkResourceConfigStandalonePage } from "@/modules/knowledge-network/pages/KnowledgeNetworkResourceConfigStandalonePage";
 
 export function MetricDetailPage() {
   return (
     <KnowledgeNetworkResourceConfigStandalonePage>
-      <MetricDetailScene />
+      <ObjectMetricDetailScene />
     </KnowledgeNetworkResourceConfigStandalonePage>
   );
 }

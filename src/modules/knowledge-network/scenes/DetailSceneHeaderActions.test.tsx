@@ -11,13 +11,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getKnowledgeNetworkActionTypeDetail: vi.fn(),
-  getKnowledgeNetworkMetric: vi.fn(),
   getKnowledgeNetworkObjectTypeDetail: vi.fn(),
   getKnowledgeNetworkRelationTypeDetail: vi.fn(),
   getObjectTypeSampleData: vi.fn(),
   listKnowledgeNetworkActionTypePage: vi.fn(),
   listKnowledgeNetworkActionTypes: vi.fn(),
-  listKnowledgeNetworkMetrics: vi.fn(),
+  listObjectMetricsV1: vi.fn(),
   listKnowledgeNetworkObjectTypes: vi.fn(),
   listKnowledgeNetworkRelationTypePage: vi.fn(),
   listKnowledgeNetworkRelationTypes: vi.fn(),
@@ -79,17 +78,15 @@ vi.mock(
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
   deleteKnowledgeNetworkActionType: vi.fn(),
-  deleteKnowledgeNetworkMetric: vi.fn(),
   deleteKnowledgeNetworkObjectType: vi.fn(),
   deleteKnowledgeNetworkRelationType: vi.fn(),
   getKnowledgeNetworkActionTypeDetail: mocks.getKnowledgeNetworkActionTypeDetail,
-  getKnowledgeNetworkMetric: mocks.getKnowledgeNetworkMetric,
   getKnowledgeNetworkObjectTypeDetail: mocks.getKnowledgeNetworkObjectTypeDetail,
   getKnowledgeNetworkRelationTypeDetail: mocks.getKnowledgeNetworkRelationTypeDetail,
   getObjectTypeSampleData: mocks.getObjectTypeSampleData,
   listKnowledgeNetworkActionTypePage: mocks.listKnowledgeNetworkActionTypePage,
   listKnowledgeNetworkActionTypes: mocks.listKnowledgeNetworkActionTypes,
-  listKnowledgeNetworkMetrics: mocks.listKnowledgeNetworkMetrics,
+  listObjectMetricsV1: mocks.listObjectMetricsV1,
   listKnowledgeNetworkObjectTypes: mocks.listKnowledgeNetworkObjectTypes,
   listKnowledgeNetworkRelationTypePage: mocks.listKnowledgeNetworkRelationTypePage,
   listKnowledgeNetworkRelationTypes: mocks.listKnowledgeNetworkRelationTypes,
@@ -119,7 +116,6 @@ vi.mock(
 );
 
 import { ActionTypeDetailScene } from "./ActionTypeDetailScene";
-import { MetricDetailScene } from "./MetricDetailScene";
 import { ObjectTypeDetailScene } from "./ObjectTypeDetailScene";
 import { RelationTypeDetailScene } from "./RelationTypeDetailScene";
 
@@ -131,7 +127,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.listKnowledgeNetworkActionTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
   mocks.listKnowledgeNetworkActionTypes.mockResolvedValue([]);
-  mocks.listKnowledgeNetworkMetrics.mockResolvedValue({ entries: [], totalCount: 0 });
+  mocks.listObjectMetricsV1.mockResolvedValue({ entries: [], total_count: 0 });
   mocks.listKnowledgeNetworkObjectTypes.mockResolvedValue([]);
   mocks.listKnowledgeNetworkRelationTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
   mocks.listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
@@ -417,39 +413,6 @@ describe("knowledge network detail scene headers", () => {
     fireEvent.click(screen.getByText("knowledgeNetwork.relationTypeMappingEntry"));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/relation-types/relation-1/mapping",
-    );
-  });
-
-  it("shows metric operations granted by the detail record", async () => {
-    mocks.routeParams.current = { metricId: "metric-1", networkId: "network-1" };
-    mocks.getKnowledgeNetworkMetric.mockResolvedValue({
-      calculationFormula: {
-        aggregation: { aggr: "count", property: "id" },
-      },
-      description: "Metric description",
-      id: "metric-1",
-      metricType: "atomic",
-      name: "Order count",
-      operations: ["view_detail", "modify", "delete"],
-      scopeRef: "subgraph-1",
-      scopeType: "subgraph",
-      tags: [],
-      updateTime: "2026-08-20 16:09:36",
-      updaterName: "admin",
-    });
-
-    render(<MetricDetailScene />);
-
-    expect(screen.getByTestId("detail-shell").dataset.loading).toBe("true");
-    expect(await screen.findByText("Order count")).not.toBeNull();
-    expect(screen.getByTestId("detail-shell").dataset.loading).toBe("false");
-    expect(screen.getByText("common.edit")).not.toBeNull();
-    expect(screen.getByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
-    expect(screen.getByText("common.delete")).not.toBeNull();
-
-    fireEvent.click(screen.getByText("common.edit"));
-    expect(mocks.navigate).toHaveBeenCalledWith(
-      "/knowledge-network/workspace/network-1/metrics/metric-1/edit",
     );
   });
 });

@@ -1,0 +1,64 @@
+.callEditor {
+  display: grid;
+  gap: 10px;
+}
+
+.functionDescription {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.argumentList {
+  display: grid;
+  gap: 10px;
+  margin-top: 2px;
+  padding-left: 14px;
+  border-left: 2px solid color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+}
+
+.argumentRow {
+  display: grid;
+  grid-template-columns: minmax(132px, 170px) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg-container) 72%, transparent);
+}
+
+.argumentHeading {
+  display: grid;
+  gap: 3px;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.argumentHeading b {
+  margin-right: 4px;
+  color: var(--color-error);
+}
+
+.argumentHeading small {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.argumentEditor {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .argumentRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

@@ -31,6 +31,7 @@ export const knowledgeNetworkModuleManifest = {
     "bkn-backend/concept-groups",
     "bkn-backend/object-types",
     "bkn-backend/metrics",
+    "bkn-backend/v2/object-metrics",
     "ontology-query/metrics",
   ],
   scenes: [
@@ -49,21 +50,16 @@ export const knowledgeNetworkModuleManifest = {
     },
     {
       id: "knowledge-network.metric-form",
-      exportName: "MetricFormScene",
-      description: "Create or edit a knowledge-network metric.",
-      inputs: ["mode", "networkId?", "metricId?", "onBack?", "onSubmitSuccess?"],
+      exportName: "ObjectMetricFormScene",
+      description: "Create or edit an object-centered atomic, derived, or composite metric.",
+      inputs: ["mode"],
     },
     {
       id: "knowledge-network.metric-detail",
-      exportName: "MetricDetailScene",
-      description: "View metric details, formula, and embedded data query results.",
-      inputs: ["networkId?", "metricId?", "onBack?", "onEdit?", "onDeleteSuccess?"],
-    },
-    {
-      id: "knowledge-network.metric-data-query",
-      exportName: "MetricDataQueryScene",
-      description: "Run standalone data queries for a knowledge-network metric.",
-      inputs: ["networkId?", "metricId?", "onBack?"],
+      exportName: "ObjectMetricDetailScene",
+      description:
+        "View object-metric definitions, immutable versions, and logical-property binding.",
+      inputs: [],
     },
   ],
 } as const;

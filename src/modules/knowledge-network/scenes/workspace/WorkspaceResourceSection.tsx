@@ -12,13 +12,12 @@ import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-netwo
 import { ActionTypeListPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeListPanel";
 import { CapabilityListPanel } from "@/modules/knowledge-network/components/capability/CapabilityListPanel";
 import { ConceptGroupListPanel } from "@/modules/knowledge-network/components/concept-group/ConceptGroupListPanel";
-import { MetricListPanel } from "@/modules/knowledge-network/components/metric/MetricListPanel";
+import { ObjectMetricListPanel } from "@/modules/knowledge-network/components/object-metric/ObjectMetricListPanel";
 import { ObjectTypeListPanel } from "@/modules/knowledge-network/components/object-type/ObjectTypeListPanel";
 import { RelationTypeListPanel } from "@/modules/knowledge-network/components/relation-type/RelationTypeListPanel";
 import {
   deleteKnowledgeNetworkActionType,
   deleteKnowledgeNetworkConceptGroup,
-  deleteKnowledgeNetworkMetric,
   deleteKnowledgeNetworkObjectType,
   deleteKnowledgeNetworkRelationType,
   importKnowledgeNetworkConceptGroup,
@@ -131,21 +130,7 @@ export function WorkspaceResourceSection({
         />
       );
     case "metrics":
-      return (
-        <MetricListPanel
-          loading={data.sectionLoading}
-          canModify={canModify}
-          canDelete={canDelete}
-          metrics={data.metrics}
-          networkId={networkId}
-          networkName={networkName}
-          onDelete={async (metricId) => {
-            await deleteKnowledgeNetworkMetric(networkId, metricId);
-          }}
-          onRefresh={data.reloadMetrics}
-          unsupported={data.metricApiUnavailable}
-        />
-      );
+      return <ObjectMetricListPanel canModify={canModify} networkId={networkId} />;
     case "functions":
     case "apis":
     case "mcp":

@@ -5,13 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { MetricFormScene } from "@/modules/knowledge-network/scenes/MetricFormScene";
+import { ObjectMetricFormScene } from "@/modules/knowledge-network/scenes/ObjectMetricFormScene";
 import { KnowledgeNetworkResourceConfigStandalonePage } from "@/modules/knowledge-network/pages/KnowledgeNetworkResourceConfigStandalonePage";
 
 export function MetricCreatePage() {
   return (
     <KnowledgeNetworkResourceConfigStandalonePage>
-      <MetricFormScene mode="create" />
+      <ObjectMetricFormScene mode="create" />
     </KnowledgeNetworkResourceConfigStandalonePage>
   );
 }

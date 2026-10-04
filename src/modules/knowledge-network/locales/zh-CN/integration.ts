@@ -81,7 +81,7 @@ openbkn help all`,
         install: "安装 @openbkn/bkn-sdk。",
         token: "在个人中心签发 API Key，并通过 BKN_BASE_URL 和 BKN_TOKEN 配置服务端。",
         client: "创建客户端后，通过 bkn.context 调用知识网络能力。",
-        tools: "按需查询对象实例，或发现并调用动态 MCP 工具。",
+        tools: "按需查询实例，或发现并调用动态 MCP 工具。",
       },
       installSuccessMessage: "SDK 安装命令已复制",
       installTitle: "安装 SDK",
@@ -108,7 +108,7 @@ const result = await bkn.context.searchSchema(
         },
         "instance-query": {
           label: "查询实例",
-          title: "按对象类与条件查询对象实例",
+          title: "按对象类与条件查询实例",
           code: `const result = await bkn.context.queryObjectInstance("your_kn_id", {
   ot_id: "order",
   condition: {

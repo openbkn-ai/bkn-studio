@@ -40,6 +40,25 @@ describe("listKnowledgeNetworkMetrics", () => {
 });
 
 describe("normalizeMetricDataResponse", () => {
+  it("formats metric time-series buckets in UTC instead of the browser timezone", () => {
+    const result = normalizeMetricDataResponse(
+      {
+        datas: [
+          {
+            time_strs: ["2021-01-01T00:00:00Z"],
+            values: [124],
+          },
+        ],
+      },
+      "trend",
+    );
+
+    expect(result.rows[0]).toMatchObject({
+      timestamp: "2021-01-01 00:00:00",
+      value: 124,
+    });
+  });
+
   it("expands multi-series trend rows with prefixed dimension columns", () => {
     const result = normalizeMetricDataResponse(
       {

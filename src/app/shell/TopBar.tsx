@@ -58,7 +58,9 @@ export function TopBar() {
     let disposed = false;
     setNetworkName(null);
 
-    void getKnowledgeNetwork(networkId)
+    // The breadcrumb can safely fall back to the network id. Access failures are owned by the
+    // route content, so the shell must not add duplicate global permission toasts.
+    void getKnowledgeNetwork(networkId, { skipErrorToast: true })
       .then((record) => {
         if (!disposed) {
           setNetworkName(record?.name ?? networkId);

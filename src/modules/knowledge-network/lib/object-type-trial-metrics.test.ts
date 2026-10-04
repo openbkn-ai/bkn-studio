@@ -15,7 +15,7 @@ import {
 import type { ObjectTypeLogicProperty } from "@/modules/knowledge-network/types/knowledge-network";
 
 describe("object-type trial helpers", () => {
-  it("excludes aggregate metric bindings from instance trials", () => {
+  it("includes metric bindings now that the object query evaluates them per instance", () => {
     const logicProperties = [
       {
         dataSource: { id: "tool-1", name: "Discount", type: "tool" },
@@ -33,6 +33,7 @@ describe("object-type trial helpers", () => {
 
     expect(filterInstanceTrialLogicProperties(logicProperties).map((item) => item.name)).toEqual([
       "discount",
+      "gmv",
     ]);
   });
 

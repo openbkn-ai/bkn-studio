@@ -15,7 +15,6 @@ import { knowledgeNetworkStandaloneRoutes } from "@/modules/knowledge-network/ro
 import {
   getKnowledgeNetworkActionTypeDetail,
   getKnowledgeNetworkConceptGroup,
-  getKnowledgeNetworkMetric,
   getKnowledgeNetworkObjectTypeDetail,
   getKnowledgeNetworkRelationTypeDetail,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -43,11 +42,6 @@ describe("knowledge network standalone routes", () => {
       loadResource: getKnowledgeNetworkConceptGroup,
       path: "/knowledge-network/workspace/:networkId/concept-groups/:conceptGroupId/edit",
       resourceIdParam: "conceptGroupId",
-    },
-    {
-      loadResource: getKnowledgeNetworkMetric,
-      path: "/knowledge-network/workspace/:networkId/metrics/:metricId/edit",
-      resourceIdParam: "metricId",
     },
     {
       loadResource: getKnowledgeNetworkObjectTypeDetail,
@@ -86,6 +80,7 @@ describe("knowledge network standalone routes", () => {
   it.each([
     "/knowledge-network/workspace/:networkId/concept-groups/create",
     "/knowledge-network/workspace/:networkId/metrics/create",
+    "/knowledge-network/workspace/:networkId/metrics/:metricId/edit",
     "/knowledge-network/workspace/:networkId/object-types/create",
     "/knowledge-network/workspace/:networkId/relation-types/create",
     "/knowledge-network/workspace/:networkId/action-types/create",

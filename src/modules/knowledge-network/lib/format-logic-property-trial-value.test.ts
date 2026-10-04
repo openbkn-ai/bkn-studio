@@ -10,10 +10,11 @@ import { describe, expect, it } from "vitest";
 import { formatLogicPropertyTrialValue } from "@/modules/knowledge-network/lib/format-logic-property-trial-value";
 
 describe("formatLogicPropertyTrialValue", () => {
-  it("formats nullish values as placeholder", () => {
-    expect(formatLogicPropertyTrialValue(null)).toBe("--");
-    expect(formatLogicPropertyTrialValue(undefined)).toBe("--");
-    expect(formatLogicPropertyTrialValue("")).toBe("--");
+  it("distinguishes a completed trial with no data from a value that has not been run", () => {
+    expect(formatLogicPropertyTrialValue(null, "无数据")).toBe("无数据");
+    expect(formatLogicPropertyTrialValue(undefined, "无数据")).toBe("无数据");
+    expect(formatLogicPropertyTrialValue("", "无数据")).toBe("无数据");
+    expect(formatLogicPropertyTrialValue({ datas: [], model: {} }, "无数据")).toBe("无数据");
   });
 
   it("preserves scalar primitives", () => {
