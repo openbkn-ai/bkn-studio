@@ -677,6 +677,7 @@ export const systemAdminEnUS = {
       authority: {
         admin_authz: "Platform administrator",
         owner_delegate: "Owner delegation",
+        permission_request: "Permission request approval",
         system: "System",
         migration: "Migration",
       },

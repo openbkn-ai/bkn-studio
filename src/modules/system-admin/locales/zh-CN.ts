@@ -630,6 +630,7 @@ export const systemAdminZhCN = {
       authority: {
         admin_authz: "平台管理员",
         owner_delegate: "对象所有者委派",
+        permission_request: "工单审批",
         system: "系统",
         migration: "迁移",
       },

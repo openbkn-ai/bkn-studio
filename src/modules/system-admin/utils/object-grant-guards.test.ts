@@ -128,9 +128,44 @@ describe("canManageGrantSource", () => {
       canManageGrantSource({
         currentUserId: "u-b",
         isPlatformAuthzAdmin: false,
+        source: { ...source("u-b"), policySource: "community_bundle" },
+      }),
+    ).toBe(false);
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-b",
+        isPlatformAuthzAdmin: false,
         source: { ...source("u-b"), effect: "deny" },
       }),
     ).toBe(false);
+  });
+
+  it("allows an approver to manage an ordinary source created by their permission request", () => {
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-approver",
+        isPlatformAuthzAdmin: false,
+        source: { ...source("u-approver"), authoritySource: "permission_request" },
+      }),
+    ).toBe(true);
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-other",
+        isPlatformAuthzAdmin: false,
+        source: { ...source("u-approver"), authoritySource: "permission_request" },
+      }),
+    ).toBe(false);
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-approver",
+        isPlatformAuthzAdmin: false,
+        source: {
+          ...source("u-approver"),
+          authoritySource: "permission_request",
+          policySource: "community_bundle",
+        },
+      }),
+    ).toBe(true);
   });
 
   it("keeps unattributable historical sources read-only for delegates", () => {
