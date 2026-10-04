@@ -7,6 +7,16 @@
 
 import { http } from "@/framework/request/http";
 import { isRequestNotFound } from "@/framework/request/error-message";
+import {
+  cancelMockPermissionRequest,
+  createMockPermissionRequest,
+  decideMockPermissionRequest,
+  getMockPermissionRequest,
+  getMockPermissionRequestProposalPreview,
+  getMockPermissionRequestTodoSummary,
+  listMockPermissionRequestReviews,
+  listMockPermissionRequests,
+} from "./permission-requests.mock";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const todoSummaryNotFoundRetryMs = 2 * 60 * 1000;
@@ -68,6 +78,8 @@ export async function listPermissionRequests(
   offset = 0,
   filters: PermissionRequestFilters = {},
 ) {
+  if (useMock) return listMockPermissionRequests(kind, limit, offset, filters);
+
   const response = await http.get<PermissionRequestPage>(
     `/safe/v1/me/permission-requests/${kind}`,
     {
@@ -89,7 +101,7 @@ export async function listPermissionRequests(
 
 export async function getPermissionRequestTodoSummary(): Promise<PermissionRequestTodoSummary | null> {
   if (useMock) {
-    return { pending_count: 0 };
+    return getMockPermissionRequestTodoSummary();
   }
   if (Date.now() < todoSummaryRetryAfter) return null;
 
@@ -108,6 +120,8 @@ export async function getPermissionRequestTodoSummary(): Promise<PermissionReque
 }
 
 export async function getPermissionRequestProposalPreview(resourceID: string) {
+  if (useMock) return getMockPermissionRequestProposalPreview();
+
   const response = await http.get<{
     property_grants: unknown;
     row_filter: unknown;
@@ -142,6 +156,8 @@ export async function decidePermissionRequest(
   decision: "approve" | "reject",
   comment = "",
 ) {
+  if (useMock) return decideMockPermissionRequest(id, decision, comment);
+
   const response = await http.post<PermissionRequest>(
     `/safe/v1/me/permission-requests/${id}/decision`,
     { decision, comment },
@@ -151,15 +167,24 @@ export async function decidePermissionRequest(
 }
 
 export async function cancelPermissionRequest(id: string) {
+  if (useMock) {
+    cancelMockPermissionRequest(id);
+    return;
+  }
+
   await http.post(`/safe/v1/me/permission-requests/${id}/cancel`, {}, { skipErrorToast: true });
 }
 
 export async function getPermissionRequest(id: string) {
+  if (useMock) return getMockPermissionRequest(id);
+
   const response = await http.get<PermissionRequest>(`/safe/v1/me/permission-requests/${id}`);
   return response.data;
 }
 
 export async function listPermissionRequestReviews(id: string) {
+  if (useMock) return listMockPermissionRequestReviews(id);
+
   const response = await http.get<{ entries: PermissionRequestReview[] }>(
     `/safe/v1/me/permission-requests/${id}/reviews`,
   );
@@ -174,6 +199,11 @@ export async function createPermissionRequest(payload: {
   proposal?: { kind: "row_filter" | "property_grants"; payload: unknown };
   reason: string;
 }) {
+  if (useMock) {
+    createMockPermissionRequest(payload);
+    return;
+  }
+
   await http.post(
     "/safe/v1/permission-requests",
     {
