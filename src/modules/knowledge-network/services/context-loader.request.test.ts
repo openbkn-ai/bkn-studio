@@ -17,6 +17,7 @@ import {
   fetchKnDetail,
   fetchKnDetailRest,
   listMcpTools,
+  mcpOpsFrom,
   sendRequest,
   type ContextLoaderOp,
 } from "@/modules/knowledge-network/services/context-loader.service";
@@ -186,6 +187,43 @@ describe("sendRequest", () => {
       params: { arguments: Record<string, unknown> };
     };
     expect(call.params.arguments).toMatchObject({ response_format: "toon" });
+  });
+
+  it.each(["bkn_start_interaction", "bkn_finish_interaction", "execute_tool"])(
+    "does not restore a stale format selector for %s",
+    async (name) => {
+      const [op] = mcpOpsFrom([{ name, inputSchema: { type: "object", properties: {} } }]);
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(
+          new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }),
+        )
+        .mockResolvedValueOnce(new Response(null, { status: 202 }))
+        .mockResolvedValueOnce(
+          new Response('{"jsonrpc":"2.0","result":{"content":[]}}', { status: 200 }),
+        );
+      const env = { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" };
+      expect(buildCurl(env, op, "mcp", { response_format: "toon" }, "{}")).not.toContain(
+        "response_format",
+      );
+      await sendRequest(env, op, "mcp", { response_format: "toon" }, "{}");
+      expect(
+        (jsonRpcBody(fetchSpy.mock.calls[2][1]) as { params: { arguments: object } }).params
+          .arguments,
+      ).not.toHaveProperty("response_format");
+    },
+  );
+
+  it("keeps explicitly edited unsupported arguments visible in curl", () => {
+    expect(
+      buildCurl(
+        { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+        startInteraction,
+        "mcp",
+        {},
+        '{"response_format":"json"}',
+      ),
+    ).toContain("response_format");
   });
 
   it("carries the managed context into the REST body", async () => {

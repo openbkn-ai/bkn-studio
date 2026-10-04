@@ -41,7 +41,7 @@ describe("mcpOpsFrom", () => {
     const curated = CONTEXT_LOADER_OPS.find((op) => op.id === "run_sql");
     expect(curated).toBeDefined();
     const ops = mcpOpsFrom([tool("run_sql"), tool("not_in_catalog")]);
-    expect(ops[0]).toBe(curated);
+    expect(ops[0].id).toBe(curated?.id);
     expect(ops[1].id).toBe("not_in_catalog");
   });
 
@@ -60,12 +60,67 @@ describe("mcpOpsFrom", () => {
     });
   });
 
-  it("keeps the curated op itself when the tool declares every example argument", () => {
+  it("keeps the curated example when the tool declares every example argument", () => {
     const curated = CONTEXT_LOADER_OPS.find((op) => op.id === "get_kn_detail")!;
     const [op] = mcpOpsFrom([
       { name: "get_kn_detail", inputSchema: { type: "object", properties: { kn_id: {} } } },
     ]);
-    expect(op).toBe(curated);
+    expect(op.id).toBe(curated.id);
+    expect(op.mcpArgs).toEqual(curated.mcpArgs);
+    expect(op.body).toEqual(curated.body);
+  });
+
+  it.each([
+    "bkn_start_interaction",
+    "bkn_finish_interaction",
+    "execute_action",
+    "execute_tool",
+    "execute_skill",
+    "run_code",
+    "run_shell",
+  ])("does not offer a format for undeclared %s arguments", (name) => {
+    const [op] = mcpOpsFrom([
+      { name, inputSchema: { type: "object", properties: { question: { type: "string" } } } },
+    ]);
+    expect(op.query.some((param) => param.name === "response_format")).toBe(false);
+  });
+
+  it("uses the declared format enum and default for curated and synthesized tools", () => {
+    for (const name of ["search_capabilities", "new_tool"]) {
+      const [op] = mcpOpsFrom([
+        {
+          name,
+          inputSchema: {
+            type: "object",
+            properties: {
+              response_format: { type: "string", enum: ["toon", "json"], default: "toon" },
+            },
+          },
+        },
+      ]);
+      expect(op.query.find((param) => param.name === "response_format")).toEqual({
+        name: "response_format",
+        options: ["toon", "json"],
+        value: "toon",
+      });
+    }
+  });
+
+  it("keeps synthesized format choices out of the editable example body", () => {
+    const [op] = mcpOpsFrom([
+      {
+        name: "new_tool",
+        inputSchema: {
+          type: "object",
+          properties: {
+            response_format: { type: "string", enum: ["toon", "json"] },
+          },
+        },
+      },
+    ]);
+    expect(op.query.find((param) => param.name === "response_format")?.value).toBe("json");
+    expect(op.mcpArgs).not.toHaveProperty("response_format");
+    expect(op.body).not.toHaveProperty("response_format");
   });
 
   // The retired tool must not come back through the curated catalogue (#1401).
