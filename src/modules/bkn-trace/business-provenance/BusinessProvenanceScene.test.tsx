@@ -68,6 +68,29 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     getMarkdown.mockResolvedValue("# 当前交互轮次知识网络优化分析输入\n\n- Operation：`op-1`");
   });
 
+  it("does not label an unread question as unrecorded in an incomplete query", async () => {
+    getConversations.mockResolvedValue({
+      entries: [
+        { conversationId: "conv-unread", previewUnavailable: true },
+        { conversationId: "conv-known", questionPreview: "已读取的问题", previewUnavailable: true },
+        { conversationId: "conv-empty" },
+      ],
+      total: 3,
+    });
+    getInteractions.mockResolvedValue({
+      entries: [{ interactionId: "int-unread", previewUnavailable: true }],
+      total: 1,
+    });
+    getInteraction.mockRejectedValue({ response: { status: 404 } });
+    render(<BusinessProvenanceScene />);
+    const unread = await screen.findByRole("button", { name: "摘要暂不可用" });
+    expect(screen.getByRole("button", { name: "已读取的问题" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "未记录问题" })).not.toBeNull();
+    fireEvent.click(unread);
+    expect(await screen.findByText("摘要暂不可用")).not.toBeNull();
+    expect(screen.queryByText("未记录问题")).toBeNull();
+  });
+
   it("opens the exact conversation supplied by an associated log", async () => {
     window.history.replaceState(
       {},

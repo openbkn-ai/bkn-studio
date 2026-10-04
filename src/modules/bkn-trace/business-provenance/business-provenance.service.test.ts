@@ -44,6 +44,47 @@ describe("EE business provenance service", () => {
     expect(page.entries[0]?.conversationId).toBe("conv-1");
   });
 
+  it.each(["partial", "truncated"])(
+    "preserves %s query metadata and marks unread previews",
+    async (field) => {
+      getMock.mockResolvedValue({
+        data: {
+          entries: [{ conversation_id: "conv-1" }],
+          total: 1,
+          [field]: true,
+          partial_reasons: ["projection_scan_cap_reached"],
+        },
+      });
+      const { getBusinessProvenanceConversations } = await import("./business-provenance.service");
+      const page = await getBusinessProvenanceConversations();
+      expect(page).toMatchObject({
+        [field]: true,
+        partialReasons: ["projection_scan_cap_reached"],
+      });
+      expect(page.entries[0]).toMatchObject({ previewUnavailable: true });
+    },
+  );
+
+  it("preserves incomplete interaction preview context for the round navigation", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [{ interaction_id: "int-1" }],
+        total: 1,
+        partial: true,
+        truncated: true,
+        partial_reasons: ["projection_scan_cap_reached"],
+      },
+    });
+    const { getBusinessProvenanceInteractions } = await import("./business-provenance.service");
+    const page = await getBusinessProvenanceInteractions({ conversationId: "conv-1" });
+    expect(page).toMatchObject({
+      partial: true,
+      truncated: true,
+      partialReasons: ["projection_scan_cap_reached"],
+    });
+    expect(page.entries[0]).toMatchObject({ previewUnavailable: true });
+  });
+
   it("reads an interaction projection and its canonical Markdown from EE", async () => {
     getMock
       .mockResolvedValueOnce({

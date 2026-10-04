@@ -712,6 +712,7 @@ export const bknTraceZhCN = {
           search_instance: "实例语义检索",
           search_schema: "Schema 探索",
         },
+        summaryUnavailable: "摘要暂不可用",
         questionNotRecorded: "未记录问题",
         resultNotRecorded: "业务结果未记录",
         roundLabel: "第 {{index}} 轮",

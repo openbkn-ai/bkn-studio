@@ -755,6 +755,7 @@ export const bknTraceEnUS = {
           search_instance: "Instance Semantic Search",
           search_schema: "Explore Schema",
         },
+        summaryUnavailable: "Summary temporarily unavailable",
         questionNotRecorded: "Question not recorded",
         resultNotRecorded: "Business result not recorded",
         roundLabel: "Interaction {{index}}",
