@@ -573,6 +573,7 @@ export const bknTraceZhCN = {
           requiredRecord: "合同要求的记录",
           checkFailed: "本次记录完整性核查读取失败，请刷新重试。",
           fields: {
+            request_id: "调用请求",
             artifact: "证据内容",
             evidence: "独立证据事件",
             outcome: "调用结局",
