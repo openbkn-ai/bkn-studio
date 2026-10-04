@@ -28,11 +28,14 @@ export function RecordMissingDetails({ items }: { items?: RecordIntegrity["missi
               },
             )}
           </span>
+          {item.tool_name ? <code>{item.tool_name}</code> : null}
           {item.operation_id ? (
             <code>
               {item.operation_id}
               {item.attempt > 0 ? ` / ${item.attempt}` : ""}
             </code>
+          ) : item.field.startsWith("request_id:") && item.field.slice("request_id:".length) ? (
+            <code>{item.field.slice("request_id:".length)}</code>
           ) : null}
         </li>
       ))}
