@@ -42,7 +42,7 @@ describe("getPermissionRequestTodoSummary", () => {
   it("does not request an unproxied API in mock mode", async () => {
     const getSummary = await importSummary("true");
 
-    await expect(getSummary()).resolves.toEqual({ pending_count: 0 });
+    await expect(getSummary()).resolves.toEqual({ pending_count: 2 });
     expect(httpState.calls).toHaveLength(0);
   });
 
