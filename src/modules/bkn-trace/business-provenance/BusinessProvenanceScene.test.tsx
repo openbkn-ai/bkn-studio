@@ -91,6 +91,112 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.queryByText("未记录问题")).toBeNull();
   });
 
+  it("refreshes the current round without returning to the first round or starting analysis", async () => {
+    getConversations.mockResolvedValue({
+      entries: [{ conversationId: "conv-refresh", questionPreview: "刷新测试" }],
+      total: 1,
+    });
+    getInteractions.mockResolvedValue({
+      entries: [
+        { interactionId: "int-first", questionPreview: "第一轮" },
+        { interactionId: "int-second", questionPreview: "第二轮" },
+      ],
+      total: 2,
+    });
+    getInteraction.mockImplementation((interactionId: string) =>
+      Promise.resolve({
+        interactionId,
+        conversationContext: [],
+        derivedFacts: [],
+        contextRelations: [],
+        operations: [],
+      }),
+    );
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "刷新测试" }));
+    fireEvent.click(await screen.findByText("第二轮"));
+    await waitFor(() => expect(getInteraction).toHaveBeenLastCalledWith("int-second"));
+    await waitFor(() => expect(getAnalysisHistory).toHaveBeenLastCalledWith("int-second"));
+    fireEvent.click(await screen.findByRole("button", { name: "失败 0" }));
+    const detailReads = getInteraction.mock.calls.length;
+    const roundReads = getInteractions.mock.calls.length;
+    const conversationReads = getConversations.mock.calls.length;
+    getConversations.mockRejectedValue(new Error("list service unavailable"));
+    fireEvent.click(screen.getByRole("button", { name: /刷新/ }));
+    await waitFor(() => expect(getInteractions.mock.calls.length).toBe(roundReads + 1));
+    await waitFor(() => expect(getInteraction.mock.calls.length).toBe(detailReads + 1));
+    expect(getInteraction).toHaveBeenLastCalledWith("int-second");
+    expect(getConversations).toHaveBeenCalledTimes(conversationReads);
+    expect(screen.getByRole("button", { name: "失败 0" }).className).toContain(
+      "timelineFilterActive",
+    );
+    expect(streamAnalysis).not.toHaveBeenCalled();
+  });
+
+  it("updates the complete conversation round count while keeping filtered counts separate", async () => {
+    getConversations.mockResolvedValue({
+      entries: [{ conversationId: "conv-count", questionPreview: "轮数核查", interactionCount: 2 }],
+      total: 1,
+    });
+    getInteractions.mockResolvedValue({
+      entries: [{ interactionId: "int-count", questionPreview: "采购轮次" }],
+      total: 4,
+    });
+    getInteraction.mockResolvedValue({
+      interactionId: "int-count",
+      conversationContext: [],
+      derivedFacts: [],
+      contextRelations: [],
+      operations: [],
+    });
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "轮数核查" }));
+    expect(await screen.findByText("4 轮交互")).not.toBeNull();
+    getInteractions.mockResolvedValueOnce({
+      entries: [{ interactionId: "int-count", questionPreview: "采购轮次" }],
+      total: 1,
+    });
+    fireEvent.change(screen.getByPlaceholderText("搜索问题或业务对象"), {
+      target: { value: "采购" },
+    });
+    await waitFor(() =>
+      expect(getInteractions).toHaveBeenLastCalledWith(
+        expect.objectContaining({ keyword: "采购" }),
+      ),
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: /采购轮次/ })).not.toBeNull());
+    expect(screen.getByText("4 轮交互")).not.toBeNull();
+    expect(getConversations).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["partial", "truncated"])(
+    "does not overwrite the conversation round count from a %s round response",
+    async (field) => {
+      getConversations.mockResolvedValue({
+        entries: [
+          { conversationId: "conv-count", questionPreview: "轮数核查", interactionCount: 4 },
+        ],
+        total: 1,
+      });
+      getInteractions.mockResolvedValue({
+        entries: [{ interactionId: "int-count", questionPreview: "采购轮次" }],
+        total: 1,
+        [field]: true,
+      });
+      getInteraction.mockResolvedValue({
+        interactionId: "int-count",
+        conversationContext: [],
+        derivedFacts: [],
+        contextRelations: [],
+        operations: [],
+      });
+      render(<BusinessProvenanceScene />);
+      fireEvent.click(await screen.findByRole("button", { name: "轮数核查" }));
+      await waitFor(() => expect(getAnalysisHistory).toHaveBeenCalledWith("int-count"));
+      expect(screen.getByText("4 轮交互")).not.toBeNull();
+    },
+  );
+
   it("opens the exact conversation supplied by an associated log", async () => {
     window.history.replaceState(
       {},
@@ -127,7 +233,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         expect.objectContaining({ conversationId: "conv-linked" }),
       ),
     );
-    expect(await screen.findByText("关联轮次")).not.toBeNull();
+    expect(await screen.findByRole("button", { name: /关联轮次/ })).not.toBeNull();
   });
 
   it("keeps the original question and timeline available when integrity reads fail", async () => {
@@ -558,7 +664,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
 
     render(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "会话 A" }));
-    fireEvent.click(screen.getByRole("button", { name: /返回业务会话/ }));
+    fireEvent.click(screen.getByRole("button", { name: /返回业务溯源列表/ }));
     fireEvent.click(await screen.findByRole("button", { name: "会话 B" }));
 
     resolveSecond({ entries: [{ interactionId: "int-b", questionPreview: "B 的轮次" }], total: 1 });
@@ -714,7 +820,8 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         expect.objectContaining({ conversationId: "conv-1" }),
       ),
     );
-    expect(await screen.findByText("2 轮交互")).not.toBeNull();
+    // The full round response is newer than the conversation-list snapshot (2 rounds).
+    expect(await screen.findByText("1 轮交互")).not.toBeNull();
     expect(await screen.findByText("交互轮次")).not.toBeNull();
     expect(await screen.findByRole("tab", { name: "时间链" })).toHaveAttribute(
       "aria-selected",
@@ -974,7 +1081,8 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(normalizedStyles).toContain(
       ".timelineLayout{height:auto;min-height:0;overflow:visible;grid-template-columns:1fr;}",
     );
-  });
+    // This checks layout and selection, not latency; 34 cards make jsdom role queries slow.
+  }, 60_000);
 
   it("opens managed function hierarchy on the default timeline without generating evidence", async () => {
     getConversations.mockResolvedValue({

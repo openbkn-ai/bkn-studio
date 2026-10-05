@@ -5,7 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, Collapse, Descriptions, Drawer, Spin, Tag, Typography } from "antd";
+import { CopyOutlined } from "@ant-design/icons";
+import {
+  Alert,
+  Button,
+  Collapse,
+  Descriptions,
+  Drawer,
+  Spin,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,6 +27,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import {
   presentAuthMethod,
   presentLogAction,
+  presentLogFact,
   presentLogActor,
   presentLogTarget,
   presentTargetType,
@@ -25,6 +37,8 @@ import {
   getLogDetail,
   type LogDetailResult,
 } from "@/modules/bkn-trace/services/observability.service";
+
+const detailColumns = { xs: 1, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 } as const;
 
 type Props = {
   logId?: string;
@@ -67,15 +81,39 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
       .then(() => message.success(t("bknTrace.logs.detail.rawFactsCopied")))
       .catch(() => message.error(t("bknTrace.logs.detail.copyFailed")));
   };
+  const renderId = (value: string, label: string, link?: { href: string; label: string }) => (
+    <span className={styles.detailId} title={value}>
+      {link ? (
+        <a href={link.href} aria-label={link.label}>
+          {value}
+        </a>
+      ) : (
+        <span className={styles.detailIdValue}>{value}</span>
+      )}
+      <Tooltip title={t("bknTrace.logs.detail.copyId", { label })}>
+        <Button
+          aria-label={t("bknTrace.logs.detail.copyId", { label })}
+          type="text"
+          size="small"
+          icon={<CopyOutlined />}
+          onClick={() => {
+            void writeTextToClipboard(value)
+              .then(() => message.success(t("bknTrace.logs.detail.idCopied")))
+              .catch(() => message.error(t("bknTrace.logs.detail.copyFailed")));
+          }}
+        />
+      </Tooltip>
+    </span>
+  );
   return (
     <Drawer
       className={styles.compactDrawer}
       destroyOnHidden
       onClose={onClose}
       open={Boolean(logId)}
-      rootClassName={styles.compactDrawerRoot}
+      rootClassName={`${styles.compactDrawerRoot} ${styles.logDetailDrawerRoot}`}
       title={t("bknTrace.logs.detail.title")}
-      width={420}
+      width="min(600px, calc(100vw - 48px))"
     >
       {error ? <Alert message={error} showIcon type="error" /> : null}
       {!detail && !error ? <Spin /> : null}
@@ -92,8 +130,8 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
           </div>
 
           <DetailSection title={t("bknTrace.logs.detail.businessObject")}>
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label={t("bknTrace.logs.detail.target")}>
+            <Descriptions column={detailColumns} layout="vertical" size="small">
+              <Descriptions.Item span="filled" label={t("bknTrace.logs.detail.target")}>
                 {target?.primary}
               </Descriptions.Item>
               <Descriptions.Item label={t("bknTrace.logs.detail.targetType")}>
@@ -106,7 +144,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
           </DetailSection>
 
           <DetailSection title={t("bknTrace.logs.detail.facts")}>
-            <Descriptions column={1} size="small">
+            <Descriptions column={detailColumns} layout="vertical" size="small">
               {record.facts.method ? (
                 <Descriptions.Item label={t("bknTrace.logs.detail.method")}>
                   {record.facts.method}
@@ -124,17 +162,23 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
               ) : null}
               {record.facts.operationType ? (
                 <Descriptions.Item label={t("bknTrace.logs.detail.operationType")}>
-                  {record.facts.operationType}
+                  <span title={record.facts.operationType}>
+                    {presentLogFact("operationType", record.facts.operationType, t)}
+                  </span>
                 </Descriptions.Item>
               ) : null}
               {record.facts.operationStatus ? (
                 <Descriptions.Item label={t("bknTrace.logs.detail.operationStatus")}>
-                  {record.facts.operationStatus}
+                  <span title={record.facts.operationStatus}>
+                    {presentLogFact("operationStatus", record.facts.operationStatus, t)}
+                  </span>
                 </Descriptions.Item>
               ) : null}
               {record.facts.businessContext ? (
                 <Descriptions.Item label={t("bknTrace.logs.detail.businessContext")}>
-                  {record.facts.businessContext}
+                  <span title={record.facts.businessContext}>
+                    {presentLogFact("businessContext", record.facts.businessContext, t)}
+                  </span>
                 </Descriptions.Item>
               ) : null}
             </Descriptions>
@@ -146,7 +190,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
           </DetailSection>
 
           <DetailSection title={t("bknTrace.logs.detail.actorAndSource")}>
-            <Descriptions column={1} size="small">
+            <Descriptions column={detailColumns} layout="vertical" size="small">
               <Descriptions.Item label={t("bknTrace.logs.detail.actor")}>
                 {actor?.primary}
               </Descriptions.Item>
@@ -158,7 +202,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
                   {record.credential.name || record.credential.id}
                 </Descriptions.Item>
               ) : null}
-              <Descriptions.Item label={t("bknTrace.logs.detail.source")}>
+              <Descriptions.Item span="filled" label={t("bknTrace.logs.detail.source")}>
                 {record.sourceId} · {record.sourceChannel}
               </Descriptions.Item>
             </Descriptions>
@@ -180,36 +224,32 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
               <Descriptions column={1} size="small">
                 {record.conversationId ? (
                   <Descriptions.Item label={t("bknTrace.logs.detail.conversationId")}>
-                    <a
-                      aria-label={t("bknTrace.logs.detail.openBusinessProvenance")}
-                      href={buildAppPath(
+                    {renderId(record.conversationId, t("bknTrace.logs.detail.conversationId"), {
+                      href: buildAppPath(
                         `/observability/business-provenance?conversation_id=${encodeURIComponent(record.conversationId)}`,
-                      )}
-                    >
-                      {record.conversationId}
-                    </a>
+                      ),
+                      label: t("bknTrace.logs.detail.openBusinessProvenance"),
+                    })}
                   </Descriptions.Item>
                 ) : null}
                 {record.requestId ? (
                   <Descriptions.Item label={t("bknTrace.logs.detail.requestId")}>
-                    <span className={styles.technicalId}>{record.requestId}</span>
+                    {renderId(record.requestId, t("bknTrace.logs.detail.requestId"))}
                   </Descriptions.Item>
                 ) : null}
                 {record.taskId ? (
                   <Descriptions.Item label={t("bknTrace.logs.detail.taskId")}>
-                    <span className={styles.technicalId}>{record.taskId}</span>
+                    {renderId(record.taskId, t("bknTrace.logs.detail.taskId"))}
                   </Descriptions.Item>
                 ) : null}
                 {record.traceId ? (
                   <Descriptions.Item label={t("bknTrace.logs.detail.traceId")}>
-                    <a
-                      aria-label={t("bknTrace.logs.detail.openTrace")}
-                      href={buildAppPath(
+                    {renderId(record.traceId, t("bknTrace.logs.detail.traceId"), {
+                      href: buildAppPath(
                         `/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`,
-                      )}
-                    >
-                      {record.traceId}
-                    </a>
+                      ),
+                      label: t("bknTrace.logs.detail.openTrace"),
+                    })}
                   </Descriptions.Item>
                 ) : null}
               </Descriptions>
@@ -231,13 +271,13 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
                       {record.action}
                     </Descriptions.Item>
                     <Descriptions.Item label={t("bknTrace.logs.detail.targetId")}>
-                      <span className={styles.technicalId}>{record.target.id}</span>
+                      {renderId(record.target.id, t("bknTrace.logs.detail.targetId"))}
                     </Descriptions.Item>
                     <Descriptions.Item label={t("bknTrace.logs.detail.actorId")}>
-                      <span className={styles.technicalId}>{record.actor.id}</span>
+                      {renderId(record.actor.id, t("bknTrace.logs.detail.actorId"))}
                     </Descriptions.Item>
                     <Descriptions.Item label={t("bknTrace.logs.detail.eventId")}>
-                      <span className={styles.technicalId}>{record.eventId}</span>
+                      {renderId(record.eventId, t("bknTrace.logs.detail.eventId"))}
                     </Descriptions.Item>
                     <Descriptions.Item label={t("bknTrace.logs.detail.recordedAt")}>
                       {formatTime(record.recordedAt)}

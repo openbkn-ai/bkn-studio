@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   presentLogAction,
+  presentLogFact,
   presentLogActor,
   presentLogTarget,
   presentTargetType,
@@ -45,6 +46,16 @@ const translateZhCN = createLocaleTranslator(bknTraceZhCN);
 const translateEnUS = createLocaleTranslator(bknTraceEnUS);
 
 describe("log presentation", () => {
+  it("localizes known facts without changing the meaning of completion or hiding unknown values", () => {
+    expect(presentLogFact("operationType", "conversation.create", translateZhCN)).toBe(
+      "发起 Agent 业务会话",
+    );
+    expect(presentLogFact("operationStatus", "completed", translateZhCN)).toBe("已完成");
+    expect(presentLogFact("businessContext", "managed", translateZhCN)).toBe("受管会话");
+    expect(presentLogFact("operationStatus", "custom_status", translateZhCN)).toBe("custom_status");
+    expect(presentLogFact("businessContext", "other", translateEnUS)).toBe("other");
+  });
+
   it("presents a system user creation as a readable business action", () => {
     const record = {
       action: "create",

@@ -15,6 +15,23 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 export type LogText = { primary: string; secondary?: string };
 
+export function presentLogFact(
+  field: "operationType" | "operationStatus" | "businessContext",
+  value: string,
+  t: Translate,
+) {
+  const keys: Record<string, Record<string, string>> = {
+    operationType: { "conversation.create": "bknTrace.logs.auditActions.startAgentConversation" },
+    operationStatus: {
+      completed: "bknTrace.logs.detail.statuses.completed",
+      failed: "bknTrace.logs.detail.statuses.failed",
+    },
+    businessContext: { managed: "bknTrace.logs.detail.contexts.managed" },
+  };
+  const key = keys[field][value];
+  return key ? t(key) : value;
+}
+
 export function isAgentConversationCreated(record: LogRecord) {
   return record.eventName === "conversation.created" && record.target.type === "conversation";
 }

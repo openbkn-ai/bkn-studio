@@ -39,7 +39,7 @@
 }
 .filters {
   display: grid;
-  grid-template-columns: 2.2fr repeat(5, minmax(120px, 1fr)) auto;
+  grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(120px, 1fr)) auto auto;
   gap: 12px;
   padding: 12px;
   border-bottom: 1px solid var(--color-divider);
@@ -200,7 +200,8 @@
 .roundList {
   display: grid;
   gap: 8px;
-  min-height: 330px;
+  align-content: start;
+  grid-auto-rows: max-content;
   max-height: calc(100vh - 340px);
   overflow: auto;
   padding: 0 2px;
@@ -1145,8 +1146,9 @@
 }
 .roundList {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
-  min-height: 330px;
+  grid-auto-rows: max-content;
   max-height: calc(100vh - 360px);
   overflow: auto;
   padding: 0 2px;
@@ -1536,7 +1538,9 @@
   .pageSurface {
     padding: 12px;
   }
-  .workspace,
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .workspaceRoundsCollapsed {
     grid-template-columns: 48px minmax(0, 1fr);
   }
@@ -1552,6 +1556,13 @@
   .analysisPane {
     grid-column: 2;
     padding: 12px;
+  }
+  .workspace:not(.workspaceRoundsCollapsed) .roundSidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .workspace:not(.workspaceRoundsCollapsed) .analysisPane {
+    grid-column: 1;
   }
   .timelineLayout {
     height: auto;

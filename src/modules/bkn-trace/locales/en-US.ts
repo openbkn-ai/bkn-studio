@@ -462,7 +462,7 @@ export const bknTraceEnUS = {
       workspace: {
         actions: {
           analyze: "Analyze with BKN Agent",
-          back: "Back to conversations",
+          back: "Back to business provenance",
           copyMarkdown: "Copy Markdown",
           downloadMarkdown: "Download Markdown",
           query: "Query",
@@ -845,10 +845,10 @@ export const bknTraceEnUS = {
       filters: {
         error: "Error keyword",
         from: "Start time",
-        service: "Service",
+        service: "Root service (exact match)",
         status: "Status",
         to: "End time",
-        tool: "Tool / API",
+        tool: "Root operation (exact match)",
         traceId: "Trace ID",
       },
       input: "Input",
@@ -991,6 +991,10 @@ export const bknTraceEnUS = {
         clientIp: "Client IP",
         copyFailed: "Copy failed",
         copyRawFacts: "Copy raw facts",
+        idCopied: "Identifier copied",
+        copyId: "Copy {{label}}",
+        statuses: { completed: "Completed", failed: "Failed" },
+        contexts: { managed: "Managed conversation" },
         event: "Event type",
         facts: "Operation facts",
         credential: "Credential",

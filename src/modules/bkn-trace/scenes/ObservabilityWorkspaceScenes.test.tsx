@@ -7,6 +7,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import dayjs from "dayjs";
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ObservabilityLogsScene } from "@/modules/bkn-trace/scenes/ObservabilityLogsScene";
@@ -27,6 +28,10 @@ import {
   getTraceEvidenceOperation,
 } from "@/modules/bkn-trace/services/trace.service";
 import { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
+
+vi.mock("@/framework/compat/clipboard", () => ({
+  writeTextToClipboard: vi.fn().mockResolvedValue(undefined),
+}));
 
 const translate = (key: string, options?: Record<string, unknown>) => {
   const value =
@@ -53,6 +58,8 @@ const translate = (key: string, options?: Record<string, unknown>) => {
     typeof options?.[name] === "string" ? options[name] : "",
   );
 };
+
+const mockMessage = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 
 const mockCurrentUser = vi.hoisted(() => ({
   id: "user-a",
@@ -93,7 +100,10 @@ vi.mock("@/modules/bkn-trace/services/observability.service", async (importOrigi
 });
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ runtimeConfig: { currentUser: mockCurrentUser } }),
+  useAppServices: () => ({
+    runtimeConfig: { currentUser: mockCurrentUser },
+    message: mockMessage,
+  }),
 }));
 
 const profile = {
@@ -603,7 +613,26 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.logs.detail.businessObject")).not.toBeNull();
     expect(screen.getAllByText("供应链分析助手 的业务会话").length).toBeGreaterThan(0);
     expect(screen.getAllByText("通过 API Key").length).toBeGreaterThan(0);
-    expect(screen.getByText("managed")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.detail.contexts.managed")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.detail.statuses.completed")).not.toBeNull();
+    expect(screen.getByTitle("conversation.create").textContent).toBe(
+      "bknTrace.logs.auditActions.startAgentConversation",
+    );
+    const conversationId = screen.getByTitle("conv-a");
+    const copyButton = conversationId.querySelector("button");
+    expect(copyButton).not.toBeNull();
+    expect(copyButton?.closest("a")).toBeNull();
+    fireEvent.click(copyButton!);
+    await waitFor(() => expect(writeTextToClipboard).toHaveBeenCalledWith("conv-a"));
+    await waitFor(() =>
+      expect(mockMessage.success).toHaveBeenCalledWith("bknTrace.logs.detail.idCopied"),
+    );
+    vi.mocked(writeTextToClipboard).mockRejectedValueOnce(new Error("Clipboard rejected"));
+    fireEvent.click(copyButton!);
+    await waitFor(() =>
+      expect(mockMessage.error).toHaveBeenCalledWith("bknTrace.logs.detail.copyFailed"),
+    );
+    expect(mockMessage.success).toHaveBeenCalledTimes(1);
     expect(screen.getByText("bknTrace.logs.detail.rawFacts")).not.toBeNull();
     expect(
       screen
