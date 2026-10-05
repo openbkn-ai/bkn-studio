@@ -271,3 +271,36 @@
     display: grid;
   }
 }
+
+/* Local to log details: do not resize the other compact drawers. */
+.logDetailDrawerRoot :global(.ant-descriptions-item-content) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.detailId {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+.detailId > a,
+.detailIdValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detailId > :global(.ant-btn) {
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .logDetailDrawerRoot :global(.ant-drawer-content-wrapper) {
+    width: 100% !important;
+  }
+}
+
+.detailSummary :global(.ant-tag) {
+  justify-self: start;
+}

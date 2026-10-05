@@ -6,6 +6,8 @@
  */
 
 import {
+  ArrowLeftOutlined,
+  ClearOutlined,
   CloseOutlined,
   CopyOutlined,
   DownloadOutlined,
@@ -738,6 +740,10 @@ export function BusinessProvenanceScene() {
   const [interactionDetailError, setInteractionDetailError] = useState(false);
   const [projectionUnavailable, setProjectionUnavailable] = useState(false);
   const [interactionReload, setInteractionReload] = useState(0);
+  const [interactionListReload, setInteractionListReload] = useState(0);
+  const selectedConversationId = selectedConversation?.conversationId;
+  const loadedConversationId = useRef<string | undefined>(undefined);
+  const loadedInteractionId = useRef<string | undefined>(undefined);
   const [view, setView] = useState<View>("timeline");
   const [roundsCollapsed, setRoundsCollapsed] = useState(
     () =>
@@ -776,10 +782,10 @@ export function BusinessProvenanceScene() {
       if (request !== conversationRequest.current) return;
       setConversations(page.entries);
       setConversationTotal(page.total);
-      if (linkedConversationId) {
-        const linked = page.entries.find((entry) => entry.conversationId === linkedConversationId);
-        if (linked) setSelectedConversation((current) => current ?? linked);
-      }
+      setSelectedConversation((current) => {
+        const id = current?.conversationId ?? linkedConversationId;
+        return page.entries.find((entry) => entry.conversationId === id) ?? current;
+      });
     } catch (error) {
       if (request !== conversationRequest.current) return;
       const status = responseStatus(error);
@@ -795,22 +801,29 @@ export function BusinessProvenanceScene() {
     void loadConversations();
   }, [loadConversations]);
   useEffect(() => {
-    if (!selectedConversation) return;
+    if (!selectedConversationId) {
+      loadedConversationId.current = undefined;
+      return;
+    }
     let current = true;
-    setInteractions([]);
-    setInteractionTotal(0);
-    setSelectedInteraction(undefined);
+    const conversationChanged = loadedConversationId.current !== selectedConversationId;
+    loadedConversationId.current = selectedConversationId;
+    if (conversationChanged) {
+      setInteractions([]);
+      setInteractionTotal(0);
+      setSelectedInteraction(undefined);
+      setProjection(undefined);
+      setDetailOperation(undefined);
+      setProjectionUnavailable(false);
+      setAnalysisResult(undefined);
+      setAnalysisHistory([]);
+      setAnalysisPanelOpen(false);
+      setAnalysisError(undefined);
+    }
     setInteractionListLoading(true);
     setInteractionListError(false);
-    setProjection(undefined);
-    setDetailOperation(undefined);
-    setProjectionUnavailable(false);
-    setAnalysisResult(undefined);
-    setAnalysisHistory([]);
-    setAnalysisPanelOpen(false);
-    setAnalysisError(undefined);
     void getBusinessProvenanceInteractions({
-      conversationId: selectedConversation.conversationId,
+      conversationId: selectedConversationId,
       page: 1,
       pageSize: 50,
       keyword: interactionKeyword,
@@ -819,10 +832,22 @@ export function BusinessProvenanceScene() {
         if (current) {
           setInteractions(page.entries);
           setInteractionTotal(page.total);
-          setSelectedInteraction(
-            page.entries.find((item) => item.interactionId === linkedInteractionId) ||
-              page.entries[0],
-          );
+          // Filtered or incomplete results cannot establish the whole conversation's round count.
+          if (!interactionKeyword.trim() && !page.partial && !page.truncated) {
+            setSelectedConversation((conversation) =>
+              conversation?.conversationId === selectedConversationId
+                ? { ...conversation, interactionCount: page.total }
+                : conversation,
+            );
+          }
+          setSelectedInteraction((previous) => {
+            const selected =
+              page.entries.find((item) => item.interactionId === previous?.interactionId) ||
+              page.entries.find((item) => item.interactionId === linkedInteractionId) ||
+              page.entries[0];
+            // A new snapshot triggers the existing detail loader, including when the ID is unchanged.
+            return selected ? { ...selected } : undefined;
+          });
         }
       })
       .catch(() => {
@@ -837,9 +862,10 @@ export function BusinessProvenanceScene() {
     return () => {
       current = false;
     };
-  }, [interactionKeyword, linkedInteractionId, selectedConversation]);
+  }, [interactionKeyword, linkedInteractionId, selectedConversationId, interactionListReload]);
   useEffect(() => {
     if (!selectedInteraction) {
+      loadedInteractionId.current = undefined;
       setProjection(undefined);
       setDetailOperation(undefined);
       setInteractionDetailLoading(false);
@@ -850,8 +876,11 @@ export function BusinessProvenanceScene() {
     let current = true;
     setProjection(undefined);
     setDetailOperation(undefined);
-    setTimelineFilter("all");
-    setEvidencePanel("evidence");
+    if (loadedInteractionId.current !== selectedInteraction.interactionId) {
+      setTimelineFilter("all");
+      setEvidencePanel("evidence");
+    }
+    loadedInteractionId.current = selectedInteraction.interactionId;
     setInteractionDetailLoading(true);
     setInteractionDetailError(false);
     setProjectionUnavailable(false);
@@ -1149,7 +1178,7 @@ export function BusinessProvenanceScene() {
             </Button>
             <Button
               aria-label={bpText("actions.reset")}
-              icon={<ReloadOutlined />}
+              icon={<ClearOutlined />}
               onClick={() => {
                 setConversationKeyword("");
                 setConversationAgent("");
@@ -1158,7 +1187,9 @@ export function BusinessProvenanceScene() {
                 setConversationPage(1);
                 setConversationQuery({});
               }}
-            />
+            >
+              {bpText("actions.reset")}
+            </Button>
           </div>
           <Table
             rowKey="conversationId"
@@ -1194,7 +1225,12 @@ export function BusinessProvenanceScene() {
           <Typography.Title level={3}>{bpText("analysis.title")}</Typography.Title>
           <Typography.Text>{bpText("analysis.description")}</Typography.Text>
         </div>
-        <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>
+        <Button
+          icon={<ReloadOutlined />}
+          disabled={analysisStarting}
+          loading={interactionListLoading || interactionDetailLoading}
+          onClick={() => setInteractionListReload((value) => value + 1)}
+        >
           {bpText("actions.refresh")}
         </Button>
       </header>
@@ -1203,7 +1239,8 @@ export function BusinessProvenanceScene() {
       >
         <header className={styles.workspaceHeader}>
           <Button
-            type="link"
+            type="text"
+            icon={<ArrowLeftOutlined />}
             className={styles.backButton}
             onClick={() => {
               setSelectedConversation(undefined);
@@ -1211,7 +1248,7 @@ export function BusinessProvenanceScene() {
               setProjection(undefined);
             }}
           >
-            ← {bpText("actions.back")}
+            {bpText("actions.back")}
           </Button>
           <div className={styles.conversationHeading}>
             <h1>{conversationTitle(selectedConversation)}</h1>

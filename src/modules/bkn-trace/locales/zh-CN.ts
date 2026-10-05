@@ -435,7 +435,7 @@ export const bknTraceZhCN = {
       workspace: {
         actions: {
           analyze: "交给 BKN Agent 分析",
-          back: "返回业务会话",
+          back: "返回业务溯源列表",
           copyMarkdown: "复制 Markdown",
           downloadMarkdown: "下载 Markdown",
           query: "查询",
@@ -793,10 +793,10 @@ export const bknTraceZhCN = {
       filters: {
         error: "错误关键词",
         from: "开始时间",
-        service: "服务",
+        service: "根服务（精确匹配）",
         status: "状态",
         to: "结束时间",
-        tool: "工具 / 接口",
+        tool: "根调用（精确匹配）",
         traceId: "Trace ID",
       },
       input: "输入",
@@ -932,6 +932,10 @@ export const bknTraceZhCN = {
         clientIp: "来源 IP",
         copyFailed: "复制失败",
         copyRawFacts: "复制原始事实",
+        idCopied: "标识已复制",
+        copyId: "复制 {{label}}",
+        statuses: { completed: "已完成", failed: "失败" },
+        contexts: { managed: "受管会话" },
         event: "事件类型",
         facts: "操作事实",
         credential: "使用凭证",
