@@ -596,6 +596,15 @@ describe("observability workspace scenes", () => {
     expect(query).toMatchObject({ page: 2, pageSize: 20 });
     expect(query?.timeFrom).toEqual(expect.any(String));
     expect(query?.timeTo).toEqual(expect.any(String));
+    const sizeChanger = document.querySelector(
+      ".ant-pagination-options-size-changer .ant-select-selector",
+    );
+    expect(sizeChanger).not.toBeNull();
+    fireEvent.mouseDown(sizeChanger!);
+    const options = await screen.findAllByRole("option");
+    expect(
+      options.map((option) => option.getAttribute("aria-label") ?? option.textContent),
+    ).toEqual(["20 / page", "50 / page", "100 / page", "200 / page"]);
     expect(
       await screen.findByText((content) => content.includes("HD供应链业务知识网络_v3")),
     ).not.toBeNull();

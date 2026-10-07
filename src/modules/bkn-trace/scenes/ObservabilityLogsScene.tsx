@@ -372,6 +372,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
               current={result.page ?? pagination.page}
               onChange={changePage}
               pageSize={result.pageSize ?? pagination.pageSize}
+              pageSizeOptions={[20, 50, 100, 200]}
               showSizeChanger
               showTotal={(total) => t("common.total", { total })}
               total={result.count.value}
