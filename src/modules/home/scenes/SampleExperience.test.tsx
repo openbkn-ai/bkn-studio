@@ -222,6 +222,82 @@ describe("SampleExperience", () => {
     expect(await screen.findByText("1. Prepare database")).toBeTruthy();
   });
 
+  it("lets another sample start while one install request is still open", async () => {
+    listSamples.mockResolvedValue({
+      samples: [
+        sample(),
+        sample({
+          displayName: "Harbor",
+          knowledgeNetwork: { displayName: "Harbor network", id: "harbor_kn" },
+          name: "harbor",
+        }),
+      ],
+      sourceRejected: false,
+    });
+    createSampleInstallation.mockImplementation(() => new Promise(() => undefined));
+    renderExperience();
+
+    const installButtons = await screen.findAllByRole("button", {
+      name: "home.sample.actions.install",
+    });
+    fireEvent.click(installButtons[0]);
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
+
+    expect(await screen.findByText("home.sample.status.installing")).toBeTruthy();
+    expect(screen.queryByText("home.sample.confirm.irreversible")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.install" }));
+    const start = screen.getByRole("button", { name: "home.sample.actions.start" });
+    expect(start).toHaveProperty("disabled", false);
+    fireEvent.click(start);
+    await waitFor(() => expect(createSampleInstallation).toHaveBeenCalledTimes(2));
+  });
+
+  it("hides the previous failure while a retry is still running", async () => {
+    listSamples
+      .mockResolvedValueOnce({
+        samples: [
+          sample({
+            installationId: "inst-9",
+            installable: false,
+            status: "installing",
+          }),
+        ],
+        sourceRejected: false,
+      })
+      .mockResolvedValue({
+        samples: [
+          sample({
+            installationId: "inst-9",
+            message: "Smoke failed",
+            status: "failed",
+          }),
+        ],
+        sourceRejected: false,
+      });
+    getSampleInstallation.mockResolvedValue({
+      error: { code: "verify_failed", message: "previous failure", stage: "verify" },
+      id: "inst-9",
+      requestedBy: "admin",
+      sample: "northwind",
+      stages: [{ id: "verify", name: "Smoke", state: "failed" }],
+      status: "failed",
+      version: "0.1.0",
+    });
+    retrySampleInstallation.mockImplementation(() => new Promise(() => undefined));
+    renderExperience();
+
+    expect(await screen.findByText("previous failure")).toBeTruthy();
+    expect(screen.getByText("1. Smoke")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.retry" }));
+
+    expect(await screen.findByText("home.sample.status.installing")).toBeTruthy();
+    expect(screen.queryByText("previous failure")).toBeNull();
+    expect(screen.queryByText("Smoke failed")).toBeNull();
+    expect(screen.queryByText("1. Smoke")).toBeNull();
+  });
+
   it("shows a name conflict without retry", async () => {
     listSamples.mockResolvedValue({
       samples: [sample({ installable: false, message: "Catalog exists", status: "conflict" })],
