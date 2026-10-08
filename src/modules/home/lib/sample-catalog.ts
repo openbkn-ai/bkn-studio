@@ -85,7 +85,7 @@ export function sampleCardAction(item: SampleCatalogItem): SampleCardAction {
     return "open";
   }
 
-  if (item.status === "failed") {
+  if (item.status === "failed" || item.status === "conflict") {
     return "retry";
   }
 

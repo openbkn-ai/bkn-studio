@@ -121,6 +121,52 @@ export function SampleExperience() {
     };
   }, [catalog, loadCatalog]);
 
+  useEffect(() => {
+    const settled = (catalog?.samples ?? []).flatMap((item) => {
+      if (item.status !== "failed" && item.status !== "conflict") {
+        return [];
+      }
+
+      return item.installationId ? [{ installationId: item.installationId, name: item.name }] : [];
+    });
+
+    if (settled.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const updates = await Promise.all(
+        settled.map(async (item) => {
+          try {
+            return await getSampleInstallation(item.name, item.installationId);
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      setInstallations((current) => {
+        const next = { ...current };
+        updates.forEach((installation) => {
+          if (installation) {
+            next[installation.sample] = installation;
+          }
+        });
+        return next;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [catalog]);
+
   const runInstallation = async (item: SampleCatalogItem, mode: "install" | "retry") => {
     if (runningRef.current.has(item.name)) {
       return;
@@ -198,13 +244,18 @@ export function SampleExperience() {
 
       <div className={styles.cards}>
         {samples.map((item) => {
+          const liveInstallation = installations[item.name];
+          const serverInstalling = liveInstallation?.status === "installing";
           const showLocalProgress =
             installingNames.includes(item.name) &&
-            (item.status === "not_installed" || item.status === "failed");
+            !serverInstalling &&
+            (item.status === "not_installed" ||
+              item.status === "failed" ||
+              item.status === "conflict");
 
           return (
             <SampleCard
-              installation={showLocalProgress ? undefined : installations[item.name]}
+              installation={showLocalProgress ? undefined : liveInstallation}
               item={showLocalProgress ? { ...item, message: "", status: "installing" } : item}
               key={item.name}
               onInstall={() => setPending(item)}
@@ -281,7 +332,16 @@ function SampleCard({
   const { t } = useTranslation();
   const action = sampleCardAction(item);
   const enabled = item.installable;
-  const detail = installation?.error?.message || item.message;
+  const conflict = item.status === "conflict" || installation?.error?.code === "ownership_conflict";
+  const detail = conflict
+    ? t("home.sample.errors.ownership_conflict")
+    : installation?.error?.message || item.message;
+  const stages =
+    installation &&
+    installation.stages.length > 0 &&
+    (item.status === "installing" || item.status === "failed" || item.status === "conflict")
+      ? installation.stages
+      : [];
 
   return (
     <article className={styles.card}>
@@ -325,14 +385,12 @@ function SampleCard({
         </div>
       </div>
 
-      {installation &&
-      installation.stages.length > 0 &&
-      (item.status === "installing" || item.status === "failed") ? (
+      {stages.length > 0 ? (
         <div className={styles.stages}>
-          {installation.stages.map((stage, index) => (
-            <div className={styles.stage} key={stage.id}>
+          {stages.map((stage, index) => (
+            <div className={styles.stage} data-state={stage.state} key={stage.id}>
               <strong>
-                {index + 1}. {stage.name}
+                {index + 1}. {t(`home.sample.stages.${stage.id}`, { defaultValue: stage.name })}
               </strong>
               <span>{t(`home.sample.stageState.${stage.state}`)}</span>
             </div>
@@ -341,8 +399,9 @@ function SampleCard({
       ) : null}
 
       {detail && item.status !== "installed" && item.status !== "not_installed" ? (
-        <p className={styles.error}>{detail}</p>
+        <p className={conflict ? styles.conflict : styles.error}>{detail}</p>
       ) : null}
+      {conflict ? <p className={styles.conflictHint}>{t("home.sample.conflictHint")}</p> : null}
 
       {item.status === "installed" ? (
         <>
