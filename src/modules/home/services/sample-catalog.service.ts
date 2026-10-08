@@ -16,6 +16,7 @@ import {
 } from "@/modules/home/lib/sample-catalog";
 
 const SAMPLE_API = "/studio/samples";
+const INSTALL_TIMEOUT_MS = 30 * 60 * 1000;
 
 export class SampleRequestError extends Error {
   code: string;
@@ -47,7 +48,7 @@ export async function createSampleInstallation(sampleName: string): Promise<Samp
     const response = await http.post<unknown>(
       `${samplePath(sampleName)}/installations`,
       {},
-      { skipErrorToast: true },
+      { skipErrorToast: true, timeout: INSTALL_TIMEOUT_MS },
     );
     return parseSampleInstallation(response.data);
   } catch (error) {
@@ -63,7 +64,7 @@ export async function retrySampleInstallation(
     const response = await http.post<unknown>(
       `${installationPath(sampleName, installationId)}/retry`,
       {},
-      { skipErrorToast: true },
+      { skipErrorToast: true, timeout: INSTALL_TIMEOUT_MS },
     );
     return parseSampleInstallation(response.data);
   } catch (error) {
