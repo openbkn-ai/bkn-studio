@@ -125,7 +125,9 @@ export function SampleExperience() {
     setSubmitting(true);
     setActionError("");
     setPending(null);
-    setInstallingNames((current) => (current.includes(item.name) ? current : [...current, item.name]));
+    setInstallingNames((current) =>
+      current.includes(item.name) ? current : [...current, item.name],
+    );
 
     try {
       const installation =
