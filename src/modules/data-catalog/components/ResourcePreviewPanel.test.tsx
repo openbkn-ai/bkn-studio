@@ -224,6 +224,28 @@ describe("ResourcePreviewPanel", () => {
     expect(previewCatalogResourceMock).not.toHaveBeenCalled();
   });
 
+  it.each(["dataset", "table", "index"] as const)(
+    "uses the correct empty-schema message for %s with a legacy discovery error",
+    (category) => {
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, category, lastDiscoverStatus: "error" }}
+        />,
+      );
+      const message = category === "dataset" ? "metadataUnavailable" : "metadataDiscoveryFailed";
+      expect(screen.getByText(`dataCatalog.preview.${message}`)).toBeTruthy();
+      expect(screen.getByText(`dataCatalog.preview.${message}Description`)).toBeTruthy();
+      if (category === "dataset") {
+        expect(screen.queryByText("dataCatalog.preview.metadataDiscoveryFailed")).toBeNull();
+        expect(
+          screen.queryByText("dataCatalog.preview.metadataDiscoveryFailedDescription"),
+        ).toBeNull();
+      }
+      expect(previewCatalogResourceMock).not.toHaveBeenCalled();
+    },
+  );
+
   it("does not request preview data when the resource is missing but its previous schema remains", () => {
     render(
       <ResourcePreviewPanel
