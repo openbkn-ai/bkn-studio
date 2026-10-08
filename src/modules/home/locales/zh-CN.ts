@@ -90,6 +90,7 @@ export const homeZhCN = {
         network: "知识网络 {{network}}",
         title: "安装「{{name}}」{{version}}",
       },
+      conflictHint: "把已有的同名知识网络删除或改名后，点重试可以继续这次安装。",
       empty: "当前没有可安装的样例",
       errors: {
         already_installed: "该样例已经安装",
@@ -98,7 +99,7 @@ export const homeZhCN = {
         forbidden: "需要管理员安装",
         image_unavailable: "样例数据库镜像暂时拉不下来",
         install_failed: "安装没有完成，现场已保留",
-        ownership_conflict: "同名资源已存在，且不是本次安装创建的",
+        ownership_conflict: "同名知识网络已存在，而且不是这次安装创建的。已有网络不会被改动。",
         sample_data_unavailable: "样例数据没有准备完成",
         source_rejected: "样例来源不是官方仓库或版本不一致",
         storage_class_missing: "集群还没有可用的默认存储",
@@ -112,6 +113,13 @@ export const homeZhCN = {
       reload: "重新加载",
       sourceLabel: "来源",
       sourceName: "openbkn-ai/bkn-samples",
+      stages: {
+        capabilities: "发布能力",
+        database: "准备样例库",
+        discover: "扫描数据资源",
+        knowledge: "导入并绑定知识网络",
+        verify: "冒烟验收",
+      },
       stageState: {
         failed: "失败",
         pending: "未开始",

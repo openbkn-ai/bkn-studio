@@ -95,6 +95,8 @@ export const homeEnUS = {
         network: "Knowledge network {{network}}",
         title: "Install {{name}} {{version}}",
       },
+      conflictHint:
+        "Delete or rename the existing knowledge network, then retry to continue this installation.",
       empty: "No samples are available to install",
       errors: {
         already_installed: "This sample is already installed",
@@ -104,7 +106,7 @@ export const homeEnUS = {
         image_unavailable: "The sample database image cannot be pulled right now",
         install_failed: "Installation did not finish. Existing resources were kept.",
         ownership_conflict:
-          "A resource with the same name already exists and was not created by this installer",
+          "A knowledge network with the same name already exists and was not created by this installer. The existing network is left unchanged.",
         sample_data_unavailable: "The sample data is not ready",
         source_rejected:
           "The sample source is not the official repository, or the version does not match",
@@ -120,6 +122,13 @@ export const homeEnUS = {
       reload: "Reload",
       sourceLabel: "Source",
       sourceName: "openbkn-ai/bkn-samples",
+      stages: {
+        capabilities: "Publish capabilities",
+        database: "Prepare the sample database",
+        discover: "Scan data resources",
+        knowledge: "Import and bind the knowledge network",
+        verify: "Run the smoke test",
+      },
       stageState: {
         failed: "Failed",
         pending: "Not started",

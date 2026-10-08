@@ -29,6 +29,21 @@
   background: var(--color-bg-surface);
 }
 
+.conflict,
+.conflictHint {
+  margin: 12px 0 0;
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+.conflict {
+  padding: 12px 14px;
+  border: 1px solid var(--color-warning-600, #d48806);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-warning-600, #d48806) 12%, var(--color-bg-surface));
+  font-weight: 600;
+}
+
 .cards {
   display: flex;
   flex-direction: column;
@@ -131,6 +146,21 @@
   margin-top: 4px;
   color: var(--color-text-secondary);
   font-size: 12px;
+}
+
+.stage[data-state="succeeded"] span {
+  color: var(--color-success-600, #1a7f37);
+  font-weight: 600;
+}
+
+.stage[data-state="running"] span {
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+.stage[data-state="failed"] span {
+  color: var(--color-error-600, #cf1322);
+  font-weight: 600;
 }
 
 .questions {

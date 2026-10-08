@@ -85,17 +85,17 @@ describe("sample catalog", () => {
     expect(catalog.samples[0]?.status).toBe("not_installed");
   });
 
-  it("keeps retry only for a failed sample", () => {
+  it("keeps retry for a failed sample and a name conflict", () => {
     const failed = parseSampleCatalog([
       item({ installationId: "inst-1", message: "Smoke failed", status: "failed" }),
     ]).samples[0];
     const conflict = parseSampleCatalog([
-      item({ installable: false, message: "Catalog exists", status: "conflict" }),
+      item({ installable: true, message: "Catalog exists", status: "conflict" }),
     ]).samples[0];
 
     expect(failed && sampleCardAction(failed)).toBe("retry");
     expect(failed && sampleCardAction({ ...failed, installable: false })).toBe("retry");
-    expect(conflict && sampleCardAction(conflict)).toBe("none");
+    expect(conflict && sampleCardAction(conflict)).toBe("retry");
   });
 
   it("reads an in-progress installation", () => {
