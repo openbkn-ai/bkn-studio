@@ -37,9 +37,10 @@ export function SampleExperience() {
   const [loadError, setLoadError] = useState(false);
   const [installations, setInstallations] = useState<Record<string, SampleInstallation>>({});
   const [pending, setPending] = useState<SampleCatalogItem | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [installingNames, setInstallingNames] = useState<string[]>([]);
   const [actionError, setActionError] = useState("");
   const installationsRef = useRef(installations);
+  const runningRef = useRef(new Set<string>());
   installationsRef.current = installations;
 
   const loadCatalog = useCallback(async () => {
@@ -55,6 +56,15 @@ export function SampleExperience() {
   useEffect(() => {
     void loadCatalog();
   }, [loadCatalog]);
+
+  useEffect(() => {
+    if (installingNames.length === 0) {
+      return;
+    }
+
+    const timer = window.setInterval(() => void loadCatalog(), POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [installingNames, loadCatalog]);
 
   useEffect(() => {
     const active = (catalog?.samples ?? []).flatMap((item) => {
@@ -112,8 +122,16 @@ export function SampleExperience() {
   }, [catalog, loadCatalog]);
 
   const runInstallation = async (item: SampleCatalogItem, mode: "install" | "retry") => {
-    setSubmitting(true);
+    if (runningRef.current.has(item.name)) {
+      return;
+    }
+
+    runningRef.current.add(item.name);
     setActionError("");
+    setPending(null);
+    setInstallingNames((current) =>
+      current.includes(item.name) ? current : [...current, item.name],
+    );
 
     try {
       const installation =
@@ -121,7 +139,6 @@ export function SampleExperience() {
           ? await createSampleInstallation(item.name)
           : await retrySampleInstallation(item.name, item.installationId);
       setInstallations((current) => ({ ...current, [item.name]: installation }));
-      setPending(null);
       await loadCatalog();
     } catch (error) {
       const requestError =
@@ -132,7 +149,8 @@ export function SampleExperience() {
       );
       await loadCatalog();
     } finally {
-      setSubmitting(false);
+      runningRef.current.delete(item.name);
+      setInstallingNames((current) => current.filter((name) => name !== item.name));
     }
   };
 
@@ -179,18 +197,24 @@ export function SampleExperience() {
       {actionError ? <p className={styles.error}>{actionError}</p> : null}
 
       <div className={styles.cards}>
-        {samples.map((item) => (
-          <SampleCard
-            installation={installations[item.name]}
-            item={item}
-            key={item.name}
-            onInstall={() => setPending(item)}
-            onOpen={() =>
-              void navigate(`/knowledge-network/workspace/${item.knowledgeNetwork.id}/overview`)
-            }
-            onRetry={() => void runInstallation(item, "retry")}
-          />
-        ))}
+        {samples.map((item) => {
+          const showLocalProgress =
+            installingNames.includes(item.name) &&
+            (item.status === "not_installed" || item.status === "failed");
+
+          return (
+            <SampleCard
+              installation={showLocalProgress ? undefined : installations[item.name]}
+              item={showLocalProgress ? { ...item, message: "", status: "installing" } : item}
+              key={item.name}
+              onInstall={() => setPending(item)}
+              onOpen={() =>
+                void navigate(`/knowledge-network/workspace/${item.knowledgeNetwork.id}/overview`)
+              }
+              onRetry={() => void runInstallation(item, "retry")}
+            />
+          );
+        })}
       </div>
 
       <Modal
@@ -228,7 +252,6 @@ export function SampleExperience() {
               </button>
               <button
                 className={styles.install}
-                disabled={submitting}
                 onClick={() => void runInstallation(pending, "install")}
                 type="button"
               >
