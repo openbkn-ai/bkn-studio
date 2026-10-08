@@ -51,10 +51,20 @@ const DISCOVER_TASK_STATUS_TONES: Record<DataConnectDiscoverTask["status"], Ligh
 function statusTag(
   status: DataConnectDiscoverTask["status"],
   t: (key: string, options?: Record<string, unknown>) => string,
+  result?: DataConnectDiscoverTask["result"],
 ) {
   return (
-    <LightStatusTag tone={DISCOVER_TASK_STATUS_TONES[status]}>
-      {t(`dataConnect.discoverTaskStatuses.${status}`)}
+    <LightStatusTag
+      tone={
+        status === "completed" &&
+        ((result?.failedCount ?? 0) > 0 || (result?.skippedCount ?? 0) > 0)
+          ? "warning"
+          : DISCOVER_TASK_STATUS_TONES[status]
+      }
+    >
+      {status === "completed" && ((result?.failedCount ?? 0) > 0 || (result?.skippedCount ?? 0) > 0)
+        ? t("dataConnect.discoverPartialCompletion")
+        : t(`dataConnect.discoverTaskStatuses.${status}`)}
     </LightStatusTag>
   );
 }
@@ -141,6 +151,11 @@ export function DataConnectDiscoverTaskDrawer({
           metric: t("dataConnect.discoverResultFailed"),
           count: task.result.failedCount,
         },
+        {
+          key: "skipped",
+          metric: t("dataConnect.discoverResultSkipped"),
+          count: task.result.skippedCount ?? 0,
+        },
       ]
     : [];
   const resultColumns: ColumnsType<DiscoverResultRow> = [
@@ -182,7 +197,7 @@ export function DataConnectDiscoverTaskDrawer({
                 {t(`dataConnect.discoverTriggerTypes.${task.triggerType}`)}
               </LightStatusTag>
               {priorityTag(task.queuePriority, t)}
-              {statusTag(task.status, t)}
+              {statusTag(task.status, t, task.result)}
             </div>
             <Progress
               percent={task.progress}

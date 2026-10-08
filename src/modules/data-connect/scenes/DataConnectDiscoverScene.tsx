@@ -669,7 +669,7 @@ export function DataConnectDiscoverScene({
       dataIndex: "strategy",
       title: t("dataConnect.discoverStrategy"),
       width: 110,
-      filters: ["full_sync", "create_only", "cleanup_only"].map((value) => ({
+      filters: ["full_sync", "create_only", "cleanup_only", "count_only"].map((value) => ({
         text: t(`dataConnect.discoverStrategies.${value}`),
         value,
       })),
@@ -706,9 +706,19 @@ export function DataConnectDiscoverScene({
         value,
       })),
       filteredValue: taskStatusFilter.length ? taskStatusFilter : null,
-      render: (value: DataConnectDiscoverTaskStatus) => (
-        <LightStatusTag tone={DISCOVER_TASK_STATUS_TONES[value]}>
-          {t(`dataConnect.discoverTaskStatuses.${value}`)}
+      render: (value: DataConnectDiscoverTaskStatus, record) => (
+        <LightStatusTag
+          tone={
+            value === "completed" &&
+            ((record.result?.failedCount ?? 0) > 0 || (record.result?.skippedCount ?? 0) > 0)
+              ? "warning"
+              : DISCOVER_TASK_STATUS_TONES[value]
+          }
+        >
+          {value === "completed" &&
+          ((record.result?.failedCount ?? 0) > 0 || (record.result?.skippedCount ?? 0) > 0)
+            ? t("dataConnect.discoverPartialCompletion")
+            : t(`dataConnect.discoverTaskStatuses.${value}`)}
         </LightStatusTag>
       ),
     },

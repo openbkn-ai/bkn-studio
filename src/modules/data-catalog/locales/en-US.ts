@@ -77,7 +77,11 @@ export const dataCatalogEnUS = {
         "No usable field metadata is available. Add or refresh the resource fields before querying or building an index.",
       statusMessageDetail: "Status details: {{message}}",
       openDiscovery: "Open discovery",
+      refreshCount: "Refresh Exact Count",
+      refreshCountDescription:
+        "Create an exact count task. Large tables may take longer and increase source load.",
       refreshMetadata: "Start Resource Metadata Discovery",
+      countQueued: "Exact count task created.",
       discoveryQueued: "Resource metadata discovery task created.",
       refreshMetadataConfirmTitle: "Start resource metadata discovery?",
       refreshMetadataConfirmDescription:
@@ -494,6 +498,10 @@ export const dataCatalogEnUS = {
       creator: "Created by",
       enabledStatus: "Enabled",
       discoverStatus: "Discovery Status",
+      estimatedRowCountLabel: "Estimated row count",
+      lastDiscoverTime: "Metadata and estimate updated",
+      rowCountTime: "Exact count updated",
+      unknownTime: "Unknown",
       rowCount: "Rows",
       estimatedRowCount_one: "Approximately {{formattedCount}} row",
       estimatedRowCount_other: "Approximately {{formattedCount}} rows",

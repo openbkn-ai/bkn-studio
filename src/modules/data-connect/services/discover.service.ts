@@ -71,6 +71,7 @@ type BackendDiscoverTask = {
   result?: {
     catalog_id?: string;
     failed_count?: number;
+    skipped_count?: number;
     message?: string;
     new_count?: number;
     restored_count?: number;
@@ -267,6 +268,7 @@ function normalizeStrategy(value?: string): DataConnectDiscoverStrategy {
   switch (value) {
     case "create_only":
     case "cleanup_only":
+    case "count_only":
       return value;
     default:
       return "full_sync";
@@ -331,6 +333,7 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
       ? {
           catalogId: item.result.catalog_id ?? item.catalog_id,
           failedCount: item.result.failed_count ?? 0,
+          skippedCount: item.result.skipped_count ?? 0,
           message: item.result.message ?? "",
           newCount: item.result.new_count ?? 0,
           restoredCount: item.result.restored_count ?? 0,
@@ -354,6 +357,7 @@ function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSu
     ? {
         catalogId: fullResult.catalogId,
         failedCount: fullResult.failedCount,
+        skippedCount: fullResult.skippedCount,
         newCount: fullResult.newCount,
         restoredCount: fullResult.restoredCount,
         staleCount: fullResult.staleCount,

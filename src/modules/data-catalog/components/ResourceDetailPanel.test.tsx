@@ -158,6 +158,56 @@ describe("ResourceDetailPanel", () => {
     );
   });
 
+  it("shows unknown collection times without substituting update_time", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel active canEdit={false} catalog={null} resource={resource} />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByText("dataCatalog.resource.unknownTime")).toHaveLength(2);
+    expect(screen.queryByText(resource.updateTime)).toBeNull();
+  });
+
+  it("keeps Dataset real-time counts separate from source snapshot times", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, category: "dataset", rowCount: 0 }}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText("dataCatalog.resource.rowCountTime")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.lastDiscoverTime")).toBeNull();
+  });
+
+  it.each(["table", "index"] as const)(
+    "shows separate discovery and exact count collection times for %s",
+    (category) => {
+      render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit={false}
+            catalog={null}
+            resource={{
+              ...resource,
+              category,
+              rowCount: 0,
+              lastDiscoverTime: 1720000000000,
+              rowCountTime: 1720000001000,
+            }}
+          />
+        </MemoryRouter>,
+      );
+      expect(screen.getByText("dataCatalog.resource.lastDiscoverTime")).toBeTruthy();
+      expect(screen.getByText("dataCatalog.resource.rowCountTime")).toBeTruthy();
+      expect(screen.queryByText("dataCatalog.resource.unknownTime")).toBeNull();
+    },
+  );
+
   it("shows an exact zero row count without the estimate prefix", () => {
     render(
       <MemoryRouter>
@@ -472,4 +522,21 @@ describe("ResourceDetailPanel", () => {
     expect(getCatalogResourceMock).toHaveBeenCalledWith(resource.id);
     expect(await screen.findByText("server description")).toBeTruthy();
   });
+});
+
+it("shows the logic view exact count time without source discovery time", () => {
+  render(
+    <MemoryRouter>
+      <ResourceDetailPanel
+        active
+        canEdit={false}
+        catalog={null}
+        resource={{ ...resource, category: "logicview", rowCount: 7, rowCountTime: 1720000001000 }}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("dataCatalog.resource.rowCountTime")).toBeTruthy();
+  expect(screen.queryByText("dataCatalog.resource.lastDiscoverTime")).toBeNull();
+  expect(screen.queryByText("dataCatalog.resource.estimatedRowCountLabel")).toBeNull();
+  expect(screen.queryByText("dataCatalog.resource.unknownTime")).toBeNull();
 });

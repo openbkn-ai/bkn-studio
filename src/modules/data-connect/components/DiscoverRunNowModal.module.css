@@ -34,7 +34,8 @@
   font-weight: 600;
 }
 
-.strategyGroup {
+.strategyGroup,
+.strategyList {
   width: 100%;
 }
 

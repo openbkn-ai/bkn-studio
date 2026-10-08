@@ -147,6 +147,7 @@ export const dataConnectZhCN = {
     discoverStrategyHints: {
       full_sync: "同步全部资源，包含新增发现与失效清理。",
       create_only: "只发现新增资源，不清理已有资源。",
+      count_only: "仅对已有源表或视图执行精确计数，可能需要较长时间。",
       cleanup_only: "只清理失效资源，不发现新增。",
     },
     discoverRunScheduleConfirmTitle: "立即执行",
@@ -218,12 +219,15 @@ export const dataConnectZhCN = {
     discoverResultStale: "过期资源",
     discoverResultRestored: "恢复资源",
     discoverResultUnchanged: "未变化资源",
+    discoverResultSkipped: "跳过",
+    discoverPartialCompletion: "部分完成",
     discoverResultFailed: "失败资源",
     discoverResultMessage: "结果说明",
     discoverManualTask: "手动触发",
     discoverStrategies: {
       full_sync: "全量同步",
       create_only: "仅新增发现",
+      count_only: "精确计数",
       cleanup_only: "仅执行清理",
     },
     discoverTaskStatuses: {

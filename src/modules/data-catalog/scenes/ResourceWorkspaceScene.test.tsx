@@ -19,6 +19,7 @@ const discoverCatalogResourceMock = vi.hoisted(() => vi.fn());
 const deleteCatalogResourceMock = vi.hoisted(() => vi.fn());
 const setCatalogResourceEnabledMock = vi.hoisted(() => vi.fn());
 const modalConfirmMock = vi.hoisted(() => vi.fn());
+const messageSuccessMock = vi.hoisted(() => vi.fn());
 const navigateMock = vi.hoisted(() => vi.fn());
 const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
 const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
@@ -80,7 +81,7 @@ vi.mock("react-router-dom", () => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn(), success: vi.fn() },
+    message: { error: vi.fn(), success: messageSuccessMock },
     modal: { confirm: modalConfirmMock },
     runtimeConfig: { currentUser: { permissions: currentPermissions.value } },
   }),
@@ -631,6 +632,7 @@ describe("ResourceWorkspaceScene", () => {
 
     await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
     expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshCount")).toBeNull();
     expect(screen.queryByText("common.disable")).toBeNull();
   });
 
@@ -653,6 +655,7 @@ describe("ResourceWorkspaceScene", () => {
 
     await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
     expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
+    expect(screen.getByText("dataCatalog.resourceWorkspace.refreshCount")).toBeTruthy();
     expect(screen.queryByText("dataCatalog.resourceWorkspace.openDiscovery")).toBeNull();
     expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
   });
@@ -734,6 +737,53 @@ describe("ResourceWorkspaceScene", () => {
         title: "dataCatalog.resourceWorkspace.disableConfirmTitle",
       }),
     );
+  });
+
+  it("keeps the metadata discovery success message", async () => {
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+    fireEvent.click(await screen.findByText("dataCatalog.resourceWorkspace.refreshMetadata"));
+    const options = modalConfirmMock.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await act(async () => {
+      await options.onOk();
+    });
+    expect(discoverCatalogResourceMock).toHaveBeenCalledWith(staleResource.id);
+    expect(messageSuccessMock).toHaveBeenCalledWith(
+      "dataCatalog.resourceWorkspace.discoveryQueued",
+    );
+  });
+
+  it.each([
+    { category: "table", sourceMetadata: { objectType: "BASE TABLE" } },
+    { category: "table", sourceMetadata: { objectType: "VIEW" } },
+    { category: "index" },
+    { category: "logicview" },
+  ] as const)("creates an exact count task only after confirmation for %j", async (source) => {
+    getCatalogResourceMock.mockResolvedValue({ ...staleResource, ...source });
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+    fireEvent.click(await screen.findByText("dataCatalog.resourceWorkspace.refreshCount"));
+    expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
+    const options = modalConfirmMock.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await act(async () => {
+      await options.onOk();
+    });
+    expect(discoverCatalogResourceMock).toHaveBeenCalledWith(staleResource.id, "count_only");
+    expect(messageSuccessMock).toHaveBeenCalledWith("dataCatalog.resourceWorkspace.countQueued");
   });
 
   it("confirms enabling a disabled resource before issuing the request", async () => {

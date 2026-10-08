@@ -7,7 +7,7 @@
 
 import { http } from "@/framework/request/http";
 
-export type CatalogDiscoverStrategy = "cleanup_only" | "create_only" | "full_sync";
+export type CatalogDiscoverStrategy = "cleanup_only" | "create_only" | "full_sync" | "count_only";
 
 type CatalogDiscoverOptions = {
   strategy?: CatalogDiscoverStrategy;

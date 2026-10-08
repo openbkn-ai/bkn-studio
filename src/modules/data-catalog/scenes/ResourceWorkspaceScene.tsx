@@ -90,7 +90,9 @@ export function ResourceWorkspaceScene({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resourceReadForbidden, setResourceReadForbidden] = useState(false);
   const [detailEditing, setDetailEditing] = useState(false);
-  const [resourceAction, setResourceAction] = useState<"discover" | "enabled" | null>(null);
+  const [resourceAction, setResourceAction] = useState<"discover" | "count" | "enabled" | null>(
+    null,
+  );
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const previousTabRef = useRef(tab);
   const resourceVersionRef = useRef(0);
@@ -300,18 +302,27 @@ export function ResourceWorkspaceScene({
     setResource(latestResource);
   }, []);
 
-  const triggerResourceDiscovery = useCallback(async () => {
-    if (resource?.category === "logicview") return;
-    setResourceAction("discover");
-    try {
-      await discoverCatalogResource(resourceId);
-      void message.success(t("dataCatalog.resourceWorkspace.discoveryQueued"));
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    } finally {
-      setResourceAction(null);
-    }
-  }, [message, resource?.category, resourceId, t]);
+  const triggerResourceDiscovery = useCallback(
+    async (strategy?: "count_only") => {
+      if (resource?.category === "logicview" && strategy !== "count_only") return;
+      setResourceAction(strategy === "count_only" ? "count" : "discover");
+      try {
+        await discoverCatalogResource(resourceId, ...(strategy ? [strategy] : []));
+        void message.success(
+          t(
+            strategy === "count_only"
+              ? "dataCatalog.resourceWorkspace.countQueued"
+              : "dataCatalog.resourceWorkspace.discoveryQueued",
+          ),
+        );
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
+      } finally {
+        setResourceAction(null);
+      }
+    },
+    [message, resource?.category, resourceId, t],
+  );
 
   const updateResourceEnabled = useCallback(
     async (enabled: boolean) => {
@@ -343,7 +354,7 @@ export function ResourceWorkspaceScene({
       cancelText: t("common.cancel"),
       content: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmDescription"),
       okText: t("dataCatalog.resourceWorkspace.refreshMetadataConfirm"),
-      onOk: triggerResourceDiscovery,
+      onOk: () => triggerResourceDiscovery(),
       title: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmTitle"),
     });
   }, [modal, resource?.category, t, triggerResourceDiscovery]);
@@ -523,6 +534,25 @@ export function ResourceWorkspaceScene({
                 onClick={confirmResourceDiscovery}
               >
                 {t("dataCatalog.resourceWorkspace.refreshMetadata")}
+              </AppButton>
+            ) : null}
+            {canManageCatalogTasks &&
+            (resource.category === "table" ||
+              resource.category === "index" ||
+              resource.category === "logicview") ? (
+              <AppButton
+                disabled={detailEditing || resourceAction !== null}
+                icon={<ReloadOutlined />}
+                loading={resourceAction === "count"}
+                onClick={() => {
+                  void modal.confirm({
+                    title: t("dataCatalog.resourceWorkspace.refreshCount"),
+                    content: t("dataCatalog.resourceWorkspace.refreshCountDescription"),
+                    onOk: () => triggerResourceDiscovery("count_only"),
+                  });
+                }}
+              >
+                {t("dataCatalog.resourceWorkspace.refreshCount")}
               </AppButton>
             ) : null}
             {canModifyResource ? (

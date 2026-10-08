@@ -578,6 +578,40 @@ export function ResourceDetailPanel({
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}</span>
             <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
           </div>
+          {resource.category === "table" || resource.category === "index" ? (
+            <>
+              <div className={styles.basicInfoItem}>
+                <span className={styles.basicInfoLabel}>
+                  {t("dataCatalog.resource.estimatedRowCountLabel")}
+                </span>
+                <span className={styles.basicInfoValue}>{resource.estimatedRowCount ?? "-"}</span>
+              </div>
+              <div className={styles.basicInfoItem}>
+                <span className={styles.basicInfoLabel}>
+                  {t("dataCatalog.resource.lastDiscoverTime")}
+                </span>
+                <span className={styles.basicInfoValue}>
+                  {resource.lastDiscoverTime
+                    ? formatDateTime(resource.lastDiscoverTime)
+                    : t("dataCatalog.resource.unknownTime")}
+                </span>
+              </div>
+            </>
+          ) : null}
+          {resource.category === "table" ||
+          resource.category === "index" ||
+          resource.category === "logicview" ? (
+            <div className={styles.basicInfoItem}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.rowCountTime")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.rowCountTime
+                  ? formatDateTime(resource.rowCountTime)
+                  : t("dataCatalog.resource.unknownTime")}
+              </span>
+            </div>
+          ) : null}
 
           {resource.category !== "logicview" ? (
             <>
