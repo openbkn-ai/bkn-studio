@@ -277,7 +277,9 @@ export function ResourceWorkspaceScene({
   // handled inside the tab panel so the navigation remains discoverable and deep links stay valid.
   const hideSemanticUnderstanding = Boolean(catalog?.builtin);
   const discoveryFailed =
-    resource?.category !== "logicview" && resource?.lastDiscoverStatus === "error";
+    resource?.category !== "logicview" &&
+    resource?.category !== "dataset" &&
+    resource?.lastDiscoverStatus === "error";
   const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;
   const resourceDisabled = queryBlockReason === "disabled";
   const resourceMissing = queryBlockReason === "missing";
@@ -655,7 +657,7 @@ export function ResourceWorkspaceScene({
                             : "dataCatalog.resourceWorkspace.discoveryFailedStaleSchemaDescription",
                   )}
                 </div>
-                {resource.statusMessage ? (
+                {resource.category !== "dataset" && resource.statusMessage ? (
                   <div className={styles.resourceStatusMessage}>
                     {t("dataCatalog.resourceWorkspace.statusMessageDetail", {
                       message: resource.statusMessage,

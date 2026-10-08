@@ -675,6 +675,59 @@ describe("ResourceWorkspaceScene", () => {
     },
   );
 
+  it.each([
+    { enabled: true, emptySchema: false, title: null },
+    { enabled: false, emptySchema: false, title: "resourceDisabledTitle" },
+    { enabled: true, emptySchema: true, title: "metadataUnavailableTitle" },
+  ])(
+    "ignores Dataset discovery failures while preserving query restrictions: %j",
+    async ({ enabled, emptySchema, title }) => {
+      getCatalogResourceMock.mockResolvedValue({
+        ...staleResource,
+        category: "dataset",
+        enabled,
+        status: "active",
+        lastDiscoverStatus: "error",
+        statusMessage: "legacy source error",
+        schema: emptySchema ? [] : staleResource.schema,
+      });
+      render(
+        <ResourceWorkspaceScene
+          indexView="config"
+          onIndexViewChange={vi.fn()}
+          onTabChange={vi.fn()}
+          resourceId={staleResource.id}
+          tab="detail"
+        />,
+      );
+      await screen.findByTestId("detail-schema-name");
+      expect(screen.queryByText("dataCatalog.resourceWorkspace.discoveryFailedTitle")).toBeNull();
+      expect(screen.queryByText("dataCatalog.resourceWorkspace.statusMessageDetail")).toBeNull();
+      if (title) expect(screen.getByText(`dataCatalog.resourceWorkspace.${title}`)).toBeTruthy();
+    },
+  );
+
+  it("retains source discovery failure details for a table", async () => {
+    getCatalogResourceMock.mockResolvedValue({
+      ...staleResource,
+      status: "active",
+      lastDiscoverStatus: "error",
+      statusMessage: "source error",
+    });
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+    await screen.findByTestId("detail-schema-name");
+    expect(screen.getByText("dataCatalog.resourceWorkspace.discoveryFailedTitle")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.resourceWorkspace.statusMessageDetail")).toBeTruthy();
+  });
+
   it("keeps a view out of index tasks, including a direct index tab link", async () => {
     getCatalogResourceMock.mockResolvedValue({ ...staleResource, category: "logicview" });
     const onTabChange = vi.fn();
