@@ -54,6 +54,7 @@ import {
   type SemanticUnderstandingTaskListFilters,
   type SemanticUnderstandingTaskSummary,
 } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { isPartiallyCompletedDiscoverTask } from "@/modules/data-connect/utils/discover-task-status";
 import { listCatalogs } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
@@ -127,16 +128,10 @@ function DiscoverTaskStatusTag({
   result?: DataConnectDiscoverTaskSummary["result"];
 }) {
   const { t } = useTranslation();
+  const partiallyCompleted = isPartiallyCompletedDiscoverTask(status, result);
   return (
-    <LightStatusTag
-      tone={
-        status === "completed" &&
-        ((result?.failedCount ?? 0) > 0 || (result?.skippedCount ?? 0) > 0)
-          ? "warning"
-          : DISCOVER_TASK_STATUS_TONES[status]
-      }
-    >
-      {status === "completed" && ((result?.failedCount ?? 0) > 0 || (result?.skippedCount ?? 0) > 0)
+    <LightStatusTag tone={partiallyCompleted ? "warning" : DISCOVER_TASK_STATUS_TONES[status]}>
+      {partiallyCompleted
         ? t("dataConnect.discoverPartialCompletion")
         : t(`dataConnect.discoverTaskStatuses.${status}`)}
     </LightStatusTag>

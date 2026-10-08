@@ -92,8 +92,16 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 }));
 
 vi.mock("@/framework/ui/common/AppButton", () => ({
-  AppButton: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
-    <button onClick={onClick} type="button">
+  AppButton: ({
+    children,
+    onClick,
+    disabled,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+  }) => (
+    <button disabled={disabled} onClick={onClick} type="button">
       {children}
     </button>
   ),
@@ -737,6 +745,55 @@ describe("ResourceWorkspaceScene", () => {
         title: "dataCatalog.resourceWorkspace.disableConfirmTitle",
       }),
     );
+  });
+
+  it.each([
+    "dataCatalog.resourceWorkspace.refreshCount",
+    "dataCatalog.resourceWorkspace.refreshMetadata",
+    "common.disable",
+  ])("disables all resource actions while %s is pending", async (actionLabel) => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+    let resolveRequest!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      resolveRequest = resolve;
+    });
+    discoverCatalogResourceMock.mockReturnValue(pending);
+    setCatalogResourceEnabledMock.mockReturnValue(pending);
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+    fireEvent.click(await screen.findByText(actionLabel));
+    const options = modalConfirmMock.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    let request!: Promise<void>;
+    act(() => {
+      request = options.onOk();
+    });
+    for (const label of [
+      "dataCatalog.resourceWorkspace.refreshCount",
+      "dataCatalog.resourceWorkspace.refreshMetadata",
+      "common.disable",
+    ]) {
+      const button = screen.getByRole("button", { name: label });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    }
+    expect(modalConfirmMock).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolveRequest();
+      await request;
+    });
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.resourceWorkspace.refreshCount" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.resourceWorkspace.refreshMetadata" }),
+    ).toBeEnabled();
   });
 
   it("keeps the metadata discovery success message", async () => {

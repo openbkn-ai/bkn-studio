@@ -59,6 +59,7 @@ import type {
   DataConnectDiscoverTaskStatus,
   DataConnectDiscoverTaskTriggerType,
 } from "@/modules/data-connect/types/discover";
+import { isPartiallyCompletedDiscoverTask } from "@/modules/data-connect/utils/discover-task-status";
 import { formatDiscoverTaskTime } from "@/modules/data-connect/utils/discover-task-time";
 import {
   DiscoverScheduleFormModal,
@@ -706,21 +707,16 @@ export function DataConnectDiscoverScene({
         value,
       })),
       filteredValue: taskStatusFilter.length ? taskStatusFilter : null,
-      render: (value: DataConnectDiscoverTaskStatus, record) => (
-        <LightStatusTag
-          tone={
-            value === "completed" &&
-            ((record.result?.failedCount ?? 0) > 0 || (record.result?.skippedCount ?? 0) > 0)
-              ? "warning"
-              : DISCOVER_TASK_STATUS_TONES[value]
-          }
-        >
-          {value === "completed" &&
-          ((record.result?.failedCount ?? 0) > 0 || (record.result?.skippedCount ?? 0) > 0)
-            ? t("dataConnect.discoverPartialCompletion")
-            : t(`dataConnect.discoverTaskStatuses.${value}`)}
-        </LightStatusTag>
-      ),
+      render: (value: DataConnectDiscoverTaskStatus, record) => {
+        const partiallyCompleted = isPartiallyCompletedDiscoverTask(value, record.result);
+        return (
+          <LightStatusTag tone={partiallyCompleted ? "warning" : DISCOVER_TASK_STATUS_TONES[value]}>
+            {partiallyCompleted
+              ? t("dataConnect.discoverPartialCompletion")
+              : t(`dataConnect.discoverTaskStatuses.${value}`)}
+          </LightStatusTag>
+        );
+      },
     },
     {
       dataIndex: "progress",

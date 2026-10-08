@@ -528,7 +528,7 @@ export function ResourceWorkspaceScene({
           <Space className={styles.pageHeaderActions} wrap>
             {canManageCatalogTasks && resource.category !== "logicview" ? (
               <AppButton
-                disabled={detailEditing}
+                disabled={detailEditing || resourceAction !== null}
                 icon={<ReloadOutlined />}
                 loading={resourceAction === "discover"}
                 onClick={confirmResourceDiscovery}
@@ -559,7 +559,7 @@ export function ResourceWorkspaceScene({
               <AppButton
                 color={resource.enabled === false ? "green" : undefined}
                 danger={resource.enabled !== false}
-                disabled={detailEditing}
+                disabled={detailEditing || resourceAction !== null}
                 loading={resourceAction === "enabled"}
                 onClick={() => confirmResourceEnabled(resource.enabled === false)}
                 type={resource.enabled === false ? "primary" : "default"}
