@@ -28,7 +28,36 @@ import {
 
 import styles from "./SampleExperience.module.css";
 
-const POLL_INTERVAL_MS = 4000;
+const POLL_INTERVAL_MS = 1000;
+const SAMPLE_STAGE_IDS = ["database", "discover", "knowledge", "capabilities", "verify"] as const;
+
+function rememberInstallation(
+  current: Record<string, SampleInstallation>,
+  installation: SampleInstallation,
+  running: Set<string>,
+) {
+  if (running.has(installation.sample) && installation.status !== "installing") {
+    return current;
+  }
+
+  return { ...current, [installation.sample]: installation };
+}
+
+function startingInstallation(sampleName: string): SampleInstallation {
+  return {
+    error: null,
+    id: `inst-${sampleName}`,
+    requestedBy: "",
+    sample: sampleName,
+    stages: SAMPLE_STAGE_IDS.map((id, index) => ({
+      id,
+      name: id,
+      state: index === 0 ? "running" : "pending",
+    })),
+    status: "installing",
+    version: "",
+  };
+}
 
 export function SampleExperience() {
   const { t } = useTranslation();
@@ -62,6 +91,7 @@ export function SampleExperience() {
       return;
     }
 
+    void loadCatalog();
     const timer = window.setInterval(() => void loadCatalog(), POLL_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [installingNames, loadCatalog]);
@@ -97,15 +127,13 @@ export function SampleExperience() {
         return;
       }
 
-      setInstallations((current) => {
-        const next = { ...current };
-        updates.forEach((installation) => {
-          if (installation) {
-            next[installation.sample] = installation;
-          }
-        });
-        return next;
-      });
+      setInstallations((current) =>
+        updates.reduce(
+          (next, installation) =>
+            installation ? rememberInstallation(next, installation, runningRef.current) : next,
+          current,
+        ),
+      );
 
       if (updates.some((installation) => installation && installation.status !== "installing")) {
         void loadCatalog();
@@ -151,15 +179,13 @@ export function SampleExperience() {
         return;
       }
 
-      setInstallations((current) => {
-        const next = { ...current };
-        updates.forEach((installation) => {
-          if (installation) {
-            next[installation.sample] = installation;
-          }
-        });
-        return next;
-      });
+      setInstallations((current) =>
+        updates.reduce(
+          (next, installation) =>
+            installation ? rememberInstallation(next, installation, runningRef.current) : next,
+          current,
+        ),
+      );
     })();
 
     return () => {
@@ -178,6 +204,26 @@ export function SampleExperience() {
     setInstallingNames((current) =>
       current.includes(item.name) ? current : [...current, item.name],
     );
+    setInstallations((current) => ({
+      ...current,
+      [item.name]: startingInstallation(item.name),
+    }));
+
+    const installationId = item.installationId ?? `inst-${item.name}`;
+    let stopped = false;
+    const readProgress = async () => {
+      try {
+        const current = await getSampleInstallation(item.name, installationId);
+        if (stopped || current.status !== "installing" || current.stages.length === 0) {
+          return;
+        }
+        setInstallations((existing) => ({ ...existing, [item.name]: current }));
+      } catch {
+        return;
+      }
+    };
+    void readProgress();
+    const progressTimer = window.setInterval(() => void readProgress(), POLL_INTERVAL_MS);
 
     try {
       const installation =
@@ -195,6 +241,8 @@ export function SampleExperience() {
       );
       await loadCatalog();
     } finally {
+      stopped = true;
+      window.clearInterval(progressTimer);
       runningRef.current.delete(item.name);
       setInstallingNames((current) => current.filter((name) => name !== item.name));
     }
@@ -244,19 +292,12 @@ export function SampleExperience() {
 
       <div className={styles.cards}>
         {samples.map((item) => {
-          const liveInstallation = installations[item.name];
-          const serverInstalling = liveInstallation?.status === "installing";
-          const showLocalProgress =
-            installingNames.includes(item.name) &&
-            !serverInstalling &&
-            (item.status === "not_installed" ||
-              item.status === "failed" ||
-              item.status === "conflict");
+          const watching = installingNames.includes(item.name);
 
           return (
             <SampleCard
-              installation={showLocalProgress ? undefined : liveInstallation}
-              item={showLocalProgress ? { ...item, message: "", status: "installing" } : item}
+              installation={installations[item.name]}
+              item={watching ? { ...item, message: "", status: "installing" } : item}
               key={item.name}
               onInstall={() => setPending(item)}
               onOpen={() =>

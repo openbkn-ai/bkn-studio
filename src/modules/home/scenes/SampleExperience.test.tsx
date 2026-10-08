@@ -315,7 +315,8 @@ describe("SampleExperience", () => {
     expect(screen.queryByText("previous failure")).toBeNull();
     expect(screen.queryByText("Smoke failed")).toBeNull();
     expect(screen.queryByText("1. home.sample.stages.verify")).toBeNull();
-    expect(screen.queryByText("home.sample.stageState.running")).toBeNull();
+    expect(screen.getByText("1. home.sample.stages.database")).toBeTruthy();
+    expect(screen.getByText("home.sample.stageState.running")).toBeTruthy();
   });
 
   it("shows a name conflict with retry and the finished steps", async () => {
@@ -360,6 +361,26 @@ describe("SampleExperience", () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(listSamples).toHaveBeenCalledTimes(1);
     expect(getSampleInstallation).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the first step as soon as install starts", async () => {
+    listSamples.mockResolvedValue({
+      samples: [sample()],
+      sourceRejected: false,
+    });
+    createSampleInstallation.mockImplementation(() => new Promise(() => undefined));
+    getSampleInstallation.mockRejectedValue(new Error("not written yet"));
+    renderExperience();
+
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
+
+    expect(await screen.findByText("1. home.sample.stages.database")).toBeTruthy();
+    expect(screen.getByText("home.sample.stageState.running")).toBeTruthy();
+    expect(screen.getByText("2. home.sample.stages.discover")).toBeTruthy();
+    await waitFor(() =>
+      expect(getSampleInstallation).toHaveBeenCalledWith("northwind", "inst-northwind"),
+    );
   });
 
   it("does not invent steps before the server reports them", async () => {
