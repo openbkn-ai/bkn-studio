@@ -106,35 +106,51 @@ describe("resource.service · previewCatalogResource", () => {
     vi.stubEnv("VITE_USE_MOCK", "true");
     const { previewCatalogResource } =
       await import("@/modules/data-catalog/services/resource.service");
-    const filterCondition = {
-      operation: "and",
-      sub_conditions: [
-        { field: "customer_id", operation: ">", value: 99999 },
-        {
-          operation: "or",
-          sub_conditions: [
-            { field: "customer_id", operation: "==", value: 100000 },
-            { field: "customer_id", operation: "==", value: 100007 },
-          ],
-        },
-      ],
-    };
-    const result = await previewCatalogResource("res-customers", {
-      filterCondition,
-      limit: 10,
-      offset: 0,
-    });
-    expect(result.total).toBe(2);
-    expect(result.rows).toHaveLength(2);
-    expect(result.rows[0]?.customer_id).toBe(100000);
-    expect(result.rows[1]?.customer_id).toBe(100007);
-    const nextPage = await previewCatalogResource("res-customers", {
-      filterCondition,
-      limit: 10,
-      offset: 2,
-    });
-    expect(nextPage.rows).toHaveLength(0);
-    expect(nextPage.total).toBe(2);
+    const { mockResources } = await import("@/modules/data-catalog/services/mock-db");
+    const customers = mockResources.find((item) => item.id === "res-customers")!;
+    const originalRowCount = customers.rowCount;
+    // Twelve rows include both matches and nonmatching rows without scanning the full demo dataset.
+    customers.rowCount = 12;
+    try {
+      const filterCondition = {
+        operation: "and",
+        sub_conditions: [
+          { field: "customer_id", operation: ">", value: 99999 },
+          {
+            operation: "or",
+            sub_conditions: [
+              { field: "customer_id", operation: "==", value: 100000 },
+              { field: "customer_id", operation: "==", value: 100007 },
+            ],
+          },
+        ],
+      };
+      const result = await previewCatalogResource("res-customers", {
+        filterCondition,
+        limit: 1,
+        offset: 0,
+      });
+      expect(result.total).toBe(2);
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]?.customer_id).toBe(100000);
+      const secondPage = await previewCatalogResource("res-customers", {
+        filterCondition,
+        limit: 1,
+        offset: 1,
+      });
+      expect(secondPage.total).toBe(2);
+      expect(secondPage.rows).toHaveLength(1);
+      expect(secondPage.rows[0]?.customer_id).toBe(100007);
+      const nextPage = await previewCatalogResource("res-customers", {
+        filterCondition,
+        limit: 10,
+        offset: 2,
+      });
+      expect(nextPage.rows).toHaveLength(0);
+      expect(nextPage.total).toBe(2);
+    } finally {
+      customers.rowCount = originalRowCount;
+    }
   });
 
   it("applies a mock derived View's fixed filter to its source rows", async () => {
