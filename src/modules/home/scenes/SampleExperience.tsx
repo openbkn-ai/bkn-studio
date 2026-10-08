@@ -17,7 +17,6 @@ import {
   type SampleCatalog,
   type SampleCatalogItem,
   type SampleInstallation,
-  type SampleInstallationStage,
 } from "@/modules/home/lib/sample-catalog";
 import {
   createSampleInstallation,
@@ -30,7 +29,6 @@ import {
 import styles from "./SampleExperience.module.css";
 
 const POLL_INTERVAL_MS = 4000;
-const SAMPLE_STAGE_IDS = ["database", "discover", "knowledge", "capabilities", "verify"] as const;
 
 export function SampleExperience() {
   const { t } = useTranslation();
@@ -70,14 +68,12 @@ export function SampleExperience() {
 
   useEffect(() => {
     const active = (catalog?.samples ?? []).flatMap((item) => {
-      if (item.status !== "installing" && item.status !== "failed" && item.status !== "conflict") {
+      if (item.status !== "installing") {
         return [];
       }
 
       const installationId = item.installationId ?? installationsRef.current[item.name]?.id ?? null;
-      return installationId
-        ? [{ installationId, live: item.status === "installing", name: item.name }]
-        : [];
+      return installationId ? [{ installationId, name: item.name }] : [];
     });
 
     if (active.length === 0) {
@@ -117,12 +113,6 @@ export function SampleExperience() {
     };
 
     void tick();
-    if (!active.some((item) => item.live)) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
     const timer = window.setInterval(() => void tick(), POLL_INTERVAL_MS);
 
     return () => {
@@ -130,6 +120,52 @@ export function SampleExperience() {
       window.clearInterval(timer);
     };
   }, [catalog, loadCatalog]);
+
+  useEffect(() => {
+    const settled = (catalog?.samples ?? []).flatMap((item) => {
+      if (item.status !== "failed" && item.status !== "conflict") {
+        return [];
+      }
+
+      return item.installationId ? [{ installationId: item.installationId, name: item.name }] : [];
+    });
+
+    if (settled.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const updates = await Promise.all(
+        settled.map(async (item) => {
+          try {
+            return await getSampleInstallation(item.name, item.installationId);
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      setInstallations((current) => {
+        const next = { ...current };
+        updates.forEach((installation) => {
+          if (installation) {
+            next[installation.sample] = installation;
+          }
+        });
+        return next;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [catalog]);
 
   const runInstallation = async (item: SampleCatalogItem, mode: "install" | "retry") => {
     if (runningRef.current.has(item.name)) {
@@ -280,25 +316,6 @@ export function SampleExperience() {
   );
 }
 
-function visibleStages(
-  item: SampleCatalogItem,
-  installation: SampleInstallation | undefined,
-): SampleInstallationStage[] {
-  if (installation && installation.stages.length > 0) {
-    return installation.stages;
-  }
-
-  if (item.status !== "installing") {
-    return [];
-  }
-
-  return SAMPLE_STAGE_IDS.map((id, index) => ({
-    id,
-    name: id,
-    state: index === 0 ? "running" : "pending",
-  }));
-}
-
 function SampleCard({
   installation,
   item,
@@ -319,7 +336,12 @@ function SampleCard({
   const detail = conflict
     ? t("home.sample.errors.ownership_conflict")
     : installation?.error?.message || item.message;
-  const stages = visibleStages(item, installation);
+  const stages =
+    installation &&
+    installation.stages.length > 0 &&
+    (item.status === "installing" || item.status === "failed" || item.status === "conflict")
+      ? installation.stages
+      : [];
 
   return (
     <article className={styles.card}>
@@ -363,13 +385,12 @@ function SampleCard({
         </div>
       </div>
 
-      {stages.length > 0 &&
-      (item.status === "installing" || item.status === "failed" || item.status === "conflict") ? (
+      {stages.length > 0 ? (
         <div className={styles.stages}>
           {stages.map((stage, index) => (
             <div className={styles.stage} data-state={stage.state} key={stage.id}>
               <strong>
-                {index + 1}. {t(`home.sample.stages.${stage.id}`)}
+                {index + 1}. {t(`home.sample.stages.${stage.id}`, { defaultValue: stage.name })}
               </strong>
               <span>{t(`home.sample.stageState.${stage.state}`)}</span>
             </div>
@@ -380,9 +401,7 @@ function SampleCard({
       {detail && item.status !== "installed" && item.status !== "not_installed" ? (
         <p className={conflict ? styles.conflict : styles.error}>{detail}</p>
       ) : null}
-      {conflict && item.status === "conflict" ? (
-        <p className={styles.conflictHint}>{t("home.sample.conflictHint")}</p>
-      ) : null}
+      {conflict ? <p className={styles.conflictHint}>{t("home.sample.conflictHint")}</p> : null}
 
       {item.status === "installed" ? (
         <>

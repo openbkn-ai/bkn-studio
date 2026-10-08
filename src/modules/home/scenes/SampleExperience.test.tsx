@@ -17,8 +17,27 @@ const navigate = vi.hoisted(() => vi.fn());
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
-    t: (key: string, values?: Record<string, unknown>) =>
-      values ? `${key}:${JSON.stringify(values)}` : key,
+    t: (key: string, values?: Record<string, unknown>) => {
+      if (values && "defaultValue" in values) {
+        const { defaultValue, ...rest } = values;
+        if (Object.keys(rest).length === 0) {
+          return key.startsWith("home.sample.stages.") &&
+            ![
+              "home.sample.stages.capabilities",
+              "home.sample.stages.database",
+              "home.sample.stages.discover",
+              "home.sample.stages.knowledge",
+              "home.sample.stages.verify",
+            ].includes(key)
+            ? String(defaultValue)
+            : key;
+        }
+
+        return `${key}:${JSON.stringify(rest)}`;
+      }
+
+      return values ? `${key}:${JSON.stringify(values)}` : key;
+    },
   }),
 }));
 
@@ -296,8 +315,7 @@ describe("SampleExperience", () => {
     expect(screen.queryByText("previous failure")).toBeNull();
     expect(screen.queryByText("Smoke failed")).toBeNull();
     expect(screen.queryByText("1. home.sample.stages.verify")).toBeNull();
-    expect(screen.getByText("1. home.sample.stages.database")).toBeTruthy();
-    expect(screen.getByText("home.sample.stageState.running")).toBeTruthy();
+    expect(screen.queryByText("home.sample.stageState.running")).toBeNull();
   });
 
   it("shows a name conflict with retry and the finished steps", async () => {
@@ -339,6 +357,48 @@ describe("SampleExperience", () => {
     expect(screen.queryByText("knowledge network already exists")).toBeNull();
     expect(await screen.findByText("2. home.sample.stages.discover")).toBeTruthy();
     expect(screen.getAllByText("home.sample.stageState.succeeded")).toHaveLength(2);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(listSamples).toHaveBeenCalledTimes(1);
+    expect(getSampleInstallation).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not invent steps before the server reports them", async () => {
+    listSamples.mockResolvedValue({
+      samples: [sample({ installationId: "inst-1", installable: false, status: "installing" })],
+      sourceRejected: false,
+    });
+    getSampleInstallation.mockResolvedValue({
+      id: "inst-1",
+      requestedBy: "admin",
+      sample: "northwind",
+      stages: [],
+      status: "installing",
+      version: "0.1.0",
+    });
+    renderExperience();
+
+    expect(await screen.findByText("home.sample.status.installing")).toBeTruthy();
+    await waitFor(() => expect(getSampleInstallation).toHaveBeenCalled());
+    expect(screen.queryByText("1. home.sample.stages.database")).toBeNull();
+    expect(screen.queryByText("home.sample.stageState.running")).toBeNull();
+  });
+
+  it("uses the server stage name when that step has no translation", async () => {
+    listSamples.mockResolvedValue({
+      samples: [sample({ installationId: "inst-1", installable: false, status: "installing" })],
+      sourceRejected: false,
+    });
+    getSampleInstallation.mockResolvedValue({
+      id: "inst-1",
+      requestedBy: "admin",
+      sample: "northwind",
+      stages: [{ id: "publish-index", name: "Publish index", state: "running" }],
+      status: "installing",
+      version: "0.1.0",
+    });
+    renderExperience();
+
+    expect(await screen.findByText("1. Publish index")).toBeTruthy();
   });
 
   it("shows the unavailable banner when the source is rejected", async () => {
