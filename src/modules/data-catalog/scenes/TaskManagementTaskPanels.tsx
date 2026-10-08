@@ -54,6 +54,7 @@ import {
   type SemanticUnderstandingTaskListFilters,
   type SemanticUnderstandingTaskSummary,
 } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { isPartiallyCompletedDiscoverTask } from "@/modules/data-connect/utils/discover-task-status";
 import { listCatalogs } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
@@ -119,11 +120,20 @@ const DISCOVER_TASK_STATUS_TONES: Record<DataConnectDiscoverTaskStatus, LightSta
   running: "info",
 };
 
-function DiscoverTaskStatusTag({ status }: { status: DataConnectDiscoverTaskStatus }) {
+function DiscoverTaskStatusTag({
+  status,
+  result,
+}: {
+  status: DataConnectDiscoverTaskStatus;
+  result?: DataConnectDiscoverTaskSummary["result"];
+}) {
   const { t } = useTranslation();
+  const partiallyCompleted = isPartiallyCompletedDiscoverTask(status, result);
   return (
-    <LightStatusTag tone={DISCOVER_TASK_STATUS_TONES[status]}>
-      {t(`dataConnect.discoverTaskStatuses.${status}`)}
+    <LightStatusTag tone={partiallyCompleted ? "warning" : DISCOVER_TASK_STATUS_TONES[status]}>
+      {partiallyCompleted
+        ? t("dataConnect.discoverPartialCompletion")
+        : t(`dataConnect.discoverTaskStatuses.${status}`)}
     </LightStatusTag>
   );
 }
@@ -306,7 +316,7 @@ export function DiscoverTaskListPanel() {
       dataIndex: "strategy",
       title: t("dataCatalog.taskManagement.columns.strategy"),
       width: 110,
-      filters: ["full_sync", "create_only", "cleanup_only"].map((value) => ({
+      filters: ["full_sync", "create_only", "cleanup_only", "count_only"].map((value) => ({
         text: t(`dataConnect.discoverStrategies.${value}`),
         value,
       })),
@@ -341,7 +351,9 @@ export function DiscoverTaskListPanel() {
         value,
       })),
       filteredValue: statuses.length ? statuses : null,
-      render: (value: DataConnectDiscoverTaskStatus) => <DiscoverTaskStatusTag status={value} />,
+      render: (value: DataConnectDiscoverTaskStatus, record) => (
+        <DiscoverTaskStatusTag status={value} result={record.result} />
+      ),
     },
     {
       dataIndex: "progress",

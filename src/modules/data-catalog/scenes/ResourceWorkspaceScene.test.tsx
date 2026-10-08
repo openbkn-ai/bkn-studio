@@ -19,6 +19,7 @@ const discoverCatalogResourceMock = vi.hoisted(() => vi.fn());
 const deleteCatalogResourceMock = vi.hoisted(() => vi.fn());
 const setCatalogResourceEnabledMock = vi.hoisted(() => vi.fn());
 const modalConfirmMock = vi.hoisted(() => vi.fn());
+const messageSuccessMock = vi.hoisted(() => vi.fn());
 const navigateMock = vi.hoisted(() => vi.fn());
 const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
 const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
@@ -80,7 +81,7 @@ vi.mock("react-router-dom", () => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn(), success: vi.fn() },
+    message: { error: vi.fn(), success: messageSuccessMock },
     modal: { confirm: modalConfirmMock },
     runtimeConfig: { currentUser: { permissions: currentPermissions.value } },
   }),
@@ -91,8 +92,16 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 }));
 
 vi.mock("@/framework/ui/common/AppButton", () => ({
-  AppButton: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
-    <button onClick={onClick} type="button">
+  AppButton: ({
+    children,
+    onClick,
+    disabled,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+  }) => (
+    <button disabled={disabled} onClick={onClick} type="button">
       {children}
     </button>
   ),
@@ -631,16 +640,80 @@ describe("ResourceWorkspaceScene", () => {
 
     await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
     expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshCount")).toBeNull();
     expect(screen.queryByText("common.disable")).toBeNull();
   });
 
-  it("does not offer metadata discovery for a view", async () => {
+  it.each(["logicview", "dataset"] as const)(
+    "does not offer metadata discovery for %s",
+    async (category) => {
+      getCatalogResourceMock.mockResolvedValue({
+        ...staleResource,
+        category,
+        lastDiscoverStatus: "error",
+      });
+
+      render(
+        <ResourceWorkspaceScene
+          indexView="config"
+          onIndexViewChange={vi.fn()}
+          onTabChange={vi.fn()}
+          resourceId={staleResource.id}
+          tab="detail"
+        />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
+      expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
+      if (category === "logicview") {
+        expect(screen.getByText("dataCatalog.resourceWorkspace.refreshCount")).toBeTruthy();
+      } else {
+        expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshCount")).toBeNull();
+      }
+      expect(screen.queryByText("dataCatalog.resourceWorkspace.openDiscovery")).toBeNull();
+      expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { enabled: true, emptySchema: false, title: null },
+    { enabled: false, emptySchema: false, title: "resourceDisabledTitle" },
+    { enabled: true, emptySchema: true, title: "metadataUnavailableTitle" },
+  ])(
+    "ignores Dataset discovery failures while preserving query restrictions: %j",
+    async ({ enabled, emptySchema, title }) => {
+      getCatalogResourceMock.mockResolvedValue({
+        ...staleResource,
+        category: "dataset",
+        enabled,
+        status: "active",
+        lastDiscoverStatus: "error",
+        statusMessage: "legacy source error",
+        schema: emptySchema ? [] : staleResource.schema,
+      });
+      render(
+        <ResourceWorkspaceScene
+          indexView="config"
+          onIndexViewChange={vi.fn()}
+          onTabChange={vi.fn()}
+          resourceId={staleResource.id}
+          tab="detail"
+        />,
+      );
+      await screen.findByTestId("detail-schema-name");
+      expect(screen.queryByText("dataCatalog.resourceWorkspace.discoveryFailedTitle")).toBeNull();
+      expect(screen.queryByText("dataCatalog.resourceWorkspace.statusMessageDetail")).toBeNull();
+      if (title) expect(screen.getByText(`dataCatalog.resourceWorkspace.${title}`)).toBeTruthy();
+    },
+  );
+
+  it("retains source discovery failure details for a table", async () => {
     getCatalogResourceMock.mockResolvedValue({
       ...staleResource,
-      category: "logicview",
+      status: "active",
       lastDiscoverStatus: "error",
+      statusMessage: "source error",
     });
-
     render(
       <ResourceWorkspaceScene
         indexView="config"
@@ -650,11 +723,9 @@ describe("ResourceWorkspaceScene", () => {
         tab="detail"
       />,
     );
-
-    await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
-    expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
-    expect(screen.queryByText("dataCatalog.resourceWorkspace.openDiscovery")).toBeNull();
-    expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
+    await screen.findByTestId("detail-schema-name");
+    expect(screen.getByText("dataCatalog.resourceWorkspace.discoveryFailedTitle")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.resourceWorkspace.statusMessageDetail")).toBeTruthy();
   });
 
   it("keeps a view out of index tasks, including a direct index tab link", async () => {
@@ -734,6 +805,102 @@ describe("ResourceWorkspaceScene", () => {
         title: "dataCatalog.resourceWorkspace.disableConfirmTitle",
       }),
     );
+  });
+
+  it.each([
+    "dataCatalog.resourceWorkspace.refreshCount",
+    "dataCatalog.resourceWorkspace.refreshMetadata",
+    "common.disable",
+  ])("disables all resource actions while %s is pending", async (actionLabel) => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+    let resolveRequest!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      resolveRequest = resolve;
+    });
+    discoverCatalogResourceMock.mockReturnValue(pending);
+    setCatalogResourceEnabledMock.mockReturnValue(pending);
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+    fireEvent.click(await screen.findByText(actionLabel));
+    const options = modalConfirmMock.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    let request!: Promise<void>;
+    act(() => {
+      request = options.onOk();
+    });
+    for (const label of [
+      "dataCatalog.resourceWorkspace.refreshCount",
+      "dataCatalog.resourceWorkspace.refreshMetadata",
+      "common.disable",
+    ]) {
+      const button = screen.getByRole("button", { name: label });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    }
+    expect(modalConfirmMock).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolveRequest();
+      await request;
+    });
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.resourceWorkspace.refreshCount" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.resourceWorkspace.refreshMetadata" }),
+    ).toBeEnabled();
+  });
+
+  it("keeps the metadata discovery success message", async () => {
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+    fireEvent.click(await screen.findByText("dataCatalog.resourceWorkspace.refreshMetadata"));
+    const options = modalConfirmMock.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await act(async () => {
+      await options.onOk();
+    });
+    expect(discoverCatalogResourceMock).toHaveBeenCalledWith(staleResource.id);
+    expect(messageSuccessMock).toHaveBeenCalledWith(
+      "dataCatalog.resourceWorkspace.discoveryQueued",
+    );
+  });
+
+  it.each([
+    { category: "table", sourceMetadata: { objectType: "BASE TABLE" } },
+    { category: "table", sourceMetadata: { objectType: "VIEW" } },
+    { category: "index" },
+    { category: "logicview" },
+  ] as const)("creates an exact count task only after confirmation for %j", async (source) => {
+    getCatalogResourceMock.mockResolvedValue({ ...staleResource, ...source });
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+    fireEvent.click(await screen.findByText("dataCatalog.resourceWorkspace.refreshCount"));
+    expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
+    const options = modalConfirmMock.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await act(async () => {
+      await options.onOk();
+    });
+    expect(discoverCatalogResourceMock).toHaveBeenCalledWith(staleResource.id, "count_only");
+    expect(messageSuccessMock).toHaveBeenCalledWith("dataCatalog.resourceWorkspace.countQueued");
   });
 
   it("confirms enabling a disabled resource before issuing the request", async () => {

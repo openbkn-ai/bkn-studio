@@ -307,7 +307,8 @@ export function ResourcePreviewPanel({
   }
 
   if (previewUnavailable) {
-    const discoveryFailed = resource.lastDiscoverStatus === "error";
+    const discoveryFailed =
+      resource.category !== "dataset" && resource.lastDiscoverStatus === "error";
     return (
       <Alert
         description={t(

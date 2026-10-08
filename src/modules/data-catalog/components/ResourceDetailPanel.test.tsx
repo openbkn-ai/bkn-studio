@@ -9,7 +9,11 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { formatDateTime } from "@/framework/i18n/format";
+
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+
+import styles from "./ResourceDetailPanel.module.css";
 
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
 const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
@@ -158,6 +162,95 @@ describe("ResourceDetailPanel", () => {
     );
   });
 
+  it("shows unknown collection times without substituting update_time", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel active canEdit={false} catalog={null} resource={resource} />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByText("dataCatalog.resource.unknownTime")).toHaveLength(3);
+    expect(screen.queryByText(resource.updateTime)).toBeNull();
+  });
+
+  it.each([undefined, 1720000001000])(
+    "shows Dataset row count time %s without source discovery fields",
+    (rowCountTime) => {
+      render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit={false}
+            catalog={null}
+            resource={{ ...resource, category: "dataset", rowCount: 0, rowCountTime }}
+          />
+        </MemoryRouter>,
+      );
+      for (const field of ["discoverStatus", "resourceStatus", "statusMessage"]) {
+        expect(screen.queryByText(`dataCatalog.resource.${field}`)).toBeNull();
+      }
+      const basicInfo = within(
+        screen.getByText("dataCatalog.resource.category").parentElement!.parentElement!,
+      );
+      const cells = ["sourceIdentifier", "fieldCount", "rowCount", "rowCountTime"].map(
+        (field) => basicInfo.getByText(`dataCatalog.resource.${field}`).parentElement!,
+      );
+      cells.forEach((cell, index) => {
+        expect(cell).toHaveClass(styles.basicInfoQuarter);
+        if (index > 0) expect(cells[index - 1].nextElementSibling).toBe(cell);
+      });
+      expect(within(cells[2]).getByText("0")).toBeTruthy();
+      expect(
+        within(cells[3]).getByText(
+          rowCountTime ? formatDateTime(rowCountTime) : "dataCatalog.resource.unknownTime",
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText("dataCatalog.resource.lastDiscoverTime")).toBeNull();
+    },
+  );
+
+  it.each(["table", "index"] as const)(
+    "shows separate discovery and exact count collection times for %s",
+    (category) => {
+      render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit={false}
+            catalog={null}
+            resource={{
+              ...resource,
+              category,
+              rowCount: 0,
+              lastDiscoverTime: 1720000000000,
+              rowCountTime: 1720000001000,
+            }}
+          />
+        </MemoryRouter>,
+      );
+      const basicInfo = within(
+        screen.getByText("dataCatalog.resource.category").parentElement!.parentElement!,
+      );
+      for (const fields of [
+        ["category", "enabledStatus", "discoverStatus", "lastDiscoverTime"],
+        ["sourceIdentifier", "fieldCount", "rowCount", "rowCountTime"],
+      ]) {
+        const cells = fields.map(
+          (field) => basicInfo.getByText(`dataCatalog.resource.${field}`).parentElement!,
+        );
+        cells.forEach((cell, index) => {
+          expect(cell).toHaveClass(styles.basicInfoQuarter);
+          if (index > 0) expect(cells[index - 1].nextElementSibling).toBe(cell);
+        });
+      }
+      for (const field of ["discoverStatus", "resourceStatus", "statusMessage"]) {
+        expect(screen.getByText(`dataCatalog.resource.${field}`)).toBeTruthy();
+      }
+      expect(screen.getByText("dataCatalog.resource.lastDiscoverTime")).toBeTruthy();
+      expect(basicInfo.getByText("dataCatalog.resource.rowCountTime")).toBeTruthy();
+      expect(screen.queryByText("dataCatalog.resource.unknownTime")).toBeNull();
+    },
+  );
+
   it("shows an exact zero row count without the estimate prefix", () => {
     render(
       <MemoryRouter>
@@ -255,6 +348,44 @@ describe("ResourceDetailPanel", () => {
     expect(
       screen.getByText("dataCatalog.resource.sourceForeignKeyCount").parentElement?.textContent,
     ).toContain("1");
+  });
+
+  it.each(["table", "index"] as const)("places the %s estimate in source metadata", (category) => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, category, estimatedRowCount: 0 }}
+        />
+      </MemoryRouter>,
+    );
+    const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
+    const cells = [
+      "fieldCount",
+      "sourceIndexCount",
+      "sourceForeignKeyCount",
+      "estimatedRowCountLabel",
+      "rowCount",
+      "rowCountTime",
+    ].map(
+      (field) => within(sourceMetadata).getByText(`dataCatalog.resource.${field}`).parentElement!,
+    );
+    cells.forEach((cell, index) => {
+      expect(cell).toHaveClass(styles.basicInfoItem);
+      expect(cell).not.toHaveClass(styles.basicInfoQuarter);
+      expect(cell).not.toHaveClass(styles.basicInfoHalf);
+      expect(cell).not.toHaveClass(styles.basicInfoSpanTwo);
+      if (index > 0) expect(cells[index - 1].nextElementSibling).toBe(cell);
+    });
+    const estimate = within(sourceMetadata).getByText(
+      "dataCatalog.resource.estimatedRowCountLabel",
+    ).parentElement!;
+    expect(within(estimate).getByText("0")).toBeTruthy();
+    const basicInfo = screen.getByText("dataCatalog.resource.category").parentElement!
+      .parentElement!;
+    expect(within(basicInfo).queryByText("dataCatalog.resource.estimatedRowCountLabel")).toBeNull();
   });
 
   it("does not show source metadata for a dataset", () => {
@@ -471,5 +602,35 @@ describe("ResourceDetailPanel", () => {
     });
     expect(getCatalogResourceMock).toHaveBeenCalledWith(resource.id);
     expect(await screen.findByText("server description")).toBeTruthy();
+  });
+
+  it("places logic view statistics and their update time in four equal columns", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logicview",
+            rowCount: 7,
+            rowCountTime: 1720000001000,
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const cells = ["sourceIdentifier", "fieldCount", "rowCount", "rowCountTime"].map(
+      (field) => screen.getByText(`dataCatalog.resource.${field}`).parentElement!,
+    );
+    for (const cell of cells) {
+      expect(cell).toHaveClass(styles.basicInfoQuarter);
+    }
+    expect(cells[0].nextElementSibling).toBe(cells[1]);
+    expect(cells[1].nextElementSibling).toBe(cells[2]);
+    expect(cells[2].nextElementSibling).toBe(cells[3]);
+    expect(screen.queryByText("dataCatalog.resource.lastDiscoverTime")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.estimatedRowCountLabel")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.unknownTime")).toBeNull();
   });
 });

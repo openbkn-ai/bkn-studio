@@ -81,6 +81,9 @@ export type CatalogResource = {
   indexConfig?: ResourceIndexConfig;
   /** Latest source-discovery observation reported by Vega. */
   lastDiscoverStatus?: ResourceDiscoverStatus;
+  lastDiscoverTime?: number;
+  /** Exact count collection time from the independent detail field; omitted when unknown. */
+  rowCountTime?: number;
   /** Name of the Resource's current local index, when one has been published. */
   localIndexName?: string;
   /** Authoritative query availability of the Resource's local index. */
@@ -91,7 +94,7 @@ export type CatalogResource = {
   name: string;
   /** Effective operations for the current account on this Resource. */
   operations?: string[];
-  /** Resource count returned by Vega; null means unavailable. */
+  /** Exact count from the independent Vega detail field; null means unknown and zero is valid. */
   rowCount: ResourceRowCount | null;
   /** Estimated source count returned by Vega; null means unavailable. */
   estimatedRowCount?: ResourceRowCount | null;

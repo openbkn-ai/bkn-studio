@@ -25,6 +25,7 @@ const STRATEGY_OPTIONS: DataConnectDiscoverStrategy[] = [
   "full_sync",
   "create_only",
   "cleanup_only",
+  "count_only",
 ];
 
 export function DiscoverRunNowModal({
@@ -71,7 +72,7 @@ export function DiscoverRunNowModal({
         }}
         value={strategy}
       >
-        <Space direction="vertical" size={10}>
+        <Space className={styles.strategyList} direction="vertical" size={10}>
           {STRATEGY_OPTIONS.map((option) => (
             <Radio className={styles.strategyOption} key={option} value={option}>
               <span className={styles.strategyTitle}>

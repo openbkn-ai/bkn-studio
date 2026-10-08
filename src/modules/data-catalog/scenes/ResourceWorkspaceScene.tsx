@@ -90,7 +90,9 @@ export function ResourceWorkspaceScene({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resourceReadForbidden, setResourceReadForbidden] = useState(false);
   const [detailEditing, setDetailEditing] = useState(false);
-  const [resourceAction, setResourceAction] = useState<"discover" | "enabled" | null>(null);
+  const [resourceAction, setResourceAction] = useState<"discover" | "count" | "enabled" | null>(
+    null,
+  );
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const previousTabRef = useRef(tab);
   const resourceVersionRef = useRef(0);
@@ -275,7 +277,9 @@ export function ResourceWorkspaceScene({
   // handled inside the tab panel so the navigation remains discoverable and deep links stay valid.
   const hideSemanticUnderstanding = Boolean(catalog?.builtin);
   const discoveryFailed =
-    resource?.category !== "logicview" && resource?.lastDiscoverStatus === "error";
+    resource?.category !== "logicview" &&
+    resource?.category !== "dataset" &&
+    resource?.lastDiscoverStatus === "error";
   const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;
   const resourceDisabled = queryBlockReason === "disabled";
   const resourceMissing = queryBlockReason === "missing";
@@ -300,18 +304,31 @@ export function ResourceWorkspaceScene({
     setResource(latestResource);
   }, []);
 
-  const triggerResourceDiscovery = useCallback(async () => {
-    if (resource?.category === "logicview") return;
-    setResourceAction("discover");
-    try {
-      await discoverCatalogResource(resourceId);
-      void message.success(t("dataCatalog.resourceWorkspace.discoveryQueued"));
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    } finally {
-      setResourceAction(null);
-    }
-  }, [message, resource?.category, resourceId, t]);
+  const triggerResourceDiscovery = useCallback(
+    async (strategy?: "count_only") => {
+      if (
+        resource?.category === "dataset" ||
+        (resource?.category === "logicview" && strategy !== "count_only")
+      )
+        return;
+      setResourceAction(strategy === "count_only" ? "count" : "discover");
+      try {
+        await discoverCatalogResource(resourceId, ...(strategy ? [strategy] : []));
+        void message.success(
+          t(
+            strategy === "count_only"
+              ? "dataCatalog.resourceWorkspace.countQueued"
+              : "dataCatalog.resourceWorkspace.discoveryQueued",
+          ),
+        );
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
+      } finally {
+        setResourceAction(null);
+      }
+    },
+    [message, resource?.category, resourceId, t],
+  );
 
   const updateResourceEnabled = useCallback(
     async (enabled: boolean) => {
@@ -338,12 +355,12 @@ export function ResourceWorkspaceScene({
   );
 
   const confirmResourceDiscovery = useCallback(() => {
-    if (resource?.category === "logicview") return;
+    if (resource?.category === "logicview" || resource?.category === "dataset") return;
     void modal.confirm({
       cancelText: t("common.cancel"),
       content: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmDescription"),
       okText: t("dataCatalog.resourceWorkspace.refreshMetadataConfirm"),
-      onOk: triggerResourceDiscovery,
+      onOk: () => triggerResourceDiscovery(),
       title: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmTitle"),
     });
   }, [modal, resource?.category, t, triggerResourceDiscovery]);
@@ -515,9 +532,11 @@ export function ResourceWorkspaceScene({
             </div>
           </div>
           <Space className={styles.pageHeaderActions} wrap>
-            {canManageCatalogTasks && resource.category !== "logicview" ? (
+            {canManageCatalogTasks &&
+            resource.category !== "logicview" &&
+            resource.category !== "dataset" ? (
               <AppButton
-                disabled={detailEditing}
+                disabled={detailEditing || resourceAction !== null}
                 icon={<ReloadOutlined />}
                 loading={resourceAction === "discover"}
                 onClick={confirmResourceDiscovery}
@@ -525,11 +544,30 @@ export function ResourceWorkspaceScene({
                 {t("dataCatalog.resourceWorkspace.refreshMetadata")}
               </AppButton>
             ) : null}
+            {canManageCatalogTasks &&
+            (resource.category === "table" ||
+              resource.category === "index" ||
+              resource.category === "logicview") ? (
+              <AppButton
+                disabled={detailEditing || resourceAction !== null}
+                icon={<ReloadOutlined />}
+                loading={resourceAction === "count"}
+                onClick={() => {
+                  void modal.confirm({
+                    title: t("dataCatalog.resourceWorkspace.refreshCount"),
+                    content: t("dataCatalog.resourceWorkspace.refreshCountDescription"),
+                    onOk: () => triggerResourceDiscovery("count_only"),
+                  });
+                }}
+              >
+                {t("dataCatalog.resourceWorkspace.refreshCount")}
+              </AppButton>
+            ) : null}
             {canModifyResource ? (
               <AppButton
                 color={resource.enabled === false ? "green" : undefined}
                 danger={resource.enabled !== false}
-                disabled={detailEditing}
+                disabled={detailEditing || resourceAction !== null}
                 loading={resourceAction === "enabled"}
                 onClick={() => confirmResourceEnabled(resource.enabled === false)}
                 type={resource.enabled === false ? "primary" : "default"}
@@ -587,6 +625,7 @@ export function ResourceWorkspaceScene({
             action={
               canManageCatalogTasks &&
               resource.category !== "logicview" &&
+              resource.category !== "dataset" &&
               !resourceDisabled &&
               !resourceStale &&
               (discoveryFailed || resourceMissing) ? (
@@ -618,7 +657,7 @@ export function ResourceWorkspaceScene({
                             : "dataCatalog.resourceWorkspace.discoveryFailedStaleSchemaDescription",
                   )}
                 </div>
-                {resource.statusMessage ? (
+                {resource.category !== "dataset" && resource.statusMessage ? (
                   <div className={styles.resourceStatusMessage}>
                     {t("dataCatalog.resourceWorkspace.statusMessageDetail", {
                       message: resource.statusMessage,

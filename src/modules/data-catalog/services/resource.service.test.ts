@@ -106,35 +106,51 @@ describe("resource.service · previewCatalogResource", () => {
     vi.stubEnv("VITE_USE_MOCK", "true");
     const { previewCatalogResource } =
       await import("@/modules/data-catalog/services/resource.service");
-    const filterCondition = {
-      operation: "and",
-      sub_conditions: [
-        { field: "customer_id", operation: ">", value: 99999 },
-        {
-          operation: "or",
-          sub_conditions: [
-            { field: "customer_id", operation: "==", value: 100000 },
-            { field: "customer_id", operation: "==", value: 100007 },
-          ],
-        },
-      ],
-    };
-    const result = await previewCatalogResource("res-customers", {
-      filterCondition,
-      limit: 10,
-      offset: 0,
-    });
-    expect(result.total).toBe(2);
-    expect(result.rows).toHaveLength(2);
-    expect(result.rows[0]?.customer_id).toBe(100000);
-    expect(result.rows[1]?.customer_id).toBe(100007);
-    const nextPage = await previewCatalogResource("res-customers", {
-      filterCondition,
-      limit: 10,
-      offset: 2,
-    });
-    expect(nextPage.rows).toHaveLength(0);
-    expect(nextPage.total).toBe(2);
+    const { mockResources } = await import("@/modules/data-catalog/services/mock-db");
+    const customers = mockResources.find((item) => item.id === "res-customers")!;
+    const originalRowCount = customers.rowCount;
+    // Twelve rows include both matches and nonmatching rows without scanning the full demo dataset.
+    customers.rowCount = 12;
+    try {
+      const filterCondition = {
+        operation: "and",
+        sub_conditions: [
+          { field: "customer_id", operation: ">", value: 99999 },
+          {
+            operation: "or",
+            sub_conditions: [
+              { field: "customer_id", operation: "==", value: 100000 },
+              { field: "customer_id", operation: "==", value: 100007 },
+            ],
+          },
+        ],
+      };
+      const result = await previewCatalogResource("res-customers", {
+        filterCondition,
+        limit: 1,
+        offset: 0,
+      });
+      expect(result.total).toBe(2);
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]?.customer_id).toBe(100000);
+      const secondPage = await previewCatalogResource("res-customers", {
+        filterCondition,
+        limit: 1,
+        offset: 1,
+      });
+      expect(secondPage.total).toBe(2);
+      expect(secondPage.rows).toHaveLength(1);
+      expect(secondPage.rows[0]?.customer_id).toBe(100007);
+      const nextPage = await previewCatalogResource("res-customers", {
+        filterCondition,
+        limit: 10,
+        offset: 2,
+      });
+      expect(nextPage.rows).toHaveLength(0);
+      expect(nextPage.total).toBe(2);
+    } finally {
+      customers.rowCount = originalRowCount;
+    }
   });
 
   it("applies a mock derived View's fixed filter to its source rows", async () => {
@@ -579,6 +595,7 @@ describe("resource.service · listCatalogResourcePage", () => {
       columnCount: null,
       indexConfig: undefined,
       rowCount: null,
+      rowCountTime: undefined,
       schema: [],
       sourceMetadata: undefined,
     });
@@ -593,6 +610,7 @@ describe("resource.service · listCatalogResourcePage", () => {
             category: "table",
             id: "res-1",
             last_discover_status: "error",
+            last_discover_time: 100,
             index_name: "bkn_res-1",
             local_status: "available",
             name: "orders",
@@ -617,6 +635,8 @@ describe("resource.service · listCatalogResourcePage", () => {
       schema: "external_data",
       sort: "name",
     });
+    expect(result.items[0]?.lastDiscoverTime).toBe(100);
+    expect(result.items[0]?.rowCountTime).toBeUndefined();
 
     expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/resources", {
       params: {
@@ -680,6 +700,18 @@ describe("resource.service · discovery and enabled actions", () => {
     vi.unstubAllEnvs();
   });
 
+  it("passes count_only to the existing resource discovery endpoint", async () => {
+    postMock.mockResolvedValue({ data: { id: "count-task" } });
+    const { discoverCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    await expect(discoverCatalogResource("res-1", "count_only")).resolves.toEqual({
+      id: "count-task",
+    });
+    expect(postMock).toHaveBeenCalledWith("/vega-backend/v1/resources/res-1/discover", {
+      strategy: "count_only",
+    });
+  });
+
   it("uses dedicated endpoints for resource metadata refresh and enablement", async () => {
     postMock
       .mockResolvedValueOnce({ data: { id: "task-1" } })
@@ -729,6 +761,8 @@ describe("resource.service · getCatalogResources", () => {
             name: "orders",
             operations: ["view_detail", "query_data"],
             row_count: 42,
+            last_discover_time: 1000,
+            row_count_time: 2000,
             estimated_row_count: 41,
             source_metadata: {
               foreign_keys: [{ name: "fk_orders_customer" }],
@@ -757,6 +791,8 @@ describe("resource.service · getCatalogResources", () => {
         localIndexStatus: "available",
         operations: ["view_detail", "query_data"],
         rowCount: 42,
+        lastDiscoverTime: 1000,
+        rowCountTime: 2000,
         estimatedRowCount: 41,
         sourceMetadata: {
           foreignKeyCount: 1,
@@ -769,6 +805,38 @@ describe("resource.service · getCatalogResources", () => {
       }),
     ]);
   });
+
+  it.each([
+    { row_count: 0, row_count_time: 2000, expectedCount: 0, expectedTime: 2000 },
+    { row_count: 42, expectedCount: 42, expectedTime: undefined },
+    { expectedCount: null, expectedTime: undefined },
+  ])(
+    "reads independent exact statistics without a legacy metadata fallback: %j",
+    async (sample) => {
+      getMock.mockResolvedValue({
+        data: {
+          entries: [
+            {
+              catalog_id: "cat-1",
+              category: "table",
+              id: "res-1",
+              name: "orders",
+              row_count: sample.row_count,
+              row_count_time: sample.row_count_time,
+              estimated_row_count: 41,
+              source_metadata: { properties: { row_count: 999, row_count_time: 888 } },
+            },
+          ],
+        },
+      });
+      const { getCatalogResources } =
+        await import("@/modules/data-catalog/services/resource.service");
+      const [resource] = await getCatalogResources(["res-1"]);
+      expect(resource?.rowCount).toBe(sample.expectedCount);
+      expect(resource?.rowCountTime).toBe(sample.expectedTime);
+      expect(resource?.estimatedRowCount).toBe(41);
+    },
+  );
 
   it("maps a derived logic view's nested source resource metadata", async () => {
     getMock.mockResolvedValue({

@@ -227,6 +227,7 @@ type BackendResourceSummary = {
   enabled?: boolean;
   id: string;
   last_discover_status?: string;
+  last_discover_time?: number;
   index_name?: string;
   local_status?: string;
   logic_type?: string;
@@ -242,6 +243,7 @@ type BackendResourceSummary = {
 };
 
 type BackendResourceDetailFields = {
+  row_count_time?: number;
   column_count?: number;
   index_config?: BackendIndexConfig | null;
   row_count?: number | string;
@@ -400,6 +402,8 @@ function mapResource(
     schema: (item.schema_definition ?? []).map(mapSchemaField),
     indexConfig: mapIndexConfigFromBackend(item.index_config),
     lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
+    lastDiscoverTime: item.last_discover_time,
+    rowCountTime: item.row_count_time,
     localIndexName: item.index_name?.trim() || undefined,
     localIndexStatus: normalizeLocalIndexStatus(item.local_status),
     logicType:
@@ -521,6 +525,7 @@ export async function listCatalogResourcePage(
         columnCount: null,
         indexConfig: undefined,
         rowCount: null,
+        rowCountTime: undefined,
         schema: [],
         sourceMetadata: undefined,
       })),
@@ -885,7 +890,10 @@ export async function deleteCatalogResource(
 }
 
 /** Trigger asynchronous metadata refresh for one Resource. */
-export async function discoverCatalogResource(id: string): Promise<{ id: string }> {
+export async function discoverCatalogResource(
+  id: string,
+  strategy?: "full_sync" | "count_only",
+): Promise<{ id: string }> {
   if (useMock) {
     const resource = mockResources.find((item) => item.id === id);
     if (!resource) {
@@ -895,7 +903,10 @@ export async function discoverCatalogResource(id: string): Promise<{ id: string 
     return { id: `discover-resource-${id}` };
   }
 
-  const response = await http.post<{ id: string }>(`/vega-backend/v1/resources/${id}/discover`);
+  const response = await http.post<{ id: string }>(
+    `/vega-backend/v1/resources/${id}/discover`,
+    ...(strategy ? [{ strategy }] : []),
+  );
   return response.data;
 }
 

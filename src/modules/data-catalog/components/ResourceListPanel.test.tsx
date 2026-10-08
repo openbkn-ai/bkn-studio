@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -528,6 +528,27 @@ describe("ResourceListPanel", () => {
     expect(screen.getByText("dataCatalog.resource.localIndexStatuses.unavailable")).toBeTruthy();
     expect(screen.queryByText("dataCatalog.resource.fieldCount")).toBeNull();
     expect(screen.queryByText("dataCatalog.resource.rowCount")).toBeNull();
+  });
+
+  it("omits Dataset discovery and source status even when legacy values exist", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [missingResource({ category: "dataset", statusMessage: "legacy source error" })],
+      total: 1,
+    });
+    renderPanel(catalog);
+    const row = (await screen.findByText("archived_orders")).closest("tr")!;
+    const cells = within(row).getAllByRole("cell");
+    const headers = screen.getAllByRole("columnheader");
+    for (const label of ["resourceStatus", "discoverStatus"]) {
+      const index = headers.findIndex((header) =>
+        header.textContent?.includes(`dataCatalog.resource.${label}`),
+      );
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect(cells[index]).toHaveTextContent("—");
+    }
+    expect(within(row).queryByText("dataCatalog.resourceStatuses.stale")).toBeNull();
+    expect(within(row).queryByText("dataCatalog.discoverStatuses.missing")).toBeNull();
+    expect(screen.queryByText("legacy source error")).toBeNull();
   });
 
   it("shows the source identifier below the resource name", async () => {

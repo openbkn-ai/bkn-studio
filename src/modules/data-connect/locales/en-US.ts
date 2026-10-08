@@ -163,6 +163,7 @@ export const dataConnectEnUS = {
     discoverStrategyHints: {
       full_sync: "Sync all resources, including new discovery and cleanup.",
       create_only: "Discover new resources only. Existing resources are kept.",
+      count_only: "Count existing source tables or views exactly. Complex views may take longer.",
       cleanup_only: "Clean up stale resources only. No new discovery.",
     },
     discoverRunScheduleConfirmTitle: "Run now",
@@ -238,12 +239,15 @@ export const dataConnectEnUS = {
     discoverResultStale: "Stale Resources",
     discoverResultRestored: "Restored Resources",
     discoverResultUnchanged: "Unchanged Resources",
+    discoverResultSkipped: "Skipped",
+    discoverPartialCompletion: "Partially completed",
     discoverResultFailed: "Failed Resources",
     discoverResultMessage: "Result Message",
     discoverManualTask: "Manual Trigger",
     discoverStrategies: {
       full_sync: "Full Sync",
       create_only: "Incremental Create",
+      count_only: "Exact Row Count",
       cleanup_only: "Cleanup Only",
     },
     discoverTaskStatuses: {

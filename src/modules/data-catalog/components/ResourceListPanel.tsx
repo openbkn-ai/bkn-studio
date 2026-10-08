@@ -347,7 +347,7 @@ export function ResourceListPanel({
       title: t("dataCatalog.resource.resourceStatus"),
       width: 104,
       render: (value: CatalogResource["status"], record) => {
-        if (!value) {
+        if (record.category === "dataset" || !value) {
           return "—";
         }
         const tag = (
@@ -385,8 +385,8 @@ export function ResourceListPanel({
       ellipsis: true,
       title: t("dataCatalog.resource.discoverStatus"),
       width: 112,
-      render: (value: ResourceDiscoverStatus | undefined) =>
-        value ? (
+      render: (value: ResourceDiscoverStatus | undefined, record) =>
+        record.category !== "dataset" && value ? (
           <Tag className={DISCOVER_STATUS_CLASSES[value]}>
             {t(`dataCatalog.discoverStatuses.${value}`)}
           </Tag>

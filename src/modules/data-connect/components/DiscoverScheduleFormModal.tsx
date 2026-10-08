@@ -198,6 +198,7 @@ export function DiscoverScheduleFormModal({
               <Select
                 optionLabelProp="label"
                 options={[
+                  { label: t("dataConnect.discoverStrategies.count_only"), value: "count_only" },
                   {
                     label: t("dataConnect.discoverStrategies.full_sync"),
                     value: "full_sync",

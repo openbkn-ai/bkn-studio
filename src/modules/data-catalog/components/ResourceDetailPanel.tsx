@@ -478,7 +478,7 @@ export function ResourceDetailPanel({
           </div>
 
           <div
-            className={`${styles.basicInfoItem} ${resource.category === "logicview" ? styles.basicInfoHalf : ""}`}
+            className={`${styles.basicInfoItem} ${resource.category === "logicview" || resource.category === "dataset" ? styles.basicInfoHalf : resource.category === "table" || resource.category === "index" ? styles.basicInfoQuarter : ""}`}
           >
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.category")}</span>
             <span className={styles.basicInfoValue}>
@@ -486,7 +486,7 @@ export function ResourceDetailPanel({
             </span>
           </div>
           <div
-            className={`${styles.basicInfoItem} ${resource.category === "logicview" ? styles.basicInfoHalf : ""}`}
+            className={`${styles.basicInfoItem} ${resource.category === "logicview" || resource.category === "dataset" ? styles.basicInfoHalf : resource.category === "table" || resource.category === "index" ? styles.basicInfoQuarter : ""}`}
           >
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.enabledStatus")}</span>
             <span className={styles.basicInfoValue}>
@@ -499,8 +499,10 @@ export function ResourceDetailPanel({
               </Tag>
             </span>
           </div>
-          {resource.category !== "logicview" ? (
-            <div className={styles.basicInfoItem}>
+          {resource.category !== "logicview" && resource.category !== "dataset" ? (
+            <div
+              className={`${styles.basicInfoItem} ${resource.category === "table" || resource.category === "index" ? styles.basicInfoQuarter : ""}`}
+            >
               <span className={styles.basicInfoLabel}>
                 {t("dataCatalog.resource.discoverStatus")}
               </span>
@@ -525,8 +527,20 @@ export function ResourceDetailPanel({
               </span>
             </div>
           ) : null}
+          {resource.category === "table" || resource.category === "index" ? (
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.lastDiscoverTime")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.lastDiscoverTime
+                  ? formatDateTime(resource.lastDiscoverTime)
+                  : t("dataCatalog.resource.unknownTime")}
+              </span>
+            </div>
+          ) : null}
 
-          {resource.category !== "logicview" ? (
+          {resource.category !== "logicview" && resource.category !== "dataset" ? (
             <>
               <div className={styles.basicInfoItem}>
                 <span className={styles.basicInfoLabel}>
@@ -559,7 +573,9 @@ export function ResourceDetailPanel({
             </>
           ) : null}
 
-          <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
+          <div
+            className={`${styles.basicInfoItem} ${resource.category === "logicview" || resource.category === "table" || resource.category === "index" || resource.category === "dataset" ? styles.basicInfoQuarter : styles.basicInfoHalf}`}
+          >
             <span className={styles.basicInfoLabel}>
               {t("dataCatalog.resource.sourceIdentifier")}
             </span>
@@ -578,6 +594,21 @@ export function ResourceDetailPanel({
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}</span>
             <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
           </div>
+          {resource.category === "table" ||
+          resource.category === "index" ||
+          resource.category === "logicview" ||
+          resource.category === "dataset" ? (
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.rowCountTime")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.rowCountTime
+                  ? formatDateTime(resource.rowCountTime)
+                  : t("dataCatalog.resource.unknownTime")}
+              </span>
+            </div>
+          ) : null}
 
           {resource.category !== "logicview" ? (
             <>
@@ -722,19 +753,13 @@ export function ResourceDetailPanel({
                     )}
                   </span>
                 </div>
-                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                <div className={styles.basicInfoItem}>
                   <span className={styles.basicInfoLabel}>
                     {t("dataCatalog.resource.fieldCount")}
                   </span>
                   <span className={styles.basicInfoValue}>{resource.columnCount ?? "-"}</span>
                 </div>
-                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-                  <span className={styles.basicInfoLabel}>
-                    {t("dataCatalog.resource.rowCount")}
-                  </span>
-                  <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
-                </div>
-                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                <div className={styles.basicInfoItem}>
                   <span className={styles.basicInfoLabel}>
                     {t("dataCatalog.resource.sourceIndexCount")}
                   </span>
@@ -742,12 +767,34 @@ export function ResourceDetailPanel({
                     {resource.sourceMetadata?.indexCount ?? "-"}
                   </span>
                 </div>
-                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                <div className={styles.basicInfoItem}>
                   <span className={styles.basicInfoLabel}>
                     {t("dataCatalog.resource.sourceForeignKeyCount")}
                   </span>
                   <span className={styles.basicInfoValue}>
                     {resource.sourceMetadata?.foreignKeyCount ?? "-"}
+                  </span>
+                </div>
+                <div className={styles.basicInfoItem}>
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.estimatedRowCountLabel")}
+                  </span>
+                  <span className={styles.basicInfoValue}>{resource.estimatedRowCount ?? "-"}</span>
+                </div>
+                <div className={styles.basicInfoItem}>
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.rowCount")}
+                  </span>
+                  <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
+                </div>
+                <div className={styles.basicInfoItem}>
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.rowCountTime")}
+                  </span>
+                  <span className={styles.basicInfoValue}>
+                    {resource.rowCountTime
+                      ? formatDateTime(resource.rowCountTime)
+                      : t("dataCatalog.resource.unknownTime")}
                   </span>
                 </div>
               </>
