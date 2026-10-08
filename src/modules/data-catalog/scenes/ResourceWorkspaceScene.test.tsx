@@ -644,29 +644,36 @@ describe("ResourceWorkspaceScene", () => {
     expect(screen.queryByText("common.disable")).toBeNull();
   });
 
-  it("does not offer metadata discovery for a view", async () => {
-    getCatalogResourceMock.mockResolvedValue({
-      ...staleResource,
-      category: "logicview",
-      lastDiscoverStatus: "error",
-    });
+  it.each(["logicview", "dataset"] as const)(
+    "does not offer metadata discovery for %s",
+    async (category) => {
+      getCatalogResourceMock.mockResolvedValue({
+        ...staleResource,
+        category,
+        lastDiscoverStatus: "error",
+      });
 
-    render(
-      <ResourceWorkspaceScene
-        indexView="config"
-        onIndexViewChange={vi.fn()}
-        onTabChange={vi.fn()}
-        resourceId={staleResource.id}
-        tab="detail"
-      />,
-    );
+      render(
+        <ResourceWorkspaceScene
+          indexView="config"
+          onIndexViewChange={vi.fn()}
+          onTabChange={vi.fn()}
+          resourceId={staleResource.id}
+          tab="detail"
+        />,
+      );
 
-    await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
-    expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
-    expect(screen.getByText("dataCatalog.resourceWorkspace.refreshCount")).toBeTruthy();
-    expect(screen.queryByText("dataCatalog.resourceWorkspace.openDiscovery")).toBeNull();
-    expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
-  });
+      await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
+      expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
+      if (category === "logicview") {
+        expect(screen.getByText("dataCatalog.resourceWorkspace.refreshCount")).toBeTruthy();
+      } else {
+        expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshCount")).toBeNull();
+      }
+      expect(screen.queryByText("dataCatalog.resourceWorkspace.openDiscovery")).toBeNull();
+      expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
+    },
+  );
 
   it("keeps a view out of index tasks, including a direct index tab link", async () => {
     getCatalogResourceMock.mockResolvedValue({ ...staleResource, category: "logicview" });

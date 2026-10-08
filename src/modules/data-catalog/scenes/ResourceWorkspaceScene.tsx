@@ -304,7 +304,11 @@ export function ResourceWorkspaceScene({
 
   const triggerResourceDiscovery = useCallback(
     async (strategy?: "count_only") => {
-      if (resource?.category === "logicview" && strategy !== "count_only") return;
+      if (
+        resource?.category === "dataset" ||
+        (resource?.category === "logicview" && strategy !== "count_only")
+      )
+        return;
       setResourceAction(strategy === "count_only" ? "count" : "discover");
       try {
         await discoverCatalogResource(resourceId, ...(strategy ? [strategy] : []));
@@ -349,7 +353,7 @@ export function ResourceWorkspaceScene({
   );
 
   const confirmResourceDiscovery = useCallback(() => {
-    if (resource?.category === "logicview") return;
+    if (resource?.category === "logicview" || resource?.category === "dataset") return;
     void modal.confirm({
       cancelText: t("common.cancel"),
       content: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmDescription"),
@@ -526,7 +530,9 @@ export function ResourceWorkspaceScene({
             </div>
           </div>
           <Space className={styles.pageHeaderActions} wrap>
-            {canManageCatalogTasks && resource.category !== "logicview" ? (
+            {canManageCatalogTasks &&
+            resource.category !== "logicview" &&
+            resource.category !== "dataset" ? (
               <AppButton
                 disabled={detailEditing || resourceAction !== null}
                 icon={<ReloadOutlined />}
@@ -617,6 +623,7 @@ export function ResourceWorkspaceScene({
             action={
               canManageCatalogTasks &&
               resource.category !== "logicview" &&
+              resource.category !== "dataset" &&
               !resourceDisabled &&
               !resourceStale &&
               (discoveryFailed || resourceMissing) ? (
