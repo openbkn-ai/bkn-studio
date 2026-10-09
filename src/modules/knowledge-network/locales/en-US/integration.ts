@@ -106,8 +106,6 @@ openbkn help all`,
 
 const bkn = await createAuthenticatedClient({
   baseUrl: process.env.BKN_BASE_URL!,
-  // Set BKN_INSECURE=true only for a trusted self-signed test environment.
-  insecure: process.env.BKN_INSECURE === "true",
   auth: {
     username: process.env.BKN_USERNAME!,
     password: process.env.BKN_PASSWORD!,

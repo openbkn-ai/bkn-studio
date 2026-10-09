@@ -102,8 +102,6 @@ openbkn help all`,
 
 const bkn = await createAuthenticatedClient({
   baseUrl: process.env.BKN_BASE_URL!,
-  // 仅受信任的自签名测试环境设置 BKN_INSECURE=true。
-  insecure: process.env.BKN_INSECURE === "true",
   auth: {
     username: process.env.BKN_USERNAME!,
     password: process.env.BKN_PASSWORD!,
