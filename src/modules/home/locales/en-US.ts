@@ -167,6 +167,8 @@ export const homeEnUS = {
       reload: "Reload",
       importPackage: "Import offline package",
       importing: "Importing…",
+      importFailed:
+        "The offline sample package could not be imported. Check its version, digest, and platform compatibility.",
       sourceLabel: "Source",
       sourceName: "openbkn-ai/bkn-samples",
       stages: {

@@ -48,6 +48,7 @@ export function SampleExperience() {
   const [installingNames, setInstallingNames] = useState<string[]>([]);
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState(false);
   const installationsRef = useRef(installations);
   const runningRef = useRef(new Set<string>());
   const catalogRequestRef = useRef(0);
@@ -222,11 +223,12 @@ export function SampleExperience() {
 
   const importPackage = async (file: File) => {
     setImporting(true);
+    setImportError(false);
     try {
       await importSamplePackage(file);
       await loadCatalog();
     } catch {
-      setLoadError(true);
+      setImportError(true);
     } finally {
       setImporting(false);
     }
@@ -301,6 +303,7 @@ export function SampleExperience() {
           {catalog ? <p>{t("home.sample.cachedCatalog")}</p> : null}
         </div>
       ) : null}
+      {importError ? <div className={styles.banner}>{t("home.sample.importFailed")}</div> : null}
 
       {!catalog && !loadError ? <p className={styles.meta}>{t("home.sample.loading")}</p> : null}
 
@@ -826,6 +829,8 @@ function knownError(code: string) {
     "image_unavailable",
     "install_failed",
     "install_interrupted",
+    "release_withdrawn",
+    "runtime_upgrade_required",
     "ownership_conflict",
     "sample_data_unavailable",
     "source_rejected",

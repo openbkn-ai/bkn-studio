@@ -364,6 +364,25 @@ describe("SampleExperience", () => {
     await waitFor(() => expect(screen.queryByText("home.sample.confirm.irreversible")).toBeNull());
   });
 
+  it("clears an unknown request error when polling later reports success", async () => {
+    listSamples
+      .mockResolvedValueOnce({ samples: [sample()], sourceRejected: false })
+      .mockResolvedValueOnce({
+        samples: [
+          sample({ status: "installed", installationId: "inst-1", installedVersion: "0.1.0" }),
+        ],
+        sourceRejected: false,
+      });
+    createSampleInstallation.mockRejectedValue(new SampleRequestError("status_unknown", ""));
+    renderExperience();
+
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
+
+    expect(await screen.findByText("home.sample.errors.status_unknown")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("home.sample.errors.status_unknown")).toBeNull());
+  });
+
   it("polls the created installation when the catalog omits its id", async () => {
     listSamples
       .mockResolvedValueOnce({ samples: [sample()], sourceRejected: false })

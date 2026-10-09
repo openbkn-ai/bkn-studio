@@ -149,6 +149,7 @@ export const homeZhCN = {
       reload: "重新加载",
       importPackage: "导入离线包",
       importing: "正在导入…",
+      importFailed: "离线样例包导入失败，请检查包版本、摘要和平台兼容性。",
       sourceLabel: "来源",
       sourceName: "openbkn-ai/bkn-samples",
       stages: {
