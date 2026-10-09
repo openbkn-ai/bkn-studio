@@ -42,7 +42,8 @@ export const subscriptionZhCN = {
           b2: "Oracle（0.2.0 起）",
           b3: "SAP HANA（0.2.0 起）",
         },
-        description: "认证/高级数据源连接器（SQL Server、Oracle、SAP HANA；Oracle 与 SAP HANA 自 0.2.0 起支持）；社区版仅开放基础连接器",
+        description:
+          "认证/高级数据源连接器（SQL Server、Oracle、SAP HANA；Oracle 与 SAP HANA 自 0.2.0 起支持）；社区版仅开放基础连接器",
         name: "高级数据连接",
       },
       vega_logic_view: {
