@@ -19,13 +19,11 @@ export const subscriptionZhCN = {
   subscription: {
     capabilities: {
       business_provenance: {
-        // 与业务溯源页的三个视图同名(时间链视图 / 证据链 / 执行链路)。
         bullets: {
           b1: "时间链",
           b2: "证据链",
-          b3: "执行链",
         },
-        description: "业务问题与结果的证据链、数据溯源、业务语义图与交互式追溯",
+        description: "业务问题与结果的时间链、证据链、数据溯源、业务语义图与交互式追溯",
         name: "业务溯源",
       },
       bkn_trace: {
@@ -34,15 +32,17 @@ export const subscriptionZhCN = {
       },
       connector_certified: {
         bullets: {
-          b1: "SQL Server 等商业数据库直连,不必再导出中间文件",
+          b1: "SQL Server、Oracle、SAP HANA 直连（后两者 0.2.0 起支持），无需导出中间文件",
           b2: "连接参数、驱动与方言由官方维护并随版本验证",
           b3: "与社区连接器同一套建模、索引与查询链路,切换不改模型",
         },
         // 卡片只列连得上哪些库;上面的整句卖点留给升级弹窗。
         cardBullets: {
           b1: "SQL Server",
+          b2: "Oracle（0.2.0 起）",
+          b3: "SAP HANA（0.2.0 起）",
         },
-        description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
+        description: "认证/高级数据源连接器（SQL Server、Oracle、SAP HANA；Oracle 与 SAP HANA 自 0.2.0 起支持）；社区版仅开放基础连接器",
         name: "高级数据连接",
       },
       vega_logic_view: {
