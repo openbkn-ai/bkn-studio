@@ -18,6 +18,14 @@ import {
 const SAMPLE_API = "/studio/samples";
 const INSTALL_TIMEOUT_MS = 30000;
 
+export async function importSamplePackage(file: File): Promise<void> {
+  await http.post(`${SAMPLE_API}/import`, file, {
+    headers: { "Content-Type": "application/gzip" },
+    skipErrorToast: true,
+    timeout: 120000,
+  });
+}
+
 export class SampleRequestError extends Error {
   code: string;
 

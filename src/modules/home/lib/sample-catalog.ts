@@ -85,6 +85,7 @@ export type SampleInstallation = {
 
 export type SampleCatalog = {
   samples: SampleCatalogItem[];
+  canImport?: boolean;
   sourceRejected: boolean;
   sourceRefresh?: {
     supported: boolean;
@@ -143,6 +144,7 @@ export function parseSampleCatalog(payload: unknown): SampleCatalog {
   return {
     samples,
     sourceRejected,
+    ...(payload.canImport === true ? { canImport: true } : {}),
     sourceRefresh:
       refresh && refresh.supported === true
         ? {

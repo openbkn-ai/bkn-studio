@@ -147,6 +147,8 @@ export const homeZhCN = {
       progressUnavailable: "暂时无法获取安装状态。保留最后已知状态，这不表示安装失败。",
       loading: "正在读取样例目录",
       reload: "重新加载",
+      importPackage: "导入离线包",
+      importing: "正在导入…",
       sourceLabel: "来源",
       sourceName: "openbkn-ai/bkn-samples",
       stages: {

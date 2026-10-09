@@ -165,6 +165,8 @@ export const homeEnUS = {
         "The installation status could not be retrieved. The last known status is kept; this does not mean installation failed.",
       loading: "Loading the sample catalog",
       reload: "Reload",
+      importPackage: "Import offline package",
+      importing: "Importing…",
       sourceLabel: "Source",
       sourceName: "openbkn-ai/bkn-samples",
       stages: {

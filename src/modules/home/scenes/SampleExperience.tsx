@@ -21,11 +21,13 @@ import {
   createSampleInstallation,
   getSampleInstallation,
   getSampleReleaseNotes,
+  importSamplePackage,
   listSampleInstallations,
   type SampleReleaseNotes,
   listSamples,
   refreshSamples,
   retrySampleInstallation,
+  readSampleRequestError,
   SampleRequestError,
 } from "@/modules/home/services/sample-catalog.service";
 
@@ -46,6 +48,7 @@ export function SampleExperience() {
   const [pending, setPending] = useState<SampleCatalogItem | null>(null);
   const [installingNames, setInstallingNames] = useState<string[]>([]);
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
+  const [importing, setImporting] = useState(false);
   const installationsRef = useRef(installations);
   const runningRef = useRef(new Set<string>());
   const catalogRequestRef = useRef(0);
@@ -173,8 +176,7 @@ export function SampleExperience() {
       setInstallations((current) => ({ ...current, [item.name]: installation }));
       await loadCatalog();
     } catch (error) {
-      const requestError =
-        error instanceof SampleRequestError ? error : new SampleRequestError("install_failed", "");
+      const requestError = readSampleRequestError(error);
       setPending(null);
       setActionErrors((current) => ({
         ...current,
@@ -204,6 +206,18 @@ export function SampleExperience() {
     }
   };
 
+  const importPackage = async (file: File) => {
+    setImporting(true);
+    try {
+      await importSamplePackage(file);
+      await loadCatalog();
+    } catch {
+      setLoadError(true);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const samples = catalog?.samples ?? [];
   const showUnavailable = Boolean(catalog?.sourceRejected);
 
@@ -230,6 +244,21 @@ export function SampleExperience() {
                 : "home.sample.reload",
             )}
           </button>
+          {catalog?.canImport ? (
+            <label className={styles.reload}>
+              {importing ? t("home.sample.importing") : t("home.sample.importPackage")}
+              <input
+                accept=".tar.gz,application/gzip"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void importPackage(file);
+                }}
+                type="file"
+              />
+            </label>
+          ) : null}
         </div>
       </div>
 
