@@ -1185,6 +1185,7 @@ export const bknTraceZhCN = {
       accessProfileFailed: "无法获取当前溯源分析权限，请刷新后重试。",
       missingScope: "请输入 trace id 或 request id。",
       queryFailed: "查询失败。",
+      auditNotConfigured: "系统审计尚未配置。请联系部署管理员配置并启用审计采集，完成后再刷新。",
     },
     emptyStates: {
       businessNodes: "未返回业务语义节点",

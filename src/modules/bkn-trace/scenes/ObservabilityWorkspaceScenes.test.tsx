@@ -7,6 +7,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import dayjs from "dayjs";
+import { AxiosError, AxiosHeaders } from "axios";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -328,6 +329,45 @@ describe("observability workspace scenes", () => {
     expect(resetQuery).not.toHaveProperty("actorId");
     expect(resetQuery).not.toHaveProperty("actorQuery");
     expect(new URLSearchParams(window.location.search).has("actor_id")).toBe(false);
+  });
+
+  it("系统审计未配置时展示配置提示，刷新成功后清除提示", async () => {
+    vi.mocked(listLogs).mockRejectedValueOnce(
+      new AxiosError("Request failed with status code 503", undefined, undefined, undefined, {
+        config: { headers: new AxiosHeaders() },
+        data: { error: { code: "audit_consumer_not_configured", retryable: false } },
+        headers: {},
+        status: 503,
+        statusText: "Service Unavailable",
+      }),
+    );
+    render(<ObservabilityLogsScene mode="audit" />);
+    expect(await screen.findByText("bknTrace.errors.auditNotConfigured")).not.toBeNull();
+    expect(screen.queryByText("Request failed with status code 503")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
+    await waitFor(() =>
+      expect(screen.queryByText("bknTrace.errors.auditNotConfigured")).toBeNull(),
+    );
+    expect(screen.getByText("供应链分析助手 的业务会话")).not.toBeNull();
+  });
+
+  it("混合查询保留可用数据并提示审计尚未配置", async () => {
+    const result = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockResolvedValueOnce({
+      ...result,
+      sourceStatus: [
+        {
+          sourceId: "audit-ledger",
+          status: "not_integrated",
+          reliability: "best_effort",
+          coveredModules: ["system_management"],
+          reason: "audit_consumer_not_configured",
+        },
+      ],
+    });
+    render(<ObservabilityLogsScene />);
+    expect(await screen.findByText("bknTrace.errors.auditNotConfigured")).not.toBeNull();
+    expect(screen.getByText("供应链分析助手 的业务会话")).not.toBeNull();
   });
 
   it("只在当前查询失败时显示来源错误，不显示来源运行状态", async () => {

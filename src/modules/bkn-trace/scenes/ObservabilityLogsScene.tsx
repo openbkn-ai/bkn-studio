@@ -35,6 +35,7 @@ import {
 } from "@/modules/bkn-trace/components/log-presentation";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
+  isAuditConsumerNotConfigured,
   listLogs,
   type AuditOutcome,
   type BusinessModule,
@@ -83,6 +84,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
   const [result, setResult] = useState<LogListResult>();
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
   const [loading, setLoading] = useState(true);
+  const [auditNotConfigured, setAuditNotConfigured] = useState(false);
   const [error, setError] = useState<string>();
 
   const load = useCallback(
@@ -90,6 +92,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       if (!canSearchLogs(access, associatedScope)) return;
       setLoading(true);
       setError(undefined);
+      setAuditNotConfigured(false);
       try {
         const query: LogListQuery = {
           page: nextPage,
@@ -113,7 +116,16 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         };
         setResult(await listLogs(query));
       } catch (caught: unknown) {
-        setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
+        setResult(undefined);
+        const unconfigured = isAuditConsumerNotConfigured(caught);
+        setAuditNotConfigured(unconfigured);
+        setError(
+          unconfigured
+            ? t("bknTrace.errors.auditNotConfigured")
+            : caught instanceof Error
+              ? caught.message
+              : t("bknTrace.errors.queryFailed"),
+        );
       } finally {
         setLoading(false);
       }
@@ -267,7 +279,13 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         </Button>
       </header>
 
-      {error ? <Alert message={error} showIcon type="error" /> : null}
+      {error ? (
+        <Alert message={error} showIcon type={auditNotConfigured ? "warning" : "error"} />
+      ) : null}
+      {!error &&
+      result?.sourceStatus.some((source) => source.reason === "audit_consumer_not_configured") ? (
+        <Alert message={t("bknTrace.errors.auditNotConfigured")} showIcon type="warning" />
+      ) : null}
       {hasSourceQueryFailure(result?.sourceStatus) ? (
         <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" />
       ) : null}

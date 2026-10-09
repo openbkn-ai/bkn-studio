@@ -6,6 +6,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AxiosError, AxiosHeaders } from "axios";
 
 const getMock = vi.hoisted(() => vi.fn());
 
@@ -14,6 +15,29 @@ vi.mock("@/framework/request/http", () => ({
 }));
 
 describe("observability service", () => {
+  it("distinguishes an unconfigured audit consumer from a temporary source failure", async () => {
+    const { isAuditConsumerNotConfigured } = await import("./observability.service");
+    const response = {
+      config: { headers: new AxiosHeaders() },
+      data: { error: { code: "audit_consumer_not_configured", retryable: false } },
+      headers: {},
+      status: 503,
+      statusText: "Service Unavailable",
+    };
+    expect(
+      isAuditConsumerNotConfigured(
+        new AxiosError("503", undefined, undefined, undefined, response),
+      ),
+    ).toBe(true);
+    response.data.error.code = "sources_unavailable";
+    expect(
+      isAuditConsumerNotConfigured(
+        new AxiosError("503", undefined, undefined, undefined, response),
+      ),
+    ).toBe(false);
+    expect(isAuditConsumerNotConfigured(new Error("audit_consumer_not_configured"))).toBe(false);
+  });
+
   beforeEach(() => {
     vi.resetModules();
     getMock.mockReset();
