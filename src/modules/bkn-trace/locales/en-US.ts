@@ -1253,6 +1253,8 @@ export const bknTraceEnUS = {
         "Unable to load the current provenance access profile. Refresh and try again.",
       missingScope: "Enter a trace id or request id.",
       queryFailed: "Query failed.",
+      auditNotConfigured:
+        "System audit is not configured. Ask your deployment administrator to configure and enable audit collection, then refresh.",
     },
     emptyStates: {
       businessNodes: "No business semantic nodes returned.",

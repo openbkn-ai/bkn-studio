@@ -6,8 +6,16 @@
  */
 
 import { http } from "@/framework/request/http";
+import axios from "axios";
 
 const OBSERVABILITY_API_PREFIX = "/observability/v1";
+
+export function isAuditConsumerNotConfigured(error: unknown): boolean {
+  return (
+    axios.isAxiosError<{ error?: { code?: string } }>(error) &&
+    error.response?.data.error?.code === "audit_consumer_not_configured"
+  );
+}
 
 export type LogCategory =
   "access.user" | "audit.admin" | "audit.security" | "runtime.business" | "runtime.model";
