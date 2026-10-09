@@ -21,6 +21,14 @@
   line-height: 1.6;
 }
 
+.catalogToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .banner,
 .error {
   padding: 12px 14px;
@@ -87,6 +95,7 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   flex-shrink: 0;
   gap: 8px;
   align-items: center;
@@ -111,7 +120,8 @@
 }
 
 .install:disabled,
-.retry:disabled {
+.retry:disabled,
+.reload:disabled {
   border-color: var(--color-divider);
   background: transparent;
   color: var(--color-text-secondary);
@@ -171,6 +181,56 @@
 .confirmList {
   margin: 12px 0 0;
   padding-left: 18px;
+}
+
+.details {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.confirmation {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+}
+
+.confirmation h4 {
+  margin: 0 0 8px;
+}
+
+.notesContent {
+  overflow-wrap: anywhere;
+}
+
+.versionPicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.versionPicker select {
+  padding: 6px 10px;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.releaseNotes,
+.history {
+  margin-bottom: 16px;
+}
+
+.historyItem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .confirmActions {

@@ -48,7 +48,7 @@ describe("sample catalog service", () => {
     expect(postMock).toHaveBeenCalledWith(
       "/studio/samples/northwind/installations",
       {},
-      { skipErrorToast: true, timeout: 30 * 60 * 1000 },
+      { skipErrorToast: true, timeout: 30000 },
     );
   });
 
