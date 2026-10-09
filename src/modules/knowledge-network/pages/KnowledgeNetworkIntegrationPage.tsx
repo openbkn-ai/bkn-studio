@@ -5,21 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  ApiOutlined,
-  CodeOutlined,
-  CopyOutlined,
-  ForkOutlined,
-  KeyOutlined,
-} from "@ant-design/icons";
+import { ApiOutlined, CodeOutlined, CopyOutlined, ForkOutlined } from "@ant-design/icons";
 import { App } from "antd";
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation } from "react-router-dom";
 
 import { gatewayOrigin } from "@/framework/auth/oauth";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
-import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 
 import styles from "./KnowledgeNetworkIntegrationPage.module.css";
@@ -54,8 +46,6 @@ type CodeIntegrationPanelProps<T extends string> = {
   installCommand?: string;
   installSuccessMessage?: string;
   installTitle?: string;
-  issueApiKeyLabel: string;
-  note: string;
   packageLabel: string;
   packageUrl: string;
   successMessage: string;
@@ -74,18 +64,14 @@ function CodeIntegrationPanel<T extends string>({
   installCommand,
   installSuccessMessage,
   installTitle,
-  issueApiKeyLabel,
-  note,
   packageLabel,
   packageUrl,
   successMessage,
   title,
 }: CodeIntegrationPanelProps<T>) {
   const { message } = App.useApp();
-  const location = useLocation();
   const [activeExample, setActiveExample] = useState<T>(() => Object.keys(examples)[0] as T);
   const example = examples[activeExample];
-  const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
 
   const copyText = async (text: string, successText: string) => {
     try {
@@ -106,11 +92,6 @@ function CodeIntegrationPanel<T extends string>({
             <li key={step}>{step}</li>
           ))}
         </ol>
-        <div className={styles.sdkKeyNote}>
-          <KeyOutlined aria-hidden />
-          <span>{note}</span>
-          <Link to={apiKeyPagePath}>{issueApiKeyLabel}</Link>
-        </div>
       </aside>
 
       <div className={styles.sdkContent}>
@@ -232,8 +213,6 @@ function CliIntegrationPanel() {
         t("knowledgeNetwork.integration.cli.steps.skill"),
       ]}
       guideTitle={t("knowledgeNetwork.integration.cli.guideTitle")}
-      issueApiKeyLabel={t("knowledgeNetwork.integration.issueApiKey")}
-      note={t("knowledgeNetwork.integration.cli.note")}
       packageLabel={t("knowledgeNetwork.integration.packageLabel")}
       packageUrl="https://www.npmjs.com/package/@openbkn/bkn-sdk"
       successMessage={t("knowledgeNetwork.integration.cli.successMessage")}
@@ -264,8 +243,6 @@ function SdkIntegrationPanel() {
       installCommand="npm install @openbkn/bkn-sdk"
       installSuccessMessage={t("knowledgeNetwork.integration.sdk.installSuccessMessage")}
       installTitle={t("knowledgeNetwork.integration.sdk.installTitle")}
-      issueApiKeyLabel={t("knowledgeNetwork.integration.issueApiKey")}
-      note={t("knowledgeNetwork.integration.sdk.note")}
       packageLabel={t("knowledgeNetwork.integration.packageLabel")}
       packageUrl="https://www.npmjs.com/package/@openbkn/bkn-sdk"
       successMessage={t("knowledgeNetwork.integration.sdk.successMessage")}
