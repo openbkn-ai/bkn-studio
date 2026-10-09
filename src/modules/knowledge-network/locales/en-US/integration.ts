@@ -126,7 +126,7 @@ const result = await bkn.context.searchSchema(
         "instance-query": {
           label: "Query Instances",
           title: "Query object instances by object type and conditions",
-          code: `const result = await bkn.context.queryObjectInstance("your_kn_id", {
+          code: `const result = await bkn.context.queryObjectInstance(knId, {
   ot_id: "order",
   condition: {
     operation: "and",
@@ -141,10 +141,10 @@ const result = await bkn.context.searchSchema(
           label: "Dynamic Tools",
           title: "Discover and call MCP tools exposed by the current knowledge network",
           code: `// Step 1: Discover tools exposed by the knowledge network
-const tools = await bkn.context.tools("your_kn_id");
+const tools = await bkn.context.tools(knId);
 
 // Step 2: Call the selected tool
-const result = await bkn.context.toolCall("your_kn_id", "search_schema", {
+const result = await bkn.context.toolCall(knId, "search_schema", {
   query: "Find order-related objects and relations",
   response_format: "json",
 });`,

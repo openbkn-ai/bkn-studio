@@ -122,7 +122,7 @@ const result = await bkn.context.searchSchema(
         "instance-query": {
           label: "查询实例",
           title: "按对象类与条件查询对象实例",
-          code: `const result = await bkn.context.queryObjectInstance("your_kn_id", {
+          code: `const result = await bkn.context.queryObjectInstance(knId, {
   ot_id: "order",
   condition: {
     operation: "and",
@@ -137,10 +137,10 @@ const result = await bkn.context.searchSchema(
           label: "动态工具",
           title: "发现并调用当前知识网络开放的 MCP 工具",
           code: `// 步骤 1：发现当前知识网络开放的工具
-const tools = await bkn.context.tools("your_kn_id");
+const tools = await bkn.context.tools(knId);
 
 // 步骤 2：调用指定工具
-const result = await bkn.context.toolCall("your_kn_id", "search_schema", {
+const result = await bkn.context.toolCall(knId, "search_schema", {
   query: "查询订单相关对象和关系",
   response_format: "json",
 });`,
