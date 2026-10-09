@@ -8,6 +8,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import styles from "./BusinessProvenance016.module.css";
+
 import type { EvidenceChainView } from "./evidence-chain.types";
 import { BusinessProvenance016 } from "./BusinessProvenance016";
 
@@ -912,5 +914,36 @@ describe("BusinessProvenance016", () => {
     expect(screen.queryByRole("tab", { name: "时间链" })).toBeNull();
     expect(screen.queryByRole("tab", { name: "证据链" })).toBeNull();
     expect(screen.getByRole("button", { name: "全屏查看" })).toBeTruthy();
+  });
+  it("shares heading semantics and typography across embedded and full-screen evidence", () => {
+    render(<BusinessProvenance016 view={view} evidenceOnly />);
+    const checkHeadings = () => {
+      const headings = screen.getAllByRole("heading", { name: "业务处理与证据", level: 2 });
+      expect(headings).toHaveLength(2);
+      headings.forEach((heading) => expect(heading).toHaveClass(styles.sectionTitle));
+    };
+    checkHeadings();
+    fireEvent.click(screen.getByRole("button", { name: "全屏查看" }));
+    checkHeadings();
+    fireEvent.click(screen.getByRole("button", { name: "退出全屏" }));
+    checkHeadings();
+  });
+
+  it("restores body scrolling on full-screen exit and unmount", () => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "scroll";
+    const { unmount } = render(<BusinessProvenance016 view={view} evidenceOnly />);
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "全屏查看" }));
+      expect(document.body.style.overflow).toBe("hidden");
+      fireEvent.click(screen.getByRole("button", { name: "退出全屏" }));
+      expect(document.body.style.overflow).toBe("scroll");
+      fireEvent.click(screen.getByRole("button", { name: "全屏查看" }));
+      unmount();
+      expect(document.body.style.overflow).toBe("scroll");
+    } finally {
+      unmount();
+      document.body.style.overflow = previous;
+    }
   });
 });
