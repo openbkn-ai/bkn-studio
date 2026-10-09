@@ -27,7 +27,6 @@ import {
   listSamples,
   refreshSamples,
   retrySampleInstallation,
-  readSampleRequestError,
   SampleRequestError,
 } from "@/modules/home/services/sample-catalog.service";
 
@@ -82,6 +81,20 @@ export function SampleExperience() {
     const timer = window.setInterval(() => void loadCatalog(), POLL_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [installingNames, loadCatalog]);
+
+  useEffect(() => {
+    const installed = new Set(
+      (catalog?.samples ?? [])
+        .filter((item) => item.status === "installed")
+        .map((item) => item.name),
+    );
+    if (installed.size === 0) return;
+    setActionErrors((current) => {
+      const next = { ...current };
+      installed.forEach((name) => delete next[name]);
+      return next;
+    });
+  }, [catalog]);
 
   useEffect(() => {
     const tracked = (catalog?.samples ?? [])
@@ -176,7 +189,8 @@ export function SampleExperience() {
       setInstallations((current) => ({ ...current, [item.name]: installation }));
       await loadCatalog();
     } catch (error) {
-      const requestError = readSampleRequestError(error);
+      const requestError =
+        error instanceof SampleRequestError ? error : new SampleRequestError("install_failed", "");
       setPending(null);
       setActionErrors((current) => ({
         ...current,
@@ -412,7 +426,7 @@ function SampleCard({
           if (!cancelled) setNotesLoading(false);
         });
     }
-    if (item.installationId && item.hasReleaseNotes) {
+    if (item.installationId) {
       setHistoryLoading(true);
       setHistoryError(false);
       void listSampleInstallations(item.name)
@@ -702,7 +716,7 @@ function SampleCard({
             ))}
           </ul>
         ) : null}
-        {item.installationId && item.hasReleaseNotes ? (
+        {item.installationId ? (
           <div className={styles.history}>
             <h4>{t("home.sample.historyTitle")}</h4>
             {historyLoading ? (
