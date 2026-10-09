@@ -45,12 +45,12 @@ describe("sample catalog", () => {
     expect(catalog.sourceRejected).toBe(false);
     expect(catalog.samples).toHaveLength(1);
     const sample = catalog.samples[0];
-    expect(sample?.questions).toEqual([]);
+    expect(sample?.questions).toEqual(["Which orders are open?"]);
     expect(sample && sampleCardAction(sample)).toBe("install");
     expect(sampleCatalogName("northwind")).toBe("bkn-sample-northwind");
   });
 
-  it("keeps questions only after a successful install", () => {
+  it("keeps the preview questions and actual successful installation time", () => {
     const catalog = parseSampleCatalog({
       items: [
         item({ installable: false, installedAt: "2026-09-24T03:40:00Z", status: "installed" }),

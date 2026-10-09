@@ -128,7 +128,8 @@
   isolation: isolate;
   flex: 1 0 auto;
   padding: 28px 40px 44px;
-  overflow: hidden;
+  /* Clip decorative backgrounds without allowing focus to scroll this container. */
+  overflow: clip;
   background:
     linear-gradient(
       180deg,

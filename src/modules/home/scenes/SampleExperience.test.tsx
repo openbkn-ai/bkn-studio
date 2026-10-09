@@ -13,10 +13,14 @@ const createSampleInstallation = vi.hoisted(() => vi.fn());
 const retrySampleInstallation = vi.hoisted(() => vi.fn());
 const getSampleInstallation = vi.hoisted(() => vi.fn());
 const navigate = vi.hoisted(() => vi.fn());
+const getSampleReleaseNotes = vi.hoisted(() => vi.fn());
+const listSampleInstallations = vi.hoisted(() => vi.fn());
+const refreshSamples = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
+    i18n: { language: "zh-CN", resolvedLanguage: "zh-CN" },
     t: (key: string, values?: Record<string, unknown>) => {
       if (values && "defaultValue" in values) {
         const { defaultValue, ...rest } = values;
@@ -58,6 +62,9 @@ vi.mock("@/modules/home/services/sample-catalog.service", () => ({
   getSampleInstallation,
   listSamples,
   retrySampleInstallation,
+  getSampleReleaseNotes,
+  listSampleInstallations,
+  refreshSamples,
 }));
 
 import { SampleExperience } from "@/modules/home/scenes/SampleExperience";
@@ -88,8 +95,67 @@ function renderExperience() {
 }
 
 describe("SampleExperience", () => {
+  it("installs the chosen published version with that version's manifest digest", async () => {
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({
+          manifestSha256: "a".repeat(64),
+          hasReleaseNotes: true,
+          versions: [
+            {
+              version: "0.1.0",
+              hasReleaseNotes: true,
+              installable: true,
+              manifestSha256: "a".repeat(64),
+            },
+            {
+              version: "0.2.0",
+              hasReleaseNotes: true,
+              installable: true,
+              manifestSha256: "b".repeat(64),
+            },
+          ],
+        }),
+      ],
+      sourceRejected: false,
+    });
+    getSampleReleaseNotes.mockImplementation((_name: string, version: string) =>
+      Promise.resolve({
+        sample: "northwind",
+        version,
+        content: "Chosen version notes",
+        digest: "sha256:" + "c".repeat(64),
+        resolvedLocale: "zh-CN",
+      }),
+    );
+    createSampleInstallation.mockResolvedValue({
+      id: "inst-1",
+      sample: "northwind",
+      version: "0.2.0",
+      status: "installing",
+      stages: [],
+    });
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "0.2.0" } });
+    await waitFor(() =>
+      expect(getSampleReleaseNotes).toHaveBeenCalledWith("northwind", "0.2.0", "zh-CN"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.install" }));
+    const start = await screen.findByRole("button", { name: "home.sample.actions.start" });
+    await waitFor(() => expect(start.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(start);
+    await waitFor(() =>
+      expect(createSampleInstallation).toHaveBeenCalledWith("northwind", {
+        version: "0.2.0",
+        manifestSha256: "b".repeat(64),
+      }),
+    );
+  });
   beforeEach(() => {
     vi.clearAllMocks();
+    getSampleReleaseNotes.mockReset();
+    listSampleInstallations.mockResolvedValue({ items: [], historyComplete: false });
     getSampleInstallation.mockImplementation((sampleName: string, installationId: string) => ({
       id: installationId,
       sample: sampleName,
@@ -97,6 +163,121 @@ describe("SampleExperience", () => {
       status: "installing",
       version: "0.1.0",
     }));
+  });
+
+  it("starts collapsed and permits only one expanded card", async () => {
+    listSamples.mockResolvedValue({
+      samples: [sample(), sample({ name: "harbor", displayName: "Harbor" })],
+      sourceRejected: false,
+    });
+    renderExperience();
+    const toggles = await screen.findAllByRole("button", { name: "home.sample.actions.expand" });
+    expect(toggles).toHaveLength(2);
+    expect(toggles[0]).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggles[0]);
+    expect(toggles[0]).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.expand" }));
+    expect(toggles[0]).toHaveAttribute("aria-expanded", "false");
+    expect(toggles[1]).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("loads notes before confirming the fixed version and manifest", async () => {
+    const manifestSha256 = "a".repeat(64);
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({
+          manifestSha256,
+          hasReleaseNotes: true,
+          versions: [{ version: "0.1.0", hasReleaseNotes: true }],
+        }),
+      ],
+      sourceRejected: false,
+    });
+    getSampleReleaseNotes.mockResolvedValue({
+      version: "0.1.0",
+      resolvedLocale: "zh-CN",
+      content: "Release details",
+      digest: "sha256:" + "b".repeat(64),
+    });
+    createSampleInstallation.mockResolvedValue({
+      id: "inst-1",
+      sample: "northwind",
+      stages: [],
+      status: "installing",
+      version: "0.1.0",
+    });
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    expect(await screen.findByText("Release details")).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "home.sample.actions.start" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
+    await waitFor(() =>
+      expect(createSampleInstallation).toHaveBeenCalledWith("northwind", {
+        version: "0.1.0",
+        manifestSha256,
+      }),
+    );
+    expect(getSampleReleaseNotes).toHaveBeenCalledWith("northwind", "0.1.0", "zh-CN");
+  });
+
+  it("blocks confirmation when release notes cannot be loaded", async () => {
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({ hasReleaseNotes: true, versions: [{ version: "0.1.0", hasReleaseNotes: true }] }),
+      ],
+      sourceRejected: false,
+    });
+    getSampleReleaseNotes.mockRejectedValue(new Error("unavailable"));
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    expect(await screen.findByText("home.sample.notesFailed")).toBeVisible();
+    expect(screen.getByRole("button", { name: "home.sample.actions.start" })).toBeDisabled();
+    expect(createSampleInstallation).not.toHaveBeenCalled();
+  });
+
+  it("shows the installed record and notes only after expansion", async () => {
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({
+          status: "installed",
+          installedVersion: "0.1.0",
+          installationId: "inst-1",
+          installable: false,
+          hasReleaseNotes: true,
+          versions: [{ version: "0.1.0", hasReleaseNotes: true }],
+        }),
+      ],
+      sourceRejected: false,
+    });
+    getSampleReleaseNotes.mockResolvedValue({
+      version: "0.1.0",
+      resolvedLocale: "zh-CN",
+      content: "Release details",
+      digest: "sha256:" + "b".repeat(64),
+    });
+    listSampleInstallations.mockResolvedValue({
+      items: [
+        {
+          id: "inst-1",
+          sample: "northwind",
+          version: "0.1.0",
+          status: "installed",
+          stages: [],
+          finishedAt: "2026-10-09T05:52:05Z",
+        },
+      ],
+      historyComplete: false,
+    });
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
+    expect(await screen.findByText("Release details")).toBeVisible();
+    expect(await screen.findByText("2026-10-09T05:52:05Z")).toBeVisible();
+    expect(screen.getByText("home.sample.historyPartial")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.collapse" }));
+    expect(screen.getByText("Release details")).not.toBeVisible();
+    expect(screen.getByRole("button", { name: "home.sample.actions.open" })).toBeEnabled();
   });
 
   it("asks for confirmation before installing a catalog sample", async () => {
@@ -112,12 +293,61 @@ describe("SampleExperience", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
     expect(screen.getByText("home.sample.confirm.irreversible")).toBeTruthy();
-    expect(screen.getByText(/bkn-sample-northwind/)).toBeTruthy();
+    expect(screen.getByText(/home.sample.confirm.network/)).toBeTruthy();
     expect(createSampleInstallation).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
 
     await waitFor(() => expect(createSampleInstallation).toHaveBeenCalledWith("northwind"));
+  });
+
+  it("localizes a recovered interruption and permits retrying the original task", async () => {
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({ status: "failed", installationId: "inst-1", message: "Server English detail" }),
+      ],
+      sourceRejected: false,
+    });
+    getSampleInstallation.mockResolvedValue({
+      id: "inst-1",
+      sample: "northwind",
+      status: "failed",
+      version: "0.1.0",
+      stages: [],
+      error: { code: "install_interrupted", message: "Server English detail" },
+    });
+    renderExperience();
+    expect(await screen.findByText("home.sample.errors.install_interrupted")).toBeVisible();
+    expect(screen.queryByText("Server English detail")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.failureDetails" }));
+    expect(screen.getByRole("button", { name: "home.sample.actions.retry" })).toBeEnabled();
+  });
+
+  it("tracks an accepted task after the create request returns", async () => {
+    listSamples.mockResolvedValueOnce({ samples: [sample()], sourceRejected: false });
+    listSamples.mockResolvedValue({
+      samples: [sample({ status: "installing", installationId: "inst-1", installable: false })],
+      sourceRejected: false,
+    });
+    createSampleInstallation.mockResolvedValue({
+      id: "inst-1",
+      sample: "northwind",
+      status: "installing",
+      version: "0.1.0",
+      stages: [{ id: "database", name: "Prepare database", state: "running" }],
+    });
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
+    await waitFor(() => expect(getSampleInstallation).toHaveBeenCalledWith("northwind", "inst-1"));
+    expect(
+      await screen.findByRole("button", { name: "home.sample.actions.progress" }),
+    ).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "home.sample.actions.install" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "home.sample.actions.open" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.collapse" }));
+    expect(screen.getByRole("button", { name: "home.sample.actions.progress" })).toBeEnabled();
+    expect(createSampleInstallation).toHaveBeenCalledTimes(1);
   });
 
   it("closes the confirm dialog and shows the install error", async () => {
@@ -132,6 +362,25 @@ describe("SampleExperience", () => {
 
     expect(await screen.findByText("Need an administrator")).toBeTruthy();
     await waitFor(() => expect(screen.queryByText("home.sample.confirm.irreversible")).toBeNull());
+  });
+
+  it("clears an unknown request error when polling later reports success", async () => {
+    listSamples
+      .mockResolvedValueOnce({ samples: [sample()], sourceRejected: false })
+      .mockResolvedValueOnce({
+        samples: [
+          sample({ status: "installed", installationId: "inst-1", installedVersion: "0.1.0" }),
+        ],
+        sourceRejected: false,
+      });
+    createSampleInstallation.mockRejectedValue(new SampleRequestError("status_unknown", ""));
+    renderExperience();
+
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
+
+    expect(await screen.findByText("home.sample.errors.status_unknown")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("home.sample.errors.status_unknown")).toBeNull());
   });
 
   it("polls the created installation when the catalog omits its id", async () => {
@@ -198,6 +447,7 @@ describe("SampleExperience", () => {
     renderExperience();
 
     const install = await screen.findByRole("button", { name: "home.sample.actions.install" });
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.failureDetails" }));
     const retry = screen.getByRole("button", { name: "home.sample.actions.retry" });
 
     expect(install).toHaveProperty("disabled", true);
@@ -223,6 +473,13 @@ describe("SampleExperience", () => {
       ],
       sourceRejected: false,
     });
+    getSampleInstallation.mockImplementation((sampleName: string, installationId: string) => ({
+      id: installationId,
+      sample: sampleName,
+      stages: [{ id: "database", name: "Prepare", state: "running" }],
+      status: sampleName === "northwind" ? "failed" : "installing",
+      version: "0.1.0",
+    }));
     retrySampleInstallation.mockResolvedValue({
       id: "inst-9",
       sample: "northwind",
@@ -232,7 +489,13 @@ describe("SampleExperience", () => {
     });
     renderExperience();
 
-    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.retry" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "home.sample.actions.failureDetails" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "home.sample.actions.retry" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.retry" }));
     expect(screen.queryByText("home.sample.confirm.irreversible")).toBeNull();
     await waitFor(() =>
       expect(retrySampleInstallation).toHaveBeenCalledWith("northwind", "inst-9"),
@@ -309,6 +572,7 @@ describe("SampleExperience", () => {
     expect(await screen.findByText("previous failure")).toBeTruthy();
     expect(screen.getByText("1. home.sample.stages.verify")).toBeTruthy();
 
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.failureDetails" }));
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.retry" }));
 
     expect(await screen.findByText("home.sample.status.installing")).toBeTruthy();
@@ -353,6 +617,7 @@ describe("SampleExperience", () => {
 
     expect(await screen.findByText("home.sample.errors.ownership_conflict")).toBeTruthy();
     expect(screen.getByText("home.sample.conflictHint")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.failureDetails" }));
     expect(screen.getByRole("button", { name: "home.sample.actions.retry" })).toBeTruthy();
     expect(screen.queryByText("knowledge network already exists")).toBeNull();
     expect(await screen.findByText("2. home.sample.stages.discover")).toBeTruthy();

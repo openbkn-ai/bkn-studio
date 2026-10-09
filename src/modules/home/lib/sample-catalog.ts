@@ -8,7 +8,7 @@
 export const OFFICIAL_SAMPLE_SOURCE = "https://github.com/openbkn-ai/bkn-samples";
 export const SAMPLE_NAMESPACE = "openbkn-samples";
 
-const SAMPLE_NAME = /^[a-z0-9-]{1,32}$/;
+const SAMPLE_NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
 export const SAMPLE_STATUSES = [
   "not_installed",
@@ -37,6 +37,18 @@ export type SampleCatalogItem = {
   installationId: string | null;
   installable: boolean;
   installedAt?: string;
+  installedVersion?: string;
+  manifestSha256?: string;
+  hasReleaseNotes?: boolean;
+  latestPublishedVersion?: string;
+  versions?: {
+    version: string;
+    hasReleaseNotes: boolean;
+    manifestSha256?: string;
+    installable?: boolean;
+    reason?: string;
+    publishedAt?: string;
+  }[];
   knowledgeNetwork: SampleKnowledgeNetwork;
   licenseNote: string;
   message: string;
@@ -67,11 +79,21 @@ export type SampleInstallation = {
   stages: SampleInstallationStage[];
   status: SampleStatus;
   version: string;
+  startedAt?: string;
+  finishedAt?: string;
 };
 
 export type SampleCatalog = {
   samples: SampleCatalogItem[];
+  canImport?: boolean;
   sourceRejected: boolean;
+  sourceRefresh?: {
+    supported: boolean;
+    status: string;
+    code: string;
+    lastSuccessfulRefreshAt?: string;
+    throttled?: boolean;
+  };
 };
 
 export type SampleCardAction = "install" | "none" | "open" | "retry";
@@ -118,7 +140,22 @@ export function parseSampleCatalog(payload: unknown): SampleCatalog {
     sourceRejected ? { ...item, installable: false, status: "unavailable" as const } : item,
   );
 
-  return { samples, sourceRejected };
+  const refresh = isRecord(payload.sourceRefresh) ? payload.sourceRefresh : null;
+  return {
+    samples,
+    sourceRejected,
+    ...(payload.canImport === true ? { canImport: true } : {}),
+    sourceRefresh:
+      refresh && refresh.supported === true
+        ? {
+            supported: true,
+            status: optionalString(refresh.status) ?? "not_refreshed",
+            code: optionalString(refresh.code) ?? "",
+            lastSuccessfulRefreshAt: optionalString(refresh.lastSuccessfulRefreshAt),
+            throttled: refresh.throttled === true,
+          }
+        : undefined,
+  };
 }
 
 export function parseSampleInstallation(payload: unknown): SampleInstallation {
@@ -139,6 +176,8 @@ export function parseSampleInstallation(payload: unknown): SampleInstallation {
     stages,
     status,
     version: optionalString(payload.version) ?? "",
+    startedAt: optionalString(payload.startedAt),
+    finishedAt: optionalString(payload.finishedAt),
   };
 }
 
@@ -160,7 +199,7 @@ function parseSample(payload: unknown): SampleCatalogItem | null {
   const network = isRecord(payload.knowledgeNetwork) ? payload.knowledgeNetwork : null;
   const networkId = optionalString(network?.id);
 
-  if (!status || !networkId) {
+  if (!status || (!networkId && status !== "unavailable")) {
     return null;
   }
 
@@ -173,14 +212,50 @@ function parseSample(payload: unknown): SampleCatalogItem | null {
     installationId: optionalString(payload.installationId) ?? null,
     installable: payload.installable === true,
     installedAt: installed ? optionalString(payload.installedAt) : undefined,
+    installedVersion: installed ? optionalString(payload.installedVersion) : undefined,
+    manifestSha256:
+      typeof payload.manifestSha256 === "string" && /^[a-f0-9]{64}$/.test(payload.manifestSha256)
+        ? payload.manifestSha256
+        : undefined,
+    hasReleaseNotes:
+      Array.isArray(payload.versions) &&
+      payload.versions.some(
+        (item: unknown) =>
+          isRecord(item) && item.version === payload.version && item.hasReleaseNotes === true,
+      ),
+    latestPublishedVersion: optionalString(payload.latestPublishedVersion),
+    versions: Array.isArray(payload.versions)
+      ? payload.versions.flatMap((item: unknown) => {
+          if (
+            !isRecord(item) ||
+            typeof item.version !== "string" ||
+            !/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(item.version)
+          )
+            return [];
+          return [
+            {
+              version: item.version,
+              hasReleaseNotes: item.hasReleaseNotes === true,
+              manifestSha256:
+                typeof item.manifestSha256 === "string" &&
+                /^[a-f0-9]{64}$/.test(item.manifestSha256)
+                  ? item.manifestSha256
+                  : undefined,
+              installable: typeof item.installable === "boolean" ? item.installable : undefined,
+              reason: optionalString(item.reason),
+              publishedAt: optionalString(item.publishedAt),
+            },
+          ];
+        })
+      : undefined,
     knowledgeNetwork: {
-      displayName: optionalString(network?.displayName) ?? networkId,
-      id: networkId,
+      displayName: optionalString(network?.displayName) ?? networkId ?? "",
+      id: networkId ?? "",
     },
     licenseNote: optionalString(payload.licenseNote) ?? "",
     message: optionalString(payload.message) ?? "",
     name,
-    questions: installed ? stringList(payload.questions) : [],
+    questions: stringList(payload.questions),
     status,
     summary: optionalString(payload.summary) ?? "",
     version: optionalString(payload.version) ?? "",
