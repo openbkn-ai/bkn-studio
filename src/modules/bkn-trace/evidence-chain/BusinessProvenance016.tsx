@@ -397,7 +397,7 @@ function ReadingView({
       <section className={styles.sectionHead}>
         <div>
           <span className={styles.kicker}>{p16Text("reading.attribution")}</span>
-          <h2>{p16Text("reading.processAndEvidence")}</h2>
+          <h2 className={styles.sectionTitle}>{p16Text("reading.processAndEvidence")}</h2>
         </div>
         <p>{p16Text("reading.explanation")}</p>
       </section>
@@ -1393,9 +1393,9 @@ export function BusinessProvenance016({
             </button>
           </div>
         ) : (
-          <div>
+          <div className={styles.workspaceHeading}>
             <span className={styles.kicker}>{p16Text("workspace.evidence")}</span>
-            <strong>{p16Text("reading.processAndEvidence")}</strong>
+            <h2 className={styles.sectionTitle}>{p16Text("reading.processAndEvidence")}</h2>
           </div>
         )}
         <button
