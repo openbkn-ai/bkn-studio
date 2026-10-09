@@ -552,7 +552,7 @@
   background: var(--color-accent-bg);
 }
 .graphNode.node_step {
-  border-color: var(--color-text-secondary);
+  border-color: var(--color-text-tertiary);
   background: var(--color-bg-page);
 }
 .graphNode.nodeSelected {
@@ -637,6 +637,7 @@
   overflow: auto;
   border-radius: 4px;
   background: var(--color-interface-code-bg);
+  border: 1px solid var(--color-border);
   padding: 9px;
   color: var(--color-interface-code-text);
   font-size: 10px;
@@ -897,6 +898,7 @@
   overflow: auto;
   border-radius: 6px;
   background: var(--color-interface-code-bg);
+  border: 1px solid var(--color-border);
   padding: 12px;
   color: var(--color-interface-code-text);
 }
@@ -1253,8 +1255,8 @@
   max-height: 220px;
   margin: 0;
   overflow: auto;
-  border-top: 1px solid var(--color-divider);
   background: var(--color-interface-code-bg);
+  border: 1px solid var(--color-border);
   padding: 10px;
   color: var(--color-interface-code-text);
   font-size: 10px;

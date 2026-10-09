@@ -20,4 +20,26 @@ describe("evidence chain theme surfaces", () => {
       expect(declarations).not.toMatch(/data-theme/);
     },
   );
+  it.each([".attempt pre", ".answerDocument :global(pre)", ".timeInspector pre"])(
+    "%s separates code from the surrounding light surface",
+    (selector) => {
+      const css = readFileSync(
+        "src/modules/bkn-trace/evidence-chain/BusinessProvenance016.module.css",
+        "utf8",
+      );
+      const rule = css.split(`${selector} {`)[1]?.split("}")[0];
+      expect(rule).toBeDefined();
+      expect(rule).toMatch(/\bborder:\s*1px solid var\(--color-border\)/);
+    },
+  );
+
+  it("keeps technical step outlines quieter than secondary text", () => {
+    const css = readFileSync(
+      "src/modules/bkn-trace/evidence-chain/BusinessProvenance016.module.css",
+      "utf8",
+    );
+    const rule = css.split(".graphNode.node_step {")[1]?.split("}")[0];
+    expect(rule).toBeDefined();
+    expect(rule).not.toMatch(/border-color:\s*var\(--color-text-(?:primary|secondary)\)/);
+  });
 });
