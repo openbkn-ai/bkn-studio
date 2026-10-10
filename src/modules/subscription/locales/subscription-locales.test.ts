@@ -29,12 +29,19 @@ describe("subscription capability copy", () => {
     ).toEqual(["Timeline", "Evidence chain"]);
   });
 
-  it("lists the 0.2.0 Oracle and SAP HANA connectors on the Professional card", () => {
+  it("lists Oracle and SAP HANA without version labels on the Professional card", () => {
     expect(
       Object.values(subscriptionZhCN.subscription.capabilities.connector_certified.cardBullets),
-    ).toEqual(["SQL Server", "Oracle（0.2.0 起）", "SAP HANA（0.2.0 起）"]);
+    ).toEqual(["SQL Server", "Oracle", "SAP HANA"]);
     expect(
       Object.values(subscriptionEnUS.subscription.capabilities.connector_certified.cardBullets),
-    ).toEqual(["SQL Server", "Oracle (from 0.2.0)", "SAP HANA (from 0.2.0)"]);
+    ).toEqual(["SQL Server", "Oracle", "SAP HANA"]);
+    for (const copy of [
+      subscriptionZhCN.subscription.capabilities.connector_certified,
+      subscriptionEnUS.subscription.capabilities.connector_certified,
+    ]) {
+      expect(copy.description).not.toContain("0.2.0");
+      expect(Object.values(copy.bullets).join(" ")).not.toContain("0.2.0");
+    }
   });
 });
