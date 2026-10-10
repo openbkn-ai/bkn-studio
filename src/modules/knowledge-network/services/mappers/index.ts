@@ -87,6 +87,10 @@ export function mapRecentObject(item: BackendObjectType): KnowledgeNetworkRecent
 }
 
 export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTypeRecord {
+  const indexStatus = item.index_status?.state
+    ? { state: item.index_status.state, sourceStatus: item.index_status.source_status }
+    : { state: "unknown" as const };
+
   return {
     id: item.id,
     name: item.name,
@@ -104,12 +108,10 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
           type: item.data_source.type,
         }
       : undefined,
-    indexStatus: item.index_status?.state
-      ? { state: item.index_status.state, sourceStatus: item.index_status.source_status }
-      : undefined,
+    indexStatus,
     // The UI still keeps a boolean for graph rendering, but it is derived exclusively from the
     // current BKN index_status; there is no persisted-status fallback.
-    hasIndex: item.index_status?.state === "available",
+    hasIndex: indexStatus.state === "available",
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
   };
