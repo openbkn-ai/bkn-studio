@@ -692,7 +692,11 @@ export const dataCatalogEnUS = {
       activeTaskLocked:
         "This resource already has an active build task, so the entire configuration page is locked. Wait for it to finish or stop it before changing config or starting a new build.",
       configConflict:
-        "An active build task blocks index config updates. Stop the task, then save again.",
+        "The index configuration could not be saved due to a conflict. Refresh the resource and review the configuration before retrying.",
+      resourceUpdateConflict:
+        "Another request updated this resource. Refresh the page, then edit and save the index configuration again.",
+      datasetRebuildRequired:
+        "The existing Dataset index structure or fulltext field analyzer cannot be changed directly. Rebuild the Dataset to apply the new configuration.",
       startRejected:
         "Could not start this task (config may have changed, or a newer successful build exists). Save the latest config under Configure Index, then create a new build.",
       created: "Build task created: {{id}}",

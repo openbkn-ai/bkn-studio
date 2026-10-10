@@ -660,7 +660,11 @@ export async function createCatalogResource(input: ResourceCreateInput) {
   );
 }
 
-export async function updateCatalogResource(id: string, input: ResourceUpdateInput) {
+export async function updateCatalogResource(
+  id: string,
+  input: ResourceUpdateInput,
+  options: { skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
     const index = mockResources.findIndex((item) => item.id === id);
     if (index < 0) {
@@ -707,17 +711,21 @@ export async function updateCatalogResource(id: string, input: ResourceUpdateInp
     return wait(nextResource);
   }
 
-  await http.put(`/vega-backend/v1/resources/${id}`, {
-    catalog_id: input.catalogId,
-    category: input.category,
-    description: input.description,
-    ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
-    name: input.name,
-    schema_definition: input.schema.map(mapSchemaFieldUpdateToBackend),
-    index_config: mapIndexConfigToBackend(input.indexConfig),
-    expected_update_time: input.expectedUpdateTime,
-    source_identifier: input.sourceIdentifier,
-  });
+  await http.put(
+    `/vega-backend/v1/resources/${id}`,
+    {
+      catalog_id: input.catalogId,
+      category: input.category,
+      description: input.description,
+      ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
+      name: input.name,
+      schema_definition: input.schema.map(mapSchemaFieldUpdateToBackend),
+      index_config: mapIndexConfigToBackend(input.indexConfig),
+      expected_update_time: input.expectedUpdateTime,
+      source_identifier: input.sourceIdentifier,
+    },
+    { skipErrorToast: options.skipErrorToast },
+  );
 
   return getCatalogResource(id);
 }

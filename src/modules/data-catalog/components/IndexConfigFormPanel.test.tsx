@@ -16,6 +16,8 @@ import type {
   ResourceUpdateInput,
 } from "@/modules/data-catalog/types/data-catalog";
 
+const translateMock = vi.hoisted(() => vi.fn((key: string) => key));
+const messageErrorMock = vi.hoisted(() => vi.fn());
 const loadAnalyzerCapabilitiesMock = vi.hoisted(() => vi.fn());
 const loadEmbeddingModelOptionsMock = vi.hoisted(() => vi.fn());
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
@@ -24,11 +26,11 @@ const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: translateMock }),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: { error: vi.fn(), success: vi.fn() } }),
+  useAppServices: () => ({ message: { error: messageErrorMock, success: vi.fn() } }),
 }));
 
 vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
@@ -52,6 +54,9 @@ vi.mock("@/modules/data-catalog/utils/embedding-model-options", () => ({
   pickRegisteredEmbeddingModelId: vi.fn().mockReturnValue(undefined),
 }));
 
+import { dataCatalogZhCN } from "@/modules/data-catalog/locales/zh-CN";
+import { dataCatalogEnUS } from "@/modules/data-catalog/locales/en-US";
+
 import { IndexConfigFormPanel } from "./IndexConfigFormPanel";
 
 const resource: CatalogResource = {
@@ -72,6 +77,7 @@ const resource: CatalogResource = {
 describe("IndexConfigFormPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    translateMock.mockImplementation((key: string) => key);
     getCatalogResourceMock.mockReset().mockResolvedValue(resource);
     listBuildTaskPageMock.mockReset().mockResolvedValue({ items: [], total: 0 });
     updateCatalogResourceMock.mockReset();
@@ -317,7 +323,7 @@ describe("IndexConfigFormPanel", () => {
   it.each([
     ["VegaBackend.BuildTask.Exist", "dataCatalog.build.activeTaskLocked"],
     ["VegaBackend.BuildTask.HasRunningExecution", "dataCatalog.build.activeTaskLocked"],
-    ["VegaBackend.Resource.UpdateConflict", "dataCatalog.build.configConflict"],
+    ["VegaBackend.Resource.UpdateConflict", "dataCatalog.build.resourceUpdateConflict"],
   ])("reports backend conflict %s with the appropriate message", async (code, expectedMessage) => {
     const conflictError = new AxiosError("Build task running", undefined, undefined, undefined, {
       config: { headers: new AxiosHeaders() },
@@ -349,12 +355,164 @@ describe("IndexConfigFormPanel", () => {
     );
     expect(
       screen.queryByText(
-        expectedMessage === "dataCatalog.build.configConflict"
+        expectedMessage === "dataCatalog.build.resourceUpdateConflict"
           ? "dataCatalog.build.activeTaskLocked"
-          : "dataCatalog.build.configConflict",
+          : "dataCatalog.build.resourceUpdateConflict",
       ),
     ).toBeNull();
   });
+
+  it.each([
+    [
+      "zh-CN",
+      "dataset",
+      409,
+      "VegaBackend.InvalidParameter.RequestBody",
+      "已有 Dataset 的索引结构或全文字段分词器无法直接修改，需要重建 Dataset 后再应用新配置。",
+    ],
+    [
+      "en-US",
+      "dataset",
+      409,
+      "VegaBackend.InvalidParameter.RequestBody",
+      "The existing Dataset index structure or fulltext field analyzer cannot be changed directly. Rebuild the Dataset to apply the new configuration.",
+    ],
+    [
+      "zh-CN",
+      "dataset",
+      409,
+      "VegaBackend.Resource.UpdateConflict",
+      "资源已被其他请求更新，请刷新页面后重新修改并保存索引配置。",
+    ],
+    [
+      "en-US",
+      "dataset",
+      409,
+      "VegaBackend.Resource.UpdateConflict",
+      "Another request updated this resource. Refresh the page, then edit and save the index configuration again.",
+    ],
+    [
+      "zh-CN",
+      "dataset",
+      409,
+      "VegaBackend.BuildTask.Exist",
+      dataCatalogZhCN.dataCatalog.build.activeTaskLocked,
+    ],
+    [
+      "en-US",
+      "dataset",
+      409,
+      "VegaBackend.BuildTask.HasRunningExecution",
+      dataCatalogEnUS.dataCatalog.build.activeTaskLocked,
+    ],
+    [
+      "zh-CN",
+      "dataset",
+      409,
+      "Unknown.Conflict",
+      "索引配置保存发生冲突，请刷新资源并检查配置后重试。",
+    ],
+    [
+      "en-US",
+      "table",
+      409,
+      "VegaBackend.InvalidParameter.RequestBody",
+      "The index configuration could not be saved due to a conflict. Refresh the resource and review the configuration before retrying.",
+    ],
+    ["zh-CN", "dataset", 400, "VegaBackend.InvalidParameter.RequestBody", "Invalid analyzer"],
+    ["en-US", "dataset", 500, "Internal.Error", "Service unavailable"],
+    ["zh-CN", "dataset", 0, "", "Network Error"],
+  ] as const)(
+    "shows consistent actionable errors for %s %s %s %s",
+    async (locale, category, status, code, expectedMessage) => {
+      const translations = locale === "zh-CN" ? dataCatalogZhCN : dataCatalogEnUS;
+      translateMock.mockImplementation((key: string) => {
+        const prefix = "dataCatalog.build.";
+        return key.startsWith(prefix)
+          ? (((translations.dataCatalog.build as Record<string, unknown>)[
+              key.slice(prefix.length)
+            ] as string) ?? key)
+          : key;
+      });
+      const dataset: CatalogResource = {
+        ...resource,
+        category,
+        indexConfig: { defaultFulltextAnalyzer: "standard" },
+        schema: [{ name: "content", type: "string", features: [{ featureType: "fulltext" }] }],
+      };
+      loadAnalyzerCapabilitiesMock.mockResolvedValue({
+        errorMessage: null,
+        options: ["standard", "english"],
+        state: "ready",
+      });
+      getCatalogResourceMock.mockResolvedValue(dataset);
+      const onSaved = vi.fn();
+      updateCatalogResourceMock.mockRejectedValue(
+        status === 0
+          ? new AxiosError("Network Error")
+          : new AxiosError("Request failed", undefined, undefined, undefined, {
+              config: { headers: new AxiosHeaders() },
+              data: {
+                error_code: code,
+                description:
+                  expectedMessage === "Invalid analyzer" ||
+                  expectedMessage === "Service unavailable"
+                    ? expectedMessage
+                    : "无效的请求体",
+                error_details:
+                  locale === "zh-CN"
+                    ? 'dataset fulltext analyzer for field "content" cannot be changed on an existing index; rebuild the dataset instead'
+                    : undefined,
+              },
+              headers: {},
+              status,
+              statusText: "Request failed",
+            }),
+      );
+      render(
+        <MemoryRouter>
+          <IndexConfigFormPanel active canViewTasks={false} resource={dataset} onSaved={onSaved} />
+        </MemoryRouter>,
+      );
+      const changesAnalyzer =
+        category === "dataset" &&
+        status === 409 &&
+        code === "VegaBackend.InvalidParameter.RequestBody";
+      if (changesAnalyzer) {
+        await waitFor(() =>
+          expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull(),
+        );
+        fireEvent.mouseDown(screen.getAllByRole("combobox")[0]);
+        fireEvent.click(await screen.findByText("dataCatalog.build.analyzers.english"));
+      }
+      fireEvent.click(
+        await screen.findByRole("button", { name: translations.dataCatalog.build.saveIndexConfig }),
+      );
+      expect(await screen.findByText(expectedMessage)).toBeInTheDocument();
+      expect(messageErrorMock).toHaveBeenCalledExactlyOnceWith(expectedMessage);
+      expect(updateCatalogResourceMock).toHaveBeenCalledWith(resource.id, expect.anything(), {
+        skipErrorToast: true,
+      });
+      expect(onSaved).not.toHaveBeenCalled();
+      if (changesAnalyzer) {
+        const [, payload] = updateCatalogResourceMock.mock.calls[0] as [
+          string,
+          ResourceUpdateInput,
+        ];
+        expect(payload.indexConfig?.defaultFulltextAnalyzer).toBe("english");
+        expect(payload.schema[0]?.features).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ featureType: "fulltext", config: { analyzer: "english" } }),
+          ]),
+        );
+        expect(screen.getAllByText("dataCatalog.build.analyzers.english").length).toBeGreaterThan(
+          0,
+        );
+        expect(dataset.indexConfig?.defaultFulltextAnalyzer).toBe("standard");
+        expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+      }
+    },
+  );
 
   it("drops an in-flight task result when task_manage is revoked", async () => {
     let resolveTasks: ((value: { items: BuildTask[]; total: number }) => void) | null = null;
@@ -860,6 +1018,7 @@ describe("IndexConfigFormPanel", () => {
             }),
           ],
         }),
+        { skipErrorToast: true },
       );
     });
   });

@@ -650,7 +650,10 @@ export const dataCatalogZhCN = {
         "流式任务不支持原地改配置。请先保存资源配置，再到任务管理创建新的流式构建。",
       activeTaskLocked:
         "该资源已有进行中的构建任务，整个配置页面已锁定。请先等待完成或停止当前任务，再修改配置或发起新构建。",
-      configConflict: "当前存在进行中的构建任务，无法修改索引配置。请先停止任务后再保存。",
+      configConflict: "索引配置保存发生冲突，请刷新资源并检查配置后重试。",
+      resourceUpdateConflict: "资源已被其他请求更新，请刷新页面后重新修改并保存索引配置。",
+      datasetRebuildRequired:
+        "已有 Dataset 的索引结构或全文字段分词器无法直接修改，需要重建 Dataset 后再应用新配置。",
       startRejected:
         "无法启动该任务（配置可能已变更，或已有更新的成功构建）。请到「配置索引」保存最新配置后，再新建构建。",
       created: "构建任务已创建:{{id}}",

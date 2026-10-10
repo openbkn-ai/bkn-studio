@@ -719,36 +719,48 @@ export function IndexConfigFormPanel({
             primaryKeyFields: undefined,
           };
 
-      await updateCatalogResource(resource.id, {
-        catalogId: detail.catalogId,
-        category: detail.category,
-        description: detail.description,
-        enabled: detail.enabled ?? true,
-        expectedUpdateTime: detail.expectedUpdateTime,
-        name: detail.name,
-        sourceIdentifier: detail.sourceIdentifier,
-        schema: nextSchema,
-        indexConfig: nextIndexConfig,
-      });
+      await updateCatalogResource(
+        resource.id,
+        {
+          catalogId: detail.catalogId,
+          category: detail.category,
+          description: detail.description,
+          enabled: detail.enabled ?? true,
+          expectedUpdateTime: detail.expectedUpdateTime,
+          name: detail.name,
+          sourceIdentifier: detail.sourceIdentifier,
+          schema: nextSchema,
+          indexConfig: nextIndexConfig,
+        },
+        { skipErrorToast: true },
+      );
 
       setSchema(nextSchema);
       setDirty(false);
       message.success(t("dataCatalog.build.saveConfigSuccess"));
       onSaved?.();
     } catch (persistError) {
+      const { code, description } = extractRequestErrorDetails(persistError);
+      let errorMessage = description;
       if (extractRequestStatus(persistError) === 409) {
-        const code = extractRequestErrorDetails(persistError).code;
-        setError(
-          t(
-            code === "VegaBackend.BuildTask.Exist" ||
-              code === "VegaBackend.BuildTask.HasRunningExecution"
-              ? "dataCatalog.build.activeTaskLocked"
-              : "dataCatalog.build.configConflict",
-          ),
-        );
-      } else {
-        setError(extractRequestErrorMessage(persistError));
+        let key = "configConflict";
+        if (
+          code === "VegaBackend.BuildTask.Exist" ||
+          code === "VegaBackend.BuildTask.HasRunningExecution"
+        ) {
+          key = "activeTaskLocked";
+        } else if (code === "VegaBackend.Resource.UpdateConflict") {
+          key = "resourceUpdateConflict";
+        } else if (
+          resource.category === "dataset" &&
+          code === "VegaBackend.InvalidParameter.RequestBody"
+        ) {
+          key = "datasetRebuildRequired";
+        }
+        errorMessage = t(`dataCatalog.build.${key}`);
       }
+      setError(errorMessage);
+      void message.error(errorMessage);
     } finally {
       setSaving(false);
     }
