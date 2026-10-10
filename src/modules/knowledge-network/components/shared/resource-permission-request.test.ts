@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   canRequestResourcePermission,
+  getEffectiveRowFilterPolicies,
+  hasEffectiveRowFilter,
   hasRequestableObjectTypePermission,
   hasRequestableObjectTypePolicyScope,
   isPermissionRequestPrefillReady,
@@ -48,6 +50,44 @@ describe("hasRequestableObjectTypePolicyScope", () => {
         property_grants: { entries: [{ level: "masked" }] },
       }),
     ).toBe(true);
+    expect(
+      hasRequestableObjectTypePolicyScope({
+        row_filter: {
+          effective_policies: [
+            {
+              conditions: [{ operator: "in", property_name: "region", values: ["east"] }],
+              relation: "and",
+            },
+          ],
+          effective_policy_present: true,
+        },
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("effective row-filter previews", () => {
+  const rolePolicy = {
+    conditions: [{ operator: "in", property_name: "region", values: ["east"] }],
+    relation: "and" as const,
+  };
+
+  it("prefers the complete effective policy list over the legacy direct policy", () => {
+    expect(
+      getEffectiveRowFilterPolicies({
+        effective_policies: [rolePolicy],
+        policy: { ...rolePolicy, conditions: [] },
+      }),
+    ).toEqual([rolePolicy]);
+  });
+
+  it("uses the effective presence flag even when no legacy policy is returned", () => {
+    expect(hasEffectiveRowFilter({ effective_policy_present: true, policy: null })).toBe(true);
+  });
+
+  it("keeps compatibility with legacy previews", () => {
+    expect(getEffectiveRowFilterPolicies({ policy: rolePolicy })).toEqual([rolePolicy]);
+    expect(hasEffectiveRowFilter({ policy: rolePolicy })).toBe(true);
   });
 });
 

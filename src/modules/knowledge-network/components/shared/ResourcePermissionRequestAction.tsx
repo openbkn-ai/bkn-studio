@@ -57,10 +57,13 @@ import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network
 import { basePropertyAccessLevel } from "@/modules/knowledge-network/utils/property-authorization";
 import {
   getMissingResourcePermissionOperations,
+  getEffectiveRowFilterPolicies,
+  hasEffectiveRowFilter,
   hasRequestableObjectTypePermission,
   isPermissionRequestProposalReady,
   isPermissionRequestPrefillReady,
   togglePermissionRequestOperation,
+  type RowFilterPolicy,
 } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
 import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
@@ -76,14 +79,9 @@ type ProposalPreview = {
       name: string;
       type: string;
     }>;
-    policy?: {
-      conditions: Array<{
-        operator: string;
-        property_name: string;
-        values: Array<string | number | boolean>;
-      }>;
-      relation: "and" | "or";
-    } | null;
+    effective_policies?: RowFilterPolicy[];
+    effective_policy_present?: boolean;
+    policy?: RowFilterPolicy | null;
     revision?: string | null;
   };
   property_grants?: { entries?: Array<{ level: string; property_name: string }> };
@@ -154,7 +152,11 @@ export function ResourcePermissionRequestAction({
   const requestOpen = open ?? internalOpen;
   const currentProposalPreviewResolved =
     proposalPreviewResolved && proposalPreviewResourceID === resourceID;
-  const hasRowFilter = Boolean(proposalPreview?.row_filter?.policy?.conditions.length);
+  const rowFilterPolicies = useMemo(
+    () => getEffectiveRowFilterPolicies(proposalPreview?.row_filter),
+    [proposalPreview],
+  );
+  const hasRowFilter = hasEffectiveRowFilter(proposalPreview?.row_filter);
   const restrictedProperties = useMemo(
     () =>
       (proposalPreview?.property_grants?.entries ?? []).filter(
@@ -721,29 +723,31 @@ export function ResourcePermissionRequestAction({
                   type="info"
                   message={t("knowledgeNetwork.permissionRequestRowScopeHint")}
                 />
-                {(proposalPreview?.row_filter?.policy?.conditions ?? []).map((condition) => {
-                  const field = proposalPreview?.row_filter?.available_fields?.find(
-                    (item) => item.name === condition.property_name,
-                  );
-                  return (
-                    <Form.Item
-                      key={`${condition.property_name}-${condition.operator}`}
-                      label={`${field?.display_name || condition.property_name} · ${t(`knowledgeNetwork.rowFilterConditionOperator.${condition.operator}`)}`}
-                      style={{ marginTop: 16 }}
-                    >
-                      <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                        <Space wrap>
-                          <Typography.Text type="secondary">
-                            {t("knowledgeNetwork.permissionRequestRowScopeCurrentValues")}
-                          </Typography.Text>
-                          {condition.values.map((value) => (
-                            <Tag key={String(value)}>{String(value)}</Tag>
-                          ))}
+                {rowFilterPolicies.flatMap((policy, policyIndex) =>
+                  policy.conditions.map((condition, conditionIndex) => {
+                    const field = proposalPreview?.row_filter?.available_fields?.find(
+                      (item) => item.name === condition.property_name,
+                    );
+                    return (
+                      <Form.Item
+                        key={`${policyIndex}-${conditionIndex}-${condition.property_name}-${condition.operator}`}
+                        label={`${field?.display_name || condition.property_name} · ${t(`knowledgeNetwork.rowFilterConditionOperator.${condition.operator}`)}`}
+                        style={{ marginTop: 16 }}
+                      >
+                        <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                          <Space wrap>
+                            <Typography.Text type="secondary">
+                              {t("knowledgeNetwork.permissionRequestRowScopeCurrentValues")}
+                            </Typography.Text>
+                            {condition.values.map((value) => (
+                              <Tag key={String(value)}>{String(value)}</Tag>
+                            ))}
+                          </Space>
                         </Space>
-                      </Space>
-                    </Form.Item>
-                  );
-                })}
+                      </Form.Item>
+                    );
+                  }),
+                )}
               </>
             ) : null}
             {proposalKind === "property_grants" ? (

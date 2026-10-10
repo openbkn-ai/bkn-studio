@@ -37,6 +37,32 @@ export type RequestablePermissionOperation = {
 
 export type PermissionRequestProposalKind = "grant" | "row_filter" | "property_grants";
 
+export type RowFilterPolicy = {
+  conditions: Array<{
+    operator: string;
+    property_name: string;
+    values: Array<string | number | boolean>;
+  }>;
+  relation: "and" | "or";
+};
+
+export type RowFilterProposalPreview = {
+  effective_policies?: RowFilterPolicy[];
+  effective_policy_present?: boolean;
+  policy?: RowFilterPolicy | null;
+};
+
+export function getEffectiveRowFilterPolicies(preview: RowFilterProposalPreview | undefined) {
+  if (preview?.effective_policies?.length) return preview.effective_policies;
+  return preview?.policy ? [preview.policy] : [];
+}
+
+export function hasEffectiveRowFilter(preview: RowFilterProposalPreview | undefined) {
+  return Boolean(
+    preview?.effective_policy_present ?? getEffectiveRowFilterPolicies(preview).length,
+  );
+}
+
 // Initial values from a deep link may only be applied after the asynchronous
 // data for the current dialog resource has returned. Comparing resource IDs
 // prevents a reopened dialog from consuming state left by the previous one.
@@ -137,9 +163,9 @@ export function hasRequestableObjectTypePermission({
 export function hasRequestableObjectTypePolicyScope(preview: unknown) {
   const value = preview as {
     property_grants?: { entries?: Array<{ level?: string }> };
-    row_filter?: { policy?: { conditions?: unknown[] } | null };
+    row_filter?: RowFilterProposalPreview;
   };
-  const hasRestrictedRowScope = Boolean(value.row_filter?.policy?.conditions?.length);
+  const hasRestrictedRowScope = hasEffectiveRowFilter(value.row_filter);
   const hasRestrictedPropertyScope = (value.property_grants?.entries ?? []).some(
     (entry) => entry.level !== "full" && entry.level !== "inherit",
   );
