@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   canRequestResourcePermission,
   getEffectiveRowFilterPolicies,
+  getRequestablePropertyGrants,
   hasEffectiveRowFilter,
   hasRequestableObjectTypePermission,
   hasRequestableObjectTypePolicyScope,
@@ -85,9 +86,47 @@ describe("effective row-filter previews", () => {
     expect(hasEffectiveRowFilter({ effective_policy_present: true, policy: null })).toBe(true);
   });
 
+  it("does not infer a filter when the effective presence flag is explicitly false", () => {
+    expect(
+      hasEffectiveRowFilter({
+        effective_policies: [rolePolicy],
+        effective_policy_present: false,
+      }),
+    ).toBe(false);
+  });
+
   it("keeps compatibility with legacy previews", () => {
     expect(getEffectiveRowFilterPolicies({ policy: rolePolicy })).toEqual([rolePolicy]);
     expect(hasEffectiveRowFilter({ policy: rolePolicy })).toBe(true);
+  });
+});
+
+describe("getRequestablePropertyGrants", () => {
+  it("expands a wildcard restriction into named object properties", () => {
+    expect(
+      getRequestablePropertyGrants(
+        [{ level: "masked", property_name: "*" }],
+        ["customer_name", "customer_phone"],
+      ),
+    ).toEqual([
+      { level: "masked", property_name: "customer_name" },
+      { level: "masked", property_name: "customer_phone" },
+    ]);
+  });
+
+  it("prefers an explicit property entry over the wildcard", () => {
+    expect(
+      getRequestablePropertyGrants(
+        [
+          { level: "masked", property_name: "*" },
+          { level: "schema", property_name: "customer_name" },
+        ],
+        ["customer_name", "customer_phone"],
+      ),
+    ).toEqual([
+      { level: "schema", property_name: "customer_name" },
+      { level: "masked", property_name: "customer_phone" },
+    ]);
   });
 });
 

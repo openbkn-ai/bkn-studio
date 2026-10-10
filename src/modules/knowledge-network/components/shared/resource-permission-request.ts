@@ -52,6 +52,11 @@ export type RowFilterProposalPreview = {
   policy?: RowFilterPolicy | null;
 };
 
+export type PropertyGrantPreviewEntry = {
+  level: string;
+  property_name: string;
+};
+
 export function getEffectiveRowFilterPolicies(preview: RowFilterProposalPreview | undefined) {
   if (preview?.effective_policies?.length) return preview.effective_policies;
   return preview?.policy ? [preview.policy] : [];
@@ -60,6 +65,33 @@ export function getEffectiveRowFilterPolicies(preview: RowFilterProposalPreview 
 export function hasEffectiveRowFilter(preview: RowFilterProposalPreview | undefined) {
   return Boolean(
     preview?.effective_policy_present ?? getEffectiveRowFilterPolicies(preview).length,
+  );
+}
+
+export function getRequestablePropertyGrants(
+  entries: PropertyGrantPreviewEntry[],
+  propertyNames: string[],
+) {
+  const explicitEntries = new Map(
+    entries
+      .filter((entry) => entry.property_name !== "*")
+      .map((entry) => [entry.property_name, entry]),
+  );
+  const wildcardEntry = entries.find((entry) => entry.property_name === "*");
+
+  if (wildcardEntry) {
+    for (const propertyName of propertyNames) {
+      if (!explicitEntries.has(propertyName)) {
+        explicitEntries.set(propertyName, {
+          ...wildcardEntry,
+          property_name: propertyName,
+        });
+      }
+    }
+  }
+
+  return [...explicitEntries.values()].filter(
+    (entry) => entry.level !== "full" && entry.level !== "inherit",
   );
 }
 
