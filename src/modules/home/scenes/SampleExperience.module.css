@@ -21,12 +21,41 @@
   line-height: 1.6;
 }
 
-.catalogToolbar {
+.catalogPanel {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, var(--color-primary-50));
+}
+
+.catalogInfo,
+.catalogActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.catalogLabel,
+.catalogUpdated {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.sourceLink {
+  color: var(--color-primary-600);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sourceLink:hover {
+  text-decoration: underline;
 }
 
 .banner,
