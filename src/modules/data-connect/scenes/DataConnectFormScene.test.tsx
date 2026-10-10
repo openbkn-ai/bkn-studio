@@ -771,6 +771,43 @@ describe("DataConnectFormScene · connection preflight", () => {
     HEAVY_SCENE_TIMEOUT_MS,
   );
 
+  it.each([
+    ["professional", false],
+    ["enterprise", true],
+    ["industry", true],
+  ])(
+    "HANA 在 %s 档位显示对应企业版门控",
+    async (edition, available) => {
+      permissionState.values = new Set(["catalog:create"]);
+      entitlementState.snapshot = { capabilities: [], edition, extensions: [] };
+      listDataConnectConnectorTypesMock.mockResolvedValue([
+        {
+          available,
+          category: "table",
+          description: "",
+          enabled: true,
+          fieldConfig: {},
+          mode: "local",
+          name: "SAP HANA",
+          requiredEdition: "enterprise",
+          type: "hana",
+        },
+      ]);
+
+      render(<DataConnectFormScene mode="create" />);
+      const hanaButton = await findConnectorCard("SAP HANA");
+      expect(hanaButton.hasAttribute("disabled")).toBe(!available);
+      if (available) {
+        expect(hanaButton.textContent).not.toContain("common.entitlement.editionsShort.enterprise");
+        expect(hanaButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
+      } else {
+        expect(hanaButton.textContent).toContain("common.entitlement.editionsShort.enterprise");
+        expect(hanaButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+      }
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
+
   it(
     "SQL Server 停用时服从服务端 enabled,不弹前端升级引导",
     async () => {
