@@ -37,7 +37,7 @@ export const CAPABILITIES = {
   /** 认证/高级数据源连接器(SQL Server 等商业库)。专业档起,由 Vega 实现。 */
   CONNECTOR_CERTIFIED: "connector_certified",
   /** Vega 衍生逻辑视图。专业档起，由 EE Vega 实现。 */
-  VEGA_LOGIC_VIEW: "vega_logic_view",
+  VEGA_LOGICAL_VIEW: "vega_logic_view",
   /**
    * 图探索:实例级图探索页与独立看图页。专业档起。
    *

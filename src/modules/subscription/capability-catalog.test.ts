@@ -82,7 +82,7 @@ describe("capability catalog", () => {
     expect(CAPABILITY_CATALOG).toContainEqual(
       expect.objectContaining({
         category: "dataConnect",
-        key: CAPABILITIES.VEGA_LOGIC_VIEW,
+        key: CAPABILITIES.VEGA_LOGICAL_VIEW,
         minEdition: "professional",
         reportedByEndpoint: false,
       }),

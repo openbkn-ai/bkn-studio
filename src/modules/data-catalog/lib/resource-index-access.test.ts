@@ -47,9 +47,9 @@ describe("resource index access", () => {
   });
 
   it("allows future non-dataset resource categories to manage build tasks", () => {
-    expect(canManageResourceBuildTasks(resource("logicview"), catalog(false))).toBe(true);
+    expect(canManageResourceBuildTasks(resource("logical_view"), catalog(false))).toBe(true);
     expect(canManageResourceBuildTasks(resource("table"), catalog(true))).toBe(false);
-    expect(canViewResourceIndexTasks(resource("logicview"), catalog(false))).toBe(true);
-    expect(canViewResourceIndexTasks(resource("logicview"), catalog(false, []))).toBe(false);
+    expect(canViewResourceIndexTasks(resource("logical_view"), catalog(false))).toBe(true);
+    expect(canViewResourceIndexTasks(resource("logical_view"), catalog(false, []))).toBe(false);
   });
 });

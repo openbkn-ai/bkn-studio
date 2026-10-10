@@ -131,7 +131,7 @@ export function ResourceWorkspaceScene({
       );
       let latestTasks: BuildTask[] = [];
       let taskLoadFailed = false;
-      if (detail.category !== "logicview" && hasCatalogOperation(catalogRecord, "task_manage")) {
+      if (detail.category !== "logical_view" && hasCatalogOperation(catalogRecord, "task_manage")) {
         try {
           const latestTaskPage = await listBuildTaskPage(
             {
@@ -219,7 +219,7 @@ export function ResourceWorkspaceScene({
   }, [message, resourceId]);
 
   const refreshIndexContext = useCallback(async () => {
-    if (resource?.category === "logicview") return;
+    if (resource?.category === "logical_view") return;
     if (!(await refreshResource()) || !hasCatalogOperation(catalog, "task_manage")) return;
     const resourceVersion = resourceVersionRef.current;
     try {
@@ -251,7 +251,7 @@ export function ResourceWorkspaceScene({
   }, [refreshResource, tab]);
 
   useEffect(() => {
-    if (resource?.category === "logicview" && tab === "index") onTabChange("detail");
+    if (resource?.category === "logical_view" && tab === "index") onTabChange("detail");
   }, [onTabChange, resource?.category, tab]);
 
   useEffect(() => {
@@ -277,7 +277,7 @@ export function ResourceWorkspaceScene({
   // handled inside the tab panel so the navigation remains discoverable and deep links stay valid.
   const hideSemanticUnderstanding = Boolean(catalog?.builtin);
   const discoveryFailed =
-    resource?.category !== "logicview" &&
+    resource?.category !== "logical_view" &&
     resource?.category !== "dataset" &&
     resource?.lastDiscoverStatus === "error";
   const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;
@@ -308,7 +308,7 @@ export function ResourceWorkspaceScene({
     async (strategy?: "count_only") => {
       if (
         resource?.category === "dataset" ||
-        (resource?.category === "logicview" && strategy !== "count_only")
+        (resource?.category === "logical_view" && strategy !== "count_only")
       )
         return;
       setResourceAction(strategy === "count_only" ? "count" : "discover");
@@ -355,7 +355,7 @@ export function ResourceWorkspaceScene({
   );
 
   const confirmResourceDiscovery = useCallback(() => {
-    if (resource?.category === "logicview" || resource?.category === "dataset") return;
+    if (resource?.category === "logical_view" || resource?.category === "dataset") return;
     void modal.confirm({
       cancelText: t("common.cancel"),
       content: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmDescription"),
@@ -389,7 +389,7 @@ export function ResourceWorkspaceScene({
 
   const handleTabChange = (key: string) => {
     const nextTab = key as ResourceWorkspaceTab;
-    if (resource?.category === "logicview" && nextTab === "index") return;
+    if (resource?.category === "logical_view" && nextTab === "index") return;
     if (tab === "detail" && nextTab !== "detail" && detailEditing) {
       void modal.confirm({
         cancelText: t("common.cancel"),
@@ -518,7 +518,7 @@ export function ResourceWorkspaceScene({
                   </span>
                 </>
               ) : null}
-              {!catalog?.builtin && resource.category !== "logicview" ? (
+              {!catalog?.builtin && resource.category !== "logical_view" ? (
                 <>
                   <span className={styles.contextDivider}>·</span>
                   <span className={styles.contextMeta}>
@@ -533,7 +533,7 @@ export function ResourceWorkspaceScene({
           </div>
           <Space className={styles.pageHeaderActions} wrap>
             {canManageCatalogTasks &&
-            resource.category !== "logicview" &&
+            resource.category !== "logical_view" &&
             resource.category !== "dataset" ? (
               <AppButton
                 disabled={detailEditing || resourceAction !== null}
@@ -547,7 +547,7 @@ export function ResourceWorkspaceScene({
             {canManageCatalogTasks &&
             (resource.category === "table" ||
               resource.category === "index" ||
-              resource.category === "logicview") ? (
+              resource.category === "logical_view") ? (
               <AppButton
                 disabled={detailEditing || resourceAction !== null}
                 icon={<ReloadOutlined />}
@@ -624,7 +624,7 @@ export function ResourceWorkspaceScene({
           <Alert
             action={
               canManageCatalogTasks &&
-              resource.category !== "logicview" &&
+              resource.category !== "logical_view" &&
               resource.category !== "dataset" &&
               !resourceDisabled &&
               !resourceStale &&
@@ -725,7 +725,7 @@ export function ResourceWorkspaceScene({
                 </div>
               ),
             },
-            ...(resource.category === "logicview"
+            ...(resource.category === "logical_view"
               ? []
               : [
                   {

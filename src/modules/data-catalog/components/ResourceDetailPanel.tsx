@@ -75,7 +75,7 @@ export function ResourceDetailPanel({
 
   const gate = resourceGateOf(catalog);
   const readOnly =
-    isResourceIndexReadOnly(catalog) || !canEdit || resource.category === "logicview";
+    isResourceIndexReadOnly(catalog) || !canEdit || resource.category === "logical_view";
   const schemaOffset = (schemaPage - 1) * schemaPageSize;
   const rowCount = resource.rowCount ?? resource.estimatedRowCount;
   const fixedFilter = parseFilterCondition(resource.logicDefinition?.filterCondition);
@@ -113,7 +113,7 @@ export function ResourceDetailPanel({
     const sourceId = resource.logicDefinition?.sourceResourceId;
     let cancelled = false;
     setFilterSourceFields([]);
-    if (resource.category === "logicview" && sourceId) {
+    if (resource.category === "logical_view" && sourceId) {
       void getCatalogResource(sourceId)
         .then((source) => {
           if (!cancelled) setFilterSourceFields(source?.schema ?? []);
@@ -376,8 +376,8 @@ export function ResourceDetailPanel({
         </div>
       ) : null}
 
-      {resource.category === "logicview" && resource.logicType !== "derived" ? (
-        <Alert message={t("dataCatalog.resource.logicViewReadOnly")} showIcon type="info" />
+      {resource.category === "logical_view" && resource.logicType !== "derived" ? (
+        <Alert message={t("dataCatalog.resource.logicalViewReadOnly")} showIcon type="info" />
       ) : null}
 
       <div className={styles.sectionCard}>
@@ -406,7 +406,7 @@ export function ResourceDetailPanel({
                   {t("common.save")}
                 </AppButton>
               </>
-            ) : resource.category === "logicview" &&
+            ) : resource.category === "logical_view" &&
               resource.logicType === "derived" &&
               !catalog?.builtin &&
               canEdit &&
@@ -478,7 +478,7 @@ export function ResourceDetailPanel({
           </div>
 
           <div
-            className={`${styles.basicInfoItem} ${resource.category === "logicview" || resource.category === "dataset" ? styles.basicInfoHalf : resource.category === "table" || resource.category === "index" ? styles.basicInfoQuarter : ""}`}
+            className={`${styles.basicInfoItem} ${resource.category === "logical_view" || resource.category === "dataset" ? styles.basicInfoHalf : resource.category === "table" || resource.category === "index" ? styles.basicInfoQuarter : ""}`}
           >
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.category")}</span>
             <span className={styles.basicInfoValue}>
@@ -486,7 +486,7 @@ export function ResourceDetailPanel({
             </span>
           </div>
           <div
-            className={`${styles.basicInfoItem} ${resource.category === "logicview" || resource.category === "dataset" ? styles.basicInfoHalf : resource.category === "table" || resource.category === "index" ? styles.basicInfoQuarter : ""}`}
+            className={`${styles.basicInfoItem} ${resource.category === "logical_view" || resource.category === "dataset" ? styles.basicInfoHalf : resource.category === "table" || resource.category === "index" ? styles.basicInfoQuarter : ""}`}
           >
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.enabledStatus")}</span>
             <span className={styles.basicInfoValue}>
@@ -499,7 +499,7 @@ export function ResourceDetailPanel({
               </Tag>
             </span>
           </div>
-          {resource.category !== "logicview" && resource.category !== "dataset" ? (
+          {resource.category !== "logical_view" && resource.category !== "dataset" ? (
             <div
               className={`${styles.basicInfoItem} ${resource.category === "table" || resource.category === "index" ? styles.basicInfoQuarter : ""}`}
             >
@@ -540,7 +540,7 @@ export function ResourceDetailPanel({
             </div>
           ) : null}
 
-          {resource.category !== "logicview" && resource.category !== "dataset" ? (
+          {resource.category !== "logical_view" && resource.category !== "dataset" ? (
             <>
               <div className={styles.basicInfoItem}>
                 <span className={styles.basicInfoLabel}>
@@ -574,7 +574,7 @@ export function ResourceDetailPanel({
           ) : null}
 
           <div
-            className={`${styles.basicInfoItem} ${resource.category === "logicview" || resource.category === "table" || resource.category === "index" || resource.category === "dataset" ? styles.basicInfoQuarter : styles.basicInfoHalf}`}
+            className={`${styles.basicInfoItem} ${resource.category === "logical_view" || resource.category === "table" || resource.category === "index" || resource.category === "dataset" ? styles.basicInfoQuarter : styles.basicInfoHalf}`}
           >
             <span className={styles.basicInfoLabel}>
               {t("dataCatalog.resource.sourceIdentifier")}
@@ -596,7 +596,7 @@ export function ResourceDetailPanel({
           </div>
           {resource.category === "table" ||
           resource.category === "index" ||
-          resource.category === "logicview" ||
+          resource.category === "logical_view" ||
           resource.category === "dataset" ? (
             <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
               <span className={styles.basicInfoLabel}>
@@ -610,7 +610,7 @@ export function ResourceDetailPanel({
             </div>
           ) : null}
 
-          {resource.category !== "logicview" ? (
+          {resource.category !== "logical_view" ? (
             <>
               <div className={styles.basicInfoItem}>
                 <span className={styles.basicInfoLabel}>
@@ -665,7 +665,7 @@ export function ResourceDetailPanel({
         <div className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.sourceMetadata")}</h3>
           <div className={styles.basicInfo}>
-            {resource.category === "logicview" ? (
+            {resource.category === "logical_view" ? (
               <div className={styles.basicInfoItem}>
                 <span className={styles.basicInfoLabel}>
                   {t("dataCatalog.resource.viewSource")}
@@ -697,7 +697,7 @@ export function ResourceDetailPanel({
                 {resource.sourceMetadata?.originalName || "-"}
               </span>
             </div>
-            {resource.category !== "logicview" ? (
+            {resource.category !== "logical_view" ? (
               <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
                 <span className={styles.basicInfoLabel}>
                   {t("dataCatalog.resource.originalDescription")}
@@ -713,7 +713,7 @@ export function ResourceDetailPanel({
               </div>
             ) : null}
             <div
-              className={`${styles.basicInfoItem} ${resource.category === "logicview" ? "" : styles.basicInfoQuarter}`}
+              className={`${styles.basicInfoItem} ${resource.category === "logical_view" ? "" : styles.basicInfoQuarter}`}
             >
               <span className={styles.basicInfoLabel}>
                 {t("dataCatalog.resource.sourceObjectType")}
@@ -727,7 +727,7 @@ export function ResourceDetailPanel({
                   : "-"}
               </span>
             </div>
-            {resource.category !== "logicview" ? (
+            {resource.category !== "logical_view" ? (
               <>
                 <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
                   <span className={styles.basicInfoLabel}>
@@ -837,7 +837,7 @@ export function ResourceDetailPanel({
         ) : null}
       </div>
 
-      {resource.category === "logicview" ? (
+      {resource.category === "logical_view" ? (
         <div className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.viewFixedFilter")}</h3>
           {fixedFilter?.children.length ? (

@@ -426,15 +426,15 @@ describe("ResourceDetailPanel", () => {
           active
           canEdit
           catalog={null}
-          resource={{ ...resource, category: "logicview", lastDiscoverStatus: "updated" }}
+          resource={{ ...resource, category: "logical_view", lastDiscoverStatus: "updated" }}
         />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("dataCatalog.categories.logicview")).toBeTruthy();
-    expect(screen.getByText("dataCatalog.categories.logicview").parentElement?.className).toContain(
-      "basicInfoHalf",
-    );
+    expect(screen.getByText("dataCatalog.categories.logical_view")).toBeTruthy();
+    expect(
+      screen.getByText("dataCatalog.categories.logical_view").parentElement?.className,
+    ).toContain("basicInfoHalf");
     expect(
       screen.getByText("dataCatalog.resource.enabledStatus").parentElement?.className,
     ).toContain("basicInfoHalf");
@@ -445,7 +445,7 @@ describe("ResourceDetailPanel", () => {
     expect(screen.queryByText("dataCatalog.resource.discoverStatus")).toBeNull();
     expect(screen.queryByText("dataCatalog.discoverStatuses.updated")).toBeNull();
     expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
-    expect(screen.getByText("dataCatalog.resource.logicViewReadOnly")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.resource.logicalViewReadOnly")).toBeTruthy();
     const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
     expect(within(sourceMetadata).getByText("dataCatalog.resource.originalName")).toBeTruthy();
     expect(within(sourceMetadata).getByText("dataCatalog.resource.sourceObjectType")).toBeTruthy();
@@ -471,7 +471,7 @@ describe("ResourceDetailPanel", () => {
           catalog={null}
           resource={{
             ...resource,
-            category: "logicview",
+            category: "logical_view",
             logicType: "derived",
             logicDefinition: {
               sourceResourceId: "source-orders",
@@ -529,7 +529,7 @@ describe("ResourceDetailPanel", () => {
           catalog={null}
           resource={{
             ...resource,
-            category: "logicview",
+            category: "logical_view",
             logicType: "derived",
             schema: [{ name: "score_alias", displayName: "Output Score", type: "string" }],
             logicDefinition: {
@@ -613,7 +613,7 @@ describe("ResourceDetailPanel", () => {
           catalog={null}
           resource={{
             ...resource,
-            category: "logicview",
+            category: "logical_view",
             rowCount: 7,
             rowCountTime: 1720000001000,
           }}

@@ -229,7 +229,7 @@ describe("ResourceWorkspaceScene", () => {
     ["missing table", { category: "table", status: "stale", lastDiscoverStatus: "missing" }, true],
     ["active table", { category: "table", status: "active" }, false],
     ["dataset", { category: "dataset", status: "active" }, true],
-    ["view", { category: "logicview", status: "active" }, true],
+    ["view", { category: "logical_view", status: "active" }, true],
     [
       "without permission",
       { category: "dataset", status: "active", operations: ["view_detail"] },
@@ -259,7 +259,7 @@ describe("ResourceWorkspaceScene", () => {
   it("deletes an eligible resource and returns to its catalog", async () => {
     getCatalogResourceMock.mockResolvedValue({
       ...staleResource,
-      category: "logicview",
+      category: "logical_view",
       operations: ["view_detail", "delete"],
       status: "active",
     });
@@ -644,7 +644,7 @@ describe("ResourceWorkspaceScene", () => {
     expect(screen.queryByText("common.disable")).toBeNull();
   });
 
-  it.each(["logicview", "dataset"] as const)(
+  it.each(["logical_view", "dataset"] as const)(
     "does not offer metadata discovery for %s",
     async (category) => {
       getCatalogResourceMock.mockResolvedValue({
@@ -665,7 +665,7 @@ describe("ResourceWorkspaceScene", () => {
 
       await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
       expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
-      if (category === "logicview") {
+      if (category === "logical_view") {
         expect(screen.getByText("dataCatalog.resourceWorkspace.refreshCount")).toBeTruthy();
       } else {
         expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshCount")).toBeNull();
@@ -729,7 +729,7 @@ describe("ResourceWorkspaceScene", () => {
   });
 
   it("keeps a view out of index tasks, including a direct index tab link", async () => {
-    getCatalogResourceMock.mockResolvedValue({ ...staleResource, category: "logicview" });
+    getCatalogResourceMock.mockResolvedValue({ ...staleResource, category: "logical_view" });
     const onTabChange = vi.fn();
 
     render(
@@ -881,7 +881,7 @@ describe("ResourceWorkspaceScene", () => {
     { category: "table", sourceMetadata: { objectType: "BASE TABLE" } },
     { category: "table", sourceMetadata: { objectType: "VIEW" } },
     { category: "index" },
-    { category: "logicview" },
+    { category: "logical_view" },
   ] as const)("creates an exact count task only after confirmation for %j", async (source) => {
     getCatalogResourceMock.mockResolvedValue({ ...staleResource, ...source });
     render(

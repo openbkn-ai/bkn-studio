@@ -197,7 +197,7 @@ export function ResourcePreviewPanel({
   const queryPath: FilterQueryPath =
     resource.category === "index" ||
     (resource.category === "table" && !queriesSource) ||
-    (resource.category === "logicview" && result?.querySource === "local_index")
+    (resource.category === "logical_view" && result?.querySource === "local_index")
       ? "local_index"
       : "source";
   const activeFilter =

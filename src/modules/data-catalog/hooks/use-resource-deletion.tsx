@@ -22,7 +22,7 @@ export function isResourceDeletionEligible(resource: CatalogResource) {
   if (!hasCatalogResourceOperation(resource, "delete")) {
     return false;
   }
-  if (resource.category === "dataset" || resource.category === "logicview") {
+  if (resource.category === "dataset" || resource.category === "logical_view") {
     return true;
   }
   return resource.status === "stale" && resource.lastDiscoverStatus === "missing";
@@ -76,7 +76,7 @@ export function useResourceDeletion() {
             throw new Error(t("dataCatalog.resource.deleteStateChanged"));
           }
           await deleteCatalogResource(record.id, {
-            onlyIfStale: latest.category !== "dataset" && latest.category !== "logicview",
+            onlyIfStale: latest.category !== "dataset" && latest.category !== "logical_view",
             skipErrorToast: true,
           });
           message.success(t("dataCatalog.resource.deleted", { name: record.name }));
