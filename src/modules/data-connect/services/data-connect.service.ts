@@ -183,7 +183,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     mode: "local",
     description: "Connect SAP HANA relational databases.",
     enabled: true,
-    required_edition: "professional",
+    required_edition: "enterprise",
     field_config: {
       host: mockField("Host", "SAP HANA database host address", "string", true),
       port: mockField("Port", "SAP HANA SQL port", "integer", true),

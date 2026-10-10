@@ -349,7 +349,7 @@ describe("data-connect.service · test connection", () => {
     );
     expect(editionsByType.get("sqlserver")).toBe("professional");
     expect(editionsByType.get("oracle")).toBe("professional");
-    expect(editionsByType.get("hana")).toBe("professional");
+    expect(editionsByType.get("hana")).toBe("enterprise");
     expect(editionsByType.get("mysql")).toBeUndefined();
 
     const stateByType = new Map(connectorTypes.map((connector) => [connector.type, connector]));
@@ -359,23 +359,29 @@ describe("data-connect.service · test connection", () => {
     expect(stateByType.get("mysql")).toMatchObject({ available: true, enabled: false });
   });
 
-  it("makes enterprise database connectors available only at professional edition or above", async () => {
-    vi.resetModules();
+  it.each([
+    ["community", false, false],
+    ["professional", false, true],
+    ["enterprise", true, true],
+    ["industry", true, true],
+  ])("gates mock HANA at %s edition", async (edition, hanaAvailable, professionalAvailable) => {
     vi.stubEnv("VITE_USE_MOCK", "true");
-    vi.stubEnv("VITE_MOCK_EDITION", "professional");
+    vi.stubEnv("VITE_MOCK_EDITION", edition);
     const { listDataConnectConnectorTypes } =
       await import("@/modules/data-connect/services/data-connect.service");
 
     const connectorTypes = await listDataConnectConnectorTypes();
-    expect(connectorTypes.find((connector) => connector.type === "oracle")).toMatchObject({
-      available: true,
-      enabled: true,
-      requiredEdition: "professional",
-    });
+    for (const type of ["sqlserver", "oracle"]) {
+      expect(connectorTypes.find((connector) => connector.type === type)).toMatchObject({
+        available: professionalAvailable,
+        enabled: true,
+        requiredEdition: "professional",
+      });
+    }
     expect(connectorTypes.find((connector) => connector.type === "hana")).toMatchObject({
-      available: true,
+      available: hanaAvailable,
       enabled: true,
-      requiredEdition: "professional",
+      requiredEdition: "enterprise",
     });
   });
 
