@@ -6,12 +6,10 @@
  */
 
 import { getRuntimeConfig } from "@/framework/runtime/config";
-import { isCapabilityAvailable } from "@/framework/entitlement/capability-state";
-import { CAPABILITIES } from "@/framework/entitlement/capabilities";
-import type { EntitlementView } from "@/framework/entitlement/types";
+import type { CapabilityState } from "@/framework/entitlement/types";
 
-export function canPreviewObjectTypePolicyScope(entitlement: EntitlementView) {
-  return isCapabilityAvailable(CAPABILITIES.PERM_OBJECT_LEVEL, entitlement);
+export function canPreviewObjectTypePolicyScope(capability: CapabilityState) {
+  return capability === "available";
 }
 
 const resourcePermissionOperations: Record<string, readonly string[]> = {

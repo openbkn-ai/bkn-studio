@@ -14,8 +14,9 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { isCommunityBuild } from "@/framework/entitlement/types";
-import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { useCapability, useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -185,9 +186,11 @@ function parsePermissionRequestValues(value: string | null) {
 
 export function ObjectTypeDetailScene() {
   const entitlement = useEntitlement();
+  const policyScopeCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
   const permissionRequestsEnabled = !isCommunityBuild(entitlement);
   const policyScopePreviewsEnabled =
-    canPreviewObjectTypePolicyScope(entitlement) && !getRuntimeConfig().currentUser.isSuperAdmin;
+    canPreviewObjectTypePolicyScope(policyScopeCapability) &&
+    !getRuntimeConfig().currentUser.isSuperAdmin;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();

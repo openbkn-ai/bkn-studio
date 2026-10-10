@@ -95,7 +95,15 @@ vi.mock("@/framework/runtime/config", async (importOriginal) => ({
 
 vi.mock("@/framework/entitlement/use-entitlement", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/framework/entitlement/use-entitlement")>()),
-  useEntitlement: () => ({ extensions: ["permobject"] }),
+  useCapability: () => "available",
+  useEntitlement: () => ({
+    capabilities: ["perm_object_level"],
+    edition: "enterprise",
+    extensions: ["perm_object_level"],
+    licensed: true,
+    limits: {},
+    state: "valid",
+  }),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({

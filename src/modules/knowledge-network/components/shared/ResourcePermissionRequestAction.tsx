@@ -41,7 +41,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useCapability, useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getRuntimeConfig } from "@/framework/runtime/config";
@@ -131,8 +132,9 @@ export function ResourcePermissionRequestAction({
   const { catalogError, catalogLoading, operationsForType, retryAuthorizationRegistry } =
     useAuthorizationRegistry();
   const entitlement = useEntitlement();
+  const policyScopeCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
   const communityBuild = isCommunityBuild(entitlement);
-  const policyScopePreviewsEnabled = canPreviewObjectTypePolicyScope(entitlement);
+  const policyScopePreviewsEnabled = canPreviewObjectTypePolicyScope(policyScopeCapability);
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -256,7 +258,7 @@ export function ResourcePermissionRequestAction({
     setPendingRequestsResourceID(null);
     setSelectedOperations([]);
     initialOperationsAppliedFor.current = null;
-    setProposalKind(policyScopePreviewsEnabled ? initialProposalKind : "grant");
+    setProposalKind(initialProposalKind);
     setProposalPreview(undefined);
     setProposalPreviewResolved(resourceType !== "object_type");
     setProposalPreviewResourceID(resourceType !== "object_type" ? resourceID : null);
@@ -307,16 +309,13 @@ export function ResourcePermissionRequestAction({
     return () => {
       active = false;
     };
-  }, [
-    form,
-    initialProposalKind,
-    initialReason,
-    message,
-    policyScopePreviewsEnabled,
-    requestOpen,
-    resourceID,
-    resourceType,
-  ]);
+  }, [form, initialProposalKind, initialReason, message, requestOpen, resourceID, resourceType]);
+
+  useEffect(() => {
+    if (requestOpen && !policyScopePreviewsEnabled && proposalKind !== "grant") {
+      setProposalKind("grant");
+    }
+  }, [policyScopePreviewsEnabled, proposalKind, requestOpen]);
 
   useEffect(() => {
     const prefillKey = `${resourceID}\u0000${initialOperations.join("\u0000")}`;
@@ -369,6 +368,14 @@ export function ResourcePermissionRequestAction({
       setProposalPreviewResourceID(resourceID);
       setProposalPreviewResolved(true);
     }
+    return () => {
+      active = false;
+    };
+  }, [policyScopePreviewsEnabled, requestOpen, resourceID, resourceType]);
+
+  useEffect(() => {
+    if (!requestOpen || resourceType !== "object_type") return;
+    let active = true;
     const [networkId, objectTypeId] = resourceID.split("/", 2);
     if (networkId && objectTypeId) {
       void getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId)
@@ -391,7 +398,7 @@ export function ResourcePermissionRequestAction({
     return () => {
       active = false;
     };
-  }, [policyScopePreviewsEnabled, requestOpen, resourceID, resourceType]);
+  }, [requestOpen, resourceID, resourceType]);
 
   useEffect(() => {
     if (

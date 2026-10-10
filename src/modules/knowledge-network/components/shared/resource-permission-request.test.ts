@@ -6,6 +6,8 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { capabilityState } from "@/framework/entitlement/capability-state";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { FALLBACK_ENTITLEMENT } from "@/framework/entitlement/types";
 
 import {
@@ -29,27 +31,33 @@ describe("canPreviewObjectTypePolicyScope", () => {
 
   it("keeps the enterprise preview disabled for a Professional license even when installed", () => {
     expect(
-      canPreviewObjectTypePolicyScope({
-        ...installed,
-        capabilities: ["rbac_basic"],
-        edition: "professional",
-        licensed: true,
-        state: "valid",
-      }),
+      canPreviewObjectTypePolicyScope(
+        capabilityState(CAPABILITIES.PERM_OBJECT_LEVEL, {
+          ...installed,
+          capabilities: ["rbac_basic"],
+          edition: "professional",
+          licensed: true,
+          state: "valid",
+        }),
+      ),
     ).toBe(false);
   });
 
   it("enables the preview only when the backend reports the capability available", () => {
     expect(
-      canPreviewObjectTypePolicyScope({
-        ...installed,
-        capabilities: ["rbac_basic", "perm_object_level"],
-        edition: "enterprise",
-        licensed: true,
-        state: "valid",
-      }),
+      canPreviewObjectTypePolicyScope(
+        capabilityState(CAPABILITIES.PERM_OBJECT_LEVEL, {
+          ...installed,
+          capabilities: ["rbac_basic", "perm_object_level"],
+          edition: "enterprise",
+          licensed: true,
+          state: "valid",
+        }),
+      ),
     ).toBe(true);
-    expect(canPreviewObjectTypePolicyScope(FALLBACK_ENTITLEMENT)).toBe(false);
+    expect(
+      canPreviewObjectTypePolicyScope(capabilityState(CAPABILITIES.PERM_OBJECT_LEVEL, null)),
+    ).toBe(false);
   });
 });
 

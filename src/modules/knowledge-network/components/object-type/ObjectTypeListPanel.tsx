@@ -20,8 +20,9 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { isCommunityBuild } from "@/framework/entitlement/types";
-import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { useCapability, useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -76,9 +77,11 @@ export function ObjectTypeListPanel({
   onDelete,
 }: ObjectTypeListPanelProps) {
   const entitlement = useEntitlement();
+  const policyScopeCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
   const permissionRequestsEnabled = !isCommunityBuild(entitlement);
   const policyScopePreviewsEnabled =
-    canPreviewObjectTypePolicyScope(entitlement) && !getRuntimeConfig().currentUser.isSuperAdmin;
+    canPreviewObjectTypePolicyScope(policyScopeCapability) &&
+    !getRuntimeConfig().currentUser.isSuperAdmin;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
