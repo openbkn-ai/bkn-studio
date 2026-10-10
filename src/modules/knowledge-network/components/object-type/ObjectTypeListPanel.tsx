@@ -33,6 +33,7 @@ import { ResourceTagList } from "@/modules/knowledge-network/components/shared/R
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import {
   canRequestResourcePermission,
+  canPreviewObjectTypePolicyScope,
   getMissingResourcePermissionOperations,
   hasRequestableObjectTypePolicyScope,
 } from "@/modules/knowledge-network/components/shared/resource-permission-request";
@@ -74,9 +75,10 @@ export function ObjectTypeListPanel({
   networkName,
   onDelete,
 }: ObjectTypeListPanelProps) {
-  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
+  const entitlement = useEntitlement();
+  const permissionRequestsEnabled = !isCommunityBuild(entitlement);
   const policyScopePreviewsEnabled =
-    permissionRequestsEnabled && !getRuntimeConfig().currentUser.isSuperAdmin;
+    canPreviewObjectTypePolicyScope(entitlement) && !getRuntimeConfig().currentUser.isSuperAdmin;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();

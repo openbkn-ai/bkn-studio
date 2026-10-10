@@ -6,6 +6,13 @@
  */
 
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import { isCapabilityAvailable } from "@/framework/entitlement/capability-state";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import type { EntitlementView } from "@/framework/entitlement/types";
+
+export function canPreviewObjectTypePolicyScope(entitlement: EntitlementView) {
+  return isCapabilityAvailable(CAPABILITIES.PERM_OBJECT_LEVEL, entitlement);
+}
 
 const resourcePermissionOperations: Record<string, readonly string[]> = {
   knowledge_network: ["view_detail", "modify", "delete", "execute", "query_data"],

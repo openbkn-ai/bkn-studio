@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
@@ -31,6 +32,7 @@ import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/com
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import {
   canRequestResourcePermission,
+  canPreviewObjectTypePolicyScope,
   getMissingResourcePermissionOperations,
   hasRequestableObjectTypePolicyScope,
 } from "@/modules/knowledge-network/components/shared/resource-permission-request";
@@ -182,7 +184,10 @@ function parsePermissionRequestValues(value: string | null) {
 }
 
 export function ObjectTypeDetailScene() {
-  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
+  const entitlement = useEntitlement();
+  const permissionRequestsEnabled = !isCommunityBuild(entitlement);
+  const policyScopePreviewsEnabled =
+    canPreviewObjectTypePolicyScope(entitlement) && !getRuntimeConfig().currentUser.isSuperAdmin;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -443,7 +448,7 @@ export function ObjectTypeDetailScene() {
     detail?.operations,
   );
   useEffect(() => {
-    if (!detail || !permissionRequestsEnabled || missingRequestableOperations.length > 0) {
+    if (!detail || !policyScopePreviewsEnabled || missingRequestableOperations.length > 0) {
       setPolicyScopeRequestable(false);
       return;
     }
@@ -458,7 +463,7 @@ export function ObjectTypeDetailScene() {
     return () => {
       active = false;
     };
-  }, [detail, missingRequestableOperations.length, networkId, permissionRequestsEnabled]);
+  }, [detail, missingRequestableOperations.length, networkId, policyScopePreviewsEnabled]);
 
   const canRequestPermission =
     Boolean(detail) &&

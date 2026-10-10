@@ -56,6 +56,7 @@ import {
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/object-type.service";
 import { basePropertyAccessLevel } from "@/modules/knowledge-network/utils/property-authorization";
 import {
+  canPreviewObjectTypePolicyScope,
   getMissingResourcePermissionOperations,
   getEffectiveRowFilterPolicies,
   getRequestablePropertyGrants,
@@ -131,6 +132,7 @@ export function ResourcePermissionRequestAction({
     useAuthorizationRegistry();
   const entitlement = useEntitlement();
   const communityBuild = isCommunityBuild(entitlement);
+  const policyScopePreviewsEnabled = canPreviewObjectTypePolicyScope(entitlement);
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -254,7 +256,7 @@ export function ResourcePermissionRequestAction({
     setPendingRequestsResourceID(null);
     setSelectedOperations([]);
     initialOperationsAppliedFor.current = null;
-    setProposalKind(initialProposalKind);
+    setProposalKind(policyScopePreviewsEnabled ? initialProposalKind : "grant");
     setProposalPreview(undefined);
     setProposalPreviewResolved(resourceType !== "object_type");
     setProposalPreviewResourceID(resourceType !== "object_type" ? resourceID : null);
@@ -305,7 +307,16 @@ export function ResourcePermissionRequestAction({
     return () => {
       active = false;
     };
-  }, [form, initialProposalKind, initialReason, message, requestOpen, resourceID, resourceType]);
+  }, [
+    form,
+    initialProposalKind,
+    initialReason,
+    message,
+    policyScopePreviewsEnabled,
+    requestOpen,
+    resourceID,
+    resourceType,
+  ]);
 
   useEffect(() => {
     const prefillKey = `${resourceID}\u0000${initialOperations.join("\u0000")}`;
@@ -339,23 +350,25 @@ export function ResourcePermissionRequestAction({
   useEffect(() => {
     if (!requestOpen || resourceType !== "object_type") return;
     let active = true;
-    void getPermissionRequestProposalPreview(resourceID)
-      .then((preview) => {
-        if (!active) return;
-        setProposalPreview(preview as ProposalPreview);
-      })
-      .catch(() => {
-        if (active) {
-          // The policy extension is optional. Base operation requests remain available.
-          setProposalPreview({});
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setProposalPreviewResourceID(resourceID);
-          setProposalPreviewResolved(true);
-        }
-      });
+    if (policyScopePreviewsEnabled) {
+      void getPermissionRequestProposalPreview(resourceID)
+        .then((preview) => {
+          if (active) setProposalPreview(preview as ProposalPreview);
+        })
+        .catch(() => {
+          if (active) setProposalPreview({});
+        })
+        .finally(() => {
+          if (active) {
+            setProposalPreviewResourceID(resourceID);
+            setProposalPreviewResolved(true);
+          }
+        });
+    } else {
+      setProposalPreview({});
+      setProposalPreviewResourceID(resourceID);
+      setProposalPreviewResolved(true);
+    }
     const [networkId, objectTypeId] = resourceID.split("/", 2);
     if (networkId && objectTypeId) {
       void getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId)
@@ -378,7 +391,7 @@ export function ResourcePermissionRequestAction({
     return () => {
       active = false;
     };
-  }, [requestOpen, resourceID, resourceType]);
+  }, [policyScopePreviewsEnabled, requestOpen, resourceID, resourceType]);
 
   useEffect(() => {
     if (
@@ -638,7 +651,7 @@ export function ResourcePermissionRequestAction({
                 message={t("knowledgeNetwork.permissionRequestPolicyPending")}
               />
             ) : null}
-            {resourceType === "object_type" ? (
+            {resourceType === "object_type" && policyScopePreviewsEnabled ? (
               <Tabs
                 activeKey={proposalKind}
                 items={[
