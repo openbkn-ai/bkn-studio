@@ -242,39 +242,56 @@ export function SampleExperience() {
       <div className={styles.heading}>
         <h2 id="sample-experience-title">{t("home.paths.sample.heading")}</h2>
         <p>{t("home.paths.sample.description")}</p>
-        <div className={styles.catalogToolbar}>
-          <p className={styles.meta}>
-            {t("home.sample.sourceLabel")} {t("home.sample.sourceName")}
-          </p>
-          <button
-            className={styles.reload}
-            disabled={catalogLoading}
-            onClick={() =>
-              void (catalog?.sourceRefresh?.supported ? refreshCatalog() : loadCatalog())
-            }
-            type="button"
-          >
-            {t(
-              catalog?.sourceRefresh?.supported
-                ? "home.sample.refreshSource"
-                : "home.sample.reload",
-            )}
-          </button>
-          {catalog?.canImport ? (
-            <label className={styles.reload}>
-              {importing ? t("home.sample.importing") : t("home.sample.importPackage")}
-              <input
-                accept=".tar.gz,application/gzip"
-                hidden
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (file) void importPackage(file);
-                }}
-                type="file"
-              />
-            </label>
-          ) : null}
+        <div className={styles.catalogPanel}>
+          <div className={styles.catalogInfo}>
+            <span className={styles.catalogLabel}>{t("home.sample.sourceLabel")}</span>
+            <a
+              className={styles.sourceLink}
+              href="https://github.com/openbkn-ai/bkn-samples"
+              rel="noreferrer"
+              target="_blank"
+            >
+              {t("home.sample.sourceName")}
+            </a>
+            {catalog?.sourceRefresh?.lastSuccessfulRefreshAt ? (
+              <span className={styles.catalogUpdated}>
+                {t("home.sample.lastRefresh", {
+                  time: catalog.sourceRefresh.lastSuccessfulRefreshAt,
+                })}
+              </span>
+            ) : null}
+          </div>
+          <div className={styles.catalogActions}>
+            <button
+              className={styles.reload}
+              disabled={catalogLoading}
+              onClick={() =>
+                void (catalog?.sourceRefresh?.supported ? refreshCatalog() : loadCatalog())
+              }
+              type="button"
+            >
+              {t(
+                catalog?.sourceRefresh?.supported
+                  ? "home.sample.refreshSource"
+                  : "home.sample.reload",
+              )}
+            </button>
+            {catalog?.canImport ? (
+              <label className={styles.reload}>
+                {importing ? t("home.sample.importing") : t("home.sample.importPackage")}
+                <input
+                  accept=".tar.gz,application/gzip"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) void importPackage(file);
+                  }}
+                  type="file"
+                />
+              </label>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -287,13 +304,6 @@ export function SampleExperience() {
           </p>
           {catalog.sourceRefresh.code === "catalog_not_published" ? (
             <p>{t("home.sample.catalogNotPublished")}</p>
-          ) : null}
-          {catalog.sourceRefresh.lastSuccessfulRefreshAt ? (
-            <p>
-              {t("home.sample.lastRefresh", {
-                time: catalog.sourceRefresh.lastSuccessfulRefreshAt,
-              })}
-            </p>
           ) : null}
         </div>
       ) : null}
