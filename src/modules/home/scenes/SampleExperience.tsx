@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 
 import {
+  OFFICIAL_SAMPLE_SOURCE,
   sampleCardAction,
   type SampleCatalog,
   type SampleCatalogItem,
@@ -247,7 +248,7 @@ export function SampleExperience() {
             <span className={styles.catalogLabel}>{t("home.sample.sourceLabel")}</span>
             <a
               className={styles.sourceLink}
-              href="https://github.com/openbkn-ai/bkn-samples"
+              href={OFFICIAL_SAMPLE_SOURCE}
               rel="noreferrer"
               target="_blank"
             >
