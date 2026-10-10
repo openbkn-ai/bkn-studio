@@ -57,10 +57,14 @@ import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network
 import { basePropertyAccessLevel } from "@/modules/knowledge-network/utils/property-authorization";
 import {
   getMissingResourcePermissionOperations,
+  getEffectiveRowFilterPolicies,
+  getRequestablePropertyGrants,
+  hasEffectiveRowFilter,
   hasRequestableObjectTypePermission,
   isPermissionRequestProposalReady,
   isPermissionRequestPrefillReady,
   togglePermissionRequestOperation,
+  type RowFilterPolicy,
 } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
 import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
@@ -76,14 +80,9 @@ type ProposalPreview = {
       name: string;
       type: string;
     }>;
-    policy?: {
-      conditions: Array<{
-        operator: string;
-        property_name: string;
-        values: Array<string | number | boolean>;
-      }>;
-      relation: "and" | "or";
-    } | null;
+    effective_policies?: RowFilterPolicy[];
+    effective_policy_present?: boolean;
+    policy?: RowFilterPolicy | null;
     revision?: string | null;
   };
   property_grants?: { entries?: Array<{ level: string; property_name: string }> };
@@ -148,19 +147,26 @@ export function ResourcePermissionRequestAction({
   const [objectProperties, setObjectProperties] = useState<
     Array<{ displayName?: string; name: string }>
   >([]);
+  const [objectPropertiesResolved, setObjectPropertiesResolved] = useState(false);
   const initialOperationsAppliedFor = useRef<string | null>(null);
   const initialPropertiesAppliedFor = useRef<string | null>(null);
   const [form] = Form.useForm<RequestForm>();
   const requestOpen = open ?? internalOpen;
   const currentProposalPreviewResolved =
     proposalPreviewResolved && proposalPreviewResourceID === resourceID;
-  const hasRowFilter = Boolean(proposalPreview?.row_filter?.policy?.conditions.length);
+  const currentPropertyPreviewResolved = currentProposalPreviewResolved && objectPropertiesResolved;
+  const rowFilterPolicies = useMemo(
+    () => getEffectiveRowFilterPolicies(proposalPreview?.row_filter),
+    [proposalPreview],
+  );
+  const hasRowFilter = hasEffectiveRowFilter(proposalPreview?.row_filter);
   const restrictedProperties = useMemo(
     () =>
-      (proposalPreview?.property_grants?.entries ?? []).filter(
-        (entry) => entry.level !== "full" && entry.level !== "inherit",
+      getRequestablePropertyGrants(
+        proposalPreview?.property_grants?.entries ?? [],
+        objectProperties.map((property) => property.name),
       ),
-    [proposalPreview],
+    [objectProperties, proposalPreview],
   );
   const selectableOperationKeys = useMemo(
     () =>
@@ -255,6 +261,7 @@ export function ResourcePermissionRequestAction({
     setSelectedPropertyNames([]);
     initialPropertiesAppliedFor.current = null;
     setObjectProperties([]);
+    setObjectPropertiesResolved(resourceType !== "object_type");
     void listPermissionRequests("mine", 20, 0, {
       resourceID,
       resourceType,
@@ -361,7 +368,12 @@ export function ResourcePermissionRequestAction({
               })),
             );
         })
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .finally(() => {
+          if (active) setObjectPropertiesResolved(true);
+        });
+    } else {
+      setObjectPropertiesResolved(true);
     }
     return () => {
       active = false;
@@ -371,6 +383,7 @@ export function ResourcePermissionRequestAction({
   useEffect(() => {
     if (
       !requestOpen ||
+      !objectPropertiesResolved ||
       !isPermissionRequestPrefillReady({
         initialProposalKind,
         pendingRequestsResourceID,
@@ -393,6 +406,7 @@ export function ResourcePermissionRequestAction({
   }, [
     initialPropertyNames,
     initialProposalKind,
+    objectPropertiesResolved,
     pendingRequestsResourceID,
     proposalPreviewResourceID,
     requestOpen,
@@ -401,7 +415,7 @@ export function ResourcePermissionRequestAction({
   ]);
 
   useEffect(() => {
-    if (!requestOpen || resourceType !== "object_type" || !currentProposalPreviewResolved) return;
+    if (!requestOpen || resourceType !== "object_type" || !currentPropertyPreviewResolved) return;
     if (proposalKind === "row_filter" && !hasRowFilter) {
       setProposalKind("grant");
       return;
@@ -412,7 +426,7 @@ export function ResourcePermissionRequestAction({
   }, [
     hasRowFilter,
     proposalKind,
-    currentProposalPreviewResolved,
+    currentPropertyPreviewResolved,
     requestOpen,
     resourceType,
     restrictedProperties.length,
@@ -422,7 +436,7 @@ export function ResourcePermissionRequestAction({
     if (
       !requestOpen ||
       resourceType !== "object_type" ||
-      !currentProposalPreviewResolved ||
+      !currentPropertyPreviewResolved ||
       pendingRequestsResourceID !== resourceID
     )
       return;
@@ -442,7 +456,7 @@ export function ResourcePermissionRequestAction({
     message,
     pendingOperations.length,
     pendingProposalKinds.length,
-    currentProposalPreviewResolved,
+    currentPropertyPreviewResolved,
     pendingRequestsResourceID,
     requestOpen,
     resourceID,
@@ -463,7 +477,9 @@ export function ResourcePermissionRequestAction({
       !isPermissionRequestProposalReady({
         proposalKind,
         resourceType,
-        previewResolved: currentProposalPreviewResolved,
+        previewResolved:
+          currentProposalPreviewResolved &&
+          (proposalKind !== "property_grants" || objectPropertiesResolved),
       })
     ) {
       void message.warning(t("knowledgeNetwork.permissionRequestPolicyPreviewPending"));
@@ -565,7 +581,9 @@ export function ResourcePermissionRequestAction({
             !isPermissionRequestProposalReady({
               proposalKind,
               resourceType,
-              previewResolved: currentProposalPreviewResolved,
+              previewResolved:
+                currentProposalPreviewResolved &&
+                (proposalKind !== "property_grants" || objectPropertiesResolved),
             }) ||
             (proposalKind !== "grant" && pendingProposalKinds.includes(proposalKind)) ||
             (proposalKind === "grant" && selectedOperations.length === 0) ||
@@ -721,29 +739,55 @@ export function ResourcePermissionRequestAction({
                   type="info"
                   message={t("knowledgeNetwork.permissionRequestRowScopeHint")}
                 />
-                {(proposalPreview?.row_filter?.policy?.conditions ?? []).map((condition) => {
-                  const field = proposalPreview?.row_filter?.available_fields?.find(
-                    (item) => item.name === condition.property_name,
-                  );
-                  return (
-                    <Form.Item
-                      key={`${condition.property_name}-${condition.operator}`}
-                      label={`${field?.display_name || condition.property_name} · ${t(`knowledgeNetwork.rowFilterConditionOperator.${condition.operator}`)}`}
-                      style={{ marginTop: 16 }}
-                    >
+                <Space direction="vertical" size={12} style={{ marginTop: 16, width: "100%" }}>
+                  {rowFilterPolicies.map((policy, policyIndex) => (
+                    <div key={`${policyIndex}-${policy.relation}`}>
+                      {policyIndex > 0 ? (
+                        <Typography.Text strong>
+                          {t("knowledgeNetwork.rowFilterConditionGroupOr")}
+                        </Typography.Text>
+                      ) : null}
                       <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                        <Space wrap>
-                          <Typography.Text type="secondary">
-                            {t("knowledgeNetwork.permissionRequestRowScopeCurrentValues")}
-                          </Typography.Text>
-                          {condition.values.map((value) => (
-                            <Tag key={String(value)}>{String(value)}</Tag>
-                          ))}
-                        </Space>
+                        {policy.conditions.map((condition, conditionIndex) => {
+                          const field = proposalPreview?.row_filter?.available_fields?.find(
+                            (item) => item.name === condition.property_name,
+                          );
+                          return (
+                            <div
+                              key={`${conditionIndex}-${condition.property_name}-${condition.operator}`}
+                            >
+                              {conditionIndex > 0 ? (
+                                <Typography.Text strong>
+                                  {t(
+                                    policy.relation === "and"
+                                      ? "knowledgeNetwork.rowFilterConditionGroupAnd"
+                                      : "knowledgeNetwork.rowFilterConditionGroupOr",
+                                  )}
+                                </Typography.Text>
+                              ) : null}
+                              <div>
+                                <Typography.Text>
+                                  {field?.display_name || condition.property_name} ·{" "}
+                                  {t(
+                                    `knowledgeNetwork.rowFilterConditionOperator.${condition.operator}`,
+                                  )}
+                                </Typography.Text>
+                              </div>
+                              <Space wrap>
+                                <Typography.Text type="secondary">
+                                  {t("knowledgeNetwork.permissionRequestRowScopeCurrentValues")}
+                                </Typography.Text>
+                                {condition.values.map((value) => (
+                                  <Tag key={String(value)}>{String(value)}</Tag>
+                                ))}
+                              </Space>
+                            </div>
+                          );
+                        })}
                       </Space>
-                    </Form.Item>
-                  );
-                })}
+                    </div>
+                  ))}
+                </Space>
               </>
             ) : null}
             {proposalKind === "property_grants" ? (

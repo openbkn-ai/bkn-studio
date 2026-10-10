@@ -9,6 +9,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   canRequestResourcePermission,
+  getEffectiveRowFilterPolicies,
+  getRequestablePropertyGrants,
+  hasEffectiveRowFilter,
   hasRequestableObjectTypePermission,
   hasRequestableObjectTypePolicyScope,
   isPermissionRequestPrefillReady,
@@ -48,6 +51,82 @@ describe("hasRequestableObjectTypePolicyScope", () => {
         property_grants: { entries: [{ level: "masked" }] },
       }),
     ).toBe(true);
+    expect(
+      hasRequestableObjectTypePolicyScope({
+        row_filter: {
+          effective_policies: [
+            {
+              conditions: [{ operator: "in", property_name: "region", values: ["east"] }],
+              relation: "and",
+            },
+          ],
+          effective_policy_present: true,
+        },
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("effective row-filter previews", () => {
+  const rolePolicy = {
+    conditions: [{ operator: "in", property_name: "region", values: ["east"] }],
+    relation: "and" as const,
+  };
+
+  it("prefers the complete effective policy list over the legacy direct policy", () => {
+    expect(
+      getEffectiveRowFilterPolicies({
+        effective_policies: [rolePolicy],
+        policy: { ...rolePolicy, conditions: [] },
+      }),
+    ).toEqual([rolePolicy]);
+  });
+
+  it("uses the effective presence flag even when no legacy policy is returned", () => {
+    expect(hasEffectiveRowFilter({ effective_policy_present: true, policy: null })).toBe(true);
+  });
+
+  it("does not infer a filter when the effective presence flag is explicitly false", () => {
+    expect(
+      hasEffectiveRowFilter({
+        effective_policies: [rolePolicy],
+        effective_policy_present: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps compatibility with legacy previews", () => {
+    expect(getEffectiveRowFilterPolicies({ policy: rolePolicy })).toEqual([rolePolicy]);
+    expect(hasEffectiveRowFilter({ policy: rolePolicy })).toBe(true);
+  });
+});
+
+describe("getRequestablePropertyGrants", () => {
+  it("expands a wildcard restriction into named object properties", () => {
+    expect(
+      getRequestablePropertyGrants(
+        [{ level: "masked", property_name: "*" }],
+        ["customer_name", "customer_phone"],
+      ),
+    ).toEqual([
+      { level: "masked", property_name: "customer_name" },
+      { level: "masked", property_name: "customer_phone" },
+    ]);
+  });
+
+  it("prefers an explicit property entry over the wildcard", () => {
+    expect(
+      getRequestablePropertyGrants(
+        [
+          { level: "masked", property_name: "*" },
+          { level: "schema", property_name: "customer_name" },
+        ],
+        ["customer_name", "customer_phone"],
+      ),
+    ).toEqual([
+      { level: "schema", property_name: "customer_name" },
+      { level: "masked", property_name: "customer_phone" },
+    ]);
   });
 });
 
