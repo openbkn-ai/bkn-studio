@@ -16,7 +16,11 @@ import type {
   ResourceUpdateInput,
 } from "@/modules/data-catalog/types/data-catalog";
 
-const translateMock = vi.hoisted(() => vi.fn((key: string) => key));
+const translateMock = vi.hoisted(() =>
+  vi.fn((key: string, options?: { value?: string }) =>
+    options?.value && key.startsWith("common.error.") ? `${key}: ${options.value}` : key,
+  ),
+);
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const loadAnalyzerCapabilitiesMock = vi.hoisted(() => vi.fn());
 const loadEmbeddingModelOptionsMock = vi.hoisted(() => vi.fn());
@@ -77,7 +81,9 @@ const resource: CatalogResource = {
 describe("IndexConfigFormPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    translateMock.mockImplementation((key: string) => key);
+    translateMock.mockImplementation((key: string, options?: { value?: string }) =>
+      options?.value && key.startsWith("common.error.") ? `${key}: ${options.value}` : key,
+    );
     getCatalogResourceMock.mockReset().mockResolvedValue(resource);
     listBuildTaskPageMock.mockReset().mockResolvedValue({ items: [], total: 0 });
     updateCatalogResourceMock.mockReset();
@@ -348,11 +354,7 @@ describe("IndexConfigFormPanel", () => {
       }),
     );
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
-    await waitFor(() =>
-      expect(
-        [...document.querySelectorAll(".ant-alert")].map((node) => node.textContent),
-      ).toContain(expectedMessage),
-    );
+    expect(await screen.findByText(expectedMessage)).toBeInTheDocument();
     expect(
       screen.queryByText(
         expectedMessage === "dataCatalog.build.resourceUpdateConflict"
@@ -511,6 +513,77 @@ describe("IndexConfigFormPanel", () => {
         expect(dataset.indexConfig?.defaultFulltextAnalyzer).toBe("standard");
         expect(listBuildTaskPageMock).not.toHaveBeenCalled();
       }
+    },
+  );
+
+  it.each([
+    [
+      "Unknown.Conflict",
+      "dataCatalog.build.configConflict",
+      "Resource cannot be updated in its current state",
+      "Enable the resource before editing its index",
+    ],
+    [
+      "Unknown.DescriptionOnly",
+      "dataCatalog.build.configConflict",
+      "Resource is archived",
+      undefined,
+    ],
+    [
+      "VegaBackend.InvalidParameter.RequestBody",
+      "dataCatalog.build.datasetRebuildRequired",
+      "无效的请求体",
+      'dataset fulltext analyzer for field "content" cannot be changed on an existing index; rebuild the dataset instead',
+    ],
+    [
+      "VegaBackend.Resource.UpdateConflict",
+      "dataCatalog.build.resourceUpdateConflict",
+      "Resource was modified concurrently",
+      "Reload the latest resource version",
+    ],
+  ])(
+    "preserves backend diagnostics for conflict %s",
+    async (code, summary, description, details) => {
+      const dataset: CatalogResource = { ...resource, category: "dataset" };
+      getCatalogResourceMock.mockResolvedValue(dataset);
+      updateCatalogResourceMock.mockRejectedValue(
+        new AxiosError("Conflict", undefined, undefined, undefined, {
+          config: { headers: new AxiosHeaders() },
+          data: {
+            error_code: code,
+            description,
+            error_details: details,
+            solution: "Review the resource configuration",
+            error_link: "https://example.com/errors/resource-conflict",
+          },
+          headers: {},
+          status: 409,
+          statusText: "Conflict",
+        }),
+      );
+      render(
+        <MemoryRouter>
+          <IndexConfigFormPanel active canViewTasks={false} resource={dataset} />
+        </MemoryRouter>,
+      );
+      fireEvent.click(
+        await screen.findByRole("button", { name: "dataCatalog.build.saveIndexConfig" }),
+      );
+      expect(await screen.findByText(summary)).toBeInTheDocument();
+      expect(messageErrorMock).toHaveBeenCalledExactlyOnceWith(summary);
+      fireEvent.click(screen.getByRole("button", { name: "common.viewDetails" }));
+      expect(screen.getByText(`common.error.code: ${code}`)).toBeInTheDocument();
+      const diagnostic = screen.getByText((text) => text.startsWith("common.error.details:"));
+      expect(diagnostic).toHaveTextContent(description);
+      if (details) expect(diagnostic).toHaveTextContent(details);
+      expect(
+        screen.getByText("common.error.solution: Review the resource configuration"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("common.error.link: https://example.com/errors/resource-conflict"),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "common.hideDetails" }));
+      expect(screen.queryByText(`common.error.code: ${code}`)).not.toBeInTheDocument();
     },
   );
 

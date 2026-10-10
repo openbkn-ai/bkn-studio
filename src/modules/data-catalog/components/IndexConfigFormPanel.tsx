@@ -14,8 +14,10 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import {
   extractRequestErrorDetails,
   extractRequestErrorMessage,
+  type RequestErrorDetails,
 } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { RequestErrorAlert } from "@/framework/ui/common/RequestErrorAlert";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import { listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
@@ -171,7 +173,7 @@ export function IndexConfigFormPanel({
   const analyzerRequestIdRef = useRef(0);
   const [orphanSavedModel, setOrphanSavedModel] = useState<string | null>(null);
   const [defaultModelId, setDefaultModelId] = useState<string>();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RequestErrorDetails | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [featureFieldsPage, setFeatureFieldsPage] = useState(1);
@@ -189,15 +191,6 @@ export function IndexConfigFormPanel({
   useEffect(() => {
     setFeatureFieldsPage((page) => Math.min(page, featureFieldsPageCount));
   }, [featureFieldsPageCount]);
-
-  useEffect(() => {
-    if (!error) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => setError(null), 5000);
-    return () => window.clearTimeout(timer);
-  }, [error]);
 
   const analyzerOptions = useMemo(
     () =>
@@ -661,7 +654,7 @@ export function IndexConfigFormPanel({
   const validateForm = () => {
     const validationError = getFormValidationError();
     if (validationError) {
-      setError(validationError);
+      setError({ description: validationError });
       return false;
     }
     return true;
@@ -673,13 +666,13 @@ export function IndexConfigFormPanel({
     }
     if (actionsLocked) {
       if (!readOnly) {
-        setError(
-          taskStatusPending
+        setError({
+          description: taskStatusPending
             ? t("dataCatalog.resourceWorkspace.taskStatusUnavailable")
             : streamingActive
               ? t("dataCatalog.build.streamingActiveLocked")
               : t("dataCatalog.build.activeTaskLocked"),
-        );
+        });
       }
       return;
     }
@@ -740,7 +733,8 @@ export function IndexConfigFormPanel({
       message.success(t("dataCatalog.build.saveConfigSuccess"));
       onSaved?.();
     } catch (persistError) {
-      const { code, description } = extractRequestErrorDetails(persistError);
+      const backendError = extractRequestErrorDetails(persistError);
+      const { code, description } = backendError;
       let errorMessage = description;
       if (extractRequestStatus(persistError) === 409) {
         let key = "configConflict";
@@ -755,11 +749,19 @@ export function IndexConfigFormPanel({
           resource.category === "dataset" &&
           code === "VegaBackend.InvalidParameter.RequestBody"
         ) {
+          // The Resource update contract uses this 409 code for Dataset index/analyzer rebuild guards.
           key = "datasetRebuildRequired";
         }
         errorMessage = t(`dataCatalog.build.${key}`);
       }
-      setError(errorMessage);
+      setError({
+        ...backendError,
+        description: errorMessage,
+        details:
+          errorMessage === description
+            ? backendError.details
+            : [description, backendError.details].filter(Boolean).join("\n"),
+      });
       void message.error(errorMessage);
     } finally {
       setSaving(false);
@@ -1708,7 +1710,9 @@ export function IndexConfigFormPanel({
         ) : null}
       </Drawer>
 
-      {error ? <Alert message={error} showIcon type="error" /> : null}
+      {error ? (
+        <RequestErrorAlert autoDismissMs={5000} error={error} onDismiss={() => setError(null)} />
+      ) : null}
       {dirty ? (
         <Alert message={t("dataCatalog.build.unsavedIndexConfig")} showIcon type="warning" />
       ) : null}
