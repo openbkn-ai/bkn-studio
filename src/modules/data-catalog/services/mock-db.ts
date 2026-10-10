@@ -65,7 +65,7 @@ function makeResource(
   const sourceMetadata =
     input.category === "dataset"
       ? undefined
-      : input.category === "logicview"
+      : input.category === "logical_view"
         ? input.sourceMetadata
         : {
             foreignKeyCount: 0,
@@ -258,7 +258,7 @@ export const mockResources: CatalogResource[] = [
     id: "res-high-value-orders-view",
     catalogId: "cat-001",
     name: "high_value_orders",
-    category: "logicview",
+    category: "logical_view",
     logicType: "derived",
     sourceIdentifier: "res-high-value-orders-view",
     sourceMetadata: {

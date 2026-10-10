@@ -319,11 +319,11 @@ function formatTimestamp(value?: number) {
 }
 
 function normalizeCategory(value?: string, logicType?: string): ResourceCategory {
-  if (value === "logicview" || value === "dataset" || value === "index") {
+  if (value === "logical_view" || value === "dataset" || value === "index") {
     return value;
   }
   if (logicType) {
-    return "logicview";
+    return "logical_view";
   }
   return "table";
 }
@@ -735,12 +735,16 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
   if (useMock) {
     const source = mockResources.find((item) => item.id === input.sourceResourceId);
     if (!source || (source.category !== "table" && source.category !== "index")) {
-      throwMockRequestError(400, "VegaBackend.LogicView.InvalidSource", "Invalid source resource.");
+      throwMockRequestError(
+        400,
+        "VegaBackend.LogicalView.InvalidSource",
+        "Invalid source resource.",
+      );
     }
     const timestamp = Date.now();
     const resource: CatalogResource = {
       catalogId: input.catalogId,
-      category: "logicview",
+      category: "logical_view",
       columnCount: input.schema.length,
       description: input.description,
       enabled: input.enabled,
@@ -769,7 +773,7 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
     "/vega-backend/v1/resources",
     {
       catalog_id: input.catalogId,
-      category: "logicview",
+      category: "logical_view",
       description: input.description,
       enabled: input.enabled,
       logic_type: "derived",
@@ -797,7 +801,7 @@ export async function updateDerivedView(
   if (useMock) {
     const index = mockResources.findIndex((item) => item.id === id);
     const current = mockResources[index];
-    if (!current || current.category !== "logicview" || current.logicType !== "derived") {
+    if (!current || current.category !== "logical_view" || current.logicType !== "derived") {
       throwMockRequestError(404, "VegaBackend.Resource.NotFound", "View not found.");
     }
     validateMockExpectedUpdateTime(input.expectedUpdateTime);
@@ -828,7 +832,7 @@ export async function updateDerivedView(
     `/vega-backend/v1/resources/${id}`,
     {
       catalog_id: input.catalogId,
-      category: "logicview",
+      category: "logical_view",
       description: input.description,
       enabled: input.enabled,
       expected_update_time: input.expectedUpdateTime,

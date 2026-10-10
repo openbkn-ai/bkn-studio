@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type ResourceCategory = "dataset" | "index" | "logicview" | "table";
+export type ResourceCategory = "dataset" | "index" | "logical_view" | "table";
 
 export type ResourceDiscoverStatus =
   "error" | "missing" | "new" | "restored" | "unchanged" | "updated";

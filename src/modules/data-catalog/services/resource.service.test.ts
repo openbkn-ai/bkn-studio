@@ -313,7 +313,7 @@ describe("resource.service · previewCatalogResource", () => {
   it("preserves numeric types in an unsupported stored view filter", async () => {
     const rawResponse =
       '{"entries":[{"id":"view-1","catalog_id":"catalog-1","name":"view",' +
-      '"category":"logicview","logic_type":"derived","logic_definition":{' +
+      '"category":"logical_view","logic_type":"derived","logic_definition":{' +
       '"source_resource_id":"source-1","filter_condition":{' +
       '"field":"id","operation":"in","value":[9007199254740993,"9007199254740995"]}}}]}';
     getMock.mockImplementation(
@@ -463,7 +463,7 @@ describe("resource.service · derived view contract", () => {
         entries: [
           {
             catalog_id: "cat-1",
-            category: "logicview",
+            category: "logical_view",
             id: "view-1",
             name: "orders_view",
             logic_type: "derived",
@@ -490,7 +490,7 @@ describe("resource.service · derived view contract", () => {
 
     expect(postMock.mock.calls[0]?.[1]).toMatchObject({
       catalog_id: "cat-1",
-      category: "logicview",
+      category: "logical_view",
       enabled: false,
       logic_type: "derived",
       logic_definition: { source_resource_id: "source-1" },
@@ -515,7 +515,7 @@ describe("resource.service · derived view contract", () => {
         entries: [
           {
             catalog_id: "cat-1",
-            category: "logicview",
+            category: "logical_view",
             id: "view-1",
             name: "orders_view",
             logic_type: "derived",
@@ -844,7 +844,7 @@ describe("resource.service · getCatalogResources", () => {
         entries: [
           {
             catalog_id: "cat-1",
-            category: "logicview",
+            category: "logical_view",
             id: "view-1",
             name: "orders_view",
             source_metadata: {
@@ -859,7 +859,7 @@ describe("resource.service · getCatalogResources", () => {
           },
           {
             catalog_id: "cat-1",
-            category: "logicview",
+            category: "logical_view",
             id: "view-2",
             name: "search_view",
             source_metadata: {
@@ -873,11 +873,11 @@ describe("resource.service · getCatalogResources", () => {
           },
           {
             catalog_id: "cat-1",
-            category: "logicview",
+            category: "logical_view",
             id: "view-3",
             name: "unsupported_view",
             source_metadata: {
-              source_resource: { category: "logicview", original_name: "other_view" },
+              source_resource: { category: "logical_view", original_name: "other_view" },
             },
           },
         ],

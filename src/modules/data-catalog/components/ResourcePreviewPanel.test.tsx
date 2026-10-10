@@ -84,7 +84,7 @@ describe("ResourcePreviewPanel", () => {
 
   it("shows type, display name, and field name together in Table and View headers", () => {
     previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
-    for (const category of ["table", "logicview"] as const) {
+    for (const category of ["table", "logical_view"] as const) {
       const { unmount } = render(
         <ResourcePreviewPanel
           active
@@ -116,7 +116,7 @@ describe("ResourcePreviewPanel", () => {
 
   it("applies and clears a temporary filter for both Table and View previews", async () => {
     previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
-    for (const category of ["table", "logicview"] as const) {
+    for (const category of ["table", "logical_view"] as const) {
       const { unmount } = render(
         <ResourcePreviewPanel
           active
@@ -388,7 +388,7 @@ describe("ResourcePreviewPanel", () => {
         active
         resource={{
           ...resource,
-          category: "logicview",
+          category: "logical_view",
           columnCount: 1,
           logicDefinition: {
             sourceResourceId: "source-1",
@@ -866,7 +866,7 @@ describe("ResourcePreviewPanel", () => {
         active
         resource={{
           ...resource,
-          category: "logicview",
+          category: "logical_view",
           name: "orders_view",
           sourceIdentifier: "logic-view-id",
           columnCount: 1,

@@ -282,8 +282,8 @@ export function ResourceIndexPanel({
   const canModifyResource = hasCatalogOperation(catalog, "resource_manage");
   const canViewResourceDetail = hasCatalogResourceOperation(resource, "view_detail");
   const readOnly = isResourceIndexReadOnly(catalog, canModifyResource);
-  const logicViewReadOnly = resource.category === "logicview";
-  const configReadOnly = readOnly || logicViewReadOnly;
+  const logicalViewReadOnly = resource.category === "logical_view";
+  const configReadOnly = readOnly || logicalViewReadOnly;
   const canManageBuildTasks = canManageResourceBuildTasks(resource, catalog);
   const canManageTaskActions = canManageBuildTasks;
   const latest = taskStatusUnavailable ? null : state.latest;
@@ -588,8 +588,8 @@ export function ResourceIndexPanel({
         {!canModifyResource ? (
           <Alert message={t("dataCatalog.build.configReadOnly")} showIcon type="warning" />
         ) : null}
-        {logicViewReadOnly ? (
-          <Alert message={t("dataCatalog.resource.logicViewReadOnly")} showIcon type="info" />
+        {logicalViewReadOnly ? (
+          <Alert message={t("dataCatalog.resource.logicalViewReadOnly")} showIcon type="info" />
         ) : null}
         <div className={panelStyles.configureCard}>
           <IndexConfigFormPanel

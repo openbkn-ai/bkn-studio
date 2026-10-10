@@ -53,7 +53,7 @@ import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceListPanel.module.css";
 
-const CATEGORY_FILTERS = ["table", "index", "logicview", "dataset"] as const;
+const CATEGORY_FILTERS = ["table", "index", "logical_view", "dataset"] as const;
 const RESOURCE_STATUS_FILTERS = ["active", "deprecated", "stale"] as const;
 const DISCOVER_STATUS_FILTERS = [
   "error",
@@ -400,7 +400,7 @@ export function ResourceListPanel({
       title: t("dataCatalog.resource.indexState"),
       width: 112,
       render: (value: CatalogResource["localIndexStatus"], record) =>
-        record.category === "logicview" ? (
+        record.category === "logical_view" ? (
           "—"
         ) : (
           <Tag
@@ -463,7 +463,7 @@ export function ResourceListPanel({
             ),
           });
         }
-        if (record.category !== "logicview") {
+        if (record.category !== "logical_view") {
           moreItems.push({
             key: "index",
             label: indexLabel,

@@ -572,7 +572,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
@@ -594,7 +594,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
@@ -616,7 +616,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
@@ -640,7 +640,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
@@ -668,7 +668,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
@@ -703,7 +703,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       enabled: false,
       name: "orders_view",
@@ -778,7 +778,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       logicDefinition: {
@@ -809,7 +809,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
@@ -842,7 +842,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
@@ -872,7 +872,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       schema: [{ name: "notes", originalName: "notes", type: "text", displayName: "Notes" }],
@@ -914,7 +914,7 @@ describe("ViewEditorScene", () => {
     const view = {
       ...source,
       id: "view-1",
-      category: "logicview",
+      category: "logical_view",
       logicType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,

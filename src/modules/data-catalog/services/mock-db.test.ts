@@ -148,7 +148,7 @@ describe("data catalog discover-status mocks", () => {
         continue;
       }
 
-      if (resource.category === "logicview") {
+      if (resource.category === "logical_view") {
         continue;
       }
 
@@ -168,7 +168,7 @@ describe("data catalog discover-status mocks", () => {
 
     expect(view).toMatchObject({
       catalogId: "cat-001",
-      category: "logicview",
+      category: "logical_view",
       enabled: true,
       logicType: "derived",
       operations: ["view_detail", "query_data", "delete"],

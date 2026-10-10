@@ -179,7 +179,7 @@ describe("ResourceListPanel", () => {
     ],
     [
       "active view",
-      { category: "logicview", status: "active", lastDiscoverStatus: undefined },
+      { category: "logical_view", status: "active", lastDiscoverStatus: undefined },
       true,
     ],
     ["without delete permission", { operations: ["view_detail"] }, false],
@@ -199,7 +199,7 @@ describe("ResourceListPanel", () => {
     expect(screen.queryByRole("menuitem", { name: "common.delete" }) !== null).toBe(visible);
   });
 
-  it.each(["dataset", "logicview"])("deletes an active %s with permission", async (category) => {
+  it.each(["dataset", "logical_view"])("deletes an active %s with permission", async (category) => {
     const resource = missingResource({ category, status: "active", lastDiscoverStatus: undefined });
     listCatalogResourcePageMock.mockResolvedValue({ items: [resource], total: 1 });
     getCatalogResourceMock.mockResolvedValue(resource);
@@ -226,7 +226,7 @@ describe("ResourceListPanel", () => {
   });
 
   it("rejects an active view when its delete permission disappears", async () => {
-    const resource = missingResource({ category: "logicview", status: "active" });
+    const resource = missingResource({ category: "logical_view", status: "active" });
     listCatalogResourcePageMock.mockResolvedValue({ items: [resource], total: 1 });
     getCatalogResourceMock.mockResolvedValue({ ...resource, operations: ["view_detail"] });
     renderPanel(catalog);
@@ -647,7 +647,7 @@ describe("ResourceListPanel", () => {
       items: [
         {
           catalogId: "catalog-1",
-          category: "logicview",
+          category: "logical_view",
           columnCount: 1,
           description: "",
           expectedUpdateTime: 0,

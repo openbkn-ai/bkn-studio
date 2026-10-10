@@ -289,7 +289,7 @@ describe("ResourceIndexPanel", () => {
           indexViewExplicit
           onIndexViewChange={vi.fn()}
           onRefresh={vi.fn()}
-          resource={{ ...resource, category: "logicview" }}
+          resource={{ ...resource, category: "logical_view" }}
           tasks={[]}
         />
       </MemoryRouter>,
@@ -298,7 +298,7 @@ describe("ResourceIndexPanel", () => {
     expect(indexConfigFormPanelMock).toHaveBeenCalledWith(
       expect.objectContaining({ hideBuildControls: true, readOnly: true }),
     );
-    expect(screen.getByText("dataCatalog.resource.logicViewReadOnly")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.resource.logicalViewReadOnly")).toBeTruthy();
   });
 
   it("keeps configuration editable without task_manage while withholding task access", () => {

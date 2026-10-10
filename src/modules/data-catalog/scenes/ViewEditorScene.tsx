@@ -530,7 +530,7 @@ export function ViewEditorScene({
   if (
     resourceId &&
     (!view ||
-      view.category !== "logicview" ||
+      view.category !== "logical_view" ||
       view.logicType !== "derived" ||
       !view.logicDefinition)
   ) {
