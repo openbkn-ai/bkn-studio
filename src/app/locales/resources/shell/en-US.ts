@@ -69,10 +69,44 @@ export const shellEnUS = {
       logManagement: "Audit Logs",
       apiKeys: "API Key",
       account: "Account",
+      aboutOpenBkn: "About OpenBKN",
       permissionReviews: "Permission tickets",
       pendingPermissionRequests_one: "{{count}} permission ticket awaiting review",
       pendingPermissionRequests_other: "{{count}} permission tickets awaiting review",
       installStatus: "Backend Service Status",
+    },
+    aboutOpenBkn: {
+      title: "About OpenBKN",
+      subtitle: "Open Business Knowledge Network. Open Source Ontology Platform.",
+      summaryZh:
+        "OpenBKN 是一个面向企业 AI、自动化与决策智能的本体驱动业务知识网络平台，也是一个开源本体平台。",
+      summaryEn:
+        "OpenBKN is an ontology-driven business knowledge network platform for enterprise AI, automation and decision intelligence. It's an Open Source Ontology Platform.",
+      points: {
+        ontology: {
+          title: "本体驱动 · Ontology-Driven",
+          description:
+            "Use ontologies to describe enterprise objects, relationships, rules, risks, and actions.",
+        },
+        openSource: {
+          title: "开放平台 · Open Source",
+          description:
+            "Open, transparent, and extensible, with support for private deployment and collaboration.",
+        },
+        action: {
+          title: "从理解到行动 · From Understanding to Action",
+          description:
+            "Connect knowledge, tools, and business actions so agents can participate in real workflows.",
+        },
+        governance: {
+          title: "安全可治理 · Secure & Traceable",
+          description:
+            "Apply permissions, risk controls, and end-to-end traceability to business actions.",
+        },
+      },
+      footer: "Like OpenBKN? Give us a star on GitHub.",
+      website: "Learn more ↗",
+      github: "Star on GitHub",
     },
   },
 } as const;
