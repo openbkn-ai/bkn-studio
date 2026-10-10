@@ -30,10 +30,6 @@ vi.mock("@/framework/context/use-app-services", () => ({
   }),
 }));
 
-vi.mock("@/framework/entitlement/LicenseStateBanner", () => ({
-  LicenseStateBanner: () => null,
-}));
-
 vi.mock("@/framework/entitlement/use-entitlement", () => ({
   useRefreshEntitlement: () => vi.fn().mockResolvedValue(undefined),
 }));

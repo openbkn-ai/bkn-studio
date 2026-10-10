@@ -124,8 +124,9 @@ export const commonZhCN = {
       },
       upgrade: "升级",
       banner: {
-        unlicensed: "当前没有可用授权,社区能力照常使用。导入授权文件可解锁付费能力。",
-        action: "去处理",
+        unlicensed:
+          "产品尚未激活。请注册账号并领取社区版永久免费授权，或者申请专业版/企业版授权评估。社区功能可继续使用",
+        action: "欢迎注册领取授权",
       },
     },
   },

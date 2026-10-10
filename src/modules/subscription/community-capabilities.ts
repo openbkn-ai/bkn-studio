@@ -25,20 +25,21 @@ export type CommunityCapability = {
   /** i18n 后缀,文案在 `subscription.community.<id>`。 */
   id: string;
   /**
-   * 是否上社区版卡片。卡片是选购视角,只放建模底座和权限基线——付费两档的卡片讲的
-   * 正是权限模型怎么递进,社区卡不写清起点,后两张的「更细」就没有参照。完整清单在
-   * 对比表里。
+   * 是否上社区版卡片。卡片是选购视角,列出建模底座、常用接入、体验入口和权限基线;
+   * 完整清单在对比表里。
    */
   onCard?: boolean;
 };
 
 export const COMMUNITY_CAPABILITIES: CommunityCapability[] = [
   { category: "modeling", id: "modelingSurfaces", onCard: true },
+  { category: "modeling", id: "oneClickExperience", onCard: true },
   { category: "modeling", id: "modelingTypes", onCard: true },
   { category: "modeling", id: "queryAndSearch", onCard: true },
   { category: "dataConnect", id: "commonSources", onCard: true },
   { category: "dataConnect", id: "indexing" },
   { category: "semantic", id: "mcpTooling" },
+  { category: "semantic", id: "executionFactory", onCard: true },
   { category: "semantic", id: "actionSandbox" },
   // 权限基线,对应对外版本说明「权限能力矩阵」里三档都成立的那几行:内置角色 / 顶层资源
   // 整体授权 / 基础审计。矩阵社区列里的「只授顶层、固定权限包」是限制不是能力——这张表的

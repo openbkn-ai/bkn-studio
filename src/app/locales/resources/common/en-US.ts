@@ -113,8 +113,8 @@ export const commonEnUS = {
       upgrade: "Upgrade",
       banner: {
         unlicensed:
-          "No licence is active. Community capabilities keep working; import a licence to unlock paid ones.",
-        action: "Resolve",
+          "The product is not activated. Register for a permanently free Community licence, or apply for a Professional/Enterprise evaluation licence. Community features remain available.",
+        action: "Register to claim your licence",
       },
     },
   },
