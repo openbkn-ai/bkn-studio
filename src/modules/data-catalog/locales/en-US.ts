@@ -356,14 +356,14 @@ export const dataCatalogEnUS = {
       sourceSchemaChanged:
         "Source fields changed. Review output fields and fixed filters before saving.",
       invalidName: "Enter a logical view name.",
-      nameLengthLimit: "Logical View names must be at most 255 characters.",
+      nameLengthLimit: "Logical view names must be at most 255 characters.",
       descriptionLengthLimit: "Descriptions must be at most 1000 characters.",
       invalidFields:
         "Keep at least one field. Output names and display names must be nonempty, unique, and at most 255 characters.",
       duplicateOutputName: 'Output name "{{name}}" is duplicated. Change it.',
       duplicateDisplayName: 'Display name "{{name}}" is duplicated. Change it.',
       saveError: "Could not save the logical view. Check your input and try again.",
-      saved: "Logical View saved",
+      saved: "Logical view saved",
       discardTitle: "Discard unsaved changes?",
       discardHint: "Leaving this page will discard the current edits.",
       cancel: "Cancel",
@@ -566,7 +566,7 @@ export const dataCatalogEnUS = {
       fieldOriginalDescription: "Original Description",
       editFields: "Edit description and fields",
       logicalViewReadOnly:
-        "Logical View editing is not yet available in Studio. You can still view its details.",
+        "Logical view editing is not yet available in Studio. You can still view its details.",
       editHint:
         "You can edit the resource description, field business names, and field descriptions here.",
       copyValue: "Copy {{label}}",
