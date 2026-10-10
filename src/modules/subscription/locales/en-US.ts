@@ -30,7 +30,7 @@ export const subscriptionEnUS = {
       },
       connector_certified: {
         bullets: {
-          b1: "Connect directly to SQL Server, Oracle and SAP HANA without an intermediate export",
+          b1: "Connect directly to SQL Server and Oracle without an intermediate export",
           b2: "Connection parameters, drivers and dialects are vendor-maintained and validated each release",
           b3: "Same modelling, indexing and query path as the community connectors — switching changes no model",
         },
@@ -38,16 +38,14 @@ export const subscriptionEnUS = {
         cardBullets: {
           b1: "SQL Server",
           b2: "Oracle",
-          b3: "SAP HANA",
         },
         description:
-          "Certified and advanced source connectors (SQL Server, Oracle and SAP HANA). Community ships the basic connectors only.",
+          "Certified and advanced source connectors: Professional includes SQL Server and Oracle; Enterprise adds SAP HANA. Community ships the basic connectors only.",
         name: "Advanced data connectivity",
       },
       vega_logic_view: {
-        description:
-          "Create derived logical views from tables or indexes with selected fields and fixed filters.",
-        name: "Logical views",
+        description: "Supports derived and composite views.",
+        name: "Logical views: derived and composite views",
       },
       graph_explorer: {
         bullets: {
@@ -69,10 +67,9 @@ export const subscriptionEnUS = {
       },
       perm_object_level: {
         bullets: {
-          b1: "Row-level permissions on object types",
-          b2: "Column-level permissions on object types, four property tiers",
-          b3: "Column Masking",
-          b4: "Audit of row and column permission changes",
+          b1: "Object types support row filtering",
+          b2: "Object types support column filtering (hide property columns, show property names only, or use Column Masking to redact content)",
+          b3: "Audit of row and column permission changes",
         },
         description: "Enterprise object-rule compatibility and property-level controls",
         name: "Enterprise object rules",
@@ -83,7 +80,7 @@ export const subscriptionEnUS = {
       },
       semantic_task: {
         description: "Authoring and execution of business-semantic understanding tasks",
-        name: "Semantic understanding tasks",
+        name: "Semantic understanding for data resources",
       },
     },
     /**
@@ -96,12 +93,14 @@ export const subscriptionEnUS = {
       actionSandbox: "Action execution in a secure sandbox",
       basicAudit: "Basic activity audit",
       cliTrace: "Query run traces, latency, evidence and reasoning via CLI / SDK",
-      commonSources: "Common databases, OpenSearch and CSV ingestion",
+      commonSources: "Connect to MySQL, PostgreSQL, MariaDB and OpenSearch as data sources",
+      executionFactory: "Execution Factory connects OpenAPI, MCP, SKILL and functions",
       indexing: "Data discovery, batch indexing and vectorisation",
       localAuth: "Local sign-in with user, department and built-in role management",
       mcpTooling: "Connect, debug and invoke MCP servers, tools and Skills",
       modelingSurfaces: "Model and manage knowledge networks from BKN Studio, CLI, SDK and Skills",
       modelingTypes: "Object, relation, action and metric modelling",
+      oneClickExperience: "Try it in one click with dynamically loaded official examples",
       queryAndSearch: "Relation queries, path queries and semantic search",
       selfHosted: "Source builds, basic deployment, health checks and upgrade docs",
       topLevelGrants: "Grants on whole top-level resources (knowledge networks, catalogs)",
@@ -148,7 +147,8 @@ export const subscriptionEnUS = {
       },
       enterprise: {
         audience:
-          "For organisations running their enterprise AI agents on OpenBKN. Adds fine-grained enterprise object permissions and business provenance on top of Professional.",
+          "For organisations running their enterprise AI agents on OpenBKN. Adds SAP HANA connectivity, fine-grained enterprise object permissions and business provenance on top of Professional.",
+        hanaConnector: "SAP HANA",
         price: "Contact us",
         unit: "Per contract",
       },

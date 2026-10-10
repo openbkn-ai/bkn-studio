@@ -34,7 +34,7 @@ export const CAPABILITIES = {
    * 永久隐藏(ee-design.md §6「A 答不了 B」)。它今天只用于版本页的在售清单。
    */
   BUSINESS_PROVENANCE: "business_provenance",
-  /** 认证/高级数据源连接器（SQL Server、Oracle、SAP HANA）。专业档起,由 Vega 实现。 */
+  /** 认证/高级数据源连接器（专业版 SQL Server、Oracle；企业版另含 SAP HANA）。由 Vega 实现。 */
   CONNECTOR_CERTIFIED: "connector_certified",
   /** Vega 衍生逻辑视图。专业档起，由 EE Vega 实现。 */
   VEGA_LOGIC_VIEW: "vega_logic_view",

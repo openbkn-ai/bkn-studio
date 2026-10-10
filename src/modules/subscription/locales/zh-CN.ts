@@ -12,7 +12,7 @@
  *
  * `bullets` 不在登记表里,是产品侧补的卖点:版本卡片与升级弹窗共用;`cardBullets` 有值时
  * 卡片改用它(见 `capabilityCardBullets`)。权限三项的条目
- * 来自对外版本说明的「权限能力矩阵」(资源粒度 / 操作粒度 / 行列权限 / 列掩码 / 审计),
+ * 来自对外版本说明的「权限能力矩阵」(资源粒度 / 操作粒度 / 行过滤与列权限 / 审计),
  * 矩阵改了这里要跟着改。
  */
 export const subscriptionZhCN = {
@@ -32,7 +32,7 @@ export const subscriptionZhCN = {
       },
       connector_certified: {
         bullets: {
-          b1: "SQL Server、Oracle、SAP HANA 直连，无需导出中间文件",
+          b1: "SQL Server、Oracle 直连，无需导出中间文件",
           b2: "连接参数、驱动与方言由官方维护并随版本验证",
           b3: "与社区连接器同一套建模、索引与查询链路,切换不改模型",
         },
@@ -40,15 +40,14 @@ export const subscriptionZhCN = {
         cardBullets: {
           b1: "SQL Server",
           b2: "Oracle",
-          b3: "SAP HANA",
         },
         description:
-          "认证/高级数据源连接器（SQL Server、Oracle、SAP HANA）；社区版仅开放基础连接器",
+          "认证/高级数据源连接器：专业版支持 SQL Server、Oracle，企业版增加 SAP HANA；社区版仅开放基础连接器",
         name: "高级数据连接",
       },
       vega_logic_view: {
-        description: "基于数据表或索引创建衍生逻辑视图，配置输出字段与固定过滤条件",
-        name: "逻辑视图",
+        description: "支持衍生视图和复合视图",
+        name: "逻辑视图：支持衍生视图和复合视图",
       },
       graph_explorer: {
         bullets: {
@@ -69,10 +68,9 @@ export const subscriptionZhCN = {
       },
       perm_object_level: {
         bullets: {
-          b1: "对象类行权限",
-          b2: "对象类列权限,属性分四档",
-          b3: "列掩码",
-          b4: "行列权限变更审计",
+          b1: "对象类支持行过滤",
+          b2: "对象类支持列过滤（支持配置属性列不可见、仅属性名称、列掩码-内容脱敏）",
+          b3: "行列权限变更审计",
         },
         description: "企业对象规则兼容层与属性级权限",
         name: "企业对象规则",
@@ -80,7 +78,7 @@ export const subscriptionZhCN = {
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
       semantic_task: {
         description: "面向业务语义的理解任务编排与执行",
-        name: "语义理解任务",
+        name: "数据资源支持语义理解",
       },
     },
     /**
@@ -91,12 +89,14 @@ export const subscriptionZhCN = {
       actionSandbox: "行动运行与安全沙箱环境",
       basicAudit: "基础操作审计",
       cliTrace: "通过 CLI / SDK 查询运行链路、性能、证据与推理过程",
-      commonSources: "常用数据库、OpenSearch 与 CSV 接入",
+      commonSources: "MySQL、PostgreSQL、MariaDB、Opensearch 作为数据源接入",
+      executionFactory: "执行工厂可接入 OpenAPI、MCP、 SKILL 与函数",
       indexing: "数据发现、批量索引与向量化",
       localAuth: "本地登录,用户、部门与内置角色管理",
       mcpTooling: "MCP、工具与 Skill 的接入、调试和调用",
       modelingSurfaces: "通过 BKN Studio、CLI、SDK 与 Skill 建模并管理知识网络",
       modelingTypes: "对象、关系、行动与指标建模",
+      oneClickExperience: "支持一键体验，动态加载官方样例",
       queryAndSearch: "关系查询、路径查询与语义检索",
       selfHosted: "源码构建、基础部署、状态检查与升级文档",
       topLevelGrants: "知识网络、Catalog 等顶层资源的整体授权",
@@ -141,7 +141,8 @@ export const subscriptionZhCN = {
       },
       enterprise: {
         audience:
-          "面向以 OpenBKN 为企业 AI Agent 运行底座的组织,在专业版基础上增加企业对象细粒度权限和业务溯源。",
+          "面向以 OpenBKN 为企业 AI Agent 运行底座的组织,在专业版基础上增加 SAP HANA 数据连接、企业对象细粒度权限和业务溯源。",
+        hanaConnector: "SAP HANA",
         price: "洽谈",
         unit: "按合同授权",
       },
