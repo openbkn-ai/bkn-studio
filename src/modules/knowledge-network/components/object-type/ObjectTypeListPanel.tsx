@@ -20,8 +20,9 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { isCommunityBuild } from "@/framework/entitlement/types";
-import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { useCapability, useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -33,6 +34,7 @@ import { ResourceTagList } from "@/modules/knowledge-network/components/shared/R
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import {
   canRequestResourcePermission,
+  canPreviewObjectTypePolicyScope,
   getMissingResourcePermissionOperations,
   hasRequestableObjectTypePolicyScope,
 } from "@/modules/knowledge-network/components/shared/resource-permission-request";
@@ -74,9 +76,12 @@ export function ObjectTypeListPanel({
   networkName,
   onDelete,
 }: ObjectTypeListPanelProps) {
-  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
+  const entitlement = useEntitlement();
+  const policyScopeCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
+  const permissionRequestsEnabled = !isCommunityBuild(entitlement);
   const policyScopePreviewsEnabled =
-    permissionRequestsEnabled && !getRuntimeConfig().currentUser.isSuperAdmin;
+    canPreviewObjectTypePolicyScope(policyScopeCapability) &&
+    !getRuntimeConfig().currentUser.isSuperAdmin;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
