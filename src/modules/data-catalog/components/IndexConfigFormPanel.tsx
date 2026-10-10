@@ -760,7 +760,7 @@ export function IndexConfigFormPanel({
         details:
           errorMessage === description
             ? backendError.details
-            : [description, backendError.details].filter(Boolean).join("\n"),
+            : [...new Set([description, backendError.details].filter(Boolean))].join("\n"),
       });
       void message.error(errorMessage);
     } finally {
@@ -1710,9 +1710,7 @@ export function IndexConfigFormPanel({
         ) : null}
       </Drawer>
 
-      {error ? (
-        <RequestErrorAlert autoDismissMs={5000} error={error} onDismiss={() => setError(null)} />
-      ) : null}
+      {error ? <RequestErrorAlert error={error} onDismiss={() => setError(null)} /> : null}
       {dirty ? (
         <Alert message={t("dataCatalog.build.unsavedIndexConfig")} showIcon type="warning" />
       ) : null}

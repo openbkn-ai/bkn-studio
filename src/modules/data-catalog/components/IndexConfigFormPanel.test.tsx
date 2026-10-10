@@ -587,6 +587,38 @@ describe("IndexConfigFormPanel", () => {
     },
   );
 
+  it.each(["details", "detail", "error_details"])(
+    "shows identical backend description and %s only once",
+    async (detailField) => {
+      const description = "Resource version changed";
+      updateCatalogResourceMock.mockRejectedValue(
+        new AxiosError("Conflict", undefined, undefined, undefined, {
+          config: { headers: new AxiosHeaders() },
+          data: {
+            error_code: "VegaBackend.Resource.UpdateConflict",
+            ...(detailField === "error_details" ? { description } : {}),
+            [detailField]: description,
+          },
+          headers: {},
+          status: 409,
+          statusText: "Conflict",
+        }),
+      );
+      render(
+        <MemoryRouter>
+          <IndexConfigFormPanel active canViewTasks={false} resource={resource} />
+        </MemoryRouter>,
+      );
+      fireEvent.click(
+        await screen.findByRole("button", { name: "dataCatalog.build.saveIndexConfig" }),
+      );
+      await screen.findByText("dataCatalog.build.resourceUpdateConflict");
+      fireEvent.click(screen.getByRole("button", { name: "common.viewDetails" }));
+      const diagnostic = screen.getByText((text) => text.startsWith("common.error.details:"));
+      expect(diagnostic.textContent).toBe(`common.error.details: ${description}`);
+    },
+  );
+
   it("drops an in-flight task result when task_manage is revoked", async () => {
     let resolveTasks: ((value: { items: BuildTask[]; total: number }) => void) | null = null;
     listBuildTaskPageMock.mockImplementation(
