@@ -16,6 +16,7 @@ const navigate = vi.hoisted(() => vi.fn());
 const getSampleReleaseNotes = vi.hoisted(() => vi.fn());
 const listSampleInstallations = vi.hoisted(() => vi.fn());
 const refreshSamples = vi.hoisted(() => vi.fn());
+const deleteSamplePackage = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -65,6 +66,7 @@ vi.mock("@/modules/home/services/sample-catalog.service", () => ({
   getSampleReleaseNotes,
   listSampleInstallations,
   refreshSamples,
+  deleteSamplePackage,
 }));
 
 import { SampleExperience } from "@/modules/home/scenes/SampleExperience";
@@ -179,6 +181,33 @@ describe("SampleExperience", () => {
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.expand" }));
     expect(toggles[0]).toHaveAttribute("aria-expanded", "false");
     expect(toggles[1]).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("removes an imported offline package and reloads the catalog", async () => {
+    listSamples
+      .mockResolvedValueOnce({
+        canImport: true,
+        samples: [sample({ source: "offline", displayName: "Offline sample" })],
+        sourceRejected: false,
+      })
+      .mockResolvedValueOnce({ canImport: true, samples: [sample()], sourceRejected: false });
+    deleteSamplePackage.mockResolvedValue(undefined);
+    renderExperience();
+    expect(await screen.findByText("home.sample.offlinePackagesTitle")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.removeOffline" }));
+    await waitFor(() => expect(deleteSamplePackage).toHaveBeenCalledWith("northwind"));
+    await waitFor(() => expect(screen.queryByText("home.sample.offlinePackagesTitle")).toBeNull());
+  });
+
+  it("hides offline package removal from non-admin catalogs", async () => {
+    listSamples.mockResolvedValue({
+      canImport: false,
+      samples: [sample({ source: "offline" })],
+      sourceRejected: false,
+    });
+    renderExperience();
+    await screen.findByText("home.sample.offlinePackagesTitle");
+    expect(screen.queryByRole("button", { name: "home.sample.removeOffline" })).toBeNull();
   });
 
   it("loads notes before confirming the fixed version and manifest", async () => {

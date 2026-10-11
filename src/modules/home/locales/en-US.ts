@@ -178,7 +178,8 @@ export const homeEnUS = {
       offlineImported: "Offline package imported",
       installProgress: "Installation progress: {{stage}}",
       offlinePackagesTitle: "Imported offline packages",
-      offlinePackagesDescription: "Review cached offline versions. Uninstalled packages can be removed and uploaded again.",
+      offlinePackagesDescription:
+        "Review cached offline versions. Uninstalled packages can be removed and uploaded again.",
       removeOffline: "Remove package",
       offlineDeleting: "Removing…",
       offlineDeleteFailed: "The offline package could not be removed. Try again later.",

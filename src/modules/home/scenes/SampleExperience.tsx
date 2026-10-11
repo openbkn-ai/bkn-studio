@@ -238,6 +238,7 @@ export function SampleExperience() {
   };
 
   const removeOfflinePackage = async (item: SampleCatalogItem) => {
+    setActionErrors((current) => ({ ...current, [item.name]: "" }));
     setOfflineDeleting(item.name);
     try {
       await deleteSamplePackage(item.name);
@@ -357,20 +358,24 @@ export function SampleExperience() {
                   <span className={styles.offlineBadge}>
                     {item.displayName} · {item.version}
                   </span>
-                  <button
-                    className={styles.removeOffline}
-                    disabled={
-                      offlineDeleting === item.name ||
-                      item.status === "installed" ||
-                      item.status === "installing"
-                    }
-                    onClick={() => void removeOfflinePackage(item)}
-                    type="button"
-                  >
-                    {offlineDeleting === item.name
-                      ? t("home.sample.offlineDeleting")
-                      : t("home.sample.removeOffline")}
-                  </button>
+                  {catalog?.canImport ? (
+                    <button
+                      className={styles.removeOffline}
+                      disabled={
+                        offlineDeleting === item.name ||
+                        installingNames.includes(item.name) ||
+                        item.status === "failed" ||
+                        item.status === "installed" ||
+                        item.status === "installing"
+                      }
+                      onClick={() => void removeOfflinePackage(item)}
+                      type="button"
+                    >
+                      {offlineDeleting === item.name
+                        ? t("home.sample.offlineDeleting")
+                        : t("home.sample.removeOffline")}
+                    </button>
+                  ) : null}
                 </div>
               ))}
           </div>
@@ -589,7 +594,7 @@ function SampleCard({
               </span>
             ) : null}
             {item.source === "offline" ? (
-              <span className={styles.fact}>{t("home.sample.offlineImported")}</span>
+              <span className={styles.offlineBadge}>{t("home.sample.offlineImported")}</span>
             ) : null}
             {item.status === "installed" ? (
               <span className={styles.fact}>
