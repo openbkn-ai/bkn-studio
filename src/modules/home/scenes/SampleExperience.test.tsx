@@ -144,9 +144,6 @@ describe("SampleExperience", () => {
       expect(getSampleReleaseNotes).toHaveBeenCalledWith("northwind", "0.2.0", "zh-CN"),
     );
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.install" }));
-    const start = await screen.findByRole("button", { name: "home.sample.actions.start" });
-    await waitFor(() => expect(start.hasAttribute("disabled")).toBe(false));
-    fireEvent.click(start);
     await waitFor(() =>
       expect(createSampleInstallation).toHaveBeenCalledWith("northwind", {
         version: "0.2.0",
@@ -210,7 +207,7 @@ describe("SampleExperience", () => {
     expect(screen.queryByRole("button", { name: "home.sample.removeOffline" })).toBeNull();
   });
 
-  it("loads notes before confirming the fixed version and manifest", async () => {
+  it("starts installation immediately while loading the fixed version notes", async () => {
     const manifestSha256 = "a".repeat(64);
     listSamples.mockResolvedValue({
       samples: [
@@ -239,10 +236,6 @@ describe("SampleExperience", () => {
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
     expect(await screen.findByText("Release details")).toBeVisible();
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "home.sample.actions.start" })).toBeEnabled(),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
-    await waitFor(() =>
       expect(createSampleInstallation).toHaveBeenCalledWith("northwind", {
         version: "0.1.0",
         manifestSha256,
@@ -251,7 +244,7 @@ describe("SampleExperience", () => {
     expect(getSampleReleaseNotes).toHaveBeenCalledWith("northwind", "0.1.0", "zh-CN");
   });
 
-  it("blocks confirmation when release notes cannot be loaded", async () => {
+  it("starts installation even when release notes cannot be loaded", async () => {
     listSamples.mockResolvedValue({
       samples: [
         sample({ hasReleaseNotes: true, versions: [{ version: "0.1.0", hasReleaseNotes: true }] }),
@@ -262,8 +255,7 @@ describe("SampleExperience", () => {
     renderExperience();
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
     expect(await screen.findByText("home.sample.notesFailed")).toBeVisible();
-    expect(screen.getByRole("button", { name: "home.sample.actions.start" })).toBeDisabled();
-    expect(createSampleInstallation).not.toHaveBeenCalled();
+    await waitFor(() => expect(createSampleInstallation).toHaveBeenCalledWith("northwind"));
   });
 
   it("shows the installed record and notes only after expansion", async () => {
@@ -320,7 +312,7 @@ describe("SampleExperience", () => {
     expect(screen.getByRole("button", { name: "home.sample.actions.open" })).toBeEnabled();
   });
 
-  it("asks for confirmation before installing a catalog sample", async () => {
+  it("starts installing a catalog sample from the card action", async () => {
     listSamples.mockResolvedValue({ samples: [sample()], sourceRejected: false });
     createSampleInstallation.mockResolvedValue({
       id: "inst-1",
@@ -332,12 +324,6 @@ describe("SampleExperience", () => {
     renderExperience();
 
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
-    expect(screen.getByText("home.sample.confirm.irreversible")).toBeTruthy();
-    expect(screen.getByText(/home.sample.confirm.network/)).toBeTruthy();
-    expect(createSampleInstallation).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
-
     await waitFor(() => expect(createSampleInstallation).toHaveBeenCalledWith("northwind"));
   });
 
@@ -378,7 +364,6 @@ describe("SampleExperience", () => {
     });
     renderExperience();
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
-    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
     await waitFor(() => expect(getSampleInstallation).toHaveBeenCalledWith("northwind", "inst-1"));
     expect(
       await screen.findByRole("button", { name: "home.sample.actions.progress" }),
@@ -390,7 +375,7 @@ describe("SampleExperience", () => {
     expect(createSampleInstallation).toHaveBeenCalledTimes(1);
   });
 
-  it("closes the confirm dialog and shows the install error", async () => {
+  it("shows the install error from the card action", async () => {
     listSamples.mockResolvedValue({ samples: [sample()], sourceRejected: false });
     createSampleInstallation.mockRejectedValue(
       new SampleRequestError("forbidden", "Need an administrator"),
@@ -398,10 +383,8 @@ describe("SampleExperience", () => {
     renderExperience();
 
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
-    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
 
     expect(await screen.findByText("Need an administrator")).toBeTruthy();
-    await waitFor(() => expect(screen.queryByText("home.sample.confirm.irreversible")).toBeNull());
   });
 
   it("clears an unknown request error when polling later reports success", async () => {
@@ -417,7 +400,6 @@ describe("SampleExperience", () => {
     renderExperience();
 
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
-    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
 
     expect(await screen.findByText("home.sample.errors.status_unknown")).toBeTruthy();
     await waitFor(() => expect(screen.queryByText("home.sample.errors.status_unknown")).toBeNull());
@@ -440,7 +422,6 @@ describe("SampleExperience", () => {
     renderExperience();
 
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
-    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
 
     await waitFor(() =>
       expect(getSampleInstallation).toHaveBeenCalledWith("northwind", "inst-created"),
@@ -563,15 +544,11 @@ describe("SampleExperience", () => {
       name: "home.sample.actions.install",
     });
     fireEvent.click(installButtons[0]);
-    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
 
     expect(await screen.findByText("home.sample.status.installing")).toBeTruthy();
     expect(screen.queryByText("home.sample.confirm.irreversible")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.install" }));
-    const start = screen.getByRole("button", { name: "home.sample.actions.start" });
-    expect(start).toHaveProperty("disabled", false);
-    fireEvent.click(start);
     await waitFor(() => expect(createSampleInstallation).toHaveBeenCalledTimes(2));
   });
 
