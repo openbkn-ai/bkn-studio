@@ -76,9 +76,8 @@ export const shellZhCN = {
     },
     aboutOpenBkn: {
       title: "关于 OpenBKN",
-      subtitle: "开放业务知识网络。开源本体平台。",
       summary:
-        "OpenBKN 是一个面向企业 AI、自动化与决策智能的本体驱动业务知识网络平台，也是一个开源本体平台。",
+        "OpenBKN 是一个开源的本体平台，通过本体驱动的企业知识网络，赋能企业人工智能、自动化和决策智能。",
       points: {
         ontology: {
           title: "本体驱动",

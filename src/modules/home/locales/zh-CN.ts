@@ -54,7 +54,7 @@ export const homeZhCN = {
       "欢迎使用 OpenBKN。面向各类企业智能体，OpenBKN 以本体驱动构建业务知识网络，统一组织企业的数据、逻辑、行动与风险，让智能体的创造性与企业业务的确定性相结合，支撑准确、安全、可靠的分析、执行与决策。",
     aboutOpenBkn: {
       title: "了解 OpenBKN",
-      description: "认识 OpenBKN 的定位、协议要点与开源生态",
+      description: "了解 OpenBKN 定位、开源协议及生态",
       website: "访问官网 ↗",
       github: "GitHub 点 Star",
     },

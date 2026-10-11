@@ -392,7 +392,6 @@ export function TopBar() {
         title={
           <div className="console-about-modal-title">
             <strong>{t("shell.aboutOpenBkn.title")}</strong>
-            <span>{t("shell.aboutOpenBkn.subtitle")}</span>
           </div>
         }
         width={640}
