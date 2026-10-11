@@ -12,6 +12,8 @@ import {
   CopyOutlined,
   DatabaseOutlined,
   FileTextOutlined,
+  GithubOutlined,
+  LinkOutlined,
   PartitionOutlined,
   QuestionCircleOutlined,
   RocketOutlined,
@@ -402,6 +404,36 @@ export function HomeScene() {
         <div className={styles.heroInner}>
           <h1>{greeting}</h1>
           <p className={styles.introduction}>{t("home.introduction")}</p>
+          <div className={styles.aboutEntry}>
+            <div className={styles.aboutEntryCopy}>
+              <span className={styles.aboutEntryIcon} aria-hidden>
+                <LinkOutlined />
+              </span>
+              <span>
+                <strong>{t("home.aboutOpenBkn.title")}</strong>
+                <small>{t("home.aboutOpenBkn.description")}</small>
+              </span>
+            </div>
+            <div className={styles.aboutEntryActions}>
+              <button
+                className={styles.aboutEntryLink}
+                onClick={() => window.open("https://openbkn.ai/", "_blank", "noopener,noreferrer")}
+                type="button"
+              >
+                {t("home.aboutOpenBkn.website")}
+              </button>
+              <button
+                className={styles.aboutEntryPrimary}
+                onClick={() =>
+                  window.open("https://github.com/openbkn-ai", "_blank", "noopener,noreferrer")
+                }
+                type="button"
+              >
+                <GithubOutlined />
+                {t("home.aboutOpenBkn.github")}
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 

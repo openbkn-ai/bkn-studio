@@ -68,10 +68,37 @@ export const shellZhCN = {
       logManagement: "审计日志",
       apiKeys: "API Key",
       account: "个人中心",
+      aboutOpenBkn: "关于 OpenBKN",
       permissionReviews: "权限工单",
       pendingPermissionRequests_one: "有 {{count}} 项待处理权限工单",
       pendingPermissionRequests_other: "有 {{count}} 项待处理权限工单",
       installStatus: "后端服务状态",
+    },
+    aboutOpenBkn: {
+      title: "关于 OpenBKN",
+      summary:
+        "OpenBKN 是一个开源的本体平台，通过本体驱动的企业知识网络，赋能企业 AI、自动化和决策智能。",
+      points: {
+        ontology: {
+          title: "本体驱动",
+          description: "用本体描述企业对象、关系、规则、风险与行动，为智能体提供业务语义。",
+        },
+        openSource: {
+          title: "开源本体平台",
+          description: "开放、透明、可扩展，支持企业私有化部署与社区协作。",
+        },
+        action: {
+          title: "从理解到行动",
+          description: "连接知识、工具与业务行动，让智能体参与真实工作流。",
+        },
+        governance: {
+          title: "安全可治理",
+          description: "围绕业务对象与行动提供权限、风险控制和全链路追溯。",
+        },
+      },
+      footer: "喜欢 OpenBKN？欢迎在 GitHub 为我们点个 Star。",
+      website: "了解更多 ↗",
+      github: "GitHub 点 Star",
     },
   },
 } as const;

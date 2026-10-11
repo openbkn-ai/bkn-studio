@@ -56,6 +56,12 @@ export const homeEnUS = {
     },
     introduction:
       "Welcome to OpenBKN. For all types of enterprise agents, OpenBKN builds business knowledge networks driven by ontology, uniformly organizing the enterprise's data, logic, actions and risks, combining the creativity of agents with the certainty of enterprise business, and supporting accurate, secure and reliable analysis, execution and decision-making.",
+    aboutOpenBkn: {
+      title: "Learn about OpenBKN",
+      description: "Learn about OpenBKN's positioning, open-source licensing, and ecosystem",
+      website: "Visit website ↗",
+      github: "Star on GitHub",
+    },
     pathLabel: "Build path",
     paths: {
       engineering: {

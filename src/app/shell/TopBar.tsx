@@ -11,12 +11,14 @@ import {
   CloudServerOutlined,
   GlobalOutlined,
   CrownOutlined,
+  GithubOutlined,
+  InfoCircleOutlined,
   LogoutOutlined,
   MoonOutlined,
   SunOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Badge, Dropdown } from "antd";
+import { Badge, Dropdown, Modal } from "antd";
 import type { MenuProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -58,6 +60,7 @@ export function TopBar() {
   const [pendingPermissionRequestCount, setPendingPermissionRequestCount] = useState<number | null>(
     null,
   );
+  const [aboutOpen, setAboutOpen] = useState(false);
   const isKnowledgeNetworkRoute =
     routeHandle?.console?.menuKey?.startsWith("domain-knowledge-network") ?? false;
   const permissionRequestsAvailable = !isCommunityBuild(entitlement);
@@ -157,6 +160,12 @@ export function TopBar() {
             <span>{t("shell.versionLine", { version: APP_VERSION })}</span>
           </span>
         ),
+      },
+      {
+        icon: <InfoCircleOutlined />,
+        key: "about-openbkn",
+        label: t("shell.items.aboutOpenBkn"),
+        onClick: () => setAboutOpen(true),
       },
       { type: "divider" as const },
     ];
@@ -273,6 +282,10 @@ export function TopBar() {
     updateLocale,
   ]);
 
+  const openExternal = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <header className="console-topbar">
       <div className="console-brand">
@@ -370,6 +383,61 @@ export function TopBar() {
           </button>
         </Dropdown>
       </div>
+      <Modal
+        centered
+        className="console-about-modal"
+        footer={null}
+        onCancel={() => setAboutOpen(false)}
+        open={aboutOpen}
+        title={
+          <div className="console-about-modal-title">
+            <strong>{t("shell.aboutOpenBkn.title")}</strong>
+          </div>
+        }
+        width={640}
+      >
+        <p className="console-about-modal-summary">
+          <span>{t("shell.aboutOpenBkn.summary")}</span>
+        </p>
+        <div className="console-about-modal-points">
+          <div>
+            <strong>{t("shell.aboutOpenBkn.points.ontology.title")}</strong>
+            <span>{t("shell.aboutOpenBkn.points.ontology.description")}</span>
+          </div>
+          <div>
+            <strong>{t("shell.aboutOpenBkn.points.openSource.title")}</strong>
+            <span>{t("shell.aboutOpenBkn.points.openSource.description")}</span>
+          </div>
+          <div>
+            <strong>{t("shell.aboutOpenBkn.points.action.title")}</strong>
+            <span>{t("shell.aboutOpenBkn.points.action.description")}</span>
+          </div>
+          <div>
+            <strong>{t("shell.aboutOpenBkn.points.governance.title")}</strong>
+            <span>{t("shell.aboutOpenBkn.points.governance.description")}</span>
+          </div>
+        </div>
+        <div className="console-about-modal-footer">
+          <span>{t("shell.aboutOpenBkn.footer")}</span>
+          <div>
+            <button
+              className="console-about-modal-link"
+              onClick={() => openExternal("https://openbkn.ai/")}
+              type="button"
+            >
+              {t("shell.aboutOpenBkn.website")}
+            </button>
+            <button
+              className="console-about-modal-primary"
+              onClick={() => openExternal("https://github.com/openbkn-ai")}
+              type="button"
+            >
+              <GithubOutlined />
+              {t("shell.aboutOpenBkn.github")}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </header>
   );
 }

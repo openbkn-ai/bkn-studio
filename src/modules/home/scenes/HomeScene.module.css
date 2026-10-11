@@ -89,6 +89,97 @@
   line-height: 1.65;
 }
 
+.aboutEntry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 780px;
+  margin-top: 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-primary-50) 78%, var(--color-bg-surface));
+}
+
+.aboutEntryCopy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.aboutEntryIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+  font-size: 14px;
+}
+
+.aboutEntryCopy > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.aboutEntryCopy strong {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.aboutEntryCopy small {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aboutEntryActions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.aboutEntryLink,
+.aboutEntryPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.aboutEntryLink {
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-bg-surface);
+  color: var(--color-primary-700);
+}
+
+.aboutEntryPrimary {
+  border: 1px solid var(--color-primary-600);
+  background: var(--color-primary-600);
+  color: var(--color-text-inverse);
+}
+
+.aboutEntryLink:hover,
+.aboutEntryPrimary:hover {
+  opacity: 0.88;
+}
+
 .pathTabsOuter {
   border-bottom: 1px solid var(--color-divider);
 }
@@ -716,6 +807,21 @@
 
   .hero {
     min-height: 146px;
+  }
+
+  .aboutEntry {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .aboutEntryActions {
+    width: 100%;
+  }
+
+  .aboutEntryLink,
+  .aboutEntryPrimary {
+    flex: 1;
+    justify-content: center;
   }
 
   .hero::before {
