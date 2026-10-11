@@ -156,6 +156,8 @@ export const homeZhCN = {
       importPackage: "导入离线包",
       importing: "正在导入…",
       importFailed: "离线样例包导入失败，请检查包版本、摘要和平台兼容性。",
+      offlineImported: "已导入离线包",
+      installProgress: "安装进度：{{stage}}",
       sourceLabel: "来源",
       sourceName: "openbkn-ai/bkn-samples",
       stages: {

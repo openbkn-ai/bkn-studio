@@ -70,6 +70,12 @@ describe("sample catalog", () => {
     expect(sampleCatalogName("northwind")).toBe("bkn-sample-northwind");
   });
 
+  it("preserves an offline source on the sample card", () => {
+    const sample = parseSampleCatalog({ samples: [item({ source: "offline" })] }).samples[0];
+
+    expect(sample?.source).toBe("offline");
+  });
+
   it("keeps the preview questions and actual successful installation time", () => {
     const catalog = parseSampleCatalog({
       items: [

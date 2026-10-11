@@ -31,6 +31,7 @@ export type SampleKnowledgeNetwork = {
 };
 
 export type SampleCatalogItem = {
+  source?: "official" | "offline";
   catalogId?: string;
   displayName: string;
   expectedTables: number;
@@ -208,6 +209,7 @@ function parseSample(payload: unknown): SampleCatalogItem | null {
   const installed = status === "installed";
 
   return {
+    source: payload.source === "offline" ? "offline" : "official",
     catalogId: optionalString(payload.catalogId),
     displayName: optionalString(payload.displayName) ?? name,
     expectedTables: finiteCount(payload.expectedTables),

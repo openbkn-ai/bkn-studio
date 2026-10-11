@@ -522,11 +522,23 @@ function SampleCard({
         <div>
           <h3>{item.displayName}</h3>
           <p className={styles.meta}>{item.summary}</p>
+          {activeStage ? (
+            <p className={styles.note} role="status">
+              {t("home.sample.installProgress", {
+                stage: t("home.sample.stages." + activeStage.id, {
+                  defaultValue: activeStage.name,
+                }),
+              })}
+            </p>
+          ) : null}
           <div className={styles.facts}>
             {item.version ? (
               <span className={styles.fact}>
                 {t("home.sample.versionLabel", { version: item.version })}
               </span>
+            ) : null}
+            {item.source === "offline" ? (
+              <span className={styles.fact}>{t("home.sample.offlineImported")}</span>
             ) : null}
             {item.status === "installed" ? (
               <span className={styles.fact}>
@@ -612,11 +624,6 @@ function SampleCard({
         </div>
       </div>
 
-      {activeStage ? (
-        <p className={styles.note}>
-          {t("home.sample.stages." + activeStage.id, { defaultValue: activeStage.name })}
-        </p>
-      ) : null}
       {detail && item.status !== "installed" && item.status !== "not_installed" ? (
         <p className={conflict ? styles.conflict : styles.error}>{detail}</p>
       ) : null}
