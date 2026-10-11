@@ -754,7 +754,13 @@ function SampleCard({
                   <p className={styles.note}>{t("home.sample.historyPartial")}</p>
                 ) : null}
                 {history.items.map((record) => (
-                  <div key={record.id} className={styles.historyItem}>
+                  <div
+                    key={
+                      record.attemptId ??
+                      `${record.id}-${record.version}-${record.finishedAt ?? record.startedAt ?? ""}`
+                    }
+                    className={styles.historyItem}
+                  >
                     <span>
                       {t("home.sample.versionLabel", { version: record.version })} ·{" "}
                       {t(`home.sample.status.${record.status}`)}

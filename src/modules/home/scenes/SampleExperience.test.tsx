@@ -261,11 +261,21 @@ describe("SampleExperience", () => {
       items: [
         {
           id: "inst-1",
+          attemptId: "attempt-success",
           sample: "northwind",
           version: "0.1.0",
           status: "installed",
           stages: [],
           finishedAt: "2026-10-09T05:52:05Z",
+        },
+        {
+          id: "inst-1",
+          attemptId: "attempt-failure",
+          sample: "northwind",
+          version: "0.1.0",
+          status: "failed",
+          stages: [],
+          finishedAt: "2026-10-09T05:50:00Z",
         },
       ],
       historyComplete: false,
@@ -274,6 +284,7 @@ describe("SampleExperience", () => {
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
     expect(await screen.findByText("Release details")).toBeVisible();
     expect(await screen.findByText("2026-10-09T05:52:05Z")).toBeVisible();
+    expect(await screen.findByText("2026-10-09T05:50:00Z")).toBeVisible();
     expect(screen.getByText("home.sample.historyPartial")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.collapse" }));
     expect(screen.getByText("Release details")).not.toBeVisible();

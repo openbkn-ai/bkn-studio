@@ -133,7 +133,7 @@ export const homeEnUS = {
       historyLoading: "Loading installation records",
       historyFailed: "Installation records could not be loaded",
       historyPartial:
-        "The current installer retains only one record. Earlier history cannot be reconstructed.",
+        "Some earlier installation records are missing. Complete history cannot be reconstructed.",
       errors: {
         already_installed: "This sample is already installed",
         runtime_upgrade_required:

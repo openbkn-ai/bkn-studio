@@ -123,7 +123,7 @@ export const homeZhCN = {
       historyTitle: "安装记录",
       historyLoading: "正在读取安装记录",
       historyFailed: "暂时无法读取安装记录",
-      historyPartial: "当前安装服务仅保留一条记录，无法还原此前历史。",
+      historyPartial: "部分早期安装记录缺失，无法还原完整历史。",
       errors: {
         already_installed: "该样例已经安装",
         runtime_upgrade_required: "当前安装服务尚不支持此版本，可先查看版本说明。",
