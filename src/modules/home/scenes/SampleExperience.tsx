@@ -524,7 +524,11 @@ function SampleCard({
           <p className={styles.meta}>{item.summary}</p>
           {activeStage ? (
             <p className={styles.note} role="status">
-              {t("home.sample.installProgress", { stage: t("home.sample.stages." + activeStage.id, { defaultValue: activeStage.name }) })}
+              {t("home.sample.installProgress", {
+                stage: t("home.sample.stages." + activeStage.id, {
+                  defaultValue: activeStage.name,
+                }),
+              })}
             </p>
           ) : null}
           <div className={styles.facts}>
