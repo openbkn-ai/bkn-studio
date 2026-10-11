@@ -177,6 +177,12 @@ export const homeEnUS = {
         "The offline sample package could not be imported. Check its version, digest, and platform compatibility.",
       offlineImported: "Offline package imported",
       installProgress: "Installation progress: {{stage}}",
+      offlinePackagesTitle: "Imported offline packages",
+      offlinePackagesDescription:
+        "Review cached offline versions. Uninstalled packages can be removed and uploaded again.",
+      removeOffline: "Remove package",
+      offlineDeleting: "Removing…",
+      offlineDeleteFailed: "The offline package could not be removed. Try again later.",
       sourceLabel: "Source",
       sourceName: "openbkn-ai/bkn-samples",
       stages: {

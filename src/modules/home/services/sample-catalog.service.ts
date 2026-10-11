@@ -26,6 +26,12 @@ export async function importSamplePackage(file: File): Promise<void> {
   });
 }
 
+export async function deleteSamplePackage(sampleName: string): Promise<void> {
+  await http.delete(`${SAMPLE_API}/${encodeURIComponent(sampleName)}/offline`, {
+    skipErrorToast: true,
+  });
+}
+
 export class SampleRequestError extends Error {
   code: string;
 
