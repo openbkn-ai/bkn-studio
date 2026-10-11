@@ -199,7 +199,7 @@ function parseSample(payload: unknown): SampleCatalogItem | null {
   const network = isRecord(payload.knowledgeNetwork) ? payload.knowledgeNetwork : null;
   const networkId = optionalString(network?.id);
 
-  if (!status || (!networkId && status !== "unavailable")) {
+  if (!status || (!networkId && status === "installed")) {
     return null;
   }
 
