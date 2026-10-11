@@ -364,7 +364,6 @@ export function SampleExperience() {
                       disabled={
                         offlineDeleting === item.name ||
                         installingNames.includes(item.name) ||
-                        item.status === "failed" ||
                         item.status === "installed" ||
                         item.status === "installing"
                       }
