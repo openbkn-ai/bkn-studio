@@ -398,8 +398,7 @@ export function TopBar() {
         width={640}
       >
         <p className="console-about-modal-summary">
-          <strong>{t("shell.aboutOpenBkn.summaryZh")}</strong>
-          <span>{t("shell.aboutOpenBkn.summaryEn")}</span>
+          <span>{t("shell.aboutOpenBkn.summary")}</span>
         </p>
         <div className="console-about-modal-points">
           <div>
