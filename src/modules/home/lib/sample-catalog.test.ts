@@ -122,6 +122,7 @@ describe("sample catalog", () => {
     expect(
       parseSampleInstallation({
         id: "inst-1",
+        attemptId: "attempt-1",
         sample: "northwind",
         stages: [
           { id: "database", name: "Prepare database", state: "succeeded" },
@@ -132,6 +133,7 @@ describe("sample catalog", () => {
       }),
     ).toMatchObject({
       id: "inst-1",
+      attemptId: "attempt-1",
       sample: "northwind",
       status: "installing",
       stages: [{ state: "succeeded" }, { state: "running" }],

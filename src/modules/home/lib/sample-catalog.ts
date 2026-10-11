@@ -72,6 +72,7 @@ export type SampleInstallationError = {
 };
 
 export type SampleInstallation = {
+  attemptId?: string;
   error: SampleInstallationError | null;
   id: string;
   requestedBy: string;
@@ -169,6 +170,7 @@ export function parseSampleInstallation(payload: unknown): SampleInstallation {
   const stages = Array.isArray(payload.stages) ? payload.stages.flatMap(parseStage) : [];
 
   return {
+    attemptId: optionalString(payload.attemptId),
     error: parseInstallationError(payload.error),
     id,
     requestedBy: optionalString(payload.requestedBy) ?? "",
