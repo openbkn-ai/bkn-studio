@@ -17,6 +17,9 @@ export const SAMPLE_STATUSES = [
   "failed",
   "conflict",
   "unavailable",
+  "uninstalling",
+  "uninstall_failed",
+  "uninstalled",
 ] as const;
 
 export type SampleStatus = (typeof SAMPLE_STATUSES)[number];
@@ -37,6 +40,8 @@ export type SampleCatalogItem = {
   expectedTables: number;
   installationId: string | null;
   installable: boolean;
+  canUninstall?: boolean;
+  uninstallUnavailableReason?: string;
   installedAt?: string;
   installedVersion?: string;
   manifestSha256?: string;
@@ -73,6 +78,7 @@ export type SampleInstallationError = {
 };
 
 export type SampleInstallation = {
+  operation?: "install" | "uninstall";
   attemptId?: string;
   error: SampleInstallationError | null;
   id: string;
@@ -171,6 +177,7 @@ export function parseSampleInstallation(payload: unknown): SampleInstallation {
   const stages = Array.isArray(payload.stages) ? payload.stages.flatMap(parseStage) : [];
 
   return {
+    operation: payload.operation === "uninstall" ? "uninstall" : "install",
     attemptId: optionalString(payload.attemptId),
     error: parseInstallationError(payload.error),
     id,
@@ -215,8 +222,12 @@ function parseSample(payload: unknown): SampleCatalogItem | null {
     expectedTables: finiteCount(payload.expectedTables),
     installationId: optionalString(payload.installationId) ?? null,
     installable: payload.installable === true,
+    canUninstall: payload.canUninstall === true,
+    uninstallUnavailableReason: optionalString(payload.uninstallUnavailableReason),
     installedAt: installed ? optionalString(payload.installedAt) : undefined,
-    installedVersion: installed ? optionalString(payload.installedVersion) : undefined,
+    installedVersion: ["installed", "uninstalling", "uninstall_failed"].includes(status)
+      ? optionalString(payload.installedVersion)
+      : undefined,
     manifestSha256:
       typeof payload.manifestSha256 === "string" && /^[a-f0-9]{64}$/.test(payload.manifestSha256)
         ? payload.manifestSha256

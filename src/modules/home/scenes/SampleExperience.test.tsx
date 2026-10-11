@@ -16,6 +16,7 @@ const navigate = vi.hoisted(() => vi.fn());
 const getSampleReleaseNotes = vi.hoisted(() => vi.fn());
 const listSampleInstallations = vi.hoisted(() => vi.fn());
 const refreshSamples = vi.hoisted(() => vi.fn());
+const uninstallSample = vi.hoisted(() => vi.fn());
 const deleteSamplePackage = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -67,6 +68,7 @@ vi.mock("@/modules/home/services/sample-catalog.service", () => ({
   listSampleInstallations,
   refreshSamples,
   deleteSamplePackage,
+  uninstallSample,
 }));
 
 import { SampleExperience } from "@/modules/home/scenes/SampleExperience";
@@ -97,6 +99,64 @@ function renderExperience() {
 }
 
 describe("SampleExperience", () => {
+  it("confirms uninstall and displays its progress above release notes", async () => {
+    const installed = sample({
+      name: "supply-chain",
+      status: "installed",
+      installedVersion: "0.1.3",
+      installationId: "inst-old",
+      installable: false,
+      canUninstall: true,
+      hasReleaseNotes: true,
+    });
+    const task = {
+      id: "inst-old",
+      sample: "supply-chain",
+      version: "0.1.3",
+      status: "uninstalling",
+      operation: "uninstall",
+      stages: [{ id: "knowledge", name: "Remove network", state: "running" }],
+    };
+    listSamples
+      .mockResolvedValueOnce({ samples: [installed], sourceRejected: false })
+      .mockResolvedValue({
+        samples: [{ ...installed, status: "uninstalling", canUninstall: false }],
+        sourceRejected: false,
+      });
+    uninstallSample.mockResolvedValue(task);
+    getSampleInstallation.mockResolvedValue(task);
+    getSampleReleaseNotes.mockResolvedValue({
+      version: "0.1.3",
+      content: "Release notes",
+      resolvedLocale: "zh-CN",
+    });
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.uninstall" }));
+    expect(uninstallSample).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText("home.sample.uninstallWarning")).toBeVisible());
+    fireEvent.click(screen.getByRole("button", { name: "common.cancel" }));
+    expect(uninstallSample).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.uninstall" }));
+    fireEvent.click(await screen.findByRole("button", { name: "common.delete" }));
+    await waitFor(() => expect(uninstallSample).toHaveBeenCalledWith("supply-chain", "inst-old"));
+    const stage = await screen.findByText("1. home.sample.uninstallStages.knowledge");
+    const notes = await screen.findByText("Release notes");
+    expect(stage.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "home.sample.actions.install" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides uninstall without the backend capability", async () => {
+    listSamples.mockResolvedValue({
+      samples: [sample({ status: "installed", canUninstall: false })],
+      sourceRejected: false,
+    });
+    renderExperience();
+    await screen.findByText("Northwind");
+    expect(screen.queryByRole("button", { name: "home.sample.uninstall" })).not.toBeInTheDocument();
+  });
+
   it("installs the chosen published version with that version's manifest digest", async () => {
     listSamples.mockResolvedValue({
       samples: [

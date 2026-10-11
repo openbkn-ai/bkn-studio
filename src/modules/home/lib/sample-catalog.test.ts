@@ -15,6 +15,9 @@ import {
   sampleCatalogName,
 } from "@/modules/home/lib/sample-catalog";
 
+import { homeZhCN } from "@/modules/home/locales/zh-CN";
+import { homeEnUS } from "@/modules/home/locales/en-US";
+
 const network = { displayName: "Northwind network", id: "northwind_kn" };
 
 function item(overrides: Record<string, unknown> = {}) {
@@ -144,5 +147,30 @@ describe("sample catalog", () => {
       status: "installing",
       stages: [{ state: "succeeded" }, { state: "running" }],
     });
+  });
+});
+
+describe("uninstall compatibility", () => {
+  it("provides uninstall translations under the page namespace", () => {
+    for (const locale of [homeZhCN, homeEnUS]) {
+      expect(locale.home.sample.uninstall).toBeTruthy();
+      expect(locale.home.sample.uninstallWarning).toBeTruthy();
+      expect(Object.keys(locale.home.sample.uninstallStages)).toHaveLength(5);
+    }
+  });
+  it("keeps the installed version while uninstalling", () => {
+    const catalog = parseSampleCatalog({
+      source: OFFICIAL_SAMPLE_SOURCE,
+      samples: [
+        {
+          name: "supply-chain",
+          version: "0.1.4",
+          installedVersion: "0.1.3",
+          status: "uninstalling",
+          canUninstall: false,
+        },
+      ],
+    });
+    expect(catalog.samples[0]?.installedVersion).toBe("0.1.3");
   });
 });

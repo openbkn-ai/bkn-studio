@@ -84,6 +84,20 @@ export const homeEnUS = {
       },
     },
     sample: {
+      uninstallProgress: "Uninstalling: {{stage}}",
+      uninstall: "Uninstall sample",
+      retryUninstall: "Resume uninstall",
+      uninstallTitle: "Uninstall {{name}} {{version}}",
+      uninstallWarning:
+        "Uninstall permanently removes this sample's data, knowledge network, metrics, functions and Skills, including user changes. Installation history is retained. Only resources owned by this sample are removed. You can install a new version after cleanup completes.",
+      uninstallStages: {
+        knowledge: "Delete knowledge network and metrics",
+        capabilities: "Delete functions and Skills",
+        discover: "Delete data source",
+        database: "Delete sample database and storage",
+        verify: "Verify cleanup",
+      },
+
       actions: {
         collapse: "Collapse",
         expand: "Expand",
@@ -135,6 +149,11 @@ export const homeEnUS = {
       historyPartial:
         "Some earlier installation records are missing. Complete history cannot be reconstructed.",
       errors: {
+        uninstall_interrupted:
+          "Uninstall was interrupted. Continue cleanup before installing again.",
+        uninstall_failed: "Uninstall incomplete. Resume cleanup.",
+        ownership_receipt_missing:
+          "The legacy installation has no ownership receipt; automatic uninstall is unavailable.",
         already_installed: "This sample is already installed",
         runtime_upgrade_required:
           "The current installer does not support this version yet. You can view its release notes.",
@@ -199,6 +218,9 @@ export const homeEnUS = {
         succeeded: "Completed",
       },
       status: {
+        uninstalling: "Uninstalling",
+        uninstall_failed: "Uninstall incomplete",
+        uninstalled: "Uninstalled",
         conflict: "Name conflict",
         failed: "Install failed",
         installed: "Installed",

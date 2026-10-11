@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { useDangerDelete } from "@/framework/safety/DangerDeleteModal";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 
 import {
@@ -20,6 +21,7 @@ import {
 } from "@/modules/home/lib/sample-catalog";
 import {
   createSampleInstallation,
+  uninstallSample,
   deleteSamplePackage,
   getSampleInstallation,
   getSampleReleaseNotes,
@@ -46,6 +48,7 @@ export function SampleExperience() {
   const [progressUnavailable, setProgressUnavailable] = useState<Record<string, boolean>>({});
   const [installations, setInstallations] = useState<Record<string, SampleInstallation>>({});
   const [expandedName, setExpandedName] = useState<string | null>(null);
+  const [uninstallingNames, setUninstallingNames] = useState<string[]>([]);
   const [installingNames, setInstallingNames] = useState<string[]>([]);
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
@@ -101,7 +104,11 @@ export function SampleExperience() {
 
   useEffect(() => {
     const tracked = (catalog?.samples ?? [])
-      .filter((item) => ["installing", "failed", "conflict"].includes(item.status))
+      .filter((item) =>
+        ["installing", "failed", "conflict", "uninstalling", "uninstall_failed"].includes(
+          item.status,
+        ),
+      )
       .map((item) => ({
         name: item.name,
         status: item.status,
@@ -145,7 +152,9 @@ export function SampleExperience() {
         if (
           updates.some(
             ({ status, installation }) =>
-              status === "installing" && installation && installation.status !== "installing",
+              ["installing", "uninstalling"].includes(status) &&
+              installation &&
+              !["installing", "uninstalling"].includes(installation.status),
           )
         )
           void loadCatalog();
@@ -155,7 +164,7 @@ export function SampleExperience() {
     };
 
     void tick();
-    const timer = tracked.some((item) => item.status === "installing")
+    const timer = tracked.some((item) => ["installing", "uninstalling"].includes(item.status))
       ? window.setInterval(() => void tick(), POLL_INTERVAL_MS)
       : undefined;
     return () => {
@@ -164,12 +173,16 @@ export function SampleExperience() {
     };
   }, [catalog, installationRefresh, loadCatalog]);
 
-  const runInstallation = async (item: SampleCatalogItem, mode: "install" | "retry") => {
+  const runInstallation = async (
+    item: SampleCatalogItem,
+    mode: "install" | "retry" | "uninstall",
+  ) => {
     if (runningRef.current.has(item.name)) {
       return;
     }
 
     runningRef.current.add(item.name);
+    if (mode === "uninstall") setUninstallingNames((current) => [...current, item.name]);
     setActionErrors((current) => ({ ...current, [item.name]: "" }));
     setInstallingNames((current) =>
       current.includes(item.name) ? current : [...current, item.name],
@@ -187,7 +200,9 @@ export function SampleExperience() {
                 manifestSha256: item.manifestSha256,
               })
             : await createSampleInstallation(item.name)
-          : await retrySampleInstallation(item.name, item.installationId!);
+          : mode === "uninstall"
+            ? await uninstallSample(item.name, item.installationId!)
+            : await retrySampleInstallation(item.name, item.installationId!);
       setInstallations((current) => ({ ...current, [item.name]: installation }));
       await loadCatalog();
     } catch (error) {
@@ -201,6 +216,7 @@ export function SampleExperience() {
       await loadCatalog();
     } finally {
       runningRef.current.delete(item.name);
+      setUninstallingNames((current) => current.filter((name) => name !== item.name));
       setInstallingNames((current) => current.filter((name) => name !== item.name));
     }
   };
@@ -361,8 +377,9 @@ export function SampleExperience() {
                       disabled={
                         offlineDeleting === item.name ||
                         installingNames.includes(item.name) ||
-                        item.status === "installed" ||
-                        item.status === "installing"
+                        ["installed", "installing", "uninstalling", "uninstall_failed"].includes(
+                          item.status,
+                        )
                       }
                       onClick={() => void removeOfflinePackage(item)}
                       type="button"
@@ -392,7 +409,13 @@ export function SampleExperience() {
           return (
             <SampleCard
               installation={showLocalProgress ? undefined : liveInstallation}
-              item={showLocalProgress ? { ...item, message: "", status: "installing" } : item}
+              item={
+                uninstallingNames.includes(item.name)
+                  ? { ...item, canUninstall: false, status: "uninstalling" }
+                  : showLocalProgress
+                    ? { ...item, message: "", status: "installing" }
+                    : item
+              }
               key={item.name}
               actionError={actionErrors[item.name]}
               progressUnavailable={progressUnavailable[item.name] ?? false}
@@ -404,6 +427,10 @@ export function SampleExperience() {
               onInstall={(selected) => {
                 setExpandedName(item.name);
                 void runInstallation(selected, "install");
+              }}
+              onUninstall={() => {
+                setExpandedName(item.name);
+                return runInstallation(item, "uninstall");
               }}
               onOpen={() =>
                 void navigate(`/knowledge-network/workspace/${item.knowledgeNetwork.id}/overview`)
@@ -431,6 +458,7 @@ function SampleCard({
   onInstall,
   onOpen,
   onRetry,
+  onUninstall,
 }: {
   progressUnavailable: boolean;
   onRefreshProgress: () => void;
@@ -442,8 +470,10 @@ function SampleCard({
   onInstall: (selected: SampleCatalogItem) => void;
   onOpen: () => void;
   onRetry: () => void;
+  onUninstall: () => Promise<void>;
 }) {
   const { t, i18n } = useTranslation();
+  const uninstallConfirmation = useDangerDelete();
   const [notes, setNotes] = useState<SampleReleaseNotes | null>(null);
   const [notesLoading, setNotesLoading] = useState(false);
   const [notesError, setNotesError] = useState(false);
@@ -456,7 +486,10 @@ function SampleCard({
   const [detailsReload, setDetailsReload] = useState(0);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const notesVersion =
-    selectedVersion ?? (item.status === "installed" ? item.installedVersion : item.version);
+    selectedVersion ??
+    (["installed", "uninstalling", "uninstall_failed"].includes(item.status)
+      ? item.installedVersion
+      : item.version);
   const versions: NonNullable<SampleCatalogItem["versions"]> = item.versions ?? [
     { version: item.version, hasReleaseNotes: item.hasReleaseNotes === true },
   ];
@@ -526,11 +559,17 @@ function SampleCard({
     Boolean(item.installationId) &&
     ["failed", "conflict"].includes(installation?.status ?? "");
   const conflict = item.status === "conflict" || installation?.error?.code === "ownership_conflict";
-  const interrupted = installation?.error?.code === "install_interrupted";
+  const interrupted = ["install_interrupted", "uninstall_interrupted"].includes(
+    installation?.error?.code ?? "",
+  );
   const detail = conflict
     ? t("home.sample.errors.ownership_conflict")
     : interrupted
-      ? t("home.sample.errors.install_interrupted")
+      ? t(
+          installation?.operation === "uninstall"
+            ? "home.sample.errors.uninstall_interrupted"
+            : "home.sample.errors.install_interrupted",
+        )
       : installation?.error?.message ||
         (["runtime_upgrade_required", "release_withdrawn"].includes(item.message)
           ? t(`home.sample.errors.${item.message}`)
@@ -538,7 +577,7 @@ function SampleCard({
   const stages =
     installation &&
     installation.stages.length > 0 &&
-    (item.status === "installing" || item.status === "failed" || item.status === "conflict")
+    ["installing", "failed", "conflict", "uninstalling", "uninstall_failed"].includes(item.status)
       ? installation.stages
       : [];
 
@@ -553,11 +592,21 @@ function SampleCard({
           <p className={styles.meta}>{item.summary}</p>
           {activeStage ? (
             <p className={styles.note} role="status">
-              {t("home.sample.installProgress", {
-                stage: t("home.sample.stages." + activeStage.id, {
-                  defaultValue: activeStage.name,
-                }),
-              })}
+              {t(
+                installation?.operation === "uninstall"
+                  ? "home.sample.uninstallProgress"
+                  : "home.sample.installProgress",
+                {
+                  stage: t(
+                    (installation?.operation === "uninstall"
+                      ? "home.sample.uninstallStages."
+                      : "home.sample.stages.") + activeStage.id,
+                    {
+                      defaultValue: activeStage.name,
+                    },
+                  ),
+                },
+              )}
             </p>
           ) : null}
           <div className={styles.facts}>
@@ -637,7 +686,33 @@ function SampleCard({
               {t("home.sample.actions.open")}
             </button>
           ) : null}
-          {item.status === "installing" ? (
+          {item.canUninstall ? (
+            <button
+              className={styles.reload}
+              type="button"
+              onClick={() =>
+                uninstallConfirmation.open({
+                  title: t("home.sample.uninstallTitle", {
+                    name: item.displayName,
+                    version: item.installedVersion || item.version,
+                  }),
+                  targetName: item.displayName,
+                  impact: <p>{t("home.sample.uninstallWarning")}</p>,
+                  onOk: async () => {
+                    toggleRef.current?.focus();
+                    await onUninstall();
+                  },
+                })
+              }
+            >
+              {t(
+                item.status === "uninstall_failed"
+                  ? "home.sample.retryUninstall"
+                  : "home.sample.uninstall",
+              )}
+            </button>
+          ) : null}
+          {["installing", "uninstalling"].includes(item.status) ? (
             <button
               className={styles.open}
               onClick={() => {
@@ -660,13 +735,19 @@ function SampleCard({
 
       {actionError && actionError !== detail ? <p className={styles.error}>{actionError}</p> : null}
 
-      {progressUnavailable && ["installing", "failed", "conflict"].includes(item.status) ? (
+      {progressUnavailable &&
+      ["installing", "failed", "conflict", "uninstalling", "uninstall_failed"].includes(
+        item.status,
+      ) ? (
         <div className={styles.banner} role="status">
           <p>{t("home.sample.progressUnavailable")}</p>
           <button className={styles.reload} onClick={onRefreshProgress} type="button">
             {t("home.sample.actions.refreshProgress")}
           </button>
         </div>
+      ) : null}
+      {item.uninstallUnavailableReason === "ownership_receipt_missing" ? (
+        <p className={styles.note}>{t("home.sample.errors.ownership_receipt_missing")}</p>
       ) : null}
       <div id={panelId} hidden={!expanded} className={styles.details}>
         {versions.length > 1 ? (
@@ -707,7 +788,10 @@ function SampleCard({
             {stages.map((stage, index) => (
               <div className={styles.stage} data-state={stage.state} key={stage.id}>
                 <strong>
-                  {index + 1}. {t(`home.sample.stages.${stage.id}`, { defaultValue: stage.name })}
+                  {index + 1}.{" "}
+                  {installation?.operation === "uninstall"
+                    ? t(`home.sample.uninstallStages.${stage.id}`)
+                    : t(`home.sample.stages.${stage.id}`, { defaultValue: stage.name })}
                 </strong>
                 <span>{t(`home.sample.stageState.${stage.state}`)}</span>
               </div>
@@ -797,6 +881,7 @@ function SampleCard({
                     className={styles.historyItem}
                   >
                     <span>
+                      {record.operation === "uninstall" ? t("home.sample.uninstall") + " · " : ""}
                       {t("home.sample.versionLabel", { version: record.version })} ·{" "}
                       {t(`home.sample.status.${record.status}`)}
                     </span>
@@ -823,12 +908,15 @@ function SampleCard({
           </div>
         ) : null}
       </div>
+      {uninstallConfirmation.node}
     </article>
   );
 }
 
 function knownError(code: string) {
   const known = [
+    "uninstall_failed",
+    "ownership_receipt_missing",
     "already_installed",
     "database_not_ready",
     "discover_incomplete",
