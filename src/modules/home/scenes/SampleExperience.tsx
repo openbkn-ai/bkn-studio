@@ -790,7 +790,7 @@ function SampleCard({
                 <strong>
                   {index + 1}.{" "}
                   {installation?.operation === "uninstall"
-                    ? t(`home.sample.uninstallStages.${stage.id}`)
+                    ? t(`home.sample.uninstallStages.${stage.id}`, { defaultValue: stage.name })
                     : t(`home.sample.stages.${stage.id}`, { defaultValue: stage.name })}
                 </strong>
                 <span>{t(`home.sample.stageState.${stage.state}`)}</span>

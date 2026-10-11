@@ -27,13 +27,19 @@ vi.mock("react-i18next", async (importOriginal) => ({
       if (values && "defaultValue" in values) {
         const { defaultValue, ...rest } = values;
         if (Object.keys(rest).length === 0) {
-          return key.startsWith("home.sample.stages.") &&
+          return (key.startsWith("home.sample.stages.") ||
+            key.startsWith("home.sample.uninstallStages.")) &&
             ![
               "home.sample.stages.capabilities",
               "home.sample.stages.database",
               "home.sample.stages.discover",
               "home.sample.stages.knowledge",
               "home.sample.stages.verify",
+              "home.sample.uninstallStages.knowledge",
+              "home.sample.uninstallStages.capabilities",
+              "home.sample.uninstallStages.discover",
+              "home.sample.uninstallStages.database",
+              "home.sample.uninstallStages.verify",
             ].includes(key)
             ? String(defaultValue)
             : key;
@@ -144,6 +150,27 @@ describe("SampleExperience", () => {
     expect(stage.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: "home.sample.actions.install" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("uses the server label for an unknown uninstall stage", async () => {
+    listSamples.mockResolvedValue({
+      samples: [sample({ status: "uninstalling", installationId: "inst-old" })],
+      sourceRejected: false,
+    });
+    getSampleInstallation.mockResolvedValue({
+      id: "inst-old",
+      sample: "northwind",
+      version: "0.1.0",
+      operation: "uninstall",
+      status: "uninstalling",
+      stages: [{ id: "future_cleanup", name: "Remove future resource", state: "running" }],
+    });
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
+    expect(await screen.findByText("1. Remove future resource")).toBeVisible();
+    expect(
+      screen.queryByText("1. home.sample.uninstallStages.future_cleanup"),
     ).not.toBeInTheDocument();
   });
 
