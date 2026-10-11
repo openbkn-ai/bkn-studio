@@ -20,6 +20,7 @@ import {
 } from "@/modules/home/lib/sample-catalog";
 import {
   createSampleInstallation,
+  deleteSamplePackage,
   getSampleInstallation,
   getSampleReleaseNotes,
   importSamplePackage,
@@ -50,6 +51,7 @@ export function SampleExperience() {
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState(false);
+  const [offlineDeleting, setOfflineDeleting] = useState<string | null>(null);
   const installationsRef = useRef(installations);
   const runningRef = useRef(new Set<string>());
   const catalogRequestRef = useRef(0);
@@ -235,6 +237,21 @@ export function SampleExperience() {
     }
   };
 
+  const removeOfflinePackage = async (item: SampleCatalogItem) => {
+    setOfflineDeleting(item.name);
+    try {
+      await deleteSamplePackage(item.name);
+      await loadCatalog();
+    } catch {
+      setActionErrors((current) => ({
+        ...current,
+        [item.name]: t("home.sample.offlineDeleteFailed"),
+      }));
+    } finally {
+      setOfflineDeleting(null);
+    }
+  };
+
   const samples = catalog?.samples ?? [];
   const showUnavailable = Boolean(catalog?.sourceRejected);
 
@@ -324,6 +341,40 @@ export function SampleExperience() {
 
       {catalog && samples.length === 0 && !showUnavailable ? (
         <p className={styles.meta}>{t("home.sample.empty")}</p>
+      ) : null}
+
+      {samples.some((item) => item.source === "offline") ? (
+        <section className={styles.offlinePackages} aria-labelledby="offline-packages-title">
+          <div>
+            <h3 id="offline-packages-title">{t("home.sample.offlinePackagesTitle")}</h3>
+            <p className={styles.meta}>{t("home.sample.offlinePackagesDescription")}</p>
+          </div>
+          <div className={styles.offlinePackageList}>
+            {samples
+              .filter((item) => item.source === "offline")
+              .map((item) => (
+                <div className={styles.offlinePackage} key={item.name}>
+                  <span className={styles.offlineBadge}>
+                    {item.displayName} · {item.version}
+                  </span>
+                  <button
+                    className={styles.removeOffline}
+                    disabled={
+                      offlineDeleting === item.name ||
+                      item.status === "installed" ||
+                      item.status === "installing"
+                    }
+                    onClick={() => void removeOfflinePackage(item)}
+                    type="button"
+                  >
+                    {offlineDeleting === item.name
+                      ? t("home.sample.offlineDeleting")
+                      : t("home.sample.removeOffline")}
+                  </button>
+                </div>
+              ))}
+          </div>
+        </section>
       ) : null}
 
       <div className={styles.cards}>

@@ -122,6 +122,58 @@
   font-size: 12px;
 }
 
+.offlineBadge {
+  padding: 3px 10px;
+  border: 1px solid var(--color-warning-600, #d48806);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-warning-600, #d48806) 18%, var(--color-bg-surface));
+  color: var(--color-warning-700, #ad6800);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.offlinePackages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-warning-600, #d48806);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-warning-600, #d48806) 7%, var(--color-bg-surface));
+}
+
+.offlinePackages h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.offlinePackageList,
+.offlinePackage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.offlinePackage {
+  justify-content: space-between;
+}
+
+.removeOffline {
+  padding: 5px 12px;
+  border: 1px solid var(--color-warning-600, #d48806);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-warning-700, #ad6800);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.removeOffline:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
