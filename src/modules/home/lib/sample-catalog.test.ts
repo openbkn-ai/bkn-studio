@@ -36,6 +36,26 @@ function item(overrides: Record<string, unknown> = {}) {
 }
 
 describe("sample catalog", () => {
+  it.each(["not_installed", "installing", "failed", "conflict", "unavailable"])(
+    "keeps a remote %s sample before its knowledge network is created",
+    (status) => {
+      const catalog = parseSampleCatalog({
+        samples: [item({ status, knowledgeNetwork: { id: "", displayName: "" } })],
+      });
+
+      expect(catalog.samples).toHaveLength(1);
+      expect(catalog.samples[0]?.status).toBe(status);
+      expect(catalog.samples[0]?.knowledgeNetwork.id).toBe("");
+    },
+  );
+
+  it("rejects an installed sample without a knowledge network destination", () => {
+    expect(
+      parseSampleCatalog({ samples: [item({ status: "installed", knowledgeNetwork: {} })] })
+        .samples,
+    ).toEqual([]);
+  });
+
   it("reads samples from the catalog envelope", () => {
     const catalog = parseSampleCatalog({
       samples: [item(), { name: "not a name", status: "installed", knowledgeNetwork: network }],
