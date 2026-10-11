@@ -175,6 +175,8 @@ export const homeEnUS = {
       importing: "Importing…",
       importFailed:
         "The offline sample package could not be imported. Check its version, digest, and platform compatibility.",
+      offlineImported: "Offline package imported · click Install",
+      installProgress: "Installation progress: {{stage}}",
       sourceLabel: "Source",
       sourceName: "openbkn-ai/bkn-samples",
       stages: {
