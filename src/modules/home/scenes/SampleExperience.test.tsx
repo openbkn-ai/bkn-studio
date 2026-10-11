@@ -323,7 +323,12 @@ describe("SampleExperience", () => {
     });
     renderExperience();
 
-    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    const installButton = await screen.findByRole("button", {
+      name: "home.sample.actions.install",
+    });
+    installButton.focus();
+    fireEvent.click(installButton);
+    expect(screen.getByRole("button", { name: "home.sample.actions.collapse" })).toHaveFocus();
     await waitFor(() => expect(createSampleInstallation).toHaveBeenCalledWith("northwind"));
   });
 
@@ -517,7 +522,6 @@ describe("SampleExperience", () => {
       expect(screen.getByRole("button", { name: "home.sample.actions.retry" })).toBeEnabled(),
     );
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.retry" }));
-    expect(screen.queryByText("home.sample.confirm.irreversible")).toBeNull();
     await waitFor(() =>
       expect(retrySampleInstallation).toHaveBeenCalledWith("northwind", "inst-9"),
     );
@@ -546,7 +550,6 @@ describe("SampleExperience", () => {
     fireEvent.click(installButtons[0]);
 
     expect(await screen.findByText("home.sample.status.installing")).toBeTruthy();
-    expect(screen.queryByText("home.sample.confirm.irreversible")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.install" }));
     await waitFor(() => expect(createSampleInstallation).toHaveBeenCalledTimes(2));

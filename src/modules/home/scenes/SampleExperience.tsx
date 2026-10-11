@@ -607,14 +607,15 @@ function SampleCard({
             <button
               className={styles.install}
               disabled={!enabled || !selectedInstallable}
-              onClick={() =>
+              onClick={() => {
+                toggleRef.current?.focus();
                 onInstall({
                   ...item,
                   version: notesVersion ?? item.version,
                   manifestSha256: selectedDigest,
                   hasReleaseNotes: hasNotes,
-                })
-              }
+                });
+              }}
               type="button"
             >
               {t("home.sample.actions.install")}
