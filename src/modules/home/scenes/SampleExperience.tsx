@@ -46,7 +46,6 @@ export function SampleExperience() {
   const [progressUnavailable, setProgressUnavailable] = useState<Record<string, boolean>>({});
   const [installations, setInstallations] = useState<Record<string, SampleInstallation>>({});
   const [expandedName, setExpandedName] = useState<string | null>(null);
-  const [pending, setPending] = useState<SampleCatalogItem | null>(null);
   const [installingNames, setInstallingNames] = useState<string[]>([]);
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
@@ -172,7 +171,6 @@ export function SampleExperience() {
 
     runningRef.current.add(item.name);
     setActionErrors((current) => ({ ...current, [item.name]: "" }));
-    setPending(null);
     setInstallingNames((current) =>
       current.includes(item.name) ? current : [...current, item.name],
     );
@@ -195,7 +193,6 @@ export function SampleExperience() {
     } catch (error) {
       const requestError =
         error instanceof SampleRequestError ? error : new SampleRequestError("install_failed", "");
-      setPending(null);
       setActionErrors((current) => ({
         ...current,
         [item.name]:
@@ -401,16 +398,12 @@ export function SampleExperience() {
               progressUnavailable={progressUnavailable[item.name] ?? false}
               onRefreshProgress={() => setInstallationRefresh((current) => current + 1)}
               expanded={expandedName === item.name}
-              confirmation={pending?.name === item.name ? pending : undefined}
-              onCancel={() => setPending(null)}
-              onConfirm={() => pending && void runInstallation(pending, "install")}
               onToggle={() => {
                 setExpandedName((current) => (current === item.name ? null : item.name));
-                setPending(null);
               }}
               onInstall={(selected) => {
                 setExpandedName(item.name);
-                setPending(selected);
+                void runInstallation(selected, "install");
               }}
               onOpen={() =>
                 void navigate(`/knowledge-network/workspace/${item.knowledgeNetwork.id}/overview`)
@@ -432,9 +425,6 @@ function SampleCard({
   onRefreshProgress,
   actionError,
   expanded,
-  confirmation,
-  onCancel,
-  onConfirm,
   onToggle,
   installation,
   item,
@@ -446,9 +436,6 @@ function SampleCard({
   onRefreshProgress: () => void;
   actionError?: string;
   expanded: boolean;
-  confirmation?: SampleCatalogItem;
-  onCancel: () => void;
-  onConfirm: () => void;
   onToggle: () => void;
   installation?: SampleInstallation;
   item: SampleCatalogItem;
@@ -524,15 +511,6 @@ function SampleCard({
     detailsReload,
   ]);
   const toggleRef = useRef<HTMLButtonElement>(null);
-  const confirmationRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (confirmation && expanded) {
-      const panel = confirmationRef.current;
-      if (!panel) return;
-      panel.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-      panel.focus();
-    }
-  }, [confirmation, expanded]);
   const action = sampleCardAction(item);
   const enabled = item.installable;
   const selectedDigest =
@@ -547,14 +525,6 @@ function SampleCard({
     !progressUnavailable &&
     Boolean(item.installationId) &&
     ["failed", "conflict"].includes(installation?.status ?? "");
-  const canConfirm = Boolean(
-    confirmation &&
-    confirmation.version === notesVersion &&
-    confirmation.manifestSha256 === selectedDigest &&
-    action === "install" &&
-    enabled &&
-    selectedInstallable,
-  );
   const conflict = item.status === "conflict" || installation?.error?.code === "ownership_conflict";
   const interrupted = installation?.error?.code === "install_interrupted";
   const detail = conflict
@@ -572,7 +542,6 @@ function SampleCard({
       ? installation.stages
       : [];
 
-  const notesReady = !hasNotes || (!notesLoading && !notesError && notes?.version === notesVersion);
   const activeStage = stages.find((stage) => stage.state === "running");
   const panelId = `sample-details-${item.name}`;
 
@@ -638,14 +607,15 @@ function SampleCard({
             <button
               className={styles.install}
               disabled={!enabled || !selectedInstallable}
-              onClick={() =>
+              onClick={() => {
+                toggleRef.current?.focus();
                 onInstall({
                   ...item,
                   version: notesVersion ?? item.version,
                   manifestSha256: selectedDigest,
                   hasReleaseNotes: hasNotes,
-                })
-              }
+                });
+              }}
               type="button"
             >
               {t("home.sample.actions.install")}
@@ -707,7 +677,6 @@ function SampleCard({
               onChange={(event) => {
                 setSelectedVersion(event.target.value);
                 setNotes(null);
-                onCancel();
               }}
             >
               {!versions.some((release) => release.version === notesVersion) && notesVersion ? (
@@ -732,6 +701,18 @@ function SampleCard({
               defaultValue: t("home.sample.status.unavailable"),
             })}
           </p>
+        ) : null}
+        {stages.length > 0 ? (
+          <div className={styles.stages}>
+            {stages.map((stage, index) => (
+              <div className={styles.stage} data-state={stage.state} key={stage.id}>
+                <strong>
+                  {index + 1}. {t(`home.sample.stages.${stage.id}`, { defaultValue: stage.name })}
+                </strong>
+                <span>{t(`home.sample.stageState.${stage.state}`)}</span>
+              </div>
+            ))}
+          </div>
         ) : null}
         {hasNotes ? (
           <div className={styles.releaseNotes}>
@@ -762,19 +743,6 @@ function SampleCard({
           </div>
         ) : null}
         {item.licenseNote ? <p className={styles.note}>{item.licenseNote}</p> : null}
-        {stages.length > 0 ? (
-          <div className={styles.stages}>
-            {stages.map((stage, index) => (
-              <div className={styles.stage} data-state={stage.state} key={stage.id}>
-                <strong>
-                  {index + 1}. {t(`home.sample.stages.${stage.id}`, { defaultValue: stage.name })}
-                </strong>
-                <span>{t(`home.sample.stageState.${stage.state}`)}</span>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
         {conflict ? <p className={styles.conflictHint}>{t("home.sample.conflictHint")}</p> : null}
 
         {item.status === "installed" ? (
@@ -852,51 +820,6 @@ function SampleCard({
             >
               {t("home.sample.actions.retry")}
             </button>
-          </div>
-        ) : null}
-        {confirmation && action === "install" && enabled ? (
-          <div className={styles.confirmation} ref={confirmationRef} tabIndex={-1}>
-            <h4>
-              {t("home.sample.confirm.title", {
-                name: confirmation.displayName,
-                version: confirmation.version,
-              })}
-            </h4>
-            <p className={styles.note}>{t("home.sample.confirm.body")}</p>
-            {confirmation.knowledgeNetwork.displayName ? (
-              <p className={styles.note}>
-                {t("home.sample.confirm.network", {
-                  network: confirmation.knowledgeNetwork.displayName,
-                })}
-              </p>
-            ) : null}
-            <p className={styles.note}>{t("home.sample.confirm.irreversible")}</p>
-            {!canConfirm ? (
-              <p className={styles.error}>{t("home.sample.confirm.changed")}</p>
-            ) : null}
-            <div className={styles.confirmActions}>
-              <button
-                className={styles.reload}
-                onClick={() => {
-                  toggleRef.current?.focus();
-                  onCancel();
-                }}
-                type="button"
-              >
-                {t("home.sample.actions.cancel")}
-              </button>
-              <button
-                className={styles.install}
-                disabled={!canConfirm || !notesReady}
-                onClick={() => {
-                  toggleRef.current?.focus();
-                  onConfirm();
-                }}
-                type="button"
-              >
-                {t("home.sample.actions.start")}
-              </button>
-            </div>
           </div>
         ) : null}
       </div>
