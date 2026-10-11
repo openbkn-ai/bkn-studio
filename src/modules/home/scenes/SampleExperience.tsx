@@ -526,7 +526,12 @@ function SampleCard({
   const toggleRef = useRef<HTMLButtonElement>(null);
   const confirmationRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (confirmation && expanded) confirmationRef.current?.focus();
+    if (confirmation && expanded) {
+      const panel = confirmationRef.current;
+      if (!panel) return;
+      panel.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+      panel.focus();
+    }
   }, [confirmation, expanded]);
   const action = sampleCardAction(item);
   const enabled = item.installable;
