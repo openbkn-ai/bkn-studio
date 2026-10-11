@@ -98,6 +98,25 @@ export async function retrySampleInstallation(
   }
 }
 
+export async function uninstallSample(
+  sampleName: string,
+  installationId: string,
+): Promise<SampleInstallation> {
+  try {
+    const response = await http.post<unknown>(
+      `${installationPath(sampleName, installationId)}/uninstall`,
+      {},
+      {
+        skipErrorToast: true,
+        timeout: INSTALL_TIMEOUT_MS,
+      },
+    );
+    return parseSampleInstallation(response.data);
+  } catch (error) {
+    throw toSampleRequestError(error);
+  }
+}
+
 export function readSampleRequestError(error: unknown) {
   return toSampleRequestError(error);
 }

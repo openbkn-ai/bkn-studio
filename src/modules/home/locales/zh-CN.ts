@@ -79,6 +79,20 @@ export const homeZhCN = {
       },
     },
     sample: {
+      uninstallProgress: "正在卸载：{{stage}}",
+      uninstall: "卸载样例",
+      retryUninstall: "继续卸载",
+      uninstallTitle: "卸载 {{name}} {{version}}",
+      uninstallWarning:
+        "卸载将永久删除该样例的数据、知识网络、指标、函数和 Skill，包括其中的用户修改。历史安装记录将保留。只清理属于该样例的资源；完成后可重新安装新版本。",
+      uninstallStages: {
+        knowledge: "删除知识网络和指标",
+        capabilities: "删除函数和 Skill",
+        discover: "删除数据源",
+        database: "删除样例库和存储",
+        verify: "验证清理结果",
+      },
+
       actions: {
         collapse: "收起",
         expand: "展开",
@@ -125,6 +139,9 @@ export const homeZhCN = {
       historyFailed: "暂时无法读取安装记录",
       historyPartial: "部分早期安装记录缺失，无法还原完整历史。",
       errors: {
+        uninstall_interrupted: "卸载被中断，请继续清理后再安装。",
+        uninstall_failed: "卸载未完成，请继续卸载。",
+        ownership_receipt_missing: "旧安装记录缺少资源归属清单，无法自动卸载。",
         already_installed: "该样例已经安装",
         runtime_upgrade_required: "当前安装服务尚不支持此版本，可先查看版本说明。",
         release_withdrawn: "此版本已撤回，不可新安装。",
@@ -179,6 +196,9 @@ export const homeZhCN = {
         succeeded: "已完成",
       },
       status: {
+        uninstalling: "卸载中",
+        uninstall_failed: "卸载未完成",
+        uninstalled: "已卸载",
         conflict: "名称冲突",
         failed: "安装失败",
         installed: "已安装",

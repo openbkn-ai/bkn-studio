@@ -16,6 +16,7 @@ vi.mock("@/framework/request/http", () => ({
 
 import {
   createSampleInstallation,
+  uninstallSample,
   listSamples,
   SampleRequestError,
 } from "@/modules/home/services/sample-catalog.service";
@@ -32,6 +33,32 @@ describe("sample catalog service", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
+  });
+
+  it("starts an asynchronous uninstall for the selected installation", async () => {
+    postMock.mockResolvedValue({
+      data: { ...installation, status: "uninstalling", operation: "uninstall" },
+    });
+    await expect(uninstallSample("supply-chain", "inst-old")).resolves.toMatchObject({
+      status: "uninstalling",
+      operation: "uninstall",
+    });
+    expect(postMock).toHaveBeenCalledWith(
+      "/studio/samples/supply-chain/installations/inst-old/uninstall",
+      {},
+      { skipErrorToast: true, timeout: 30000 },
+    );
+  });
+
+  it("preserves uninstall permission failures", async () => {
+    postMock.mockRejectedValue({
+      isAxiosError: true,
+      response: { data: { code: "forbidden", message: "Administrator required" }, status: 403 },
+    });
+    await expect(uninstallSample("supply-chain", "inst-old")).rejects.toMatchObject({
+      code: "forbidden",
+      message: "Administrator required",
+    });
   });
 
   it("loads the studio sample catalog", async () => {
