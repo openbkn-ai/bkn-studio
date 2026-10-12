@@ -17,6 +17,14 @@ export function isAuditConsumerNotConfigured(error: unknown): boolean {
   );
 }
 
+export function isLogCursorStale(error: unknown): boolean {
+  return (
+    axios.isAxiosError<{ error?: { code?: string } }>(error) &&
+    error.response?.status === 409 &&
+    error.response?.data.error?.code === "cursor_stale"
+  );
+}
+
 export type LogCategory =
   "access.user" | "audit.admin" | "audit.security" | "runtime.business" | "runtime.model";
 
