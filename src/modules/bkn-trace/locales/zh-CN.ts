@@ -901,6 +901,11 @@ export const bknTraceZhCN = {
       resultCount_one: "共 {{count}} 条可核对事实",
       resultCount_other: "共 {{count}} 条可核对事实",
       resultCountUnknown: "可核对事实总数暂不可知",
+      previousPage: "上一页",
+      nextPage: "下一页",
+      currentPage: "第 {{page}} 页",
+      pageSize: "每页条数",
+      rowsPerPage: "{{size}} 条/页",
       searchPlaceholder: "搜索操作、对象、操作者或 ID",
       startTime: "开始时间",
       modules: {
