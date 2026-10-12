@@ -960,6 +960,11 @@ export const bknTraceEnUS = {
       resultCount_one: "{{count}} verifiable fact",
       resultCount_other: "{{count}} verifiable facts",
       resultCountUnknown: "Total verifiable facts unknown",
+      previousPage: "Previous page",
+      nextPage: "Next page",
+      currentPage: "Page {{page}}",
+      pageSize: "Page size",
+      rowsPerPage: "{{size}} / page",
       searchPlaceholder: "Search actions, targets, actors, or IDs",
       startTime: "Start time",
       modules: {
