@@ -36,6 +36,14 @@ describe("observability service", () => {
       ),
     ).toBe(false);
     expect(isAuditConsumerNotConfigured(new Error("audit_consumer_not_configured"))).toBe(false);
+    expect(
+      isAuditConsumerNotConfigured(
+        new AxiosError("409", undefined, undefined, undefined, {
+          ...response,
+          data: undefined,
+        }),
+      ),
+    ).toBe(false);
   });
 
   it("recognizes only the structured 409 cursor_stale error", async () => {
@@ -49,6 +57,14 @@ describe("observability service", () => {
     };
     const error = () => new AxiosError("409", undefined, undefined, undefined, response);
     expect(isLogCursorStale(error())).toBe(true);
+    expect(
+      isLogCursorStale(
+        new AxiosError("409", undefined, undefined, undefined, {
+          ...response,
+          data: undefined,
+        }),
+      ),
+    ).toBe(false);
     response.data.error.code = "cursor_invalid";
     expect(isLogCursorStale(error())).toBe(false);
     response.data.error.code = "cursor_stale";

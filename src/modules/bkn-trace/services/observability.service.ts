@@ -13,7 +13,7 @@ const OBSERVABILITY_API_PREFIX = "/observability/v1";
 export function isAuditConsumerNotConfigured(error: unknown): boolean {
   return (
     axios.isAxiosError<{ error?: { code?: string } }>(error) &&
-    error.response?.data.error?.code === "audit_consumer_not_configured"
+    error.response?.data?.error?.code === "audit_consumer_not_configured"
   );
 }
 
@@ -21,7 +21,7 @@ export function isLogCursorStale(error: unknown): boolean {
   return (
     axios.isAxiosError<{ error?: { code?: string } }>(error) &&
     error.response?.status === 409 &&
-    error.response?.data.error?.code === "cursor_stale"
+    error.response?.data?.error?.code === "cursor_stale"
   );
 }
 
