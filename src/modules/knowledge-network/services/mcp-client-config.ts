@@ -6,6 +6,7 @@
  */
 
 const MCP_SERVER_NAME = "bkn-agent-retrieval";
+const MCP_COMPACT_SERVER_NAME = "bkn-agent-retrieval-compact";
 const TLS_BYPASS_ENV = "NODE_TLS_REJECT_UNAUTHORIZED=0";
 
 export type McpConnectionProtocol = "http" | "https";
@@ -33,6 +34,20 @@ export function getMcpConnectionProtocol(mcpUrl: string): McpConnectionProtocol 
   }
 
   throw new Error(`Unsupported MCP URL protocol: ${protocol}`);
+}
+
+/**
+ * Names the compact endpoint apart from the full one, so a client can register both side by side
+ * and switching one does not overwrite the other.
+ */
+export function mcpServerNameFor(mcpUrl: string): string {
+  let path: string;
+  try {
+    path = new URL(mcpUrl).pathname;
+  } catch {
+    return MCP_SERVER_NAME;
+  }
+  return /\/mcp-compact(\/|$)/.test(path) ? MCP_COMPACT_SERVER_NAME : MCP_SERVER_NAME;
 }
 
 function createMcpRemoteServer(mcpUrl: string, apiKey: string, options: McpClientConfigOptions) {
@@ -69,7 +84,7 @@ export function createMcpRemoteJsonConfig(
   return JSON.stringify(
     {
       mcpServers: {
-        [MCP_SERVER_NAME]: createMcpRemoteServer(mcpUrl, apiKey, options),
+        [mcpServerNameFor(mcpUrl)]: createMcpRemoteServer(mcpUrl, apiKey, options),
       },
     },
     null,
@@ -83,7 +98,7 @@ export function createClaudeCodeMcpCommand(
   options: McpClientConfigOptions = {},
 ): string {
   const protocol = getMcpConnectionProtocol(mcpUrl);
-  const lines = [`claude mcp add ${MCP_SERVER_NAME} \\`, "  --scope user \\"];
+  const lines = [`claude mcp add ${mcpServerNameFor(mcpUrl)} \\`, "  --scope user \\"];
 
   if (protocol === "https" && options.allowInsecureTls) {
     lines.push(`  --env ${TLS_BYPASS_ENV} \\`);

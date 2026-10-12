@@ -33,7 +33,7 @@ export function CreateOperatorModal({ open, onClose }: CreateOperatorModalProps)
 
   return (
     <Modal
-      destroyOnClose
+      destroyOnHidden
       okButtonProps={{ disabled: !mode }}
       okText={t("common.save")}
       onCancel={onClose}

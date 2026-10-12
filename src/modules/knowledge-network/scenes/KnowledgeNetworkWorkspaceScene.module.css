@@ -195,6 +195,12 @@
   width: 100%;
 }
 
+/* Agent chat brings its own sticky header and scroll area; sit it edge to edge. */
+.workspaceSectionFlush {
+  overflow: hidden;
+  padding: 0;
+}
+
 .workspacePreviewPage {
   display: flex;
   flex-direction: column;

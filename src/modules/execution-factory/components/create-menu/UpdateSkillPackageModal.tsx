@@ -95,7 +95,7 @@ export function UpdateSkillPackageModal({
   return (
     <Modal
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t("common.confirm")}
       onCancel={onClose}
       onOk={() => void handleSubmit()}

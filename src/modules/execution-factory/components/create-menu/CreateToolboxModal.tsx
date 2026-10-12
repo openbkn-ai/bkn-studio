@@ -22,7 +22,7 @@ export function CreateToolboxModal({ open, onClose, onCreated }: CreateToolboxMo
 
   return (
     <Modal
-      destroyOnClose
+      destroyOnHidden
       footer={
         <AppButton form="create-toolbox-modal-form" htmlType="submit" type="primary">
           {t("common.confirm")}

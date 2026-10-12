@@ -162,7 +162,7 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
   return (
     <Drawer
       className={drawerStyles.drawer}
-      destroyOnClose
+      destroyOnHidden
       footer={
         <div className={drawerStyles.drawerFooter}>
           <div className={drawerStyles.footerActions}>

@@ -6,16 +6,19 @@
  */
 
 import {
+  AuditOutlined,
   CheckOutlined,
   CloudServerOutlined,
   GlobalOutlined,
   CrownOutlined,
+  GithubOutlined,
+  InfoCircleOutlined,
   LogoutOutlined,
   MoonOutlined,
   SunOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Dropdown } from "antd";
+import { Badge, Dropdown, Modal } from "antd";
 import type { MenuProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,10 +31,18 @@ import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig, useUpdateLocale } from "@/framework/context/use-runtime-config";
 import { useEntitlement, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { isCommunityBuild } from "@/framework/entitlement/types";
 import { APP_VERSION } from "@/framework/runtime/app-version";
-import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
+import {
+  buildInstallStatusRedirectUrl,
+  getInstallStatusUrl,
+} from "@/framework/runtime/install-status-url";
 import type { SupportedLocale } from "@/framework/runtime/types";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
+import {
+  getPermissionRequestTodoSummary,
+  onPermissionRequestTodoSummaryChanged,
+} from "@/modules/account/services/permission-requests.service";
 
 export function TopBar() {
   const { t } = useTranslation();
@@ -46,8 +57,46 @@ export function TopBar() {
   const { snapshot } = useEntitlementContext();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const [networkName, setNetworkName] = useState<string | null>(null);
+  const [pendingPermissionRequestCount, setPendingPermissionRequestCount] = useState<number | null>(
+    null,
+  );
+  const [aboutOpen, setAboutOpen] = useState(false);
   const isKnowledgeNetworkRoute =
     routeHandle?.console?.menuKey?.startsWith("domain-knowledge-network") ?? false;
+  const permissionRequestsAvailable = !isCommunityBuild(entitlement);
+
+  useEffect(() => {
+    if (!permissionRequestsAvailable) {
+      setPendingPermissionRequestCount(null);
+      return;
+    }
+    let disposed = false;
+    let loading = false;
+    const refresh = () => {
+      if (document.visibilityState !== "visible" || loading) return;
+      loading = true;
+      void getPermissionRequestTodoSummary()
+        .then((summary) => {
+          if (!disposed) setPendingPermissionRequestCount(summary?.pending_count ?? null);
+        })
+        .catch(() => {
+          if (!disposed) setPendingPermissionRequestCount(null);
+        })
+        .finally(() => {
+          loading = false;
+        });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 60000);
+    document.addEventListener("visibilitychange", refresh);
+    const removeSummaryListener = onPermissionRequestTodoSummaryChanged(refresh);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      removeSummaryListener();
+    };
+  }, [permissionRequestsAvailable]);
 
   useEffect(() => {
     if (!isKnowledgeNetworkRoute || !networkId) {
@@ -114,6 +163,12 @@ export function TopBar() {
           </span>
         ),
       },
+      {
+        icon: <InfoCircleOutlined />,
+        key: "about-openbkn",
+        label: t("shell.items.aboutOpenBkn"),
+        onClick: () => setAboutOpen(true),
+      },
       { type: "divider" as const },
     ];
 
@@ -159,7 +214,14 @@ export function TopBar() {
         key: "install-status",
         label: t("shell.items.installStatus"),
         onClick: () => {
-          window.open(installStatusUrl, "_blank", "noopener,noreferrer");
+          const redirectUrl = buildInstallStatusRedirectUrl(
+            installStatusUrl,
+            runtimeConfig.auth.tokenManager.getAccessToken(),
+            runtimeConfig.locale,
+          );
+          if (redirectUrl) {
+            window.open(redirectUrl, "_blank", "noopener,noreferrer");
+          }
         },
       });
     }
@@ -214,12 +276,17 @@ export function TopBar() {
     entitlement.edition,
     installStatusUrl,
     navigate,
+    runtimeConfig.auth.tokenManager,
     runtimeConfig.locale,
     runtimeConfig.mode,
     snapshot,
     t,
     updateLocale,
   ]);
+
+  const openExternal = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <header className="console-topbar">
@@ -270,6 +337,26 @@ export function TopBar() {
       </div>
 
       <div className="console-topbar-actions">
+        {permissionRequestsAvailable &&
+        pendingPermissionRequestCount !== null &&
+        pendingPermissionRequestCount > 0 ? (
+          <Badge count={pendingPermissionRequestCount} overflowCount={99} size="small">
+            <button
+              aria-label={t("shell.items.pendingPermissionRequests", {
+                count: pendingPermissionRequestCount,
+              })}
+              className="console-topbar-chip console-topbar-chip-accent"
+              onClick={() => void navigate("/account/permission-requests?tab=todo")}
+              title={t("shell.items.pendingPermissionRequests", {
+                count: pendingPermissionRequestCount,
+              })}
+              type="button"
+            >
+              <AuditOutlined aria-hidden />
+              <span>{t("shell.items.permissionReviews")}</span>
+            </button>
+          </Badge>
+        ) : null}
         <button
           aria-label={t(
             resolvedTheme === "dark" ? "shell.theme.switchToLight" : "shell.theme.switchToDark",
@@ -298,6 +385,61 @@ export function TopBar() {
           </button>
         </Dropdown>
       </div>
+      <Modal
+        centered
+        className="console-about-modal"
+        footer={null}
+        onCancel={() => setAboutOpen(false)}
+        open={aboutOpen}
+        title={
+          <div className="console-about-modal-title">
+            <strong>{t("shell.aboutOpenBkn.title")}</strong>
+          </div>
+        }
+        width={640}
+      >
+        <p className="console-about-modal-summary">
+          <span>{t("shell.aboutOpenBkn.summary")}</span>
+        </p>
+        <div className="console-about-modal-points">
+          <div>
+            <strong>{t("shell.aboutOpenBkn.points.ontology.title")}</strong>
+            <span>{t("shell.aboutOpenBkn.points.ontology.description")}</span>
+          </div>
+          <div>
+            <strong>{t("shell.aboutOpenBkn.points.openSource.title")}</strong>
+            <span>{t("shell.aboutOpenBkn.points.openSource.description")}</span>
+          </div>
+          <div>
+            <strong>{t("shell.aboutOpenBkn.points.action.title")}</strong>
+            <span>{t("shell.aboutOpenBkn.points.action.description")}</span>
+          </div>
+          <div>
+            <strong>{t("shell.aboutOpenBkn.points.governance.title")}</strong>
+            <span>{t("shell.aboutOpenBkn.points.governance.description")}</span>
+          </div>
+        </div>
+        <div className="console-about-modal-footer">
+          <span>{t("shell.aboutOpenBkn.footer")}</span>
+          <div>
+            <button
+              className="console-about-modal-link"
+              onClick={() => openExternal("https://openbkn.ai/")}
+              type="button"
+            >
+              {t("shell.aboutOpenBkn.website")}
+            </button>
+            <button
+              className="console-about-modal-primary"
+              onClick={() => openExternal("https://github.com/openbkn-ai")}
+              type="button"
+            >
+              <GithubOutlined />
+              {t("shell.aboutOpenBkn.github")}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </header>
   );
 }

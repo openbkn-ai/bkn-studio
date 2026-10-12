@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
@@ -29,8 +30,6 @@ import {
   formatOptionalTimestamp,
   resolveSkillCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
-import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 import styles from "./ToolboxDetailDrawer.module.css";
 
@@ -72,7 +71,6 @@ export function SkillDetailDrawer({
   skillId,
 }: SkillDetailDrawerProps) {
   const { t } = useTranslation();
-  const auditUserDirectory = useAuditUserDirectory();
   const [record, setRecord] = useState<SkillRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -137,7 +135,7 @@ export function SkillDetailDrawer({
       {
         key: "createUser",
         label: t("executionFactory.createUser"),
-        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.createUser }),
+        value: formatAuditUserDisplay({ id: record.createUser, name: record.createUserName }),
         icon: <UserOutlined />,
       },
       {
@@ -153,7 +151,7 @@ export function SkillDetailDrawer({
         icon: <ClockCircleOutlined />,
       },
     ];
-  }, [auditUserDirectory, record, t]);
+  }, [record, t]);
 
   return (
     <ExecutionUnitDetailDrawerLayout

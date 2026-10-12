@@ -85,7 +85,7 @@ export function FunctionExecuteModal({
   return (
     <Modal
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t("executionFactory.runFunction")}
       onCancel={onClose}
       onOk={() => {

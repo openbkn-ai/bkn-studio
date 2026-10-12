@@ -206,7 +206,7 @@ export function ToolFormDrawer({
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       extra={
         <div style={{ display: "flex", gap: 12 }}>
           <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>

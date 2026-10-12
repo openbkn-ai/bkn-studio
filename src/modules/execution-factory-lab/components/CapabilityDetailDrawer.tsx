@@ -34,8 +34,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { hasPermissions } from "@/framework/permission/has-permissions";
-import { listUsers } from "@/modules/system-admin/services/admin.service";
 import { CapabilityStatusStepper } from "@/modules/execution-factory-lab/components/CapabilityStatusStepper";
 import {
   LabDestructiveImpactAlert,
@@ -64,10 +64,6 @@ import { SkillFileTreePanel } from "@/modules/execution-factory-lab/components/S
 import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
 import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
 import { editPermissionForKind } from "@/modules/execution-factory-lab/utils/create-menu-permissions";
-import {
-  buildAuditUserDirectory,
-  formatAuditUserDisplay,
-} from "@/modules/execution-factory-lab/utils/audit-user-display";
 import type {
   CapabilityAudit,
   CapabilityRecord,
@@ -419,7 +415,6 @@ function formatAuditTime(value?: number) {
 function auditDescriptionItems(
   audit?: CapabilityAudit,
   currentUser?: { id?: string | null; name?: string | null },
-  userDirectory?: Map<string, string>,
 ) {
   return [
     {
@@ -428,7 +423,6 @@ function auditDescriptionItems(
         id: audit?.createUser,
         name: audit?.createUserName,
         currentUser,
-        directory: userDirectory,
       }),
     },
     {
@@ -441,7 +435,6 @@ function auditDescriptionItems(
         id: audit?.updateUser,
         name: audit?.updateUserName,
         currentUser,
-        directory: userDirectory,
       }),
     },
     {
@@ -454,7 +447,6 @@ function auditDescriptionItems(
         id: audit?.releaseUser,
         name: audit?.releaseUserName,
         currentUser,
-        directory: userDirectory,
       }),
     },
     {
@@ -479,14 +471,12 @@ export function CapabilityDetailDrawer({
     id: runtimeConfig.currentUser.id,
     name: runtimeConfig.currentUser.name,
   };
-  const [auditUserDirectory, setAuditUserDirectory] = useState<Map<string, string>>(() =>
-    buildAuditUserDirectory([]),
-  );
   const [detail, setDetail] = useState<CapabilityRecord | undefined>(capability);
   const [versions, setVersions] = useState<VersionEntry[]>([]);
   const [orchestration, setOrchestration] = useState<{
     enabled: boolean;
     operatorId?: string;
+    operatorName?: string;
     audit?: CapabilityAudit;
   }>({ enabled: false });
   const [orchestrationRuntime, setOrchestrationRuntime] = useState<OrchestrationRuntimeConfig>(
@@ -551,6 +541,7 @@ export function CapabilityDetailDrawer({
         setOrchestration({
           enabled: orch.enabled,
           operatorId: orch.operatorId,
+          operatorName: orch.operatorName ?? fresh.orchestration?.operatorName,
           audit: orch.audit ?? fresh.orchestration?.audit,
         });
 
@@ -568,25 +559,6 @@ export function CapabilityDetailDrawer({
       }
     })();
   }, [capability, initialTab, open]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    let cancelled = false;
-    void listUsers()
-      .then((users) => {
-        if (!cancelled) {
-          setAuditUserDirectory(buildAuditUserDirectory(users));
-        }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
 
   if (!detail) {
     return null;
@@ -789,6 +761,7 @@ export function CapabilityDetailDrawer({
       setOrchestration({
         enabled: true,
         operatorId: result.operatorId,
+        operatorName: result.operatorName ?? orchestration.operatorName,
         audit: result.audit ?? orchestration.audit,
       });
       onUpdated?.();
@@ -809,6 +782,7 @@ export function CapabilityDetailDrawer({
       setOrchestration({
         enabled: result.enabled,
         operatorId: result.operatorId,
+        operatorName: result.operatorName ?? orchestration.operatorName,
         audit: result.audit ?? orchestration.audit,
       });
       onUpdated?.();
@@ -825,7 +799,11 @@ export function CapabilityDetailDrawer({
     setError(null);
     try {
       const result = await disableOrchestration(detail.id);
-      setOrchestration({ enabled: result.enabled, operatorId: result.operatorId });
+      setOrchestration({
+        enabled: result.enabled,
+        operatorId: result.operatorId,
+        operatorName: result.operatorName,
+      });
       onUpdated?.();
       message.success(t("executionFactoryLab.disableOrchestrationSuccess"));
     } catch (orchError) {
@@ -1132,11 +1110,7 @@ export function CapabilityDetailDrawer({
                     <Descriptions
                       bordered
                       column={2}
-                      items={auditDescriptionItems(
-                        detail.audit,
-                        currentAuditUser,
-                        auditUserDirectory,
-                      ).map((item) => ({
+                      items={auditDescriptionItems(detail.audit, currentAuditUser).map((item) => ({
                         ...item,
                         label: t(`executionFactoryLab.${item.key}`),
                       }))}
@@ -1319,7 +1293,6 @@ export function CapabilityDetailDrawer({
                           id: row.releaseUser,
                           name: row.releaseUserName,
                           currentUser: currentAuditUser,
-                          directory: auditUserDirectory,
                         }),
                     },
                     {
@@ -1403,7 +1376,7 @@ export function CapabilityDetailDrawer({
                   <Descriptions bordered column={1} size="small">
                     {orchestration.enabled ? (
                       <Descriptions.Item label={t("executionFactoryLab.orchestrationOperatorId")}>
-                        {orchestration.operatorId ?? "-"}
+                        {orchestration.operatorName ?? orchestration.operatorId ?? "-"}
                       </Descriptions.Item>
                     ) : null}
                     <Descriptions.Item label={t("executionFactoryLab.orchestrationTimeoutMs")}>
@@ -1426,14 +1399,12 @@ export function CapabilityDetailDrawer({
                       <Descriptions
                         bordered
                         column={2}
-                        items={auditDescriptionItems(
-                          orchestration.audit,
-                          currentAuditUser,
-                          auditUserDirectory,
-                        ).map((item) => ({
-                          ...item,
-                          label: t(`executionFactoryLab.${item.key}`),
-                        }))}
+                        items={auditDescriptionItems(orchestration.audit, currentAuditUser).map(
+                          (item) => ({
+                            ...item,
+                            label: t(`executionFactoryLab.${item.key}`),
+                          }),
+                        )}
                         size="small"
                       />
                     </div>

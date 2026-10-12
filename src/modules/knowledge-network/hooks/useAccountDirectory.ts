@@ -7,16 +7,22 @@
 
 import { useEffect, useState } from "react";
 
-import {
-  buildAuditUserDirectory,
-  formatAuditUserDisplay,
-} from "@/modules/execution-factory-lab/utils/audit-user-display";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { getUser, listUsers } from "@/modules/system-admin/services/admin.service";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function buildAccountDirectory(users: Array<{ id?: string; name?: string }>) {
+  return new Map(
+    users.flatMap((user) => {
+      const id = user.id?.trim();
+      const name = user.name?.trim();
+      return id && name ? [[id, name] as const] : [];
+    }),
+  );
+}
 
 export function useAccountDirectory() {
   const runtimeConfig = useRuntimeConfig();
@@ -35,7 +41,7 @@ export function useAccountDirectory() {
 
     void listUsers({ skipErrorToast: true })
       .then((users) => {
-        setDirectory(buildAuditUserDirectory(users));
+        setDirectory(buildAccountDirectory(users));
       })
       .catch(() => {
         setDirectory(new Map());
@@ -50,12 +56,12 @@ export function resolveUpdaterDisplayName(
   directory: Map<string, string>,
   emptyLabel = "--",
 ) {
-  const display = formatAuditUserDisplay({
-    id: updaterName,
-    directory,
-  });
+  const normalized = updaterName?.trim();
+  if (!normalized) {
+    return emptyLabel;
+  }
 
-  return display === "-" ? emptyLabel : display;
+  return directory.get(normalized) ?? (UUID_PATTERN.test(normalized) ? emptyLabel : normalized);
 }
 
 export function useResolvedUpdaterName(updaterName?: string, emptyLabel = "--") {
@@ -92,7 +98,7 @@ export function useResolvedUpdaterName(updaterName?: string, emptyLabel = "--") 
     }
 
     let cancelled = false;
-    void getUser(trimmed)
+    void getUser(trimmed, { skipErrorToast: true })
       .then((user) => {
         if (cancelled) {
           return;

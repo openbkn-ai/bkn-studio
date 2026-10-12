@@ -8,6 +8,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { isIncrementalField, isPrimaryKeyField } from "@/modules/data-catalog/lib/build-guards";
+import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
+import {
+  filterValidationError,
+  parseFilterCondition,
+} from "@/modules/data-catalog/lib/filter-tree";
 
 import {
   mockBuildTasks,
@@ -18,6 +23,35 @@ import {
 } from "./mock-db";
 
 describe("data catalog discover-status mocks", () => {
+  it("grants delete on ordinary resource categories and keeps restricted examples read-only", () => {
+    const restrictedIds = new Set([
+      "res-permission-limited-orders",
+      "res-summary-only-orders",
+      "adp_bkn_concept_dataset",
+    ]);
+    for (const resource of mockResources) {
+      if (restrictedIds.has(resource.id)) {
+        expect(resource.operations).not.toContain("delete");
+      } else {
+        expect(resource.operations).toContain("delete");
+      }
+    }
+
+    const missing = mockResources.find((item) => item.id === "res-source-missing");
+    expect(missing).toMatchObject({
+      lastDiscoverStatus: "missing",
+    });
+    expect(missing?.operations).toContain("delete");
+    expect(missing && resourceQueryBlockReason(missing)).toBe("missing");
+
+    const staleMissing = mockResources.find((item) => item.id === "res-stale-source-missing");
+    expect(staleMissing).toMatchObject({
+      status: "stale",
+      lastDiscoverStatus: "missing",
+    });
+    expect(staleMissing?.operations).toContain("delete");
+  });
+
   it("populates every Property field required by the resource contract", () => {
     for (const resource of mockResources) {
       for (const field of resource.schema) {
@@ -63,6 +97,18 @@ describe("data catalog discover-status mocks", () => {
     ).toEqual([]);
   });
 
+  it("provides source display names for the editable derived view", () => {
+    const source = mockResources.find((item) => item.id === "res-orders");
+    const view = mockResources.find((item) => item.id === "res-high-value-orders-view");
+
+    expect(view?.logicDefinition?.sourceResourceId).toBe(source?.id);
+    for (const field of view?.schema ?? []) {
+      const sourceField = source?.schema.find((item) => item.originalName === field.originalName);
+      expect(sourceField?.displayName).toBeTruthy();
+      expect(sourceField?.displayName).not.toBe(sourceField?.name);
+    }
+  });
+
   it("provides a 20-field index configuration demo with supported and fallback source types", () => {
     const resource = mockResources.find((item) => item.id === "res-index-config-demo");
     expect(resource?.schema).toHaveLength(20);
@@ -102,12 +148,49 @@ describe("data catalog discover-status mocks", () => {
         continue;
       }
 
+      if (resource.category === "logical_view") {
+        continue;
+      }
+
       expect(resource.sourceMetadata?.objectType).toBe("table");
       expect(resource.sourceMetadata?.originalName).toBe(resource.sourceIdentifier);
       expect(typeof resource.sourceMetadata?.foreignKeyCount).toBe("number");
       expect(typeof resource.sourceMetadata?.indexCount).toBe("number");
       expect(typeof resource.sourceMetadata?.originalDescription).toBe("string");
     }
+  });
+
+  it("provides a derived view with valid source bindings and a nested fixed filter", () => {
+    const view = mockResources.find((item) => item.id === "res-high-value-orders-view");
+    const source = mockResources.find(
+      (item) => item.id === view?.logicDefinition?.sourceResourceId,
+    );
+
+    expect(view).toMatchObject({
+      catalogId: "cat-001",
+      category: "logical_view",
+      enabled: true,
+      logicType: "derived",
+      operations: ["view_detail", "query_data", "delete"],
+      status: "active",
+      sourceIdentifier: "res-high-value-orders-view",
+      sourceMetadata: { objectType: "table", originalName: "crm_core.orders" },
+    });
+    expect(view?.sourceMetadata).toEqual({ objectType: "table", originalName: "crm_core.orders" });
+    expect(view?.lastDiscoverStatus).toBeUndefined();
+    expect(source?.category).toBe("table");
+    expect(view?.schema).toHaveLength(4);
+    for (const field of view?.schema ?? []) {
+      const sourceField = source?.schema.find((item) => item.name === field.originalName);
+      expect(sourceField?.type).toBe(field.type);
+      expect(field.displayName).toBeTruthy();
+    }
+    const filter = parseFilterCondition(view?.logicDefinition?.filterCondition);
+    expect(filter).not.toBeNull();
+    expect(
+      filter?.children.some((child) => child.kind === "group" && child.operation === "or"),
+    ).toBe(true);
+    expect(filterValidationError(filter!, source?.schema ?? [])).toBeNull();
   });
 
   it("provides a non-dataset resource with view-detail-only permissions", () => {

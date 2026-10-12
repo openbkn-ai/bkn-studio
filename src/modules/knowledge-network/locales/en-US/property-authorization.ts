@@ -112,6 +112,8 @@ export const propertyAuthorizationPart = {
     "Changing this role may affect {{count}} member. Direct user grants, other roles, and base permissions still participate in the final decision.",
   propertyAuthorizationRoleImpact_other:
     "Changing this role may affect {{count}} members. Direct user grants, other roles, and base permissions still participate in the final decision.",
+  propertyAuthorizationRoleImpactUnknown:
+    "This change applies to every member of the role. Direct user grants, other roles, and base permissions still participate in the final decision.",
   propertyAuthorizationSearchProperty: "Search properties",
   propertyAuthorizationFilterAll: "All states",
   propertyAuthorizationFilterExplicit: "Configured",
@@ -183,7 +185,7 @@ export const propertyAuthorizationPart = {
   rowFilterSubjectHelp:
     "Only users and roles can be configured. Organizations filter the user list only; they are not authorization subjects.",
   rowFilterSelectUser: "Select a user for row filtering",
-  rowFilterUserOrganizationFilter: "Filter users by organization",
+  rowFilterUserOrganizationFilter: "Search users",
   rowFilterSelectSubject: "Select a user or role",
   rowFilterSelectSubjectDescription:
     "Select a subject to inspect and configure its row-filter policy for this object type.",

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -771,6 +771,43 @@ describe("DataConnectFormScene · connection preflight", () => {
     HEAVY_SCENE_TIMEOUT_MS,
   );
 
+  it.each([
+    ["professional", false],
+    ["enterprise", true],
+    ["industry", true],
+  ])(
+    "HANA 在 %s 档位显示对应企业版门控",
+    async (edition, available) => {
+      permissionState.values = new Set(["catalog:create"]);
+      entitlementState.snapshot = { capabilities: [], edition, extensions: [] };
+      listDataConnectConnectorTypesMock.mockResolvedValue([
+        {
+          available,
+          category: "table",
+          description: "",
+          enabled: true,
+          fieldConfig: {},
+          mode: "local",
+          name: "SAP HANA",
+          requiredEdition: "enterprise",
+          type: "hana",
+        },
+      ]);
+
+      render(<DataConnectFormScene mode="create" />);
+      const hanaButton = await findConnectorCard("SAP HANA");
+      expect(hanaButton.hasAttribute("disabled")).toBe(!available);
+      if (available) {
+        expect(hanaButton.textContent).not.toContain("common.entitlement.editionsShort.enterprise");
+        expect(hanaButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
+      } else {
+        expect(hanaButton.textContent).toContain("common.entitlement.editionsShort.enterprise");
+        expect(hanaButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+      }
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
+
   it(
     "SQL Server 停用时服从服务端 enabled,不弹前端升级引导",
     async () => {
@@ -899,6 +936,283 @@ describe("DataConnectFormScene · connection preflight", () => {
           { skipErrorToast: true },
         );
       });
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
+
+  it(
+    "creates an Oracle catalog with a service name and the default port",
+    async () => {
+      permissionState.values = new Set(["catalog:create"]);
+      const oracleConnector: DataConnectConnectorType = {
+        available: true,
+        category: "table",
+        description: "Oracle 关系型数据库连接器",
+        enabled: true,
+        fieldConfig: {
+          host: connectorField("主机地址", "string", true),
+          port: connectorField("端口号", "integer", true),
+          username: connectorField("用户名", "string", true),
+          password: connectorField("密码", "string", true, true),
+          service_name: connectorField("服务名", "string", true),
+          schemas: connectorField("Schema 列表", "array", false),
+          options: connectorField("连接参数", "object", false),
+        },
+        mode: "local",
+        name: "Oracle",
+        type: "oracle",
+      };
+      getDataConnectConnectorTypeMock.mockResolvedValue(oracleConnector);
+      listDataConnectConnectorTypesMock.mockResolvedValue([oracleConnector]);
+
+      render(<DataConnectFormScene mode="create" />);
+
+      fireEvent.click(await findConnectorCard("Oracle"));
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+
+      fireEvent.change(await screen.findByPlaceholderText("dataConnect.namePlaceholder"), {
+        target: { value: "oracle-orders" },
+      });
+      expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("oracle");
+      fireEvent.change(screen.getByPlaceholderText("例如 db.example.internal"), {
+        target: { value: "oracle.example.com" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("例如 readonly_user"), {
+        target: { value: "readonly_user" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("dataConnect.encryptedFieldPlaceholder"), {
+        target: { value: "test-password" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
+      await screen.findByText("common.required");
+      expect(createDataConnectRecordMock).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByPlaceholderText("例如 ORCLPDB1"), {
+        target: { value: "ORCLPDB1" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
+
+      await waitFor(() => {
+        expect(createDataConnectRecordMock).toHaveBeenCalledWith(
+          {
+            connectorConfig: {
+              host: "oracle.example.com",
+              password: "test-password",
+              port: 1521,
+              service_name: "ORCLPDB1",
+              username: "readonly_user",
+            },
+            connectorType: "oracle",
+            description: "",
+            enabled: true,
+            healthCheckSchedule: { cronExpr: undefined, mode: "inherit" },
+            name: "oracle-orders",
+            tags: [],
+          },
+          { skipErrorToast: true },
+        );
+      });
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
+  it(
+    "creates a HANA catalog with a required tenant database on port 30015 without TLS options",
+    async () => {
+      permissionState.values = new Set(["catalog:create"]);
+      const hanaConnector: DataConnectConnectorType = {
+        available: true,
+        category: "table",
+        description: "SAP HANA 关系型数据库连接器",
+        enabled: true,
+        fieldConfig: {
+          host: connectorField("主机地址", "string", true),
+          port: connectorField("端口号", "integer", true),
+          username: connectorField("用户名", "string", true),
+          password: connectorField("密码", "string", true, true),
+          database: connectorField("租户数据库名", "string", true),
+          schemas: connectorField("Schema 列表", "array", false),
+          options: connectorField("连接参数", "object", false),
+        },
+        mode: "local",
+        name: "SAP HANA",
+        type: "hana",
+      };
+      getDataConnectConnectorTypeMock.mockResolvedValue(hanaConnector);
+      listDataConnectConnectorTypesMock.mockResolvedValue([hanaConnector]);
+
+      render(<DataConnectFormScene mode="create" />);
+      fireEvent.click(await findConnectorCard("SAP HANA"));
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+
+      fireEvent.change(await screen.findByPlaceholderText("dataConnect.namePlaceholder"), {
+        target: { value: "hana-analytics" },
+      });
+      expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("hana");
+      fireEvent.change(screen.getByPlaceholderText("例如 db.example.internal"), {
+        target: { value: "hana.example.com" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("例如 readonly_user"), {
+        target: { value: "readonly_user" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("dataConnect.encryptedFieldPlaceholder"), {
+        target: { value: "test-password" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
+      await screen.findByText("common.required");
+      expect(createDataConnectRecordMock).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByPlaceholderText("例如 TENANT_DB"), {
+        target: { value: "TENANT_DB" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
+      await waitFor(() => {
+        expect(createDataConnectRecordMock).toHaveBeenCalledWith(
+          {
+            connectorConfig: {
+              host: "hana.example.com",
+              password: "test-password",
+              port: 30015,
+              database: "TENANT_DB",
+              username: "readonly_user",
+            },
+            connectorType: "hana",
+            description: "",
+            enabled: true,
+            healthCheckSchedule: { cronExpr: undefined, mode: "inherit" },
+            name: "hana-analytics",
+            tags: [],
+          },
+          { skipErrorToast: true },
+        );
+      });
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
+
+  it(
+    "replaces HANA defaults when switching to PostgreSQL without edited fields",
+    async () => {
+      permissionState.values = new Set(["catalog:create"]);
+      const hana = {
+        available: true,
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {
+          port: connectorField("Port", "integer", false),
+          options: connectorField("Options", "object", false),
+        },
+        mode: "local",
+        name: "SAP HANA",
+        type: "hana",
+      } as DataConnectConnectorType;
+      const postgres = {
+        ...hana,
+        name: "PostgreSQL",
+        type: "postgresql",
+      };
+      listDataConnectConnectorTypesMock.mockResolvedValue([hana, postgres]);
+      getDataConnectConnectorTypeMock.mockImplementation((type: string) =>
+        Promise.resolve(type === "hana" ? hana : postgres),
+      );
+
+      render(<DataConnectFormScene mode="create" />);
+      fireEvent.click(await findConnectorCard("SAP HANA"));
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      expect(await screen.findByDisplayValue("30015")).toBeTruthy();
+      expect(screen.queryByDisplayValue('{"tls":true}')).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "common.previous" }));
+      fireEvent.click(await findConnectorCard("PostgreSQL"));
+      expect(modalConfirmMock).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      await screen.findByPlaceholderText("dataConnect.namePlaceholder");
+      expect(screen.queryByDisplayValue("30015")).toBeNull();
+      expect(screen.getByDisplayValue("5432")).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "common.testConnection" }));
+      await waitFor(() =>
+        expect(testDataConnectConfigMock).toHaveBeenCalledWith({
+          connectorConfig: { port: 5432 },
+          connectorType: "postgresql",
+        }),
+      );
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
+
+  it(
+    "preserves edited fields until continuing with a different connector",
+    async () => {
+      permissionState.values = new Set(["catalog:create"]);
+      const hana = {
+        available: true,
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {
+          host: connectorField("Host", "string", false),
+          options: connectorField("Options", "object", false),
+        },
+        mode: "local",
+        name: "SAP HANA",
+        type: "hana",
+      } as DataConnectConnectorType;
+      const postgres = { ...hana, name: "PostgreSQL", type: "postgresql" };
+      listDataConnectConnectorTypesMock.mockResolvedValue([hana, postgres]);
+      getDataConnectConnectorTypeMock.mockImplementation((type: string) =>
+        Promise.resolve(type === "hana" ? hana : postgres),
+      );
+
+      render(<DataConnectFormScene mode="create" />);
+      fireEvent.click(await findConnectorCard("SAP HANA"));
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      const host = await screen.findByPlaceholderText("例如 db.example.internal");
+      fireEvent.change(host, { target: { value: "hana.example.com" } });
+      fireEvent.change(screen.getByPlaceholderText('例如 {"timeout":30}'), {
+        target: { value: '{"tls":true}' },
+      });
+      fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+        target: { value: "Shared name" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.previous" }));
+      fireEvent.click(await findConnectorCard("SAP HANA"));
+      expect(modalConfirmMock).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      expect(await screen.findByDisplayValue("hana.example.com")).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "common.previous" }));
+      fireEvent.click(await findConnectorCard("PostgreSQL"));
+      expect(modalConfirmMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "dataConnect.changeConnectorTitle",
+          content: "dataConnect.changeConnectorDescription",
+        }),
+      );
+      expect((await findConnectorCard("SAP HANA")).className).toContain("cardActive");
+
+      const onOk = modalConfirmMock.mock.calls[0]?.[0]?.onOk;
+      if (!onOk) throw new Error("Expected connector change confirmation");
+      act(() => onOk());
+      fireEvent.click(await findConnectorCard("SAP HANA"));
+      expect(modalConfirmMock).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      expect(await screen.findByDisplayValue("hana.example.com")).toBeTruthy();
+      expect(screen.getByDisplayValue('{"tls":true}')).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "common.previous" }));
+      fireEvent.click(await findConnectorCard("PostgreSQL"));
+      const confirmSwitch = modalConfirmMock.mock.calls[1]?.[0]?.onOk;
+      if (!confirmSwitch) throw new Error("Expected connector change confirmation");
+      act(() => confirmSwitch());
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      await screen.findByPlaceholderText("dataConnect.namePlaceholder");
+      expect(screen.getByDisplayValue("Shared name")).toBeTruthy();
+      expect(screen.queryByDisplayValue("hana.example.com")).toBeNull();
+      expect(screen.queryByDisplayValue('{"tls":true}')).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "common.testConnection" }));
+      await waitFor(() =>
+        expect(testDataConnectConfigMock).toHaveBeenCalledWith({
+          connectorConfig: {},
+          connectorType: "postgresql",
+        }),
+      );
     },
     HEAVY_SCENE_TIMEOUT_MS,
   );

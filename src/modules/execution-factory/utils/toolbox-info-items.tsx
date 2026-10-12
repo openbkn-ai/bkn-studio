@@ -16,8 +16,8 @@ import {
 } from "@ant-design/icons";
 
 import type { DetailMetaItem } from "@/modules/execution-factory/components/DetailMetaPanel";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
-import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import {
   formatOptionalTimestamp,
   resolveToolboxCategoryLabel,
@@ -25,7 +25,6 @@ import {
 
 type BuildToolboxBasicInfoItemsOptions = {
   t: (key: string) => string;
-  auditUserDirectory: Parameters<typeof formatAuditUserDisplay>[0]["directory"];
   /** Tool/function count, passed explicitly because the two hosts obtain it from different sources. */
   toolCount: number;
   /** Toolbox details include publisher and publication time; the function workbench does not display them. */
@@ -39,7 +38,7 @@ type BuildToolboxBasicInfoItemsOptions = {
  */
 export function buildToolboxBasicInfoItems(
   toolbox: ToolboxRecord,
-  { t, auditUserDirectory, toolCount, includeRelease = false }: BuildToolboxBasicInfoItemsOptions,
+  { t, toolCount, includeRelease = false }: BuildToolboxBasicInfoItemsOptions,
 ): DetailMetaItem[] {
   const items: DetailMetaItem[] = [
     {
@@ -79,13 +78,13 @@ export function buildToolboxBasicInfoItems(
     {
       key: "createUser",
       label: t("executionFactory.createUser"),
-      value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.createUser }),
+      value: formatAuditUserDisplay({ id: toolbox.createUser, name: toolbox.createUserName }),
       icon: <UserOutlined />,
     },
     {
       key: "updateUser",
       label: t("executionFactory.updateUser"),
-      value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.updateUser }),
+      value: formatAuditUserDisplay({ id: toolbox.updateUser, name: toolbox.updateUserName }),
       icon: <UserOutlined />,
     },
     {
@@ -107,7 +106,7 @@ export function buildToolboxBasicInfoItems(
       {
         key: "releaseUser",
         label: t("executionFactory.releaseUser"),
-        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.releaseUser }),
+        value: formatAuditUserDisplay({ id: toolbox.releaseUser, name: toolbox.releaseUserName }),
         icon: <UserOutlined />,
       },
       {

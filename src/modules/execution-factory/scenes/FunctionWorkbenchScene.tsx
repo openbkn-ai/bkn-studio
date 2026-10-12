@@ -29,6 +29,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -60,9 +61,7 @@ import type { FunctionExecuteResult } from "@/modules/execution-factory/types/fu
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
 import type { ToolStatus } from "@/modules/execution-factory/types/tool";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
-import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatOptionalTimestamp } from "@/modules/execution-factory/utils/detail-display";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { buildToolboxBasicInfoItems } from "@/modules/execution-factory/utils/toolbox-info-items";
 import {
   DEFAULT_FUNCTION_TEMPLATE,
@@ -216,7 +215,6 @@ export function FunctionWorkbenchScene({
 
   const [toolbox, setToolbox] = useState<ToolboxRecord | null>(null);
   const [boxName, setBoxName] = useState("");
-  const auditUserDirectory = useAuditUserDirectory();
   const [boxCategory, setBoxCategory] = useState<string | undefined>();
   const [functions, setFunctions] = useState<WorkbenchFunction[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -1138,11 +1136,10 @@ export function FunctionWorkbenchScene({
       toolbox
         ? buildToolboxBasicInfoItems(toolbox, {
             t,
-            auditUserDirectory,
             toolCount: functions.length || toolbox.toolCount || 0,
           })
         : [],
-    [auditUserDirectory, functions.length, t, toolbox],
+    [functions.length, t, toolbox],
   );
 
   if (loading) {
@@ -1204,7 +1201,10 @@ export function FunctionWorkbenchScene({
           {toolbox.updateUser ? (
             <span>
               <UserOutlined />{" "}
-              {formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.updateUser })}
+              {formatAuditUserDisplay({
+                id: toolbox.updateUser,
+                name: toolbox.updateUserName,
+              })}
             </span>
           ) : null}
         </div>

@@ -125,7 +125,7 @@ export function RoleDetailDrawer({
   return (
     <Drawer
       className={styles.drawer}
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       rootClassName={appStyles.adminOverlay}

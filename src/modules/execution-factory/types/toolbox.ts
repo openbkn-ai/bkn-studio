@@ -32,8 +32,11 @@ export type ToolboxRecord = {
   createTime?: number;
   updateTime?: number;
   createUser?: string;
+  createUserName?: string;
   updateUser?: string;
+  updateUserName?: string;
   releaseUser?: string;
+  releaseUserName?: string;
   releaseTime?: number;
   isInternal?: boolean;
 };

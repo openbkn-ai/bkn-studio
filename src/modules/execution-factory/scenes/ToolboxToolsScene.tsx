@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import type { ToolboxToolsSceneProps } from "@/modules/execution-factory/contracts/scenes";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -68,10 +69,8 @@ import {
   hasCapabilityIoFacts,
 } from "@/modules/execution-factory/utils/capability-manifest";
 import { buildToolboxBasicInfoItems } from "@/modules/execution-factory/utils/toolbox-info-items";
-import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 import { resolveToolStatusOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
 
 import styles from "./toolbox-detail.module.css";
@@ -106,7 +105,6 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
   const [railKeyword, setRailKeyword] = useState("");
   const { exportComponentById, isExporting } = useImpexExport();
-  const auditUserDirectory = useAuditUserDirectory();
 
   const loadToolbox = useCallback(async () => {
     try {
@@ -471,12 +469,11 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
       toolbox
         ? buildToolboxBasicInfoItems(toolbox, {
             t,
-            auditUserDirectory,
             toolCount: items.length || toolbox.toolCount || 0,
             includeRelease: true,
           })
         : [],
-    [auditUserDirectory, items.length, t, toolbox],
+    [items.length, t, toolbox],
   );
 
   const selectedToolManifest = useMemo(() => {
@@ -566,7 +563,10 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
             {toolbox.updateUser ? (
               <span>
                 <UserOutlined />{" "}
-                {formatAuditUserDisplay({ directory: auditUserDirectory, id: toolbox.updateUser })}
+                {formatAuditUserDisplay({
+                  id: toolbox.updateUser,
+                  name: toolbox.updateUserName,
+                })}
               </span>
             ) : null}
           </div>

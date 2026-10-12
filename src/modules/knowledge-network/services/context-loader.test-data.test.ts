@@ -149,6 +149,28 @@ describe("buildTestData", () => {
     expect(fill.query).toBeUndefined();
   });
 
+  // query_object_instance declares no need_total, and /mcp-compact/ rejects undeclared
+  // arguments, so a filled body must keep only what the reported tool declares.
+  it("query_object_instance (MCP) keeps only the arguments the tool declares", () => {
+    const resOt = pickQueryableObjectType(d);
+    const inputSchema = {
+      type: "object",
+      properties: { kn_id: {}, ot_id: {}, include_logic_params: {}, filters: {}, limit: {} },
+    };
+    const fill = buildTestData(
+      opById("query_object_instance"),
+      "mcp",
+      "kn_demo",
+      d,
+      resOt,
+      { status: "paid" },
+      inputSchema,
+    );
+    const body = JSON.parse(fill.body) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("need_total");
+    expect(body).toMatchObject({ kn_id: "kn_demo", ot_id: "orders", limit: 10 });
+  });
+
   it("query_instance_subgraph builds a path from a real relation type (REST)", () => {
     const dg = detail(
       [ot("team", ["name"], "res_team"), ot("player", ["name"], "res_player")],

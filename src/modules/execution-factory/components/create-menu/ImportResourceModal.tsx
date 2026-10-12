@@ -352,7 +352,7 @@ export function ImportResourceModal({
     <Modal
       confirmLoading={submitting}
 
-      destroyOnClose
+      destroyOnHidden
 
       okText={t("executionFactory.importConfirm")}
 

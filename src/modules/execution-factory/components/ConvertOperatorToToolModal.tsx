@@ -104,7 +104,7 @@ export function ConvertOperatorToToolModal({
   return (
     <Modal
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t("executionFactory.convertToTool")}
       onCancel={onClose}
       onOk={() => {

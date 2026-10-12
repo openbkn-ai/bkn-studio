@@ -15,13 +15,15 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { isCommunityBuild } from "@/framework/entitlement/types";
-import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { useCapability, useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
@@ -30,7 +32,13 @@ import { renderResourceIcon } from "@/modules/knowledge-network/components/share
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
-import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
+import {
+  canRequestResourcePermission,
+  canPreviewObjectTypePolicyScope,
+  getMissingResourcePermissionOperations,
+  hasRequestableObjectTypePolicyScope,
+} from "@/modules/knowledge-network/components/shared/resource-permission-request";
+import { getPermissionRequestProposalPreview } from "@/modules/account/services/permission-requests.service";
 import {
   readPositiveInteger,
   readStoredPageSize,
@@ -68,7 +76,12 @@ export function ObjectTypeListPanel({
   networkName,
   onDelete,
 }: ObjectTypeListPanelProps) {
-  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
+  const entitlement = useEntitlement();
+  const policyScopeCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
+  const permissionRequestsEnabled = !isCommunityBuild(entitlement);
+  const policyScopePreviewsEnabled =
+    canPreviewObjectTypePolicyScope(policyScopeCapability) &&
+    !getRuntimeConfig().currentUser.isSuperAdmin;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -90,6 +103,8 @@ export function ObjectTypeListPanel({
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [items, setItems] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
+  const [policyRequestableIDs, setPolicyRequestableIDs] = useState<Set<string>>(() => new Set());
+  const policyRequestabilityCache = useRef(new Map<string, boolean>());
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -150,6 +165,57 @@ export function ObjectTypeListPanel({
     sortBy,
     sortDirection,
   ]);
+  useEffect(() => {
+    policyRequestabilityCache.current.clear();
+  }, [networkId, refreshVersion]);
+  useEffect(() => {
+    if (!policyScopePreviewsEnabled) {
+      setPolicyRequestableIDs(new Set());
+      return;
+    }
+    let cancelled = false;
+    const candidates = items.filter(
+      (record) =>
+        getMissingResourcePermissionOperations("object_type", record.operations).length === 0,
+    );
+    const resolved = new Set(
+      candidates
+        .filter((record) => policyRequestabilityCache.current.get(`${networkId}/${record.id}`))
+        .map((record) => record.id),
+    );
+    setPolicyRequestableIDs(resolved);
+
+    const unresolved = candidates.filter(
+      (record) => !policyRequestabilityCache.current.has(`${networkId}/${record.id}`),
+    );
+    if (!unresolved.length) return;
+
+    void Promise.all(
+      unresolved.map(async (record) => {
+        const resourceID = `${networkId}/${record.id}`;
+        try {
+          const preview = await getPermissionRequestProposalPreview(resourceID);
+          return [record.id, hasRequestableObjectTypePolicyScope(preview)] as const;
+        } catch {
+          return [record.id, false] as const;
+        }
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+      for (const [id, requestable] of results) {
+        policyRequestabilityCache.current.set(`${networkId}/${id}`, requestable);
+      }
+      setPolicyRequestableIDs(
+        new Set([
+          ...resolved,
+          ...results.filter(([, requestable]) => requestable).map(([id]) => id),
+        ]),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [items, networkId, policyScopePreviewsEnabled, refreshVersion]);
   useEffect(() => {
     const nextKeyword = searchParams.get("q") ?? "";
     const nextTag = searchParams.get("tag") ?? "all";
@@ -333,7 +399,9 @@ export function ObjectTypeListPanel({
             "object_type",
             record.operations,
             permissionRequestsEnabled,
-          )
+          ) &&
+          (getMissingResourcePermissionOperations("object_type", record.operations).length > 0 ||
+            policyRequestableIDs.has(record.id))
             ? [
                 {
                   key: "request-permission",

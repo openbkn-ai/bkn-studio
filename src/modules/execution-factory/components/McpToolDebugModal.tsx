@@ -88,7 +88,7 @@ export function McpToolDebugModal({
          needs its own body scrolling, or it pushes the Debug button below the viewport. */
       className={styles.modal}
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t("executionFactory.debug")}
       onCancel={onClose}
       onOk={() => {

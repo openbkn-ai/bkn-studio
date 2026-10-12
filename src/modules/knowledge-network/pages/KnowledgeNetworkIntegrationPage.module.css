@@ -193,30 +193,11 @@
   font-weight: 700;
 }
 
-.sdkKeyNote {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-divider);
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.sdkKeyNote > :first-child {
-  color: var(--color-text-link);
-}
-
-.sdkKeyNote a,
 .sdkPackageLink {
   color: var(--color-text-link);
   text-decoration: none;
 }
 
-.sdkKeyNote a:hover,
 .sdkPackageLink:hover {
   color: var(--color-text-link);
 }

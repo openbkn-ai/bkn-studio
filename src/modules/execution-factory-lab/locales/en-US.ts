@@ -182,7 +182,7 @@ export const executionFactoryLabEnUS = {
     orchestrationEnabledTitle: "Available as a workflow operator",
     orchestrationEnabledDescription:
       "This capability has been registered as a workflow operator. Configure runtime behavior before it is used in flows.",
-    orchestrationOperatorId: "Operator ID",
+    orchestrationOperatorId: "Operator",
     orchestrationTimeoutMs: "Timeout (ms)",
     orchestrationRetryPolicy: "Retry policy",
     orchestrationMaxAttempts: "Max attempts",

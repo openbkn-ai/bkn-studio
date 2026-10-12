@@ -410,7 +410,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
   return (
     <Drawer
       className={styles.drawer}
-      destroyOnClose
+      destroyOnHidden
       footer={
         <div className={styles.footer}>
           <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>

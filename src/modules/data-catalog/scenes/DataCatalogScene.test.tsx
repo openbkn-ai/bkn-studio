@@ -28,6 +28,7 @@ vi.mock("@/modules/data-catalog/components/CatalogTreePanel", () => ({
     onSearch,
     onSearchChange,
     onSelectCatalog,
+    resourceCount,
   }: {
     catalogs: CatalogRecord[];
     keyword: string;
@@ -36,10 +37,12 @@ vi.mock("@/modules/data-catalog/components/CatalogTreePanel", () => ({
     onSearch: (keyword?: string) => void;
     onSearchChange: (keyword: string) => void;
     onSelectCatalog: (catalogId: string) => void;
+    resourceCount: number;
   }) => (
     <>
       <output data-testid="catalog-ids">{catalogs.map((item) => item.id).join(",")}</output>
       <output data-testid="catalog-keyword">{keyword}</output>
+      <output data-testid="resource-count">{resourceCount}</output>
       <button onClick={() => onSelectCatalog("catalog-1")} type="button">
         select catalog
       </button>
@@ -68,8 +71,19 @@ vi.mock("@/modules/data-catalog/components/ResourceFormDrawer", () => ({
   ResourceFormDrawer: () => null,
 }));
 vi.mock("@/modules/data-catalog/components/ResourceListPanel", () => ({
-  default: ({ catalog }: { catalog: CatalogRecord }) => (
-    <output data-testid="selected-catalog-id">{catalog.id}</output>
+  default: ({
+    catalog,
+    onResourceDeleted,
+  }: {
+    catalog: CatalogRecord;
+    onResourceDeleted: () => void;
+  }) => (
+    <>
+      <output data-testid="selected-catalog-id">{catalog.id}</output>
+      <button onClick={onResourceDeleted} type="button">
+        simulate resource delete
+      </button>
+    </>
   ),
 }));
 vi.mock("@/modules/data-catalog/services/mock-db", () => ({
@@ -281,6 +295,73 @@ describe("DataCatalogScene", () => {
 
     expect((await screen.findByTestId("selected-catalog-id")).textContent).toBe("catalog-1");
     expect(getCatalogMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the deleted resource count when the follow-up count request fails", async () => {
+    countCatalogResourcesMock
+      .mockResolvedValueOnce(2)
+      .mockRejectedValueOnce(new Error("count unavailable"));
+    getCatalogMock.mockResolvedValue(catalog);
+
+    render(
+      <MemoryRouter initialEntries={["/data-catalog/catalog/catalog-1"]}>
+        <DataCatalogScene selection={{ id: "catalog-1", type: "catalog" }} suppressAutoSelect />
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId("selected-catalog-id");
+    expect(screen.getByTestId("resource-count")).toHaveTextContent("2");
+
+    fireEvent.click(screen.getByRole("button", { name: "simulate resource delete" }));
+
+    expect(screen.getByTestId("resource-count")).toHaveTextContent("1");
+    await waitFor(() => expect(countCatalogResourcesMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("ignores an older count response after consecutive resource deletions", async () => {
+    let resolveFirstCount!: (count: number) => void;
+    let resolveSecondCount!: (count: number) => void;
+    countCatalogResourcesMock
+      .mockResolvedValueOnce(3)
+      .mockImplementationOnce(
+        () =>
+          new Promise<number>((resolve) => {
+            resolveFirstCount = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<number>((resolve) => {
+            resolveSecondCount = resolve;
+          }),
+      );
+    getCatalogMock.mockResolvedValue(catalog);
+
+    render(
+      <MemoryRouter initialEntries={["/data-catalog/catalog/catalog-1"]}>
+        <DataCatalogScene selection={{ id: "catalog-1", type: "catalog" }} suppressAutoSelect />
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId("selected-catalog-id");
+    expect(screen.getByTestId("resource-count")).toHaveTextContent("3");
+
+    fireEvent.click(screen.getByRole("button", { name: "simulate resource delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "simulate resource delete" }));
+    expect(screen.getByTestId("resource-count")).toHaveTextContent("1");
+    expect(countCatalogResourcesMock).toHaveBeenCalledTimes(3);
+
+    await act(async () => {
+      resolveSecondCount(1);
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("resource-count")).toHaveTextContent("1");
+
+    await act(async () => {
+      resolveFirstCount(2);
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("resource-count")).toHaveTextContent("1");
   });
 
   it("keeps the catalog error when no directly granted resource is available", async () => {

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined, KeyOutlined, ReloadOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, DeleteOutlined, KeyOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Alert, Space, Spin, Tabs } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +20,10 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ResourceDetailPanel } from "@/modules/data-catalog/components/ResourceDetailPanel";
+import {
+  isResourceDeletionEligible,
+  useResourceDeletion,
+} from "@/modules/data-catalog/hooks/use-resource-deletion";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { authzPoints } from "@/modules/system-admin/permissions";
@@ -69,6 +73,7 @@ export function ResourceWorkspaceScene({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal, runtimeConfig } = useAppServices();
+  const { confirmDeleteResource } = useResourceDeletion();
   const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   // Reading this table's rows is granted on the table itself; its management verbs live on the
   // owning catalog (openbkn-ai/bkn-foundry#986). Shown to whoever may issue grants at all.
@@ -85,7 +90,9 @@ export function ResourceWorkspaceScene({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resourceReadForbidden, setResourceReadForbidden] = useState(false);
   const [detailEditing, setDetailEditing] = useState(false);
-  const [resourceAction, setResourceAction] = useState<"discover" | "enabled" | null>(null);
+  const [resourceAction, setResourceAction] = useState<"discover" | "count" | "enabled" | null>(
+    null,
+  );
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const previousTabRef = useRef(tab);
   const resourceVersionRef = useRef(0);
@@ -124,7 +131,7 @@ export function ResourceWorkspaceScene({
       );
       let latestTasks: BuildTask[] = [];
       let taskLoadFailed = false;
-      if (hasCatalogOperation(catalogRecord, "task_manage")) {
+      if (detail.category !== "logical_view" && hasCatalogOperation(catalogRecord, "task_manage")) {
         try {
           const latestTaskPage = await listBuildTaskPage(
             {
@@ -212,6 +219,7 @@ export function ResourceWorkspaceScene({
   }, [message, resourceId]);
 
   const refreshIndexContext = useCallback(async () => {
+    if (resource?.category === "logical_view") return;
     if (!(await refreshResource()) || !hasCatalogOperation(catalog, "task_manage")) return;
     const resourceVersion = resourceVersionRef.current;
     try {
@@ -232,7 +240,7 @@ export function ResourceWorkspaceScene({
         setTaskStatusUnavailable(true);
       }
     }
-  }, [catalog, refreshResource, resourceId]);
+  }, [catalog, refreshResource, resource?.category, resourceId]);
 
   useEffect(() => {
     const previousTab = previousTabRef.current;
@@ -241,6 +249,10 @@ export function ResourceWorkspaceScene({
       void refreshResource();
     }
   }, [refreshResource, tab]);
+
+  useEffect(() => {
+    if (resource?.category === "logical_view" && tab === "index") onTabChange("detail");
+  }, [onTabChange, resource?.category, tab]);
 
   useEffect(() => {
     return subscribeMockDb(() => {
@@ -264,7 +276,10 @@ export function ResourceWorkspaceScene({
   // Internal catalogs do not support semantic-understanding tasks. Missing task permission is
   // handled inside the tab panel so the navigation remains discoverable and deep links stay valid.
   const hideSemanticUnderstanding = Boolean(catalog?.builtin);
-  const discoveryFailed = resource?.lastDiscoverStatus === "error";
+  const discoveryFailed =
+    resource?.category !== "logical_view" &&
+    resource?.category !== "dataset" &&
+    resource?.lastDiscoverStatus === "error";
   const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;
   const resourceDisabled = queryBlockReason === "disabled";
   const resourceMissing = queryBlockReason === "missing";
@@ -289,17 +304,31 @@ export function ResourceWorkspaceScene({
     setResource(latestResource);
   }, []);
 
-  const triggerResourceDiscovery = useCallback(async () => {
-    setResourceAction("discover");
-    try {
-      await discoverCatalogResource(resourceId);
-      void message.success(t("dataCatalog.resourceWorkspace.discoveryQueued"));
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    } finally {
-      setResourceAction(null);
-    }
-  }, [message, resourceId, t]);
+  const triggerResourceDiscovery = useCallback(
+    async (strategy?: "count_only") => {
+      if (
+        resource?.category === "dataset" ||
+        (resource?.category === "logical_view" && strategy !== "count_only")
+      )
+        return;
+      setResourceAction(strategy === "count_only" ? "count" : "discover");
+      try {
+        await discoverCatalogResource(resourceId, ...(strategy ? [strategy] : []));
+        void message.success(
+          t(
+            strategy === "count_only"
+              ? "dataCatalog.resourceWorkspace.countQueued"
+              : "dataCatalog.resourceWorkspace.discoveryQueued",
+          ),
+        );
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
+      } finally {
+        setResourceAction(null);
+      }
+    },
+    [message, resource?.category, resourceId, t],
+  );
 
   const updateResourceEnabled = useCallback(
     async (enabled: boolean) => {
@@ -326,14 +355,15 @@ export function ResourceWorkspaceScene({
   );
 
   const confirmResourceDiscovery = useCallback(() => {
+    if (resource?.category === "logical_view" || resource?.category === "dataset") return;
     void modal.confirm({
       cancelText: t("common.cancel"),
       content: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmDescription"),
       okText: t("dataCatalog.resourceWorkspace.refreshMetadataConfirm"),
-      onOk: triggerResourceDiscovery,
+      onOk: () => triggerResourceDiscovery(),
       title: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmTitle"),
     });
-  }, [modal, t, triggerResourceDiscovery]);
+  }, [modal, resource?.category, t, triggerResourceDiscovery]);
 
   const confirmResourceEnabled = useCallback(
     (enabled: boolean) => {
@@ -359,6 +389,7 @@ export function ResourceWorkspaceScene({
 
   const handleTabChange = (key: string) => {
     const nextTab = key as ResourceWorkspaceTab;
+    if (resource?.category === "logical_view" && nextTab === "index") return;
     if (tab === "detail" && nextTab !== "detail" && detailEditing) {
       void modal.confirm({
         cancelText: t("common.cancel"),
@@ -487,7 +518,7 @@ export function ResourceWorkspaceScene({
                   </span>
                 </>
               ) : null}
-              {!catalog?.builtin ? (
+              {!catalog?.builtin && resource.category !== "logical_view" ? (
                 <>
                   <span className={styles.contextDivider}>·</span>
                   <span className={styles.contextMeta}>
@@ -500,10 +531,12 @@ export function ResourceWorkspaceScene({
               ) : null}
             </div>
           </div>
-          <Space>
-            {canManageCatalogTasks ? (
+          <Space className={styles.pageHeaderActions} wrap>
+            {canManageCatalogTasks &&
+            resource.category !== "logical_view" &&
+            resource.category !== "dataset" ? (
               <AppButton
-                disabled={detailEditing}
+                disabled={detailEditing || resourceAction !== null}
                 icon={<ReloadOutlined />}
                 loading={resourceAction === "discover"}
                 onClick={confirmResourceDiscovery}
@@ -511,17 +544,50 @@ export function ResourceWorkspaceScene({
                 {t("dataCatalog.resourceWorkspace.refreshMetadata")}
               </AppButton>
             ) : null}
+            {canManageCatalogTasks &&
+            (resource.category === "table" ||
+              resource.category === "index" ||
+              resource.category === "logical_view") ? (
+              <AppButton
+                disabled={detailEditing || resourceAction !== null}
+                icon={<ReloadOutlined />}
+                loading={resourceAction === "count"}
+                onClick={() => {
+                  void modal.confirm({
+                    title: t("dataCatalog.resourceWorkspace.refreshCount"),
+                    content: t("dataCatalog.resourceWorkspace.refreshCountDescription"),
+                    onOk: () => triggerResourceDiscovery("count_only"),
+                  });
+                }}
+              >
+                {t("dataCatalog.resourceWorkspace.refreshCount")}
+              </AppButton>
+            ) : null}
             {canModifyResource ? (
               <AppButton
                 color={resource.enabled === false ? "green" : undefined}
                 danger={resource.enabled !== false}
-                disabled={detailEditing}
+                disabled={detailEditing || resourceAction !== null}
                 loading={resourceAction === "enabled"}
                 onClick={() => confirmResourceEnabled(resource.enabled === false)}
                 type={resource.enabled === false ? "primary" : "default"}
                 variant={resource.enabled === false ? "solid" : undefined}
               >
                 {t(resource.enabled === false ? "common.enable" : "common.disable")}
+              </AppButton>
+            ) : null}
+            {catalog && !catalog.builtin && isResourceDeletionEligible(resource) ? (
+              <AppButton
+                danger
+                disabled={detailEditing || resourceAction !== null}
+                icon={<DeleteOutlined />}
+                onClick={() =>
+                  confirmDeleteResource(resource, catalog, () => {
+                    void navigate(backTarget);
+                  })
+                }
+              >
+                {t("common.delete")}
               </AppButton>
             ) : null}
             {canAuthorizeResource ? (
@@ -558,6 +624,8 @@ export function ResourceWorkspaceScene({
           <Alert
             action={
               canManageCatalogTasks &&
+              resource.category !== "logical_view" &&
+              resource.category !== "dataset" &&
               !resourceDisabled &&
               !resourceStale &&
               (discoveryFailed || resourceMissing) ? (
@@ -589,7 +657,7 @@ export function ResourceWorkspaceScene({
                             : "dataCatalog.resourceWorkspace.discoveryFailedStaleSchemaDescription",
                   )}
                 </div>
-                {resource.statusMessage ? (
+                {resource.category !== "dataset" && resource.statusMessage ? (
                   <div className={styles.resourceStatusMessage}>
                     {t("dataCatalog.resourceWorkspace.statusMessageDetail", {
                       message: resource.statusMessage,
@@ -657,26 +725,30 @@ export function ResourceWorkspaceScene({
                 </div>
               ),
             },
-            {
-              key: "index",
-              label: t("dataCatalog.resourceWorkspace.tabIndex"),
-              children: (
-                <div className={styles.tabPanel}>
-                  <ResourceIndexPanel
-                    active={tab === "index"}
-                    catalog={catalog}
-                    indexView={indexView}
-                    indexViewExplicit={indexViewExplicit}
-                    onIndexViewChange={onIndexViewChange}
-                    onLatestTaskLoaded={handleLatestTaskLoaded}
-                    onRefresh={refreshIndexContext}
-                    resource={resource}
-                    taskStatusUnavailable={taskStatusUnavailable}
-                    tasks={sortedTasks}
-                  />
-                </div>
-              ),
-            },
+            ...(resource.category === "logical_view"
+              ? []
+              : [
+                  {
+                    key: "index",
+                    label: t("dataCatalog.resourceWorkspace.tabIndex"),
+                    children: (
+                      <div className={styles.tabPanel}>
+                        <ResourceIndexPanel
+                          active={tab === "index"}
+                          catalog={catalog}
+                          indexView={indexView}
+                          indexViewExplicit={indexViewExplicit}
+                          onIndexViewChange={onIndexViewChange}
+                          onLatestTaskLoaded={handleLatestTaskLoaded}
+                          onRefresh={refreshIndexContext}
+                          resource={resource}
+                          taskStatusUnavailable={taskStatusUnavailable}
+                          tasks={sortedTasks}
+                        />
+                      </div>
+                    ),
+                  },
+                ]),
             ...(hideSemanticUnderstanding
               ? []
               : [

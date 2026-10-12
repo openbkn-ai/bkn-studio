@@ -65,21 +65,23 @@ function makeResource(
   const sourceMetadata =
     input.category === "dataset"
       ? undefined
-      : {
-          foreignKeyCount: 0,
-          indexCount: 0,
-          objectType: "table",
-          originalDescription: input.description,
-          originalName: input.sourceIdentifier,
-          ...input.sourceMetadata,
-        };
+      : input.category === "logical_view"
+        ? input.sourceMetadata
+        : {
+            foreignKeyCount: 0,
+            indexCount: 0,
+            objectType: "table",
+            originalDescription: input.description,
+            originalName: input.sourceIdentifier,
+            ...input.sourceMetadata,
+          };
 
   return {
     ...input,
     columnCount: input.schema.length,
     enabled: input.enabled ?? true,
     localIndexStatus: input.localIndexStatus ?? "unavailable",
-    operations: input.operations ?? ["view_detail", "query_data"],
+    operations: input.operations ?? ["view_detail", "query_data", "delete"],
     sourceMetadata,
     updateTime: formatMockTimestamp(input.expectedUpdateTime),
   };
@@ -205,7 +207,7 @@ export const mockResources: CatalogResource[] = [
     schema: [
       {
         name: "order_id",
-        displayName: "order_id",
+        displayName: "订单ID",
         description: "",
         type: "integer",
         originalName: "order_id",
@@ -214,7 +216,7 @@ export const mockResources: CatalogResource[] = [
       },
       {
         name: "customer_id",
-        displayName: "customer_id",
+        displayName: "客户ID",
         description: "",
         type: "integer",
         originalName: "customer_id",
@@ -223,7 +225,7 @@ export const mockResources: CatalogResource[] = [
       },
       {
         name: "item_summary",
-        displayName: "item_summary",
+        displayName: "订单摘要",
         description: "",
         type: "text",
         originalName: "item_summary",
@@ -232,7 +234,7 @@ export const mockResources: CatalogResource[] = [
       },
       {
         name: "amount",
-        displayName: "amount",
+        displayName: "订单金额",
         description: "",
         type: "decimal",
         originalName: "amount",
@@ -241,7 +243,7 @@ export const mockResources: CatalogResource[] = [
       },
       {
         name: "created_at",
-        displayName: "created_at",
+        displayName: "创建时间",
         description: "",
         type: "datetime",
         originalName: "created_at",
@@ -251,6 +253,81 @@ export const mockResources: CatalogResource[] = [
     ],
     rowCount: 96_120,
     expectedUpdateTime: minutesAgo(18),
+  }),
+  makeResource({
+    id: "res-high-value-orders-view",
+    catalogId: "cat-001",
+    name: "high_value_orders",
+    category: "logical_view",
+    logicType: "derived",
+    sourceIdentifier: "res-high-value-orders-view",
+    sourceMetadata: {
+      objectType: "table",
+      originalName: "crm_core.orders",
+    },
+    logicDefinition: {
+      sourceResourceId: "res-orders",
+      filterCondition: {
+        operation: "and",
+        sub_conditions: [
+          { field: "amount", operation: ">", value: 1000 },
+          {
+            operation: "or",
+            sub_conditions: [
+              { field: "customer_id", operation: "==", value: 101 },
+              { field: "customer_id", operation: "==", value: 102 },
+            ],
+          },
+        ],
+      },
+    },
+    description: "高价值客户订单视图，筛选指定客户且金额大于 1000 的订单。",
+    tags: ["crm", "orders", "high-value"],
+    creatorName: "Data Steward",
+    createTime: formatMockTimestamp(daysAgo(3)),
+    updaterName: "Data Steward",
+    status: "active",
+    operations: ["view_detail", "query_data", "delete"],
+    schema: [
+      {
+        name: "order_id",
+        displayName: "订单ID",
+        description: "订单唯一标识",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "customer_id",
+        displayName: "客户ID",
+        description: "客户唯一标识",
+        type: "integer",
+        originalName: "customer_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "amount",
+        displayName: "订单金额",
+        description: "订单金额",
+        type: "decimal",
+        originalName: "amount",
+        originalType: "decimal(18,2)",
+        originalDescription: "",
+      },
+      {
+        name: "created_at",
+        displayName: "创建时间",
+        description: "订单创建时间",
+        type: "datetime",
+        originalName: "created_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 256,
+    expectedUpdateTime: minutesAgo(9),
   }),
   makeResource({
     id: "res-permission-limited-orders",
@@ -605,6 +682,31 @@ export const mockResources: CatalogResource[] = [
     expectedUpdateTime: minutesAgo(30),
   }),
   makeResource({
+    id: "res-stale-source-missing",
+    catalogId: "cat-001",
+    name: "stale_archived_orders",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.stale_archived_orders",
+    description: "用于验证已失效且源端缺失的资源可删除。",
+    status: "stale",
+    lastDiscoverStatus: "missing",
+    statusMessage: "The resource was not found during the latest discovery.",
+    schema: [
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 12_480,
+    expectedUpdateTime: minutesAgo(31),
+  }),
+  makeResource({
     id: "res-discovery-error",
     catalogId: "cat-001",
     name: "discover_error_orders",
@@ -855,6 +957,7 @@ export const mockResources: CatalogResource[] = [
     category: "dataset",
     sourceIdentifier: "",
     description: "BKN的概念存储数据集",
+    operations: ["view_detail", "query_data"],
     schema: [
       {
         name: "module_type",

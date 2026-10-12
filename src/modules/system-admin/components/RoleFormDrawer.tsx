@@ -169,7 +169,7 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       footer={
         <div className={styles.drawerFooter}>
           <span style={{ flex: 1 }} />

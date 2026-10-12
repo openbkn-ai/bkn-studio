@@ -279,6 +279,28 @@ describe("ResourceIndexPanel", () => {
     );
   });
 
+  it("shows logic view index configuration without the unsupported generic edit action", () => {
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={modifiableCatalog}
+          indexView="config"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={{ ...resource, category: "logical_view" }}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(indexConfigFormPanelMock).toHaveBeenCalledWith(
+      expect.objectContaining({ hideBuildControls: true, readOnly: true }),
+    );
+    expect(screen.getByText("dataCatalog.resource.logicalViewReadOnly")).toBeTruthy();
+  });
+
   it("keeps configuration editable without task_manage while withholding task access", () => {
     render(
       <MemoryRouter>

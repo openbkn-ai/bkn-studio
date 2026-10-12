@@ -22,7 +22,11 @@ export type McpRecord = {
   category?: string;
   url?: string;
   createUser?: string;
+  createUserName?: string;
+  updateUser?: string;
+  updateUserName?: string;
   releaseUser?: string;
+  releaseUserName?: string;
   releaseTime?: number;
   toolConfigs?: McpToolConfigInput[];
   updateTime?: number;

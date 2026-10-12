@@ -345,6 +345,52 @@ export const executionFactoryEnUS = {
       custom: "Custom",
       tool_imported: "Tool Imported",
     },
+    mcpJsonImport: {
+      button: "Import from JSON",
+      title: "Import from mcpServers JSON",
+      hint: "Paste the mcpServers config from your MCP provider. Only remote HTTP servers (Streamable HTTP / SSE) are supported; local process configs such as command / args are not. The platform backend makes the connection, so the URL must be reachable from the backend, and localhost means the backend host, not your machine.",
+      parse: "Parse",
+      fillForm: "Fill form",
+      fillFormHint:
+        "Select one server to fill the form, then add a description and category before registering",
+      registerSelected: "Register selected ({{total}})",
+      done: "Done",
+      summary: "Registration finished: {{succeeded}} succeeded, {{failed}} failed",
+      columns: {
+        name: "Name",
+        mode: "Mode",
+        url: "Service URL",
+        headers: "Headers",
+        status: "Status",
+      },
+      configErrors: {
+        invalid_json: "Invalid JSON. Check the config and paste it again",
+        missing_mcp_servers: "Missing the top-level mcpServers object",
+        empty: "mcpServers contains no servers",
+      },
+      entryErrors: {
+        not_object: "Server config must be an object",
+        stdio_unsupported:
+          "Local process configs (command / args) are not supported. Use the provider's HTTP URL instead",
+        unknown_type: 'Unsupported transport type "{{type}}". Use streamable_http, http or sse',
+        missing_url: "Missing url",
+        invalid_url: "url must be an http or https address",
+        invalid_headers: "headers must be an object of string values",
+        duplicate_name: "Name duplicates another server",
+        name_invalid: "Only Chinese characters, letters, digits and underscores are allowed",
+      },
+      warnings: {
+        type_missing:
+          "No type declared. Streamable HTTP is tried first, then SSE if the handshake fails",
+        name_adjusted: 'Original name "{{key}}" does not meet the naming rule and was adjusted',
+        fields_ignored: "These fields are not imported: {{fields}}",
+      },
+      statuses: {
+        registering: "Registering",
+        registered: "Registered",
+        failed: "Failed",
+      },
+    },
     skillFileTypes: {
       zip: "Zip Package",
       content: "Text Content",

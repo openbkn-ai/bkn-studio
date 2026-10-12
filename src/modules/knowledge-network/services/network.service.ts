@@ -53,10 +53,19 @@ import {
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
 
-// The backend assembles the whole network — schema plus capability dependencies —
-// while the request is open, which outlasts the client's 30s default on a large
-// network. The other packaging exports in this repo settle on the same minute.
-const BKN_EXPORT_TIMEOUT_MS = 60_000;
+// Whole-network import and export can outlast the client's 30s default while
+// the backend processes a large model. Keep both operations on an explicit
+// one-minute request budget without changing the global HTTP timeout.
+const KNOWLEDGE_NETWORK_EXPORT_TIMEOUT_MS = 60_000;
+const DEFAULT_KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS = 60_000;
+const configuredKnowledgeNetworkImportTimeout = Number(
+  import.meta.env.VITE_KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS,
+);
+const KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS =
+  Number.isFinite(configuredKnowledgeNetworkImportTimeout) &&
+  configuredKnowledgeNetworkImportTimeout > 0
+    ? configuredKnowledgeNetworkImportTimeout
+    : DEFAULT_KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS;
 
 const MOCK_KNOWLEDGE_NETWORK_OPERATIONS = [
   "view_detail",
@@ -326,7 +335,7 @@ export async function exportKnowledgeNetwork(
   if (format === "bkn") {
     const response = await http.get<Blob>(`/bkn-backend/v1/bkns/${networkId}`, {
       responseType: "blob",
-      timeout: BKN_EXPORT_TIMEOUT_MS,
+      timeout: KNOWLEDGE_NETWORK_EXPORT_TIMEOUT_MS,
     });
 
     triggerBrowserDownload(
@@ -338,13 +347,18 @@ export async function exportKnowledgeNetwork(
     return;
   }
 
-  const response = await http.get<Record<string, unknown>>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}`,
-    { params: { mode: "export" } },
-  );
+  const response = await http.get<Blob>(`/bkn-backend/v1/knowledge-networks/${networkId}`, {
+    params: { mode: "export" },
+    responseType: "blob",
+    timeout: KNOWLEDGE_NETWORK_EXPORT_TIMEOUT_MS,
+  });
 
-  const payload = response.data;
-  downloadJsonFile(stringFromUnknown(payload.name, networkId), payload);
+  triggerBrowserDownload(
+    response.data,
+    parseContentDispositionFilename(
+      response.headers["content-disposition"] as string | undefined,
+    ) ?? `${networkId}.json`,
+  );
 }
 
 export async function importKnowledgeNetwork(
@@ -411,6 +425,7 @@ export async function importKnowledgeNetwork(
         validate_dependency: false,
       },
       skipErrorToast: true,
+      timeout: KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS,
     });
   } catch (error) {
     const response = (

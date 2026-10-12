@@ -25,6 +25,7 @@ import type {
 type BackendMcpInfo = {
   category?: string;
   create_user?: string;
+  create_user_name?: string;
   creation_type?: string;
   description?: string;
   headers?: Record<string, string>;
@@ -33,6 +34,9 @@ type BackendMcpInfo = {
   mode?: string;
   name: string;
   operations?: string[];
+  release_user?: string;
+  release_user_name?: string;
+  release_time?: number;
   status?: string;
   tool_configs?: Array<{
     box_id?: string;
@@ -43,6 +47,8 @@ type BackendMcpInfo = {
     use_rule?: string;
   }>;
   update_time?: number;
+  update_user?: string;
+  update_user_name?: string;
   url?: string;
 };
 
@@ -120,6 +126,12 @@ function mapMcp(item: BackendMcpInfo): McpRecord {
     category: item.category,
     url: item.url,
     createUser: item.create_user,
+    createUserName: item.create_user_name,
+    updateUser: item.update_user,
+    updateUserName: item.update_user_name,
+    releaseUser: item.release_user,
+    releaseUserName: item.release_user_name,
+    releaseTime: normalizeTimestamp(item.release_time),
     updateTime: normalizeTimestamp(item.update_time),
     isInternal: item.is_internal,
   };
@@ -277,7 +289,9 @@ export async function parseMcpSse(input: McpParseSseInput): Promise<McpParseSseR
       mode: input.mode ?? "stream",
       url: input.url,
     },
-    {},
+    // Callers report the failure themselves, and a failed first transport is often retried with
+    // the other one, so a global toast would announce errors the user never needs to act on.
+    { skipErrorToast: true },
   );
 
   return {

@@ -142,7 +142,7 @@ export function ResourceFormDrawer({
         </Form.Item>
         <Form.Item label={t("dataCatalog.resource.category")} name="category">
           <Select
-            options={(["table", "logicview", "dataset"] as const).map((category) => ({
+            options={(["table", "logical_view", "dataset"] as const).map((category) => ({
               label: t(`dataCatalog.categories.${category}`),
               value: category,
             }))}

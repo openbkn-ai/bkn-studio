@@ -56,7 +56,7 @@ export function ResetPasswordModal({ onClose, open, user }: ResetPasswordModalPr
     <Modal
       cancelText={t("common.cancel")}
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       okText={t("systemAdmin.users.reset.submit")}
       onCancel={onClose}
       onOk={handleSubmit}

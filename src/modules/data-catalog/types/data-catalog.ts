@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type ResourceCategory = "dataset" | "logicview" | "table";
+export type ResourceCategory = "dataset" | "index" | "logical_view" | "table";
 
 export type ResourceDiscoverStatus =
   "error" | "missing" | "new" | "restored" | "unchanged" | "updated";
@@ -81,14 +81,20 @@ export type CatalogResource = {
   indexConfig?: ResourceIndexConfig;
   /** Latest source-discovery observation reported by Vega. */
   lastDiscoverStatus?: ResourceDiscoverStatus;
+  lastDiscoverTime?: number;
+  /** Exact count collection time from the independent detail field; omitted when unknown. */
+  rowCountTime?: number;
   /** Name of the Resource's current local index, when one has been published. */
   localIndexName?: string;
   /** Authoritative query availability of the Resource's local index. */
   localIndexStatus: ResourceLocalIndexStatus;
+  /** Present on a logic view detail response. List results may only carry logicType. */
+  logicDefinition?: DerivedLogicDefinition;
+  logicType?: "derived" | "composite";
   name: string;
   /** Effective operations for the current account on this Resource. */
   operations?: string[];
-  /** Resource count returned by Vega; null means unavailable. */
+  /** Exact count from the independent Vega detail field; null means unknown and zero is valid. */
   rowCount: ResourceRowCount | null;
   /** Estimated source count returned by Vega; null means unavailable. */
   estimatedRowCount?: ResourceRowCount | null;
@@ -138,7 +144,29 @@ export type ResourceUpdateInput = ResourceCreateInput & {
   expectedUpdateTime: number;
 };
 
+export type DerivedLogicDefinition = {
+  sourceResourceId: string;
+  filterCondition?: Record<string, unknown> | null;
+};
+
+export type DerivedViewInput = {
+  catalogId: string;
+  description: string;
+  enabled: boolean;
+  name: string;
+  schema: ResourceSchemaField[];
+  sourceResourceId: string;
+  filterCondition?: Record<string, unknown> | null;
+  tags: string[];
+};
+
+export type DerivedViewUpdateInput = DerivedViewInput & {
+  expectedUpdateTime: number;
+  filterCondition?: Record<string, unknown> | null;
+};
+
 export type ResourcePreviewQuery = {
+  filterCondition?: Record<string, unknown> | null;
   /** Bypass the local index and query the original data source. */
   ignoreLocalIndex?: boolean;
   /** Only valid when querying the original source. */

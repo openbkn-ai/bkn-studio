@@ -5,15 +5,33 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { formatDateTime } from "@/framework/i18n/format";
+
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+
+import styles from "./ResourceDetailPanel.module.css";
 
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
 const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+const editionMock = vi.hoisted(() => ({ value: "professional" }));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useEntitlementContext: () => ({
+    snapshot: {
+      edition: editionMock.value,
+      licensed: editionMock.value !== "community",
+      capabilities: [],
+      extensions: [],
+      limits: {},
+      state: "valid",
+    },
+  }),
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -73,6 +91,8 @@ const resource: CatalogResource = {
 describe("ResourceDetailPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    editionMock.value = "professional";
+    getCatalogResourceMock.mockResolvedValue(null);
     updateCatalogResourceMock.mockResolvedValue(undefined);
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
@@ -141,6 +161,95 @@ describe("ResourceDetailPanel", () => {
       3,
     );
   });
+
+  it("shows unknown collection times without substituting update_time", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel active canEdit={false} catalog={null} resource={resource} />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByText("dataCatalog.resource.unknownTime")).toHaveLength(3);
+    expect(screen.queryByText(resource.updateTime)).toBeNull();
+  });
+
+  it.each([undefined, 1720000001000])(
+    "shows Dataset row count time %s without source discovery fields",
+    (rowCountTime) => {
+      render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit={false}
+            catalog={null}
+            resource={{ ...resource, category: "dataset", rowCount: 0, rowCountTime }}
+          />
+        </MemoryRouter>,
+      );
+      for (const field of ["discoverStatus", "resourceStatus", "statusMessage"]) {
+        expect(screen.queryByText(`dataCatalog.resource.${field}`)).toBeNull();
+      }
+      const basicInfo = within(
+        screen.getByText("dataCatalog.resource.category").parentElement!.parentElement!,
+      );
+      const cells = ["sourceIdentifier", "fieldCount", "rowCount", "rowCountTime"].map(
+        (field) => basicInfo.getByText(`dataCatalog.resource.${field}`).parentElement!,
+      );
+      cells.forEach((cell, index) => {
+        expect(cell).toHaveClass(styles.basicInfoQuarter);
+        if (index > 0) expect(cells[index - 1].nextElementSibling).toBe(cell);
+      });
+      expect(within(cells[2]).getByText("0")).toBeTruthy();
+      expect(
+        within(cells[3]).getByText(
+          rowCountTime ? formatDateTime(rowCountTime) : "dataCatalog.resource.unknownTime",
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText("dataCatalog.resource.lastDiscoverTime")).toBeNull();
+    },
+  );
+
+  it.each(["table", "index"] as const)(
+    "shows separate discovery and exact count collection times for %s",
+    (category) => {
+      render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit={false}
+            catalog={null}
+            resource={{
+              ...resource,
+              category,
+              rowCount: 0,
+              lastDiscoverTime: 1720000000000,
+              rowCountTime: 1720000001000,
+            }}
+          />
+        </MemoryRouter>,
+      );
+      const basicInfo = within(
+        screen.getByText("dataCatalog.resource.category").parentElement!.parentElement!,
+      );
+      for (const fields of [
+        ["category", "enabledStatus", "discoverStatus", "lastDiscoverTime"],
+        ["sourceIdentifier", "fieldCount", "rowCount", "rowCountTime"],
+      ]) {
+        const cells = fields.map(
+          (field) => basicInfo.getByText(`dataCatalog.resource.${field}`).parentElement!,
+        );
+        cells.forEach((cell, index) => {
+          expect(cell).toHaveClass(styles.basicInfoQuarter);
+          if (index > 0) expect(cells[index - 1].nextElementSibling).toBe(cell);
+        });
+      }
+      for (const field of ["discoverStatus", "resourceStatus", "statusMessage"]) {
+        expect(screen.getByText(`dataCatalog.resource.${field}`)).toBeTruthy();
+      }
+      expect(screen.getByText("dataCatalog.resource.lastDiscoverTime")).toBeTruthy();
+      expect(basicInfo.getByText("dataCatalog.resource.rowCountTime")).toBeTruthy();
+      expect(screen.queryByText("dataCatalog.resource.unknownTime")).toBeNull();
+    },
+  );
 
   it("shows an exact zero row count without the estimate prefix", () => {
     render(
@@ -241,6 +350,44 @@ describe("ResourceDetailPanel", () => {
     ).toContain("1");
   });
 
+  it.each(["table", "index"] as const)("places the %s estimate in source metadata", (category) => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, category, estimatedRowCount: 0 }}
+        />
+      </MemoryRouter>,
+    );
+    const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
+    const cells = [
+      "fieldCount",
+      "sourceIndexCount",
+      "sourceForeignKeyCount",
+      "estimatedRowCountLabel",
+      "rowCount",
+      "rowCountTime",
+    ].map(
+      (field) => within(sourceMetadata).getByText(`dataCatalog.resource.${field}`).parentElement!,
+    );
+    cells.forEach((cell, index) => {
+      expect(cell).toHaveClass(styles.basicInfoItem);
+      expect(cell).not.toHaveClass(styles.basicInfoQuarter);
+      expect(cell).not.toHaveClass(styles.basicInfoHalf);
+      expect(cell).not.toHaveClass(styles.basicInfoSpanTwo);
+      if (index > 0) expect(cells[index - 1].nextElementSibling).toBe(cell);
+    });
+    const estimate = within(sourceMetadata).getByText(
+      "dataCatalog.resource.estimatedRowCountLabel",
+    ).parentElement!;
+    expect(within(estimate).getByText("0")).toBeTruthy();
+    const basicInfo = screen.getByText("dataCatalog.resource.category").parentElement!
+      .parentElement!;
+    expect(within(basicInfo).queryByText("dataCatalog.resource.estimatedRowCountLabel")).toBeNull();
+  });
+
   it("does not show source metadata for a dataset", () => {
     render(
       <MemoryRouter>
@@ -270,6 +417,149 @@ describe("ResourceDetailPanel", () => {
     );
 
     expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
+  });
+
+  it("shows logic view details without the unsupported generic edit action", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{ ...resource, category: "logical_view", lastDiscoverStatus: "updated" }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("dataCatalog.categories.logical_view")).toBeTruthy();
+    expect(
+      screen.getByText("dataCatalog.categories.logical_view").parentElement?.className,
+    ).toContain("basicInfoHalf");
+    expect(
+      screen.getByText("dataCatalog.resource.enabledStatus").parentElement?.className,
+    ).toContain("basicInfoHalf");
+    expect(screen.queryByText("dataCatalog.resource.resourceStatus")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.statusMessage")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.indexState")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.indexName")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.discoverStatus")).toBeNull();
+    expect(screen.queryByText("dataCatalog.discoverStatuses.updated")).toBeNull();
+    expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
+    expect(screen.getByText("dataCatalog.resource.logicalViewReadOnly")).toBeTruthy();
+    const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
+    expect(within(sourceMetadata).getByText("dataCatalog.resource.originalName")).toBeTruthy();
+    expect(within(sourceMetadata).getByText("dataCatalog.resource.sourceObjectType")).toBeTruthy();
+    for (const label of [
+      "originalDescription",
+      "schemaName",
+      "sourcePrimaryKeys",
+      "fieldCount",
+      "rowCount",
+      "sourceIndexCount",
+      "sourceForeignKeyCount",
+    ]) {
+      expect(within(sourceMetadata).queryByText(`dataCatalog.resource.${label}`)).toBeNull();
+    }
+  });
+
+  it("places a derived view source in source metadata and its filter after fields", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logical_view",
+            logicType: "derived",
+            logicDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: {
+                operation: "and",
+                sub_conditions: [
+                  { field: "amount", operation: ">", value: 1000 },
+                  {
+                    operation: "or",
+                    sub_conditions: [
+                      { field: "id", operation: "==", value: 1 },
+                      { field: "id", operation: "==", value: 2 },
+                    ],
+                  },
+                ],
+              },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("dataCatalog.resource.viewDefinition")).toBeNull();
+    expect(screen.getByRole("button", { name: "dataCatalog.viewEditor.edit" })).toBeTruthy();
+    const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
+    expect(within(sourceMetadata).getByText("dataCatalog.resource.viewSource")).toBeTruthy();
+    expect(within(sourceMetadata).getByRole("button", { name: "source-orders" })).toBeTruthy();
+    const filterHeading = screen.getByText("dataCatalog.resource.viewFixedFilter");
+    const fieldsHeading = screen.getByText("dataCatalog.resource.schemaSection");
+    expect(filterHeading.parentElement).not.toBe(fieldsHeading.parentElement);
+    expect(
+      fieldsHeading.compareDocumentPosition(filterHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const filterCard = within(filterHeading.parentElement!);
+    expect(filterCard.getByText("dataCatalog.filter.and")).toBeTruthy();
+    expect(filterCard.getByText("dataCatalog.filter.or")).toBeTruthy();
+    expect(filterCard.getAllByText("amount")).toHaveLength(2);
+    expect(filterCard.getByText(">")).toBeTruthy();
+    expect(filterCard.getByText("1000")).toBeTruthy();
+    expect(filterCard.queryByRole("textbox")).toBeNull();
+    expect(filterCard.queryByRole("button")).toBeNull();
+  });
+
+  it("uses source schema labels for fixed filters on hidden source fields", async () => {
+    getCatalogResourceMock.mockResolvedValue({
+      ...resource,
+      id: "source-orders",
+      schema: [{ name: "internal_score", displayName: "Source Score", type: "integer" }],
+    });
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logical_view",
+            logicType: "derived",
+            schema: [{ name: "score_alias", displayName: "Output Score", type: "string" }],
+            logicDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: { field: "internal_score", operation: ">", value: 10 },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const filterCard = screen.getByText("dataCatalog.resource.viewFixedFilter").parentElement!;
+    expect(await within(filterCard).findByText("Source Score")).toBeTruthy();
+    expect(within(filterCard).getByText("internal_score")).toBeTruthy();
+    expect(within(filterCard).queryByText("Output Score")).toBeNull();
+  });
+
+  it("keeps discovery status visible for a table", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, lastDiscoverStatus: "updated" }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("dataCatalog.resource.discoverStatus")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.discoverStatuses.updated")).toBeTruthy();
   });
 
   it("refreshes the resource version after an update conflict", async () => {
@@ -312,5 +602,35 @@ describe("ResourceDetailPanel", () => {
     });
     expect(getCatalogResourceMock).toHaveBeenCalledWith(resource.id);
     expect(await screen.findByText("server description")).toBeTruthy();
+  });
+
+  it("places logic view statistics and their update time in four equal columns", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logical_view",
+            rowCount: 7,
+            rowCountTime: 1720000001000,
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const cells = ["sourceIdentifier", "fieldCount", "rowCount", "rowCountTime"].map(
+      (field) => screen.getByText(`dataCatalog.resource.${field}`).parentElement!,
+    );
+    for (const cell of cells) {
+      expect(cell).toHaveClass(styles.basicInfoQuarter);
+    }
+    expect(cells[0].nextElementSibling).toBe(cells[1]);
+    expect(cells[1].nextElementSibling).toBe(cells[2]);
+    expect(cells[2].nextElementSibling).toBe(cells[3]);
+    expect(screen.queryByText("dataCatalog.resource.lastDiscoverTime")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.estimatedRowCountLabel")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.unknownTime")).toBeNull();
   });
 });

@@ -10,10 +10,47 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const postMock = vi.hoisted(() => vi.fn());
 const getMock = vi.hoisted(() => vi.fn());
 const putMock = vi.hoisted(() => vi.fn());
+const deleteMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock, post: postMock, put: putMock },
+  http: { delete: deleteMock, get: getMock, post: postMock, put: putMock },
 }));
+
+describe("resource.service · deleteCatalogResource", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    deleteMock.mockReset();
+    deleteMock.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("lets a caller handle delete errors without the global toast", async () => {
+    const { deleteCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    await deleteCatalogResource("resource-1", { skipErrorToast: true });
+
+    expect(deleteMock).toHaveBeenCalledWith("/vega-backend/v1/resources/resource-1", {
+      skipErrorToast: true,
+    });
+  });
+
+  it("uses a conditional DELETE only when requested", async () => {
+    const { deleteCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    await deleteCatalogResource("resource-1", { onlyIfStale: true, skipErrorToast: true });
+
+    expect(deleteMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/resources/resource-1?only_if_stale=true",
+      { skipErrorToast: true },
+    );
+  });
+});
 
 describe("resource.service · previewCatalogResource", () => {
   beforeEach(() => {
@@ -34,7 +71,7 @@ describe("resource.service · previewCatalogResource", () => {
     });
     const { previewCatalogResource } =
       await import("@/modules/data-catalog/services/resource.service");
-    const { transformPrecisionSafeJSONResponse } =
+    const { transformPrecisionSafeJSONRequest, transformPrecisionSafeJSONResponse } =
       await import("@/framework/request/precision-safe-json");
 
     const result = await previewCatalogResource("r-1", { limit: 10, offset: 20 });
@@ -46,12 +83,214 @@ describe("resource.service · previewCatalogResource", () => {
         paging: { limit: 10, mode: "single", offset: 20 },
       },
       {
-        headers: { "X-HTTP-Method-Override": "GET" },
+        headers: { "Content-Type": "application/json", "X-HTTP-Method-Override": "GET" },
         skipErrorToast: true,
+        transformRequest: transformPrecisionSafeJSONRequest,
         transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
     expect(result).toEqual({ querySource: "local_index", rows: [{ id: "r-1" }], total: 42 });
+  });
+
+  it("sends a preview filter with the query without persisting it", async () => {
+    postMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const filterCondition = { field: "id", operation: ">", value: 10 };
+    await previewCatalogResource("r-1", { filterCondition, limit: 10, offset: 0 });
+    expect(postMock.mock.calls[0]?.[1]).toMatchObject({ filter_condition: filterCondition });
+  });
+
+  it("applies mock preview filters before pagination and total counting", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const { mockResources } = await import("@/modules/data-catalog/services/mock-db");
+    const customers = mockResources.find((item) => item.id === "res-customers")!;
+    const originalRowCount = customers.rowCount;
+    // Twelve rows include both matches and nonmatching rows without scanning the full demo dataset.
+    customers.rowCount = 12;
+    try {
+      const filterCondition = {
+        operation: "and",
+        sub_conditions: [
+          { field: "customer_id", operation: ">", value: 99999 },
+          {
+            operation: "or",
+            sub_conditions: [
+              { field: "customer_id", operation: "==", value: 100000 },
+              { field: "customer_id", operation: "==", value: 100007 },
+            ],
+          },
+        ],
+      };
+      const result = await previewCatalogResource("res-customers", {
+        filterCondition,
+        limit: 1,
+        offset: 0,
+      });
+      expect(result.total).toBe(2);
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]?.customer_id).toBe(100000);
+      const secondPage = await previewCatalogResource("res-customers", {
+        filterCondition,
+        limit: 1,
+        offset: 1,
+      });
+      expect(secondPage.total).toBe(2);
+      expect(secondPage.rows).toHaveLength(1);
+      expect(secondPage.rows[0]?.customer_id).toBe(100007);
+      const nextPage = await previewCatalogResource("res-customers", {
+        filterCondition,
+        limit: 10,
+        offset: 2,
+      });
+      expect(nextPage.rows).toHaveLength(0);
+      expect(nextPage.total).toBe(2);
+    } finally {
+      customers.rowCount = originalRowCount;
+    }
+  });
+
+  it("applies a mock derived View's fixed filter to its source rows", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const result = await previewCatalogResource("res-high-value-orders-view", {
+      limit: 20,
+      offset: 0,
+    });
+    expect(result.total).toBeGreaterThan(0);
+    expect(result.rows.length).toBeGreaterThan(0);
+    for (const row of result.rows) {
+      expect(Number(row.amount)).toBeGreaterThan(1000);
+      expect([101, 102]).toContain(row.customer_id);
+    }
+  });
+
+  it("maps mock derived rows by the source field originalName", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { mockResources } = await import("@/modules/data-catalog/services/mock-db");
+    const source = mockResources.find((item) => item.id === "res-customers")!;
+    const field = source.schema.find((item) => item.name === "customer_id")!;
+    const originalName = field.originalName;
+    field.originalName = "db_customer_id";
+    const { createDerivedView, deleteCatalogResource, previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    let createdId: string | undefined;
+    try {
+      const created = await createDerivedView({
+        catalogId: source.catalogId,
+        description: "",
+        enabled: true,
+        name: "mock_original_name_view",
+        sourceResourceId: source.id,
+        filterCondition: { field: "customer_id", operation: "==", value: 100000 },
+        tags: [],
+        schema: [{ name: "customer_id", originalName: "db_customer_id", type: field.type }],
+      });
+      createdId = created.id;
+      const result = await previewCatalogResource(created.id, { limit: 1, offset: 0 });
+      expect(result.total).toBe(1);
+      expect(result.rows[0]?.customer_id).toBe(100000);
+    } finally {
+      field.originalName = originalName;
+      if (createdId) await deleteCatalogResource(createdId);
+    }
+  });
+
+  it("previews rows from a newly created mock derived view", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { createDerivedView, deleteCatalogResource, previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const created = await createDerivedView({
+      catalogId: "cat-001",
+      description: "",
+      enabled: true,
+      name: "mock_customers_view",
+      sourceResourceId: "res-customers",
+      tags: [],
+      schema: [
+        { name: "customer_id", originalName: "customer_id", type: "integer", displayName: "ID" },
+      ],
+    });
+
+    try {
+      const result = await previewCatalogResource(created.id, { limit: 2, offset: 0 });
+      expect(result.total).toBeGreaterThan(0);
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]).toHaveProperty("customer_id");
+    } finally {
+      await deleteCatalogResource(created.id);
+    }
+  });
+
+  it("round-trips a mock view's unsafe integer fixed filter", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { filterToBackend, parseFilterCondition } =
+      await import("@/modules/data-catalog/lib/filter-tree");
+    const { createDerivedView, deleteCatalogResource, getCatalogResource, updateDerivedView } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const filterCondition = filterToBackend(
+      {
+        kind: "group",
+        operation: "and",
+        children: [
+          { kind: "rule", field: "customer_id", operation: ">", value: "9007199254740993" },
+        ],
+      },
+      [{ name: "customer_id", type: "integer" }],
+    );
+    const created = await createDerivedView({
+      catalogId: "cat-001",
+      description: "",
+      enabled: true,
+      name: "mock_large_integer_view",
+      sourceResourceId: "res-customers",
+      filterCondition,
+      tags: [],
+      schema: [
+        { name: "customer_id", originalName: "customer_id", type: "integer", displayName: "ID" },
+      ],
+    });
+
+    try {
+      const saved = await getCatalogResource(created.id);
+      const parsed = parseFilterCondition(saved?.logicDefinition?.filterCondition);
+      expect(parsed?.children[0]).toMatchObject({ value: "9007199254740993" });
+
+      const updatedFilter = filterToBackend(
+        {
+          kind: "group",
+          operation: "and",
+          children: [
+            { kind: "rule", field: "customer_id", operation: ">", value: "9007199254740995" },
+          ],
+        },
+        [{ name: "customer_id", type: "integer" }],
+      );
+      const updated = await updateDerivedView(created.id, {
+        catalogId: created.catalogId,
+        description: created.description,
+        enabled: true,
+        expectedUpdateTime: created.expectedUpdateTime,
+        filterCondition: updatedFilter,
+        name: created.name,
+        schema: created.schema,
+        sourceResourceId: "res-customers",
+        tags: [],
+      });
+      expect(
+        parseFilterCondition(updated?.logicDefinition?.filterCondition)?.children[0],
+      ).toMatchObject({ value: "9007199254740995" });
+    } finally {
+      await deleteCatalogResource(created.id);
+    }
   });
 
   it("preserves an unsafe int64 preview total", async () => {
@@ -69,6 +308,27 @@ describe("resource.service · previewCatalogResource", () => {
     const result = await previewCatalogResource("r-1", { limit: 10, offset: 0 });
 
     expect(result.total).toBe("9007199254740993");
+  });
+
+  it("preserves numeric types in an unsupported stored view filter", async () => {
+    const rawResponse =
+      '{"entries":[{"id":"view-1","catalog_id":"catalog-1","name":"view",' +
+      '"category":"logical_view","logic_type":"derived","logic_definition":{' +
+      '"source_resource_id":"source-1","filter_condition":{' +
+      '"field":"id","operation":"in","value":[9007199254740993,"9007199254740995"]}}}]}';
+    getMock.mockImplementation(
+      (_url: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+        Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
+    );
+    const { getCatalogResource } = await import("@/modules/data-catalog/services/resource.service");
+    const { transformPrecisionSafeJSONRequest } =
+      await import("@/framework/request/precision-safe-json");
+
+    const view = await getCatalogResource("view-1");
+
+    expect(transformPrecisionSafeJSONRequest(view?.logicDefinition?.filterCondition)).toContain(
+      '"value":[9007199254740993,"9007199254740995"]',
+    );
   });
 
   it("requests Binary content only when the caller forces the original source", async () => {
@@ -183,6 +443,134 @@ describe("resource.service · previewCatalogResource", () => {
   });
 });
 
+describe("resource.service · derived view contract", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+    postMock.mockReset();
+    putMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("creates a view with source bindings, a custom display name, and tags", async () => {
+    postMock.mockResolvedValue({ data: { id: "view-1" } });
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "logical_view",
+            id: "view-1",
+            name: "orders_view",
+            logic_type: "derived",
+            logic_definition: { source_resource_id: "source-1" },
+            schema_definition: [
+              { name: "order_id", original_name: "id", type: "integer", display_name: "Order ID" },
+            ],
+            tags: ["orders"],
+          },
+        ],
+      },
+    });
+    const { createDerivedView } = await import("@/modules/data-catalog/services/resource.service");
+
+    const created = await createDerivedView({
+      catalogId: "cat-1",
+      description: "",
+      enabled: false,
+      name: "orders_view",
+      sourceResourceId: "source-1",
+      tags: ["orders"],
+      schema: [{ name: "order_id", originalName: "id", type: "integer", displayName: "Order ID" }],
+    });
+
+    expect(postMock.mock.calls[0]?.[1]).toMatchObject({
+      catalog_id: "cat-1",
+      category: "logical_view",
+      enabled: false,
+      logic_type: "derived",
+      logic_definition: { source_resource_id: "source-1" },
+      tags: ["orders"],
+      schema_definition: [
+        { name: "order_id", original_name: "id", type: "integer", display_name: "Order ID" },
+      ],
+    });
+    expect(postMock.mock.calls[0]?.[1]).not.toHaveProperty("source_identifier");
+    const createPayload = postMock.mock.calls[0]?.[1] as {
+      schema_definition: Array<Record<string, unknown>>;
+    };
+    expect(createPayload.schema_definition[0]).not.toHaveProperty("features");
+    expect(created.logicDefinition?.sourceResourceId).toBe("source-1");
+    expect(created.schema[0]?.displayName).toBe("Order ID");
+  });
+
+  it("preserves a nested fixed filter in a complete PUT", async () => {
+    putMock.mockResolvedValue({ data: {} });
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "logical_view",
+            id: "view-1",
+            name: "orders_view",
+            logic_type: "derived",
+            logic_definition: { source_resource_id: "source-1" },
+          },
+        ],
+      },
+    });
+    const { updateDerivedView } = await import("@/modules/data-catalog/services/resource.service");
+    const filter = {
+      operation: "or",
+      sub_conditions: [
+        { field: "status", operation: "==", value: "active" },
+        { field: "status", operation: "==", value: "pending" },
+      ],
+    };
+
+    await updateDerivedView("view-1", {
+      catalogId: "cat-1",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 123,
+      filterCondition: filter,
+      name: "orders_view",
+      sourceResourceId: "source-1",
+      tags: [],
+      schema: [
+        {
+          name: "order_id",
+          originalName: "id",
+          type: "integer",
+          displayName: "Order ID",
+          features: [],
+        },
+      ],
+    });
+
+    expect(putMock.mock.calls[0]?.[1]).toMatchObject({
+      expected_update_time: 123,
+      logic_definition: { source_resource_id: "source-1", filter_condition: filter },
+      schema_definition: [
+        { name: "order_id", original_name: "id", display_name: "Order ID", features: [] },
+      ],
+    });
+  });
+
+  it("keeps Index as a real source category", async () => {
+    getMock.mockResolvedValue({
+      data: { entries: [{ catalog_id: "cat-1", category: "index", id: "index-1", name: "idx" }] },
+    });
+    const { getCatalogResource } = await import("@/modules/data-catalog/services/resource.service");
+    expect((await getCatalogResource("index-1"))?.category).toBe("index");
+  });
+});
+
 describe("resource.service · listCatalogResourcePage", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -207,6 +595,7 @@ describe("resource.service · listCatalogResourcePage", () => {
       columnCount: null,
       indexConfig: undefined,
       rowCount: null,
+      rowCountTime: undefined,
       schema: [],
       sourceMetadata: undefined,
     });
@@ -221,6 +610,7 @@ describe("resource.service · listCatalogResourcePage", () => {
             category: "table",
             id: "res-1",
             last_discover_status: "error",
+            last_discover_time: 100,
             index_name: "bkn_res-1",
             local_status: "available",
             name: "orders",
@@ -245,6 +635,8 @@ describe("resource.service · listCatalogResourcePage", () => {
       schema: "external_data",
       sort: "name",
     });
+    expect(result.items[0]?.lastDiscoverTime).toBe(100);
+    expect(result.items[0]?.rowCountTime).toBeUndefined();
 
     expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/resources", {
       params: {
@@ -308,6 +700,18 @@ describe("resource.service · discovery and enabled actions", () => {
     vi.unstubAllEnvs();
   });
 
+  it("passes count_only to the existing resource discovery endpoint", async () => {
+    postMock.mockResolvedValue({ data: { id: "count-task" } });
+    const { discoverCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    await expect(discoverCatalogResource("res-1", "count_only")).resolves.toEqual({
+      id: "count-task",
+    });
+    expect(postMock).toHaveBeenCalledWith("/vega-backend/v1/resources/res-1/discover", {
+      strategy: "count_only",
+    });
+  });
+
   it("uses dedicated endpoints for resource metadata refresh and enablement", async () => {
     postMock
       .mockResolvedValueOnce({ data: { id: "task-1" } })
@@ -357,6 +761,8 @@ describe("resource.service · getCatalogResources", () => {
             name: "orders",
             operations: ["view_detail", "query_data"],
             row_count: 42,
+            last_discover_time: 1000,
+            row_count_time: 2000,
             estimated_row_count: 41,
             source_metadata: {
               foreign_keys: [{ name: "fk_orders_customer" }],
@@ -385,6 +791,8 @@ describe("resource.service · getCatalogResources", () => {
         localIndexStatus: "available",
         operations: ["view_detail", "query_data"],
         rowCount: 42,
+        lastDiscoverTime: 1000,
+        rowCountTime: 2000,
         estimatedRowCount: 41,
         sourceMetadata: {
           foreignKeyCount: 1,
@@ -396,6 +804,101 @@ describe("resource.service · getCatalogResources", () => {
         },
       }),
     ]);
+  });
+
+  it.each([
+    { row_count: 0, row_count_time: 2000, expectedCount: 0, expectedTime: 2000 },
+    { row_count: 42, expectedCount: 42, expectedTime: undefined },
+    { expectedCount: null, expectedTime: undefined },
+  ])(
+    "reads independent exact statistics without a legacy metadata fallback: %j",
+    async (sample) => {
+      getMock.mockResolvedValue({
+        data: {
+          entries: [
+            {
+              catalog_id: "cat-1",
+              category: "table",
+              id: "res-1",
+              name: "orders",
+              row_count: sample.row_count,
+              row_count_time: sample.row_count_time,
+              estimated_row_count: 41,
+              source_metadata: { properties: { row_count: 999, row_count_time: 888 } },
+            },
+          ],
+        },
+      });
+      const { getCatalogResources } =
+        await import("@/modules/data-catalog/services/resource.service");
+      const [resource] = await getCatalogResources(["res-1"]);
+      expect(resource?.rowCount).toBe(sample.expectedCount);
+      expect(resource?.rowCountTime).toBe(sample.expectedTime);
+      expect(resource?.estimatedRowCount).toBe(41);
+    },
+  );
+
+  it("maps a derived logic view's nested source resource metadata", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "logical_view",
+            id: "view-1",
+            name: "orders_view",
+            source_metadata: {
+              properties: {},
+              source_resource: {
+                catalog_id: "cat-1",
+                category: "table",
+                original_name: "public.orders",
+                table_type: "row",
+              },
+            },
+          },
+          {
+            catalog_id: "cat-1",
+            category: "logical_view",
+            id: "view-2",
+            name: "search_view",
+            source_metadata: {
+              properties: {},
+              source_resource: {
+                catalog_id: "cat-1",
+                category: "index",
+                original_name: "orders_index",
+              },
+            },
+          },
+          {
+            catalog_id: "cat-1",
+            category: "logical_view",
+            id: "view-3",
+            name: "unsupported_view",
+            source_metadata: {
+              source_resource: { category: "logical_view", original_name: "other_view" },
+            },
+          },
+        ],
+      },
+    });
+    const { getCatalogResources } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    const resources = await getCatalogResources(["view-1", "view-2", "view-3"]);
+
+    expect(resources[0]?.sourceMetadata).toEqual({
+      foreignKeyCount: undefined,
+      indexCount: undefined,
+      objectType: "row",
+      originalDescription: undefined,
+      originalName: "public.orders",
+      primaryKeys: undefined,
+    });
+    expect(resources[1]?.sourceMetadata?.objectType).toBe("index");
+    expect(resources[1]?.sourceMetadata?.originalName).toBe("orders_index");
+    expect(resources[2]?.sourceMetadata?.objectType).toBeUndefined();
   });
 
   it("preserves an unsafe int64 row count from detail responses", async () => {
@@ -410,15 +913,10 @@ describe("resource.service · getCatalogResources", () => {
     );
     const { getCatalogResources } =
       await import("@/modules/data-catalog/services/resource.service");
-    const { transformPrecisionSafeJSONResponse } =
-      await import("@/framework/request/precision-safe-json");
 
     const [resource] = await getCatalogResources(["res-1"]);
 
-    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/resources/res-1", {
-      skipErrorToast: true,
-      transformResponse: transformPrecisionSafeJSONResponse,
-    });
+    expect(getMock.mock.calls[0]?.[0]).toBe("/vega-backend/v1/resources/res-1");
     expect(resource?.rowCount).toBe(rowCount);
   });
 
@@ -526,32 +1024,67 @@ describe("resource.service · updateCatalogResource", () => {
       sourceIdentifier: "orders",
     });
 
-    expect(putMock).toHaveBeenCalledWith("/vega-backend/v1/resources/res-1", {
-      catalog_id: "cat-1",
-      category: "table",
-      description: "",
-      expected_update_time: 123,
-      name: "orders",
-      schema_definition: [
-        expect.objectContaining({
-          description: "Request identifier generated by semantic understanding",
-          display_name: "Request number",
-          features: [
-            expect.not.objectContaining({ ref_property: "request_no" }),
-            expect.objectContaining({ ref_property: "external_keyword" }),
-          ],
-        }),
-      ],
-      index_config: {
-        default_keyword_ignore_above: 512,
-        default_embedding_model: undefined,
-        default_fulltext_analyzer: undefined,
-        incremental_fields: ["updated_at", "revision"],
-        primary_key_fields: ["tenant_id", "request_no"],
+    expect(putMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/resources/res-1",
+      {
+        catalog_id: "cat-1",
+        category: "table",
+        description: "",
+        expected_update_time: 123,
+        name: "orders",
+        schema_definition: [
+          expect.objectContaining({
+            description: "Request identifier generated by semantic understanding",
+            display_name: "Request number",
+            features: [
+              expect.not.objectContaining({ ref_property: "request_no" }),
+              expect.objectContaining({ ref_property: "external_keyword" }),
+            ],
+          }),
+        ],
+        index_config: {
+          default_keyword_ignore_above: 512,
+          default_embedding_model: undefined,
+          default_fulltext_analyzer: undefined,
+          incremental_fields: ["updated_at", "revision"],
+          primary_key_fields: ["tenant_id", "request_no"],
+        },
+        source_identifier: "orders",
       },
-      source_identifier: "orders",
-    });
+      { skipErrorToast: undefined },
+    );
   });
+
+  it.each([undefined, true, false])(
+    "passes skipErrorToast=%s to resource updates",
+    async (skipErrorToast) => {
+      const { updateCatalogResource } =
+        await import("@/modules/data-catalog/services/resource.service");
+      const conflict = new Error("Update rejected");
+      putMock.mockRejectedValue(conflict);
+      await expect(
+        updateCatalogResource(
+          "dataset-1",
+          {
+            catalogId: "catalog-1",
+            category: "dataset",
+            description: "",
+            expectedUpdateTime: 123,
+            name: "documents",
+            schema: [],
+            sourceIdentifier: "documents",
+          },
+          skipErrorToast === undefined ? undefined : { skipErrorToast },
+        ),
+      ).rejects.toBe(conflict);
+      expect(putMock).toHaveBeenCalledWith(
+        "/vega-backend/v1/resources/dataset-1",
+        expect.anything(),
+        { skipErrorToast },
+      );
+      expect(getMock).not.toHaveBeenCalled();
+    },
+  );
 
   it("omits unsupported dataset build keys from the request", async () => {
     putMock.mockResolvedValue({});
@@ -601,7 +1134,61 @@ describe("resource.service · mock update boundaries", () => {
 
     const resource = await getCatalogResource("res-orders");
 
-    expect(resource?.operations).toEqual(["view_detail", "query_data"]);
+    expect(resource?.operations).toEqual(["view_detail", "query_data", "delete"]);
+  });
+
+  it("grants delete on newly created index resources in mock mode", async () => {
+    const { createCatalogResource, deleteCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const created = await createCatalogResource({
+      catalogId: "cat-001",
+      category: "index",
+      description: "",
+      name: "mock-index-delete-permission",
+      schema: [],
+      sourceIdentifier: "mock-index-delete-permission",
+    });
+
+    try {
+      expect(created.operations).toContain("delete");
+    } finally {
+      await deleteCatalogResource(created.id);
+    }
+  });
+
+  it("rejects deleting a resource with a running build task without changing mock data", async () => {
+    const { deleteCatalogResource, getCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const { mockBuildTasks } = await import("@/modules/data-catalog/services/mock-db");
+    const taskIds = mockBuildTasks
+      .filter((task) => task.resourceId === "res-orders")
+      .map((task) => task.id);
+
+    await expect(deleteCatalogResource("res-orders")).rejects.toMatchObject({
+      response: {
+        status: 409,
+        data: { error_code: "VegaBackend.BuildTask.HasRunningExecution" },
+      },
+    });
+    expect(await getCatalogResource("res-orders")).not.toBeNull();
+    expect(
+      mockBuildTasks.filter((task) => task.resourceId === "res-orders").map((task) => task.id),
+    ).toEqual(taskIds);
+  });
+
+  it("keeps an active mock resource when missing-state deletion is required", async () => {
+    const { deleteCatalogResource, getCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    await expect(
+      deleteCatalogResource("res-customers", { onlyIfStale: true }),
+    ).rejects.toMatchObject({
+      response: {
+        status: 409,
+        data: { error_code: "VegaBackend.Resource.DeleteConflict" },
+      },
+    });
+    expect(await getCatalogResource("res-customers")).not.toBeNull();
   });
 
   it("returns an HTTP-shaped 404 for a missing resource", async () => {

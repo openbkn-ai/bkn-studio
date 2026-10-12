@@ -608,6 +608,38 @@ describe("DataConnectDiscoverScene", () => {
     );
   });
 
+  it("shows partial completion for exact count tasks with failures or skips", async () => {
+    listTasksMock.mockResolvedValue({
+      items: [
+        {
+          catalogId: "catalog-1",
+          createTime: 100,
+          id: "count-task",
+          progress: 100,
+          queuePriority: 20,
+          status: "completed",
+          strategy: "count_only",
+          triggerType: "manual",
+          result: {
+            catalogId: "catalog-1",
+            updatedCount: 1,
+            failedCount: 1,
+            skippedCount: 2,
+            newCount: 0,
+            restoredCount: 0,
+            staleCount: 0,
+            unchangedCount: 0,
+          },
+        },
+      ],
+      total: 1,
+    });
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    expect(await screen.findByText("dataConnect.discoverPartialCompletion")).toHaveClass(
+      lightStatusStyles.warning,
+    );
+  });
+
   it("renders pending task status and progress with the neutral light style", async () => {
     listTasksMock.mockResolvedValue({
       items: [

@@ -40,32 +40,6 @@ export type AdminUser = {
   updatedAt?: number;
 };
 
-export type AuditLog = {
-  action: string;
-  actorId: string;
-  clientIp: string;
-  createdAt: string;
-  detail?: string;
-  id: string;
-  method: string;
-  resource: string;
-  status: number;
-  targetId: string;
-  targetName?: string;
-};
-
-export type AuditLogQuery = {
-  action?: string;
-  actorId?: string;
-  failedOnly?: boolean;
-  from?: string;
-  limit?: number;
-  offset?: number;
-  resource?: string;
-  targetId?: string;
-  to?: string;
-};
-
 export type AdminDepartment = {
   code?: string;
   email?: string;

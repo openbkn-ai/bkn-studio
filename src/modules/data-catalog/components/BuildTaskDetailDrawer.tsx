@@ -197,7 +197,7 @@ export function BuildTaskDetailDrawer({
     return (
       <Drawer
         className={styles.drawer}
-        destroyOnClose
+        destroyOnHidden
         loading={loading}
         onClose={onClose}
         open={open}
@@ -225,7 +225,7 @@ export function BuildTaskDetailDrawer({
   return (
     <Drawer
       className={styles.drawer}
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       styles={{

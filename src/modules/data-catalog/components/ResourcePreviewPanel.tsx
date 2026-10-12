@@ -12,8 +12,17 @@ import { useTranslation } from "react-i18next";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage, isRequestForbidden } from "@/framework/request/error-message";
+import { extractRequestErrorDetails, isRequestForbidden } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
+import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
+import {
+  emptyFilterGroup,
+  filterToBackend,
+  filterValidationError,
+  type FilterGroup,
+  type FilterQueryPath,
+} from "@/modules/data-catalog/lib/filter-tree";
 import {
   resourceCountAsBigInt,
   resourceCountForPagination,
@@ -23,7 +32,6 @@ import { previewCatalogResource } from "@/modules/data-catalog/services/resource
 import type {
   CatalogResource,
   ResourcePreviewResult,
-  ResourceSchemaField,
 } from "@/modules/data-catalog/types/data-catalog";
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 
@@ -37,7 +45,9 @@ type ResourcePreviewPanelProps = {
 };
 
 const DEFAULT_PAGE_SIZE = 10;
+const INDEX_PREVIEW_PAGE_LIMIT = 10_000;
 const PREVIEW_CONTENT_LENGTH = 20;
+const EMPTY_APPLIED_FILTER = emptyFilterGroup();
 
 function isNumericType(type: string) {
   const lowered = type.toLowerCase();
@@ -143,19 +153,6 @@ function formatOtherPreviewCell(
   return formatExpandablePreviewCell(value);
 }
 
-function resolvePreviewColumnHead(field: ResourceSchemaField) {
-  const technicalName = field.name;
-  const businessName = field.displayName?.trim();
-  const hasDistinctBusinessName = Boolean(businessName && businessName !== technicalName);
-
-  return {
-    primary: hasDistinctBusinessName ? businessName! : technicalName,
-    secondary: hasDistinctBusinessName ? technicalName : undefined,
-    type: field.type,
-    tooltip: field.description?.trim() || undefined,
-  };
-}
-
 export function ResourcePreviewPanel({
   active,
   disabled = false,
@@ -171,9 +168,18 @@ export function ResourcePreviewPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [sourceReadDetails, setSourceReadDetails] = useState<{
+    description: string;
+    solution?: string;
+  } | null>(null);
   const [ignoreLocalIndex, setIgnoreLocalIndex] = useState(false);
   const [binaryContent, setBinaryContent] = useState(false);
+  const [filterDraft, setFilterDraft] = useState<FilterGroup>(emptyFilterGroup);
+  const [appliedFilter, setAppliedFilter] = useState<FilterGroup>(emptyFilterGroup);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterError, setFilterError] = useState<string | null>(null);
   const requestVersionRef = useRef(0);
+  const previousResourceId = useRef(resource.id);
   const queryBlockReason = resourceQueryBlockReason(resource);
   const resourceDisabled = queryBlockReason === "disabled";
   const resourceMissing = queryBlockReason === "missing";
@@ -188,6 +194,16 @@ export function ResourcePreviewPanel({
     resource.category === "table" &&
     resource.schema.some((field) => field.type.trim().toLowerCase() === "binary");
   const queriesSource = !hasLocalIndex || ignoreLocalIndex;
+  const queryPath: FilterQueryPath =
+    resource.category === "index" ||
+    (resource.category === "table" && !queriesSource) ||
+    (resource.category === "logical_view" && result?.querySource === "local_index")
+      ? "local_index"
+      : "source";
+  const activeFilter =
+    filterValidationError(appliedFilter, resource.schema, queryPath) === null
+      ? appliedFilter
+      : EMPTY_APPLIED_FILTER;
 
   const load = useCallback(
     async (nextOffset: number, nextLimit: number) => {
@@ -195,12 +211,16 @@ export function ResourcePreviewPanel({
       setLoading(true);
       setError(null);
       setForbidden(false);
+      setSourceReadDetails(null);
       try {
         const data = await previewCatalogResource(resource.id, {
           ...(hasBinaryField && queriesSource
             ? { binaryMode: binaryContent ? "content" : "metadata" }
             : {}),
           ...(ignoreLocalIndex ? { ignoreLocalIndex: true } : {}),
+          ...(activeFilter.children.length
+            ? { filterCondition: filterToBackend(activeFilter, resource.schema) }
+            : {}),
           limit: nextLimit,
           offset: nextOffset,
         });
@@ -215,8 +235,11 @@ export function ResourcePreviewPanel({
         // Reading rows is granted separately from seeing the table's structure. The panel loads on
         // its own, so a bare 403 leaves the user guessing whether the table, the connection or
         // their own access is the problem — name it instead.
-        setForbidden(isRequestForbidden(loadError));
-        setError(extractRequestErrorMessage(loadError));
+        const details = extractRequestErrorDetails(loadError);
+        const sourceDenied = details.code === "VegaBackend.Resource.SourceReadForbidden";
+        setSourceReadDetails(sourceDenied ? details : null);
+        setForbidden(!sourceDenied && isRequestForbidden(loadError));
+        setError(details.description);
         setResult(null);
       } finally {
         if (requestVersion === requestVersionRef.current) {
@@ -224,8 +247,39 @@ export function ResourcePreviewPanel({
         }
       }
     },
-    [resource.id, ignoreLocalIndex, binaryContent, hasBinaryField, queriesSource],
+    [
+      resource.id,
+      resource.schema,
+      ignoreLocalIndex,
+      binaryContent,
+      hasBinaryField,
+      queriesSource,
+      activeFilter,
+    ],
   );
+
+  useEffect(() => {
+    if (previousResourceId.current === resource.id) return;
+    previousResourceId.current = resource.id;
+    setFilterDraft(emptyFilterGroup());
+    setAppliedFilter(emptyFilterGroup());
+    setFilterError(null);
+    setFilterOpen(false);
+  }, [resource.id]);
+
+  useEffect(() => {
+    if (active) return;
+    setFilterDraft(emptyFilterGroup());
+    setAppliedFilter(emptyFilterGroup());
+    setFilterOpen(false);
+  }, [active]);
+
+  useEffect(() => {
+    if (!appliedFilter.children.length || activeFilter.children.length) return;
+    setAppliedFilter(emptyFilterGroup());
+    setFilterError(t("dataCatalog.preview.filterUnavailableForSource"));
+    setFilterOpen(true);
+  }, [activeFilter.children.length, appliedFilter.children.length, t]);
 
   useEffect(() => {
     if (!active || disabled || previewUnavailable || !canQueryData) {
@@ -253,7 +307,8 @@ export function ResourcePreviewPanel({
   }
 
   if (previewUnavailable) {
-    const discoveryFailed = resource.lastDiscoverStatus === "error";
+    const discoveryFailed =
+      resource.category !== "dataset" && resource.lastDiscoverStatus === "error";
     return (
       <Alert
         description={t(
@@ -299,10 +354,16 @@ export function ResourcePreviewPanel({
   const rows = result?.rows ?? [];
   const fetched = offset + rows.length;
   const totalUnreliable =
-    rows.length === pageSize && resourceCountAsBigInt(backendTotal) <= BigInt(fetched);
+    !appliedFilter.children.length &&
+    !resource.logicDefinition?.filterCondition &&
+    rows.length === pageSize &&
+    resourceCountAsBigInt(backendTotal) < BigInt(fetched);
   const total = totalUnreliable
     ? resourceCountForPagination(backendTotal, resource.rowCount, fetched)
     : resourceCountForPagination(backendTotal, fetched);
+  const indexWindowLimited =
+    result?.querySource === "local_index" && total > INDEX_PREVIEW_PAGE_LIMIT;
+  const paginationTotal = indexWindowLimited ? INDEX_PREVIEW_PAGE_LIMIT : total;
   const columns = resource.schema;
 
   const handlePaginationChange = (nextPage: number, nextPageSize: number) => {
@@ -326,6 +387,10 @@ export function ResourcePreviewPanel({
     <div className={styles.panel}>
       <div className={styles.metaRow}>
         <div className={styles.previewControls}>
+          <Button onClick={() => setFilterOpen((open) => !open)}>
+            {t("dataCatalog.preview.filter")}
+            {activeFilter.children.length ? ` (${activeFilter.children.length})` : ""}
+          </Button>
           {hasLocalIndex ? (
             <Checkbox
               checked={ignoreLocalIndex}
@@ -359,7 +424,70 @@ export function ResourcePreviewPanel({
           ) : null}
         </div>
       </div>
-      {forbidden ? (
+      {filterOpen ? (
+        <div className={styles.filterPanel}>
+          <FilterTreeEditor
+            fields={resource.schema}
+            queryPath={queryPath}
+            onChange={(next) => {
+              setFilterDraft(next);
+              setFilterError(null);
+            }}
+            value={filterDraft}
+          />
+          {filterError ? <Alert message={filterError} showIcon type="error" /> : null}
+          <div className={styles.filterActions}>
+            <Button
+              type="primary"
+              onClick={() => {
+                const validation = filterValidationError(filterDraft, resource.schema, queryPath);
+                if (validation) {
+                  setFilterError(t(`dataCatalog.filter.errors.${validation}`));
+                  return;
+                }
+                setAppliedFilter(filterDraft);
+              }}
+            >
+              {t("dataCatalog.preview.applyFilter")}
+            </Button>
+            <Button
+              onClick={() => {
+                setFilterDraft(emptyFilterGroup());
+                setAppliedFilter(emptyFilterGroup());
+                setFilterError(null);
+              }}
+            >
+              {t("dataCatalog.preview.clearFilter")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      {sourceReadDetails ? (
+        <Alert
+          description={
+            <>
+              <div>
+                {t(
+                  resource.category === "table"
+                    ? "dataCatalog.preview.sourceReadForbiddenDescription"
+                    : "dataCatalog.preview.sourceReadForbiddenGenericDescription",
+                )}
+              </div>
+              <div>{sourceReadDetails.description}</div>
+              {sourceReadDetails.solution ? <div>{sourceReadDetails.solution}</div> : null}
+            </>
+          }
+          message={
+            resource.category === "table"
+              ? t("dataCatalog.preview.sourceReadForbidden", {
+                  source: resource.sourceIdentifier || resource.name,
+                })
+              : t("dataCatalog.preview.sourceReadForbiddenGeneric")
+          }
+          showIcon
+          type="warning"
+        />
+      ) : forbidden ? (
         <Alert
           description={t("dataCatalog.preview.noQueryPermissionDescription")}
           message={t("dataCatalog.preview.noQueryPermission")}
@@ -375,28 +503,11 @@ export function ResourcePreviewPanel({
               <thead>
                 <tr>
                   <th className={[styles.rowIndexHead, styles.rowIndex].join(" ")}>#</th>
-                  {columns.map((field) => {
-                    const head = resolvePreviewColumnHead(field);
-                    const primaryLabel = (
-                      <span className={styles.columnHeadPrimary}>{head.primary}</span>
-                    );
-
-                    return (
-                      <th key={field.name}>
-                        <div className={styles.columnHead}>
-                          {head.tooltip ? (
-                            <Tooltip title={head.tooltip}>{primaryLabel}</Tooltip>
-                          ) : (
-                            primaryLabel
-                          )}
-                          {head.secondary ? (
-                            <span className={styles.columnHeadSecondary}>{head.secondary}</span>
-                          ) : null}
-                          <span className={styles.columnHeadType}>{head.type}</span>
-                        </div>
-                      </th>
-                    );
-                  })}
+                  {columns.map((field) => (
+                    <th key={field.name}>
+                      <FieldIdentity field={field} name={field.name} />
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -464,14 +575,24 @@ export function ResourcePreviewPanel({
           </div>
         </Spin>
       )}
-      {total > 0 ? (
+      {indexWindowLimited ? (
+        <Alert
+          message={t("dataCatalog.preview.indexPageLimit", {
+            limit: INDEX_PREVIEW_PAGE_LIMIT,
+            total,
+          })}
+          showIcon
+          type="info"
+        />
+      ) : null}
+      {paginationTotal > 0 ? (
         <TablePaginationBar
           current={page}
           onChange={handlePaginationChange}
           pageSize={pageSize}
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
-          total={total}
+          total={paginationTotal}
         />
       ) : null}
       <Modal

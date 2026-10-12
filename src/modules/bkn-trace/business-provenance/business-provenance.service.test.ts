@@ -44,6 +44,47 @@ describe("EE business provenance service", () => {
     expect(page.entries[0]?.conversationId).toBe("conv-1");
   });
 
+  it.each(["partial", "truncated"])(
+    "preserves %s query metadata and marks unread previews",
+    async (field) => {
+      getMock.mockResolvedValue({
+        data: {
+          entries: [{ conversation_id: "conv-1" }],
+          total: 1,
+          [field]: true,
+          partial_reasons: ["projection_scan_cap_reached"],
+        },
+      });
+      const { getBusinessProvenanceConversations } = await import("./business-provenance.service");
+      const page = await getBusinessProvenanceConversations();
+      expect(page).toMatchObject({
+        [field]: true,
+        partialReasons: ["projection_scan_cap_reached"],
+      });
+      expect(page.entries[0]).toMatchObject({ previewUnavailable: true });
+    },
+  );
+
+  it("preserves incomplete interaction preview context for the round navigation", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [{ interaction_id: "int-1" }],
+        total: 1,
+        partial: true,
+        truncated: true,
+        partial_reasons: ["projection_scan_cap_reached"],
+      },
+    });
+    const { getBusinessProvenanceInteractions } = await import("./business-provenance.service");
+    const page = await getBusinessProvenanceInteractions({ conversationId: "conv-1" });
+    expect(page).toMatchObject({
+      partial: true,
+      truncated: true,
+      partialReasons: ["projection_scan_cap_reached"],
+    });
+    expect(page.entries[0]).toMatchObject({ previewUnavailable: true });
+  });
+
   it("reads an interaction projection and its canonical Markdown from EE", async () => {
     getMock
       .mockResolvedValueOnce({
@@ -256,5 +297,42 @@ describe("EE business provenance service", () => {
     await expect(getBusinessProvenanceAnalysisHistory("int-1")).resolves.toMatchObject([
       { analysisId: "analysis-1", status: "completed", result: { decision: "no_change" } },
     ]);
+  });
+});
+
+describe("current record integrity", () => {
+  it("maps the independent assessment and sends its own filter", async () => {
+    const report = {
+      status: "missing",
+      checked_at: "2026-10-03T00:00:00Z",
+      scope: "registered_call_records",
+      missing: [
+        {
+          operation_id: "op",
+          attempt: 1,
+          reason: "business_target_missing",
+          field: "business_refs",
+        },
+      ],
+    };
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            conversation_id: "conv",
+            evidence_completeness: "complete",
+            current_record_integrity: report,
+          },
+        ],
+        total: 1,
+      },
+    });
+    const { getBusinessProvenanceConversations } = await import("./business-provenance.service");
+    const page = await getBusinessProvenanceConversations({ recordIntegrity: "missing" });
+    expect(page.entries[0].currentRecordIntegrity).toEqual(report);
+    expect(getMock).toHaveBeenLastCalledWith(
+      "/agent-observability/v1/business-provenance/conversations",
+      expect.objectContaining({ params: { record_integrity: "missing" } }),
+    );
   });
 });

@@ -64,7 +64,7 @@ export function useDangerDelete() {
     <Modal
       cancelButtonProps={{ disabled: busy }}
       cancelText={t("common.cancel")}
-      destroyOnClose
+      destroyOnHidden
       maskClosable={!busy}
       okButtonProps={{ danger: true, disabled: !canConfirm, loading: busy }}
       okText={t("common.delete")}

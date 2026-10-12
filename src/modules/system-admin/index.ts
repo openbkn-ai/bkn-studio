@@ -13,10 +13,14 @@ export type {
 } from "@/modules/system-admin/contracts/scenes";
 export { UserManagementScene } from "@/modules/system-admin/scenes/UserManagementScene";
 export { RoleManagementScene } from "@/modules/system-admin/scenes/RoleManagementScene";
-export { AuditLogScene } from "@/modules/system-admin/scenes/AuditLogScene";
+export { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
 export { LicenseManagementScene } from "@/modules/system-admin/scenes/LicenseManagementScene";
 export { OAuthAccessOriginsScene } from "@/modules/system-admin/scenes/OAuthAccessOriginsScene";
 export { DirectoryUserPicker } from "@/modules/system-admin/components/DirectoryUserPicker";
 export type { DirectoryUserPickerProps } from "@/modules/system-admin/components/DirectoryUserPicker";
+export { GrantableUserPicker } from "@/modules/system-admin/components/GrantableUserPicker";
+export type { GrantableUserPickerProps } from "@/modules/system-admin/components/GrantableUserPicker";
+export { GrantableRolePicker } from "@/modules/system-admin/components/GrantableRolePicker";
+export type { GrantableRolePickerProps } from "@/modules/system-admin/components/GrantableRolePicker";
 export type * from "@/modules/system-admin/types/admin";
 export type * from "@/modules/system-admin/types/oauth-access-origin";

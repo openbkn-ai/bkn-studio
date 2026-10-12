@@ -77,7 +77,11 @@ export const dataCatalogEnUS = {
         "No usable field metadata is available. Add or refresh the resource fields before querying or building an index.",
       statusMessageDetail: "Status details: {{message}}",
       openDiscovery: "Open discovery",
+      refreshCount: "Refresh Exact Count",
+      refreshCountDescription:
+        "Create an exact count task. Large tables may take longer and increase source load.",
       refreshMetadata: "Start Resource Metadata Discovery",
+      countQueued: "Exact count task created.",
       discoveryQueued: "Resource metadata discovery task created.",
       refreshMetadataConfirmTitle: "Start resource metadata discovery?",
       refreshMetadataConfirmDescription:
@@ -284,8 +288,107 @@ export const dataCatalogEnUS = {
     },
     categories: {
       table: "Table",
-      logicview: "Logic View",
+      index: "Index",
+      logical_view: "Logical View",
       dataset: "Dataset",
+    },
+    viewEditor: {
+      create: "Create Logical View",
+      edit: "Edit Logical View",
+      titleCreate: "New Logical View",
+      titleEdit: "Edit Derived Logical View",
+      subtitleCreate: "Choose a logical view type and configure output fields and filters.",
+      subtitleEdit: "Adjust the logical view's public fields and fixed filter.",
+      typeStep: "Select Type",
+      configStep: "Configure Logical View",
+      typeTitle: "Select a Logical View Type",
+      typeDescription:
+        "Choose the type of logical view to create, then continue with its configuration.",
+      configTitle: "Configure Logical View",
+      editConfigTitle: "Edit Logical View Configuration",
+      configDescription:
+        "Set the basic information, logical view source, output fields, and filter.",
+      derivedType: "Derived Logical View",
+      derivedTypeDescription:
+        "Choose output fields from one Table or Index and add a fixed filter.",
+      compositeType: "Composite Logical View",
+      compositeTypeDescription: "Combine multiple data resources into one logical view.",
+      typeUnavailable: "Coming later",
+      basic: "Basic Information",
+      catalog: "Catalog",
+      name: "Logical View Name",
+      description: "Description",
+      tags: "Tags",
+      tagsHint: "Up to 5 tags, with at most 40 characters each",
+      tagErrors: {
+        count: "At most 5 tags are allowed.",
+        empty: "Tags cannot be empty.",
+        length: "Each tag must be at most 40 characters.",
+        characters: "Tags contain unsupported special characters.",
+      },
+      source: "Logical View Source",
+      sourceSearch: "Search Tables or Indexes by resource name",
+      sourceEmpty: "No matching source resources",
+      sourceMore: "Load more",
+      sourceBlocked: "No query access or resource unavailable",
+      sourceChangeTitle: "Change logical view source?",
+      sourceChangeHint: "Changing the source resets output fields and fixed filters.",
+      sourceLocked:
+        "This logical view has an unsupported fixed filter, so its logical view source cannot be changed.",
+      fields: "Output Fields",
+      sourceField: "Source Field",
+      outputName: "Output Name",
+      displayName: "Display Name",
+      fieldType: "Type",
+      addField: "Add Field",
+      removeField: "Remove",
+      moveUp: "Move Up",
+      moveDown: "Move Down",
+      fixedFilter: "Fixed Filter",
+      unsupportedFilter:
+        "This filter contains operations the editor cannot change. Saving other edits preserves it unchanged.",
+      filterNeedsReview:
+        "The fixed filter is incompatible with the current query path or source fields. Update it or change the logical view source.",
+      noAccess:
+        "This catalog cannot create or edit logical views. Check access and catalog status.",
+      unsupported: "Only derived logical views can be edited.",
+      invalidSource: "Select an available Table or Index with query access.",
+      sourceSchemaChanged:
+        "Source fields changed. Review output fields and fixed filters before saving.",
+      invalidName: "Enter a logical view name.",
+      nameLengthLimit: "Logical view names must be at most 255 characters.",
+      descriptionLengthLimit: "Descriptions must be at most 1000 characters.",
+      invalidFields:
+        "Keep at least one field. Output names and display names must be nonempty, unique, and at most 255 characters.",
+      duplicateOutputName: 'Output name "{{name}}" is duplicated. Change it.',
+      duplicateDisplayName: 'Display name "{{name}}" is duplicated. Change it.',
+      saveError: "Could not save the logical view. Check your input and try again.",
+      saved: "Logical view saved",
+      discardTitle: "Discard unsaved changes?",
+      discardHint: "Leaving this page will discard the current edits.",
+      cancel: "Cancel",
+      save: "Save Logical View",
+    },
+    filter: {
+      match: "Match",
+      groupLogic: "Condition logic",
+      and: "All conditions (AND)",
+      or: "Any condition (OR)",
+      conditions: "conditions",
+      field: "Field",
+      operator: "Operator",
+      value: "Value",
+      addRule: "Add condition",
+      addGroup: "Add group",
+      removeRule: "Remove condition",
+      removeGroup: "Remove group",
+      errors: {
+        emptyGroup: "Add a condition or remove the empty group.",
+        tooMany: "A group can contain at most 100 conditions.",
+        invalidField: "Select a valid field.",
+        missingValue: "Enter a filter value.",
+        invalidNumber: "Enter a valid number for this field.",
+      },
     },
     modes: {
       batch: "Batch",
@@ -323,6 +426,8 @@ export const dataCatalogEnUS = {
         mariadb: "MariaDB",
         mysql: "MySQL",
         opensearch: "OpenSearch",
+        oracle: "Oracle",
+        hana: "SAP HANA",
         postgresql: "PostgreSQL",
         sqlserver: "SQL Server",
       },
@@ -376,6 +481,10 @@ export const dataCatalogEnUS = {
       emptyResourcesLogical: "No resources yet",
     },
     resource: {
+      viewDefinition: "Logical View Definition",
+      viewSource: "Logical View Source",
+      viewFixedFilter: "Fixed Filter Conditions",
+      filterUnsupported: "This filter cannot currently be shown as a tree.",
       name: "Resource Name",
       basicName: "Resource",
       headerIndexState: "Index State",
@@ -392,6 +501,10 @@ export const dataCatalogEnUS = {
       creator: "Created by",
       enabledStatus: "Enabled",
       discoverStatus: "Discovery Status",
+      estimatedRowCountLabel: "Estimated row count",
+      lastDiscoverTime: "Discovery time",
+      rowCountTime: "Row count updated",
+      unknownTime: "Unknown",
       rowCount: "Rows",
       estimatedRowCount_one: "Approximately {{formattedCount}} row",
       estimatedRowCount_other: "Approximately {{formattedCount}} rows",
@@ -411,6 +524,13 @@ export const dataCatalogEnUS = {
       create: "New Resource",
       createTitle: "New Data Resource",
       created: "Resource created: {{name}}",
+      deleted: "Resource deleted: {{name}}",
+      deleteTitle: "Delete resource?",
+      deleteImpact:
+        "This removes the resource record and related information in OpenBKN and may affect indexes, tasks, and grants. It does not delete or modify source database tables or data.",
+      deleteUnknownReferences:
+        "References from other business objects cannot be checked here. Confirm that you have reviewed them. Deletion may be irreversible.",
+      deleteStateChanged: "The resource state or delete permission changed. Refresh and try again.",
       description: "Description",
       originalName: "Original Name",
       originalDescription: "Original Description",
@@ -419,6 +539,7 @@ export const dataCatalogEnUS = {
       sourceIndexCount: "Source Indexes",
       sourceObjectType: "Source Object Type",
       sourceObjectTypes: {
+        index: "Index",
         materialized_view: "Materialized View",
         table: "Table",
         view: "View",
@@ -444,6 +565,8 @@ export const dataCatalogEnUS = {
       fieldOriginalType: "Original Type",
       fieldOriginalDescription: "Original Description",
       editFields: "Edit description and fields",
+      logicalViewReadOnly:
+        "Logical view editing is not yet available in Studio. You can still view its details.",
       editHint:
         "You can edit the resource description, field business names, and field descriptions here.",
       copyValue: "Copy {{label}}",
@@ -503,6 +626,11 @@ export const dataCatalogEnUS = {
       goEnable: "Open connections",
     },
     preview: {
+      filter: "Filter rows",
+      applyFilter: "Apply filter",
+      clearFilter: "Clear filter",
+      filterUnavailableForSource:
+        "The selected query source does not support the applied filter. Adjust the conditions and apply again.",
       binaryContent: "Binary content ({{count}} bytes)",
       binaryContentUnavailable: "Binary content not loaded",
       fieldContentUnavailable: "Field content not loaded",
@@ -513,8 +641,16 @@ export const dataCatalogEnUS = {
       queryOriginalSource: "Query original data",
       loadBinaryContent: "Load Binary content",
       dataSourceIndex: "Source: local index",
+      indexPageLimit:
+        "{{total}} rows total. Only the first {{limit}} can be previewed from the local index.",
       dataSourceOriginal: "Source: original data",
       noQueryPermission: "No permission to read this data",
+      sourceReadForbidden: "The data source account cannot read data for {{source}}",
+      sourceReadForbiddenDescription:
+        "Check SELECT permission on the requested object and any underlying objects.",
+      sourceReadForbiddenGeneric: "The data source account cannot read the underlying source",
+      sourceReadForbiddenGenericDescription:
+        "Check the connection account's read permission on the source used by this resource.",
       noQueryPermissionDescription:
         "You can see this table's structure, but reading its rows is granted separately. Ask an administrator for query permission on this table or the catalog it belongs to.",
       empty: "No data",
@@ -559,7 +695,11 @@ export const dataCatalogEnUS = {
       activeTaskLocked:
         "This resource already has an active build task, so the entire configuration page is locked. Wait for it to finish or stop it before changing config or starting a new build.",
       configConflict:
-        "An active build task blocks index config updates. Stop the task, then save again.",
+        "The index configuration could not be saved due to a conflict. Refresh the resource and review the configuration before retrying.",
+      resourceUpdateConflict:
+        "Another request updated this resource. Refresh the page, then edit and save the index configuration again.",
+      datasetRebuildRequired:
+        "The existing Dataset index structure or fulltext field analyzer cannot be changed directly. Rebuild the Dataset to apply the new configuration.",
       startRejected:
         "Could not start this task (config may have changed, or a newer successful build exists). Save the latest config under Configure Index, then create a new build.",
       created: "Build task created: {{id}}",

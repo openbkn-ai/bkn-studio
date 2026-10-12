@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type DataConnectDiscoverStrategy = "cleanup_only" | "create_only" | "full_sync";
+export type DataConnectDiscoverStrategy =
+  "cleanup_only" | "create_only" | "full_sync" | "count_only";
 
 export type DataConnectDiscoverTaskStatus =
   "cancelled" | "completed" | "failed" | "pending" | "running";
@@ -69,6 +70,7 @@ export type DataConnectDiscoverTaskSummary = Omit<DataConnectDiscoverTask, "mess
 export type DataConnectDiscoverResult = {
   catalogId: string;
   failedCount: number;
+  skippedCount?: number;
   message: string;
   newCount: number;
   restoredCount: number;

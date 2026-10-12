@@ -25,6 +25,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
+import { useAppServices } from "@/framework/context/use-app-services";
 import { LogDetailDrawer } from "@/modules/bkn-trace/components/LogDetailDrawer";
 import {
   presentLogAction,
@@ -33,6 +35,7 @@ import {
 } from "@/modules/bkn-trace/components/log-presentation";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
+  isAuditConsumerNotConfigured,
   listLogs,
   type AuditOutcome,
   type BusinessModule,
@@ -46,7 +49,6 @@ import {
   type TraceAccessProfile,
 } from "@/modules/bkn-trace/services/trace.service";
 import { readAuditLogDrilldown } from "@/modules/bkn-trace/utils/audit-log-drilldown";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 const BUSINESS_MODULES: BusinessModule[] = [
   "domain_knowledge_network",
@@ -74,7 +76,7 @@ type Filters = {
 
 export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsSceneProps) {
   const { t } = useTranslation();
-  const userDirectory = useAuditUserDirectory();
+  const { runtimeConfig } = useAppServices();
   const [associatedScope] = useState(readAssociatedLogScope);
   const [profile, setProfile] = useState<TraceAccessProfile>();
   const [filters, setFilters] = useState<Filters>(() => readInitialFilters(mode));
@@ -82,6 +84,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
   const [result, setResult] = useState<LogListResult>();
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
   const [loading, setLoading] = useState(true);
+  const [auditNotConfigured, setAuditNotConfigured] = useState(false);
   const [error, setError] = useState<string>();
 
   const load = useCallback(
@@ -89,6 +92,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       if (!canSearchLogs(access, associatedScope)) return;
       setLoading(true);
       setError(undefined);
+      setAuditNotConfigured(false);
       try {
         const query: LogListQuery = {
           page: nextPage,
@@ -96,7 +100,9 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
           timeFrom: nextFilters.timeRange[0].toISOString(),
           timeTo: nextFilters.timeRange[1].toISOString(),
           ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
-          ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
+          ...(mode !== "audit" && nextFilters.businessModule
+            ? { businessModule: nextFilters.businessModule }
+            : {}),
           ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
           ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
           ...(associatedScope.actorId ? { actorId: associatedScope.actorId } : {}),
@@ -110,7 +116,16 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         };
         setResult(await listLogs(query));
       } catch (caught: unknown) {
-        setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
+        setResult(undefined);
+        const unconfigured = isAuditConsumerNotConfigured(caught);
+        setAuditNotConfigured(unconfigured);
+        setError(
+          unconfigured
+            ? t("bknTrace.errors.auditNotConfigured")
+            : caught instanceof Error
+              ? caught.message
+              : t("bknTrace.errors.queryFailed"),
+        );
       } finally {
         setLoading(false);
       }
@@ -180,7 +195,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         title: t("bknTrace.logs.columns.actor"),
         width: "18%",
         render: (_actor: LogRecord["actor"], record) => {
-          const value = presentLogActor(record, t, userDirectory);
+          const value = presentLogActor(record, t, runtimeConfig.currentUser);
           return <ClampedText secondary={value.secondary} value={value.primary} />;
         },
       },
@@ -203,7 +218,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         ),
       },
     ],
-    [t, userDirectory],
+    [runtimeConfig.currentUser, t],
   );
 
   const submit = useCallback(() => {
@@ -264,14 +279,26 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         </Button>
       </header>
 
-      {error ? <Alert message={error} showIcon type="error" /> : null}
-      {result?.partial ? (
+      {error ? (
+        <Alert message={error} showIcon type={auditNotConfigured ? "warning" : "error"} />
+      ) : null}
+      {!error &&
+      result?.sourceStatus.some((source) => source.reason === "audit_consumer_not_configured") ? (
+        <Alert message={t("bknTrace.errors.auditNotConfigured")} showIcon type="warning" />
+      ) : null}
+      {hasSourceQueryFailure(result?.sourceStatus) ? (
         <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" />
       ) : null}
-      {result?.partial ? <SourceFailures sources={result.sourceStatus} t={t} /> : null}
+      {hasSourceQueryFailure(result?.sourceStatus) ? (
+        <SourceFailures sources={result?.sourceStatus ?? []} t={t} />
+      ) : null}
       {associated ? (
         <div className={styles.sourceStrip}>
-          <AssociatedScopeTag scope={associatedScope} t={t} userDirectory={userDirectory} />
+          <AssociatedScopeTag
+            currentUser={runtimeConfig.currentUser}
+            scope={associatedScope}
+            t={t}
+          />
         </div>
       ) : null}
 
@@ -289,16 +316,18 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
               showTime
               value={filters.timeRange}
             />
-            <Select
-              allowClear
-              onChange={(businessModule) => setFilters((value) => ({ ...value, businessModule }))}
-              options={BUSINESS_MODULES.map((module) => ({
-                label: moduleLabel(module, t),
-                value: module,
-              }))}
-              placeholder={t("bknTrace.logs.modulePlaceholder")}
-              value={filters.businessModule}
-            />
+            {mode !== "audit" ? (
+              <Select
+                allowClear
+                onChange={(businessModule) => setFilters((value) => ({ ...value, businessModule }))}
+                options={BUSINESS_MODULES.map((module) => ({
+                  label: moduleLabel(module, t),
+                  value: module,
+                }))}
+                placeholder={t("bknTrace.logs.modulePlaceholder")}
+                value={filters.businessModule}
+              />
+            ) : null}
             <Select
               allowClear
               onChange={(outcome) => setFilters((value) => ({ ...value, outcome }))}
@@ -337,15 +366,6 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
                 ? t("bknTrace.logs.resultCountUnknown")
                 : t("bknTrace.logs.resultCount", { count: result.count.value })}
             </Typography.Text>
-            {result.sourceStatus.length ? (
-              <Space size={4} wrap>
-                {result.sourceStatus.map((source) => (
-                  <Tag color={sourceStatusColor(source.status)} key={source.sourceId}>
-                    {source.sourceId} · {sourceStatusLabel(source.status, t)}
-                  </Tag>
-                ))}
-              </Space>
-            ) : null}
           </div>
 
           <Spin spinning={loading}>
@@ -370,6 +390,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
               current={result.page ?? pagination.page}
               onChange={changePage}
               pageSize={result.pageSize ?? pagination.pageSize}
+              pageSizeOptions={[20, 50, 100, 200]}
               showSizeChanger
               showTotal={(total) => t("common.total", { total })}
               total={result.count.value}
@@ -470,20 +491,24 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 function AssociatedScopeTag({
+  currentUser,
   scope,
   t,
-  userDirectory,
 }: {
+  currentUser: { id?: string | null; name?: string | null };
   scope: AssociatedLogScope;
   t: Translate;
-  userDirectory: Map<string, string>;
 }) {
   if (scope.targetId) {
     const displayType = scope.targetType === "user" ? "user" : "resource";
     return (
       <Tag color="blue">
         <span>{t(`bknTrace.logs.associatedTarget.${displayType}`)}</span>{" "}
-        <span>{userDirectory.get(scope.targetId) ?? scope.targetId}</span>
+        <span>
+          {scope.targetType === "user"
+            ? formatAuditUserDisplay({ currentUser, id: scope.targetId })
+            : scope.targetId}
+        </span>
       </Tag>
     );
   }
@@ -491,18 +516,19 @@ function AssociatedScopeTag({
     return (
       <Tag color="blue">
         <span>{t("bknTrace.logs.associatedTarget.user")}</span>{" "}
-        <span>{userDirectory.get(scope.actorId) ?? scope.actorId}</span>
+        <span>{formatAuditUserDisplay({ currentUser, id: scope.actorId })}</span>
       </Tag>
     );
   }
   return <Tag color="blue">{scope.conversationId || scope.traceId || scope.requestId}</Tag>;
 }
 
+function hasSourceQueryFailure(sources: LogListResult["sourceStatus"] | undefined) {
+  return sources?.some((source) => source.status === "unavailable") ?? false;
+}
+
 function SourceFailures({ sources, t }: { sources: LogListResult["sourceStatus"]; t: Translate }) {
-  const failed = sources.filter(
-    (source) =>
-      source.reason && !isHealthySource(source.status) && source.status !== "not_integrated",
-  );
+  const failed = sources.filter((source) => source.reason && source.status === "unavailable");
   if (!failed.length) return null;
   return (
     <div className={styles.sourceStrip}>
@@ -518,12 +544,6 @@ function SourceFailures({ sources, t }: { sources: LogListResult["sourceStatus"]
 
 function isHealthySource(status: string) {
   return status === "available" || status === "healthy";
-}
-
-function sourceStatusColor(status: string) {
-  if (isHealthySource(status)) return "green";
-  if (status === "unavailable") return "orange";
-  return undefined;
 }
 
 function sourceStatusLabel(status: string, t: Translate) {

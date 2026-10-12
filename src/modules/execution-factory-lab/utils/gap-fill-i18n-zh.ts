@@ -137,7 +137,7 @@ export const executionFactoryLabGapFillZh = {
     orchestrationEnabledTitle: "\u5df2\u53ef\u4f5c\u4e3a\u6d41\u7a0b\u7b97\u5b50\u4f7f\u7528",
     orchestrationEnabledDescription:
       "\u6b64\u80fd\u529b\u5df2\u6ce8\u518c\u4e3a\u6d41\u7a0b\u7b97\u5b50\uff0c\u53ef\u5728\u6d41\u7a0b\u4e2d\u88ab\u7f16\u6392\u8c03\u7528\u3002\u5728\u6295\u5165\u4f7f\u7528\u524d\uff0c\u53ef\u5148\u8bbe\u7f6e\u8fd0\u884c\u53c2\u6570\u3002",
-    orchestrationOperatorId: "\u7b97\u5b50 ID",
+    orchestrationOperatorId: "\u7b97\u5b50",
     orchestrationTimeoutMs: "\u8d85\u65f6\u65f6\u95f4\uff08ms\uff09",
     orchestrationRetryPolicy: "\u91cd\u8bd5\u7b56\u7565",
     orchestrationMaxAttempts: "\u6700\u5927\u91cd\u8bd5\u6b21\u6570",

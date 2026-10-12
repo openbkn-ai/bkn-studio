@@ -24,6 +24,12 @@ export function formatPrecisionSafeJSON(data: string): string {
   return precisionPreservingJSON.stringify(precisionPreservingJSON.parse(data), null, 2);
 }
 
+/** Axios request transformer for bodies containing precise numeric literals. */
+export function transformPrecisionSafeJSONRequest(data: unknown): string {
+  if (typeof data === "string") return data;
+  return precisionPreservingJSON.stringify(data);
+}
+
 /** Axios response transformer for APIs that may return dynamic business data. */
 export function transformPrecisionSafeJSONResponse(data: unknown): unknown {
   if (typeof data !== "string" || data.length === 0) {

@@ -511,7 +511,7 @@ export function SandboxRuntimeScene() {
         />
 
         <Drawer
-          destroyOnClose
+          destroyOnHidden
           extra={
             <AppButton disabled={!selected} onClick={() => void copyDiagnostics()}>
               {t("executionFactoryLab.sandboxRuntimeCopyDiagnostics")}

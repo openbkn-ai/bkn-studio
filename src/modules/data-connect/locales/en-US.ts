@@ -69,6 +69,7 @@ export const dataConnectEnUS = {
       confirm: "Save Anyway",
     },
     tagsPlaceholder: "Press Enter to add tags",
+    tagsHint: "Up to 5 tags, with at most 40 characters each",
     connectorTypeStep: "Connector Type",
     configStep: "Configuration",
     connectorTypeStepTitle: "Select connector type",
@@ -83,6 +84,10 @@ export const dataConnectEnUS = {
     discardChangesDescription:
       "The connection information you entered has not been saved and will be lost if you go back.",
     discardChangesConfirm: "Discard and go back",
+    changeConnectorTitle: "Change connector type?",
+    changeConnectorDescription:
+      "Continuing to the new connector's configuration will clear the current settings and apply the new defaults.",
+    changeConnectorConfirm: "Change connector",
     jsonObjectInvalid: "Enter a valid JSON object.",
     categoryAll: "All",
     selectConnectorTypeRequired: "Please select a connector type first.",
@@ -158,6 +163,7 @@ export const dataConnectEnUS = {
     discoverStrategyHints: {
       full_sync: "Sync all resources, including new discovery and cleanup.",
       create_only: "Discover new resources only. Existing resources are kept.",
+      count_only: "Count existing source tables or views exactly. Complex views may take longer.",
       cleanup_only: "Clean up stale resources only. No new discovery.",
     },
     discoverRunScheduleConfirmTitle: "Run now",
@@ -233,12 +239,15 @@ export const dataConnectEnUS = {
     discoverResultStale: "Stale Resources",
     discoverResultRestored: "Restored Resources",
     discoverResultUnchanged: "Unchanged Resources",
+    discoverResultSkipped: "Skipped",
+    discoverPartialCompletion: "Partially completed",
     discoverResultFailed: "Failed Resources",
     discoverResultMessage: "Result Message",
     discoverManualTask: "Manual Trigger",
     discoverStrategies: {
       full_sync: "Full Sync",
       create_only: "Incremental Create",
+      count_only: "Exact Row Count",
       cleanup_only: "Cleanup Only",
     },
     discoverTaskStatuses: {
@@ -322,6 +331,12 @@ export const dataConnectEnUS = {
         opensearch: {
           description: "Connect OpenSearch indexes.",
         },
+        oracle: {
+          description: "Connect Oracle relational databases.",
+        },
+        hana: {
+          description: "Connect SAP HANA relational databases.",
+        },
         postgresql: {
           description: "Connect PostgreSQL relational databases.",
         },
@@ -330,6 +345,9 @@ export const dataConnectEnUS = {
         },
       },
       fieldLabels: {
+        hana: {
+          database: "Tenant database",
+        },
         account: "Account",
         api_key: "API Key",
         app_id: "Application ID",
@@ -362,6 +380,7 @@ export const dataConnectEnUS = {
         schema: "Schema",
         schema_list: "Schema list",
         schemas: "Schema list",
+        service_name: "Service name",
         secret: "Secret",
         secret_key: "Secret key",
         server: "Host",
@@ -398,9 +417,17 @@ export const dataConnectEnUS = {
         schema_list: "For example: public, ods",
         schemas:
           "Leave empty to discover all accessible schemas, or enter each name and press Enter",
+        service_name: "For example: ORCLPDB1",
         secret: "Enter secret",
         secret_key: "Enter secret",
         server: "For example: db.example.internal",
+        oracleOptions: 'For example: {"timeout":30,"charset":"UTF8"}',
+        hanaDatabase: "For example: TENANT_DB",
+        hanaOptions: 'For example: {"timeout":30}',
+        hanaSchemas:
+          "Leave empty to discover accessible non-system schemas; enter a name and press Enter",
+        oracleSchemas:
+          "Leave empty to discover accessible schemas, or enter a name and press Enter",
         sqlserverOptions: 'For example: {"encrypt":true,"trustservercertificate":false}',
         table: "For example: order_detail",
         token: "Enter access token",
@@ -415,12 +442,18 @@ export const dataConnectEnUS = {
           "When specified, database names must exactly match the database, including case",
         schemaIdentifierCase:
           "When specified, schema names must exactly match the database, including case",
+        oracleSchemaIdentifierCase:
+          "Unquoted lowercase names are normalized to uppercase; wrap case-sensitive lowercase names in double quotes",
+        hanaSchemaIdentifierCase:
+          "Use the schema name as stored in HANA, including case; unquoted names are usually uppercase",
       },
       portPlaceholders: {
         default: "For example: 3306",
         mariadb: "For example: 3306",
         mysql: "For example: 3306",
         opensearch: "For example: 9200",
+        oracle: "For example: 1521",
+        hana: "For example: 30015",
         postgresql: "For example: 5432",
         sqlserver: "For example: 1433",
       },
@@ -464,7 +497,6 @@ export const dataConnectEnUS = {
     descriptionPlaceholder: "Briefly describe the purpose (optional)",
     booleanTrue: "Yes",
     booleanFalse: "No",
-    sensitiveValueHidden: "Hidden",
     switchOn: "On",
     switchOff: "Off",
     selectFieldPlaceholder: "Select {{field}}",

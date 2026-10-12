@@ -34,15 +34,18 @@ type BackendToolboxInfo = {
   category_type?: string;
   create_time?: number;
   create_user?: string;
+  create_user_name?: string;
   is_internal?: boolean;
   metadata_type?: string;
   operations?: string[];
   release_time?: number;
   release_user?: string;
+  release_user_name?: string;
   status?: string;
   tools?: Array<BackendToolInfo | string>;
   update_time?: number;
   update_user?: string;
+  update_user_name?: string;
 };
 
 type BackendToolboxListResponse = {
@@ -126,8 +129,11 @@ function mapToolbox(item: BackendToolboxInfo): ToolboxRecord {
     createTime: normalizeTimestamp(item.create_time),
     updateTime: normalizeTimestamp(item.update_time),
     createUser: item.create_user,
+    createUserName: item.create_user_name,
     updateUser: item.update_user,
+    updateUserName: item.update_user_name,
     releaseUser: item.release_user,
+    releaseUserName: item.release_user_name,
     releaseTime: normalizeTimestamp(item.release_time),
     isInternal: item.is_internal,
   };

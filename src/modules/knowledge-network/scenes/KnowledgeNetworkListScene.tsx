@@ -11,7 +11,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Alert, Checkbox, Dropdown, Empty, Form, Input, Modal, Select, Spin } from "antd";
+import { Alert, Dropdown, Empty, Input, Modal, Select, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -27,8 +27,8 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import type { KnowledgeNetworkListSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkCard } from "@/modules/knowledge-network/components/network/KnowledgeNetworkCard";
-import { getMissingKnowledgeNetworkBusinessOperations } from "@/modules/knowledge-network/components/network/knowledge-network-card";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
+import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { KnowledgeNetworkImportButton } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkImportButton";
@@ -41,10 +41,6 @@ import {
   updateKnowledgeNetwork,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { logServiceFallback } from "@/modules/knowledge-network/services/shared/runtime";
-import {
-  createPermissionRequest,
-  listPermissionRequests,
-} from "@/modules/account/services/permission-requests.service";
 import type {
   KnowledgeNetworkMutationPayload,
   KnowledgeNetworkRecord,
@@ -54,7 +50,6 @@ import styles from "./KnowledgeNetworkListScene.module.css";
 
 const CARD_GRID_PAGE_SIZE = 12;
 const CARD_GRID_PAGE_SIZE_OPTIONS = ["12", "24", "36"];
-type PermissionRequestForm = { operations: string[]; reason: string };
 
 export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkListSceneProps) {
   const { t } = useTranslation();
@@ -82,10 +77,6 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
   const [deleting, setDeleting] = useState(false);
   const [permissionRequestRecord, setPermissionRequestRecord] =
     useState<KnowledgeNetworkRecord | null>(null);
-  const [pendingPermissionOperations, setPendingPermissionOperations] = useState<string[]>([]);
-  const [permissionRequestLoading, setPermissionRequestLoading] = useState(false);
-  const [permissionRequestSubmitting, setPermissionRequestSubmitting] = useState(false);
-  const [permissionRequestForm] = Form.useForm<PermissionRequestForm>();
 
   const hasActiveFilter = useMemo(
     () => Boolean(pageState.keyword.trim()) || selectedTag !== "all",
@@ -167,78 +158,9 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
     setDeletingRecord(record);
   };
 
-  const openPermissionRequest = async (record: KnowledgeNetworkRecord) => {
-    const missingOperations = getMissingKnowledgeNetworkBusinessOperations(record);
-    if (missingOperations.length === 0) {
-      message.info(t("knowledgeNetwork.permissionRequestNoOperations"));
-      return;
-    }
+  const openPermissionRequest = (record: KnowledgeNetworkRecord) => {
     setPermissionRequestRecord(record);
-    setPermissionRequestLoading(true);
-    permissionRequestForm.resetFields();
-    try {
-      const page = await listPermissionRequests("mine", 200, 0);
-      const pendingOperations = page.entries
-        .filter(
-          (request) =>
-            request.status === "pending" &&
-            request.resource_type === "knowledge_network" &&
-            request.resource_id === record.id,
-        )
-        .flatMap((request) =>
-          request.operations?.length ? request.operations : [request.operation],
-        );
-      setPendingPermissionOperations(pendingOperations);
-    } catch (error) {
-      setPermissionRequestRecord(null);
-      message.error(extractRequestErrorMessage(error));
-    } finally {
-      setPermissionRequestLoading(false);
-    }
   };
-
-  const closePermissionRequest = (force = false) => {
-    if (force || !permissionRequestSubmitting) {
-      setPermissionRequestRecord(null);
-      setPendingPermissionOperations([]);
-      permissionRequestForm.resetFields();
-    }
-  };
-
-  const submitPermissionRequest = async (values: PermissionRequestForm) => {
-    if (!permissionRequestRecord) return;
-    const missingOperations = getMissingKnowledgeNetworkBusinessOperations(permissionRequestRecord);
-    const operations = communityBuild ? ["full_business_access"] : values.operations;
-    if (operations.length === 0 || missingOperations.length === 0) return;
-    setPermissionRequestSubmitting(true);
-    try {
-      await createPermissionRequest({
-        resourceType: "knowledge_network",
-        resourceID: permissionRequestRecord.id,
-        resourceName: permissionRequestRecord.name,
-        operations,
-        reason: values.reason,
-      });
-      message.success(t("knowledgeNetwork.permissionRequestSuccess"));
-      closePermissionRequest(true);
-    } catch (error) {
-      message.error(extractRequestErrorMessage(error));
-    } finally {
-      setPermissionRequestSubmitting(false);
-    }
-  };
-
-  const missingPermissionOperations = permissionRequestRecord
-    ? getMissingKnowledgeNetworkBusinessOperations(permissionRequestRecord)
-    : [];
-  const hasPendingFullBusinessAccess = pendingPermissionOperations.includes("full_business_access");
-  const selectablePermissionOperations = communityBuild
-    ? hasPendingFullBusinessAccess
-      ? []
-      : ["full_business_access"]
-    : missingPermissionOperations.filter(
-        (operation) => !pendingPermissionOperations.includes(operation),
-      );
 
   const closeDelete = () => {
     if (deleting) {
@@ -490,83 +412,19 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
         onClose={() => setAuthorizingRecord(null)}
         open={Boolean(authorizingRecord)}
       />
-      <Modal
-        centered
-        confirmLoading={permissionRequestSubmitting}
-        okButtonProps={{
-          disabled: permissionRequestLoading || selectablePermissionOperations.length === 0,
-        }}
-        okText={t("knowledgeNetwork.permissionRequestSubmit")}
-        onCancel={() => closePermissionRequest()}
-        onOk={() => permissionRequestForm.submit()}
-        open={Boolean(permissionRequestRecord)}
-        title={t("knowledgeNetwork.permissionRequestTitle")}
-      >
-        <Spin spinning={permissionRequestLoading}>
-          <Form
-            form={permissionRequestForm}
-            layout="vertical"
-            onFinish={(values) => void submitPermissionRequest(values)}
-          >
-            <Form.Item label={t("knowledgeNetwork.permissionRequestNetwork")}>
-              <Input
-                disabled
-                value={
-                  permissionRequestRecord
-                    ? `${permissionRequestRecord.name} (${permissionRequestRecord.id})`
-                    : ""
-                }
-              />
-            </Form.Item>
-            {communityBuild ? (
-              <Alert
-                showIcon
-                type="warning"
-                message={t("knowledgeNetwork.permissionRequestCommunity")}
-              />
-            ) : null}
-            {pendingPermissionOperations.length > 0 ? (
-              <Alert
-                showIcon
-                style={{ marginTop: 16 }}
-                type="info"
-                message={t("knowledgeNetwork.permissionRequestPending", {
-                  operations: pendingPermissionOperations
-                    .map((operation) => t(`knowledgeNetwork.permissionOperation.${operation}`))
-                    .join("、"),
-                })}
-              />
-            ) : null}
-            {communityBuild ? (
-              <Form.Item
-                label={t("knowledgeNetwork.permissionRequestOperations")}
-                style={{ marginTop: 16 }}
-              >
-                <Checkbox checked disabled>
-                  {t("knowledgeNetwork.permissionOperation.full_business_access")}
-                </Checkbox>
-              </Form.Item>
-            ) : (
-              <Form.Item
-                label={t("knowledgeNetwork.permissionRequestOperations")}
-                name="operations"
-                rules={[{ required: true }]}
-                style={{ marginTop: 16 }}
-              >
-                <Checkbox.Group
-                  options={selectablePermissionOperations.map((operation) => ({
-                    label: t(`knowledgeNetwork.permissionOperation.${operation}`),
-                    value: operation,
-                  }))}
-                />
-              </Form.Item>
-            )}
-            <Form.Item label={t("knowledgeNetwork.permissionRequestReason")} name="reason">
-              <Input.TextArea maxLength={512} rows={3} />
-            </Form.Item>
-          </Form>
-        </Spin>
-      </Modal>
+      {permissionRequestRecord ? (
+        <ResourcePermissionRequestAction
+          onOpenChange={(open) => {
+            if (!open) setPermissionRequestRecord(null);
+          }}
+          open
+          operations={permissionRequestRecord.operations}
+          resourceID={permissionRequestRecord.id}
+          resourceName={permissionRequestRecord.name}
+          resourceType="knowledge_network"
+          trigger="none"
+        />
+      ) : null}
       <Modal
         centered
         closable={!deleting}

@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -42,8 +43,6 @@ import {
   formatOptionalTimestamp,
   resolveToolboxCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
-import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
 
 import styles from "./ToolboxDetailDrawer.module.css";
@@ -109,7 +108,6 @@ export function ToolboxDetailDrawer({
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { exportComponentById, isExporting } = useImpexExport();
-  const auditUserDirectory = useAuditUserDirectory();
   const editPermission =
     record?.metadataType === "function"
       ? "execution-factory:function:edit"
@@ -266,13 +264,13 @@ export function ToolboxDetailDrawer({
       {
         key: "createUser",
         label: t("executionFactory.createUser"),
-        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.createUser }),
+        value: formatAuditUserDisplay({ id: record.createUser, name: record.createUserName }),
         icon: <UserOutlined />,
       },
       {
         key: "updateUser",
         label: t("executionFactory.updateUser"),
-        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.updateUser }),
+        value: formatAuditUserDisplay({ id: record.updateUser, name: record.updateUserName }),
         icon: <UserOutlined />,
       },
       {
@@ -290,7 +288,7 @@ export function ToolboxDetailDrawer({
       {
         key: "releaseUser",
         label: t("executionFactory.releaseUser"),
-        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.releaseUser }),
+        value: formatAuditUserDisplay({ id: record.releaseUser, name: record.releaseUserName }),
         icon: <UserOutlined />,
       },
       {
@@ -300,7 +298,7 @@ export function ToolboxDetailDrawer({
         icon: <CalendarOutlined />,
       },
     ];
-  }, [auditUserDirectory, record, t]);
+  }, [record, t]);
 
   return (
     <ExecutionUnitDetailDrawerLayout

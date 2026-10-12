@@ -215,6 +215,17 @@ export function SubscriptionScene() {
                   得把这几项列出来。默认与升级弹窗同一份卖点;连接器的卖点是整句,卡片上只列
                   它的摘要(`cardBullets`),整句留给弹窗,否则卡片会被拉成一页说明书。
                 */}
+                {plan.edition === "enterprise" ? (
+                  <li>
+                    <CheckOutlined className={styles.tick} />
+                    <span>
+                      {t("subscription.capabilities.connector_certified.name")}
+                      <ul className={styles.planFeatDetail}>
+                        <li>{t("subscription.plans.enterprise.hanaConnector")}</li>
+                      </ul>
+                    </span>
+                  </li>
+                ) : null}
                 {introduced.map((entry) => {
                   const bullets = capabilityCardBullets(t, entry.key);
 

@@ -175,6 +175,14 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     ).not.toBeNull();
   });
 
+  it("shows a request error without assigning a source state when Trace loading fails", async () => {
+    vi.mocked(listTechnicalTraces).mockRejectedValueOnce(new Error("trace query unavailable"));
+
+    render(<TraceAnalysisScene />);
+
+    expect(await screen.findByText("bknTrace.traceWorkspace.listFailed")).not.toBeNull();
+  });
+
   it("opens a real technical Trace into summary, execution chain and raw detail", async () => {
     const { container } = render(<TraceAnalysisScene />);
     expect(container.firstElementChild?.className).toContain("pageSurface");

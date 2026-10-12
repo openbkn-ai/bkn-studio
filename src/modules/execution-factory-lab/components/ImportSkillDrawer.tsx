@@ -65,7 +65,7 @@ export function ImportSkillDrawer({ open, onClose, onImported }: ImportSkillDraw
 
   return (
     <Drawer
-      destroyOnClose
+      destroyOnHidden
       onClose={onClose}
       open={open}
       title={t("executionFactoryLab.importSkillTitle")}

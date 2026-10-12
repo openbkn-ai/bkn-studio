@@ -11,7 +11,6 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
   BUSINESS_MODULES,
@@ -30,9 +29,12 @@ import {
   type LogSourceStatus,
 } from "@/modules/bkn-trace/services/observability.service";
 import {
+  changeTraceEvidenceConfiguration,
   getAccessProfile,
   getTraceEvidenceConfiguration,
-  type CapturePolicy,
+  getTraceEvidenceOperation,
+  type CapturePolicyConfiguration,
+  type CapturePolicyOperation,
 } from "@/modules/bkn-trace/services/trace.service";
 
 type StorageRow = {
@@ -45,33 +47,32 @@ type StorageRow = {
 type SourceLoadState = "loaded" | "not_requested" | "unavailable";
 type ModuleSourceRow = {
   module: BusinessModule;
-  reason?: string;
   sourceIds: string[];
-  status: "healthy" | "not_integrated" | "unavailable" | "unknown";
+  status: "integrated" | "not_integrated";
 };
+
+const SHARED_LOG_SOURCE_ID = "otel-runtime";
+const MANAGEMENT_AUDIT_SOURCE_ID = "audit-ledger";
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
-  const { runtimeConfig } = useAppServices();
-  const superAdmin = runtimeConfig.currentUser.isSuperAdmin;
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
   const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
   const [archives, setArchives] = useState<ArchiveOverview[]>([]);
   const [archiveJobs, setArchiveJobs] = useState<ArchiveJob[]>([]);
   const [archiveManage, setArchiveManage] = useState(false);
-  const [capturePolicy, setCapturePolicy] = useState<CapturePolicy>();
+  const [capturePolicy, setCapturePolicy] = useState<CapturePolicyConfiguration>();
+  const [capturePolicyOperation, setCapturePolicyOperation] = useState<CapturePolicyOperation>();
   const [capturePolicyUnavailable, setCapturePolicyUnavailable] = useState(false);
+  const [capturePolicyOperationUnavailable, setCapturePolicyOperationUnavailable] = useState(false);
+  const [capturePolicyWrite, setCapturePolicyWrite] = useState(false);
+  const [pollingOperationId, setPollingOperationId] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (!superAdmin) {
-      setDenied(true);
-      setLoading(false);
-      return;
-    }
     let active = true;
     getAccessProfile()
       .then(async (profile) => {
@@ -87,6 +88,7 @@ export function ObservabilitySettingsScene() {
           return;
         }
         setArchiveManage(profile.observabilityArchiveManage);
+        setCapturePolicyWrite(profile.traceEvidenceConfigurationWrite);
         const [
           sourceResult,
           policyResult,
@@ -112,7 +114,7 @@ export function ObservabilitySettingsScene() {
             : Promise.resolve<ArchiveJob[]>([]),
           profile.traceEvidenceConfigurationRead
             ? getTraceEvidenceConfiguration()
-            : Promise.resolve<CapturePolicy | undefined>(undefined),
+            : Promise.resolve<CapturePolicyConfiguration | undefined>(undefined),
         ]);
         if (!active) return;
         if (sourceResult.status === "fulfilled") {
@@ -133,8 +135,30 @@ export function ObservabilitySettingsScene() {
         if (capturePolicyResult.status === "fulfilled" && capturePolicyResult.value) {
           setCapturePolicy(capturePolicyResult.value);
           setCapturePolicyUnavailable(false);
+          if (capturePolicyResult.value.activeOperationId) {
+            setPollingOperationId(capturePolicyResult.value.activeOperationId);
+            const operationResult = await Promise.allSettled([
+              getTraceEvidenceOperation(capturePolicyResult.value.activeOperationId),
+            ]);
+            if (!active) return;
+            if (operationResult[0]?.status === "fulfilled") {
+              setCapturePolicyOperation(operationResult[0].value);
+              if (isSettledCapturePolicy(capturePolicyResult.value, operationResult[0].value))
+                setPollingOperationId(undefined);
+              setCapturePolicyOperationUnavailable(false);
+            } else {
+              setCapturePolicyOperation(undefined);
+              setCapturePolicyOperationUnavailable(true);
+            }
+          } else {
+            setCapturePolicyOperation(undefined);
+            setCapturePolicyOperationUnavailable(false);
+          }
         } else if (profile.traceEvidenceConfigurationRead) {
+          setCapturePolicy(undefined);
+          setCapturePolicyOperation(undefined);
           setCapturePolicyUnavailable(true);
+          setCapturePolicyOperationUnavailable(false);
         }
         if (sourceResult.status === "rejected" || policyResult.status === "rejected")
           setError(t("bknTrace.errors.queryFailed"));
@@ -149,67 +173,101 @@ export function ObservabilitySettingsScene() {
     return () => {
       active = false;
     };
-  }, [superAdmin, t]);
+  }, [t]);
+
+  useEffect(() => {
+    if (!pollingOperationId) return;
+    let active = true;
+    let timer: number;
+    let consecutiveFailures = 0;
+    const poll = async () => {
+      let terminal = false;
+      const [operationResult, configurationResult] = await Promise.allSettled([
+        getTraceEvidenceOperation(pollingOperationId),
+        getTraceEvidenceConfiguration(),
+      ]);
+      if (!active) return;
+      if (operationResult.status === "fulfilled") {
+        setCapturePolicyOperation(operationResult.value);
+        setCapturePolicyOperationUnavailable(false);
+      } else {
+        setCapturePolicyOperation(undefined);
+        setCapturePolicyOperationUnavailable(true);
+      }
+      if (configurationResult.status === "fulfilled") {
+        setCapturePolicy(configurationResult.value);
+        setCapturePolicyUnavailable(false);
+        terminal =
+          operationResult.status === "fulfilled"
+            ? isSettledCapturePolicy(configurationResult.value, operationResult.value)
+            : !configurationResult.value.activeOperationId;
+      } else {
+        setCapturePolicyUnavailable(true);
+      }
+      consecutiveFailures =
+        operationResult.status === "rejected" || configurationResult.status === "rejected"
+          ? consecutiveFailures + 1
+          : 0;
+      if (terminal || consecutiveFailures >= 5) setPollingOperationId(undefined);
+      else timer = window.setTimeout(() => void poll(), 2000);
+    };
+    timer = window.setTimeout(() => void poll(), 2000);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [pollingOperationId]);
 
   const moduleSources = useMemo<ModuleSourceRow[]>(
     () =>
-      BUSINESS_MODULES.map((module) => {
-        if (sourceLoadState === "not_requested")
-          return { module, reason: "source_not_requested", sourceIds: [], status: "unknown" };
-        if (sourceLoadState === "unavailable")
-          return { module, reason: "source_query_failed", sourceIds: [], status: "unavailable" };
-        const matching = sources.filter((source) => source.coveredModules.includes(module));
-        if (!matching.length) return { module, sourceIds: [], status: "not_integrated" };
-        const unavailable = matching.find(
-          (source) => !["available", "healthy", "not_integrated"].includes(source.status),
-        );
-        if (unavailable) {
-          return {
-            module,
-            reason: unavailable.reason,
-            sourceIds: matching.map((source) => source.sourceId),
-            status: "unavailable",
-          };
-        }
-        if (matching.some((source) => ["available", "healthy"].includes(source.status))) {
-          return {
-            module,
-            reason: matching.map((source) => source.reason).find(Boolean),
-            sourceIds: matching.map((source) => source.sourceId),
-            status: "healthy",
-          };
-        }
-        return {
-          module,
-          reason: matching.map((source) => source.reason).find(Boolean),
-          sourceIds: matching.map((source) => source.sourceId),
-          status: "not_integrated",
-        };
-      }),
+      sourceLoadState === "loaded"
+        ? BUSINESS_MODULES.map((module) => {
+            const directSourceIds = sources
+              .filter(
+                (source) =>
+                  source.coveredModules.includes(module) && source.status !== "not_integrated",
+              )
+              .map((source) => source.sourceId);
+            const sharedSourceIds =
+              module === "observability"
+                ? []
+                : sources
+                    .filter(
+                      (source) =>
+                        source.sourceId === SHARED_LOG_SOURCE_ID &&
+                        source.status !== "not_integrated",
+                    )
+                    .map((source) => source.sourceId);
+            const maintenanceSourceIds =
+              module === "observability"
+                ? sources
+                    .filter(
+                      (source) =>
+                        source.sourceId === MANAGEMENT_AUDIT_SOURCE_ID &&
+                        source.status !== "not_integrated",
+                    )
+                    .map((source) => source.sourceId)
+                : [];
+            const sourceIds = [
+              ...new Set([...directSourceIds, ...sharedSourceIds, ...maintenanceSourceIds]),
+            ];
+            return {
+              module,
+              sourceIds,
+              status: sourceIds.length ? "integrated" : "not_integrated",
+            };
+          })
+        : [],
     [sourceLoadState, sources],
   );
 
-  const excludedOperationAuditSources = useMemo(
-    () =>
-      sources.filter(
-        (source) =>
-          !source.coveredModules.some((module) =>
-            BUSINESS_MODULES.includes(module as BusinessModule),
-          ),
-      ),
-    [sources],
+  const overview = useMemo(
+    () => ({
+      integrated: moduleSources.filter((source) => source.status === "integrated").length,
+      notIntegrated: moduleSources.filter((source) => source.status === "not_integrated").length,
+    }),
+    [moduleSources],
   );
-
-  const overview = useMemo(() => {
-    const healthy = moduleSources.filter((source) => source.status === "healthy").length;
-    const unavailable = moduleSources.filter((source) => source.status === "unavailable").length;
-    return {
-      healthy,
-      registered: moduleSources.length,
-      unavailable,
-      unconfigured: moduleSources.filter((source) => source.status === "not_integrated").length,
-    };
-  }, [moduleSources]);
 
   const sourceColumns: ColumnsType<ModuleSourceRow> = [
     {
@@ -221,35 +279,25 @@ export function ObservabilitySettingsScene() {
     {
       dataIndex: "sourceIds",
       key: "sourceIds",
-      title: t("bknTrace.settings.columns.source"),
-      render: (sourceIds: string[], row) =>
+      title: t("bknTrace.settings.independentQuerySource"),
+      render: (sourceIds: string[]) =>
         sourceIds.length
           ? sourceIds
               .map((sourceId) =>
                 t(`bknTrace.settings.sourceLabels.${sourceId}`, { defaultValue: sourceId }),
               )
               .join("、")
-          : t(
-              row.status === "not_integrated"
-                ? "bknTrace.settings.sourceNotIntegrated"
-                : "bknTrace.settings.sourceNotReturned",
-            ),
+          : t("bknTrace.settings.sourceNotIntegrated"),
     },
     {
       dataIndex: "status",
       key: "status",
-      title: t("bknTrace.settings.columns.status"),
+      title: t("bknTrace.settings.integrationStatus"),
       render: (value: ModuleSourceRow["status"]) => (
-        <Tag color={value === "healthy" ? "green" : value === "unavailable" ? "orange" : "default"}>
-          {t(`bknTrace.settings.status.${value}`)}
+        <Tag color={value === "integrated" ? "green" : "default"}>
+          {t(`bknTrace.settings.integration.${value}`)}
         </Tag>
       ),
-    },
-    {
-      dataIndex: "reason",
-      key: "reason",
-      title: t("bknTrace.settings.columns.dataState"),
-      render: (value?: string) => sourceStateLabel(value, t),
     },
   ];
 
@@ -261,8 +309,8 @@ export function ObservabilitySettingsScene() {
         dataKind: t("bknTrace.settings.storage.runtimeLogs"),
         description: t("bknTrace.settings.storage.defaultValue"),
         key: "runtime",
-        retention: retention("runtime.system"),
-        status: retention("runtime.system") === undefined ? "unknown" : "known",
+        retention: retention("runtime.business"),
+        status: retention("runtime.business") === undefined ? "unknown" : "known",
       },
       {
         dataKind: t("bknTrace.settings.storage.auditLogs"),
@@ -301,12 +349,7 @@ export function ObservabilitySettingsScene() {
     },
   ];
 
-  if (!superAdmin || loading)
-    return superAdmin ? (
-      <Spin />
-    ) : (
-      <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />
-    );
+  if (loading) return <Spin />;
   if (denied) return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
   return (
     <div className={styles.workspace}>
@@ -316,45 +359,54 @@ export function ObservabilitySettingsScene() {
           <Typography.Text type="secondary">{t("bknTrace.settings.description")}</Typography.Text>
         </div>
       </header>
-      <Alert message={t("bknTrace.settings.readOnlyNotice")} showIcon type="info" />
       {error ? <Alert message={error} showIcon type="error" /> : null}
 
       {capturePolicy || capturePolicyUnavailable ? (
-        <CapturePolicySection policy={capturePolicy} unavailable={capturePolicyUnavailable} />
+        <CapturePolicySection
+          configuration={capturePolicy}
+          operation={capturePolicyOperation}
+          operationUnavailable={capturePolicyOperationUnavailable}
+          unavailable={capturePolicyUnavailable}
+          canWrite={capturePolicyWrite}
+          onChange={async (desiredState, expectedRevision) => {
+            const configuration = await changeTraceEvidenceConfiguration(
+              desiredState,
+              expectedRevision,
+            );
+            setCapturePolicy(configuration);
+            setCapturePolicyOperation(undefined);
+            setCapturePolicyOperationUnavailable(false);
+            setPollingOperationId(configuration.activeOperationId);
+          }}
+        />
       ) : null}
 
-      <SettingsSection title={t("bknTrace.settings.overview")}>
-        <div className={styles.metricGrid}>
-          <Metric label={t("bknTrace.settings.metrics.registered")} value={overview.registered} />
-          <Metric label={t("bknTrace.settings.metrics.healthy")} value={overview.healthy} />
-          <Metric label={t("bknTrace.settings.metrics.unavailable")} value={overview.unavailable} />
-          <Metric
-            label={t("bknTrace.settings.metrics.unconfigured")}
-            value={overview.unconfigured}
-          />
-          <Metric
-            label={t("bknTrace.settings.metrics.updatedAt")}
-            value={t("bknTrace.settings.notReturned")}
-          />
-        </div>
-      </SettingsSection>
+      {sourceLoadState === "loaded" ? (
+        <>
+          <SettingsSection title={t("bknTrace.settings.overview")}>
+            <div className={styles.metricGrid}>
+              <Metric
+                label={t("bknTrace.settings.metrics.integrated")}
+                value={overview.integrated}
+              />
+              <Metric
+                label={t("bknTrace.settings.metrics.notIntegrated")}
+                value={overview.notIntegrated}
+              />
+            </div>
+          </SettingsSection>
 
-      <SettingsSection title={t("bknTrace.settings.sources")}>
-        <Table
-          columns={sourceColumns}
-          dataSource={moduleSources}
-          pagination={false}
-          rowKey="module"
-          tableLayout="fixed"
-        />
-        {excludedOperationAuditSources.length ? (
-          <Typography.Paragraph type="secondary">
-            {t("bknTrace.settings.excludedOperationAuditSources", {
-              count: excludedOperationAuditSources.length,
-            })}
-          </Typography.Paragraph>
-        ) : null}
-      </SettingsSection>
+          <SettingsSection title={t("bknTrace.settings.sources")}>
+            <Table
+              columns={sourceColumns}
+              dataSource={moduleSources}
+              pagination={false}
+              rowKey="module"
+              tableLayout="fixed"
+            />
+          </SettingsSection>
+        </>
+      ) : null}
 
       <SettingsSection title={t("bknTrace.settings.storageRetention")}>
         <div className={styles.storageLayout}>
@@ -594,50 +646,146 @@ function SettingsSection({ children, title }: { children: ReactNode; title: stri
 }
 
 function CapturePolicySection({
-  policy,
+  canWrite,
+  configuration,
+  onChange,
+  operation,
+  operationUnavailable,
   unavailable,
 }: {
-  policy?: CapturePolicy;
+  canWrite: boolean;
+  configuration?: CapturePolicyConfiguration;
+  onChange: (desiredState: "enabled" | "disabled", expectedRevision: number) => Promise<void>;
+  operation?: CapturePolicyOperation;
+  operationUnavailable: boolean;
   unavailable: boolean;
 }) {
   const { t } = useTranslation();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [changeError, setChangeError] = useState(false);
+  const nextState = configuration?.desiredState === "enabled" ? "disabled" : "enabled";
+  const stable =
+    configuration &&
+    configuration.desiredState === configuration.effectiveState &&
+    (configuration.desiredState === "enabled" || configuration.desiredState === "disabled");
+  const change = async () => {
+    if (!configuration || !stable) return;
+    setSubmitting(true);
+    setChangeError(false);
+    try {
+      await onChange(nextState, configuration.policyRevision);
+      setConfirmOpen(false);
+    } catch {
+      setChangeError(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <SettingsSection title={t("bknTrace.settings.capturePolicy.title")}>
-      {unavailable || !policy ? (
+      {unavailable || !configuration ? (
         <Alert message={t("bknTrace.settings.capturePolicy.unavailable")} showIcon type="warning" />
       ) : (
         <>
           <div className={styles.metricGrid}>
             <Metric
               label={t("bknTrace.settings.capturePolicy.desiredState")}
-              value={t(`bknTrace.settings.capturePolicy.states.${policy.desiredState}`)}
+              value={t(`bknTrace.settings.capturePolicy.states.${configuration.desiredState}`)}
             />
             <Metric
               label={t("bknTrace.settings.capturePolicy.effectiveState")}
-              value={t(`bknTrace.settings.capturePolicy.states.${policy.effectiveState}`)}
+              value={t(`bknTrace.settings.capturePolicy.states.${configuration.effectiveState}`)}
             />
             <Metric
               label={t("bknTrace.settings.capturePolicy.phase")}
-              value={t(`bknTrace.settings.capturePolicy.phases.${policy.operation.phase}`)}
+              value={
+                operation
+                  ? t(`bknTrace.settings.capturePolicy.phases.${operation.phase}`)
+                  : operationUnavailable
+                    ? t("bknTrace.settings.capturePolicy.dataUnavailable")
+                    : configuration.activeOperationId
+                      ? t("bknTrace.settings.capturePolicy.phases.pending")
+                      : t("bknTrace.settings.capturePolicy.noActiveOperation")
+              }
             />
-            <Metric label={t("bknTrace.settings.capturePolicy.revision")} value={policy.revision} />
+            <Metric
+              label={t("bknTrace.settings.capturePolicy.revision")}
+              value={configuration.policyRevision}
+            />
+            <Metric
+              label={t("bknTrace.settings.capturePolicy.lastStableRevision")}
+              value={configuration.lastStableRevision}
+            />
           </div>
-          {policy.coverageGap ? (
+          {canWrite ? (
+            <Button
+              disabled={!stable || Boolean(configuration.activeOperationId) || submitting}
+              onClick={() => {
+                setChangeError(false);
+                setConfirmOpen(true);
+              }}
+              type="primary"
+            >
+              {t(
+                `bknTrace.settings.capturePolicy.${nextState === "enabled" ? "enable" : "disable"}`,
+              )}
+            </Button>
+          ) : null}
+          {!stable &&
+          !configuration.activeOperationId &&
+          (operation?.phase === "failed" || operation?.phase === "rollback_failed") ? (
             <Alert
-              message={t("bknTrace.settings.capturePolicy.coverageGap")}
+              message={t("bknTrace.settings.capturePolicy.reconcileRequired")}
               showIcon
               type="warning"
             />
           ) : null}
-          <Typography.Paragraph type="secondary">
-            {t("bknTrace.settings.capturePolicy.acknowledgementCount", {
-              count: policy.acknowledgements.length,
-            })}
-          </Typography.Paragraph>
+          <Modal
+            cancelText={t("common.cancel")}
+            confirmLoading={submitting}
+            okText={t("bknTrace.settings.capturePolicy.confirmAction")}
+            onCancel={() => {
+              setChangeError(false);
+              setConfirmOpen(false);
+            }}
+            onOk={() => void change()}
+            open={confirmOpen}
+            title={t("bknTrace.settings.capturePolicy.confirmTitle")}
+          >
+            <Typography.Paragraph>
+              {t("bknTrace.settings.capturePolicy.confirmWarning")}
+            </Typography.Paragraph>
+            {changeError ? (
+              <Alert
+                message={t("bknTrace.settings.capturePolicy.changeFailed")}
+                showIcon
+                type="error"
+              />
+            ) : null}
+          </Modal>
+          {operationUnavailable ? (
+            <Alert
+              message={t("bknTrace.settings.capturePolicy.operationUnavailable")}
+              showIcon
+              type="info"
+            />
+          ) : null}
         </>
       )}
     </SettingsSection>
   );
+}
+
+function isTerminalCapturePolicyPhase(phase: CapturePolicyOperation["phase"]): boolean {
+  return ["succeeded", "failed", "rollback_completed", "rollback_failed"].includes(phase);
+}
+
+function isSettledCapturePolicy(
+  configuration: CapturePolicyConfiguration,
+  operation: CapturePolicyOperation,
+): boolean {
+  return isTerminalCapturePolicyPhase(operation.phase) && !configuration.activeOperationId;
 }
 
 function Metric({ label, value }: { label: string; value: number | string }) {
@@ -647,12 +795,4 @@ function Metric({ label, value }: { label: string; value: number | string }) {
       <Typography.Text strong>{value}</Typography.Text>
     </div>
   );
-}
-
-function sourceStateLabel(
-  reason: string | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-) {
-  if (!reason) return t("bknTrace.settings.noIssueReturned");
-  return t(`bknTrace.settings.sourceState.${reason}`, { defaultValue: reason });
 }

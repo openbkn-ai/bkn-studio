@@ -12,12 +12,12 @@ import {
   listDomainObjectsPage,
   resolveGrantNames,
 } from "@/modules/system-admin/services/authz-objects.service";
+import { listRoles, listUsersPage } from "@/modules/system-admin/services/admin.service";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type {
   AuthorizableObject,
   AuthzSummary,
   EffectiveDecision,
-  EnterpriseObjectGrant,
   GrantRecord,
   ObjectGrant,
   ObjectGrantInput,
@@ -462,11 +462,13 @@ export async function upsertObjectGrant(
     "bundle" in input
       ? {
           accessor_id: input.accessorId,
+          accessor_type: input.accessorType ?? "user",
           bundle: input.bundle,
           resource: { type: input.objType, id: input.objId },
         }
       : {
           accessor_id: input.accessorId,
+          accessor_type: input.accessorType ?? "user",
           effect: input.effect ?? "allow",
           operations: input.operations,
           resource: { type: input.objType, id: input.objId },
@@ -705,11 +707,13 @@ export async function upsertObjectGrantForObject(input: ObjectGrantInput): Promi
     "bundle" in input
       ? {
           accessor_id: input.accessorId,
+          accessor_type: input.accessorType ?? "user",
           bundle: input.bundle,
           resource: { id: input.objId, type: input.objType },
         }
       : {
           accessor_id: input.accessorId,
+          accessor_type: input.accessorType ?? "user",
           effect: input.effect ?? "allow",
           operations: input.operations,
           resource: { id: input.objId, type: input.objType },
@@ -750,14 +754,21 @@ export async function revokeObjectGrantsForObject(grantIds: string[]): Promise<v
 export async function listGrantableUsersForObject(
   objType: string,
   objId: string,
-  search: string,
+  search = "",
 ): Promise<AdminUser[]> {
+  const normalizedSearch = search.trim();
   if (useMock) {
-    return [];
+    const result = await listUsersPage({
+      enabled: true,
+      limit: 50,
+      offset: 0,
+      search: normalizedSearch,
+    });
+    return result.users;
   }
   const response = await http.get<{ users?: { account?: string; id?: string; name?: string }[] }>(
     "/safe/v1/me/grantable-users",
-    { params: { resource_id: objId, resource_type: objType, search: search.trim() } },
+    { params: { resource_id: objId, resource_type: objType, search: normalizedSearch } },
   );
   return (response.data.users ?? [])
     .filter((user) => user.id)
@@ -773,53 +784,31 @@ export async function listGrantableUsersForObject(
     }));
 }
 
-/** Read-only Enterprise compatibility inventory. Runtime eligibility is supplied by the server. */
-export async function listEnterpriseObjectGrants(
-  query: {
-    accessorId?: string;
-    resourceId?: string;
-    resourceType?: string;
-  } = {},
-): Promise<EnterpriseObjectGrant[]> {
+export type GrantableRole = {
+  description: string;
+  id: string;
+  name: string;
+};
+
+/** Existing roles this exact object may be shared with; membership is intentionally unavailable. */
+export async function listGrantableRolesForObject(
+  objType: string,
+  objId: string,
+  search = "",
+): Promise<GrantableRole[]> {
+  const normalizedSearch = search.trim();
   if (useMock) {
-    return wait([]);
+    const all = await listRoles();
+    const keyword = normalizedSearch.toLowerCase();
+    return all
+      .filter((role) =>
+        keyword ? `${role.name} ${role.description}`.toLowerCase().includes(keyword) : true,
+      )
+      .slice(0, 50)
+      .map(({ description, id, name }) => ({ description, id, name }));
   }
-  const response = await http.get<{
-    entries?: Array<{
-      activation_state?: EnterpriseObjectGrant["activationState"];
-      accessor_id?: string;
-      classification?: string;
-      effect?: EnterpriseObjectGrant["effect"];
-      expires_at?: string;
-      grant_id?: string;
-      inactive_reason?: string;
-      operation?: string;
-      resource_id?: string;
-      resource_type?: string;
-      rule_id?: string;
-      runtime_eligible?: boolean;
-      subject_type?: EnterpriseObjectGrant["subjectType"];
-    }>;
-  }>(`${ADMIN}/enterprise-object-grants`, {
-    params: {
-      accessor_id: query.accessorId,
-      resource_id: query.resourceId,
-      resource_type: query.resourceType,
-    },
+  const response = await http.get<{ roles?: GrantableRole[] }>("/safe/v1/me/grantable-roles", {
+    params: { resource_id: objId, resource_type: objType, search: normalizedSearch || undefined },
   });
-  return (response.data.entries ?? []).map((entry) => ({
-    activationState: entry.activation_state ?? "invalid",
-    accessorId: entry.accessor_id ?? "",
-    classification: entry.classification ?? "",
-    effect: entry.effect ?? "deny",
-    expiresAt: entry.expires_at,
-    grantId: entry.grant_id ?? "",
-    inactiveReason: entry.inactive_reason,
-    operation: entry.operation ?? "",
-    resourceId: entry.resource_id ?? "",
-    resourceType: entry.resource_type ?? "",
-    ruleId: entry.rule_id ?? "",
-    runtimeEligible: entry.runtime_eligible === true,
-    subjectType: entry.subject_type ?? "unknown",
-  }));
+  return (response.data.roles ?? []).filter((role) => role.id);
 }

@@ -8,15 +8,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
+const putMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock },
+  http: { get: getMock, put: putMock },
 }));
 
 describe("BKN Trace access profile service", () => {
   beforeEach(() => {
     vi.resetModules();
     getMock.mockReset();
+    putMock.mockReset();
   });
 
   it("uses only the server-derived whole-record access profile", async () => {
@@ -55,25 +57,84 @@ describe("BKN Trace access profile service", () => {
       securityAudit: false,
       technicalTrace: false,
       traceEvidenceConfigurationRead: false,
+      traceEvidenceConfigurationWrite: false,
     });
     expect(getMock.mock.calls.flat().join(" ")).not.toContain("roles");
   });
 
-  it("reads the unified Trace/Evidence policy without collapsing effective state to a boolean", async () => {
+  it("maps the exact server write grant and submits revision-guarded change", async () => {
     getMock.mockResolvedValue({
+      data: { trace_evidence_configuration_read: true, trace_evidence_configuration_write: true },
+    });
+    putMock.mockResolvedValue({
       data: {
-        revision: 9,
-        desired_state: "enabled",
-        effective_state: "enabling",
-        last_stable_revision: 8,
-        coverage_gap: false,
+        desired_state: "disabled",
+        effective_state: "enabled",
+        revision: 10,
+        last_stable_revision: 9,
         operation: {
-          id: "op-9",
-          phase: "enabling",
-          requested_state: "enabled",
+          id: "op-10",
+          phase: "disabling",
+          requested_state: "disabled",
           expected_revision: 9,
         },
-        acknowledgements: [],
+      },
+    });
+    const { getAccessProfile, changeTraceEvidenceConfiguration } =
+      await import("@/modules/bkn-trace/services/trace.service");
+
+    await expect(getAccessProfile()).resolves.toMatchObject({
+      traceEvidenceConfigurationRead: true,
+      traceEvidenceConfigurationWrite: true,
+    });
+    await expect(changeTraceEvidenceConfiguration("disabled", 9)).resolves.toMatchObject({
+      desiredState: "disabled",
+      effectiveState: "enabled",
+      policyRevision: 10,
+      activeOperationId: "op-10",
+    });
+    expect(putMock).toHaveBeenCalledWith("/agent-observability/v1/trace-evidence-configuration", {
+      desired_state: "disabled",
+      expected_revision: 9,
+    });
+  });
+
+  it("accepts revision zero when the frozen PUT snapshot includes its operation", async () => {
+    putMock.mockResolvedValue({
+      data: {
+        desired_state: "disabled",
+        effective_state: "enabled",
+        revision: 0,
+        last_stable_revision: 0,
+        operation: {
+          id: "op-zero",
+          phase: "disabling",
+          requested_state: "disabled",
+          expected_revision: 0,
+        },
+      },
+    });
+    const { changeTraceEvidenceConfiguration } =
+      await import("@/modules/bkn-trace/services/trace.service");
+
+    await expect(changeTraceEvidenceConfiguration("disabled", 0)).resolves.toMatchObject({
+      policyRevision: 0,
+      activeOperationId: "op-zero",
+    });
+  });
+
+  it("reads the frozen configuration_get contract without inventing operation or queue fields", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        kind: "configuration_get",
+        desired_state: "enabled",
+        effective_state: "enabled",
+        policy_revision: 9,
+        last_stable_revision: 8,
+        active_operation_id: "op-9",
+        heartbeat_interval_seconds: 10,
+        lease_ttl_seconds: 30,
+        admission_budget: { contract_version: "AdmissionBudgetV1" },
       },
     });
 
@@ -81,34 +142,49 @@ describe("BKN Trace access profile service", () => {
       await import("@/modules/bkn-trace/services/trace.service");
 
     await expect(getTraceEvidenceConfiguration()).resolves.toEqual({
-      revision: 9,
+      kind: "configuration_get",
       desiredState: "enabled",
-      effectiveState: "enabling",
+      effectiveState: "enabled",
+      policyRevision: 9,
       lastStableRevision: 8,
-      coverageGap: false,
-      operation: {
-        id: "op-9",
-        phase: "enabling",
-        requestedState: "enabled",
-        expectedRevision: 9,
-      },
-      acknowledgements: [],
+      activeOperationId: "op-9",
+      heartbeatIntervalSeconds: 10,
+      leaseTtlSeconds: 30,
     });
     expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/trace-evidence-configuration");
   });
 
-  it("preserves unknown state when the backend omits policy fields", async () => {
-    getMock.mockResolvedValue({ data: { revision: 10 } });
+  it("reads an active operation through its separate operation resource", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        id: "op-9",
+        phase: "enabling",
+        requested_state: "enabled",
+        expected_revision: 9,
+      },
+    });
+    const { getTraceEvidenceOperation } =
+      await import("@/modules/bkn-trace/services/trace.service");
+
+    await expect(getTraceEvidenceOperation("op-9")).resolves.toEqual({
+      id: "op-9",
+      phase: "enabling",
+      requestedState: "enabled",
+      expectedRevision: 9,
+    });
+    expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/trace-evidence-operations/op-9");
+  });
+
+  it("normalizes missing configuration states without fabricating queue or gap data", async () => {
+    getMock.mockResolvedValue({ data: { kind: "configuration_get", policy_revision: 10 } });
     const { getTraceEvidenceConfiguration } =
       await import("@/modules/bkn-trace/services/trace.service");
 
     await expect(getTraceEvidenceConfiguration()).resolves.toMatchObject({
       desiredState: "unknown",
       effectiveState: "unknown",
-      operation: {
-        phase: "unknown",
-        requestedState: "unknown",
-      },
+      policyRevision: 10,
+      activeOperationId: undefined,
     });
   });
 });

@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   presentLogAction,
+  presentLogFact,
   presentLogActor,
   presentLogTarget,
   presentTargetType,
@@ -45,6 +46,16 @@ const translateZhCN = createLocaleTranslator(bknTraceZhCN);
 const translateEnUS = createLocaleTranslator(bknTraceEnUS);
 
 describe("log presentation", () => {
+  it("localizes known facts without changing the meaning of completion or hiding unknown values", () => {
+    expect(presentLogFact("operationType", "conversation.create", translateZhCN)).toBe(
+      "发起 Agent 业务会话",
+    );
+    expect(presentLogFact("operationStatus", "completed", translateZhCN)).toBe("已完成");
+    expect(presentLogFact("businessContext", "managed", translateZhCN)).toBe("受管会话");
+    expect(presentLogFact("operationStatus", "custom_status", translateZhCN)).toBe("custom_status");
+    expect(presentLogFact("businessContext", "other", translateEnUS)).toBe("other");
+  });
+
   it("presents a system user creation as a readable business action", () => {
     const record = {
       action: "create",
@@ -67,6 +78,187 @@ describe("log presentation", () => {
     expect(presentLogAction(record, translateZhCN)).toBe("用户登录");
   });
 
+  it("presents a technical access session as a readable login session", () => {
+    const record = {
+      action: "login",
+      eventName: "login.succeeded",
+      logCategory: "access.user",
+      businessModule: "system_management",
+      target: {
+        id: "session:38afbb4fc86703514e2bf16ede39a327",
+        name: "session:38afbb4fc86703514e2bf16ede39a327",
+        type: "session",
+      },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "登录会话",
+      secondary: "session:38afbb4fc86703514e2bf16ede39a327",
+    });
+    expect(presentTargetType(record, translateZhCN)).toBe("登录会话");
+  });
+
+  it("presents an authorization decision with a business-readable action and target", () => {
+    const record = {
+      action: "check",
+      actor: { id: "anonymous", name: "anonymous", type: "anonymous" },
+      authMethod: "unknown",
+      businessModule: "system_management",
+      eventName: "authorization.decided",
+      logCategory: "audit.security",
+      target: {
+        id: "decision:decision-1",
+        name: "decision:decision-1",
+        type: "authorization_decision",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("鉴权判定");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "授权决策",
+      secondary: "decision:decision-1",
+    });
+    expect(presentLogActor(record, translateZhCN).primary).toBe("未识别调用方");
+  });
+
+  it("presents a permission request without exposing its technical identifier as the name", () => {
+    const record = {
+      action: "get",
+      actor: { id: "system:access", name: "system:access", type: "service_account" },
+      authMethod: "oauth",
+      businessModule: "system_management",
+      eventName: "resource.read",
+      logCategory: "audit.admin",
+      target: {
+        id: "permission_request:request-1",
+        name: "permission_request:request-1",
+        type: "permission_request",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("查询权限请求");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "权限请求",
+      secondary: "permission_request:request-1",
+    });
+    expect(presentLogActor(record, translateZhCN).primary).toBe("系统服务");
+  });
+
+  it("presents the compact security producer decision record from the live log", () => {
+    const record = {
+      action: "check",
+      actor: { id: "anonymous", name: "anonymous", type: "anonymous" },
+      businessModule: "system_management",
+      logCategory: "audit.security",
+      target: {
+        id: "decision:decision-1",
+        name: "decision:decision-1",
+        type: "resource",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("鉴权判定");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "授权决策",
+      secondary: "decision:decision-1",
+    });
+  });
+
+  it("presents the compact permission-request read record from the live log", () => {
+    const record = {
+      action: "get",
+      businessModule: "system_management",
+      logCategory: "audit.admin",
+      target: {
+        id: "permission_request:request-1",
+        name: "permission_request:request-1",
+        type: "resource",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("查询权限请求");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "权限请求",
+      secondary: "permission_request:request-1",
+    });
+  });
+
+  it("does not relabel an authorization event whose target is a real business resource", () => {
+    const record = {
+      action: "check",
+      businessModule: "system_management",
+      eventName: "authorization.decided",
+      logCategory: "audit.security",
+      target: { id: "material", name: "物料", type: "object_type" },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("鉴权判定");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "对象类: 物料",
+      secondary: "material",
+    });
+    expect(presentTargetType(record, translateZhCN)).toBe("对象类");
+  });
+
+  it("uses the semantic target label when an authorization decision has no name snapshot", () => {
+    const record = {
+      target: { id: "decision-1", name: "", type: "authorization_decision" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "授权决策",
+      secondary: "decision-1",
+    });
+  });
+
+  it("keeps the target id as the fallback for ordinary records without a name snapshot", () => {
+    const record = {
+      target: { id: "user-1", name: "", type: "user" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "user-1",
+      secondary: "user-1",
+    });
+  });
+
+  it("shows the object type together with the producer snapshot", () => {
+    const record = {
+      action: "update",
+      businessModule: "data_resource_knowledge_network",
+      target: { id: "catalog-a", name: "audit-e2e-vega-20260928", type: "catalog" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "数据目录: audit-e2e-vega-20260928",
+      secondary: "catalog-a",
+    });
+  });
+
+  it("does not repeat an id when the producer snapshot is the id", () => {
+    const record = {
+      target: { id: "catalog-a", name: "catalog-a", type: "catalog" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "数据目录: catalog-a",
+      secondary: undefined,
+    });
+  });
+
+  it("degrades safely when a producer omits nullable target or actor snapshots", () => {
+    const record = {
+      actor: { id: null, name: null, type: "user" },
+      target: { id: "user-1", name: null, type: "user" },
+    } as unknown as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "user-1",
+      secondary: "user-1",
+    });
+    expect(presentLogActor(record, translateZhCN).primary).toBe("-");
+  });
+
   it("uses the current authenticated username when an old event only contains its user id", () => {
     const record = {
       actor: {
@@ -77,7 +269,7 @@ describe("log presentation", () => {
       authMethod: "unknown",
     } as LogRecord;
 
-    expect(presentLogActor(record, translate, new Map()).primary).toBe("Administrator");
+    expect(presentLogActor(record, translate).primary).toBe("Administrator");
   });
 
   it.each([
@@ -102,7 +294,10 @@ describe("log presentation", () => {
 
       expect(presentLogAction(record, translateZhCN)).toBe(expectedAction);
       expect(presentTargetType(record, translateZhCN)).toBe(expectedType);
-      expect(presentLogTarget(record, translateZhCN)).toEqual({ primary: name, secondary: id });
+      expect(presentLogTarget(record, translateZhCN)).toEqual({
+        primary: `${expectedType}: ${name}`,
+        secondary: id,
+      });
     },
   );
 

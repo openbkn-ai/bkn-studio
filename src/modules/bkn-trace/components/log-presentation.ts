@@ -6,11 +6,31 @@
  */
 
 import type { LogRecord } from "@/modules/bkn-trace/services/observability.service";
-import { getRuntimeConfig } from "@/framework/runtime/config";
+import {
+  formatAuditUserDisplay,
+  type AuditUserDisplayInput,
+} from "@/framework/audit/audit-user-display";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 export type LogText = { primary: string; secondary?: string };
+
+export function presentLogFact(
+  field: "operationType" | "operationStatus" | "businessContext",
+  value: string,
+  t: Translate,
+) {
+  const keys: Record<string, Record<string, string>> = {
+    operationType: { "conversation.create": "bknTrace.logs.auditActions.startAgentConversation" },
+    operationStatus: {
+      completed: "bknTrace.logs.detail.statuses.completed",
+      failed: "bknTrace.logs.detail.statuses.failed",
+    },
+    businessContext: { managed: "bknTrace.logs.detail.contexts.managed" },
+  };
+  const key = keys[field][value];
+  return key ? t(key) : value;
+}
 
 export function isAgentConversationCreated(record: LogRecord) {
   return record.eventName === "conversation.created" && record.target.type === "conversation";
@@ -19,6 +39,11 @@ export function isAgentConversationCreated(record: LogRecord) {
 export function presentLogAction(record: LogRecord, t: Translate) {
   if (isAgentConversationCreated(record))
     return t("bknTrace.logs.auditActions.startAgentConversation");
+  const semanticAction = semanticActionKey(record);
+  if (semanticAction) {
+    const label = t(`bknTrace.logs.semanticActions.${semanticAction}`, { defaultValue: "" });
+    if (label && label !== `bknTrace.logs.semanticActions.${semanticAction}`) return label;
+  }
   if (record.logCategory === "access.user") {
     const key = `bknTrace.logs.accessActions.${record.action}`;
     const label = t(key, { defaultValue: "" });
@@ -64,7 +89,26 @@ function normalizedSystemTargetType(value: string) {
 
 export function presentLogTarget(record: LogRecord, t: Translate): LogText {
   if (!isAgentConversationCreated(record)) {
-    return { primary: record.target.name || record.target.id, secondary: record.target.id };
+    const targetName = normalizedText(record.target.name);
+    const targetID = normalizedText(record.target.id);
+    const semanticTarget = semanticTargetKey(record);
+    if (
+      semanticTarget &&
+      (!targetName || isTechnicalTargetName(targetName, targetID, record.target.type))
+    ) {
+      const label = t(`bknTrace.logs.targetTypes.${semanticTarget}`, {
+        defaultValue: t("bknTrace.logs.unnamedTarget"),
+      });
+      return { primary: label, secondary: targetID || undefined };
+    }
+    const targetType = presentTargetType(record, t);
+    const readableType =
+      targetType && targetType !== normalizedText(record.target.type) ? targetType : "";
+    return {
+      primary:
+        targetName && readableType ? `${readableType}: ${targetName}` : targetName || targetID,
+      secondary: targetID && targetID !== targetName ? targetID : undefined,
+    };
   }
   const agentName = conversationAgentName(record) || t("bknTrace.logs.unnamedAgent");
   return {
@@ -76,15 +120,71 @@ export function presentLogTarget(record: LogRecord, t: Translate): LogText {
 export function presentLogActor(
   record: LogRecord,
   t: Translate,
-  userDirectory?: Map<string, string>,
+  currentUser?: AuditUserDisplayInput["currentUser"],
 ): LogText {
-  const name = record.actor.name.trim();
-  const id = record.actor.id.trim();
-  const directoryName = userDirectory?.get(id)?.trim();
-  const currentUser = getRuntimeConfig().currentUser;
-  const currentUserName = currentUser.id === id ? currentUser.name?.trim() : "";
-  const primary = name && name !== id ? name : directoryName || currentUserName || id || "-";
-  return { primary, secondary: presentAuthMethod(record.authMethod, t) };
+  const actorID = normalizedText(record.actor.id);
+  if (record.actor.type === "anonymous" || actorID === "anonymous") {
+    return {
+      primary: t("bknTrace.logs.actorTypes.anonymous"),
+      secondary: presentAuthMethod(record.authMethod, t),
+    };
+  }
+  if (record.actor.type === "service_account" || actorID.startsWith("system:")) {
+    const actorName = normalizedText(record.actor.name);
+    return {
+      primary:
+        actorName && actorName !== actorID ? actorName : t("bknTrace.logs.actorTypes.service"),
+      secondary: presentAuthMethod(record.authMethod, t),
+    };
+  }
+  return {
+    primary: formatAuditUserDisplay({ currentUser, id: record.actor.id, name: record.actor.name }),
+    secondary: presentAuthMethod(record.authMethod, t),
+  };
+}
+
+function semanticActionKey(record: LogRecord) {
+  const semanticTarget = semanticTargetKey(record);
+  if (record.eventName === "authorization.decided" || semanticTarget === "authorization_decision") {
+    return "authorization_decided";
+  }
+  if (semanticTarget === "permission_request" && record.action === "get") {
+    return "permission_request_read";
+  }
+  return "";
+}
+
+function isTechnicalTargetName(name: string, id: string, targetType: string) {
+  if (name === id) return true;
+  return (
+    name.startsWith(`${targetType}:`) ||
+    name.startsWith("decision:") ||
+    name.startsWith("permission_request:")
+  );
+}
+
+function semanticTargetKey(record: LogRecord) {
+  const targetType = normalizedText(record.target.type);
+  const targetID = normalizedText(record.target.id);
+  const targetName = normalizedText(record.target.name);
+  const hasTargetPrefix = (prefix: string) =>
+    targetID.startsWith(prefix) || targetName.startsWith(prefix);
+
+  if (
+    targetType === "authorization_decision" ||
+    ((record.eventName === "authorization.decided" ||
+      (record.logCategory === "audit.security" && record.action === "check")) &&
+      hasTargetPrefix("decision:"))
+  ) {
+    return "authorization_decision";
+  }
+  if (targetType === "permission_request" || hasTargetPrefix("permission_request:")) {
+    return "permission_request";
+  }
+  if (targetType === "session" && record.logCategory === "access.user") {
+    return "session";
+  }
+  return "";
 }
 
 export function presentAuthMethod(value: string, t: Translate) {
@@ -93,6 +193,8 @@ export function presentAuthMethod(value: string, t: Translate) {
 
 export function presentTargetType(record: LogRecord, t: Translate) {
   if (isAgentConversationCreated(record)) return t("bknTrace.logs.targetTypes.agentConversation");
+  const semanticTarget = semanticTargetKey(record);
+  if (semanticTarget) return t(`bknTrace.logs.targetTypes.${semanticTarget}`);
   return t(`bknTrace.logs.targetTypes.${record.target.type}`, { defaultValue: record.target.type });
 }
 
@@ -100,7 +202,7 @@ function conversationAgentName(record: LogRecord) {
   const attributeName =
     typeof record.attributes.agent_name === "string" ? record.attributes.agent_name.trim() : "";
   if (attributeName) return attributeName;
-  const projectedName = record.target.name.trim();
+  const projectedName = normalizedText(record.target.name);
   if (
     !projectedName ||
     projectedName === record.target.id ||
@@ -111,7 +213,11 @@ function conversationAgentName(record: LogRecord) {
   return projectedName;
 }
 
-function shortIdentifier(value: string) {
-  const normalized = value.trim();
+function shortIdentifier(value: unknown) {
+  const normalized = normalizedText(value);
   return normalized.length > 8 ? `${normalized.slice(0, 8)}…` : normalized || "-";
+}
+
+function normalizedText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
 }

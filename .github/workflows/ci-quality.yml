@@ -5,7 +5,7 @@
 
 name: ci-quality
 
-# PRs run affected Vitest tests for fast feedback. Pushes to main and release
+# PRs run affected module suites for fast feedback. Pushes to main and release
 # branches retain the complete quality suite, so protected branches remain
 # full regression gates. Keeping the two triggers disjoint also avoids
 # duplicate same-repo PR runs for the same head SHA.
@@ -29,7 +29,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        # Vitest's --changed mode needs the PR base commit to be available.
+        # The module selector needs the PR base commit to be available.
         # A full history is also safer than relying on an event-specific
         # shallow-fetch edge case; protected branches still run the unchanged
         # full suite.
@@ -78,44 +78,46 @@ jobs:
         run: |
           set -euo pipefail
 
-          # The dependency graph selects tests for ordinary feature-module
-          # changes. Shared runtime and tooling changes can affect arbitrary
-          # modules, so they deliberately retain the full suite on PRs.
-          full_suite_pattern='^(src/(app|framework|shared|test)/|src/main\.tsx$|src/vite-env\.d\.ts$|vite\.config\.ts$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig[^/]*\.json$|eslint\.config[^/]*\.(js|mjs|cjs)$|prettier\.config[^/]*\.(js|mjs|cjs)$|\.github/workflows/)'
-
           if ! git cat-file -e "${BASE_SHA}^{commit}"; then
             echo "PR base commit is unavailable; using the full unit test suite."
             echo "scope=full" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          changed_files=$(git diff --name-only "${BASE_SHA}" HEAD)
-          if grep -Eq "$full_suite_pattern" <<< "$changed_files"; then
-            echo "Shared runtime or tooling changed; using the full unit test suite."
-            echo "scope=full" >> "$GITHUB_OUTPUT"
-          else
-            echo "Module-only change; using affected Vitest tests."
-            echo "scope=affected" >> "$GITHUB_OUTPUT"
-          fi
+          node scripts/select-unit-tests.mjs "$BASE_SHA" | tee -a "$GITHUB_OUTPUT"
 
       - name: Unit tests
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           TEST_SCOPE: ${{ steps.unit-tests.outputs.scope || 'full' }}
+          TEST_PATHS: ${{ steps.unit-tests.outputs.test_paths }}
         run: |
           set -euo pipefail
+          echo "Unit test scope: $TEST_SCOPE"
 
-          if [ "$TEST_SCOPE" = "affected" ]; then
-            # Dependency analysis can fail before tests run for packages that
-            # are only reached while tracing a changed source file. Preserve
-            # the regression gate by retrying the established full suite.
-            pnpm exec vitest --run --changed "$BASE_SHA" || pnpm exec vitest --run
-          else
-            pnpm exec vitest --run
-          fi
+          case "$TEST_SCOPE" in
+            modules)
+              read -r -a test_paths <<< "$TEST_PATHS"
+              if [ "${#test_paths[@]}" -eq 0 ]; then
+                echo "::error::Module test scope has no test paths."
+                exit 1
+              fi
+              printf 'Selected test paths: %s\n' "${test_paths[*]}"
+              pnpm exec vitest --run "${test_paths[@]}"
+              ;;
+            full)
+              pnpm exec vitest --run
+              ;;
+            none)
+              echo "No unit tests needed for documentation-only changes."
+              ;;
+            *)
+              echo "::error::Unknown unit test scope: $TEST_SCOPE"
+              exit 1
+              ;;
+          esac
 
       - name: Boundary contract tests
-        if: steps.unit-tests.outputs.scope == 'affected'
+        if: steps.unit-tests.outputs.scope == 'modules'
         run: |
           # These tests inspect source files with node:fs, so Vitest's import
           # graph cannot select them from changes to the files they enforce.

@@ -198,7 +198,7 @@ export function FunctionAiGenerateModal({
 
   return (
     <Modal
-      destroyOnClose
+      destroyOnHidden
       footer={null}
       onCancel={onClose}
       open={open}

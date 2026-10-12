@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ExecutionUnitDetailDrawerLayout } from "@/modules/execution-factory/components/execution-unit-detail/ExecutionUnitDetailDrawerLayout";
@@ -29,8 +30,6 @@ import {
   formatOptionalTimestamp,
   resolveOperatorCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
-import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 import { ConvertOperatorToToolModal } from "./ConvertOperatorToToolModal";
 import { operatorConversionPermission } from "@/modules/execution-factory/utils/operator-conversion-targets";
@@ -82,7 +81,6 @@ export function OperatorDetailDrawer({
   operatorId,
 }: OperatorDetailDrawerProps) {
   const { t } = useTranslation();
-  const auditUserDirectory = useAuditUserDirectory();
   const [record, setRecord] = useState<OperatorDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -229,16 +227,16 @@ export function OperatorDetailDrawer({
                     key: "createUser",
                     label: t("executionFactory.createUser"),
                     children: formatAuditUserDisplay({
-                      directory: auditUserDirectory,
                       id: record.createUser,
+                      name: record.createUserName,
                     }),
                   },
                   {
                     key: "updateUser",
                     label: t("executionFactory.updateUser"),
                     children: formatAuditUserDisplay({
-                      directory: auditUserDirectory,
                       id: record.updateUser,
+                      name: record.updateUserName,
                     }),
                   },
                   {
@@ -255,8 +253,8 @@ export function OperatorDetailDrawer({
                     key: "releaseUser",
                     label: t("executionFactory.releaseUser"),
                     children: formatAuditUserDisplay({
-                      directory: auditUserDirectory,
                       id: record.releaseUser,
+                      name: record.releaseUserName,
                     }),
                   },
                   {

@@ -17,49 +17,54 @@ export const integrationPart = {
       cli: "CLI Integration",
       sdk: "SDK Integration",
     },
-    issueApiKey: "Issue API Key",
     packageLabel: "View npm package",
     copy: "Copy",
     copyFailed: "Copy failed. Please copy the code manually.",
     cli: {
       guideTitle: "Use OpenBKN from the CLI",
       guideDescription:
-        "Use this for local terminals, CI/CD, and agents with shell access. The CLI uses the same platform capabilities without requiring custom API protocol handling.",
+        "Use this for local terminals, CI/CD, and agents with shell access. OAuth account sessions are the default way to access platform capabilities without custom API protocol handling.",
       steps: {
         install: "Install @openbkn/bkn-sdk globally to get the openbkn command.",
-        token:
-          "Issue an API Key in Account Center and use BKN_TOKEN to sign in to the target OpenBKN environment.",
+        token: "Sign in with an OpenBKN account; the CLI stores and refreshes the OAuth session.",
         context:
-          "Use context commands to search knowledge models, query instances, or discover MCP tools.",
+          "Use bkn list to get a knowledge network ID, then call platform or context commands as needed.",
         skill:
           "After installing the OpenBKN Skill for an agent, use natural language to choose the corresponding command.",
       },
-      note: "API Keys currently power Context Loader commands. Issue one in Account Center and inject it into the terminal through BKN_TOKEN.",
       title: "CLI Examples",
       ariaLabel: "CLI examples",
       successMessage: "CLI example copied",
       examples: {
         setup: {
           label: "Install and Authenticate",
-          title: "Install OpenBKN CLI and configure access credentials",
+          title: "Install OpenBKN CLI and sign in with an account",
           code: `npm install -g @openbkn/bkn-sdk
 
 export BKN_BASE_URL="{{platformOrigin}}"
-export BKN_TOKEN="bak_<issued_from_account_center>"
+# Scenario 1: Local terminal sign-in in a browser
+openbkn auth login "$BKN_BASE_URL"
 
-openbkn auth login "$BKN_BASE_URL" --token "$BKN_TOKEN"
-openbkn --version`,
+# Scenario 2: Headless non-interactive account/password sign-in (choose one)
+# openbkn auth login "$BKN_BASE_URL" -u "<account>" -p "<password>"
+
+# Verify the session and list accessible knowledge networks
+openbkn auth status
+openbkn bkn list --limit 10`,
         },
         context: {
           label: "Knowledge Network Query",
-          title: "Search knowledge models, query instances, and discover tools from the terminal",
-          code: `openbkn context search-schema <kn-id> "Find order-related objects and relations"
+          title: "Common scenarios: search models, query instances, and discover tools",
+          code: `# Scenario 1: Search knowledge models
+openbkn context search-schema <kn-id> "Find order-related objects and relations"
 
+# Scenario 2: Query object instances
 openbkn context query-object-instance <kn-id> --args '{
   "ot_id": "order",
   "limit": 20
 }'
 
+# Scenario 3: Discover available tools
 openbkn context tools <kn-id>`,
         },
         "agent-skill": {
@@ -69,9 +74,8 @@ openbkn context tools <kn-id>`,
 npx skills add openbkn-ai/bkn-sdk@openbkn -g -y
 
 export BKN_BASE_URL="{{platformOrigin}}"
-export BKN_TOKEN="bak_<issued_from_account_center>"
-
-openbkn auth login "$BKN_BASE_URL" --token "$BKN_TOKEN"
+# Sign in once, then reuse the stored OAuth session.
+openbkn auth login "$BKN_BASE_URL"
 openbkn help all`,
         },
       },
@@ -79,33 +83,40 @@ openbkn help all`,
     sdk: {
       guideTitle: "Integrate OpenBKN with the SDK",
       guideDescription:
-        "Use this for Node.js server-side projects. The SDK wraps authentication, MCP sessions, JSON-RPC calls, and response parsing so services do not need to maintain raw HTTP protocol details.",
+        "Use this for Node.js server-side projects. The SDK establishes and refreshes OAuth sessions with account credentials, and wraps platform requests, MCP sessions, JSON-RPC calls, and response parsing.",
       steps: {
         install: "Install @openbkn/bkn-sdk.",
         token:
-          "Issue an API Key in Account Center and configure BKN_BASE_URL and BKN_TOKEN on the server.",
-        client: "Create a client and call knowledge network capabilities through bkn.context.",
-        tools: "Query object instances as needed, or discover and call dynamic MCP tools.",
+          "Configure an OpenBKN account and password; the SDK establishes a refreshable OAuth session.",
+        client: "Create an authenticated client asynchronously with the platform URL.",
+        tools:
+          "Get a knowledge network ID first, then call bkn, resource, vega, or context capabilities as permitted by the account.",
       },
       installSuccessMessage: "SDK install command copied",
       installTitle: "Install SDK",
-      note: "API Keys currently power bkn.context and are managed only in Account Center. Server-side code reads them from BKN_TOKEN.",
       title: "SDK Examples",
       ariaLabel: "SDK examples",
       successMessage: "SDK example copied",
       examples: {
         "quick-start": {
           label: "Quick Start",
-          title: "Create an SDK client and search knowledge models",
-          code: `import { createClient } from "@openbkn/bkn-sdk";
+          title:
+            "Create an authenticated client with account credentials and search knowledge models",
+          code: `import { createAuthenticatedClient } from "@openbkn/bkn-sdk";
 
-const bkn = createClient({
+const bkn = await createAuthenticatedClient({
   baseUrl: process.env.BKN_BASE_URL!,
-  token: process.env.BKN_TOKEN!,
+  auth: {
+    username: process.env.BKN_USERNAME!,
+    password: process.env.BKN_PASSWORD!,
+  },
 });
 
+// Configure the knowledge network ID for the service.
+const knId = process.env.BKN_KN_ID!;
+
 const result = await bkn.context.searchSchema(
-  "your_kn_id",
+  knId,
   "Find order-related objects and relations",
   { searchScope: ["object", "relation"], maxConcepts: 10 },
 );`,
@@ -113,7 +124,7 @@ const result = await bkn.context.searchSchema(
         "instance-query": {
           label: "Query Instances",
           title: "Query object instances by object type and conditions",
-          code: `const result = await bkn.context.queryObjectInstance("your_kn_id", {
+          code: `const result = await bkn.context.queryObjectInstance(knId, {
   ot_id: "order",
   condition: {
     operation: "and",
@@ -127,9 +138,11 @@ const result = await bkn.context.searchSchema(
         "dynamic-tool": {
           label: "Dynamic Tools",
           title: "Discover and call MCP tools exposed by the current knowledge network",
-          code: `const tools = await bkn.context.tools("your_kn_id");
+          code: `// Step 1: Discover tools exposed by the knowledge network
+const tools = await bkn.context.tools(knId);
 
-const result = await bkn.context.toolCall("your_kn_id", "search_schema", {
+// Step 2: Call the selected tool
+const result = await bkn.context.toolCall(knId, "search_schema", {
   query: "Find order-related objects and relations",
   response_format: "json",
 });`,

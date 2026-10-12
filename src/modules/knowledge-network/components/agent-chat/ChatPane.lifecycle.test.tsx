@@ -27,7 +27,6 @@ import type { LlmModel } from "@/modules/model-resources/types/llm";
 import { ANSWER_OPEN } from "@/modules/knowledge-network/services/agent-chat.service";
 
 import {
-  BASE_EVIDENCE_HINT,
   ChatPane,
   DEFAULT_PROMPT,
   KN_EVIDENCE_HINT,
@@ -58,19 +57,9 @@ vi.mock("@/modules/knowledge-network/services/bkn-lifecycle.service", async (imp
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 
 const profile: PaneProfile = {
-  paneKey: "solo",
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: false,
-  defaultToolNames: null,
   evidenceHint: KN_EVIDENCE_HINT,
-};
-
-const baseProfile: PaneProfile = {
-  paneKey: "base",
-  defaultPrompt: DEFAULT_PROMPT,
-  injectKnContext: false,
-  defaultToolNames: ["list_resources", "describe_resource", "run_sql"],
-  evidenceHint: BASE_EVIDENCE_HINT,
 };
 
 const toolDefs: McpToolDef[] = [
@@ -113,23 +102,20 @@ function toolOptions() {
   return buildAgentTools.mock.calls[0][5];
 }
 
-function renderPane(options: { profile?: PaneProfile; toolDefs?: McpToolDef[] } = {}) {
+function renderPane() {
   const ref = createRef<ChatPaneHandle>();
-  const paneProfile = options.profile ?? profile;
-  const paneToolDefs = options.toolDefs ?? toolDefs;
   render(
     <ChatPane
       ref={ref}
       env={{ base: "https://platform.example.com", token: "token-1", knId: "kn-demo" }}
       tokenProvider={{ getToken: () => "token-1", refresh: () => Promise.resolve("token-1") }}
-      profile={paneProfile}
+      profile={profile}
       models={models}
       modelsLoaded
       knContext=""
       knSummary={null}
       suggestions={[]}
-      getTools={() => Promise.resolve(paneToolDefs)}
-      toolDefs={paneToolDefs}
+      getTools={() => Promise.resolve(toolDefs)}
       pageScrollRef={createRef<HTMLDivElement>()}
     />,
   );
@@ -188,36 +174,6 @@ describe("ChatPane 受管生命周期接线", () => {
       { name: "bkn_finish_interaction" },
     ]);
     expect(finish).toHaveBeenCalledWith("completed", "答复正文");
-  });
-
-  it("基础数据面板只向模型暴露基础数据工具", async () => {
-    stubLifecycle();
-    runAgentChat.mockImplementation(({ onChunk }) => {
-      onChunk({ type: "finish" });
-      return Promise.resolve();
-    });
-
-    const ref = renderPane({
-      profile: baseProfile,
-      toolDefs: [
-        { name: "bkn_start_interaction" },
-        { name: "list_resources" },
-        { name: "describe_resource" },
-        { name: "run_sql" },
-        { name: "search_schema" },
-        { name: "get_kn_detail" },
-      ],
-    });
-    await act(async () => {
-      ref.current?.send("问一句");
-      await Promise.resolve();
-    });
-
-    expect(buildAgentTools.mock.calls[0][0]).toEqual([
-      { name: "list_resources" },
-      { name: "describe_resource" },
-      { name: "run_sql" },
-    ]);
   });
 
   it("被接管的生命周期工具不展示一份从未发出的请求体", async () => {

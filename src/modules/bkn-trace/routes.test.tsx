@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { isValidElement } from "react";
+import { isValidElement, Suspense } from "react";
 import { describe, expect, it } from "vitest";
 
 import { consoleNavigation } from "@/app/shell/console-navigation";
@@ -46,6 +46,17 @@ describe("bkn-trace module registration", () => {
   it("registers permissions in runtime module manifests", () => {
     expect(runtimeModuleManifests.map((manifest) => manifest.id)).toContain("bkn-trace");
     expect(bknTraceModuleManifest.permissions).toEqual([]);
+  });
+
+  it("lets the settings page enforce server-derived capabilities instead of a role gate", () => {
+    const route = bknTraceRouteContribution.routes.find(
+      ({ path }) => path === "observability/settings",
+    );
+    expect(
+      bknTraceNavigation.items[0].children?.find((item) => item.key === "observability-settings")
+        ?.requiresSuperAdmin,
+    ).not.toBe(true);
+    expect(isValidElement(route?.element) && route.element.type).toBe(Suspense);
   });
 
   it("does not mount the business provenance preview while enterprise is locked", () => {

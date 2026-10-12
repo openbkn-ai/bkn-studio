@@ -46,11 +46,6 @@ vi.mock("@/modules/execution-factory/components/create-menu/AddCapabilityWizard"
   AddCapabilityWizard: () => null,
 }));
 
-const auditUserDirectory = vi.hoisted(() => new Map<string, string>());
-
-vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
-  useAuditUserDirectory: () => auditUserDirectory,
-}));
 vi.mock("@/modules/execution-factory/utils/use-impex-export", () => ({
   useImpexExport: () => ({ exportComponentById: vi.fn(), isExporting: () => false }),
 }));

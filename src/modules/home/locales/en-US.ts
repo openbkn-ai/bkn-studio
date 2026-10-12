@@ -56,6 +56,12 @@ export const homeEnUS = {
     },
     introduction:
       "Welcome to OpenBKN. For all types of enterprise agents, OpenBKN builds business knowledge networks driven by ontology, uniformly organizing the enterprise's data, logic, actions and risks, combining the creativity of agents with the certainty of enterprise business, and supporting accurate, secure and reliable analysis, execution and decision-making.",
+    aboutOpenBkn: {
+      title: "Learn about OpenBKN",
+      description: "Learn about OpenBKN's positioning, open-source licensing, and ecosystem",
+      website: "Visit website ↗",
+      github: "Star on GitHub",
+    },
     pathLabel: "Build path",
     paths: {
       engineering: {
@@ -72,54 +78,139 @@ export const homeEnUS = {
       },
       sample: {
         description:
-          "Install sample data and a knowledge network into this environment. After the smoke test passes, the sample is ready. No database or image address is required.",
+          "Choose an official sample and install its data and knowledge network into this environment to get started.",
         heading: "Install an official sample",
         title: "One-click experience",
       },
     },
     sample: {
+      uninstallProgress: "Uninstalling: {{stage}}",
+      uninstall: "Uninstall sample",
+      retryUninstall: "Resume uninstall",
+      uninstallTitle: "Uninstall {{name}} {{version}}",
+      uninstallWarning:
+        "Uninstall permanently removes this sample's data, knowledge network, metrics, functions and Skills, including user changes. Installation history is retained. Only resources owned by this sample are removed. You can install a new version after cleanup completes.",
+      uninstallStages: {
+        knowledge: "Delete knowledge network and metrics",
+        capabilities: "Delete functions and Skills",
+        discover: "Delete data source",
+        database: "Delete sample database and storage",
+        verify: "Verify cleanup",
+      },
+
       actions: {
+        collapse: "Collapse",
+        expand: "Expand",
+        failureDetails: "View failure details",
+        refreshProgress: "Refresh status",
         cancel: "Cancel",
         install: "Install",
         open: "Open knowledge network",
+        progress: "View progress",
         retry: "Retry",
         start: "Start installation",
       },
       adminHint: "Administrator required",
       confirm: {
-        body: "This creates a database for the sample in the current OpenBKN cluster, then scans, binds, and runs the smoke test.",
+        changed: "The sample version has changed. Select Install again to review the confirmation.",
+        body: "This creates the sample's data resources and knowledge network in this environment and verifies the installation.",
         catalog: "Catalog name {{catalog}}",
         irreversible:
-          "After a successful install, the home page shows status only. The sample cannot be added again, and there is no uninstall.",
+          "After installation, you can open the knowledge network. Automatic upgrades and uninstall are not yet supported.",
         namespace: "Sample database namespace {{namespace}}",
         network: "Knowledge network {{network}}",
         title: "Install {{name}} {{version}}",
       },
+      conflictHint:
+        "Ask an administrator to check ownership of the existing knowledge network. Retry after the conflict is resolved.",
       empty: "No samples are available to install",
+      refreshSource: "Refresh samples",
+      catalogNotPublished:
+        "The official version catalog is not published yet. Bundled samples remain available.",
+      lastRefresh: "Last successful refresh: {{time}}",
+      latestVersion: "Latest published {{version}}",
+      selectVersion: "View version",
+      publishedAt: "Published at {{time}}",
+      refreshStatus: {
+        rate_limited: "A refresh was attempted recently. Please try again shortly.",
+        updated: "The sample catalog was updated",
+        unchanged: "No catalog updates",
+        failed:
+          "The official catalog could not be refreshed. Cached and bundled samples were kept.",
+        not_refreshed: "The official version catalog has not been scanned",
+      },
+      notesTitle: "Release notes · {{version}}",
+      notesLoading: "Loading release notes",
+      notesFailed: "Release notes could not be loaded. Reload them before installing.",
+      notesLocale: "Notes language: {{locale}}",
+      historyTitle: "Installation records",
+      historyLoading: "Loading installation records",
+      historyFailed: "Installation records could not be loaded",
+      historyPartial:
+        "Some earlier installation records are missing. Complete history cannot be reconstructed.",
       errors: {
+        uninstall_interrupted:
+          "Uninstall was interrupted. Continue cleanup before installing again.",
+        uninstall_failed: "Uninstall incomplete. Resume cleanup.",
+        ownership_receipt_missing:
+          "The legacy installation has no ownership receipt; automatic uninstall is unavailable.",
         already_installed: "This sample is already installed",
+        runtime_upgrade_required:
+          "The current installer does not support this version yet. You can view its release notes.",
+        release_withdrawn: "This version was withdrawn and cannot be installed.",
+        already_installing: "This sample is being installed. Check the existing task's progress.",
+        version_changed:
+          "The sample version or manifest changed. Reload and confirm again. Retries require the original artifacts.",
         database_not_ready: "The sample database did not pass the readiness check",
         discover_incomplete: "Data resources were not fully discovered",
         forbidden: "An administrator is required to install",
         image_unavailable: "The sample database image cannot be pulled right now",
         install_failed: "Installation did not finish. Existing resources were kept.",
         ownership_conflict:
-          "A resource with the same name already exists and was not created by this installer",
+          "A knowledge network with the same name already exists and was not created by this installer. The existing network is left unchanged.",
         sample_data_unavailable: "The sample data is not ready",
         source_rejected:
           "The sample source is not the official repository, or the version does not match",
         storage_class_missing: "The cluster has no default storage class",
+        status_unknown:
+          "The connection was interrupted, so the installation result is unknown. Reload the catalog and check its status before taking another action.",
         use_retry: "Continue the failed installation instead of adding it again",
-        verify_failed: "The smoke test did not pass. Earlier resources were kept.",
+        verify_failed: "Installation validation failed. Created resources were kept.",
+        install_interrupted:
+          "Installation was interrupted by a service restart. Completed steps and resources were kept; retry the original task.",
       },
       installedMeta: "Installed at {{time}} · version {{version}}.",
+      installedVersion: "Installed {{version}}",
+      versionUnknown: "Version not recorded",
       llmNote:
         "Configure a model from manual build before asking questions. That does not change this installation result.",
       loadFailed: "The sample catalog could not be loaded",
+      cachedCatalog: "The last loaded catalog is shown. Its information may be out of date.",
+      progressUnavailable:
+        "The installation status could not be retrieved. The last known status is kept; this does not mean installation failed.",
       loading: "Loading the sample catalog",
       reload: "Reload",
+      importPackage: "Import offline package",
+      importing: "Importing…",
+      importFailed:
+        "The offline sample package could not be imported. Check its version, digest, and platform compatibility.",
+      offlineImported: "Offline package imported",
+      installProgress: "Installation progress: {{stage}}",
+      offlinePackagesTitle: "Imported offline packages",
+      offlinePackagesDescription:
+        "Review cached offline versions. Uninstalled packages can be removed and uploaded again.",
+      removeOffline: "Remove package",
+      offlineDeleting: "Removing…",
+      offlineDeleteFailed: "The offline package could not be removed. Try again later.",
       sourceLabel: "Source",
       sourceName: "openbkn-ai/bkn-samples",
+      stages: {
+        capabilities: "Publish capabilities",
+        database: "Prepare the sample database",
+        discover: "Scan data resources",
+        knowledge: "Import and bind the knowledge network",
+        verify: "Verify installation",
+      },
       stageState: {
         failed: "Failed",
         pending: "Not started",
@@ -127,6 +218,9 @@ export const homeEnUS = {
         succeeded: "Completed",
       },
       status: {
+        uninstalling: "Uninstalling",
+        uninstall_failed: "Uninstall incomplete",
+        uninstalled: "Uninstalled",
         conflict: "Name conflict",
         failed: "Install failed",
         installed: "Installed",

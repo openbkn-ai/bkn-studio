@@ -13,7 +13,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Alert, Avatar, Empty, Input, Segmented, Select, Spin, Tooltip } from "antd";
+import { Alert, Input, Segmented, Select, Spin, Tooltip } from "antd";
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,8 +21,9 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { DirectoryUserPicker } from "@/modules/system-admin";
-import type { AdminRole, AdminUser } from "@/modules/system-admin/types/admin";
+import { GrantableRolePicker, GrantableUserPicker } from "@/modules/system-admin";
+import type { GrantableRole } from "@/modules/system-admin/services/authz.service";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 import {
   explainRowFilter,
   getRowFilterSnapshot,
@@ -49,11 +50,16 @@ import {
 const MAX_CONDITIONS = 5;
 
 type Props = {
+  allowRoleSubjects: boolean;
+  allowUserSubjects: boolean;
+  canWriteRole: boolean;
+  canWriteUser: boolean;
   discardNonce: number;
+  initialSubjectId?: string;
   objectTypeRef: string;
   onBeforeSubjectChange: (next: () => void) => void;
   onDirtyChange: (dirty: boolean) => void;
-  roles: AdminRole[];
+  roles: GrantableRole[];
   users: AdminUser[];
 };
 
@@ -148,7 +154,12 @@ function policySummary(
 }
 
 export function RowFilterAuthorizationPanel({
+  allowRoleSubjects,
+  allowUserSubjects,
+  canWriteRole,
+  canWriteUser,
   discardNonce,
+  initialSubjectId,
   objectTypeRef,
   onBeforeSubjectChange,
   onDirtyChange,
@@ -157,10 +168,12 @@ export function RowFilterAuthorizationPanel({
 }: Props) {
   const { t } = useTranslation();
   const { message } = useAppServices();
-  const [subjectType, setSubjectType] = useState<RowFilterSubjectType>("user");
+  const [subjectType, setSubjectType] = useState<RowFilterSubjectType>(
+    allowUserSubjects ? "user" : "role",
+  );
   const [subjectId, setSubjectId] = useState<string>();
   const [pickedUsers, setPickedUsers] = useState<AdminUser[]>([]);
-  const [roleKeyword, setRoleKeyword] = useState("");
+  const [pickedRoles, setPickedRoles] = useState<GrantableRole[]>([]);
   const [snapshot, setSnapshot] = useState<RowFilterSnapshot>();
   const [explain, setExplain] = useState<RowFilterExplain>();
   const [loading, setLoading] = useState(false);
@@ -170,6 +183,23 @@ export function RowFilterAuthorizationPanel({
   const [conditions, setConditions] = useState<EditableCondition[]>([]);
   const [conditionRelation, setConditionRelation] = useState<"and" | "or">("and");
   const loadRequestId = useRef(0);
+
+  useEffect(() => {
+    if (initialSubjectId && allowUserSubjects) {
+      setSubjectType("user");
+      setSubjectId(initialSubjectId);
+    }
+  }, [allowUserSubjects, initialSubjectId]);
+
+  useEffect(() => {
+    if (subjectType === "user" && !allowUserSubjects && allowRoleSubjects) {
+      setSubjectType("role");
+      setSubjectId(undefined);
+    } else if (subjectType === "role" && !allowRoleSubjects && allowUserSubjects) {
+      setSubjectType("user");
+      setSubjectId(undefined);
+    }
+  }, [allowRoleSubjects, allowUserSubjects, subjectType]);
 
   const subject = useMemo<RowFilterSubject | null>(
     () => (subjectId ? { id: subjectId, type: subjectType } : null),
@@ -181,7 +211,9 @@ export function RowFilterAuthorizationPanel({
     [initialPolicy],
   );
   const currentState = editableStateKey(conditionRelation, conditions);
-  const dirty = Boolean(snapshot) && editing && currentState !== baselineState;
+  const canWriteCurrentSubject = subjectType === "user" ? canWriteUser : canWriteRole;
+  const dirty =
+    canWriteCurrentSubject && Boolean(snapshot) && editing && currentState !== baselineState;
   const conditionErrors = conditions.map((condition) => {
     const field = snapshot?.availableFields.find((item) => item.name === condition.propertyName);
     return !condition.propertyName || parseConditionValues(condition, field?.type) === null;
@@ -204,6 +236,7 @@ export function RowFilterAuthorizationPanel({
     };
   }, [conditionRelation, conditions, hasConditionError, snapshot?.availableFields]);
   const canSave =
+    canWriteCurrentSubject &&
     dirty &&
     !saving &&
     !hasConditionError &&
@@ -228,7 +261,10 @@ export function RowFilterAuthorizationPanel({
             pickedUsers.find((item) => item.id === subjectId);
           return user?.name?.trim() || user?.account?.trim() || subjectId;
         })()
-      : roles.find((item) => item.id === subjectId)?.name || subjectId;
+      : (
+          roles.find((item) => item.id === subjectId) ??
+          pickedRoles.find((item) => item.id === subjectId)
+        )?.name || subjectId;
   const effectiveSources: EffectiveRuleSource[] = [];
   if (directPolicy) {
     effectiveSources.push({
@@ -243,7 +279,11 @@ export function RowFilterAuthorizationPanel({
     });
   }
   (explain?.rolePolicies ?? []).forEach((source) => {
-    const roleName = roles.find((role) => role.id === source.subject.id)?.name || source.subject.id;
+    const roleName =
+      (
+        roles.find((role) => role.id === source.subject.id) ??
+        pickedRoles.find((role) => role.id === source.subject.id)
+      )?.name || source.subject.id;
     effectiveSources.push({
       effect: policySummary(source.policy, t, snapshot?.availableFields ?? []),
       id: `${source.subject.type}:${source.subject.id}`,
@@ -309,17 +349,10 @@ export function RowFilterAuthorizationPanel({
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [dirty]);
 
-  const visibleRoles = useMemo(() => {
-    const keyword = roleKeyword.trim().toLowerCase();
-    return roles.filter((role) =>
-      `${role.name} ${role.description}`.toLowerCase().includes(keyword),
-    );
-  }, [roleKeyword, roles]);
   const changeSubjectType = (nextType: RowFilterSubjectType) =>
     onBeforeSubjectChange(() => {
       setSubjectType(nextType);
       setSubjectId(undefined);
-      setRoleKeyword("");
     });
   const save = async () => {
     if (!subject || !snapshot || !canSave) return;
@@ -380,23 +413,31 @@ export function RowFilterAuthorizationPanel({
           block
           onChange={(value) => changeSubjectType(value as RowFilterSubjectType)}
           options={[
-            {
-              icon: <UserOutlined />,
-              label: t("knowledgeNetwork.propertyAuthorizationUser"),
-              value: "user",
-            },
-            {
-              icon: <TeamOutlined />,
-              label: t("knowledgeNetwork.propertyAuthorizationRole"),
-              value: "role",
-            },
+            ...(allowUserSubjects
+              ? [
+                  {
+                    icon: <UserOutlined />,
+                    label: t("knowledgeNetwork.propertyAuthorizationUser"),
+                    value: "user",
+                  },
+                ]
+              : []),
+            ...(allowRoleSubjects
+              ? [
+                  {
+                    icon: <TeamOutlined />,
+                    label: t("knowledgeNetwork.propertyAuthorizationRole"),
+                    value: "role",
+                  },
+                ]
+              : []),
           ]}
           value={subjectType}
         />
         {subjectType === "user" ? (
           <div className={styles.userPickerSection}>
             <span>{t("knowledgeNetwork.rowFilterUserOrganizationFilter")}</span>
-            <DirectoryUserPicker
+            <GrantableUserPicker
               ariaLabel={t("knowledgeNetwork.rowFilterSelectUser")}
               className={styles.userPicker}
               initialUsers={users}
@@ -409,34 +450,29 @@ export function RowFilterAuthorizationPanel({
                 })
               }
               presentation="inline"
+              resourceId={objectTypeRef}
+              resourceType="object_type"
               value={subjectId}
             />
           </div>
         ) : (
-          <>
-            <Input
-              allowClear
-              onChange={(event) => setRoleKeyword(event.target.value)}
-              placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
-              value={roleKeyword}
-            />
-            <div className={styles.roleList}>
-              {visibleRoles.map((role) => (
-                <button
-                  className={role.id === subjectId ? styles.subjectSelected : styles.subjectItem}
-                  key={role.id}
-                  onClick={() => onBeforeSubjectChange(() => setSubjectId(role.id))}
-                  type="button"
-                >
-                  <Avatar icon={<TeamOutlined />} size={32} />
-                  <span>
-                    <strong>{role.name || role.id}</strong>
-                  </span>
-                </button>
-              ))}
-              {!visibleRoles.length ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : null}
-            </div>
-          </>
+          <GrantableRolePicker
+            ariaLabel={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+            className={styles.userPicker}
+            initialRoles={roles}
+            onChange={(nextRoleId) => onBeforeSubjectChange(() => setSubjectId(nextRoleId))}
+            onRolesChange={(nextRoles) =>
+              setPickedRoles((current) => {
+                const byId = new Map(current.map((role) => [role.id, role]));
+                nextRoles.forEach((role) => byId.set(role.id, role));
+                return [...byId.values()];
+              })
+            }
+            presentation="inline"
+            resourceId={objectTypeRef}
+            resourceType="object_type"
+            value={subjectId}
+          />
         )}
       </aside>
       <section className={styles.content}>
@@ -474,7 +510,11 @@ export function RowFilterAuthorizationPanel({
                 <div className={styles.inheritState}>
                   <strong>{t("knowledgeNetwork.rowFilterInheritStateTitle")}</strong>
                   <p>{t("knowledgeNetwork.rowFilterInheritStateDescription")}</p>
-                  <AppButton onClick={() => setEditing(true)} type="primary">
+                  <AppButton
+                    disabled={!canWriteCurrentSubject}
+                    onClick={() => setEditing(true)}
+                    type="primary"
+                  >
                     {t("knowledgeNetwork.rowFilterConfigure")}
                   </AppButton>
                 </div>
@@ -493,6 +533,7 @@ export function RowFilterAuthorizationPanel({
                         <div className={styles.conditionRelation}>
                           <span>{t("knowledgeNetwork.rowFilterConditionRelation")}</span>
                           <Select
+                            disabled={!canWriteCurrentSubject}
                             onChange={setConditionRelation}
                             options={[
                               {
@@ -509,7 +550,7 @@ export function RowFilterAuthorizationPanel({
                         </div>
                       ) : null}
                       <AppButton
-                        disabled={conditions.length >= MAX_CONDITIONS}
+                        disabled={!canWriteCurrentSubject || conditions.length >= MAX_CONDITIONS}
                         icon={<PlusOutlined />}
                         onClick={addCondition}
                         type="default"
@@ -534,6 +575,7 @@ export function RowFilterAuthorizationPanel({
                             <div className={styles.conditionItem} key={condition.id}>
                               <div className={styles.conditionRow}>
                                 <Select
+                                  disabled={!canWriteCurrentSubject}
                                   onChange={(propertyName) =>
                                     updateCondition(condition.id, {
                                       operator: "in",
@@ -552,7 +594,7 @@ export function RowFilterAuthorizationPanel({
                                 />
                                 <Select
                                   className={styles.conditionOperatorSelect}
-                                  disabled={!condition.propertyName}
+                                  disabled={!canWriteCurrentSubject || !condition.propertyName}
                                   onChange={(operator) =>
                                     updateCondition(condition.id, {
                                       operator,
@@ -572,7 +614,7 @@ export function RowFilterAuthorizationPanel({
                                 {isRangeOperator ? (
                                   <div className={styles.conditionValueRange}>
                                     <Input
-                                      disabled={!condition.propertyName}
+                                      disabled={!canWriteCurrentSubject || !condition.propertyName}
                                       inputMode="numeric"
                                       onBlur={() =>
                                         updateCondition(condition.id, { touched: true })
@@ -591,7 +633,7 @@ export function RowFilterAuthorizationPanel({
                                     />
                                     <span>{t("knowledgeNetwork.rowFilterRangeSeparator")}</span>
                                     <Input
-                                      disabled={!condition.propertyName}
+                                      disabled={!canWriteCurrentSubject || !condition.propertyName}
                                       inputMode="numeric"
                                       onBlur={() =>
                                         updateCondition(condition.id, { touched: true })
@@ -612,7 +654,7 @@ export function RowFilterAuthorizationPanel({
                                 ) : (
                                   <Input.TextArea
                                     autoSize={{ minRows: 1, maxRows: 3 }}
-                                    disabled={!condition.propertyName}
+                                    disabled={!canWriteCurrentSubject || !condition.propertyName}
                                     inputMode={valueInputType(field?.type)}
                                     onBlur={() => updateCondition(condition.id, { touched: true })}
                                     onChange={(event) =>
@@ -632,6 +674,7 @@ export function RowFilterAuthorizationPanel({
                                 )}
                                 <AppButton
                                   aria-label={t("knowledgeNetwork.rowFilterRemoveCondition")}
+                                  disabled={!canWriteCurrentSubject}
                                   icon={<DeleteOutlined />}
                                   onClick={() =>
                                     setConditions((current) =>

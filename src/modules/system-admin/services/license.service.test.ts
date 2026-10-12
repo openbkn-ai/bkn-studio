@@ -46,6 +46,13 @@ describe("license.service", () => {
     });
   });
 
+  it("maps an issuer-side unbind or revoke and drops unknown binding values", () => {
+    expect(mapLicenseDetail({ binding: "unbound", state: "unlicensed" }).binding).toBe("unbound");
+    expect(mapLicenseDetail({ binding: "revoked", state: "unlicensed" }).binding).toBe("revoked");
+    expect(mapLicenseDetail({ binding: "something-new" }).binding).toBeUndefined();
+    expect(mapLicenseDetail({}).binding).toBeUndefined();
+  });
+
   it("treats a missing backend state as unlicensed", () => {
     expect(mapLicenseDetail({}).state).toBe("unlicensed");
   });

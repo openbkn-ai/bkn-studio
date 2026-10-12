@@ -9,6 +9,8 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Alert, Empty, Tag } from "antd";
 import i18n from "@/app/locales/i18n";
+import { RecordMissingDetails } from "../business-provenance/RecordMissingDetails";
+import type { RecordIntegrity } from "../business-provenance/business-provenance.service";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 
 import type {
@@ -395,7 +397,7 @@ function ReadingView({
       <section className={styles.sectionHead}>
         <div>
           <span className={styles.kicker}>{p16Text("reading.attribution")}</span>
-          <h2>{p16Text("reading.processAndEvidence")}</h2>
+          <h2 className={styles.sectionTitle}>{p16Text("reading.processAndEvidence")}</h2>
         </div>
         <p>{p16Text("reading.explanation")}</p>
       </section>
@@ -1028,10 +1030,12 @@ export type TimeRailBusinessSummary = {
 };
 
 export function TimeRailView({
+  recordIntegrity,
   items,
   summaries = {},
 }: {
   items: TimeRailItem[];
+  recordIntegrity?: RecordIntegrity;
   summaries?: Record<string, TimeRailBusinessSummary>;
 }) {
   const ordered = useMemo(
@@ -1213,6 +1217,13 @@ export function TimeRailView({
           <span className={styles.kicker}>{p16Text("timeline.selectedCall")}</span>
           {selected ? (
             <>
+              <RecordMissingDetails
+                items={recordIntegrity?.missing.filter(
+                  (item) =>
+                    item.operation_id === selected.operation_id &&
+                    item.attempt === selected.attempt,
+                )}
+              />
               <h3>
                 {managedFunctionInfo(selected)?.name ||
                   summaries[selected.operation_id]?.name ||
@@ -1382,9 +1393,9 @@ export function BusinessProvenance016({
             </button>
           </div>
         ) : (
-          <div>
+          <div className={styles.workspaceHeading}>
             <span className={styles.kicker}>{p16Text("workspace.evidence")}</span>
-            <strong>{p16Text("reading.processAndEvidence")}</strong>
+            <h2 className={styles.sectionTitle}>{p16Text("reading.processAndEvidence")}</h2>
           </div>
         )}
         <button

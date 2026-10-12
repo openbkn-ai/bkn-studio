@@ -22,7 +22,6 @@ import { useNavigate } from "react-router-dom";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
-import { LicenseStateBanner } from "@/framework/entitlement/LicenseStateBanner";
 import { useRefreshEntitlement } from "@/framework/entitlement/use-entitlement";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -45,7 +44,14 @@ const { TextArea } = Input;
 type ActionKind = "delete" | "import" | "online" | null;
 
 function canRemoveLicense(detail: LicenseDetail | null) {
-  return detail !== null && detail.state !== "trial" && detail.state !== "unlicensed";
+  if (detail === null) {
+    return false;
+  }
+  // An unbound or revoked certificate reads "unlicensed" but is still installed,
+  // and removing it is exactly what a migrated-away cluster should do next.
+  return (
+    detail.binding !== undefined || (detail.state !== "trial" && detail.state !== "unlicensed")
+  );
 }
 
 function formatUnixSeconds(value: number | undefined, locale: string, permanentText: string) {
@@ -119,6 +125,9 @@ export function LicenseManagementScene() {
     if (!detail) {
       return "";
     }
+    if (detail.binding) {
+      return t(`systemAdmin.license.status.${detail.binding}`);
+    }
     if (detail.state === "valid" && !detail.activated) {
       return t("systemAdmin.license.status.validUnbound");
     }
@@ -128,6 +137,11 @@ export function LicenseManagementScene() {
   const statusDescription = useMemo(() => {
     if (!detail) {
       return "";
+    }
+    // Checked before state: a taken-back certificate reports "unlicensed", and
+    // that copy ("no license imported") would contradict the license shown below.
+    if (detail.binding) {
+      return t(`systemAdmin.license.statusDesc.${detail.binding}`);
     }
     if (detail.state === "grace") {
       return t("systemAdmin.license.statusDesc.grace", {
@@ -273,7 +287,14 @@ export function LicenseManagementScene() {
       ]
     : [];
   const fingerprintValue = detail ? fingerprint || detail.instanceFp || "-" : "-";
-  const licensedUntil = detail
+  // Two different dates: the certificate's own expiry (renewed in place while
+  // the contract runs) and the contract end it can never be renewed past.
+  // Labelling the contract end as the licence's validity made a certificate
+  // that lapses next quarter look good for years (#1782).
+  const certificateExpiresAt = detail
+    ? formatUnixSeconds(detail.expiresAt, i18n.language, t("systemAdmin.license.permanent"))
+    : "-";
+  const contractExpiresAt = detail
     ? formatUnixSeconds(detail.contractExpiresAt, i18n.language, t("systemAdmin.license.permanent"))
     : "-";
   const metricItems = detail
@@ -284,22 +305,26 @@ export function LicenseManagementScene() {
           value: detail.edition ? translatedLicenseKey(t, "editionLabels", detail.edition) : "-",
         },
         {
-          label: t("systemAdmin.license.metrics.licensedUntil"),
-          value: licensedUntil,
+          label: t("systemAdmin.license.metrics.certificateExpiresAt"),
+          value: certificateExpiresAt,
+        },
+        {
+          label: t("systemAdmin.license.metrics.contractExpiresAt"),
+          value: contractExpiresAt,
         },
         {
           label: t("systemAdmin.license.metrics.activation"),
-          value: detail.activated
-            ? t("systemAdmin.license.metrics.activationBound")
-            : t("systemAdmin.license.metrics.activationPending"),
+          value: detail.binding
+            ? t(`systemAdmin.license.metrics.activation_${detail.binding}`)
+            : detail.activated
+              ? t("systemAdmin.license.metrics.activationBound")
+              : t("systemAdmin.license.metrics.activationPending"),
         },
       ]
     : [];
 
   return (
     <div className={styles.contentSurface}>
-      {/* 无证提示只落在能处理它的这一页,不再跟着整个控制台走。 */}
-      <LicenseStateBanner />
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div>

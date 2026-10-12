@@ -14,7 +14,7 @@ import {
   FileTextOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
-import { Input, Modal, Select, Spin, Tooltip } from "antd";
+import { Input, Modal, Segmented, Select, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
@@ -26,6 +26,7 @@ import {
   type ContextLoaderMode,
   type ContextLoaderOp,
   type ContextLoaderResponse,
+  type McpProfile,
   type McpToolDef,
   isLongToolSummary,
   toolSummaryPreview,
@@ -90,6 +91,9 @@ type ContextLoaderIntegrationPanelProps = {
   onReloadTools: () => void;
   dataBrowserPanel: ReactNode;
   mcpUrl: string;
+  /** Which Context Loader MCP endpoint the console lists, calls and generates configs for. */
+  mcpProfile: McpProfile;
+  onMcpProfileChange: (profile: McpProfile) => void;
   appKeyValue: string;
   showMcpConnect?: boolean;
 };
@@ -378,6 +382,8 @@ export function ContextLoaderIntegrationPanel({
   onReloadTools,
   dataBrowserPanel,
   mcpUrl,
+  mcpProfile,
+  onMcpProfileChange,
   appKeyValue,
   showMcpConnect = false,
 }: ContextLoaderIntegrationPanelProps) {
@@ -415,6 +421,31 @@ export function ContextLoaderIntegrationPanel({
     configAppKey,
     mcpClientOptions,
   );
+  const mcpProfileHint =
+    mcpProfile === "compact"
+      ? t("knowledgeNetwork.contextLoaderPanel.mcpProfile.compactHint")
+      : t("knowledgeNetwork.contextLoaderPanel.mcpProfile.fullHint");
+  const mcpProfileSegmented = (block: boolean) => (
+    <Segmented<McpProfile>
+      size="small"
+      block={block}
+      value={mcpProfile}
+      onChange={onMcpProfileChange}
+      aria-label={t("knowledgeNetwork.contextLoaderPanel.mcpProfile.label")}
+      options={[
+        { value: "full", label: t("knowledgeNetwork.contextLoaderPanel.mcpProfile.full") },
+        { value: "compact", label: t("knowledgeNetwork.contextLoaderPanel.mcpProfile.compact") },
+      ]}
+    />
+  );
+  // Shown in the tool list as well as the empty state, so a failing endpoint can be switched away from.
+  const mcpProfileBar =
+    mode === "mcp" ? (
+      <div className={styles.mcpProfileBar}>
+        {mcpProfileSegmented(true)}
+        <div className={styles.mcpProfileHint}>{mcpProfileHint}</div>
+      </div>
+    ) : null;
   // Display names and groups come from tools/list metadata first, with local fallback for old servers.
   const toolMetaByName = useMemo(
     () => new Map((toolDefs ?? []).map((tool) => [tool.name, tool])),
@@ -546,6 +577,13 @@ export function ContextLoaderIntegrationPanel({
             </ol>
           </div>
           <div className={styles.mcpConnectMain}>
+            <div className={styles.mcpProfileRow}>
+              <span className={styles.mcpProfileLabel}>
+                {t("knowledgeNetwork.contextLoaderPanel.mcpProfile.label")}
+              </span>
+              {mcpProfileSegmented(false)}
+              <span className={styles.mcpProfileHint}>{mcpProfileHint}</span>
+            </div>
             <div className={styles.mcpConfigHeader}>
               <div className={styles.mcpConfigTabs}>
                 {[
@@ -698,6 +736,7 @@ export function ContextLoaderIntegrationPanel({
               {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
             </button>
           </div>
+          {mcpProfileBar}
           <div className={styles.listSearch}>
             <Input
               value={filter}
@@ -781,6 +820,7 @@ export function ContextLoaderIntegrationPanel({
                 </button>
               ) : null}
             </div>
+            {mcpProfileBar}
             <div className={styles.listSearch}>
               <Input
                 value={filter}

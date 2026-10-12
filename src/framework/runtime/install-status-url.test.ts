@@ -8,9 +8,38 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  buildInstallStatusRedirectUrl,
   getInstallStatusUrl,
   resolveConfiguredInstallStatusUrl,
 } from "@/framework/runtime/install-status-url";
+
+describe("buildInstallStatusRedirectUrl", () => {
+  it("puts the access token in the fragment and passes the Chinese locale", () => {
+    expect(
+      buildInstallStatusRedirectUrl(
+        "https://gateway.example.com/install-status?source=menu",
+        "studio-token",
+        "zh-CN",
+      ),
+    ).toBe("https://gateway.example.com/install-status?source=menu&lang=zh#token=studio-token");
+  });
+
+  it("encodes the fragment token and passes the English locale", () => {
+    expect(
+      buildInstallStatusRedirectUrl(
+        "https://gateway.example.com/install-status",
+        "token+/= value",
+        "en-US",
+      ),
+    ).toBe("https://gateway.example.com/install-status?lang=en#token=token%2B%2F%3D+value");
+  });
+
+  it("does not build a redirect without an access token", () => {
+    expect(
+      buildInstallStatusRedirectUrl("https://gateway.example.com/install-status", null, "zh-CN"),
+    ).toBeNull();
+  });
+});
 
 describe("resolveConfiguredInstallStatusUrl", () => {
   afterEach(() => {

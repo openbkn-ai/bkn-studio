@@ -21,12 +21,64 @@
   line-height: 1.6;
 }
 
+.catalogPanel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, var(--color-primary-50));
+}
+
+.catalogInfo,
+.catalogActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.catalogLabel,
+.catalogUpdated {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.sourceLink {
+  color: var(--color-primary-600);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sourceLink:hover {
+  text-decoration: underline;
+}
+
 .banner,
 .error {
   padding: 12px 14px;
   border: 1px solid var(--color-divider);
   border-radius: 8px;
   background: var(--color-bg-surface);
+}
+
+.conflict,
+.conflictHint {
+  margin: 12px 0 0;
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+.conflict {
+  padding: 12px 14px;
+  border: 1px solid var(--color-warning-600, #d48806);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-warning-600, #d48806) 12%, var(--color-bg-surface));
+  font-weight: 600;
 }
 
 .cards {
@@ -70,8 +122,61 @@
   font-size: 12px;
 }
 
+.offlineBadge {
+  padding: 3px 10px;
+  border: 1px solid var(--color-warning-600, #d48806);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-warning-600, #d48806) 18%, var(--color-bg-surface));
+  color: var(--color-warning-700, #ad6800);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.offlinePackages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-warning-600, #d48806);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-warning-600, #d48806) 7%, var(--color-bg-surface));
+}
+
+.offlinePackages h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.offlinePackageList,
+.offlinePackage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.offlinePackage {
+  justify-content: space-between;
+}
+
+.removeOffline {
+  padding: 5px 12px;
+  border: 1px solid var(--color-warning-600, #d48806);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-warning-700, #ad6800);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.removeOffline:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .actions {
   display: flex;
+  flex-wrap: wrap;
   flex-shrink: 0;
   gap: 8px;
   align-items: center;
@@ -96,7 +201,8 @@
 }
 
 .install:disabled,
-.retry:disabled {
+.retry:disabled,
+.reload:disabled {
   border-color: var(--color-divider);
   background: transparent;
   color: var(--color-text-secondary);
@@ -133,6 +239,21 @@
   font-size: 12px;
 }
 
+.stage[data-state="succeeded"] span {
+  color: var(--color-success-600, #1a7f37);
+  font-weight: 600;
+}
+
+.stage[data-state="running"] span {
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+.stage[data-state="failed"] span {
+  color: var(--color-error-600, #cf1322);
+  font-weight: 600;
+}
+
 .questions {
   margin-top: 12px;
   padding-left: 18px;
@@ -141,6 +262,56 @@
 .confirmList {
   margin: 12px 0 0;
   padding-left: 18px;
+}
+
+.details {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.confirmation {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+}
+
+.confirmation h4 {
+  margin: 0 0 8px;
+}
+
+.notesContent {
+  overflow-wrap: anywhere;
+}
+
+.versionPicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.versionPicker select {
+  padding: 6px 10px;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.releaseNotes,
+.history {
+  margin-bottom: 16px;
+}
+
+.historyItem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .confirmActions {

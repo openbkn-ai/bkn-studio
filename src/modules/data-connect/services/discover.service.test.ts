@@ -25,6 +25,30 @@ describe("discover.service · task status contract", () => {
     vi.unstubAllEnvs();
   });
 
+  it("preserves exact count strategy and skipped results", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            id: "task-1",
+            catalog_id: "catalog-1",
+            strategy: "count_only",
+            status: "completed",
+            result: { updated_count: 1, failed_count: 1, skipped_count: 2 },
+          },
+        ],
+        total_count: 1,
+      },
+    });
+    const { listDataConnectDiscoverTasks } =
+      await import("@/modules/data-connect/services/discover.service");
+    const result = await listDataConnectDiscoverTasks({ page: 1, pageSize: 20 });
+    expect(result.items[0]).toMatchObject({
+      strategy: "count_only",
+      result: { updatedCount: 1, failedCount: 1, skippedCount: 2 },
+    });
+  });
+
   it("preserves cancelled tasks returned by Vega", async () => {
     getMock.mockResolvedValue({
       data: {

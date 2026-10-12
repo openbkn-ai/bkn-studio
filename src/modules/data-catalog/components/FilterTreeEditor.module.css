@@ -1,0 +1,81 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary, #1677ff);
+  background: var(--color-bg-surface);
+}
+
+.toolbar,
+.rule,
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.toolbar {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.rule {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary, #1677ff);
+  background: var(--color-bg-surface);
+}
+
+.rule > :first-child {
+  min-width: 180px;
+  flex: 2;
+}
+
+.rule > :nth-child(2) {
+  min-width: 80px;
+}
+
+.rule > :nth-child(3) {
+  min-width: 150px;
+  flex: 2;
+}
+
+.actions {
+  margin-top: 2px;
+}
+
+.readOnlyLogic {
+  padding: 4px 8px;
+  background: var(--color-fill-secondary);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.fieldSelect :global(.ant-select-selection-item) {
+  display: flex;
+  align-items: center;
+  line-height: normal;
+}
+
+.readOnlyCell {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  min-width: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

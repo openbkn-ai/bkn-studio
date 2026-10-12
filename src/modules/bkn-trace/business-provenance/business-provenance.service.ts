@@ -24,7 +24,21 @@ export class BusinessProvenanceAnalysisError extends Error {
   }
 }
 
+export type RecordIntegrity = {
+  status: "complete" | "missing";
+  checked_at: string;
+  scope: "registered_call_records";
+  missing: Array<{
+    operation_id: string;
+    attempt: number;
+    tool_name?: string;
+    reason: "call_outcome_missing" | "record_content_missing" | "business_target_missing";
+    field: string;
+  }>;
+};
+
 export type BusinessProvenanceQuery = {
+  recordIntegrity?: string;
   page?: number;
   pageSize?: number;
   keyword?: string;
@@ -36,9 +50,13 @@ export type BusinessProvenanceQuery = {
 };
 
 export type BusinessProvenanceConversation = {
+  currentRecordIntegrity?: RecordIntegrity;
+  recordIntegrityCheckFailed?: boolean;
   conversationId: string;
   agentName?: string;
   questionPreview?: string;
+  /** The list query did not finish reading all preview evidence. */
+  previewUnavailable?: boolean;
   resultPreview?: string;
   startedAt?: string;
   status?: string;
@@ -48,11 +66,15 @@ export type BusinessProvenanceConversation = {
 };
 
 export type BusinessProvenanceInteractionListItem = {
+  currentRecordIntegrity?: RecordIntegrity;
+  recordIntegrityCheckFailed?: boolean;
   interactionId: string;
   conversationId?: string;
   /** Chronological position within the conversation; the API list is newest first. */
   roundNumber?: number;
   questionPreview?: string;
+  /** The list query did not finish reading all preview evidence. */
+  previewUnavailable?: boolean;
   resultPreview?: string;
   startedAt?: string;
   status?: string;
@@ -60,6 +82,9 @@ export type BusinessProvenanceInteractionListItem = {
 };
 
 export type BusinessProvenancePage<T> = {
+  partial?: boolean;
+  truncated?: boolean;
+  partialReasons?: string[];
   entries: T[];
   total: number;
   page?: number;
@@ -112,6 +137,8 @@ export type BusinessProvenanceDerivedFact = {
 };
 
 export type BusinessProvenanceInteraction = {
+  currentRecordIntegrity?: RecordIntegrity;
+  recordIntegrityCheckFailed?: boolean;
   timeRail?: TimeRailItem[];
   interactionId: string;
   interactionQuestion?: string;
@@ -142,6 +169,8 @@ type BackendConversation = {
   interaction_count?: number;
   duration_ms?: number;
   evidence_completeness?: string;
+  current_record_integrity?: RecordIntegrity;
+  record_integrity_check_failed?: boolean;
 };
 
 export async function getBusinessProvenanceConversations(
@@ -152,6 +181,9 @@ export async function getBusinessProvenanceConversations(
     total?: number;
     page?: number;
     page_size?: number;
+    partial?: boolean;
+    truncated?: boolean;
+    partial_reasons?: string[];
   }>(`${EE_PROVENANCE_PREFIX}/conversations`, {
     params: provenanceParams(query),
     skipErrorToast: true,
@@ -161,16 +193,22 @@ export async function getBusinessProvenanceConversations(
       conversationId: entry.conversation_id ?? "",
       agentName: entry.agent_name,
       questionPreview: entry.question_preview,
+      previewUnavailable: response.data.partial === true || response.data.truncated === true,
       resultPreview: entry.result_preview,
       startedAt: entry.started_at,
       status: entry.status,
       interactionCount: entry.interaction_count,
       durationMs: entry.duration_ms,
       evidenceCompleteness: entry.evidence_completeness,
+      currentRecordIntegrity: entry.current_record_integrity,
+      recordIntegrityCheckFailed: entry.record_integrity_check_failed,
     })),
     total: response.data.total ?? 0,
     page: response.data.page,
     pageSize: response.data.page_size,
+    partial: response.data.partial,
+    truncated: response.data.truncated,
+    partialReasons: response.data.partial_reasons ?? [],
   };
 }
 
@@ -180,6 +218,8 @@ export async function getBusinessProvenanceInteractions(
   const response = await http.get<{
     entries?: Array<{
       interaction_id?: string;
+      current_record_integrity?: RecordIntegrity;
+      record_integrity_check_failed?: boolean;
       conversation_id?: string;
       round_number?: number;
       question_preview?: string;
@@ -191,13 +231,19 @@ export async function getBusinessProvenanceInteractions(
     total?: number;
     page?: number;
     page_size?: number;
+    partial?: boolean;
+    truncated?: boolean;
+    partial_reasons?: string[];
   }>(`${EE_PROVENANCE_PREFIX}/interactions`, { params: provenanceParams(query) });
   return {
     entries: (response.data.entries ?? []).map((entry) => ({
       interactionId: entry.interaction_id ?? "",
+      currentRecordIntegrity: entry.current_record_integrity,
+      recordIntegrityCheckFailed: entry.record_integrity_check_failed,
       conversationId: entry.conversation_id,
       roundNumber: entry.round_number,
       questionPreview: entry.question_preview,
+      previewUnavailable: response.data.partial === true || response.data.truncated === true,
       resultPreview: entry.result_preview,
       startedAt: entry.started_at,
       status: entry.status,
@@ -206,6 +252,9 @@ export async function getBusinessProvenanceInteractions(
     total: response.data.total ?? 0,
     page: response.data.page,
     pageSize: response.data.page_size,
+    partial: response.data.partial,
+    truncated: response.data.truncated,
+    partialReasons: response.data.partial_reasons ?? [],
   };
 }
 
@@ -215,6 +264,8 @@ export async function getBusinessProvenanceInteraction(
   const response = await http.get<{
     time_rail?: TimeRailItem[];
     interaction_id?: string;
+    current_record_integrity?: RecordIntegrity;
+    record_integrity_check_failed?: boolean;
     interaction_question?: string;
     interaction_result?: string;
     conversation_context?: Array<{
@@ -271,6 +322,8 @@ export async function getBusinessProvenanceInteraction(
   });
   return {
     timeRail: response.data.time_rail,
+    currentRecordIntegrity: response.data.current_record_integrity,
+    recordIntegrityCheckFailed: response.data.record_integrity_check_failed,
     interactionId: response.data.interaction_id ?? interactionId,
     interactionQuestion: response.data.interaction_question,
     interactionResult: response.data.interaction_result,
@@ -495,6 +548,7 @@ function provenanceParams(query: BusinessProvenanceQuery) {
   if (query.status) params.status = query.status;
   if (query.agentOrApp) params.agent_or_app = query.agentOrApp;
   if (query.knowledgeNetwork) params.knowledge_network = query.knowledgeNetwork;
+  if (query.recordIntegrity) params.record_integrity = query.recordIntegrity;
   if (query.evidenceCompleteness) params.evidence_completeness = query.evidenceCompleteness;
   if (query.conversationId) params.conversation_id = query.conversationId;
   return Object.keys(params).length ? params : undefined;

@@ -488,7 +488,7 @@ export function ActionTypeTaskManagementPanel({
       />
 
       <Drawer
-        destroyOnClose
+        destroyOnHidden
         onClose={() => setDrawerOpen(false)}
         open={drawerOpen}
         title={t("knowledgeNetwork.actionTypeExecutionLogDetailTitle")}

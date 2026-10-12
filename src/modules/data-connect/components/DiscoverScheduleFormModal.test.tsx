@@ -56,6 +56,33 @@ describe("DiscoverScheduleFormModal", () => {
     }));
   });
 
+  it("submits count_only as a schedule strategy", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DiscoverScheduleFormModal
+        catalogs={[]}
+        defaultCatalogId="catalog-1"
+        mode="create"
+        onCancel={vi.fn()}
+        onSubmit={onSubmit}
+        open
+        submitting={false}
+      />,
+    );
+    fireEvent.change(
+      await screen.findByPlaceholderText("dataConnect.discoverScheduleNamePlaceholder"),
+      { target: { value: "Exact count" } },
+    );
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: /dataConnect.discoverStrategy/ }));
+    fireEvent.click(await screen.findByText("dataConnect.discoverStrategies.count_only"));
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ catalogId: "catalog-1", strategy: "count_only" }),
+      ),
+    );
+  });
+
   it("rejects a discover schedule that runs more than once per hour", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(

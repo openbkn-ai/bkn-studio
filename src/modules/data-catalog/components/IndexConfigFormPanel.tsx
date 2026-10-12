@@ -14,9 +14,12 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import {
   extractRequestErrorDetails,
   extractRequestErrorMessage,
+  type RequestErrorDetails,
 } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { RequestErrorAlert } from "@/framework/ui/common/RequestErrorAlert";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import { listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
 import {
   loadAnalyzerCapabilities,
@@ -83,14 +86,6 @@ const isFeatureConfigField = (type: string) =>
   ["string", "text"].includes(normalizeFieldType(type));
 const isTextField = isFeatureConfigField;
 const isTextType = (type: string) => normalizeFieldType(type) === "text";
-
-function keyFieldOptionLabel(field: ResourceSchemaField): string {
-  const displayName = field.displayName?.trim();
-  if (displayName && displayName !== field.name) {
-    return `${displayName}（${field.name} · ${field.type}）`;
-  }
-  return `${field.name}（${field.type}）`;
-}
 
 const defaultFeatureNameOf = (kind: FeatureKind, index: number) => {
   const base = kind === "embedding" ? "vector" : kind;
@@ -178,7 +173,7 @@ export function IndexConfigFormPanel({
   const analyzerRequestIdRef = useRef(0);
   const [orphanSavedModel, setOrphanSavedModel] = useState<string | null>(null);
   const [defaultModelId, setDefaultModelId] = useState<string>();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RequestErrorDetails | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [featureFieldsPage, setFeatureFieldsPage] = useState(1);
@@ -196,15 +191,6 @@ export function IndexConfigFormPanel({
   useEffect(() => {
     setFeatureFieldsPage((page) => Math.min(page, featureFieldsPageCount));
   }, [featureFieldsPageCount]);
-
-  useEffect(() => {
-    if (!error) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => setError(null), 5000);
-    return () => window.clearTimeout(timer);
-  }, [error]);
 
   const analyzerOptions = useMemo(
     () =>
@@ -668,7 +654,7 @@ export function IndexConfigFormPanel({
   const validateForm = () => {
     const validationError = getFormValidationError();
     if (validationError) {
-      setError(validationError);
+      setError({ description: validationError });
       return false;
     }
     return true;
@@ -680,13 +666,13 @@ export function IndexConfigFormPanel({
     }
     if (actionsLocked) {
       if (!readOnly) {
-        setError(
-          taskStatusPending
+        setError({
+          description: taskStatusPending
             ? t("dataCatalog.resourceWorkspace.taskStatusUnavailable")
             : streamingActive
               ? t("dataCatalog.build.streamingActiveLocked")
               : t("dataCatalog.build.activeTaskLocked"),
-        );
+        });
       }
       return;
     }
@@ -726,36 +712,57 @@ export function IndexConfigFormPanel({
             primaryKeyFields: undefined,
           };
 
-      await updateCatalogResource(resource.id, {
-        catalogId: detail.catalogId,
-        category: detail.category,
-        description: detail.description,
-        enabled: detail.enabled ?? true,
-        expectedUpdateTime: detail.expectedUpdateTime,
-        name: detail.name,
-        sourceIdentifier: detail.sourceIdentifier,
-        schema: nextSchema,
-        indexConfig: nextIndexConfig,
-      });
+      await updateCatalogResource(
+        resource.id,
+        {
+          catalogId: detail.catalogId,
+          category: detail.category,
+          description: detail.description,
+          enabled: detail.enabled ?? true,
+          expectedUpdateTime: detail.expectedUpdateTime,
+          name: detail.name,
+          sourceIdentifier: detail.sourceIdentifier,
+          schema: nextSchema,
+          indexConfig: nextIndexConfig,
+        },
+        { skipErrorToast: true },
+      );
 
       setSchema(nextSchema);
       setDirty(false);
       message.success(t("dataCatalog.build.saveConfigSuccess"));
       onSaved?.();
     } catch (persistError) {
+      const backendError = extractRequestErrorDetails(persistError);
+      const { code, description } = backendError;
+      let errorMessage = description;
       if (extractRequestStatus(persistError) === 409) {
-        const code = extractRequestErrorDetails(persistError).code;
-        setError(
-          t(
-            code === "VegaBackend.BuildTask.Exist" ||
-              code === "VegaBackend.BuildTask.HasRunningExecution"
-              ? "dataCatalog.build.activeTaskLocked"
-              : "dataCatalog.build.configConflict",
-          ),
-        );
-      } else {
-        setError(extractRequestErrorMessage(persistError));
+        let key = "configConflict";
+        if (
+          code === "VegaBackend.BuildTask.Exist" ||
+          code === "VegaBackend.BuildTask.HasRunningExecution"
+        ) {
+          key = "activeTaskLocked";
+        } else if (code === "VegaBackend.Resource.UpdateConflict") {
+          key = "resourceUpdateConflict";
+        } else if (
+          resource.category === "dataset" &&
+          code === "VegaBackend.InvalidParameter.RequestBody"
+        ) {
+          // The Resource update contract uses this 409 code for Dataset index/analyzer rebuild guards.
+          key = "datasetRebuildRequired";
+        }
+        errorMessage = t(`dataCatalog.build.${key}`);
       }
+      setError({
+        ...backendError,
+        description: errorMessage,
+        details:
+          errorMessage === description
+            ? backendError.details
+            : [...new Set([description, backendError.details].filter(Boolean))].join("\n"),
+      });
+      void message.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -764,7 +771,8 @@ export function IndexConfigFormPanel({
   const primaryKeyOptions = useMemo(
     () =>
       schema.filter(isPrimaryKeyField).map((field) => ({
-        label: keyFieldOptionLabel(field),
+        label: <FieldIdentity field={field} layout="inline" name={field.name} showNameWhenSame />,
+        searchText: `${field.displayName ?? ""} ${field.name} ${field.type}`,
         value: field.name,
       })),
     [schema],
@@ -772,7 +780,8 @@ export function IndexConfigFormPanel({
   const incrementalFieldOptions = useMemo(
     () =>
       schema.filter(isIncrementalField).map((field) => ({
-        label: keyFieldOptionLabel(field),
+        label: <FieldIdentity field={field} layout="inline" name={field.name} showNameWhenSame />,
+        searchText: `${field.displayName ?? ""} ${field.name} ${field.type}`,
         value: field.name,
       })),
     [schema],
@@ -842,17 +851,29 @@ export function IndexConfigFormPanel({
     const displayName = field?.displayName?.trim();
     return displayName && displayName !== fieldName ? `${displayName}（${fieldName}）` : fieldName;
   };
-  const summarizeFields = (fields: string[]) => {
-    if (fields.length === 0) {
-      return t("dataCatalog.build.notConfigured");
-    }
-    const labels = fields.map(summaryFieldLabel);
-    if (fields.length <= 2) {
-      return labels.join(", ");
-    }
-    return `${labels.slice(0, 2).join(", ")} +${fields.length - 2}`;
-  };
   const fullFieldSummary = (fields: string[]) => fields.map(summaryFieldLabel).join(", ");
+  const renderKeyFieldSummary = (fieldNames: string[]) => {
+    if (fieldNames.length === 0) return <b>{t("dataCatalog.build.notConfigured")}</b>;
+    return (
+      <div className={formStyles.configMetricFields} title={fullFieldSummary(fieldNames)}>
+        {fieldNames.slice(0, 2).map((name) => {
+          const field = schema.find((item) => item.name === name);
+          return (
+            <span className={formStyles.configMetricField} key={name}>
+              {field ? (
+                <FieldIdentity field={field} layout="inline" name={name} showNameWhenSame />
+              ) : (
+                name
+              )}
+            </span>
+          );
+        })}
+        {fieldNames.length > 2 ? (
+          <span className={formStyles.configMetricMore}>+{fieldNames.length - 2}</span>
+        ) : null}
+      </div>
+    );
+  };
   const selectedEmbeddingGroups = featureField
     ? (eligibleEmbeddingModelGroups[featureField.name] ?? [])
     : [];
@@ -1206,15 +1227,11 @@ export function IndexConfigFormPanel({
           >
             <div className={formStyles.configMetric}>
               <span>{t("dataCatalog.build.rolePrimaryKey")}</span>
-              <b title={fullFieldSummary(primaryKeyFields) || undefined}>
-                {summarizeFields(primaryKeyFields)}
-              </b>
+              {renderKeyFieldSummary(primaryKeyFields)}
             </div>
             <div className={formStyles.configMetric}>
               <span>{t("dataCatalog.build.roleIncrementalKey")}</span>
-              <b title={fullFieldSummary(incrementalFields) || undefined}>
-                {summarizeFields(incrementalFields)}
-              </b>
+              {renderKeyFieldSummary(incrementalFields)}
             </div>
             {!hideBuildControls ? (
               <div className={formStyles.configMetric}>
@@ -1415,6 +1432,7 @@ export function IndexConfigFormPanel({
                     markDirty();
                   }}
                   options={primaryKeyOptions}
+                  optionFilterProp="searchText"
                   placeholder={t("dataCatalog.build.primaryKeyFieldsPlaceholder")}
                   style={{ width: "100%" }}
                   value={primaryKeyFields}
@@ -1435,6 +1453,7 @@ export function IndexConfigFormPanel({
                     markDirty();
                   }}
                   options={incrementalFieldOptions}
+                  optionFilterProp="searchText"
                   placeholder={t("dataCatalog.build.incrementalFieldsPlaceholder")}
                   style={{ width: "100%" }}
                   value={incrementalFields}
@@ -1691,7 +1710,7 @@ export function IndexConfigFormPanel({
         ) : null}
       </Drawer>
 
-      {error ? <Alert message={error} showIcon type="error" /> : null}
+      {error ? <RequestErrorAlert error={error} onDismiss={() => setError(null)} /> : null}
       {dirty ? (
         <Alert message={t("dataCatalog.build.unsavedIndexConfig")} showIcon type="warning" />
       ) : null}

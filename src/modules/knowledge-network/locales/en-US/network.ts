@@ -47,9 +47,47 @@ export const networkPart = {
   permissionRequestReasonRequired: "Please enter a reason.",
   permissionRequestSubmit: "Submit request",
   permissionRequestSuccess: "Permission request submitted.",
+  permissionRequestViewMine: "View my requests",
+  permissionRequestAlreadyGranted:
+    "You already have the selected permission. The request window has been closed; refresh the page to update permission state.",
+  permissionRequestNothingAvailable:
+    "There are no permissions available to request for this resource.",
+  permissionRequestResourceDeleted:
+    "This resource has been deleted and can no longer accept permission requests.",
+  permissionRequestResourceID: "Resource ID: {{id}}",
   permissionRequestNoOperations:
     "You already have every requestable business permission on this knowledge network.",
   permissionRequestPending: "These permissions already have a pending request: {{operations}}",
+  permissionRequestPolicyPending:
+    "A request for this policy is already pending; submitting again will not create another task.",
+  permissionRequestPolicyIncomplete: "Complete the requested permission settings first.",
+  permissionRequestPolicyPreviewPending:
+    "Loading the current permission scope. Please submit the request shortly.",
+  permissionRequestBasePermissions: "Base permissions",
+  permissionRequestRowFilter: "Row filter",
+  permissionRequestPropertyPermissions: "Property access",
+  permissionRequestRowScope: "Request row access",
+  permissionRequestPropertyScope: "Request original field values",
+  permissionRequestRowScopeHint:
+    "These are your current row-filter conditions. Describe the required data scope in the reason; an administrator configures the final rule after approval.",
+  permissionRequestRowScopeCurrentValues: "Currently allowed values",
+  permissionRequestRowScopeAddValues: "Additional allowed values requested",
+  permissionRequestRowScopeAddValuesPlaceholder: "Separate multiple values with commas",
+  permissionRequestRowScopeBoundaryPlaceholder:
+    "Enter the requested boundary: lower minimum or higher maximum",
+  permissionRequestPropertyScopeHint:
+    "Select fields whose original values you need. After reviewer confirmation, the selected fields become visible as original values immediately.",
+  permissionRequestPropertyScopeCurrent: "Current: {{level}}",
+  permissionRequestPropertyScopeBase: "Base permission: {{level}}",
+  permissionRequestPropertyScopeExplicit: "Explicit configuration: {{level}}",
+  permissionRequestPropertyScopeOriginalValue: "Request original value",
+  permissionRequestRowFilterHint:
+    "A row filter further limits rows returned under existing query permission.",
+  permissionRequestRowFilterField: "Filter property",
+  permissionRequestRowFilterValues: "Allowed values",
+  permissionRequestRowFilterValuesPlaceholder: "Separate multiple values with commas",
+  permissionRequestPropertyPermissionsHint:
+    "Property access only narrows base permissions; it does not grant object access by itself.",
   permissionRequestCommunity:
     "In the Community edition, approval grants every business permission on this knowledge network, excluding authorization management.",
   permissionOperation: {
@@ -97,6 +135,7 @@ export const networkPart = {
   networkIdOrNameExists: "Knowledge network ID or name already exists.",
   importIgnore: "Ignore",
   importInvalidJson: "The import file is not valid JSON.",
+  importFileTooLarge: "The import file exceeds the {{maxSizeMB}} MB gateway limit.",
   importOverwrite: "Overwrite",
   importPending:
     "The import flow will be aligned with the legacy Vega experience in a later slice.",

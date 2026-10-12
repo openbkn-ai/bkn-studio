@@ -249,6 +249,7 @@ describe("data-connect.service · test connection", () => {
   it("covers every built-in connector field from the Vega initialization data", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.stubEnv("VITE_MOCK_EDITION", "community");
     const { listDataConnectConnectorTypes } =
       await import("@/modules/data-connect/services/data-connect.service");
 
@@ -291,7 +292,34 @@ describe("data-connect.service · test connection", () => {
       "schemas",
       "options",
     ]);
-    expect(fieldsByType.get("oracle")).toEqual({});
+    expect(Object.keys(fieldsByType.get("oracle") ?? {})).toEqual([
+      "host",
+      "port",
+      "username",
+      "password",
+      "service_name",
+      "schemas",
+      "options",
+    ]);
+    expect(fieldsByType.get("oracle")?.password).toMatchObject({
+      encrypted: true,
+      required: true,
+      type: "string",
+    });
+    expect(Object.keys(fieldsByType.get("hana") ?? {})).toEqual([
+      "host",
+      "port",
+      "username",
+      "password",
+      "database",
+      "schemas",
+      "options",
+    ]);
+    expect(fieldsByType.get("hana")?.password).toMatchObject({
+      encrypted: true,
+      required: true,
+      type: "string",
+    });
     expect(Object.keys(fieldsByType.get("opensearch") ?? {})).toEqual([
       "host",
       "port",
@@ -321,12 +349,40 @@ describe("data-connect.service · test connection", () => {
     );
     expect(editionsByType.get("sqlserver")).toBe("professional");
     expect(editionsByType.get("oracle")).toBe("professional");
+    expect(editionsByType.get("hana")).toBe("enterprise");
     expect(editionsByType.get("mysql")).toBeUndefined();
 
     const stateByType = new Map(connectorTypes.map((connector) => [connector.type, connector]));
     expect(stateByType.get("opensearch")).toMatchObject({ available: false, enabled: true });
-    expect(stateByType.get("oracle")).toMatchObject({ available: false, enabled: false });
+    expect(stateByType.get("oracle")).toMatchObject({ available: false, enabled: true });
+    expect(stateByType.get("hana")).toMatchObject({ available: false, enabled: true });
     expect(stateByType.get("mysql")).toMatchObject({ available: true, enabled: false });
+  });
+
+  it.each([
+    ["community", false, false],
+    ["professional", false, true],
+    ["enterprise", true, true],
+    ["industry", true, true],
+  ])("gates mock HANA at %s edition", async (edition, hanaAvailable, professionalAvailable) => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.stubEnv("VITE_MOCK_EDITION", edition);
+    const { listDataConnectConnectorTypes } =
+      await import("@/modules/data-connect/services/data-connect.service");
+
+    const connectorTypes = await listDataConnectConnectorTypes();
+    for (const type of ["sqlserver", "oracle"]) {
+      expect(connectorTypes.find((connector) => connector.type === type)).toMatchObject({
+        available: professionalAvailable,
+        enabled: true,
+        requiredEdition: "professional",
+      });
+    }
+    expect(connectorTypes.find((connector) => connector.type === "hana")).toMatchObject({
+      available: hanaAvailable,
+      enabled: true,
+      requiredEdition: "enterprise",
+    });
   });
 
   it("recognizes only the backend connection-test failure code", async () => {

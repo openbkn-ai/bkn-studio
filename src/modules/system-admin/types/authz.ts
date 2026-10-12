@@ -19,7 +19,8 @@ export type GrantEffect = "allow" | "deny";
 export type GrantPolicySource =
   "community_bundle" | "professional_rule" | "legacy" | "system_derived" | "role_permission";
 
-export type GrantAuthoritySource = "admin_authz" | "owner_delegate" | "system" | "migration";
+export type GrantAuthoritySource =
+  "admin_authz" | "owner_delegate" | "permission_request" | "system" | "migration";
 
 export type EffectiveDecisionBasis =
   "direct" | "inherited" | "bundle" | "wildcard" | "default" | "requires";
@@ -80,6 +81,7 @@ export type AuthorizableObject = {
 
 type ObjectGrantTargetInput = {
   accessorId: string;
+  accessorType?: "user" | "role";
   objId: string;
   objName: string;
   objSub?: string;
@@ -122,29 +124,4 @@ export type ObjectGrantListResult = {
   grants: ObjectGrant[];
   total: number;
   summary?: AuthzSummary;
-};
-
-export type EnterpriseGrantActivationState =
-  | "activated"
-  | "expired"
-  | "downgraded_inactive"
-  | "deleted"
-  | "dormant"
-  | "experimental"
-  | "invalid";
-
-export type EnterpriseObjectGrant = {
-  activationState: EnterpriseGrantActivationState;
-  accessorId: string;
-  classification: string;
-  effect: GrantEffect;
-  expiresAt?: string;
-  grantId: string;
-  inactiveReason?: string;
-  operation: string;
-  resourceId: string;
-  resourceType: string;
-  ruleId: string;
-  runtimeEligible: boolean;
-  subjectType: "user" | "role" | "department" | "unknown";
 };

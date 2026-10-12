@@ -388,6 +388,141 @@ select {
   font-weight: 600;
 }
 
+.console-about-modal .ant-modal-content {
+  overflow: hidden;
+  padding: 0;
+  border-radius: 14px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.console-about-modal .ant-modal-header {
+  margin: 0;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-bg-surface);
+}
+
+.console-about-modal .ant-modal-body {
+  padding: 16px 22px 18px;
+}
+
+.console-about-modal-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.console-about-modal-title strong {
+  color: var(--color-text-primary);
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.console-about-modal-title span {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.console-about-modal-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.console-about-modal-summary strong {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.console-about-modal-points {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.console-about-modal-points > div {
+  display: flex;
+  min-height: 84px;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-interface-panel-bg);
+}
+
+.console-about-modal-points strong {
+  color: var(--color-text-primary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.console-about-modal-points span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.console-about-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px -22px -18px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.console-about-modal-footer > span {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.console-about-modal-footer > div {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.console-about-modal-link,
+.console-about-modal-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.console-about-modal-link {
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-bg-surface);
+  color: var(--color-primary-700);
+}
+
+.console-about-modal-primary {
+  border: 1px solid var(--color-primary-600);
+  background: var(--color-primary-600);
+  color: var(--color-text-inverse);
+}
+
+.console-about-modal-link:hover,
+.console-about-modal-primary:hover {
+  opacity: 0.88;
+}
+
 .console-language-menu-option {
   display: inline-flex;
   align-items: center;
@@ -1390,5 +1525,24 @@ select {
   .page-toolbar {
     flex-direction: column;
     gap: 12px;
+  }
+
+  .console-about-modal-points {
+    grid-template-columns: 1fr;
+  }
+
+  .console-about-modal-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .console-about-modal-footer > div {
+    width: 100%;
+  }
+
+  .console-about-modal-link,
+  .console-about-modal-primary {
+    flex: 1;
+    justify-content: center;
   }
 }

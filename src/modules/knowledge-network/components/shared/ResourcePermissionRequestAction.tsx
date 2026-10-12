@@ -5,107 +5,573 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Checkbox, Form, Input, Modal, Spin } from "antd";
-import { useMemo, useState, type MouseEvent } from "react";
+import {
+  ApiOutlined,
+  AppstoreOutlined,
+  DatabaseOutlined,
+  DeploymentUnitOutlined,
+  FileTextOutlined,
+  LockOutlined,
+  ToolOutlined,
+} from "@ant-design/icons";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Form,
+  Input,
+  Modal,
+  Space,
+  Spin,
+  Tabs,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useCapability, useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   createPermissionRequest,
+  getPermissionRequestProposalPreview,
+  isPermissionAlreadyGrantedError,
+  isPermissionRequestResourceDeletedError,
   listPermissionRequests,
 } from "@/modules/account/services/permission-requests.service";
-import { getMissingResourcePermissionOperations } from "@/modules/knowledge-network/components/shared/resource-permission-request";
+import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/object-type.service";
+import { basePropertyAccessLevel } from "@/modules/knowledge-network/utils/property-authorization";
+import {
+  canPreviewObjectTypePolicyScope,
+  getMissingResourcePermissionOperations,
+  getEffectiveRowFilterPolicies,
+  getRequestablePropertyGrants,
+  hasEffectiveRowFilter,
+  hasRequestableObjectTypePermission,
+  isPermissionRequestProposalReady,
+  isPermissionRequestPrefillReady,
+  togglePermissionRequestOperation,
+  type RowFilterPolicy,
+} from "@/modules/knowledge-network/components/shared/resource-permission-request";
+import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
+import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
+
+import authorizationStyles from "@/modules/system-admin/scenes/admin.module.css";
 
 type RequestForm = { operations?: string[]; reason?: string };
+type ProposalKind = "grant" | "row_filter" | "property_grants";
+type ProposalPreview = {
+  row_filter?: {
+    available_fields?: Array<{
+      display_name?: string;
+      name: string;
+      type: string;
+    }>;
+    effective_policies?: RowFilterPolicy[];
+    effective_policy_present?: boolean;
+    policy?: RowFilterPolicy | null;
+    revision?: string | null;
+  };
+  property_grants?: { entries?: Array<{ level: string; property_name: string }> };
+};
 
 type ResourcePermissionRequestActionProps = {
+  initialOperations?: string[];
+  initialProposalKind?: ProposalKind;
+  initialPropertyNames?: string[];
+  initialReason?: string;
   operations?: string[];
   resourceType: string;
   resourceID: string;
   resourceName: string;
-  trigger?: "button" | "text";
+  trigger?: "button" | "none" | "text";
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
+function requestResourceIcon(resourceType: string) {
+  if (resourceType === "knowledge_network") return <DeploymentUnitOutlined />;
+  if (["catalog", "resource"].includes(resourceType)) return <DatabaseOutlined />;
+  if (["tool_box", "function"].includes(resourceType)) return <ToolOutlined />;
+  if (resourceType === "mcp") return <ApiOutlined />;
+  if (resourceType === "skill") return <FileTextOutlined />;
+  return <AppstoreOutlined />;
+}
+
 export function ResourcePermissionRequestAction({
+  initialOperations = [],
+  initialProposalKind = "grant",
+  initialPropertyNames = [],
+  initialReason = "",
   operations,
   resourceType,
   resourceID,
   resourceName,
   trigger = "text",
+  open,
+  onOpenChange,
 }: ResourcePermissionRequestActionProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
+  const navigate = useNavigate();
+  const { catalogError, catalogLoading, operationsForType, retryAuthorizationRegistry } =
+    useAuthorizationRegistry();
   const entitlement = useEntitlement();
+  const policyScopeCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
   const communityBuild = isCommunityBuild(entitlement);
-  const [open, setOpen] = useState(false);
+  const policyScopePreviewsEnabled = canPreviewObjectTypePolicyScope(policyScopeCapability);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pending, setPending] = useState(false);
   const [pendingOperations, setPendingOperations] = useState<string[]>([]);
+  const [pendingProposalKinds, setPendingProposalKinds] = useState<string[]>([]);
+  const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
+  const [proposalKind, setProposalKind] = useState<ProposalKind>("grant");
+  const [proposalPreview, setProposalPreview] = useState<ProposalPreview>();
+  const [proposalPreviewResolved, setProposalPreviewResolved] = useState(false);
+  const [proposalPreviewResourceID, setProposalPreviewResourceID] = useState<string | null>(null);
+  const [pendingRequestsResourceID, setPendingRequestsResourceID] = useState<string | null>(null);
+  const [selectedPropertyNames, setSelectedPropertyNames] = useState<string[]>([]);
+  const [objectProperties, setObjectProperties] = useState<
+    Array<{ displayName?: string; name: string }>
+  >([]);
+  const [objectPropertiesResolved, setObjectPropertiesResolved] = useState(false);
+  const initialOperationsAppliedFor = useRef<string | null>(null);
+  const initialPropertiesAppliedFor = useRef<string | null>(null);
   const [form] = Form.useForm<RequestForm>();
-  const selectableOperations = useMemo(
+  const requestOpen = open ?? internalOpen;
+  const currentProposalPreviewResolved =
+    proposalPreviewResolved && proposalPreviewResourceID === resourceID;
+  const currentPropertyPreviewResolved = currentProposalPreviewResolved && objectPropertiesResolved;
+  const rowFilterPolicies = useMemo(
+    () => getEffectiveRowFilterPolicies(proposalPreview?.row_filter),
+    [proposalPreview],
+  );
+  const hasRowFilter = hasEffectiveRowFilter(proposalPreview?.row_filter);
+  const restrictedProperties = useMemo(
+    () =>
+      getRequestablePropertyGrants(
+        proposalPreview?.property_grants?.entries ?? [],
+        objectProperties.map((property) => property.name),
+      ),
+    [objectProperties, proposalPreview],
+  );
+  const selectableOperationKeys = useMemo(
     () =>
       getMissingResourcePermissionOperations(resourceType, operations).filter(
         (operation) => !pendingOperations.includes(operation),
       ),
     [operations, pendingOperations, resourceType],
   );
+  const selectableOperations = useMemo(() => {
+    const registryOperations = new Map(
+      operationsForType(resourceType).map((operation) => [operation.key, operation]),
+    );
+    return selectableOperationKeys.map((operation) => {
+      const registryOperation = registryOperations.get(operation);
+      return (
+        registryOperation ?? {
+          description: t(`knowledgeNetwork.permissionOperation.${operation}`),
+          key: operation,
+          label: t(`knowledgeNetwork.permissionOperation.${operation}`),
+          requires: [],
+        }
+      );
+    });
+  }, [operationsForType, resourceType, selectableOperationKeys, t]);
+  const selectedRequirements = useMemo(
+    () =>
+      selectableOperations.flatMap((requirement) => {
+        const dependents = selectableOperations.filter(
+          (operation) =>
+            selectedOperations.includes(operation.key) &&
+            operation.requires.includes(requirement.key),
+        );
+        return dependents.length ? [requirement.key] : [];
+      }),
+    [selectableOperations, selectedOperations],
+  );
 
-  if (communityBuild || getRuntimeConfig().currentUser.isSuperAdmin) {
-    return null;
-  }
+  const setOperations = useCallback(
+    (next: string[]) => {
+      const normalized = [...new Set(next)];
+      setSelectedOperations(normalized);
+      form.setFieldValue("operations", normalized);
+    },
+    [form],
+  );
+  const toggleOperation = (operationKey: string) => {
+    setSelectedOperations((current) => {
+      const next = togglePermissionRequestOperation(current, operationKey, selectableOperations);
+      form.setFieldValue("operations", next);
+      return next;
+    });
+  };
+  const setRequestOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (open === undefined) setInternalOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange, open],
+  );
 
-  const openRequest = async (event: MouseEvent) => {
+  const openRequest = (event: MouseEvent | KeyboardEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    setOpen(true);
-    setLoading(true);
-    form.resetFields();
-    try {
-      const page = await listPermissionRequests("mine", 200, 0);
-      const nextPendingOperations = page.entries
-        .filter(
-          (request) =>
-            request.status === "pending" &&
-            request.resource_type === resourceType &&
-            request.resource_id === resourceID,
-        )
-        .flatMap((request) =>
-          request.operations?.length ? request.operations : [request.operation],
-        );
-      setPendingOperations(nextPendingOperations);
-      setPending(nextPendingOperations.length > 0);
-    } catch (error) {
-      setOpen(false);
-      void message.error(extractRequestErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
+    setRequestOpen(true);
   };
 
+  useEffect(() => {
+    if (requestOpen) return;
+    initialOperationsAppliedFor.current = null;
+    initialPropertiesAppliedFor.current = null;
+    setPendingRequestsResourceID(null);
+    setProposalPreviewResourceID(null);
+    setProposalPreviewResolved(false);
+  }, [requestOpen]);
+
+  useEffect(() => {
+    if (!requestOpen) return;
+    let active = true;
+    setLoading(true);
+    form.resetFields();
+    form.setFieldValue("reason", initialReason);
+    setPending(false);
+    setPendingOperations([]);
+    setPendingProposalKinds([]);
+    setPendingRequestsResourceID(null);
+    setSelectedOperations([]);
+    initialOperationsAppliedFor.current = null;
+    setProposalKind(initialProposalKind);
+    setProposalPreview(undefined);
+    setProposalPreviewResolved(resourceType !== "object_type");
+    setProposalPreviewResourceID(resourceType !== "object_type" ? resourceID : null);
+    setSelectedPropertyNames([]);
+    initialPropertiesAppliedFor.current = null;
+    setObjectProperties([]);
+    setObjectPropertiesResolved(resourceType !== "object_type");
+    void listPermissionRequests("mine", 20, 0, {
+      resourceID,
+      resourceType,
+      status: "pending",
+    })
+      .then((page) => {
+        if (!active) return;
+        const nextPendingOperations = page.entries
+          .filter(
+            (request) =>
+              request.status === "pending" &&
+              request.resource_type === resourceType &&
+              request.resource_id === resourceID,
+          )
+          .flatMap((request) =>
+            request.operations?.length ? request.operations : [request.operation],
+          );
+        setPendingOperations(nextPendingOperations);
+        setPendingProposalKinds(
+          page.entries
+            .filter(
+              (request) =>
+                request.status === "pending" &&
+                request.proposal_kind &&
+                request.proposal_kind !== "grant",
+            )
+            .map((request) => request.proposal_kind as string),
+        );
+        setPending(nextPendingOperations.length > 0);
+      })
+      .catch((error) => {
+        if (!active) return;
+        void message.error(extractRequestErrorMessage(error));
+      })
+      .finally(() => {
+        if (active) {
+          setPendingRequestsResourceID(resourceID);
+          setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [form, initialProposalKind, initialReason, message, requestOpen, resourceID, resourceType]);
+
+  useEffect(() => {
+    if (requestOpen && !policyScopePreviewsEnabled && proposalKind !== "grant") {
+      setProposalKind("grant");
+    }
+  }, [policyScopePreviewsEnabled, proposalKind, requestOpen]);
+
+  useEffect(() => {
+    const prefillKey = `${resourceID}\u0000${initialOperations.join("\u0000")}`;
+    if (
+      !isPermissionRequestPrefillReady({
+        initialProposalKind,
+        pendingRequestsResourceID,
+        proposalPreviewResourceID,
+        requestOpen,
+        resourceID,
+        target: "operations",
+      }) ||
+      initialOperationsAppliedFor.current === prefillKey
+    )
+      return;
+    initialOperationsAppliedFor.current = prefillKey;
+    setOperations(
+      initialOperations.filter((operation) => selectableOperationKeys.includes(operation)),
+    );
+  }, [
+    initialOperations,
+    initialProposalKind,
+    pendingRequestsResourceID,
+    proposalPreviewResourceID,
+    requestOpen,
+    resourceID,
+    selectableOperationKeys,
+    setOperations,
+  ]);
+
+  useEffect(() => {
+    if (!requestOpen || resourceType !== "object_type") return;
+    let active = true;
+    if (policyScopePreviewsEnabled) {
+      void getPermissionRequestProposalPreview(resourceID)
+        .then((preview) => {
+          if (active) setProposalPreview(preview as ProposalPreview);
+        })
+        .catch(() => {
+          if (active) setProposalPreview({});
+        })
+        .finally(() => {
+          if (active) {
+            setProposalPreviewResourceID(resourceID);
+            setProposalPreviewResolved(true);
+          }
+        });
+    } else {
+      setProposalPreview({});
+      setProposalPreviewResourceID(resourceID);
+      setProposalPreviewResolved(true);
+    }
+    return () => {
+      active = false;
+    };
+  }, [policyScopePreviewsEnabled, requestOpen, resourceID, resourceType]);
+
+  useEffect(() => {
+    if (!requestOpen || resourceType !== "object_type") return;
+    let active = true;
+    const [networkId, objectTypeId] = resourceID.split("/", 2);
+    if (networkId && objectTypeId) {
+      void getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId)
+        .then((detail) => {
+          if (active)
+            setObjectProperties(
+              (detail?.dataProperties ?? []).map((property) => ({
+                name: property.name,
+                displayName: property.displayName,
+              })),
+            );
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (active) setObjectPropertiesResolved(true);
+        });
+    } else {
+      setObjectPropertiesResolved(true);
+    }
+    return () => {
+      active = false;
+    };
+  }, [requestOpen, resourceID, resourceType]);
+
+  useEffect(() => {
+    if (
+      !requestOpen ||
+      !objectPropertiesResolved ||
+      !isPermissionRequestPrefillReady({
+        initialProposalKind,
+        pendingRequestsResourceID,
+        proposalPreviewResourceID,
+        requestOpen,
+        resourceID,
+        target: "properties",
+      })
+    )
+      return;
+    const prefillKey = `${resourceID}\u0000${initialPropertyNames.join("\u0000")}`;
+    if (initialPropertiesAppliedFor.current === prefillKey) return;
+    initialPropertiesAppliedFor.current = prefillKey;
+    const requestableProperties = new Set(
+      restrictedProperties.map((property) => property.property_name),
+    );
+    setSelectedPropertyNames(
+      initialPropertyNames.filter((property) => requestableProperties.has(property)),
+    );
+  }, [
+    initialPropertyNames,
+    initialProposalKind,
+    objectPropertiesResolved,
+    pendingRequestsResourceID,
+    proposalPreviewResourceID,
+    requestOpen,
+    resourceID,
+    restrictedProperties,
+  ]);
+
+  useEffect(() => {
+    if (!requestOpen || resourceType !== "object_type" || !currentPropertyPreviewResolved) return;
+    if (proposalKind === "row_filter" && !hasRowFilter) {
+      setProposalKind("grant");
+      return;
+    }
+    if (proposalKind === "property_grants" && !restrictedProperties.length) {
+      setProposalKind("grant");
+    }
+  }, [
+    hasRowFilter,
+    proposalKind,
+    currentPropertyPreviewResolved,
+    requestOpen,
+    resourceType,
+    restrictedProperties.length,
+  ]);
+
+  useEffect(() => {
+    if (
+      !requestOpen ||
+      resourceType !== "object_type" ||
+      !currentPropertyPreviewResolved ||
+      pendingRequestsResourceID !== resourceID
+    )
+      return;
+    const hasPendingRequest = pendingOperations.length > 0 || pendingProposalKinds.length > 0;
+    const hasRequestableContent = hasRequestableObjectTypePermission({
+      hasPendingRequest,
+      hasRowFilter,
+      missingOperationCount: selectableOperationKeys.length,
+      restrictedPropertyCount: restrictedProperties.length,
+    });
+    if (hasRequestableContent) return;
+
+    setRequestOpen(false);
+    void message.info(t("knowledgeNetwork.permissionRequestNothingAvailable"));
+  }, [
+    hasRowFilter,
+    message,
+    pendingOperations.length,
+    pendingProposalKinds.length,
+    currentPropertyPreviewResolved,
+    pendingRequestsResourceID,
+    requestOpen,
+    resourceID,
+    resourceType,
+    restrictedProperties.length,
+    selectableOperationKeys.length,
+    setRequestOpen,
+    t,
+  ]);
+
   const submit = async (values: RequestForm) => {
+    const rowFilter = proposalPreview?.row_filter;
+    const propertyChanges = selectedPropertyNames.map((property_name) => ({
+      property_name,
+      level: "full",
+    }));
+    if (
+      !isPermissionRequestProposalReady({
+        proposalKind,
+        resourceType,
+        previewResolved:
+          currentProposalPreviewResolved &&
+          (proposalKind !== "property_grants" || objectPropertiesResolved),
+      })
+    ) {
+      void message.warning(t("knowledgeNetwork.permissionRequestPolicyPreviewPending"));
+      return;
+    }
+    if (proposalKind === "row_filter" && !hasRowFilter) {
+      void message.warning(t("knowledgeNetwork.permissionRequestPolicyIncomplete"));
+      return;
+    }
+    if (proposalKind === "property_grants" && !propertyChanges.length) {
+      void message.warning(t("knowledgeNetwork.permissionRequestPolicyIncomplete"));
+      return;
+    }
     setSubmitting(true);
     try {
       await createPermissionRequest({
         resourceType,
         resourceID,
         resourceName,
-        operations: values.operations ?? [],
+        operations: proposalKind === "grant" ? (values.operations ?? []) : [],
+        proposal:
+          proposalKind === "row_filter"
+            ? {
+                kind: "row_filter",
+                payload: {
+                  current_policy: rowFilter?.policy ?? null,
+                  current_revision: rowFilter?.revision ?? null,
+                },
+              }
+            : proposalKind === "property_grants"
+              ? { kind: "property_grants", payload: { changes: propertyChanges } }
+              : undefined,
         reason: values.reason?.trim() ?? "",
       });
-      void message.success(t("knowledgeNetwork.permissionRequestSuccess"));
-      setOpen(false);
+      setRequestOpen(false);
+      message.success({
+        content: (
+          <Space size={8}>
+            {t("knowledgeNetwork.permissionRequestSuccess")}
+            <Button
+              onClick={() => {
+                void navigate("/account/permission-requests?tab=mine");
+              }}
+              size="small"
+              type="link"
+            >
+              {t("knowledgeNetwork.permissionRequestViewMine")}
+            </Button>
+          </Space>
+        ),
+        duration: 5,
+      });
     } catch (error) {
+      if (isPermissionAlreadyGrantedError(error)) {
+        setRequestOpen(false);
+        void message.info(t("knowledgeNetwork.permissionRequestAlreadyGranted"));
+        return;
+      }
+      if (isPermissionRequestResourceDeletedError(error)) {
+        setRequestOpen(false);
+        void message.warning(t("knowledgeNetwork.permissionRequestResourceDeleted"));
+        return;
+      }
       void message.error(extractRequestErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (communityBuild || getRuntimeConfig().currentUser.isSuperAdmin) {
+    return null;
+  }
 
   return (
     <>
@@ -113,31 +579,66 @@ export function ResourcePermissionRequestAction({
         <AppButton onClick={(event) => void openRequest(event)}>
           {t("knowledgeNetwork.requestPermission")}
         </AppButton>
-      ) : (
-        <span onClick={(event) => void openRequest(event)} role="button" tabIndex={0}>
+      ) : trigger === "text" ? (
+        <span
+          onClick={(event) => void openRequest(event)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") void openRequest(event);
+          }}
+          role="button"
+          tabIndex={0}
+        >
           {t("knowledgeNetwork.requestPermission")}
         </span>
-      )}
+      ) : null}
       <Modal
         centered
         confirmLoading={submitting}
         okButtonProps={{
-          disabled: loading || selectableOperations.length === 0,
+          disabled:
+            loading ||
+            catalogLoading ||
+            !isPermissionRequestProposalReady({
+              proposalKind,
+              resourceType,
+              previewResolved:
+                currentProposalPreviewResolved &&
+                (proposalKind !== "property_grants" || objectPropertiesResolved),
+            }) ||
+            (proposalKind !== "grant" && pendingProposalKinds.includes(proposalKind)) ||
+            (proposalKind === "grant" && selectedOperations.length === 0) ||
+            (proposalKind === "property_grants" && selectedPropertyNames.length === 0),
         }}
         okText={t("knowledgeNetwork.permissionRequestSubmit")}
         onCancel={() => {
-          if (!submitting) setOpen(false);
+          if (!submitting) setRequestOpen(false);
         }}
         onOk={() => void form.submit()}
-        open={open}
+        open={requestOpen}
+        rootClassName={authorizationStyles.adminOverlay}
         title={t("knowledgeNetwork.permissionRequestResourceTitle")}
       >
         <Spin spinning={loading}>
           <Form form={form} layout="vertical" onFinish={(values) => void submit(values)}>
             <Form.Item label={t("knowledgeNetwork.permissionRequestResource")}>
-              <Input disabled value={`${resourceName} (${resourceID})`} />
+              <Space align="start" size={8}>
+                <Typography.Text>{requestResourceIcon(resourceType)}</Typography.Text>
+                <div>
+                  <Typography.Text strong>{resourceName}</Typography.Text>
+                  <div>
+                    <Tag>{t(`account.permissionRequests.resourceTypes.${resourceType}`)}</Tag>
+                    <Typography.Text copyable={{ text: resourceID }} type="secondary">
+                      {t("knowledgeNetwork.permissionRequestResourceID", { id: resourceID })}
+                    </Typography.Text>
+                  </div>
+                </div>
+              </Space>
             </Form.Item>
-            {pending ? (
+            <AuthorizationRegistryFailureAlert
+              error={catalogError}
+              onRetry={retryAuthorizationRegistry}
+            />
+            {pending && proposalKind === "grant" ? (
               <Alert
                 showIcon
                 style={{ marginTop: 16 }}
@@ -149,20 +650,227 @@ export function ResourcePermissionRequestAction({
                 })}
               />
             ) : null}
-            <Form.Item
-              label={t("knowledgeNetwork.permissionRequestOperations")}
-              name="operations"
-              rules={[{ required: true }]}
-              style={{ marginTop: 16 }}
-            >
-              <Checkbox.Group
-                options={selectableOperations.map((operation) => ({
-                  label: t(`knowledgeNetwork.permissionOperation.${operation}`),
-                  value: operation,
-                }))}
+            {pendingProposalKinds.includes(proposalKind) ? (
+              <Alert
+                showIcon
+                style={{ marginTop: 16 }}
+                type="info"
+                message={t("knowledgeNetwork.permissionRequestPolicyPending")}
               />
-            </Form.Item>
-            <Form.Item label={t("knowledgeNetwork.permissionRequestReason")} name="reason">
+            ) : null}
+            {resourceType === "object_type" && policyScopePreviewsEnabled ? (
+              <Tabs
+                activeKey={proposalKind}
+                items={[
+                  { key: "grant", label: t("knowledgeNetwork.permissionRequestBasePermissions") },
+                  {
+                    key: "row_filter",
+                    label: t("knowledgeNetwork.permissionRequestRowScope"),
+                    disabled: !hasRowFilter,
+                  },
+                  {
+                    key: "property_grants",
+                    label: t("knowledgeNetwork.permissionRequestPropertyScope"),
+                    disabled: !restrictedProperties.length,
+                  },
+                ]}
+                onChange={(key) => setProposalKind(key as ProposalKind)}
+              />
+            ) : null}
+            {proposalKind === "grant" ? (
+              <>
+                <Form.Item hidden name="operations" rules={[{ required: true }]}>
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  label={t("knowledgeNetwork.permissionRequestOperations")}
+                  style={{ marginTop: 16 }}
+                >
+                  <div className={authorizationStyles.authzGrantFieldHead}>
+                    <span className={authorizationStyles.authzGrantFieldLabel}>
+                      {t("systemAdmin.objectGrants.selectedOperationCount", {
+                        selected: selectedOperations.length,
+                        total: selectableOperations.length,
+                      })}
+                    </span>
+                    <div className={authorizationStyles.authzGrantFieldActions}>
+                      <Button
+                        disabled={
+                          catalogLoading ||
+                          !selectableOperations.length ||
+                          selectedOperations.length === selectableOperations.length
+                        }
+                        onClick={() =>
+                          setOperations(selectableOperations.map((operation) => operation.key))
+                        }
+                        size="small"
+                        type="link"
+                      >
+                        {t("systemAdmin.objectGrants.selectAllOperations")}
+                      </Button>
+                      <Button
+                        disabled={catalogLoading || !selectedOperations.length}
+                        onClick={() => setOperations([])}
+                        size="small"
+                        type="link"
+                      >
+                        {t("systemAdmin.objectGrants.clearOperations")}
+                      </Button>
+                    </div>
+                  </div>
+                  <div
+                    aria-label={t("knowledgeNetwork.permissionRequestOperations")}
+                    className={authorizationStyles.authzGrantOperations}
+                    role="group"
+                  >
+                    {selectableOperations.map((operation) => {
+                      const selected = selectedOperations.includes(operation.key);
+                      const required = selectedRequirements.includes(operation.key);
+                      return (
+                        <Tooltip key={operation.key} title={operation.description ?? operation.key}>
+                          <button
+                            aria-label={`${operation.label} (${operation.key})`}
+                            aria-pressed={selected}
+                            className={
+                              selected
+                                ? authorizationStyles.authzGrantOperationSelected
+                                : authorizationStyles.authzGrantOperation
+                            }
+                            disabled={catalogLoading}
+                            onClick={() => toggleOperation(operation.key)}
+                            type="button"
+                          >
+                            {operation.label}
+                            {required ? (
+                              <LockOutlined className={authorizationStyles.authzGrantLock} />
+                            ) : null}
+                          </button>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </Form.Item>
+              </>
+            ) : null}
+            {proposalKind === "row_filter" ? (
+              <>
+                <Alert
+                  showIcon
+                  type="info"
+                  message={t("knowledgeNetwork.permissionRequestRowScopeHint")}
+                />
+                <Space direction="vertical" size={12} style={{ marginTop: 16, width: "100%" }}>
+                  {rowFilterPolicies.map((policy, policyIndex) => (
+                    <div key={`${policyIndex}-${policy.relation}`}>
+                      {policyIndex > 0 ? (
+                        <Typography.Text strong>
+                          {t("knowledgeNetwork.rowFilterConditionGroupOr")}
+                        </Typography.Text>
+                      ) : null}
+                      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                        {policy.conditions.map((condition, conditionIndex) => {
+                          const field = proposalPreview?.row_filter?.available_fields?.find(
+                            (item) => item.name === condition.property_name,
+                          );
+                          return (
+                            <div
+                              key={`${conditionIndex}-${condition.property_name}-${condition.operator}`}
+                            >
+                              {conditionIndex > 0 ? (
+                                <Typography.Text strong>
+                                  {t(
+                                    policy.relation === "and"
+                                      ? "knowledgeNetwork.rowFilterConditionGroupAnd"
+                                      : "knowledgeNetwork.rowFilterConditionGroupOr",
+                                  )}
+                                </Typography.Text>
+                              ) : null}
+                              <div>
+                                <Typography.Text>
+                                  {field?.display_name || condition.property_name} ·{" "}
+                                  {t(
+                                    `knowledgeNetwork.rowFilterConditionOperator.${condition.operator}`,
+                                  )}
+                                </Typography.Text>
+                              </div>
+                              <Space wrap>
+                                <Typography.Text type="secondary">
+                                  {t("knowledgeNetwork.permissionRequestRowScopeCurrentValues")}
+                                </Typography.Text>
+                                {condition.values.map((value) => (
+                                  <Tag key={String(value)}>{String(value)}</Tag>
+                                ))}
+                              </Space>
+                            </div>
+                          );
+                        })}
+                      </Space>
+                    </div>
+                  ))}
+                </Space>
+              </>
+            ) : null}
+            {proposalKind === "property_grants" ? (
+              <>
+                <Alert
+                  showIcon
+                  type="info"
+                  message={t("knowledgeNetwork.permissionRequestPropertyScopeHint")}
+                />
+                <Typography.Text type="secondary">
+                  {t("knowledgeNetwork.permissionRequestPropertyScopeBase", {
+                    level: t(
+                      `knowledgeNetwork.propertyAuthorizationLevel.${basePropertyAccessLevel(operations ?? [])}`,
+                    ),
+                  })}
+                </Typography.Text>
+                <Checkbox.Group
+                  style={{ display: "block", marginTop: 12 }}
+                  value={selectedPropertyNames}
+                  onChange={(values) => setSelectedPropertyNames(values.map(String))}
+                >
+                  {restrictedProperties.map((entry) => {
+                    const property = objectProperties.find(
+                      (item) => item.name === entry.property_name,
+                    );
+                    return (
+                      <Form.Item
+                        key={entry.property_name}
+                        label={property?.displayName || entry.property_name}
+                      >
+                        <Space>
+                          <Typography.Text type="secondary">
+                            {t("knowledgeNetwork.permissionRequestPropertyScopeExplicit", {
+                              level: t(
+                                `knowledgeNetwork.propertyAuthorizationLevel.${entry.level}`,
+                              ),
+                            })}
+                          </Typography.Text>
+                          <Checkbox value={entry.property_name}>
+                            {t("knowledgeNetwork.permissionRequestPropertyScopeOriginalValue")}
+                          </Checkbox>
+                        </Space>
+                      </Form.Item>
+                    );
+                  })}
+                </Checkbox.Group>
+              </>
+            ) : null}
+            <Form.Item
+              label={t("knowledgeNetwork.permissionRequestReason")}
+              name="reason"
+              rules={
+                proposalKind === "row_filter"
+                  ? [
+                      {
+                        message: t("knowledgeNetwork.permissionRequestReasonRequired"),
+                        required: true,
+                        whitespace: true,
+                      },
+                    ]
+                  : undefined
+              }
+            >
               <Input.TextArea maxLength={512} rows={3} />
             </Form.Item>
           </Form>

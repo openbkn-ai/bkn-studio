@@ -6,6 +6,8 @@
  */
 
 import {
+  ArrowLeftOutlined,
+  ClearOutlined,
   CloseOutlined,
   CopyOutlined,
   DownloadOutlined,
@@ -33,6 +35,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RecordMissingDetails } from "./RecordMissingDetails";
 import { TimeRailView } from "../evidence-chain/BusinessProvenance016";
 import { CurrentExplanationPanel } from "../evidence-chain/CurrentExplanationPanel";
 import i18n from "@/app/locales/i18n";
@@ -586,9 +589,10 @@ function ClampedText({ value }: { value: string }) {
 }
 
 function evidenceLabel(conversation: BusinessProvenanceConversation) {
-  if (conversation.evidenceCompleteness === "complete") return bpText("evidence.complete");
-  if (conversation.evidenceCompleteness === "partial") return bpText("evidence.partial");
-  return conversation.evidenceCompleteness || bpText("evidence.byRound");
+  if (conversation.currentRecordIntegrity?.status === "complete")
+    return bpText("evidence.complete");
+  if (conversation.currentRecordIntegrity?.status === "missing") return bpText("evidence.partial");
+  return "—";
 }
 
 function textValue(value: unknown): string | undefined {
@@ -718,7 +722,6 @@ export function BusinessProvenanceScene() {
   const [conversationKeyword, setConversationKeyword] = useState("");
   const [conversationAgent, setConversationAgent] = useState("");
   const [conversationKnowledgeNetwork, setConversationKnowledgeNetwork] = useState("");
-  const [conversationStatus, setConversationStatus] = useState<string>();
   const [conversationEvidence, setConversationEvidence] = useState<string>();
   const [conversationQuery, setConversationQuery] = useState<
     Parameters<typeof getBusinessProvenanceConversations>[0]
@@ -737,6 +740,10 @@ export function BusinessProvenanceScene() {
   const [interactionDetailError, setInteractionDetailError] = useState(false);
   const [projectionUnavailable, setProjectionUnavailable] = useState(false);
   const [interactionReload, setInteractionReload] = useState(0);
+  const [interactionListReload, setInteractionListReload] = useState(0);
+  const selectedConversationId = selectedConversation?.conversationId;
+  const loadedConversationId = useRef<string | undefined>(undefined);
+  const loadedInteractionId = useRef<string | undefined>(undefined);
   const [view, setView] = useState<View>("timeline");
   const [roundsCollapsed, setRoundsCollapsed] = useState(
     () =>
@@ -775,10 +782,10 @@ export function BusinessProvenanceScene() {
       if (request !== conversationRequest.current) return;
       setConversations(page.entries);
       setConversationTotal(page.total);
-      if (linkedConversationId) {
-        const linked = page.entries.find((entry) => entry.conversationId === linkedConversationId);
-        if (linked) setSelectedConversation((current) => current ?? linked);
-      }
+      setSelectedConversation((current) => {
+        const id = current?.conversationId ?? linkedConversationId;
+        return page.entries.find((entry) => entry.conversationId === id) ?? current;
+      });
     } catch (error) {
       if (request !== conversationRequest.current) return;
       const status = responseStatus(error);
@@ -794,22 +801,29 @@ export function BusinessProvenanceScene() {
     void loadConversations();
   }, [loadConversations]);
   useEffect(() => {
-    if (!selectedConversation) return;
+    if (!selectedConversationId) {
+      loadedConversationId.current = undefined;
+      return;
+    }
     let current = true;
-    setInteractions([]);
-    setInteractionTotal(0);
-    setSelectedInteraction(undefined);
+    const conversationChanged = loadedConversationId.current !== selectedConversationId;
+    loadedConversationId.current = selectedConversationId;
+    if (conversationChanged) {
+      setInteractions([]);
+      setInteractionTotal(0);
+      setSelectedInteraction(undefined);
+      setProjection(undefined);
+      setDetailOperation(undefined);
+      setProjectionUnavailable(false);
+      setAnalysisResult(undefined);
+      setAnalysisHistory([]);
+      setAnalysisPanelOpen(false);
+      setAnalysisError(undefined);
+    }
     setInteractionListLoading(true);
     setInteractionListError(false);
-    setProjection(undefined);
-    setDetailOperation(undefined);
-    setProjectionUnavailable(false);
-    setAnalysisResult(undefined);
-    setAnalysisHistory([]);
-    setAnalysisPanelOpen(false);
-    setAnalysisError(undefined);
     void getBusinessProvenanceInteractions({
-      conversationId: selectedConversation.conversationId,
+      conversationId: selectedConversationId,
       page: 1,
       pageSize: 50,
       keyword: interactionKeyword,
@@ -818,10 +832,22 @@ export function BusinessProvenanceScene() {
         if (current) {
           setInteractions(page.entries);
           setInteractionTotal(page.total);
-          setSelectedInteraction(
-            page.entries.find((item) => item.interactionId === linkedInteractionId) ||
-              page.entries[0],
-          );
+          // Filtered or incomplete results cannot establish the whole conversation's round count.
+          if (!interactionKeyword.trim() && !page.partial && !page.truncated) {
+            setSelectedConversation((conversation) =>
+              conversation?.conversationId === selectedConversationId
+                ? { ...conversation, interactionCount: page.total }
+                : conversation,
+            );
+          }
+          setSelectedInteraction((previous) => {
+            const selected =
+              page.entries.find((item) => item.interactionId === previous?.interactionId) ||
+              page.entries.find((item) => item.interactionId === linkedInteractionId) ||
+              page.entries[0];
+            // A new snapshot triggers the existing detail loader, including when the ID is unchanged.
+            return selected ? { ...selected } : undefined;
+          });
         }
       })
       .catch(() => {
@@ -836,9 +862,10 @@ export function BusinessProvenanceScene() {
     return () => {
       current = false;
     };
-  }, [interactionKeyword, linkedInteractionId, selectedConversation]);
+  }, [interactionKeyword, linkedInteractionId, selectedConversationId, interactionListReload]);
   useEffect(() => {
     if (!selectedInteraction) {
+      loadedInteractionId.current = undefined;
       setProjection(undefined);
       setDetailOperation(undefined);
       setInteractionDetailLoading(false);
@@ -849,8 +876,11 @@ export function BusinessProvenanceScene() {
     let current = true;
     setProjection(undefined);
     setDetailOperation(undefined);
-    setTimelineFilter("all");
-    setEvidencePanel("evidence");
+    if (loadedInteractionId.current !== selectedInteraction.interactionId) {
+      setTimelineFilter("all");
+      setEvidencePanel("evidence");
+    }
+    loadedInteractionId.current = selectedInteraction.interactionId;
     setInteractionDetailLoading(true);
     setInteractionDetailError(false);
     setProjectionUnavailable(false);
@@ -985,16 +1015,9 @@ export function BusinessProvenanceScene() {
       keyword: conversationKeyword,
       agentOrApp: conversationAgent,
       knowledgeNetwork: conversationKnowledgeNetwork,
-      status: conversationStatus,
-      evidenceCompleteness: conversationEvidence,
+      recordIntegrity: conversationEvidence,
     });
-  }, [
-    conversationAgent,
-    conversationEvidence,
-    conversationKeyword,
-    conversationKnowledgeNetwork,
-    conversationStatus,
-  ]);
+  }, [conversationAgent, conversationEvidence, conversationKeyword, conversationKnowledgeNetwork]);
 
   const conversationColumns: ColumnsType<BusinessProvenanceConversation> = [
     {
@@ -1013,7 +1036,8 @@ export function BusinessProvenanceScene() {
       title: bpText("columns.question"),
       width: "20%",
       render: (value: string | undefined, item) => {
-        const text = value || bpText("questionNotRecorded");
+        const text =
+          value || bpText(item.previewUnavailable ? "summaryUnavailable" : "questionNotRecorded");
         return (
           <Tooltip title={text}>
             <Button
@@ -1048,15 +1072,19 @@ export function BusinessProvenanceScene() {
       render: (value?: string) => <ClampedText value={value || bpText("agentNotRecorded")} />,
     },
     {
-      dataIndex: "status",
-      title: bpText("columns.status"),
-      width: "8%",
-      render: (value?: string) => <span className={styles.statusText}>{statusLabel(value)}</span>,
-    },
-    {
       title: bpText("columns.evidence"),
       width: "9%",
-      render: (_, item) => <span className={styles.evidence}>{evidenceLabel(item)}</span>,
+      render: (_, item) => (
+        <span
+          className={
+            item.currentRecordIntegrity?.status === "missing"
+              ? styles.evidenceMissing
+              : styles.evidence
+          }
+        >
+          {evidenceLabel(item)}
+        </span>
+      ),
     },
     {
       dataIndex: "durationMs",
@@ -1136,24 +1164,12 @@ export function BusinessProvenanceScene() {
               placeholder={bpText("filters.network")}
             />
             <Select
-              aria-label={bpText("filters.status")}
-              allowClear
-              placeholder={bpText("filters.status")}
-              value={conversationStatus}
-              options={[
-                { value: "completed", label: statusLabel("completed") },
-                { value: "failed", label: statusLabel("failed") },
-                { value: "active", label: statusLabel("active") },
-              ]}
-              onChange={setConversationStatus}
-            />
-            <Select
               allowClear
               placeholder={bpText("filters.evidence")}
               value={conversationEvidence}
               options={[
                 { value: "complete", label: bpText("evidence.complete") },
-                { value: "partial", label: bpText("evidence.partial") },
+                { value: "missing", label: bpText("evidence.partial") },
               ]}
               onChange={setConversationEvidence}
             />
@@ -1162,17 +1178,18 @@ export function BusinessProvenanceScene() {
             </Button>
             <Button
               aria-label={bpText("actions.reset")}
-              icon={<ReloadOutlined />}
+              icon={<ClearOutlined />}
               onClick={() => {
                 setConversationKeyword("");
                 setConversationAgent("");
                 setConversationKnowledgeNetwork("");
-                setConversationStatus(undefined);
                 setConversationEvidence(undefined);
                 setConversationPage(1);
                 setConversationQuery({});
               }}
-            />
+            >
+              {bpText("actions.reset")}
+            </Button>
           </div>
           <Table
             rowKey="conversationId"
@@ -1208,7 +1225,12 @@ export function BusinessProvenanceScene() {
           <Typography.Title level={3}>{bpText("analysis.title")}</Typography.Title>
           <Typography.Text>{bpText("analysis.description")}</Typography.Text>
         </div>
-        <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>
+        <Button
+          icon={<ReloadOutlined />}
+          disabled={analysisStarting}
+          loading={interactionListLoading || interactionDetailLoading}
+          onClick={() => setInteractionListReload((value) => value + 1)}
+        >
           {bpText("actions.refresh")}
         </Button>
       </header>
@@ -1217,7 +1239,8 @@ export function BusinessProvenanceScene() {
       >
         <header className={styles.workspaceHeader}>
           <Button
-            type="link"
+            type="text"
+            icon={<ArrowLeftOutlined />}
             className={styles.backButton}
             onClick={() => {
               setSelectedConversation(undefined);
@@ -1225,7 +1248,7 @@ export function BusinessProvenanceScene() {
               setProjection(undefined);
             }}
           >
-            ← {bpText("actions.back")}
+            {bpText("actions.back")}
           </Button>
           <div className={styles.conversationHeading}>
             <h1>{conversationTitle(selectedConversation)}</h1>
@@ -1293,7 +1316,12 @@ export function BusinessProvenanceScene() {
                     {item.roundNumber && item.roundNumber > 0 ? item.roundNumber : "•"}
                   </span>
                   <b>{roundLabel(item)}</b>
-                  <strong>{item.questionPreview || bpText("questionNotRecorded")}</strong>
+                  <strong>
+                    {item.questionPreview ||
+                      bpText(
+                        item.previewUnavailable ? "summaryUnavailable" : "questionNotRecorded",
+                      )}
+                  </strong>
                   <small>
                     {formatClock(item.startedAt)} · {formatDuration(item.durationMs)} ·{" "}
                     {statusLabel(item.status)}
@@ -1436,12 +1464,31 @@ export function BusinessProvenanceScene() {
                   {bpText("views.evidence")}
                 </button>
               </div>
+              {projection.currentRecordIntegrity ? (
+                <Typography.Text type="secondary" className={styles.integrityCheckedAt}>
+                  {bpText("integrity.checkedAt")}{" "}
+                  {formatTime(projection.currentRecordIntegrity.checked_at)}
+                </Typography.Text>
+              ) : null}
+              {projection.recordIntegrityCheckFailed ? (
+                <Alert type="warning" message={bpText("integrity.checkFailed")} />
+              ) : null}
+              <RecordMissingDetails
+                items={projection.currentRecordIntegrity?.missing.filter(
+                  (item) =>
+                    !projection.operations.some(
+                      (op) =>
+                        op.operationId === item.operation_id && (op.attempt ?? 1) === item.attempt,
+                    ),
+                )}
+              />
               {view === "timeline" ? (
                 projection.timeRail?.some(
                   (item) => item.capability?.evidence_contract === "managed_function_execution/v1",
                 ) ? (
                   <TimeRailView
                     items={projection.timeRail}
+                    recordIntegrity={projection.currentRecordIntegrity}
                     summaries={Object.fromEntries(
                       projection.operations.map((operation) => [
                         operation.operationId,
@@ -1590,6 +1637,13 @@ export function BusinessProvenanceScene() {
                                   {statusLabel(detailOperation.callStatus)}
                                 </span>
                               </header>
+                              <RecordMissingDetails
+                                items={projection.currentRecordIntegrity?.missing.filter(
+                                  (item) =>
+                                    item.operation_id === detailOperation.operationId &&
+                                    item.attempt === (detailOperation.attempt ?? 1),
+                                )}
+                              />
                               <dl>
                                 <OperationSummaryRows
                                   operation={detailOperation}

@@ -94,6 +94,9 @@ const TYPE_TO_TEMPLATE_FALLBACKS: Record<string, { description?: string; label?:
   oracle: {
     description: "Connect Oracle relational databases.",
   },
+  hana: {
+    description: "Connect SAP HANA relational databases.",
+  },
   opensearch: {
     description: "Connect OpenSearch indexes.",
   },
@@ -107,6 +110,8 @@ const KNOWN_CONNECTOR_TYPES: DataConnectConnectorType[] = [
   knownConnectorType("mysql", "MySQL", "table"),
   knownConnectorType("postgresql", "PostgreSQL", "table"),
   knownConnectorType("sqlserver", "SQL Server", "table"),
+  knownConnectorType("oracle", "Oracle", "table"),
+  knownConnectorType("hana", "SAP HANA", "table"),
   knownConnectorType("opensearch", "OpenSearch", "index"),
 ];
 
@@ -139,6 +144,12 @@ const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
   sqlserver: {
     port: 1433,
   },
+  oracle: {
+    port: 1521,
+  },
+  hana: {
+    port: 30015,
+  },
   opensearch: {
     port: 9200,
   },
@@ -149,6 +160,8 @@ const TYPE_PORT_PLACEHOLDER: Record<string, string> = {
   mysql: "For example: 3306",
   postgresql: "For example: 5432",
   sqlserver: "For example: 1433",
+  oracle: "For example: 1521",
+  hana: "For example: 30015",
   opensearch: "For example: 9200",
 };
 
@@ -227,7 +240,7 @@ const CONNECTOR_FIELD_TEMPLATES: Record<string, Record<string, ConnectorFieldTem
     port: { label: "Port" },
     username: { group: "auth", label: "Username" },
     password: { group: "auth", label: "Password" },
-    databases: { label: "Database list" },
+    databases: { group: "advanced", label: "Database list" },
     options: { group: "advanced", label: "Connection options" },
   },
   mysql: {
@@ -235,7 +248,7 @@ const CONNECTOR_FIELD_TEMPLATES: Record<string, Record<string, ConnectorFieldTem
     port: { label: "Port" },
     username: { group: "auth", label: "Username" },
     password: { group: "auth", label: "Password" },
-    databases: { label: "Database list" },
+    databases: { group: "advanced", label: "Database list" },
     options: { group: "advanced", label: "Connection options" },
   },
   postgresql: {
@@ -256,12 +269,30 @@ const CONNECTOR_FIELD_TEMPLATES: Record<string, Record<string, ConnectorFieldTem
     schemas: { group: "advanced", label: "Schema list" },
     options: { group: "advanced", label: "Connection options" },
   },
+  oracle: {
+    host: { label: "Host" },
+    port: { label: "Port" },
+    username: { group: "auth", label: "Username" },
+    password: { group: "auth", label: "Password" },
+    service_name: { label: "Service name" },
+    schemas: { group: "advanced", label: "Schema list" },
+    options: { group: "advanced", label: "Connection options" },
+  },
+  hana: {
+    host: { label: "Host" },
+    port: { label: "Port" },
+    username: { group: "auth", label: "Username" },
+    password: { group: "auth", label: "Password" },
+    database: { label: "Tenant database" },
+    schemas: { group: "advanced", label: "Schema list" },
+    options: { group: "advanced", label: "Connection options" },
+  },
   opensearch: {
     host: { label: "Host" },
     port: { label: "Port" },
     username: { group: "auth", label: "Username" },
     password: { group: "auth", label: "Password" },
-    index_pattern: { label: "Index pattern" },
+    index_pattern: { group: "advanced", label: "Index pattern" },
   },
   anyshare: {
     protocol: {
@@ -352,6 +383,7 @@ const GENERIC_FIELD_LABELS: Record<string, string> = {
   schema: "Schema",
   schema_list: "Schema list",
   schemas: "Schema list",
+  service_name: "Service name",
   secret: "Secret",
   secret_key: "Secret key",
   server: "Host",
@@ -385,6 +417,7 @@ const CONNECTION_KEYS = new Set([
   "project",
   "schema",
   "schema_list",
+  "service_name",
   "server",
   "table",
   "uri",
@@ -519,6 +552,13 @@ function knownConnectorType(
 export function humanizeConnectorFieldLabel(name: string, connectorType?: string) {
   const normalized = name.trim().toLowerCase();
   const template = getConnectorFieldTemplate(connectorType, normalized);
+  const typeKey = connectorType?.trim().toLowerCase();
+  if (template && typeKey) {
+    const specificKey = `dataConnect.connectorTemplates.fieldLabels.${typeKey}.${normalized}`;
+    if (i18n.exists(specificKey)) {
+      return i18n.t(specificKey, { defaultValue: template.label });
+    }
+  }
   const defaultLabel = template?.label ?? GENERIC_FIELD_LABELS[normalized];
   if (defaultLabel) {
     return dataConnectText(`connectorTemplates.fieldLabels.${normalized}`, defaultLabel);
@@ -546,6 +586,7 @@ export function connectorFieldOrderRank(key: string) {
     databases: 4,
     schema: 4,
     schema_list: 4,
+    service_name: 4,
     table: 5,
     endpoint: 6,
     url: 6,
@@ -579,6 +620,7 @@ export function getConnectorFieldPlaceholder(
     schema_list: "For example: public, ods",
     schemas:
       "Leave empty to discover all accessible schemas; enter each name exactly as it appears in the database, including case",
+    service_name: "For example: ORCLPDB1",
     secret: "Enter secret",
     secret_key: "Enter secret",
     server: "For example: db.example.internal",
@@ -599,6 +641,41 @@ export function getConnectorFieldPlaceholder(
     return dataConnectText(
       "connectorTemplates.placeholders.sqlserverOptions",
       'For example: {"encrypt":true,"trustservercertificate":false}',
+    );
+  }
+
+  if (normalized === "options" && typeKey === "oracle") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.oracleOptions",
+      'For example: {"timeout":30,"charset":"UTF8"}',
+    );
+  }
+
+  if (normalized === "options" && typeKey === "hana") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.hanaOptions",
+      'For example: {"timeout":30}',
+    );
+  }
+
+  if (normalized === "database" && typeKey === "hana") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.hanaDatabase",
+      "For example: TENANT_DB",
+    );
+  }
+
+  if (normalized === "schemas" && typeKey === "oracle") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.oracleSchemas",
+      "Leave empty to discover accessible schemas; enter a name and press Enter",
+    );
+  }
+
+  if (normalized === "schemas" && typeKey === "hana") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.hanaSchemas",
+      "Leave empty to discover accessible non-system schemas; enter a name and press Enter",
     );
   }
 
@@ -645,6 +722,20 @@ export function getConnectorFieldHint(fieldName: string, connectorType?: string)
     return dataConnectText(
       "connectorTemplates.hints.schemaIdentifierCase",
       "When specified, schema names must exactly match the database, including case",
+    );
+  }
+
+  if (normalized === "schemas" && typeKey === "oracle") {
+    return dataConnectText(
+      "connectorTemplates.hints.oracleSchemaIdentifierCase",
+      "Unquoted lowercase names are normalized to uppercase; wrap case-sensitive lowercase names in double quotes",
+    );
+  }
+
+  if (normalized === "schemas" && typeKey === "hana") {
+    return dataConnectText(
+      "connectorTemplates.hints.hanaSchemaIdentifierCase",
+      "Schema names must match HANA exactly, including case",
     );
   }
 

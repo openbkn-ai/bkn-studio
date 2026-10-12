@@ -62,6 +62,7 @@ export const dataConnectZhCN = {
       confirm: "仍然保存",
     },
     tagsPlaceholder: "输入后回车添加标签",
+    tagsHint: "最多 5 个标签，每个不超过 40 个字符",
     connectorTypeStep: "连接器类型",
     configStep: "连接配置",
     connectorTypeStepTitle: "选择连接器类型",
@@ -74,6 +75,10 @@ export const dataConnectZhCN = {
     discardChangesTitle: "放弃未保存的内容？",
     discardChangesDescription: "当前填写的连接信息尚未保存，返回后将无法恢复。",
     discardChangesConfirm: "放弃并返回",
+    changeConnectorTitle: "切换连接器类型？",
+    changeConnectorDescription:
+      "进入新连接器的配置步骤时，将清空当前连接配置，并填入新连接器的默认值。",
+    changeConnectorConfirm: "确认切换",
     jsonObjectInvalid: "请输入有效的 JSON 对象。",
     categoryAll: "全部",
     selectConnectorTypeRequired: "请先选择连接器类型。",
@@ -142,6 +147,7 @@ export const dataConnectZhCN = {
     discoverStrategyHints: {
       full_sync: "同步全部资源，包含新增发现与失效清理。",
       create_only: "只发现新增资源，不清理已有资源。",
+      count_only: "仅对已有源表或视图执行精确计数，可能需要较长时间。",
       cleanup_only: "只清理失效资源，不发现新增。",
     },
     discoverRunScheduleConfirmTitle: "立即执行",
@@ -213,12 +219,15 @@ export const dataConnectZhCN = {
     discoverResultStale: "过期资源",
     discoverResultRestored: "恢复资源",
     discoverResultUnchanged: "未变化资源",
+    discoverResultSkipped: "跳过",
+    discoverPartialCompletion: "部分完成",
     discoverResultFailed: "失败资源",
     discoverResultMessage: "结果说明",
     discoverManualTask: "手动触发",
     discoverStrategies: {
       full_sync: "全量同步",
       create_only: "仅新增发现",
+      count_only: "精确计数",
       cleanup_only: "仅执行清理",
     },
     discoverTaskStatuses: {
@@ -306,6 +315,12 @@ export const dataConnectZhCN = {
         opensearch: {
           description: "连接 OpenSearch 检索索引。",
         },
+        oracle: {
+          description: "连接 Oracle 关系型数据库。",
+        },
+        hana: {
+          description: "连接 SAP HANA 关系型数据库。",
+        },
         postgresql: {
           description: "连接 PostgreSQL 关系型数据库。",
         },
@@ -314,6 +329,9 @@ export const dataConnectZhCN = {
         },
       },
       fieldLabels: {
+        hana: {
+          database: "租户数据库",
+        },
         account: "账号",
         api_key: "API Key",
         app_id: "应用 ID",
@@ -346,6 +364,7 @@ export const dataConnectZhCN = {
         schema: "Schema",
         schema_list: "Schema 列表",
         schemas: "Schema 列表",
+        service_name: "服务名",
         secret: "密钥",
         secret_key: "密钥",
         server: "主机地址",
@@ -381,9 +400,15 @@ export const dataConnectZhCN = {
         schema: "例如 public",
         schema_list: "例如 public, ods",
         schemas: "留空扫描全部可访问 Schema；输入名称后按回车逐个添加",
+        service_name: "例如 ORCLPDB1",
         secret: "请输入密钥",
         secret_key: "请输入密钥",
         server: "例如 db.example.internal",
+        oracleOptions: '例如 {"timeout":30,"charset":"UTF8"}',
+        hanaDatabase: "例如 TENANT_DB",
+        hanaOptions: '例如 {"timeout":30}',
+        hanaSchemas: "留空扫描可访问的非系统 Schema；输入名称后按回车逐个添加",
+        oracleSchemas: "留空扫描可访问 Schema；输入名称后按回车逐个添加",
         sqlserverOptions: '例如 {"encrypt":true,"trustservercertificate":false}',
         table: "例如 order_detail",
         token: "请输入访问令牌",
@@ -396,12 +421,18 @@ export const dataConnectZhCN = {
       hints: {
         databaseIdentifierCase: "填写时必须与数据库中的实际名称及大小写完全一致",
         schemaIdentifierCase: "填写时必须与数据库中的实际名称及大小写完全一致",
+        oracleSchemaIdentifierCase:
+          "未加引号的全小写名称会转为大写；区分大小写的全小写名称请用双引号包裹",
+        hanaSchemaIdentifierCase:
+          "按 HANA 中实际存储的 Schema 名称及大小写填写；未加引号的名称通常为大写",
       },
       portPlaceholders: {
         default: "例如 3306",
         mariadb: "例如 3306",
         mysql: "例如 3306",
         opensearch: "例如 9200",
+        oracle: "例如 1521",
+        hana: "例如 30015",
         postgresql: "例如 5432",
         sqlserver: "例如 1433",
       },
@@ -445,7 +476,6 @@ export const dataConnectZhCN = {
     descriptionPlaceholder: "简要说明用途（可选）",
     booleanTrue: "是",
     booleanFalse: "否",
-    sensitiveValueHidden: "已隐藏",
     switchOn: "开",
     switchOff: "关",
     selectFieldPlaceholder: "请选择{{field}}",

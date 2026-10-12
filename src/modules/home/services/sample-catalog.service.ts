@@ -16,6 +16,21 @@ import {
 } from "@/modules/home/lib/sample-catalog";
 
 const SAMPLE_API = "/studio/samples";
+const INSTALL_TIMEOUT_MS = 30000;
+
+export async function importSamplePackage(file: File): Promise<void> {
+  await http.post(`${SAMPLE_API}/import`, file, {
+    headers: { "Content-Type": "application/gzip" },
+    skipErrorToast: true,
+    timeout: 120000,
+  });
+}
+
+export async function deleteSamplePackage(sampleName: string): Promise<void> {
+  await http.delete(`${SAMPLE_API}/${encodeURIComponent(sampleName)}/offline`, {
+    skipErrorToast: true,
+  });
+}
 
 export class SampleRequestError extends Error {
   code: string;
@@ -32,6 +47,15 @@ export async function listSamples(): Promise<SampleCatalog> {
   return parseSampleCatalog(response.data);
 }
 
+export async function refreshSamples(): Promise<SampleCatalog> {
+  const response = await http.post<unknown>(
+    `${SAMPLE_API}/refresh`,
+    {},
+    { skipErrorToast: true, timeout: 30000 },
+  );
+  return parseSampleCatalog(response.data);
+}
+
 export async function getSampleInstallation(
   sampleName: string,
   installationId: string,
@@ -42,12 +66,15 @@ export async function getSampleInstallation(
   return parseSampleInstallation(response.data);
 }
 
-export async function createSampleInstallation(sampleName: string): Promise<SampleInstallation> {
+export async function createSampleInstallation(
+  sampleName: string,
+  release?: { version: string; manifestSha256: string },
+): Promise<SampleInstallation> {
   try {
     const response = await http.post<unknown>(
       `${samplePath(sampleName)}/installations`,
-      {},
-      { skipErrorToast: true },
+      release ?? {},
+      { skipErrorToast: true, timeout: INSTALL_TIMEOUT_MS },
     );
     return parseSampleInstallation(response.data);
   } catch (error) {
@@ -63,7 +90,26 @@ export async function retrySampleInstallation(
     const response = await http.post<unknown>(
       `${installationPath(sampleName, installationId)}/retry`,
       {},
-      { skipErrorToast: true },
+      { skipErrorToast: true, timeout: INSTALL_TIMEOUT_MS },
+    );
+    return parseSampleInstallation(response.data);
+  } catch (error) {
+    throw toSampleRequestError(error);
+  }
+}
+
+export async function uninstallSample(
+  sampleName: string,
+  installationId: string,
+): Promise<SampleInstallation> {
+  try {
+    const response = await http.post<unknown>(
+      `${installationPath(sampleName, installationId)}/uninstall`,
+      {},
+      {
+        skipErrorToast: true,
+        timeout: INSTALL_TIMEOUT_MS,
+      },
     );
     return parseSampleInstallation(response.data);
   } catch (error) {
@@ -73,6 +119,54 @@ export async function retrySampleInstallation(
 
 export function readSampleRequestError(error: unknown) {
   return toSampleRequestError(error);
+}
+
+export type SampleReleaseNotes = {
+  version: string;
+  resolvedLocale: string;
+  content: string;
+  digest: string;
+};
+
+export async function getSampleReleaseNotes(
+  sampleName: string,
+  version: string,
+  locale: string,
+): Promise<SampleReleaseNotes> {
+  const response = await http.get<unknown>(
+    `${samplePath(sampleName)}/versions/${encodeURIComponent(version)}/release-notes`,
+    { params: { locale }, skipErrorToast: true },
+  );
+  const data = response.data;
+  if (
+    !isRecord(data) ||
+    data.sample !== sampleName ||
+    data.version !== version ||
+    typeof data.content !== "string" ||
+    !data.content.trim() ||
+    typeof data.resolvedLocale !== "string" ||
+    typeof data.digest !== "string" ||
+    !/^sha256:[a-f0-9]{64}$/.test(data.digest)
+  )
+    throw new Error("Invalid release notes response");
+  return {
+    version,
+    content: data.content,
+    resolvedLocale: data.resolvedLocale,
+    digest: data.digest,
+  };
+}
+
+export async function listSampleInstallations(sampleName: string) {
+  const response = await http.get<unknown>(`${samplePath(sampleName)}/installations`, {
+    skipErrorToast: true,
+  });
+  if (!isRecord(response.data) || !Array.isArray(response.data.items))
+    throw new Error("Invalid installation history response");
+  const items = response.data.items.map(parseSampleInstallation);
+  if (items.some((item) => item.sample !== sampleName))
+    throw new Error("Installation history sample mismatch");
+  return { items, historyComplete: response.data.historyComplete === true };
 }
 
 function samplePath(sampleName: string) {
@@ -90,6 +184,11 @@ function toSampleRequestError(error: unknown) {
 
   if (!axios.isAxiosError<unknown>(error)) {
     return new SampleRequestError("install_failed", "");
+  }
+
+  // A missing response does not establish whether the server accepted the task.
+  if (!error.response) {
+    return new SampleRequestError("status_unknown", "");
   }
 
   const data = isRecord(error.response?.data) ? error.response.data : {};
