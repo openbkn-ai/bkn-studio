@@ -137,6 +137,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         setResult(response);
       } catch (caught: unknown) {
         if (request !== requestSequence.current) return;
+        setPagination({ page: nextPage, pageSize: nextPageSize });
         setResult(undefined);
         const unconfigured = isAuditConsumerNotConfigured(caught);
         setAuditNotConfigured(unconfigured);
@@ -160,7 +161,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       .then((access) => {
         if (!active) return;
         setProfile(access);
-        if (canSearchLogs(access, associatedScope)) void load(access, filters);
+        if (canSearchLogs(access, associatedScope)) void load(access, appliedFilters.current);
         else setLoading(false);
       })
       .catch((caught: unknown) => {
@@ -173,8 +174,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     return () => {
       active = false;
     };
-    // The initial request intentionally uses the URL-derived filter snapshot once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Language changes replay only the committed query, never draft filter edits.
   }, [associatedScope, load, t]);
 
   const columns = useMemo<ColumnsType<LogRecord>>(

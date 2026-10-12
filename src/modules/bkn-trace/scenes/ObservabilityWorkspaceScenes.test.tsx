@@ -64,6 +64,8 @@ const translate = (key: string, options?: Record<string, unknown>) => {
   );
 };
 
+let currentTranslate = translate;
+
 const mockMessage = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 
 const mockCurrentUser = vi.hoisted(() => ({
@@ -74,7 +76,7 @@ const mockCurrentUser = vi.hoisted(() => ({
 
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
-  return { ...original, useTranslation: () => ({ t: translate }) };
+  return { ...original, useTranslation: () => ({ t: currentTranslate }) };
 });
 
 vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => {
@@ -143,6 +145,7 @@ describe("observability workspace scenes", () => {
   });
 
   beforeEach(() => {
+    currentTranslate = translate;
     vi.clearAllMocks();
     mockCurrentUser.isSuperAdmin = true;
     vi.mocked(createArchive).mockReset();
@@ -739,6 +742,81 @@ describe("observability workspace scenes", () => {
       page: 2,
       cursor: "new-page-2",
       actorQuery: "new actor",
+    });
+  });
+
+  it.each(["query", "reset", "size"])(
+    "%s 请求失败后刷新仍从请求的首页及页大小开始",
+    async (action) => {
+      const base = await vi.mocked(listLogs)({});
+      vi.mocked(listLogs).mockClear();
+      vi.mocked(listLogs).mockResolvedValue({ ...base, nextCursor: "next", sourceStatus: [] });
+      render(<ObservabilityLogsScene />);
+      await screen.findByText("Page 1");
+      for (const page of [2, 3]) {
+        fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+        await screen.findByText(`Page ${page}`);
+      }
+      fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+        target: { value: "new actor" },
+      });
+      vi.mocked(listLogs).mockRejectedValueOnce(new Error("query failed"));
+      if (action === "size") {
+        fireEvent.mouseDown(screen.getByRole("combobox", { name: "bknTrace.logs.pageSize" }));
+        fireEvent.click(await screen.findByText("50 / page"));
+      } else {
+        fireEvent.click(screen.getByText(`bknTrace.actions.${action}`));
+      }
+      await screen.findByText("query failed");
+      const failedQuery = vi.mocked(listLogs).mock.calls[3]?.[0];
+      expect(failedQuery).toMatchObject({ page: 1, pageSize: action === "size" ? 50 : 20 });
+      expect(failedQuery?.cursor).toBeUndefined();
+      fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
+      await screen.findByText("Page 1");
+      expect(vi.mocked(listLogs).mock.calls[4]?.[0]).toEqual(failedQuery);
+    },
+  );
+
+  it("切换语言重查已提交筛选，下一页沿用相同条件与新游标", async () => {
+    const base = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockClear();
+    vi.mocked(listLogs).mockResolvedValue({
+      ...base,
+      nextCursor: "committed-next",
+      sourceStatus: [],
+    });
+    const view = render(<ObservabilityLogsScene />);
+    await screen.findByText("Page 1");
+    fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+      target: { value: "committed actor" },
+    });
+    fireEvent.click(screen.getByText("bknTrace.actions.query"));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "bknTrace.logs.nextPage" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await screen.findByText("Page 2");
+    fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+      target: { value: "draft actor" },
+    });
+    vi.mocked(listLogs).mockResolvedValue({
+      ...base,
+      nextCursor: "translated-next",
+      sourceStatus: [],
+    });
+    currentTranslate = (key, options) => translate(key, options);
+    view.rerender(<ObservabilityLogsScene />);
+    await screen.findByText("Page 1");
+    const languageQuery = vi.mocked(listLogs).mock.calls[3]?.[0];
+    expect(languageQuery).toMatchObject({ page: 1, actorQuery: "committed actor" });
+    expect(languageQuery?.cursor).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await screen.findByText("Page 2");
+    expect(vi.mocked(listLogs).mock.calls[4]?.[0]).toEqual({
+      ...languageQuery,
+      page: 2,
+      cursor: "translated-next",
     });
   });
 
