@@ -9,7 +9,7 @@ on:
   workflow_run:
     workflows: [ci-quality]
     types: [completed]
-    branches: [main, 'release/**']
+    branches: [main, "release/**"]
   workflow_dispatch:
 
 permissions: {}
