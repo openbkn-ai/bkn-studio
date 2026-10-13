@@ -35,7 +35,6 @@ import type { Dayjs } from "dayjs";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { buildAppPath } from "@/app/router/app-paths";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import type { PayloadEnvelope } from "@/modules/bkn-trace/shared/operation-fact.types";
@@ -483,7 +482,6 @@ function TraceDetail({
             key={operationKey(selectedOperation)}
             onClose={onCloseOperation}
             operation={selectedOperation}
-            traceId={summary.traceId}
           />
         ) : null}
       </div>
@@ -494,11 +492,9 @@ function TraceDetail({
 function OperationPanel({
   onClose,
   operation,
-  traceId,
 }: {
   onClose: () => void;
   operation: TechnicalTraceOperation;
-  traceId: string;
 }) {
   const { t } = useTranslation();
   const items = [
@@ -561,9 +557,6 @@ function OperationPanel({
         </Descriptions.Item>
       </Descriptions>
       <Tabs items={items} />
-      <Button href={buildAppPath(`/observability/logs?trace_id=${encodeURIComponent(traceId)}`)}>
-        {t("bknTrace.actions.viewLogs")}
-      </Button>
     </aside>
   );
 }
