@@ -1248,7 +1248,6 @@ export const bknTraceEnUS = {
       restartQuery: "Restart query",
       refresh: "Refresh",
       reset: "Reset",
-      viewLogs: "View related logs",
     },
     description:
       "Inspect runtime traces, evidence chains, business semantic graphs, and snapshot previews by trace id or request id.",
