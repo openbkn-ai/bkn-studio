@@ -1182,7 +1182,6 @@ export const bknTraceZhCN = {
       restartQuery: "重新查询",
       refresh: "刷新",
       reset: "重置",
-      viewLogs: "查看关联日志",
     },
     description: "按 trace id 或 request id 查看运行链路、证据链、业务语义链和快照预览。",
     empty: "输入 trace id 或 request id 后查询",

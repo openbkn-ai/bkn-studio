@@ -208,6 +208,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
 
     fireEvent.click(operationButton);
     expect(await screen.findByText(/SELECT parent_material_code FROM t/)).not.toBeNull();
+    expect(screen.queryByRole("link", { name: "bknTrace.actions.viewLogs" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /bknTrace\.traceWorkspace\.copy/ }));
     expect(writeTextMock).toHaveBeenCalledWith(
       expect.stringContaining("SELECT parent_material_code FROM t"),
