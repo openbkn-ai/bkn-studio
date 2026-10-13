@@ -36,6 +36,7 @@ import {
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
   isAuditConsumerNotConfigured,
+  isLogCursorStale,
   listLogs,
   type AuditOutcome,
   type BusinessModule,
@@ -88,6 +89,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
   const [loading, setLoading] = useState(true);
   const [auditNotConfigured, setAuditNotConfigured] = useState(false);
+  const [cursorStale, setCursorStale] = useState(false);
   const [error, setError] = useState<string>();
 
   const load = useCallback(
@@ -103,6 +105,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       setLoading(true);
       setError(undefined);
       setAuditNotConfigured(false);
+      setCursorStale(false);
       try {
         const query: LogListQuery = {
           page: nextPage,
@@ -137,16 +140,21 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         setResult(response);
       } catch (caught: unknown) {
         if (request !== requestSequence.current) return;
-        setPagination({ page: nextPage, pageSize: nextPageSize });
+        const stale = isLogCursorStale(caught);
+        if (stale) pageCursors.current = {};
+        setCursorStale(stale);
+        setPagination({ page: stale ? 1 : nextPage, pageSize: nextPageSize });
         setResult(undefined);
         const unconfigured = isAuditConsumerNotConfigured(caught);
         setAuditNotConfigured(unconfigured);
         setError(
-          unconfigured
-            ? t("bknTrace.errors.auditNotConfigured")
-            : caught instanceof Error
-              ? caught.message
-              : t("bknTrace.errors.queryFailed"),
+          stale
+            ? t("bknTrace.errors.cursorStale")
+            : unconfigured
+              ? t("bknTrace.errors.auditNotConfigured")
+              : caught instanceof Error
+                ? caught.message
+                : t("bknTrace.errors.queryFailed"),
         );
       } finally {
         if (request === requestSequence.current) setLoading(false);
@@ -166,6 +174,8 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       })
       .catch((caught: unknown) => {
         if (!active) return;
+        setCursorStale(false);
+        setAuditNotConfigured(false);
         setError(
           caught instanceof Error ? caught.message : t("bknTrace.errors.accessProfileFailed"),
         );
@@ -321,7 +331,23 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       </header>
 
       {error ? (
-        <Alert message={error} showIcon type={auditNotConfigured ? "warning" : "error"} />
+        <Alert
+          message={error}
+          showIcon
+          type={auditNotConfigured || cursorStale ? "warning" : "error"}
+          action={
+            cursorStale ? (
+              <Button
+                disabled={loading}
+                onClick={() => {
+                  if (profile) void load(profile, appliedFilters.current, 1, pagination.pageSize);
+                }}
+              >
+                {t("bknTrace.actions.restartQuery")}
+              </Button>
+            ) : undefined
+          }
+        />
       ) : null}
       {!error &&
       result?.sourceStatus.some((source) => source.reason === "audit_consumer_not_configured") ? (
