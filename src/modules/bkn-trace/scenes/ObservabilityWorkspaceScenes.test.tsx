@@ -893,6 +893,44 @@ describe("observability workspace scenes", () => {
     },
   );
 
+  it.each(["cursor_stale", "audit_consumer_not_configured"])(
+    "%s 后切换语言遇到权限加载失败，应清除旧错误类型",
+    async (code) => {
+      const base = await vi.mocked(listLogs)({});
+      vi.mocked(listLogs).mockClear();
+      const stale = code === "cursor_stale";
+      vi.mocked(listLogs)
+        .mockResolvedValueOnce({ ...base, nextCursor: "page-2", sourceStatus: [] })
+        .mockRejectedValueOnce(
+          new AxiosError(code, undefined, undefined, undefined, {
+            config: { headers: new AxiosHeaders() },
+            headers: {},
+            status: stale ? 409 : 503,
+            statusText: stale ? "Conflict" : "Service Unavailable",
+            data: { error: { code } },
+          }),
+        );
+      const view = render(<ObservabilityLogsScene />);
+      await screen.findByText("Page 1");
+      fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+      await screen.findByText(
+        stale ? "bknTrace.errors.cursorStale" : "bknTrace.errors.auditNotConfigured",
+      );
+      expect(document.querySelector(".ant-alert-warning")).not.toBeNull();
+      if (stale)
+        expect(screen.getByRole("button", { name: "bknTrace.actions.restartQuery" })).toBeEnabled();
+      vi.mocked(getAccessProfile).mockRejectedValueOnce(new Error("profile failed"));
+      currentTranslate = (key, options) => translate(key, options);
+      view.rerender(<ObservabilityLogsScene />);
+      await screen.findByText("profile failed");
+      expect(screen.queryByRole("button", { name: "bknTrace.actions.restartQuery" })).toBeNull();
+      expect(document.querySelector(".ant-alert-warning")).toBeNull();
+      expect(document.querySelector(".ant-alert-error")).not.toBeNull();
+      expect(getAccessProfile).toHaveBeenCalledTimes(2);
+      expect(listLogs).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it("切换语言重查已提交筛选，下一页沿用相同条件与新游标", async () => {
     const base = await vi.mocked(listLogs)({});
     vi.mocked(listLogs).mockClear();
