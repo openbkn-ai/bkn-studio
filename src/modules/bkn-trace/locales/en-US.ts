@@ -1245,6 +1245,7 @@ export const bknTraceEnUS = {
       back: "Back to runs",
       loadMore: "Load more",
       query: "Query",
+      restartQuery: "Restart query",
       refresh: "Refresh",
       reset: "Reset",
       viewLogs: "View related logs",
@@ -1257,6 +1258,7 @@ export const bknTraceEnUS = {
       accessProfileFailed:
         "Unable to load the current provenance access profile. Refresh and try again.",
       missingScope: "Enter a trace id or request id.",
+      cursorStale: "Pagination has expired. Restart the query to keep your applied filters.",
       queryFailed: "Query failed.",
       auditNotConfigured:
         "System audit is not configured. Ask your deployment administrator to configure and enable audit collection, then refresh.",
