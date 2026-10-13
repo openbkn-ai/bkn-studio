@@ -174,6 +174,8 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       })
       .catch((caught: unknown) => {
         if (!active) return;
+        setCursorStale(false);
+        setAuditNotConfigured(false);
         setError(
           caught instanceof Error ? caught.message : t("bknTrace.errors.accessProfileFailed"),
         );
