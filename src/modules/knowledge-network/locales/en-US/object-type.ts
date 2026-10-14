@@ -154,6 +154,10 @@ export const objecttypePart = {
   objectTypeDetailLogicTrialRunBatch: "Batch trial ({{count}})",
   objectTypeDetailLogicTrialRunAll: "Trial all",
   objectTypeDetailLogicTrialCompleted: "Completed logical-property trials for {{count}} objects.",
+  objectTypeDetailLogicTrialCompleted_one:
+    "Completed logical-property trials for {{count}} object.",
+  objectTypeDetailLogicTrialCompleted_other:
+    "Completed logical-property trials for {{count}} objects.",
   objectTypeDetailLogicTrialNoData: "No data",
   objectTypeDetailLogicTrialInputTitle: "Enter function inputs",
   objectTypeDetailLogicTrialInputDescription:
