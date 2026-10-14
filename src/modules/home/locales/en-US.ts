@@ -86,7 +86,12 @@ export const homeEnUS = {
     sample: {
       uninstallProgress: "Uninstalling: {{stage}}",
       uninstall: "Uninstall sample",
-      retryUninstall: "Resume uninstall",
+      retryUninstall: "Continue cleanup",
+      continueCleanupTitle: "Continue cleaning up resources for {{name}} {{version}}",
+      cleanupFailed: "Clean up failed installation",
+      cleanupFailedTitle: "Clean up the failed installation of {{name}} {{version}}",
+      cleanupFailedWarning:
+        "This deletes sample resources and data created by the failed installation, including user changes. Only resources confirmed to belong to this sample are removed; cleanup stops if ownership is unclear or conflicting. The original failure remains in history. After cleanup succeeds, you can install an imported offline package. If cleanup is incomplete, you can continue it.",
       uninstallTitle: "Uninstall {{name}} {{version}}",
       uninstallWarning:
         "Uninstall permanently removes this sample's data, knowledge network, metrics, functions and Skills, including user changes. Installation history is retained. Only resources owned by this sample are removed. You can install a new version after cleanup completes.",

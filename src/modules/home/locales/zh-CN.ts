@@ -81,7 +81,12 @@ export const homeZhCN = {
     sample: {
       uninstallProgress: "正在卸载：{{stage}}",
       uninstall: "卸载样例",
-      retryUninstall: "继续卸载",
+      retryUninstall: "继续清理",
+      continueCleanupTitle: "继续清理 {{name}} {{version}} 的样例资源",
+      cleanupFailed: "清理失败安装",
+      cleanupFailedTitle: "清理 {{name}} {{version}} 的失败安装",
+      cleanupFailedWarning:
+        "将删除这次失败安装已创建的样例资源和数据，包括其中的用户修改。只清理确认属于该样例的资源；归属不明或冲突时停止。原失败记录将保留；清理成功后可以重新安装已导入的离线包。清理未完成时可继续清理。",
       uninstallTitle: "卸载 {{name}} {{version}}",
       uninstallWarning:
         "卸载将永久删除该样例的数据、知识网络、指标、函数和 Skill，包括其中的用户修改。历史安装记录将保留。只清理属于该样例的资源；完成后可重新安装新版本。",
