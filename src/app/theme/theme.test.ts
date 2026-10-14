@@ -91,4 +91,14 @@ describe("createThemeConfig", () => {
     expect(tableTokens?.rowSelectedBg).toBe("#1e3a5f");
     expect(tableTokens?.rowSelectedHoverBg).toBe("#254b78");
   });
+
+  it("uses legible selected tab colors on both themes", () => {
+    const lightTabs = createThemeConfig(runtimeConfig, "light").components?.Tabs;
+    const darkTabs = createThemeConfig(runtimeConfig, "dark").components?.Tabs;
+
+    expect(lightTabs?.itemSelectedColor).toBe("#1e3a8a");
+    expect(darkTabs?.itemSelectedColor).toBe("#93c5fd");
+    expect(darkTabs?.itemActiveColor).toBe("#93c5fd");
+    expect(darkTabs?.itemHoverColor).toBe("#bfdbfe");
+  });
 });

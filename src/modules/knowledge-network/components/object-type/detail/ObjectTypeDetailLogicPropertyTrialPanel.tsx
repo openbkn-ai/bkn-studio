@@ -210,6 +210,7 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
             propertyNames.forEach((name) => {
               rowValues[name] = formatLogicPropertyTrialValue(
                 readLogicPropertyTrialCellValue(apiRow, name),
+                t("knowledgeNetwork.objectTypeDetailLogicTrialNoData"),
               );
             });
 
@@ -218,6 +219,9 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
 
           return next;
         });
+        void message.success(
+          t("knowledgeNetwork.objectTypeDetailLogicTrialCompleted", { count: entries.length }),
+        );
         return true;
       } catch (nextError) {
         setError(extractRequestErrorMessage(nextError));

@@ -1,0 +1,1316 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: var(--color-bg-layout);
+  color: var(--color-text-primary);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 78px;
+  padding: 12px 32px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
+  box-shadow: 0 6px 18px rgb(2 8 23 / 8%);
+  backdrop-filter: blur(12px);
+}
+
+.backButton {
+  flex: 0 0 auto;
+  color: var(--color-text-primary);
+  font-size: 18px;
+}
+
+.headerCopy {
+  min-width: 0;
+}
+
+.headerActions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.35;
+}
+.subtitle {
+  margin: 3px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.body {
+  width: min(920px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 28px 0 152px;
+}
+
+.form {
+  width: 100%;
+}
+
+.aiDialogTitle {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.aiDialogTitleIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--color-primary-600);
+  color: var(--color-text-inverse);
+  font-size: 17px;
+}
+
+.aiDialogTitle > div {
+  display: grid;
+  gap: 1px;
+}
+
+.aiDialogTitle strong {
+  color: var(--color-text-primary);
+  font-size: 15px;
+}
+
+.aiDialogTitle span:last-child {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.aiDialogIntro {
+  margin: 2px 0 16px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.aiConversation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 320px;
+  padding: 14px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary-bg) 22%, var(--color-bg-layout)) 0%,
+    var(--color-bg-layout) 70%
+  );
+  animation: ai-conversation-enter 180ms ease-out;
+}
+
+@keyframes ai-conversation-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.aiMessage {
+  width: fit-content;
+  max-width: 84%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.aiMessageAssistant {
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  border-top-left-radius: 2px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.aiMessageUser {
+  align-self: flex-end;
+  border: 1px solid var(--color-primary-border);
+  border-top-right-radius: 2px;
+  background: var(--color-primary-600);
+  color: var(--color-text-inverse);
+}
+
+:global(:root[data-theme="dark"]) .aiMessageUser {
+  background: #1e3a8a;
+}
+
+.aiMessageError {
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.aiThinking {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 8px;
+  vertical-align: 2px;
+}
+
+.aiThinking i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  animation: ai-thinking 1.1s ease-in-out infinite;
+}
+
+.aiThinking i:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.aiThinking i:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+@keyframes ai-thinking {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.aiDialogExamples {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.aiDialogResultActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.aiDialogExamples > span {
+  flex: 0 0 auto;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.aiDialogExamples button {
+  overflow: hidden;
+  padding: 4px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.aiDialogExamples button:hover,
+.aiDialogExamples button:focus-visible {
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-600);
+  outline: none;
+}
+
+.aiDialogComposer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.aiDialogComposer :global(.ant-input) {
+  resize: none;
+}
+
+.aiDialogComposer :global(.ant-btn) {
+  width: 86px;
+  height: 48px;
+}
+
+.aiDialogFootnote {
+  margin: 10px 0 0;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.form :global(.ant-form-item) {
+  margin-bottom: 18px;
+}
+
+.form :global(.ant-form-item-label) {
+  padding-bottom: 6px;
+}
+
+.form :global(.ant-form-item-label > label) {
+  height: auto;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form :global(.ant-input:not(textarea)),
+.form :global(.ant-input-number),
+.form :global(.ant-select-selector),
+.form :global(.ant-radio-button-wrapper) {
+  min-height: 36px;
+}
+
+.form :global(.ant-select-single .ant-select-selector) {
+  align-items: center;
+}
+
+.section {
+  padding: 26px 0 30px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.section:last-child {
+  border-bottom: 0;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.sectionTitle h2,
+.sectionTitle h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 16px;
+  line-height: 1.45;
+}
+.sectionHint {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.helpButton {
+  align-self: center;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--color-text-secondary);
+}
+
+.helpButton:hover {
+  color: var(--color-primary-600) !important;
+}
+
+.helpButton:focus-visible {
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 2px;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
+}
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 14px;
+}
+.full {
+  grid-column: 1 / -1;
+}
+
+.queryCapabilityHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 8px 0 16px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.queryCapabilityHeader strong {
+  flex: 0 0 auto;
+  color: var(--color-text-primary);
+  font-size: 14px;
+}
+
+.queryCapabilityHeader span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.logicPropertyCard {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+  padding: 16px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-primary-bg) 24%, var(--color-bg-surface));
+}
+
+.logicPropertyHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.logicPropertyHeader > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.logicPropertyHeader strong {
+  color: var(--color-text-primary);
+  font-size: 14px;
+}
+
+.logicPropertyHeader span,
+.logicPropertyDisabledHint {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.logicPropertyFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
+}
+
+.logicPropertyDisabledHint {
+  margin: 0;
+}
+
+.editorBox {
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg-surface) 76%, transparent);
+}
+
+.inheritedContract {
+  overflow: hidden;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-primary-bg) 42%, var(--color-bg-surface));
+}
+
+.inheritedContractHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.inheritedContractHeader > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.inheritedContractHeader strong {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inheritedContractHeader span,
+.inheritedContract > p {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.inheritedContractGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--color-divider);
+}
+
+.inheritedContractGrid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, transparent);
+}
+
+.inheritedContractGrid span,
+.inheritedResultSummary span {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}
+
+.inheritedContractGrid strong,
+.inheritedResultSummary strong {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inheritedContract > p {
+  margin: 0;
+  padding: 10px 16px;
+}
+
+.derivedFlow {
+  display: grid;
+  gap: 14px;
+}
+
+.qualifierStatus {
+  margin-bottom: 2px;
+}
+
+.qualifierCard {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-bg-surface) 78%, transparent);
+}
+
+.qualifierHeading {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.qualifierHeading > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary-bg);
+  color: var(--color-primary-600);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.qualifierHeading h3,
+.qualifierHeading p {
+  margin: 0;
+}
+
+.qualifierHeading h3 {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.qualifierHeading p {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.timeWindowGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.rollingWindowControl {
+  display: grid;
+  grid-template-columns: auto minmax(88px, 0.7fr) minmax(112px, 1fr);
+  align-items: center;
+  min-height: 32px;
+  border: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
+}
+
+.rollingWindowControl > span {
+  padding: 0 10px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.rollingWindowControl :global(.ant-input-number),
+.rollingWindowControl :global(.ant-select-selector) {
+  border-width: 0 0 0 1px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.rollingWindowControl :global(.ant-input-number),
+.rollingWindowControl :global(.ant-select) {
+  width: 100%;
+}
+
+.timeWindowPreview {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--color-primary-600);
+  background: color-mix(in srgb, var(--color-primary-bg) 28%, transparent);
+}
+
+.timeWindowPreview > span,
+.timeWindowPreview > small {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.timeWindowPreview > strong {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.relationStep {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) minmax(190px, auto) 32px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.relationTarget {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relationPathHint {
+  display: inline-block;
+  margin-left: 10px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.relationConfiguration {
+  display: grid;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.relationRuleSentence {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 34px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.relationRuleSentence strong {
+  color: var(--color-text-primary);
+}
+
+.relationAutomaticHint {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .relationStep {
+    grid-template-columns: auto minmax(0, 1fr) 32px;
+  }
+
+  .relationTarget {
+    display: none;
+  }
+
+  .relationPathHint {
+    display: block;
+    margin: 8px 0 0;
+  }
+
+  .relationRuleSentence {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.definitionPreview {
+  padding: 16px;
+  border: 1px solid var(--color-primary-border);
+  border-left: 3px solid var(--color-primary-600);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-primary-bg) 34%, var(--color-bg-surface));
+}
+
+.definitionPreviewTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.definitionPreviewTitle strong {
+  color: var(--color-text-primary);
+  font-size: 14px;
+}
+
+.definitionPreviewTitle span,
+.technicalPreview {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}
+
+.definitionPreview > p {
+  margin: 10px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.definitionPreview > .technicalPreview {
+  margin-top: 6px;
+}
+
+.guidedEmpty {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 28px 20px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-fill-secondary) 44%, transparent);
+  text-align: center;
+}
+
+.guidedEmpty strong {
+  color: var(--color-text-primary);
+  font-size: 14px;
+}
+
+.guidedEmpty span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.inheritedResultSummary {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-divider);
+}
+
+.inheritedResultSummary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--color-bg-surface) 90%, transparent);
+}
+
+.inheritedResultSummary > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--color-primary-bg) 34%, var(--color-bg-surface));
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.compositeFlow {
+  display: grid;
+  gap: 14px;
+}
+
+.dependencyRow {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
+}
+
+.dependencyCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.dependencyCardHeader > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dependencyCardHeader span {
+  color: var(--color-primary-600);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dependencyCardHeader strong {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dependencyPrimaryFields,
+.dependencyAlignmentChoice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.42fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.dependencyPrimaryFields label,
+.dependencyAlignmentChoice label,
+.dependencyTimeSection label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.dependencyPrimaryFields label > span,
+.dependencyAlignmentChoice label > span,
+.dependencyTimeSection label > span {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.dependencyContract,
+.alignmentSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-divider);
+}
+
+.dependencyContract > div,
+.alignmentSummary > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, transparent);
+}
+
+.dependencyContract span,
+.alignmentSummary span {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}
+
+.dependencyContract strong,
+.alignmentSummary strong {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alignmentSummary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dependencyAlignmentSection,
+.dependencyTimeSection {
+  display: grid;
+  gap: 10px;
+}
+
+.dependencyTimeSection label {
+  max-width: 420px;
+}
+
+.dependencySubheading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dependencySubheading strong {
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+.dependencySubheading span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-align: right;
+}
+
+.dependencyAdvanced,
+.resultAlignmentAdvanced {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--color-fill-secondary) 34%, transparent);
+}
+
+.dependencyAdvanced > summary,
+.resultAlignmentAdvanced > summary {
+  padding: 11px 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dependencyAdvanced > p,
+.resultAlignmentAdvanced > p {
+  margin: 0;
+  padding: 0 13px 10px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.resultAlignmentAdvanced[open] > summary,
+.dependencyAdvanced[open] > summary {
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.resultAlignmentAdvanced .grid3 {
+  padding: 14px 14px 0;
+}
+
+.formulaPreview {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--color-primary-600);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-primary-bg) 30%, transparent);
+}
+
+.formulaPreview span,
+.formulaPreview small {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}
+
+.formulaPreview strong {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.dependencyPath {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+}
+.dependencyContext {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+}
+
+.scopeField {
+  margin-bottom: 14px !important;
+}
+
+.scopeGroup {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.scopeOption {
+  display: flex;
+  align-items: flex-start;
+  min-height: 112px;
+  margin: 0;
+  padding: 15px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-bg-surface) 76%, transparent);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.scopeOption:hover {
+  border-color: var(--color-primary-border);
+}
+
+.scopeOption:has(:global(.ant-radio-checked)) {
+  border-color: var(--color-primary-600);
+  background: color-mix(in srgb, var(--color-primary-bg) 68%, transparent);
+  box-shadow: inset 3px 0 0 var(--color-primary-600);
+}
+
+.scopeOption:has(:global(.ant-radio-disabled)) {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.scopeOption :global(.ant-radio) {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.scopeOptionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-left: 4px;
+}
+
+.scopeOptionTitle {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.scopeOptionDescription {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.scopeOptionExample {
+  color: var(--color-primary-600);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.outputSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-fill-secondary) 72%, transparent);
+}
+
+.outputSummary strong {
+  font-size: 13px;
+}
+
+.outputSummary span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.inferredResultInline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  min-height: 22px;
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.inferredResultInline strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.inlineHelpButton {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  padding: 0;
+  color: var(--color-text-tertiary);
+}
+
+.inlineHelpButton:hover {
+  color: var(--color-primary-600) !important;
+}
+
+.inlineHelpButton:focus-visible {
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 1px;
+}
+
+.resultDetails {
+  grid-column: 1 / -1;
+  margin-bottom: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg-surface) 68%, transparent);
+}
+
+.resultDetails summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.resultDetails summary::-webkit-details-marker {
+  display: none;
+}
+
+.resultDetails summary::after {
+  content: "+";
+  color: var(--color-text-tertiary);
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.resultDetails[open] summary::after {
+  content: "−";
+}
+
+.resultDetails summary > span:nth-child(2) {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 14px;
+  padding: 12px 14px 0;
+  border-top: 1px solid var(--color-divider);
+}
+
+.inheritedValuePlaceholder {
+  grid-column: 1 / -1;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-fill-secondary) 48%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.issues {
+  margin-top: 16px;
+}
+
+.publishActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.validationIssueList {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.validationIssueList li {
+  padding-left: 2px;
+}
+
+.validationIssueList strong,
+.validationIssueList span {
+  display: block;
+}
+
+.validationIssueList strong {
+  margin-bottom: 2px;
+  color: var(--color-text-primary);
+}
+
+.validationSuggestion {
+  margin-top: 3px;
+  color: var(--color-text-secondary);
+}
+
+.expressionIssue {
+  margin-top: 12px;
+}
+@media (max-width: 900px) {
+  .header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    min-height: 0;
+    padding: 14px 16px;
+  }
+  .headerCopy {
+    flex: 1;
+  }
+  .headerActions {
+    width: 100%;
+    padding-left: 46px;
+  }
+  .body {
+    width: calc(100% - 32px);
+    padding-top: 24px;
+    padding-bottom: 112px;
+  }
+  .publishActions {
+    justify-content: stretch;
+  }
+  .publishActions > * {
+    flex: 1;
+  }
+  .grid2,
+  .grid3,
+  .timeWindowGrid,
+  .detailsGrid,
+  .logicPropertyFields,
+  .scopeGroup {
+    grid-template-columns: 1fr;
+  }
+  .queryCapabilityHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .inheritedContractGrid,
+  .inheritedResultSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .relationStep {
+    grid-template-columns: auto minmax(0, 1fr) 32px;
+  }
+  .relationTarget {
+    grid-column: 2 / -1;
+  }
+  .relationStep > button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .dependencyPrimaryFields,
+  .dependencyAlignmentChoice,
+  .dependencyContract,
+  .alignmentSummary {
+    grid-template-columns: 1fr;
+  }
+  .dependencySubheading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .dependencySubheading span {
+    text-align: left;
+  }
+
+  .timeWindowPreview {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
+@media (max-width: 480px) {
+  .aiDialogComposer {
+    grid-template-columns: 1fr;
+  }
+  .aiDialogComposer :global(.ant-btn) {
+    width: 100%;
+    height: 40px;
+  }
+  .aiDialogExamples {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .inheritedContractGrid,
+  .inheritedResultSummary {
+    grid-template-columns: 1fr;
+  }
+}

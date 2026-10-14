@@ -91,7 +91,7 @@ components/
   action-type/     # 列表、SourcePicker、Overview/Task、执行日志（逻辑见 utils/action-type-execution.ts）
   services/
     action-type-tool.service.ts  # 工具目录（mock / GET /tools/catalog）
-  metric/          # MetricListPanel
+  object-metric/   # 对象指标列表、条件树与表达式树编辑器
 ```
 
 ## 分层规则
@@ -142,7 +142,7 @@ services/
 | 概念分组 | `ConceptGroupFormScene` / `ConceptGroupDetailScene`  | `.../concept-groups/create`          |
 | 关系类   | `RelationTypeFormScene` / `RelationTypeMappingScene` | `.../relation-types/create`          |
 | 行动类   | `ActionTypeFormScene` / `ActionTypeExecutionScene`   | `.../action-types/create`            |
-| 指标     | `MetricFormScene` / `MetricDataQueryScene`           | `.../metrics/create`                 |
+| 对象指标 | `ObjectMetricFormScene` / `ObjectMetricDetailScene`  | `.../metrics/create`                 |
 
 ## 开发 Mock
 

@@ -153,13 +153,19 @@ export async function listKnowledgeNetworkTags() {
   return [...tagSet].sort((left, right) => left.localeCompare(right));
 }
 
-export async function getKnowledgeNetwork(networkId: string) {
+export async function getKnowledgeNetwork(
+  networkId: string,
+  options: { skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
     return wait(mockKnowledgeNetworks.find((item) => item.id === networkId) ?? null);
   }
 
   const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}`,
+    {
+      skipErrorToast: options.skipErrorToast,
+    },
   );
 
   const record = unwrapSingleEntryResponse(response.data);

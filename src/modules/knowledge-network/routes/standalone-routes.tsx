@@ -17,7 +17,6 @@ import {
   ConceptGroupDetailPage,
   ConceptGroupEditPage,
   MetricCreatePage,
-  MetricDataQueryPage,
   MetricDetailPage,
   MetricEditPage,
   ObjectTypeCreatePage,
@@ -39,7 +38,6 @@ import { createKnowledgeNetworkRoute } from "@/modules/knowledge-network/routes/
 import {
   getKnowledgeNetworkActionTypeDetail,
   getKnowledgeNetworkConceptGroup,
-  getKnowledgeNetworkMetric,
   getKnowledgeNetworkObjectTypeDetail,
   getKnowledgeNetworkRelationTypeDetail,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -206,7 +204,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.metricEditDescription",
       titleKey: "knowledgeNetwork.metricEditTitle",
     },
-    childModifyRoute(<MetricEditPage />, "metricId", getKnowledgeNetworkMetric),
+    modifyRoute(<MetricEditPage />),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/metrics/:metricId/detail",
@@ -215,14 +213,6 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       titleKey: "knowledgeNetwork.metricDetailTitle",
     },
     <MetricDetailPage />,
-  ),
-  createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/metrics/:metricId/data-query",
-    {
-      descriptionKey: "knowledgeNetwork.metricDataQueryDescription",
-      titleKey: "knowledgeNetwork.metricDataQueryTitle",
-    },
-    <MetricDataQueryPage />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/object-types/create",

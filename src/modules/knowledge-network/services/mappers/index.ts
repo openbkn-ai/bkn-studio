@@ -89,7 +89,7 @@ export function mapRecentObject(item: BackendObjectType): KnowledgeNetworkRecent
 export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTypeRecord {
   const indexStatus = item.index_status?.state
     ? { state: item.index_status.state, sourceStatus: item.index_status.source_status }
-    : { state: "unknown" as const };
+    : { state: item.data_source ? ("unknown" as const) : ("not_applicable" as const) };
 
   return {
     id: item.id,

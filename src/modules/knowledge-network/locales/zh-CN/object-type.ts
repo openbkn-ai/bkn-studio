@@ -144,6 +144,10 @@ export const objecttypePart = {
   objectTypeDetailLogicTrialRunSingle: "试算",
   objectTypeDetailLogicTrialRunBatch: "批量试算（{{count}}）",
   objectTypeDetailLogicTrialRunAll: "试算全部",
+  objectTypeDetailLogicTrialCompleted: "已完成 {{count}} 个对象的逻辑属性试算。",
+  objectTypeDetailLogicTrialCompleted_one: "已完成 {{count}} 个对象的逻辑属性试算。",
+  objectTypeDetailLogicTrialCompleted_other: "已完成 {{count}} 个对象的逻辑属性试算。",
+  objectTypeDetailLogicTrialNoData: "无数据",
   objectTypeDetailLogicTrialInputTitle: "填写函数输入",
   objectTypeDetailLogicTrialInputDescription: "这些值会应用到本次试算选择的全部对象。",
   objectTypeDetailLogicTrialInputConfirm: "开始试算",
@@ -276,5 +280,5 @@ export const objecttypePart = {
   objectTypeLogicMetricUnavailable: "指标类逻辑属性暂不支持编辑。",
   objectTypeLogicMetricReferenceMissing:
     "逻辑属性「{{name}}」绑定的指标模型不存在，请删除该逻辑属性后再保存。",
-  objectTypeDetailLogicTrialMetricUnavailable: "指标类逻辑属性暂不支持按实例试算。",
+  objectTypeDetailLogicTrialMetricUnavailable: "当前没有可按实例试算的逻辑属性。",
 };

@@ -54,7 +54,7 @@ export function useKnowledgeNetworkOperationAccessState(
       };
     }
 
-    void getKnowledgeNetwork(networkId)
+    void getKnowledgeNetwork(networkId, { skipErrorToast: true })
       .then((record) => {
         if (!cancelled) {
           setAccess(

@@ -153,6 +153,12 @@ export const objecttypePart = {
   objectTypeDetailLogicTrialRunSingle: "Trial",
   objectTypeDetailLogicTrialRunBatch: "Batch trial ({{count}})",
   objectTypeDetailLogicTrialRunAll: "Trial all",
+  objectTypeDetailLogicTrialCompleted: "Completed logical-property trials for {{count}} objects.",
+  objectTypeDetailLogicTrialCompleted_one:
+    "Completed logical-property trials for {{count}} object.",
+  objectTypeDetailLogicTrialCompleted_other:
+    "Completed logical-property trials for {{count}} objects.",
+  objectTypeDetailLogicTrialNoData: "No data",
   objectTypeDetailLogicTrialInputTitle: "Enter function inputs",
   objectTypeDetailLogicTrialInputDescription:
     "These values apply to every object selected for this trial.",
@@ -213,7 +219,7 @@ export const objecttypePart = {
   objectTypeLogicMetricReferenceMissing:
     'The metric bound to logical property "{{name}}" no longer exists. Delete the logical property before saving.',
   objectTypeDetailLogicTrialMetricUnavailable:
-    "Metric-based logical properties cannot be run against individual instances yet.",
+    "No logical properties are available for per-instance trial.",
   objectTypeLogicAttributeMatchedPropertyPending: "Select an analysis dimension first",
   objectTypeLogicAttributeMatchedPropertyMissing: "Missing same-name property on object type",
   objectTypeLogicAttributeTypeMetric: "Metric",

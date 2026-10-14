@@ -104,20 +104,22 @@ describe("http request headers", () => {
   it("does not notify globally when an expected request error opts out", async () => {
     const notify = vi.fn();
     setRequestErrorHandler(notify);
-    const missingRoute: AxiosAdapter = (config) =>
+    const missingRoute = vi.fn<AxiosAdapter>((config) =>
       Promise.reject(
         Object.assign(new Error("Request failed with status code 404"), {
           config,
           isAxiosError: true,
           response: { status: 404 },
         }),
-      );
+      ),
+    );
 
     await expect(
       http.get("/enterprise-only", { adapter: missingRoute, skipErrorToast: true }),
     ).rejects.toThrow("Request failed with status code 404");
 
     expect(notify).not.toHaveBeenCalled();
+    expect(missingRoute.mock.calls[0]?.[0].skipErrorToast).toBe(true);
   });
 
   it("reports the backend description when a download fails with a blob body", async () => {

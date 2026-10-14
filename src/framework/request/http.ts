@@ -91,7 +91,6 @@ http.interceptors.request.use((config) => {
   if (token) {
     config.headers.set("Authorization", `Bearer ${token}`);
   }
-
   return config;
 });
 

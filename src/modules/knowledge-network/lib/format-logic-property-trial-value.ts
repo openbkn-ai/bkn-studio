@@ -26,12 +26,12 @@ function isMetricResultPayload(value: unknown): value is MetricResultPayload {
   }
 
   const datas = (value as MetricResultPayload).datas;
-  return Array.isArray(datas) && datas.length > 0;
+  return Array.isArray(datas);
 }
 
-function formatScalarValue(value: unknown) {
+function formatScalarValue(value: unknown, emptyLabel: string) {
   if (value == null || value === "") {
-    return "--";
+    return emptyLabel;
   }
 
   if (typeof value === "number") {
@@ -54,7 +54,7 @@ function formatScalarValue(value: unknown) {
   return JSON.stringify(value);
 }
 
-function formatMetricResultPayload(payload: MetricResultPayload) {
+function formatMetricResultPayload(payload: MetricResultPayload, emptyLabel: string) {
   const unit = payload.model?.unit?.trim();
   const unitSuffix = unit ? ` ${unit}` : "";
   const values: unknown[] = [];
@@ -64,15 +64,15 @@ function formatMetricResultPayload(payload: MetricResultPayload) {
   }
 
   if (values.length === 0) {
-    return "--";
+    return emptyLabel;
   }
 
   if (values.length === 1) {
-    return `${formatScalarValue(values[0])}${unitSuffix}`;
+    return `${formatScalarValue(values[0], emptyLabel)}${unitSuffix}`;
   }
 
-  const first = formatScalarValue(values[0]);
-  const last = formatScalarValue(values[values.length - 1]);
+  const first = formatScalarValue(values[0], emptyLabel);
+  const last = formatScalarValue(values[values.length - 1], emptyLabel);
 
   if (first === last) {
     return `${first}${unitSuffix} (${values.length})`;
@@ -81,22 +81,22 @@ function formatMetricResultPayload(payload: MetricResultPayload) {
   return `${first} ~ ${last}${unitSuffix} (${values.length})`;
 }
 
-export function formatLogicPropertyTrialValue(value: unknown): string {
+export function formatLogicPropertyTrialValue(value: unknown, emptyLabel = "No data"): string {
   if (value == null || value === "") {
-    return "--";
+    return emptyLabel;
   }
 
   if (typeof value !== "object") {
-    return formatScalarValue(value);
+    return formatScalarValue(value, emptyLabel);
   }
 
   if (Array.isArray(value)) {
     const items = value as unknown[];
-    return items.map((item) => formatLogicPropertyTrialValue(item)).join(", ");
+    return items.map((item) => formatLogicPropertyTrialValue(item, emptyLabel)).join(", ");
   }
 
   if (isMetricResultPayload(value)) {
-    return formatMetricResultPayload(value);
+    return formatMetricResultPayload(value, emptyLabel);
   }
 
   return JSON.stringify(value);

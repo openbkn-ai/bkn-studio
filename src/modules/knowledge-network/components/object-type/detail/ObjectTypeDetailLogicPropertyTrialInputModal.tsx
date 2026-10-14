@@ -61,6 +61,7 @@ export function ObjectTypeDetailLogicPropertyTrialInputModal({
       cancelText={t("common.cancel")}
       confirmLoading={submitting}
       destroyOnHidden
+      forceRender
       maskClosable={!submitting}
       okText={t("knowledgeNetwork.objectTypeDetailLogicTrialInputConfirm")}
       onCancel={submitting ? undefined : onCancel}

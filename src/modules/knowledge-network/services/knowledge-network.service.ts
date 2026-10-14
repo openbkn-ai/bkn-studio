@@ -15,6 +15,7 @@ export * from "@/modules/knowledge-network/services/action-type.service";
 export * from "@/modules/knowledge-network/services/object-type-logic-property-trial.service";
 export * from "@/modules/knowledge-network/services/overview-graph.service";
 export * from "@/modules/knowledge-network/services/metric.service";
+export * from "@/modules/knowledge-network/services/object-metric.service";
 export {
   KnowledgeNetworkImportBindingError,
   KnowledgeNetworkImportConflictError,

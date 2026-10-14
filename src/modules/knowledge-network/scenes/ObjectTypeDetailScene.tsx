@@ -45,9 +45,9 @@ import {
 } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTable";
 import { useObjectTypePropertyTableState } from "@/modules/knowledge-network/components/object-type/useObjectTypePropertyTableState";
 import { ObjectTypeDetailLogicPropertyTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailLogicPropertyTrialPanel";
-import { ObjectTypeDetailMetricTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailMetricTrialPanel";
 import { buildSampleRowKey } from "@/modules/knowledge-network/lib/object-type-instance-identity";
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
+import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
   deleteKnowledgeNetworkObjectType,
@@ -55,17 +55,17 @@ import {
   getKnowledgeNetworkObjectTypeDetail,
   getObjectTypeSampleData,
   listKnowledgeNetworkActionTypePage,
-  listKnowledgeNetworkMetrics,
   listKnowledgeNetworkRelationTypePage,
+  listObjectMetricsV1,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   KnowledgeNetworkActionTypeRecord,
-  KnowledgeNetworkMetricRecord,
   KnowledgeNetworkRelationTypeRecord,
   ObjectTypeDetail,
   ObjectTypeLogicProperty,
   ObjectTypeResourcePreview,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./ObjectTypeDetailScene.module.css";
@@ -91,7 +91,7 @@ function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: strin
 }
 
 type ObjectTypeDetailTabKey = "overview" | "properties" | "data" | "related";
-type ObjectTypeDataSectionKey = "instance" | "logic" | "metric";
+type ObjectTypeDataSectionKey = "instance" | "logic";
 type ObjectTypeRelatedSectionKey = "relations" | "metrics" | "actions";
 
 const OBJECT_TYPE_DETAIL_TABS: ObjectTypeDetailTabKey[] = [
@@ -109,16 +109,9 @@ function parseObjectTypeDetailTab(value: string | null): ObjectTypeDetailTabKey 
   return "overview";
 }
 
-function parseObjectTypeDataSection(
-  value: string | null,
-  metricId: string | null,
-): ObjectTypeDataSectionKey {
+function parseObjectTypeDataSection(value: string | null): ObjectTypeDataSectionKey {
   if (value === "logic") {
     return "logic";
-  }
-
-  if (value === "metric" || (value === "trial" && metricId)) {
-    return "metric";
   }
 
   if (value === "trial") {
@@ -218,7 +211,6 @@ export function ObjectTypeDetailScene() {
     ? (searchParams.get("reason") ?? "").slice(0, 512)
     : "";
   const activeTab = parseObjectTypeDetailTab(searchParams.get("tab"));
-  const selectedTrialMetricId = searchParams.get("metricId");
   const selectedLogicPropertyName = searchParams.get("logicProperty");
   const selectedSampleRowKey = searchParams.get("sampleRow");
   const selectedLogicTrialRowKeys = useMemo(
@@ -226,9 +218,7 @@ export function ObjectTypeDetailScene() {
     [selectedSampleRowKey],
   );
   const dataSection =
-    activeTab === "data"
-      ? parseObjectTypeDataSection(searchParams.get("section"), selectedTrialMetricId)
-      : "instance";
+    activeTab === "data" ? parseObjectTypeDataSection(searchParams.get("section")) : "instance";
   const relatedSection =
     activeTab === "related"
       ? parseObjectTypeRelatedSection(searchParams.get("relatedSection"))
@@ -256,7 +246,7 @@ export function ObjectTypeDetailScene() {
   >(null);
   const [relatedRelationsPage, setRelatedRelationsPage] = useState(1);
   const [relatedRelationsPageSize, setRelatedRelationsPageSize] = useState(10);
-  const [relatedMetrics, setRelatedMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
+  const [relatedMetrics, setRelatedMetrics] = useState<ObjectMetricRecordV1[]>([]);
   const [relatedMetricsTotalCount, setRelatedMetricsTotalCount] = useState(0);
   const [relatedMetricsLoading, setRelatedMetricsLoading] = useState(false);
   const [relatedMetricsError, setRelatedMetricsError] = useState<string | null>(null);
@@ -318,23 +308,6 @@ export function ObjectTypeDetailScene() {
       width: 520,
     });
   };
-
-  const openMetricTrial = useCallback(
-    (metricId: string) => {
-      setSearchParams(
-        (current) => {
-          const next = new URLSearchParams(current);
-          next.set("tab", "data");
-          next.set("section", "metric");
-          next.set("metricId", metricId);
-          next.delete("logicProperty");
-          return next;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
-  );
 
   const openLogicPropertyTrial = useCallback(
     (logicPropertyName: string, sampleRowKey?: string | null) => {
@@ -644,18 +617,16 @@ export function ObjectTypeDetailScene() {
     setRelatedMetricsLoading(true);
     setRelatedMetricsError(null);
 
-    void listKnowledgeNetworkMetrics(networkId, {
-      direction: "desc",
+    void listObjectMetricsV1(networkId, {
       keyword: relatedRequestKeyword || undefined,
       limit: relatedMetricsPageSize,
       offset: (relatedMetricsRequestPage - 1) * relatedMetricsPageSize,
-      scopeRef: objectTypeId,
-      sort: "update_time",
+      ownerObjectTypeId: objectTypeId,
     })
       .then((result) => {
         if (!cancelled) {
           setRelatedMetrics(result.entries);
-          setRelatedMetricsTotalCount(result.totalCount);
+          setRelatedMetricsTotalCount(result.total_count);
           setRelatedMetricsLoadedObjectTypeId(objectTypeId);
         }
       })
@@ -1389,9 +1360,9 @@ export function ObjectTypeDetailScene() {
     </div>
   );
 
-  const relatedMetricColumns: TableProps<KnowledgeNetworkMetricRecord>["columns"] = [
+  const relatedMetricColumns: TableProps<ObjectMetricRecordV1>["columns"] = [
     {
-      dataIndex: "name",
+      dataIndex: ["definition", "name"],
       key: "name",
       title: t("common.name"),
       width: 260,
@@ -1399,11 +1370,14 @@ export function ObjectTypeDetailScene() {
         <button
           className={styles.tableLink}
           onClick={() => {
-            void navigate(`/knowledge-network/workspace/${networkId}/metrics/${record.id}/detail`, {
-              state: {
-                knowledgeNetworkReturnTo: detailPath,
+            void navigate(
+              `/knowledge-network/workspace/${networkId}/metrics/${record.definition.id}/detail`,
+              {
+                state: {
+                  knowledgeNetworkReturnTo: detailPath,
+                },
               },
-            });
+            );
           }}
           title={value}
           type="button"
@@ -1413,32 +1387,23 @@ export function ObjectTypeDetailScene() {
       ),
     },
     {
-      dataIndex: "updateTime",
+      dataIndex: "update_time",
       key: "updateTime",
       title: t("common.updateTime"),
       width: 180,
-      render: (value: string) => value || "--",
+      render: (value: number) => formatTimestamp(value),
     },
     {
       key: "actions",
       title: t("common.actions"),
-      width: 180,
+      width: 100,
       render: (_value, record) => (
         <div className={styles.rowActions}>
           <button
             className={styles.tableLink}
             onClick={() => {
-              openMetricTrial(record.id);
-            }}
-            type="button"
-          >
-            {t("knowledgeNetwork.objectTypeDetailTrialAction")}
-          </button>
-          <button
-            className={styles.tableLink}
-            onClick={() => {
               void navigate(
-                `/knowledge-network/workspace/${networkId}/metrics/${record.id}/detail`,
+                `/knowledge-network/workspace/${networkId}/metrics/${record.definition.id}/detail`,
                 {
                   state: {
                     knowledgeNetworkReturnTo: detailPath,
@@ -1664,12 +1629,7 @@ export function ObjectTypeDetailScene() {
                     next.delete("sampleRow");
                   } else {
                     next.set("section", nextSection);
-
-                    if (nextSection === "logic") {
-                      next.delete("metricId");
-                    } else {
-                      next.delete("logicProperty");
-                    }
+                    next.delete("metricId");
                   }
 
                   return next;
@@ -1685,10 +1645,6 @@ export function ObjectTypeDetailScene() {
               {
                 label: t("knowledgeNetwork.objectTypeDetailDataSectionLogic"),
                 value: "logic",
-              },
-              {
-                label: t("knowledgeNetwork.objectTypeDetailDataSectionMetric"),
-                value: "metric",
               },
             ]}
             size="small"
@@ -1886,30 +1842,6 @@ export function ObjectTypeDetailScene() {
             }}
           />
         ) : null}
-
-        {dataSection === "metric" ? (
-          <ObjectTypeDetailMetricTrialPanel
-            dataProperties={detail.dataProperties}
-            loading={relatedMetricsLoading}
-            metrics={relatedMetrics}
-            networkId={networkId}
-            objectTypeId={objectTypeId}
-            objectTypeName={detail.name}
-            onSelectMetricId={(metricId) => {
-              setSearchParams(
-                (current) => {
-                  const next = new URLSearchParams(current);
-                  next.set("tab", "data");
-                  next.set("section", "metric");
-                  next.set("metricId", metricId);
-                  return next;
-                },
-                { replace: true },
-              );
-            }}
-            selectedMetricId={selectedTrialMetricId}
-          />
-        ) : null}
       </div>
     </div>
   );
@@ -2023,7 +1955,7 @@ export function ObjectTypeDetailScene() {
               <Alert message={relatedMetricsError} showIcon type="error" />
             ) : (
               <>
-                <Table<KnowledgeNetworkMetricRecord>
+                <Table<ObjectMetricRecordV1>
                   columns={relatedMetricColumns}
                   dataSource={pagedRelatedMetrics}
                   loading={relatedMetricsLoading}
@@ -2035,7 +1967,7 @@ export function ObjectTypeDetailScene() {
                     ),
                   }}
                   pagination={false}
-                  rowKey="id"
+                  rowKey={(record) => `${record.definition.id}@${record.definition.version}`}
                   scroll={{ x: 760 }}
                   size="small"
                 />

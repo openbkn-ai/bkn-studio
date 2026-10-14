@@ -1,0 +1,324 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.shell {
+  --metric-graph-canvas: #f8fafc;
+  --metric-graph-dot: #cbd5e1;
+  --metric-graph-relation-edge: #6b8db7;
+  --metric-graph-value-edge: #b88a36;
+  --metric-graph-lineage-edge: #8665c8;
+
+  min-width: 0;
+  min-height: 100%;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+:global(:root[data-theme="dark"]) .shell {
+  --metric-graph-canvas: #121c2e;
+  --metric-graph-dot: #334155;
+  --metric-graph-relation-edge: #6489b8;
+  --metric-graph-value-edge: #d0a24b;
+  --metric-graph-lineage-edge: #a78bfa;
+}
+
+.canvasHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-primary-bg) 34%, var(--color-bg-surface)) 0%,
+    var(--color-bg-surface) 62%
+  );
+}
+
+.canvasHeader > div {
+  display: grid;
+  gap: 3px;
+}
+
+.canvasHeader strong {
+  color: var(--color-text-primary);
+  font-size: 15px;
+}
+
+.canvasHeader span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.canvas {
+  position: relative;
+  height: auto;
+  min-height: 500px;
+  flex: 1 1 500px;
+  overflow: hidden;
+  touch-action: none;
+  background-color: var(--metric-graph-canvas);
+  background-image: radial-gradient(circle, var(--metric-graph-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+  user-select: none;
+}
+
+.edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.relationEdge,
+.metricEdge {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.relationEdge {
+  stroke: var(--metric-graph-relation-edge);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+}
+
+.metricEdge {
+  stroke: var(--metric-graph-value-edge);
+  stroke-width: 1.4;
+}
+
+.metricDependencyEdge {
+  fill: none;
+  stroke: var(--metric-graph-lineage-edge);
+  stroke-width: 1.8;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.node {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    filter 150ms ease;
+}
+
+.node:active {
+  cursor: grabbing;
+}
+
+.node:hover,
+.node:focus-visible {
+  z-index: 3;
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+  filter: brightness(1.02);
+  box-shadow: 0 10px 24px rgb(15 23 42 / 14%);
+}
+
+.objectNode {
+  width: 142px;
+  min-height: 74px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 6px;
+  background: var(--color-bg-raised);
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.focusObject {
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-500) 16%, transparent);
+}
+
+.nodeEyebrow {
+  color: var(--color-text-teal);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.objectNode strong,
+.metricNode strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node small {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relationNode {
+  gap: 2px;
+  width: 112px;
+  min-height: 44px;
+  padding: 5px 8px;
+  border: 1px solid var(--color-success-border);
+  border-radius: 4px;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  text-align: center;
+}
+
+.relationNode > span:not(:global(.anticon)) {
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metricNode {
+  width: 158px;
+  min-height: 56px;
+  padding: 7px 15px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 999px;
+  background: var(--color-bg-raised);
+  text-align: center;
+}
+
+.metricNode > span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.atomic {
+  border-color: var(--color-success-border);
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+}
+
+.derived {
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+}
+
+.composite {
+  border-color: var(--color-accent-border);
+  color: var(--color-text-accent);
+  background: var(--color-accent-bg);
+}
+
+.legend {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 4;
+  display: flex;
+  gap: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg-raised) 88%, transparent);
+  box-shadow: 0 4px 14px rgb(15 23 42 / 6%);
+  backdrop-filter: blur(8px);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.objectLegend {
+  background: #527397;
+}
+.relationLegend {
+  background: #3d9c96;
+}
+.atomicLegend {
+  background: #168b86;
+}
+.derivedLegend {
+  background: #d58b22;
+}
+.compositeLegend {
+  background: #8b5fd3;
+}
+.lineageLegend {
+  width: 14px !important;
+  height: 2px !important;
+  border-radius: 0 !important;
+  background: var(--metric-graph-lineage-edge);
+}
+
+.drawerContent {
+  display: grid;
+  gap: 20px;
+}
+
+.drawer :global(.ant-drawer-content),
+.drawer :global(.ant-drawer-header),
+.drawer :global(.ant-drawer-body) {
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.drawer :global(.ant-drawer-header) {
+  border-bottom-color: var(--color-border);
+}
+
+.drawer :global(.ant-drawer-content) {
+  box-shadow: -16px 0 42px rgb(2 8 23 / 28%);
+}
+
+.drawerTitle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.drawerTitle h2 {
+  margin: 10px 0 2px;
+}
+
+.drawerTitle code {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .legend {
+    flex-wrap: wrap;
+    max-width: 340px;
+  }
+}

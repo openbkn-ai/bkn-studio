@@ -80,6 +80,12 @@ describe("English count pluralization", () => {
       other: "2 calls",
       zero: "0 calls",
     },
+    {
+      key: "knowledgeNetwork.objectTypeDetailLogicTrialCompleted",
+      one: "Completed logical-property trials for 1 object.",
+      other: "Completed logical-property trials for 2 objects.",
+      zero: "Completed logical-property trials for 0 objects.",
+    },
   ])("formats 0/1/2 for $key", async ({ key, one, other, zero }) => {
     await i18n.changeLanguage("en-US");
 

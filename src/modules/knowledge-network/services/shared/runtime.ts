@@ -61,7 +61,7 @@ export const wait = async <T>(value: T) =>
     window.setTimeout(() => resolve(value), 160);
   });
 
-export function formatTimestamp(value?: number) {
+export function formatTimestamp(value?: number, timeZone?: string) {
   if (!value) {
     return "-";
   }
@@ -81,6 +81,7 @@ export function formatTimestamp(value?: number) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+    timeZone,
   }).format(timestamp);
 
   if (locale === "zh-CN") {
@@ -122,7 +123,7 @@ export function formatMetricTimeLabel(value: unknown): string {
   }
 
   if (typeof value === "number") {
-    const formatted = formatTimestamp(value);
+    const formatted = formatTimestamp(value, "UTC");
     return formatted === "-" ? String(value) : formatted;
   }
 
@@ -147,7 +148,7 @@ export function formatMetricTimeLabel(value: unknown): string {
   if (/^\d{10,19}$/.test(trimmed)) {
     const asNumber = Number(trimmed);
     if (Number.isFinite(asNumber)) {
-      const formatted = formatTimestamp(asNumber);
+      const formatted = formatTimestamp(asNumber, "UTC");
       return formatted === "-" ? trimmed : formatted;
     }
   }
@@ -155,7 +156,7 @@ export function formatMetricTimeLabel(value: unknown): string {
   // ISO / RFC3339 / common date-time strings
   const parsed = Date.parse(trimmed);
   if (Number.isFinite(parsed)) {
-    const formatted = formatTimestamp(parsed);
+    const formatted = formatTimestamp(parsed, "UTC");
     return formatted === "-" ? trimmed : formatted;
   }
 

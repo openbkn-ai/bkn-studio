@@ -1,0 +1,107 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.panel {
+  display: grid;
+  gap: 14px;
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.header p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px minmax(180px, 0.75fr) 26px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+}
+.column {
+  min-height: 148px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg-layout) 74%, transparent);
+}
+.column h4,
+.bindings h4 {
+  margin: 0 0 10px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.root {
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.arrow {
+  align-self: center;
+  color: var(--color-text-link);
+  font-size: 16px;
+}
+.node,
+.rootNode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 0;
+}
+.node span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.node small,
+.rootNode small {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.node em {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-style: normal;
+}
+.rootNode {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.bindings {
+  padding-top: 4px;
+}
+@media (max-width: 760px) {
+  .header {
+    flex-direction: column;
+  }
+  .counts {
+    justify-content: flex-start;
+  }
+  .flow {
+    grid-template-columns: 1fr;
+  }
+  .arrow {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+}
