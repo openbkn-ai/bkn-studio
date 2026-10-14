@@ -571,6 +571,8 @@ function SampleCard({
         .finally(() => {
           if (!cancelled) setNotesLoading(false);
         });
+    } else {
+      setNotesLoading(false);
     }
     if (item.installationId) {
       setHistoryLoading(true);
@@ -585,6 +587,8 @@ function SampleCard({
         .finally(() => {
           if (!cancelled) setHistoryLoading(false);
         });
+    } else {
+      setHistoryLoading(false);
     }
     return () => {
       cancelled = true;
@@ -602,10 +606,36 @@ function SampleCard({
   ]);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLElement>(null);
+  const expansionNeedsAlignment = useRef(true);
   useLayoutEffect(() => {
-    if (expanded)
-      cardRef.current?.scrollIntoView({ block: "start", inline: "nearest", behavior: "auto" });
-  }, [expanded]);
+    if (!expanded) {
+      expansionNeedsAlignment.current = true;
+      return;
+    }
+    const waitingForNotes = hasNotes && notesVersion && !notes && !notesError;
+    const waitingForHistory = item.installationId && !history && !historyError;
+    if (
+      !expansionNeedsAlignment.current ||
+      notesLoading ||
+      historyLoading ||
+      waitingForNotes ||
+      waitingForHistory
+    )
+      return;
+    cardRef.current?.scrollIntoView({ block: "start", inline: "nearest", behavior: "auto" });
+    expansionNeedsAlignment.current = false;
+  }, [
+    expanded,
+    hasNotes,
+    notesVersion,
+    notes,
+    notesError,
+    notesLoading,
+    item.installationId,
+    history,
+    historyError,
+    historyLoading,
+  ]);
   const action = sampleCardAction(item);
   const enabled = item.installable;
   const selectedDigest =
