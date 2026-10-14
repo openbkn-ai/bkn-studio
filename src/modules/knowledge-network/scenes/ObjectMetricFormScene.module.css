@@ -85,7 +85,7 @@
   place-items: center;
   border-radius: 7px;
   background: var(--color-primary-600);
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 17px;
 }
 
@@ -163,7 +163,7 @@
   border: 1px solid var(--color-primary-border);
   border-top-right-radius: 2px;
   background: var(--color-primary-600);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 :global(:root[data-theme="dark"]) .aiMessageUser {
