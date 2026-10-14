@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import type { ObjectMetricExpressionV1 } from "@/modules/knowledge-network/types/object-metric";
 
 import {
@@ -53,6 +54,17 @@ function literal(valueType: "decimal" | "int64" | "string", value: number | stri
 }
 
 describe("object metric expression registry", () => {
+  it("resolves function labels in the current language after a locale switch", async () => {
+    try {
+      await i18n.changeLanguage("zh-CN");
+      expect(objectMetricFunctionDefinitions[0].label).toBe("转数值");
+      await i18n.changeLanguage("en-US");
+      expect(objectMetricFunctionDefinitions[0].label).toBe("Convert to number");
+    } finally {
+      await i18n.changeLanguage("zh-CN");
+    }
+  });
+
   it("covers every function advertised by the V1 backend registry", () => {
     expect(objectMetricFunctionDefinitions.map((item) => item.value)).toEqual([
       "to_number",

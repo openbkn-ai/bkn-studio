@@ -9,11 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AxiosAdapter } from "axios";
 
-import {
-  http,
-  setRequestErrorHandler,
-  SUPPRESS_ERROR_TOAST_HEADER,
-} from "@/framework/request/http";
+import { http, setRequestErrorHandler } from "@/framework/request/http";
 import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
 
@@ -123,7 +119,7 @@ describe("http request headers", () => {
     ).rejects.toThrow("Request failed with status code 404");
 
     expect(notify).not.toHaveBeenCalled();
-    expect(missingRoute.mock.calls[0]?.[0].headers?.get(SUPPRESS_ERROR_TOAST_HEADER)).toBe("true");
+    expect(missingRoute.mock.calls[0]?.[0].skipErrorToast).toBe(true);
   });
 
   it("reports the backend description when a download fails with a blob body", async () => {

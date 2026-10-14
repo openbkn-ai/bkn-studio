@@ -19,6 +19,8 @@ import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/obj
 import type { ObjectTypeLogicProperty } from "@/modules/knowledge-network/types/object-type";
 
 import styles from "./ObjectMetricLineagePanel.module.css";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
 function logicPropertyUsesMetric(property: ObjectTypeLogicProperty, metric: ObjectMetricRecordV1) {
   return (
@@ -41,18 +43,18 @@ function MetricNode({ item }: { item: MetricLineageEntry }) {
         }
       >
         {definition?.metric_type === "composite"
-          ? "复合"
+          ? objectMetricText("mfb3d9250b174")
           : definition?.metric_type === "derived"
-            ? "衍生"
+            ? objectMetricText("m445278d8a39d")
             : definition?.metric_type === "atomic"
-              ? "原子"
-              : "指标"}
+              ? objectMetricText("mdbd7a1806c97")
+              : objectMetricText("mb87e67c7dae0")}
       </Tag>
       <Tooltip title={item.key}>
         <span>{definition?.name ?? item.reference.metric_id}</span>
       </Tooltip>
       <small>@v{item.reference.version}</small>
-      {!definition ? <em>当前没有可访问的定义</em> : null}
+      {!definition ? <em>{objectMetricText("m3e4f197d0add")}</em> : null}
     </div>
   );
 }
@@ -68,6 +70,7 @@ export function ObjectMetricLineagePanel({
   metric,
   metrics,
 }: ObjectMetricLineagePanelProps) {
+  useTranslation();
   const { downstream, logicBindings, upstream } = useMemo(() => {
     const recordsByKey = new Map(
       [...metrics, metric].map((item) => [
@@ -83,41 +86,48 @@ export function ObjectMetricLineagePanel({
   }, [logicProperties, metric, metrics]);
 
   return (
-    <section className={styles.panel} aria-label="指标血缘">
+    <section className={styles.panel} aria-label={objectMetricText("m0e31df4b04a7")}>
       <div className={styles.header}>
         <div>
           <h3>
-            <LinkOutlined /> 指标血缘
+            <LinkOutlined /> {objectMetricText("m0e31df4b04a7")}
           </h3>
-          <p>查看当前版本的上下游依赖与逻辑属性引用。</p>
+          <p>{objectMetricText("m3f2c7ca35393")}</p>
         </div>
         <div className={styles.counts}>
-          <Tag>上游 {upstream.length}</Tag>
-          <Tag color={downstream.length ? "warning" : "default"}>下游 {downstream.length}</Tag>
+          <Tag>
+            {objectMetricText("ma9ab292ea9fe")} {upstream.length}
+          </Tag>
+          <Tag color={downstream.length ? "warning" : "default"}>
+            {objectMetricText("mfde36e14c8e9")} {downstream.length}
+          </Tag>
           <Tag color={logicBindings.length ? "processing" : "default"}>
-            逻辑属性 {logicBindings.length}
+            {objectMetricText("mc5d0fa67a665")} {logicBindings.length}
           </Tag>
         </div>
       </div>
       <div className={styles.flow}>
         <div className={styles.column}>
-          <h4>上游指标</h4>
+          <h4>{objectMetricText("m419edc70d2ad")}</h4>
           {upstream.length ? (
             upstream.map((item) => <MetricNode item={item} key={item.key} />)
           ) : (
-            <Empty description="没有依赖指标" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty
+              description={objectMetricText("m58a0d1bd2597")}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
           )}
         </div>
         <ArrowDownOutlined className={styles.arrow} rotate={-90} />
         <div className={`${styles.column} ${styles.root}`}>
-          <h4>当前指标</h4>
+          <h4>{objectMetricText("m510521886ce8")}</h4>
           <div className={styles.rootNode}>
             <Tag color="blue">
               {metric.definition.metric_type === "atomic"
-                ? "原子"
+                ? objectMetricText("mdbd7a1806c97")
                 : metric.definition.metric_type === "derived"
-                  ? "衍生"
-                  : "复合"}
+                  ? objectMetricText("m445278d8a39d")
+                  : objectMetricText("mfb3d9250b174")}
             </Tag>
             <strong>{metric.definition.name}</strong>
             <small>@v{metric.definition.version}</small>
@@ -125,17 +135,20 @@ export function ObjectMetricLineagePanel({
         </div>
         <ArrowDownOutlined className={styles.arrow} rotate={-90} />
         <div className={styles.column}>
-          <h4>下游指标</h4>
+          <h4>{objectMetricText("m361847a7a129")}</h4>
           {downstream.length ? (
             downstream.map((item) => <MetricNode item={item} key={item.key} />)
           ) : (
-            <Empty description="没有下游引用" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty
+              description={objectMetricText("m378d1f8deae6")}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
           )}
         </div>
       </div>
       {logicBindings.length ? (
         <div className={styles.bindings}>
-          <h4>对象类逻辑属性</h4>
+          <h4>{objectMetricText("m82a971b32787")}</h4>
           {logicBindings.map((property) => (
             <Tag key={property.name}>
               {property.displayName || property.name} · {property.name}

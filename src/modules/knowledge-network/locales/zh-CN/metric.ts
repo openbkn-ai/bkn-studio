@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { objectMetricV1Part } from "./object-metric-v1";
+
 export const metricPart = {
+  objectMetricV1: objectMetricV1Part,
   metricEmptyNoSearchResult: "未找到匹配的指标。",
   metricAggregationAggr: "聚合方式",
   metricApiUnavailableDescription:

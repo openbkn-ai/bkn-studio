@@ -27,6 +27,8 @@ import {
 import type { ObjectMetricExpressionV1 } from "@/modules/knowledge-network/types/object-metric";
 
 import styles from "./AtomicInstanceExpressionBuilder.module.css";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
 type BasicExpressionMode = "binary" | "direct" | "function";
 
@@ -39,13 +41,27 @@ const binaryOperators = [
 ] as const;
 
 const valueTypeLabels: Record<ExpressionValueType, string> = {
-  boolean: "布尔",
-  date: "日期",
-  datetime: "日期时间",
-  decimal: "数值",
-  duration: "持续时长",
-  int64: "整数",
-  string: "文本",
+  get boolean() {
+    return objectMetricText("m8e607148f445");
+  },
+  get date() {
+    return objectMetricText("m70d0c1b33626");
+  },
+  get datetime() {
+    return objectMetricText("m6ac8b7718121");
+  },
+  get decimal() {
+    return objectMetricText("mc5500a58e0c5");
+  },
+  get duration() {
+    return objectMetricText("m3e777ea8f1e8");
+  },
+  get int64() {
+    return objectMetricText("m67e2bb6ef67b");
+  },
+  get string() {
+    return objectMetricText("mdd81861811e5");
+  },
 };
 
 function basicModeOf(value: ObjectMetricExpressionV1): BasicExpressionMode {
@@ -171,7 +187,7 @@ function LiteralValueControl({
   if (["decimal", "duration", "int64"].includes(value.value_type)) {
     return (
       <InputNumber
-        aria-label={definition?.label ?? "固定值"}
+        aria-label={definition?.label ?? objectMetricText("ma92a585d1fbf")}
         className={styles.valueControl}
         max={definition?.numericMaximum}
         min={definition?.numericMinimum}
@@ -184,12 +200,12 @@ function LiteralValueControl({
   if (value.value_type === "boolean") {
     return (
       <Select
-        aria-label={definition?.label ?? "固定值"}
+        aria-label={definition?.label ?? objectMetricText("ma92a585d1fbf")}
         className={styles.valueControl}
         onChange={(next) => onChange({ ...value, value: next })}
         options={[
-          { label: "是", value: true },
-          { label: "否", value: false },
+          { label: objectMetricText("mb5141d3d19e9"), value: true },
+          { label: objectMetricText("m0c70665b6eb6"), value: false },
         ]}
         value={Boolean(value.value)}
       />
@@ -197,10 +213,10 @@ function LiteralValueControl({
   }
   return (
     <Input
-      aria-label={definition?.label ?? "固定值"}
+      aria-label={definition?.label ?? objectMetricText("ma92a585d1fbf")}
       className={styles.valueControl}
       onChange={(event) => onChange({ ...value, value: event.target.value })}
-      placeholder={value.value_type === "date" ? "YYYY-MM-DD" : "输入固定值"}
+      placeholder={value.value_type === "date" ? "YYYY-MM-DD" : objectMetricText("mee1b67319603")}
       type={
         value.value_type === "date"
           ? "date"
@@ -245,7 +261,7 @@ function BasicOperandEditor({
           acceptedTypes: acceptedTypes ?? "any",
           description: "",
           key: "value",
-          label: "固定值",
+          label: objectMetricText("ma92a585d1fbf"),
           required: false,
         },
         acceptedTypes?.[0],
@@ -286,7 +302,9 @@ function BasicOperandEditor({
     <div className={styles.compactControl}>
       {allowLiteral ? (
         <Select
-          aria-label={`${definition?.label ?? "计算值"}来源`}
+          aria-label={objectMetricText("m0a0f07efbeb0", {
+            p0: definition?.label ?? objectMetricText("m919daa651e48"),
+          })}
           className={styles.sourceControl}
           onChange={(source) =>
             onChange(
@@ -299,7 +317,7 @@ function BasicOperandEditor({
                         acceptedTypes: acceptedTypes ?? "any",
                         description: "",
                         key: "value",
-                        label: "固定值",
+                        label: objectMetricText("ma92a585d1fbf"),
                         required: false,
                       },
                       acceptedTypes?.[0],
@@ -307,18 +325,20 @@ function BasicOperandEditor({
             )
           }
           options={[
-            { label: "对象属性", value: "property" },
-            ...(allowNumberConversion ? [{ label: "文本转数值", value: "to_number" }] : []),
-            { label: "固定值", value: "literal" },
+            { label: objectMetricText("m1cded5b3fdf7"), value: "property" },
+            ...(allowNumberConversion
+              ? [{ label: objectMetricText("mebb70c4b1049"), value: "to_number" }]
+              : []),
+            { label: objectMetricText("ma92a585d1fbf"), value: "literal" },
           ]}
           value={selectedSource}
         />
       ) : null}
       {isNumberCast ? (
         <Select
-          aria-label="转数值属性"
+          aria-label={objectMetricText("m8ddaad1caae8")}
           className={styles.propertyControl}
-          notFoundContent="没有可转换为数值的属性"
+          notFoundContent={objectMetricText("m9579f7bb0b6d")}
           onChange={(encoded) => {
             const [objectTypeId, propertyName] = JSON.parse(encoded) as [string, string];
             const property = numberConvertibleProperties.find(
@@ -335,15 +355,15 @@ function BasicOperandEditor({
             label: item.label,
             value: propertyKey(item),
           }))}
-          placeholder="选择文本或数值属性"
+          placeholder={objectMetricText("m6f5050b9512f")}
           showSearch
           value={convertedPropertyValue}
         />
       ) : argument.node_type === "property" ? (
         <Select
-          aria-label={definition?.label ?? "对象属性"}
+          aria-label={definition?.label ?? objectMetricText("m1cded5b3fdf7")}
           className={styles.propertyControl}
-          notFoundContent="没有符合类型要求的属性"
+          notFoundContent={objectMetricText("mb633bb5239e8")}
           onChange={(encoded) => {
             const [objectTypeId, propertyName] = JSON.parse(encoded) as [string, string];
             const property = availableProperties.find(
@@ -357,7 +377,7 @@ function BasicOperandEditor({
             label: item.label,
             value: propertyKey(item),
           }))}
-          placeholder="选择对象属性"
+          placeholder={objectMetricText("mf7e136727d4d")}
           showSearch
           value={selectedPropertyValue}
         />
@@ -365,7 +385,7 @@ function BasicOperandEditor({
         <>
           {literalTypes.length > 1 ? (
             <Select
-              aria-label="固定值类型"
+              aria-label={objectMetricText("m08fe0e9dfd25")}
               className={styles.typeControl}
               onChange={(next: ExpressionValueType) =>
                 onChange({
@@ -403,7 +423,7 @@ function ParameterLabel({ definition }: { definition: FunctionArgumentDefinition
       </span>
       <Tooltip title={definition.description}>
         <Button
-          aria-label={`查看${definition.label}说明`}
+          aria-label={objectMetricText("mb0cce778c076", { p0: definition.label })}
           className={styles.helpButton}
           icon={<QuestionCircleOutlined />}
           size="small"
@@ -427,6 +447,7 @@ export function AtomicInstanceExpressionBuilder({
   properties: ObjectMetricExpressionPropertyOption[];
   value: ObjectMetricExpressionV1;
 }) {
+  useTranslation();
   const basicMode = basicModeOf(value);
   const availableFunctions = useMemo(
     () =>
@@ -486,14 +507,14 @@ export function AtomicInstanceExpressionBuilder({
     <div className={styles.builder}>
       <div className={styles.basicEditor}>
         <Radio.Group
-          aria-label="基础计算方式"
+          aria-label={objectMetricText("m3f914e35052a")}
           className={styles.modeGroup}
           onChange={(event) => selectBasicMode(event.target.value as BasicExpressionMode)}
           optionType="button"
           options={[
-            { label: "直接取值", value: "direct" },
-            { label: "四则运算", value: "binary" },
-            { label: "函数计算", value: "function" },
+            { label: objectMetricText("m9d001b97d59e"), value: "direct" },
+            { label: objectMetricText("me4b5641e465c"), value: "binary" },
+            { label: objectMetricText("mee5b7214a79f"), value: "function" },
           ]}
           value={basicMode}
         />
@@ -504,9 +525,9 @@ export function AtomicInstanceExpressionBuilder({
               <ParameterLabel
                 definition={{
                   acceptedTypes: "any",
-                  description: "选择当前对象类中作为指标返回值的数据属性。",
+                  description: objectMetricText("mb38d573c1406"),
                   key: "property",
-                  label: "取值属性",
+                  label: objectMetricText("m64fc858320a9"),
                   required: true,
                 }}
               />
@@ -515,9 +536,9 @@ export function AtomicInstanceExpressionBuilder({
                 argument={value}
                 definition={{
                   acceptedTypes: "any",
-                  description: "选择当前对象类中作为指标返回值的数据属性。",
+                  description: objectMetricText("mb38d573c1406"),
                   key: "property",
-                  label: "取值属性",
+                  label: objectMetricText("m64fc858320a9"),
                   required: true,
                 }}
                 onChange={onChange}
@@ -533,9 +554,9 @@ export function AtomicInstanceExpressionBuilder({
               <ParameterLabel
                 definition={{
                   acceptedTypes: ["int64", "decimal"],
-                  description: "选择运算符左侧的数值属性或固定值。",
+                  description: objectMetricText("m7532921095b9"),
                   key: "left",
-                  label: "左侧值",
+                  label: objectMetricText("m9861244ae513"),
                   required: true,
                 }}
               />
@@ -551,14 +572,14 @@ export function AtomicInstanceExpressionBuilder({
               <ParameterLabel
                 definition={{
                   acceptedTypes: "any",
-                  description: "选择加、减、乘、除或取模。",
+                  description: objectMetricText("m89aa2145f566"),
                   key: "operator",
-                  label: "运算符",
+                  label: objectMetricText("m6a4b1a3683a3"),
                   required: true,
                 }}
               />
               <Select
-                aria-label="运算符"
+                aria-label={objectMetricText("m6a4b1a3683a3")}
                 className={styles.operatorControl}
                 onChange={(operator) => onChange({ ...value, operator })}
                 options={binaryOperators
@@ -572,9 +593,9 @@ export function AtomicInstanceExpressionBuilder({
               <ParameterLabel
                 definition={{
                   acceptedTypes: ["int64", "decimal"],
-                  description: "选择运算符右侧的数值属性或固定值。",
+                  description: objectMetricText("m93808d76a523"),
                   key: "right",
-                  label: "右侧值",
+                  label: objectMetricText("mf3f3e28ec1a3"),
                   required: true,
                 }}
               />
@@ -593,9 +614,9 @@ export function AtomicInstanceExpressionBuilder({
           <div className={styles.functionEditor}>
             <div className={styles.functionHeader}>
               <div>
-                <div className={styles.functionLabel}>计算函数</div>
+                <div className={styles.functionLabel}>{objectMetricText("me7e7d5466a05")}</div>
                 <Select
-                  aria-label="计算函数"
+                  aria-label={objectMetricText("me7e7d5466a05")}
                   className={styles.functionSelect}
                   onChange={changeFunction}
                   options={availableFunctions.map((item) => ({
@@ -654,7 +675,7 @@ export function AtomicInstanceExpressionBuilder({
                       />
                       {removable ? (
                         <Button
-                          aria-label={`删除${definition.label}`}
+                          aria-label={objectMetricText("mc0620a1380c9", { p0: definition.label })}
                           danger
                           icon={<DeleteOutlined />}
                           onClick={() =>
@@ -692,7 +713,8 @@ export function AtomicInstanceExpressionBuilder({
                   }
                   type="dashed"
                 >
-                  添加{selectedFunction.variadicArgument.label}
+                  {objectMetricText("m7a8a11ead507")}
+                  {selectedFunction.variadicArgument.label}
                 </Button>
               ) : null}
             </div>
@@ -701,7 +723,7 @@ export function AtomicInstanceExpressionBuilder({
       </div>
 
       <div className={styles.previewBar} aria-live="polite">
-        <span className={styles.previewLabel}>公式预览</span>
+        <span className={styles.previewLabel}>{objectMetricText("m1f0939d62813")}</span>
         <code>{formula}</code>
       </div>
     </div>

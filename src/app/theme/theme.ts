@@ -54,10 +54,10 @@ export function createThemeConfig(
         hoverBorderColor: "#cbd5e1",
       },
       Tabs: {
-        inkBarColor: "#2563eb",
-        itemActiveColor: "#1e3a8a",
-        itemHoverColor: "#2563eb",
-        itemSelectedColor: "#1e3a8a",
+        inkBarColor: isDark ? "#60a5fa" : "#2563eb",
+        itemActiveColor: isDark ? "#93c5fd" : "#1e3a8a",
+        itemHoverColor: isDark ? "#bfdbfe" : "#2563eb",
+        itemSelectedColor: isDark ? "#93c5fd" : "#1e3a8a",
       },
       Table: {
         // Keep selectable rows easy to scan: hover gives a quiet cue, selection

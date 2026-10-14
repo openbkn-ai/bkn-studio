@@ -8,6 +8,7 @@
 import type { ObjectMetricExpressionV1 } from "@/modules/knowledge-network/types/object-metric";
 
 import type { ObjectMetricExpressionPropertyOption } from "./ObjectMetricExpressionEditor";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 
 export type ExpressionValueType =
   "boolean" | "date" | "datetime" | "decimal" | "duration" | "int64" | "string";
@@ -42,14 +43,22 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: ["string", "int64", "decimal"],
-        description: "选择以文本存储、但业务上表示数字的属性；原生数值也可保持原值。",
+        get description() {
+          return objectMetricText("mbb9b93472f87");
+        },
         key: "value",
-        label: "待转换属性",
+        get label() {
+          return objectMetricText("m060168b295c3");
+        },
         required: true,
       },
     ],
-    description: "严格将数字文本转换为数值；无法转换时拒绝计算并指出异常值。",
-    label: "转数值",
+    get description() {
+      return objectMetricText("mcddc9bab8af7");
+    },
+    get label() {
+      return objectMetricText("mb7f34a5c6f75");
+    },
     maxArguments: 1,
     minArguments: 1,
     value: "to_number",
@@ -58,14 +67,22 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: numericTypes,
-        description: "选择需要转换为绝对值的数值属性或数值。",
+        get description() {
+          return objectMetricText("mf62d01efa483");
+        },
         key: "value",
-        label: "待处理数值",
+        get label() {
+          return objectMetricText("me478c4467c76");
+        },
         required: true,
       },
     ],
-    description: "返回数值去除正负号后的结果。",
-    label: "绝对值",
+    get description() {
+      return objectMetricText("m87d0314e99a4");
+    },
+    get label() {
+      return objectMetricText("mcee3428b51b6");
+    },
     maxArguments: 1,
     minArguments: 1,
     value: "abs",
@@ -74,14 +91,22 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: numericTypes,
-        description: "选择需要向上取整的数值属性或数值。",
+        get description() {
+          return objectMetricText("m2d57e50aac3a");
+        },
         key: "value",
-        label: "待处理数值",
+        get label() {
+          return objectMetricText("me478c4467c76");
+        },
         required: true,
       },
     ],
-    description: "返回大于或等于原数值的最小整数。",
-    label: "向上取整",
+    get description() {
+      return objectMetricText("m9f9f0fbd346d");
+    },
+    get label() {
+      return objectMetricText("m2534ac6ed23d");
+    },
     maxArguments: 1,
     minArguments: 1,
     value: "ceil",
@@ -90,14 +115,22 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: numericTypes,
-        description: "选择需要向下取整的数值属性或数值。",
+        get description() {
+          return objectMetricText("m9155d8ef186e");
+        },
         key: "value",
-        label: "待处理数值",
+        get label() {
+          return objectMetricText("me478c4467c76");
+        },
         required: true,
       },
     ],
-    description: "返回小于或等于原数值的最大整数。",
-    label: "向下取整",
+    get description() {
+      return objectMetricText("m22d9bb29cf30");
+    },
+    get label() {
+      return objectMetricText("m2db59b7b2c50");
+    },
     maxArguments: 1,
     minArguments: 1,
     value: "floor",
@@ -106,24 +139,36 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: numericTypes,
-        description: "选择需要四舍五入的数值属性或数值。",
+        get description() {
+          return objectMetricText("mea125ab78e8e");
+        },
         key: "value",
-        label: "待处理数值",
+        get label() {
+          return objectMetricText("me478c4467c76");
+        },
         required: true,
       },
       {
         acceptedTypes: ["int64"],
-        description: "填写 0～15；0 表示取整，2 表示保留两位小数。",
+        get description() {
+          return objectMetricText("mbfc3952c663d");
+        },
         key: "precision",
-        label: "保留小数位",
+        get label() {
+          return objectMetricText("m12dad8f35995");
+        },
         literalOnly: true,
         numericMaximum: 15,
         numericMinimum: 0,
         required: false,
       },
     ],
-    description: "按指定小数位对数值进行四舍五入。",
-    label: "四舍五入",
+    get description() {
+      return objectMetricText("m085f954802f7");
+    },
+    get label() {
+      return objectMetricText("m9c09e447599c");
+    },
     maxArguments: 2,
     minArguments: 1,
     value: "round",
@@ -132,28 +177,44 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: "any",
-        description: "优先返回这个属性或值。",
+        get description() {
+          return objectMetricText("mbd547cfc1314");
+        },
         key: "value",
-        label: "原始值",
+        get label() {
+          return objectMetricText("m74d205a9890c");
+        },
         required: true,
       },
       {
         acceptedTypes: "same_as_first",
-        description: "原始值为空时返回；类型需要与原始值一致。",
+        get description() {
+          return objectMetricText("medad6e45fe45");
+        },
         key: "fallback",
-        label: "为空时返回",
+        get label() {
+          return objectMetricText("mc5a03548c515");
+        },
         required: true,
       },
     ],
-    description: "按顺序返回第一个非空值。",
-    label: "空值替代",
+    get description() {
+      return objectMetricText("m0e1cfcf3cc72");
+    },
+    get label() {
+      return objectMetricText("m28db31c2885a");
+    },
     minArguments: 2,
     value: "coalesce",
     variadicArgument: {
       acceptedTypes: "same_as_first",
-      description: "前面的值均为空时继续使用这个候选值。",
+      get description() {
+        return objectMetricText("m4e5e9c229784");
+      },
       key: "fallback",
-      label: "备用值",
+      get label() {
+        return objectMetricText("m52196184367c");
+      },
       required: false,
     },
   },
@@ -161,28 +222,44 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: numericTypes,
-        description: "参与比较的第一个数值。",
+        get description() {
+          return objectMetricText("m974232760cd2");
+        },
         key: "first",
-        label: "比较值 1",
+        get label() {
+          return objectMetricText("m1698e5558918");
+        },
         required: true,
       },
       {
         acceptedTypes: numericTypes,
-        description: "参与比较的第二个数值。",
+        get description() {
+          return objectMetricText("m0ff300e79da2");
+        },
         key: "second",
-        label: "比较值 2",
+        get label() {
+          return objectMetricText("ma05e4b683261");
+        },
         required: true,
       },
     ],
-    description: "返回所有比较值中的最大数值。",
-    label: "取最大值",
+    get description() {
+      return objectMetricText("m5d76b4c1c837");
+    },
+    get label() {
+      return objectMetricText("me462a39ea0a4");
+    },
     minArguments: 2,
     value: "greatest",
     variadicArgument: {
       acceptedTypes: numericTypes,
-      description: "继续添加参与比较的数值。",
+      get description() {
+        return objectMetricText("m077d5820994f");
+      },
       key: "comparison",
-      label: "其他比较值",
+      get label() {
+        return objectMetricText("m575886e0a64f");
+      },
       required: false,
     },
   },
@@ -190,28 +267,44 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: numericTypes,
-        description: "参与比较的第一个数值。",
+        get description() {
+          return objectMetricText("m974232760cd2");
+        },
         key: "first",
-        label: "比较值 1",
+        get label() {
+          return objectMetricText("m1698e5558918");
+        },
         required: true,
       },
       {
         acceptedTypes: numericTypes,
-        description: "参与比较的第二个数值。",
+        get description() {
+          return objectMetricText("m0ff300e79da2");
+        },
         key: "second",
-        label: "比较值 2",
+        get label() {
+          return objectMetricText("ma05e4b683261");
+        },
         required: true,
       },
     ],
-    description: "返回所有比较值中的最小数值。",
-    label: "取最小值",
+    get description() {
+      return objectMetricText("m642c8f861853");
+    },
+    get label() {
+      return objectMetricText("m16d697fe5749");
+    },
     minArguments: 2,
     value: "least",
     variadicArgument: {
       acceptedTypes: numericTypes,
-      description: "继续添加参与比较的数值。",
+      get description() {
+        return objectMetricText("m077d5820994f");
+      },
       key: "comparison",
-      label: "其他比较值",
+      get label() {
+        return objectMetricText("m575886e0a64f");
+      },
       required: false,
     },
   },
@@ -219,21 +312,33 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: temporalTypes,
-        description: "选择作为区间起点的日期或日期时间属性。",
+        get description() {
+          return objectMetricText("m96dd8744d1ad");
+        },
         key: "start",
-        label: "开始时间",
+        get label() {
+          return objectMetricText("m6a9906c79f26");
+        },
         required: true,
       },
       {
         acceptedTypes: temporalTypes,
-        description: "选择作为区间终点的日期或日期时间属性。",
+        get description() {
+          return objectMetricText("m381bf1d364cd");
+        },
         key: "end",
-        label: "结束时间",
+        get label() {
+          return objectMetricText("mf50276449943");
+        },
         required: true,
       },
     ],
-    description: "计算结束时间与开始时间之间的持续时长。",
-    label: "时间间隔",
+    get description() {
+      return objectMetricText("m2325b7be968f");
+    },
+    get label() {
+      return objectMetricText("ma44781c1f2bd");
+    },
     maxArguments: 2,
     minArguments: 2,
     value: "duration_between",
@@ -242,36 +347,77 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: temporalTypes,
-        description: "选择日期差计算的起点。",
+        get description() {
+          return objectMetricText("m341f74261248");
+        },
         key: "start",
-        label: "开始时间",
+        get label() {
+          return objectMetricText("m6a9906c79f26");
+        },
         required: true,
       },
       {
         acceptedTypes: temporalTypes,
-        description: "选择日期差计算的终点。",
+        get description() {
+          return objectMetricText("m3cd1ba7c7bb0");
+        },
         key: "end",
-        label: "结束时间",
+        get label() {
+          return objectMetricText("mf50276449943");
+        },
         required: true,
       },
       {
         acceptedTypes: ["string"],
         choices: [
-          { label: "天", value: "day" },
-          { label: "小时", value: "hour" },
-          { label: "分钟", value: "minute" },
-          { label: "秒", value: "second" },
-          { label: "毫秒", value: "millisecond" },
+          {
+            get label() {
+              return objectMetricText("m49da61ceeea2");
+            },
+            value: "day",
+          },
+          {
+            get label() {
+              return objectMetricText("m3b6fefc50feb");
+            },
+            value: "hour",
+          },
+          {
+            get label() {
+              return objectMetricText("mbd957bc497aa");
+            },
+            value: "minute",
+          },
+          {
+            get label() {
+              return objectMetricText("m9dcdc2b289b9");
+            },
+            value: "second",
+          },
+          {
+            get label() {
+              return objectMetricText("m9659733917ec");
+            },
+            value: "millisecond",
+          },
         ],
-        description: "选择日期差结果使用的时间单位。",
+        get description() {
+          return objectMetricText("mdbd59bd3b875");
+        },
         key: "unit",
-        label: "结果单位",
+        get label() {
+          return objectMetricText("m3e2578483aff");
+        },
         literalOnly: true,
         required: false,
       },
     ],
-    description: "按指定单位计算结束时间与开始时间之差。",
-    label: "日期差",
+    get description() {
+      return objectMetricText("m13aaab555585");
+    },
+    get label() {
+      return objectMetricText("meaa5b30c6bcb");
+    },
     maxArguments: 3,
     minArguments: 2,
     value: "date_diff",
@@ -281,29 +427,71 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
       {
         acceptedTypes: ["string"],
         choices: [
-          { label: "年", value: "year" },
-          { label: "月", value: "month" },
-          { label: "日", value: "day" },
-          { label: "小时", value: "hour" },
-          { label: "分钟", value: "minute" },
-          { label: "秒", value: "second" },
+          {
+            get label() {
+              return objectMetricText("m62ef900a8f5d");
+            },
+            value: "year",
+          },
+          {
+            get label() {
+              return objectMetricText("m1625179badc0");
+            },
+            value: "month",
+          },
+          {
+            get label() {
+              return objectMetricText("m85217f7aff77");
+            },
+            value: "day",
+          },
+          {
+            get label() {
+              return objectMetricText("m3b6fefc50feb");
+            },
+            value: "hour",
+          },
+          {
+            get label() {
+              return objectMetricText("mbd957bc497aa");
+            },
+            value: "minute",
+          },
+          {
+            get label() {
+              return objectMetricText("m9dcdc2b289b9");
+            },
+            value: "second",
+          },
         ],
-        description: "选择需要从日期或日期时间中提取的部分。",
+        get description() {
+          return objectMetricText("m80db7c6b51a5");
+        },
         key: "part",
-        label: "提取部分",
+        get label() {
+          return objectMetricText("m89cef51cab67");
+        },
         literalOnly: true,
         required: true,
       },
       {
         acceptedTypes: temporalTypes,
-        description: "选择需要提取日期部分的属性。",
+        get description() {
+          return objectMetricText("m629f63ba0f43");
+        },
         key: "value",
-        label: "日期或时间",
+        get label() {
+          return objectMetricText("m830413e761d9");
+        },
         required: true,
       },
     ],
-    description: "从日期或日期时间中提取年、月、日等部分。",
-    label: "提取日期部分",
+    get description() {
+      return objectMetricText("ma2461e8df8b2");
+    },
+    get label() {
+      return objectMetricText("me58e6c796523");
+    },
     maxArguments: 2,
     minArguments: 2,
     value: "date_part",
@@ -312,14 +500,22 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: ["string"],
-        description: "选择需要转换为小写的文本属性或文本。",
+        get description() {
+          return objectMetricText("m7249e5f788ed");
+        },
         key: "value",
-        label: "待处理文本",
+        get label() {
+          return objectMetricText("m1aed2e7286fb");
+        },
         required: true,
       },
     ],
-    description: "将文本中的字母转换为小写。",
-    label: "转小写",
+    get description() {
+      return objectMetricText("m7929f23be1d7");
+    },
+    get label() {
+      return objectMetricText("m6ccf5f80a503");
+    },
     maxArguments: 1,
     minArguments: 1,
     value: "lower",
@@ -328,14 +524,22 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: ["string"],
-        description: "选择需要转换为大写的文本属性或文本。",
+        get description() {
+          return objectMetricText("m9bf8a52e2724");
+        },
         key: "value",
-        label: "待处理文本",
+        get label() {
+          return objectMetricText("m1aed2e7286fb");
+        },
         required: true,
       },
     ],
-    description: "将文本中的字母转换为大写。",
-    label: "转大写",
+    get description() {
+      return objectMetricText("mea62f3ddeb79");
+    },
+    get label() {
+      return objectMetricText("mc601dee5e036");
+    },
     maxArguments: 1,
     minArguments: 1,
     value: "upper",
@@ -344,14 +548,22 @@ export const objectMetricFunctionDefinitions: ObjectMetricFunctionDefinition[] =
     arguments: [
       {
         acceptedTypes: ["string"],
-        description: "选择需要计算字符数的文本属性或文本。",
+        get description() {
+          return objectMetricText("mce0223af4256");
+        },
         key: "value",
-        label: "待处理文本",
+        get label() {
+          return objectMetricText("m1aed2e7286fb");
+        },
         required: true,
       },
     ],
-    description: "返回文本包含的字符数量。",
-    label: "文本长度",
+    get description() {
+      return objectMetricText("mdbaf0119cf41");
+    },
+    get label() {
+      return objectMetricText("m06acfd88eefe");
+    },
     maxArguments: 1,
     minArguments: 1,
     value: "length",
@@ -392,9 +604,9 @@ export function functionArgumentAt(
     definition.arguments[index] ??
     definition.variadicArgument ?? {
       acceptedTypes: "any",
-      description: "函数的附加参数。",
+      description: objectMetricText("m4158771021a4"),
       key: `argument_${index + 1}`,
-      label: `参数 ${index + 1}`,
+      label: objectMetricText("ma80a5b61e0bd", { p0: index + 1 }),
       required: false,
     }
   );
@@ -520,15 +732,20 @@ export function formatObjectMetricExpression(
         item.propertyName === expression.property_ref.property_name,
     );
     return (
-      (property?.label.split(" · ")[0] ?? expression.property_ref.property_name) || "未选择属性"
+      (property?.label.split(" · ")[0] ?? expression.property_ref.property_name) ||
+      objectMetricText("mdf3320ad0747")
     );
   }
-  if (expression.node_type === "dependency") return expression.dependency_alias || "未选择指标";
+  if (expression.node_type === "dependency")
+    return expression.dependency_alias || objectMetricText("m07d6d224888a");
   if (expression.node_type === "literal") {
     if (expression.value_type === "string") {
       return `“${displayLiteralValue(expression.value, "")}”`;
     }
-    if (expression.value_type === "boolean") return expression.value ? "是" : "否";
+    if (expression.value_type === "boolean")
+      return expression.value
+        ? objectMetricText("mb5141d3d19e9")
+        : objectMetricText("m0c70665b6eb6");
     return displayLiteralValue(expression.value, "0");
   }
   if (expression.node_type === "unary") {

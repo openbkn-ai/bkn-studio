@@ -9,6 +9,7 @@ import type { EChartsOption } from "echarts";
 import { Empty, Segmented, Space, Tag, Tooltip } from "antd";
 import { useMemo, useState } from "react";
 
+import { useResolvedTheme } from "@/app/theme/theme-context";
 import { ChartLine } from "@/modules/model-resources/components/statistics/ChartLine";
 import { recommendObjectMetricAnalysisView } from "@/modules/knowledge-network/lib/object-metric-analysis";
 import type {
@@ -17,6 +18,11 @@ import type {
 } from "@/modules/knowledge-network/types/object-metric";
 
 import styles from "./ObjectMetricAnalysisPanel.module.css";
+import {
+  objectMetricLocale,
+  objectMetricText,
+} from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
 type ObjectMetricAnalysisView =
   | "auto"
@@ -33,16 +39,66 @@ type ObjectMetricAnalysisView =
 type NumericEntry = ObjectMetricDataEntryV1 & { value: number };
 
 const viewOptions: Array<{ label: string; value: ObjectMetricAnalysisView }> = [
-  { label: "自动", value: "auto" },
-  { label: "指标卡", value: "summary" },
-  { label: "柱状", value: "bar" },
-  { label: "堆叠柱", value: "stacked_bar" },
-  { label: "折线", value: "line" },
-  { label: "面积", value: "area" },
-  { label: "饼图", value: "pie" },
-  { label: "热力图", value: "heatmap" },
-  { label: "柱线组合", value: "combo" },
-  { label: "表格", value: "table" },
+  {
+    get label() {
+      return objectMetricText("m7eb336e42cb5");
+    },
+    value: "auto",
+  },
+  {
+    get label() {
+      return objectMetricText("m3cbd54715b01");
+    },
+    value: "summary",
+  },
+  {
+    get label() {
+      return objectMetricText("m1e40c6b3e237");
+    },
+    value: "bar",
+  },
+  {
+    get label() {
+      return objectMetricText("mf5acc2cddb4a");
+    },
+    value: "stacked_bar",
+  },
+  {
+    get label() {
+      return objectMetricText("mf5b8cf7d59b7");
+    },
+    value: "line",
+  },
+  {
+    get label() {
+      return objectMetricText("m5cf70b0cf922");
+    },
+    value: "area",
+  },
+  {
+    get label() {
+      return objectMetricText("m86f348d65745");
+    },
+    value: "pie",
+  },
+  {
+    get label() {
+      return objectMetricText("mb438f5427c90");
+    },
+    value: "heatmap",
+  },
+  {
+    get label() {
+      return objectMetricText("m96862e2555c6");
+    },
+    value: "combo",
+  },
+  {
+    get label() {
+      return objectMetricText("m22d9e7c54b88");
+    },
+    value: "table",
+  },
 ];
 
 const palette = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#06b6d4", "#f97316", "#ec4899"];
@@ -57,11 +113,11 @@ function toNumber(value: unknown): number | undefined {
 }
 
 function formatNumber(value: number): string {
-  return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 4 }).format(value);
+  return new Intl.NumberFormat(objectMetricLocale(), { maximumFractionDigits: 4 }).format(value);
 }
 
 function formatTime(value: number): string {
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(objectMetricLocale(), {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
@@ -91,12 +147,14 @@ function categoryLabel(entry: ObjectMetricDataEntryV1): string {
     return Object.entries(entry.instance_identity)
       .map(([key, value]) => `${key}: ${String(value)}`)
       .join(" · ");
-  return "汇总";
+  return objectMetricText("mbd0a40247497");
 }
 
 function seriesLabel(entry: ObjectMetricDataEntryV1): string {
   const dimensions = dimensionEntries(entry);
-  return dimensions.length ? dimensions.map(([, value]) => String(value)).join(" · ") : "指标值";
+  return dimensions.length
+    ? dimensions.map(([, value]) => String(value)).join(" · ")
+    : objectMetricText("m6018e00aca78");
 }
 
 function hasTime(entries: NumericEntry[]) {
@@ -119,7 +177,7 @@ function buildCategoryOption(entries: NumericEntry[]): EChartsOption {
       {
         barMaxWidth: 42,
         data: entries.map((entry) => entry.value),
-        name: "指标值",
+        name: objectMetricText("m6018e00aca78"),
         type: "bar",
       },
     ],
@@ -242,7 +300,10 @@ function buildTimeSeriesOption(entries: NumericEntry[], area: boolean): EChartsO
   };
 }
 
-function buildHeatmapOption(entries: NumericEntry[]): EChartsOption | undefined {
+function buildHeatmapOption(
+  entries: NumericEntry[],
+  resolvedTheme: "light" | "dark",
+): EChartsOption | undefined {
   const first = entries.find((entry) => dimensionEntries(entry).length >= 2);
   if (!first) return undefined;
   const dimensionKeys = dimensionEntries(first)
@@ -276,7 +337,12 @@ function buildHeatmapOption(entries: NumericEntry[]): EChartsOption | undefined 
     tooltip: { position: "top" },
     visualMap: {
       calculable: true,
-      inRange: { color: ["#172554", "#0ea5e9", "#fbbf24"] },
+      inRange: {
+        color:
+          resolvedTheme === "dark"
+            ? ["#3b82f6", "#38bdf8", "#fbbf24"]
+            : ["#172554", "#0ea5e9", "#fbbf24"],
+      },
       max,
       min,
       orient: "vertical",
@@ -325,10 +391,16 @@ function buildComboOption(entries: NumericEntry[]): EChartsOption {
       { scale: true, type: "value" },
     ],
     series: [
-      { barMaxWidth: 38, data: totalValues, name: "指标值", type: "bar", yAxisIndex: 0 },
+      {
+        barMaxWidth: 38,
+        data: totalValues,
+        name: objectMetricText("m6018e00aca78"),
+        type: "bar",
+        yAxisIndex: 0,
+      },
       {
         data: cumulativeValues,
-        name: "累计指标值（当前结果计算）",
+        name: objectMetricText("m604502c3c32a"),
         showSymbol: false,
         smooth: true,
         type: "line",
@@ -343,6 +415,8 @@ type ObjectMetricAnalysisPanelProps = {
 };
 
 export function ObjectMetricAnalysisPanel({ result }: ObjectMetricAnalysisPanelProps) {
+  useTranslation();
+  const resolvedTheme = useResolvedTheme();
   const [selectedView, setSelectedView] = useState<ObjectMetricAnalysisView>("auto");
   const entries = useMemo<NumericEntry[]>(
     () =>
@@ -364,39 +438,41 @@ export function ObjectMetricAnalysisPanel({ result }: ObjectMetricAnalysisPanelP
       return hasTime(entries) ? buildTimeSeriesOption(entries, false) : undefined;
     if (resolvedView === "area")
       return hasTime(entries) ? buildTimeSeriesOption(entries, true) : undefined;
-    if (resolvedView === "heatmap") return buildHeatmapOption(entries);
+    if (resolvedView === "heatmap") return buildHeatmapOption(entries, resolvedTheme);
     if (resolvedView === "combo") return hasTime(entries) ? buildComboOption(entries) : undefined;
     return undefined;
-  }, [entries, resolvedView]);
+  }, [entries, resolvedTheme, resolvedView]);
   const manualView = selectedView !== "auto";
   const summaryValue = entries.length === 1 ? entries[0]?.value : undefined;
 
   let emptyDescription: string | undefined;
-  if (!entries.length) emptyDescription = "当前结果没有可视化的数值型指标值。";
+  if (!entries.length) emptyDescription = objectMetricText("m5ce071e63067");
   else if (resolvedView === "line" || resolvedView === "area" || resolvedView === "combo") {
-    emptyDescription = "该视图需要按时间返回的指标结果。";
+    emptyDescription = objectMetricText("mc7f799243550");
   } else if (resolvedView === "heatmap") {
-    emptyDescription = "热力图需要至少两个分组维度。";
+    emptyDescription = objectMetricText("m222510b14c45");
   } else if (resolvedView === "stacked_bar") {
-    emptyDescription = "堆叠柱图需要按时间返回，或至少两个分组维度。";
+    emptyDescription = objectMetricText("mbe13c12cd1d4");
   } else if (resolvedView === "pie" && entries.some((entry) => entry.value < 0)) {
-    emptyDescription = "饼图不能表达包含负数的指标结果，请改用柱状图或折线图。";
+    emptyDescription = objectMetricText("m9fb886c212ce");
   }
 
   return (
-    <section className={styles.panel} aria-label="运行分析">
+    <section className={styles.panel} aria-label={objectMetricText("ma1dba3459e6d")}>
       <div className={styles.header}>
         <div>
-          <h3>运行分析</h3>
-          <p>图表仅改变呈现方式，不改变已发布指标的计算口径。</p>
+          <h3>{objectMetricText("ma1dba3459e6d")}</h3>
+          <p>{objectMetricText("m3fbb6c3fc51f")}</p>
         </div>
         <Space size={6} wrap>
           <Tag color="cyan">{result.model.output_shape}</Tag>
-          <Tooltip title="自动模式会根据结果中的时间和维度推荐最合适的图表。">
+          <Tooltip title={objectMetricText("m8bd667da7e33")}>
             <Tag>
               {selectedView === "auto"
-                ? `推荐：${viewOptions.find((item) => item.value === resolvedView)?.label}`
-                : "手动选择"}
+                ? objectMetricText("m1312046364bb", {
+                    p0: viewOptions.find((item) => item.value === resolvedView)?.label,
+                  })
+                : objectMetricText("m187b88cd44e4")}
             </Tag>
           </Tooltip>
         </Space>
@@ -409,7 +485,7 @@ export function ObjectMetricAnalysisPanel({ result }: ObjectMetricAnalysisPanelP
       />
       {resolvedView === "summary" && summaryValue !== undefined ? (
         <div className={styles.summary}>
-          <span>指标值</span>
+          <span>{objectMetricText("m6018e00aca78")}</span>
           <strong>{formatNumber(summaryValue)}</strong>
           {result.model.value.unit?.display_symbol || result.model.value.unit?.code ? (
             <em>{result.model.value.unit.display_symbol ?? result.model.value.unit.code}</em>
@@ -420,13 +496,13 @@ export function ObjectMetricAnalysisPanel({ result }: ObjectMetricAnalysisPanelP
           <ChartLine option={chartOption} />
         </div>
       ) : resolvedView === "table" ? (
-        <div className={styles.tableHint}>完整明细见下方“试算结果”。</div>
+        <div className={styles.tableHint}>{objectMetricText("mf87336ab991b")}</div>
       ) : (
         <Empty
           className={styles.empty}
           description={
             emptyDescription ??
-            (manualView ? "当前结果不适合此图表。" : "当前结果没有可分析的数据。")
+            (manualView ? objectMetricText("m6709a4b4db1c") : objectMetricText("m9703199b649c"))
           }
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />

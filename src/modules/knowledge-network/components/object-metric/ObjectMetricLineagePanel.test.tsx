@@ -5,9 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import { ObjectMetricLineagePanel } from "@/modules/knowledge-network/components/object-metric/ObjectMetricLineagePanel";
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeLogicProperty } from "@/modules/knowledge-network/types/object-type";
@@ -54,6 +55,24 @@ function metric(
 }
 
 describe("ObjectMetricLineagePanel", () => {
+  it("updates visible copy when the language changes", async () => {
+    const current = metric("order_count", "Order count", {
+      kind: "atomic",
+      measure: { aggregation: "count_rows" },
+    });
+    try {
+      await i18n.changeLanguage("zh-CN");
+      render(<ObjectMetricLineagePanel logicProperties={[]} metric={current} metrics={[]} />);
+      expect(screen.getByRole("region", { name: "指标血缘" })).toBeInTheDocument();
+      await act(async () => {
+        await i18n.changeLanguage("en-US");
+      });
+      expect(screen.getByRole("region", { name: "Metric lineage" })).toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage("zh-CN");
+    }
+  });
+
   it("keeps impact counts visible without rendering a persistent warning alert", () => {
     const current = metric("order_count", "订单数", {
       kind: "atomic",

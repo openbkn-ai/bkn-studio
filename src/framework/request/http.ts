@@ -19,8 +19,6 @@ type RetryableRequestConfig = InternalAxiosRequestConfig & {
 
 type RequestErrorHandler = ((message: string) => void) | null;
 
-export const SUPPRESS_ERROR_TOAST_HEADER = "X-BKN-Client-Suppress-Error-Toast";
-
 export const http = axios.create({
   timeout: 30000,
 });
@@ -29,11 +27,7 @@ let refreshPromise: Promise<string | null> | null = null;
 let requestErrorHandler: RequestErrorHandler = null;
 
 function notifyRequestError(error: unknown, config?: RetryableRequestConfig) {
-  if (
-    config?.skipErrorToast ||
-    config?._errorNotified ||
-    config?.headers.get(SUPPRESS_ERROR_TOAST_HEADER) === "true"
-  ) {
+  if (config?.skipErrorToast || config?._errorNotified) {
     return;
   }
 
@@ -97,13 +91,6 @@ http.interceptors.request.use((config) => {
   if (token) {
     config.headers.set("Authorization", `Bearer ${token}`);
   }
-  // Axios adapters are allowed to rebuild the response config and may discard custom top-level
-  // fields. Mirror this client-only flag into the standard headers bag so the response interceptor
-  // can still suppress an expected error after a real network round trip.
-  if ((config as RetryableRequestConfig).skipErrorToast) {
-    config.headers.set(SUPPRESS_ERROR_TOAST_HEADER, "true");
-  }
-
   return config;
 });
 

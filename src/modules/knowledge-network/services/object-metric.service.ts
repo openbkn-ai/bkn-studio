@@ -20,6 +20,7 @@ import {
   type ObjectMetricValidationIssueV1,
   type ObjectMetricValidationResultV1,
 } from "@/modules/knowledge-network/types/object-metric";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 
 const mockObjectMetrics: Record<string, ObjectMetricRecordV1[]> = {};
 
@@ -34,13 +35,17 @@ function mockGeneratedMetricCode(id: string): string {
 function mockValidation(definition: ObjectMetricDefinitionV1): ObjectMetricValidationResultV1 {
   const issues: ObjectMetricValidationIssueV1[] = [];
   if (!definition.name.trim()) {
-    issues.push({ code: "name_required", field: "name", message: "指标名称不能为空" });
+    issues.push({
+      code: "name_required",
+      field: "name",
+      message: objectMetricText("m548fb9a98bc0"),
+    });
   }
   if (!definition.description.trim()) {
     issues.push({
       code: "description_required",
       field: "description",
-      message: "业务定义不能为空",
+      message: objectMetricText("m7eecb1b54667"),
     });
   }
   return {

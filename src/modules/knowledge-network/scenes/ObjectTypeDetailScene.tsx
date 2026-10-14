@@ -47,6 +47,7 @@ import { useObjectTypePropertyTableState } from "@/modules/knowledge-network/com
 import { ObjectTypeDetailLogicPropertyTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailLogicPropertyTrialPanel";
 import { buildSampleRowKey } from "@/modules/knowledge-network/lib/object-type-instance-identity";
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
+import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
   deleteKnowledgeNetworkObjectType,
@@ -1390,7 +1391,7 @@ export function ObjectTypeDetailScene() {
       key: "updateTime",
       title: t("common.updateTime"),
       width: 180,
-      render: (value: number) => (value ? new Date(value).toLocaleString() : "--"),
+      render: (value: number) => formatTimestamp(value),
     },
     {
       key: "actions",

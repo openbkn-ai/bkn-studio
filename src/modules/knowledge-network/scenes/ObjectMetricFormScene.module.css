@@ -166,6 +166,10 @@
   color: #fff;
 }
 
+:global(:root[data-theme="dark"]) .aiMessageUser {
+  background: #1e3a8a;
+}
+
 .aiMessageError {
   border-color: var(--color-error-border);
   background: var(--color-error-bg);

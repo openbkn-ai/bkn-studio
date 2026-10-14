@@ -18,6 +18,7 @@ import type {
   ObjectMetricOperandV1,
   ObjectMetricTypeV1,
 } from "@/modules/knowledge-network/types/object-metric";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 
 export type ObjectMetricAiIntent = {
   name?: string;
@@ -117,7 +118,7 @@ function extractJsonObject(text: string): string {
   const withoutFence = text.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
   const start = withoutFence.indexOf("{");
   const end = withoutFence.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("AI 未返回可识别的指标配置，请换一种描述后重试");
+  if (start < 0 || end <= start) throw new Error(objectMetricText("mbea600bbe742"));
   return withoutFence.slice(start, end + 1);
 }
 
@@ -195,7 +196,7 @@ function parseAiOperand(
     const propertyName = optionalString(propertyRef?.property_name ?? value.property_name);
     if (!propertyName) return undefined;
     if (options.allowedProperties && !options.allowedProperties.has(propertyName)) {
-      warnings.push(`业务条件引用了不可用属性“${propertyName}”，已跳过`);
+      warnings.push(objectMetricText("mde719c1e6e9a", { p0: propertyName }));
       return undefined;
     }
     return {
@@ -233,7 +234,7 @@ function parseAiCondition(
       : { boolean_operator: "and", children, node_type: "group" };
   }
   if (!isRecord(value)) {
-    warnings.push("业务筛选条件格式不完整，已跳过");
+    warnings.push(objectMetricText("m21df9ab9af30"));
     return undefined;
   }
   if (value.node_type === "group" || Array.isArray(value.children)) {
@@ -247,7 +248,7 @@ function parseAiCondition(
         })
       : [];
     if (!children.length) {
-      warnings.push("业务筛选条件组没有有效条件，已跳过");
+      warnings.push(objectMetricText("ma0e381e333b1"));
       return undefined;
     }
     return { boolean_operator: operator, children, node_type: "group" };
@@ -262,7 +263,7 @@ function parseAiCondition(
   );
   if (!left || left.source !== "property" || !comparison || !comparisonOperators.has(comparison)) {
     if (warnings.length === warningCountBeforeLeft) {
-      warnings.push("业务筛选条件缺少属性或有效判断方式，已跳过");
+      warnings.push(objectMetricText("ma4021f694175"));
     }
     return undefined;
   }
@@ -279,7 +280,7 @@ function parseAiCondition(
         return operand ? [operand] : [];
       });
   if (!comparisonsWithoutRight.has(comparison) && !right?.length) {
-    warnings.push("业务筛选条件缺少判断值，已跳过");
+    warnings.push(objectMetricText("m1e5bff31ad22"));
     return undefined;
   }
   return {
@@ -351,7 +352,7 @@ function parseAiExpression(
       ? { arguments: arguments_, function: functionName, node_type: "call" }
       : undefined;
   }
-  warnings.push("计算表达式格式不完整，已跳过");
+  warnings.push(objectMetricText("m3d91e66cedb9"));
   return undefined;
 }
 
@@ -363,11 +364,11 @@ export function parseObjectMetricAiIntent(
   try {
     parsed = JSON.parse(extractJsonObject(text));
   } catch (error) {
-    if (error instanceof SyntaxError) throw new Error("AI 返回的指标配置不是有效 JSON，请重试");
+    if (error instanceof SyntaxError) throw new Error(objectMetricText("m5f60adbd6366"));
     throw error;
   }
   if (!isRecord(parsed)) {
-    throw new Error("AI 返回的指标配置格式不正确，请重试");
+    throw new Error(objectMetricText("m426d9c7d04f4"));
   }
   const warnings = stringArray(parsed.notes) ?? [];
   const intent: ObjectMetricAiIntent = {};
@@ -483,37 +484,7 @@ export function parseObjectMetricAiIntent(
 }
 
 function metricPrompt(context: ObjectMetricAiContext) {
-  return `你是 OpenBKN 指标配置助手。你的唯一任务是把用户描述转换成当前指标表单可使用的 JSON。
-
-规则：
-1. 只输出一个 JSON 对象，不要 Markdown、解释或代码围栏。
-2. 当前正在创建 ${context.metricType} 指标；不得改变指标类型和归属对象类。
-3. 属性、基础指标和依赖指标只能从“可用上下文”中选择，使用其中的精确 name、id 和 version，严禁编造。
-4. 无法确定的字段直接省略，不能猜测；可把简短提醒放入 notes 数组。
-5. AI 只填写表单，不保存、不发布；无需输出 id、version、lifecycle。
-6. 原子指标：atomic 可包含 aggregation、property_name 或 expression。count_rows 不需要 property_name。
-7. 衍生指标：只能以已发布原子指标为 base metric，derived 可包含 base_metric_id、base_metric_version、filters、event_time、time_window_mode、time_window_length、time_window_unit。
-8. 复合指标：composite.dependencies 至少两个；alias 使用英文字母开头的稳定短名；expression 使用 dependency 节点以及 binary/unary/call/literal 节点。
-9. filters 必须符合 ObjectMetricConditionV1：predicate 的 left 使用 property operand，right 使用 literal operand；多个条件使用 group。
-10. 币种金额通常使用 semantic_type=amount、physical_type=decimal、unit_system=ISO_4217、quantity_kind=currency；计数使用 semantic_type=count、physical_type=int64、unit_code=1、unit_system=UCUM、quantity_kind=count。
-
-允许的顶层结构：
-{
-  "name": string,
-  "code": string,
-  "description": string,
-  "calculation_scope": "object_instance" | "object_set",
-  "atomic": object,
-  "derived": object,
-  "composite": object,
-  "result": object,
-  "query": object,
-  "logic_property": object,
-  "notes": string[]
-}
-
-可用上下文：
-${JSON.stringify(context)}`;
+  return objectMetricText("mb4d00a1030cc", { p0: context.metricType, p1: JSON.stringify(context) });
 }
 
 export async function generateObjectMetricAiIntent(params: {
@@ -526,7 +497,7 @@ export async function generateObjectMetricAiIntent(params: {
   const models = await listLlmModels({ page: 1, size: 100 });
   const modelName =
     models.items.find((item) => item.default)?.modelName ?? models.items[0]?.modelName;
-  if (!modelName) throw new Error("当前没有可用的大模型，请先在模型工厂配置默认模型");
+  if (!modelName) throw new Error(objectMetricText("m02aa2f1bb8cb"));
 
   let output = "";
   let generationError = "";

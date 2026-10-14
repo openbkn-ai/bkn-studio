@@ -6,6 +6,7 @@
  */
 
 import type { ObjectMetricDefinitionV1 } from "@/modules/knowledge-network/types/object-metric";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 
 export type ObjectMetricUnitQuantityKind =
   | "dimensionless"
@@ -32,35 +33,75 @@ type SemanticType = ObjectMetricDefinitionV1["result_semantics"]["value"]["seman
 type PhysicalType = ObjectMetricDefinitionV1["result_semantics"]["value"]["physical_type"];
 
 const unitCatalog: ObjectMetricUnitOption[] = [
-  { code: "1", label: "无量纲 · 1", quantityKind: "dimensionless", scaleFactor: 1, system: "UCUM" },
-  { code: "%", label: "百分比 · %", quantityKind: "dimensionless", scaleFactor: 1, system: "UCUM" },
+  {
+    code: "1",
+    get label() {
+      return objectMetricText("m0e3460b4c11c");
+    },
+    quantityKind: "dimensionless",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "%",
+    get label() {
+      return objectMetricText("m5b06f7c857a2");
+    },
+    quantityKind: "dimensionless",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
 
-  { code: "1", label: "通用计数 · 1", quantityKind: "count", scaleFactor: 1, system: "UCUM" },
-  { code: "item", label: "件 · item", quantityKind: "count", scaleFactor: 1, system: "registered" },
+  {
+    code: "1",
+    get label() {
+      return objectMetricText("mef36c66ef41e");
+    },
+    quantityKind: "count",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "item",
+    get label() {
+      return objectMetricText("m0c1a77cf21d1");
+    },
+    quantityKind: "count",
+    scaleFactor: 1,
+    system: "registered",
+  },
   {
     code: "order",
-    label: "订单 · order",
+    get label() {
+      return objectMetricText("mc968a3be70f6");
+    },
     quantityKind: "count",
     scaleFactor: 1,
     system: "registered",
   },
   {
     code: "person",
-    label: "人 · person",
+    get label() {
+      return objectMetricText("m5b0762a27516");
+    },
     quantityKind: "count",
     scaleFactor: 1,
     system: "registered",
   },
   {
     code: "record",
-    label: "条 · record",
+    get label() {
+      return objectMetricText("m886776baa648");
+    },
     quantityKind: "count",
     scaleFactor: 1,
     system: "registered",
   },
   {
     code: "occurrence",
-    label: "次 · occurrence",
+    get label() {
+      return objectMetricText("mded051219c76");
+    },
     quantityKind: "count",
     scaleFactor: 1,
     system: "registered",
@@ -68,68 +109,224 @@ const unitCatalog: ObjectMetricUnitOption[] = [
 
   {
     code: "CNY",
-    label: "人民币元 · CNY",
+    get label() {
+      return objectMetricText("mb7f00f7e4fe4");
+    },
     quantityKind: "currency",
     scaleFactor: 1,
     system: "ISO_4217",
   },
   {
     code: "USD",
-    label: "美元 · USD",
+    get label() {
+      return objectMetricText("mbd487b0fa4d3");
+    },
     quantityKind: "currency",
     scaleFactor: 1,
     system: "ISO_4217",
   },
   {
     code: "EUR",
-    label: "欧元 · EUR",
+    get label() {
+      return objectMetricText("mbdb877468b8e");
+    },
     quantityKind: "currency",
     scaleFactor: 1,
     system: "ISO_4217",
   },
   {
     code: "JPY",
-    label: "日元 · JPY",
+    get label() {
+      return objectMetricText("m8f7a1781b918");
+    },
     quantityKind: "currency",
     scaleFactor: 1,
     system: "ISO_4217",
   },
   {
     code: "HKD",
-    label: "港元 · HKD",
+    get label() {
+      return objectMetricText("m95d8a4e9ae1f");
+    },
     quantityKind: "currency",
     scaleFactor: 1,
     system: "ISO_4217",
   },
   {
     code: "GBP",
-    label: "英镑 · GBP",
+    get label() {
+      return objectMetricText("m76e07b294bb4");
+    },
     quantityKind: "currency",
     scaleFactor: 1,
     system: "ISO_4217",
   },
 
-  { code: "ms", label: "毫秒 · ms", quantityKind: "duration", scaleFactor: 1, system: "UCUM" },
-  { code: "s", label: "秒 · s", quantityKind: "duration", scaleFactor: 1, system: "UCUM" },
-  { code: "min", label: "分钟 · min", quantityKind: "duration", scaleFactor: 1, system: "UCUM" },
-  { code: "h", label: "小时 · h", quantityKind: "duration", scaleFactor: 1, system: "UCUM" },
-  { code: "d", label: "天 · d", quantityKind: "duration", scaleFactor: 1, system: "UCUM" },
+  {
+    code: "ms",
+    get label() {
+      return objectMetricText("m9aabbbf25cea");
+    },
+    quantityKind: "duration",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "s",
+    get label() {
+      return objectMetricText("m3f6f70f87717");
+    },
+    quantityKind: "duration",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "min",
+    get label() {
+      return objectMetricText("m9dbb4567873e");
+    },
+    quantityKind: "duration",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "h",
+    get label() {
+      return objectMetricText("m4b9e00763164");
+    },
+    quantityKind: "duration",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "d",
+    get label() {
+      return objectMetricText("m6b6621262f63");
+    },
+    quantityKind: "duration",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
 
-  { code: "mg", label: "毫克 · mg", quantityKind: "weight", scaleFactor: 1, system: "UCUM" },
-  { code: "g", label: "克 · g", quantityKind: "weight", scaleFactor: 1, system: "UCUM" },
-  { code: "kg", label: "千克 · kg", quantityKind: "weight", scaleFactor: 1, system: "UCUM" },
-  { code: "t", label: "吨 · t", quantityKind: "weight", scaleFactor: 1, system: "UCUM" },
+  {
+    code: "mg",
+    get label() {
+      return objectMetricText("maf1405fb0f94");
+    },
+    quantityKind: "weight",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "g",
+    get label() {
+      return objectMetricText("md69a38953356");
+    },
+    quantityKind: "weight",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "kg",
+    get label() {
+      return objectMetricText("m82f07ca38fec");
+    },
+    quantityKind: "weight",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "t",
+    get label() {
+      return objectMetricText("m72b97029cfbf");
+    },
+    quantityKind: "weight",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
 
-  { code: "mm", label: "毫米 · mm", quantityKind: "length", scaleFactor: 1, system: "UCUM" },
-  { code: "cm", label: "厘米 · cm", quantityKind: "length", scaleFactor: 1, system: "UCUM" },
-  { code: "m", label: "米 · m", quantityKind: "length", scaleFactor: 1, system: "UCUM" },
-  { code: "km", label: "千米 · km", quantityKind: "length", scaleFactor: 1, system: "UCUM" },
+  {
+    code: "mm",
+    get label() {
+      return objectMetricText("m5f0d4fc6545d");
+    },
+    quantityKind: "length",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "cm",
+    get label() {
+      return objectMetricText("m879030313976");
+    },
+    quantityKind: "length",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "m",
+    get label() {
+      return objectMetricText("m821d6a8b01ed");
+    },
+    quantityKind: "length",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "km",
+    get label() {
+      return objectMetricText("m18dc79b1c5af");
+    },
+    quantityKind: "length",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
 
-  { code: "B", label: "字节 · B", quantityKind: "data_size", scaleFactor: 1, system: "UCUM" },
-  { code: "kB", label: "千字节 · kB", quantityKind: "data_size", scaleFactor: 1, system: "UCUM" },
-  { code: "MB", label: "兆字节 · MB", quantityKind: "data_size", scaleFactor: 1, system: "UCUM" },
-  { code: "GB", label: "吉字节 · GB", quantityKind: "data_size", scaleFactor: 1, system: "UCUM" },
-  { code: "TB", label: "太字节 · TB", quantityKind: "data_size", scaleFactor: 1, system: "UCUM" },
+  {
+    code: "B",
+    get label() {
+      return objectMetricText("m569c00bfad06");
+    },
+    quantityKind: "data_size",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "kB",
+    get label() {
+      return objectMetricText("ma55b69b0b0e2");
+    },
+    quantityKind: "data_size",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "MB",
+    get label() {
+      return objectMetricText("m15468df44a6c");
+    },
+    quantityKind: "data_size",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "GB",
+    get label() {
+      return objectMetricText("ma4a07e19bb13");
+    },
+    quantityKind: "data_size",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "TB",
+    get label() {
+      return objectMetricText("m744fb5d8080a");
+    },
+    quantityKind: "data_size",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
 ];
 
 function allowedQuantityKinds(semanticType?: SemanticType, physicalType?: PhysicalType) {
@@ -169,7 +366,7 @@ export function objectMetricUnitOptions(
       ...options,
       {
         code: current.code,
-        label: `${current.code} · 已有单位`,
+        label: objectMetricText("m5d2f6bfa96cf", { p0: current.code }),
         quantityKind: current.quantityKind,
         scaleFactor: current.scaleFactor ?? 1,
         system: current.system,

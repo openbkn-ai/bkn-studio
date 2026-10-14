@@ -19,6 +19,8 @@ import {
 import type { ObjectMetricExpressionPropertyOption } from "./ObjectMetricExpressionEditor";
 
 import styles from "./ObjectMetricConditionBuilder.module.css";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   allowedBooleanOperators?: string[];
@@ -46,30 +48,78 @@ const rangeOperators = new Set(["between", "not_between"]);
 const membershipOperators = new Set(["in", "not_in"]);
 
 const comparisonLabels: Record<ComparisonOperator, string> = {
-  after: "晚于",
-  after_or_equal: "不早于",
-  before: "早于",
-  before_or_equal: "不晚于",
-  between: "介于",
-  contains: "包含",
-  ends_with: "结尾是",
-  eq: "等于",
-  gt: "大于",
-  gte: "大于等于",
-  in: "属于",
-  is_empty: "为空",
-  is_false: "为假",
-  is_not_empty: "不为空",
-  is_not_null: "不是空值",
-  is_null: "是空值",
-  is_true: "为真",
-  lt: "小于",
-  lte: "小于等于",
-  neq: "不等于",
-  not_between: "不介于",
-  not_contains: "不包含",
-  not_in: "不属于",
-  starts_with: "开头是",
+  get after() {
+    return objectMetricText("m05bf631daf34");
+  },
+  get after_or_equal() {
+    return objectMetricText("m20e88f66687e");
+  },
+  get before() {
+    return objectMetricText("mac3abc8a1900");
+  },
+  get before_or_equal() {
+    return objectMetricText("m10981edc118a");
+  },
+  get between() {
+    return objectMetricText("m2805cdf0df59");
+  },
+  get contains() {
+    return objectMetricText("m107319b8b39d");
+  },
+  get ends_with() {
+    return objectMetricText("me3131c75602a");
+  },
+  get eq() {
+    return objectMetricText("m4bc69a0562ff");
+  },
+  get gt() {
+    return objectMetricText("mb4614ab230a5");
+  },
+  get gte() {
+    return objectMetricText("me1feef07d1b8");
+  },
+  get in() {
+    return objectMetricText("m541d9758ac8d");
+  },
+  get is_empty() {
+    return objectMetricText("m6f0db35f5cdb");
+  },
+  get is_false() {
+    return objectMetricText("m0461a3b64d46");
+  },
+  get is_not_empty() {
+    return objectMetricText("m1a160efcb337");
+  },
+  get is_not_null() {
+    return objectMetricText("m35a1640c0161");
+  },
+  get is_null() {
+    return objectMetricText("m56f9835c2cd7");
+  },
+  get is_true() {
+    return objectMetricText("m463fb81cc157");
+  },
+  get lt() {
+    return objectMetricText("ma39accd3595f");
+  },
+  get lte() {
+    return objectMetricText("m035d78382d6f");
+  },
+  get neq() {
+    return objectMetricText("m9678e3a7cb3c");
+  },
+  get not_between() {
+    return objectMetricText("mbd1d591a5fe0");
+  },
+  get not_contains() {
+    return objectMetricText("m5f60ffcf600a");
+  },
+  get not_in() {
+    return objectMetricText("m346b5503cd87");
+  },
+  get starts_with() {
+    return objectMetricText("mf35b23dcbbae");
+  },
 };
 
 function literalOperand(valueType: string, value?: unknown): ObjectMetricOperandV1 {
@@ -132,7 +182,7 @@ function PropertySelect({
   const ref = operand.source === "property" ? operand.property_ref : undefined;
   return (
     <Select
-      aria-label="判断字段"
+      aria-label={objectMetricText("m327bdd799586")}
       className={styles.fieldSelect}
       onChange={(encoded) => {
         const [objectTypeId, propertyName] = JSON.parse(encoded) as [string, string];
@@ -142,7 +192,7 @@ function PropertySelect({
         });
       }}
       options={properties.map((item) => ({ label: item.label, value: propertyKey(item) }))}
-      placeholder="选择判断字段"
+      placeholder={objectMetricText("m583ee3c6383a")}
       showSearch
       value={
         ref?.property_name ? JSON.stringify([ref.object_type_id, ref.property_name]) : undefined
@@ -193,7 +243,7 @@ function ValueEditor({
           )}
         />
         <Button onClick={() => onChange(literalOperand(expectedValueType))} size="small">
-          改用固定值
+          {objectMetricText("me1d61932ef7e")}
         </Button>
       </div>
     );
@@ -202,10 +252,10 @@ function ValueEditor({
   if (expectedValueType === "int64" || expectedValueType === "decimal") {
     return (
       <InputNumber
-        aria-label="判断值"
+        aria-label={objectMetricText("mb964a92285bc")}
         className={styles.valueControl}
         onChange={(value) => onChange(literalOperand(expectedValueType, value ?? undefined))}
-        placeholder="输入判断值"
+        placeholder={objectMetricText("m110e4c3fca51")}
         value={operand.value === undefined ? null : Number(operand.value)}
       />
     );
@@ -213,24 +263,28 @@ function ValueEditor({
   if (expectedValueType === "boolean") {
     return (
       <Select
-        aria-label="判断值"
+        aria-label={objectMetricText("mb964a92285bc")}
         className={styles.valueControl}
         onChange={(value) => onChange(literalOperand("boolean", value))}
         options={[
-          { label: "是", value: true },
-          { label: "否", value: false },
+          { label: objectMetricText("mb5141d3d19e9"), value: true },
+          { label: objectMetricText("m0c70665b6eb6"), value: false },
         ]}
-        placeholder="选择判断值"
+        placeholder={objectMetricText("m954d224b10fa")}
         value={typeof operand.value === "boolean" ? operand.value : undefined}
       />
     );
   }
   return (
     <Input
-      aria-label="判断值"
+      aria-label={objectMetricText("mb964a92285bc")}
       className={styles.valueControl}
       onChange={(event) => onChange(literalOperand(expectedValueType, event.target.value))}
-      placeholder={expectedValueType === "string" ? "输入判断值" : "输入日期或时间"}
+      placeholder={
+        expectedValueType === "string"
+          ? objectMetricText("m110e4c3fca51")
+          : objectMetricText("mad37b165ef82")
+      }
       value={literalText(operand.value)}
     />
   );
@@ -251,7 +305,7 @@ function MembershipEditor({
     .filter(Boolean);
   return (
     <Select
-      aria-label="判断值"
+      aria-label={objectMetricText("mb964a92285bc")}
       className={styles.valueControl}
       mode="tags"
       onChange={(nextValues) =>
@@ -262,7 +316,7 @@ function MembershipEditor({
         )
       }
       open={false}
-      placeholder="输入值后按回车，可添加多个"
+      placeholder={objectMetricText("m75a3e4ef1cef")}
       tokenSeparators={[","]}
       value={values}
     />
@@ -281,11 +335,11 @@ function ConditionActions({
   return (
     <div className={styles.conditionActions}>
       <Button icon={<PlusOutlined aria-hidden="true" />} onClick={onAdd} size="small">
-        添加条件
+        {objectMetricText("m236878c0b380")}
       </Button>
       {canAddGroup ? (
         <Button icon={<ApartmentOutlined aria-hidden="true" />} onClick={onAddGroup} size="small">
-          添加条件组
+          {objectMetricText("mcb35cc5b434f")}
         </Button>
       ) : null}
     </div>
@@ -300,6 +354,7 @@ export function ObjectMetricConditionBuilder({
   properties,
   value,
 }: Props) {
+  useTranslation();
   if (!value) {
     return (
       <Button
@@ -307,7 +362,7 @@ export function ObjectMetricConditionBuilder({
         onClick={() => onChange(predicate(properties))}
         type="dashed"
       >
-        添加业务条件
+        {objectMetricText("md0d748999bc8")}
       </Button>
     );
   }
@@ -357,7 +412,7 @@ export function ObjectMetricConditionBuilder({
             properties={properties}
           />
           <Select
-            aria-label="判断关系"
+            aria-label={objectMetricText("m898d2cd2c8e7")}
             className={styles.operationSelect}
             disabled={!hasSelectedProperty}
             onChange={(comparison_operator) =>
@@ -373,16 +428,20 @@ export function ObjectMetricConditionBuilder({
               })
             }
             options={comparisonOptions(leftValueType, allowedComparisonOperators)}
-            placeholder={hasSelectedProperty ? "选择判断关系" : "请先选择判断字段"}
+            placeholder={
+              hasSelectedProperty
+                ? objectMetricText("m8d4c581e57d5")
+                : objectMetricText("m21fb1b3e9a3a")
+            }
             value={hasSelectedProperty ? currentOperator : undefined}
           />
           <div className={styles.valueArea}>
             {!hasSelectedProperty ? (
               <Input
-                aria-label="判断值"
+                aria-label={objectMetricText("mb964a92285bc")}
                 className={styles.valueControl}
                 disabled
-                placeholder="请先选择判断字段"
+                placeholder={objectMetricText("m21fb1b3e9a3a")}
               />
             ) : membershipOperators.has(currentOperator) ? (
               <MembershipEditor
@@ -395,7 +454,7 @@ export function ObjectMetricConditionBuilder({
             ) : (
               right.map((operand, index) => (
                 <div className={styles.rangeValue} key={index}>
-                  {index === 1 ? <span>至</span> : null}
+                  {index === 1 ? <span>{objectMetricText("m65edbf9f1c67")}</span> : null}
                   <ValueEditor
                     expectedValueType={leftValueType}
                     onChange={(next) =>
@@ -413,7 +472,7 @@ export function ObjectMetricConditionBuilder({
             )}
           </div>
           <Button
-            aria-label="删除条件"
+            aria-label={objectMetricText("m96d7b159d24e")}
             className={styles.deleteButton}
             danger
             icon={<DeleteOutlined aria-hidden="true" />}
@@ -454,9 +513,9 @@ export function ObjectMetricConditionBuilder({
   return (
     <div className={`${styles.conditionGroup} ${depth ? styles.nestedGroup : ""}`}>
       <div className={styles.groupHeader}>
-        <span>条件关系</span>
+        <span>{objectMetricText("m5c81d40b1516")}</span>
         <Select
-          aria-label="条件关系"
+          aria-label={objectMetricText("m5c81d40b1516")}
           className={styles.groupSelect}
           onChange={(boolean_operator) => {
             const children =
@@ -468,16 +527,16 @@ export function ObjectMetricConditionBuilder({
             });
           }}
           options={[
-            { label: "且", value: "and" },
-            { label: "或", value: "or" },
-            { label: "非", value: "not" },
+            { label: objectMetricText("m9f00f6770f8c"), value: "and" },
+            { label: objectMetricText("ma2123d69506f"), value: "or" },
+            { label: objectMetricText("mf48551bc8b4d"), value: "not" },
           ].filter(
             (item) => !allowedBooleanOperators || allowedBooleanOperators.includes(item.value),
           )}
           value={value.boolean_operator}
         />
         <Button
-          aria-label="删除条件组"
+          aria-label={objectMetricText("m7181350804ed")}
           danger
           icon={<DeleteOutlined aria-hidden="true" />}
           onClick={() => onChange(undefined)}

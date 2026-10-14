@@ -17,6 +17,8 @@ import type {
   ObjectMetricQueryRequestV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
 type TrialFormValues = {
   analysisDimensions?: string[];
@@ -58,10 +60,10 @@ function displayMetricValue(value: unknown): string {
 function trialErrorMessage(error: unknown): string {
   const details = extractRequestErrorDetails(error);
   if (details.details?.includes("requires numeric operands")) {
-    return "计算属性返回了文本值，不能直接进行四则运算。请在对应的左侧值或右侧值中选择“文本转数值”后重试。";
+    return objectMetricText("mbaea9b35162e");
   }
   if (details.details?.includes("to_number")) {
-    return "存在无法转换为数值的文本。请检查所选属性中的空字符串、中文、货币符号或其他非数字内容。";
+    return objectMetricText("m228e2f6a7e9d");
   }
   return details.details ? `${details.description}：${details.details}` : details.description;
 }
@@ -74,6 +76,7 @@ export function ObjectMetricTrialDrawer({
   onRun,
   open,
 }: ObjectMetricTrialDrawerProps) {
+  useTranslation();
   const [form] = Form.useForm<TrialFormValues>();
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
@@ -121,17 +124,19 @@ export function ObjectMetricTrialDrawer({
       open={open}
       title={
         mode === "draft"
-          ? `试算当前配置 · ${definition.name || "未命名指标"}`
-          : `试算真实数据 · ${definition.name}@v${definition.version}`
+          ? objectMetricText("mf007eccc9fb2", {
+              p0: definition.name || objectMetricText("ma8da957c687c"),
+            })
+          : objectMetricText("m0c19c9a5c9aa", { p0: definition.name, p1: definition.version })
       }
       width="min(760px, calc(100vw - 24px))"
     >
       <Alert
-        message={mode === "draft" ? "使用当前配置试算真实数据" : "读取已发布指标的真实结果"}
+        message={
+          mode === "draft" ? objectMetricText("m938b57be39c0") : objectMetricText("m0926f375ff3b")
+        }
         description={
-          mode === "draft"
-            ? "试算不会保存、发布或改写指标；正式发布仍需通过配置检查。"
-            : "指标定义和固定口径不会被改写；这里只提供实例、查询时间范围和分析维度等运行时参数。"
+          mode === "draft" ? objectMetricText("m0f8ba014cedf") : objectMetricText("m2ac58784332f")
         }
         type="info"
         showIcon
@@ -151,42 +156,42 @@ export function ObjectMetricTrialDrawer({
                   key={name}
                   label={`${property?.displayName || name} · ${name}`}
                   name={["identity", name]}
-                  rules={[{ required: true, message: "请输入实例 ID" }]}
+                  rules={[{ required: true, message: objectMetricText("m803fff99642e") }]}
                 >
-                  <Input placeholder={`按对象类主键 ${name} 定位实例`} />
+                  <Input placeholder={objectMetricText("m52a8e4de05d5", { p0: name })} />
                 </Form.Item>
               );
             })
           ) : (
-            <Alert message="对象类尚未配置主键，无法定位单个实例" type="error" showIcon />
+            <Alert message={objectMetricText("md23ea9c2fae2")} type="error" showIcon />
           )
         ) : null}
         {usesFixedDerivedTimeWindow ? (
           <Alert
-            message="本次试算使用当前配置中的固定时间范围"
-            description="固定时间口径不会在试算时被临时查询条件覆盖。"
+            message={objectMetricText("m80365c614b62")}
+            description={objectMetricText("mf3d478db033d")}
             showIcon
             style={{ marginBottom: 20 }}
             type="info"
           />
         ) : (
           <Form.Item
-            label="查询时间范围（可选）"
+            label={objectMetricText("m76a5dbc71e2b")}
             name="time"
-            tooltip="未填写时查询全部可用数据；填写后仅影响本次试算，不会写回指标配置"
+            tooltip={objectMetricText("mb4dd619d5bbc")}
           >
             <DatePicker.RangePicker showTime style={{ width: "100%" }} />
           </Form.Item>
         )}
         {definition.calculation_scope === "object_set" ? (
-          <Form.Item label="按分析维度拆解（可选）" name="analysisDimensions">
+          <Form.Item label={objectMetricText("m2acf103ad6cf")} name="analysisDimensions">
             <Select
               mode="multiple"
               options={definition.query_capabilities.analysis_dimensions.map((item) => ({
                 label: item.property_name,
                 value: item.property_name,
               }))}
-              placeholder="不选择时按指标固定粒度返回"
+              placeholder={objectMetricText("m6f346a890bc4")}
             />
           </Form.Item>
         ) : null}
@@ -198,12 +203,12 @@ export function ObjectMetricTrialDrawer({
           loading={loading}
           type="primary"
         >
-          开始试算
+          {objectMetricText("mf143bd50d496")}
         </Button>
       </Form>
       {error ? (
         <Alert
-          description="文本属性只有明确配置“文本转数值”后才会转换，系统不会隐式转换订单号、编码等文本。"
+          description={objectMetricText("m4b1d94a3b184")}
           message={error}
           showIcon
           style={{ marginTop: 20 }}
@@ -213,11 +218,14 @@ export function ObjectMetricTrialDrawer({
       {result ? (
         <Space direction="vertical" size={16} style={{ display: "flex", marginTop: 24 }}>
           <Alert
-            message={`执行状态：${result.status}`}
+            message={objectMetricText("m4ff4d4be847e", { p0: result.status })}
             description={
               result.warnings?.length
-                ? `${result.warnings.join("；")}（耗时 ${result.overall_ms} ms）`
-                : `耗时 ${result.overall_ms} ms`
+                ? objectMetricText("md105cd96c338", {
+                    p0: result.warnings.join("；"),
+                    p1: result.overall_ms,
+                  })
+                : objectMetricText("m164ba48e7c5d", { p0: result.overall_ms })
             }
             type={result.status === "partial" ? "warning" : "success"}
             showIcon
@@ -230,26 +238,31 @@ export function ObjectMetricTrialDrawer({
                 key: "instance_identity",
                 render: (value: Record<string, unknown> | undefined) =>
                   value ? JSON.stringify(value) : "—",
-                title: "实例 ID",
+                title: objectMetricText("m99fc84c8b8ae"),
               },
               {
                 dataIndex: "dimensions",
                 key: "dimensions",
                 render: (value: Record<string, unknown> | undefined) =>
                   value && Object.keys(value).length ? JSON.stringify(value) : "—",
-                title: "维度",
+                title: objectMetricText("m4fa164bacd53"),
               },
               {
                 dataIndex: "time",
                 key: "time",
                 render: (value: number | undefined) => (value ? formatMetricTimeLabel(value) : "—"),
-                title: "时间（UTC）",
+                title: objectMetricText("mbf80e223ad96"),
               },
-              { dataIndex: "value", key: "value", render: displayMetricValue, title: "指标值" },
-              { dataIndex: "status", key: "status", title: "结果状态" },
+              {
+                dataIndex: "value",
+                key: "value",
+                render: displayMetricValue,
+                title: objectMetricText("m6018e00aca78"),
+              },
+              { dataIndex: "status", key: "status", title: objectMetricText("m0d9a32dba031") },
             ]}
             dataSource={result.entries.map((item, index) => ({ ...item, key: index }))}
-            locale={{ emptyText: "当前条件下没有可返回的指标结果" }}
+            locale={{ emptyText: objectMetricText("ma1af72fea205") }}
             pagination={false}
             size="small"
           />

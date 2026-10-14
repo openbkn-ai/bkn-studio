@@ -53,22 +53,39 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectMetricListPanel.module.css";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
 type Props = { canModify: boolean; networkId: string };
 
 const typeNames: Record<ObjectMetricTypeV1, string> = {
-  atomic: "原子指标",
-  composite: "复合指标",
-  derived: "衍生指标",
+  get atomic() {
+    return objectMetricText("me5675ba4c2fd");
+  },
+  get composite() {
+    return objectMetricText("m3e70c815f275");
+  },
+  get derived() {
+    return objectMetricText("me88b222ae28a");
+  },
 };
 const statusNames = {
-  deprecated: "已废弃",
-  draft: "草稿",
-  published: "已发布",
-  validated: "已校验",
+  get deprecated() {
+    return objectMetricText("m1948aabb85ed");
+  },
+  get draft() {
+    return objectMetricText("m2a2fd29bd27a");
+  },
+  get published() {
+    return objectMetricText("md334724d6b2f");
+  },
+  get validated() {
+    return objectMetricText("m1936eafc0c3c");
+  },
 };
 
 export function ObjectMetricListPanel({ canModify, networkId }: Props) {
+  useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
   const [loading, setLoading] = useState(true);
@@ -160,7 +177,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const columns: TableProps<ObjectMetricRecordV1>["columns"] = [
     {
       key: "name",
-      title: "指标",
+      title: objectMetricText("mb87e67c7dae0"),
       width: 280,
       render: (_, record) => (
         <div className={styles.nameCell}>
@@ -173,7 +190,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     },
     {
       key: "type",
-      title: "类型",
+      title: objectMetricText("mba40014ff496"),
       width: 110,
       render: (_, record) => (
         <Tag
@@ -191,14 +208,16 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     },
     {
       key: "scope",
-      title: "计算对象",
+      title: objectMetricText("mec7844e49915"),
       width: 120,
       render: (_, record) =>
-        record.definition.calculation_scope === "object_instance" ? "单个实例" : "实例集合",
+        record.definition.calculation_scope === "object_instance"
+          ? objectMetricText("mabe9d02781fc")
+          : objectMetricText("m9c51e86f9307"),
     },
     {
       key: "status",
-      title: "状态",
+      title: objectMetricText("m6320b4a8722a"),
       width: 100,
       render: (_, record) => (
         <Tag color={record.definition.lifecycle.status === "published" ? "success" : "default"}>
@@ -208,13 +227,13 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     },
     {
       key: "description",
-      title: "业务定义",
+      title: objectMetricText("m419eb90613fd"),
       ellipsis: true,
       render: (_, record) => record.definition.description || "--",
     },
     {
       key: "actions",
-      title: "操作",
+      title: objectMetricText("med31fbb483ee"),
       width: 150,
       fixed: "right",
       render: (_, record) => (
@@ -228,18 +247,18 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
             size="small"
             type="link"
           >
-            详情
+            {objectMetricText("m979a332955c8")}
           </Button>
           {canModify ? (
             <Tooltip
               title={
                 ["published", "deprecated"].includes(record.definition.lifecycle.status)
-                  ? "创建新草稿版本后编辑"
-                  : "编辑当前草稿"
+                  ? objectMetricText("m0ae9e2e1ef17")
+                  : objectMetricText("mec3ba1e99684")
               }
             >
               <Button
-                aria-label={`编辑指标 ${record.definition.name}`}
+                aria-label={objectMetricText("m79bef996428f", { p0: record.definition.name })}
                 icon={<EditOutlined />}
                 onClick={() => void openEditor(record)}
                 size="small"
@@ -249,12 +268,12 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
           ) : null}
           {canModify && ["draft", "validated"].includes(record.definition.lifecycle.status) ? (
             <Button
-              aria-label={`删除指标草稿 ${record.definition.name}`}
+              aria-label={objectMetricText("m7a7c17d22328", { p0: record.definition.name })}
               danger
               icon={<DeleteOutlined />}
               onClick={() => {
                 Modal.confirm({
-                  content: `确定删除草稿“${record.definition.name}”吗？`,
+                  content: objectMetricText("m1baf039f0b73", { p0: record.definition.name }),
                   okButtonProps: { danger: true },
                   onOk: async () => {
                     await deleteObjectMetricDraftV1(
@@ -262,10 +281,10 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                       record.definition.id,
                       record.definition.version,
                     );
-                    void message.success("草稿已删除");
+                    void message.success(objectMetricText("md393b7cc3ea3"));
                     await reload();
                   },
-                  title: "删除草稿",
+                  title: objectMetricText("m1dfe58237bbf"),
                 });
               }}
               size="small"
@@ -277,7 +296,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
               danger
               onClick={() => {
                 Modal.confirm({
-                  content: "废弃后新建指标不能再引用这个版本，已有固定版本依赖不受影响。",
+                  content: objectMetricText("mcb05d2c2df12"),
                   okButtonProps: { danger: true },
                   onOk: async () => {
                     await deprecateObjectMetricV1(
@@ -285,16 +304,16 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                       record.definition.id,
                       record.definition.version,
                     );
-                    void message.success("指标版本已废弃");
+                    void message.success(objectMetricText("mda791b06ec77"));
                     await reload();
                   },
-                  title: `废弃“${record.definition.name}”`,
+                  title: objectMetricText("ma01ab2ceb262", { p0: record.definition.name }),
                 });
               }}
               size="small"
               type="link"
             >
-              废弃
+              {objectMetricText("mca0ff1e63793")}
             </Button>
           ) : null}
         </Space>
@@ -327,26 +346,29 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
           <Input
             allowClear
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder="搜索对象类或指标"
+            placeholder={objectMetricText("m3719f5de9935")}
             prefix={<SearchOutlined />}
             value={keyword}
           />
-          {renderObjectGroup("已定义指标", objectsWithMetrics)}
-          {renderObjectGroup("暂无指标", objectsWithoutMetrics)}
+          {renderObjectGroup(objectMetricText("mc2204ec9b74b"), objectsWithMetrics)}
+          {renderObjectGroup(objectMetricText("meffa57b0d294"), objectsWithoutMetrics)}
           {!objectTypes.length && !loading ? (
-            <Empty description="暂无对象类" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty
+              description={objectMetricText("mc90d408577d0")}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
           ) : null}
         </aside>
         <div className={styles.content}>
           <div className={styles.toolbar}>
             <div className={styles.toolbarLeft}>
-              <strong>{selectedObject?.name ?? "请选择对象类"}</strong>
+              <strong>{selectedObject?.name ?? objectMetricText("m6be07467be0f")}</strong>
               <span>{selectedObject?.id}</span>
             </div>
             <div className={styles.toolbarRight}>
-              <Tooltip title="刷新对象类与指标数据">
+              <Tooltip title={objectMetricText("m09f60ac5c12e")}>
                 <Button
-                  aria-label="刷新对象类与指标数据"
+                  aria-label={objectMetricText("m09f60ac5c12e")}
                   icon={<ReloadOutlined />}
                   loading={loading}
                   onClick={() => void reload()}
@@ -355,8 +377,8 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
               <Segmented
                 onChange={(value) => setViewMode(value as "graph" | "list")}
                 options={[
-                  { label: "图谱", value: "graph" },
-                  { label: "列表", value: "list" },
+                  { label: objectMetricText("m3b51eaa93417"), value: "graph" },
+                  { label: objectMetricText("maedd6814ff8c"), value: "list" },
                 ]}
                 value={viewMode}
               />
@@ -364,7 +386,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                 allowClear
                 onChange={setMetricType}
                 options={Object.entries(typeNames).map(([value, label]) => ({ label, value }))}
-                placeholder="全部类型"
+                placeholder={objectMetricText("m267c4a7a86dd")}
                 value={metricType}
                 style={{ width: 130 }}
               />
@@ -372,13 +394,16 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                 <Dropdown
                   menu={{
                     items: (["atomic", "derived", "composite"] as ObjectMetricTypeV1[]).map(
-                      (type) => ({ key: type, label: `新建${typeNames[type]}` }),
+                      (type) => ({
+                        key: type,
+                        label: objectMetricText("m422c8208705c", { p0: typeNames[type] }),
+                      }),
                     ),
                     onClick: ({ key }) => openCreate(key as ObjectMetricTypeV1),
                   }}
                 >
                   <Button disabled={!selectedObjectTypeId} icon={<PlusOutlined />} type="primary">
-                    新建指标
+                    {objectMetricText("mc89eb03160da")}
                   </Button>
                 </Dropdown>
               ) : null}
@@ -406,8 +431,8 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                     className={styles.empty}
                     description={
                       selectedObjectTypeId
-                        ? "当前对象类还没有指标，可从右上角新建。"
-                        : "请选择对象类"
+                        ? objectMetricText("m522159fe536d")
+                        : objectMetricText("m6be07467be0f")
                     }
                   />
                 ),

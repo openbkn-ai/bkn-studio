@@ -6,12 +6,12 @@
  */
 
 .panel {
-  border: 1px solid color-mix(in srgb, var(--color-primary) 36%, var(--color-border));
+  border: 1px solid color-mix(in srgb, var(--color-primary-600) 36%, var(--color-border));
   border-radius: 8px;
   background:
     linear-gradient(
       122deg,
-      color-mix(in srgb, var(--color-primary) 9%, transparent),
+      color-mix(in srgb, var(--color-primary-600) 9%, transparent),
       transparent 42%
     ),
     var(--color-bg-surface);

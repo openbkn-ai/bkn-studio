@@ -20,6 +20,8 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectMetricGraphCanvas.module.css";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
 type Position = { x: number; y: number };
 type GraphNode =
@@ -50,7 +52,17 @@ type Props = {
 
 const VIEWBOX = { height: 620, width: 1100 };
 const selectedObjectPosition = { x: 295, y: 215 };
-const metricTypeNames = { atomic: "原子指标", composite: "复合指标", derived: "衍生指标" };
+const metricTypeNames = {
+  get atomic() {
+    return objectMetricText("me5675ba4c2fd");
+  },
+  get composite() {
+    return objectMetricText("m3e70c815f275");
+  },
+  get derived() {
+    return objectMetricText("me88b222ae28a");
+  },
+};
 const metricTypeClass = {
   atomic: styles.atomic,
   composite: styles.composite,
@@ -154,6 +166,7 @@ export function ObjectMetricGraphCanvas({
   relationTypes,
   selectedObjectTypeId,
 }: Props) {
+  useTranslation();
   const initialNodes = useMemo(
     () => defaultLayout(objectTypes, relationTypes, metrics, selectedObjectTypeId),
     [metrics, objectTypes, relationTypes, selectedObjectTypeId],
@@ -233,21 +246,19 @@ export function ObjectMetricGraphCanvas({
   };
 
   if (!nodes.length) {
-    return <Empty description="选择一个对象类后查看对象指标图谱" />;
+    return <Empty description={objectMetricText("m4093b8d5ac81")} />;
   }
 
   return (
     <div className={styles.shell}>
       <div className={styles.canvasHeader}>
         <div>
-          <strong>对象指标图谱</strong>
-          <span>
-            关系类连接对象，金色线表示归属，紫色箭头表示指标依赖；节点可拖动，点击指标查看定义。
-          </span>
+          <strong>{objectMetricText("m8864ee148733")}</strong>
+          <span>{objectMetricText("m25d94a840760")}</span>
         </div>
-        <Tooltip title="恢复自动布局">
+        <Tooltip title={objectMetricText("m3208ffc11c17")}>
           <Button icon={<AimOutlined />} onClick={() => setNodes(initialNodes)} size="small">
-            重置布局
+            {objectMetricText("mb74829d20f7d")}
           </Button>
         </Tooltip>
       </div>
@@ -340,7 +351,7 @@ export function ObjectMetricGraphCanvas({
           if (node.kind === "object") {
             return (
               <button
-                aria-label={`对象类 ${node.object.name}`}
+                aria-label={objectMetricText("m1a35a8fea7ba", { p0: node.object.name })}
                 className={`${styles.node} ${styles.objectNode} ${node.object.id === selectedObjectTypeId ? styles.focusObject : ""}`}
                 key={node.id}
                 onClick={() => {
@@ -351,7 +362,7 @@ export function ObjectMetricGraphCanvas({
                 title={`${node.object.name} · ${node.object.id}`}
                 type="button"
               >
-                <span className={styles.nodeEyebrow}>对象类</span>
+                <span className={styles.nodeEyebrow}>{objectMetricText("m04c269ce47c9")}</span>
                 <strong>{node.object.name}</strong>
                 <small>{node.object.id}</small>
               </button>
@@ -360,7 +371,7 @@ export function ObjectMetricGraphCanvas({
           if (node.kind === "relation") {
             return (
               <button
-                aria-label={`关系类 ${node.relation.name}`}
+                aria-label={objectMetricText("mfa030e9d6456", { p0: node.relation.name })}
                 className={`${styles.node} ${styles.relationNode}`}
                 key={node.id}
                 onPointerDown={pointerDown}
@@ -398,27 +409,27 @@ export function ObjectMetricGraphCanvas({
         <div className={styles.legend}>
           <span>
             <i className={styles.objectLegend} />
-            对象类
+            {objectMetricText("m04c269ce47c9")}
           </span>
           <span>
             <i className={styles.relationLegend} />
-            关系类
+            {objectMetricText("me68ff632cab8")}
           </span>
           <span>
             <i className={styles.atomicLegend} />
-            原子指标
+            {objectMetricText("me5675ba4c2fd")}
           </span>
           <span>
             <i className={styles.derivedLegend} />
-            衍生指标
+            {objectMetricText("me88b222ae28a")}
           </span>
           <span>
             <i className={styles.compositeLegend} />
-            复合指标
+            {objectMetricText("m3e70c815f275")}
           </span>
           <span>
             <i className={styles.lineageLegend} />
-            指标依赖
+            {objectMetricText("m3d28b1387d4e")}
           </span>
         </div>
       </div>
@@ -427,7 +438,7 @@ export function ObjectMetricGraphCanvas({
         onClose={() => setSelectedMetric(undefined)}
         open={Boolean(selectedMetric)}
         rootClassName={styles.drawer}
-        title="指标定义"
+        title={objectMetricText("m8646198458ce")}
         width="min(520px, calc(100vw - 24px))"
       >
         {selectedMetric ? (
@@ -445,26 +456,29 @@ export function ObjectMetricGraphCanvas({
                   selectedMetric.definition.lifecycle.status === "published" ? "success" : "default"
                 }
               >
-                {selectedMetric.definition.lifecycle.status === "published" ? "已发布" : "草稿"}
+                {selectedMetric.definition.lifecycle.status === "published"
+                  ? objectMetricText("md334724d6b2f")
+                  : objectMetricText("m2a2fd29bd27a")}
               </Tag>
             </div>
             <p>{selectedMetric.definition.description}</p>
             <Descriptions bordered column={1} size="small">
-              <Descriptions.Item label="归属对象类">
+              <Descriptions.Item label={objectMetricText("m90f9643a2da5")}>
                 {objectTypes.find(
                   (item) => item.id === selectedMetric.definition.owner_object_type_id,
                 )?.name ?? selectedMetric.definition.owner_object_type_id}
               </Descriptions.Item>
-              <Descriptions.Item label="计算对象">
+              <Descriptions.Item label={objectMetricText("mec7844e49915")}>
                 {selectedMetric.definition.calculation_scope === "object_instance"
-                  ? "单个实例"
-                  : "实例集合"}
+                  ? objectMetricText("mabe9d02781fc")
+                  : objectMetricText("m9c51e86f9307")}
               </Descriptions.Item>
-              <Descriptions.Item label="业务值类型">
+              <Descriptions.Item label={objectMetricText("mc8475edb7e01")}>
                 {selectedMetric.definition.result_semantics.value.semantic_type}
               </Descriptions.Item>
-              <Descriptions.Item label="单位">
-                {selectedMetric.definition.result_semantics.value.unit?.code ?? "无单位"}
+              <Descriptions.Item label={objectMetricText("m80b19d68b149")}>
+                {selectedMetric.definition.result_semantics.value.unit?.code ??
+                  objectMetricText("m3be9bf13138e")}
               </Descriptions.Item>
             </Descriptions>
             <Button
@@ -473,7 +487,7 @@ export function ObjectMetricGraphCanvas({
               onClick={() => onOpenMetric(selectedMetric.definition.id)}
               type="primary"
             >
-              查看完整定义
+              {objectMetricText("m316e53b767a4")}
             </Button>
           </div>
         ) : null}

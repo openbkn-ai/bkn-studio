@@ -37,6 +37,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { isRequestForbidden, isRequestNotFound } from "@/framework/request/error-message";
 import { ObjectMetricConditionBuilder } from "@/modules/knowledge-network/components/object-metric/ObjectMetricConditionBuilder";
 import { AtomicInstanceExpressionBuilder } from "@/modules/knowledge-network/components/object-metric/AtomicInstanceExpressionBuilder";
 import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
@@ -115,47 +116,143 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectMetricFormScene.module.css";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
 type UnitQuantityKind = ObjectMetricUnitQuantityKind;
 
 const timeUnitOptions = [
-  { label: "分钟", value: "minute" },
-  { label: "小时", value: "hour" },
-  { label: "日", value: "day" },
-  { label: "周", value: "week" },
-  { label: "月", value: "month" },
-  { label: "季度", value: "quarter" },
-  { label: "年", value: "year" },
+  {
+    get label() {
+      return objectMetricText("mbd957bc497aa");
+    },
+    value: "minute",
+  },
+  {
+    get label() {
+      return objectMetricText("m3b6fefc50feb");
+    },
+    value: "hour",
+  },
+  {
+    get label() {
+      return objectMetricText("m85217f7aff77");
+    },
+    value: "day",
+  },
+  {
+    get label() {
+      return objectMetricText("m5c553ec3f6db");
+    },
+    value: "week",
+  },
+  {
+    get label() {
+      return objectMetricText("m1625179badc0");
+    },
+    value: "month",
+  },
+  {
+    get label() {
+      return objectMetricText("m4f1c54f507c9");
+    },
+    value: "quarter",
+  },
+  {
+    get label() {
+      return objectMetricText("m62ef900a8f5d");
+    },
+    value: "year",
+  },
 ] as const;
 
 const defaultMetricTimezone = DEFAULT_OBJECT_METRIC_TIMEZONE;
 
 const rollingTimeUnitLabels: Record<NonNullable<FormValues["timeWindowUnit"]>, string> = {
-  day: "天",
-  hour: "小时",
-  minute: "分钟",
-  month: "个月",
-  quarter: "个季度",
-  week: "周",
-  year: "年",
+  get day() {
+    return objectMetricText("m49da61ceeea2");
+  },
+  get hour() {
+    return objectMetricText("m3b6fefc50feb");
+  },
+  get minute() {
+    return objectMetricText("mbd957bc497aa");
+  },
+  get month() {
+    return objectMetricText("me5afd16c6a36");
+  },
+  get quarter() {
+    return objectMetricText("mb5acf6b4d6a5");
+  },
+  get week() {
+    return objectMetricText("m5c553ec3f6db");
+  },
+  get year() {
+    return objectMetricText("m62ef900a8f5d");
+  },
 };
 
 const physicalTypeOptions = [
-  { label: "整数", value: "int64" },
-  { label: "小数", value: "decimal" },
-  { label: "布尔值", value: "boolean" },
-  { label: "文本", value: "string" },
-  { label: "日期", value: "date" },
-  { label: "日期时间", value: "datetime" },
-  { label: "持续时长", value: "duration" },
+  {
+    get label() {
+      return objectMetricText("m67e2bb6ef67b");
+    },
+    value: "int64",
+  },
+  {
+    get label() {
+      return objectMetricText("m75a7f49573c8");
+    },
+    value: "decimal",
+  },
+  {
+    get label() {
+      return objectMetricText("mc08142c140ff");
+    },
+    value: "boolean",
+  },
+  {
+    get label() {
+      return objectMetricText("mdd81861811e5");
+    },
+    value: "string",
+  },
+  {
+    get label() {
+      return objectMetricText("m70d0c1b33626");
+    },
+    value: "date",
+  },
+  {
+    get label() {
+      return objectMetricText("m6ac8b7718121");
+    },
+    value: "datetime",
+  },
+  {
+    get label() {
+      return objectMetricText("m3e777ea8f1e8");
+    },
+    value: "duration",
+  },
 ] as const;
 
 const roundingModeLabels: Record<NonNullable<FormValues["roundingMode"]>, string> = {
-  ceiling: "向上取整",
-  floor: "向下取整",
-  half_even: "银行家舍入",
-  half_up: "四舍五入",
-  truncate: "直接截断",
+  get ceiling() {
+    return objectMetricText("m2534ac6ed23d");
+  },
+  get floor() {
+    return objectMetricText("m2db59b7b2c50");
+  },
+  get half_even() {
+    return objectMetricText("m7d5873e080fb");
+  },
+  get half_up() {
+    return objectMetricText("m9c09e447599c");
+  },
+  get truncate() {
+    return objectMetricText("mb6f97fe55978");
+  },
 };
 
 const physicalTypesBySemanticType: Record<
@@ -276,97 +373,265 @@ type FormValues = {
 };
 
 const semanticTypeOptions: Array<{ label: string; value: FormValues["semanticType"] }> = [
-  { label: "度量值", value: "measure" },
-  { label: "计数", value: "count" },
-  { label: "金额", value: "amount" },
-  { label: "比率", value: "ratio" },
-  { label: "百分比", value: "percentage" },
-  { label: "评分", value: "score" },
-  { label: "排名", value: "rank" },
-  { label: "时间点", value: "timestamp" },
-  { label: "时长", value: "duration" },
-  { label: "日期", value: "date" },
-  { label: "分类值", value: "category" },
-  { label: "布尔值", value: "boolean" },
+  {
+    get label() {
+      return objectMetricText("m208d85fd9f3a");
+    },
+    value: "measure",
+  },
+  {
+    get label() {
+      return objectMetricText("m21179deb9a74");
+    },
+    value: "count",
+  },
+  {
+    get label() {
+      return objectMetricText("mffc624300de8");
+    },
+    value: "amount",
+  },
+  {
+    get label() {
+      return objectMetricText("m8a457b6b1337");
+    },
+    value: "ratio",
+  },
+  {
+    get label() {
+      return objectMetricText("m03af18e36797");
+    },
+    value: "percentage",
+  },
+  {
+    get label() {
+      return objectMetricText("m96fff2e26c8d");
+    },
+    value: "score",
+  },
+  {
+    get label() {
+      return objectMetricText("m6570a98f2850");
+    },
+    value: "rank",
+  },
+  {
+    get label() {
+      return objectMetricText("m2d1060334622");
+    },
+    value: "timestamp",
+  },
+  {
+    get label() {
+      return objectMetricText("m04a95e0654d3");
+    },
+    value: "duration",
+  },
+  {
+    get label() {
+      return objectMetricText("m70d0c1b33626");
+    },
+    value: "date",
+  },
+  {
+    get label() {
+      return objectMetricText("m20fcf2eb775f");
+    },
+    value: "category",
+  },
+  {
+    get label() {
+      return objectMetricText("mc08142c140ff");
+    },
+    value: "boolean",
+  },
 ];
 
 const calculationScopeLabels: Record<FormValues["calculationScope"], string> = {
-  object_instance: "单个实例",
-  object_set: "实例集合",
+  get object_instance() {
+    return objectMetricText("mabe9d02781fc");
+  },
+  get object_set() {
+    return objectMetricText("m9c51e86f9307");
+  },
 };
 
 const metricTypeLabels: Record<ObjectMetricTypeV1, string> = {
-  atomic: "原子指标",
-  composite: "复合指标",
-  derived: "衍生指标",
+  get atomic() {
+    return objectMetricText("me5675ba4c2fd");
+  },
+  get composite() {
+    return objectMetricText("m3e70c815f275");
+  },
+  get derived() {
+    return objectMetricText("me88b222ae28a");
+  },
 };
 
 const metricLifecycleStatusLabels: Record<ObjectMetricDefinitionV1["lifecycle"]["status"], string> =
   {
-    deprecated: "已停用",
-    draft: "草稿",
-    published: "已发布",
-    validated: "已校验",
+    get deprecated() {
+      return objectMetricText("ma8c3698b5b8c");
+    },
+    get draft() {
+      return objectMetricText("m2a2fd29bd27a");
+    },
+    get published() {
+      return objectMetricText("md334724d6b2f");
+    },
+    get validated() {
+      return objectMetricText("m1936eafc0c3c");
+    },
   };
 
 const aggregationLabels: Record<FormValues["aggregation"], string> = {
-  avg: "平均值",
-  count: "非空计数",
-  count_distinct: "去重计数",
-  count_rows: "计数",
-  identity: "直接取值",
-  max: "最大值",
-  min: "最小值",
-  sum: "求和",
+  get avg() {
+    return objectMetricText("mdb7538b96322");
+  },
+  get count() {
+    return objectMetricText("m3a6663a758c9");
+  },
+  get count_distinct() {
+    return objectMetricText("m1e96cd1f49bf");
+  },
+  get count_rows() {
+    return objectMetricText("m21179deb9a74");
+  },
+  get identity() {
+    return objectMetricText("m9d001b97d59e");
+  },
+  get max() {
+    return objectMetricText("m1e7a22820768");
+  },
+  get min() {
+    return objectMetricText("mb2dcdcfabb6a");
+  },
+  get sum() {
+    return objectMetricText("m2819237ddb01");
+  },
 };
 
 const atomicAggregationGuidance: Record<FormValues["aggregation"], string> = {
-  avg: "选择一个数值属性，返回全部实例该属性的平均值。",
-  count: "选择一个属性，只统计该属性有值的实例数量。",
-  count_distinct: "选择一个属性，统计该属性不同取值的数量。",
-  count_rows: "统计当前查询范围内的全部实例数量，不需要选择属性。",
-  identity: "每个实例直接返回所选属性或简单计算的结果。",
-  max: "选择一个属性，返回全部实例中该属性的最大值。",
-  min: "选择一个属性，返回全部实例中该属性的最小值。",
-  sum: "选择一个数值属性，返回全部实例该属性的合计值。",
+  get avg() {
+    return objectMetricText("m1afe51282ba8");
+  },
+  get count() {
+    return objectMetricText("mfc9ae0b4bc74");
+  },
+  get count_distinct() {
+    return objectMetricText("mc85054311533");
+  },
+  get count_rows() {
+    return objectMetricText("mc4c20772d4a3");
+  },
+  get identity() {
+    return objectMetricText("mca90417ebd86");
+  },
+  get max() {
+    return objectMetricText("m84405156480f");
+  },
+  get min() {
+    return objectMetricText("m673a5e2385de");
+  },
+  get sum() {
+    return objectMetricText("md6f22f4bb383");
+  },
 };
 
 const comparisonLabels: Record<
   Extract<ObjectMetricConditionV1, { node_type: "predicate" }>["comparison_operator"],
   string
 > = {
-  after: "晚于",
-  after_or_equal: "不早于",
-  before: "早于",
-  before_or_equal: "不晚于",
-  between: "介于",
-  contains: "包含",
-  ends_with: "结尾是",
-  eq: "等于",
-  gt: "大于",
-  gte: "大于等于",
-  in: "属于",
-  is_empty: "为空",
-  is_false: "为假",
-  is_not_empty: "不为空",
-  is_not_null: "不是空值",
-  is_null: "是空值",
-  is_true: "为真",
-  lt: "小于",
-  lte: "小于等于",
-  neq: "不等于",
-  not_between: "不介于",
-  not_contains: "不包含",
-  not_in: "不属于",
-  starts_with: "开头是",
+  get after() {
+    return objectMetricText("m05bf631daf34");
+  },
+  get after_or_equal() {
+    return objectMetricText("m20e88f66687e");
+  },
+  get before() {
+    return objectMetricText("mac3abc8a1900");
+  },
+  get before_or_equal() {
+    return objectMetricText("m10981edc118a");
+  },
+  get between() {
+    return objectMetricText("m2805cdf0df59");
+  },
+  get contains() {
+    return objectMetricText("m107319b8b39d");
+  },
+  get ends_with() {
+    return objectMetricText("me3131c75602a");
+  },
+  get eq() {
+    return objectMetricText("m4bc69a0562ff");
+  },
+  get gt() {
+    return objectMetricText("mb4614ab230a5");
+  },
+  get gte() {
+    return objectMetricText("me1feef07d1b8");
+  },
+  get in() {
+    return objectMetricText("m541d9758ac8d");
+  },
+  get is_empty() {
+    return objectMetricText("m6f0db35f5cdb");
+  },
+  get is_false() {
+    return objectMetricText("m0461a3b64d46");
+  },
+  get is_not_empty() {
+    return objectMetricText("m1a160efcb337");
+  },
+  get is_not_null() {
+    return objectMetricText("m35a1640c0161");
+  },
+  get is_null() {
+    return objectMetricText("m56f9835c2cd7");
+  },
+  get is_true() {
+    return objectMetricText("m463fb81cc157");
+  },
+  get lt() {
+    return objectMetricText("ma39accd3595f");
+  },
+  get lte() {
+    return objectMetricText("m035d78382d6f");
+  },
+  get neq() {
+    return objectMetricText("m9678e3a7cb3c");
+  },
+  get not_between() {
+    return objectMetricText("mbd1d591a5fe0");
+  },
+  get not_contains() {
+    return objectMetricText("m5f60ffcf600a");
+  },
+  get not_in() {
+    return objectMetricText("m346b5503cd87");
+  },
+  get starts_with() {
+    return objectMetricText("mf35b23dcbbae");
+  },
 };
 
 const relationQuantifierLabels: Record<NonNullable<FormValues["relationQuantifier"]>, string> = {
-  all: "全部满足条件",
-  all_nonempty: "至少存在 1 个且全部满足条件",
-  count_compare: "关联数量满足条件",
-  exists: "至少存在 1 个满足条件的关联实例",
-  not_exists: "不存在满足条件的关联实例",
+  get all() {
+    return objectMetricText("m0807fecce6a6");
+  },
+  get all_nonempty() {
+    return objectMetricText("m0d3c640ca7ca");
+  },
+  get count_compare() {
+    return objectMetricText("m2ee2adf98ead");
+  },
+  get exists() {
+    return objectMetricText("me16ed4de78a6");
+  },
+  get not_exists() {
+    return objectMetricText("ma444f2c0f5f9");
+  },
 };
 
 function isGeneratedMetricCode(code: string) {
@@ -379,8 +644,15 @@ function conditionSummary(
 ): string {
   if (condition.node_type === "group") {
     const children = condition.children.map((child) => conditionSummary(child, propertyOptions));
-    if (condition.boolean_operator === "not") return `不满足（${children.join(" 且 ")}）`;
-    return children.join(condition.boolean_operator === "and" ? " 且 " : " 或 ");
+    if (condition.boolean_operator === "not")
+      return objectMetricText("m971ba98c1c78", {
+        p0: children.join(objectMetricText("ma22bdbe928cd")),
+      });
+    return children.join(
+      condition.boolean_operator === "and"
+        ? objectMetricText("ma22bdbe928cd")
+        : objectMetricText("m60ab743988bb"),
+    );
   }
   const operandLabel = (operand: ObjectMetricOperandV1) => {
     if (operand.source === "property") {
@@ -393,13 +665,13 @@ function conditionSummary(
       );
     }
     if (operand.value === "" || operand.value === undefined || operand.value === null) {
-      return "未填写值";
+      return objectMetricText("m4b6f06b32354");
     }
     if (typeof operand.value === "string") return `“${operand.value}”`;
     if (typeof operand.value === "number" || typeof operand.value === "boolean") {
       return String(operand.value);
     }
-    return JSON.stringify(operand.value) ?? "未填写值";
+    return JSON.stringify(operand.value) ?? objectMetricText("m4b6f06b32354");
   };
   const right = condition.right?.map(operandLabel).join("、");
   return [operandLabel(condition.left), comparisonLabels[condition.comparison_operator], right]
@@ -860,7 +1132,7 @@ function HelpTooltip({ label, title }: { label: string; title: string }) {
   return (
     <Tooltip title={title}>
       <Button
-        aria-label={`${label}说明`}
+        aria-label={objectMetricText("mc55fe58f16e2", { p0: label })}
         className={styles.helpButton}
         icon={<QuestionCircleOutlined aria-hidden="true" />}
         size="small"
@@ -871,6 +1143,7 @@ function HelpTooltip({ label, title }: { label: string; title: string }) {
 }
 
 export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
+  useTranslation();
   const params = useParams<{ metricId: string; networkId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -885,12 +1158,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [record, setRecord] = useState<ObjectMetricRecordV1>();
+  const [loadError, setLoadError] = useState<"forbidden" | "not-found" | "unknown" | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [relationTypes, setRelationTypes] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
   const [publishedMetrics, setPublishedMetrics] = useState<ObjectMetricRecordV1[]>([]);
   const [capabilities, setCapabilities] = useState<ObjectMetricCapabilitiesV1>();
   const [properties, setProperties] = useState<ObjectMetricExpressionPropertyOption[]>([]);
   const [propertiesLoading, setPropertiesLoading] = useState(false);
+  const [propertiesError, setPropertiesError] = useState(false);
+  const [propertiesReloadKey, setPropertiesReloadKey] = useState(0);
   const [ownerObjectTypeDetail, setOwnerObjectTypeDetail] = useState<ObjectTypeDetail | null>();
   const [measureExpression, setMeasureExpression] = useState<ObjectMetricExpressionV1>({
     node_type: "literal",
@@ -1018,8 +1295,13 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     form.setFieldsValue(suggestion);
   };
   const canBuildDefinition = () => {
+    if (mode === "edit" && !record) return false;
+    if (propertiesLoading || propertiesError) {
+      void message.error(objectMetricText("m46b0bf3afbc9"));
+      return false;
+    }
     if (requiresAtomicMeasureProperty && !hasAtomicMeasureProperty) {
-      void message.error("请在取值方式中至少选择一个对象属性");
+      void message.error(objectMetricText("mfef679ae00cd"));
       return false;
     }
     return true;
@@ -1101,7 +1383,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       weekStart: undefined,
     });
     if (previousKey && previousKey !== key) {
-      void message.info("已切换基础指标，原有业务限定和结果粒度已清空，请重新配置");
+      void message.info(objectMetricText("mb11572e529d2"));
     }
   };
   const updateCompositeExpression = (next: ObjectMetricExpressionV1) => {
@@ -1299,13 +1581,25 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           knId: networkId,
           token: tokenProvider.getToken(),
         },
-        prompt: `${
-          aiConversation.length
-            ? `此前对话：\n${aiConversation
-                .map((item) => `${item.role === "user" ? "用户" : "助手"}：${item.content}`)
-                .join("\n")}\n\n`
-            : ""
-        }当前表单状态：\n${JSON.stringify(form.getFieldsValue(true))}\n\n本轮要求：${prompt}`,
+        prompt: objectMetricText("m0fa83749ec68", {
+          p0: aiConversation.length
+            ? objectMetricText("mb86e7d4fc5e1", {
+                p0: aiConversation
+                  .map((item) =>
+                    objectMetricText("m3c4b7d4493c1", {
+                      p0:
+                        item.role === "user"
+                          ? objectMetricText("m0d0e1a86b3aa")
+                          : objectMetricText("me5ce5f6da7bd"),
+                      p1: item.content,
+                    }),
+                  )
+                  .join("\n"),
+              })
+            : "",
+          p1: JSON.stringify(form.getFieldsValue(true)),
+          p2: prompt,
+        }),
         signal: controller.signal,
         tokenProvider,
       });
@@ -1316,8 +1610,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         ...current,
         {
           content: notes.length
-            ? `已填写当前表单。还需要你确认：${notes.join("；")}`
-            : "已填写当前表单。你可以继续提出调整，或关闭窗口检查配置。",
+            ? objectMetricText("m277d595bb888", { p0: notes.join("；") })
+            : objectMetricText("mae87f64d5821"),
           id: `${turnId}-assistant`,
           role: "assistant",
         },
@@ -1327,7 +1621,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         setAiConversation((current) => [
           ...current,
           {
-            content: "已停止本次生成，你可以修改描述后重新发送。",
+            content: objectMetricText("m6f5dab617253"),
             id: `${turnId}-stopped`,
             role: "assistant",
           },
@@ -1337,7 +1631,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       setAiConversation((current) => [
         ...current,
         {
-          content: error instanceof Error ? error.message : "AI 创建失败，请稍后重试",
+          content: error instanceof Error ? error.message : objectMetricText("mf6977fb2dfc0"),
           id: `${turnId}-error`,
           role: "assistant",
           tone: "error",
@@ -1422,35 +1716,52 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     : availableRelationContinuations.length > 0;
   const timeWindowPeriod = objectMetricTimeWindowPeriod(timeWindowMode);
   const timeWindowOptions: Array<{ label: string; value: ObjectMetricTimeWindowSelection }> = [
-    { label: "不固定时间（查询时选择）", value: "unbounded" },
-    { label: "最近一段时间", value: "rolling" },
-    { label: "本周", value: "current_week" },
-    { label: "本月", value: "current_month" },
-    { label: "本季度", value: "current_quarter" },
-    { label: "本年", value: "current_year" },
-    { label: "指定日期区间", value: "fixed_range" },
+    { label: objectMetricText("mdc429a1d5381"), value: "unbounded" },
+    { label: objectMetricText("m55f2da7177ff"), value: "rolling" },
+    { label: objectMetricText("mb4c6c3eb0bce"), value: "current_week" },
+    { label: objectMetricText("m0eeecd26f2ba"), value: "current_month" },
+    { label: objectMetricText("mf142ffeef6d8"), value: "current_quarter" },
+    { label: objectMetricText("m78ebb7f81db5"), value: "current_year" },
+    { label: objectMetricText("mc708147495a5"), value: "fixed_range" },
   ];
   if (timeWindowMode && (timeWindowMode.startsWith("full_") || timeWindowMode === "current_day")) {
     timeWindowOptions.push({
-      label: `${objectMetricTimeWindowBusinessLabel(timeWindowMode) ?? "旧版时间范围"}（兼容已有指标）`,
+      label: objectMetricText("md54367b76201", {
+        p0:
+          objectMetricTimeWindowBusinessLabel(timeWindowMode) ?? objectMetricText("m5a1f6f428efd"),
+      }),
       value: timeWindowMode,
     });
   }
   const timeWindowLabel = (() => {
     if (!timeWindowMode || timeWindowMode === "unbounded") return undefined;
     const timeProperty = timePropertyOptions.find((item) => item.value === eventTime)?.label;
-    const prefix = timeProperty ? `按${timeProperty}` : "按所选事件时间";
+    const prefix = timeProperty
+      ? objectMetricText("mf145846aa1ef", { p0: timeProperty })
+      : objectMetricText("me0386bb310d5");
     if (timeWindowMode === "rolling") {
-      const rollingUnit = timeWindowUnit ? rollingTimeUnitLabels[timeWindowUnit] : "个周期";
-      return `${prefix}统计最近${timeWindowLength ?? 30}${rollingUnit}`;
+      const rollingUnit = timeWindowUnit
+        ? rollingTimeUnitLabels[timeWindowUnit]
+        : objectMetricText("m99bd7c9bcd7f");
+      return objectMetricText("mb57a559179e5", {
+        p0: prefix,
+        p1: timeWindowLength ?? 30,
+        p2: rollingUnit,
+      });
     }
     if (timeWindowMode === "fixed_range") {
       return fixedTimeRange?.[0] && fixedTimeRange[1]
-        ? `${prefix}统计 ${fixedTimeRange[0].format("YYYY-MM-DD HH:mm")} 至 ${fixedTimeRange[1].format("YYYY-MM-DD HH:mm")}`
+        ? objectMetricText("mf412ae95d897", {
+            p0: prefix,
+            p1: fixedTimeRange[0].format("YYYY-MM-DD HH:mm"),
+            p2: fixedTimeRange[1].format("YYYY-MM-DD HH:mm"),
+          })
         : undefined;
     }
     const periodLabel = objectMetricTimeWindowBusinessLabel(timeWindowMode);
-    return periodLabel ? `${prefix}统计${periodLabel}数据` : undefined;
+    return periodLabel
+      ? objectMetricText("mb0da3e3a8637", { p0: prefix, p1: periodLabel })
+      : undefined;
   })();
   const hasCompleteBusinessCondition = conditionIsComplete(businessCondition);
   const hasCompleteRelationQualifier = Boolean(
@@ -1478,22 +1789,28 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       ? conditionSummary(businessCondition, properties)
       : undefined,
     hasCompleteRelationQualifier && relationQuantifier
-      ? `${relationPathLabel || "关联路径"}：${
+      ? `${relationPathLabel || objectMetricText("m3db87a44ae00")}：${
           relationQuantifier === "exists"
             ? relatedCondition
-              ? "任一关联实例满足条件"
-              : "存在关联实例"
+              ? objectMetricText("md0c927ca64d6")
+              : objectMetricText("m69087851bfff")
             : relationQuantifierLabels[relationQuantifier]
         }`
       : undefined,
     hasCompleteTimeWindow ? timeWindowLabel : undefined,
     canConfigureFixedResultGrain && groupByDimensions?.length
-      ? `固定按${groupByDimensions
-          .map((name) => propertyOptions.find((item) => item.value === name)?.label ?? name)
-          .join("、")}分组`
+      ? objectMetricText("m9092ce372dbc", {
+          p0: groupByDimensions
+            .map((name) => propertyOptions.find((item) => item.value === name)?.label ?? name)
+            .join("、"),
+        })
       : undefined,
     canConfigureFixedResultGrain && timeGranularity && eventTime
-      ? `按${timeUnitOptions.find((item) => item.value === timeGranularity)?.label ?? timeGranularity}返回时间序列`
+      ? objectMetricText("m9d4f4092586c", {
+          p0:
+            timeUnitOptions.find((item) => item.value === timeGranularity)?.label ??
+            timeGranularity,
+        })
       : undefined,
   ].filter((item): item is string => Boolean(item));
   const hasDerivedQualifier = derivedQualifierSummaries.length > 0;
@@ -1501,9 +1818,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     const definition = record.definition;
     const objectName =
       definition.owner_object_type_id === ownerObjectTypeId
-        ? "当前对象"
+        ? objectMetricText("m19fb5855ae0c")
         : (objectTypes.find((item) => item.id === definition.owner_object_type_id)?.name ??
-          "关联对象");
+          objectMetricText("m1b6beda9eeba"));
     return `${definition.name} · v${definition.version} · ${metricTypeLabels[definition.metric_type]} · ${objectName} · ${metricLifecycleStatusLabels[definition.lifecycle.status]}`;
   };
   const publishedOptions = publishedMetrics
@@ -1538,7 +1855,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           disabled: true,
           label: selected
             ? dependencyMetricOptionLabel(selected)
-            : `依赖指标不可用 · v${dependency.metric_ref.version}（已删除、无权限或版本不存在）`,
+            : objectMetricText("m82b3a1701feb", { p0: dependency.metric_ref.version }),
           value,
         },
       ];
@@ -1559,19 +1876,19 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     const metricName = selected.definition.name;
     const objectName =
       objectTypes.find((item) => item.id === selected.definition.owner_object_type_id)?.name ??
-      "关联对象";
+      objectMetricText("m1b6beda9eeba");
     const objectAlignment =
       dependency.object_alignment.mode === "same_object"
-        ? `${metricName}与结果属于同一对象，自动按实例身份对齐`
+        ? objectMetricText("mc403e419e200", { p0: metricName })
         : dependency.object_alignment.mode === "related_object_set"
-          ? `${metricName}来自${objectName}集合，按关系路径汇总后参与计算`
-          : `${metricName}来自${objectName}，按唯一关联实例对齐`;
+          ? objectMetricText("mab25bebbaef4", { p0: metricName, p1: objectName })
+          : objectMetricText("m86aee4662324", { p0: metricName, p1: objectName });
     const windowAlignment =
       dependency.evaluation_context.window === "inherited"
-        ? "使用当前查询时间范围"
+        ? objectMetricText("m3872d2043ce5")
         : dependency.evaluation_context.window === "rolling"
-          ? "使用独立滚动时间范围"
-          : "使用自然周期至今";
+          ? objectMetricText("m29017178bfa2")
+          : objectMetricText("m358d86334bfb");
     return [`${objectAlignment}；${windowAlignment}`];
   });
   const dependencyAlignmentOptions = (
@@ -1583,19 +1900,26 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         item.definition.version === dependency.metric_ref.version,
     );
     if (selected?.definition.owner_object_type_id === ownerObjectTypeId) {
-      return [{ label: "同一对象", value: "same_object" as const }];
+      return [{ label: objectMetricText("m5949366ca6b4"), value: "same_object" as const }];
     }
     return calculationScope === "object_set"
       ? [
-          { label: "关联对象集（汇总）", value: "related_object_set" as const },
-          { label: "唯一关联对象", value: "related_object" as const },
+          { label: objectMetricText("m48173d9369fe"), value: "related_object_set" as const },
+          { label: objectMetricText("m73cf37095088"), value: "related_object" as const },
         ]
-      : [{ label: "唯一关联对象", value: "related_object" as const }];
+      : [{ label: objectMetricText("m73cf37095088"), value: "related_object" as const }];
   };
 
   useEffect(() => {
     if (!networkId) return;
     let active = true;
+    setLoadError(null);
+    if (mode === "edit") setRecord(undefined);
+    if (mode === "edit" && !metricId) {
+      setLoadError("not-found");
+      setLoading(false);
+      return;
+    }
     if (mode === "create") {
       form.setFieldsValue(initialFormValues(requestedMetricType));
       if (requestedMetricType === "atomic") {
@@ -1624,9 +1948,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         let metricCatalog = metrics.entries;
         let nextRecord: ObjectMetricRecordV1 | undefined;
         if (mode === "edit" && metricId) {
-          nextRecord = await getObjectMetricV1(networkId, metricId);
+          nextRecord = await getObjectMetricV1(networkId, metricId, undefined, {
+            skipErrorToast: true,
+          });
           if (["published", "deprecated"].includes(nextRecord.definition.lifecycle.status)) {
-            void message.info("已发布版本不可直接修改，请从详情页明确创建新版本");
+            void message.info(objectMetricText("m345e77bf06f8"));
             void navigate(
               `/knowledge-network/workspace/${networkId}/metrics/${nextRecord.definition.id}/detail`,
               { replace: true },
@@ -1691,6 +2017,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           ];
         }
         if (active) setPublishedMetrics(metricCatalog);
+      } catch (error) {
+        if (active) {
+          setLoadError(
+            isRequestForbidden(error)
+              ? "forbidden"
+              : isRequestNotFound(error)
+                ? "not-found"
+                : "unknown",
+          );
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -1707,19 +2043,30 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     networkId,
     requestedMetricType,
     requestedObjectTypeId,
+    reloadKey,
   ]);
 
   useEffect(() => {
     if (!networkId || !ownerObjectTypeId) return;
     let active = true;
     setPropertiesLoading(true);
+    setPropertiesError(false);
+    setProperties([]);
     void (async () => {
-      const [dependencyProperties, detail] = await Promise.all([
-        getKnowledgeNetworkMetricDependencyProperties(networkId, ownerObjectTypeId).catch(() => []),
+      const [dependencyPropertiesResult, detail] = await Promise.all([
+        getKnowledgeNetworkMetricDependencyProperties(networkId, ownerObjectTypeId)
+          .then((entries) => ({ entries, failed: false }))
+          .catch(() => ({ entries: [], failed: true })),
         getKnowledgeNetworkObjectTypeDetail(networkId, ownerObjectTypeId).catch(() => null),
       ]);
-      const sourceProperties = dependencyProperties.length
-        ? dependencyProperties
+      if (!active) return;
+      if (dependencyPropertiesResult.failed) {
+        setPropertiesError(true);
+        setPropertiesLoading(false);
+        return;
+      }
+      const sourceProperties = dependencyPropertiesResult.entries.length
+        ? dependencyPropertiesResult.entries
         : (detail?.dataProperties ?? []);
       const items = sourceProperties.map((item) => ({
         label: `${item.displayName || item.name} · ${item.name}`,
@@ -1727,7 +2074,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         propertyName: item.name,
         propertyType: item.type,
       }));
-      if (!active) return;
       setProperties(items);
       setOwnerObjectTypeDetail(detail);
       setPropertiesLoading(false);
@@ -1735,7 +2081,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     return () => {
       active = false;
     };
-  }, [networkId, ownerObjectTypeId]);
+  }, [networkId, ownerObjectTypeId, propertiesReloadKey]);
 
   useEffect(() => {
     if (
@@ -2107,7 +2453,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         : await createObjectMetricDraftV1(networkId, next);
       if (saved) {
         setRecord(saved);
-        void message.success("草稿已保存");
+        void message.success(objectMetricText("med6341cbd511"));
         if (!record) {
           void navigate(
             `/knowledge-network/workspace/${networkId}/metrics/${saved.definition.id}/edit`,
@@ -2148,7 +2494,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         );
       }
     }
-    void message.success("语义校验通过，当前版本已标记为已校验");
+    void message.success(objectMetricText("mb98ac5ead1a7"));
   };
 
   const openPreview = async () => {
@@ -2186,7 +2532,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       validated?.definition.id ?? saved.definition.id,
       validated?.definition.version ?? saved.definition.version,
     );
-    void message.success("指标已发布");
+    void message.success(objectMetricText("mbf73c8faca59"));
     void navigate(
       `/knowledge-network/workspace/${networkId}/metrics/${saved.definition.id}/detail`,
       { state: { justPublished: true } },
@@ -2199,47 +2545,93 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         <Spin />
       </div>
     );
+  if (mode === "edit" && !record) {
+    return (
+      <Result
+        status={loadError === "forbidden" ? "403" : loadError === "not-found" ? "404" : "error"}
+        title={
+          loadError === "forbidden"
+            ? objectMetricText("m2a9ed8385cd1")
+            : loadError === "not-found"
+              ? objectMetricText("mcbc612fb7c63")
+              : objectMetricText("mb453a743a203")
+        }
+        subTitle={objectMetricText("m40f0ad99f292")}
+        extra={
+          <Space>
+            <Button
+              onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/metrics`)}
+            >
+              {objectMetricText("m8d8251782181")}
+            </Button>
+            {loadError === "unknown" ? (
+              <Button onClick={() => setReloadKey((value) => value + 1)} type="primary">
+                {objectMetricText("mb8784c8dd563")}
+              </Button>
+            ) : null}
+          </Space>
+        }
+      />
+    );
+  }
   if (!ownerObjectTypeId) {
     return (
       <Result
         status="warning"
-        title="请先选择对象类"
-        subTitle="指标必须从对象指标列表中的对象类上下文创建。"
+        title={objectMetricText("m31ec9738ea7b")}
+        subTitle={objectMetricText("mbe1539a3daff")}
         extra={
           <Button
             onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/metrics`)}
             type="primary"
           >
-            返回对象指标列表
+            {objectMetricText("mcdfb4fd1b61d")}
           </Button>
         }
       />
     );
   }
 
-  const metricTypeNames = { atomic: "原子指标", composite: "复合指标", derived: "衍生指标" };
+  const metricTypeNames = {
+    atomic: objectMetricText("me5675ba4c2fd"),
+    composite: objectMetricText("m3e70c815f275"),
+    derived: objectMetricText("me88b222ae28a"),
+  };
   const ownerObjectName = ownerObjectType?.name ?? ownerObjectTypeId;
   const outputNames = {
-    grouped: "分组结果",
-    object_value: "每实例单值",
-    summary: "汇总值",
-    time_series: "时间序列",
+    grouped: objectMetricText("m63a570e277c4"),
+    object_value: objectMetricText("m63b7464d2a3f"),
+    summary: objectMetricText("m887c0bab2e93"),
+    time_series: objectMetricText("m523d11919689"),
   };
   const aiExamples =
     metricType === "atomic"
-      ? ["统计订单数量", "汇总实付金额", "每笔订单实付金额"]
+      ? [
+          objectMetricText("maa59dfb26df4"),
+          objectMetricText("me73d061bf548"),
+          objectMetricText("m7ba5278750dc"),
+        ]
       : metricType === "derived"
-        ? ["已完成订单金额", "本月支付额", "按渠道统计订单数"]
-        : ["订单平均金额", "支付转化率", "退款金额占比"];
+        ? [
+            objectMetricText("m26c1d6f2523b"),
+            objectMetricText("m8552028074d2"),
+            objectMetricText("m9bdb41d25a11"),
+          ]
+        : [
+            objectMetricText("m1d08faa33bfc"),
+            objectMetricText("mf84b7b21ea55"),
+            objectMetricText("me6c97a7d8a7c"),
+          ];
   const aiGenerationSucceeded = aiConversation.some(
-    (item) => item.role === "assistant" && item.content.startsWith("已填写当前表单"),
+    (item) =>
+      item.role === "assistant" && item.content.startsWith(objectMetricText("m93b79e40a429")),
   );
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
         <Button
-          aria-label="返回对象指标列表"
+          aria-label={objectMetricText("mcdfb4fd1b61d")}
           className={styles.backButton}
           icon={<LeftOutlined />}
           onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/metrics`)}
@@ -2247,22 +2639,35 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         />
         <div className={styles.headerCopy}>
           <h1 className={styles.title}>
-            {record ? "编辑" : "新建"}
+            {record ? objectMetricText("m051836569928") : objectMetricText("m50ef2f4cf6a4")}
             {metricTypeNames[metricType]} · {ownerObjectName}
           </h1>
           <p className={styles.subtitle}>
             {metricType === "atomic"
-              ? "定义可复用的基础事实，保存草稿并检查配置后发布。"
-              : "按业务口径完成配置，保存草稿后校验发布。"}
+              ? objectMetricText("m8a16c5f40c99")
+              : objectMetricText("mb3ad01d53b9e")}
           </p>
         </div>
         <div className={styles.headerActions}>
           <Button icon={<ThunderboltOutlined />} onClick={() => setAiOpen(true)} type="primary">
-            AI 生成
+            {objectMetricText("m7714c1cdc14a")}
           </Button>
         </div>
       </header>
       <div className={styles.body}>
+        {propertiesError ? (
+          <Alert
+            description={objectMetricText("m8345f4c73446")}
+            message={objectMetricText("m2b3e9803192c")}
+            showIcon
+            type="error"
+            action={
+              <Button onClick={() => setPropertiesReloadKey((value) => value + 1)} size="small">
+                {objectMetricText("mb8784c8dd563")}
+              </Button>
+            }
+          />
+        ) : null}
         <Form
           className={styles.form}
           form={form}
@@ -2273,37 +2678,37 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             setPreview(undefined);
           }}
         >
-          <Section title="1. 基本信息">
+          <Section title={objectMetricText("m15b0d75b1662")}>
             <div className={styles.grid2}>
               <Form.Item
-                label="指标名称"
+                label={objectMetricText("m5fadf5e3e6a9")}
                 name="name"
-                rules={[{ required: true, message: "请输入指标名称" }]}
+                rules={[{ required: true, message: objectMetricText("m4f3aafd2922b") }]}
               >
                 <Input
                   maxLength={128}
                   placeholder={
                     metricType === "atomic"
                       ? calculationScope === "object_instance"
-                        ? "例如：每笔订单实付金额"
-                        : "例如：订单总数或订单金额合计"
-                      : "例如：已取消订单数"
+                        ? objectMetricText("m999909534bc6")
+                        : objectMetricText("m10563427d63a")
+                      : objectMetricText("m826f8d73782b")
                   }
                 />
               </Form.Item>
               <Form.Item
-                label="指标编码"
+                label={objectMetricText("m13700a34d7b3")}
                 name="code"
                 rules={[
                   {
                     pattern: /^[a-z][a-z0-9_]*$/,
-                    message: "使用小写字母、数字和下划线，并以字母开头",
+                    message: objectMetricText("mb9eeaa34688d"),
                   },
                 ]}
                 tooltip={
                   metricType === "atomic"
-                    ? "可选。用于系统集成、规则和逻辑属性引用；留空时由系统自动生成，创建后不可修改。"
-                    : "用于接口、规则和逻辑属性的稳定引用。留空时由系统生成，创建后不可修改。"
+                    ? objectMetricText("m50b12a6c63da")
+                    : objectMetricText("m0ed0e30a33ce")
                 }
               >
                 <Input
@@ -2312,30 +2717,26 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   placeholder={
                     metricType === "atomic"
                       ? calculationScope === "object_instance"
-                        ? "例如：order_paid_amount"
-                        : "例如：order_count 或 order_amount_sum"
-                      : "例如：cancelled_order_count"
+                        ? objectMetricText("m46cb4578ccda")
+                        : objectMetricText("m9b146d55919f")
+                      : objectMetricText("m4587b84e64ae")
                   }
                   spellCheck={false}
                 />
               </Form.Item>
               <Form.Item
                 className={styles.full}
-                extra={
-                  metricType === "atomic"
-                    ? "原子指标只定义可复用的基础事实；状态、渠道、时间范围或关联对象等业务限定请在衍生指标中配置。"
-                    : undefined
-                }
-                label="业务定义"
+                extra={metricType === "atomic" ? objectMetricText("m38858a833aef") : undefined}
+                label={objectMetricText("m419eb90613fd")}
                 name="description"
-                rules={[{ required: true, message: "请说明这个指标表达的业务含义" }]}
+                rules={[{ required: true, message: objectMetricText("mf741bb6e021d") }]}
               >
                 <Input.TextArea
                   rows={3}
                   placeholder={
                     metricType === "atomic"
-                      ? "说明取值来源、计算方式和结果含义；不要加入状态、渠道或时间范围等业务限定"
-                      : "说明统计对象、业务口径和结果含义"
+                      ? objectMetricText("md965eea2b982")
+                      : objectMetricText("m1ed87cf29094")
                   }
                 />
               </Form.Item>
@@ -2343,25 +2744,25 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </Section>
 
           <Section
-            title={metricType === "derived" ? "2. 选择基础指标" : "2. 计算范围"}
-            tooltip={
+            title={
               metricType === "derived"
-                ? "衍生指标继承基础原子指标的计算范围、聚合方式、值类型和单位，只增加业务限定。"
-                : undefined
+                ? objectMetricText("me9820e0a2bfa")
+                : objectMetricText("ma7d66d99c5ec")
             }
+            tooltip={metricType === "derived" ? objectMetricText("m46b0eb4ce947") : undefined}
           >
             {metricType === "derived" ? (
               <>
                 <Form.Item
-                  label="基础原子指标"
+                  label={objectMetricText("m4919ba2e9c0b")}
                   name="baseMetric"
-                  rules={[{ required: true, message: "请选择已发布原子指标" }]}
+                  rules={[{ required: true, message: objectMetricText("m9c96505c8b76") }]}
                 >
                   <Select
                     notFoundContent={
                       compatibleAtomicMetrics.length
-                        ? "没有找到匹配的指标"
-                        : "当前对象类还没有已发布的原子指标"
+                        ? objectMetricText("mdeb8a04abe26")
+                        : objectMetricText("m9d00ceba9472")
                     }
                     onChange={selectBaseMetric}
                     optionFilterProp="label"
@@ -2369,7 +2770,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       label: `${item.name} · v${item.version}`,
                       value: dependencyKey(item.id, item.version),
                     }))}
-                    placeholder="选择一个已发布的原子指标版本"
+                    placeholder={objectMetricText("m49d82b057932")}
                     showSearch
                   />
                 </Form.Item>
@@ -2378,8 +2779,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 </Form.Item>
                 {!compatibleAtomicMetrics.length ? (
                   <Alert
-                    description="请先在当前对象类下创建并发布原子指标，再返回创建衍生指标。"
-                    message="没有可用的基础原子指标"
+                    description={objectMetricText("maaf65e7dd687")}
+                    message={objectMetricText("md47b8b9dc87e")}
                     showIcon
                     type="info"
                   />
@@ -2389,7 +2790,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     <div className={styles.inheritedContractHeader}>
                       <div>
                         <strong>{selectedBaseDefinition.name}</strong>
-                        <span>已锁定发布版本 v{selectedBaseDefinition.version}</span>
+                        <span>
+                          {objectMetricText("m6a342183b1b0")}
+                          {selectedBaseDefinition.version}
+                        </span>
                       </div>
                       {!isGeneratedMetricCode(selectedBaseDefinition.code) ? (
                         <Tag>{selectedBaseDefinition.code}</Tag>
@@ -2397,21 +2801,21 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     </div>
                     <div className={styles.inheritedContractGrid}>
                       <div>
-                        <span>计算范围</span>
+                        <span>{objectMetricText("m9d1c9c0a1780")}</span>
                         <strong>
                           {calculationScopeLabels[selectedBaseDefinition.calculation_scope]}
                         </strong>
                       </div>
                       <div>
-                        <span>基础计算</span>
+                        <span>{objectMetricText("mf4b24b147909")}</span>
                         <strong>
                           {selectedBaseAggregation
                             ? aggregationLabels[selectedBaseAggregation]
-                            : "继承基础指标"}
+                            : objectMetricText("m10de36a7014d")}
                         </strong>
                       </div>
                       <div>
-                        <span>指标值类型</span>
+                        <span>{objectMetricText("m6551b12a8b84")}</span>
                         <strong>
                           {semanticTypeOptions.find(
                             (item) => item.value === selectedBaseValue.semantic_type,
@@ -2419,14 +2823,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         </strong>
                       </div>
                       <div>
-                        <span>单位</span>
-                        <strong>{selectedBaseValue.unit?.code ?? "无单位"}</strong>
+                        <span>{objectMetricText("m80b19d68b149")}</span>
+                        <strong>
+                          {selectedBaseValue.unit?.code ?? objectMetricText("m3be9bf13138e")}
+                        </strong>
                       </div>
                     </div>
                     <p>
                       {selectedBaseDefinition.calculation_scope === "object_instance"
-                        ? "当前衍生指标只能增加业务条件和时间范围，不能修改以上基础计算。"
-                        : "当前衍生指标可以增加业务条件、时间范围和结果粒度，不能修改以上基础计算。"}
+                        ? objectMetricText("mb11260bc678c")
+                        : objectMetricText("m50cbde258a05")}
                     </p>
                   </div>
                 ) : null}
@@ -2435,12 +2841,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               <>
                 <Form.Item
                   className={styles.scopeField}
-                  label="实例范围"
+                  label={objectMetricText("ma923e53ba2d5")}
                   name="calculationScope"
                   tooltip={
                     metricType === "atomic"
-                      ? "选择“单个实例”时为每个实例返回一个值；选择“实例集合”时默认返回一个汇总值，并可开放查询时使用的分析维度和时间属性。"
-                      : "选择“单个实例”时逐个计算，不进行聚合；选择“实例集合”时对一组实例进行聚合，并可进一步配置统计周期和分组维度。"
+                      ? objectMetricText("m9fd8d792ab65")
+                      : objectMetricText("mb8d096f57bc7")
                   }
                 >
                   <Radio.Group
@@ -2497,7 +2903,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             setCompositeExpression(defaultCompositeExpression(next));
                             form.setFieldValue("primaryDependencyAlias", undefined);
                             void message.info(
-                              `计算范围已切换，${current.length - next.length} 个不兼容的依赖指标已移除，公式已重新初始化`,
+                              objectMetricText("m20c6463a2da7", {
+                                p0: current.length - next.length,
+                              }),
                             );
                           }
                           return next;
@@ -2550,32 +2958,42 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   >
                     <Radio className={styles.scopeOption} value="object_instance">
                       <span className={styles.scopeOptionContent}>
-                        <strong className={styles.scopeOptionTitle}>单个实例</strong>
+                        <strong className={styles.scopeOptionTitle}>
+                          {objectMetricText("mabe9d02781fc")}
+                        </strong>
                         <span className={styles.scopeOptionDescription}>
-                          对每个实例独立计算，结果按实例返回
+                          {objectMetricText("mb96813e37eb9")}
                         </span>
-                        <span className={styles.scopeOptionExample}>例如：每笔订单的实付金额</span>
+                        <span className={styles.scopeOptionExample}>
+                          {objectMetricText("m32d1a0eb2656")}
+                        </span>
                       </span>
                     </Radio>
                     <Radio className={styles.scopeOption} value="object_set">
                       <span className={styles.scopeOptionContent}>
-                        <strong className={styles.scopeOptionTitle}>实例集合</strong>
+                        <strong className={styles.scopeOptionTitle}>
+                          {objectMetricText("m9c51e86f9307")}
+                        </strong>
                         <span className={styles.scopeOptionDescription}>
                           {metricType === "atomic"
-                            ? "对一组实例进行聚合，默认返回一个汇总值"
-                            : "对一组实例进行聚合，返回汇总、分组或时间序列结果"}
+                            ? objectMetricText("mce629b202a48")
+                            : objectMetricText("ma093d92f2da5")}
                         </span>
                         <span className={styles.scopeOptionExample}>
                           {metricType === "atomic"
-                            ? "例如：订单总数、全部订单金额合计"
-                            : "例如：订单总数、按渠道统计的订单金额"}
+                            ? objectMetricText("me26cdf99b8a7")
+                            : objectMetricText("m0dc2d63d582b")}
                         </span>
                       </span>
                     </Radio>
                   </Radio.Group>
                 </Form.Item>
                 <div className={styles.outputSummary}>
-                  <span>{metricType === "atomic" ? "默认结果" : "预计结果"}</span>
+                  <span>
+                    {metricType === "atomic"
+                      ? objectMetricText("md16809473a31")
+                      : objectMetricText("mac3b1f1a1611")}
+                  </span>
                   <strong>{outputNames[outputShape]}</strong>
                 </div>
               </>
@@ -2583,15 +3001,19 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </Section>
 
           <Section
-            title={metricType === "derived" ? "3. 业务限定" : "3. 计算逻辑"}
+            title={
+              metricType === "derived"
+                ? objectMetricText("m79786328b3a7")
+                : objectMetricText("maeb999515d25")
+            }
             tooltip={
               metricType === "atomic"
                 ? calculationScope === "object_instance"
-                  ? "定义每个实例如何得到一个值：直接读取属性，或进行一次简单函数或四则运算。若需限定状态、渠道、时间范围或关联对象，请发布后创建衍生指标。"
-                  : "定义一组实例如何得到汇总值：可直接计数，或对某个属性进行聚合。若需限定状态、渠道、时间范围或关联对象，请发布后创建衍生指标。"
+                  ? objectMetricText("mf56efcaee393")
+                  : objectMetricText("md4a65d30b01e")
                 : metricType === "derived"
-                  ? "在一个已发布原子指标的基础上增加业务限定。"
-                  : "组合至少两个已发布指标，并配置依赖、运算公式和对齐规则。"
+                  ? objectMetricText("md6af45998ee5")
+                  : objectMetricText("m1c88a196f1e5")
             }
           >
             {metricType === "atomic" ? (
@@ -2599,10 +3021,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 {calculationScope !== "object_instance" ? (
                   <Form.Item
                     extra={aggregation ? atomicAggregationGuidance[aggregation] : undefined}
-                    label="聚合方式"
+                    label={objectMetricText("mb17e03bc6bad")}
                     name="aggregation"
-                    rules={[{ required: true, message: "请选择聚合方式" }]}
-                    tooltip="计数统计全部实例，无需选择属性；非空计数和去重计数需要选择属性；求和和平均值适用于数值属性；最小值和最大值返回指定属性的极值。"
+                    rules={[{ required: true, message: objectMetricText("mc2dcda28ea66") }]}
+                    tooltip={objectMetricText("mfe11249e4b11")}
                   >
                     <Select
                       onChange={(aggregation: FormValues["aggregation"]) => {
@@ -2616,13 +3038,13 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         );
                       }}
                       options={[
-                        { label: "计数（全部实例）", value: "count_rows" },
-                        { label: "非空计数（指定属性）", value: "count" },
-                        { label: "去重计数（指定属性）", value: "count_distinct" },
-                        { label: "求和（数值属性）", value: "sum" },
-                        { label: "平均值（数值属性）", value: "avg" },
-                        { label: "最小值（指定属性）", value: "min" },
-                        { label: "最大值（指定属性）", value: "max" },
+                        { label: objectMetricText("mc88821bc9355"), value: "count_rows" },
+                        { label: objectMetricText("m42f96dcbed92"), value: "count" },
+                        { label: objectMetricText("m92f727932d82"), value: "count_distinct" },
+                        { label: objectMetricText("m4d3f0a6e432f"), value: "sum" },
+                        { label: objectMetricText("m7b3b2b341884"), value: "avg" },
+                        { label: objectMetricText("m7a2c98005c37"), value: "min" },
+                        { label: objectMetricText("md856266eea4c"), value: "max" },
                       ].filter(
                         (item) =>
                           !capabilities ||
@@ -2635,14 +3057,20 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   <div className={styles.full}>
                     <div className={styles.sectionTitle}>
                       <h3>
-                        {calculationScope === "object_instance" ? "取值方式" : "参与聚合的值"}
+                        {calculationScope === "object_instance"
+                          ? objectMetricText("mae25d81d750f")
+                          : objectMetricText("m9935c5534c0d")}
                       </h3>
                       <HelpTooltip
-                        label={calculationScope === "object_instance" ? "取值方式" : "参与聚合的值"}
+                        label={
+                          calculationScope === "object_instance"
+                            ? objectMetricText("mae25d81d750f")
+                            : objectMetricText("m9935c5534c0d")
+                        }
                         title={
                           calculationScope === "object_instance"
-                            ? "选择当前对象的一个属性直接返回，也可使用一次简单函数或一次四则运算；公式必须引用至少一个对象属性。"
-                            : "选择需要计数或聚合的对象属性，也可在聚合前使用一次简单函数或一次四则运算。"
+                            ? objectMetricText("me490400910d6")
+                            : objectMetricText("med64b62cd336")
                         }
                       />
                     </div>
@@ -2650,12 +3078,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       {requiresAtomicMeasureProperty && propertiesLoading ? (
                         <Space size="small">
                           <Spin size="small" />
-                          <span>正在加载对象属性…</span>
+                          <span>{objectMetricText("mba3ef4c0763f")}</span>
                         </Space>
                       ) : requiresAtomicMeasureProperty && !properties.length ? (
                         <Alert
-                          description="请检查当前对象类是否已定义数据属性，或稍后重试加载。"
-                          message="未加载到可引用的对象属性"
+                          description={objectMetricText("m3276cb837889")}
+                          message={objectMetricText("m6d93f88af148")}
                           showIcon
                           type="error"
                         />
@@ -2677,13 +3105,13 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         className={styles.expressionIssue}
                         description={
                           atomicExpressionInteracted
-                            ? "固定值可以参与计算，但原子指标必须至少引用一个当前对象属性。请在计算中选择对象属性。"
-                            : "原子指标需要从当前对象的数据属性取得基础事实。"
+                            ? objectMetricText("m360aa1f864e9")
+                            : objectMetricText("mc7b974dcab96")
                         }
                         message={
                           atomicExpressionInteracted
-                            ? "当前计算尚未引用对象属性"
-                            : "请先选择一个对象属性"
+                            ? objectMetricText("mef3f1cb3fcd8")
+                            : objectMetricText("m1fd43c6f6310")
                         }
                         showIcon
                         type={atomicExpressionInteracted ? "warning" : "info"}
@@ -2701,12 +3129,18 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     className={styles.qualifierStatus}
                     description={
                       hasDerivedQualifier
-                        ? `已配置 ${derivedQualifierSummaries.length} 项业务限定。`
+                        ? objectMetricText("m04877d8ac4cb", {
+                            p0: derivedQualifierSummaries.length,
+                          })
                         : selectedBaseDefinition?.calculation_scope === "object_instance"
-                          ? "衍生指标不能与基础指标完全相同，请至少增加当前实例条件、关联实例条件或时间范围中的 1 项。"
-                          : "衍生指标不能与基础指标完全相同，请至少增加当前实例条件、关联实例条件、时间范围、固定分组或时间粒度中的 1 项。"
+                          ? objectMetricText("m8fb551ae43b9")
+                          : objectMetricText("m759cd4799d14")
                     }
-                    message={hasDerivedQualifier ? "业务口径已形成" : "还需要增加业务限定"}
+                    message={
+                      hasDerivedQualifier
+                        ? objectMetricText("m6af7b015b79d")
+                        : objectMetricText("m35375e17cc4f")
+                    }
                     showIcon
                     type={hasDerivedQualifier ? "success" : "warning"}
                   />
@@ -2715,10 +3149,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     <div className={styles.qualifierHeading}>
                       <span>1</span>
                       <div>
-                        <h3>当前实例条件</h3>
-                        <p>直接使用{ownerObjectName}的属性限定参与计算的实例。</p>
+                        <h3>{objectMetricText("ma5e8d53d9876")}</h3>
+                        <p>
+                          {objectMetricText("m22bb45e08a49")}
+                          {ownerObjectName}
+                          {objectMetricText("m5e818337deeb")}
+                        </p>
                       </div>
-                      <Tag>可选</Tag>
+                      <Tag>{objectMetricText("m537352400c49")}</Tag>
                     </div>
                     <ObjectMetricConditionBuilder
                       allowedBooleanOperators={capabilities?.boolean_operators}
@@ -2742,10 +3180,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     <div className={styles.qualifierHeading}>
                       <span>2</span>
                       <div>
-                        <h3>关联实例条件</h3>
-                        <p>通过关系类判断当前实例是否参与计算，不汇总关联实例的数值。</p>
+                        <h3>{objectMetricText("m14abf2359755")}</h3>
+                        <p>{objectMetricText("m4e5b4856e92a")}</p>
                       </div>
-                      <Tag>可选</Tag>
+                      <Tag>{objectMetricText("m537352400c49")}</Tag>
                     </div>
                     {relationSteps.map((step, index) => {
                       const sourceObjectTypeId =
@@ -2771,7 +3209,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         >
                           <Tag>{index + 1}</Tag>
                           <Select
-                            aria-label={`第 ${index + 1} 步关系类`}
+                            aria-label={objectMetricText("m74d1b07c2aa3", { p0: index + 1 })}
                             onChange={(relationTypeId) => {
                               const relation = relationTypes.find(
                                 (item) => item.id === relationTypeId,
@@ -2801,16 +3239,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                               label: item.name,
                               value: item.id,
                             }))}
-                            placeholder="选择关系类"
+                            placeholder={objectMetricText("m994d0853ef10")}
                             value={step.relation_type_id || undefined}
                           />
                           <span className={styles.relationTarget}>
                             →{" "}
                             {objectTypes.find((item) => item.id === step.target_object_type_id)
-                              ?.name ?? "选择关系后自动确定目标对象类"}
+                              ?.name ?? objectMetricText("m5079d07a8554")}
                           </span>
                           <Button
-                            aria-label={`删除第 ${index + 1} 个关系类步骤`}
+                            aria-label={objectMetricText("md8db94640516", { p0: index + 1 })}
                             danger
                             icon={<DeleteOutlined aria-hidden="true" />}
                             onClick={() => {
@@ -2844,37 +3282,43 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       }
                       type="dashed"
                     >
-                      添加关系路径
+                      {objectMetricText("m22c295f59271")}
                     </Button>
                     {lastRelationStep?.target_object_type_id && !canAddRelationStep ? (
                       <span className={styles.relationPathHint}>
-                        当前关联对象没有可继续选择的关系；已自动排除原路返回。
+                        {objectMetricText("m7c206c7867f0")}
                       </span>
                     ) : null}
                     {relationSteps.length && relatedProperties.length ? (
                       <div className={styles.relationConfiguration}>
                         {hasLegacyRelationRule && relationQuantifier ? (
                           <div className={styles.relationRuleSentence}>
-                            <Tag>历史规则</Tag>
+                            <Tag>{objectMetricText("mf4fb8cc04dfb")}</Tag>
                             <span>
-                              当前继续按“{relationQuantifierLabels[relationQuantifier]}”判断关联的
+                              {objectMetricText("m4061607ab144")}
+                              {relationQuantifierLabels[relationQuantifier]}
+                              {objectMetricText("mdf286d746f86")}
                               <strong>
                                 {objectTypes.find(
                                   (item) => item.id === relationSteps.at(-1)?.target_object_type_id,
-                                )?.name ?? "实例"}
+                                )?.name ?? objectMetricText("mcc43dc69ae08")}
                               </strong>
                               。
                             </span>
                           </div>
                         ) : (
                           <p className={styles.relationAutomaticHint}>
-                            默认规则：关联对象任一满足条件即可，当前{ownerObjectName}只计算一次。
+                            {objectMetricText("mb6daf7c89039")}
+                            {ownerObjectName}
+                            {objectMetricText("m741f53ab3631")}
                           </p>
                         )}
                         {hasLegacyRelationRule && relationQuantifier ? (
                           <Alert
-                            description="为避免改变已有指标口径，当前继续按原规则执行；重新选择关系路径后将使用默认的“任一满足”。"
-                            message={`历史高级判断规则：${relationQuantifierLabels[relationQuantifier]}`}
+                            description={objectMetricText("mff9b85306df2")}
+                            message={objectMetricText("mc5ece2837411", {
+                              p0: relationQuantifierLabels[relationQuantifier],
+                            })}
                             showIcon
                             type="info"
                           />
@@ -2894,13 +3338,13 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     <div className={styles.qualifierHeading}>
                       <span>3</span>
                       <div>
-                        <h3>时间范围</h3>
-                        <p>限定哪些时间的数据参与计算；不固定时由查询方选择日期。</p>
+                        <h3>{objectMetricText("m07eb730af899")}</h3>
+                        <p>{objectMetricText("me58563870371")}</p>
                       </div>
-                      <Tag>可选</Tag>
+                      <Tag>{objectMetricText("m537352400c49")}</Tag>
                     </div>
                     <div className={styles.timeWindowGrid}>
-                      <Form.Item label="统计时间范围" name="timeWindowMode">
+                      <Form.Item label={objectMetricText("m80ee5ade8132")} name="timeWindowMode">
                         <Select
                           onChange={(mode: FormValues["timeWindowMode"]) => {
                             if (!mode || mode === "unbounded") {
@@ -2938,36 +3382,44 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             }
                           }}
                           options={timeWindowOptions}
-                          placeholder="不固定时间（查询时选择）"
+                          placeholder={objectMetricText("mdc429a1d5381")}
                         />
                       </Form.Item>
                       {(timeWindowMode && timeWindowMode !== "unbounded") || timeGranularity ? (
                         <Form.Item
-                          label={timeGranularity ? "时间属性（同时用于结果分桶）" : "时间属性"}
+                          label={
+                            timeGranularity
+                              ? objectMetricText("m7d5e7c7bcea6")
+                              : objectMetricText("m499eb2a235de")
+                          }
                           name="eventTime"
-                          rules={[{ required: true, message: "请选择事件时间属性" }]}
+                          rules={[{ required: true, message: objectMetricText("m6c1dc7649906") }]}
                         >
                           <Select
                             options={timePropertyOptions}
-                            placeholder="选择基础指标开放的时间属性"
+                            placeholder={objectMetricText("m006ac9135d75")}
                           />
                         </Form.Item>
                       ) : null}
                       {timeWindowMode === "rolling" ? (
-                        <Form.Item label="最近多久" required>
+                        <Form.Item label={objectMetricText("mea12178e66cd")} required>
                           <div className={styles.rollingWindowControl}>
-                            <span>最近</span>
+                            <span>{objectMetricText("m997a5e6e513f")}</span>
                             <Form.Item
                               name="timeWindowLength"
                               noStyle
-                              rules={[{ required: true, message: "请输入时间长度" }]}
+                              rules={[
+                                { required: true, message: objectMetricText("mbd4e7e999b6b") },
+                              ]}
                             >
                               <InputNumber min={1} precision={0} />
                             </Form.Item>
                             <Form.Item
                               name="timeWindowUnit"
                               noStyle
-                              rules={[{ required: true, message: "请选择时间单位" }]}
+                              rules={[
+                                { required: true, message: objectMetricText("me389729df418") },
+                              ]}
                             >
                               <Select options={[...timeUnitOptions]} />
                             </Form.Item>
@@ -2976,14 +3428,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       ) : null}
                       {timeWindowMode === "fixed_range" ? (
                         <Form.Item
-                          extra="适合活动期、合同期等不会随查询日期变化的指标；固定后会降低指标复用性。"
-                          label="日期范围"
+                          extra={objectMetricText("m5f42ef09875a")}
+                          label={objectMetricText("mc95ff6b50078")}
                           name="fixedTimeRange"
-                          rules={[{ required: true, message: "请选择开始和结束时间" }]}
+                          rules={[{ required: true, message: objectMetricText("me28db81c3731") }]}
                         >
                           <DatePicker.RangePicker
                             format="YYYY-MM-DD HH:mm"
-                            placeholder={["开始时间", "结束时间"]}
+                            placeholder={[
+                              objectMetricText("m6a9906c79f26"),
+                              objectMetricText("mf50276449943"),
+                            ]}
                             showTime
                             style={{ width: "100%" }}
                           />
@@ -2993,12 +3448,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     {timeWindowMode && timeWindowMode !== "unbounded" ? (
                       <>
                         <div aria-live="polite" className={styles.timeWindowPreview}>
-                          <span>当前时间口径</span>
-                          <strong>{timeWindowLabel ?? "请完成时间范围配置"}</strong>
+                          <span>{objectMetricText("ma17e39c40c62")}</span>
+                          <strong>{timeWindowLabel ?? objectMetricText("m8c84513554d5")}</strong>
                           <small>
-                            统一使用 UTC
-                            {timeWindowMode === "fixed_range" ? "解释起止时间" : "划分日期边界"}
-                            {timeWindowPeriod === "week" ? "，每周从周一开始" : ""}
+                            {objectMetricText("m122e141120bd")}
+                            {timeWindowMode === "fixed_range"
+                              ? objectMetricText("mea595b5cd6fb")
+                              : objectMetricText("mca00485fdcfd")}
+                            {timeWindowPeriod === "week" ? objectMetricText("mb47fc4bc3795") : ""}
                           </small>
                         </div>
                       </>
@@ -3006,8 +3463,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     {((timeWindowMode && timeWindowMode !== "unbounded") || timeGranularity) &&
                     !timePropertyOptions.length ? (
                       <Alert
-                        description="请先在基础原子指标中开放一个日期或日期时间属性。"
-                        message="基础指标没有可用的时间属性"
+                        description={objectMetricText("medfc221d3390")}
+                        message={objectMetricText("m7692663f41e1")}
                         showIcon
                         type="warning"
                       />
@@ -3016,32 +3473,33 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
 
                   <div aria-live="polite" className={styles.definitionPreview}>
                     <div className={styles.definitionPreviewTitle}>
-                      <strong>当前业务口径</strong>
-                      <span>随配置实时更新</span>
+                      <strong>{objectMetricText("me566a8a69945")}</strong>
+                      <span>{objectMetricText("mb8ee9bec6e3b")}</span>
                     </div>
                     <p>
-                      基于“{selectedBaseDefinition?.name} v{selectedBaseDefinition?.version}”
+                      {objectMetricText("m501e184c7e81")}
+                      {selectedBaseDefinition?.name} v{selectedBaseDefinition?.version}”
                       {derivedQualifierSummaries.length
                         ? `，${derivedQualifierSummaries.join("；")}。`
-                        : "，尚未增加业务限定。"}
+                        : objectMetricText("m4d39fee53b2d")}
                     </p>
                     <p className={styles.technicalPreview}>
-                      计算范围：
+                      {objectMetricText("m55dc21e73831")}
                       {selectedBaseDefinition
                         ? calculationScopeLabels[selectedBaseDefinition.calculation_scope]
                         : "—"}
-                      · 基础计算：
+                      {objectMetricText("me13e2a0e8378")}
                       {selectedBaseAggregation
                         ? aggregationLabels[selectedBaseAggregation]
-                        : "继承基础指标"}
-                      · 关联实例仅用于筛选，当前实例按身份去重
+                        : objectMetricText("m10de36a7014d")}
+                      {objectMetricText("m86aad48a82fb")}
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className={styles.guidedEmpty}>
-                  <strong>先选择基础原子指标</strong>
-                  <span>选定后再配置当前实例条件、关联实例条件或固定时间范围。</span>
+                  <strong>{objectMetricText("m293a6721e7d0")}</strong>
+                  <span>{objectMetricText("mf3a298338291")}</span>
                 </div>
               )
             ) : null}
@@ -3052,8 +3510,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   <div className={styles.qualifierHeading}>
                     <span>1</span>
                     <div>
-                      <h3>选择参与计算的指标</h3>
-                      <p>至少选择 2 个已发布指标。系统会先判断对象、时间和粒度是否需要对齐。</p>
+                      <h3>{objectMetricText("m0c5f4f3ba24a")}</h3>
+                      <p>{objectMetricText("m701146c5f12f")}</p>
                     </div>
                     <Tag
                       color={
@@ -3062,13 +3520,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           : "warning"
                       }
                     >
-                      已识别 {dependencies.filter(selectedDependencyMetric).length} / 2
+                      {objectMetricText("m4d26bc13c4df")}{" "}
+                      {dependencies.filter(selectedDependencyMetric).length} / 2
                     </Tag>
                   </div>
                   {!publishedOptions.length ? (
                     <Alert
-                      description="请先发布与当前计算范围兼容的指标，再返回配置复合指标。"
-                      message="没有可用的依赖指标"
+                      description={objectMetricText("m8ac5c335aec1")}
+                      message={objectMetricText("m3e1ac4af86fd")}
                       showIcon
                       type="info"
                     />
@@ -3077,14 +3536,20 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     <div className={styles.dependencyRow} key={`${dependency.alias}-${index}`}>
                       <div className={styles.dependencyCardHeader}>
                         <div>
-                          <span>依赖 {index + 1}</span>
+                          <span>
+                            {objectMetricText("m776740486540")} {index + 1}
+                          </span>
                           <strong>
                             {selectedDependencyMetric(dependency)?.definition.name ??
-                              (dependency.metric_ref.metric_id ? "依赖指标不可用" : "尚未选择指标")}
+                              (dependency.metric_ref.metric_id
+                                ? objectMetricText("ma651bcb613fe")
+                                : objectMetricText("m0beef12b359d"))}
                           </strong>
                         </div>
                         <Button
-                          aria-label={`删除依赖指标 ${dependency.alias || index + 1}`}
+                          aria-label={objectMetricText("m5e3791d6b67f", {
+                            p0: dependency.alias || index + 1,
+                          })}
                           danger
                           icon={<DeleteOutlined aria-hidden="true" />}
                           onClick={() => {
@@ -3102,7 +3567,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                               form.setFieldValue("primaryDependencyAlias", undefined);
                             }
                             if (referenced) {
-                              void message.info("已删除公式引用的依赖指标，公式已重新初始化");
+                              void message.info(objectMetricText("m21302c2230d1"));
                             }
                           }}
                           type="text"
@@ -3110,9 +3575,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       </div>
                       <div className={styles.dependencyPrimaryFields}>
                         <label>
-                          <span>依赖指标</span>
+                          <span>{objectMetricText("ma6ace5b29ab9")}</span>
                           <Select
-                            aria-label={`第 ${index + 1} 个依赖指标`}
+                            aria-label={objectMetricText("m40f7639b7cc9", { p0: index + 1 })}
                             onChange={(key) => {
                               const metricRef = parseDependencyKey(key);
                               const selectedMetric = publishedMetrics.find(
@@ -3160,7 +3625,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             }}
                             optionFilterProp="label"
                             options={dependencyOptions}
-                            placeholder="选择已发布指标…"
+                            placeholder={objectMetricText("m600842604da9")}
                             showSearch
                             value={
                               dependency.metric_ref.metric_id
@@ -3174,14 +3639,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         </label>
                         <label>
                           <span>
-                            公式符号
+                            {objectMetricText("m5de7f5e9ae00")}
                             <HelpTooltip
-                              label="公式符号"
-                              title="公式符号用于在运算公式中引用这个指标。系统已自动生成，通常无需修改。"
+                              label={objectMetricText("m5de7f5e9ae00")}
+                              title={objectMetricText("mad039f6c54a0")}
                             />
                           </span>
                           <Input
-                            aria-label={`第 ${index + 1} 个依赖的公式符号`}
+                            aria-label={objectMetricText("mf213f7f2f151", { p0: index + 1 })}
                             autoComplete="off"
                             onChange={(event) => {
                               const nextAlias = event.target.value;
@@ -3198,7 +3663,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                 form.setFieldValue("primaryDependencyAlias", nextAlias);
                               }
                             }}
-                            placeholder="例如 metric_1"
+                            placeholder={objectMetricText("m236e81cac728")}
                             spellCheck={false}
                             value={dependency.alias}
                           />
@@ -3206,8 +3671,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       </div>
                       {dependency.metric_ref.metric_id && !selectedDependencyMetric(dependency) ? (
                         <Alert
-                          description="该指标版本可能已删除、当前账号无权访问，或版本已经不存在。请重新选择一个已发布指标。"
-                          message="原依赖指标无法读取"
+                          description={objectMetricText("m75c02af034c3")}
+                          message={objectMetricText("m47caacfdb9f4")}
                           showIcon
                           type="error"
                         />
@@ -3215,18 +3680,18 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       {selectedDependencyMetric(dependency) ? (
                         <div className={styles.dependencyContract}>
                           <div>
-                            <span>所属对象</span>
+                            <span>{objectMetricText("mf36b90ed2a53")}</span>
                             <strong>
                               {objectTypes.find(
                                 (item) =>
                                   item.id ===
                                   selectedDependencyMetric(dependency)?.definition
                                     .owner_object_type_id,
-                              )?.name ?? "当前对象"}
+                              )?.name ?? objectMetricText("m19fb5855ae0c")}
                             </strong>
                           </div>
                           <div>
-                            <span>计算范围</span>
+                            <span>{objectMetricText("m9d1c9c0a1780")}</span>
                             <strong>
                               {
                                 calculationScopeLabels[
@@ -3236,21 +3701,21 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             </strong>
                           </div>
                           <div>
-                            <span>指标值类型</span>
+                            <span>{objectMetricText("m6551b12a8b84")}</span>
                             <strong>
                               {semanticTypeOptions.find(
                                 (item) =>
                                   item.value ===
                                   selectedDependencyMetric(dependency)!.definition.result_semantics
                                     .value.semantic_type,
-                              )?.label ?? "未定义"}
+                              )?.label ?? objectMetricText("m2ba10dda19be")}
                             </strong>
                           </div>
                           <div>
-                            <span>单位</span>
+                            <span>{objectMetricText("m80b19d68b149")}</span>
                             <strong>
                               {selectedDependencyMetric(dependency)!.definition.result_semantics
-                                .value.unit?.code ?? "无单位"}
+                                .value.unit?.code ?? objectMetricText("m3be9bf13138e")}
                             </strong>
                           </div>
                         </div>
@@ -3258,26 +3723,26 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       {selectedDependencyMetric(dependency) ? (
                         <div className={styles.dependencyAlignmentSection}>
                           <div className={styles.dependencySubheading}>
-                            <strong>对象对齐</strong>
+                            <strong>{objectMetricText("m0fe7b9870d3e")}</strong>
                             <span>
                               {dependency.object_alignment.mode === "same_object"
-                                ? "对象一致，系统自动完成"
-                                : "对象不同，需要说明如何找到并汇总关联实例"}
+                                ? objectMetricText("mb867bbb4c8db")
+                                : objectMetricText("mb8778ccfb2a5")}
                             </span>
                           </div>
                           {dependency.object_alignment.mode === "same_object" ? (
                             <Alert
-                              description="该指标与复合指标属于同一对象，按实例身份自动对齐，无需额外配置。"
-                              message="已自动对齐"
+                              description={objectMetricText("md4f7dea4bd2d")}
+                              message={objectMetricText("m5b51529d42f5")}
                               showIcon
                               type="success"
                             />
                           ) : (
                             <div className={styles.dependencyAlignmentChoice}>
                               <label>
-                                <span>关联方式</span>
+                                <span>{objectMetricText("mc815120c6337")}</span>
                                 <Select
-                                  aria-label={`第 ${index + 1} 个依赖的对象对齐方式`}
+                                  aria-label={objectMetricText("mdc57eff09546", { p0: index + 1 })}
                                   onChange={(mode: ObjectMetricObjectAlignmentV1["mode"]) => {
                                     if (mode !== "same_object")
                                       clearUnsupportedCompositeTimeSeries();
@@ -3348,8 +3813,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                 }
                               >
                                 {dependency.object_alignment.relation_path?.length
-                                  ? `继续添加关系（当前 ${dependency.object_alignment.relation_path.length} 跳）`
-                                  : "选择关系路径"}
+                                  ? objectMetricText("m471205a52beb", {
+                                      p0: dependency.object_alignment.relation_path.length,
+                                    })
+                                  : objectMetricText("m342e100bad1e")}
                               </Button>
                             </div>
                           )}
@@ -3410,7 +3877,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                       label: item.name,
                                       value: item.id,
                                     }))}
-                                    placeholder="选择关系类…"
+                                    placeholder={objectMetricText("m54a43c83f3d5")}
                                     value={step.relation_type_id || undefined}
                                     style={{ minWidth: 260 }}
                                   />
@@ -3421,7 +3888,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                     )?.name ?? step.target_object_type_id}
                                   </span>
                                   <Button
-                                    aria-label={`删除依赖指标 ${dependency.alias || index + 1} 的第 ${stepIndex + 1} 个关系类步骤`}
+                                    aria-label={objectMetricText("m1fb65fe93c19", {
+                                      p0: dependency.alias || index + 1,
+                                      p1: stepIndex + 1,
+                                    })}
                                     danger
                                     icon={<DeleteOutlined />}
                                     onClick={() =>
@@ -3450,28 +3920,26 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             },
                           )}
                           <span className={styles.sectionHint}>
-                            路径终点应为
+                            {objectMetricText("mffa9c68eaa1d")}
                             {objectTypes.find(
                               (item) =>
                                 item.id ===
                                 selectedDependencyMetric(dependency)?.definition
                                   .owner_object_type_id,
-                            )?.name ?? "依赖指标所属对象"}
+                            )?.name ?? objectMetricText("ma18f086e3882")}
                           </span>
                         </div>
                       ) : null}
                       {selectedDependencyMetric(dependency) ? (
                         <div className={styles.dependencyTimeSection}>
                           <div className={styles.dependencySubheading}>
-                            <strong>时间对齐</strong>
-                            <span>
-                              通常继承本次查询的时间范围；只有同比、环比等场景才单独设置。
-                            </span>
+                            <strong>{objectMetricText("m84ea70c602bf")}</strong>
+                            <span>{objectMetricText("md851e8f8e71b")}</span>
                           </div>
                           <label>
-                            <span>计算时间范围</span>
+                            <span>{objectMetricText("ma757a2b18321")}</span>
                             <Select
-                              aria-label={`第 ${index + 1} 个依赖的计算时间范围`}
+                              aria-label={objectMetricText("m081318fd4fcd", { p0: index + 1 })}
                               onChange={(window) =>
                                 setDependencies((current) =>
                                   current.map((item, itemIndex) =>
@@ -3503,9 +3971,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                 )
                               }
                               options={[
-                                { label: "使用当前查询时间范围（推荐）", value: "inherited" },
-                                { label: "最近一段时间", value: "rolling" },
-                                { label: "本周期至今", value: "calendar_to_date" },
+                                { label: objectMetricText("m1ac40aa12a05"), value: "inherited" },
+                                { label: objectMetricText("m55f2da7177ff"), value: "rolling" },
+                                {
+                                  label: objectMetricText("mf1715ddd00d8"),
+                                  value: "calendar_to_date",
+                                },
                               ]}
                               value={dependency.evaluation_context.window}
                             />
@@ -3514,12 +3985,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       ) : null}
                       {selectedDependencyMetric(dependency) ? (
                         <details className={styles.dependencyAdvanced}>
-                          <summary>高级依赖设置</summary>
-                          <p>仅在需要汇总关联数据、移除查询筛选或进行同比/环比时修改。</p>
+                          <summary>{objectMetricText("mee9a5fef6416")}</summary>
+                          <p>{objectMetricText("m2b04df4b8e31")}</p>
                           <div className={styles.dependencyContext}>
                             {dependency.object_alignment.mode !== "same_object" ? (
                               <>
-                                <span className={styles.sectionHint}>关系基数</span>
+                                <span className={styles.sectionHint}>
+                                  {objectMetricText("m2b8a7ee8d986")}
+                                </span>
                                 <Select
                                   onChange={(relationship_cardinality) =>
                                     setDependencies((current) =>
@@ -3539,18 +4012,32 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                   options={
                                     dependency.object_alignment.mode === "related_object"
                                       ? [
-                                          { label: "一对一", value: "one_to_one" },
-                                          { label: "多对一", value: "many_to_one" },
+                                          {
+                                            label: objectMetricText("m0cc998eed7dd"),
+                                            value: "one_to_one",
+                                          },
+                                          {
+                                            label: objectMetricText("m90e4a2a6f194"),
+                                            value: "many_to_one",
+                                          },
                                         ]
                                       : [
-                                          { label: "一对多", value: "one_to_many" },
-                                          { label: "多对多", value: "many_to_many" },
+                                          {
+                                            label: objectMetricText("me019a8f8bfc7"),
+                                            value: "one_to_many",
+                                          },
+                                          {
+                                            label: objectMetricText("mb50a3fb1df3a"),
+                                            value: "many_to_many",
+                                          },
                                         ]
                                   }
                                   value={dependency.object_alignment.relationship_cardinality}
                                   style={{ width: 130 }}
                                 />
-                                <span className={styles.sectionHint}>重复对象</span>
+                                <span className={styles.sectionHint}>
+                                  {objectMetricText("m0488af93b4dc")}
+                                </span>
                                 <Select
                                   disabled={
                                     dependency.object_alignment.mode === "related_object_set"
@@ -3571,8 +4058,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                     )
                                   }
                                   options={[
-                                    { label: "保留", value: "none" },
-                                    { label: "按实例去重", value: "by_object_identity" },
+                                    { label: objectMetricText("m670ec25af841"), value: "none" },
+                                    {
+                                      label: objectMetricText("m3ed9651ecb2d"),
+                                      value: "by_object_identity",
+                                    },
                                   ]}
                                   value={dependency.object_alignment.deduplication}
                                   style={{ width: 170 }}
@@ -3582,7 +4072,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             {dependency.object_alignment.mode === "related_object_set" ||
                             grainPolicy === "rollup" ? (
                               <>
-                                <span className={styles.sectionHint}>依赖汇总方式</span>
+                                <span className={styles.sectionHint}>
+                                  {objectMetricText("m03a815e81997")}
+                                </span>
                                 <Select
                                   onChange={(rollup_aggregation) =>
                                     setDependencies((current) =>
@@ -3594,14 +4086,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                     )
                                   }
                                   options={[
-                                    { label: "求和", value: "sum" },
-                                    { label: "平均值", value: "avg" },
-                                    { label: "最小值", value: "min" },
-                                    { label: "最大值", value: "max" },
-                                    { label: "计数", value: "count" },
-                                    { label: "去重计数", value: "count_distinct" },
+                                    { label: objectMetricText("m2819237ddb01"), value: "sum" },
+                                    { label: objectMetricText("mdb7538b96322"), value: "avg" },
+                                    { label: objectMetricText("mb2dcdcfabb6a"), value: "min" },
+                                    { label: objectMetricText("m1e7a22820768"), value: "max" },
+                                    { label: objectMetricText("m21179deb9a74"), value: "count" },
+                                    {
+                                      label: objectMetricText("m1e96cd1f49bf"),
+                                      value: "count_distinct",
+                                    },
                                   ]}
-                                  placeholder="选择依赖汇总方式"
+                                  placeholder={objectMetricText("m1263b1820b3e")}
                                   value={dependency.rollup_aggregation}
                                   style={{ width: 170 }}
                                 />
@@ -3610,7 +4105,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             {dependency.evaluation_context.window === "rolling" &&
                             dependency.evaluation_context.window_spec?.mode === "rolling" ? (
                               <>
-                                <span className={styles.sectionHint}>窗口长度</span>
+                                <span className={styles.sectionHint}>
+                                  {objectMetricText("mac004ae1635a")}
+                                </span>
                                 <InputNumber
                                   min={1}
                                   onChange={(length) =>
@@ -3663,7 +4160,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             {dependency.evaluation_context.window === "calendar_to_date" &&
                             dependency.evaluation_context.window_spec?.mode === "period_to_date" ? (
                               <>
-                                <span className={styles.sectionHint}>自然周期</span>
+                                <span className={styles.sectionHint}>
+                                  {objectMetricText("mac21fba0bb58")}
+                                </span>
                                 <Select
                                   onChange={(period) =>
                                     setDependencies((current) =>
@@ -3696,7 +4195,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                 />
                               </>
                             ) : null}
-                            <span className={styles.sectionHint}>筛选上下文</span>
+                            <span className={styles.sectionHint}>
+                              {objectMetricText("mc660f4d82b0f")}
+                            </span>
                             <Select
                               onChange={(mode) =>
                                 setDependencies((current) =>
@@ -3719,8 +4220,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                 )
                               }
                               options={[
-                                { label: "继承查询筛选", value: "inherit" },
-                                { label: "移除某维度筛选", value: "remove_dimension_filter" },
+                                { label: objectMetricText("m16cb1eb3e3d5"), value: "inherit" },
+                                {
+                                  label: objectMetricText("m00895a6fb076"),
+                                  value: "remove_dimension_filter",
+                                },
                               ]}
                               value={dependency.evaluation_context.filter_context.mode}
                               style={{ minWidth: 180 }}
@@ -3746,7 +4250,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                   )
                                 }
                                 options={propertyOptions}
-                                placeholder="选择维度"
+                                placeholder={objectMetricText("mb081a851d6b8")}
                                 value={
                                   dependency.evaluation_context.filter_context.dimension
                                     ?.property_name
@@ -3754,7 +4258,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                 style={{ minWidth: 180 }}
                               />
                             ) : null}
-                            <span className={styles.sectionHint}>时间偏移</span>
+                            <span className={styles.sectionHint}>
+                              {objectMetricText("mf41e7d3a2201")}
+                            </span>
                             <InputNumber
                               onChange={(amount) =>
                                 setDependencies((current) =>
@@ -3779,7 +4285,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                   ),
                                 )
                               }
-                              placeholder="偏移量"
+                              placeholder={objectMetricText("m6962484cdf55")}
                               value={dependency.evaluation_context.time_shift?.amount}
                             />
                             <Select
@@ -3840,7 +4346,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     }}
                     type="dashed"
                   >
-                    添加依赖指标
+                    {objectMetricText("m638fd5c260e8")}
                   </Button>
                 </div>
 
@@ -3848,11 +4354,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   <div className={styles.qualifierHeading}>
                     <span>2</span>
                     <div>
-                      <h3>配置指标运算公式</h3>
-                      <p>
-                        使用公式符号组合依赖指标；选择第 2
-                        个依赖后，系统会生成一条可编辑的加法公式。
-                      </p>
+                      <h3>{objectMetricText("m15f7fef3c17a")}</h3>
+                      <p>{objectMetricText("m9222ea568c49")}</p>
                     </div>
                   </div>
                   {dependencies.filter(selectedDependencyMetric).length >= 2 ? (
@@ -3869,17 +4372,22 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         value={compositeExpression}
                       />
                       <div className={styles.formulaPreview} aria-live="polite">
-                        <span>业务公式</span>
+                        <span>{objectMetricText("me1126763a0f0")}</span>
                         <strong>{compositeBusinessFormula}</strong>
-                        <small>技术表达式：{expressionLabel(compositeExpression)}</small>
+                        <small>
+                          {objectMetricText("m95ebb042c769")}
+                          {expressionLabel(compositeExpression)}
+                        </small>
                       </div>
                     </div>
                   ) : (
                     <div className={styles.guidedEmpty}>
                       <strong>
-                        还需要选择 {2 - dependencies.filter(selectedDependencyMetric).length} 个指标
+                        {objectMetricText("m4726cde51412")}{" "}
+                        {2 - dependencies.filter(selectedDependencyMetric).length}{" "}
+                        {objectMetricText("mac9b54d372b2")}
                       </strong>
-                      <span>完成至少 2 个依赖指标后，才能配置它们之间的运算关系。</span>
+                      <span>{objectMetricText("m3c2ba68b72ac")}</span>
                     </div>
                   )}
                 </div>
@@ -3888,41 +4396,41 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   <div className={styles.qualifierHeading}>
                     <span>3</span>
                     <div>
-                      <h3>确认结果对齐方式</h3>
-                      <p>常见场景使用系统默认值即可；只有粒度或结果集合不一致时才需要修改。</p>
+                      <h3>{objectMetricText("m50b23b0dbf42")}</h3>
+                      <p>{objectMetricText("m03b017610a64")}</p>
                     </div>
                   </div>
                   <div className={styles.alignmentSummary}>
                     <div>
-                      <span>粒度</span>
+                      <span>{objectMetricText("m761fc4d6cd1f")}</span>
                       <strong>
-                        {grainPolicy === "rollup" ? "汇总到结果粒度" : "保持相同粒度"}
+                        {grainPolicy === "rollup"
+                          ? objectMetricText("m4d0093db94fa")
+                          : objectMetricText("me06fb8926b0e")}
                       </strong>
                     </div>
                     <div>
-                      <span>时间</span>
+                      <span>{objectMetricText("m8b6ff498515b")}</span>
                       <strong>
                         {getFieldValue("timeAlignment") === "explicit_rollup"
-                          ? "汇总到结果时间粒度"
-                          : "使用同一查询窗口"}
+                          ? objectMetricText("m36d3ef52bba6")
+                          : objectMetricText("m7cef526c5adc")}
                       </strong>
                     </div>
                     <div>
-                      <span>结果集合</span>
+                      <span>{objectMetricText("meb37ea7105cf")}</span>
                       <strong>
                         {resultSetPolicy === "preserve_primary_dependency"
-                          ? "保留主依赖的结果"
-                          : "仅保留各依赖均有结果的实例"}
+                          ? objectMetricText("mefd78ebd1cc1")
+                          : objectMetricText("mfe2f6b20f741")}
                       </strong>
                     </div>
                   </div>
                   <details className={styles.resultAlignmentAdvanced}>
-                    <summary>修改高级结果对齐</summary>
-                    <p>
-                      当依赖指标粒度不同、希望保留某个指标的全部实例，或需要指定空值规则时使用。
-                    </p>
+                    <summary>{objectMetricText("m6f7e8956fabc")}</summary>
+                    <p>{objectMetricText("mcaee8de65f44")}</p>
                     <div className={styles.grid3}>
-                      <Form.Item label="粒度对齐" name="grainPolicy">
+                      <Form.Item label={objectMetricText("m99f946c417dc")} name="grainPolicy">
                         <Select
                           onChange={(value) =>
                             setDependencies((current) =>
@@ -3938,20 +4446,20 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           }
                           options={
                             calculationScope === "object_instance"
-                              ? [{ label: "保持相同粒度", value: "same_grain" }]
+                              ? [{ label: objectMetricText("me06fb8926b0e"), value: "same_grain" }]
                               : [
-                                  { label: "保持相同粒度", value: "same_grain" },
-                                  { label: "汇总到结果粒度", value: "rollup" },
+                                  { label: objectMetricText("me06fb8926b0e"), value: "same_grain" },
+                                  { label: objectMetricText("m4d0093db94fa"), value: "rollup" },
                                 ]
                           }
                         />
                       </Form.Item>
-                      <Form.Item label="结果实例范围" name="resultSetPolicy">
+                      <Form.Item label={objectMetricText("mfb94d5196639")} name="resultSetPolicy">
                         <Select
                           options={[
-                            { label: "仅保留各依赖均有结果的实例", value: "intersection" },
+                            { label: objectMetricText("mfe2f6b20f741"), value: "intersection" },
                             {
-                              label: "保留主依赖的全部实例",
+                              label: objectMetricText("m73510991c005"),
                               value: "preserve_primary_dependency",
                             },
                           ]}
@@ -3959,20 +4467,20 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       </Form.Item>
                       {resultSetPolicy === "preserve_primary_dependency" ? (
                         <Form.Item
-                          label="主依赖指标"
+                          label={objectMetricText("m1b7c44db1dec")}
                           name="primaryDependencyAlias"
-                          rules={[{ required: true, message: "请选择要保留其全部实例的指标" }]}
+                          rules={[{ required: true, message: objectMetricText("m784690665bf2") }]}
                         >
                           <Select
                             options={dependencies.filter(selectedDependencyMetric).map((item) => ({
                               label: selectedDependencyMetric(item)?.definition.name ?? item.alias,
                               value: item.alias,
                             }))}
-                            placeholder="选择主依赖指标…"
+                            placeholder={objectMetricText("m9d6942ee407f")}
                           />
                         </Form.Item>
                       ) : null}
-                      <Form.Item label="时间粒度对齐" name="timeAlignment">
+                      <Form.Item label={objectMetricText("m1b06a052b577")} name="timeAlignment">
                         <Select
                           onChange={(value) => {
                             if (value === "explicit_rollup") {
@@ -3987,31 +4495,42 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           }}
                           options={
                             calculationScope === "object_instance"
-                              ? [{ label: "使用同一查询窗口", value: "same_time_window" }]
-                              : [
-                                  { label: "使用同一查询窗口", value: "same_time_window" },
+                              ? [
                                   {
-                                    label: "汇总到结果时间粒度",
+                                    label: objectMetricText("m7cef526c5adc"),
+                                    value: "same_time_window",
+                                  },
+                                ]
+                              : [
+                                  {
+                                    label: objectMetricText("m7cef526c5adc"),
+                                    value: "same_time_window",
+                                  },
+                                  {
+                                    label: objectMetricText("m36d3ef52bba6"),
                                     value: "explicit_rollup",
                                   },
                                 ]
                           }
                         />
                       </Form.Item>
-                      <Form.Item label="某个依赖没有值时" name="nullPolicy">
+                      <Form.Item label={objectMetricText("mea304362e984")} name="nullPolicy">
                         <Select
                           options={[
-                            { label: "结果也为空", value: "propagate" },
-                            { label: "按 0 参与计算", value: "coalesce_zero" },
+                            { label: objectMetricText("md3525beb73a9"), value: "propagate" },
+                            { label: objectMetricText("m261cb066fc9e"), value: "coalesce_zero" },
                           ]}
                         />
                       </Form.Item>
-                      <Form.Item label="除数为 0 时" name="zeroDivisionPolicy">
+                      <Form.Item
+                        label={objectMetricText("m9d04a114686f")}
+                        name="zeroDivisionPolicy"
+                      >
                         <Select
                           options={[
-                            { label: "标记结果不可用", value: "unavailable" },
-                            { label: "返回 null", value: "null" },
-                            { label: "返回 0", value: "zero" },
+                            { label: objectMetricText("m931f0ed7e202"), value: "unavailable" },
+                            { label: objectMetricText("mb5ec9d293722"), value: "null" },
+                            { label: objectMetricText("m55a0eda285d4"), value: "zero" },
                           ]}
                         />
                       </Form.Item>
@@ -4021,16 +4540,21 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
 
                 <div className={styles.definitionPreview} aria-live="polite">
                   <div className={styles.definitionPreviewTitle}>
-                    <strong>业务预览</strong>
-                    <span>随配置实时更新</span>
+                    <strong>{objectMetricText("ma425a081f382")}</strong>
+                    <span>{objectMetricText("mb8ee9bec6e3b")}</span>
                   </div>
                   {dependencies.filter(selectedDependencyMetric).length >= 2 ? (
                     <>
                       <p>
-                        在{ownerObjectType?.name ?? "当前对象"}的
-                        {calculationScope === "object_instance" ? "每个实例" : "实例集合"}
-                        范围内，先完成依赖指标的对象、时间和粒度对齐，再按“
-                        {compositeBusinessFormula}”计算结果。
+                        {objectMetricText("m12404a0b6381")}
+                        {ownerObjectType?.name ?? objectMetricText("m19fb5855ae0c")}
+                        {objectMetricText("m8af2350cfd65")}
+                        {calculationScope === "object_instance"
+                          ? objectMetricText("mb358f0089f6c")
+                          : objectMetricText("m9c51e86f9307")}
+                        {objectMetricText("m0837b6d747fe")}
+                        {compositeBusinessFormula}
+                        {objectMetricText("m4fc7df62507c")}
                       </p>
                       {compositeAlignmentSummaries.map((summary, index) => (
                         <div className={styles.technicalPreview} key={`${index}-${summary}`}>
@@ -4039,7 +4563,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       ))}
                     </>
                   ) : (
-                    <p>选择至少 2 个依赖指标后，这里会用业务语言说明它们如何对齐和组合。</p>
+                    <p>{objectMetricText("m55ec8ea851e8")}</p>
                   )}
                 </div>
               </div>
@@ -4048,18 +4572,20 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
 
           <Section
             title={
-              effectiveCalculationScope === "object_instance" ? "4. 结果定义" : "4. 结果与分析"
+              effectiveCalculationScope === "object_instance"
+                ? objectMetricText("mb5acb826a85a")
+                : objectMetricText("m090a0f265f9d")
             }
             tooltip={
               metricType === "atomic"
                 ? effectiveCalculationScope === "object_instance"
-                  ? "确认每个实例返回值的业务含义和单位，并声明该指标支持使用的分析维度和时间维度。系统只保存结果定义，不保存运行产生的具体数值。"
-                  : "确认汇总结果的业务含义和单位，并设置无数据规则以及查询时可用的分析维度和时间属性。"
+                  ? objectMetricText("md513f57f39b6")
+                  : objectMetricText("m0bce011fd587")
                 : effectiveCalculationScope === "object_instance"
-                  ? "定义指标结果的业务含义、单位和无数据处理方式。系统会自动推断并保存技术类型，但不会保存指标运行产生的具体数值。"
+                  ? objectMetricText("m2c827391ea37")
                   : metricType === "derived"
-                    ? "配置固定分组、开放分析维度和时间维度；值类型与单位继承基础原子指标。"
-                    : "配置固定分组、开放分析维度和时间维度，定义结果如何返回和分析。"
+                    ? objectMetricText("md4d8ef322109")
+                    : objectMetricText("m0bd634a1921c")
             }
           >
             <div className={styles.grid2}>
@@ -4068,17 +4594,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               (!physicalType || !semanticType) ? (
                 <Alert
                   className={styles.full}
-                  message="暂未推断出结果类型"
-                  description="请先选择对象属性并完成取值方式。系统会根据属性、函数和运算符自动确定结果类型。"
+                  message={objectMetricText("m6b30bf1852ca")}
+                  description={objectMetricText("mf15dd5b505db")}
                   showIcon
                   type="info"
                 />
               ) : null}
               {canConfigureFixedResultGrain ? (
                 <Form.Item
-                  label="固定分组维度"
+                  label={objectMetricText("m88459b43afb6")}
                   name="groupByDimensions"
-                  tooltip="选中后每个分组返回一行；不选时返回一个汇总值。"
+                  tooltip={objectMetricText("m2f5a19addd3c")}
                 >
                   <Select
                     mode="multiple"
@@ -4092,7 +4618,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       );
                     }}
                     options={resultPropertyOptions}
-                    placeholder="默认返回一个汇总值"
+                    placeholder={objectMetricText("m5f94b2e25902")}
                   />
                 </Form.Item>
               ) : null}
@@ -4100,12 +4626,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 <Form.Item
                   extra={
                     metricType === "composite" && hasCrossObjectDependency
-                      ? "当前跨对象依赖没有可对齐的事件时间，因此不能设置固定时间粒度。"
+                      ? objectMetricText("m1179dd9bf21e")
                       : undefined
                   }
-                  label="固定时间粒度"
+                  label={objectMetricText("m7c27a3d92ed9")}
                   name="timeGranularity"
-                  tooltip="选中后按指定周期返回时间序列；不选时不按时间分桶。"
+                  tooltip={objectMetricText("m74a6bbce62d4")}
                 >
                   <Select
                     allowClear
@@ -4128,12 +4654,15 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               ) : null}
               {metricType === "composite" && canConfigureFixedResultGrain && timeGranularity ? (
                 <Form.Item
-                  label="结果时间字段"
+                  label={objectMetricText("m22e6e27580ff")}
                   name="alignmentTimeKey"
-                  rules={[{ required: true, message: "请选择用于时间对齐的结果时间字段" }]}
-                  tooltip="依赖指标按该字段归入同一时间桶"
+                  rules={[{ required: true, message: objectMetricText("ma3a6dfb20bbd") }]}
+                  tooltip={objectMetricText("mfdc8bc1e7853")}
                 >
-                  <Select options={timePropertyOptions} placeholder="选择日期或日期时间属性" />
+                  <Select
+                    options={timePropertyOptions}
+                    placeholder={objectMetricText("me02a91a80be0")}
+                  />
                 </Form.Item>
               ) : null}
               {metricType === "derived" ? (
@@ -4141,7 +4670,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   <>
                     <div className={styles.inheritedResultSummary}>
                       <div>
-                        <span>继承的指标值类型</span>
+                        <span>{objectMetricText("m53510be9d473")}</span>
                         <strong>
                           {semanticTypeOptions.find(
                             (item) => item.value === selectedBaseValue.semantic_type,
@@ -4149,7 +4678,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         </strong>
                       </div>
                       <div>
-                        <span>结果数据类型</span>
+                        <span>{objectMetricText("m8410f1c133ee")}</span>
                         <strong>
                           {physicalTypeOptions.find(
                             (item) => item.value === selectedBaseValue.physical_type,
@@ -4157,12 +4686,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         </strong>
                       </div>
                       <div>
-                        <span>继承的单位</span>
-                        <strong>{selectedBaseValue.unit?.code ?? "无单位"}</strong>
+                        <span>{objectMetricText("m4664320a75fc")}</span>
+                        <strong>
+                          {selectedBaseValue.unit?.code ?? objectMetricText("m3be9bf13138e")}
+                        </strong>
                       </div>
-                      <p>
-                        以上结果含义由基础原子指标决定；当前衍生指标可以单独设置无数据处理和开放分析维度。
-                      </p>
+                      <p>{objectMetricText("mb0592ef95e17")}</p>
                     </div>
                     <Form.Item hidden name="physicalType">
                       <Input />
@@ -4218,7 +4747,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   </>
                 ) : (
                   <div className={styles.inheritedValuePlaceholder}>
-                    选择基础原子指标后，这里会显示继承的值类型和单位。
+                    {objectMetricText("m42810b33a04f")}
                   </div>
                 )
               ) : (
@@ -4226,22 +4755,22 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   <Form.Item
                     name="physicalType"
                     hidden
-                    rules={[{ required: true, message: "请先完成取值方式以确定结果类型" }]}
+                    rules={[{ required: true, message: objectMetricText("m551e3de491fa") }]}
                   >
                     <Input />
                   </Form.Item>
                   <Form.Item
                     extra={
                       <div className={styles.inferredResultInline}>
-                        <span>结果数据类型：</span>
+                        <span>{objectMetricText("ma1e9cca0bdf3")}</span>
                         <strong>
                           {physicalTypeOptions.find((item) => item.value === physicalType)?.label ??
-                            "等待推断"}
+                            objectMetricText("m67a71e70110c")}
                         </strong>
-                        <span>（自动确定）</span>
-                        <Tooltip title="这是结果的返回格式，例如整数、小数或文本。系统根据对象属性和计算方式自动确定；它不是指标运行产生的具体数值。">
+                        <span>{objectMetricText("mfa92619fb598")}</span>
+                        <Tooltip title={objectMetricText("mb31168a91f2a")}>
                           <Button
-                            aria-label="了解结果数据类型"
+                            aria-label={objectMetricText("ma8ed40325903")}
                             className={styles.inlineHelpButton}
                             icon={<QuestionCircleOutlined />}
                             size="small"
@@ -4250,13 +4779,13 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         </Tooltip>
                       </div>
                     }
-                    label="指标值类型"
+                    label={objectMetricText("m6551b12a8b84")}
                     name="semanticType"
-                    rules={[{ required: true, message: "请选择指标值类型" }]}
+                    rules={[{ required: true, message: objectMetricText("m7da337decf29") }]}
                     tooltip={
                       metricType === "atomic"
-                        ? "系统已根据对象属性和计算方式筛选可选项；请选择最符合业务含义的类型，例如金额、计数、百分比或时长。"
-                        : "说明结果在业务上的含义，如金额、计数、百分比或时长。"
+                        ? objectMetricText("m92736ba484af")
+                        : objectMetricText("md031dc3c0654")
                     }
                   >
                     <Select
@@ -4390,24 +4919,28 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   {physicalType === "decimal" ? (
                     <details className={styles.resultDetails}>
                       <summary>
-                        <span>数值格式</span>
+                        <span>{objectMetricText("m553a32eccee9")}</span>
                         <span>
-                          {precision ?? 18} 位精度 · 保留 {scale ?? 2} 位 ·{` `}
-                          {roundingMode ? roundingModeLabels[roundingMode] : "四舍五入"}
+                          {precision ?? 18} {objectMetricText("m567d157e1d3e")} {scale ?? 2}{" "}
+                          {objectMetricText("m9745fe3ebbc5")}
+                          {` `}
+                          {roundingMode
+                            ? roundingModeLabels[roundingMode]
+                            : objectMetricText("m9c09e447599c")}
                         </span>
                       </summary>
                       <div className={styles.detailsGrid}>
                         <Form.Item
-                          label="精度"
+                          label={objectMetricText("m408ce7a76a40")}
                           name="precision"
-                          rules={[{ required: true, message: "请输入小数总位数" }]}
+                          rules={[{ required: true, message: objectMetricText("m2df29e0c01f3") }]}
                         >
                           <InputNumber max={38} min={1} style={{ width: "100%" }} />
                         </Form.Item>
                         <Form.Item
-                          label="小数位"
+                          label={objectMetricText("m571bf00dfd42")}
                           name="scale"
-                          rules={[{ required: true, message: "请输入保留小数位数" }]}
+                          rules={[{ required: true, message: objectMetricText("mf01e1f6563fb") }]}
                         >
                           <InputNumber
                             max={getFieldValue("precision") ?? 38}
@@ -4416,17 +4949,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           />
                         </Form.Item>
                         <Form.Item
-                          label="舍入方式"
+                          label={objectMetricText("med1beda86003")}
                           name="roundingMode"
-                          rules={[{ required: true, message: "请选择舍入方式" }]}
+                          rules={[{ required: true, message: objectMetricText("m4d97805ede61") }]}
                         >
                           <Select
                             options={[
-                              { label: "四舍五入", value: "half_up" },
-                              { label: "银行家舍入", value: "half_even" },
-                              { label: "向下取整", value: "floor" },
-                              { label: "向上取整", value: "ceiling" },
-                              { label: "直接截断", value: "truncate" },
+                              { label: objectMetricText("m9c09e447599c"), value: "half_up" },
+                              { label: objectMetricText("m7d5873e080fb"), value: "half_even" },
+                              { label: objectMetricText("m2db59b7b2c50"), value: "floor" },
+                              { label: objectMetricText("m2534ac6ed23d"), value: "ceiling" },
+                              { label: objectMetricText("mb6f97fe55978"), value: "truncate" },
                             ]}
                           />
                         </Form.Item>
@@ -4438,10 +4971,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       <Form.Item
                         extra={
                           unitSelectionLocked
-                            ? "该单位由指标值类型自动确定。"
-                            : "仅显示与当前指标值类型兼容的常用单位。"
+                            ? objectMetricText("m845d2fc745c0")
+                            : objectMetricText("m265856d5f0b9")
                         }
-                        label="单位"
+                        label={objectMetricText("m80b19d68b149")}
                         name="unitCode"
                         rules={[
                           {
@@ -4449,13 +4982,13 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                               semanticType === "amount" ||
                               semanticType === "duration" ||
                               semanticType === "percentage",
-                            message: "请选择结果单位",
+                            message: objectMetricText("m023b684ab455"),
                           },
                         ]}
                         tooltip={
                           metricType === "atomic"
-                            ? "选择结果使用的业务单位，例如元、%、分钟或个；系统用它展示结果并检查指标之间是否可以计算。"
-                            : "系统会保存标准单位代码及其量纲，用于结果展示、比较和换算。"
+                            ? objectMetricText("m113b7aeb77f7")
+                            : objectMetricText("m68fcd65be131")
                         }
                       >
                         <Select
@@ -4487,10 +5020,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           }))}
                           placeholder={
                             semanticType === "amount"
-                              ? "请选择币种"
+                              ? objectMetricText("mdf1f09af43b6")
                               : semanticType === "duration"
-                                ? "请选择时长单位"
-                                : "请选择单位（可选）"
+                                ? objectMetricText("m531eb8c7fbe1")
+                                : objectMetricText("m9c1dca226dde")
                           }
                           showSearch
                         />
@@ -4545,51 +5078,55 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               {metricType !== "derived" || selectedBaseDefinition ? (
                 <>
                   <Form.Item
-                    label="没有可计算数据时"
+                    label={objectMetricText("mf0020b8d8097")}
                     name="noDataPolicy"
-                    tooltip="决定没有可计算数据时的返回方式，不改变正常计算结果。"
+                    tooltip={objectMetricText("m049e6c0e0fa6")}
                   >
                     <Select
                       options={[
                         {
                           disabled: !supportsUnit(physicalType),
-                          label: "返回 0（按零值参与后续计算）",
+                          label: objectMetricText("m4ade446d35d9"),
                           value: "zero",
                         },
                         {
-                          label: "返回空值（不参与后续计算）",
+                          label: objectMetricText("m6ef515948e8b"),
                           value: "null",
                         },
                         {
-                          label: "标记不可用（本次指标结果不可用）",
+                          label: objectMetricText("mb17b9571f302"),
                           value: "unavailable",
                         },
                       ]}
                     />
                   </Form.Item>
                   <div className={`${styles.full} ${styles.queryCapabilityHeader}`}>
-                    <strong>{metricType === "atomic" ? "分析口径" : "查询与分析能力"}</strong>
+                    <strong>
+                      {metricType === "atomic"
+                        ? objectMetricText("mf854bfeaec18")
+                        : objectMetricText("m7dee984d9d2c")}
+                    </strong>
                     <span>
                       {metricType === "atomic"
-                        ? "定义该指标支持按哪些业务属性和时间属性进行查询分析，不改变指标的计算逻辑和返回值。"
+                        ? objectMetricText("m7f85f2218de2")
                         : effectiveCalculationScope === "object_instance"
-                          ? "声明查询时可以使用的属性，不改变每个实例返回一个值。"
-                          : "声明查询时可以临时筛选、分组、下钻或限定时间范围的属性。"}
+                          ? objectMetricText("me9e05592e555")
+                          : objectMetricText("m9b89526e6f75")}
                     </span>
                   </div>
                   <Form.Item
                     label={
                       metricType === "atomic"
-                        ? "可分析维度"
+                        ? objectMetricText("m983fa38f4f75")
                         : effectiveCalculationScope === "object_instance"
-                          ? "可用于筛选和分析的属性"
-                          : "开放分析维度"
+                          ? objectMetricText("m55ae2bf36da7")
+                          : objectMetricText("m9a004b7a1da9")
                     }
                     name="analysisDimensions"
                     tooltip={
                       metricType === "atomic"
-                        ? "查询时可用于筛选、分组和下钻的业务属性；不会改变指标的计算方式和返回粒度。"
-                        : "查询时可用于筛选、分组和下钻，不改变指标的固定返回粒度。"
+                        ? objectMetricText("m86bda0ca8446")
+                        : objectMetricText("me7d9267aa381")
                     }
                   >
                     <Select
@@ -4597,34 +5134,34 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       options={analysisPropertyOptions}
                       placeholder={
                         metricType === "atomic"
-                          ? "选择查询时可用于筛选、分组和下钻的属性（可选）"
-                          : "选择查询时可使用的分析属性（可选）"
+                          ? objectMetricText("mb7e241925acf")
+                          : objectMetricText("m0bd0ff9621b0")
                       }
                     />
                   </Form.Item>
                   <Form.Item
                     label={
                       metricType === "atomic"
-                        ? "可查询时间维度"
+                        ? objectMetricText("m40e232fef99f")
                         : effectiveCalculationScope === "object_instance"
-                          ? "可用于时间筛选的属性"
-                          : "可查询时间维度"
+                          ? objectMetricText("md63d3a9bd7e3")
+                          : objectMetricText("m40e232fef99f")
                     }
                     name="timeDimensions"
                     tooltip={
                       metricType === "atomic"
-                        ? "查询时可用于指定统计时间范围的日期或日期时间属性；原子指标本身不固定时间窗口。"
-                        : "查询时可用来限定业务时间范围的日期或日期时间属性。"
+                        ? objectMetricText("m2fe2ec23e176")
+                        : objectMetricText("m0e5e04ce2dd2")
                     }
                   >
                     <Select
                       mode="multiple"
-                      notFoundContent="当前对象没有可用的日期或日期时间属性"
+                      notFoundContent={objectMetricText("m60d87d7f6f27")}
                       options={timePropertyOptions}
                       placeholder={
                         metricType === "atomic"
-                          ? "选择查询时可用于限定统计时间范围的属性（可选）"
-                          : "选择查询时可使用的时间属性（可选）"
+                          ? objectMetricText("mcc0196c65cfa")
+                          : objectMetricText("mea90868b384a")
                       }
                     />
                   </Form.Item>
@@ -4632,15 +5169,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     <div className={`${styles.full} ${styles.logicPropertyCard}`}>
                       <div className={styles.logicPropertyHeader}>
                         <div>
-                          <strong>发布后作为逻辑属性使用</strong>
+                          <strong>{objectMetricText("m315197671848")}</strong>
                           <span>
-                            现在完成属性配置；发布成功后，系统会将它添加到
-                            {ownerObjectType?.name ?? "当前对象类"}，无需再次进入详情页操作。
+                            {objectMetricText("m356d91b99e17")}
+                            {ownerObjectType?.name ?? objectMetricText("md4abcfbf9164")}
+                            {objectMetricText("mdfbd0f596032")}
                           </span>
                         </div>
                         <Form.Item name="logicPropertyEnabled" noStyle valuePropName="checked">
                           <Switch
-                            aria-label="发布后作为逻辑属性使用"
+                            aria-label={objectMetricText("m315197671848")}
                             onChange={(checked) => {
                               if (!checked) return;
                               form.setFieldsValue({
@@ -4659,40 +5197,38 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       </div>
                       {logicPropertyEnabled ? (
                         <>
-                          <Alert
-                            message="配置在发布前保存，只有指标发布成功后才会正式生效。"
-                            showIcon
-                            type="info"
-                          />
+                          <Alert message={objectMetricText("mb85aba5c793c")} showIcon type="info" />
                           <div className={styles.logicPropertyFields}>
                             <Form.Item
-                              label="属性名称"
+                              label={objectMetricText("maac14899bd42")}
                               name="logicPropertyName"
                               rules={[
-                                { required: true, message: "请输入逻辑属性名称" },
+                                { required: true, message: objectMetricText("md93f0beda75d") },
                                 {
                                   pattern: /^[a-z][a-z0-9_]*$/,
-                                  message: "使用小写字母、数字和下划线，并以字母开头",
+                                  message: objectMetricText("mb9eeaa34688d"),
                                 },
                               ]}
                             >
-                              <Input placeholder="例如：offline_order_amount" />
+                              <Input placeholder={objectMetricText("mcd56973f4ad0")} />
                             </Form.Item>
                             <Form.Item
-                              label="显示名称"
+                              label={objectMetricText("ma98585871c53")}
                               name="logicPropertyDisplayName"
-                              rules={[{ required: true, message: "请输入逻辑属性显示名称" }]}
+                              rules={[
+                                { required: true, message: objectMetricText("m90fc64da3e98") },
+                              ]}
                             >
-                              <Input placeholder="例如：线下门店订单金额" />
+                              <Input placeholder={objectMetricText("m5dbc85bc1ad3")} />
                             </Form.Item>
                             <Form.Item
                               className={styles.full}
-                              label="属性说明（可选）"
+                              label={objectMetricText("m05e490686037")}
                               name="logicPropertyComment"
                             >
                               <Input.TextArea
                                 maxLength={500}
-                                placeholder="说明该属性在对象详情、规则或应用中的用途"
+                                placeholder={objectMetricText("md65e0329b5e8")}
                                 rows={2}
                               />
                             </Form.Item>
@@ -4700,7 +5236,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         </>
                       ) : (
                         <p className={styles.logicPropertyDisabledHint}>
-                          关闭时只发布指标，不创建逻辑属性；发布后仍可在指标详情页补充配置。
+                          {objectMetricText("m7ba5a8c5277e")}
                         </p>
                       )}
                     </div>
@@ -4711,27 +5247,31 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </Section>
 
           <Section
-            title="5. 校验与发布"
+            title={objectMetricText("mc989f4dba768")}
             tooltip={
               metricType === "atomic"
-                ? "检查基本信息、计算范围、取值或聚合方式、结果类型和单位是否完整且一致；检查通过后才能发布当前版本。"
-                : "语义校验会检查配置完整性和依赖有效性；校验通过后才能发布当前版本。"
+                ? objectMetricText("mc54cb2885fba")
+                : objectMetricText("m2f686d59fc10")
             }
           >
             <Space wrap>
               <Button onClick={() => void validate()}>
-                {metricType === "atomic" ? "检查配置" : "语义校验"}
+                {metricType === "atomic"
+                  ? objectMetricText("m9b3caaa13a63")
+                  : objectMetricText("mbbc80a0bad9b")}
               </Button>
-              <Button onClick={() => void openTrial()}>试算真实数据</Button>
+              <Button onClick={() => void openTrial()}>{objectMetricText("m073728637a26")}</Button>
               <Button onClick={() => void openPreview()}>
-                {metricType === "atomic" ? "预览结果结构" : "查看返回契约"}
+                {metricType === "atomic"
+                  ? objectMetricText("m3802a1523205")
+                  : objectMetricText("m2ad170f9888f")}
               </Button>
             </Space>
             {formValidationIssueCount ? (
               <Alert
                 className={styles.issues}
-                description="请先处理表单中标红的必填项或格式问题，然后重新校验。"
-                message={`发现 ${formValidationIssueCount} 个表单问题`}
+                description={objectMetricText("m64139c51e42a")}
+                message={objectMetricText("m240dc0fcb0de", { p0: formValidationIssueCount })}
                 showIcon
                 type="error"
               />
@@ -4739,7 +5279,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               <Alert
                 className={styles.issues}
                 message={
-                  validation.valid ? "校验通过，可以发布" : `发现 ${validationIssues.length} 个问题`
+                  validation.valid
+                    ? objectMetricText("m00d84f955fd2")
+                    : objectMetricText("m5ace8ec0965f", { p0: validationIssues.length })
                 }
                 type={validation.valid ? "success" : "error"}
                 showIcon
@@ -4751,7 +5293,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           <strong>{issue.location}</strong>
                           <span>{issue.problem}</span>
                           <span className={styles.validationSuggestion}>
-                            处理建议：{issue.suggestion}
+                            {objectMetricText("mf99abae6107a")}
+                            {issue.suggestion}
                           </span>
                         </li>
                       ))}
@@ -4762,12 +5305,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             ) : null}
             <div className={styles.publishActions}>
               <Button loading={saving} onClick={() => void save()}>
-                保存草稿
+                {objectMetricText("m5329e3f0ee46")}
               </Button>
               <Button loading={saving} onClick={() => void publish()} type="primary">
                 {logicPropertyEnabled && effectiveCalculationScope === "object_instance"
-                  ? "发布指标并创建逻辑属性"
-                  : "发布指标"}
+                  ? objectMetricText("m029208c5ed8f")
+                  : objectMetricText("m5c5fd681a047")}
               </Button>
             </div>
           </Section>
@@ -4788,7 +5331,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               <ThunderboltOutlined />
             </span>
             <div>
-              <strong>AI 生成指标</strong>
+              <strong>{objectMetricText("m1a09e582c302")}</strong>
               <span>
                 {metricTypeNames[metricType]} · {ownerObjectName}
               </span>
@@ -4798,7 +5341,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         width={640}
       >
         {!aiConversation.length && !aiGenerating ? (
-          <p className={styles.aiDialogIntro}>描述业务口径，我会直接填写当前指标表单。</p>
+          <p className={styles.aiDialogIntro}>{objectMetricText("madf4b42e777b")}</p>
         ) : (
           <div className={styles.aiConversation} aria-live="polite">
             {aiConversation.map((item) => (
@@ -4818,22 +5361,22 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   <i />
                   <i />
                 </span>
-                正在理解业务口径并生成配置…
+                {objectMetricText("m800e5eb6c8b5")}
               </div>
             ) : null}
           </div>
         )}
         {aiGenerationSucceeded && !aiGenerating ? (
           <div className={styles.aiDialogResultActions}>
-            <span>表单已经更新</span>
+            <span>{objectMetricText("mf9494812edfd")}</span>
             <Button onClick={() => setAiOpen(false)} size="small">
-              查看表单
+              {objectMetricText("m406b2bdda3ce")}
             </Button>
           </div>
         ) : null}
         {!aiConversation.length ? (
           <div className={styles.aiDialogExamples}>
-            <span>示例</span>
+            <span>{objectMetricText("m0d53f08678d8")}</span>
             {aiExamples.map((example) => (
               <button key={example} onClick={() => setAiPrompt(example)} type="button">
                 {example}
@@ -4843,7 +5386,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         ) : null}
         <div className={styles.aiDialogComposer}>
           <Input.TextArea
-            aria-label="描述要创建的指标"
+            aria-label={objectMetricText("m15a3900b6bf9")}
             autoFocus
             autoSize={{ minRows: 2, maxRows: 5 }}
             disabled={aiGenerating}
@@ -4855,32 +5398,36 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 void generateWithAi();
               }
             }}
-            placeholder="描述指标口径；Enter 发送，Shift + Enter 换行"
+            placeholder={objectMetricText("m7d7fca1df843")}
             value={aiPrompt}
           />
           <Button
-            aria-label="发送指标描述"
+            aria-label={objectMetricText("m24d9e58a6e44")}
             danger={aiGenerating}
             disabled={!aiGenerating && !aiPrompt.trim()}
             icon={aiGenerating ? <StopOutlined /> : <SendOutlined />}
             onClick={() => (aiGenerating ? stopAiGeneration() : void generateWithAi())}
             type={aiGenerating ? "default" : "primary"}
           >
-            {aiGenerating ? "停止" : "发送"}
+            {aiGenerating ? objectMetricText("mca4d973c0b00") : objectMetricText("medecf0ae6e51")}
           </Button>
         </div>
-        <p className={styles.aiDialogFootnote}>不会自动保存或发布，最终以表单校验为准。</p>
+        <p className={styles.aiDialogFootnote}>{objectMetricText("m1917adbea87f")}</p>
       </Modal>
       <Drawer
         onClose={() => setPreview(undefined)}
         open={Boolean(preview)}
-        title="指标返回契约"
+        title={objectMetricText("mf712d3495e8f")}
         width={520}
       >
         {preview ? (
           <>
             <Alert
-              message={preview.validation.valid ? "返回契约有效" : "返回契约尚未通过校验"}
+              message={
+                preview.validation.valid
+                  ? objectMetricText("m22fb195328e4")
+                  : objectMetricText("m54742908207a")
+              }
               type={preview.validation.valid ? "success" : "warning"}
               showIcon
             />

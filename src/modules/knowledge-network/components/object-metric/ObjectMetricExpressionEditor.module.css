@@ -21,7 +21,7 @@
   gap: 10px;
   margin-top: 2px;
   padding-left: 14px;
-  border-left: 2px solid color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  border-left: 2px solid color-mix(in srgb, var(--color-primary-600) 45%, var(--color-border));
 }
 
 .argumentRow {
@@ -32,7 +32,7 @@
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--color-bg-container) 72%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
 }
 
 .argumentHeading {
@@ -46,7 +46,7 @@
 
 .argumentHeading b {
   margin-right: 4px;
-  color: var(--color-error);
+  color: var(--color-error-text);
 }
 
 .argumentHeading small {

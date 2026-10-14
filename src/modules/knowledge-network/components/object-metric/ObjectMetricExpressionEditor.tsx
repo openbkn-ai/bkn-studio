@@ -22,6 +22,8 @@ import {
 import type { ObjectMetricExpressionV1 } from "@/modules/knowledge-network/types/object-metric";
 
 import styles from "./ObjectMetricExpressionEditor.module.css";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
 function defaultArguments(
   count: number,
@@ -128,6 +130,7 @@ export function ObjectMetricExpressionEditor({
   requiresPropertyReference = false,
   value,
 }: Props) {
+  useTranslation();
   const isAtomicRoot = requiresPropertyReference && depth === 0;
   useEffect(() => {
     if (isAtomicRoot && value.node_type === "literal" && properties.length) {
@@ -140,19 +143,27 @@ export function ObjectMetricExpressionEditor({
     (item) => !allowedFunctions || allowedFunctions.includes(item.value),
   );
   const availableNodeTypes = [
-    ...(availableProperties.length ? [{ label: "对象属性", value: "property" }] : []),
-    ...(dependencyAliases.length ? [{ label: "依赖指标", value: "dependency" }] : []),
-    ...(!isAtomicRoot ? [{ label: "常量", value: "literal" }] : []),
-    { label: "函数", value: "call" },
-    { label: "取负值", value: "unary" },
-    ...(depth < 5 ? [{ label: "四则运算", value: "binary" }] : []),
+    ...(availableProperties.length
+      ? [{ label: objectMetricText("m1cded5b3fdf7"), value: "property" }]
+      : []),
+    ...(dependencyAliases.length
+      ? [{ label: objectMetricText("ma6ace5b29ab9"), value: "dependency" }]
+      : []),
+    ...(!isAtomicRoot ? [{ label: objectMetricText("m7dc406c92803"), value: "literal" }] : []),
+    { label: objectMetricText("m1832990660bb"), value: "call" },
+    { label: objectMetricText("m266eedd2b0da"), value: "unary" },
+    ...(depth < 5 ? [{ label: objectMetricText("me4b5641e465c"), value: "binary" }] : []),
   ];
 
   const nodeTypeSelect = (
     <Space size={6}>
-      <span>{isAtomicRoot ? "表达式类型" : "参数来源"}</span>
+      <span>
+        {isAtomicRoot ? objectMetricText("m2b34dfff84ba") : objectMetricText("m57a1db52deb4")}
+      </span>
       <Select
-        aria-label={isAtomicRoot ? "表达式类型" : "参数来源"}
+        aria-label={
+          isAtomicRoot ? objectMetricText("m2b34dfff84ba") : objectMetricText("m57a1db52deb4")
+        }
         onChange={(nodeType: ObjectMetricExpressionV1["node_type"]) =>
           onChange(
             createNode(nodeType, availableProperties, dependencyAliases, requiresPropertyReference),
@@ -170,7 +181,7 @@ export function ObjectMetricExpressionEditor({
       <Space wrap>
         {nodeTypeSelect}
         <Select
-          aria-label="度量属性"
+          aria-label={objectMetricText("mbf3eefd70d61")}
           onChange={(encoded) => {
             const [objectTypeId, propertyName] = JSON.parse(encoded) as [string, string];
             const property = availableProperties.find(
@@ -188,7 +199,7 @@ export function ObjectMetricExpressionEditor({
             label: item.label,
             value: propertyKey(item),
           }))}
-          placeholder="选择对象属性"
+          placeholder={objectMetricText("mf7e136727d4d")}
           showSearch
           value={
             value.property_ref.object_type_id && value.property_ref.property_name
@@ -209,10 +220,10 @@ export function ObjectMetricExpressionEditor({
       <Space wrap>
         {nodeTypeSelect}
         <Select
-          aria-label="依赖指标"
+          aria-label={objectMetricText("ma6ace5b29ab9")}
           onChange={(dependency_alias) => onChange({ dependency_alias, node_type: "dependency" })}
           options={dependencyAliases.map((alias) => ({ label: alias, value: alias }))}
-          placeholder="选择依赖别名"
+          placeholder={objectMetricText("mf231bbdb00de")}
           value={value.dependency_alias || undefined}
           style={{ minWidth: 220 }}
         />
@@ -222,13 +233,13 @@ export function ObjectMetricExpressionEditor({
 
   if (value.node_type === "literal") {
     const allLiteralTypeOptions: Array<{ label: string; value: ExpressionValueType }> = [
-      { label: "数值", value: "decimal" },
-      { label: "整数", value: "int64" },
-      { label: "文本", value: "string" },
-      { label: "布尔", value: "boolean" },
-      { label: "日期", value: "date" },
-      { label: "日期时间", value: "datetime" },
-      { label: "持续时长", value: "duration" },
+      { label: objectMetricText("mc5500a58e0c5"), value: "decimal" },
+      { label: objectMetricText("m67e2bb6ef67b"), value: "int64" },
+      { label: objectMetricText("mdd81861811e5"), value: "string" },
+      { label: objectMetricText("m8e607148f445"), value: "boolean" },
+      { label: objectMetricText("m70d0c1b33626"), value: "date" },
+      { label: objectMetricText("m6ac8b7718121"), value: "datetime" },
+      { label: objectMetricText("m3e777ea8f1e8"), value: "duration" },
     ];
     const literalTypeOptions = allLiteralTypeOptions.filter(
       (item) => !acceptedPropertyTypes?.length || acceptedPropertyTypes.includes(item.value),
@@ -237,7 +248,7 @@ export function ObjectMetricExpressionEditor({
       <Space wrap>
         {nodeTypeSelect}
         <Select
-          aria-label="常量类型"
+          aria-label={objectMetricText("m74a3e83eeee9")}
           onChange={(value_type) => onChange({ ...value, value_type })}
           options={literalTypeOptions}
           value={value.value_type}
@@ -247,24 +258,24 @@ export function ObjectMetricExpressionEditor({
         value.value_type === "int64" ||
         value.value_type === "duration" ? (
           <InputNumber
-            aria-label="常量值"
+            aria-label={objectMetricText("m906bc76b812a")}
             onChange={(next) => onChange({ ...value, value: next ?? 0 })}
             value={Number(value.value ?? 0)}
           />
         ) : value.value_type === "boolean" ? (
           <Select
-            aria-label="常量值"
+            aria-label={objectMetricText("m906bc76b812a")}
             onChange={(next) => onChange({ ...value, value: next })}
             options={[
-              { label: "是", value: true },
-              { label: "否", value: false },
+              { label: objectMetricText("mb5141d3d19e9"), value: true },
+              { label: objectMetricText("m0c70665b6eb6"), value: false },
             ]}
             value={Boolean(value.value)}
             style={{ width: 120 }}
           />
         ) : (
           <Input
-            aria-label="常量值"
+            aria-label={objectMetricText("m906bc76b812a")}
             onChange={(event) => onChange({ ...value, value: event.target.value })}
             value={typeof value.value === "string" ? value.value : ""}
             style={{ width: 180 }}
@@ -279,7 +290,7 @@ export function ObjectMetricExpressionEditor({
       <div>
         <Space wrap>
           {nodeTypeSelect}
-          <span>取负</span>
+          <span>{objectMetricText("mee0a67eb1186")}</span>
         </Space>
         <div
           style={{
@@ -310,14 +321,14 @@ export function ObjectMetricExpressionEditor({
         <Space wrap>
           {nodeTypeSelect}
           <Select
-            aria-label="运算符"
+            aria-label={objectMetricText("m6a4b1a3683a3")}
             onChange={(operator) => onChange({ ...value, operator })}
             options={[
-              { label: "加", value: "add" },
-              { label: "减", value: "subtract" },
-              { label: "乘", value: "multiply" },
-              { label: "除", value: "divide" },
-              { label: "取模", value: "modulo" },
+              { label: objectMetricText("mf0f0327bc557"), value: "add" },
+              { label: objectMetricText("mec2287dc7bf8"), value: "subtract" },
+              { label: objectMetricText("md3ea6e17e3b5"), value: "multiply" },
+              { label: objectMetricText("md213ae206e7e"), value: "divide" },
+              { label: objectMetricText("md4417f86000a"), value: "modulo" },
             ].filter((item) => !allowedOperators || allowedOperators.includes(item.value))}
             value={value.operator}
             style={{ width: 100 }}
@@ -374,7 +385,7 @@ export function ObjectMetricExpressionEditor({
       <Space wrap>
         {nodeTypeSelect}
         <Select
-          aria-label="函数"
+          aria-label={objectMetricText("m1832990660bb")}
           onChange={(func) => {
             const definition = objectMetricFunctionDefinitions.find((item) => item.value === func);
             if (!definition) return;
@@ -408,7 +419,7 @@ export function ObjectMetricExpressionEditor({
             label,
             value: functionName,
           }))}
-          placeholder="选择函数"
+          placeholder={objectMetricText("m8f410db7bc6a")}
           value={value.function}
           style={{ width: 220 }}
         />
@@ -447,7 +458,7 @@ export function ObjectMetricExpressionEditor({
                   value={argument}
                 />
                 <Button
-                  aria-label={`删除${argumentDefinition.label}`}
+                  aria-label={objectMetricText("mc0620a1380c9", { p0: argumentDefinition.label })}
                   disabled={index < selectedFunction.minArguments}
                   danger
                   icon={<DeleteOutlined />}
@@ -477,7 +488,8 @@ export function ObjectMetricExpressionEditor({
           }
           type="dashed"
         >
-          添加{nextArgumentDefinition.label}
+          {objectMetricText("m7a8a11ead507")}
+          {nextArgumentDefinition.label}
         </Button>
       </div>
     </div>

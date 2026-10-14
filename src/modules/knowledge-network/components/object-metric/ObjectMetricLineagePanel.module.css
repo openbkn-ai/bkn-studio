@@ -57,7 +57,7 @@
 }
 .arrow {
   align-self: center;
-  color: var(--color-primary);
+  color: var(--color-text-link);
   font-size: 16px;
 }
 .node,

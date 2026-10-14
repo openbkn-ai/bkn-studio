@@ -9,6 +9,7 @@ import type {
   ObjectMetricTimeGranularityV1,
   ObjectMetricTimeWindowV1,
 } from "@/modules/knowledge-network/types/object-metric";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 
 type CalendarPeriod = Exclude<ObjectMetricTimeGranularityV1, "minute" | "hour">;
 
@@ -101,15 +102,15 @@ export function objectMetricTimeWindowBusinessLabel(
   selection?: ObjectMetricTimeWindowSelection,
 ): string | undefined {
   const periodLabels: Record<CalendarPeriod, string> = {
-    day: "今日",
-    month: "本月",
-    quarter: "本季度",
-    week: "本周",
-    year: "本年",
+    day: objectMetricText("m5c9cf5e0dd47"),
+    month: objectMetricText("m0eeecd26f2ba"),
+    quarter: objectMetricText("mf142ffeef6d8"),
+    week: objectMetricText("mb4c6c3eb0bce"),
+    year: objectMetricText("m78ebb7f81db5"),
   };
   const period = objectMetricTimeWindowPeriod(selection);
   if (!period) return undefined;
   return selection?.startsWith("full_")
-    ? `整个${periodLabels[period]}（含未来日期）`
+    ? objectMetricText("m23459309ff77", { p0: periodLabels[period] })
     : periodLabels[period];
 }

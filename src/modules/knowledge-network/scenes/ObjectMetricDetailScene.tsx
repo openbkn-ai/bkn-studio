@@ -71,24 +71,60 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectMetricDetailScene.module.css";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { useTranslation } from "react-i18next";
 
-const typeNames = { atomic: "原子指标", composite: "复合指标", derived: "衍生指标" };
+const typeNames = {
+  get atomic() {
+    return objectMetricText("me5675ba4c2fd");
+  },
+  get composite() {
+    return objectMetricText("m3e70c815f275");
+  },
+  get derived() {
+    return objectMetricText("me88b222ae28a");
+  },
+};
 const statusNames: Record<ObjectMetricRecordV1["definition"]["lifecycle"]["status"], string> = {
-  deprecated: "已停用",
-  draft: "草稿",
-  published: "已发布",
-  validated: "已校验",
+  get deprecated() {
+    return objectMetricText("ma8c3698b5b8c");
+  },
+  get draft() {
+    return objectMetricText("m2a2fd29bd27a");
+  },
+  get published() {
+    return objectMetricText("md334724d6b2f");
+  },
+  get validated() {
+    return objectMetricText("m1936eafc0c3c");
+  },
 };
 
 const aggregationNames: Record<string, string> = {
-  avg: "平均值",
-  count: "非空计数",
-  count_distinct: "去重计数",
-  count_rows: "计数",
-  identity: "直接读取",
-  max: "最大值",
-  min: "最小值",
-  sum: "求和",
+  get avg() {
+    return objectMetricText("mdb7538b96322");
+  },
+  get count() {
+    return objectMetricText("m3a6663a758c9");
+  },
+  get count_distinct() {
+    return objectMetricText("m1e96cd1f49bf");
+  },
+  get count_rows() {
+    return objectMetricText("m21179deb9a74");
+  },
+  get identity() {
+    return objectMetricText("m7ea9fbba115d");
+  },
+  get max() {
+    return objectMetricText("m1e7a22820768");
+  },
+  get min() {
+    return objectMetricText("mb2dcdcfabb6a");
+  },
+  get sum() {
+    return objectMetricText("m2819237ddb01");
+  },
 };
 
 function timeWindowLabel(
@@ -97,18 +133,23 @@ function timeWindowLabel(
     { kind: "derived" }
   >["business_qualifiers"]["time_window"],
 ) {
-  if (!window || window.mode === "unbounded") return "不限时间";
-  if (window.mode === "rolling") return `最近 ${window.length} ${window.unit}`;
+  if (!window || window.mode === "unbounded") return objectMetricText("m12edbc42122f");
+  if (window.mode === "rolling")
+    return objectMetricText("mff99c135adbc", { p0: window.length, p1: window.unit });
   if (window.mode === "fixed_range") {
-    return `${dayjs(window.start_at).format("YYYY-MM-DD HH:mm")} 至 ${dayjs(window.end_at).format("YYYY-MM-DD HH:mm")} · ${window.timezone}`;
+    return objectMetricText("mf971493b1e41", {
+      p0: dayjs(window.start_at).format("YYYY-MM-DD HH:mm"),
+      p1: dayjs(window.end_at).format("YYYY-MM-DD HH:mm"),
+      p2: window.timezone,
+    });
   }
   return `${objectMetricTimeWindowBusinessLabel(objectMetricTimeWindowSelection(window)) ?? window.period} · ${window.timezone}`;
 }
 
 function dependencyFailureLabel(error: unknown, version: number) {
-  if (isRequestNotFound(error)) return `依赖版本不存在 · v${version}`;
-  if (isRequestForbidden(error)) return `无权读取依赖指标 · v${version}`;
-  return `依赖指标读取失败 · v${version}`;
+  if (isRequestNotFound(error)) return objectMetricText("mf40f436696fb", { p0: version });
+  if (isRequestForbidden(error)) return objectMetricText("m193341f84d98", { p0: version });
+  return objectMetricText("m654b86d99a38", { p0: version });
 }
 
 function dependencyFailureDescription(error: unknown) {
@@ -117,6 +158,7 @@ function dependencyFailureDescription(error: unknown) {
 }
 
 export function ObjectMetricDetailScene() {
+  useTranslation();
   const { metricId = "", networkId = "" } = useParams<{ metricId: string; networkId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -190,11 +232,20 @@ export function ObjectMetricDetailScene() {
   }, [metricId, networkId]);
 
   useEffect(() => {
-    if (!record?.definition.owner_object_type_id) return;
-    void getKnowledgeNetworkObjectTypeDetail(
-      networkId,
-      record.definition.owner_object_type_id,
-    ).then(setOwnerObjectType);
+    const ownerObjectTypeId = record?.definition.owner_object_type_id;
+    setOwnerObjectType(null);
+    if (!ownerObjectTypeId) return;
+    let active = true;
+    void getKnowledgeNetworkObjectTypeDetail(networkId, ownerObjectTypeId)
+      .then((detail) => {
+        if (active) setOwnerObjectType(detail);
+      })
+      .catch(() => {
+        if (active) setOwnerObjectType(null);
+      });
+    return () => {
+      active = false;
+    };
   }, [networkId, record?.definition.owner_object_type_id]);
 
   const dependencyReferenceSignature = record
@@ -235,15 +286,21 @@ export function ObjectMetricDetailScene() {
     if (loadError === "forbidden") {
       return (
         <Alert
-          description="当前账号没有查看该指标定义的权限，请联系知识网络管理员授权。"
-          message="无权查看该指标"
+          description={objectMetricText("m9590c71c5808")}
+          message={objectMetricText("m2a9ed8385cd1")}
           showIcon
           type="warning"
         />
       );
     }
     return (
-      <Empty description={loadError === "unknown" ? "指标加载失败，请稍后重试" : "指标不存在"} />
+      <Empty
+        description={
+          loadError === "unknown"
+            ? objectMetricText("m51fc5b3bc879")
+            : objectMetricText("mcbc612fb7c63")
+        }
+      />
     );
   }
   const definition = record.definition;
@@ -311,7 +368,7 @@ export function ObjectMetricDetailScene() {
       on_error: "unavailable",
       status: "published",
     });
-    void message.success("已添加到对象类逻辑属性");
+    void message.success(objectMetricText("mbc21b4167a12"));
     setBindingOpen(false);
   };
 
@@ -340,7 +397,7 @@ export function ObjectMetricDetailScene() {
           <Button
             onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/metrics`)}
           >
-            返回列表
+            {objectMetricText("me9d5ca6c1406")}
           </Button>
           <Button
             onClick={() => {
@@ -356,36 +413,36 @@ export function ObjectMetricDetailScene() {
             type="primary"
           >
             {["published", "deprecated"].includes(definition.lifecycle.status)
-              ? "创建新版本"
-              : "编辑草稿"}
+              ? objectMetricText("m5a3f1953b1fb")
+              : objectMetricText("m9d0eedd99d2b")}
           </Button>
         </div>
       </div>
       <div className={styles.content}>
         {(location.state as { justPublished?: boolean } | null)?.justPublished ? (
           <Alert
-            message={`指标已发布为 v${definition.version}`}
-            description="可以继续试算已发布版本，或将单个实例指标配置为逻辑属性。"
+            message={objectMetricText("m7d6fe77cb980", { p0: definition.version })}
+            description={objectMetricText("ma9b914cb8eda")}
             type="success"
             showIcon
             closable
           />
         ) : null}
-        <Card className={styles.sectionCard} title="使用与验证">
+        <Card className={styles.sectionCard} title={objectMetricText("mb76466842ab3")}>
           <div className={styles.usageGrid}>
             <div className={styles.usageItem}>
               <div>
-                <strong>试算真实数据</strong>
-                <p>使用当前已发布版本读取业务数据，核对指标结果。</p>
+                <strong>{objectMetricText("m073728637a26")}</strong>
+                <p>{objectMetricText("m7a26b9117cf8")}</p>
               </div>
               <Button disabled={!canQuery} onClick={() => setTrialOpen(true)}>
-                {canQuery ? "开始试算" : "发布后可试算"}
+                {canQuery ? objectMetricText("mf143bd50d496") : objectMetricText("mf4389f020d9b")}
               </Button>
             </div>
             <div className={styles.usageItem}>
               <div>
-                <strong>作为逻辑属性使用</strong>
-                <p>让单个实例指标像对象属性一样被查询和引用。</p>
+                <strong>{objectMetricText("mb847b6e39e27")}</strong>
+                <p>{objectMetricText("md320de80ff41")}</p>
               </div>
               <Button
                 disabled={
@@ -395,51 +452,53 @@ export function ObjectMetricDetailScene() {
                 onClick={() => setBindingOpen(true)}
               >
                 {definition.calculation_scope !== "object_instance"
-                  ? "仅适用于单个实例"
+                  ? objectMetricText("m71a96d83271b")
                   : definition.lifecycle.status === "published"
-                    ? "配置逻辑属性"
-                    : "发布后可配置"}
+                    ? objectMetricText("m915fe912305c")
+                    : objectMetricText("m8f301dc74371")}
               </Button>
             </div>
           </div>
         </Card>
-        <Card className={styles.sectionCard} title="业务定义">
+        <Card className={styles.sectionCard} title={objectMetricText("m419eb90613fd")}>
           <Descriptions column={2} bordered>
-            <Descriptions.Item label="指标类型">
+            <Descriptions.Item label={objectMetricText("m7626be61e570")}>
               <Tag color="blue">{typeNames[definition.metric_type]}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="状态">
+            <Descriptions.Item label={objectMetricText("m6320b4a8722a")}>
               <Tag color={definition.lifecycle.status === "published" ? "success" : "default"}>
                 {statusNames[definition.lifecycle.status]}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="主归属对象类">
+            <Descriptions.Item label={objectMetricText("m26c439016066")}>
               {objectTypes.find((item) => item.id === definition.owner_object_type_id)?.name ??
                 definition.owner_object_type_id}
             </Descriptions.Item>
-            <Descriptions.Item label="计算对象">
-              {definition.calculation_scope === "object_instance" ? "单个实例" : "实例集合"}
+            <Descriptions.Item label={objectMetricText("mec7844e49915")}>
+              {definition.calculation_scope === "object_instance"
+                ? objectMetricText("mabe9d02781fc")
+                : objectMetricText("m9c51e86f9307")}
             </Descriptions.Item>
-            <Descriptions.Item label="业务定义" span={2}>
+            <Descriptions.Item label={objectMetricText("m419eb90613fd")} span={2}>
               {definition.description}
             </Descriptions.Item>
           </Descriptions>
         </Card>
-        <Card className={styles.sectionCard} title="计算逻辑">
+        <Card className={styles.sectionCard} title={objectMetricText("m6c7b29b8b211")}>
           {specification.kind === "atomic" ? (
             <Descriptions column={2}>
-              <Descriptions.Item label="聚合方式">
+              <Descriptions.Item label={objectMetricText("mb17e03bc6bad")}>
                 {aggregationNames[specification.measure.aggregation] ??
                   specification.measure.aggregation}
               </Descriptions.Item>
-              <Descriptions.Item label="度量表达式">
-                {expression ? expressionLabel(expression) : "计数"}
+              <Descriptions.Item label={objectMetricText("me92a76d3b298")}>
+                {expression ? expressionLabel(expression) : objectMetricText("m21179deb9a74")}
               </Descriptions.Item>
             </Descriptions>
           ) : null}
           {specification.kind === "derived" ? (
             <Descriptions column={2}>
-              <Descriptions.Item label="基础原子指标">
+              <Descriptions.Item label={objectMetricText("m4919ba2e9c0b")}>
                 {publishedMetrics.find(
                   (item) =>
                     item.definition.id === specification.base_metric.metric_id &&
@@ -447,26 +506,26 @@ export function ObjectMetricDetailScene() {
                 )?.definition.name ?? specification.base_metric.metric_id}
                 @v{specification.base_metric.version}
               </Descriptions.Item>
-              <Descriptions.Item label="时间窗口">
+              <Descriptions.Item label={objectMetricText("me306e231fb23")}>
                 {timeWindowLabel(specification.business_qualifiers.time_window)}
               </Descriptions.Item>
-              <Descriptions.Item label="业务条件" span={2}>
+              <Descriptions.Item label={objectMetricText("m391f2f5d1034")} span={2}>
                 {objectMetricBusinessConditionLabel(specification.business_qualifiers)}
               </Descriptions.Item>
-              <Descriptions.Item label="关系类路径" span={2}>
+              <Descriptions.Item label={objectMetricText("mf8c41076f5dc")} span={2}>
                 {specification.business_qualifiers.relation_path?.steps
                   .map(
                     (step) =>
                       relationTypes.find((item) => item.id === step.relation_type_id)?.name ??
                       step.relation_type_id,
                   )
-                  .join(" → ") || "未使用关系路径"}
+                  .join(" → ") || objectMetricText("m21f55b7680c9")}
               </Descriptions.Item>
             </Descriptions>
           ) : null}
           {specification.kind === "composite" ? (
             <Descriptions column={1}>
-              <Descriptions.Item label="依赖指标">
+              <Descriptions.Item label={objectMetricText("ma6ace5b29ab9")}>
                 <Space size={[8, 8]} wrap>
                   {compositeDependencies.map(
                     ({
@@ -483,10 +542,22 @@ export function ObjectMetricDetailScene() {
                           key={`${dependency.metric_ref.metric_id}@${dependency.metric_ref.version}`}
                         >
                           {dependencyRecord
-                            ? `${dependencyRecord.definition.name} · v${dependencyRecord.definition.version} · ${typeNames[dependencyRecord.definition.metric_type]} · ${statusNames[dependencyRecord.definition.lifecycle.status]}（公式符号：${dependency.alias}）`
+                            ? objectMetricText("m12e768346231", {
+                                p0: dependencyRecord.definition.name,
+                                p1: dependencyRecord.definition.version,
+                                p2: typeNames[dependencyRecord.definition.metric_type],
+                                p3: statusNames[dependencyRecord.definition.lifecycle.status],
+                                p4: dependency.alias,
+                              })
                             : dependencyLoading
-                              ? `正在读取依赖指标 · v${dependency.metric_ref.version}（公式符号：${dependency.alias}）`
-                              : `${dependencyFailureLabel(error, dependency.metric_ref.version)}（公式符号：${dependency.alias}）`}
+                              ? objectMetricText("m7d9782471028", {
+                                  p0: dependency.metric_ref.version,
+                                  p1: dependency.alias,
+                                })
+                              : objectMetricText("mcb1ed2f66b66", {
+                                  p0: dependencyFailureLabel(error, dependency.metric_ref.version),
+                                  p1: dependency.alias,
+                                })}
                         </Tag>
                       );
                       return error ? (
@@ -503,7 +574,7 @@ export function ObjectMetricDetailScene() {
                   )}
                 </Space>
               </Descriptions.Item>
-              <Descriptions.Item label="业务公式">
+              <Descriptions.Item label={objectMetricText("me1126763a0f0")}>
                 {expressionLabel(
                   replaceObjectMetricDependencyAliases(
                     specification.expression,
@@ -511,47 +582,47 @@ export function ObjectMetricDetailScene() {
                   ),
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="技术表达式">
+              <Descriptions.Item label={objectMetricText("m485ac2c76c24")}>
                 {expressionLabel(specification.expression)}
               </Descriptions.Item>
             </Descriptions>
           ) : null}
         </Card>
-        <Card className={styles.sectionCard} title="血缘与影响">
+        <Card className={styles.sectionCard} title={objectMetricText("m7f4551dd15d1")}>
           <ObjectMetricLineagePanel
             logicProperties={ownerObjectType?.logicProperties ?? []}
             metric={record}
             metrics={lineageCatalog}
           />
         </Card>
-        <Card className={styles.sectionCard} title="结果与分析">
+        <Card className={styles.sectionCard} title={objectMetricText("mf006fe7f4bbf")}>
           <Descriptions column={2} bordered>
-            <Descriptions.Item label="固定分组维度">
+            <Descriptions.Item label={objectMetricText("m88459b43afb6")}>
               {definition.result_semantics.statistical_grain.group_by_dimensions
                 .map((item) => item.property_name)
-                .join("、") || "无（返回汇总值）"}
+                .join("、") || objectMetricText("m9f05b0e41cb5")}
             </Descriptions.Item>
-            <Descriptions.Item label="时间粒度">
+            <Descriptions.Item label={objectMetricText("m0a2ce90e187a")}>
               {definition.result_semantics.statistical_grain.time_granularity
-                ? `${definition.result_semantics.statistical_grain.time_granularity} · ${definition.result_semantics.statistical_grain.timezone ?? "未指定时区"}${definition.result_semantics.statistical_grain.week_start ? ` · 每周从 ${definition.result_semantics.statistical_grain.week_start} 开始` : ""}`
-                : "无"}
+                ? `${definition.result_semantics.statistical_grain.time_granularity} · ${definition.result_semantics.statistical_grain.timezone ?? objectMetricText("m589d84e4cca8")}${definition.result_semantics.statistical_grain.week_start ? objectMetricText("m8dba6895a41a", { p0: definition.result_semantics.statistical_grain.week_start }) : ""}`
+                : objectMetricText("m484d55613910")}
             </Descriptions.Item>
-            <Descriptions.Item label="值类型">
+            <Descriptions.Item label={objectMetricText("me659c05e3760")}>
               {definition.result_semantics.value.physical_type} /{" "}
               {definition.result_semantics.value.semantic_type}
             </Descriptions.Item>
-            <Descriptions.Item label="单位">
-              {definition.result_semantics.value.unit?.code ?? "无"}
+            <Descriptions.Item label={objectMetricText("m80b19d68b149")}>
+              {definition.result_semantics.value.unit?.code ?? objectMetricText("m484d55613910")}
             </Descriptions.Item>
-            <Descriptions.Item label="开放分析维度">
+            <Descriptions.Item label={objectMetricText("m9a004b7a1da9")}>
               {definition.query_capabilities.analysis_dimensions
                 .map((item) => item.property_name)
-                .join("、") || "无"}
+                .join("、") || objectMetricText("m484d55613910")}
             </Descriptions.Item>
-            <Descriptions.Item label="可查询时间维度">
+            <Descriptions.Item label={objectMetricText("m40e232fef99f")}>
               {definition.query_capabilities.time_dimensions
                 .map((item) => item.property_name)
-                .join("、") || "无"}
+                .join("、") || objectMetricText("m484d55613910")}
             </Descriptions.Item>
           </Descriptions>
         </Card>
@@ -572,12 +643,12 @@ export function ObjectMetricDetailScene() {
         onClose={() => setBindingOpen(false)}
         open={bindingOpen}
         rootClassName={styles.drawer}
-        title="绑定为对象类逻辑属性"
+        title={objectMetricText("m6c461a9f092b")}
         width="min(520px, calc(100vw - 24px))"
       >
         <Alert
-          message="逻辑属性随实例按需计算"
-          description={`该属性绑定到对象类 ${definition.owner_object_type_id}，唯一标识沿用对象类主键，不需要再次配置。`}
+          message={objectMetricText("m517a1a8a0069")}
+          description={objectMetricText("mca81dbf346a3", { p0: definition.owner_object_type_id })}
           type="info"
           showIcon
         />
@@ -590,23 +661,27 @@ export function ObjectMetricDetailScene() {
           style={{ marginTop: 20 }}
         >
           <Form.Item
-            label="属性名称"
+            label={objectMetricText("maac14899bd42")}
             name="property_name"
             rules={[
               { required: true },
-              { pattern: /^[A-Za-z_][A-Za-z0-9_]*$/, message: "请输入合法属性名称" },
+              { pattern: /^[A-Za-z_][A-Za-z0-9_]*$/, message: objectMetricText("m1223e28b1644") },
             ]}
           >
-            <Input placeholder="例如 fulfilment_duration" />
+            <Input placeholder={objectMetricText("m262469df7a5d")} />
           </Form.Item>
-          <Form.Item label="显示名称" name="display_name" rules={[{ required: true }]}>
-            <Input placeholder="例如 履约耗时" />
+          <Form.Item
+            label={objectMetricText("ma98585871c53")}
+            name="display_name"
+            rules={[{ required: true }]}
+          >
+            <Input placeholder={objectMetricText("me8b7c5d7cc73")} />
           </Form.Item>
-          <Form.Item label="说明" name="comment">
+          <Form.Item label={objectMetricText("m4262c45dc797")} name="comment">
             <Input.TextArea rows={3} />
           </Form.Item>
           <Button htmlType="submit" type="primary">
-            确认绑定
+            {objectMetricText("md45097132e0d")}
           </Button>
         </Form>
       </Drawer>

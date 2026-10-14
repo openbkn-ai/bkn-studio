@@ -9,7 +9,7 @@ import {
   parseContentDispositionFilename,
   triggerBrowserDownload,
 } from "@/framework/download/file-download";
-import { http, SUPPRESS_ERROR_TOAST_HEADER } from "@/framework/request/http";
+import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
 import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import type {
@@ -164,7 +164,6 @@ export async function getKnowledgeNetwork(
   const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}`,
     {
-      headers: options.skipErrorToast ? { [SUPPRESS_ERROR_TOAST_HEADER]: "true" } : undefined,
       skipErrorToast: options.skipErrorToast,
     },
   );
