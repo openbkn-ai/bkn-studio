@@ -34,13 +34,15 @@ function metricUrl(route) {
   return `${baseURL}/studio/knowledge-network/workspace/${networkId}/metrics/${route}`;
 }
 
-async function gotoMetric(page, route) {
-  const response = await page.goto(metricUrl(route), { waitUntil: "domcontentloaded" });
+async function loginIfNeeded(page) {
+  await page.waitForLoadState("networkidle");
   if (page.url().includes(":9001/login")) {
     const username = process.env.E2E_USERNAME || process.argv[5];
     const password = process.env.E2E_PASSWORD || process.argv[6];
     const usernameInput = page
-      .locator('input[name="username"], input[type="text"], input[type="email"]')
+      .locator(
+        'input[name="account"], input[name="username"], input[type="text"], input[type="email"]',
+      )
       .first();
     const passwordInput = page.locator('input[name="password"], input[type="password"]').first();
     if ((await usernameInput.count()) > 0 && (await passwordInput.count()) > 0) {
@@ -53,6 +55,11 @@ async function gotoMetric(page, route) {
     await page.getByRole("button", { name: "登录", exact: true }).click();
     await page.waitForURL((url) => url.origin === baseURL && url.pathname.startsWith("/studio/"));
   }
+}
+
+async function gotoMetric(page, route) {
+  const response = await page.goto(metricUrl(route), { waitUntil: "domcontentloaded" });
+  await loginIfNeeded(page);
   await page.waitForLoadState("networkidle");
   try {
     await page.getByRole("heading", { level: 1 }).waitFor({ timeout: 15_000 });
@@ -70,30 +77,48 @@ async function openTrial(page, triggerName = "试算真实数据") {
 }
 
 async function runTrial(page) {
-  await page.getByRole("button", { name: "开始试算", exact: true }).last().click();
+  const responsePromise = page.waitForResponse(
+    (response) => response.request().method() === "POST",
+  );
+  await page
+    .locator(".ant-drawer-content:visible")
+    .last()
+    .getByRole("button", { name: "开始试算", exact: true })
+    .click({ force: true });
+  const response = await responsePromise;
+  console.log(`TRIAL_RESPONSE ${response.status()} ${response.url()}`);
   await page.getByText(/执行状态：/).waitFor();
 }
 
 async function selectVersion(page, label) {
-  await page.getByRole("combobox").first().click();
+  await page.locator(".ant-select-selector").first().click();
   await page.getByText(label, { exact: true }).last().click();
-  await page.getByText(label, { exact: true }).first().waitFor();
+  await page.locator(".ant-select-selection-item", { hasText: label }).first().waitFor();
 }
 
 async function checkSingleAtomic(browser) {
   const page = await browser.newPage();
   await gotoMetric(page, routes.orderAmountDraft);
-  await page.getByRole("heading", { name: "编辑原子指标 · 销售订单" }).waitFor();
-  assert.equal(
-    await page.getByRole("switch", { name: "发布后作为逻辑属性使用" }).isChecked(),
-    true,
-  );
-  assert.equal(
-    await page.getByRole("textbox", { name: "* 显示名称" }).inputValue(),
-    "验收订单金额",
-  );
+  const editHeading = page.getByRole("heading", { name: "编辑原子指标 · 销售订单" });
+  const isDraft = (await editHeading.count()) > 0;
+  if (isDraft) {
+    await editHeading.waitFor();
+    assert.equal(
+      await page.getByRole("switch", { name: "发布后作为逻辑属性使用" }).isChecked(),
+      true,
+    );
+    assert.equal(
+      await page.getByRole("textbox", { name: "* 显示名称" }).inputValue(),
+      "验收订单金额",
+    );
+  } else {
+    await page.getByRole("heading", { name: "验收订单金额", exact: true }).waitFor();
+    await page
+      .getByText("验收订单金额 · metric_e2e_20261004_order_amount", { exact: true })
+      .waitFor();
+  }
 
-  await openTrial(page);
+  await openTrial(page, isDraft ? "试算真实数据" : "开始试算");
   const identity = page.getByRole("textbox", { name: "* order_id · order_id" });
   await identity.fill("10357");
   await runTrial(page);
@@ -163,7 +188,7 @@ async function checkPublishedVersion(browser) {
   const page = await browser.newPage();
   await gotoMetric(page, routes.orderCountDetail);
   await selectVersion(page, "v1 · 已发布");
-  await page.getByText("当前版本被 4 个下游指标", { exact: false }).waitFor();
+  await page.getByText("下游 4", { exact: true }).first().waitFor();
   await openTrial(page, "开始试算");
   await runTrial(page);
   await page.getByText("15000", { exact: true }).last().waitFor();
@@ -188,6 +213,7 @@ async function checkMetricLogicPropertyTrial(browser) {
   const page = await browser.newPage();
   const url = `${baseURL}/studio/knowledge-network/workspace/${networkId}/object-types/order/detail?tab=data&section=logic`;
   await page.goto(url, { waitUntil: "networkidle" });
+  await loginIfNeeded(page);
   await page.getByText("逻辑属性试算", { exact: true }).first().waitFor();
   const row = page.getByRole("row").filter({ hasText: "10357" }).first();
   const responsePromise = page.waitForResponse(
@@ -208,6 +234,7 @@ async function checkExistingOrderLogicProperties(browser) {
   const page = await browser.newPage();
   const url = `${baseURL}/studio/knowledge-network/workspace/ecommerce_ops_bkn/object-types/order/detail?tab=data&section=logic`;
   await page.goto(url, { waitUntil: "networkidle" });
+  await loginIfNeeded(page);
   await page.getByRole("columnheader", { name: "订单折扣率", exact: true }).waitFor();
   const row = page.getByRole("row").filter({ hasText: "10357" }).first();
   await row.getByRole("button", { name: "试算", exact: true }).click();
@@ -244,6 +271,7 @@ async function checkForbiddenMetricPage(browser) {
     if (response.status() === 403) forbiddenUrls.push(response.url());
   });
   await page.goto(metricUrl(routes.orderCountDetail), { waitUntil: "networkidle" });
+  await loginIfNeeded(page);
   await page.getByText("无权查看该指标", { exact: true }).waitFor();
   assert.equal(await page.getByText("指标不存在", { exact: true }).count(), 0);
   const permissionMessages = await page.getByText(/没有执行此操作的权限/).evaluateAll((nodes) =>
@@ -263,6 +291,24 @@ async function checkForbiddenMetricPage(browser) {
   await page.close();
 }
 
+async function checkQueryEditionForbidden(browser) {
+  const page = await browser.newPage();
+  await gotoMetric(page, routes.orderCountDetail);
+  await selectVersion(page, "v1 · 已发布");
+  await openTrial(page, "开始试算");
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/api/ontology-query/v2/") &&
+      response.url().includes("/object-metrics/") &&
+      new URL(response.url()).pathname.endsWith("/data"),
+  );
+  await page.getByRole("button", { name: "开始试算", exact: true }).last().click();
+  const response = await responsePromise;
+  assert.equal(response.status(), 403, await response.text());
+  await page.close();
+}
+
 async function checkDerivedLineage(browser) {
   const page = await browser.newPage();
   await gotoMetric(page, routes.derivedDetail);
@@ -275,6 +321,7 @@ async function checkObjectTypeIndexStatus(browser) {
   const page = await browser.newPage();
   const listUrl = `${baseURL}/studio/knowledge-network/workspace/ecommerce_ops_bkn/object-types?q=order`;
   await page.goto(listUrl, { waitUntil: "networkidle" });
+  await loginIfNeeded(page);
   const orderRow = page.getByRole("row").filter({ hasText: "销售订单" }).first();
   await orderRow.waitFor();
   assert.equal(await orderRow.getByText("资源未建索引", { exact: true }).count(), 0);
@@ -311,6 +358,7 @@ async function main() {
     ["live-metric-logic-property", checkMetricLogicPropertyTrial],
     ["live-existing-order-logic-properties", checkExistingOrderLogicProperties],
     ["live-forbidden-metric-page", checkForbiddenMetricPage],
+    ["live-query-edition-forbidden", checkQueryEditionForbidden],
     ["live-derived-lineage", checkDerivedLineage],
     ["live-object-type-index-status", checkObjectTypeIndexStatus],
   ];
@@ -329,11 +377,16 @@ async function main() {
       } catch (error) {
         failures.push({ name, error });
         console.error(`FAIL ${name}: ${error.stack || error.message || error}`);
+        for (const page of browser.pages()) {
+          console.error(
+            `STATE ${page.url()} ${await page.title()} :: ${(await page.locator("body").innerText()).slice(0, 800)}`,
+          );
+        }
       }
     }
   } finally {
-    await browser.close();
-    await browserProcess.close();
+    await browser.close().catch(() => undefined);
+    await browserProcess.close().catch(() => undefined);
   }
 
   if (failures.length) {

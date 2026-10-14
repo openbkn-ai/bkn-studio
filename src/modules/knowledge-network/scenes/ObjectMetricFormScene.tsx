@@ -10,6 +10,9 @@ import {
   LeftOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
+  SendOutlined,
+  StopOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -19,6 +22,7 @@ import {
   Form,
   Input,
   InputNumber,
+  Modal,
   Radio,
   Result,
   Select,
@@ -29,7 +33,7 @@ import {
   Tooltip,
 } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -69,6 +73,10 @@ import {
   type ObjectMetricUnitQuantityKind,
 } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
 import { objectMetricFormErrorCount } from "@/modules/knowledge-network/lib/object-metric-form-validation";
+import {
+  generateObjectMetricAiIntent,
+  type ObjectMetricAiIntent,
+} from "@/modules/knowledge-network/services/object-metric-ai.service";
 import {
   createObjectMetricDraftV1,
   getObjectMetricCapabilitiesV1,
@@ -554,6 +562,98 @@ function propertyName(ref?: ObjectMetricPropertyRefV1) {
   return ref?.property_name;
 }
 
+function sanitizeAiCondition(
+  condition: ObjectMetricConditionV1 | undefined,
+  ownerObjectTypeId: string,
+  allowedProperties: Set<string>,
+): ObjectMetricConditionV1 | undefined {
+  if (!condition || typeof condition !== "object") return undefined;
+  if (condition.node_type === "group") {
+    if (!Array.isArray(condition.children)) return undefined;
+    const children = condition.children.flatMap((child) => {
+      const next = sanitizeAiCondition(child, ownerObjectTypeId, allowedProperties);
+      return next ? [next] : [];
+    });
+    if (!children.length) return undefined;
+    return { ...condition, children };
+  }
+  if (
+    condition.node_type !== "predicate" ||
+    !condition.left ||
+    condition.left.source !== "property" ||
+    !condition.left.property_ref?.property_name ||
+    !allowedProperties.has(condition.left.property_ref.property_name)
+  ) {
+    return undefined;
+  }
+  return {
+    ...condition,
+    left: {
+      source: "property",
+      property_ref: propertyRef(ownerObjectTypeId, condition.left.property_ref.property_name),
+    },
+  };
+}
+
+function sanitizeAiExpression(
+  expression: ObjectMetricExpressionV1 | undefined,
+  ownerObjectTypeId: string,
+  allowedProperties: Set<string>,
+  allowedDependencyAliases?: Set<string>,
+): ObjectMetricExpressionV1 | undefined {
+  if (!expression || typeof expression !== "object" || !("node_type" in expression)) {
+    return undefined;
+  }
+  if (expression.node_type === "property") {
+    if (!allowedProperties.has(expression.property_ref.property_name)) return undefined;
+    return {
+      ...expression,
+      property_ref: propertyRef(ownerObjectTypeId, expression.property_ref.property_name),
+    };
+  }
+  if (expression.node_type === "dependency") {
+    return allowedDependencyAliases?.has(expression.dependency_alias) ? expression : undefined;
+  }
+  if (expression.node_type === "literal") return expression;
+  if (expression.node_type === "unary") {
+    const left = sanitizeAiExpression(
+      expression.left,
+      ownerObjectTypeId,
+      allowedProperties,
+      allowedDependencyAliases,
+    );
+    return left ? { ...expression, left } : undefined;
+  }
+  if (expression.node_type === "binary") {
+    const left = sanitizeAiExpression(
+      expression.left,
+      ownerObjectTypeId,
+      allowedProperties,
+      allowedDependencyAliases,
+    );
+    const right = sanitizeAiExpression(
+      expression.right,
+      ownerObjectTypeId,
+      allowedProperties,
+      allowedDependencyAliases,
+    );
+    return left && right ? { ...expression, left, right } : undefined;
+  }
+  if (expression.node_type !== "call" || !Array.isArray(expression.arguments)) return undefined;
+  const arguments_ = expression.arguments.flatMap((argument) => {
+    const next = sanitizeAiExpression(
+      argument,
+      ownerObjectTypeId,
+      allowedProperties,
+      allowedDependencyAliases,
+    );
+    return next ? [next] : [];
+  });
+  return arguments_.length === expression.arguments.length
+    ? { ...expression, arguments: arguments_ }
+    : undefined;
+}
+
 function dependencyKey(metricId: string, version: number) {
   return `${metricId}@${version}`;
 }
@@ -774,7 +874,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const params = useParams<{ metricId: string; networkId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { message } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const networkId = params.networkId ?? "";
   const metricId = params.metricId;
   const requestedMetricType = parseMetricType(searchParams.get("metricType"));
@@ -814,6 +914,20 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const [validation, setValidation] = useState<ObjectMetricValidationResultV1>();
   const [preview, setPreview] = useState<ObjectMetricPreviewV1>();
   const [trialDefinition, setTrialDefinition] = useState<ObjectMetricDefinitionV1>();
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const aiAbortRef = useRef<AbortController | null>(null);
+  const [aiConversation, setAiConversation] = useState<
+    Array<{ content: string; id: string; role: "assistant" | "user"; tone?: "error" }>
+  >([]);
+
+  useEffect(
+    () => () => {
+      aiAbortRef.current?.abort();
+    },
+    [],
+  );
 
   const definition = record?.definition;
   const metricType = definition?.metric_type ?? requestedMetricType;
@@ -1006,6 +1120,239 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     ) as Record<string, ExpressionValueType>;
     const nextPhysicalType = expressionValueType(next, [], dependencyTypes);
     if (nextPhysicalType) applyValueSuggestion(valueSuggestionForPhysicalType(nextPhysicalType));
+  };
+  const applyAiIntent = (intent: ObjectMetricAiIntent) => {
+    const allowedProperties = new Set(properties.map((item) => item.propertyName));
+    const commonValues: Partial<FormValues> = {
+      name: intent.name?.trim() || undefined,
+      code: record ? undefined : intent.code?.trim() || undefined,
+      description: intent.description?.trim() || undefined,
+      calculationScope: metricType === "derived" ? undefined : intent.calculation_scope,
+    };
+
+    if (metricType === "atomic" && intent.atomic) {
+      const nextAggregation = intent.atomic.aggregation ?? getFieldValue("aggregation");
+      const nextExpression =
+        sanitizeAiExpression(intent.atomic.expression, ownerObjectTypeId, allowedProperties) ??
+        (intent.atomic.property_name && allowedProperties.has(intent.atomic.property_name)
+          ? {
+              node_type: "property" as const,
+              property_ref: propertyRef(ownerObjectTypeId, intent.atomic.property_name),
+            }
+          : undefined);
+      if (nextAggregation) commonValues.aggregation = nextAggregation;
+      if (nextExpression) {
+        setMeasureExpression(nextExpression);
+        setAtomicExpressionInteracted(true);
+        applyValueSuggestion(
+          instanceValueSuggestion(nextExpression, properties, nextAggregation),
+          nextAggregation === "count_rows" ||
+            nextAggregation === "count" ||
+            nextAggregation === "count_distinct",
+        );
+      }
+    }
+
+    if (metricType === "derived" && intent.derived) {
+      const requestedVersion = intent.derived.base_metric_version;
+      const base = compatibleAtomicMetrics.find(
+        (item) =>
+          (intent.derived?.base_metric_id
+            ? item.definition.id === intent.derived.base_metric_id
+            : item.definition.name === intent.derived?.base_metric_name) &&
+          (!requestedVersion || item.definition.version === requestedVersion),
+      );
+      if (base) {
+        const key = dependencyKey(base.definition.id, base.definition.version);
+        commonValues.baseMetric = key;
+        selectBaseMetric(key);
+      }
+      setBusinessCondition(
+        sanitizeAiCondition(intent.derived.filters, ownerObjectTypeId, allowedProperties),
+      );
+      if (intent.derived.event_time && allowedProperties.has(intent.derived.event_time)) {
+        commonValues.eventTime = intent.derived.event_time;
+      }
+      commonValues.timeWindowMode = intent.derived.time_window_mode;
+      commonValues.timeWindowLength = intent.derived.time_window_length;
+      commonValues.timeWindowUnit = intent.derived.time_window_unit;
+    }
+
+    if (metricType === "composite" && intent.composite) {
+      const nextDependencies: ObjectMetricDependencyV1[] = (
+        intent.composite.dependencies ?? []
+      ).flatMap((requested) => {
+        const selected = publishedMetrics.find(
+          (item) =>
+            (requested.metric_id
+              ? item.definition.id === requested.metric_id
+              : item.definition.name === requested.metric_name) &&
+            (!requested.version || item.definition.version === requested.version) &&
+            item.definition.owner_object_type_id === ownerObjectTypeId &&
+            item.definition.calculation_scope ===
+              (intent.calculation_scope ?? getFieldValue("calculationScope")),
+        );
+        if (!selected || !/^[a-z][a-z0-9_]*$/i.test(requested.alias)) return [];
+        return [
+          {
+            alias: requested.alias,
+            evaluation_context: { filter_context: { mode: "inherit" }, window: "inherited" },
+            metric_ref: {
+              metric_id: selected.definition.id,
+              version: selected.definition.version,
+            },
+            object_alignment: { deduplication: "none", mode: "same_object" },
+          },
+        ];
+      });
+      if (nextDependencies.length) {
+        setDependencies(nextDependencies);
+        const nextExpression = sanitizeAiExpression(
+          intent.composite.expression,
+          ownerObjectTypeId,
+          allowedProperties,
+          new Set(nextDependencies.map((item) => item.alias)),
+        );
+        setCompositeExpression(nextExpression ?? defaultCompositeExpression(nextDependencies));
+      }
+    }
+
+    const result = intent.result;
+    if (result) {
+      commonValues.noDataPolicy = result.no_data_policy;
+      commonValues.physicalType = result.physical_type;
+      commonValues.semanticType = result.semantic_type;
+      commonValues.unitCode = result.unit_code;
+      commonValues.unitSystem = result.unit_system;
+      commonValues.quantityKind = result.quantity_kind;
+      commonValues.unitScaleFactor = result.unit_code ? 1 : undefined;
+      if (result.physical_type === "decimal") {
+        commonValues.precision = 18;
+        commonValues.scale = 2;
+        commonValues.roundingMode = "half_up";
+      }
+    }
+
+    const validPropertyList = (items?: string[]) =>
+      items?.filter((item) => allowedProperties.has(item));
+    if (intent.query) {
+      commonValues.analysisDimensions = validPropertyList(intent.query.analysis_dimensions);
+      commonValues.groupByDimensions = validPropertyList(intent.query.group_by_dimensions);
+      commonValues.timeDimensions = validPropertyList(intent.query.time_dimensions);
+      commonValues.timeGranularity = intent.query.time_granularity;
+    }
+    if (
+      intent.logic_property &&
+      (intent.calculation_scope ?? getFieldValue("calculationScope")) === "object_instance"
+    ) {
+      commonValues.logicPropertyEnabled = intent.logic_property.enabled;
+      commonValues.logicPropertyName = intent.logic_property.property_name;
+      commonValues.logicPropertyDisplayName = intent.logic_property.display_name;
+      commonValues.logicPropertyComment = intent.logic_property.comment;
+    }
+
+    form.setFieldsValue(
+      Object.fromEntries(Object.entries(commonValues).filter(([, value]) => value !== undefined)),
+    );
+    setFormValidationIssueCount(0);
+    setValidation(undefined);
+    setPreview(undefined);
+  };
+
+  const generateWithAi = async () => {
+    const prompt = aiPrompt.trim();
+    if (!prompt || aiGenerating) return;
+    const turnId = `${Date.now()}`;
+    setAiConversation((current) => [
+      ...current,
+      { content: prompt, id: `${turnId}-user`, role: "user" },
+    ]);
+    setAiPrompt("");
+    setAiGenerating(true);
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
+    try {
+      const tokenProvider = {
+        getToken: () => runtimeConfig.auth.tokenManager.getAccessToken() ?? "",
+        refresh: () => runtimeConfig.auth.tokenManager.refreshAccessToken(),
+      };
+      const intent = await generateObjectMetricAiIntent({
+        context: {
+          metricType,
+          objectType: { id: ownerObjectTypeId, name: ownerObjectName },
+          properties: properties.map((item) => ({
+            label: item.label,
+            name: item.propertyName,
+            type: item.propertyType,
+          })),
+          publishedMetrics: publishedMetrics.map((item) => ({
+            id: item.definition.id,
+            name: item.definition.name,
+            objectTypeId: item.definition.owner_object_type_id,
+            scope: item.definition.calculation_scope,
+            type: item.definition.metric_type,
+            version: item.definition.version,
+          })),
+        },
+        env: {
+          base: typeof window === "undefined" ? "" : window.location.origin,
+          knId: networkId,
+          token: tokenProvider.getToken(),
+        },
+        prompt: `${
+          aiConversation.length
+            ? `此前对话：\n${aiConversation
+                .map((item) => `${item.role === "user" ? "用户" : "助手"}：${item.content}`)
+                .join("\n")}\n\n`
+            : ""
+        }当前表单状态：\n${JSON.stringify(form.getFieldsValue(true))}\n\n本轮要求：${prompt}`,
+        signal: controller.signal,
+        tokenProvider,
+      });
+      if (controller.signal.aborted) return;
+      applyAiIntent(intent);
+      const notes = intent.notes?.filter(Boolean) ?? [];
+      setAiConversation((current) => [
+        ...current,
+        {
+          content: notes.length
+            ? `已填写当前表单。还需要你确认：${notes.join("；")}`
+            : "已填写当前表单。你可以继续提出调整，或关闭窗口检查配置。",
+          id: `${turnId}-assistant`,
+          role: "assistant",
+        },
+      ]);
+    } catch (error) {
+      if (controller.signal.aborted) {
+        setAiConversation((current) => [
+          ...current,
+          {
+            content: "已停止本次生成，你可以修改描述后重新发送。",
+            id: `${turnId}-stopped`,
+            role: "assistant",
+          },
+        ]);
+        return;
+      }
+      setAiConversation((current) => [
+        ...current,
+        {
+          content: error instanceof Error ? error.message : "AI 创建失败，请稍后重试",
+          id: `${turnId}-error`,
+          role: "assistant",
+          tone: "error",
+        },
+      ]);
+    } finally {
+      if (aiAbortRef.current === controller) {
+        aiAbortRef.current = null;
+        setAiGenerating(false);
+      }
+    }
+  };
+
+  const stopAiGeneration = () => {
+    aiAbortRef.current?.abort();
   };
   const derivedAnalysisNames = new Set(
     selectedBaseMetric?.definition.query_capabilities.analysis_dimensions.map(
@@ -1878,6 +2225,15 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     summary: "汇总值",
     time_series: "时间序列",
   };
+  const aiExamples =
+    metricType === "atomic"
+      ? ["统计订单数量", "汇总实付金额", "每笔订单实付金额"]
+      : metricType === "derived"
+        ? ["已完成订单金额", "本月支付额", "按渠道统计订单数"]
+        : ["订单平均金额", "支付转化率", "退款金额占比"];
+  const aiGenerationSucceeded = aiConversation.some(
+    (item) => item.role === "assistant" && item.content.startsWith("已填写当前表单"),
+  );
 
   return (
     <main className={styles.page}>
@@ -1899,6 +2255,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               ? "定义可复用的基础事实，保存草稿并检查配置后发布。"
               : "按业务口径完成配置，保存草稿后校验发布。"}
           </p>
+        </div>
+        <div className={styles.headerActions}>
+          <Button icon={<ThunderboltOutlined />} onClick={() => setAiOpen(true)} type="primary">
+            AI 生成
+          </Button>
         </div>
       </header>
       <div className={styles.body}>
@@ -4412,6 +4773,104 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </Section>
         </Form>
       </div>
+      <Modal
+        centered
+        className={styles.aiDialog}
+        footer={null}
+        onCancel={() => {
+          if (aiGenerating) stopAiGeneration();
+          setAiOpen(false);
+        }}
+        open={aiOpen}
+        title={
+          <div className={styles.aiDialogTitle}>
+            <span className={styles.aiDialogTitleIcon} aria-hidden="true">
+              <ThunderboltOutlined />
+            </span>
+            <div>
+              <strong>AI 生成指标</strong>
+              <span>
+                {metricTypeNames[metricType]} · {ownerObjectName}
+              </span>
+            </div>
+          </div>
+        }
+        width={640}
+      >
+        {!aiConversation.length && !aiGenerating ? (
+          <p className={styles.aiDialogIntro}>描述业务口径，我会直接填写当前指标表单。</p>
+        ) : (
+          <div className={styles.aiConversation} aria-live="polite">
+            {aiConversation.map((item) => (
+              <div
+                className={`${styles.aiMessage} ${
+                  item.role === "user" ? styles.aiMessageUser : styles.aiMessageAssistant
+                } ${item.tone === "error" ? styles.aiMessageError : ""}`}
+                key={item.id}
+              >
+                {item.content}
+              </div>
+            ))}
+            {aiGenerating ? (
+              <div className={`${styles.aiMessage} ${styles.aiMessageAssistant}`}>
+                <span className={styles.aiThinking}>
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                正在理解业务口径并生成配置…
+              </div>
+            ) : null}
+          </div>
+        )}
+        {aiGenerationSucceeded && !aiGenerating ? (
+          <div className={styles.aiDialogResultActions}>
+            <span>表单已经更新</span>
+            <Button onClick={() => setAiOpen(false)} size="small">
+              查看表单
+            </Button>
+          </div>
+        ) : null}
+        {!aiConversation.length ? (
+          <div className={styles.aiDialogExamples}>
+            <span>示例</span>
+            {aiExamples.map((example) => (
+              <button key={example} onClick={() => setAiPrompt(example)} type="button">
+                {example}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <div className={styles.aiDialogComposer}>
+          <Input.TextArea
+            aria-label="描述要创建的指标"
+            autoFocus
+            autoSize={{ minRows: 2, maxRows: 5 }}
+            disabled={aiGenerating}
+            maxLength={1200}
+            onChange={(event) => setAiPrompt(event.target.value)}
+            onPressEnter={(event) => {
+              if (!event.shiftKey) {
+                event.preventDefault();
+                void generateWithAi();
+              }
+            }}
+            placeholder="描述指标口径；Enter 发送，Shift + Enter 换行"
+            value={aiPrompt}
+          />
+          <Button
+            aria-label="发送指标描述"
+            danger={aiGenerating}
+            disabled={!aiGenerating && !aiPrompt.trim()}
+            icon={aiGenerating ? <StopOutlined /> : <SendOutlined />}
+            onClick={() => (aiGenerating ? stopAiGeneration() : void generateWithAi())}
+            type={aiGenerating ? "default" : "primary"}
+          >
+            {aiGenerating ? "停止" : "发送"}
+          </Button>
+        </div>
+        <p className={styles.aiDialogFootnote}>不会自动保存或发布，最终以表单校验为准。</p>
+      </Modal>
       <Drawer
         onClose={() => setPreview(undefined)}
         open={Boolean(preview)}

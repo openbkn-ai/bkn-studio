@@ -72,6 +72,211 @@
   width: 100%;
 }
 
+.aiDialogTitle {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.aiDialogTitleIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--color-primary-600);
+  color: #fff;
+  font-size: 17px;
+}
+
+.aiDialogTitle > div {
+  display: grid;
+  gap: 1px;
+}
+
+.aiDialogTitle strong {
+  color: var(--color-text-primary);
+  font-size: 15px;
+}
+
+.aiDialogTitle span:last-child {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.aiDialogIntro {
+  margin: 2px 0 16px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.aiConversation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 320px;
+  padding: 14px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary-bg) 22%, var(--color-bg-layout)) 0%,
+    var(--color-bg-layout) 70%
+  );
+  animation: ai-conversation-enter 180ms ease-out;
+}
+
+@keyframes ai-conversation-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.aiMessage {
+  width: fit-content;
+  max-width: 84%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.aiMessageAssistant {
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  border-top-left-radius: 2px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.aiMessageUser {
+  align-self: flex-end;
+  border: 1px solid var(--color-primary-border);
+  border-top-right-radius: 2px;
+  background: var(--color-primary-600);
+  color: #fff;
+}
+
+.aiMessageError {
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.aiThinking {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 8px;
+  vertical-align: 2px;
+}
+
+.aiThinking i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  animation: ai-thinking 1.1s ease-in-out infinite;
+}
+
+.aiThinking i:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.aiThinking i:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+@keyframes ai-thinking {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.aiDialogExamples {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.aiDialogResultActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.aiDialogExamples > span {
+  flex: 0 0 auto;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.aiDialogExamples button {
+  overflow: hidden;
+  padding: 4px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.aiDialogExamples button:hover,
+.aiDialogExamples button:focus-visible {
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-600);
+  outline: none;
+}
+
+.aiDialogComposer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.aiDialogComposer :global(.ant-input) {
+  resize: none;
+}
+
+.aiDialogComposer :global(.ant-btn) {
+  width: 86px;
+  height: 48px;
+}
+
+.aiDialogFootnote {
+  margin: 10px 0 0;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .form :global(.ant-form-item) {
   margin-bottom: 18px;
 }
@@ -1089,6 +1294,17 @@
 }
 
 @media (max-width: 480px) {
+  .aiDialogComposer {
+    grid-template-columns: 1fr;
+  }
+  .aiDialogComposer :global(.ant-btn) {
+    width: 100%;
+    height: 40px;
+  }
+  .aiDialogExamples {
+    align-items: flex-start;
+    flex-direction: column;
+  }
   .inheritedContractGrid,
   .inheritedResultSummary {
     grid-template-columns: 1fr;
