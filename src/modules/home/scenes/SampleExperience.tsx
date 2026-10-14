@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -76,8 +76,30 @@ export function SampleExperience() {
   }, []);
 
   useEffect(() => {
-    void loadCatalog();
-  }, [loadCatalog]);
+    let cancelled = false;
+    const request = ++catalogRequestRef.current;
+    const isCurrent = () => !cancelled && request === catalogRequestRef.current;
+    setCatalogLoading(true);
+    void (async () => {
+      try {
+        const cached = await listSamples();
+        if (!isCurrent()) return;
+        setCatalog(cached);
+        setLoadError(false);
+        if (cached.sourceRefresh?.supported) {
+          const refreshed = await refreshSamples();
+          if (isCurrent()) setCatalog(refreshed);
+        }
+      } catch {
+        if (isCurrent()) setLoadError(true);
+      } finally {
+        if (isCurrent()) setCatalogLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (installingNames.length === 0) {
@@ -275,22 +297,51 @@ export function SampleExperience() {
         <h2 id="sample-experience-title">{t("home.paths.sample.heading")}</h2>
         <p>{t("home.paths.sample.description")}</p>
         <div className={styles.catalogPanel}>
-          <div className={styles.catalogInfo}>
-            <span className={styles.catalogLabel}>{t("home.sample.sourceLabel")}</span>
-            <a
-              className={styles.sourceLink}
-              href={OFFICIAL_SAMPLE_SOURCE}
-              rel="noreferrer"
-              target="_blank"
-            >
-              {t("home.sample.sourceName")}
-            </a>
-            {catalog?.sourceRefresh?.lastSuccessfulRefreshAt ? (
-              <span className={styles.catalogUpdated}>
-                {t("home.sample.lastRefresh", {
-                  time: catalog.sourceRefresh.lastSuccessfulRefreshAt,
-                })}
-              </span>
+          <div className={styles.catalogSummary}>
+            <div className={styles.catalogInfo}>
+              <span className={styles.catalogLabel}>{t("home.sample.sourceLabel")}</span>
+              <a
+                className={styles.sourceLink}
+                href={OFFICIAL_SAMPLE_SOURCE}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {t("home.sample.sourceName")}
+              </a>
+              {catalog?.sourceRefresh?.lastSuccessfulRefreshAt ? (
+                <span className={styles.catalogUpdated}>
+                  {t("home.sample.lastRefresh", {
+                    time: catalog.sourceRefresh.lastSuccessfulRefreshAt,
+                  })}
+                </span>
+              ) : null}
+            </div>
+            {catalog?.sourceRefresh && !loadError && catalog.sourceRefresh.status !== "failed" ? (
+              <div
+                className={
+                  !catalog.sourceRefresh.throttled &&
+                  ["updated", "unchanged"].includes(catalog.sourceRefresh.status)
+                    ? styles.refreshSuccess
+                    : styles.meta
+                }
+                role="status"
+              >
+                <p>
+                  {t(
+                    `home.sample.refreshStatus.${catalog.sourceRefresh.throttled ? "rate_limited" : ["updated", "unchanged", "not_refreshed"].includes(catalog.sourceRefresh.status) ? catalog.sourceRefresh.status : "not_refreshed"}`,
+                  )}
+                </p>
+              </div>
+            ) : null}
+            {loadError || catalog?.sourceRefresh?.status === "failed" ? (
+              <div className={styles.refreshFailure} role="alert">
+                <p>
+                  {t("home.sample.refreshStatus.failed")}
+                  <a href={`${OFFICIAL_SAMPLE_SOURCE}/releases`} target="_blank" rel="noreferrer">
+                    {t("home.sample.downloadOffline")}
+                  </a>
+                </p>
+              </div>
             ) : null}
           </div>
           <div className={styles.catalogActions}>
@@ -327,24 +378,6 @@ export function SampleExperience() {
         </div>
       </div>
 
-      {catalog?.sourceRefresh ? (
-        <div className={styles.meta} role="status">
-          <p>
-            {t(
-              `home.sample.refreshStatus.${catalog.sourceRefresh.throttled ? "rate_limited" : ["updated", "unchanged", "failed", "not_refreshed"].includes(catalog.sourceRefresh.status) ? catalog.sourceRefresh.status : "not_refreshed"}`,
-            )}
-          </p>
-          {catalog.sourceRefresh.code === "catalog_not_published" ? (
-            <p>{t("home.sample.catalogNotPublished")}</p>
-          ) : null}
-        </div>
-      ) : null}
-      {loadError ? (
-        <div className={styles.banner}>
-          <p>{t("home.sample.loadFailed")}</p>
-          {catalog ? <p>{t("home.sample.cachedCatalog")}</p> : null}
-        </div>
-      ) : null}
       {importError ? <div className={styles.banner}>{t("home.sample.importFailed")}</div> : null}
 
       {!catalog && !loadError ? <p className={styles.meta}>{t("home.sample.loading")}</p> : null}
@@ -544,6 +577,11 @@ function SampleCard({
     detailsReload,
   ]);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    if (expanded)
+      cardRef.current?.scrollIntoView({ block: "start", inline: "nearest", behavior: "auto" });
+  }, [expanded]);
   const action = sampleCardAction(item);
   const enabled = item.installable;
   const selectedDigest =
@@ -585,7 +623,7 @@ function SampleCard({
   const panelId = `sample-details-${item.name}`;
 
   return (
-    <article className={styles.card}>
+    <article ref={cardRef} className={styles.card}>
       <div className={styles.cardHead}>
         <div>
           <h3>{item.displayName}</h3>
