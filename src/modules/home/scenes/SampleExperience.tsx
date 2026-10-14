@@ -793,15 +793,22 @@ function SampleCard({
           {item.canUninstall ? (
             <button
               className={styles.reload}
-              disabled={failedCleanup && !canRetry}
+              disabled={!item.installationId}
               type="button"
               onClick={() =>
                 uninstallConfirmation.open({
                   title: t(
-                    failedCleanup ? "home.sample.cleanupFailedTitle" : "home.sample.uninstallTitle",
+                    failedCleanup
+                      ? "home.sample.cleanupFailedTitle"
+                      : item.status === "uninstall_failed"
+                        ? "home.sample.continueCleanupTitle"
+                        : "home.sample.uninstallTitle",
                     {
                       name: item.displayName,
-                      version: installation?.version || item.installedVersion || item.version,
+                      version:
+                        installation?.version ||
+                        item.installedVersion ||
+                        (failedCleanup ? t("home.sample.versionUnknown") : item.version),
                     },
                   ),
                   targetName: item.displayName,
