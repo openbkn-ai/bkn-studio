@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -398,6 +398,168 @@ describe("SampleExperience", () => {
     expect(scrollIntoView.mock.instances.at(-1)).toBe(toggles[1].closest("article"));
     scrollIntoView.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.collapse" }));
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it.each(["notes-first", "history-first"])(
+    "aligns a lower card after its initial details settle (%s)",
+    async (order) => {
+      let finishNotes!: () => void;
+      let finishHistory!: () => void;
+      const notesReady = new Promise<void>((resolve) => {
+        finishNotes = resolve;
+      });
+      const historyReady = new Promise<void>((resolve) => {
+        finishHistory = resolve;
+      });
+      getSampleReleaseNotes.mockImplementation(() =>
+        notesReady.then(() => ({
+          version: "0.1.0",
+          content: "Loaded release notes",
+          resolvedLocale: "en-US",
+        })),
+      );
+      listSampleInstallations.mockImplementation(() =>
+        historyReady.then(() => ({
+          items: [],
+          historyComplete: true,
+        })),
+      );
+      listSamples.mockResolvedValue({
+        samples: [
+          sample(),
+          sample({
+            name: "harbor",
+            displayName: "Harbor",
+            hasReleaseNotes: true,
+            installationId: "old-install",
+          }),
+        ],
+      });
+      renderExperience();
+      const toggles = await screen.findAllByRole("button", { name: "home.sample.actions.expand" });
+      fireEvent.click(toggles[0]);
+      scrollIntoView.mockClear();
+      fireEvent.click(toggles[1]);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      await act(async () => {
+        (order === "notes-first" ? finishNotes : finishHistory)();
+        await (order === "notes-first" ? notesReady : historyReady);
+      });
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      await act(async () => {
+        (order === "notes-first" ? finishHistory : finishNotes)();
+        await Promise.all([notesReady, historyReady]);
+      });
+      expect(screen.getByText("Loaded release notes")).toBeVisible();
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(scrollIntoView.mock.instances.at(-1)).toBe(toggles[1].closest("article"));
+      fireEvent.click(toggles[1]);
+      fireEvent.click(toggles[1]);
+      expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("aligns the card when initial details fail to load", async () => {
+    getSampleReleaseNotes.mockRejectedValue(new Error("Notes unavailable"));
+    listSampleInstallations.mockRejectedValue(new Error("History unavailable"));
+    listSamples.mockResolvedValue({
+      samples: [
+        sample(),
+        sample({
+          name: "harbor",
+          displayName: "Harbor",
+          hasReleaseNotes: true,
+          installationId: "old-install",
+        }),
+      ],
+    });
+    renderExperience();
+    const toggles = await screen.findAllByRole("button", { name: "home.sample.actions.expand" });
+    fireEvent.click(toggles[1]);
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+    expect(scrollIntoView.mock.instances.at(-1)).toBe(toggles[1].closest("article"));
+  });
+
+  it.each(["notes", "history"])(
+    "aligns after a pending %s request becomes unnecessary during a catalog reload",
+    async (pending) => {
+      const old = sample({
+        name: "harbor",
+        displayName: "Harbor",
+        hasReleaseNotes: true,
+        installationId: "old-install",
+      });
+      const current = {
+        ...old,
+        hasReleaseNotes: pending !== "notes",
+        installationId: pending === "history" ? null : "old-install",
+      };
+      listSamples
+        .mockResolvedValueOnce({ samples: [sample(), old] })
+        .mockResolvedValue({ samples: [sample(), current] });
+      getSampleReleaseNotes.mockImplementation(() =>
+        pending === "notes"
+          ? new Promise<never>(() => {})
+          : Promise.resolve({
+              version: "0.1.0",
+              content: "Ready notes",
+              resolvedLocale: "en-US",
+            }),
+      );
+      listSampleInstallations.mockImplementation(() =>
+        pending === "history"
+          ? new Promise<never>(() => {})
+          : Promise.resolve({
+              items: [],
+              historyComplete: true,
+            }),
+      );
+      renderExperience();
+      const toggles = await screen.findAllByRole("button", { name: "home.sample.actions.expand" });
+      fireEvent.click(toggles[1]);
+      await waitFor(() =>
+        expect(
+          pending === "notes" ? getSampleReleaseNotes : listSampleInstallations,
+        ).toHaveBeenCalled(),
+      );
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "home.sample.reload" }));
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+      expect(scrollIntoView.mock.instances.at(-1)).toBe(toggles[1].closest("article"));
+    },
+  );
+
+  it("does not scroll a card collapsed while its initial notes are loading", async () => {
+    let finishNotes!: () => void;
+    const notesReady = new Promise<void>((resolve) => {
+      finishNotes = resolve;
+    });
+    getSampleReleaseNotes.mockImplementation(() =>
+      notesReady.then(() => ({
+        version: "0.1.0",
+        content: "Late release notes",
+        resolvedLocale: "en-US",
+      })),
+    );
+    listSamples.mockResolvedValue({
+      samples: [
+        sample(),
+        sample({
+          name: "harbor",
+          displayName: "Harbor",
+          hasReleaseNotes: true,
+        }),
+      ],
+    });
+    renderExperience();
+    const toggles = await screen.findAllByRole("button", { name: "home.sample.actions.expand" });
+    fireEvent.click(toggles[1]);
+    fireEvent.click(toggles[1]);
+    await act(async () => {
+      finishNotes();
+      await notesReady;
+    });
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
