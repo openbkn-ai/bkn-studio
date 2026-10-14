@@ -328,6 +328,36 @@ describe("SampleExperience", () => {
     expect(refreshSamples).not.toHaveBeenCalled();
   });
 
+  it("reports an initial catalog read failure without blaming official refresh", async () => {
+    listSamples.mockRejectedValueOnce(new Error("Service unavailable"));
+    renderExperience();
+    expect(await screen.findByText("home.sample.loadFailed")).toBeTruthy();
+    expect(screen.queryByText("home.sample.refreshStatus.failed")).toBeNull();
+    expect(screen.queryByRole("link", { name: "home.sample.downloadOffline" })).toBeNull();
+    expect(refreshSamples).not.toHaveBeenCalled();
+    listSamples.mockResolvedValue({ samples: [sample()] });
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.reload" }));
+    expect(await screen.findByText("Northwind")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps the catalog-not-published explanation in the compact status row", async () => {
+    const cached = {
+      samples: [sample()],
+      sourceRefresh: { supported: true, status: "not_refreshed" },
+    };
+    listSamples.mockResolvedValue(cached);
+    refreshSamples.mockResolvedValue({
+      ...cached,
+      sourceRefresh: { supported: true, status: "failed", code: "catalog_not_published" },
+    });
+    renderExperience();
+    expect(await screen.findByText("home.sample.catalogNotPublished")).toBeTruthy();
+    expect(screen.getByText("Northwind")).toBeTruthy();
+    expect(screen.getByRole("alert").parentElement).toHaveClass(styles.catalogSummary);
+    expect(screen.getByRole("alert").querySelectorAll("p")).toHaveLength(1);
+  });
+
   it("does not duplicate the automatic refresh during StrictMode effect replay", async () => {
     const catalog = {
       samples: [sample()],

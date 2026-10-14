@@ -43,6 +43,7 @@ export function SampleExperience() {
   const navigate = useNavigate();
   const [catalog, setCatalog] = useState<SampleCatalog | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [refreshError, setRefreshError] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [installationRefresh, setInstallationRefresh] = useState(0);
   const [progressUnavailable, setProgressUnavailable] = useState<Record<string, boolean>>({});
@@ -87,8 +88,15 @@ export function SampleExperience() {
         setCatalog(cached);
         setLoadError(false);
         if (cached.sourceRefresh?.supported) {
-          const refreshed = await refreshSamples();
-          if (isCurrent()) setCatalog(refreshed);
+          try {
+            const refreshed = await refreshSamples();
+            if (isCurrent()) {
+              setCatalog(refreshed);
+              setRefreshError(false);
+            }
+          } catch {
+            if (isCurrent()) setRefreshError(true);
+          }
         }
       } catch {
         if (isCurrent()) setLoadError(true);
@@ -251,9 +259,10 @@ export function SampleExperience() {
       if (request === catalogRequestRef.current) {
         setCatalog(next);
         setLoadError(false);
+        setRefreshError(false);
       }
     } catch {
-      if (request === catalogRequestRef.current) setLoadError(true);
+      if (request === catalogRequestRef.current) setRefreshError(true);
     } finally {
       if (request === catalogRequestRef.current) setCatalogLoading(false);
     }
@@ -316,7 +325,10 @@ export function SampleExperience() {
                 </span>
               ) : null}
             </div>
-            {catalog?.sourceRefresh && !loadError && catalog.sourceRefresh.status !== "failed" ? (
+            {catalog?.sourceRefresh &&
+            !loadError &&
+            !refreshError &&
+            catalog.sourceRefresh.status !== "failed" ? (
               <div
                 className={
                   !catalog.sourceRefresh.throttled &&
@@ -333,13 +345,25 @@ export function SampleExperience() {
                 </p>
               </div>
             ) : null}
-            {loadError || catalog?.sourceRefresh?.status === "failed" ? (
+            {loadError || refreshError || catalog?.sourceRefresh?.status === "failed" ? (
               <div className={styles.refreshFailure} role="alert">
                 <p>
-                  {t("home.sample.refreshStatus.failed")}
-                  <a href={`${OFFICIAL_SAMPLE_SOURCE}/releases`} target="_blank" rel="noreferrer">
-                    {t("home.sample.downloadOffline")}
-                  </a>
+                  {loadError ? (
+                    t("home.sample.loadFailed")
+                  ) : catalog?.sourceRefresh?.code === "catalog_not_published" && !refreshError ? (
+                    t("home.sample.catalogNotPublished")
+                  ) : (
+                    <>
+                      {t("home.sample.refreshStatus.failed")}
+                      <a
+                        href={`${OFFICIAL_SAMPLE_SOURCE}/releases`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t("home.sample.downloadOffline")}
+                      </a>
+                    </>
+                  )}
                 </p>
               </div>
             ) : null}
