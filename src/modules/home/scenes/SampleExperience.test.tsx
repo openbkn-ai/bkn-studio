@@ -481,6 +481,55 @@ describe("SampleExperience", () => {
     expect(scrollIntoView.mock.instances.at(-1)).toBe(toggles[1].closest("article"));
   });
 
+  it.each(["notes", "history"])(
+    "aligns after a pending %s request becomes unnecessary during a catalog reload",
+    async (pending) => {
+      const old = sample({
+        name: "harbor",
+        displayName: "Harbor",
+        hasReleaseNotes: true,
+        installationId: "old-install",
+      });
+      const current = {
+        ...old,
+        hasReleaseNotes: pending !== "notes",
+        installationId: pending === "history" ? null : "old-install",
+      };
+      listSamples
+        .mockResolvedValueOnce({ samples: [sample(), old] })
+        .mockResolvedValue({ samples: [sample(), current] });
+      getSampleReleaseNotes.mockImplementation(() =>
+        pending === "notes"
+          ? new Promise<never>(() => {})
+          : Promise.resolve({
+              version: "0.1.0",
+              content: "Ready notes",
+              resolvedLocale: "en-US",
+            }),
+      );
+      listSampleInstallations.mockImplementation(() =>
+        pending === "history"
+          ? new Promise<never>(() => {})
+          : Promise.resolve({
+              items: [],
+              historyComplete: true,
+            }),
+      );
+      renderExperience();
+      const toggles = await screen.findAllByRole("button", { name: "home.sample.actions.expand" });
+      fireEvent.click(toggles[1]);
+      await waitFor(() =>
+        expect(
+          pending === "notes" ? getSampleReleaseNotes : listSampleInstallations,
+        ).toHaveBeenCalled(),
+      );
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "home.sample.reload" }));
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+      expect(scrollIntoView.mock.instances.at(-1)).toBe(toggles[1].closest("article"));
+    },
+  );
+
   it("does not scroll a card collapsed while its initial notes are loading", async () => {
     let finishNotes!: () => void;
     const notesReady = new Promise<void>((resolve) => {

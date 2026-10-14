@@ -571,6 +571,8 @@ function SampleCard({
         .finally(() => {
           if (!cancelled) setNotesLoading(false);
         });
+    } else {
+      setNotesLoading(false);
     }
     if (item.installationId) {
       setHistoryLoading(true);
@@ -585,6 +587,8 @@ function SampleCard({
         .finally(() => {
           if (!cancelled) setHistoryLoading(false);
         });
+    } else {
+      setHistoryLoading(false);
     }
     return () => {
       cancelled = true;
