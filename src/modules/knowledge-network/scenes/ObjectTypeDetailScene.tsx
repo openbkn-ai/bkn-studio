@@ -180,6 +180,7 @@ function parsePermissionRequestValues(value: string | null) {
 export function ObjectTypeDetailScene() {
   const entitlement = useEntitlement();
   const policyScopeCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
+  const objectMetricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
   const permissionRequestsEnabled = !isCommunityBuild(entitlement);
   const policyScopePreviewsEnabled =
     canPreviewObjectTypePolicyScope(policyScopeCapability) &&
@@ -219,10 +220,14 @@ export function ObjectTypeDetailScene() {
   );
   const dataSection =
     activeTab === "data" ? parseObjectTypeDataSection(searchParams.get("section")) : "instance";
-  const relatedSection =
+  const requestedRelatedSection =
     activeTab === "related"
       ? parseObjectTypeRelatedSection(searchParams.get("relatedSection"))
       : "relations";
+  const relatedSection =
+    requestedRelatedSection === "metrics" && !objectMetricsAvailable
+      ? "relations"
+      : requestedRelatedSection;
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [knowledgeNetworkName, setKnowledgeNetworkName] = useState(networkId);
   const [permissionRequestOpen, setPermissionRequestOpen] = useState(false);
@@ -484,6 +489,7 @@ export function ObjectTypeDetailScene() {
     (activeTab === "overview" || (activeTab === "related" && relatedSection === "relations")),
   );
   const shouldLoadRelatedMetrics = Boolean(
+    objectMetricsAvailable &&
     networkId &&
     objectTypeId &&
     detail &&
@@ -1284,28 +1290,30 @@ export function ObjectTypeDetailScene() {
             </span>
             <span className={styles.quickStatValue}>{logicPropertyCount}</span>
           </button>
-          <button
-            className={styles.quickStatButton}
-            onClick={() => {
-              openTab("related", { relatedSection: "metrics" });
-            }}
-            type="button"
-          >
-            <span className={styles.quickStatHeader}>
-              <span className={styles.quickStatLabel}>
-                {t("knowledgeNetwork.objectTypeDetailRelatedSectionMetrics")}
+          {objectMetricsAvailable ? (
+            <button
+              className={styles.quickStatButton}
+              onClick={() => {
+                openTab("related", { relatedSection: "metrics" });
+              }}
+              type="button"
+            >
+              <span className={styles.quickStatHeader}>
+                <span className={styles.quickStatLabel}>
+                  {t("knowledgeNetwork.objectTypeDetailRelatedSectionMetrics")}
+                </span>
+                <ArrowRightOutlined className={styles.quickStatArrow} />
               </span>
-              <ArrowRightOutlined className={styles.quickStatArrow} />
-            </span>
-            <span className={styles.quickStatValue}>
-              {renderOverviewStatValue({
-                error: relatedMetricsError,
-                loaded: relatedMetricsLoadedObjectTypeId === objectTypeId,
-                loading: relatedMetricsLoading,
-                value: relatedMetricsTotalCount,
-              })}
-            </span>
-          </button>
+              <span className={styles.quickStatValue}>
+                {renderOverviewStatValue({
+                  error: relatedMetricsError,
+                  loaded: relatedMetricsLoadedObjectTypeId === objectTypeId,
+                  loading: relatedMetricsLoading,
+                  value: relatedMetricsTotalCount,
+                })}
+              </span>
+            </button>
+          ) : null}
           <button
             className={styles.quickStatButton}
             disabled={
@@ -1878,10 +1886,14 @@ export function ObjectTypeDetailScene() {
                 label: t("knowledgeNetwork.objectTypeDetailRelatedSectionRelations"),
                 value: "relations",
               },
-              {
-                label: t("knowledgeNetwork.objectTypeDetailRelatedSectionMetrics"),
-                value: "metrics",
-              },
+              ...(objectMetricsAvailable
+                ? [
+                    {
+                      label: t("knowledgeNetwork.objectTypeDetailRelatedSectionMetrics"),
+                      value: "metrics",
+                    },
+                  ]
+                : []),
               {
                 label: t("knowledgeNetwork.objectTypeDetailRelatedSectionActions"),
                 value: "actions",

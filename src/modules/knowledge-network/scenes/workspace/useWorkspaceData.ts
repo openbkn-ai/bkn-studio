@@ -8,6 +8,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useCapability } from "@/framework/entitlement/use-entitlement";
 import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-network/contracts/scenes";
 import {
   getKnowledgeNetwork,
@@ -16,10 +18,7 @@ import {
   listObjectMetricsV1,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
-import {
-  integrateWorkspaceMetrics,
-  logServiceFallback,
-} from "@/modules/knowledge-network/services/shared/runtime";
+import { logServiceFallback } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
   CapabilityBindingListResult,
   CapabilityType,
@@ -121,6 +120,7 @@ function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSe
 }
 
 export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
+  const objectMetricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
   const [detail, setDetail] = useState<KnowledgeNetworkRecord | null>(null);
   const [recentObjects, setRecentObjects] = useState<KnowledgeNetworkRecentObject[]>([]);
   const [metrics, setMetrics] = useState<ObjectMetricRecordV1[]>([]);
@@ -128,7 +128,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
   const [apis, setApis] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [mcpTools, setMcpTools] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [skills, setSkills] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
-  const [metricApiUnavailable, setMetricApiUnavailable] = useState(false);
   const [detailLoading, setDetailLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
   const [recentLoading, setRecentLoading] = useState(false);
@@ -295,11 +294,10 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
             setSkills(await listAllCapabilities(networkId, "skill"));
             break;
           case "metrics":
-            if (integrateWorkspaceMetrics) {
+            if (objectMetricsAvailable) {
               const metricResult = await listObjectMetricsV1(networkId, { limit: 500 });
               setMetrics(metricResult.entries);
               applyMetricsTotalToDetail(metricResult.total_count);
-              setMetricApiUnavailable(false);
             }
             break;
           default:
@@ -313,7 +311,7 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
         setSectionLoading(false);
       }
     },
-    [networkId, applyMetricsTotalToDetail, loadToolBindings],
+    [networkId, applyMetricsTotalToDetail, loadToolBindings, objectMetricsAvailable],
   );
 
   useEffect(() => {
@@ -366,7 +364,7 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
   );
 
   const reloadMetrics = useCallback(async () => {
-    if (!networkId || !integrateWorkspaceMetrics) {
+    if (!networkId || !objectMetricsAvailable) {
       return;
     }
 
@@ -374,15 +372,13 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
     const metricResult = await listObjectMetricsV1(networkId, { limit: 500 });
     setMetrics(metricResult.entries);
     applyMetricsTotalToDetail(metricResult.total_count);
-    setMetricApiUnavailable(false);
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "metrics"));
-  }, [networkId, applyMetricsTotalToDetail]);
+  }, [networkId, applyMetricsTotalToDetail, objectMetricsAvailable]);
 
   return {
     detail,
     detailError,
     detailLoading,
-    integrateMetrics: integrateWorkspaceMetrics,
     loadError: detailError,
     loading: sectionLoading,
     loadWorkspaceData,
@@ -390,7 +386,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
     apis,
     functions,
     mcpTools,
-    metricApiUnavailable,
     metrics,
     recentObjects,
     recentLoading,

@@ -11,6 +11,8 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useSt
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useCapability } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DEFAULT_RESOURCE_COLOR } from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
@@ -67,6 +69,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
 ) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
+  const objectMetricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
   const [localLogicProperties, setLocalLogicProperties] =
     useState<ObjectTypeLogicProperty[]>(logicProperties);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -82,7 +85,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
     const metricProperties = localLogicProperties.filter(
       (item) => item.dataSource?.type === "metric" && item.dataSource.id,
     );
-    if (!metricProperties.length || !networkId || !objectTypeId) {
+    if (!objectMetricsAvailable || !metricProperties.length || !networkId || !objectTypeId) {
       return true;
     }
 
@@ -101,7 +104,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
       }),
     );
     return false;
-  }, [localLogicProperties, message, networkId, objectTypeId, t]);
+  }, [localLogicProperties, message, networkId, objectMetricsAvailable, objectTypeId, t]);
 
   useImperativeHandle(
     ref,

@@ -57,6 +57,16 @@ export const subscriptionEnUS = {
           "Start from a concrete instance, expand its neighbours and trace paths on a canvas; also opens graph links handed over by agents.",
         name: "Graph explorer",
       },
+      object_metrics: {
+        bullets: {
+          b1: "Manage atomic, derived and composite metrics by object type",
+          b2: "Validate, preview, version, publish, bind to logical properties and inspect lineage",
+          b3: "Query and trial metric results for object instances or object sets",
+        },
+        description:
+          "Define, validate, publish and query atomic, derived and composite metrics by object type.",
+        name: "Object Metrics",
+      },
       perm_fine_grained: {
         bullets: {
           b1: "View, query, modify, delete and execute granted separately",

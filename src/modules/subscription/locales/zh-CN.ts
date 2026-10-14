@@ -58,6 +58,15 @@ export const subscriptionZhCN = {
         description: "从具体实例出发,在画布上展开邻居、追踪路径;也能打开 Agent 给出的图谱链接",
         name: "图探索",
       },
+      object_metrics: {
+        bullets: {
+          b1: "按对象类统一管理原子、衍生和复合指标",
+          b2: "支持校验、预览、版本发布、逻辑属性绑定与血缘查看",
+          b3: "按对象实例或对象集合查询和试算指标结果",
+        },
+        description: "按对象类定义、验证、发布并查询原子、衍生和复合指标",
+        name: "对象类指标",
+      },
       perm_fine_grained: {
         bullets: {
           b1: "查看、查询、修改、删除、执行分别授权",

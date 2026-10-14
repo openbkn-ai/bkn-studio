@@ -1935,11 +1935,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         const [objects, relations, metrics, registry] = await Promise.all([
           listKnowledgeNetworkObjectTypes(networkId).catch(() => []),
           listKnowledgeNetworkRelationTypes(networkId).catch(() => []),
-          listObjectMetricsV1(networkId, { limit: 500, status: "published" }).catch(() => ({
-            entries: [],
-            total_count: 0,
-          })),
-          getObjectMetricCapabilitiesV1().catch(() => undefined),
+          listObjectMetricsV1(networkId, { limit: 500, status: "published" }),
+          getObjectMetricCapabilitiesV1(),
         ]);
         if (!active) return;
         setObjectTypes(objects);

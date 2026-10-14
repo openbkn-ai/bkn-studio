@@ -8,6 +8,8 @@
 import type { RouteObject } from "react-router-dom";
 import type { ReactNode } from "react";
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireCapability } from "@/framework/entitlement/RequireCapability";
 import {
   ActionTypeCreatePage,
   ActionTypeDetailPage,
@@ -44,6 +46,10 @@ import {
 
 function modifyRoute(element: ReactNode) {
   return <KnowledgeNetworkModifyRouteGate>{element}</KnowledgeNetworkModifyRouteGate>;
+}
+
+function objectMetricsRoute(element: ReactNode) {
+  return <RequireCapability capability={CAPABILITIES.OBJECT_METRICS}>{element}</RequireCapability>;
 }
 
 function childModifyRoute(
@@ -188,7 +194,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.metricsDescription",
       titleKey: "knowledgeNetwork.workspaceMetrics",
     },
-    workspaceSectionPage("metrics"),
+    objectMetricsRoute(workspaceSectionPage("metrics")),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/metrics/create",
@@ -196,7 +202,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.metricCreateDescription",
       titleKey: "knowledgeNetwork.metricCreateTitle",
     },
-    modifyRoute(<MetricCreatePage />),
+    objectMetricsRoute(modifyRoute(<MetricCreatePage />)),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/metrics/:metricId/edit",
@@ -204,7 +210,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.metricEditDescription",
       titleKey: "knowledgeNetwork.metricEditTitle",
     },
-    modifyRoute(<MetricEditPage />),
+    objectMetricsRoute(modifyRoute(<MetricEditPage />)),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/metrics/:metricId/detail",
@@ -212,7 +218,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.metricDetailDescription",
       titleKey: "knowledgeNetwork.metricDetailTitle",
     },
-    <MetricDetailPage />,
+    objectMetricsRoute(<MetricDetailPage />),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/object-types/create",
