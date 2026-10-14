@@ -9,6 +9,10 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { homeEnUS } from "@/modules/home/locales/en-US";
+import { homeZhCN } from "@/modules/home/locales/zh-CN";
+
+const downloadErrorLocale = vi.hoisted(() => ({ value: null as "zh-CN" | "en-US" | null }));
 const listSamples = vi.hoisted(() => vi.fn());
 const createSampleInstallation = vi.hoisted(() => vi.fn());
 const retrySampleInstallation = vi.hoisted(() => vi.fn());
@@ -26,6 +30,16 @@ vi.mock("react-i18next", async (importOriginal) => ({
   useTranslation: () => ({
     i18n: { language: "zh-CN", resolvedLanguage: "zh-CN" },
     t: (key: string, values?: Record<string, unknown>) => {
+      if (downloadErrorLocale.value) {
+        const messages =
+          downloadErrorLocale.value === "zh-CN" ? homeZhCN.home.sample : homeEnUS.home.sample;
+        const translations: Record<string, string> = {
+          "home.sample.downloadFailed": messages.downloadFailed,
+          "home.sample.downloadFailedAfterLink": messages.downloadFailedAfterLink,
+          "home.sample.downloadOffline": messages.downloadOffline,
+        };
+        if (key in translations) return translations[key];
+      }
       if (values && "defaultValue" in values) {
         const { defaultValue, ...rest } = values;
         if (Object.keys(rest).length === 0) {
@@ -242,6 +256,7 @@ describe("SampleExperience", () => {
     );
   });
   beforeEach(() => {
+    downloadErrorLocale.value = null;
     vi.clearAllMocks();
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
       configurable: true,
@@ -714,6 +729,43 @@ describe("SampleExperience", () => {
     expect(screen.getByRole("button", { name: "home.sample.actions.collapse" })).toHaveFocus();
     await waitFor(() => expect(createSampleInstallation).toHaveBeenCalledWith("northwind"));
   });
+
+  it.each(["zh-CN", "en-US"] as const)(
+    "shows a localized offline-package link for a download failure in %s",
+    async (locale) => {
+      downloadErrorLocale.value = locale;
+      const messages = locale === "zh-CN" ? homeZhCN.home.sample : homeEnUS.home.sample;
+      listSamples.mockResolvedValue({
+        samples: [sample({ status: "failed", installationId: "inst-1" })],
+        sourceRejected: false,
+      });
+      getSampleInstallation.mockResolvedValue({
+        id: "inst-1",
+        sample: "northwind",
+        status: "failed",
+        version: "0.1.0",
+        stages: ["database", "discover", "knowledge", "capabilities", "verify"].map((id) => ({
+          id,
+          name: id,
+          state: "pending",
+        })),
+        error: { code: "release_download_failed", message: "Server transport detail", stage: "" },
+      });
+      renderExperience();
+      const link = await screen.findByRole("link", { name: messages.downloadOffline });
+      expect(link).toHaveAttribute("href", "https://github.com/openbkn-ai/bkn-samples/releases");
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noreferrer");
+      expect(link.parentElement?.textContent).toBe(
+        messages.downloadFailed + messages.downloadOffline + messages.downloadFailedAfterLink,
+      );
+      expect(screen.queryByText("Server transport detail")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.failureDetails" }));
+      expect(screen.getAllByText("home.sample.stageState.pending")).toHaveLength(5);
+      expect(screen.queryByText("home.sample.stageState.failed")).toBeNull();
+      expect(screen.queryByText("home.sample.stageState.succeeded")).toBeNull();
+    },
+  );
 
   it("localizes a recovered interruption and permits retrying the original task", async () => {
     listSamples.mockResolvedValue({

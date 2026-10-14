@@ -126,6 +126,8 @@ export const homeEnUS = {
       empty: "No samples are available to install",
       refreshSource: "Refresh samples",
       downloadOffline: "download an offline package",
+      downloadFailed: "Sample download failed. Please ",
+      downloadFailedAfterLink: " and import it.",
       catalogNotPublished:
         "The official version catalog is not published yet. Bundled samples remain available.",
       lastRefresh: "Last successful refresh: {{time}}",
