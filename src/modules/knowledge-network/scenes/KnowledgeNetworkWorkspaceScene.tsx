@@ -22,11 +22,13 @@ import {
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Alert } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useCapability } from "@/framework/entitlement/use-entitlement";
 import type {
   KnowledgeNetworkWorkspaceSceneProps,
   KnowledgeNetworkWorkspaceSection,
@@ -39,7 +41,6 @@ import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/w
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
 import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { integrateWorkspaceMetrics } from "@/modules/knowledge-network/services/shared/runtime";
 import type { KnowledgeNetworkMutationPayload } from "@/modules/knowledge-network/types/knowledge-network";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
@@ -72,6 +73,8 @@ export function KnowledgeNetworkWorkspaceScene({
   const { message } = useAppServices();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
+  const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
+  const objectMetricsVisible = objectMetricsCapability !== "not-installed";
   const workspaceData = useWorkspaceData(activeNetworkId, section);
   const {
     detail,
@@ -83,14 +86,6 @@ export function KnowledgeNetworkWorkspaceScene({
     recentObjects,
     sectionError,
   } = workspaceData;
-
-  useEffect(() => {
-    if (!integrateWorkspaceMetrics && section === "metrics") {
-      void navigate(`/knowledge-network/workspace/${activeNetworkId}/overview`, {
-        replace: true,
-      });
-    }
-  }, [activeNetworkId, navigate, section]);
 
   const [networkFormOpen, setNetworkFormOpen] = useState(false);
   const [sideCollapsed, setSideCollapsed] = useState(false);
@@ -148,7 +143,7 @@ export function KnowledgeNetworkWorkspaceScene({
       },
     ];
 
-    if (integrateWorkspaceMetrics) {
+    if (objectMetricsVisible) {
       items.push({
         key: "metrics",
         label: t("knowledgeNetwork.workspaceMetrics"),
@@ -187,7 +182,7 @@ export function KnowledgeNetworkWorkspaceScene({
     );
 
     return items;
-  }, [activeNetworkId, detail, t]);
+  }, [activeNetworkId, detail, objectMetricsVisible, t]);
 
   const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
   const experienceNavItems = navigationItems.filter(

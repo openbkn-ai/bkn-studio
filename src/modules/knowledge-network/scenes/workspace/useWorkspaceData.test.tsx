@@ -12,13 +12,21 @@ import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/k
 
 import { useWorkspaceData } from "./useWorkspaceData";
 
-const { getKnowledgeNetwork, getKnowledgeNetworkStatistics, listObjectMetricsV1 } = vi.hoisted(
-  () => ({
-    getKnowledgeNetwork: vi.fn<() => Promise<KnowledgeNetworkRecord | null>>(),
-    getKnowledgeNetworkStatistics: vi.fn(),
-    listObjectMetricsV1: vi.fn(),
-  }),
-);
+const {
+  entitlementState,
+  getKnowledgeNetwork,
+  getKnowledgeNetworkStatistics,
+  listObjectMetricsV1,
+} = vi.hoisted(() => ({
+  entitlementState: { value: "available" },
+  getKnowledgeNetwork: vi.fn<() => Promise<KnowledgeNetworkRecord | null>>(),
+  getKnowledgeNetworkStatistics: vi.fn(),
+  listObjectMetricsV1: vi.fn(),
+}));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useCapability: () => entitlementState.value,
+}));
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
   getKnowledgeNetwork,
@@ -59,6 +67,7 @@ function createDetail(metricsTotal = 0): KnowledgeNetworkRecord {
 }
 
 afterEach(() => {
+  entitlementState.value = "available";
   vi.clearAllMocks();
 });
 
@@ -87,5 +96,18 @@ describe("useWorkspaceData metrics sidebar count", () => {
     await waitFor(() => {
       expect(result.current.detail?.statistics.metricsTotal).toBe(12);
     });
+  });
+
+  it("does not request Object Metrics when the deployment capability is unavailable", async () => {
+    entitlementState.value = "not-installed";
+    getKnowledgeNetwork.mockResolvedValue(createDetail(0));
+    getKnowledgeNetworkStatistics.mockResolvedValue(createDetail(0).statistics);
+
+    renderHook(() => useWorkspaceData("kn-1", "metrics"));
+
+    await waitFor(() => {
+      expect(getKnowledgeNetwork).toHaveBeenCalled();
+    });
+    expect(listObjectMetricsV1).not.toHaveBeenCalled();
   });
 });

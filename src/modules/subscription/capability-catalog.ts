@@ -100,6 +100,15 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.1.6",
   },
   {
+    // 管理与查询分别由 bkn-backend-ee、ontology-query-ee 实现；bkn-safe-ee
+    // 提供部署级 display-only 标记，供 Studio 统一门控。
+    category: "semantic",
+    key: CAPABILITIES.OBJECT_METRICS,
+    reportedByEndpoint: true,
+    minEdition: "professional",
+    sinceVersion: "0.2.1",
+  },
+  {
     // 上游 e8fdf2f 把它降到社区档:技术 Trace 免费,对外能力对比里 CLI/SDK 的 trace
     // 查询本来就列在社区行。留在表里是为了让对比矩阵显示「三档都有」,不是付费项。
     category: "observability",

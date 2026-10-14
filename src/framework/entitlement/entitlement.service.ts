@@ -52,13 +52,20 @@ function mockEntitlement(edition: Edition): Entitlement {
       };
     case "professional":
       return {
-        capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer"],
+        capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer", "object_metrics"],
         edition: "professional",
-        extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        extensions: [
+          "rbac_basic",
+          "perm_fine_grained",
+          "graph_explorer",
+          "object_metrics",
+          "perm_object_level",
+        ],
         features: [
           "rbac_basic",
           "perm_fine_grained",
           "graph_explorer",
+          "object_metrics",
           "perm_object_level",
           "source_sync",
         ],
@@ -68,13 +75,26 @@ function mockEntitlement(edition: Edition): Entitlement {
       };
     case "enterprise":
       return {
-        capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        capabilities: [
+          "rbac_basic",
+          "perm_fine_grained",
+          "graph_explorer",
+          "object_metrics",
+          "perm_object_level",
+        ],
         edition: "enterprise",
-        extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        extensions: [
+          "rbac_basic",
+          "perm_fine_grained",
+          "graph_explorer",
+          "object_metrics",
+          "perm_object_level",
+        ],
         features: [
           "rbac_basic",
           "perm_fine_grained",
           "graph_explorer",
+          "object_metrics",
           "perm_object_level",
           "source_sync",
         ],
@@ -84,13 +104,26 @@ function mockEntitlement(edition: Edition): Entitlement {
       };
     case "industry":
       return {
-        capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        capabilities: [
+          "rbac_basic",
+          "perm_fine_grained",
+          "graph_explorer",
+          "object_metrics",
+          "perm_object_level",
+        ],
         edition: "industry",
-        extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        extensions: [
+          "rbac_basic",
+          "perm_fine_grained",
+          "graph_explorer",
+          "object_metrics",
+          "perm_object_level",
+        ],
         features: [
           "rbac_basic",
           "perm_fine_grained",
           "graph_explorer",
+          "object_metrics",
           "perm_object_level",
           "source_sync",
         ],
