@@ -651,6 +651,7 @@ function SampleCard({
     Boolean(item.installationId) &&
     ["failed", "conflict"].includes(installation?.status ?? "");
   const conflict = item.status === "conflict" || installation?.error?.code === "ownership_conflict";
+  const failedCleanup = ["failed", "conflict"].includes(item.status);
   const interrupted = ["install_interrupted", "uninstall_interrupted"].includes(
     installation?.error?.code ?? "",
   );
@@ -792,15 +793,34 @@ function SampleCard({
           {item.canUninstall ? (
             <button
               className={styles.reload}
+              disabled={!item.installationId}
               type="button"
               onClick={() =>
                 uninstallConfirmation.open({
-                  title: t("home.sample.uninstallTitle", {
-                    name: item.displayName,
-                    version: item.installedVersion || item.version,
-                  }),
+                  title: t(
+                    failedCleanup
+                      ? "home.sample.cleanupFailedTitle"
+                      : item.status === "uninstall_failed"
+                        ? "home.sample.continueCleanupTitle"
+                        : "home.sample.uninstallTitle",
+                    {
+                      name: item.displayName,
+                      version:
+                        installation?.version ||
+                        item.installedVersion ||
+                        (failedCleanup ? t("home.sample.versionUnknown") : item.version),
+                    },
+                  ),
                   targetName: item.displayName,
-                  impact: <p>{t("home.sample.uninstallWarning")}</p>,
+                  impact: (
+                    <p>
+                      {t(
+                        failedCleanup
+                          ? "home.sample.cleanupFailedWarning"
+                          : "home.sample.uninstallWarning",
+                      )}
+                    </p>
+                  ),
                   onOk: async () => {
                     toggleRef.current?.focus();
                     await onUninstall();
@@ -811,7 +831,9 @@ function SampleCard({
               {t(
                 item.status === "uninstall_failed"
                   ? "home.sample.retryUninstall"
-                  : "home.sample.uninstall",
+                  : failedCleanup
+                    ? "home.sample.cleanupFailed"
+                    : "home.sample.uninstall",
               )}
             </button>
           ) : null}
