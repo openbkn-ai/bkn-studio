@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import dayjs from "dayjs";
 import { AxiosError, AxiosHeaders } from "axios";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
@@ -37,6 +37,8 @@ vi.mock("@/framework/compat/clipboard", () => ({
 const translate = (key: string, options?: Record<string, unknown>) => {
   const value =
     {
+      "bknTrace.logs.currentPage": "Page {{page}}",
+      "bknTrace.logs.rowsPerPage": "{{size}} / page",
       "bknTrace.logs.authenticatedUser": "已认证用户",
       "bknTrace.logs.authMethods.api_key": "通过 API Key",
       "bknTrace.logs.businessConversationSuffix": " 的业务会话",
@@ -56,9 +58,13 @@ const translate = (key: string, options?: Record<string, unknown>) => {
         "当前没有可读取的活动操作；操作详情不在配置快照中。",
     }[key] ?? key;
   return value.replace(/{{(\w+)}}/g, (_match, name: string) =>
-    typeof options?.[name] === "string" ? options[name] : "",
+    typeof options?.[name] === "string" || typeof options?.[name] === "number"
+      ? String(options[name])
+      : "",
   );
 };
+
+let currentTranslate = translate;
 
 const mockMessage = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 
@@ -70,7 +76,7 @@ const mockCurrentUser = vi.hoisted(() => ({
 
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
-  return { ...original, useTranslation: () => ({ t: translate }) };
+  return { ...original, useTranslation: () => ({ t: currentTranslate }) };
 });
 
 vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => {
@@ -139,6 +145,7 @@ describe("observability workspace scenes", () => {
   });
 
   beforeEach(() => {
+    currentTranslate = translate;
     vi.clearAllMocks();
     mockCurrentUser.isSuperAdmin = true;
     vi.mocked(createArchive).mockReset();
@@ -560,10 +567,417 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("bknTrace.logs.resultCount")).toBeNull();
   });
 
+  it.each(["logs", "audit"] as const)(
+    "%s partial 计数缩小后仍可遍历全部记录并返回上一页",
+    async (mode) => {
+      const base = await vi.mocked(listLogs)({});
+      const records = Array.from({ length: 58 }, (_, index) => ({
+        ...base.data[0],
+        eventId: `event-${index}`,
+        target: { ...base.data[0].target, name: `record-${index}` },
+        facts: { ...base.data[0].facts, targetNameSnapshot: `record-${index}` },
+      }));
+      vi.mocked(listLogs).mockClear();
+      vi.mocked(listLogs).mockImplementation((query) => {
+        const page = query.page ?? 1;
+        expect(query.cursor).toBe(page === 1 ? undefined : `cursor-${page}`);
+        return Promise.resolve({
+          ...base,
+          data: records.slice((page - 1) * 20, page * 20),
+          count: { accuracy: "partial", value: [58, 38, 24][page - 1] },
+          nextCursor: page < 3 ? `cursor-${page + 1}` : undefined,
+          page,
+          pageSize: 20,
+          partial: false,
+          sourceStatus: [],
+        });
+      });
+      render(<ObservabilityLogsScene mode={mode} />);
+      await waitFor(() =>
+        expect(document.querySelector('tr[data-row-key="event-0"]')).not.toBeNull(),
+      );
+      expect(screen.queryByText("bknTrace.logs.resultCount")).toBeNull();
+      const visited: string[] = [];
+      for (let page = 1; page <= 3; page++) {
+        await waitFor(() =>
+          expect(
+            document.querySelector(`tr[data-row-key="event-${(page - 1) * 20}"]`),
+          ).not.toBeNull(),
+        );
+        visited.push(
+          ...Array.from(document.querySelectorAll("tr[data-row-key]"), (row) =>
+            row.getAttribute("data-row-key")!,
+          ),
+        );
+        if (page < 3)
+          fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+      }
+      expect(visited).toEqual(records.map((record) => record.eventId));
+      expect(screen.getByRole("button", { name: "bknTrace.logs.nextPage" })).toBeDisabled();
+      fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.previousPage" }));
+      await waitFor(() =>
+        expect(document.querySelector('tr[data-row-key="event-20"]')).not.toBeNull(),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
+      await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(5));
+      expect(
+        vi
+          .mocked(listLogs)
+          .mock.calls.every(([query]) =>
+            mode === "audit" ? query.categories?.[0] === "audit.admin" : !query.categories,
+          ),
+      ).toBe(true);
+    },
+  );
+
+  it.each(["logs", "audit"] as const)("%s 游标过期后保留已提交条件并重新开始", async (mode) => {
+    window.history.replaceState({}, "", "/observability/logs?actor=committed");
+    const base = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockClear();
+    const expired = new AxiosError("expired cursor", undefined, undefined, undefined, {
+      config: { headers: new AxiosHeaders() },
+      headers: {},
+      status: 409,
+      statusText: "Conflict",
+      data: { error: { code: "cursor_stale", retryable: false } },
+    });
+    vi.mocked(listLogs)
+      .mockResolvedValueOnce({ ...base, nextCursor: "expired-page-2" })
+      .mockRejectedValueOnce(expired)
+      .mockResolvedValueOnce({ ...base, nextCursor: "fresh-page-2" })
+      .mockResolvedValueOnce({ ...base, nextCursor: undefined });
+    render(<ObservabilityLogsScene mode={mode} />);
+    await screen.findByText(" 的业务会话", { exact: false });
+    fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+      target: { value: "draft" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await screen.findByText("bknTrace.errors.cursorStale");
+    expect(listLogs).toHaveBeenCalledTimes(2); // Recovery requires an explicit action.
+    expect(vi.mocked(listLogs).mock.calls[1]?.[0]).toMatchObject({
+      cursor: "expired-page-2",
+      page: 2,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.restartQuery" }));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(3));
+    const restarted = vi.mocked(listLogs).mock.calls[2]?.[0];
+    expect(restarted).toEqual({ ...vi.mocked(listLogs).mock.calls[0]?.[0], page: 1 });
+    expect(restarted?.cursor).toBeUndefined();
+    expect(restarted?.actorQuery).toBe("committed");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "bknTrace.logs.nextPage" })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(4));
+    expect(vi.mocked(listLogs).mock.calls[3]?.[0]).toMatchObject({
+      cursor: "fresh-page-2",
+      page: 2,
+    });
+  });
+
+  it("游标过期后的刷新从首页恢复，普通错误仍可重试原续页", async () => {
+    const base = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockClear();
+    const error = (code: string) =>
+      new AxiosError(code, undefined, undefined, undefined, {
+        config: { headers: new AxiosHeaders() },
+        headers: {},
+        status: 409,
+        statusText: "Conflict",
+        data: { error: { code } },
+      });
+    vi.mocked(listLogs)
+      .mockResolvedValueOnce({ ...base, nextCursor: "page-2" })
+      .mockRejectedValueOnce(error("conflict"))
+      .mockRejectedValueOnce(error("cursor_stale"))
+      .mockResolvedValueOnce({ ...base, nextCursor: "new-page-2" });
+    render(<ObservabilityLogsScene />);
+    await screen.findByText(" 的业务会话", { exact: false });
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await screen.findByText("conflict");
+    expect(screen.queryByRole("button", { name: "bknTrace.actions.restartQuery" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
+    await screen.findByText("bknTrace.errors.cursorStale");
+    expect(vi.mocked(listLogs).mock.calls[2]?.[0]).toMatchObject({ cursor: "page-2", page: 2 });
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(4));
+    expect(vi.mocked(listLogs).mock.calls[3]?.[0]).toEqual({
+      ...vi.mocked(listLogs).mock.calls[0]?.[0],
+      page: 1,
+    });
+  });
+
+  it("合法空批次仍可通过游标继续查询", async () => {
+    const base = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockClear();
+    vi.mocked(listLogs)
+      .mockResolvedValueOnce({
+        ...base,
+        data: [],
+        count: { accuracy: "partial", value: 0 },
+        nextCursor: "after-filtered-batch",
+      })
+      .mockResolvedValueOnce({ ...base, nextCursor: undefined });
+    render(<ObservabilityLogsScene />);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "bknTrace.logs.nextPage" })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await screen.findByText(" 的业务会话", { exact: false });
+    expect(vi.mocked(listLogs).mock.calls[1]?.[0]).toMatchObject({
+      cursor: "after-filtered-batch",
+      page: 2,
+    });
+  });
+
+  it("审计首页 partial=21 不误报总数，第二页 exact=47 后保留精确页码", async () => {
+    const base = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockClear();
+    vi.mocked(listLogs)
+      .mockResolvedValueOnce({
+        ...base,
+        count: { accuracy: "partial", value: 21 },
+        nextCursor: "audit-page-2",
+        partial: false,
+        sourceStatus: [],
+      })
+      .mockResolvedValueOnce({
+        ...base,
+        count: { accuracy: "exact", value: 47 },
+        page: 2,
+        pageSize: 20,
+        nextCursor: "audit-page-3",
+        partial: false,
+        sourceStatus: [],
+      });
+    render(<ObservabilityLogsScene mode="audit" />);
+    await screen.findByText("bknTrace.logs.resultCountUnknown");
+    expect(screen.queryByText("bknTrace.logs.resultCount")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await screen.findByTitle("3");
+    expect(screen.getByText("bknTrace.logs.resultCount")).not.toBeNull();
+    expect(vi.mocked(listLogs).mock.calls[1]?.[0]).toMatchObject({
+      page: 2,
+      cursor: "audit-page-2",
+      categories: ["audit.admin"],
+    });
+  });
+
+  it.each([null, 0])("partial=%s 仍按游标导航，未提交的筛选不改变当前查询", async (value) => {
+    const base = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockClear();
+    vi.mocked(listLogs).mockResolvedValue({
+      ...base,
+      count: { accuracy: "partial", value },
+      nextCursor: "continuation",
+      partial: false,
+      sourceStatus: [],
+    });
+    render(<ObservabilityLogsScene />);
+    await screen.findByText("bknTrace.logs.resultCountUnknown");
+    fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+      target: { value: "new actor" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(listLogs).mock.calls[1]?.[0]).toMatchObject({
+      page: 2,
+      cursor: "continuation",
+    });
+    expect(vi.mocked(listLogs).mock.calls[1]?.[0].actorQuery).toBeUndefined();
+    await screen.findByText("Page 2");
+    fireEvent.click(screen.getByText("bknTrace.actions.query"));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(3));
+    expect(vi.mocked(listLogs).mock.calls[2]?.[0]).toMatchObject({
+      page: 1,
+      actorQuery: "new actor",
+    });
+    expect(vi.mocked(listLogs).mock.calls[2]?.[0].cursor).toBeUndefined();
+    await screen.findByText("Page 1");
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "bknTrace.logs.pageSize" }));
+    fireEvent.click(await screen.findByText("50 / page"));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(4));
+    expect(vi.mocked(listLogs).mock.calls[3]?.[0]).toMatchObject({
+      page: 1,
+      pageSize: 50,
+      actorQuery: "new actor",
+    });
+    expect(vi.mocked(listLogs).mock.calls[3]?.[0].cursor).toBeUndefined();
+  });
+
+  it.each(["success", "stale"])(
+    "新的筛选查询完成后，旧翻页 %s 不能覆盖结果或游标",
+    async (kind) => {
+      const base = await vi.mocked(listLogs)({});
+      vi.mocked(listLogs).mockClear();
+      let rejectOldPage: ((error: Error) => void) | undefined;
+      let finishOldPage: ((result: typeof base) => void) | undefined;
+      vi.mocked(listLogs)
+        .mockResolvedValueOnce({ ...base, nextCursor: "old-page-2", sourceStatus: [] })
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve, reject) => {
+              finishOldPage = resolve;
+              rejectOldPage = reject;
+            }),
+        )
+        .mockResolvedValueOnce({ ...base, nextCursor: "new-page-2", sourceStatus: [] })
+        .mockResolvedValueOnce({ ...base, sourceStatus: [] });
+      render(<ObservabilityLogsScene />);
+      await screen.findByText("bknTrace.logs.resultCountUnknown");
+      fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+      await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
+      expect(screen.getByRole("button", { name: "bknTrace.logs.nextPage" })).toBeDisabled();
+      fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+        target: { value: "new actor" },
+      });
+      fireEvent.click(screen.getByText("bknTrace.actions.query"));
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "bknTrace.logs.nextPage" })).toBeEnabled(),
+      );
+      await act(async () => {
+        if (kind === "stale")
+          rejectOldPage?.(
+            new AxiosError("expired", undefined, undefined, undefined, {
+              config: { headers: new AxiosHeaders() },
+              headers: {},
+              status: 409,
+              statusText: "Conflict",
+              data: { error: { code: "cursor_stale" } },
+            }),
+          );
+        else finishOldPage?.({ ...base, nextCursor: "obsolete-page-3", page: 2, sourceStatus: [] });
+        await Promise.resolve();
+      });
+      expect(screen.queryByText("bknTrace.errors.cursorStale")).toBeNull();
+      expect(screen.getByText("Page 1")).not.toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+      await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(4));
+      expect(vi.mocked(listLogs).mock.calls[3]?.[0]).toMatchObject({
+        page: 2,
+        cursor: "new-page-2",
+        actorQuery: "new actor",
+      });
+    },
+  );
+
+  it.each(["query", "reset", "size"])(
+    "%s 请求失败后刷新仍从请求的首页及页大小开始",
+    async (action) => {
+      const base = await vi.mocked(listLogs)({});
+      vi.mocked(listLogs).mockClear();
+      vi.mocked(listLogs).mockResolvedValue({ ...base, nextCursor: "next", sourceStatus: [] });
+      render(<ObservabilityLogsScene />);
+      await screen.findByText("Page 1");
+      for (const page of [2, 3]) {
+        fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+        await screen.findByText(`Page ${page}`);
+      }
+      fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+        target: { value: "new actor" },
+      });
+      vi.mocked(listLogs).mockRejectedValueOnce(new Error("query failed"));
+      if (action === "size") {
+        fireEvent.mouseDown(screen.getByRole("combobox", { name: "bknTrace.logs.pageSize" }));
+        fireEvent.click(await screen.findByText("50 / page"));
+      } else {
+        fireEvent.click(screen.getByText(`bknTrace.actions.${action}`));
+      }
+      await screen.findByText("query failed");
+      const failedQuery = vi.mocked(listLogs).mock.calls[3]?.[0];
+      expect(failedQuery).toMatchObject({ page: 1, pageSize: action === "size" ? 50 : 20 });
+      expect(failedQuery?.cursor).toBeUndefined();
+      fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
+      await screen.findByText("Page 1");
+      expect(vi.mocked(listLogs).mock.calls[4]?.[0]).toEqual(failedQuery);
+    },
+  );
+
+  it.each(["cursor_stale", "audit_consumer_not_configured"])(
+    "%s 后切换语言遇到权限加载失败，应清除旧错误类型",
+    async (code) => {
+      const base = await vi.mocked(listLogs)({});
+      vi.mocked(listLogs).mockClear();
+      const stale = code === "cursor_stale";
+      vi.mocked(listLogs)
+        .mockResolvedValueOnce({ ...base, nextCursor: "page-2", sourceStatus: [] })
+        .mockRejectedValueOnce(
+          new AxiosError(code, undefined, undefined, undefined, {
+            config: { headers: new AxiosHeaders() },
+            headers: {},
+            status: stale ? 409 : 503,
+            statusText: stale ? "Conflict" : "Service Unavailable",
+            data: { error: { code } },
+          }),
+        );
+      const view = render(<ObservabilityLogsScene />);
+      await screen.findByText("Page 1");
+      fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+      await screen.findByText(
+        stale ? "bknTrace.errors.cursorStale" : "bknTrace.errors.auditNotConfigured",
+      );
+      expect(document.querySelector(".ant-alert-warning")).not.toBeNull();
+      if (stale)
+        expect(screen.getByRole("button", { name: "bknTrace.actions.restartQuery" })).toBeEnabled();
+      vi.mocked(getAccessProfile).mockRejectedValueOnce(new Error("profile failed"));
+      currentTranslate = (key, options) => translate(key, options);
+      view.rerender(<ObservabilityLogsScene />);
+      await screen.findByText("profile failed");
+      expect(screen.queryByRole("button", { name: "bknTrace.actions.restartQuery" })).toBeNull();
+      expect(document.querySelector(".ant-alert-warning")).toBeNull();
+      expect(document.querySelector(".ant-alert-error")).not.toBeNull();
+      expect(getAccessProfile).toHaveBeenCalledTimes(2);
+      expect(listLogs).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("切换语言重查已提交筛选，下一页沿用相同条件与新游标", async () => {
+    const base = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockClear();
+    vi.mocked(listLogs).mockResolvedValue({
+      ...base,
+      nextCursor: "committed-next",
+      sourceStatus: [],
+    });
+    const view = render(<ObservabilityLogsScene />);
+    await screen.findByText("Page 1");
+    fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+      target: { value: "committed actor" },
+    });
+    fireEvent.click(screen.getByText("bknTrace.actions.query"));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "bknTrace.logs.nextPage" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await screen.findByText("Page 2");
+    fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+      target: { value: "draft actor" },
+    });
+    vi.mocked(listLogs).mockResolvedValue({
+      ...base,
+      nextCursor: "translated-next",
+      sourceStatus: [],
+    });
+    currentTranslate = (key, options) => translate(key, options);
+    view.rerender(<ObservabilityLogsScene />);
+    await screen.findByText("Page 1");
+    const languageQuery = vi.mocked(listLogs).mock.calls[3]?.[0];
+    expect(languageQuery).toMatchObject({ page: 1, actorQuery: "committed actor" });
+    expect(languageQuery?.cursor).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await screen.findByText("Page 2");
+    expect(vi.mocked(listLogs).mock.calls[4]?.[0]).toEqual({
+      ...languageQuery,
+      page: 2,
+      cursor: "translated-next",
+    });
+  });
+
   it("按页读取日志并保留当前筛选条件", async () => {
     vi.mocked(listLogs)
       .mockResolvedValueOnce({
-        count: { accuracy: "partial", value: 40 },
+        count: { accuracy: "exact", value: 40 },
         data: [
           {
             action: "create",

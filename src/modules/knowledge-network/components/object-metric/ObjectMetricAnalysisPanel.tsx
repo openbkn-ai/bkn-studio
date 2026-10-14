@@ -73,6 +73,15 @@ function dimensionEntries(entry: ObjectMetricDataEntryV1): Array<[string, unknow
   return Object.entries(entry.dimensions ?? {});
 }
 
+function dimensionValueLabel(value: unknown): string {
+  if (value == null) return "—";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  return JSON.stringify(value) ?? "—";
+}
+
 function categoryLabel(entry: ObjectMetricDataEntryV1): string {
   const dimensions = dimensionEntries(entry);
   if (dimensions.length === 1) return String(dimensions[0]?.[1]);
@@ -155,10 +164,10 @@ function buildStackedBarOption(entries: NumericEntry[]): EChartsOption | undefin
 
   const [categoryKey, seriesKey] = dimensionKeys;
   const categories = Array.from(
-    new Set(entries.map((entry) => String(entry.dimensions?.[categoryKey] ?? "—"))),
+    new Set(entries.map((entry) => dimensionValueLabel(entry.dimensions?.[categoryKey]))),
   );
   const names = Array.from(
-    new Set(entries.map((entry) => String(entry.dimensions?.[seriesKey] ?? "—"))),
+    new Set(entries.map((entry) => dimensionValueLabel(entry.dimensions?.[seriesKey]))),
   );
   return {
     color: palette,
@@ -173,8 +182,8 @@ function buildStackedBarOption(entries: NumericEntry[]): EChartsOption | undefin
         entries
           .filter(
             (entry) =>
-              String(entry.dimensions?.[categoryKey] ?? "—") === category &&
-              String(entry.dimensions?.[seriesKey] ?? "—") === name,
+              dimensionValueLabel(entry.dimensions?.[categoryKey]) === category &&
+              dimensionValueLabel(entry.dimensions?.[seriesKey]) === name,
           )
           .reduce((total, entry) => total + entry.value, 0),
       ),
@@ -243,15 +252,15 @@ function buildHeatmapOption(entries: NumericEntry[]): EChartsOption | undefined 
 
   const [xKey, yKey] = dimensionKeys;
   const xValues = Array.from(
-    new Set(entries.map((entry) => String(entry.dimensions?.[xKey] ?? "—"))),
+    new Set(entries.map((entry) => dimensionValueLabel(entry.dimensions?.[xKey]))),
   );
   const yValues = Array.from(
-    new Set(entries.map((entry) => String(entry.dimensions?.[yKey] ?? "—"))),
+    new Set(entries.map((entry) => dimensionValueLabel(entry.dimensions?.[yKey]))),
   );
   const values = new Map<string, number>();
   entries.forEach((entry) => {
-    const x = String(entry.dimensions?.[xKey] ?? "—");
-    const y = String(entry.dimensions?.[yKey] ?? "—");
+    const x = dimensionValueLabel(entry.dimensions?.[xKey]);
+    const y = dimensionValueLabel(entry.dimensions?.[yKey]);
     values.set(`${x}\u0000${y}`, (values.get(`${x}\u0000${y}`) ?? 0) + entry.value);
   });
   const data = Array.from(values.entries()).map(([key, value]) => {

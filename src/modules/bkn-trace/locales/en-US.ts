@@ -960,6 +960,11 @@ export const bknTraceEnUS = {
       resultCount_one: "{{count}} verifiable fact",
       resultCount_other: "{{count}} verifiable facts",
       resultCountUnknown: "Total verifiable facts unknown",
+      previousPage: "Previous page",
+      nextPage: "Next page",
+      currentPage: "Page {{page}}",
+      pageSize: "Page size",
+      rowsPerPage: "{{size}} / page",
       searchPlaceholder: "Search actions, targets, actors, or IDs",
       startTime: "Start time",
       modules: {
@@ -1240,9 +1245,9 @@ export const bknTraceEnUS = {
       back: "Back to runs",
       loadMore: "Load more",
       query: "Query",
+      restartQuery: "Restart query",
       refresh: "Refresh",
       reset: "Reset",
-      viewLogs: "View related logs",
     },
     description:
       "Inspect runtime traces, evidence chains, business semantic graphs, and snapshot previews by trace id or request id.",
@@ -1252,6 +1257,7 @@ export const bknTraceEnUS = {
       accessProfileFailed:
         "Unable to load the current provenance access profile. Refresh and try again.",
       missingScope: "Enter a trace id or request id.",
+      cursorStale: "Pagination has expired. Restart the query to keep your applied filters.",
       queryFailed: "Query failed.",
       auditNotConfigured:
         "System audit is not configured. Ask your deployment administrator to configure and enable audit collection, then refresh.",

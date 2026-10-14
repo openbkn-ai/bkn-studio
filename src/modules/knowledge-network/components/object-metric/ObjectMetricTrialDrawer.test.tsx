@@ -13,10 +13,9 @@ import { createObjectMetricDefinitionV1 } from "@/modules/knowledge-network/comp
 import type { ObjectMetricDataV1 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 
-vi.mock(
-  "@/modules/knowledge-network/components/object-metric/ObjectMetricAnalysisPanel",
-  () => ({ ObjectMetricAnalysisPanel: () => null }),
-);
+vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAnalysisPanel", () => ({
+  ObjectMetricAnalysisPanel: () => null,
+}));
 
 const originalMatchMedia = window.matchMedia;
 

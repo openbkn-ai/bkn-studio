@@ -125,6 +125,7 @@ export const homeEnUS = {
         "Ask an administrator to check ownership of the existing knowledge network. Retry after the conflict is resolved.",
       empty: "No samples are available to install",
       refreshSource: "Refresh samples",
+      downloadOffline: "download an offline package",
       catalogNotPublished:
         "The official version catalog is not published yet. Bundled samples remain available.",
       lastRefresh: "Last successful refresh: {{time}}",
@@ -135,8 +136,7 @@ export const homeEnUS = {
         rate_limited: "A refresh was attempted recently. Please try again shortly.",
         updated: "The sample catalog was updated",
         unchanged: "No catalog updates",
-        failed:
-          "The official catalog could not be refreshed. Cached and bundled samples were kept.",
+        failed: "Unable to refresh the official catalog. Retry or ",
         not_refreshed: "The official version catalog has not been scanned",
       },
       notesTitle: "Release notes · {{version}}",

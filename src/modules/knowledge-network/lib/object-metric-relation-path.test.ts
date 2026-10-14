@@ -68,7 +68,7 @@ describe("availableRelationTypesFrom", () => {
       ...orderChannel,
       id: "order_channel_fallback",
       name: "订单备用渠道",
-    } as KnowledgeNetworkRelationTypeRecord;
+    };
 
     expect(
       availableRelationTypesFrom(

@@ -21,7 +21,7 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -36,6 +36,7 @@ import {
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
   isAuditConsumerNotConfigured,
+  isLogCursorStale,
   listLogs,
   type AuditOutcome,
   type BusinessModule,
@@ -80,23 +81,36 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
   const [associatedScope] = useState(readAssociatedLogScope);
   const [profile, setProfile] = useState<TraceAccessProfile>();
   const [filters, setFilters] = useState<Filters>(() => readInitialFilters(mode));
+  const appliedFilters = useRef(filters);
+  const pageCursors = useRef<Record<number, string>>({});
+  const requestSequence = useRef(0);
   const [selectedEventId, setSelectedEventId] = useState<string>();
   const [result, setResult] = useState<LogListResult>();
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
   const [loading, setLoading] = useState(true);
   const [auditNotConfigured, setAuditNotConfigured] = useState(false);
+  const [cursorStale, setCursorStale] = useState(false);
   const [error, setError] = useState<string>();
 
   const load = useCallback(
-    async (access: TraceAccessProfile, nextFilters: Filters, nextPage = 1, nextPageSize = 20) => {
+    async (
+      access: TraceAccessProfile,
+      nextFilters: Filters,
+      nextPage = 1,
+      nextPageSize = 20,
+      cursor?: string,
+    ) => {
       if (!canSearchLogs(access, associatedScope)) return;
+      const request = ++requestSequence.current;
       setLoading(true);
       setError(undefined);
       setAuditNotConfigured(false);
+      setCursorStale(false);
       try {
         const query: LogListQuery = {
           page: nextPage,
           pageSize: nextPageSize,
+          ...(cursor ? { cursor } : {}),
           timeFrom: nextFilters.timeRange[0].toISOString(),
           timeTo: nextFilters.timeRange[1].toISOString(),
           ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
@@ -114,20 +128,36 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
           ...(associatedScope.targetType ? { targetType: associatedScope.targetType } : {}),
           ...(associatedScope.traceId ? { traceId: associatedScope.traceId } : {}),
         };
-        setResult(await listLogs(query));
+        const response = await listLogs(query);
+        if (request !== requestSequence.current) return;
+        // Later cursors belong to the old continuation and must be rediscovered.
+        const cursors = Object.fromEntries(
+          Object.entries(pageCursors.current).filter(([page]) => Number(page) <= nextPage),
+        );
+        if (response.nextCursor) cursors[nextPage + 1] = response.nextCursor;
+        pageCursors.current = cursors;
+        setPagination({ page: nextPage, pageSize: nextPageSize });
+        setResult(response);
       } catch (caught: unknown) {
+        if (request !== requestSequence.current) return;
+        const stale = isLogCursorStale(caught);
+        if (stale) pageCursors.current = {};
+        setCursorStale(stale);
+        setPagination({ page: stale ? 1 : nextPage, pageSize: nextPageSize });
         setResult(undefined);
         const unconfigured = isAuditConsumerNotConfigured(caught);
         setAuditNotConfigured(unconfigured);
         setError(
-          unconfigured
-            ? t("bknTrace.errors.auditNotConfigured")
-            : caught instanceof Error
-              ? caught.message
-              : t("bknTrace.errors.queryFailed"),
+          stale
+            ? t("bknTrace.errors.cursorStale")
+            : unconfigured
+              ? t("bknTrace.errors.auditNotConfigured")
+              : caught instanceof Error
+                ? caught.message
+                : t("bknTrace.errors.queryFailed"),
         );
       } finally {
-        setLoading(false);
+        if (request === requestSequence.current) setLoading(false);
       }
     },
     [associatedScope, mode, t],
@@ -139,11 +169,13 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       .then((access) => {
         if (!active) return;
         setProfile(access);
-        if (canSearchLogs(access, associatedScope)) void load(access, filters);
+        if (canSearchLogs(access, associatedScope)) void load(access, appliedFilters.current);
         else setLoading(false);
       })
       .catch((caught: unknown) => {
         if (!active) return;
+        setCursorStale(false);
+        setAuditNotConfigured(false);
         setError(
           caught instanceof Error ? caught.message : t("bknTrace.errors.accessProfileFailed"),
         );
@@ -152,8 +184,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     return () => {
       active = false;
     };
-    // The initial request intentionally uses the URL-derived filter snapshot once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Language changes replay only the committed query, never draft filter edits.
   }, [associatedScope, load, t]);
 
   const columns = useMemo<ColumnsType<LogRecord>>(
@@ -223,7 +254,8 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
 
   const submit = useCallback(() => {
     if (!profile) return;
-    setPagination((current) => ({ ...current, page: 1 }));
+    appliedFilters.current = filters;
+    pageCursors.current = {};
     syncFiltersToUrl(filters, associatedScope);
     void load(profile, filters, 1, pagination.pageSize);
   }, [associatedScope, filters, load, pagination.pageSize, profile]);
@@ -232,7 +264,8 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     if (!profile) return;
     const next = defaultFilters(mode);
     setFilters(next);
-    setPagination({ page: 1, pageSize: pagination.pageSize });
+    appliedFilters.current = next;
+    pageCursors.current = {};
     syncFiltersToUrl(next, associatedScope);
     void load(profile, next, 1, pagination.pageSize);
   }, [associatedScope, load, mode, pagination.pageSize, profile]);
@@ -240,16 +273,24 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
   const changePage = useCallback(
     (page: number, pageSize: number) => {
       if (!profile) return;
-      setPagination({ page, pageSize });
-      void load(profile, filters, page, pageSize);
+      const sizeChanged = pageSize !== pagination.pageSize;
+      const nextPage = sizeChanged ? 1 : page;
+      const cursor =
+        sizeChanged || result?.count.accuracy === "exact"
+          ? undefined
+          : pageCursors.current[nextPage];
+      if (sizeChanged) pageCursors.current = {};
+      void load(profile, appliedFilters.current, nextPage, pageSize, cursor);
     },
-    [filters, load, profile],
+    [load, pagination.pageSize, profile, result?.count.accuracy],
   );
 
   if (loading && !profile) return <Spin />;
   if (profile && !canSearchLogs(profile, associatedScope)) {
     return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
   }
+
+  const exactCount = result?.count.accuracy === "exact" && result.count.value !== null;
 
   const associated =
     associatedScope.actorId ||
@@ -269,10 +310,20 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
           </Typography.Text>
         </div>
         <Button
+          disabled={loading}
           aria-label={t("bknTrace.actions.refresh")}
           icon={<ReloadOutlined />}
           onClick={() => {
-            if (profile) void load(profile, filters, pagination.page, pagination.pageSize);
+            if (profile)
+              void load(
+                profile,
+                appliedFilters.current,
+                pagination.page,
+                pagination.pageSize,
+                result?.count.accuracy === "exact"
+                  ? undefined
+                  : pageCursors.current[pagination.page],
+              );
           }}
         >
           {t("bknTrace.actions.refresh")}
@@ -280,7 +331,23 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       </header>
 
       {error ? (
-        <Alert message={error} showIcon type={auditNotConfigured ? "warning" : "error"} />
+        <Alert
+          message={error}
+          showIcon
+          type={auditNotConfigured || cursorStale ? "warning" : "error"}
+          action={
+            cursorStale ? (
+              <Button
+                disabled={loading}
+                onClick={() => {
+                  if (profile) void load(profile, appliedFilters.current, 1, pagination.pageSize);
+                }}
+              >
+                {t("bknTrace.actions.restartQuery")}
+              </Button>
+            ) : undefined
+          }
+        />
       ) : null}
       {!error &&
       result?.sourceStatus.some((source) => source.reason === "audit_consumer_not_configured") ? (
@@ -362,7 +429,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         <>
           <div className={styles.resultSummary}>
             <Typography.Text>
-              {result.count.value === null
+              {!exactCount
                 ? t("bknTrace.logs.resultCountUnknown")
                 : t("bknTrace.logs.resultCount", { count: result.count.value })}
             </Typography.Text>
@@ -385,17 +452,48 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
               tableLayout="fixed"
             />
           </Spin>
-          {result.count.value ? (
+          {exactCount ? (
             <TablePaginationBar
-              current={result.page ?? pagination.page}
+              current={pagination.page}
               onChange={changePage}
-              pageSize={result.pageSize ?? pagination.pageSize}
+              pageSize={pagination.pageSize}
               pageSizeOptions={[20, 50, 100, 200]}
               showSizeChanger
               showTotal={(total) => t("common.total", { total })}
-              total={result.count.value}
+              total={result.count.value ?? 0}
+              disabled={loading}
             />
-          ) : null}
+          ) : (
+            <div className={styles.cursorPagination}>
+              <Space>
+                <Button
+                  disabled={loading || pagination.page <= 1}
+                  onClick={() => changePage(pagination.page - 1, pagination.pageSize)}
+                >
+                  {t("bknTrace.logs.previousPage")}
+                </Button>
+                <Typography.Text>
+                  {t("bknTrace.logs.currentPage", { page: pagination.page })}
+                </Typography.Text>
+                <Button
+                  disabled={loading || !result.nextCursor}
+                  onClick={() => changePage(pagination.page + 1, pagination.pageSize)}
+                >
+                  {t("bknTrace.logs.nextPage")}
+                </Button>
+              </Space>
+              <Select
+                aria-label={t("bknTrace.logs.pageSize")}
+                disabled={loading}
+                value={pagination.pageSize}
+                options={[20, 50, 100, 200].map((size) => ({
+                  value: size,
+                  label: t("bknTrace.logs.rowsPerPage", { size }),
+                }))}
+                onChange={(size) => changePage(1, size)}
+              />
+            </div>
+          )}
         </>
       ) : null}
       <LogDetailDrawer logId={selectedEventId} onClose={() => setSelectedEventId(undefined)} />

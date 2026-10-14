@@ -387,7 +387,11 @@ function conditionSummary(
     if (operand.value === "" || operand.value === undefined || operand.value === null) {
       return "未填写值";
     }
-    return typeof operand.value === "string" ? `“${operand.value}”` : String(operand.value);
+    if (typeof operand.value === "string") return `“${operand.value}”`;
+    if (typeof operand.value === "number" || typeof operand.value === "boolean") {
+      return String(operand.value);
+    }
+    return JSON.stringify(operand.value) ?? "未填写值";
   };
   const right = condition.right?.map(operandLabel).join("、");
   return [operandLabel(condition.left), comparisonLabels[condition.comparison_operator], right]

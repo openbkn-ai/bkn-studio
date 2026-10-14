@@ -153,7 +153,10 @@ function PropertySelect({
 
 function literalText(value: unknown) {
   if (value === undefined || value === null) return "";
-  return String(value);
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value) ?? "";
 }
 
 function literalValue(value: string, valueType: string) {

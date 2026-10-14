@@ -164,9 +164,7 @@ export async function getKnowledgeNetwork(
   const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}`,
     {
-      headers: options.skipErrorToast
-        ? { [SUPPRESS_ERROR_TOAST_HEADER]: "true" }
-        : undefined,
+      headers: options.skipErrorToast ? { [SUPPRESS_ERROR_TOAST_HEADER]: "true" } : undefined,
       skipErrorToast: options.skipErrorToast,
     },
   );

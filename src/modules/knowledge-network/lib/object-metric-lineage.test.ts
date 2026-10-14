@@ -111,9 +111,11 @@ describe("object metric definition lineage", () => {
   it("loads the pinned dependency version even when a newer version exists", async () => {
     const version5 = metric("paid_amount", 5, atomic.definition.specification);
     const version6 = metric("paid_amount", 6, atomic.definition.specification);
-    const loader = async (metricId: string, version: number) =>
-      [version5, version6].find(
-        (item) => item.definition.id === metricId && item.definition.version === version,
+    const loader = (metricId: string, version: number) =>
+      Promise.resolve(
+        [version5, version6].find(
+          (item) => item.definition.id === metricId && item.definition.version === version,
+        ),
       );
 
     const [resolution] = await resolveObjectMetricReferences(

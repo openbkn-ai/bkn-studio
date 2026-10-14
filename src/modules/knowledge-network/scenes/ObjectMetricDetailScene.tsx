@@ -133,9 +133,7 @@ export function ObjectMetricDetailScene() {
   }>();
   const [ownerObjectType, setOwnerObjectType] = useState<ObjectTypeDetail | null>();
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<"forbidden" | "not-found" | "unknown" | null>(
-    null,
-  );
+  const [loadError, setLoadError] = useState<"forbidden" | "not-found" | "unknown" | null>(null);
   const [bindingOpen, setBindingOpen] = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   const [bindingForm] =
@@ -175,7 +173,11 @@ export function ObjectMetricDetailScene() {
       .catch((error) => {
         if (!active) return;
         setLoadError(
-          isRequestForbidden(error) ? "forbidden" : isRequestNotFound(error) ? "not-found" : "unknown",
+          isRequestForbidden(error)
+            ? "forbidden"
+            : isRequestNotFound(error)
+              ? "not-found"
+              : "unknown",
         );
       })
       .finally(() => {
@@ -241,9 +243,7 @@ export function ObjectMetricDetailScene() {
       );
     }
     return (
-      <Empty
-        description={loadError === "unknown" ? "指标加载失败，请稍后重试" : "指标不存在"}
-      />
+      <Empty description={loadError === "unknown" ? "指标加载失败，请稍后重试" : "指标不存在"} />
     );
   }
   const definition = record.definition;
