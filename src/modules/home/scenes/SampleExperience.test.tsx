@@ -6,6 +6,7 @@
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listSamples = vi.hoisted(() => vi.fn());
@@ -18,6 +19,7 @@ const listSampleInstallations = vi.hoisted(() => vi.fn());
 const refreshSamples = vi.hoisted(() => vi.fn());
 const uninstallSample = vi.hoisted(() => vi.fn());
 const deleteSamplePackage = vi.hoisted(() => vi.fn());
+const scrollIntoView = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -79,6 +81,7 @@ vi.mock("@/modules/home/services/sample-catalog.service", () => ({
 
 import { SampleExperience } from "@/modules/home/scenes/SampleExperience";
 import { SampleRequestError } from "@/modules/home/services/sample-catalog.service";
+import styles from "./SampleExperience.module.css";
 
 const network = { displayName: "Northwind network", id: "northwind_kn" };
 
@@ -240,6 +243,11 @@ describe("SampleExperience", () => {
   });
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    refreshSamples.mockReset();
     getSampleReleaseNotes.mockReset();
     listSampleInstallations.mockResolvedValue({ items: [], historyComplete: false });
     getSampleInstallation.mockImplementation((sampleName: string, installationId: string) => ({
@@ -251,6 +259,121 @@ describe("SampleExperience", () => {
     }));
   });
 
+  it("automatically refreshes the official catalog on entry and shows the latest version", async () => {
+    listSamples.mockResolvedValue({
+      samples: [sample()],
+      sourceRefresh: { supported: true, status: "not_refreshed" },
+    });
+    refreshSamples.mockResolvedValue({
+      samples: [sample({ version: "0.1.2", latestPublishedVersion: "0.1.2" })],
+      sourceRefresh: { supported: true, status: "updated" },
+    });
+    renderExperience();
+    expect(await screen.findByText('home.sample.latestVersion:{"version":"0.1.2"}')).toBeTruthy();
+    expect(refreshSamples).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("status")).toHaveClass(styles.refreshSuccess);
+    expect(screen.getByRole("status").parentElement).toHaveClass(styles.catalogSummary);
+  });
+
+  it("keeps cached samples visible when the automatic refresh request fails", async () => {
+    listSamples.mockResolvedValue({
+      samples: [sample()],
+      sourceRefresh: { supported: true, status: "not_refreshed" },
+    });
+    refreshSamples.mockRejectedValue(new Error("Network unavailable"));
+    renderExperience();
+    expect(await screen.findByText("home.sample.refreshStatus.failed")).toBeTruthy();
+    expect(screen.getByRole("alert")).toHaveClass(styles.refreshFailure);
+    expect(screen.getByRole("alert").parentElement).toHaveClass(styles.catalogSummary);
+    expect(screen.getByRole("alert").querySelectorAll("p")).toHaveLength(1);
+    expect(screen.getByText("Northwind")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "home.sample.refreshSource" })).toBeEnabled();
+    refreshSamples.mockResolvedValue({
+      samples: [sample({ version: "0.1.2" })],
+      sourceRefresh: { supported: true, status: "updated" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.refreshSource" }));
+    expect(await screen.findByText("home.sample.refreshStatus.updated")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(refreshSamples).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([false, true])(
+    "shows the cache warning for a server refresh failure (throttled: %s)",
+    async (throttled) => {
+      const cached = {
+        samples: [sample()],
+        sourceRefresh: { supported: true, status: "not_refreshed" },
+      };
+      listSamples.mockResolvedValue(cached);
+      refreshSamples.mockResolvedValue({
+        ...cached,
+        sourceRefresh: { supported: true, status: "failed", code: "source_unavailable", throttled },
+      });
+      renderExperience();
+      expect(await screen.findByText("home.sample.refreshStatus.failed")).toBeTruthy();
+      expect(screen.getByRole("alert")).toHaveClass(styles.refreshFailure);
+      expect(screen.getByRole("link", { name: "home.sample.downloadOffline" })).toHaveAttribute(
+        "href",
+        "https://github.com/openbkn-ai/bkn-samples/releases",
+      );
+      expect(screen.getByText("Northwind")).toBeTruthy();
+    },
+  );
+
+  it("uses the existing list path when official refresh is unsupported", async () => {
+    listSamples.mockResolvedValue({ samples: [sample()] });
+    renderExperience();
+    expect(await screen.findByText("Northwind")).toBeTruthy();
+    expect(refreshSamples).not.toHaveBeenCalled();
+  });
+
+  it("reports an initial catalog read failure without blaming official refresh", async () => {
+    listSamples.mockRejectedValueOnce(new Error("Service unavailable"));
+    renderExperience();
+    expect(await screen.findByText("home.sample.loadFailed")).toBeTruthy();
+    expect(screen.queryByText("home.sample.refreshStatus.failed")).toBeNull();
+    expect(screen.queryByRole("link", { name: "home.sample.downloadOffline" })).toBeNull();
+    expect(refreshSamples).not.toHaveBeenCalled();
+    listSamples.mockResolvedValue({ samples: [sample()] });
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.reload" }));
+    expect(await screen.findByText("Northwind")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps the catalog-not-published explanation in the compact status row", async () => {
+    const cached = {
+      samples: [sample()],
+      sourceRefresh: { supported: true, status: "not_refreshed" },
+    };
+    listSamples.mockResolvedValue(cached);
+    refreshSamples.mockResolvedValue({
+      ...cached,
+      sourceRefresh: { supported: true, status: "failed", code: "catalog_not_published" },
+    });
+    renderExperience();
+    expect(await screen.findByText("home.sample.catalogNotPublished")).toBeTruthy();
+    expect(screen.getByText("Northwind")).toBeTruthy();
+    expect(screen.getByRole("alert").parentElement).toHaveClass(styles.catalogSummary);
+    expect(screen.getByRole("alert").querySelectorAll("p")).toHaveLength(1);
+  });
+
+  it("does not duplicate the automatic refresh during StrictMode effect replay", async () => {
+    const catalog = {
+      samples: [sample()],
+      sourceRefresh: { supported: true, status: "updated" },
+    };
+    listSamples.mockResolvedValue(catalog);
+    refreshSamples.mockResolvedValue(catalog);
+    render(
+      <StrictMode>
+        <SampleExperience />
+      </StrictMode>,
+    );
+    expect(await screen.findByText("home.sample.refreshStatus.updated")).toBeTruthy();
+    expect(refreshSamples).toHaveBeenCalledTimes(1);
+  });
+
   it("starts collapsed and permits only one expanded card", async () => {
     listSamples.mockResolvedValue({
       samples: [sample(), sample({ name: "harbor", displayName: "Harbor" })],
@@ -260,11 +383,22 @@ describe("SampleExperience", () => {
     const toggles = await screen.findAllByRole("button", { name: "home.sample.actions.expand" });
     expect(toggles).toHaveLength(2);
     expect(toggles[0]).toHaveAttribute("aria-expanded", "false");
+    expect(scrollIntoView).not.toHaveBeenCalled();
     fireEvent.click(toggles[0]);
     expect(toggles[0]).toHaveAttribute("aria-expanded", "true");
+    expect(scrollIntoView).toHaveBeenLastCalledWith({
+      block: "start",
+      inline: "nearest",
+      behavior: "auto",
+    });
+    expect(scrollIntoView.mock.instances.at(-1)).toBe(toggles[0].closest("article"));
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.expand" }));
     expect(toggles[0]).toHaveAttribute("aria-expanded", "false");
     expect(toggles[1]).toHaveAttribute("aria-expanded", "true");
+    expect(scrollIntoView.mock.instances.at(-1)).toBe(toggles[1].closest("article"));
+    scrollIntoView.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.collapse" }));
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
   it("removes an imported offline package and reloads the catalog", async () => {
