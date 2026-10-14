@@ -122,6 +122,153 @@ function renderExperience() {
 }
 
 describe("SampleExperience", () => {
+  it("keeps retry and confirms failed cleanup using the original installation version", async () => {
+    const failed = sample({
+      status: "failed",
+      installationId: "inst-old",
+      canUninstall: true,
+      version: "0.1.4",
+      source: "offline",
+    });
+    listSamples.mockResolvedValue({ samples: [failed], sourceRejected: false });
+    getSampleInstallation.mockResolvedValue({
+      id: "inst-old",
+      sample: "northwind",
+      version: "0.1.3",
+      status: "failed",
+      stages: [],
+      error: { code: "discover_incomplete", message: "scan failed", stage: "discover" },
+    });
+    uninstallSample.mockResolvedValue({
+      id: "inst-old",
+      sample: "northwind",
+      version: "0.1.3",
+      status: "uninstalling",
+      operation: "uninstall",
+      stages: [],
+    });
+    renderExperience();
+    const cleanup = await screen.findByRole("button", { name: "home.sample.cleanupFailed" });
+    await waitFor(() => expect(cleanup).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.failureDetails" }));
+    expect(await screen.findByRole("button", { name: "home.sample.actions.retry" })).toBeEnabled();
+    fireEvent.click(cleanup);
+    await waitFor(() => {
+      expect(
+        screen.getByText('home.sample.cleanupFailedTitle:{"name":"Northwind","version":"0.1.3"}'),
+      ).toBeVisible();
+      expect(screen.getByText("home.sample.cleanupFailedWarning")).toBeVisible();
+    });
+    expect(uninstallSample).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "common.cancel" }));
+    expect(uninstallSample).not.toHaveBeenCalled();
+    fireEvent.click(cleanup);
+    fireEvent.click(await screen.findByRole("button", { name: "common.delete" }));
+    await waitFor(() => expect(uninstallSample).toHaveBeenCalledWith("northwind", "inst-old"));
+    expect(retrySampleInstallation).not.toHaveBeenCalled();
+  });
+
+  it("does not offer failed cleanup without the existing operation capability", async () => {
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({
+          status: "failed",
+          installationId: "inst-old",
+          installable: false,
+          canUninstall: false,
+        }),
+      ],
+      sourceRejected: false,
+    });
+    renderExperience();
+    await screen.findByText("Northwind");
+    expect(
+      screen.queryByRole("button", { name: "home.sample.cleanupFailed" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("continues incomplete cleanup through the existing uninstall endpoint", async () => {
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({
+          status: "uninstall_failed",
+          installationId: "inst-old",
+          installable: false,
+          canUninstall: true,
+        }),
+      ],
+      sourceRejected: false,
+    });
+    uninstallSample.mockResolvedValue({
+      id: "inst-old",
+      sample: "northwind",
+      version: "0.1.0",
+      status: "uninstalling",
+      operation: "uninstall",
+      stages: [],
+    });
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.retryUninstall" }));
+    fireEvent.click(await screen.findByRole("button", { name: "common.delete" }));
+    await waitFor(() => expect(uninstallSample).toHaveBeenCalledWith("northwind", "inst-old"));
+    expect(retrySampleInstallation).not.toHaveBeenCalled();
+  });
+
+  it("returns to the existing offline installation flow after failed cleanup", async () => {
+    const failed = sample({
+      status: "failed",
+      installationId: "inst-old",
+      canUninstall: true,
+      source: "offline",
+      manifestSha256: "a".repeat(64),
+    });
+    let cleaned = false;
+    listSamples.mockImplementation(() =>
+      Promise.resolve({
+        samples: [cleaned ? { ...failed, status: "not_installed", canUninstall: false } : failed],
+        sourceRejected: false,
+      }),
+    );
+    getSampleInstallation.mockResolvedValue({
+      id: "inst-old",
+      sample: "northwind",
+      version: "0.1.0",
+      status: "failed",
+      stages: [],
+    });
+    uninstallSample.mockImplementation(() => {
+      cleaned = true;
+      return Promise.resolve({
+        id: "inst-old",
+        sample: "northwind",
+        version: "0.1.0",
+        status: "uninstalling",
+        operation: "uninstall",
+        stages: [],
+      });
+    });
+    createSampleInstallation.mockResolvedValue({
+      id: "inst-new",
+      sample: "northwind",
+      version: "0.1.0",
+      status: "installing",
+      stages: [],
+    });
+    renderExperience();
+    const cleanup = await screen.findByRole("button", { name: "home.sample.cleanupFailed" });
+    await waitFor(() => expect(cleanup).toBeEnabled());
+    fireEvent.click(cleanup);
+    fireEvent.click(await screen.findByRole("button", { name: "common.delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    await waitFor(() =>
+      expect(createSampleInstallation).toHaveBeenCalledWith("northwind", {
+        version: "0.1.0",
+        manifestSha256: "a".repeat(64),
+      }),
+    );
+    expect(retrySampleInstallation).not.toHaveBeenCalled();
+  });
+
   it("confirms uninstall and displays its progress above release notes", async () => {
     const installed = sample({
       name: "supply-chain",
