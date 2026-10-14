@@ -654,18 +654,29 @@ function SampleCard({
   const interrupted = ["install_interrupted", "uninstall_interrupted"].includes(
     installation?.error?.code ?? "",
   );
-  const detail = conflict
-    ? t("home.sample.errors.ownership_conflict")
-    : interrupted
-      ? t(
-          installation?.operation === "uninstall"
-            ? "home.sample.errors.uninstall_interrupted"
-            : "home.sample.errors.install_interrupted",
-        )
-      : installation?.error?.message ||
-        (["runtime_upgrade_required", "release_withdrawn"].includes(item.message)
-          ? t(`home.sample.errors.${item.message}`)
-          : item.message);
+  const downloadFailed = installation?.error?.code === "release_download_failed";
+  const detail = downloadFailed ? (
+    <>
+      {t("home.sample.downloadFailed")}
+      <a href={`${OFFICIAL_SAMPLE_SOURCE}/releases`} target="_blank" rel="noreferrer">
+        {t("home.sample.downloadOffline")}
+      </a>
+      {t("home.sample.downloadFailedAfterLink")}
+    </>
+  ) : conflict ? (
+    t("home.sample.errors.ownership_conflict")
+  ) : interrupted ? (
+    t(
+      installation?.operation === "uninstall"
+        ? "home.sample.errors.uninstall_interrupted"
+        : "home.sample.errors.install_interrupted",
+    )
+  ) : (
+    installation?.error?.message ||
+    (["runtime_upgrade_required", "release_withdrawn"].includes(item.message)
+      ? t(`home.sample.errors.${item.message}`)
+      : item.message)
+  );
   const stages =
     installation &&
     installation.stages.length > 0 &&
