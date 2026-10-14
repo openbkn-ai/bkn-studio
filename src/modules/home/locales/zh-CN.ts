@@ -119,6 +119,8 @@ export const homeZhCN = {
       empty: "当前没有可安装的样例",
       refreshSource: "刷新样例",
       downloadOffline: "下载离线包",
+      downloadFailed: "样例下载失败，请",
+      downloadFailedAfterLink: "后导入。",
       catalogNotPublished: "官方版本目录尚未发布，现有内置样例仍可使用。",
       lastRefresh: "最后成功刷新：{{time}}",
       latestVersion: "最新发布 {{version}}",
