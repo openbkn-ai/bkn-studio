@@ -124,7 +124,7 @@ services/
   relation-type.service.ts       # 关系类 CRUD / 映射规则
   action-type.service.ts         # 行动类 CRUD / 执行日志
   concept-group.service.ts       # 概念分组 CRUD / 资源归组
-  metric.service.ts              # 指标 CRUD / 数据查询
+  object-metric.service.ts       # 对象指标 V1 CRUD / 数据查询
   shared/runtime.ts              # useMock、wait、formatTimestamp、导入冲突等
   mappers/
     backend-types.ts             # 后端 DTO 类型

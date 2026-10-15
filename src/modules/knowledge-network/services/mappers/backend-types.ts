@@ -5,8 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { KnowledgeNetworkMetricRecord } from "@/modules/knowledge-network/types/knowledge-network";
-
 export type BackendAccountInfo = {
   id?: string | null;
   name?: string | null;
@@ -262,63 +260,4 @@ export type BackendActionType = {
 export type BackendListResponse<T> = {
   entries: T[];
   total_count: number;
-};
-
-export type BackendMetricCondition = {
-  field?: string;
-  object_type_id?: string;
-  operation?: string;
-  sub_conditions?: BackendMetricCondition[];
-  value?: string | string[];
-  value_from?: "const";
-};
-
-export type BackendMetricDependencyProperty = {
-  comment?: string;
-  condition_operations?: string[];
-  display_name?: string;
-  name: string;
-  type?: string;
-};
-
-export type BackendMetric = {
-  calculation_formula?: {
-    aggregation?: {
-      aggr?: KnowledgeNetworkMetricRecord["calculationFormula"]["aggregation"]["aggr"];
-      property?: string;
-    };
-    analysis_dimensions?: Array<{ name?: string; property?: string } | string>;
-    condition?: BackendMetricCondition;
-    group_by?: Array<{ property?: string } | string>;
-    having?: {
-      field?: string;
-      operation?: string;
-      value?: number | string;
-    };
-    order_by?: Array<{
-      direction?: "asc" | "desc";
-      property?: string;
-    }>;
-  };
-  analysis_dimensions?: Array<{ display_name?: string; name?: string; property?: string } | string>;
-  dependency_properties?: BackendMetricDependencyProperty[];
-  comment?: string;
-  creator?: BackendAccountInfo | string;
-  id: string;
-  metric_type?: KnowledgeNetworkMetricRecord["metricType"];
-  name: string;
-  operations?: string[];
-  scope_ref?: string;
-  scope_name?: string;
-  scope_type?: KnowledgeNetworkMetricRecord["scopeType"];
-  tags?: string[];
-  time_dimension?: {
-    default_range_policy?: string;
-    property?: string;
-  };
-  unit?: KnowledgeNetworkMetricRecord["unit"];
-  unit_type?: KnowledgeNetworkMetricRecord["unitType"];
-  update_time?: number;
-  updater?: BackendAccountInfo | string;
-  updater_name?: string;
 };

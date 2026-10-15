@@ -21,20 +21,18 @@ vi.mock("@/modules/knowledge-network/services/shared/runtime", async () => {
 
 import { listKnowledgeNetworkActionTypes } from "./action-type.service";
 import { listKnowledgeNetworkConceptGroups } from "./concept-group.service";
-import { listKnowledgeNetworkMetrics } from "./metric.service";
 import { listKnowledgeNetworkObjectTypes } from "./object-type.service";
 
 describe("knowledge-network mock child operations", () => {
   it("projects operations on every list response used by operation-gated menus", async () => {
     const networkId = "kn-domain-risk";
-    const [conceptGroups, objectTypes, actionTypes, metrics] = await Promise.all([
+    const [conceptGroups, objectTypes, actionTypes] = await Promise.all([
       listKnowledgeNetworkConceptGroups(networkId),
       listKnowledgeNetworkObjectTypes(networkId),
       listKnowledgeNetworkActionTypes(networkId),
-      listKnowledgeNetworkMetrics(networkId),
     ]);
 
-    for (const record of [conceptGroups[0], objectTypes[0], actionTypes[0], metrics.entries[0]]) {
+    for (const record of [conceptGroups[0], objectTypes[0], actionTypes[0]]) {
       expect(record?.operations).toEqual(["view_detail", "query_data", "modify", "delete"]);
     }
   });

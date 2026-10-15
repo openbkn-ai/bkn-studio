@@ -6,6 +6,8 @@
  */
 
 import { http } from "@/framework/request/http";
+import { mockObjectMetrics } from "@/modules/knowledge-network/services/mock/object-metrics";
+import { syncKnowledgeNetworkStatistics } from "@/modules/knowledge-network/services/mock/state";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
 import {
   inferObjectMetricOutputShapeV1,
@@ -21,8 +23,6 @@ import {
   type ObjectMetricValidationResultV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
-
-const mockObjectMetrics: Record<string, ObjectMetricRecordV1[]> = {};
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -88,7 +88,7 @@ export async function listObjectMetricsV1(
     });
   }
   const response = await http.get<ObjectMetricListV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics`,
     {
       params: {
         keyword: query.keyword || undefined,
@@ -118,7 +118,7 @@ export async function getObjectMetricV1(
     return wait(clone(records.sort((a, b) => b.definition.version - a.definition.version)[0]));
   }
   const response = await http.get<ObjectMetricRecordV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/${metricId}`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}`,
     { params: { version }, skipErrorToast: options.skipErrorToast },
   );
   return response.data;
@@ -147,10 +147,11 @@ export async function createObjectMetricDraftV1(
       updater: { id: "local-admin", type: "user" },
     };
     mockObjectMetrics[networkId] = [record, ...(mockObjectMetrics[networkId] ?? [])];
+    syncKnowledgeNetworkStatistics(networkId);
     return wait(clone(record));
   }
   const response = await http.post<ObjectMetricRecordV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics`,
     definition,
   );
   return response.data;
@@ -180,7 +181,7 @@ export async function updateObjectMetricDraftV1(
     return wait(clone(updated));
   }
   const response = await http.put<ObjectMetricRecordV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/${metricId}`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}`,
     definition,
   );
   return response.data;
@@ -198,9 +199,10 @@ export async function deleteObjectMetricDraftV1(
         record.definition.version !== version ||
         record.definition.lifecycle.status === "published",
     );
+    syncKnowledgeNetworkStatistics(networkId);
     return wait(undefined);
   }
-  await http.delete(`/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/${metricId}`, {
+  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}`, {
     params: { version },
   });
 }
@@ -221,7 +223,7 @@ export async function createNextObjectMetricDraftV1(networkId: string, metricId:
     return wait(clone(record));
   }
   const response = await http.post<ObjectMetricRecordV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/${metricId}/versions`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/versions`,
   );
   return response.data;
 }
@@ -241,7 +243,7 @@ export async function listObjectMetricVersionsV1(
     );
   }
   const response = await http.get<ObjectMetricRecordV1[]>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/${metricId}/versions`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/versions`,
     { skipErrorToast: options.skipErrorToast },
   );
   return response.data;
@@ -255,7 +257,7 @@ export async function validateObjectMetricV1(
     return wait(mockValidation(definition));
   }
   const response = await http.post<ObjectMetricValidationResultV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/validate`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/validate`,
     definition,
   );
   return response.data;
@@ -291,7 +293,7 @@ export async function validateObjectMetricVersionV1(
     return wait(clone(validated));
   }
   const response = await http.post<ObjectMetricRecordV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/${metricId}/validate`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/validate`,
     undefined,
     { params: { version } },
   );
@@ -315,7 +317,7 @@ export async function previewObjectMetricV1(
     return wait(preview);
   }
   const response = await http.post<ObjectMetricPreviewV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/preview`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/preview`,
     definition,
   );
   return response.data;
@@ -346,7 +348,7 @@ export async function queryObjectMetricDataV1(
     return wait(data);
   }
   const response = await http.post<ObjectMetricDataV1>(
-    `/ontology-query/v2/knowledge-networks/${networkId}/object-metrics/${metricId}/data`,
+    `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/data`,
     query,
     { params: { branch: "main", version } },
   );
@@ -375,7 +377,7 @@ export async function trialObjectMetricDataV1(
     return wait(data);
   }
   const response = await http.post<ObjectMetricDataV1>(
-    `/ontology-query/v2/knowledge-networks/${networkId}/object-metrics/trial`,
+    `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/trial`,
     { definition, query },
     { params: { branch: "main" }, skipErrorToast: true },
   );
@@ -405,7 +407,7 @@ export async function publishObjectMetricV1(networkId: string, metricId: string,
     return wait(clone(published));
   }
   const response = await http.post<ObjectMetricRecordV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/${metricId}/publish`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/publish`,
     undefined,
     { params: { version } },
   );
@@ -436,7 +438,7 @@ export async function deprecateObjectMetricV1(
     return wait(clone(deprecated));
   }
   const response = await http.post<ObjectMetricRecordV1>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/${metricId}/deprecate`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/deprecate`,
     undefined,
     { params: { version } },
   );
@@ -540,7 +542,7 @@ export async function getObjectMetricCapabilitiesV1() {
     });
   }
   const response = await http.get<ObjectMetricCapabilitiesV1>(
-    "/bkn-backend/v2/object-metrics/capabilities",
+    "/bkn-backend/v1/object-metrics/capabilities",
   );
   return response.data;
 }
@@ -571,7 +573,7 @@ export async function bindObjectMetricLogicPropertyV1(
     name: string;
     type: "metric";
   }>(
-    `/bkn-backend/v2/knowledge-networks/${networkId}/object-metrics/${metricId}/logic-properties`,
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/logic-properties`,
     binding,
     { params: { version } },
   );

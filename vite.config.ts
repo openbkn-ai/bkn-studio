@@ -58,6 +58,9 @@ export default defineConfig(({ mode }) => {
   // 监听的端口并返 500。要连本地调试实例时显式设 VITE_*_TARGET。
   const labProxyTarget = process.env.VITE_LAB_PROXY_TARGET ?? devProxyOrigin;
   const ossProxyTarget = process.env.VITE_OSS_PROXY_TARGET ?? devProxyOrigin;
+  // Older remote installations still serve object metrics under v2. Keep the
+  // production API contract unchanged while allowing local UI integration.
+  const objectMetricDevApiVersion = env.VITE_DEV_OBJECT_METRIC_API_VERSION?.trim();
 
   return {
     base: appBase,
@@ -185,6 +188,16 @@ export default defineConfig(({ mode }) => {
                 // Allow self-signed HTTPS targets used by local gateways.
                 secure: false,
                 target: devProxyOrigin,
+                ...(objectMetricDevApiVersion === "v2"
+                  ? {
+                      rewrite: (url: string) =>
+                        /^\/api\/(?:bkn-backend|ontology-query)\/v1\/knowledge-networks\/[^/]+\/object-metrics(?:\/|\?|$)/.test(
+                          url,
+                        ) || url.startsWith("/api/bkn-backend/v1/object-metrics/capabilities")
+                          ? url.replace("/v1/", "/v2/")
+                          : url,
+                    }
+                  : {}),
               },
               // hydra public OAuth2/OIDC endpoints (login flow + token exchange)
               // exposed same-origin at the gateway; mirror them in dev.

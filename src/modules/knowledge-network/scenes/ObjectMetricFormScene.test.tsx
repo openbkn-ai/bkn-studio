@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => {
   };
   return {
     createObjectMetricDraftV1: vi.fn(),
-    getKnowledgeNetworkMetricDependencyProperties: vi.fn(),
     getKnowledgeNetworkObjectTypeDetail: vi.fn(),
     getObjectMetricV1: vi.fn(),
     message: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
@@ -50,8 +49,6 @@ vi.mock(
       typeof import("@/modules/knowledge-network/services/knowledge-network.service")
     >()),
     createObjectMetricDraftV1: mocks.createObjectMetricDraftV1,
-    getKnowledgeNetworkMetricDependencyProperties:
-      mocks.getKnowledgeNetworkMetricDependencyProperties,
     getObjectMetricCapabilitiesV1: vi.fn().mockResolvedValue(undefined),
     getObjectMetricV1: mocks.getObjectMetricV1,
     listKnowledgeNetworkObjectTypes: vi.fn().mockResolvedValue([]),
@@ -97,14 +94,11 @@ beforeEach(() => {
   mocks.searchParams.current = "";
 });
 
-describe("ObjectMetricFormScene dependency properties", () => {
-  it("does not offer a silent fallback or save when the authorized-property request fails", async () => {
+describe("ObjectMetricFormScene object properties", () => {
+  it("does not offer a silent fallback or save when object-type detail fails", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
     mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
-    mocks.getKnowledgeNetworkMetricDependencyProperties.mockRejectedValueOnce(new Error("offline"));
-    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValueOnce({
-      dataProperties: [{ displayName: "Amount", name: "amount", type: "decimal" }],
-    });
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockRejectedValueOnce(new Error("offline"));
 
     render(<ObjectMetricFormScene mode="create" />);
 

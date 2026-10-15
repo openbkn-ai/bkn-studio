@@ -24,7 +24,6 @@ import type {
   ConceptGroupDetail,
   ConceptGroupRelatedResourceRef,
   KnowledgeNetworkActionTypeRecord,
-  KnowledgeNetworkMetricRecord,
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRecentObject,
   KnowledgeNetworkRecord,
@@ -34,13 +33,13 @@ import type {
   ObjectTypeResourceField,
   ObjectTypeResourceGroup,
   ObjectTypeDetail,
-  ObjectTypeLogicMetricModelRecord,
   ObjectTypeLogicProperty,
   ObjectTypeSmallModel,
   RelationTypeResourceRowMapping,
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
+import { countMockObjectMetrics } from "@/modules/knowledge-network/services/mock/object-metrics";
 
 const mockKnowledgeNetworkOperations = [
   "view_detail",
@@ -75,7 +74,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
       relationTypesTotal: 12,
       actionTypesTotal: 7,
       conceptGroupsTotal: 6,
-      metricsTotal: 9,
+      metricsTotal: 0,
       skillsTotal: 0,
       mcpToolsTotal: 0,
       apisTotal: 0,
@@ -100,7 +99,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
       relationTypesTotal: 9,
       actionTypesTotal: 5,
       conceptGroupsTotal: 4,
-      metricsTotal: 6,
+      metricsTotal: 0,
       skillsTotal: 0,
       mcpToolsTotal: 0,
       apisTotal: 0,
@@ -125,7 +124,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
       relationTypesTotal: 8,
       actionTypesTotal: 6,
       conceptGroupsTotal: 5,
-      metricsTotal: 8,
+      metricsTotal: 0,
       skillsTotal: 0,
       mcpToolsTotal: 0,
       apisTotal: 0,
@@ -481,54 +480,7 @@ export const mockObjectTypeDataProperties: Record<
 export const mockObjectTypeLogicProperties: Record<
   string,
   Record<string, ObjectTypeLogicProperty[]>
-> = {
-  "kn-domain-risk": {
-    "ot-risk-order": [
-      {
-        comment: "Computed risk level from policy engine.",
-        dataSource: {
-          id: "metric-risk-hit-rate",
-          name: "风险命中率",
-          type: "metric",
-        },
-        displayName: "Risk Level",
-        name: "risk_level",
-        parameters: [
-          {
-            id: "param-risk-region",
-            name: "region",
-            operation: "==",
-            type: "string",
-            value: "region_code",
-            valueFrom: "property",
-          },
-        ],
-        type: "metric",
-      },
-    ],
-  },
-};
-
-export const mockObjectTypeLogicMetricModels: ObjectTypeLogicMetricModelRecord[] = [
-  {
-    analysisDimensions: [
-      { displayName: "区域", name: "region", type: "string" },
-      { displayName: "风险等级", name: "risk_level", type: "string" },
-    ],
-    groupName: "风控指标",
-    id: "metric-risk-hit-rate",
-    name: "风险命中率",
-  },
-  {
-    analysisDimensions: [
-      { displayName: "设备 ID", name: "device_id", type: "string" },
-      { displayName: "评分", name: "risk_score", type: "integer" },
-    ],
-    groupName: "设备指标",
-    id: "metric-device-score",
-    name: "设备风险评分",
-  },
-];
+> = {};
 
 export function cloneDataProperties(properties: ObjectTypeDataProperty[]) {
   return properties.map((item) => ({
@@ -1158,40 +1110,6 @@ export function removeMockActionTypeExecutionLogs(networkId: string, actionTypeI
   );
 }
 
-export const mockMetrics: Record<string, KnowledgeNetworkMetricRecord[]> = {
-  "kn-domain-risk": [
-    {
-      calculationFormula: {
-        aggregation: {
-          aggr: "avg",
-          property: "risk_score",
-        },
-        analysisDimensions: ["order_name"],
-        groupBy: ["order_name"],
-        orderBy: {
-          direction: "desc",
-          property: "risk_score",
-        },
-      },
-      description: "统计命中风控策略的订单占比。",
-      id: "metric-risk-hit-rate",
-      metricType: "atomic",
-      name: "风险命中率",
-      scopeRef: "ot-risk-order",
-      scopeType: "object_type",
-      tags: ["风控"],
-      timeDimension: {
-        defaultRangePolicy: "last_24h",
-        property: "created_at",
-      },
-      unit: "%",
-      unitType: "percent",
-      updateTime: "2026-06-04 12:00:00",
-      updaterName: "Knowledge Team",
-    },
-  ],
-};
-
 /**
  * Mock capability bindings. Names stay empty on purpose: the real list gets them backfilled from
  * the execution factory, and inventing them here would hide the fallback the panel has to render
@@ -1305,7 +1223,6 @@ export function syncKnowledgeNetworkStatistics(networkId: string) {
   const conceptGroupCount = (mockConceptGroups[networkId] ?? []).length;
   const relationTypeCount = (mockRelationTypes[networkId] ?? []).length;
   const actionTypeCount = (mockActionTypes[networkId] ?? []).length;
-  const metricCount = (mockMetrics[networkId] ?? []).length;
   const bindings = mockCapabilityBindings[networkId] ?? [];
   const skillCount = bindings.filter((item) => item.capabilityType === "skill").length;
   const functionCount = bindings.filter((item) => item.capabilityType === "function").length;
@@ -1325,7 +1242,7 @@ export function syncKnowledgeNetworkStatistics(networkId: string) {
             actionTypesTotal: actionTypeCount,
             conceptGroupsTotal: conceptGroupCount,
             functionsTotal: functionCount - apiCount,
-            metricsTotal: metricCount,
+            metricsTotal: countMockObjectMetrics(networkId),
             objectTypesTotal: objectTypeCount,
             skillsTotal: skillCount,
             mcpToolsTotal: mcpToolCount,

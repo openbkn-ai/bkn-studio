@@ -25,7 +25,27 @@
   color: var(--color-text-primary);
 }
 .sidebar {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  min-height: 0;
+  max-height: clamp(320px, calc(100dvh - 220px), 720px);
+  align-self: start;
+  flex-direction: column;
+  width: 100%;
   padding: 14px;
+}
+.sidebarSearch {
+  flex: 0 0 auto;
+  padding-bottom: 8px;
+}
+.objectList {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .groupTitle {
   margin: 14px 4px 8px;
@@ -51,10 +71,17 @@
   overflow: hidden;
   flex-direction: column;
 }
+.listContent {
+  align-self: start;
+  width: 100%;
+}
 
 .content > :last-child {
   flex: 1 1 auto;
   min-height: 0;
+}
+.listContent > .listView {
+  flex: none;
 }
 .toolbar {
   display: flex;
@@ -94,13 +121,26 @@
 .empty {
   padding: 72px 24px;
 }
+.listView {
+  display: flex;
+  flex-direction: column;
+}
+.tableViewport {
+  min-width: 0;
+}
+.paginationBar {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
 @container metric-page (max-width: 1050px) {
   .layout {
     grid-template-columns: 1fr;
   }
   .sidebar {
     max-height: 260px;
-    overflow: auto;
+    position: static;
   }
 }
 
@@ -121,7 +161,7 @@
   }
   .sidebar {
     max-height: 280px;
-    overflow: auto;
+    position: static;
   }
   .toolbar {
     flex-direction: column;

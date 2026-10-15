@@ -525,7 +525,6 @@ export {
   mapCapabilityBoxSummary,
   toBackendAttachEntry,
 } from "./capability.mapper";
-export { mapMetric, toBackendMetricCondition, toBackendMetricEntry } from "./metric.mapper";
 
 export {
   mapRelationTypeMappingsFromBackend,
