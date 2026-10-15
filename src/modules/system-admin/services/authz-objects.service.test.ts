@@ -10,12 +10,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const getMock = vi.hoisted(() => vi.fn());
 const postMock = vi.hoisted(() => vi.fn());
 const listActionTypesMock = vi.hoisted(() => vi.fn());
+const listObjectMetricsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
   http: { get: getMock, post: postMock },
 }));
 vi.mock("@/modules/knowledge-network/services/action-type.service", () => ({
   listKnowledgeNetworkActionTypes: listActionTypesMock,
+}));
+vi.mock("@/modules/knowledge-network/services/object-metric.service", () => ({
+  listObjectMetricsV1: listObjectMetricsMock,
 }));
 
 import {
@@ -42,6 +46,7 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
+    listObjectMetricsMock.mockReset();
   });
 
   afterEach(() => {
@@ -122,6 +127,33 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
       expect.arrayContaining([expect.objectContaining({ objName: "c-cache-1" })]),
     );
     expect(getMock.mock.calls.length).toBe(afterFirst);
+  });
+
+  it("resolves a metric grant through paged Object Metrics V1 definitions", async () => {
+    postMock.mockResolvedValue({ data: { entries: [] } });
+    listObjectMetricsMock.mockImplementation(
+      (_networkId: string, options?: { offset?: number }) => {
+        const offset = options?.offset ?? 0;
+        return Promise.resolve({
+          entries: offset
+            ? [{ definition: { id: "metric-last", name: "Last metric" } }]
+            : Array.from({ length: 500 }, (_, index) => ({
+                definition: { id: `metric-${index}`, name: `Metric ${index}` },
+              })),
+          total_count: 501,
+        });
+      },
+    );
+    const grant: ObjectGrant = {
+      accessorId: "u1",
+      objId: "kn-metric-v1/metric-last",
+      objName: "kn-metric-v1/metric-last",
+      objType: "metric",
+      operations: ["view"],
+    };
+    const [resolved] = await resolveGrantNames([grant]);
+    expect(resolved.objName).toBe("Last metric");
+    expect(listObjectMetricsMock).toHaveBeenCalledWith("kn-metric-v1", { offset: 500, limit: 500 });
   });
 });
 

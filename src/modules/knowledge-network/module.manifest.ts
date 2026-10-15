@@ -30,10 +30,8 @@ export const knowledgeNetworkModuleManifest = {
     "bkn-backend/knowledge-networks",
     "bkn-backend/concept-groups",
     "bkn-backend/object-types",
-    "bkn-backend/metrics",
-    "bkn-backend/v2/object-metrics",
-    "ontology-query/metrics",
-    "ontology-query/v2/object-metrics",
+    "bkn-backend/v1/object-metrics",
+    "ontology-query/v1/object-metrics",
   ],
   scenes: [
     {

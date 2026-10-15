@@ -81,7 +81,6 @@ import {
 import {
   createObjectMetricDraftV1,
   getObjectMetricCapabilitiesV1,
-  getKnowledgeNetworkMetricDependencyProperties,
   getObjectMetricV1,
   listKnowledgeNetworkObjectTypes,
   listKnowledgeNetworkRelationTypes,
@@ -2050,22 +2049,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     setPropertiesError(false);
     setProperties([]);
     void (async () => {
-      const [dependencyPropertiesResult, detail] = await Promise.all([
-        getKnowledgeNetworkMetricDependencyProperties(networkId, ownerObjectTypeId)
-          .then((entries) => ({ entries, failed: false }))
-          .catch(() => ({ entries: [], failed: true })),
-        getKnowledgeNetworkObjectTypeDetail(networkId, ownerObjectTypeId).catch(() => null),
-      ]);
+      const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, ownerObjectTypeId).catch(
+        () => null,
+      );
       if (!active) return;
-      if (dependencyPropertiesResult.failed) {
+      if (!detail) {
         setPropertiesError(true);
         setPropertiesLoading(false);
         return;
       }
-      const sourceProperties = dependencyPropertiesResult.entries.length
-        ? dependencyPropertiesResult.entries
-        : (detail?.dataProperties ?? []);
-      const items = sourceProperties.map((item) => ({
+      const items = (detail.dataProperties ?? []).map((item) => ({
         label: `${item.displayName || item.name} · ${item.name}`,
         objectTypeId: ownerObjectTypeId,
         propertyName: item.name,
@@ -2212,19 +2205,21 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       return;
     }
     let active = true;
-    void getKnowledgeNetworkMetricDependencyProperties(networkId, relatedObjectTypeId).then(
-      (items) => {
+    void getKnowledgeNetworkObjectTypeDetail(networkId, relatedObjectTypeId)
+      .then((detail) => {
         if (!active) return;
         setRelatedProperties(
-          items.map((item) => ({
+          (detail?.dataProperties ?? []).map((item) => ({
             label: `${item.displayName || item.name} · ${item.name}`,
             objectTypeId: relatedObjectTypeId,
             propertyName: item.name,
             propertyType: item.type,
           })),
         );
-      },
-    );
+      })
+      .catch(() => {
+        if (active) setRelatedProperties([]);
+      });
     return () => {
       active = false;
     };

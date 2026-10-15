@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createObjectMetricDefinitionV1 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
+import { mockKnowledgeNetworks } from "@/modules/knowledge-network/services/mock/state";
 import {
   createNextObjectMetricDraftV1,
   createObjectMetricDraftV1,
@@ -25,6 +26,26 @@ import {
 } from "@/modules/knowledge-network/services/object-metric.service";
 
 describe("object metric lifecycle", () => {
+  it("keeps mock network statistics in sync with V1 metric creation and deletion", async () => {
+    const networkId = "kn-domain-risk";
+    const initialCount =
+      mockKnowledgeNetworks.find((network) => network.id === networkId)?.statistics.metricsTotal ??
+      0;
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.name = "Temporary metric";
+    definition.description = "Used to verify mock statistics";
+
+    const draft = await createObjectMetricDraftV1(networkId, definition);
+    expect(
+      mockKnowledgeNetworks.find((network) => network.id === networkId)?.statistics.metricsTotal,
+    ).toBe(initialCount + 1);
+
+    await deleteObjectMetricDraftV1(networkId, draft.definition.id, draft.definition.version);
+    expect(
+      mockKnowledgeNetworks.find((network) => network.id === networkId)?.statistics.metricsTotal,
+    ).toBe(initialCount);
+  });
+
   it("generates a metric code when the user leaves it blank", async () => {
     const networkId = `kn-${crypto.randomUUID()}`;
     const definition = createObjectMetricDefinitionV1("atomic", "order");

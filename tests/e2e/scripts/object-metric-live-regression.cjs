@@ -299,7 +299,7 @@ async function checkQueryEditionForbidden(browser) {
   const responsePromise = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
-      response.url().includes("/api/ontology-query/v2/") &&
+      response.url().includes("/api/ontology-query/v1/") &&
       response.url().includes("/object-metrics/") &&
       new URL(response.url()).pathname.endsWith("/data"),
   );

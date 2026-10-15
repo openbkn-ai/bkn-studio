@@ -13,7 +13,7 @@
 import { http } from "@/framework/request/http";
 import { listKnowledgeNetworkActionTypes } from "@/modules/knowledge-network/services/action-type.service";
 import { listKnowledgeNetworkConceptGroups } from "@/modules/knowledge-network/services/concept-group.service";
-import { listKnowledgeNetworkMetrics } from "@/modules/knowledge-network/services/metric.service";
+import { listObjectMetricsV1 } from "@/modules/knowledge-network/services/object-metric.service";
 import { listKnowledgeNetworkObjectTypes } from "@/modules/knowledge-network/services/object-type.service";
 import { listKnowledgeNetworkRelationTypes } from "@/modules/knowledge-network/services/relation-type.service";
 import type { AuthorizableObject, ObjectGrant } from "@/modules/system-admin/types/authz";
@@ -257,12 +257,24 @@ const NAMES_CONFIG: Record<string, NamesConfig> = {
 
 type KnowledgeChildResolver = (networkId: string) => Promise<Array<{ id: string; name: string }>>;
 
+async function listObjectMetricNames(networkId: string) {
+  const entries: Array<{ id: string; name: string }> = [];
+  for (let offset = 0; ; offset += 500) {
+    const page = await listObjectMetricsV1(networkId, { offset, limit: 500 });
+    entries.push(
+      ...page.entries.map(({ definition }) => ({ id: definition.id, name: definition.name })),
+    );
+    if (entries.length >= page.total_count) return entries;
+    if (page.entries.length === 0) throw new Error("Object metric name list is incomplete");
+  }
+}
+
 // bkn-safe deliberately stores an opaque `network_id/child_id` key for knowledge-network
 // children. Resolve it through the owning domain instead of presenting that storage key as a name.
 const KNOWLEDGE_CHILD_RESOLVERS: Partial<Record<string, KnowledgeChildResolver>> = {
   action_type: listKnowledgeNetworkActionTypes,
   concept_group: listKnowledgeNetworkConceptGroups,
-  metric: async (networkId) => (await listKnowledgeNetworkMetrics(networkId)).entries,
+  metric: listObjectMetricNames,
   object_type: listKnowledgeNetworkObjectTypes,
   relation_type: listKnowledgeNetworkRelationTypes,
 };
