@@ -254,8 +254,10 @@ type BackendResourceDetailFields = {
     filter_condition?: Record<string, unknown> | null;
   } | null;
   source_metadata?: {
+    description?: string;
     foreign_keys?: unknown[];
     indices?: unknown[];
+    name?: string;
     original_description?: string;
     original_name?: string;
     primary_keys?: string[];
@@ -380,8 +382,10 @@ function mapSourceMetadata(
     indexCount: metadata.indices?.length,
     objectType:
       source?.table_type?.trim() || sourceCategory || metadata.table_type?.trim() || undefined,
-    originalDescription: metadata.original_description?.trim() || undefined,
-    originalName: source?.original_name?.trim() || metadata.original_name?.trim() || undefined,
+    originalDescription:
+      (metadata.description ?? metadata.original_description)?.trim() || undefined,
+    originalName:
+      source?.original_name?.trim() || metadata.name || metadata.original_name?.trim() || undefined,
     primaryKeys: metadata.primary_keys?.map((key) => key.trim()).filter(Boolean),
   };
 }

@@ -767,8 +767,8 @@ describe("resource.service · getCatalogResources", () => {
             source_metadata: {
               foreign_keys: [{ name: "fk_orders_customer" }],
               indices: [{ name: "PRIMARY" }, { name: "idx_orders_updated_at" }],
-              original_description: "Orders from the source database",
-              original_name: "public.orders",
+              description: "Orders from the source database",
+              name: "orders",
               properties: { row_count: 999 },
               primary_keys: ["tenant_id", "order_id"],
               table_type: "table",
@@ -799,7 +799,7 @@ describe("resource.service · getCatalogResources", () => {
           indexCount: 2,
           objectType: "table",
           originalDescription: "Orders from the source database",
-          originalName: "public.orders",
+          originalName: "orders",
           primaryKeys: ["tenant_id", "order_id"],
         },
       }),
@@ -837,6 +837,158 @@ describe("resource.service · getCatalogResources", () => {
       expect(resource?.estimatedRowCount).toBe(41);
     },
   );
+
+  it.each([
+    {
+      label: "MariaDB",
+      category: "table",
+      metadata: { name: 'ord"ers', database: "sales", schema: "sales" },
+      expected: 'ord"ers',
+    },
+    {
+      label: "PostgreSQL",
+      category: "table",
+      metadata: { name: 'ord"ers', database: "app", schema: "public" },
+      expected: 'ord"ers',
+    },
+    {
+      label: "index",
+      category: "index",
+      metadata: { name: "orders_index" },
+      expected: "orders_index",
+    },
+    { label: "ordinary name", category: "table", metadata: { name: "orders" }, expected: "orders" },
+    {
+      label: "literal spaces and dots",
+      category: "table",
+      metadata: { name: " order.items " },
+      expected: " order.items ",
+    },
+    {
+      label: "new name precedence",
+      category: "table",
+      metadata: { name: "orders", original_name: "public.old_orders" },
+      expected: "orders",
+    },
+    {
+      label: "fileset metadata",
+      category: "fileset",
+      metadata: { original_name: " public.orders " },
+      expected: "public.orders",
+    },
+    {
+      label: "empty new name",
+      category: "table",
+      metadata: { name: "", original_name: "public.orders" },
+      expected: "public.orders",
+    },
+    { label: "missing name", category: "table", metadata: {}, expected: undefined },
+    { label: "missing metadata", category: "table", metadata: undefined, expected: undefined },
+    {
+      label: "legacy table metadata",
+      category: "table",
+      metadata: { original_name: "public.orders" },
+      expected: "public.orders",
+    },
+    {
+      label: "nested source precedence",
+      category: "logical_view",
+      metadata: {
+        name: "view_name",
+        original_name: "view_legacy",
+        source_resource: { category: "table", original_name: 'ord"ers' },
+      },
+      expected: 'ord"ers',
+    },
+  ])(
+    "maps source names for $label without using business names or SQL references",
+    async ({ category, metadata, expected }) => {
+      getMock.mockResolvedValue({
+        data: {
+          entries: [
+            {
+              catalog_id: "cat-1",
+              category,
+              id: "res-1",
+              name: "Business name",
+              source_identifier: '"public"."ord""ers"',
+              source_metadata: metadata,
+            },
+          ],
+        },
+      });
+      const { getCatalogResources } =
+        await import("@/modules/data-catalog/services/resource.service");
+      const [resource] = await getCatalogResources(["res-1"]);
+      expect(resource?.sourceMetadata?.originalName).toBe(expected);
+    },
+  );
+
+  it.each([
+    {
+      label: "new description",
+      metadata: { description: " Source description " },
+      expected: "Source description",
+    },
+    {
+      label: "new description precedence",
+      metadata: { description: "Current", original_description: "Old" },
+      expected: "Current",
+    },
+    {
+      label: "explicitly empty description",
+      metadata: { description: "", original_description: "Old" },
+      expected: undefined,
+    },
+    {
+      label: "blank description",
+      metadata: { description: "  ", original_description: "Old" },
+      expected: undefined,
+    },
+    {
+      label: "legacy table description",
+      metadata: { original_description: " Legacy description " },
+      expected: "Legacy description",
+    },
+  ])("maps $label", async ({ metadata, expected }) => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "table",
+            id: "res-1",
+            name: "orders",
+            source_metadata: metadata,
+          },
+        ],
+      },
+    });
+    const { getCatalogResources } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const [resource] = await getCatalogResources(["res-1"]);
+    expect(resource?.sourceMetadata?.originalDescription).toBe(expected);
+  });
+
+  it("preserves the fileset description contract", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "fileset",
+            id: "res-1",
+            name: "Files",
+            source_metadata: { original_description: " Source files " },
+          },
+        ],
+      },
+    });
+    const { getCatalogResources } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const [resource] = await getCatalogResources(["res-1"]);
+    expect(resource?.sourceMetadata?.originalDescription).toBe("Source files");
+  });
 
   it("maps a derived logic view's nested source resource metadata", async () => {
     getMock.mockResolvedValue({
