@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
@@ -151,7 +151,9 @@ describe("ObjectMetricListPanel pagination", () => {
       );
     });
     await waitFor(() => {
-      expect(screen.getByLabelText("订单有 25 个指标").textContent).toBe("25");
+      expect(screen.getByLabelText("订单共有 25 个指标（不受类型筛选影响）").textContent).toBe(
+        "25",
+      );
     });
     fireEvent.click(screen.getByText(/^(列表|list)$/i));
 
@@ -208,11 +210,16 @@ describe("ObjectMetricListPanel pagination", () => {
     mocks.listObjectTypes.mockImplementation(
       (_networkId: string, query: { limit: number; offset: number; namePattern?: string }) =>
         Promise.resolve({
-          entries: Array.from({ length: query.namePattern ? 2 : 20 }, (_, index) => ({
-            id: `object-${query.offset + index}`,
-            name: query.namePattern ? `目标对象 ${index + 1}` : `对象 ${query.offset + index}`,
-          })),
-          totalCount: query.namePattern ? 2 : 10000,
+          entries: Array.from(
+            { length: query.namePattern ? Math.min(20, 25 - query.offset) : 20 },
+            (_, index) => ({
+              id: `object-${query.offset + index}`,
+              name: query.namePattern
+                ? `目标对象 ${query.offset + index + 1}`
+                : `对象 ${query.offset + index}`,
+            }),
+          ),
+          totalCount: query.namePattern ? 25 : 10000,
         }),
     );
 
@@ -228,7 +235,7 @@ describe("ObjectMetricListPanel pagination", () => {
       { limit: 1, offset: 0, ownerObjectTypeId: "object-0" },
       { skipErrorToast: true },
     );
-    expect(screen.getByLabelText("对象 0有 0 个指标").textContent).toBe("0");
+    expect(screen.getByLabelText("对象 0共有 0 个指标（不受类型筛选影响）").textContent).toBe("0");
 
     const objectList = container.querySelector<HTMLElement>("[class*=objectList]")!;
     objectList.scrollTop = 200;
@@ -243,6 +250,30 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     expect(await screen.findByTitle("目标对象 2")).not.toBeNull();
     fireEvent.click(screen.getByTitle("目标对象 2"));
+    expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe(
+      "目标对象 2",
+    );
+    mocks.listObjectTypes.mockClear();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /刷新|Refresh/ }));
+      await Promise.resolve();
+    });
+    expect(mocks.listObjectTypes).toHaveBeenCalled();
+    expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe(
+      "目标对象 2",
+    );
+
+    fireEvent.click(
+      container.querySelector('[class*="objectPagination"] .ant-pagination-next button')!,
+    );
+    expect(await screen.findByTitle("目标对象 21")).not.toBeNull();
+    await waitFor(() => {
+      expect(mocks.listObjectTypes).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({ namePattern: "目标", offset: 20 }),
+        { skipErrorToast: true },
+      );
+    });
     expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe(
       "目标对象 2",
     );
@@ -270,6 +301,32 @@ describe("ObjectMetricListPanel pagination", () => {
     expect(screen.getByTitle("销售订单")).not.toBeNull();
   });
 
+  it("ignores an old object response while a new search is being debounced", async () => {
+    let resolveInitial!: (value: {
+      entries: { id: string; name: string }[];
+      totalCount: number;
+    }) => void;
+    mocks.listObjectTypes.mockImplementation(
+      (_networkId: string, query: { namePattern?: string }) =>
+        query.namePattern
+          ? Promise.resolve({ entries: [{ id: "target", name: "目标对象" }], totalCount: 1 })
+          : new Promise((resolve) => {
+              resolveInitial = resolve;
+            }),
+    );
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+
+    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    fireEvent.change(screen.getByPlaceholderText("搜索对象类"), { target: { value: "目标" } });
+    await act(async () => {
+      resolveInitial({ entries: [{ id: "old", name: "旧对象" }], totalCount: 1 });
+      await Promise.resolve();
+    });
+    expect(screen.queryByTitle("旧对象")).toBeNull();
+    expect(await screen.findByTitle("目标对象")).not.toBeNull();
+    expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe("目标对象");
+  });
+
   it("limits count requests to four in flight and distinguishes a pending count from zero", async () => {
     const resolveCounts: Array<(value: { entries: []; total_count: number }) => void> = [];
     mocks.listObjectTypes.mockResolvedValue({
@@ -292,7 +349,9 @@ describe("ObjectMetricListPanel pagination", () => {
     expect(screen.getByTitle("对象 0").textContent).toContain("…");
     resolveCounts[0]({ entries: [], total_count: 7 });
     await waitFor(() => {
-      expect(screen.getByLabelText("对象 0有 7 个指标").textContent).toBe("7");
+      expect(screen.getByLabelText("对象 0共有 7 个指标（不受类型筛选影响）").textContent).toBe(
+        "7",
+      );
       expect(mocks.listObjectMetrics).toHaveBeenCalledTimes(5);
     });
   });

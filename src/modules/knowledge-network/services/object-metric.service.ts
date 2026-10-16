@@ -515,6 +515,8 @@ export async function getObjectMetricCapabilitiesV1() {
         "rate",
         "weight",
         "length",
+        "area",
+        "volume",
         "custom",
       ],
       registry_versions: {

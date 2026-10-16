@@ -123,6 +123,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const listCurrent = listResultKey === listRequestKey;
   const messageRef = useRef(message);
   const selectedObjectRef = useRef({ id: selectedObjectTypeId, name: selectedObjectTypeName });
+  const objectKeywordRef = useRef(objectKeyword);
   const tableViewportRef = useRef<HTMLDivElement>(null);
   const objectListRef = useRef<HTMLDivElement>(null);
   const objectMetricCountCache = useRef(new Map<string, number | null>());
@@ -150,7 +151,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       { skipErrorToast: true },
     )
       .then((result) => {
-        if (!active) return;
+        if (!active || objectKeywordRef.current.trim() !== debouncedObjectKeyword) return;
         const maxPage = Math.max(1, Math.ceil(result.totalCount / OBJECT_PAGE_SIZE));
         setObjectTotal(result.totalCount);
         if (objectPage > maxPage) {
@@ -161,7 +162,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
         setObjectTypes(result.entries);
         const first = result.entries[0];
         const currentSelection = selectedObjectRef.current;
-        if (first && (!currentSelection.id || debouncedObjectKeyword)) {
+        if (first && !currentSelection.id) {
           setSelectedObjectTypeId(first.id);
           setSelectedObjectTypeName(first.name);
         } else if (!first && result.totalCount === 0) {
@@ -475,6 +476,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                 <Input
                   allowClear
                   onChange={(event) => {
+                    objectKeywordRef.current = event.target.value;
                     setObjectKeyword(event.target.value);
                     setObjectPage(1);
                     setSelectedObjectTypeId("");
@@ -537,7 +539,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                       className={styles.objectCount}
                       title={
                         typeof objectMetricCounts[item.id] === "number"
-                          ? objectMetricText("graphMetricCount", {
+                          ? objectMetricText("graphUnfilteredMetricCount", {
                               p0: objectMetricCounts[item.id]!,
                             })
                           : undefined

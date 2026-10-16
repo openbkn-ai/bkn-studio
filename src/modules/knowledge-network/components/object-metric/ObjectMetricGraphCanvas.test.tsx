@@ -606,6 +606,39 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(screen.getByRole("button", { name: /查看指标详情|View metric details/ })).not.toBeNull();
   });
 
+  it("does not expose relation IDs from another graph page in metric details", async () => {
+    const relations = Array.from({ length: 8 }, (_, index) => relation(index + 1));
+    mocks.listRelations.mockImplementation(
+      (_networkId: string, query: { limit: number; offset: number }) =>
+        Promise.resolve({
+          entries: relations.slice(query.offset, query.offset + query.limit),
+          totalCount: relations.length,
+        }),
+    );
+    mocks.listMetrics.mockResolvedValue({
+      entries: [metric("off-page", "relation-7")],
+      total_count: 1,
+    });
+    renderGraph();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /衍生指标：指标 off-page|Derived metrics: 指标 off-page/,
+      }),
+    );
+
+    const relationRow = screen
+      .getByText(/使用的关系|Relations used/)
+      .closest(".ant-descriptions-item");
+    expect(relationRow?.querySelector(".ant-descriptions-item-content")).toBeNull();
+    expect(screen.queryByText("relation-7")).toBeNull();
+  });
+
   it("shows the full metric name when a truncated graph node is hovered", async () => {
     const longMetric = metric("very-long-metric-name");
     longMetric.definition.name = "很长的指标名称需要完整展示";

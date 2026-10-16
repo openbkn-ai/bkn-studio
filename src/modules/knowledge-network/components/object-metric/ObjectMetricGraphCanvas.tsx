@@ -1360,9 +1360,10 @@ export function ObjectMetricGraphCanvas({
                 {selectedObjectTypeName}
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("graphUsedRelations")}>
-                {drawerRelationIds.length
-                  ? drawerRelationIds.map((id) => relationNames.get(id) ?? id).join("、")
-                  : null}
+                {drawerRelationIds
+                  .map((id) => relationNames.get(id))
+                  .filter((name): name is string => Boolean(name))
+                  .join("、") || null}
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("graphDirectDependencies")}>
                 {drawerDependencies.length

@@ -14,6 +14,7 @@ import {
   createObjectMetricDraftV1,
   deleteObjectMetricDraftV1,
   deprecateObjectMetricV1,
+  getObjectMetricCapabilitiesV1,
   getObjectMetricV1,
   listObjectMetricsV1,
   listObjectMetricVersionsV1,
@@ -26,6 +27,11 @@ import {
 } from "@/modules/knowledge-network/services/object-metric.service";
 
 describe("object metric lifecycle", () => {
+  it("advertises the area and volume unit families in mock capabilities", async () => {
+    const capabilities = await getObjectMetricCapabilitiesV1();
+    expect(capabilities.quantity_kinds).toEqual(expect.arrayContaining(["area", "volume"]));
+  });
+
   it("keeps mock network statistics in sync with V1 metric creation and deletion", async () => {
     const networkId = "kn-domain-risk";
     const initialCount =
