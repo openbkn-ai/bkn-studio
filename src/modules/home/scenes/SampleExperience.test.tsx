@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -944,11 +944,60 @@ describe("SampleExperience", () => {
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
     expect(await screen.findByText("Release details")).toBeVisible();
     expect(await screen.findByText("2026-10-09T05:52:05Z")).toBeVisible();
-    expect(await screen.findByText("2026-10-09T05:50:00Z")).toBeVisible();
+    expect(screen.queryByText("2026-10-09T05:50:00Z")).not.toBeInTheDocument();
     expect(screen.getByText("home.sample.historyPartial")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.historyMore" }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(within(dialog).getByText("2026-10-09T05:52:05Z")).toBeVisible());
+    expect(within(dialog).getByText("2026-10-09T05:50:00Z")).toBeVisible();
+    expect(within(dialog).getByText("home.sample.status.failed", { exact: false })).toBeVisible();
+    expect(within(dialog).getByText("home.sample.historyPartial")).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(dialog).not.toBeVisible());
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.collapse" }));
     expect(screen.getByText("Release details")).not.toBeVisible();
     expect(screen.getByRole("button", { name: "home.sample.actions.open" })).toBeEnabled();
+  });
+
+  it.each([0, 1])("does not show More for %s history records", async (count) => {
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({
+          status: "installed",
+          installedVersion: "0.1.0",
+          installationId: "inst-1",
+          installable: false,
+        }),
+      ],
+      sourceRejected: false,
+    });
+    listSampleInstallations.mockResolvedValue({
+      items: count
+        ? [
+            {
+              id: "inst-1",
+              attemptId: "uninstall-1",
+              sample: "northwind",
+              version: "0.1.0",
+              status: "uninstalled",
+              operation: "uninstall",
+              stages: [],
+              finishedAt: "2026-10-09T05:52:05Z",
+            },
+          ]
+        : [],
+      historyComplete: true,
+    });
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
+    await waitFor(() => expect(listSampleInstallations).toHaveBeenCalledWith("northwind"));
+    await waitFor(() =>
+      expect(screen.queryByText("home.sample.historyLoading")).not.toBeInTheDocument(),
+    );
+    if (count) expect(screen.getByText("2026-10-09T05:52:05Z")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "home.sample.historyMore" }),
+    ).not.toBeInTheDocument();
   });
 
   it("starts installing a catalog sample from the card action", async () => {

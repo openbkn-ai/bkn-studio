@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { Modal } from "antd";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -539,6 +540,7 @@ function SampleCard({
     historyComplete: boolean;
   } | null>(null);
   const [historyError, setHistoryError] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [detailsReload, setDetailsReload] = useState(0);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
@@ -604,6 +606,23 @@ function SampleCard({
     locale,
     detailsReload,
   ]);
+  const renderHistoryRecord = (record: SampleInstallation) => (
+    <div
+      key={
+        record.attemptId ??
+        `${record.id}-${record.version}-${record.finishedAt ?? record.startedAt ?? ""}`
+      }
+      className={styles.historyItem}
+    >
+      <span>
+        {record.operation === "uninstall" ? t("home.sample.uninstall") + " · " : ""}
+        {t("home.sample.versionLabel", { version: record.version })} ·{" "}
+        {t(`home.sample.status.${record.status}`)}
+      </span>
+      {record.finishedAt ? <span>{record.finishedAt}</span> : null}
+    </div>
+  );
+
   const toggleRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLElement>(null);
   const expansionNeedsAlignment = useRef(true);
@@ -997,22 +1016,16 @@ function SampleCard({
                 {!history.historyComplete ? (
                   <p className={styles.note}>{t("home.sample.historyPartial")}</p>
                 ) : null}
-                {history.items.map((record) => (
-                  <div
-                    key={
-                      record.attemptId ??
-                      `${record.id}-${record.version}-${record.finishedAt ?? record.startedAt ?? ""}`
-                    }
-                    className={styles.historyItem}
+                {history.items.slice(0, 1).map(renderHistoryRecord)}
+                {history.items.length > 1 ? (
+                  <button
+                    className={styles.reload}
+                    onClick={() => setHistoryOpen(true)}
+                    type="button"
                   >
-                    <span>
-                      {record.operation === "uninstall" ? t("home.sample.uninstall") + " · " : ""}
-                      {t("home.sample.versionLabel", { version: record.version })} ·{" "}
-                      {t(`home.sample.status.${record.status}`)}
-                    </span>
-                    {record.finishedAt ? <span>{record.finishedAt}</span> : null}
-                  </div>
-                ))}
+                    {t("home.sample.historyMore")}
+                  </button>
+                ) : null}
               </>
             ) : null}
           </div>
@@ -1033,6 +1046,18 @@ function SampleCard({
           </div>
         ) : null}
       </div>
+      <Modal
+        open={expanded && historyOpen}
+        title={t("home.sample.historyDialogTitle", { name: item.displayName })}
+        onCancel={() => setHistoryOpen(false)}
+        footer={null}
+        width={720}
+      >
+        {history && !history.historyComplete ? (
+          <p className={styles.note}>{t("home.sample.historyPartial")}</p>
+        ) : null}
+        <div className={styles.historyList}>{history?.items.map(renderHistoryRecord)}</div>
+      </Modal>
       {uninstallConfirmation.node}
     </article>
   );
