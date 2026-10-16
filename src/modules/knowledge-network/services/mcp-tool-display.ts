@@ -40,8 +40,6 @@ export type McpToolGroup<T> = {
  * known group keys get concise UI descriptions here.
  */
 const GROUP_DESCRIPTIONS: Record<string, string> = {
-  // Agent chat still exposes this group to the model, while buildAgentTools binds
-  // lifecycle execution to the current Studio interaction.
   lifecycle: "Create conversations, manage interactions, and write managed context",
   discovery: "Knowledge network lists, structure, schema discovery, and type details",
   query: "Object instances, relation subgraphs, logical properties, metrics, and SQL queries",
