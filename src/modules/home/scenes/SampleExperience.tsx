@@ -1053,10 +1053,16 @@ function SampleCard({
         footer={null}
         width={720}
       >
-        {history && !history.historyComplete ? (
-          <p className={styles.note}>{t("home.sample.historyPartial")}</p>
+        {historyLoading ? <p className={styles.meta}>{t("home.sample.historyLoading")}</p> : null}
+        {historyError ? <p className={styles.error}>{t("home.sample.historyFailed")}</p> : null}
+        {history && !historyError && !historyLoading ? (
+          <>
+            {!history.historyComplete ? (
+              <p className={styles.note}>{t("home.sample.historyPartial")}</p>
+            ) : null}
+            <div className={styles.historyList}>{history.items.map(renderHistoryRecord)}</div>
+          </>
         ) : null}
-        <div className={styles.historyList}>{history?.items.map(renderHistoryRecord)}</div>
       </Modal>
       {uninstallConfirmation.node}
     </article>

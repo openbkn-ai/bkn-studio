@@ -959,6 +959,65 @@ describe("SampleExperience", () => {
     expect(screen.getByRole("button", { name: "home.sample.actions.open" })).toBeEnabled();
   });
 
+  it("hides stale dialog history while polling reloads it and when that reload fails", async () => {
+    const installing = sample({ status: "installing", installationId: "inst-1" });
+    listSamples
+      .mockResolvedValueOnce({ samples: [installing] })
+      .mockResolvedValue({ samples: [{ ...installing, status: "installed" }] });
+    let finishInstallation!: (value: Record<string, unknown>) => void;
+    getSampleInstallation.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishInstallation = resolve;
+        }),
+    );
+    let failHistory!: (reason: Error) => void;
+    listSampleInstallations
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "inst-1",
+            version: "0.1.0",
+            status: "installed",
+            stages: [],
+            finishedAt: "2026-10-09T05:52:05Z",
+          },
+          {
+            id: "inst-0",
+            version: "0.1.0",
+            status: "uninstalled",
+            stages: [],
+            finishedAt: "2026-10-09T05:50:00Z",
+          },
+        ],
+        historyComplete: true,
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            failHistory = reject;
+          }),
+      );
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.historyMore" }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(within(dialog).getByText("2026-10-09T05:50:00Z")).toBeVisible());
+    act(() => {
+      finishInstallation({ id: "inst-1", version: "0.1.0", status: "installed", stages: [] });
+    });
+    await waitFor(() =>
+      expect(within(dialog).getByText("home.sample.historyLoading")).toBeVisible(),
+    );
+    expect(within(dialog).queryByText("2026-10-09T05:50:00Z")).not.toBeInTheDocument();
+    act(() => {
+      failHistory(new Error("unavailable"));
+    });
+    expect(await within(dialog).findByText("home.sample.historyFailed")).toBeVisible();
+    expect(within(dialog).queryByText("home.sample.historyLoading")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("2026-10-09T05:50:00Z")).not.toBeInTheDocument();
+  });
+
   it.each([0, 1])("does not show More for %s history records", async (count) => {
     listSamples.mockResolvedValue({
       samples: [
