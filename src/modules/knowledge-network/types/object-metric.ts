@@ -60,6 +60,8 @@ export type ObjectMetricUnitSpecV1 = {
     | "rate"
     | "weight"
     | "length"
+    | "area"
+    | "volume"
     | "custom";
   code: string;
   display_symbol?: string;

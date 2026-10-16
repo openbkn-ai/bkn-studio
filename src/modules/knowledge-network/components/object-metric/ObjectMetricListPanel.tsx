@@ -8,6 +8,8 @@
 import {
   DeleteOutlined,
   EditOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -18,6 +20,7 @@ import {
   Empty,
   Input,
   Modal,
+  Pagination,
   Segmented,
   Select,
   Space,
@@ -26,56 +29,36 @@ import {
   Tooltip,
 } from "antd";
 import type { TableProps } from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectMetricGraphCanvas } from "@/modules/knowledge-network/components/object-metric/ObjectMetricGraphCanvas";
-import {
-  filterObjectMetrics,
-  resolveSelectedObjectTypeId,
-} from "@/modules/knowledge-network/components/object-metric/object-metric-list-utils";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import {
   createNextObjectMetricDraftV1,
   deleteObjectMetricDraftV1,
   deprecateObjectMetricV1,
-  listKnowledgeNetworkObjectTypes,
-  listKnowledgeNetworkRelationTypes,
   listObjectMetricsV1,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { listKnowledgeNetworkObjectTypePage } from "@/modules/knowledge-network/services/object-type.service";
 import type {
   ObjectMetricRecordV1,
   ObjectMetricTypeV1,
 } from "@/modules/knowledge-network/types/object-metric";
-import type {
-  KnowledgeNetworkObjectTypeRecord,
-  KnowledgeNetworkRelationTypeRecord,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectMetricListPanel.module.css";
+import metricTheme from "./ObjectMetricTheme.module.css";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import { useTranslation } from "react-i18next";
 
 type Props = { canModify: boolean; networkId: string };
 
 const PAGE_SIZE_STORAGE_SCOPE = "object-metrics";
-const GRAPH_METRIC_PAGE_SIZE = 500;
-
-async function listAllObjectMetrics(networkId: string): Promise<ObjectMetricRecordV1[]> {
-  const records: ObjectMetricRecordV1[] = [];
-  while (true) {
-    const page = await listObjectMetricsV1(networkId, {
-      limit: GRAPH_METRIC_PAGE_SIZE,
-      offset: records.length,
-    });
-    records.push(...page.entries);
-    if (page.entries.length === 0 || records.length >= page.total_count) {
-      return records;
-    }
-  }
-}
+const OBJECT_PAGE_SIZE = 20;
+const COUNT_CONCURRENCY = 4;
 
 const typeNames: Record<ObjectMetricTypeV1, string> = {
   get atomic() {
@@ -110,48 +93,153 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
-  const [relationTypes, setRelationTypes] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
-  const [metrics, setMetrics] = useState<ObjectMetricRecordV1[]>([]);
+  const [objectMetricCounts, setObjectMetricCounts] = useState<Record<string, number | null>>({});
+  const [objectTotal, setObjectTotal] = useState(0);
+  const [objectPage, setObjectPage] = useState(1);
+  const [objectSidebarCollapsed, setObjectSidebarCollapsed] = useState(false);
   const [listMetrics, setListMetrics] = useState<ObjectMetricRecordV1[]>([]);
   const [listTotal, setListTotal] = useState(0);
+  const [listResultKey, setListResultKey] = useState("");
   const [selectedObjectTypeId, setSelectedObjectTypeId] = useState("");
-  const [keyword, setKeyword] = useState("");
-  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const [selectedObjectTypeName, setSelectedObjectTypeName] = useState("");
+  const [objectKeyword, setObjectKeyword] = useState("");
+  const [debouncedObjectKeyword, setDebouncedObjectKeyword] = useState("");
+  const [metricKeyword, setMetricKeyword] = useState("");
+  const [debouncedMetricKeyword, setDebouncedMetricKeyword] = useState("");
   const [metricType, setMetricType] = useState<ObjectMetricTypeV1 | undefined>();
   const [viewMode, setViewMode] = useState<"graph" | "list">("graph");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePersistentPageSize(PAGE_SIZE_STORAGE_SCOPE, 10);
-  const [listRefreshVersion, setListRefreshVersion] = useState(0);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const listRequestKey = JSON.stringify([
+    networkId,
+    selectedObjectTypeId,
+    debouncedMetricKeyword,
+    metricType,
+    page,
+    pageSize,
+    refreshVersion,
+  ]);
+  const listCurrent = listResultKey === listRequestKey;
+  const messageRef = useRef(message);
+  const selectedObjectRef = useRef({ id: selectedObjectTypeId, name: selectedObjectTypeName });
+  const objectKeywordRef = useRef(objectKeyword);
   const tableViewportRef = useRef<HTMLDivElement>(null);
   const objectListRef = useRef<HTMLDivElement>(null);
+  const objectMetricCountCache = useRef(new Map<string, number | null>());
 
-  const reload = useCallback(async () => {
+  useEffect(() => {
+    messageRef.current = message;
+  }, [message]);
+
+  useEffect(() => {
+    selectedObjectRef.current = { id: selectedObjectTypeId, name: selectedObjectTypeName };
+  }, [selectedObjectTypeId, selectedObjectTypeName]);
+
+  useEffect(() => {
+    let active = true;
     setLoading(true);
-    try {
-      const [objects, relations, metricRecords] = await Promise.all([
-        listKnowledgeNetworkObjectTypes(networkId),
-        listKnowledgeNetworkRelationTypes(networkId),
-        listAllObjectMetrics(networkId),
-      ]);
-      setObjectTypes(objects);
-      setRelationTypes(relations);
-      setMetrics(metricRecords);
-      setSelectedObjectTypeId((current) =>
-        resolveSelectedObjectTypeId(current, objects, metricRecords),
-      );
-    } finally {
-      setLoading(false);
+    void listKnowledgeNetworkObjectTypePage(
+      networkId,
+      {
+        direction: "asc",
+        limit: OBJECT_PAGE_SIZE,
+        namePattern: debouncedObjectKeyword || undefined,
+        offset: (objectPage - 1) * OBJECT_PAGE_SIZE,
+        sort: "name",
+      },
+      { skipErrorToast: true },
+    )
+      .then((result) => {
+        if (!active || objectKeywordRef.current.trim() !== debouncedObjectKeyword) return;
+        const maxPage = Math.max(1, Math.ceil(result.totalCount / OBJECT_PAGE_SIZE));
+        setObjectTotal(result.totalCount);
+        if (objectPage > maxPage) {
+          setObjectTypes([]);
+          setObjectPage(maxPage);
+          return;
+        }
+        setObjectTypes(result.entries);
+        const first = result.entries[0];
+        const currentSelection = selectedObjectRef.current;
+        if (first && !currentSelection.id) {
+          setSelectedObjectTypeId(first.id);
+          setSelectedObjectTypeName(first.name);
+        } else if (!first && result.totalCount === 0) {
+          setSelectedObjectTypeId("");
+          setSelectedObjectTypeName("");
+        } else {
+          const selected = result.entries.find((item) => item.id === currentSelection.id);
+          if (selected) setSelectedObjectTypeName(selected.name);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setObjectTypes([]);
+          setObjectTotal(0);
+          void messageRef.current.error(objectMetricText("m51fc5b3bc879"));
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [debouncedObjectKeyword, networkId, objectPage, refreshVersion]);
+
+  useEffect(() => {
+    let active = true;
+    const countKey = (id: string) => `${networkId}\0${id}`;
+    const pending = objectTypes.filter(
+      (item) => !objectMetricCountCache.current.has(countKey(item.id)),
+    );
+    setObjectMetricCounts(
+      Object.fromEntries(
+        objectTypes
+          .filter((item) => objectMetricCountCache.current.has(countKey(item.id)))
+          .map((item) => [item.id, objectMetricCountCache.current.get(countKey(item.id))!]),
+      ),
+    );
+
+    let nextIndex = 0;
+    async function loadCounts() {
+      while (active && nextIndex < pending.length) {
+        const item = pending[nextIndex++];
+        let count: number | null = null;
+        try {
+          const result = await listObjectMetricsV1(
+            networkId,
+            { limit: 1, offset: 0, ownerObjectTypeId: item.id },
+            { skipErrorToast: true },
+          );
+          count = result.total_count;
+        } catch {
+          // A failed count must not look like an actual zero.
+        }
+        if (active) {
+          objectMetricCountCache.current.set(countKey(item.id), count);
+          setObjectMetricCounts((current) => ({ ...current, [item.id]: count }));
+        }
+      }
     }
-  }, [networkId]);
+    for (let worker = 0; worker < Math.min(COUNT_CONCURRENCY, pending.length); worker += 1) {
+      void loadCounts();
+    }
+    return () => {
+      active = false;
+    };
+  }, [networkId, objectTypes, refreshVersion]);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), 250);
+    const timer = window.setTimeout(() => setDebouncedObjectKeyword(objectKeyword.trim()), 250);
     return () => window.clearTimeout(timer);
-  }, [keyword]);
+  }, [objectKeyword]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedMetricKeyword(metricKeyword.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [metricKeyword]);
 
   useEffect(() => {
     if (viewMode !== "list") {
@@ -161,7 +249,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     let cancelled = false;
     setListLoading(true);
     void listObjectMetricsV1(networkId, {
-      keyword: debouncedKeyword || undefined,
+      keyword: debouncedMetricKeyword || undefined,
       limit: pageSize,
       metricType,
       offset: (page - 1) * pageSize,
@@ -180,11 +268,13 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
           return;
         }
         setListMetrics(result.entries);
+        setListResultKey(listRequestKey);
       })
       .catch(() => {
         if (!cancelled) {
           setListMetrics([]);
           setListTotal(0);
+          setListResultKey(listRequestKey);
         }
       })
       .finally(() => {
@@ -197,8 +287,9 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       cancelled = true;
     };
   }, [
-    debouncedKeyword,
-    listRefreshVersion,
+    debouncedMetricKeyword,
+    listRequestKey,
+    refreshVersion,
     metricType,
     networkId,
     page,
@@ -207,50 +298,11 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     viewMode,
   ]);
 
-  const refresh = useCallback(async () => {
-    setListRefreshVersion((current) => current + 1);
-    await reload();
-  }, [reload]);
-
-  const metricCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    metrics.forEach((record) =>
-      counts.set(
-        record.definition.owner_object_type_id,
-        (counts.get(record.definition.owner_object_type_id) ?? 0) + 1,
-      ),
-    );
-    return counts;
-  }, [metrics]);
-  const normalizedKeyword = keyword.trim().toLowerCase();
-  const matchingObjectTypeIds = new Set(
-    metrics
-      .filter(
-        (record) =>
-          !normalizedKeyword ||
-          record.definition.name.toLowerCase().includes(normalizedKeyword) ||
-          record.definition.code.toLowerCase().includes(normalizedKeyword),
-      )
-      .map((record) => record.definition.owner_object_type_id),
-  );
-  const visibleObjectTypes = objectTypes.filter(
-    (item) =>
-      !normalizedKeyword ||
-      item.name.toLowerCase().includes(normalizedKeyword) ||
-      item.id.toLowerCase().includes(normalizedKeyword) ||
-      matchingObjectTypeIds.has(item.id),
-  );
-  const objectsWithMetrics = visibleObjectTypes.filter(
-    (item) => (metricCounts.get(item.id) ?? 0) > 0,
-  );
-  const objectsWithoutMetrics = visibleObjectTypes.filter((item) => !metricCounts.get(item.id));
-  const selectedObject = objectTypes.find((item) => item.id === selectedObjectTypeId);
-  const visibleMetrics = filterObjectMetrics(
-    metrics,
-    selectedObjectTypeId,
-    metricType,
-    normalizedKeyword,
-  );
+  const refresh = useCallback(() => {
+    objectMetricCountCache.current.clear();
+    setObjectMetricCounts({});
+    setRefreshVersion((current) => current + 1);
+  }, []);
 
   const openCreate = (type: ObjectMetricTypeV1) => {
     if (!selectedObjectTypeId) return;
@@ -273,10 +325,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       width: 280,
       render: (_, record) => (
         <div className={styles.nameCell}>
-          <strong>{record.definition.name}</strong>
-          <span>
-            {record.definition.code}@v{record.definition.version}
-          </span>
+          <strong title={record.definition.name}>{record.definition.name}</strong>
         </div>
       ),
     },
@@ -374,7 +423,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                       record.definition.version,
                     );
                     void message.success(objectMetricText("md393b7cc3ea3"));
-                    await refresh();
+                    refresh();
                   },
                   title: objectMetricText("m1dfe58237bbf"),
                 });
@@ -397,7 +446,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                       record.definition.version,
                     );
                     void message.success(objectMetricText("mda791b06ec77"));
-                    await refresh();
+                    refresh();
                   },
                   title: objectMetricText("ma01ab2ceb262", { p0: record.definition.name }),
                 });
@@ -413,73 +462,135 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     },
   ];
 
-  const renderObjectGroup = (title: string, entries: KnowledgeNetworkObjectTypeRecord[]) =>
-    entries.length ? (
-      <>
-        <div className={styles.groupTitle}>{title}</div>
-        {entries.map((item) => (
-          <Button
-            className={`${styles.objectButton} ${selectedObjectTypeId === item.id ? styles.selected : ""}`}
-            key={item.id}
-            onClick={() => {
-              setSelectedObjectTypeId(item.id);
-              setPage(1);
-            }}
-            type="text"
-          >
-            <span>{item.name}</span>
-            <span>{metricCounts.get(item.id) ?? 0}</span>
-          </Button>
-        ))}
-      </>
-    ) : null;
-
   return (
-    <section className={styles.page}>
-      <div className={styles.layout}>
-        <aside className={styles.sidebar}>
-          <div className={styles.sidebarSearch}>
-            <Input
-              allowClear
-              onChange={(event) => {
-                setKeyword(event.target.value);
-                setPage(1);
-                if (objectListRef.current) {
-                  objectListRef.current.scrollTop = 0;
-                }
-              }}
-              placeholder={objectMetricText("m3719f5de9935")}
-              prefix={<SearchOutlined />}
-              value={keyword}
-            />
-          </div>
-          <div className={styles.objectList} ref={objectListRef}>
-            {renderObjectGroup(objectMetricText("mc2204ec9b74b"), objectsWithMetrics)}
-            {renderObjectGroup(objectMetricText("meffa57b0d294"), objectsWithoutMetrics)}
-            {!objectTypes.length && !loading ? (
-              <Empty
-                description={objectMetricText("mc90d408577d0")}
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
+    <section className={`${styles.page} ${metricTheme.scope}`}>
+      <div
+        className={`${styles.layout} ${objectSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}
+      >
+        <aside
+          className={`${styles.sidebar} ${objectSidebarCollapsed ? styles.sidebarCollapsed : ""}`}
+        >
+          <div className={styles.sidebarHeader}>
+            {objectSidebarCollapsed ? null : (
+              <div className={styles.sidebarSearch}>
+                <Input
+                  allowClear
+                  onChange={(event) => {
+                    objectKeywordRef.current = event.target.value;
+                    setObjectKeyword(event.target.value);
+                    setObjectPage(1);
+                    setSelectedObjectTypeId("");
+                    setSelectedObjectTypeName("");
+                    setPage(1);
+                    if (objectListRef.current) {
+                      objectListRef.current.scrollTop = 0;
+                    }
+                  }}
+                  placeholder={objectMetricText("graphSearchObjectTypes")}
+                  prefix={<SearchOutlined />}
+                  value={objectKeyword}
+                />
+              </div>
+            )}
+            <Tooltip
+              title={objectMetricText(
+                objectSidebarCollapsed ? "graphExpandObjectSidebar" : "graphCollapseObjectSidebar",
+              )}
+            >
+              <Button
+                aria-expanded={!objectSidebarCollapsed}
+                aria-label={objectMetricText(
+                  objectSidebarCollapsed
+                    ? "graphExpandObjectSidebar"
+                    : "graphCollapseObjectSidebar",
+                )}
+                className={styles.sidebarToggle}
+                icon={objectSidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={() => setObjectSidebarCollapsed((current) => !current)}
+                type="text"
               />
-            ) : null}
+            </Tooltip>
           </div>
+          {objectSidebarCollapsed ? null : (
+            <>
+              <div className={styles.objectList} ref={objectListRef}>
+                {objectTypes.map((item) => (
+                  <Button
+                    className={`${styles.objectButton} ${selectedObjectTypeId === item.id ? styles.selected : ""}`}
+                    key={item.id}
+                    onClick={() => {
+                      setSelectedObjectTypeId(item.id);
+                      setSelectedObjectTypeName(item.name);
+                      setPage(1);
+                    }}
+                    title={item.name}
+                    type="text"
+                  >
+                    <span className={styles.objectName}>{item.name}</span>
+                    <span
+                      aria-label={
+                        typeof objectMetricCounts[item.id] === "number"
+                          ? objectMetricText("graphObjectMetricCount", {
+                              p0: item.name,
+                              p1: objectMetricCounts[item.id]!,
+                            })
+                          : undefined
+                      }
+                      className={styles.objectCount}
+                      title={
+                        typeof objectMetricCounts[item.id] === "number"
+                          ? objectMetricText("graphUnfilteredMetricCount", {
+                              p0: objectMetricCounts[item.id]!,
+                            })
+                          : undefined
+                      }
+                    >
+                      {objectMetricCounts[item.id] === undefined
+                        ? "…"
+                        : objectMetricCounts[item.id] === null
+                          ? "—"
+                          : objectMetricCounts[item.id]}
+                    </span>
+                  </Button>
+                ))}
+                {!objectTypes.length && !loading ? (
+                  <Empty
+                    description={objectMetricText("mc90d408577d0")}
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
+                ) : null}
+              </div>
+              <div
+                className={`${styles.objectPagination} ${objectTotal <= OBJECT_PAGE_SIZE ? styles.objectPaginationSingle : ""}`}
+              >
+                <span>{objectMetricText("graphObjectTotal", { p0: objectTotal })}</span>
+                {objectTotal > OBJECT_PAGE_SIZE ? (
+                  <Pagination
+                    current={objectPage}
+                    onChange={(nextPage) => {
+                      setObjectPage(nextPage);
+                      if (objectListRef.current) objectListRef.current.scrollTop = 0;
+                    }}
+                    pageSize={OBJECT_PAGE_SIZE}
+                    showSizeChanger={false}
+                    simple
+                    size="small"
+                    total={objectTotal}
+                  />
+                ) : null}
+              </div>
+            </>
+          )}
         </aside>
         <div className={`${styles.content} ${viewMode === "list" ? styles.listContent : ""}`}>
           <div className={styles.toolbar}>
             <div className={styles.toolbarLeft}>
-              <strong>{selectedObject?.name ?? objectMetricText("m6be07467be0f")}</strong>
-              <span>{selectedObject?.id}</span>
-            </div>
-            <div className={styles.toolbarRight}>
-              <Tooltip title={objectMetricText("m09f60ac5c12e")}>
-                <Button
-                  aria-label={objectMetricText("m09f60ac5c12e")}
-                  icon={<ReloadOutlined />}
-                  loading={loading || listLoading}
-                  onClick={() => void refresh()}
-                />
-              </Tooltip>
+              <div className={styles.toolbarIdentity}>
+                <strong>{selectedObjectTypeName || objectMetricText("m6be07467be0f")}</strong>
+                <span>{selectedObjectTypeId}</span>
+              </div>
               <Segmented
+                className={styles.viewSwitch}
                 onChange={(value) => {
                   setViewMode(value as "graph" | "list");
                   setPage(1);
@@ -490,6 +601,28 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                 ]}
                 value={viewMode}
               />
+            </div>
+            <div className={styles.toolbarRight}>
+              <Tooltip title={objectMetricText("m09f60ac5c12e")}>
+                <Button
+                  aria-label={objectMetricText("m09f60ac5c12e")}
+                  icon={<ReloadOutlined />}
+                  loading={loading || listLoading}
+                  onClick={() => void refresh()}
+                />
+              </Tooltip>
+              {viewMode === "list" ? (
+                <Input
+                  allowClear
+                  onChange={(event) => {
+                    setMetricKeyword(event.target.value);
+                    setPage(1);
+                  }}
+                  placeholder={objectMetricText("graphSearchListMetrics")}
+                  prefix={<SearchOutlined />}
+                  value={metricKeyword}
+                />
+              ) : null}
               <Select
                 allowClear
                 onChange={(value) => {
@@ -522,25 +655,28 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
           </div>
           {viewMode === "graph" ? (
             <ObjectMetricGraphCanvas
-              metrics={visibleMetrics}
-              objectTypes={objectTypes}
+              metricType={metricType}
+              networkId={networkId}
               onOpenMetric={(id) =>
                 void navigate(`/knowledge-network/workspace/${networkId}/metrics/${id}/detail`)
               }
-              onSelectObject={(objectTypeId) => {
+              onSelectObject={(objectTypeId, objectTypeName) => {
                 setSelectedObjectTypeId(objectTypeId);
+                setSelectedObjectTypeName(objectTypeName);
                 setPage(1);
               }}
-              relationTypes={relationTypes}
+              onSwitchList={() => setViewMode("list")}
+              refreshVersion={refreshVersion}
               selectedObjectTypeId={selectedObjectTypeId}
+              selectedObjectTypeName={selectedObjectTypeName}
             />
           ) : (
             <div className={styles.listView}>
               <div className={styles.tableViewport} ref={tableViewportRef}>
                 <Table
                   columns={columns}
-                  dataSource={listMetrics}
-                  loading={listLoading}
+                  dataSource={listCurrent ? listMetrics : []}
+                  loading={listLoading || !listCurrent}
                   locale={{
                     emptyText: (
                       <Empty
@@ -558,14 +694,14 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                   scroll={{ x: 980 }}
                 />
               </div>
-              {listTotal > 0 ? (
+              {listCurrent && listTotal > 0 ? (
                 <div className={styles.paginationBar}>
                   <TablePaginationBar
                     current={page}
                     onChange={(nextPage, nextPageSize) => {
                       setPage(nextPageSize === pageSize ? nextPage : 1);
                       setPageSize(nextPageSize);
-                      tableViewportRef.current?.scrollIntoView?.({ block: "start" });
+                      if (tableViewportRef.current) tableViewportRef.current.scrollTop = 0;
                     }}
                     pageSize={pageSize}
                     showSizeChanger

@@ -100,7 +100,7 @@
   width: 24px;
   height: 24px;
   padding: 0;
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
 }
 
 .parameterControlRow {

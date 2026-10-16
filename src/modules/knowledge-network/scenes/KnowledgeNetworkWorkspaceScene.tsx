@@ -360,7 +360,7 @@ export function KnowledgeNetworkWorkspaceScene({
           ) : (
             <div
               className={
-                section === "experience-agent"
+                section === "experience-agent" || section === "metrics"
                   ? `${styles.workspaceSectionPage} ${styles.workspaceSectionFlush}`
                   : styles.workspaceSectionPage
               }

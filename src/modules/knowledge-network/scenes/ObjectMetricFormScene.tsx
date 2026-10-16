@@ -70,6 +70,7 @@ import {
 } from "@/modules/knowledge-network/lib/object-metric-time-window";
 import {
   objectMetricUnitOptions,
+  objectMetricUnitOptionGroups,
   objectMetricUnitSelectionLocked,
   type ObjectMetricUnitQuantityKind,
 } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
@@ -115,6 +116,7 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectMetricFormScene.module.css";
+import metricTheme from "@/modules/knowledge-network/components/object-metric/ObjectMetricTheme.module.css";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import { useTranslation } from "react-i18next";
 
@@ -1173,7 +1175,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     value: 0,
     value_type: "decimal",
   });
-  const [atomicExpressionInteracted, setAtomicExpressionInteracted] = useState(false);
   const [businessCondition, setBusinessCondition] = useState<ObjectMetricConditionV1>();
   const [relatedCondition, setRelatedCondition] = useState<ObjectMetricConditionV1>();
   const [relationSteps, setRelationSteps] = useState<ObjectMetricRelationStepV1[]>([]);
@@ -1260,12 +1261,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const presentedValidationIssues = validationIssues.map((issue) =>
     presentObjectMetricValidationIssue(issue, { aggregation, calculationScope }),
   );
-  const compatibleUnitOptions = objectMetricUnitOptions(semanticType, physicalType, {
-    code: unitCode,
-    quantityKind,
-    scaleFactor: unitScaleFactor,
-    system: unitSystem,
-  });
+  const compatibleUnitOptions = objectMetricUnitOptions(
+    semanticType,
+    physicalType,
+    {
+      code: unitCode,
+      quantityKind,
+      scaleFactor: unitScaleFactor,
+      system: unitSystem,
+    },
+    capabilities?.quantity_kinds,
+  );
   const unitSelectionLocked =
     objectMetricUnitSelectionLocked(semanticType) &&
     compatibleUnitOptions.length === 1 &&
@@ -1335,7 +1341,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       (item) => dependencyKey(item.definition.id, item.definition.version) === key,
     );
     if (!base) return;
-    const previousKey = baseMetricKey;
     const value = base.definition.result_semantics.value;
     setBusinessCondition(undefined);
     setRelatedCondition(undefined);
@@ -1381,9 +1386,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       unitSystem: value.unit?.system,
       weekStart: undefined,
     });
-    if (previousKey && previousKey !== key) {
-      void message.info(objectMetricText("mb11572e529d2"));
-    }
   };
   const updateCompositeExpression = (next: ObjectMetricExpressionV1) => {
     setCompositeExpression(next);
@@ -1424,7 +1426,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       if (nextAggregation) commonValues.aggregation = nextAggregation;
       if (nextExpression) {
         setMeasureExpression(nextExpression);
-        setAtomicExpressionInteracted(true);
         applyValueSuggestion(
           instanceValueSuggestion(nextExpression, properties, nextAggregation),
           nextAggregation === "count_rows" ||
@@ -2533,7 +2534,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
 
   if (loading)
     return (
-      <div className={styles.page}>
+      <div className={`${styles.page} ${styles.loadingPage}`}>
         <Spin />
       </div>
     );
@@ -2620,7 +2621,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   );
 
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} ${metricTheme.scope}`}>
       <header className={styles.header}>
         <Button
           aria-label={objectMetricText("mcdfb4fd1b61d")}
@@ -2913,7 +2914,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           timeGranularity: undefined,
                         });
                       }
-                      if (metricType === "atomic") setAtomicExpressionInteracted(false);
                       if (metricType === "atomic" && event.target.value === "object_instance") {
                         form.setFieldsValue({
                           aggregation: "identity",
@@ -3083,32 +3083,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         <AtomicInstanceExpressionBuilder
                           allowedFunctions={capabilities?.functions}
                           allowedOperators={capabilities?.expression_operators}
-                          onChange={(next) => {
-                            setAtomicExpressionInteracted(true);
-                            updateMeasureExpression(next);
-                          }}
+                          onChange={updateMeasureExpression}
                           properties={properties}
                           value={measureExpression}
                         />
                       )}
                     </div>
-                    {requiresAtomicMeasureProperty && !hasAtomicMeasureProperty ? (
-                      <Alert
-                        className={styles.expressionIssue}
-                        description={
-                          atomicExpressionInteracted
-                            ? objectMetricText("m360aa1f864e9")
-                            : objectMetricText("mc7b974dcab96")
-                        }
-                        message={
-                          atomicExpressionInteracted
-                            ? objectMetricText("mef3f1cb3fcd8")
-                            : objectMetricText("m1fd43c6f6310")
-                        }
-                        showIcon
-                        type={atomicExpressionInteracted ? "warning" : "info"}
-                      />
-                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -3117,25 +3097,19 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             {metricType === "derived" ? (
               selectedBaseMetric ? (
                 <div className={styles.derivedFlow}>
-                  <Alert
-                    className={styles.qualifierStatus}
-                    description={
-                      hasDerivedQualifier
-                        ? objectMetricText("m04877d8ac4cb", {
-                            p0: derivedQualifierSummaries.length,
-                          })
-                        : selectedBaseDefinition?.calculation_scope === "object_instance"
+                  {!hasDerivedQualifier ? (
+                    <Alert
+                      className={styles.qualifierStatus}
+                      description={
+                        selectedBaseDefinition?.calculation_scope === "object_instance"
                           ? objectMetricText("m8fb551ae43b9")
                           : objectMetricText("m759cd4799d14")
-                    }
-                    message={
-                      hasDerivedQualifier
-                        ? objectMetricText("m6af7b015b79d")
-                        : objectMetricText("m35375e17cc4f")
-                    }
-                    showIcon
-                    type={hasDerivedQualifier ? "success" : "warning"}
-                  />
+                      }
+                      message={objectMetricText("m35375e17cc4f")}
+                      showIcon
+                      type="warning"
+                    />
+                  ) : null}
 
                   <div className={styles.qualifierCard}>
                     <div className={styles.qualifierHeading}>
@@ -5006,10 +4980,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             });
                           }}
                           optionFilterProp="label"
-                          options={compatibleUnitOptions.map((item) => ({
-                            label: item.label,
-                            value: item.code,
-                          }))}
+                          options={objectMetricUnitOptionGroups(compatibleUnitOptions)}
                           placeholder={
                             semanticType === "amount"
                               ? objectMetricText("mdf1f09af43b6")
@@ -5098,13 +5069,20 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         ? objectMetricText("mf854bfeaec18")
                         : objectMetricText("m7dee984d9d2c")}
                     </strong>
-                    <span>
-                      {metricType === "atomic"
-                        ? objectMetricText("m7f85f2218de2")
-                        : effectiveCalculationScope === "object_instance"
-                          ? objectMetricText("me9e05592e555")
-                          : objectMetricText("m9b89526e6f75")}
-                    </span>
+                    <HelpTooltip
+                      label={
+                        metricType === "atomic"
+                          ? objectMetricText("mf854bfeaec18")
+                          : objectMetricText("m7dee984d9d2c")
+                      }
+                      title={
+                        metricType === "atomic"
+                          ? objectMetricText("m7f85f2218de2")
+                          : effectiveCalculationScope === "object_instance"
+                            ? objectMetricText("me9e05592e555")
+                            : objectMetricText("m9b89526e6f75")
+                      }
+                    />
                   </div>
                   <Form.Item
                     label={
@@ -5160,13 +5138,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   {effectiveCalculationScope === "object_instance" ? (
                     <div className={`${styles.full} ${styles.logicPropertyCard}`}>
                       <div className={styles.logicPropertyHeader}>
-                        <div>
+                        <div className={styles.logicPropertyTitle}>
                           <strong>{objectMetricText("m315197671848")}</strong>
-                          <span>
-                            {objectMetricText("m356d91b99e17")}
-                            {ownerObjectType?.name ?? objectMetricText("md4abcfbf9164")}
-                            {objectMetricText("mdfbd0f596032")}
-                          </span>
+                          <HelpTooltip
+                            label={objectMetricText("m315197671848")}
+                            title={`${objectMetricText("m356d91b99e17")}${ownerObjectType?.name ?? objectMetricText("md4abcfbf9164")}${objectMetricText("mdfbd0f596032")} ${objectMetricText(logicPropertyEnabled ? "mb85aba5c793c" : "m7ba5a8c5277e")}`}
+                          />
+                          {logicPropertyEnabled ? (
+                            <span className={styles.logicPropertyStatus}>
+                              {objectMetricText("logicPropertyPendingPublication")}
+                            </span>
+                          ) : null}
                         </div>
                         <Form.Item name="logicPropertyEnabled" noStyle valuePropName="checked">
                           <Switch
@@ -5188,49 +5170,40 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         </Form.Item>
                       </div>
                       {logicPropertyEnabled ? (
-                        <>
-                          <Alert message={objectMetricText("mb85aba5c793c")} showIcon type="info" />
-                          <div className={styles.logicPropertyFields}>
-                            <Form.Item
-                              label={objectMetricText("maac14899bd42")}
-                              name="logicPropertyName"
-                              rules={[
-                                { required: true, message: objectMetricText("md93f0beda75d") },
-                                {
-                                  pattern: /^[a-z][a-z0-9_]*$/,
-                                  message: objectMetricText("mb9eeaa34688d"),
-                                },
-                              ]}
-                            >
-                              <Input placeholder={objectMetricText("mcd56973f4ad0")} />
-                            </Form.Item>
-                            <Form.Item
-                              label={objectMetricText("ma98585871c53")}
-                              name="logicPropertyDisplayName"
-                              rules={[
-                                { required: true, message: objectMetricText("m90fc64da3e98") },
-                              ]}
-                            >
-                              <Input placeholder={objectMetricText("m5dbc85bc1ad3")} />
-                            </Form.Item>
-                            <Form.Item
-                              className={styles.full}
-                              label={objectMetricText("m05e490686037")}
-                              name="logicPropertyComment"
-                            >
-                              <Input.TextArea
-                                maxLength={500}
-                                placeholder={objectMetricText("md65e0329b5e8")}
-                                rows={2}
-                              />
-                            </Form.Item>
-                          </div>
-                        </>
-                      ) : (
-                        <p className={styles.logicPropertyDisabledHint}>
-                          {objectMetricText("m7ba5a8c5277e")}
-                        </p>
-                      )}
+                        <div className={styles.logicPropertyFields}>
+                          <Form.Item
+                            label={objectMetricText("maac14899bd42")}
+                            name="logicPropertyName"
+                            rules={[
+                              { required: true, message: objectMetricText("md93f0beda75d") },
+                              {
+                                pattern: /^[a-z][a-z0-9_]*$/,
+                                message: objectMetricText("mb9eeaa34688d"),
+                              },
+                            ]}
+                          >
+                            <Input placeholder={objectMetricText("mcd56973f4ad0")} />
+                          </Form.Item>
+                          <Form.Item
+                            label={objectMetricText("ma98585871c53")}
+                            name="logicPropertyDisplayName"
+                            rules={[{ required: true, message: objectMetricText("m90fc64da3e98") }]}
+                          >
+                            <Input placeholder={objectMetricText("m5dbc85bc1ad3")} />
+                          </Form.Item>
+                          <Form.Item
+                            className={styles.full}
+                            label={objectMetricText("m05e490686037")}
+                            name="logicPropertyComment"
+                          >
+                            <Input.TextArea
+                              maxLength={500}
+                              placeholder={objectMetricText("md65e0329b5e8")}
+                              rows={2}
+                            />
+                          </Form.Item>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </>
@@ -5310,7 +5283,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       </div>
       <Modal
         centered
-        className={styles.aiDialog}
+        className={`${styles.aiDialog} ${metricTheme.scope}`}
         footer={null}
         onCancel={() => {
           if (aiGenerating) stopAiGeneration();
@@ -5407,6 +5380,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         <p className={styles.aiDialogFootnote}>{objectMetricText("m1917adbea87f")}</p>
       </Modal>
       <Drawer
+        rootClassName={metricTheme.scope}
         onClose={() => setPreview(undefined)}
         open={Boolean(preview)}
         title={objectMetricText("mf712d3495e8f")}

@@ -6,6 +6,7 @@
  */
 
 import type { ObjectMetricDefinitionV1 } from "@/modules/knowledge-network/types/object-metric";
+import type { objectMetricV1Part } from "@/modules/knowledge-network/locales/zh-CN/object-metric-v1";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 
 export type ObjectMetricUnitQuantityKind =
@@ -17,6 +18,8 @@ export type ObjectMetricUnitQuantityKind =
   | "rate"
   | "weight"
   | "length"
+  | "area"
+  | "volume"
   | "custom";
 
 export type ObjectMetricUnitSystem = "UCUM" | "ISO_4217" | "registered";
@@ -283,6 +286,44 @@ const unitCatalog: ObjectMetricUnitOption[] = [
   },
 
   {
+    code: "m2",
+    get label() {
+      return objectMetricText("unitSquareMeter");
+    },
+    quantityKind: "area",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "km2",
+    get label() {
+      return objectMetricText("unitSquareKilometer");
+    },
+    quantityKind: "area",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+
+  {
+    code: "L",
+    get label() {
+      return objectMetricText("unitLiter");
+    },
+    quantityKind: "volume",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+  {
+    code: "m3",
+    get label() {
+      return objectMetricText("unitCubicMeter");
+    },
+    quantityKind: "volume",
+    scaleFactor: 1,
+    system: "UCUM",
+  },
+
+  {
     code: "B",
     get label() {
       return objectMetricText("m569c00bfad06");
@@ -337,7 +378,7 @@ function allowedQuantityKinds(semanticType?: SemanticType, physicalType?: Physic
     return new Set(["dimensionless"]);
   }
   if (semanticType === "measure") {
-    return new Set(["dimensionless", "weight", "length", "data_size"]);
+    return new Set(["dimensionless", "weight", "length", "area", "volume", "data_size"]);
   }
   return new Set<string>();
 }
@@ -346,9 +387,14 @@ export function objectMetricUnitOptions(
   semanticType?: SemanticType,
   physicalType?: PhysicalType,
   current?: Partial<ObjectMetricUnitOption>,
+  supportedQuantityKinds?: readonly string[],
 ) {
   const allowedKinds = allowedQuantityKinds(semanticType, physicalType);
-  let options = unitCatalog.filter((item) => allowedKinds.has(item.quantityKind));
+  let options = unitCatalog.filter(
+    (item) =>
+      allowedKinds.has(item.quantityKind) &&
+      (!supportedQuantityKinds || supportedQuantityKinds.includes(item.quantityKind)),
+  );
 
   if (semanticType === "percentage") {
     options = options.filter((item) => item.code === "%");
@@ -375,6 +421,38 @@ export function objectMetricUnitOptions(
   }
 
   return options;
+}
+
+const unitGroupKeys: Record<ObjectMetricUnitQuantityKind, keyof typeof objectMetricV1Part> = {
+  dimensionless: "unitGroupDimensionless",
+  count: "unitGroupCount",
+  currency: "unitGroupCurrency",
+  duration: "unitGroupDuration",
+  data_size: "unitGroupDataSize",
+  rate: "unitGroupRate",
+  weight: "unitGroupWeight",
+  length: "unitGroupLength",
+  area: "unitGroupArea",
+  volume: "unitGroupVolume",
+  custom: "unitGroupCustom",
+};
+
+export function objectMetricUnitOptionGroups(options: readonly ObjectMetricUnitOption[]) {
+  const groups: Array<{
+    label: string;
+    options: Array<{ label: string; value: string }>;
+  }> = [];
+  const byKind = new Map<ObjectMetricUnitQuantityKind, (typeof groups)[number]>();
+  for (const option of options) {
+    let group = byKind.get(option.quantityKind);
+    if (!group) {
+      group = { label: objectMetricText(unitGroupKeys[option.quantityKind]), options: [] };
+      byKind.set(option.quantityKind, group);
+      groups.push(group);
+    }
+    group.options.push({ label: option.label, value: option.code });
+  }
+  return groups;
 }
 
 export function objectMetricUnitSelectionLocked(semanticType?: SemanticType) {

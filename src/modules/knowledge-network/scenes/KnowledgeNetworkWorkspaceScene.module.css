@@ -98,6 +98,32 @@
   min-height: 0;
   overflow-y: auto;
   padding: 8px;
+  scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 32%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.workspaceSideScroll:hover {
+  scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 55%, transparent) transparent;
+}
+
+.workspaceSideScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.workspaceSideScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.workspaceSideScroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-secondary) 42%, transparent);
+  background-clip: padding-box;
+}
+
+.workspaceSideScroll:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-text-secondary) 65%, transparent);
+  background-clip: padding-box;
 }
 
 .workspaceSideFooter {
@@ -195,7 +221,7 @@
   width: 100%;
 }
 
-/* Agent chat brings its own sticky header and scroll area; sit it edge to edge. */
+/* Self-contained workspaces bring their own spacing and scroll areas; sit them edge to edge. */
 .workspaceSectionFlush {
   overflow: hidden;
   padding: 0;
