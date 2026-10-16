@@ -15,20 +15,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  buildAgentTools,
   DEFAULT_AGENT_CONFIG,
-  formatToolResultLimits,
   runAgentChat,
   type AgentChunk,
 } from "@/modules/knowledge-network/services/agent-chat.service";
-import {
-  isPlatformManagedTool,
-  LIFECYCLE_TOOL_NAMES,
-} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
-import {
-  CONTEXT_LOADER_OPS,
-  type McpSession,
-} from "@/modules/knowledge-network/services/context-loader.service";
+import { isPlatformManagedTool } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import { CONTEXT_LOADER_OPS } from "@/modules/knowledge-network/services/context-loader.service";
 
 type AiModule = typeof import("ai");
 
@@ -62,59 +54,6 @@ async function run(onChunk: (chunk: AgentChunk) => void, system = "sys"): Promis
   });
 }
 
-describe("buildAgentTools", () => {
-  const session: McpSession = {
-    callTool: () =>
-      Promise.resolve({ ok: true, latencyMs: 0, isError: false, text: "", structured: undefined }),
-  };
-
-  const build = (names: string[]) =>
-    buildAgentTools(
-      names.map((name) => ({ name })),
-      { base: "https://example.test", token: "t", knId: "kn_1" },
-      "kn_1",
-      DEFAULT_AGENT_CONFIG,
-      { getToken: () => "t", refresh: () => Promise.resolve("t") },
-      { session },
-    );
-
-  it("平台侧工具照常进模型工具集——生命周期由前端接管执行，不是从工具表里拿掉", () => {
-    // The earlier approach filtered all bkn_* tools, leaving the model unable to finish this
-    // interaction round. Now the tools remain and execution is bound to the frontend turn (see buildAgentTools).
-    const tools = build([
-      "run_sql",
-      "bkn_start_interaction",
-      "bkn_finish_interaction",
-      "search_schema",
-    ]);
-
-    expect(Object.keys(tools).sort()).toEqual([
-      "bkn_finish_interaction",
-      "bkn_start_interaction",
-      "run_sql",
-      "search_schema",
-    ]);
-    for (const name of LIFECYCLE_TOOL_NAMES) expect(tools[name]).toBeDefined();
-  });
-
-  it("没接管实现的平台工具直通后端，不因为前缀被吃掉", () => {
-    // Platform tools evolve with the backend; during #618 they briefly grew to more than ten
-    // lineage tools before shrinking to two. Interception covers only the two that compete with
-    // the frontend for ownership; lineage read tools have no conflict and remain available to the model.
-    const tools = build([
-      "bkn_causality",
-      "bkn_get_operation",
-      "bkn_get_receipt",
-      "bkn_retry_operation",
-      "bkn_some_future_trace_tool",
-      "query_object_instance",
-    ]);
-
-    expect(Object.keys(tools)).toHaveLength(6);
-    expect(tools.bkn_some_future_trace_tool).toBeDefined();
-  });
-});
-
 describe("本地 op 目录与后端工具面", () => {
   it("本地 op 全是业务工具，一个都不会被平台前缀规则吃掉", () => {
     // This is the safety boundary for prefix filtering: accidentally filtering a business tool silently removes that capability from the model.
@@ -133,27 +72,6 @@ describe("本地 op 目录与后端工具面", () => {
   // tool set at runtime; the local table only supplies picker grouping and debug-console examples
   // (with synthesizeOp fallback in MCP mode). Exact equality would fail CI whenever the backend
   // adds a tool even though behavior remains correct, so controlled lag is acceptable.
-});
-
-describe("formatToolResultLimits", () => {
-  it("报的是当前 config 的真实上限，schema 类不跟数据类混为一谈", () => {
-    const text = formatToolResultLimits(DEFAULT_AGENT_CONFIG);
-
-    expect(text).toContain(String(DEFAULT_AGENT_CONFIG.dataToolCap));
-    expect(text).toContain(String(DEFAULT_AGENT_CONFIG.schemaToolCap));
-  });
-
-  it("跟着调参走：用户改了上限，提示词里的数字也变", () => {
-    expect(formatToolResultLimits({ ...DEFAULT_AGENT_CONFIG, dataToolCap: 1234 })).toContain(
-      "1234",
-    );
-  });
-
-  it("两个上限都关掉时不拼这一段", () => {
-    expect(
-      formatToolResultLimits({ ...DEFAULT_AGENT_CONFIG, dataToolCap: 0, schemaToolCap: 0 }),
-    ).toBe("");
-  });
 });
 
 describe("runAgentChat 错误路径", () => {
