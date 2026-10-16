@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  objectMetricUnitOptionGroups,
   objectMetricUnitOptions,
   objectMetricUnitSelectionLocked,
 } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
@@ -55,7 +56,31 @@ describe("object metric unit catalog", () => {
     const kinds = new Set(
       objectMetricUnitOptions("measure", "decimal").map((item) => item.quantityKind),
     );
-    expect(kinds).toEqual(new Set(["dimensionless", "weight", "length", "data_size"]));
+    expect(kinds).toEqual(
+      new Set(["dimensionless", "weight", "length", "area", "volume", "data_size"]),
+    );
+    expect(objectMetricUnitOptions("measure", "decimal").map((item) => item.code)).toEqual(
+      expect.arrayContaining(["m2", "km2", "L", "m3"]),
+    );
+  });
+
+  it("groups compatible units by quantity kind", () => {
+    const groups = objectMetricUnitOptionGroups(objectMetricUnitOptions("measure", "decimal"));
+    expect(groups.find((group) => group.label === "面积")?.options).toEqual([
+      { label: "平方米 · m²", value: "m2" },
+      { label: "平方千米 · km²", value: "km2" },
+    ]);
+    expect(groups.find((group) => group.label === "体积")?.options).toEqual([
+      { label: "升 · L", value: "L" },
+      { label: "立方米 · m³", value: "m3" },
+    ]);
+  });
+
+  it("hides area and volume until the connected backend advertises support", () => {
+    const oldBackendKinds = ["dimensionless", "weight", "length", "data_size"];
+    const options = objectMetricUnitOptions("measure", "decimal", undefined, oldBackendKinds);
+    expect(options.map((item) => item.code)).not.toEqual(expect.arrayContaining(["m2", "m3"]));
+    expect(new Set(options.map((item) => item.quantityKind))).toEqual(new Set(oldBackendKinds));
   });
 
   it("does not expose a unit for text, date or boolean semantics", () => {

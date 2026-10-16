@@ -71,6 +71,7 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectMetricDetailScene.module.css";
+import metricTheme from "@/modules/knowledge-network/components/object-metric/ObjectMetricTheme.module.css";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import { useTranslation } from "react-i18next";
 
@@ -373,7 +374,7 @@ export function ObjectMetricDetailScene() {
   };
 
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} ${metricTheme.scope}`}>
       <div className={styles.header}>
         <div className={styles.identity}>
           <Select
@@ -642,7 +643,7 @@ export function ObjectMetricDetailScene() {
         forceRender
         onClose={() => setBindingOpen(false)}
         open={bindingOpen}
-        rootClassName={styles.drawer}
+        rootClassName={`${styles.drawer} ${metricTheme.scope}`}
         title={objectMetricText("m6c461a9f092b")}
         width="min(520px, calc(100vw - 24px))"
       >

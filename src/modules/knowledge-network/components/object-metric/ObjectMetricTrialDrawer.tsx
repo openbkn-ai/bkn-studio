@@ -18,6 +18,7 @@ import type {
 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import metricTheme from "./ObjectMetricTheme.module.css";
 import { useTranslation } from "react-i18next";
 
 type TrialFormValues = {
@@ -118,6 +119,7 @@ export function ObjectMetricTrialDrawer({
 
   return (
     <Drawer
+      rootClassName={metricTheme.scope}
       destroyOnHidden
       forceRender
       onClose={onClose}

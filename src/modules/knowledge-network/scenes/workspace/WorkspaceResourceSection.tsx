@@ -130,7 +130,7 @@ export function WorkspaceResourceSection({
         />
       );
     case "metrics":
-      return <ObjectMetricListPanel canModify={canModify} networkId={networkId} />;
+      return <ObjectMetricListPanel canModify={canModify} key={networkId} networkId={networkId} />;
     case "functions":
     case "apis":
     case "mcp":

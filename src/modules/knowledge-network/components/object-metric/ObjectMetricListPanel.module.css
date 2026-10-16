@@ -6,16 +6,24 @@
  */
 
 .page {
-  padding: 18px 24px 40px;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px 10px 10px;
   container-name: metric-page;
   container-type: inline-size;
 }
 .layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 16px;
-  min-height: max(580px, calc(100dvh - 166px));
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
   align-items: stretch;
+}
+.layoutSidebarCollapsed {
+  grid-template-columns: 40px minmax(0, 1fr);
 }
 .sidebar,
 .content {
@@ -25,41 +33,120 @@
   color: var(--color-text-primary);
 }
 .sidebar {
-  position: sticky;
-  top: 16px;
+  position: static;
   display: flex;
+  height: 100%;
   min-height: 0;
-  max-height: clamp(320px, calc(100dvh - 220px), 720px);
+  max-height: none;
   align-self: start;
   flex-direction: column;
   width: 100%;
-  padding: 14px;
+  padding: 10px 8px 8px;
+}
+.sidebarCollapsed {
+  height: 40px;
+  max-height: 40px;
+  padding: 4px;
+}
+.sidebarHeader {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  align-items: center;
 }
 .sidebarSearch {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.sidebarToggle {
   flex: 0 0 auto;
-  padding-bottom: 8px;
+  width: 30px;
+  height: 30px;
+  padding: 0 !important;
 }
 .objectList {
   min-height: 0;
   flex: 1 1 auto;
+  margin-top: 6px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
-.groupTitle {
-  margin: 14px 4px 8px;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
+.objectList,
+.tableViewport {
+  scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 32%, transparent) transparent;
+  scrollbar-width: thin;
+}
+.objectList:hover,
+.tableViewport:hover {
+  scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 55%, transparent) transparent;
+}
+.objectList::-webkit-scrollbar,
+.tableViewport::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.objectList::-webkit-scrollbar-track,
+.tableViewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+.objectList::-webkit-scrollbar-thumb,
+.tableViewport::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-secondary) 42%, transparent);
+  background-clip: padding-box;
+}
+.objectList:hover::-webkit-scrollbar-thumb,
+.tableViewport:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-text-secondary) 65%, transparent);
+  background-clip: padding-box;
 }
 .objectButton {
   width: 100%;
+  height: 36px;
   display: flex;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  padding: 0 10px;
   text-align: left;
+}
+.objectName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.objectCount {
+  flex: 0 0 auto;
+  min-width: 24px;
+  margin-left: 8px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-text-secondary) 12%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.objectPagination {
+  flex: 0 0 auto;
+  min-height: 38px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 2px 0;
+  border-top: 1px solid var(--color-border);
+}
+.objectPaginationSingle {
+  justify-content: center;
+}
+.objectPagination > span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
 }
 .selected {
   background: var(--color-primary-bg) !important;
@@ -67,12 +154,12 @@
 }
 .content {
   display: flex;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
   flex-direction: column;
 }
 .listContent {
-  align-self: start;
   width: 100%;
 }
 
@@ -81,7 +168,8 @@
   min-height: 0;
 }
 .listContent > .listView {
-  flex: none;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .toolbar {
   display: flex;
@@ -101,22 +189,40 @@
   min-width: 0;
   flex: 1 1 auto;
 }
-.toolbarLeft > span {
+.toolbarIdentity {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+.toolbarIdentity strong,
+.toolbarIdentity span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.toolbarIdentity span {
+  flex: 0 1 auto;
+}
+.viewSwitch {
+  flex: 0 0 auto;
+  margin-left: 8px;
+}
 .toolbarRight {
   flex: 0 0 auto;
 }
-.nameCell strong,
-.nameCell span {
-  display: block;
+.toolbarRight :global(.ant-input-affix-wrapper) {
+  width: min(240px, 30vw);
 }
-.nameCell span {
-  margin-top: 3px;
-  color: var(--color-text-secondary);
-  font-size: 12px;
+.nameCell {
+  min-width: 0;
+}
+.nameCell strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .empty {
   padding: 72px 24px;
@@ -127,6 +233,9 @@
 }
 .tableViewport {
   min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
 }
 .paginationBar {
   flex-shrink: 0;
@@ -134,17 +243,21 @@
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-surface);
 }
-@container metric-page (max-width: 1050px) {
-  .layout {
-    grid-template-columns: 1fr;
+@container metric-page (max-width: 1200px) {
+  .toolbarIdentity span {
+    display: none;
   }
-  .sidebar {
-    max-height: 260px;
-    position: static;
+  .toolbarRight :global(.ant-input-affix-wrapper) {
+    width: 180px;
   }
 }
-
-@container metric-page (max-width: 720px) {
+@container metric-page (max-width: 1050px) {
+  .layout {
+    grid-template-columns: 208px minmax(0, 1fr);
+  }
+  .layoutSidebarCollapsed {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
   .toolbar {
     align-items: stretch;
     flex-direction: column;
@@ -155,11 +268,38 @@
   }
 }
 
+@container metric-page (max-width: 760px) {
+  .page {
+    height: auto;
+    min-height: 580px;
+    overflow: auto;
+  }
+  .layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 580px;
+  }
+  .sidebarCollapsed {
+    width: 40px;
+    justify-self: end;
+  }
+  .sidebar {
+    height: auto;
+    max-height: 260px;
+    position: static;
+  }
+}
+
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
   }
+  .sidebarCollapsed {
+    width: 40px;
+    justify-self: end;
+  }
   .sidebar {
+    height: auto;
     max-height: 280px;
     position: static;
   }

@@ -6,14 +6,13 @@
  */
 
 .shell {
-  --metric-graph-canvas: #f8fafc;
-  --metric-graph-dot: #cbd5e1;
-  --metric-graph-relation-edge: #6b8db7;
-  --metric-graph-value-edge: #b88a36;
-  --metric-graph-lineage-edge: #8665c8;
-
+  --metric-atomic: #0f766e;
+  --metric-derived: #a16207;
+  --metric-composite: #6d28d9;
+  --metric-dependency: #7c3aed;
+  --metric-dependency-selected: #6d28d9;
   min-width: 0;
-  min-height: 100%;
+  min-height: 540px;
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -22,303 +21,507 @@
   border-radius: 10px;
   background: var(--color-bg-surface);
   color: var(--color-text-primary);
+  container-type: inline-size;
 }
 
 :global(:root[data-theme="dark"]) .shell {
-  --metric-graph-canvas: #121c2e;
-  --metric-graph-dot: #334155;
-  --metric-graph-relation-edge: #6489b8;
-  --metric-graph-value-edge: #d0a24b;
-  --metric-graph-lineage-edge: #a78bfa;
+  --metric-atomic: #178c9e;
+  --metric-derived: #c77c18;
+  --metric-composite: #8555c7;
+  --metric-dependency: #bd8af3;
+  --metric-dependency-selected: #d09cff;
 }
 
-.canvasHeader {
+.explorerToolbar,
+.metricFocusToolbar,
+.canvasFooter {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 64px;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 8px 14px;
+}
+
+.explorerToolbar {
+  min-height: 50px;
+  justify-content: flex-end;
   border-bottom: 1px solid var(--color-border);
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--color-primary-bg) 34%, var(--color-bg-surface)) 0%,
-    var(--color-bg-surface) 62%
-  );
 }
 
-.canvasHeader > div {
-  display: grid;
-  gap: 3px;
+.metricFocusToolbar {
+  min-height: 50px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-raised) 72%, transparent);
 }
 
-.canvasHeader strong {
+.metricFocusToolbar > span {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metricFocusToolbar > strong {
   color: var(--color-text-primary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbarMeta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbarMeta > span,
+.canvasFooter > span {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbarMeta :global(.ant-btn),
+.metricFocusToolbar :global(.ant-btn-default) {
+  width: 28px;
+  height: 28px;
+}
+
+.canvasContent {
+  position: relative;
+  min-height: 390px;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.canvasContent > :global(.ant-empty),
+.loading {
+  align-self: center;
+  margin: auto;
+}
+
+.graph {
+  width: 100%;
+  min-height: 390px;
+  flex: 1 1 auto;
+  user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.graph:active {
+  cursor: grabbing;
+}
+
+.gridDot {
+  fill: var(--color-text-faint);
+  opacity: 0.32;
+}
+
+.arrow {
+  fill: var(--color-text-secondary);
+}
+
+.usedArrow {
+  fill: var(--color-accent-500, #8d65cc);
+}
+
+.metricArrow {
+  fill: context-stroke;
+}
+
+.metricSpoke {
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.atomicMetricSpoke {
+  stroke: var(--metric-atomic);
+  stroke-opacity: 0.46;
+}
+
+.moreMetricSpoke {
+  stroke: var(--color-text-secondary);
+  stroke-dasharray: 3 6;
+  stroke-opacity: 0.3;
+}
+
+.edge,
+.usedEdge {
+  stroke: var(--color-text-secondary);
+  stroke-opacity: 0.58;
+  stroke-width: 1.5;
+  cursor: default;
+}
+
+.usedEdge {
+  stroke: var(--color-accent-500, #8d65cc);
+  stroke-opacity: 0.95;
+  stroke-width: 2;
+  cursor: pointer;
+}
+
+.metricDependencyEdge {
+  stroke: var(--metric-dependency);
+  stroke-opacity: 0.7;
+  stroke-width: 1.35;
+  pointer-events: none;
+  transition:
+    stroke-opacity 160ms ease,
+    stroke-width 160ms ease;
+}
+
+.metricDependencyEdgeSelected {
+  stroke: var(--metric-dependency-selected);
+  stroke-opacity: 1;
+  stroke-width: 2.2;
+}
+
+.metricDependencyEdgeDimmed {
+  stroke-opacity: 0.1;
+}
+
+.edgeLabel {
+  cursor: default;
+  outline: none;
+}
+
+.relatedNode,
+.ownerNode {
+  cursor: grab;
+  outline: none;
+}
+
+.relatedNode:active,
+.ownerNode:active {
+  cursor: grabbing;
+}
+
+.focusOwnerNode {
+  cursor: grab;
+}
+
+.focusOwnerNode:active {
+  cursor: grabbing;
+}
+
+.edgeLabel rect {
+  fill: var(--color-bg-raised);
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.edgeLabel text {
+  fill: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.usedEdgeLabel:hover rect,
+.usedEdgeLabel:focus-visible rect {
+  fill: var(--color-hover);
+  stroke: var(--color-primary-500);
+  stroke-width: 2;
+}
+
+.usedEdgeLabel rect {
+  stroke: var(--color-accent-border);
+}
+
+.usedEdgeLabel {
+  cursor: pointer;
+}
+
+.usedEdgeLabel text {
+  fill: var(--color-text-primary);
+}
+
+.relationCountAction {
+  cursor: pointer;
+  outline: none;
+}
+
+.relationCountAction rect {
+  fill: var(--color-accent-500, #8d65cc);
+  fill-opacity: 0.24;
+  stroke: var(--color-accent-500, #8d65cc);
+  stroke-opacity: 0.7;
+}
+
+.relationCountAction text {
+  fill: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.relationCountAction:hover rect,
+.relationCountAction:focus-visible rect {
+  fill-opacity: 0.6;
+  stroke-opacity: 1;
+}
+
+.relatedNode circle,
+.ownerNode circle {
+  fill: var(--color-primary-600);
+  stroke: var(--color-text-inverse);
+  stroke-width: 2;
+}
+
+.relatedNode text,
+.ownerName {
+  fill: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--color-bg-surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  pointer-events: auto;
+}
+
+.ownerNode circle {
+  fill: var(--color-primary-500);
+  stroke-width: 3;
+}
+
+.ownerCount {
+  fill: var(--color-text-inverse);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+.ownerCount:hover,
+.ownerCount:focus-visible,
+.expandedOwnerCount {
+  text-decoration: underline;
+}
+
+.ownerName {
   font-size: 15px;
 }
 
-.canvasHeader span {
+.relatedNode:hover circle,
+.relatedNode:focus-visible circle,
+.ownerNode:hover circle,
+.ownerNode:focus-visible circle {
+  stroke: var(--color-primary-500);
+  stroke-width: 5;
+}
+
+.metricNode {
+  cursor: grab;
+  outline: none;
+}
+
+.metricNode:active {
+  cursor: grabbing;
+}
+
+.metricNodeBody {
+  stroke: var(--color-text-inverse);
+  stroke-width: 2;
+}
+
+.metricNodeAtomic .metricNodeBody {
+  fill: var(--metric-atomic);
+}
+
+.metricNodeDerived .metricNodeBody {
+  fill: var(--metric-derived);
+}
+
+.metricNodeComposite .metricNodeBody {
+  fill: var(--metric-composite);
+}
+
+.metricNode text {
+  fill: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  paint-order: stroke;
+  pointer-events: auto;
+  stroke: var(--color-bg-surface);
+  stroke-linejoin: round;
+  stroke-width: 4px;
+}
+
+.metricNode:hover .metricNodeBody,
+.metricNode:focus-visible .metricNodeBody {
+  stroke-width: 4;
+}
+
+.metricNodeSelected .metricNodeBody {
+  filter: drop-shadow(0 0 6px rgb(189 138 243 / 75%));
+  stroke-width: 4;
+}
+
+.metricNodeDimmed {
+  opacity: 0.24;
+}
+
+.moreMetricsNode {
+  cursor: pointer;
+  outline: none;
+}
+
+.moreMetricsNode circle {
+  fill: var(--color-bg-raised);
+  stroke: var(--color-accent-500, #8d65cc);
+  stroke-dasharray: 3 3;
+  stroke-width: 1.5;
+}
+
+.moreMetricsNode text {
+  fill: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.moreMetricsNode:hover circle,
+.moreMetricsNode:focus-visible circle {
+  fill: var(--color-accent-500, #8d65cc);
+  fill-opacity: 0.28;
+  stroke-width: 2.5;
+}
+
+.moreAtomicMetrics circle {
+  stroke: var(--metric-atomic);
+}
+
+.moreDerivedMetrics circle {
+  stroke: var(--metric-derived);
+}
+
+.moreCompositeMetrics circle {
+  stroke: var(--metric-composite);
+}
+
+.metricLegend {
+  position: absolute;
+  z-index: 1;
+  bottom: 14px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg-raised);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 12%);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.metricLegend span::before {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  content: "";
+}
+
+.atomicLegend::before {
+  background: var(--metric-atomic);
+}
+
+.derivedLegend::before {
+  background: var(--metric-derived);
+}
+
+.compositeLegend::before {
+  background: var(--metric-composite);
+}
+
+.dependencyLegend::before {
+  width: 14px !important;
+  height: 2px !important;
+  border-radius: 0 !important;
+  background: var(--metric-dependency);
+}
+
+.emptyRelations {
+  position: absolute;
+  bottom: 42px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.zoomControls {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.zoomControls :global(.ant-btn) {
+  width: 28px;
+  height: 28px;
+  background: var(--color-bg-raised);
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-top: 1px solid var(--color-border);
   color: var(--color-text-secondary);
   font-size: 12px;
 }
 
-.canvas {
-  position: relative;
-  height: auto;
-  min-height: 500px;
-  flex: 1 1 500px;
-  overflow: hidden;
-  touch-action: none;
-  background-color: var(--metric-graph-canvas);
-  background-image: radial-gradient(circle, var(--metric-graph-dot) 1px, transparent 1px);
-  background-size: 22px 22px;
-  user-select: none;
+.canvasFooter {
+  min-height: 52px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
-.edges {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.relationEdge,
-.metricEdge {
-  fill: none;
-  vector-effect: non-scaling-stroke;
-}
-
-.relationEdge {
-  stroke: var(--metric-graph-relation-edge);
-  stroke-width: 1.5;
-  stroke-dasharray: 6 6;
-}
-
-.metricEdge {
-  stroke: var(--metric-graph-value-edge);
-  stroke-width: 1.4;
-}
-
-.metricDependencyEdge {
-  fill: none;
-  stroke: var(--metric-graph-lineage-edge);
-  stroke-width: 1.8;
-  stroke-dasharray: 4 3;
-  vector-effect: non-scaling-stroke;
-}
-
-.node {
-  position: absolute;
-  z-index: 2;
-  display: grid;
-  align-content: center;
-  gap: 3px;
-  transform: translate(-50%, -50%);
-  cursor: grab;
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease,
-    filter 150ms ease;
-}
-
-.node:active {
-  cursor: grabbing;
-}
-
-.node:hover,
-.node:focus-visible {
-  z-index: 3;
-  outline: 2px solid var(--color-primary-500);
-  outline-offset: 2px;
-  filter: brightness(1.02);
-  box-shadow: 0 10px 24px rgb(15 23 42 / 14%);
-}
-
-.objectNode {
-  width: 142px;
-  min-height: 74px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-primary-border);
-  border-radius: 6px;
-  background: var(--color-bg-raised);
-  color: var(--color-text-primary);
-  text-align: left;
-}
-
-.focusObject {
-  border-color: var(--color-primary-500);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-500) 16%, transparent);
-}
-
-.nodeEyebrow {
-  color: var(--color-text-teal);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.objectNode strong,
-.metricNode strong {
-  overflow: hidden;
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.node small {
-  overflow: hidden;
-  color: var(--color-text-secondary);
-  font-size: 9px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.relationNode {
-  gap: 2px;
-  width: 112px;
-  min-height: 44px;
-  padding: 5px 8px;
-  border: 1px solid var(--color-success-border);
-  border-radius: 4px;
-  background: var(--color-success-bg);
-  color: var(--color-success-text);
-  text-align: center;
-}
-
-.relationNode > span:not(:global(.anticon)) {
-  overflow: hidden;
-  font-size: 11px;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.metricNode {
-  width: 158px;
-  min-height: 56px;
-  padding: 7px 15px;
-  border-width: 1px;
-  border-style: solid;
-  border-radius: 999px;
-  background: var(--color-bg-raised);
-  text-align: center;
-}
-
-.metricNode > span {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.atomic {
-  border-color: var(--color-success-border);
-  color: var(--color-success-text);
-  background: var(--color-success-bg);
-}
-
-.derived {
-  border-color: var(--color-warning-border);
-  color: var(--color-warning-text);
-  background: var(--color-warning-bg);
-}
-
-.composite {
-  border-color: var(--color-accent-border);
-  color: var(--color-text-accent);
-  background: var(--color-accent-bg);
-}
-
-.legend {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  z-index: 4;
-  display: flex;
-  gap: 14px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--color-bg-raised) 88%, transparent);
-  box-shadow: 0 4px 14px rgb(15 23 42 / 6%);
-  backdrop-filter: blur(8px);
-}
-
-.legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--color-text-secondary);
-  font-size: 11px;
-}
-
-.legend i {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.objectLegend {
-  background: #527397;
-}
-.relationLegend {
-  background: #3d9c96;
-}
-.atomicLegend {
-  background: #168b86;
-}
-.derivedLegend {
-  background: #d58b22;
-}
-.compositeLegend {
-  background: #8b5fd3;
-}
-.lineageLegend {
-  width: 14px !important;
-  height: 2px !important;
-  border-radius: 0 !important;
-  background: var(--metric-graph-lineage-edge);
-}
-
-.drawerContent {
-  display: grid;
-  gap: 20px;
-}
-
-.drawer :global(.ant-drawer-content),
-.drawer :global(.ant-drawer-header),
-.drawer :global(.ant-drawer-body) {
+.metricDrawer :global(.ant-drawer-body) {
   background: var(--color-bg-surface);
   color: var(--color-text-primary);
 }
 
-.drawer :global(.ant-drawer-header) {
-  border-bottom-color: var(--color-border);
-}
-
-.drawer :global(.ant-drawer-content) {
-  box-shadow: -16px 0 42px rgb(2 8 23 / 28%);
-}
-
-.drawerTitle {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.drawerContent {
+  display: grid;
   gap: 16px;
 }
 
-.drawerTitle h2 {
-  margin: 10px 0 2px;
+.drawerMetricName {
+  overflow-wrap: anywhere;
+  font-size: 17px;
 }
 
-.drawerTitle code {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-}
-
-@media (max-width: 1100px) {
-  .legend {
+@container (max-width: 620px) {
+  .explorerToolbar,
+  .metricFocusToolbar,
+  .canvasFooter {
     flex-wrap: wrap;
-    max-width: 340px;
+  }
+
+  .canvasContent {
+    min-height: 440px;
+  }
+
+  .metricLegend {
+    display: none;
   }
 }

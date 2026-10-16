@@ -19,6 +19,12 @@
   color: var(--color-text-primary);
 }
 
+.loadingPage {
+  display: grid;
+  place-items: center;
+  scrollbar-gutter: auto;
+}
+
 .header {
   position: sticky;
   top: 0;
@@ -226,13 +232,13 @@
   justify-content: flex-end;
   gap: 10px;
   margin-top: 10px;
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 12px;
 }
 
 .aiDialogExamples > span {
   flex: 0 0 auto;
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 12px;
 }
 
@@ -276,7 +282,7 @@
 
 .aiDialogFootnote {
   margin: 10px 0 0;
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 12px;
   line-height: 1.5;
 }
@@ -307,8 +313,16 @@
 }
 
 .section {
-  padding: 26px 0 30px;
-  border-bottom: 1px solid var(--color-divider);
+  padding: 22px 0 12px;
+  border-bottom: 1px solid var(--metric-divider);
+}
+
+.section:first-child {
+  padding-top: 26px;
+}
+
+.section:first-child .grid2 > :global(.ant-form-item:last-child) {
+  margin-bottom: 0;
 }
 
 .section:last-child {
@@ -367,11 +381,11 @@
 
 .queryCapabilityHeader {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin: 8px 0 16px;
-  padding-top: 18px;
-  border-top: 1px solid var(--color-divider);
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--metric-divider);
 }
 
 .queryCapabilityHeader strong {
@@ -380,17 +394,11 @@
   font-size: 14px;
 }
 
-.queryCapabilityHeader span {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
 .logicPropertyCard {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   margin-top: 4px;
-  padding: 16px;
+  padding: 14px 16px;
   border: 1px solid var(--color-primary-border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--color-primary-bg) 24%, var(--color-bg-surface));
@@ -398,13 +406,15 @@
 
 .logicPropertyHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 16px;
 }
 
-.logicPropertyHeader > div:first-child {
-  display: grid;
+.logicPropertyTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
@@ -413,21 +423,21 @@
   font-size: 14px;
 }
 
-.logicPropertyHeader span,
-.logicPropertyDisabledHint {
-  color: var(--color-text-secondary);
+.logicPropertyStatus {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 999px;
+  background: var(--color-primary-bg);
+  color: var(--color-primary-600);
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.4;
 }
 
 .logicPropertyFields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 18px;
-}
-
-.logicPropertyDisabledHint {
-  margin: 0;
 }
 
 .editorBox {
@@ -450,7 +460,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--metric-divider);
 }
 
 .inheritedContractHeader > div {
@@ -492,7 +502,7 @@
 
 .inheritedContractGrid span,
 .inheritedResultSummary span {
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 11px;
 }
 
@@ -650,7 +660,7 @@
   gap: 16px;
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid var(--color-divider);
+  border-top: 1px solid var(--metric-divider);
 }
 
 .relationRuleSentence {
@@ -669,7 +679,7 @@
 
 .relationAutomaticHint {
   margin: 0;
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 12px;
   line-height: 1.5;
 }
@@ -716,7 +726,7 @@
 
 .definitionPreviewTitle span,
 .technicalPreview {
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 11px;
 }
 
@@ -803,7 +813,7 @@
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--metric-divider);
 }
 
 .dependencyCardHeader > div {
@@ -876,7 +886,7 @@
 
 .dependencyContract span,
 .alignmentSummary span {
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 11px;
 }
 
@@ -948,7 +958,7 @@
 
 .resultAlignmentAdvanced[open] > summary,
 .dependencyAdvanced[open] > summary {
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--metric-divider);
 }
 
 .resultAlignmentAdvanced .grid3 {
@@ -967,7 +977,7 @@
 
 .formulaPreview span,
 .formulaPreview small {
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 11px;
 }
 
@@ -1108,7 +1118,7 @@
   height: 20px;
   margin-left: 2px;
   padding: 0;
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
 }
 
 .inlineHelpButton:hover {
@@ -1147,7 +1157,7 @@
 
 .resultDetails summary::after {
   content: "+";
-  color: var(--color-text-tertiary);
+  color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 16px;
   font-weight: 400;
 }
@@ -1168,7 +1178,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0 14px;
   padding: 12px 14px 0;
-  border-top: 1px solid var(--color-divider);
+  border-top: 1px solid var(--metric-divider);
 }
 
 .inheritedValuePlaceholder {
@@ -1192,7 +1202,7 @@
   gap: 10px;
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid var(--color-divider);
+  border-top: 1px solid var(--metric-divider);
 }
 
 .validationIssueList {
@@ -1221,9 +1231,6 @@
   color: var(--color-text-secondary);
 }
 
-.expressionIssue {
-  margin-top: 12px;
-}
 @media (max-width: 900px) {
   .header {
     align-items: flex-start;
@@ -1256,11 +1263,6 @@
   .logicPropertyFields,
   .scopeGroup {
     grid-template-columns: 1fr;
-  }
-  .queryCapabilityHeader {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
   }
   .inheritedContractGrid,
   .inheritedResultSummary {

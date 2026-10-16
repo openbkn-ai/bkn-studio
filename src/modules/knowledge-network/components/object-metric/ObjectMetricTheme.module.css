@@ -1,0 +1,70 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/* Keep metric guidance and empty input hints readable in both themes. */
+.scope {
+  --metric-text-muted: #5b6b82;
+  --metric-placeholder: #5b6b82;
+  --metric-control-border: #cbd5e1;
+  --metric-divider: #8e9db2;
+}
+
+:global(:root[data-theme="dark"]) .scope {
+  --metric-text-muted: #a9b8cb;
+  --metric-placeholder: #a9b8cb;
+  --metric-control-border: #475569;
+  --metric-divider: #50627a;
+}
+
+.scope :global(.ant-input::placeholder),
+.scope :global(.ant-input-number-input::placeholder),
+.scope :global(.ant-picker-input > input::placeholder),
+.scope :global(.ant-select-selection-placeholder) {
+  color: var(--metric-placeholder);
+  opacity: 1;
+}
+
+.scope :global(.ant-form-item-extra),
+.scope :global(.ant-form-item-tooltip) {
+  color: var(--metric-text-muted);
+}
+
+.scope
+  :global(
+    .ant-input:not(:disabled):not(:focus):not(:hover):not(.ant-input-status-error):not(
+        .ant-input-status-warning
+      )
+  ),
+.scope
+  :global(
+    .ant-input-affix-wrapper:not(.ant-input-affix-wrapper-disabled):not(
+        .ant-input-affix-wrapper-focused
+      ):not(.ant-input-affix-wrapper-status-error):not(.ant-input-affix-wrapper-status-warning):not(
+        :hover
+      )
+  ),
+.scope
+  :global(
+    .ant-input-number:not(.ant-input-number-disabled):not(.ant-input-number-focused):not(
+        .ant-input-number-status-error
+      ):not(.ant-input-number-status-warning):not(:hover)
+  ),
+.scope
+  :global(
+    .ant-select:not(.ant-select-disabled):not(.ant-select-focused):not(
+        .ant-select-status-error
+      ):not(.ant-select-status-warning):not(:hover)
+      .ant-select-selector
+  ),
+.scope
+  :global(
+    .ant-picker:not(.ant-picker-disabled):not(.ant-picker-focused):not(
+        .ant-picker-status-error
+      ):not(.ant-picker-status-warning):not(:hover)
+  ) {
+  border-color: var(--metric-control-border);
+}
