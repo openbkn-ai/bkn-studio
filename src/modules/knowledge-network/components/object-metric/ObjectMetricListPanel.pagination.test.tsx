@@ -11,10 +11,16 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 
 const mocks = vi.hoisted(() => ({
+  createNextDraft: vi.fn(),
+  getObjectDetail: vi.fn(),
   listObjectTypes: vi.fn(),
   listObjectMetrics: vi.fn(),
   navigate: vi.fn(),
+  queryMetric: vi.fn(),
+  searchParams: { current: "" },
+  setSearchParams: vi.fn(),
   setPageSize: vi.fn(),
+  trialMetric: vi.fn(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -28,6 +34,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
   useNavigate: () => mocks.navigate,
+  useSearchParams: () => [new URLSearchParams(mocks.searchParams.current), mocks.setSearchParams],
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -41,16 +48,57 @@ vi.mock("@/modules/knowledge-network/components/shared/usePersistentPageSize", (
 }));
 
 vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricGraphCanvas", () => ({
-  ObjectMetricGraphCanvas: () => <div>metric graph</div>,
+  ObjectMetricGraphCanvas: ({
+    onEditMetric,
+    onOpenMetric,
+  }: {
+    onEditMetric: (record: ObjectMetricRecordV1) => void;
+    onOpenMetric: (record: ObjectMetricRecordV1) => void;
+  }) => (
+    <div>
+      metric graph
+      <button onClick={() => onOpenMetric(metric(1))}>Open graph metric</button>
+      <button onClick={() => onEditMetric(metric(1))}>Edit graph metric</button>
+    </div>
+  ),
+}));
+
+vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer", () => ({
+  ObjectMetricTrialDrawer: ({
+    definition,
+    mode,
+    objectType,
+    onClose,
+    onRun,
+  }: {
+    definition: { name: string };
+    mode: string;
+    objectType?: { id: string } | null;
+    onClose: () => void;
+    onRun: (query: Record<string, never>) => Promise<unknown>;
+  }) => (
+    <div
+      data-testid="list-metric-trial"
+      data-mode={mode}
+      data-name={definition.name}
+      data-object-type={objectType?.id ?? ""}
+    >
+      <button onClick={() => void onRun({})}>Run trial</button>
+      <button onClick={onClose}>Close trial</button>
+    </div>
+  ),
 }));
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
-  createNextObjectMetricDraftV1: vi.fn(),
+  createNextObjectMetricDraftV1: mocks.createNextDraft,
   deleteObjectMetricDraftV1: vi.fn(),
   deprecateObjectMetricV1: vi.fn(),
   listObjectMetricsV1: mocks.listObjectMetrics,
+  queryObjectMetricDataV1: mocks.queryMetric,
+  trialObjectMetricDataV1: mocks.trialMetric,
 }));
 vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
+  getKnowledgeNetworkObjectTypeDetail: mocks.getObjectDetail,
   listKnowledgeNetworkObjectTypePage: mocks.listObjectTypes,
 }));
 
@@ -77,11 +125,20 @@ afterAll(() => {
 
 afterEach(() => {
   cleanup();
+  mocks.createNextDraft.mockReset();
+  mocks.getObjectDetail.mockReset();
+  mocks.getObjectDetail.mockResolvedValue(null);
   mocks.listObjectTypes.mockReset();
   mocks.listObjectMetrics.mockReset();
   mocks.navigate.mockReset();
+  mocks.queryMetric.mockReset();
+  mocks.searchParams.current = "";
+  mocks.setSearchParams.mockReset();
   mocks.setPageSize.mockReset();
+  mocks.trialMetric.mockReset();
 });
+
+mocks.getObjectDetail.mockResolvedValue(null);
 
 function metric(index: number): ObjectMetricRecordV1 {
   return {
@@ -121,6 +178,239 @@ function metric(index: number): ObjectMetricRecordV1 {
 }
 
 describe("ObjectMetricListPanel pagination", () => {
+  it("does not load unfiltered metrics when no object type matches the sidebar search", async () => {
+    mocks.searchParams.current = "view=list&objectQuery=missing";
+    mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
+
+    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+
+    await waitFor(() => expect(mocks.listObjectTypes).toHaveBeenCalled());
+    await waitFor(() => expect(container.querySelector("[class*=tableLoading]")).toBeNull());
+    expect(mocks.listObjectMetrics).not.toHaveBeenCalled();
+  });
+
+  it("opens the graph-selected version and returns to the graph", async () => {
+    mocks.searchParams.current = "objectTypeId=order";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
+
+    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Open graph metric" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/metrics/metric-1/detail?version=1",
+      {
+        state: {
+          knowledgeNetworkReturnTo:
+            "/knowledge-network/workspace/network-1/metrics?objectTypeId=order&graphMetricId=metric-1&graphMetricVersion=1",
+        },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit graph metric" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/metrics/metric-1/edit",
+      {
+        state: {
+          knowledgeNetworkReturnTo:
+            "/knowledge-network/workspace/network-1/metrics?objectTypeId=order&graphMetricId=metric-1&graphMetricVersion=1",
+        },
+      },
+    );
+  });
+
+  it("keeps the list loader in the visible viewport instead of the horizontally scrollable table", () => {
+    mocks.searchParams.current = "objectTypeId=order&view=list";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockReturnValue(new Promise(() => {}));
+
+    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    const loading = container.querySelector<HTMLElement>("[class*=tableLoading]");
+    const viewport = container.querySelector<HTMLElement>("[class*=tableViewport]");
+
+    expect(loading).toBeInTheDocument();
+    expect(loading?.querySelector(".ant-spin")).toBeInTheDocument();
+    expect(loading?.parentElement).toBe(viewport?.parentElement);
+    expect(viewport?.contains(loading)).toBe(false);
+    expect(viewport?.querySelector(".ant-spin-spinning")).toBeNull();
+  });
+
+  it.each([
+    ["published", "published", "queryMetric"],
+    ["deprecated", "published", "queryMetric"],
+    ["draft", "draft", "trialMetric"],
+    ["validated", "draft", "trialMetric"],
+  ] as const)("opens the %s metric trial from the list", async (status, mode, service) => {
+    mocks.searchParams.current = "objectTypeId=order&view=list";
+    const record = metric(1);
+    record.definition.lifecycle.status = status;
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [record], total_count: 1 });
+    mocks.getObjectDetail.mockResolvedValue({ id: "order", name: "销售订单" });
+    mocks.queryMetric.mockResolvedValue({});
+    mocks.trialMetric.mockResolvedValue({});
+
+    render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "试算" }));
+    const drawer = await screen.findByTestId("list-metric-trial");
+    expect(drawer).toHaveAttribute("data-mode", mode);
+    expect(drawer).toHaveAttribute("data-name", "订单指标 1");
+    expect(drawer).toHaveAttribute("data-object-type", "order");
+    fireEvent.click(screen.getByRole("button", { name: "Run trial" }));
+    if (service === "queryMetric") {
+      expect(mocks.queryMetric).toHaveBeenCalledWith("network-1", "metric-1", 1, {});
+      expect(mocks.trialMetric).not.toHaveBeenCalled();
+    } else {
+      expect(mocks.trialMetric).toHaveBeenCalledWith("network-1", record.definition, {});
+      expect(mocks.queryMetric).not.toHaveBeenCalled();
+    }
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Close trial" }));
+    expect(screen.queryByTestId("list-metric-trial")).not.toBeInTheDocument();
+  });
+
+  it("reserves enough width for business definitions while keeping compact status columns", async () => {
+    mocks.searchParams.current = "objectTypeId=order&view=list";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
+
+    const { container } = render(<ObjectMetricListPanel canModify networkId="network-1" />);
+
+    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    const widths = [...container.querySelectorAll<HTMLTableColElement>("colgroup col")]
+      .slice(0, 7)
+      .map((column) => column.style.width);
+    expect(widths).toEqual(["280px", "100px", "112px", "90px", "152px", "300px", "212px"]);
+    expect(screen.getByRole("columnheader", { name: "业务定义" })).toBeInTheDocument();
+  });
+
+  it("loads binding status once for the selected object class", async () => {
+    mocks.searchParams.current = "objectTypeId=order&view=list";
+    const first = metric(1);
+    first.definition.calculation_scope = "object_instance";
+    const second = metric(2);
+    second.definition.calculation_scope = "object_instance";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [first, second], total_count: 2 });
+    mocks.getObjectDetail.mockResolvedValue({
+      id: "order",
+      name: "销售订单",
+      logicProperties: [
+        {
+          name: "metric_property",
+          displayName: "指标属性",
+          metricBinding: { metric_ref: { metric_id: "metric-1", version: 1 } },
+        },
+      ],
+    });
+    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+    expect(await screen.findByText("指标属性 · v1")).toHaveAttribute("title", "指标属性 · v1");
+    expect(screen.getByText("未绑定")).toBeInTheDocument();
+    expect(mocks.getObjectDetail).toHaveBeenCalledTimes(1);
+    const deprecateButtons = screen.getAllByRole("button", { name: "废弃" });
+    expect(deprecateButtons[0]).toBeDisabled();
+    expect(deprecateButtons[1]).toBeEnabled();
+  });
+  it("restores a selected object outside the first sidebar page from a direct detail return", async () => {
+    mocks.searchParams.current = "objectTypeId=remote&view=list";
+    mocks.getObjectDetail.mockResolvedValue({ id: "remote", name: "远端对象" });
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 21,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+
+    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+
+    await waitFor(() => {
+      expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe(
+        "远端对象",
+      );
+    });
+    expect(container.querySelector('[class*="toolbarIdentity"]')?.textContent).toBe("远端对象");
+    expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
+      "network-1",
+      expect.objectContaining({ ownerObjectTypeId: "remote" }),
+    );
+  });
+
+  it("restores the selected object, view and page from the list URL", async () => {
+    mocks.searchParams.current = "objectTypeId=order&objectPage=2&view=list&metricPage=2";
+    mocks.getObjectDetail.mockResolvedValue({ id: "order", name: "销售订单" });
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 21,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 21 });
+
+    render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+
+    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    expect(screen.getByTitle("销售订单").className).toMatch(/selected/);
+    expect(mocks.listObjectTypes).toHaveBeenCalledWith(
+      "network-1",
+      expect.objectContaining({ offset: 20 }),
+      { skipErrorToast: true },
+    );
+    expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
+      "network-1",
+      expect.objectContaining({ offset: 10, ownerObjectTypeId: "order" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/metrics/metric-1/detail?version=1",
+      {
+        state: {
+          knowledgeNetworkReturnTo:
+            "/knowledge-network/workspace/network-1/metrics?objectTypeId=order&objectPage=2&view=list&metricPage=2",
+        },
+      },
+    );
+  });
+
+  it("does not silently create a draft when viewing a published metric", async () => {
+    const published = metric(1);
+    const draft = metric(2);
+    draft.definition.lifecycle.status = "draft";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [published, draft], total_count: 2 });
+
+    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+
+    fireEvent.click(screen.getByText(/^(列表|list)$/i));
+    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "编辑指标 订单指标 1" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "编辑指标 订单指标 2" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/metrics/metric-2/edit",
+      {
+        state: {
+          knowledgeNetworkReturnTo:
+            "/knowledge-network/workspace/network-1/metrics?objectTypeId=order&view=list",
+        },
+      },
+    );
+    expect(mocks.createNextDraft).not.toHaveBeenCalled();
+  });
+
   it("requests the selected list page from the server", async () => {
     const records = Array.from({ length: 25 }, (_, index) => metric(index + 1));
     mocks.listObjectTypes.mockResolvedValue({

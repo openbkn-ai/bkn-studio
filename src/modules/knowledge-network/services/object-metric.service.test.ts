@@ -8,8 +8,12 @@
 import { describe, expect, it } from "vitest";
 
 import { createObjectMetricDefinitionV1 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
-import { mockKnowledgeNetworks } from "@/modules/knowledge-network/services/mock/state";
 import {
+  mockKnowledgeNetworks,
+  mockObjectTypeLogicProperties,
+} from "@/modules/knowledge-network/services/mock/state";
+import {
+  bindObjectMetricLogicPropertyV1,
   createNextObjectMetricDraftV1,
   createObjectMetricDraftV1,
   deleteObjectMetricDraftV1,
@@ -22,11 +26,40 @@ import {
   publishObjectMetricV1,
   trialObjectMetricDataV1,
   updateObjectMetricDraftV1,
+  upgradeObjectMetricLogicPropertyV1,
   validateObjectMetricV1,
   validateObjectMetricVersionV1,
 } from "@/modules/knowledge-network/services/object-metric.service";
 
 describe("object metric lifecycle", () => {
+  it("keeps one mock logical property per metric and upgrades its pinned version", async () => {
+    const networkId = `kn-${crypto.randomUUID()}`;
+    const binding = {
+      object_type_id: "order",
+      property_name: "order_count",
+      display_name: "订单数",
+      metric_ref: { metric_id: "metric-1", version: 1 },
+      execution: { mode: "realtime" as const },
+      no_data_policy: "zero" as const,
+      on_error: "unavailable" as const,
+      status: "published" as const,
+    };
+    await bindObjectMetricLogicPropertyV1(networkId, "metric-1", 1, binding);
+    await expect(
+      bindObjectMetricLogicPropertyV1(networkId, "metric-1", 2, {
+        ...binding,
+        property_name: "another_property",
+        metric_ref: { metric_id: "metric-1", version: 2 },
+      }),
+    ).rejects.toThrow("already bound");
+    await upgradeObjectMetricLogicPropertyV1(networkId, "metric-1", "order_count", 2);
+    expect(mockObjectTypeLogicProperties[networkId].order).toHaveLength(1);
+    expect(mockObjectTypeLogicProperties[networkId].order[0]).toMatchObject({
+      name: "order_count",
+      metricBinding: { metric_ref: { metric_id: "metric-1", version: 2 } },
+      dataSource: { id: "object_metric_v1:metric-1@2" },
+    });
+  });
   it("advertises the area and volume unit families in mock capabilities", async () => {
     const capabilities = await getObjectMetricCapabilitiesV1();
     expect(capabilities.quantity_kinds).toEqual(expect.arrayContaining(["area", "volume"]));
@@ -220,11 +253,28 @@ describe("object metric lifecycle", () => {
     expect(next?.definition.version).toBe(2);
     expect(next?.definition.lifecycle.status).toBe("draft");
     expect(next?.definition.description).toBe("每个订单的金额");
+    const resumed = await createNextObjectMetricDraftV1(networkId, draft.definition.id);
+    expect(resumed?.definition.version).toBe(2);
     const versions = await listObjectMetricVersionsV1(networkId, draft.definition.id);
     expect(versions.map((item) => item.definition.version)).toEqual([2, 1]);
     expect(
       versions.find((item) => item.definition.version === 1)?.definition.lifecycle.status,
     ).toBe("published");
+  });
+
+  it("can start a working draft from a deprecated release", async () => {
+    const networkId = `kn-${crypto.randomUUID()}`;
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.name = "订单金额";
+    definition.description = "每个订单的金额";
+    const draft = await createObjectMetricDraftV1(networkId, definition);
+    await validateObjectMetricVersionV1(networkId, draft.definition.id, draft.definition.version);
+    await publishObjectMetricV1(networkId, draft.definition.id, draft.definition.version);
+    await deprecateObjectMetricV1(networkId, draft.definition.id, draft.definition.version);
+
+    const next = await createNextObjectMetricDraftV1(networkId, draft.definition.id);
+    expect(next?.definition.version).toBe(2);
+    expect(next?.definition.lifecycle.status).toBe("draft");
   });
 
   it("deletes only draft versions and leaves published history readable", async () => {

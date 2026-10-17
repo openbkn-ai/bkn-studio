@@ -6,17 +6,20 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
+import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/relation-type";
 
 const mocks = vi.hoisted(() => ({
+  getMetric: vi.fn(),
   listMetrics: vi.fn(),
   listRelations: vi.fn(),
 }));
 
 vi.mock("@/modules/knowledge-network/services/object-metric.service", () => ({
+  getObjectMetricV1: mocks.getMetric,
   listObjectMetricsV1: mocks.listMetrics,
 }));
 vi.mock("@/modules/knowledge-network/services/relation-type.service", () => ({
@@ -42,6 +45,9 @@ beforeAll(() => {
     value: () => new DOMRect(0, 0, 120, 32),
   });
 });
+beforeEach(() => {
+  mocks.getMetric.mockResolvedValue(undefined);
+});
 afterAll(() => {
   window.matchMedia = originalMatchMedia;
   Reflect.deleteProperty(SVGElement.prototype, "getBBox");
@@ -49,6 +55,7 @@ afterAll(() => {
 
 afterEach(() => {
   cleanup();
+  mocks.getMetric.mockReset();
   mocks.listMetrics.mockReset();
   mocks.listRelations.mockReset();
 });
@@ -99,7 +106,11 @@ function metric(id: string, relationId?: string): ObjectMetricRecordV1 {
   } as ObjectMetricRecordV1;
 }
 
-function renderGraph(onSelectObject = vi.fn(), onOpenMetric = vi.fn()) {
+function renderGraph(
+  onSelectObject = vi.fn(),
+  onOpenMetric = vi.fn(),
+  actionProps: Partial<Parameters<typeof ObjectMetricGraphCanvas>[0]> = {},
+) {
   return render(
     <ObjectMetricGraphCanvas
       networkId="network-1"
@@ -108,11 +119,225 @@ function renderGraph(onSelectObject = vi.fn(), onOpenMetric = vi.fn()) {
       refreshVersion={0}
       selectedObjectTypeId="order"
       selectedObjectTypeName="销售订单"
+      {...actionProps}
     />,
   );
 }
 
+function neighborCountRequestIds() {
+  return mocks.listMetrics.mock.calls.flatMap(([, rawQuery]) => {
+    const query = rawQuery as { ownerObjectTypeId?: string };
+    return query.ownerObjectTypeId?.startsWith("neighbor-") ? [query.ownerObjectTypeId] : [];
+  });
+}
+
 describe("ObjectMetricGraphCanvas", () => {
+  it("shows each neighboring object's own metric count without changing the relation count", async () => {
+    mocks.listRelations.mockResolvedValue({ entries: [relation(1)], totalCount: 1 });
+    mocks.listMetrics.mockImplementation(
+      (_networkId: string, query: { ownerObjectTypeId: string }) =>
+        Promise.resolve(
+          query.ownerObjectTypeId === "neighbor-1"
+            ? { entries: [], total_count: 7 }
+            : { entries: [metric("uses-relation", "relation-1")], total_count: 1 },
+        ),
+    );
+
+    const { container } = renderGraph();
+    const neighbor = await screen.findByRole("button", { name: "关联对象 1" });
+    await waitFor(() => {
+      expect(neighbor.querySelector("[class*=relatedCount]")).toHaveTextContent("7");
+    });
+    expect(neighbor.getAttribute("aria-description")).toContain("7");
+    expect(container.querySelector("[class*=relationCountAction] text")).toHaveTextContent("1");
+    expect(container.querySelector("[class*=ownerCount]")).toHaveTextContent("1");
+    expect(mocks.listMetrics).toHaveBeenCalledWith(
+      "network-1",
+      { limit: 1, metricType: undefined, offset: 0, ownerObjectTypeId: "neighbor-1" },
+      { skipErrorToast: true },
+    );
+  });
+
+  it("applies the metric-type filter to neighbor counts and hides stale counts while reloading", async () => {
+    let resolveDerived!: (value: { entries: []; total_count: number }) => void;
+    mocks.listRelations.mockResolvedValue({ entries: [relation(1)], totalCount: 1 });
+    mocks.listMetrics.mockImplementation(
+      (_networkId: string, query: { metricType?: string; ownerObjectTypeId: string }) => {
+        if (query.ownerObjectTypeId === "neighbor-1") {
+          return query.metricType === "derived"
+            ? new Promise((resolve) => {
+                resolveDerived = resolve;
+              })
+            : Promise.resolve({ entries: [], total_count: 3 });
+        }
+        return Promise.resolve({ entries: [], total_count: 0 });
+      },
+    );
+    const props = {
+      networkId: "network-1",
+      onOpenMetric: vi.fn(),
+      onSelectObject: vi.fn(),
+      refreshVersion: 0,
+      selectedObjectTypeId: "order",
+      selectedObjectTypeName: "销售订单",
+    };
+    const { rerender } = render(<ObjectMetricGraphCanvas {...props} metricType="atomic" />);
+    const neighbor = await screen.findByRole("button", { name: "关联对象 1" });
+    await waitFor(() =>
+      expect(neighbor.querySelector("[class*=relatedCount]")).toHaveTextContent("3"),
+    );
+
+    rerender(<ObjectMetricGraphCanvas {...props} metricType="derived" />);
+    expect(neighbor.querySelector("[class*=relatedCount]")).toHaveTextContent("…");
+    await waitFor(() => expect(resolveDerived).toBeTypeOf("function"));
+    resolveDerived({ entries: [], total_count: 0 });
+    await waitFor(() =>
+      expect(neighbor.querySelector("[class*=relatedCount]")).toHaveTextContent("0"),
+    );
+    expect(mocks.listMetrics).toHaveBeenCalledWith(
+      "network-1",
+      { limit: 1, metricType: "derived", offset: 0, ownerObjectTypeId: "neighbor-1" },
+      { skipErrorToast: true },
+    );
+  });
+
+  it("deduplicates a neighbor shared by two relations and marks a failed count as unavailable", async () => {
+    const second = relation(2);
+    second.targetObjectTypeId = "neighbor-1";
+    second.targetObjectTypeName = "关联对象 1";
+    mocks.listRelations.mockResolvedValue({ entries: [relation(1), second], totalCount: 2 });
+    mocks.listMetrics.mockImplementation(
+      (_networkId: string, query: { ownerObjectTypeId: string }) =>
+        query.ownerObjectTypeId === "neighbor-1"
+          ? Promise.reject(new Error("offline"))
+          : Promise.resolve({ entries: [], total_count: 0 }),
+    );
+
+    renderGraph();
+    const neighbor = await screen.findByRole("button", { name: "关联对象 1" });
+    await waitFor(() =>
+      expect(neighbor.querySelector("[class*=relatedCount]")).toHaveTextContent("—"),
+    );
+    expect(neighbor.getAttribute("aria-description")).toMatch(/加载失败|Could not load/);
+    expect(neighborCountRequestIds()).toEqual(["neighbor-1"]);
+  });
+
+  it("queries only visible neighbors and reuses their counts when returning to a relation page", async () => {
+    const relations = Array.from({ length: 8 }, (_, index) => relation(index + 1));
+    mocks.listRelations.mockImplementation(
+      (_networkId: string, query: { limit: number; offset: number }) =>
+        Promise.resolve({
+          entries: relations.slice(query.offset, query.offset + query.limit),
+          totalCount: relations.length,
+        }),
+    );
+    mocks.listMetrics.mockImplementation(
+      (_networkId: string, query: { ownerObjectTypeId: string }) =>
+        Promise.resolve({
+          entries: [],
+          total_count: Number(query.ownerObjectTypeId.split("-")[1]) || 0,
+        }),
+    );
+
+    const { container } = renderGraph();
+    await waitFor(() => expect(neighborCountRequestIds()).toHaveLength(6));
+    expect(neighborCountRequestIds().sort()).toEqual(
+      Array.from({ length: 6 }, (_, index) => `neighbor-${index + 1}`),
+    );
+
+    fireEvent.click(container.querySelector(".ant-pagination-next button")!);
+    await waitFor(() => expect(neighborCountRequestIds()).toHaveLength(8));
+    expect(
+      screen.getByRole("button", { name: "关联对象 7" }).getAttribute("aria-description"),
+    ).toContain("7");
+
+    fireEvent.click(container.querySelector(".ant-pagination-prev button")!);
+    await screen.findByRole("button", { name: "关联对象 1" });
+    expect(neighborCountRequestIds()).toHaveLength(8);
+  });
+
+  it("limits simultaneous neighbor-count requests to three", async () => {
+    mocks.listRelations.mockResolvedValue({
+      entries: Array.from({ length: 6 }, (_, index) => relation(index + 1)),
+      totalCount: 6,
+    });
+    mocks.listMetrics.mockImplementation(
+      (_networkId: string, query: { ownerObjectTypeId: string }) =>
+        query.ownerObjectTypeId === "order"
+          ? Promise.resolve({ entries: [], total_count: 0 })
+          : new Promise(() => {}),
+    );
+
+    renderGraph();
+
+    await waitFor(() => expect(neighborCountRequestIds()).toHaveLength(3));
+  });
+
+  it("fills the graph canvas with its centered loading state", () => {
+    mocks.listRelations.mockReturnValue(new Promise(() => {}));
+    mocks.listMetrics.mockReturnValue(new Promise(() => {}));
+
+    const { container } = renderGraph();
+    const loading = screen.getByRole("status");
+
+    expect(loading.className).toContain("loading");
+    expect(loading.querySelector(".ant-spin")).toBeInTheDocument();
+    expect(loading.parentElement).toBe(container.querySelector("[class*=canvasContent]"));
+  });
+
+  it("keeps shared upstream metrics and their dependents in the same default sector", async () => {
+    const atomics = ["a", "b", "c", "d", "e", "f"].map((id) => metric(id));
+    const children = ["child-1", "child-2"].map((id) => {
+      const child = metric(id, "relation-1");
+      if (child.definition.specification.kind !== "derived") throw new Error("derived fixture");
+      child.definition.specification.base_metric = { metric_id: "a", version: 1 };
+      return child;
+    });
+    const shared = metric("shared");
+    shared.definition.metric_type = "composite";
+    shared.definition.specification = {
+      kind: "composite",
+      dependencies: ["a", "d"].map((id) => ({
+        alias: id,
+        metric_ref: { metric_id: id, version: 1 },
+        object_alignment: { mode: "same_object", deduplication: "none" },
+        evaluation_context: { window: "inherited", filter_context: { mode: "inherit" } },
+      })),
+      expression: { node_type: "dependency", dependency_alias: "a" },
+      alignment: {
+        result_owner_object_type_id: "order",
+        group_by_dimensions: [],
+        grain_policy: "same_grain",
+        result_set_policy: "intersection",
+        time_alignment: "same_time_window",
+      },
+      zero_division_policy: "unavailable",
+      null_policy: "propagate",
+    };
+    const records = [...atomics, ...children, shared];
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: records, total_count: records.length });
+    renderGraph();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 9 个|Expand metrics owned by 销售订单 \(9 total\)/,
+      }),
+    );
+    const angle = (id: string) => {
+      const node = screen.getByRole("button", { name: new RegExp(`指标 ${id}[，,]`) });
+      const match = node?.getAttribute("transform")?.match(/translate\(([-\d.]+) ([-\d.]+)\)/);
+      if (!match) throw new Error(`missing position for ${id}`);
+      return Math.atan2(Number(match[2]) - 280, Number(match[1]) - 500);
+    };
+    const distance = (left: number, right: number) =>
+      Math.abs(Math.atan2(Math.sin(left - right), Math.cos(left - right)));
+    expect(distance(angle("a"), angle("d"))).toBeLessThan(1.3);
+    expect(distance(angle("child-1"), angle("child-2"))).toBeLessThan(0.75);
+    expect(distance(angle("child-1"), angle("a"))).toBeLessThan(0.2);
+    expect(distance(angle("shared"), (angle("a") + angle("d")) / 2)).toBeLessThan(0.5);
+  });
+
   it("captures the metric count itself so a pointer click can expand it", async () => {
     mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
     mocks.listMetrics.mockResolvedValue({ entries: [metric("local")], total_count: 1 });
@@ -309,19 +534,21 @@ describe("ObjectMetricGraphCanvas", () => {
     const composite = metric("composite");
     base.definition.version = 2;
     derived.definition.version = 2;
+    if (derived.definition.specification.kind !== "derived") throw new Error("derived fixture");
+    derived.definition.specification.base_metric = { metric_id: "base", version: 2 };
     composite.definition.metric_type = "composite";
     composite.definition.specification = {
       kind: "composite",
       dependencies: [
         {
           alias: "base",
-          metric_ref: { metric_id: "base", version: 1 },
+          metric_ref: { metric_id: "base", version: 2 },
           object_alignment: { mode: "same_object", deduplication: "none" },
           evaluation_context: { window: "inherited", filter_context: { mode: "inherit" } },
         },
         {
           alias: "derived",
-          metric_ref: { metric_id: "derived", version: 1 },
+          metric_ref: { metric_id: "derived", version: 2 },
           object_alignment: { mode: "same_object", deduplication: "none" },
           evaluation_context: { window: "inherited", filter_context: { mode: "inherit" } },
         },
@@ -379,7 +606,8 @@ describe("ObjectMetricGraphCanvas", () => {
     );
     expect(container.querySelectorAll('path[class*="metricDependencyEdgeDimmed"]')).toHaveLength(1);
     expect(container.querySelectorAll('g[class*="metricNodeDimmed"]')).toHaveLength(0);
-    expect(screen.getByText("指标 base、指标 derived")).not.toBeNull();
+    expect(screen.getByText("指标 base · v2、指标 derived · v2")).not.toBeNull();
+    expect(screen.queryByText(/@v1/)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /返回对象关系|Back to object relations/ }));
     fireEvent.click(
@@ -394,6 +622,65 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(1);
     expect(container.querySelectorAll('line[class*="metricSpoke"]')).toHaveLength(1);
     expect(document.querySelector(".ant-drawer-open")).toBeNull();
+  });
+
+  it("loads an exact dependency version for its name without drawing an edge to a newer version", async () => {
+    const latestBase = metric("base");
+    latestBase.definition.version = 2;
+    const historicalBase = metric("base");
+    historicalBase.definition.name = "旧版订单数";
+    const derived = metric("derived", "relation-1");
+    if (derived.definition.specification.kind !== "derived") throw new Error("derived fixture");
+    derived.definition.specification.base_metric = { metric_id: "base", version: 1 };
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [latestBase, derived], total_count: 2 });
+    mocks.getMetric.mockResolvedValue(historicalBase);
+    const { container } = renderGraph();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 2 个|Expand metrics owned by 销售订单 \(2 total\)/,
+      }),
+    );
+    expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(0);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /衍生指标：指标 derived|Derived metrics: 指标 derived/,
+      }),
+    );
+
+    expect(await screen.findByText("旧版订单数 · v1")).toBeInTheDocument();
+    expect(mocks.getMetric).toHaveBeenCalledWith("network-1", "base", 1, {
+      skipErrorToast: true,
+    });
+    expect(screen.queryByText("base · v1")).not.toBeInTheDocument();
+    expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(0);
+  });
+
+  it("shows an unavailable dependency without exposing its ID when the fetched version is wrong", async () => {
+    const latestBase = metric("base");
+    latestBase.definition.version = 2;
+    const derived = metric("derived", "relation-1");
+    if (derived.definition.specification.kind !== "derived") throw new Error("derived fixture");
+    derived.definition.specification.base_metric = { metric_id: "base", version: 1 };
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [latestBase, derived], total_count: 2 });
+    mocks.getMetric.mockResolvedValue(latestBase);
+    renderGraph();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 2 个|Expand metrics owned by 销售订单 \(2 total\)/,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /衍生指标：指标 derived|Derived metrics: 指标 derived/,
+      }),
+    );
+
+    expect(await screen.findByText("依赖指标 1 · v1 不可访问")).toBeInTheDocument();
+    expect(screen.queryByText("base · v1")).not.toBeInTheDocument();
   });
 
   it("progressively expands metric nodes from an in-graph aggregate", async () => {
@@ -548,9 +835,10 @@ describe("ObjectMetricGraphCanvas", () => {
   });
 
   it("expands relation metrics on the canvas and opens only metric details in a drawer", async () => {
+    const related = metric("related", "relation-1");
     mocks.listRelations.mockResolvedValue({ entries: [relation(1)], totalCount: 1 });
     mocks.listMetrics.mockResolvedValue({
-      entries: [metric("related", "relation-1"), metric("local")],
+      entries: [related, metric("local")],
       total_count: 2,
     });
     const openMetric = vi.fn();
@@ -570,13 +858,224 @@ describe("ObjectMetricGraphCanvas", () => {
         name: /衍生指标：指标 related|Derived metrics: 指标 related/,
       }),
     );
-    expect(screen.getByText("Description for related")).not.toBeNull();
+    const businessDefinition = screen.getByText("Description for related");
+    expect(businessDefinition.closest(".ant-descriptions")).toBeNull();
+    expect(businessDefinition.parentElement).toHaveTextContent("业务定义");
     expect(
       screen.getByText("关系 1", { selector: ".ant-descriptions-item-content" }),
     ).not.toBeNull();
     expect(openMetric).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: /查看指标详情|View metric details/ }));
-    expect(openMetric).toHaveBeenCalledWith("related");
+    fireEvent.click(screen.getByRole("button", { name: /^(详情|Details)$/ }));
+    expect(openMetric).toHaveBeenCalledWith(related);
+  });
+
+  it("offers draft actions for the selected graph version without switching to the list", async () => {
+    const draft = metric("working");
+    draft.definition.version = 2;
+    draft.definition.lifecycle.status = "draft";
+    draft.definition.result_semantics = {
+      statistical_grain: { group_by_dimensions: [] },
+      value: {
+        physical_type: "int64",
+        semantic_type: "count",
+        unit: {
+          system: "registered",
+          quantity_kind: "count",
+          code: "times",
+          display_symbol: "次",
+          scale_factor: 1,
+        },
+      },
+      no_data_policy: "zero",
+      partial_data_policy: "reject",
+    };
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
+    const onOpenMetric = vi.fn();
+    const onTrialMetric = vi.fn();
+    const onEditMetric = vi.fn();
+    const onDeleteDraft = vi.fn();
+    renderGraph(vi.fn(), onOpenMetric, {
+      canModify: true,
+      onDeleteDraft,
+      onEditMetric,
+      onTrialMetric,
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /原子指标：指标 working|Atomic metric: 指标 working/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(screen.getByRole("button", { name: "编辑" }));
+    const drawer = screen.getByRole("dialog", { name: "指标详情" });
+    const actions = drawer.querySelector<HTMLElement>("[class*=drawerActions]");
+    const descriptions = drawer.querySelector<HTMLElement>(".ant-descriptions");
+    expect(actions).not.toBeNull();
+    expect(descriptions).not.toBeNull();
+    expect(
+      actions!.compareDocumentPosition(descriptions!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(drawer).toHaveTextContent("版本v2");
+    expect(drawer).toHaveTextContent("计算范围");
+    expect(drawer).toHaveTextContent("计算口径计数");
+    expect(drawer).toHaveTextContent("值类型整数 / 计数");
+    expect(drawer).toHaveTextContent("单位次");
+    expect(drawer).not.toHaveTextContent("逻辑属性");
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+    fireEvent.click(screen.getByRole("button", { name: "更多操作" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "删除草稿" }));
+
+    expect(onTrialMetric).toHaveBeenCalledWith(draft);
+    expect(onEditMetric).toHaveBeenCalledWith(draft);
+    expect(onOpenMetric).toHaveBeenCalledWith(draft);
+    expect(onDeleteDraft).toHaveBeenCalledWith(draft);
+  });
+
+  it("keeps mutating graph actions hidden without modify permission", async () => {
+    const draft = metric("working");
+    draft.definition.lifecycle.status = "draft";
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
+    renderGraph(vi.fn(), vi.fn(), {
+      onDeleteDraft: vi.fn(),
+      onEditMetric: vi.fn(),
+      onTrialMetric: vi.fn(),
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /原子指标：指标 working|Atomic metric: 指标 working/ }),
+    );
+    expect(screen.getByRole("button", { name: "试算" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
+  });
+
+  it("disables deprecation when the selected published version backs a logic property", async () => {
+    const published = metric("bound");
+    published.definition.calculation_scope = "object_instance";
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [published], total_count: 1 });
+    const onDeprecate = vi.fn();
+    renderGraph(vi.fn(), vi.fn(), {
+      canModify: true,
+      onDeprecate,
+      ownerObjectType: {
+        logicProperties: [
+          {
+            displayName: "支付金额",
+            name: "paid_amount",
+            metricBinding: { metric_ref: { metric_id: "bound", version: 1 } },
+          },
+        ],
+      } as ObjectTypeDetail,
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /原子指标：指标 bound|Atomic metric: 指标 bound/ }),
+    );
+    expect(screen.getByText("支付金额 · v1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "更多操作" }));
+    expect(await screen.findByRole("menuitem", { name: /废弃.*请先升级/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(onDeprecate).not.toHaveBeenCalled();
+  });
+
+  it("distinguishes a logical property bound to another metric version", async () => {
+    const draft = metric("bound");
+    draft.definition.version = 2;
+    draft.definition.calculation_scope = "object_instance";
+    draft.definition.lifecycle.status = "draft";
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
+    renderGraph(vi.fn(), vi.fn(), {
+      ownerObjectType: {
+        logicProperties: [
+          {
+            displayName: "支付金额",
+            name: "paid_amount",
+            metricBinding: { metric_ref: { metric_id: "bound", version: 1 } },
+          },
+        ],
+      } as ObjectTypeDetail,
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /原子指标：指标 bound|Atomic metric: 指标 bound/ }),
+    );
+    expect(screen.getByRole("dialog", { name: "指标详情" })).toHaveTextContent(
+      "当前版本未绑定（支付金额 绑定 v1）",
+    );
+  });
+
+  it("keeps the focused metric open when graph data refreshes", async () => {
+    const original = metric("working");
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [original], total_count: 1 });
+    const props = {
+      networkId: "network-1",
+      onOpenMetric: vi.fn(),
+      onSelectObject: vi.fn(),
+      selectedObjectTypeId: "order",
+      selectedObjectTypeName: "销售订单",
+    };
+    const { rerender } = render(<ObjectMetricGraphCanvas {...props} refreshVersion={0} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /原子指标：指标 working|Atomic metric: 指标 working/ }),
+    );
+    expect(screen.getByRole("dialog", { name: "指标详情" })).toBeInTheDocument();
+
+    rerender(<ObjectMetricGraphCanvas {...props} refreshVersion={1} />);
+    await waitFor(() => expect(mocks.listMetrics).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("dialog", { name: "指标详情" })).toBeInTheDocument();
+    expect(screen.getByText("指标 working", { selector: "strong" })).toBeInTheDocument();
+  });
+
+  it("restores the selected graph metric after returning from its detail page", async () => {
+    const first = metric("first");
+    const selected = metric("selected");
+    selected.definition.version = 2;
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [first, selected], total_count: 2 });
+
+    renderGraph(vi.fn(), vi.fn(), {
+      initialFocusedMetric: { id: "selected", objectTypeId: "order", version: 2 },
+    });
+
+    expect(await screen.findByRole("dialog", { name: "指标详情" })).toBeInTheDocument();
+    expect(screen.getByText("指标 selected", { selector: "strong" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /原子指标：指标 selected|Atomic metric: 指标 selected/,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("leaves absent relation and dependency fields blank in metric details", async () => {
@@ -595,15 +1094,9 @@ describe("ObjectMetricGraphCanvas", () => {
       }),
     );
 
-    const relationRow = screen
-      .getByText(/使用的关系|Relations used/)
-      .closest(".ant-descriptions-item");
-    const dependencyRow = screen
-      .getByText(/直接依赖|Direct dependencies/)
-      .closest(".ant-descriptions-item");
-    expect(relationRow?.querySelector(".ant-descriptions-item-content")).toBeNull();
-    expect(dependencyRow?.querySelector(".ant-descriptions-item-content")).toBeNull();
-    expect(screen.getByRole("button", { name: /查看指标详情|View metric details/ })).not.toBeNull();
+    expect(screen.queryByText(/使用的关系|Relations used/)).toBeNull();
+    expect(screen.queryByText(/直接依赖|Direct dependencies/)).toBeNull();
+    expect(screen.getByRole("button", { name: /^(详情|Details)$/ })).not.toBeNull();
   });
 
   it("does not expose relation IDs from another graph page in metric details", async () => {
@@ -632,10 +1125,7 @@ describe("ObjectMetricGraphCanvas", () => {
       }),
     );
 
-    const relationRow = screen
-      .getByText(/使用的关系|Relations used/)
-      .closest(".ant-descriptions-item");
-    expect(relationRow?.querySelector(".ant-descriptions-item-content")).toBeNull();
+    expect(screen.queryByText(/使用的关系|Relations used/)).toBeNull();
     expect(screen.queryByText("relation-7")).toBeNull();
   });
 
@@ -674,7 +1164,13 @@ describe("ObjectMetricGraphCanvas", () => {
     );
     const { container } = renderGraph();
 
-    await waitFor(() => expect(mocks.listMetrics).toHaveBeenCalledTimes(4));
+    await waitFor(() =>
+      expect(mocks.listMetrics).toHaveBeenCalledWith(
+        "network-1",
+        { limit: 50, metricType: undefined, offset: 150, ownerObjectTypeId: "order" },
+        { skipErrorToast: true },
+      ),
+    );
     expect(container.querySelector('[class*="ownerNode"] text')?.textContent).toBe("205");
     expect(container.querySelector('[class*="relationCountAction"] text')?.textContent).toMatch(
       /200\+ 个指标|200\+ metrics/,

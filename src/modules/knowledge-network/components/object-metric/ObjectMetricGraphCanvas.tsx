@@ -8,33 +8,62 @@
 import {
   AimOutlined,
   ArrowLeftOutlined,
+  MoreOutlined,
   QuestionCircleOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
 } from "@ant-design/icons";
-import { Button, Descriptions, Drawer, Empty, Pagination, Spin, Tooltip } from "antd";
+import {
+  Button,
+  Descriptions,
+  Drawer,
+  Dropdown,
+  Empty,
+  Pagination,
+  Spin,
+  Tooltip,
+  Typography,
+} from "antd";
 import type { KeyboardEvent, PointerEvent } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
+import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
+import { objectMetricPropertyDisplayName } from "@/modules/knowledge-network/lib/object-metric-display";
+import {
+  objectMetricVersionKey,
+  resolveObjectMetricReferences,
+} from "@/modules/knowledge-network/lib/object-metric-lineage";
 import { rootRelationTypeIds } from "@/modules/knowledge-network/lib/object-metric-relation-usage";
-import { listObjectMetricsV1 } from "@/modules/knowledge-network/services/object-metric.service";
+import {
+  getObjectMetricV1,
+  listObjectMetricsV1,
+} from "@/modules/knowledge-network/services/object-metric.service";
 import { listKnowledgeNetworkRelationTypePage } from "@/modules/knowledge-network/services/relation-type.service";
 import type {
   ObjectMetricRecordV1,
   ObjectMetricTypeV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/relation-type";
+import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 
 import styles from "./ObjectMetricGraphCanvas.module.css";
 import metricTheme from "./ObjectMetricTheme.module.css";
 
 type Props = {
+  canModify?: boolean;
+  initialFocusedMetric?: { id: string; objectTypeId: string; version: number };
   metricType?: ObjectMetricTypeV1;
   networkId: string;
-  onOpenMetric: (metricId: string) => void;
+  onDeleteDraft?: (metric: ObjectMetricRecordV1) => void;
+  onDeprecate?: (metric: ObjectMetricRecordV1) => void;
+  onEditMetric?: (metric: ObjectMetricRecordV1) => void;
+  onOpenMetric: (metric: ObjectMetricRecordV1) => void;
   onSelectObject: (objectTypeId: string, objectTypeName: string) => void;
   onSwitchList?: () => void;
+  onTrialMetric?: (metric: ObjectMetricRecordV1) => void;
+  ownerObjectType?: ObjectTypeDetail | null;
   refreshVersion: number;
   selectedObjectTypeId: string;
   selectedObjectTypeName: string;
@@ -48,10 +77,21 @@ type GraphNeighbor = {
   name: string;
   relations: KnowledgeNetworkRelationTypeRecord[];
 };
+type NeighborMetricCounts = {
+  requestKey: string;
+  values: Record<string, number | null>;
+};
+type DrawerDependencyNames = {
+  requestKey: string;
+  names: Record<string, string | null>;
+};
 
 const RELATION_PAGE_SIZE = 6;
+const NEIGHBOR_COUNT_CONCURRENCY = 3;
 const METRIC_SCAN_PAGE_SIZE = 50;
 const MAX_GRAPH_METRICS = 200;
+// Dense rings use the regular spacing to keep layout work bounded during dragging.
+const MAX_CLUSTERED_METRICS_PER_RING = 36;
 const EXPANDED_METRIC_BATCH_SIZE = 6;
 const INITIAL_RING_VISIBLE_COUNTS: Record<ObjectMetricTypeV1, number> = {
   atomic: EXPANDED_METRIC_BATCH_SIZE,
@@ -98,6 +138,53 @@ const metricStatusKeys = {
   published: "md334724d6b2f",
   validated: "m1936eafc0c3c",
 } as const;
+
+type MetricTextKey = Parameters<typeof objectMetricText>[0];
+const aggregationKeys: Record<
+  Extract<
+    ObjectMetricRecordV1["definition"]["specification"],
+    { kind: "atomic" }
+  >["measure"]["aggregation"],
+  MetricTextKey
+> = {
+  avg: "mdb7538b96322",
+  count: "m3a6663a758c9",
+  count_distinct: "m1e96cd1f49bf",
+  count_rows: "m21179deb9a74",
+  identity: "m7ea9fbba115d",
+  max: "m1e7a22820768",
+  min: "mb2dcdcfabb6a",
+  sum: "m2819237ddb01",
+};
+const physicalTypeKeys: Record<
+  ObjectMetricRecordV1["definition"]["result_semantics"]["value"]["physical_type"],
+  MetricTextKey
+> = {
+  boolean: "mc08142c140ff",
+  date: "m70d0c1b33626",
+  datetime: "m6ac8b7718121",
+  decimal: "m75a7f49573c8",
+  duration: "m3e777ea8f1e8",
+  int64: "m67e2bb6ef67b",
+  string: "mdd81861811e5",
+};
+const semanticTypeKeys: Record<
+  ObjectMetricRecordV1["definition"]["result_semantics"]["value"]["semantic_type"],
+  MetricTextKey
+> = {
+  amount: "mffc624300de8",
+  boolean: "mc08142c140ff",
+  category: "m20fcf2eb775f",
+  count: "m21179deb9a74",
+  date: "m70d0c1b33626",
+  duration: "m04a95e0654d3",
+  measure: "m208d85fd9f3a",
+  percentage: "m03af18e36797",
+  rank: "m6570a98f2850",
+  ratio: "m8a457b6b1337",
+  score: "m96fff2e26c8d",
+  timestamp: "m2d1060334622",
+};
 
 function pageSummary(page: number, total: number) {
   return objectMetricText("graphPageSummary", {
@@ -197,6 +284,85 @@ function directMetricRefs(metric: ObjectMetricRecordV1) {
   return [];
 }
 
+function compareMetricNames(left: ObjectMetricRecordV1, right: ObjectMetricRecordV1): number {
+  return (
+    left.definition.name.localeCompare(right.definition.name) ||
+    left.definition.id.localeCompare(right.definition.id)
+  );
+}
+
+function orderAtomicMetricsBySharedDownstream(
+  atomicMetrics: ObjectMetricRecordV1[],
+  visibleMetrics: ObjectMetricRecordV1[],
+  resolveMetric: (reference: {
+    metric_id: string;
+    version: number;
+  }) => ObjectMetricRecordV1 | undefined,
+): ObjectMetricRecordV1[] {
+  const sorted = [...atomicMetrics].sort(compareMetricNames);
+  if (sorted.length < 3 || sorted.length > MAX_CLUSTERED_METRICS_PER_RING) return sorted;
+
+  const atomicKeys = new Set(sorted.map(metricNodeKey));
+  const affinity = new Map<string, Map<string, number>>();
+  const addAffinity = (left: string, right: string, weight: number) => {
+    const leftScores = affinity.get(left) ?? new Map<string, number>();
+    const rightScores = affinity.get(right) ?? new Map<string, number>();
+    leftScores.set(right, (leftScores.get(right) ?? 0) + weight);
+    rightScores.set(left, (rightScores.get(left) ?? 0) + weight);
+    affinity.set(left, leftScores);
+    affinity.set(right, rightScores);
+  };
+  const atomicAncestors = (metric: ObjectMetricRecordV1, visited: Set<string>): Set<string> => {
+    const key = metricNodeKey(metric);
+    if (visited.has(key)) return new Set();
+    visited.add(key);
+    if (atomicKeys.has(key)) return new Set([key]);
+    const ancestors = new Set<string>();
+    directMetricRefs(metric).forEach((reference) => {
+      const dependency = resolveMetric(reference);
+      if (dependency) {
+        atomicAncestors(dependency, visited).forEach((ancestor) => ancestors.add(ancestor));
+      }
+    });
+    return ancestors;
+  };
+
+  visibleMetrics.forEach((metric) => {
+    if (metric.definition.metric_type === "atomic") return;
+    const ancestors = [...atomicAncestors(metric, new Set())];
+    const weight = 1 / Math.max(1, ancestors.length - 1);
+    ancestors.forEach((left, index) => {
+      ancestors.slice(index + 1).forEach((right) => addAffinity(left, right, weight));
+    });
+  });
+  if (!affinity.size) return sorted;
+
+  const remaining = [...sorted];
+  const totalAffinity = (metric: ObjectMetricRecordV1) =>
+    [...(affinity.get(metricNodeKey(metric))?.values() ?? [])].reduce(
+      (total, weight) => total + weight,
+      0,
+    );
+  remaining.sort(
+    (left, right) => totalAffinity(right) - totalAffinity(left) || compareMetricNames(left, right),
+  );
+  const ordered = [remaining.shift()!];
+  while (remaining.length) {
+    const previousKey = metricNodeKey(ordered[ordered.length - 1]);
+    remaining.sort((left, right) => {
+      const leftAffinity = affinity.get(previousKey)?.get(metricNodeKey(left)) ?? 0;
+      const rightAffinity = affinity.get(previousKey)?.get(metricNodeKey(right)) ?? 0;
+      return (
+        rightAffinity - leftAffinity ||
+        totalAffinity(right) - totalAffinity(left) ||
+        compareMetricNames(left, right)
+      );
+    });
+    ordered.push(remaining.shift()!);
+  }
+  return ordered;
+}
+
 function pointAngle(point: Point): number {
   return Math.atan2(point.y - CENTER.y, point.x - CENTER.x);
 }
@@ -213,6 +379,43 @@ function layerPoint(type: ObjectMetricTypeV1, angle: number): Point {
   };
 }
 
+function clusteredLayerAngle(
+  type: ObjectMetricTypeV1,
+  preferredAngle: number | undefined,
+  assignedAngles: number[],
+  slotCount: number,
+): number {
+  const candidateCount = Math.max(72, slotCount * 4);
+  const minimumGap = Math.min((2 * Math.PI) / slotCount, type === "derived" ? 0.42 : 0.35);
+  const candidates = Array.from(
+    { length: candidateCount },
+    (_, index) => metricLayerStartAngles[type] + (2 * Math.PI * index) / candidateCount,
+  );
+  const spaced = candidates.filter((candidate) =>
+    assignedAngles.every((assigned) => circularDistance(candidate, assigned) >= minimumGap - 0.01),
+  );
+  const choices = spaced.length ? spaced : candidates;
+  if (preferredAngle !== undefined) {
+    const radii = metricLayerRadii[type];
+    const targetAngle = Math.atan2(
+      Math.sin(preferredAngle) / radii.y,
+      Math.cos(preferredAngle) / radii.x,
+    );
+    return choices.reduce((best, candidate) =>
+      circularDistance(candidate, targetAngle) < circularDistance(best, targetAngle)
+        ? candidate
+        : best,
+    );
+  }
+  if (!assignedAngles.length) return choices[0];
+  return choices.reduce((best, candidate) =>
+    Math.min(...assignedAngles.map((angle) => circularDistance(candidate, angle))) >
+    Math.min(...assignedAngles.map((angle) => circularDistance(best, angle)))
+      ? candidate
+      : best,
+  );
+}
+
 function onButtonKeyDown(event: KeyboardEvent<SVGGElement>, action: () => void) {
   if (event.key === "Enter" || event.key === " ") {
     event.preventDefault();
@@ -221,11 +424,18 @@ function onButtonKeyDown(event: KeyboardEvent<SVGGElement>, action: () => void) 
 }
 
 export function ObjectMetricGraphCanvas({
+  canModify = false,
+  initialFocusedMetric,
   metricType,
   networkId,
+  onDeleteDraft,
+  onDeprecate,
+  onEditMetric,
   onOpenMetric,
   onSelectObject,
   onSwitchList,
+  onTrialMetric,
+  ownerObjectType,
   refreshVersion,
   selectedObjectTypeId,
   selectedObjectTypeName,
@@ -242,7 +452,18 @@ export function ObjectMetricGraphCanvas({
   const [metricLoading, setMetricLoading] = useState(false);
   const [metricError, setMetricError] = useState(false);
   const [metricResultKey, setMetricResultKey] = useState("");
+  const [neighborMetricCounts, setNeighborMetricCounts] = useState<NeighborMetricCounts>({
+    requestKey: "",
+    values: {},
+  });
+  const neighborCountCacheRef = useRef(new Map<string, number | null>());
+  const neighborCountRequestsRef = useRef(new Map<string, Promise<number | null>>());
   const [drawerMetric, setDrawerMetric] = useState<ObjectMetricRecordV1>();
+  const [drawerDependencyNames, setDrawerDependencyNames] = useState<DrawerDependencyNames>({
+    requestKey: "",
+    names: {},
+  });
+  const initialFocusRestoredRef = useRef(false);
   const [expandedGroup, setExpandedGroup] = useState<DetailGroup>();
   const [ringVisibleCounts, setRingVisibleCounts] = useState(INITIAL_RING_VISIBLE_COUNTS);
   const [view, setView] = useState<ViewBox>(INITIAL_VIEW);
@@ -281,6 +502,38 @@ export function ObjectMetricGraphCanvas({
   const metricReady = metricCurrent && !metricLoading;
 
   useEffect(() => {
+    if (initialFocusRestoredRef.current || !metricReady || !initialFocusedMetric) return;
+    initialFocusRestoredRef.current = true;
+    if (initialFocusedMetric.objectTypeId !== selectedObjectTypeId) return;
+    const focused = metrics.find(
+      (entry) =>
+        entry.definition.id === initialFocusedMetric.id &&
+        entry.definition.version === initialFocusedMetric.version,
+    );
+    if (!focused) return;
+    const sameType = metrics
+      .filter((entry) => entry.definition.metric_type === focused.definition.metric_type)
+      .sort(
+        (left, right) =>
+          left.definition.name.localeCompare(right.definition.name) ||
+          left.definition.id.localeCompare(right.definition.id),
+      );
+    setRingVisibleCounts((current) => ({
+      ...current,
+      [focused.definition.metric_type]: Math.max(
+        current[focused.definition.metric_type],
+        sameType.findIndex(
+          (entry) =>
+            entry.definition.id === focused.definition.id &&
+            entry.definition.version === focused.definition.version,
+        ) + 1,
+      ),
+    }));
+    setExpandedGroup({ kind: "owner" });
+    setDrawerMetric(focused);
+  }, [initialFocusedMetric, metricReady, metrics, selectedObjectTypeId]);
+
+  useEffect(() => {
     setRelationPage(1);
     setDrawerMetric(undefined);
     setExpandedGroup(undefined);
@@ -307,7 +560,7 @@ export function ObjectMetricGraphCanvas({
       Object.fromEntries(Object.entries(current).filter(([key]) => !isMetricFocusNodeKey(key))),
     );
     setView(relationViewRef.current);
-  }, [metricType, refreshVersion]);
+  }, [metricType]);
 
   useEffect(() => {
     if (!selectedObjectTypeId) return;
@@ -352,7 +605,6 @@ export function ObjectMetricGraphCanvas({
     let active = true;
     setMetricLoading(true);
     setMetricError(false);
-    setDrawerMetric(undefined);
 
     async function loadOwnerMetrics() {
       const loaded: ObjectMetricRecordV1[] = [];
@@ -375,12 +627,22 @@ export function ObjectMetricGraphCanvas({
           if (result.entries.length === 0) break;
         } while (loaded.length < total && loaded.length < MAX_GRAPH_METRICS);
         setMetrics(loaded);
+        setDrawerMetric((current) =>
+          current
+            ? loaded.find(
+                (entry) =>
+                  entry.definition.id === current.definition.id &&
+                  entry.definition.version === current.definition.version,
+              )
+            : undefined,
+        );
         setMetricTotal(total);
         setMetricComplete(loaded.length >= total);
         setMetricResultKey(metricRequestKey);
       } catch {
         if (active) {
           setMetrics([]);
+          setDrawerMetric(undefined);
           setMetricTotal(0);
           setMetricError(true);
           setMetricResultKey(metricRequestKey);
@@ -422,6 +684,88 @@ export function ObjectMetricGraphCanvas({
     }
     return [...groups.values()];
   }, [relations, selectedObjectTypeId]);
+  const neighborCountRequestKey = JSON.stringify([
+    networkId,
+    selectedObjectTypeId,
+    metricType,
+    refreshVersion,
+    relationPage,
+    relationCurrent ? neighbors.map((neighbor) => neighbor.id) : [],
+  ]);
+  const currentNeighborCounts: Record<string, number | null> =
+    neighborMetricCounts.requestKey === neighborCountRequestKey ? neighborMetricCounts.values : {};
+
+  useEffect(() => {
+    if (!relationCurrent || !selectedObjectTypeId || expandedGroup) return;
+    let active = true;
+    const cache = neighborCountCacheRef.current;
+    const requests = neighborCountRequestsRef.current;
+    const countKey = (objectTypeId: string) =>
+      JSON.stringify([networkId, metricType, refreshVersion, objectTypeId]);
+    const visibleNeighbors = neighbors.filter((neighbor) => neighbor.id !== selectedObjectTypeId);
+
+    setNeighborMetricCounts({
+      requestKey: neighborCountRequestKey,
+      values: Object.fromEntries(
+        visibleNeighbors.flatMap((neighbor) => {
+          const key = countKey(neighbor.id);
+          return cache.has(key) ? [[neighbor.id, cache.get(key) ?? null] as const] : [];
+        }),
+      ),
+    });
+
+    const missingNeighbors = visibleNeighbors.filter(
+      (neighbor) => !cache.has(countKey(neighbor.id)),
+    );
+    let nextIndex = 0;
+    const loadNext = async () => {
+      while (active && nextIndex < missingNeighbors.length) {
+        const neighbor = missingNeighbors[nextIndex++];
+        const key = countKey(neighbor.id);
+        let request = requests.get(key);
+        if (!request) {
+          request = listObjectMetricsV1(
+            networkId,
+            { limit: 1, metricType, offset: 0, ownerObjectTypeId: neighbor.id },
+            { skipErrorToast: true },
+          )
+            .then((result) => result.total_count)
+            .catch(() => null)
+            .then((count) => {
+              cache.set(key, count);
+              requests.delete(key);
+              return count;
+            });
+          requests.set(key, request);
+        }
+        const count = await request;
+        if (active) {
+          setNeighborMetricCounts((current) =>
+            current.requestKey === neighborCountRequestKey
+              ? { ...current, values: { ...current.values, [neighbor.id]: count } }
+              : current,
+          );
+        }
+      }
+    };
+    void Promise.all(
+      Array.from({ length: Math.min(NEIGHBOR_COUNT_CONCURRENCY, missingNeighbors.length) }, () =>
+        loadNext(),
+      ),
+    );
+    return () => {
+      active = false;
+    };
+  }, [
+    expandedGroup,
+    metricType,
+    neighborCountRequestKey,
+    neighbors,
+    networkId,
+    refreshVersion,
+    relationCurrent,
+    selectedObjectTypeId,
+  ]);
   const drawerRelationIds = drawerMetric ? rootRelationTypeIds(drawerMetric) : [];
   const relationshipOwnerPosition = nodePositions[selectedObjectTypeId] ?? CENTER;
   const ownerNodeKey = expandedGroup ? FOCUS_OWNER_NODE_KEY : selectedObjectTypeId;
@@ -475,18 +819,13 @@ export function ObjectMetricGraphCanvas({
     return groups;
   }, [expandedMetrics]);
   const loadedMetricsByRef = new Map(
-    metrics.map((metric) => [`${metric.definition.id}@${metric.definition.version}`, metric]),
+    metrics.map((metric) => [
+      objectMetricVersionKey(metric.definition.id, metric.definition.version),
+      metric,
+    ]),
   );
-  const loadedMetricsById = new Map<string, ObjectMetricRecordV1>();
-  metrics.forEach((metric) => {
-    const current = loadedMetricsById.get(metric.definition.id);
-    if (!current || current.definition.version < metric.definition.version) {
-      loadedMetricsById.set(metric.definition.id, metric);
-    }
-  });
   const resolveLoadedMetric = (reference: { metric_id: string; version: number }) =>
-    loadedMetricsByRef.get(`${reference.metric_id}@${reference.version}`) ??
-    loadedMetricsById.get(reference.metric_id);
+    loadedMetricsByRef.get(objectMetricVersionKey(reference.metric_id, reference.version));
   const visibleMetricKeys = new Set<string>();
   const revealMetricWithDependencies = (metric: ObjectMetricRecordV1): void => {
     const key = metricNodeKey(metric);
@@ -542,11 +881,14 @@ export function ObjectMetricGraphCanvas({
       );
       return Math.atan2(vector.y, vector.x);
     };
-    const ordered = [...group].sort(
-      (left, right) =>
-        left.definition.name.localeCompare(right.definition.name) ||
-        left.definition.id.localeCompare(right.definition.id),
-    );
+    const ordered =
+      type === "atomic"
+        ? orderAtomicMetricsBySharedDownstream(
+            group,
+            Object.values(visibleMetricsByType).flat(),
+            resolveLoadedMetric,
+          )
+        : [...group].sort(compareMetricNames);
     const slotCount = ordered.length + (hidden > 0 ? 1 : 0);
     const availableAngles = Array.from(
       { length: slotCount },
@@ -562,29 +904,45 @@ export function ObjectMetricGraphCanvas({
           left.angle - right.angle ||
           left.metric.definition.name.localeCompare(right.metric.definition.name),
       );
+    const clusterDependencies =
+      type !== "atomic" &&
+      metricsWithDependencies.length > 0 &&
+      slotCount <= MAX_CLUSTERED_METRICS_PER_RING;
+    const assignedAngles: number[] = [];
     const assignedMetricKeys = new Set<string>();
     metricsWithDependencies.forEach(({ angle, metric }) => {
-      let bestIndex = 0;
-      availableAngles.forEach((candidate, index) => {
-        if (
-          circularDistance(candidate, angle) < circularDistance(availableAngles[bestIndex], angle)
-        ) {
-          bestIndex = index;
-        }
-      });
-      const [assignedAngle] = availableAngles.splice(bestIndex, 1);
+      let assignedAngle: number;
+      if (clusterDependencies) {
+        assignedAngle = clusteredLayerAngle(type, angle, assignedAngles, slotCount);
+      } else {
+        let bestIndex = 0;
+        availableAngles.forEach((candidate, index) => {
+          if (
+            circularDistance(candidate, angle) < circularDistance(availableAngles[bestIndex], angle)
+          ) {
+            bestIndex = index;
+          }
+        });
+        [assignedAngle] = availableAngles.splice(bestIndex, 1);
+      }
+      assignedAngles.push(assignedAngle);
       automaticMetricPositions.set(metricNodeKey(metric), layerPoint(type, assignedAngle));
       assignedMetricKeys.add(metricNodeKey(metric));
     });
     ordered
       .filter((metric) => !assignedMetricKeys.has(metricNodeKey(metric)))
       .forEach((metric) => {
-        const assignedAngle = availableAngles.shift() ?? metricLayerStartAngles[type];
+        const assignedAngle = clusterDependencies
+          ? clusteredLayerAngle(type, undefined, assignedAngles, slotCount)
+          : (availableAngles.shift() ?? metricLayerStartAngles[type]);
+        assignedAngles.push(assignedAngle);
         automaticMetricPositions.set(metricNodeKey(metric), layerPoint(type, assignedAngle));
       });
     visibleMetrics.push(...ordered);
     if (hidden > 0) {
-      const angle = availableAngles.shift() ?? metricLayerStartAngles[type];
+      const angle = clusterDependencies
+        ? clusteredLayerAngle(type, undefined, assignedAngles, slotCount)
+        : (availableAngles.shift() ?? metricLayerStartAngles[type]);
       moreMetricPositions[type] = nodePositions[moreMetricNodeKey(type)] ?? layerPoint(type, angle);
     }
   });
@@ -596,18 +954,15 @@ export function ObjectMetricGraphCanvas({
   );
   const visibleMetricRefs = new Map(
     visibleMetrics.map((metric) => [
-      `${metric.definition.id}@${metric.definition.version}`,
+      objectMetricVersionKey(metric.definition.id, metric.definition.version),
       metric,
     ]),
   );
-  const visibleMetricsById = new Map(
-    visibleMetrics.map((metric) => [metric.definition.id, metric]),
-  );
   const visibleDependencyEdges = visibleMetrics.flatMap((targetMetric) =>
     directMetricRefs(targetMetric).flatMap((reference) => {
-      const sourceMetric =
-        visibleMetricRefs.get(`${reference.metric_id}@${reference.version}`) ??
-        visibleMetricsById.get(reference.metric_id);
+      const sourceMetric = visibleMetricRefs.get(
+        objectMetricVersionKey(reference.metric_id, reference.version),
+      );
       return sourceMetric ? [{ sourceMetric, targetMetric }] : [];
     }),
   );
@@ -624,15 +979,76 @@ export function ObjectMetricGraphCanvas({
       }
     });
   }
-  const drawerDependencies = drawerMetric ? directMetricRefs(drawerMetric) : [];
+  const drawerDependencies = useMemo(
+    () => (drawerMetric ? directMetricRefs(drawerMetric) : []),
+    [drawerMetric],
+  );
+  const drawerDependencyRequestKey = JSON.stringify([
+    networkId,
+    refreshVersion,
+    metricResultKey,
+    drawerMetric?.definition.id,
+    drawerMetric?.definition.version,
+    drawerDependencies.map((reference) =>
+      objectMetricVersionKey(reference.metric_id, reference.version),
+    ),
+  ]);
+  useEffect(() => {
+    const unresolved = drawerDependencies.filter(
+      (reference) =>
+        !metrics.some(
+          (metric) =>
+            metric.definition.id === reference.metric_id &&
+            metric.definition.version === reference.version,
+        ),
+    );
+    if (!unresolved.length) return;
+    let active = true;
+    void resolveObjectMetricReferences(unresolved, (id, version) =>
+      getObjectMetricV1(networkId, id, version, { skipErrorToast: true }),
+    ).then((entries) => {
+      if (!active) return;
+      setDrawerDependencyNames({
+        requestKey: drawerDependencyRequestKey,
+        names: Object.fromEntries(
+          entries.map(({ record, reference, key }) => [
+            key,
+            record?.definition.id === reference.metric_id &&
+            record.definition.version === reference.version
+              ? record.definition.name
+              : null,
+          ]),
+        ),
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, [drawerDependencies, drawerDependencyRequestKey, metrics, networkId]);
+  const drawerRelationNames = drawerRelationIds
+    .map((id) => relationNames.get(id))
+    .filter((name): name is string => Boolean(name));
+  const drawerBoundProperty = drawerMetric
+    ? findMetricLogicProperty(ownerObjectType, drawerMetric.definition.id)
+    : undefined;
+  const drawerAtomicSpecification =
+    drawerMetric?.definition.specification.kind === "atomic"
+      ? drawerMetric.definition.specification
+      : undefined;
+  const drawerAtomicExpression = drawerAtomicSpecification?.measure.expression;
+  const drawerAtomicSource =
+    drawerAtomicExpression?.node_type === "property"
+      ? objectMetricPropertyDisplayName(drawerAtomicExpression.property_ref, ownerObjectType)
+      : undefined;
+  const drawerValue = drawerMetric?.definition.result_semantics?.value;
+  const drawerActions = drawerMetric
+    ? objectMetricActions(drawerMetric, canModify, ownerObjectType)
+    : undefined;
   const loadedMetricNames = new Map(
     metrics.map((metric) => [
-      `${metric.definition.id}@${metric.definition.version}`,
-      metric.definition.name,
+      objectMetricVersionKey(metric.definition.id, metric.definition.version),
+      `${metric.definition.name} · v${metric.definition.version}`,
     ]),
-  );
-  const loadedMetricNamesById = new Map(
-    metrics.map((metric) => [metric.definition.id, metric.definition.name]),
   );
   const ownerDisplayCount = expandedGroup ? expandedMetrics.length : metricTotal;
   const focusContextName =
@@ -845,7 +1261,9 @@ export function ObjectMetricGraphCanvas({
       )}
       <div className={styles.canvasContent}>
         {relationLoading || !relationCurrent ? (
-          <Spin className={styles.loading} />
+          <div className={styles.loading} role="status">
+            <Spin />
+          </div>
         ) : relationError ? (
           <Empty description={objectMetricText("graphLoadError")} />
         ) : (
@@ -1093,9 +1511,32 @@ export function ObjectMetricGraphCanvas({
                 ? neighbors.map((neighbor, index) => {
                     const position =
                       nodePositions[neighbor.id] ?? relatedPosition(index, neighbors.length);
+                    const metricCount =
+                      neighbor.id === selectedObjectTypeId
+                        ? metricCurrent
+                          ? metricError
+                            ? null
+                            : metricTotal
+                          : undefined
+                        : currentNeighborCounts[neighbor.id];
+                    const countDisplay =
+                      metricCount === undefined
+                        ? "…"
+                        : metricCount === null
+                          ? "—"
+                          : metricCount > 999
+                            ? "999+"
+                            : String(metricCount);
+                    const countDescription =
+                      metricCount === undefined
+                        ? objectMetricText("graphRelatedObjectMetricLoading")
+                        : metricCount === null
+                          ? objectMetricText("graphRelatedObjectMetricError")
+                          : objectMetricText("graphRelatedObjectMetricCount", { p0: metricCount });
                     return (
                       <g
                         aria-label={neighbor.name}
+                        aria-description={countDescription}
                         className={styles.relatedNode}
                         data-graph-action="true"
                         key={neighbor.id}
@@ -1113,10 +1554,13 @@ export function ObjectMetricGraphCanvas({
                         transform={`translate(${position.x} ${position.y})`}
                       >
                         <circle r="18" />
+                        <text className={styles.relatedCount} dy="4" textAnchor="middle">
+                          {countDisplay}
+                        </text>
                         <text textAnchor="middle" y="38">
                           {truncate(neighbor.name, 12)}
                         </text>
-                        <title>{neighbor.name}</title>
+                        <title>{`${neighbor.name} · ${countDescription}`}</title>
                       </g>
                     );
                   })
@@ -1341,9 +1785,69 @@ export function ObjectMetricGraphCanvas({
         {drawerMetric ? (
           <div className={styles.drawerContent}>
             <strong className={styles.drawerMetricName}>{drawerMetric.definition.name}</strong>
+            <div className={styles.drawerActions}>
+              <Button
+                autoInsertSpace={false}
+                onClick={() => onOpenMetric(drawerMetric)}
+                type="primary"
+              >
+                {objectMetricText("m979a332955c8")}
+              </Button>
+              {onTrialMetric ? (
+                <Button autoInsertSpace={false} onClick={() => onTrialMetric(drawerMetric)}>
+                  {objectMetricText("m073728637a26")}
+                </Button>
+              ) : null}
+              {drawerActions?.canEdit && onEditMetric ? (
+                <Button autoInsertSpace={false} onClick={() => onEditMetric(drawerMetric)}>
+                  {objectMetricText("m9d0eedd99d2b")}
+                </Button>
+              ) : null}
+              {(drawerActions?.canDeleteDraft && onDeleteDraft) ||
+              (drawerActions?.canDeprecate && onDeprecate) ? (
+                <Dropdown
+                  trigger={["click"]}
+                  menu={{
+                    items: [
+                      ...(drawerActions.canDeleteDraft && onDeleteDraft
+                        ? [
+                            {
+                              danger: true,
+                              key: "delete",
+                              label: objectMetricText("m1dfe58237bbf"),
+                            },
+                          ]
+                        : []),
+                      ...(drawerActions.canDeprecate && onDeprecate
+                        ? [
+                            {
+                              danger: true,
+                              disabled: Boolean(drawerActions.deprecateReason),
+                              key: "deprecate",
+                              label: drawerActions.deprecateReason
+                                ? `${objectMetricText("mca0ff1e63793")} · ${drawerActions.deprecateReason}`
+                                : objectMetricText("mca0ff1e63793"),
+                            },
+                          ]
+                        : []),
+                    ],
+                    onClick: ({ key }) => {
+                      if (key === "delete") onDeleteDraft?.(drawerMetric);
+                      if (key === "deprecate") onDeprecate?.(drawerMetric);
+                    },
+                  }}
+                >
+                  <Button aria-label={objectMetricText("graphMoreActions")} icon={<MoreOutlined />}>
+                    {objectMetricText("graphMoreActions")}
+                  </Button>
+                </Dropdown>
+              ) : null}
+            </div>
             <Descriptions column={1} size="small">
               <Descriptions.Item label={objectMetricText("graphMetricCode")}>
-                {drawerMetric.definition.code}
+                <Typography.Text copyable={{ text: drawerMetric.definition.code }} type="secondary">
+                  {drawerMetric.definition.code}
+                </Typography.Text>
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("graphMetricVersion")}>
                 v{drawerMetric.definition.version}
@@ -1359,31 +1863,84 @@ export function ObjectMetricGraphCanvas({
               <Descriptions.Item label={objectMetricText("m26c439016066")}>
                 {selectedObjectTypeName}
               </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("graphUsedRelations")}>
-                {drawerRelationIds
-                  .map((id) => relationNames.get(id))
-                  .filter((name): name is string => Boolean(name))
-                  .join("、") || null}
+              <Descriptions.Item label={objectMetricText("mec7844e49915")}>
+                {objectMetricText(
+                  drawerMetric.definition.calculation_scope === "object_instance"
+                    ? "mabe9d02781fc"
+                    : "m9c51e86f9307",
+                )}
               </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("graphDirectDependencies")}>
-                {drawerDependencies.length
-                  ? drawerDependencies
-                      .map(
-                        (reference) =>
-                          loadedMetricNames.get(`${reference.metric_id}@${reference.version}`) ??
-                          loadedMetricNamesById.get(reference.metric_id) ??
-                          `${reference.metric_id}@v${reference.version}`,
-                      )
-                      .join("、")
-                  : null}
-              </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("m419eb90613fd")}>
-                {drawerMetric.definition.description || "—"}
-              </Descriptions.Item>
+              {drawerMetric.definition.calculation_scope === "object_instance" ? (
+                <Descriptions.Item label={objectMetricText("bindingStatusLabel")}>
+                  {ownerObjectType === undefined
+                    ? objectMetricText("bindingLoading")
+                    : ownerObjectType === null
+                      ? objectMetricText("bindingUnknown")
+                      : drawerBoundProperty?.metricBinding
+                        ? drawerBoundProperty.metricBinding.metric_ref.version ===
+                          drawerMetric.definition.version
+                          ? `${drawerBoundProperty.displayName || drawerBoundProperty.name} · v${drawerMetric.definition.version}`
+                          : objectMetricText("graphBindingOtherVersion", {
+                              p0: drawerBoundProperty.displayName || drawerBoundProperty.name,
+                              p1: drawerBoundProperty.metricBinding.metric_ref.version,
+                            })
+                        : objectMetricText("bindingUnbound")}
+                </Descriptions.Item>
+              ) : null}
+              {drawerAtomicSpecification ? (
+                <Descriptions.Item label={objectMetricText("graphCalculationSummary")}>
+                  {objectMetricText(aggregationKeys[drawerAtomicSpecification.measure.aggregation])}
+                  {drawerAtomicSource ? ` · ${drawerAtomicSource}` : null}
+                </Descriptions.Item>
+              ) : null}
+              {drawerValue ? (
+                <Descriptions.Item label={objectMetricText("me659c05e3760")}>
+                  {objectMetricText(physicalTypeKeys[drawerValue.physical_type])}
+                  {" / "}
+                  {objectMetricText(semanticTypeKeys[drawerValue.semantic_type])}
+                </Descriptions.Item>
+              ) : null}
+              {drawerValue?.unit ? (
+                <Descriptions.Item label={objectMetricText("m80b19d68b149")}>
+                  {drawerValue.unit.display_symbol?.trim() || drawerValue.unit.code}
+                </Descriptions.Item>
+              ) : null}
+              {drawerRelationNames.length ? (
+                <Descriptions.Item label={objectMetricText("graphUsedRelations")}>
+                  {drawerRelationNames.join("、")}
+                </Descriptions.Item>
+              ) : null}
+              {drawerDependencies.length ? (
+                <Descriptions.Item label={objectMetricText("graphDirectDependencies")}>
+                  {drawerDependencies
+                    .map((reference, index) => {
+                      const key = objectMetricVersionKey(reference.metric_id, reference.version);
+                      const loadedName = loadedMetricNames.get(key);
+                      if (loadedName) return loadedName;
+                      const resolvedName =
+                        drawerDependencyNames.requestKey === drawerDependencyRequestKey
+                          ? drawerDependencyNames.names[key]
+                          : undefined;
+                      if (resolvedName) return `${resolvedName} · v${reference.version}`;
+                      return objectMetricText(
+                        resolvedName === null
+                          ? "graphDependencyUnavailable"
+                          : "graphDependencyLoading",
+                        { p0: index + 1, p1: reference.version },
+                      );
+                    })
+                    .join("、")}
+                </Descriptions.Item>
+              ) : null}
             </Descriptions>
-            <Button block onClick={() => onOpenMetric(drawerMetric.definition.id)} type="primary">
-              {objectMetricText("graphOpenMetricDetail")}
-            </Button>
+            <div className={styles.drawerBusinessDefinition}>
+              <span className={styles.drawerBusinessDefinitionLabel}>
+                {objectMetricText("m419eb90613fd")}
+              </span>
+              <div className={styles.drawerBusinessDefinitionContent}>
+                {drawerMetric.definition.description || "—"}
+              </div>
+            </div>
           </div>
         ) : null}
       </Drawer>

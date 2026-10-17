@@ -101,10 +101,18 @@
   overflow: hidden;
 }
 
-.canvasContent > :global(.ant-empty),
-.loading {
+.canvasContent > :global(.ant-empty) {
   align-self: center;
   margin: auto;
+}
+
+.loading {
+  display: grid;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 390px;
+  place-items: center;
 }
 
 .graph {
@@ -287,6 +295,13 @@
   stroke-width: 4px;
   stroke-linejoin: round;
   pointer-events: auto;
+}
+
+.relatedNode .relatedCount {
+  fill: var(--color-text-inverse);
+  font-size: 12px;
+  font-weight: 700;
+  stroke: none;
 }
 
 .ownerNode circle {
@@ -508,6 +523,32 @@
 .drawerMetricName {
   overflow-wrap: anywhere;
   font-size: 17px;
+}
+
+.drawerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.drawerBusinessDefinition {
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.drawerBusinessDefinitionLabel {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.drawerBusinessDefinitionContent {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 @container (max-width: 620px) {

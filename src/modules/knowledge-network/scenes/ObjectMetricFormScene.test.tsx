@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => {
     createObjectMetricDraftV1: vi.fn(),
     getKnowledgeNetworkObjectTypeDetail: vi.fn(),
     getObjectMetricV1: vi.fn(),
+    locationState: { current: null as { knowledgeNetworkReturnTo?: string } | null },
     message: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
     navigate: vi.fn(),
     routeParams,
@@ -31,6 +32,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
   useNavigate: () => mocks.navigate,
+  useLocation: () => ({ state: mocks.locationState.current }),
   useParams: () => mocks.routeParams.current,
   useSearchParams: () => [new URLSearchParams(mocks.searchParams.current)],
 }));
@@ -92,6 +94,7 @@ beforeEach(() => {
   mocks.createObjectMetricDraftV1.mockResolvedValue(undefined);
   mocks.routeParams.current = { metricId: "metric-1", networkId: "network-1" };
   mocks.searchParams.current = "";
+  mocks.locationState.current = null;
 });
 
 describe("ObjectMetricFormScene object properties", () => {
@@ -106,10 +109,26 @@ describe("ObjectMetricFormScene object properties", () => {
     fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
     await waitFor(() => expect(mocks.message.error).toHaveBeenCalled());
     expect(mocks.createObjectMetricDraftV1).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "返回对象指标列表" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/metrics?objectTypeId=order",
+    );
   });
 });
 
 describe("ObjectMetricFormScene edit loading", () => {
+  it("returns to the originating object selection even when edit loading fails", async () => {
+    const returnTo =
+      "/knowledge-network/workspace/network-1/metrics?objectTypeId=customer&view=list";
+    mocks.locationState.current = { knowledgeNetworkReturnTo: returnTo };
+    mocks.getObjectMetricV1.mockRejectedValueOnce(new Error("request timeout"));
+
+    render(<ObjectMetricFormScene mode="edit" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "返回指标列表" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(returnTo);
+  });
+
   it.each([
     { error: { isAxiosError: true, response: { status: 403 } }, title: "无权查看该指标" },
     { error: { isAxiosError: true, response: { status: 404 } }, title: "指标不存在" },

@@ -7,7 +7,10 @@
 
 import { http } from "@/framework/request/http";
 import { mockObjectMetrics } from "@/modules/knowledge-network/services/mock/object-metrics";
-import { syncKnowledgeNetworkStatistics } from "@/modules/knowledge-network/services/mock/state";
+import {
+  mockObjectTypeLogicProperties,
+  syncKnowledgeNetworkStatistics,
+} from "@/modules/knowledge-network/services/mock/state";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
 import {
   inferObjectMetricOutputShapeV1,
@@ -23,6 +26,7 @@ import {
   type ObjectMetricValidationResultV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import type { BackendLogicProperty } from "@/modules/knowledge-network/services/mappers/backend-types";
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -210,7 +214,7 @@ export async function deleteObjectMetricDraftV1(
 export async function createNextObjectMetricDraftV1(networkId: string, metricId: string) {
   if (useMock) {
     const current = await getObjectMetricV1(networkId, metricId);
-    if (!current || current.definition.lifecycle.status !== "published") {
+    if (!current || !["published", "deprecated"].includes(current.definition.lifecycle.status)) {
       return current;
     }
     const record = clone(current);
@@ -556,27 +560,72 @@ export async function bindObjectMetricLogicPropertyV1(
   binding: MetricPropertyBindingV1,
 ) {
   if (useMock) {
-    return wait({
+    const properties = mockObjectTypeLogicProperties[networkId]?.[binding.object_type_id] ?? [];
+    const existing = properties.find(
+      (property) => property.metricBinding?.metric_ref.metric_id === metricId,
+    );
+    if (existing) {
+      if (
+        existing.name === binding.property_name &&
+        existing.metricBinding?.metric_ref.version === version
+      )
+        return wait(existing);
+      throw new Error("This metric is already bound to a logical property");
+    }
+    const property = {
       comment: binding.comment ?? "",
-      data_source: {
+      dataSource: {
         id: `object_metric_v1:${metricId}@${version}`,
         name: metricId,
-        type: "metric",
+        type: "metric" as const,
       },
-      display_name: binding.display_name,
+      displayName: binding.display_name,
       name: binding.property_name,
       type: "metric",
-    });
+      metricBinding: binding,
+    };
+    mockObjectTypeLogicProperties[networkId] = {
+      ...(mockObjectTypeLogicProperties[networkId] ?? {}),
+      [binding.object_type_id]: [...properties, property],
+    };
+    return wait(property);
   }
-  const response = await http.post<{
-    comment: string;
-    data_source: { id: string; name: string; type: "metric" };
-    display_name: string;
-    name: string;
-    type: "metric";
-  }>(
+  const response = await http.post<BackendLogicProperty>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/logic-properties`,
     binding,
+    { params: { version } },
+  );
+  return response.data;
+}
+
+export async function upgradeObjectMetricLogicPropertyV1(
+  networkId: string,
+  metricId: string,
+  propertyName: string,
+  version: number,
+) {
+  if (useMock) {
+    const property = Object.values(mockObjectTypeLogicProperties[networkId] ?? {})
+      .flat()
+      .find(
+        (candidate) =>
+          candidate.name === propertyName &&
+          candidate.metricBinding?.metric_ref.metric_id === metricId,
+      );
+    if (!property || !property.metricBinding || !property.dataSource)
+      throw new Error("Metric logical-property binding not found");
+    if (version < property.metricBinding.metric_ref.version)
+      throw new Error("Binding version cannot be downgraded");
+    property.metricBinding = {
+      ...property.metricBinding,
+      metric_ref: { metric_id: metricId, version },
+    };
+    property.dataSource.id = `object_metric_v1:${metricId}@${version}`;
+    return wait({ name: propertyName, metric_binding: property.metricBinding });
+  }
+  const response = await http.put<BackendLogicProperty>(
+    `/bkn-backend/v1/knowledge-networks/${encodeURIComponent(networkId)}/object-metrics/${encodeURIComponent(metricId)}/logic-properties/${encodeURIComponent(propertyName)}/metric-ref`,
+    undefined,
     { params: { version } },
   );
   return response.data;
