@@ -6,8 +6,8 @@
  */
 
 import type { EChartsOption } from "echarts";
-import { Empty, Segmented, Space, Tag, Tooltip } from "antd";
-import { useMemo, useState } from "react";
+import { Empty, Segmented, Tag } from "antd";
+import { useEffect, useMemo, useState } from "react";
 
 import { useResolvedTheme } from "@/app/theme/theme-context";
 import { ChartLine } from "@/modules/model-resources/components/statistics/ChartLine";
@@ -138,14 +138,19 @@ function dimensionValueLabel(value: unknown): string {
   return JSON.stringify(value) ?? "—";
 }
 
-function categoryLabel(entry: ObjectMetricDataEntryV1): string {
+function categoryLabel(
+  entry: ObjectMetricDataEntryV1,
+  propertyLabels: Record<string, string>,
+): string {
   const dimensions = dimensionEntries(entry);
   if (dimensions.length === 1) return String(dimensions[0]?.[1]);
   if (dimensions.length)
-    return dimensions.map(([key, value]) => `${key}: ${String(value)}`).join(" · ");
+    return dimensions
+      .map(([key, value]) => `${propertyLabels[key] || key}: ${String(value)}`)
+      .join(" · ");
   if (entry.instance_identity)
     return Object.entries(entry.instance_identity)
-      .map(([key, value]) => `${key}: ${String(value)}`)
+      .map(([key, value]) => `${propertyLabels[key] || key}: ${String(value)}`)
       .join(" · ");
   return objectMetricText("mbd0a40247497");
 }
@@ -161,8 +166,11 @@ function hasTime(entries: NumericEntry[]) {
   return entries.some((entry) => entry.time !== undefined);
 }
 
-function buildCategoryOption(entries: NumericEntry[]): EChartsOption {
-  const categories = entries.map(categoryLabel);
+function buildCategoryOption(
+  entries: NumericEntry[],
+  propertyLabels: Record<string, string>,
+): EChartsOption {
+  const categories = entries.map((entry) => categoryLabel(entry, propertyLabels));
   return {
     color: palette,
     grid: { containLabel: true, left: 14, right: 20, bottom: 44, top: 22 },
@@ -184,7 +192,10 @@ function buildCategoryOption(entries: NumericEntry[]): EChartsOption {
   };
 }
 
-function buildStackedBarOption(entries: NumericEntry[]): EChartsOption | undefined {
+function buildStackedBarOption(
+  entries: NumericEntry[],
+  propertyLabels: Record<string, string>,
+): EChartsOption | undefined {
   if (hasTime(entries)) {
     const sorted = [...entries].sort((left, right) => (left.time ?? 0) - (right.time ?? 0));
     const times = Array.from(new Set(sorted.map((entry) => entry.time ?? 0)));
@@ -232,7 +243,7 @@ function buildStackedBarOption(entries: NumericEntry[]): EChartsOption | undefin
     grid: { containLabel: true, left: 14, right: 20, bottom: 48, top: 22 },
     legend: { bottom: 0, type: "scroll" },
     tooltip: { trigger: "axis" },
-    xAxis: { data: categories, name: categoryKey, type: "category" },
+    xAxis: { data: categories, name: propertyLabels[categoryKey] || categoryKey, type: "category" },
     yAxis: { scale: true, type: "value" },
     series: names.map((name) => ({
       barMaxWidth: 42,
@@ -252,14 +263,20 @@ function buildStackedBarOption(entries: NumericEntry[]): EChartsOption | undefin
   };
 }
 
-function buildPieOption(entries: NumericEntry[]): EChartsOption {
+function buildPieOption(
+  entries: NumericEntry[],
+  propertyLabels: Record<string, string>,
+): EChartsOption {
   return {
     color: palette,
     legend: { bottom: 0, type: "scroll" },
     tooltip: { formatter: "{b}<br/>{c}（{d}%）", trigger: "item" },
     series: [
       {
-        data: entries.map((entry) => ({ name: categoryLabel(entry), value: entry.value })),
+        data: entries.map((entry) => ({
+          name: categoryLabel(entry, propertyLabels),
+          value: entry.value,
+        })),
         label: { formatter: "{b}\n{d}%" },
         radius: ["38%", "70%"],
         type: "pie",
@@ -303,6 +320,7 @@ function buildTimeSeriesOption(entries: NumericEntry[], area: boolean): EChartsO
 function buildHeatmapOption(
   entries: NumericEntry[],
   resolvedTheme: "light" | "dark",
+  propertyLabels: Record<string, string>,
 ): EChartsOption | undefined {
   const first = entries.find((entry) => dimensionEntries(entry).length >= 2);
   if (!first) return undefined;
@@ -349,8 +367,18 @@ function buildHeatmapOption(
       right: 8,
       top: "center",
     },
-    xAxis: { data: xValues, name: xKey, splitArea: { show: true }, type: "category" },
-    yAxis: { data: yValues, name: yKey, splitArea: { show: true }, type: "category" },
+    xAxis: {
+      data: xValues,
+      name: propertyLabels[xKey] || xKey,
+      splitArea: { show: true },
+      type: "category",
+    },
+    yAxis: {
+      data: yValues,
+      name: propertyLabels[yKey] || yKey,
+      splitArea: { show: true },
+      type: "category",
+    },
     series: [
       {
         data,
@@ -411,10 +439,16 @@ function buildComboOption(entries: NumericEntry[]): EChartsOption {
 }
 
 type ObjectMetricAnalysisPanelProps = {
+  propertyLabels?: Record<string, string>;
   result: ObjectMetricDataV1;
 };
 
-export function ObjectMetricAnalysisPanel({ result }: ObjectMetricAnalysisPanelProps) {
+const emptyPropertyLabels: Record<string, string> = {};
+
+export function ObjectMetricAnalysisPanel({
+  propertyLabels = emptyPropertyLabels,
+  result,
+}: ObjectMetricAnalysisPanelProps) {
   useTranslation();
   const resolvedTheme = useResolvedTheme();
   const [selectedView, setSelectedView] = useState<ObjectMetricAnalysisView>("auto");
@@ -426,23 +460,39 @@ export function ObjectMetricAnalysisPanel({ result }: ObjectMetricAnalysisPanelP
       }),
     [result.entries],
   );
+  const isSingleValue =
+    result.entries.length === 1 &&
+    entries.length === 1 &&
+    entries[0]?.time === undefined &&
+    !Object.keys(entries[0]?.dimensions ?? {}).length;
+  const availableViews = isSingleValue
+    ? viewOptions.filter((option) => ["auto", "summary", "table"].includes(option.value))
+    : viewOptions;
+  const activeView = availableViews.some((option) => option.value === selectedView)
+    ? selectedView
+    : "auto";
   const resolvedView =
-    selectedView === "auto" ? recommendObjectMetricAnalysisView(entries) : selectedView;
+    activeView === "auto" ? recommendObjectMetricAnalysisView(entries) : activeView;
+
+  useEffect(() => setSelectedView("auto"), [result]);
   const chartOption = useMemo<EChartsOption | undefined>(() => {
     if (!entries.length || resolvedView === "summary" || resolvedView === "table") return undefined;
-    if (resolvedView === "bar") return buildCategoryOption(entries);
-    if (resolvedView === "stacked_bar") return buildStackedBarOption(entries);
+    if (resolvedView === "bar") return buildCategoryOption(entries, propertyLabels);
+    if (resolvedView === "stacked_bar") return buildStackedBarOption(entries, propertyLabels);
     if (resolvedView === "pie")
-      return entries.every((entry) => entry.value >= 0) ? buildPieOption(entries) : undefined;
+      return entries.every((entry) => entry.value >= 0)
+        ? buildPieOption(entries, propertyLabels)
+        : undefined;
     if (resolvedView === "line")
       return hasTime(entries) ? buildTimeSeriesOption(entries, false) : undefined;
     if (resolvedView === "area")
       return hasTime(entries) ? buildTimeSeriesOption(entries, true) : undefined;
-    if (resolvedView === "heatmap") return buildHeatmapOption(entries, resolvedTheme);
+    if (resolvedView === "heatmap")
+      return buildHeatmapOption(entries, resolvedTheme, propertyLabels);
     if (resolvedView === "combo") return hasTime(entries) ? buildComboOption(entries) : undefined;
     return undefined;
-  }, [entries, resolvedTheme, resolvedView]);
-  const manualView = selectedView !== "auto";
+  }, [entries, propertyLabels, resolvedTheme, resolvedView]);
+  const manualView = activeView !== "auto";
   const summaryValue = entries.length === 1 ? entries[0]?.value : undefined;
 
   let emptyDescription: string | undefined;
@@ -464,24 +514,24 @@ export function ObjectMetricAnalysisPanel({ result }: ObjectMetricAnalysisPanelP
           <h3>{objectMetricText("ma1dba3459e6d")}</h3>
           <p>{objectMetricText("m3fbb6c3fc51f")}</p>
         </div>
-        <Space size={6} wrap>
-          <Tag color="cyan">{result.model.output_shape}</Tag>
-          <Tooltip title={objectMetricText("m8bd667da7e33")}>
-            <Tag>
-              {selectedView === "auto"
-                ? objectMetricText("m1312046364bb", {
-                    p0: viewOptions.find((item) => item.value === resolvedView)?.label,
-                  })
-                : objectMetricText("m187b88cd44e4")}
-            </Tag>
-          </Tooltip>
-        </Space>
+        <Tag color="cyan">
+          {objectMetricText(
+            (
+              {
+                object_value: "mabe9d02781fc",
+                summary: "m887c0bab2e93",
+                grouped: "m63a570e277c4",
+                time_series: "m523d11919689",
+              } as const
+            )[result.model.output_shape],
+          )}
+        </Tag>
       </div>
       <Segmented<ObjectMetricAnalysisView>
         className={styles.viewSelector}
         onChange={(value) => setSelectedView(value)}
-        options={viewOptions}
-        value={selectedView}
+        options={availableViews}
+        value={activeView}
       />
       {resolvedView === "summary" && summaryValue !== undefined ? (
         <div className={styles.summary}>

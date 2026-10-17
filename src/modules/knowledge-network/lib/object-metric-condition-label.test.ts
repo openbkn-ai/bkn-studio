@@ -59,6 +59,18 @@ describe("objectMetricBusinessConditionLabel", () => {
     ).toBe("当前实例：status 等于 “completed”；关联实例：channel_type 等于 “offline”");
   });
 
+  it("uses available business property names without changing stored conditions", () => {
+    const qualifiers = { filters: currentFilter };
+    expect(
+      objectMetricBusinessConditionLabel(qualifiers, (reference) =>
+        reference.property_name === "status" ? "订单状态" : reference.property_name,
+      ),
+    ).toBe("当前实例：订单状态 等于 “completed”");
+    expect(objectMetricBusinessConditionLabel(qualifiers)).toBe(
+      "当前实例：status 等于 “completed”",
+    );
+  });
+
   it("reports an unrestricted definition only when neither condition exists", () => {
     expect(objectMetricBusinessConditionLabel({})).toBe("未限定");
   });

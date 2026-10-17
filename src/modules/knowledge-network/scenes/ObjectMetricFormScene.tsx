@@ -34,7 +34,7 @@ import {
 } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { isRequestForbidden, isRequestNotFound } from "@/framework/request/error-message";
@@ -75,6 +75,7 @@ import {
   type ObjectMetricUnitQuantityKind,
 } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
 import { objectMetricFormErrorCount } from "@/modules/knowledge-network/lib/object-metric-form-validation";
+import { objectMetricReturnPath } from "@/modules/knowledge-network/lib/object-metric-navigation";
 import {
   generateObjectMetricAiIntent,
   type ObjectMetricAiIntent,
@@ -1147,6 +1148,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   useTranslation();
   const params = useParams<{ metricId: string; networkId: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message, runtimeConfig } = useAppServices();
   const networkId = params.networkId ?? "";
@@ -1209,6 +1211,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const definition = record?.definition;
   const metricType = definition?.metric_type ?? requestedMetricType;
   const ownerObjectTypeId = definition?.owner_object_type_id ?? requestedObjectTypeId;
+  const returnTo = objectMetricReturnPath(networkId, location.state, ownerObjectTypeId);
   const ownerObjectType = objectTypes.find((item) => item.id === ownerObjectTypeId);
   const calculationScope = Form.useWatch("calculationScope", form);
   const aggregation = Form.useWatch("aggregation", form);
@@ -1952,7 +1955,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             void message.info(objectMetricText("m345e77bf06f8"));
             void navigate(
               `/knowledge-network/workspace/${networkId}/metrics/${nextRecord.definition.id}/detail`,
-              { replace: true },
+              {
+                replace: true,
+                state: {
+                  knowledgeNetworkReturnTo: objectMetricReturnPath(
+                    networkId,
+                    location.state,
+                    nextRecord.definition.owner_object_type_id,
+                  ),
+                },
+              },
             );
             return;
           }
@@ -2033,6 +2045,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     };
   }, [
     form,
+    location.state,
     message,
     metricId,
     mode,
@@ -2450,7 +2463,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         if (!record) {
           void navigate(
             `/knowledge-network/workspace/${networkId}/metrics/${saved.definition.id}/edit`,
-            { replace: true },
+            { replace: true, state: { knowledgeNetworkReturnTo: returnTo } },
           );
         }
       }
@@ -2483,7 +2496,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       if (!record) {
         void navigate(
           `/knowledge-network/workspace/${networkId}/metrics/${validated.definition.id}/edit`,
-          { replace: true },
+          { replace: true, state: { knowledgeNetworkReturnTo: returnTo } },
         );
       }
     }
@@ -2528,7 +2541,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     void message.success(objectMetricText("mbf73c8faca59"));
     void navigate(
       `/knowledge-network/workspace/${networkId}/metrics/${saved.definition.id}/detail`,
-      { state: { justPublished: true } },
+      { state: { justPublished: true, knowledgeNetworkReturnTo: returnTo } },
     );
   };
 
@@ -2552,9 +2565,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         subTitle={objectMetricText("m40f0ad99f292")}
         extra={
           <Space>
-            <Button
-              onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/metrics`)}
-            >
+            <Button onClick={() => void navigate(returnTo)}>
               {objectMetricText("m8d8251782181")}
             </Button>
             {loadError === "unknown" ? (
@@ -2574,10 +2585,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         title={objectMetricText("m31ec9738ea7b")}
         subTitle={objectMetricText("mbe1539a3daff")}
         extra={
-          <Button
-            onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/metrics`)}
-            type="primary"
-          >
+          <Button onClick={() => void navigate(returnTo)} type="primary">
             {objectMetricText("mcdfb4fd1b61d")}
           </Button>
         }
@@ -2627,7 +2635,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           aria-label={objectMetricText("mcdfb4fd1b61d")}
           className={styles.backButton}
           icon={<LeftOutlined />}
-          onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/metrics`)}
+          onClick={() => void navigate(returnTo)}
           type="text"
         />
         <div className={styles.headerCopy}>
@@ -5225,7 +5233,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   ? objectMetricText("m9b3caaa13a63")
                   : objectMetricText("mbbc80a0bad9b")}
               </Button>
-              <Button onClick={() => void openTrial()}>{objectMetricText("m073728637a26")}</Button>
+              <Button autoInsertSpace={false} onClick={() => void openTrial()}>
+                {objectMetricText("m073728637a26")}
+              </Button>
               <Button onClick={() => void openPreview()}>
                 {metricType === "atomic"
                   ? objectMetricText("m3802a1523205")

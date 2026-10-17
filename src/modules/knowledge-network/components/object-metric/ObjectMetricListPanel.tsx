@@ -24,30 +24,43 @@ import {
   Segmented,
   Select,
   Space,
+  Spin,
   Table,
   Tag,
   Tooltip,
 } from "antd";
 import type { TableProps } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectMetricGraphCanvas } from "@/modules/knowledge-network/components/object-metric/ObjectMetricGraphCanvas";
+import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
+import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
 import {
-  createNextObjectMetricDraftV1,
+  objectMetricListPath,
+  readObjectMetricListLocation,
+} from "@/modules/knowledge-network/lib/object-metric-navigation";
+import {
   deleteObjectMetricDraftV1,
   deprecateObjectMetricV1,
   listObjectMetricsV1,
+  queryObjectMetricDataV1,
+  trialObjectMetricDataV1,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { listKnowledgeNetworkObjectTypePage } from "@/modules/knowledge-network/services/object-type.service";
+import {
+  getKnowledgeNetworkObjectTypeDetail,
+  listKnowledgeNetworkObjectTypePage,
+} from "@/modules/knowledge-network/services/object-type.service";
 import type {
   ObjectMetricRecordV1,
   ObjectMetricTypeV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 
 import styles from "./ObjectMetricListPanel.module.css";
 import metricTheme from "./ObjectMetricTheme.module.css";
@@ -89,28 +102,59 @@ const statusNames = {
 export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [initialLocation] = useState(() => readObjectMetricListLocation(searchParams));
+  const [initialGraphMetric] = useState(() => {
+    const version = Number(searchParams.get("graphMetricVersion"));
+    const id = searchParams.get("graphMetricId");
+    return initialLocation.view === "graph" && id && Number.isSafeInteger(version) && version > 0
+      ? { id, objectTypeId: initialLocation.objectTypeId, version }
+      : undefined;
+  });
   const { message } = useAppServices();
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [objectMetricCounts, setObjectMetricCounts] = useState<Record<string, number | null>>({});
   const [objectTotal, setObjectTotal] = useState(0);
-  const [objectPage, setObjectPage] = useState(1);
-  const [objectSidebarCollapsed, setObjectSidebarCollapsed] = useState(false);
+  const [objectPage, setObjectPage] = useState(initialLocation.objectPage);
+  const [objectSidebarCollapsed, setObjectSidebarCollapsed] = useState(
+    initialLocation.sidebarCollapsed,
+  );
   const [listMetrics, setListMetrics] = useState<ObjectMetricRecordV1[]>([]);
+  const [trialMetric, setTrialMetric] = useState<ObjectMetricRecordV1>();
+  const [trialObjectType, setTrialObjectType] = useState<ObjectTypeDetail | null>();
+  const [trialLoadingKey, setTrialLoadingKey] = useState<string>();
   const [listTotal, setListTotal] = useState(0);
   const [listResultKey, setListResultKey] = useState("");
-  const [selectedObjectTypeId, setSelectedObjectTypeId] = useState("");
+  const [selectedObjectTypeId, setSelectedObjectTypeId] = useState(initialLocation.objectTypeId);
   const [selectedObjectTypeName, setSelectedObjectTypeName] = useState("");
-  const [objectKeyword, setObjectKeyword] = useState("");
-  const [debouncedObjectKeyword, setDebouncedObjectKeyword] = useState("");
-  const [metricKeyword, setMetricKeyword] = useState("");
-  const [debouncedMetricKeyword, setDebouncedMetricKeyword] = useState("");
-  const [metricType, setMetricType] = useState<ObjectMetricTypeV1 | undefined>();
-  const [viewMode, setViewMode] = useState<"graph" | "list">("graph");
-  const [page, setPage] = useState(1);
+  const [selectedObjectDetail, setSelectedObjectDetail] = useState<{
+    id: string;
+    detail: ObjectTypeDetail | null | undefined;
+  }>();
+  const [objectKeyword, setObjectKeyword] = useState(initialLocation.objectQuery);
+  const [debouncedObjectKeyword, setDebouncedObjectKeyword] = useState(initialLocation.objectQuery);
+  const [metricKeyword, setMetricKeyword] = useState(initialLocation.metricQuery);
+  const [debouncedMetricKeyword, setDebouncedMetricKeyword] = useState(initialLocation.metricQuery);
+  const [metricType, setMetricType] = useState<ObjectMetricTypeV1 | undefined>(
+    initialLocation.metricType,
+  );
+  const [viewMode, setViewMode] = useState<"graph" | "list">(initialLocation.view);
+  const [page, setPage] = useState(initialLocation.metricPage);
   const [pageSize, setPageSize] = usePersistentPageSize(PAGE_SIZE_STORAGE_SCOPE, 10);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const returnTo = objectMetricListPath(networkId, {
+    metricPage: page,
+    metricQuery: metricKeyword,
+    metricType,
+    objectPage,
+    objectQuery: objectKeyword,
+    objectTypeId: selectedObjectTypeId,
+    sidebarCollapsed: objectSidebarCollapsed,
+    view: viewMode,
+  });
+  const search = searchParams.toString();
   const listRequestKey = JSON.stringify([
     networkId,
     selectedObjectTypeId,
@@ -127,6 +171,12 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const tableViewportRef = useRef<HTMLDivElement>(null);
   const objectListRef = useRef<HTMLDivElement>(null);
   const objectMetricCountCache = useRef(new Map<string, number | null>());
+  const trialRequestRef = useRef(0);
+
+  useEffect(() => {
+    const expected = new URL(returnTo, "http://metric-navigation.local").searchParams;
+    if (search !== expected.toString()) setSearchParams(expected, { replace: true });
+  }, [returnTo, search, setSearchParams]);
 
   useEffect(() => {
     messageRef.current = message;
@@ -187,6 +237,35 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       active = false;
     };
   }, [debouncedObjectKeyword, networkId, objectPage, refreshVersion]);
+
+  useEffect(() => {
+    if (!selectedObjectTypeId) {
+      setSelectedObjectDetail(undefined);
+      return;
+    }
+    let active = true;
+    setSelectedObjectDetail({ id: selectedObjectTypeId, detail: undefined });
+    void getKnowledgeNetworkObjectTypeDetail(networkId, selectedObjectTypeId)
+      .then((detail) => {
+        if (!active) return;
+        setSelectedObjectDetail({ id: selectedObjectTypeId, detail: detail ?? null });
+        if (detail?.name) setSelectedObjectTypeName(detail.name);
+      })
+      .catch(() => {
+        if (active) setSelectedObjectDetail({ id: selectedObjectTypeId, detail: null });
+      });
+    return () => {
+      active = false;
+    };
+  }, [networkId, selectedObjectTypeId, refreshVersion]);
+
+  useEffect(() => {
+    if (objectSidebarCollapsed || !selectedObjectTypeId) return;
+    const selectedButton = [...(objectListRef.current?.querySelectorAll("button") ?? [])].find(
+      (button) => button.dataset.objectTypeId === selectedObjectTypeId,
+    );
+    selectedButton?.scrollIntoView?.({ block: "nearest" });
+  }, [objectSidebarCollapsed, objectTypes, selectedObjectTypeId]);
 
   useEffect(() => {
     let active = true;
@@ -308,14 +387,95 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     if (!selectedObjectTypeId) return;
     void navigate(
       `/knowledge-network/workspace/${networkId}/metrics/create?objectTypeId=${encodeURIComponent(selectedObjectTypeId)}&metricType=${type}`,
+      { state: { knowledgeNetworkReturnTo: returnTo } },
     );
   };
 
-  const openEditor = async (record: ObjectMetricRecordV1) => {
-    if (["published", "deprecated"].includes(record.definition.lifecycle.status)) {
-      await createNextObjectMetricDraftV1(networkId, record.definition.id);
+  const metricReturnTo = (record: ObjectMetricRecordV1, restoreGraphFocus: boolean) => {
+    if (!restoreGraphFocus) return returnTo;
+    const graphReturnTo = new URL(returnTo, "http://metric-navigation.local");
+    graphReturnTo.searchParams.set("graphMetricId", record.definition.id);
+    graphReturnTo.searchParams.set("graphMetricVersion", String(record.definition.version));
+    return `${graphReturnTo.pathname}${graphReturnTo.search}`;
+  };
+
+  const openEditor = (record: ObjectMetricRecordV1, restoreGraphFocus = false) => {
+    void navigate(
+      `/knowledge-network/workspace/${networkId}/metrics/${record.definition.id}/edit`,
+      {
+        state: { knowledgeNetworkReturnTo: metricReturnTo(record, restoreGraphFocus) },
+      },
+    );
+  };
+
+  const openDetail = (record: ObjectMetricRecordV1, restoreGraphFocus = false) => {
+    void navigate(
+      `/knowledge-network/workspace/${encodeURIComponent(networkId)}/metrics/${encodeURIComponent(record.definition.id)}/detail?version=${record.definition.version}`,
+      {
+        state: {
+          knowledgeNetworkReturnTo: metricReturnTo(record, restoreGraphFocus),
+        },
+      },
+    );
+  };
+
+  const openTrial = async (record: ObjectMetricRecordV1) => {
+    const request = ++trialRequestRef.current;
+    setTrialLoadingKey(`${record.definition.id}@${record.definition.version}`);
+    try {
+      const cachedDetail =
+        selectedObjectDetail?.id === record.definition.owner_object_type_id
+          ? selectedObjectDetail.detail
+          : undefined;
+      const detail =
+        cachedDetail ??
+        (await getKnowledgeNetworkObjectTypeDetail(
+          networkId,
+          record.definition.owner_object_type_id,
+        ));
+      if (request !== trialRequestRef.current) return;
+      setTrialObjectType(detail ?? null);
+    } catch {
+      if (request !== trialRequestRef.current) return;
+      setTrialObjectType(null);
+    } finally {
+      if (request === trialRequestRef.current) {
+        setTrialMetric(record);
+        setTrialLoadingKey(undefined);
+      }
     }
-    void navigate(`/knowledge-network/workspace/${networkId}/metrics/${record.definition.id}/edit`);
+  };
+
+  const ownerObjectType =
+    selectedObjectDetail?.id === selectedObjectTypeId ? selectedObjectDetail.detail : undefined;
+
+  const confirmDeleteDraft = (record: ObjectMetricRecordV1) => {
+    if (!objectMetricActions(record, canModify, ownerObjectType).canDeleteDraft) return;
+    Modal.confirm({
+      content: objectMetricText("m1baf039f0b73", { p0: record.definition.name }),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        await deleteObjectMetricDraftV1(networkId, record.definition.id, record.definition.version);
+        void message.success(objectMetricText("md393b7cc3ea3"));
+        refresh();
+      },
+      title: objectMetricText("m1dfe58237bbf"),
+    });
+  };
+
+  const confirmDeprecate = (record: ObjectMetricRecordV1) => {
+    const actions = objectMetricActions(record, canModify, ownerObjectType);
+    if (!actions.canDeprecate || actions.deprecateReason) return;
+    Modal.confirm({
+      content: objectMetricText("mcb05d2c2df12"),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        await deprecateObjectMetricV1(networkId, record.definition.id, record.definition.version);
+        void message.success(objectMetricText("mda791b06ec77"));
+        refresh();
+      },
+      title: objectMetricText("ma01ab2ceb262", { p0: record.definition.name }),
+    });
   };
 
   const columns: TableProps<ObjectMetricRecordV1>["columns"] = [
@@ -332,7 +492,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     {
       key: "type",
       title: objectMetricText("mba40014ff496"),
-      width: 110,
+      width: 100,
       render: (_, record) => (
         <Tag
           color={
@@ -350,7 +510,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     {
       key: "scope",
       title: objectMetricText("mec7844e49915"),
-      width: 120,
+      width: 112,
       render: (_, record) =>
         record.definition.calculation_scope === "object_instance"
           ? objectMetricText("mabe9d02781fc")
@@ -359,7 +519,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     {
       key: "status",
       title: objectMetricText("m6320b4a8722a"),
-      width: 100,
+      width: 90,
       render: (_, record) => (
         <Tag color={record.definition.lifecycle.status === "published" ? "success" : "default"}>
           {statusNames[record.definition.lifecycle.status]}
@@ -367,37 +527,57 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       ),
     },
     {
+      key: "logicalProperty",
+      title: objectMetricText("bindingStatusLabel"),
+      width: 152,
+      render: (_, record) => {
+        if (record.definition.calculation_scope !== "object_instance")
+          return objectMetricText("bindingNotApplicable");
+        const detail =
+          selectedObjectDetail?.id === selectedObjectTypeId
+            ? selectedObjectDetail.detail
+            : undefined;
+        if (detail === undefined) return objectMetricText("bindingLoading");
+        if (detail === null) return objectMetricText("bindingUnknown");
+        const property = findMetricLogicProperty(detail, record.definition.id);
+        const label = property
+          ? `${property.displayName || property.name} · v${property.metricBinding?.metric_ref.version}`
+          : objectMetricText("bindingUnbound");
+        return (
+          <span className={styles.bindingCell} title={label}>
+            {label}
+          </span>
+        );
+      },
+    },
+    {
       key: "description",
       title: objectMetricText("m419eb90613fd"),
       ellipsis: true,
+      width: 300,
       render: (_, record) => record.definition.description || "--",
     },
     {
       key: "actions",
       title: objectMetricText("med31fbb483ee"),
-      width: 150,
+      width: 212,
       fixed: "right",
-      render: (_, record) => (
-        <Space>
-          <Button
-            onClick={() =>
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/metrics/${record.definition.id}/detail`,
-              )
-            }
-            size="small"
-            type="link"
-          >
-            {objectMetricText("m979a332955c8")}
-          </Button>
-          {canModify ? (
-            <Tooltip
-              title={
-                ["published", "deprecated"].includes(record.definition.lifecycle.status)
-                  ? objectMetricText("m0ae9e2e1ef17")
-                  : objectMetricText("mec3ba1e99684")
-              }
+      render: (_, record) => {
+        const actions = objectMetricActions(record, canModify, ownerObjectType);
+        return (
+          <Space size={4}>
+            <Button onClick={() => openDetail(record)} size="small" type="link">
+              {objectMetricText("m979a332955c8")}
+            </Button>
+            <Button
+              loading={trialLoadingKey === `${record.definition.id}@${record.definition.version}`}
+              onClick={() => void openTrial(record)}
+              size="small"
+              type="link"
             >
+              {objectMetricText("m073728637a26")}
+            </Button>
+            {actions.canEdit ? (
               <Button
                 aria-label={objectMetricText("m79bef996428f", { p0: record.definition.name })}
                 icon={<EditOutlined />}
@@ -405,60 +585,35 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                 size="small"
                 type="text"
               />
-            </Tooltip>
-          ) : null}
-          {canModify && ["draft", "validated"].includes(record.definition.lifecycle.status) ? (
-            <Button
-              aria-label={objectMetricText("m7a7c17d22328", { p0: record.definition.name })}
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => {
-                Modal.confirm({
-                  content: objectMetricText("m1baf039f0b73", { p0: record.definition.name }),
-                  okButtonProps: { danger: true },
-                  onOk: async () => {
-                    await deleteObjectMetricDraftV1(
-                      networkId,
-                      record.definition.id,
-                      record.definition.version,
-                    );
-                    void message.success(objectMetricText("md393b7cc3ea3"));
-                    refresh();
-                  },
-                  title: objectMetricText("m1dfe58237bbf"),
-                });
-              }}
-              size="small"
-              type="text"
-            />
-          ) : null}
-          {canModify && record.definition.lifecycle.status === "published" ? (
-            <Button
-              danger
-              onClick={() => {
-                Modal.confirm({
-                  content: objectMetricText("mcb05d2c2df12"),
-                  okButtonProps: { danger: true },
-                  onOk: async () => {
-                    await deprecateObjectMetricV1(
-                      networkId,
-                      record.definition.id,
-                      record.definition.version,
-                    );
-                    void message.success(objectMetricText("mda791b06ec77"));
-                    refresh();
-                  },
-                  title: objectMetricText("ma01ab2ceb262", { p0: record.definition.name }),
-                });
-              }}
-              size="small"
-              type="link"
-            >
-              {objectMetricText("mca0ff1e63793")}
-            </Button>
-          ) : null}
-        </Space>
-      ),
+            ) : null}
+            {actions.canDeleteDraft ? (
+              <Button
+                aria-label={objectMetricText("m7a7c17d22328", { p0: record.definition.name })}
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => confirmDeleteDraft(record)}
+                size="small"
+                type="text"
+              />
+            ) : null}
+            {actions.canDeprecate ? (
+              <Tooltip title={actions.deprecateReason}>
+                <span>
+                  <Button
+                    danger
+                    disabled={!!actions.deprecateReason}
+                    onClick={() => confirmDeprecate(record)}
+                    size="small"
+                    type="link"
+                  >
+                    {objectMetricText("mca0ff1e63793")}
+                  </Button>
+                </span>
+              </Tooltip>
+            ) : null}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -517,6 +672,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                 {objectTypes.map((item) => (
                   <Button
                     className={`${styles.objectButton} ${selectedObjectTypeId === item.id ? styles.selected : ""}`}
+                    data-object-type-id={item.id}
                     key={item.id}
                     onClick={() => {
                       setSelectedObjectTypeId(item.id);
@@ -586,8 +742,9 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
           <div className={styles.toolbar}>
             <div className={styles.toolbarLeft}>
               <div className={styles.toolbarIdentity}>
-                <strong>{selectedObjectTypeName || objectMetricText("m6be07467be0f")}</strong>
-                <span>{selectedObjectTypeId}</span>
+                <Tooltip title={selectedObjectTypeId || undefined}>
+                  <strong>{selectedObjectTypeName || objectMetricText("m6be07467be0f")}</strong>
+                </Tooltip>
               </div>
               <Segmented
                 className={styles.viewSwitch}
@@ -655,44 +812,56 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
           </div>
           {viewMode === "graph" ? (
             <ObjectMetricGraphCanvas
+              canModify={canModify}
+              initialFocusedMetric={initialGraphMetric}
               metricType={metricType}
               networkId={networkId}
-              onOpenMetric={(id) =>
-                void navigate(`/knowledge-network/workspace/${networkId}/metrics/${id}/detail`)
-              }
+              onDeleteDraft={confirmDeleteDraft}
+              onDeprecate={confirmDeprecate}
+              onEditMetric={(record) => openEditor(record, true)}
+              onOpenMetric={(record) => openDetail(record, true)}
               onSelectObject={(objectTypeId, objectTypeName) => {
                 setSelectedObjectTypeId(objectTypeId);
                 setSelectedObjectTypeName(objectTypeName);
                 setPage(1);
               }}
               onSwitchList={() => setViewMode("list")}
+              onTrialMetric={(record) => void openTrial(record)}
+              ownerObjectType={ownerObjectType}
               refreshVersion={refreshVersion}
               selectedObjectTypeId={selectedObjectTypeId}
               selectedObjectTypeName={selectedObjectTypeName}
             />
           ) : (
             <div className={styles.listView}>
-              <div className={styles.tableViewport} ref={tableViewportRef}>
-                <Table
-                  columns={columns}
-                  dataSource={listCurrent ? listMetrics : []}
-                  loading={listLoading || !listCurrent}
-                  locale={{
-                    emptyText: (
-                      <Empty
-                        className={styles.empty}
-                        description={
-                          selectedObjectTypeId
-                            ? objectMetricText("m522159fe536d")
-                            : objectMetricText("m6be07467be0f")
-                        }
-                      />
-                    ),
-                  }}
-                  pagination={false}
-                  rowKey={(record) => `${record.definition.id}-${record.definition.version}`}
-                  scroll={{ x: 980 }}
-                />
+              <div className={styles.tableArea}>
+                <div className={styles.tableViewport} ref={tableViewportRef}>
+                  <Table
+                    columns={columns}
+                    dataSource={listCurrent ? listMetrics : []}
+                    locale={{
+                      emptyText: (
+                        <Empty
+                          className={styles.empty}
+                          description={
+                            selectedObjectTypeId
+                              ? objectMetricText("m522159fe536d")
+                              : objectMetricText("m6be07467be0f")
+                          }
+                        />
+                      ),
+                    }}
+                    pagination={false}
+                    rowKey={(record) => `${record.definition.id}-${record.definition.version}`}
+                    scroll={{ x: 1246 }}
+                    tableLayout="fixed"
+                  />
+                </div>
+                {listLoading || !listCurrent ? (
+                  <div className={styles.tableLoading} role="status">
+                    <Spin />
+                  </div>
+                ) : null}
               </div>
               {listCurrent && listTotal > 0 ? (
                 <div className={styles.paginationBar}>
@@ -714,6 +883,33 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
           )}
         </div>
       </div>
+      {trialMetric ? (
+        <ObjectMetricTrialDrawer
+          definition={trialMetric.definition}
+          key={`${trialMetric.definition.id}@${trialMetric.definition.version}`}
+          mode={
+            ["published", "deprecated"].includes(trialMetric.definition.lifecycle.status)
+              ? "published"
+              : "draft"
+          }
+          objectType={trialObjectType}
+          onClose={() => {
+            setTrialMetric(undefined);
+            setTrialObjectType(undefined);
+          }}
+          onRun={(query) =>
+            ["published", "deprecated"].includes(trialMetric.definition.lifecycle.status)
+              ? queryObjectMetricDataV1(
+                  networkId,
+                  trialMetric.definition.id,
+                  trialMetric.definition.version,
+                  query,
+                )
+              : trialObjectMetricDataV1(networkId, trialMetric.definition, query)
+          }
+          open
+        />
+      ) : null}
     </section>
   );
 }

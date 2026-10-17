@@ -15,6 +15,24 @@ import {
 } from "./object-metric-model";
 
 describe("replaceObjectMetricDependencyAliases", () => {
+  it("formats nested property expressions with a business label only when requested", () => {
+    const expression = {
+      node_type: "binary" as const,
+      operator: "add" as const,
+      left: {
+        node_type: "property" as const,
+        property_ref: { object_type_id: "order", property_name: "paid_amount" },
+      },
+      right: { node_type: "literal" as const, value: 1, value_type: "int64" },
+    };
+    expect(
+      expressionLabel(expression, (reference) =>
+        reference.property_name === "paid_amount" ? "实付金额" : reference.property_name,
+      ),
+    ).toBe("(实付金额 + 1)");
+    expect(expressionLabel(expression)).toBe("(order.paid_amount + 1)");
+  });
+
   it("builds a business formula without changing the stored technical expression", () => {
     const expression = {
       left: { dependency_alias: "qualified", node_type: "dependency" as const },

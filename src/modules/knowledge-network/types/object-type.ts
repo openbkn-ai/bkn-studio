@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { MetricPropertyBindingV1 } from "@/modules/knowledge-network/types/object-metric";
+
 export type KnowledgeNetworkObjectTypeRecord = {
   color: string;
   conceptGroupIds: string[];
@@ -168,6 +170,7 @@ export type ObjectTypeLogicProperty = {
   comment?: string;
   dataSource?: ObjectTypeLogicDataSource | null;
   displayName: string;
+  metricBinding?: MetricPropertyBindingV1 | null;
   name: string;
   parameters?: ObjectTypeLogicParameter[] | null;
   type?: string;

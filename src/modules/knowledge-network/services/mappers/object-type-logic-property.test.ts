@@ -14,6 +14,25 @@ import {
 } from "@/modules/knowledge-network/services/mappers";
 
 describe("object type tool logic property mapper", () => {
+  it("preserves a metric binding through object-type reads and writes", () => {
+    const metricBinding = {
+      object_type_id: "order",
+      property_name: "paid_amount",
+      display_name: "订单支付额",
+      metric_ref: { metric_id: "metric-1", version: 2 },
+      execution: { mode: "realtime" as const },
+      no_data_policy: "null" as const,
+      on_error: "unavailable" as const,
+      status: "published" as const,
+    };
+    const property = mapLogicProperty({
+      name: "paid_amount",
+      display_name: "订单支付额",
+      metric_binding: metricBinding,
+    });
+    expect(property.metricBinding).toEqual(metricBinding);
+    expect(toBackendLogicProperty(property).metric_binding).toEqual(metricBinding);
+  });
   it("preserves tool parameter required flags", () => {
     const property = mapLogicProperty({
       display_name: "Availability",

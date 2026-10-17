@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 
 import {
+  atomicMeasureProperties,
   collectObjectMetricDownstream,
   collectObjectMetricUpstream,
   directObjectMetricReferences,
@@ -101,6 +102,29 @@ const composite = metric("cancelled_order_ratio", 1, {
 });
 
 describe("object metric definition lineage", () => {
+  it("extracts only unique atomic measure properties, including nested expressions", () => {
+    const property = {
+      node_type: "property" as const,
+      property_ref: { object_type_id: "order", property_name: "paid_amount" },
+    };
+    const measure = metric("paid_amount", 1, {
+      kind: "atomic",
+      measure: {
+        aggregation: "sum",
+        expression: {
+          node_type: "binary",
+          operator: "add",
+          left: property,
+          right: { node_type: "call", function: "abs", arguments: [property] },
+        },
+      },
+    });
+
+    expect(atomicMeasureProperties(measure)).toEqual([property.property_ref]);
+    expect(atomicMeasureProperties(atomic)).toEqual([]);
+    expect(atomicMeasureProperties(derived)).toEqual([]);
+  });
+
   it("keeps dependencies tied to a precise metric version", () => {
     expect(objectMetricVersionKey("order_count", 1)).toBe("order_count@1");
     expect(directObjectMetricReferences(derived)).toEqual([

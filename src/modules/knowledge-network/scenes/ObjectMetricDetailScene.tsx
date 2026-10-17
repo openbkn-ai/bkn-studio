@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { QuestionCircleOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
@@ -14,6 +15,7 @@ import {
   Empty,
   Form,
   Input,
+  Modal,
   Select,
   Space,
   Spin,
@@ -25,6 +27,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
   extractRequestErrorDetails,
   isRequestForbidden,
@@ -37,6 +40,8 @@ import {
   replaceObjectMetricDependencyAliases,
 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
 import { objectMetricBusinessConditionLabel } from "@/modules/knowledge-network/lib/object-metric-condition-label";
+import { objectMetricPropertyDisplayName } from "@/modules/knowledge-network/lib/object-metric-display";
+import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 import {
   objectMetricTimeWindowBusinessLabel,
   objectMetricTimeWindowSelection,
@@ -47,6 +52,7 @@ import {
   resolveObjectMetricReferences,
   type MetricReferenceResolution,
 } from "@/modules/knowledge-network/lib/object-metric-lineage";
+import { objectMetricReturnPath } from "@/modules/knowledge-network/lib/object-metric-navigation";
 import {
   bindObjectMetricLogicPropertyV1,
   createNextObjectMetricDraftV1,
@@ -54,6 +60,8 @@ import {
   listObjectMetricsV1,
   listObjectMetricVersionsV1,
   queryObjectMetricDataV1,
+  trialObjectMetricDataV1,
+  upgradeObjectMetricLogicPropertyV1,
 } from "@/modules/knowledge-network/services/object-metric.service";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/object-type.service";
 import {
@@ -62,7 +70,9 @@ import {
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   MetricPropertyBindingV1,
+  ObjectMetricPropertyRefV1,
   ObjectMetricRecordV1,
+  ObjectMetricTimeGranularityV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import type {
@@ -101,6 +111,31 @@ const statusNames: Record<ObjectMetricRecordV1["definition"]["lifecycle"]["statu
   },
 };
 
+const dimensionPreviewCount = 3;
+
+function MetricDimensionList({ items, emptyText }: { items: string[]; emptyText: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!items.length) return emptyText;
+
+  const hasMore = items.length > dimensionPreviewCount;
+  return (
+    <span className={styles.dimensionList}>
+      {items.slice(0, expanded ? undefined : dimensionPreviewCount).join("、")}
+      {hasMore ? (
+        <button
+          className={styles.dimensionToggle}
+          onClick={() => setExpanded((current) => !current)}
+          type="button"
+        >
+          {expanded
+            ? objectMetricText("dimensionCollapse")
+            : objectMetricText("dimensionMoreCount", { p0: items.length - dimensionPreviewCount })}
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
 const aggregationNames: Record<string, string> = {
   get avg() {
     return objectMetricText("mdb7538b96322");
@@ -128,6 +163,49 @@ const aggregationNames: Record<string, string> = {
   },
 };
 
+type MetricTextKey = Parameters<typeof objectMetricText>[0];
+
+const timeGranularityKeys: Record<ObjectMetricTimeGranularityV1, MetricTextKey> = {
+  minute: "mbd957bc497aa",
+  hour: "m3b6fefc50feb",
+  day: "m85217f7aff77",
+  week: "m5c553ec3f6db",
+  month: "m1625179badc0",
+  quarter: "m4f1c54f507c9",
+  year: "m62ef900a8f5d",
+};
+
+const physicalTypeKeys: Record<
+  ObjectMetricRecordV1["definition"]["result_semantics"]["value"]["physical_type"],
+  MetricTextKey
+> = {
+  int64: "m67e2bb6ef67b",
+  decimal: "m75a7f49573c8",
+  boolean: "mc08142c140ff",
+  string: "mdd81861811e5",
+  date: "m70d0c1b33626",
+  datetime: "m6ac8b7718121",
+  duration: "m3e777ea8f1e8",
+};
+
+const semanticTypeKeys: Record<
+  ObjectMetricRecordV1["definition"]["result_semantics"]["value"]["semantic_type"],
+  MetricTextKey
+> = {
+  measure: "m208d85fd9f3a",
+  count: "m21179deb9a74",
+  amount: "mffc624300de8",
+  ratio: "m8a457b6b1337",
+  percentage: "m03af18e36797",
+  score: "m96fff2e26c8d",
+  rank: "m6570a98f2850",
+  timestamp: "m2d1060334622",
+  duration: "m04a95e0654d3",
+  date: "m70d0c1b33626",
+  category: "m20fcf2eb775f",
+  boolean: "mc08142c140ff",
+};
+
 function timeWindowLabel(
   window: Extract<
     ObjectMetricRecordV1["definition"]["specification"],
@@ -136,7 +214,10 @@ function timeWindowLabel(
 ) {
   if (!window || window.mode === "unbounded") return objectMetricText("m12edbc42122f");
   if (window.mode === "rolling")
-    return objectMetricText("mff99c135adbc", { p0: window.length, p1: window.unit });
+    return objectMetricText("mff99c135adbc", {
+      p0: window.length,
+      p1: objectMetricText(timeGranularityKeys[window.unit]),
+    });
   if (window.mode === "fixed_range") {
     return objectMetricText("mf971493b1e41", {
       p0: dayjs(window.start_at).format("YYYY-MM-DD HH:mm"),
@@ -163,7 +244,13 @@ export function ObjectMetricDetailScene() {
   const { metricId = "", networkId = "" } = useParams<{ metricId: string; networkId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const requestedVersionValue = Number(new URLSearchParams(location.search ?? "").get("version"));
+  const requestedVersion =
+    Number.isSafeInteger(requestedVersionValue) && requestedVersionValue > 0
+      ? requestedVersionValue
+      : undefined;
   const { message } = useAppServices();
+  const canModify = useKnowledgeNetworkCanModify(networkId);
   const [record, setRecord] = useState<ObjectMetricRecordV1>();
   const [versions, setVersions] = useState<ObjectMetricRecordV1[]>([]);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
@@ -175,9 +262,12 @@ export function ObjectMetricDetailScene() {
     rootKey: string;
   }>();
   const [ownerObjectType, setOwnerObjectType] = useState<ObjectTypeDetail | null>();
+  const [ownerRefresh, setOwnerRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<"forbidden" | "not-found" | "unknown" | null>(null);
   const [bindingOpen, setBindingOpen] = useState(false);
+  const [upgradeConfirmOpen, setUpgradeConfirmOpen] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   const [bindingForm] =
     Form.useForm<Pick<MetricPropertyBindingV1, "comment" | "display_name" | "property_name">>();
@@ -188,13 +278,16 @@ export function ObjectMetricDetailScene() {
     setLoadError(null);
     setRecord(undefined);
 
-    void getObjectMetricV1(networkId, metricId, undefined, { skipErrorToast: true })
+    void getObjectMetricV1(networkId, metricId, requestedVersion, { skipErrorToast: true })
       .then(async (latest) => {
-        if (!latest || !active) {
+        if (
+          !latest ||
+          (requestedVersion && latest.definition.version !== requestedVersion) ||
+          !active
+        ) {
           if (active) setLoadError("not-found");
           return;
         }
-        setRecord(latest);
         const [entries, objects, relations, metrics, allMetrics] = await Promise.all([
           listObjectMetricVersionsV1(networkId, metricId, { skipErrorToast: true }),
           listKnowledgeNetworkObjectTypes(networkId, { skipErrorToast: true }),
@@ -207,7 +300,23 @@ export function ObjectMetricDetailScene() {
           listObjectMetricsV1(networkId, { limit: 500 }, { skipErrorToast: true }),
         ]);
         if (!active) return;
-        setVersions(entries);
+        const newest = (records: ObjectMetricRecordV1[]) =>
+          records.reduce<ObjectMetricRecordV1 | undefined>(
+            (current, candidate) =>
+              !current || candidate.definition.version > current.definition.version
+                ? candidate
+                : current,
+            undefined,
+          );
+        setRecord(
+          (requestedVersion
+            ? (entries.find((item) => item.definition.version === requestedVersion) ?? latest)
+            : undefined) ??
+            newest(entries.filter((item) => item.definition.lifecycle.status === "published")) ??
+            newest(entries.filter((item) => item.definition.lifecycle.status === "deprecated")) ??
+            latest,
+        );
+        setVersions(entries.length ? entries : [latest]);
         setObjectTypes(objects);
         setRelationTypes(relations);
         setPublishedMetrics(metrics.entries);
@@ -230,11 +339,11 @@ export function ObjectMetricDetailScene() {
     return () => {
       active = false;
     };
-  }, [metricId, networkId]);
+  }, [metricId, networkId, requestedVersion]);
 
   useEffect(() => {
     const ownerObjectTypeId = record?.definition.owner_object_type_id;
-    setOwnerObjectType(null);
+    setOwnerObjectType(undefined);
     if (!ownerObjectTypeId) return;
     let active = true;
     void getKnowledgeNetworkObjectTypeDetail(networkId, ownerObjectTypeId)
@@ -247,7 +356,7 @@ export function ObjectMetricDetailScene() {
     return () => {
       active = false;
     };
-  }, [networkId, record?.definition.owner_object_type_id]);
+  }, [networkId, record?.definition.owner_object_type_id, ownerRefresh]);
 
   const dependencyReferenceSignature = record
     ? directObjectMetricReferences(record)
@@ -287,6 +396,13 @@ export function ObjectMetricDetailScene() {
     if (loadError === "forbidden") {
       return (
         <Alert
+          action={
+            <Button
+              onClick={() => void navigate(objectMetricReturnPath(networkId, location.state))}
+            >
+              {objectMetricText("me9d5ca6c1406")}
+            </Button>
+          }
           description={objectMetricText("m9590c71c5808")}
           message={objectMetricText("m2a9ed8385cd1")}
           showIcon
@@ -301,10 +417,44 @@ export function ObjectMetricDetailScene() {
             ? objectMetricText("m51fc5b3bc879")
             : objectMetricText("mcbc612fb7c63")
         }
-      />
+      >
+        <Button onClick={() => void navigate(objectMetricReturnPath(networkId, location.state))}>
+          {objectMetricText("me9d5ca6c1406")}
+        </Button>
+      </Empty>
     );
   }
   const definition = record.definition;
+  const boundProperty = findMetricLogicProperty(ownerObjectType, definition.id);
+  const boundVersion = boundProperty?.metricBinding?.metric_ref.version;
+  const ownerObjectTypeName =
+    ownerObjectType?.name ??
+    objectTypes.find((item) => item.id === definition.owner_object_type_id)?.name;
+  const displayProperty = (reference: ObjectMetricPropertyRefV1) => {
+    const name = objectMetricPropertyDisplayName(reference, ownerObjectType);
+    if (
+      reference.object_type_id === definition.owner_object_type_id ||
+      name !== reference.property_name
+    )
+      return name;
+    const objectTypeName =
+      objectTypes.find((item) => item.id === reference.object_type_id)?.name ??
+      reference.object_type_id;
+    return `${objectTypeName}.${name}`;
+  };
+  const bindingStatus =
+    ownerObjectType === undefined
+      ? objectMetricText("bindingLoading")
+      : ownerObjectType === null
+        ? objectMetricText("bindingUnknown")
+        : boundProperty
+          ? `${boundProperty.displayName || boundProperty.name} · v${boundVersion}`
+          : objectMetricText("bindingUnbound");
+  const returnTo = objectMetricReturnPath(
+    networkId,
+    location.state,
+    definition.owner_object_type_id,
+  );
   const specification = definition.specification;
   const expression =
     specification.kind === "atomic"
@@ -312,7 +462,43 @@ export function ObjectMetricDetailScene() {
       : specification.kind === "composite"
         ? specification.expression
         : undefined;
-  const canQuery = ["published", "deprecated"].includes(definition.lifecycle.status);
+  const isPublishedVersion = ["published", "deprecated"].includes(definition.lifecycle.status);
+  const workingDraft = versions.find((item) =>
+    ["draft", "validated"].includes(item.definition.lifecycle.status),
+  );
+  const draftVersions = versions.filter((item) =>
+    ["draft", "validated"].includes(item.definition.lifecycle.status),
+  );
+  const releasedVersions = versions.filter((item) =>
+    ["published", "deprecated"].includes(item.definition.lifecycle.status),
+  );
+  const draftLabel = (draft: ObjectMetricRecordV1) => {
+    const baseVersion = releasedVersions.reduce(
+      (highest, item) =>
+        item.definition.version < draft.definition.version
+          ? Math.max(highest, item.definition.version)
+          : highest,
+      0,
+    );
+    return `${statusNames[draft.definition.lifecycle.status]} · ${
+      baseVersion
+        ? objectMetricText("draftBasedOnVersion", { p0: baseVersion })
+        : objectMetricText("draftBeforeFirstRelease")
+    }`;
+  };
+  const canBindLogicProperty =
+    canModify &&
+    definition.lifecycle.status === "published" &&
+    definition.calculation_scope === "object_instance" &&
+    !!ownerObjectType &&
+    !boundProperty;
+  const canUpgradeLogicProperty =
+    canModify &&
+    definition.lifecycle.status === "published" &&
+    definition.calculation_scope === "object_instance" &&
+    !!boundProperty &&
+    !!boundVersion &&
+    definition.version > boundVersion;
   const currentRootKey = objectMetricVersionKey(definition.id, definition.version);
   const dependenciesResolving = dependencyResolution?.rootKey !== currentRootKey;
   const exactDependencies = new Map(
@@ -371,98 +557,155 @@ export function ObjectMetricDetailScene() {
     });
     void message.success(objectMetricText("mbc21b4167a12"));
     setBindingOpen(false);
+    setOwnerRefresh((current) => current + 1);
+  };
+
+  const upgradeLogicProperty = async () => {
+    if (!boundProperty || !boundVersion) return;
+    setUpgrading(true);
+    try {
+      await upgradeObjectMetricLogicPropertyV1(
+        networkId,
+        definition.id,
+        boundProperty.name,
+        definition.version,
+      );
+      setUpgradeConfirmOpen(false);
+      setOwnerRefresh((current) => current + 1);
+      void message.success(objectMetricText("bindingUpgradeSuccess"));
+    } catch {
+      void message.error(objectMetricText("bindingUpgradeFailed"));
+    } finally {
+      setUpgrading(false);
+    }
   };
 
   return (
     <main className={`${styles.page} ${metricTheme.scope}`}>
       <div className={styles.header}>
         <div className={styles.identity}>
-          <Select
-            onChange={(version) => {
-              const selected = versions.find((item) => item.definition.version === version);
-              if (selected) setRecord(selected);
-            }}
-            options={versions.map((item) => ({
-              label: `v${item.definition.version} · ${statusNames[item.definition.lifecycle.status] ?? item.definition.lifecycle.status}`,
-              value: item.definition.version,
-            }))}
-            value={definition.version}
-            className={styles.versionSelect}
-          />
           <h1>{definition.name}</h1>
-          <p>
-            {definition.code}@v{definition.version}
-          </p>
+          <div className={styles.identityMeta}>
+            <Select
+              aria-label={objectMetricText("graphMetricVersion")}
+              className={styles.versionSelect}
+              onChange={(version) => {
+                setUpgradeConfirmOpen(false);
+                const selected = versions.find((item) => item.definition.version === version);
+                if (selected) {
+                  setRecord(selected);
+                  void navigate(
+                    `/knowledge-network/workspace/${encodeURIComponent(networkId)}/metrics/${encodeURIComponent(definition.id)}/detail?version=${version}`,
+                    {
+                      replace: true,
+                      state: location.state as {
+                        knowledgeNetworkReturnTo?: string;
+                        justPublished?: boolean;
+                      } | null,
+                    },
+                  );
+                }
+              }}
+              options={[
+                ...(draftVersions.length
+                  ? [
+                      {
+                        label: objectMetricText("workingDraftGroup"),
+                        options: draftVersions.map((item) => ({
+                          label: draftLabel(item),
+                          value: item.definition.version,
+                        })),
+                      },
+                    ]
+                  : []),
+                ...(releasedVersions.length
+                  ? [
+                      {
+                        label: objectMetricText("releasedVersionGroup"),
+                        options: releasedVersions.map((item) => ({
+                          label: `v${item.definition.version} · ${statusNames[item.definition.lifecycle.status]}`,
+                          value: item.definition.version,
+                        })),
+                      },
+                    ]
+                  : []),
+              ]}
+              value={definition.version}
+            />
+            <span className={styles.metricCode}>{definition.code}</span>
+          </div>
         </div>
         <div className={styles.actions}>
-          <Button
-            onClick={() => void navigate(`/knowledge-network/workspace/${networkId}/metrics`)}
-          >
+          <Button onClick={() => void navigate(returnTo)}>
             {objectMetricText("me9d5ca6c1406")}
           </Button>
-          <Button
-            onClick={() => {
-              void (async () => {
-                if (["published", "deprecated"].includes(definition.lifecycle.status)) {
-                  await createNextObjectMetricDraftV1(networkId, definition.id);
-                }
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/metrics/${definition.id}/edit`,
-                );
-              })();
-            }}
-            type="primary"
+          <Tooltip
+            title={
+              isPublishedVersion
+                ? objectMetricText("m7a26b9117cf8")
+                : objectMetricText("m0f8ba014cedf")
+            }
           >
-            {["published", "deprecated"].includes(definition.lifecycle.status)
-              ? objectMetricText("m5a3f1953b1fb")
-              : objectMetricText("m9d0eedd99d2b")}
-          </Button>
+            <Button autoInsertSpace={false} onClick={() => setTrialOpen(true)}>
+              {objectMetricText("m073728637a26")}
+            </Button>
+          </Tooltip>
+          {canBindLogicProperty ? (
+            <Tooltip title={objectMetricText("md320de80ff41")}>
+              <Button onClick={() => setBindingOpen(true)}>
+                {objectMetricText("m915fe912305c")}
+              </Button>
+            </Tooltip>
+          ) : null}
+          {canUpgradeLogicProperty ? (
+            <Button onClick={() => setUpgradeConfirmOpen(true)}>
+              {objectMetricText("bindingUpgradeAction")}
+            </Button>
+          ) : null}
+          {canModify && definition.lifecycle.status !== "deprecated" ? (
+            <Tooltip
+              title={
+                isPublishedVersion && workingDraft
+                  ? objectMetricText("editWorkingDraftHint")
+                  : undefined
+              }
+            >
+              <Button
+                autoInsertSpace={false}
+                onClick={() => {
+                  void (async () => {
+                    if (isPublishedVersion && !workingDraft) {
+                      await createNextObjectMetricDraftV1(networkId, definition.id);
+                    }
+                    void navigate(
+                      `/knowledge-network/workspace/${networkId}/metrics/${definition.id}/edit`,
+                      { state: { knowledgeNetworkReturnTo: returnTo } },
+                    );
+                  })();
+                }}
+                type="primary"
+              >
+                {isPublishedVersion
+                  ? workingDraft
+                    ? objectMetricText("continueEditingDraft")
+                    : objectMetricText("createWorkingDraftFromLatest")
+                  : objectMetricText("m9d0eedd99d2b")}
+              </Button>
+            </Tooltip>
+          ) : null}
         </div>
       </div>
       <div className={styles.content}>
         {(location.state as { justPublished?: boolean } | null)?.justPublished ? (
           <Alert
             message={objectMetricText("m7d6fe77cb980", { p0: definition.version })}
-            description={objectMetricText("ma9b914cb8eda")}
             type="success"
             showIcon
             closable
           />
         ) : null}
-        <Card className={styles.sectionCard} title={objectMetricText("mb76466842ab3")}>
-          <div className={styles.usageGrid}>
-            <div className={styles.usageItem}>
-              <div>
-                <strong>{objectMetricText("m073728637a26")}</strong>
-                <p>{objectMetricText("m7a26b9117cf8")}</p>
-              </div>
-              <Button disabled={!canQuery} onClick={() => setTrialOpen(true)}>
-                {canQuery ? objectMetricText("mf143bd50d496") : objectMetricText("mf4389f020d9b")}
-              </Button>
-            </div>
-            <div className={styles.usageItem}>
-              <div>
-                <strong>{objectMetricText("mb847b6e39e27")}</strong>
-                <p>{objectMetricText("md320de80ff41")}</p>
-              </div>
-              <Button
-                disabled={
-                  definition.lifecycle.status !== "published" ||
-                  definition.calculation_scope !== "object_instance"
-                }
-                onClick={() => setBindingOpen(true)}
-              >
-                {definition.calculation_scope !== "object_instance"
-                  ? objectMetricText("m71a96d83271b")
-                  : definition.lifecycle.status === "published"
-                    ? objectMetricText("m915fe912305c")
-                    : objectMetricText("m8f301dc74371")}
-              </Button>
-            </div>
-          </div>
-        </Card>
-        <Card className={styles.sectionCard} title={objectMetricText("m419eb90613fd")}>
-          <Descriptions column={2} bordered>
+        <Card className={styles.sectionCard} title={objectMetricText("detailBasicInfo")}>
+          <Descriptions column={{ xs: 1, sm: 2 }} bordered>
             <Descriptions.Item label={objectMetricText("m7626be61e570")}>
               <Tag color="blue">{typeNames[definition.metric_type]}</Tag>
             </Descriptions.Item>
@@ -472,46 +715,74 @@ export function ObjectMetricDetailScene() {
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("m26c439016066")}>
-              {objectTypes.find((item) => item.id === definition.owner_object_type_id)?.name ??
-                definition.owner_object_type_id}
+              {ownerObjectTypeName ?? definition.owner_object_type_id}
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("mec7844e49915")}>
               {definition.calculation_scope === "object_instance"
                 ? objectMetricText("mabe9d02781fc")
                 : objectMetricText("m9c51e86f9307")}
-            </Descriptions.Item>
-            <Descriptions.Item label={objectMetricText("m419eb90613fd")} span={2}>
-              {definition.description}
+              {definition.calculation_scope === "object_instance" ? (
+                <span className={styles.inlineBinding}>
+                  {objectMetricText("bindingStatusLabel")}：{bindingStatus}
+                </span>
+              ) : null}
             </Descriptions.Item>
           </Descriptions>
+          <div className={styles.businessDefinition}>
+            <div className={styles.businessDefinitionLabel}>
+              {objectMetricText("m419eb90613fd")}
+            </div>
+            <div className={styles.businessDefinitionContent}>{definition.description}</div>
+          </div>
         </Card>
         <Card className={styles.sectionCard} title={objectMetricText("m6c7b29b8b211")}>
           {specification.kind === "atomic" ? (
-            <Descriptions column={2}>
+            <Descriptions column={{ xs: 1, sm: 2 }}>
               <Descriptions.Item label={objectMetricText("mb17e03bc6bad")}>
                 {aggregationNames[specification.measure.aggregation] ??
                   specification.measure.aggregation}
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("me92a76d3b298")}>
-                {expression ? expressionLabel(expression) : objectMetricText("m21179deb9a74")}
+                {expression ? (
+                  <Tooltip title={expressionLabel(expression)}>
+                    <span>{expressionLabel(expression, displayProperty)}</span>
+                  </Tooltip>
+                ) : (
+                  objectMetricText("m21179deb9a74")
+                )}
               </Descriptions.Item>
             </Descriptions>
           ) : null}
           {specification.kind === "derived" ? (
-            <Descriptions column={2}>
+            <Descriptions column={{ xs: 1, sm: 2 }}>
               <Descriptions.Item label={objectMetricText("m4919ba2e9c0b")}>
-                {publishedMetrics.find(
-                  (item) =>
-                    item.definition.id === specification.base_metric.metric_id &&
-                    item.definition.version === specification.base_metric.version,
-                )?.definition.name ?? specification.base_metric.metric_id}
-                @v{specification.base_metric.version}
+                <span className={styles.metricReference}>
+                  <span className={styles.metricReferenceVersion}>
+                    v{specification.base_metric.version}
+                  </span>
+                  <span className={styles.metricReferenceName}>
+                    {publishedMetrics.find(
+                      (item) =>
+                        item.definition.id === specification.base_metric.metric_id &&
+                        item.definition.version === specification.base_metric.version,
+                    )?.definition.name ?? specification.base_metric.metric_id}
+                  </span>
+                </span>
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("me306e231fb23")}>
                 {timeWindowLabel(specification.business_qualifiers.time_window)}
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("m391f2f5d1034")} span={2}>
-                {objectMetricBusinessConditionLabel(specification.business_qualifiers)}
+                <Tooltip
+                  title={objectMetricBusinessConditionLabel(specification.business_qualifiers)}
+                >
+                  <span>
+                    {objectMetricBusinessConditionLabel(
+                      specification.business_qualifiers,
+                      displayProperty,
+                    )}
+                  </span>
+                </Tooltip>
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("mf8c41076f5dc")} span={2}>
                 {specification.business_qualifiers.relation_path?.steps
@@ -525,141 +796,220 @@ export function ObjectMetricDetailScene() {
             </Descriptions>
           ) : null}
           {specification.kind === "composite" ? (
-            <Descriptions column={1}>
-              <Descriptions.Item label={objectMetricText("ma6ace5b29ab9")}>
-                <Space size={[8, 8]} wrap>
-                  {compositeDependencies.map(
-                    ({
-                      dependency,
-                      error,
-                      loading: dependencyLoading,
-                      record: dependencyRecord,
-                    }) => {
-                      const tag = (
-                        <Tag
-                          color={
-                            dependencyRecord ? "blue" : dependencyLoading ? "default" : "error"
-                          }
-                          key={`${dependency.metric_ref.metric_id}@${dependency.metric_ref.version}`}
-                        >
-                          {dependencyRecord
-                            ? objectMetricText("m12e768346231", {
-                                p0: dependencyRecord.definition.name,
-                                p1: dependencyRecord.definition.version,
-                                p2: typeNames[dependencyRecord.definition.metric_type],
-                                p3: statusNames[dependencyRecord.definition.lifecycle.status],
-                                p4: dependency.alias,
+            <>
+              <Descriptions column={1}>
+                <Descriptions.Item label={objectMetricText("ma6ace5b29ab9")}>
+                  <Space size={[8, 8]} wrap>
+                    {compositeDependencies.map(
+                      ({
+                        dependency,
+                        error,
+                        loading: dependencyLoading,
+                        record: dependencyRecord,
+                      }) => {
+                        const detail = dependencyRecord
+                          ? objectMetricText("m12e768346231", {
+                              p0: dependencyRecord.definition.name,
+                              p1: dependencyRecord.definition.version,
+                              p2: typeNames[dependencyRecord.definition.metric_type],
+                              p3: statusNames[dependencyRecord.definition.lifecycle.status],
+                              p4: dependency.alias,
+                            })
+                          : dependencyLoading
+                            ? objectMetricText("m7d9782471028", {
+                                p0: dependency.metric_ref.version,
+                                p1: dependency.alias,
                               })
-                            : dependencyLoading
-                              ? objectMetricText("m7d9782471028", {
-                                  p0: dependency.metric_ref.version,
-                                  p1: dependency.alias,
-                                })
-                              : objectMetricText("mcb1ed2f66b66", {
-                                  p0: dependencyFailureLabel(error, dependency.metric_ref.version),
-                                  p1: dependency.alias,
-                                })}
-                        </Tag>
-                      );
-                      return error ? (
-                        <Tooltip
-                          key={`${dependency.metric_ref.metric_id}@${dependency.metric_ref.version}`}
-                          title={dependencyFailureDescription(error)}
-                        >
-                          {tag}
-                        </Tooltip>
-                      ) : (
-                        tag
-                      );
-                    },
+                            : objectMetricText("mcb1ed2f66b66", {
+                                p0: dependencyFailureLabel(error, dependency.metric_ref.version),
+                                p1: dependency.alias,
+                              });
+                        return (
+                          <Tooltip
+                            key={`${dependency.metric_ref.metric_id}@${dependency.metric_ref.version}`}
+                            title={error ? dependencyFailureDescription(error) : detail}
+                          >
+                            <Tag
+                              color={
+                                dependencyRecord ? "blue" : dependencyLoading ? "default" : "error"
+                              }
+                            >
+                              {dependencyRecord
+                                ? `${dependencyRecord.definition.name} · v${dependencyRecord.definition.version}`
+                                : dependencyLoading
+                                  ? objectMetricText("detailDependencyLoading", {
+                                      p0: dependency.metric_ref.version,
+                                    })
+                                  : dependencyFailureLabel(error, dependency.metric_ref.version)}
+                            </Tag>
+                          </Tooltip>
+                        );
+                      },
+                    )}
+                  </Space>
+                </Descriptions.Item>
+                <Descriptions.Item label={objectMetricText("me1126763a0f0")}>
+                  {expressionLabel(
+                    replaceObjectMetricDependencyAliases(
+                      specification.expression,
+                      compositeDependencyLabels,
+                    ),
                   )}
-                </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("me1126763a0f0")}>
-                {expressionLabel(
-                  replaceObjectMetricDependencyAliases(
-                    specification.expression,
-                    compositeDependencyLabels,
-                  ),
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("m485ac2c76c24")}>
-                {expressionLabel(specification.expression)}
-              </Descriptions.Item>
-            </Descriptions>
+                </Descriptions.Item>
+              </Descriptions>
+              <details className={styles.technicalDetails}>
+                <summary>{objectMetricText("m485ac2c76c24")}</summary>
+                <code>{expressionLabel(specification.expression)}</code>
+              </details>
+            </>
           ) : null}
         </Card>
-        <Card className={styles.sectionCard} title={objectMetricText("m7f4551dd15d1")}>
-          <ObjectMetricLineagePanel
-            logicProperties={ownerObjectType?.logicProperties ?? []}
-            metric={record}
-            metrics={lineageCatalog}
-          />
-        </Card>
         <Card className={styles.sectionCard} title={objectMetricText("mf006fe7f4bbf")}>
-          <Descriptions column={2} bordered>
+          <Descriptions
+            className={styles.resultDescriptions}
+            column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 2 }}
+            bordered
+          >
             <Descriptions.Item label={objectMetricText("m88459b43afb6")}>
-              {definition.result_semantics.statistical_grain.group_by_dimensions
-                .map((item) => item.property_name)
-                .join("、") || objectMetricText("m9f05b0e41cb5")}
+              <MetricDimensionList
+                key={`${definition.id}@${definition.version}:group`}
+                items={definition.result_semantics.statistical_grain.group_by_dimensions.map(
+                  (item) => objectMetricPropertyDisplayName(item, ownerObjectType),
+                )}
+                emptyText={objectMetricText(
+                  definition.calculation_scope === "object_instance"
+                    ? "detailNoFixedGroupForInstance"
+                    : "m9f05b0e41cb5",
+                )}
+              />
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("m0a2ce90e187a")}>
               {definition.result_semantics.statistical_grain.time_granularity
-                ? `${definition.result_semantics.statistical_grain.time_granularity} · ${definition.result_semantics.statistical_grain.timezone ?? objectMetricText("m589d84e4cca8")}${definition.result_semantics.statistical_grain.week_start ? objectMetricText("m8dba6895a41a", { p0: definition.result_semantics.statistical_grain.week_start }) : ""}`
+                ? `${objectMetricText(timeGranularityKeys[definition.result_semantics.statistical_grain.time_granularity])} · ${definition.result_semantics.statistical_grain.timezone ?? objectMetricText("m589d84e4cca8")}${definition.result_semantics.statistical_grain.week_start ? objectMetricText("m8dba6895a41a", { p0: objectMetricText(definition.result_semantics.statistical_grain.week_start === "monday" ? "detailWeekStartMonday" : "detailWeekStartSunday") }) : ""}`
                 : objectMetricText("m484d55613910")}
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("me659c05e3760")}>
-              {definition.result_semantics.value.physical_type} /{" "}
-              {definition.result_semantics.value.semantic_type}
+              <Tooltip
+                title={`${definition.result_semantics.value.physical_type} / ${definition.result_semantics.value.semantic_type}`}
+              >
+                <span>
+                  {objectMetricText(
+                    physicalTypeKeys[definition.result_semantics.value.physical_type],
+                  )}
+                  {" / "}
+                  {objectMetricText(
+                    semanticTypeKeys[definition.result_semantics.value.semantic_type],
+                  )}
+                </span>
+              </Tooltip>
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("m80b19d68b149")}>
-              {definition.result_semantics.value.unit?.code ?? objectMetricText("m484d55613910")}
+              {definition.result_semantics.value.unit ? (
+                <Tooltip title={definition.result_semantics.value.unit.code}>
+                  <span>
+                    {definition.result_semantics.value.unit.display_symbol?.trim()
+                      ? `${definition.result_semantics.value.unit.display_symbol.trim()} (${definition.result_semantics.value.unit.code})`
+                      : definition.result_semantics.value.unit.code}
+                  </span>
+                </Tooltip>
+              ) : (
+                objectMetricText("m484d55613910")
+              )}
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("m9a004b7a1da9")}>
-              {definition.query_capabilities.analysis_dimensions
-                .map((item) => item.property_name)
-                .join("、") || objectMetricText("m484d55613910")}
+              <MetricDimensionList
+                key={`${definition.id}@${definition.version}:analysis`}
+                items={definition.query_capabilities.analysis_dimensions.map((item) =>
+                  objectMetricPropertyDisplayName(item, ownerObjectType),
+                )}
+                emptyText={objectMetricText("m484d55613910")}
+              />
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("m40e232fef99f")}>
-              {definition.query_capabilities.time_dimensions
-                .map((item) => item.property_name)
-                .join("、") || objectMetricText("m484d55613910")}
+              <MetricDimensionList
+                key={`${definition.id}@${definition.version}:time`}
+                items={definition.query_capabilities.time_dimensions.map((item) =>
+                  objectMetricPropertyDisplayName(item, ownerObjectType),
+                )}
+                emptyText={objectMetricText("m484d55613910")}
+              />
             </Descriptions.Item>
           </Descriptions>
+        </Card>
+        <Card
+          className={styles.sectionCard}
+          extra={
+            <Tooltip
+              title={objectMetricText("lineageDownstreamNotice")}
+              trigger={["hover", "focus", "click"]}
+            >
+              <Button
+                aria-label={objectMetricText("lineageDownstreamUnverified")}
+                icon={<QuestionCircleOutlined />}
+                size="small"
+                type="text"
+              >
+                {objectMetricText("lineageDownstreamUnverified")}
+              </Button>
+            </Tooltip>
+          }
+          title={objectMetricText("lineageDependenciesAndReferences")}
+        >
+          <ObjectMetricLineagePanel
+            metric={record}
+            metrics={lineageCatalog}
+            onOpenMetric={(relatedMetricId, version) =>
+              void navigate(
+                `/knowledge-network/workspace/${encodeURIComponent(networkId)}/metrics/${encodeURIComponent(relatedMetricId)}/detail?version=${version}`,
+                { state: { knowledgeNetworkReturnTo: returnTo } },
+              )
+            }
+            ownerObjectType={ownerObjectType}
+          />
         </Card>
       </div>
       <ObjectMetricTrialDrawer
         definition={definition}
-        mode="published"
+        mode={isPublishedVersion ? "published" : "draft"}
         objectType={ownerObjectType}
         onClose={() => setTrialOpen(false)}
         onRun={(query) =>
-          queryObjectMetricDataV1(networkId, definition.id, definition.version, query)
+          isPublishedVersion
+            ? queryObjectMetricDataV1(networkId, definition.id, definition.version, query)
+            : trialObjectMetricDataV1(networkId, definition, query)
         }
         open={trialOpen}
       />
+      <Modal
+        confirmLoading={upgrading}
+        onCancel={() => setUpgradeConfirmOpen(false)}
+        onOk={() => void upgradeLogicProperty()}
+        okText={objectMetricText("bindingUpgradeAction")}
+        open={upgradeConfirmOpen && canUpgradeLogicProperty}
+        rootClassName={metricTheme.scope}
+        title={objectMetricText("bindingUpgradeTitle")}
+      >
+        {objectMetricText("bindingUpgradeConfirm", { p0: boundVersion, p1: definition.version })}
+      </Modal>
       <Drawer
         destroyOnHidden
         forceRender
         onClose={() => setBindingOpen(false)}
         open={bindingOpen}
         rootClassName={`${styles.drawer} ${metricTheme.scope}`}
-        title={objectMetricText("m6c461a9f092b")}
+        title={
+          ownerObjectTypeName
+            ? objectMetricText("m6c461a9f092b", { p0: ownerObjectTypeName })
+            : objectMetricText("bindingCurrentObjectTypeTitle")
+        }
         width="min(520px, calc(100vw - 24px))"
       >
-        <Alert
-          message={objectMetricText("m517a1a8a0069")}
-          description={objectMetricText("mca81dbf346a3", { p0: definition.owner_object_type_id })}
-          type="info"
-          showIcon
-        />
         <Form
           form={bindingForm}
           layout="vertical"
           onFinish={(values) => {
             void bindLogicProperty(values);
           }}
-          style={{ marginTop: 20 }}
         >
           <Form.Item
             label={objectMetricText("maac14899bd42")}

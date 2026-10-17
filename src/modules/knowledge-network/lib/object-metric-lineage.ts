@@ -5,7 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
+import type {
+  ObjectMetricExpressionV1,
+  ObjectMetricPropertyRefV1,
+  ObjectMetricRecordV1,
+} from "@/modules/knowledge-network/types/object-metric";
 
 export type MetricLineageReference = { metric_id: string; version: number };
 
@@ -25,6 +29,31 @@ export type MetricReferenceResolution = {
 
 export function objectMetricVersionKey(metricId: string, version: number) {
   return `${metricId}@${version}`;
+}
+
+/** Only measure inputs are data sources; grouping and query dimensions are not calculation inputs. */
+export function atomicMeasureProperties(metric: ObjectMetricRecordV1): ObjectMetricPropertyRefV1[] {
+  if (metric.definition.specification.kind !== "atomic") return [];
+  const properties = new Map<string, ObjectMetricPropertyRefV1>();
+  const visit = (expression: ObjectMetricExpressionV1): void => {
+    if (expression.node_type === "property") {
+      const property = expression.property_ref;
+      properties.set(
+        `${property.object_type_id}:${property.relation_path_alias ?? ""}:${property.property_name}`,
+        property,
+      );
+    } else if (expression.node_type === "call") {
+      expression.arguments.forEach(visit);
+    } else if (expression.node_type === "binary") {
+      visit(expression.left);
+      visit(expression.right);
+    } else if (expression.node_type === "unary") {
+      visit(expression.left);
+    }
+  };
+  const expression = metric.definition.specification.measure.expression;
+  if (expression) visit(expression);
+  return [...properties.values()];
 }
 
 /** Loads the immutable versions named by dependency references, never their latest replacements. */

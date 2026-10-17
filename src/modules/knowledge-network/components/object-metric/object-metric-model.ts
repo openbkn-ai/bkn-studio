@@ -8,6 +8,7 @@
 import type {
   ObjectMetricDefinitionV1,
   ObjectMetricExpressionV1,
+  ObjectMetricPropertyRefV1,
   ObjectMetricTypeV1,
   ObjectMetricUnitSpecV1,
   ObjectMetricValueSemanticsV1,
@@ -205,10 +206,16 @@ export function createObjectMetricDefinitionV1(
   };
 }
 
-export function expressionLabel(expression: ObjectMetricExpressionV1): string {
+export function expressionLabel(
+  expression: ObjectMetricExpressionV1,
+  propertyLabel?: (reference: ObjectMetricPropertyRefV1) => string,
+): string {
   switch (expression.node_type) {
     case "property":
-      return `${expression.property_ref.object_type_id}.${expression.property_ref.property_name}`;
+      return (
+        propertyLabel?.(expression.property_ref) ??
+        `${expression.property_ref.object_type_id}.${expression.property_ref.property_name}`
+      );
     case "dependency":
       return expression.dependency_alias;
     case "literal":
@@ -220,12 +227,12 @@ export function expressionLabel(expression: ObjectMetricExpressionV1): string {
             : "false"
           : "";
     case "call":
-      return `${expression.function}(${expression.arguments.map(expressionLabel).join(", ")})`;
+      return `${expression.function}(${expression.arguments.map((argument) => expressionLabel(argument, propertyLabel)).join(", ")})`;
     case "unary":
-      return `-${expressionLabel(expression.left)}`;
+      return `-${expressionLabel(expression.left, propertyLabel)}`;
     case "binary": {
       const operators = { add: "+", divide: "÷", modulo: "%", multiply: "×", subtract: "−" };
-      return `(${expressionLabel(expression.left)} ${operators[expression.operator]} ${expressionLabel(expression.right)})`;
+      return `(${expressionLabel(expression.left, propertyLabel)} ${operators[expression.operator]} ${expressionLabel(expression.right, propertyLabel)})`;
     }
   }
 }

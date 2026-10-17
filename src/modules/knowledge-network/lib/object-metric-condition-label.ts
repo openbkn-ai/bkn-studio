@@ -9,6 +9,7 @@ import type {
   ObjectMetricConditionV1,
   ObjectMetricDerivedSpecV1,
   ObjectMetricOperandV1,
+  ObjectMetricPropertyRefV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 
@@ -87,8 +88,11 @@ const comparisonNames: Record<string, string> = {
   },
 };
 
-function operandLabel(operand: ObjectMetricOperandV1) {
-  if (operand.source === "property") return operand.property_ref.property_name;
+type PropertyLabel = (reference: ObjectMetricPropertyRefV1) => string;
+
+function operandLabel(operand: ObjectMetricOperandV1, propertyLabel?: PropertyLabel) {
+  if (operand.source === "property")
+    return propertyLabel?.(operand.property_ref) ?? operand.property_ref.property_name;
   if (typeof operand.value === "string") return `“${operand.value}”`;
   if (typeof operand.value === "number") return String(operand.value);
   if (typeof operand.value === "boolean")
@@ -96,17 +100,23 @@ function operandLabel(operand: ObjectMetricOperandV1) {
   return "—";
 }
 
-export function objectMetricConditionLabel(condition: ObjectMetricConditionV1): string {
+export function objectMetricConditionLabel(
+  condition: ObjectMetricConditionV1,
+  propertyLabel?: PropertyLabel,
+): string {
   if (condition.node_type === "predicate") {
-    const right = condition.right?.map(operandLabel).join("、") ?? "";
-    return `${operandLabel(condition.left)} ${comparisonNames[condition.comparison_operator] ?? condition.comparison_operator}${right ? ` ${right}` : ""}`;
+    const right =
+      condition.right?.map((item) => operandLabel(item, propertyLabel)).join("、") ?? "";
+    return `${operandLabel(condition.left, propertyLabel)} ${comparisonNames[condition.comparison_operator] ?? condition.comparison_operator}${right ? ` ${right}` : ""}`;
   }
   const operator = {
     and: objectMetricText("m8913b8b6e1ef"),
     not: objectMetricText("m432b6e3d4bd1"),
     or: objectMetricText("m5b7bbecff860"),
   }[condition.boolean_operator];
-  const children = condition.children.map(objectMetricConditionLabel);
+  const children = condition.children.map((child) =>
+    objectMetricConditionLabel(child, propertyLabel),
+  );
   return condition.boolean_operator === "not"
     ? `${operator}（${children[0] ?? ""}）`
     : `（${children.join(` ${operator} `)}）`;
@@ -114,13 +124,16 @@ export function objectMetricConditionLabel(condition: ObjectMetricConditionV1): 
 
 export function objectMetricBusinessConditionLabel(
   qualifiers: ObjectMetricDerivedSpecV1["business_qualifiers"],
+  propertyLabel?: PropertyLabel,
 ): string {
   const current = qualifiers.filters
-    ? objectMetricText("mba4ee53e00b2", { p0: objectMetricConditionLabel(qualifiers.filters) })
+    ? objectMetricText("mba4ee53e00b2", {
+        p0: objectMetricConditionLabel(qualifiers.filters, propertyLabel),
+      })
     : undefined;
   const related = qualifiers.relation_path?.related_filters
     ? objectMetricText("m640445bff828", {
-        p0: objectMetricConditionLabel(qualifiers.relation_path.related_filters),
+        p0: objectMetricConditionLabel(qualifiers.relation_path.related_filters, propertyLabel),
       })
     : undefined;
   return [current, related].filter(Boolean).join("；") || objectMetricText("m439992fad3a5");
