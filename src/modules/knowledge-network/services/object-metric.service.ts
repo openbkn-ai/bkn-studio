@@ -75,7 +75,15 @@ export async function listObjectMetricsV1(
 ): Promise<ObjectMetricListV1> {
   if (useMock) {
     const keyword = query.keyword?.trim().toLowerCase();
-    const filtered = (mockObjectMetrics[networkId] ?? []).filter(
+    const latestById = new Map<string, ObjectMetricRecordV1>();
+    for (const record of mockObjectMetrics[networkId] ?? []) {
+      if (query.status && record.definition.lifecycle.status !== query.status) continue;
+      const current = latestById.get(record.definition.id);
+      if (!current || record.definition.version > current.definition.version) {
+        latestById.set(record.definition.id, record);
+      }
+    }
+    const filtered = [...latestById.values()].filter(
       ({ definition }) =>
         (!keyword ||
           definition.name.toLowerCase().includes(keyword) ||

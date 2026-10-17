@@ -14,6 +14,7 @@ import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
 import { DEFAULT_APP_BASENAME } from "./src/app/router/app-basename";
+import { rewriteObjectMetricDevApiUrl } from "./vite-object-metric-proxy";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const appBase = `${DEFAULT_APP_BASENAME}/`;
@@ -58,6 +59,12 @@ export default defineConfig(({ mode }) => {
   // 监听的端口并返 500。要连本地调试实例时显式设 VITE_*_TARGET。
   const labProxyTarget = process.env.VITE_LAB_PROXY_TARGET ?? devProxyOrigin;
   const ossProxyTarget = process.env.VITE_OSS_PROXY_TARGET ?? devProxyOrigin;
+  // Older remote installations still serve object metrics under v2. Keep the
+  // production API contract unchanged while allowing local UI integration.
+  const objectMetricDevApiVersion = env.VITE_DEV_OBJECT_METRIC_API_VERSION?.trim();
+  const objectMetricDevRewrite =
+    objectMetricDevApiVersion === "v2" ? rewriteObjectMetricDevApiUrl : undefined;
+
   return {
     base: appBase,
     plugins: [react(), redirectRootToAppBase()],
@@ -151,6 +158,7 @@ export default defineConfig(({ mode }) => {
                       changeOrigin: true,
                       secure: false,
                       target: env.VITE_BKN_BACKEND_TARGET,
+                      ...(objectMetricDevRewrite ? { rewrite: objectMetricDevRewrite } : {}),
                     },
                   }
                 : {}),
@@ -160,6 +168,7 @@ export default defineConfig(({ mode }) => {
                       changeOrigin: true,
                       secure: false,
                       target: env.VITE_ONTOLOGY_QUERY_TARGET,
+                      ...(objectMetricDevRewrite ? { rewrite: objectMetricDevRewrite } : {}),
                     },
                   }
                 : {}),
@@ -184,6 +193,7 @@ export default defineConfig(({ mode }) => {
                 // Allow self-signed HTTPS targets used by local gateways.
                 secure: false,
                 target: devProxyOrigin,
+                ...(objectMetricDevRewrite ? { rewrite: objectMetricDevRewrite } : {}),
               },
               // hydra public OAuth2/OIDC endpoints (login flow + token exchange)
               // exposed same-origin at the gateway; mirror them in dev.
