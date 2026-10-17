@@ -141,6 +141,7 @@ function dimensionValueLabel(value: unknown): string {
 function categoryLabel(
   entry: ObjectMetricDataEntryV1,
   propertyLabels: Record<string, string>,
+  identityLabels: Record<string, string>,
 ): string {
   const dimensions = dimensionEntries(entry);
   if (dimensions.length === 1) return String(dimensions[0]?.[1]);
@@ -150,7 +151,7 @@ function categoryLabel(
       .join(" · ");
   if (entry.instance_identity)
     return Object.entries(entry.instance_identity)
-      .map(([key, value]) => `${propertyLabels[key] || key}: ${String(value)}`)
+      .map(([key, value]) => `${identityLabels[key] || key}: ${String(value)}`)
       .join(" · ");
   return objectMetricText("mbd0a40247497");
 }
@@ -169,8 +170,9 @@ function hasTime(entries: NumericEntry[]) {
 function buildCategoryOption(
   entries: NumericEntry[],
   propertyLabels: Record<string, string>,
+  identityLabels: Record<string, string>,
 ): EChartsOption {
-  const categories = entries.map((entry) => categoryLabel(entry, propertyLabels));
+  const categories = entries.map((entry) => categoryLabel(entry, propertyLabels, identityLabels));
   return {
     color: palette,
     grid: { containLabel: true, left: 14, right: 20, bottom: 44, top: 22 },
@@ -266,6 +268,7 @@ function buildStackedBarOption(
 function buildPieOption(
   entries: NumericEntry[],
   propertyLabels: Record<string, string>,
+  identityLabels: Record<string, string>,
 ): EChartsOption {
   return {
     color: palette,
@@ -274,7 +277,7 @@ function buildPieOption(
     series: [
       {
         data: entries.map((entry) => ({
-          name: categoryLabel(entry, propertyLabels),
+          name: categoryLabel(entry, propertyLabels, identityLabels),
           value: entry.value,
         })),
         label: { formatter: "{b}\n{d}%" },
@@ -439,6 +442,7 @@ function buildComboOption(entries: NumericEntry[]): EChartsOption {
 }
 
 type ObjectMetricAnalysisPanelProps = {
+  identityLabels?: Record<string, string>;
   propertyLabels?: Record<string, string>;
   result: ObjectMetricDataV1;
 };
@@ -446,6 +450,7 @@ type ObjectMetricAnalysisPanelProps = {
 const emptyPropertyLabels: Record<string, string> = {};
 
 export function ObjectMetricAnalysisPanel({
+  identityLabels = emptyPropertyLabels,
   propertyLabels = emptyPropertyLabels,
   result,
 }: ObjectMetricAnalysisPanelProps) {
@@ -477,11 +482,11 @@ export function ObjectMetricAnalysisPanel({
   useEffect(() => setSelectedView("auto"), [result]);
   const chartOption = useMemo<EChartsOption | undefined>(() => {
     if (!entries.length || resolvedView === "summary" || resolvedView === "table") return undefined;
-    if (resolvedView === "bar") return buildCategoryOption(entries, propertyLabels);
+    if (resolvedView === "bar") return buildCategoryOption(entries, propertyLabels, identityLabels);
     if (resolvedView === "stacked_bar") return buildStackedBarOption(entries, propertyLabels);
     if (resolvedView === "pie")
       return entries.every((entry) => entry.value >= 0)
-        ? buildPieOption(entries, propertyLabels)
+        ? buildPieOption(entries, propertyLabels, identityLabels)
         : undefined;
     if (resolvedView === "line")
       return hasTime(entries) ? buildTimeSeriesOption(entries, false) : undefined;
@@ -491,7 +496,7 @@ export function ObjectMetricAnalysisPanel({
       return buildHeatmapOption(entries, resolvedTheme, propertyLabels);
     if (resolvedView === "combo") return hasTime(entries) ? buildComboOption(entries) : undefined;
     return undefined;
-  }, [entries, propertyLabels, resolvedTheme, resolvedView]);
+  }, [entries, identityLabels, propertyLabels, resolvedTheme, resolvedView]);
   const manualView = activeView !== "auto";
   const summaryValue = entries.length === 1 ? entries[0]?.value : undefined;
 

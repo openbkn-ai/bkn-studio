@@ -304,7 +304,11 @@ export function ObjectMetricTrialDrawer({
               ) : null}
               {result.entries.length ? (
                 <>
-                  <ObjectMetricAnalysisPanel propertyLabels={propertyLabels} result={result} />
+                  <ObjectMetricAnalysisPanel
+                    identityLabels={identityLabels}
+                    propertyLabels={propertyLabels}
+                    result={result}
+                  />
                   <Table
                     columns={[
                       {

@@ -88,6 +88,34 @@ describe("ObjectMetricAnalysisPanel", () => {
     expect(option?.yAxis).toMatchObject({ name: "渠道", data: ["Web", "App"] });
   });
 
+  it("uses owner identity labels for category charts even when dimension labels omit the same key", () => {
+    const objectValueResult: ObjectMetricDataV1 = {
+      ...result,
+      entries: [
+        { instance_identity: { order_no: "A" }, status: "ok", value: 12 },
+        { instance_identity: { order_no: "B" }, status: "ok", value: 8 },
+      ],
+      model: { ...result.model, output_shape: "object_value" },
+    };
+    render(
+      <ObjectMetricAnalysisPanel
+        identityLabels={{ order_no: "订单号" }}
+        propertyLabels={{}}
+        result={objectValueResult}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("柱状"));
+    expect(mocks.options.at(-1)?.xAxis).toMatchObject({
+      data: ["订单号: A", "订单号: B"],
+    });
+
+    fireEvent.click(screen.getByText("饼图"));
+    expect(mocks.options.at(-1)?.series).toMatchObject([
+      { data: [{ name: "订单号: A" }, { name: "订单号: B" }] },
+    ]);
+  });
+
   it("uses a visible heatmap palette when switching between light and dark themes", () => {
     const { rerender } = render(
       <ThemeContext.Provider value="light">

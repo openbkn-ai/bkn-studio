@@ -14,7 +14,19 @@ import type { ObjectMetricDataV1 } from "@/modules/knowledge-network/types/objec
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 
 vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAnalysisPanel", () => ({
-  ObjectMetricAnalysisPanel: () => null,
+  ObjectMetricAnalysisPanel: ({
+    identityLabels,
+    propertyLabels,
+  }: {
+    identityLabels: Record<string, string>;
+    propertyLabels: Record<string, string>;
+  }) => (
+    <div
+      data-testid="analysis-labels"
+      data-identity-labels={JSON.stringify(identityLabels)}
+      data-property-labels={JSON.stringify(propertyLabels)}
+    />
+  ),
 }));
 
 const originalMatchMedia = window.matchMedia;
@@ -86,6 +98,11 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(await screen.findByText("status: 可用")).toBeInTheDocument();
     expect(screen.getByText("订单状态: 已支付")).toBeInTheDocument();
     expect(screen.queryByText("订单状态: 可用")).not.toBeInTheDocument();
+    expect(screen.getByTestId("analysis-labels")).toHaveAttribute(
+      "data-identity-labels",
+      '{"status":"订单状态"}',
+    );
+    expect(screen.getByTestId("analysis-labels")).toHaveAttribute("data-property-labels", "{}");
   });
 
   it("uses business names in dimension choices and results but sends technical names to the API", async () => {
