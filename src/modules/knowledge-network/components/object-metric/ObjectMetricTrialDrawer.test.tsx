@@ -37,6 +37,57 @@ afterAll(() => {
 });
 
 describe("ObjectMetricTrialDrawer", () => {
+  it("keeps a related dimension's technical name when it matches an owner property", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    definition.query_capabilities.analysis_dimensions = [
+      { object_type_id: "coupon", property_name: "status" },
+    ];
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [
+        {
+          dimensions: { status: "可用" },
+          instance_identity: { status: "已支付" },
+          status: "ok",
+          value: 1,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    } satisfies ObjectMetricDataV1);
+
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        objectType={
+          {
+            id: "order",
+            dataProperties: [{ displayName: "订单状态", name: "status" }],
+            logicProperties: [],
+            primaryKeys: [],
+          } as unknown as ObjectTypeDetail
+        }
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    expect(await screen.findByText("status: 可用")).toBeInTheDocument();
+    expect(screen.getByText("订单状态: 已支付")).toBeInTheDocument();
+    expect(screen.queryByText("订单状态: 可用")).not.toBeInTheDocument();
+  });
+
   it("uses business names in dimension choices and results but sends technical names to the API", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.name = "订单数";

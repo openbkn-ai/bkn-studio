@@ -56,4 +56,17 @@ describe("object metric property display", () => {
       ),
     ).toBe("unknown_field");
   });
+
+  it("does not apply an owner label to a related object's dimension with the same property name", () => {
+    expect(
+      objectMetricPropertyDisplayLabels(objectType, [
+        { object_type_id: "coupon", property_name: "status" },
+      ]),
+    ).toEqual({ raw_field: "raw_field", paid_amount: "实付金额" });
+    expect(
+      objectMetricPropertyDisplayLabels(objectType, [
+        { object_type_id: "order", property_name: "status" },
+      ]).status,
+    ).toBe("订单状态");
+  });
 });

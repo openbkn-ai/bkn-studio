@@ -26,6 +26,7 @@ import {
   type ObjectMetricValidationResultV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import type { BackendLogicProperty } from "@/modules/knowledge-network/services/mappers/backend-types";
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -589,13 +590,7 @@ export async function bindObjectMetricLogicPropertyV1(
     };
     return wait(property);
   }
-  const response = await http.post<{
-    comment: string;
-    data_source: { id: string; name: string; type: "metric" };
-    display_name: string;
-    name: string;
-    type: "metric";
-  }>(
+  const response = await http.post<BackendLogicProperty>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/logic-properties`,
     binding,
     { params: { version } },
@@ -628,10 +623,7 @@ export async function upgradeObjectMetricLogicPropertyV1(
     property.dataSource.id = `object_metric_v1:${metricId}@${version}`;
     return wait({ name: propertyName, metric_binding: property.metricBinding });
   }
-  const response = await http.put<{
-    name: string;
-    metric_binding: MetricPropertyBindingV1;
-  }>(
+  const response = await http.put<BackendLogicProperty>(
     `/bkn-backend/v1/knowledge-networks/${encodeURIComponent(networkId)}/object-metrics/${encodeURIComponent(metricId)}/logic-properties/${encodeURIComponent(propertyName)}/metric-ref`,
     undefined,
     { params: { version } },

@@ -178,6 +178,17 @@ function metric(index: number): ObjectMetricRecordV1 {
 }
 
 describe("ObjectMetricListPanel pagination", () => {
+  it("does not load unfiltered metrics when no object type matches the sidebar search", async () => {
+    mocks.searchParams.current = "view=list&objectQuery=missing";
+    mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
+
+    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+
+    await waitFor(() => expect(mocks.listObjectTypes).toHaveBeenCalled());
+    await waitFor(() => expect(container.querySelector("[class*=tableLoading]")).toBeNull());
+    expect(mocks.listObjectMetrics).not.toHaveBeenCalled();
+  });
+
   it("opens the graph-selected version and returns to the graph", async () => {
     mocks.searchParams.current = "objectTypeId=order";
     mocks.listObjectTypes.mockResolvedValue({

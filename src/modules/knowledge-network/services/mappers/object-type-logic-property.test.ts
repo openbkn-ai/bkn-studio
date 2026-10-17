@@ -10,8 +10,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildBackendObjectTypePayload,
   mapLogicProperty,
+  mapObjectTypeDetail,
   toBackendLogicProperty,
 } from "@/modules/knowledge-network/services/mappers";
+import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 
 describe("object type tool logic property mapper", () => {
   it("preserves a metric binding through object-type reads and writes", () => {
@@ -32,6 +34,14 @@ describe("object type tool logic property mapper", () => {
     });
     expect(property.metricBinding).toEqual(metricBinding);
     expect(toBackendLogicProperty(property).metric_binding).toEqual(metricBinding);
+    const detail = mapObjectTypeDetail({
+      id: "order",
+      name: "销售订单",
+      logic_properties: [
+        { name: "paid_amount", display_name: "订单支付额", metric_binding: metricBinding },
+      ],
+    });
+    expect(findMetricLogicProperty(detail, "metric-1")?.metricBinding).toEqual(metricBinding);
   });
   it("preserves tool parameter required flags", () => {
     const property = mapLogicProperty({

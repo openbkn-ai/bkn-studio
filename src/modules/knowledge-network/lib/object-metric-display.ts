@@ -27,11 +27,16 @@ export function objectMetricPropertyDisplayName(
 
 export function objectMetricPropertyDisplayLabels(
   objectType?: PropertyCatalog | null,
+  dimensionReferences: ObjectMetricPropertyRefV1[] = [],
 ): Record<string, string> {
-  return Object.fromEntries(
+  const labels = Object.fromEntries(
     [...(objectType?.dataProperties ?? []), ...(objectType?.logicProperties ?? [])].map((item) => [
       item.name,
       item.displayName?.trim() || item.name,
     ]),
   );
+  for (const reference of dimensionReferences) {
+    if (reference.object_type_id !== objectType?.id) delete labels[reference.property_name];
+  }
+  return labels;
 }

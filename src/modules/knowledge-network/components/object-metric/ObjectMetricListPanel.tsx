@@ -324,6 +324,13 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     if (viewMode !== "list") {
       return;
     }
+    if (!selectedObjectTypeId) {
+      setListMetrics([]);
+      setListTotal(0);
+      setListResultKey(listRequestKey);
+      setListLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setListLoading(true);
@@ -332,7 +339,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       limit: pageSize,
       metricType,
       offset: (page - 1) * pageSize,
-      ownerObjectTypeId: selectedObjectTypeId || undefined,
+      ownerObjectTypeId: selectedObjectTypeId,
     })
       .then((result) => {
         if (cancelled) {

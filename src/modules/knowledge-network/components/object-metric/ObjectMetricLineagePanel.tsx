@@ -16,6 +16,7 @@ import {
   objectMetricVersionKey,
   type MetricLineageEntry,
 } from "@/modules/knowledge-network/lib/object-metric-lineage";
+import { objectMetricPropertyDisplayName } from "@/modules/knowledge-network/lib/object-metric-display";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
@@ -144,17 +145,11 @@ export function ObjectMetricLineagePanel({
             <span>{ownerObjectType?.name ?? metric.definition.owner_object_type_id}</span>
             {sourceProperties.length ? (
               sourceProperties.map((property) => {
-                const displayName =
-                  property.object_type_id === ownerObjectType?.id
-                    ? ownerObjectType.dataProperties.find(
-                        (item) => item.name === property.property_name,
-                      )?.displayName
-                    : undefined;
                 return (
                   <Tag
                     key={`${property.object_type_id}:${property.relation_path_alias ?? ""}:${property.property_name}`}
                   >
-                    {displayName || property.property_name}
+                    {objectMetricPropertyDisplayName(property, ownerObjectType)}
                     {property.relation_path_alias ? ` · ${property.relation_path_alias}` : ""}
                   </Tag>
                 );

@@ -114,7 +114,15 @@ export function ObjectMetricTrialDrawer({
   const [result, setResult] = useState<ObjectMetricDataV1>();
   const resultRef = useRef<HTMLDivElement>(null);
   const formId = `metric-trial-${definition.id}-${definition.version}`;
-  const propertyLabels = useMemo(() => objectMetricPropertyDisplayLabels(objectType), [objectType]);
+  const identityLabels = useMemo(() => objectMetricPropertyDisplayLabels(objectType), [objectType]);
+  const propertyLabels = useMemo(
+    () =>
+      objectMetricPropertyDisplayLabels(
+        objectType,
+        definition.query_capabilities.analysis_dimensions,
+      ),
+    [definition.query_capabilities.analysis_dimensions, objectType],
+  );
   const usesFixedDerivedTimeWindow =
     definition.specification.kind === "derived" &&
     definition.specification.business_qualifiers.time_window?.mode !== undefined &&
@@ -303,7 +311,7 @@ export function ObjectMetricTrialDrawer({
                         dataIndex: "instance_identity",
                         key: "instance_identity",
                         render: (value: Record<string, unknown> | undefined) =>
-                          displayMetricFields(value, propertyLabels),
+                          displayMetricFields(value, identityLabels),
                         title: objectMetricText("m99fc84c8b8ae"),
                       },
                       {

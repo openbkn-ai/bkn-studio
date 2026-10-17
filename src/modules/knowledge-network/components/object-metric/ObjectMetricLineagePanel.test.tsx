@@ -175,6 +175,35 @@ describe("ObjectMetricLineagePanel", () => {
     expect(screen.queryByText(/历史版本及未加载的引用尚未核实/)).not.toBeInTheDocument();
   });
 
+  it("uses the logical property's business name for an atomic measure source", () => {
+    const current = metric("paid_amount", "支付金额", {
+      kind: "atomic",
+      measure: {
+        aggregation: "sum",
+        expression: {
+          node_type: "property",
+          property_ref: { object_type_id: "order", property_name: "paid_amount" },
+        },
+      },
+    });
+
+    render(
+      <ObjectMetricLineagePanel
+        metric={current}
+        metrics={[]}
+        ownerObjectType={{
+          dataProperties: [],
+          id: "order",
+          logicProperties: [{ displayName: "实付金额", name: "paid_amount" }],
+          name: "销售订单",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("实付金额")).toBeInTheDocument();
+    expect(screen.queryByText("paid_amount")).not.toBeInTheDocument();
+  });
+
   it("separates draft references from released downstream impact", () => {
     const current = metric("order_count", "订单数", {
       kind: "atomic",
