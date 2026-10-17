@@ -259,8 +259,8 @@ type KnowledgeChildResolver = (networkId: string) => Promise<Array<{ id: string;
 
 async function listObjectMetricNames(networkId: string) {
   const entries: Array<{ id: string; name: string }> = [];
-  for (let offset = 0; ; offset += 500) {
-    const page = await listObjectMetricsV1(networkId, { offset, limit: 500 });
+  while (true) {
+    const page = await listObjectMetricsV1(networkId, { offset: entries.length, limit: 500 });
     entries.push(
       ...page.entries.map(({ definition }) => ({ id: definition.id, name: definition.name })),
     );

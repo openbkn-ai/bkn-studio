@@ -202,6 +202,23 @@ describe("object metric lifecycle", () => {
     expect(page.total_count).toBe(3);
   });
 
+  it("counts latest metric identities instead of all mock version rows", async () => {
+    const networkId = `kn-${crypto.randomUUID()}`;
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.name = "Order amount";
+    definition.description = "Order amount by owner";
+    const draft = await createObjectMetricDraftV1(networkId, definition);
+    await validateObjectMetricVersionV1(networkId, draft.definition.id, draft.definition.version);
+    await publishObjectMetricV1(networkId, draft.definition.id, draft.definition.version);
+    const next = await createNextObjectMetricDraftV1(networkId, draft.definition.id);
+
+    const latest = await listObjectMetricsV1(networkId);
+    expect(latest.total_count).toBe(1);
+    expect(latest.entries.map((record) => record.definition.version)).toEqual([
+      next.definition.version,
+    ]);
+  });
+
   it("resets a validated metric to draft after editing and preserves its immutable code", async () => {
     const networkId = `kn-${crypto.randomUUID()}`;
     const definition = createObjectMetricDefinitionV1("atomic", "order");

@@ -135,12 +135,13 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
       (_networkId: string, options?: { offset?: number }) => {
         const offset = options?.offset ?? 0;
         return Promise.resolve({
-          entries: offset
-            ? [{ definition: { id: "metric-last", name: "Last metric" } }]
-            : Array.from({ length: 500 }, (_, index) => ({
-                definition: { id: `metric-${index}`, name: `Metric ${index}` },
-              })),
-          total_count: 501,
+          entries:
+            offset === 400
+              ? [{ definition: { id: "metric-last", name: "Last metric" } }]
+              : Array.from({ length: 200 }, (_, index) => ({
+                  definition: { id: `metric-${offset + index}`, name: `Metric ${offset + index}` },
+                })),
+          total_count: 401,
         });
       },
     );
@@ -153,7 +154,8 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
     };
     const [resolved] = await resolveGrantNames([grant]);
     expect(resolved.objName).toBe("Last metric");
-    expect(listObjectMetricsMock).toHaveBeenCalledWith("kn-metric-v1", { offset: 500, limit: 500 });
+    expect(listObjectMetricsMock).toHaveBeenCalledWith("kn-metric-v1", { offset: 200, limit: 500 });
+    expect(listObjectMetricsMock).toHaveBeenCalledWith("kn-metric-v1", { offset: 400, limit: 500 });
   });
 });
 
