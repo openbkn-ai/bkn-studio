@@ -343,6 +343,11 @@
   margin-bottom: 16px;
 }
 
+.historyList {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
 .historyItem {
   display: flex;
   flex-wrap: wrap;

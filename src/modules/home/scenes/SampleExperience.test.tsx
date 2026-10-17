@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -944,11 +944,119 @@ describe("SampleExperience", () => {
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
     expect(await screen.findByText("Release details")).toBeVisible();
     expect(await screen.findByText("2026-10-09T05:52:05Z")).toBeVisible();
-    expect(await screen.findByText("2026-10-09T05:50:00Z")).toBeVisible();
+    expect(screen.queryByText("2026-10-09T05:50:00Z")).not.toBeInTheDocument();
     expect(screen.getByText("home.sample.historyPartial")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.historyMore" }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(within(dialog).getByText("2026-10-09T05:52:05Z")).toBeVisible());
+    expect(within(dialog).getByText("2026-10-09T05:50:00Z")).toBeVisible();
+    expect(within(dialog).getByText("home.sample.status.failed", { exact: false })).toBeVisible();
+    expect(within(dialog).getByText("home.sample.historyPartial")).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(dialog).not.toBeVisible());
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.collapse" }));
     expect(screen.getByText("Release details")).not.toBeVisible();
     expect(screen.getByRole("button", { name: "home.sample.actions.open" })).toBeEnabled();
+  });
+
+  it("hides stale dialog history while polling reloads it and when that reload fails", async () => {
+    const installing = sample({ status: "installing", installationId: "inst-1" });
+    listSamples
+      .mockResolvedValueOnce({ samples: [installing] })
+      .mockResolvedValue({ samples: [{ ...installing, status: "installed" }] });
+    let finishInstallation!: (value: Record<string, unknown>) => void;
+    getSampleInstallation.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishInstallation = resolve;
+        }),
+    );
+    let failHistory!: (reason: Error) => void;
+    listSampleInstallations
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "inst-1",
+            version: "0.1.0",
+            status: "installed",
+            stages: [],
+            finishedAt: "2026-10-09T05:52:05Z",
+          },
+          {
+            id: "inst-0",
+            version: "0.1.0",
+            status: "uninstalled",
+            stages: [],
+            finishedAt: "2026-10-09T05:50:00Z",
+          },
+        ],
+        historyComplete: true,
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            failHistory = reject;
+          }),
+      );
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.historyMore" }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(within(dialog).getByText("2026-10-09T05:50:00Z")).toBeVisible());
+    act(() => {
+      finishInstallation({ id: "inst-1", version: "0.1.0", status: "installed", stages: [] });
+    });
+    await waitFor(() =>
+      expect(within(dialog).getByText("home.sample.historyLoading")).toBeVisible(),
+    );
+    expect(within(dialog).queryByText("2026-10-09T05:50:00Z")).not.toBeInTheDocument();
+    act(() => {
+      failHistory(new Error("unavailable"));
+    });
+    expect(await within(dialog).findByText("home.sample.historyFailed")).toBeVisible();
+    expect(within(dialog).queryByText("home.sample.historyLoading")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("2026-10-09T05:50:00Z")).not.toBeInTheDocument();
+  });
+
+  it.each([0, 1])("does not show More for %s history records", async (count) => {
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({
+          status: "installed",
+          installedVersion: "0.1.0",
+          installationId: "inst-1",
+          installable: false,
+        }),
+      ],
+      sourceRejected: false,
+    });
+    listSampleInstallations.mockResolvedValue({
+      items: count
+        ? [
+            {
+              id: "inst-1",
+              attemptId: "uninstall-1",
+              sample: "northwind",
+              version: "0.1.0",
+              status: "uninstalled",
+              operation: "uninstall",
+              stages: [],
+              finishedAt: "2026-10-09T05:52:05Z",
+            },
+          ]
+        : [],
+      historyComplete: true,
+    });
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
+    await waitFor(() => expect(listSampleInstallations).toHaveBeenCalledWith("northwind"));
+    await waitFor(() =>
+      expect(screen.queryByText("home.sample.historyLoading")).not.toBeInTheDocument(),
+    );
+    if (count) expect(screen.getByText("2026-10-09T05:52:05Z")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "home.sample.historyMore" }),
+    ).not.toBeInTheDocument();
   });
 
   it("starts installing a catalog sample from the card action", async () => {

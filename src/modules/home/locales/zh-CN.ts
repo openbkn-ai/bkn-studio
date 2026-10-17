@@ -143,6 +143,8 @@ export const homeZhCN = {
       notesFailed: "暂时无法读取该版本说明，请重新加载后再安装。",
       notesLocale: "说明语言：{{locale}}",
       historyTitle: "安装记录",
+      historyMore: "更多",
+      historyDialogTitle: "{{name}} · 安装与卸载记录",
       historyLoading: "正在读取安装记录",
       historyFailed: "暂时无法读取安装记录",
       historyPartial: "部分早期安装记录缺失，无法还原完整历史。",

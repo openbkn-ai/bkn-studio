@@ -151,6 +151,8 @@ export const homeEnUS = {
       notesFailed: "Release notes could not be loaded. Reload them before installing.",
       notesLocale: "Notes language: {{locale}}",
       historyTitle: "Installation records",
+      historyMore: "More",
+      historyDialogTitle: "{{name}} · Installation and uninstall records",
       historyLoading: "Loading installation records",
       historyFailed: "Installation records could not be loaded",
       historyPartial:
