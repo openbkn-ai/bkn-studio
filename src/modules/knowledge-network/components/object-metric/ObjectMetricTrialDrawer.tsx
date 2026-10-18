@@ -506,34 +506,15 @@ export function ObjectMetricTrialDrawer({
 
   return (
     <Drawer
-      rootClassName={`${metricTheme.scope} ${mode === "published" ? styles.analysisDrawer : ""}`}
+      rootClassName={`${metricTheme.scope} ${styles.analysisDrawer}`}
       destroyOnHidden
-      footer={
-        mode === "draft" ? (
-          <div className={styles.footer}>
-            <Button
-              aria-label={objectMetricText("m073728637a26")}
-              disabled={
-                definition.calculation_scope === "object_instance" &&
-                !objectType?.primaryKeys.length
-              }
-              form={formId}
-              htmlType="submit"
-              loading={loading}
-              type="primary"
-            >
-              {objectMetricText("m073728637a26")}
-            </Button>
-          </div>
-        ) : null
-      }
       forceRender
       onClose={onClose}
       open={open}
       title={
         <div className={styles.title}>
           <span>
-            {objectMetricText(mode === "published" ? "analysisTitle" : "trialTitle", {
+            {objectMetricText("trialTitle", {
               p0: definition.name || objectMetricText("ma8da957c687c"),
             })}
           </span>
@@ -552,38 +533,35 @@ export function ObjectMetricTrialDrawer({
           </Tag>
         </div>
       }
-      width={mode === "published" ? "min(1200px, 100vw)" : "min(760px, calc(100vw - 24px))"}
+      width="min(1200px, 100vw)"
     >
-      <div className={mode === "published" ? styles.analysisWorkspace : styles.trialWorkspace}>
+      <div className={styles.analysisWorkspace}>
         <section className={styles.conditions}>
           <div className={styles.conditionsHeading}>
             <div className={styles.conditionsIntro}>
-              <h3 className={styles.sectionTitle}>
-                {objectMetricText(mode === "published" ? "analysisConditions" : "trialConditions")}
-              </h3>
-              {mode === "published" && timeNoticeKey ? (
+              <h3 className={styles.sectionTitle}>{objectMetricText("trialConditions")}</h3>
+              {timeNoticeKey ? (
                 <p className={styles.fixedTimeNotice}>{objectMetricText(timeNoticeKey)}</p>
               ) : null}
             </div>
-            {mode === "published" ? (
-              <Button
-                className={styles.conditionsRunButton}
-                disabled={
-                  definition.calculation_scope === "object_instance" &&
-                  !objectType?.primaryKeys.length
-                }
-                form={formId}
-                htmlType="submit"
-                loading={loading}
-                type="primary"
-              >
-                {objectMetricText("analysisRun")}
-              </Button>
-            ) : null}
+            <Button
+              autoInsertSpace={false}
+              className={styles.conditionsRunButton}
+              disabled={
+                definition.calculation_scope === "object_instance" &&
+                !objectType?.primaryKeys.length
+              }
+              form={formId}
+              htmlType="submit"
+              loading={loading}
+              type="primary"
+            >
+              {objectMetricText("m073728637a26")}
+            </Button>
           </div>
           <Form
             className={`${styles.form} ${
-              mode === "published" && timeNoticeKey && definition.calculation_scope === "object_set"
+              timeNoticeKey && definition.calculation_scope === "object_set"
                 ? styles.noTimeForm
                 : ""
             }`}
@@ -618,11 +596,7 @@ export function ObjectMetricTrialDrawer({
                 <Alert message={objectMetricText("md23ea9c2fae2")} type="error" showIcon />
               )
             ) : null}
-            {timeNoticeKey ? (
-              mode === "draft" ? (
-                <p className={styles.fixedTimeNotice}>{objectMetricText(timeNoticeKey)}</p>
-              ) : null
-            ) : (
+            {!timeNoticeKey && (
               <Form.Item
                 label={objectMetricText("m76a5dbc71e2b")}
                 name="time"
@@ -664,9 +638,7 @@ export function ObjectMetricTrialDrawer({
           {error || result ? (
             <div className={styles.result} ref={resultRef}>
               <div className={styles.resultHeader}>
-                <h3 className={styles.sectionTitle}>
-                  {objectMetricText(mode === "published" ? "analysisResults" : "trialResults")}
-                </h3>
+                <h3 className={styles.sectionTitle}>{objectMetricText("analysisResults")}</h3>
                 {result ? (
                   <div className={styles.resultMeta}>
                     <Tag
@@ -906,9 +878,9 @@ export function ObjectMetricTrialDrawer({
                 </Space>
               ) : null}
             </div>
-          ) : mode === "published" ? (
+          ) : (
             <div className={styles.readyHint}>{objectMetricText("analysisReadyHint")}</div>
-          ) : null}
+          )}
         </div>
       </div>
       <Drawer
