@@ -17,7 +17,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import type { ExecutionEvent } from "@/modules/knowledge-network/services/bkn-agent-execution.service";
-import type { LlmModel } from "@/modules/model-resources/types/llm";
 
 import { ChatPane, type ChatPaneHandle } from "./ChatPane";
 
@@ -37,8 +36,6 @@ vi.mock(
 );
 
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
-
-const models = [{ modelName: "qwen-test", default: true }] as unknown as LlmModel[];
 
 const call = (id: string, name: string, input: unknown = {}): ExecutionEvent => ({
   type: "tool_started",
@@ -76,8 +73,6 @@ function renderPane() {
       ref={ref}
       env={{ base: "https://platform.example.com", token: "token-1", knId: "kn-demo" }}
       tokenProvider={{ getToken: () => "token-1", refresh: () => Promise.resolve("token-1") }}
-      models={models}
-      modelsLoaded
       knSummary={null}
       suggestions={[]}
       pageScrollRef={createRef<HTMLDivElement>()}

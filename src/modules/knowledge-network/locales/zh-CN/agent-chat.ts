@@ -61,7 +61,6 @@ export const agentChatPart = {
       loadSummary: "载入知识网络摘要",
     },
     placeholders: {
-      noLlm: "请先在「模型工厂」接入大模型后再对话",
       askAgent: "向 Agent 提问，例如：{{suggestion}}",
     },
     composer: {
@@ -103,10 +102,6 @@ export const agentChatPart = {
         detail: "详情",
       },
       empty: {
-        noLlmTitle: "还没有可用的大模型",
-        noLlmDescription:
-          "Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。",
-        goModelFactory: "去模型工厂接入大模型",
         start: "开始验证",
         knIntro:
           "用自然语言向 Agent 提问，它会基于知识网络 {{knId}}{{networkName}} 调用检索工具并作答。{{summary}}",

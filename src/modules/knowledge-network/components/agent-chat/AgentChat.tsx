@@ -291,8 +291,6 @@ export function AgentChat({
     };
   }, [knDetail, modelsLoaded, models, env, llmTokenProvider, knId, activeLocale, t]);
 
-  const noLlm = modelsLoaded && models.length === 0;
-
   const sendInput = useCallback(() => {
     const text = input.trim();
     if (!text || busy) return;
@@ -314,11 +312,10 @@ export function AgentChat({
   }, []);
 
   const placeholder = useMemo(() => {
-    if (noLlm) return t("knowledgeNetwork.agentChat.placeholders.noLlm");
     return t("knowledgeNetwork.agentChat.placeholders.askAgent", {
       suggestion: suggestions[0] ?? defaultSuggestions[0],
     });
-  }, [noLlm, suggestions, defaultSuggestions, t]);
+  }, [suggestions, defaultSuggestions, t]);
 
   return (
     <div ref={pageScrollRef} className={styles.root}>
@@ -343,8 +340,6 @@ export function AgentChat({
             tokenProvider={tokenProvider}
             emptyTitle={t("knowledgeNetwork.agentChat.profiles.soloEmptyTitle")}
             networkName={networkName}
-            models={models}
-            modelsLoaded={modelsLoaded}
             knSummary={knSummary}
             pageScrollRef={pageScrollRef}
             suggestions={suggestions}
@@ -357,7 +352,6 @@ export function AgentChat({
                 className={styles.cInput}
                 value={input}
                 rows={1}
-                disabled={noLlm}
                 placeholder={placeholder}
                 spellCheck={false}
                 onChange={(e) => setInput(e.target.value)}
@@ -383,7 +377,7 @@ export function AgentChat({
                   type="button"
                   className={styles.sendBtn}
                   onClick={sendInput}
-                  disabled={!input.trim() || noLlm}
+                  disabled={!input.trim()}
                 >
                   {t("knowledgeNetwork.agentChat.composer.send")}
                 </button>

@@ -65,7 +65,6 @@ export const agentChatPart = {
       loadSummary: "Load knowledge network summary",
     },
     placeholders: {
-      noLlm: "Connect an LLM in Model Factory before chatting.",
       askAgent: "Ask Agent, for example: {{suggestion}}",
     },
     composer: {
@@ -107,10 +106,6 @@ export const agentChatPart = {
         detail: "Details",
       },
       empty: {
-        noLlmTitle: "No LLM Available",
-        noLlmDescription:
-          "Agent chat needs an LLM. Connect one in Model Factory, set it as default, and come back.",
-        goModelFactory: "Connect an LLM in Model Factory",
         start: "Start Validation",
         knIntro:
           "Ask the Agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",

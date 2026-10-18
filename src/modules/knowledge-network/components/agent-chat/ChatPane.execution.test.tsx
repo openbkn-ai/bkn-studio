@@ -20,7 +20,6 @@ import {
   BknAgentExecutionError,
   type ExecutionEvent,
 } from "@/modules/knowledge-network/services/bkn-agent-execution.service";
-import type { LlmModel } from "@/modules/model-resources/types/llm";
 
 import { ChatPane, type ChatPaneHandle } from "./ChatPane";
 
@@ -47,7 +46,6 @@ vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 
 const KN = "kn-demo";
 const HISTORY_KEY = `bkn-studio:agentchat:${KN}`;
-const models = [{ modelName: "qwen-test", default: true }] as unknown as LlmModel[];
 
 type Terminal = Extract<ExecutionEvent, { type: "terminal" }>;
 const meta = (runId: string, threadId: string): ExecutionEvent => ({
@@ -76,8 +74,6 @@ function renderPane() {
       ref={ref}
       env={{ base: "https://platform.example.com", token: "token-1", knId: KN }}
       tokenProvider={{ getToken: () => "token-1", refresh: () => Promise.resolve("token-1") }}
-      models={models}
-      modelsLoaded
       knSummary={null}
       suggestions={[]}
       pageScrollRef={createRef<HTMLDivElement>()}
@@ -272,5 +268,42 @@ describe("ChatPane BKN Agent execution", () => {
       error: i18n.t("knowledgeNetwork.agentChat.chatPane.toolCall.interrupted"),
     });
     expect(typeof assistant.toolCalls[0].latencyMs).toBe("number");
+  });
+
+  it("replaces a partially streamed answer with the committed one after a dropped stream", async () => {
+    streams([meta("run-1", "thread-1"), { type: "token", content: "半截答" }], null);
+    getExecution.mockResolvedValue({
+      run_id: "run-1",
+      thread_id: "thread-1",
+      status: "succeeded",
+      result: { answer: "完整的答复" },
+    });
+    const ref = renderPane();
+
+    await send(ref, "问题");
+    expect(screen.getByText("完整的答复")).toBeTruthy();
+    expect(screen.queryByText("半截答")).toBeNull();
+  });
+
+  it("shows the committed answer when a run streamed only its result", async () => {
+    streams([meta("run-1", "thread-1"), { type: "result", answer: "幂等重放的答复" }]);
+    const ref = renderPane();
+
+    await send(ref, "问题");
+    expect(screen.getByText("幂等重放的答复")).toBeTruthy();
+  });
+
+  it("keeps the saved thread when the Agent itself is unpublished", async () => {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify({ messages: [], threadId: "keep-me" }));
+    startExecution.mockRejectedValue(
+      new BknAgentExecutionError("Agent 不存在", 404, "BknAgent.NotFound"),
+    );
+    const ref = renderPane();
+
+    await send(ref, "问题");
+    expect(
+      screen.getByText(i18n.t("knowledgeNetwork.agentChat.execution.errors.agentNotReady")),
+    ).toBeTruthy();
+    expect(saved().threadId).toBe("keep-me");
   });
 });
