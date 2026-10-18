@@ -60,9 +60,9 @@ function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }
           <div className={styles.titleText}>{agent.name}</div>
           <div className={styles.agentId}>{agent.agent_id}</div>
           <div className={styles.facts}>
-            <LightStatusTag tone={published ? "success" : "neutral"}>
-              {t(published ? `${L}.published` : `${L}.draft`)}
-            </LightStatusTag>
+            <LightStatusTag tone="neutral">{t(`${P}.builtinTag`)}</LightStatusTag>
+            {/* Built-in Agents stay published; only a legacy draft is worth flagging. */}
+            {published ? null : <LightStatusTag tone="warning">{t(`${L}.draft`)}</LightStatusTag>}
             <LightStatusTag tone="info">{agent.model || t(`${L}.defaultModel`)}</LightStatusTag>
             {agent.layered ? (
               <LightStatusTag tone="info">{t(`${P}.layered`)}</LightStatusTag>

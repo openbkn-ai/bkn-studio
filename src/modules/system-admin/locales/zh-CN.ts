@@ -335,6 +335,9 @@ export const systemAdminZhCN = {
         "admin-apikey": {
           manage: "管理全局 AppKey。",
         },
+        "admin-agent": {
+          manage: "修改平台内置 Agent 的配置、共享提示词，或恢复它的初始版本。",
+        },
       },
       resources: {
         "admin-audit": "系统审计日志",
@@ -1101,13 +1104,41 @@ export const systemAdminZhCN = {
       },
     },
     agentConfig: {
-      title: "Agent 配置",
-      description: "维护平台内置 Agent 的配置：模型、MCP 服务、执行上限、发布状态和共享提示词。",
+      title: "内置 Agent",
+      description:
+        "平台功能依赖的内置 Agent：模型、MCP 服务、执行上限、发布状态和共享提示词。修改会立即影响依赖它的功能。",
       listHint: "平台内置的 Agent，随版本初始化，不在这里新建。",
       searchPlaceholder: "搜索名称或 ID",
       empty: "没有内置 Agent",
       noMatch: "没有匹配的 Agent",
-      detailTitle: "Agent 详情",
+      detailTitle: "内置 Agent 详情",
+      builtinTag: "内置",
+      confirmChange: "确认修改",
+      confirmRuntimeTitle: "修改「{{name}}」的运行配置？",
+      confirmPublishPromptTitle: "将共享提示词发布为新版本？",
+      confirmRollbackTitle: "改用共享提示词 v{{version}}？",
+      confirmPromptBody: "发布后立即对所有使用者生效，可以在版本列表里改回之前的版本。",
+      dangerZone: "危险操作",
+      restore: "恢复初始版本",
+      confirmRestoreTitle: "将「{{name}}」恢复为初始版本？",
+      confirmRestoreBody:
+        "模型、MCP 服务、执行上限和共享提示词都恢复为随版本初始化时的设置，立即对所有使用者生效。当前的提示词保留在版本列表里。",
+      restored: "已恢复为初始版本",
+      initialVersion: "初始",
+      compare: "对比",
+      compareTitle: "对比提示词版本",
+      compareFrom: "对比的旧版本",
+      compareTo: "对比的新版本",
+      deleteVersion: "删除此版本",
+      confirmDeleteVersionTitle: "删除提示词 v{{version}}？",
+      confirmDeleteVersionBody:
+        "删除后它不再出现在版本列表里，也不能再切换到它。正在使用的版本和初始版本不能删除。",
+      versionDeleted: "已删除",
+      notPublished: "这个 Agent 还没有发布，依赖它的功能暂时不可用。",
+      publish: "发布",
+      confirmPublishTitle: "发布「{{name}}」？",
+      publishOnce: "内置 Agent 发布后会一直保持发布，不能取消。",
+      publishedDone: "已发布",
       back: "返回列表",
       layered: "支持网络和个人配置",
       readOnly: "只读",
@@ -1116,11 +1147,9 @@ export const systemAdminZhCN = {
       intro:
         "这里是所有知识网络共用的配置。各网络的配置和用户个人偏好只能在此基础上追加提示词、收窄工具和限制。",
       introPlain: "这个 Agent 只在这里配置，没有网络和个人配置。",
-      readOnlyNotice:
-        "你只能查看这个 Agent 的配置。在权限表注册 Agent 管理权限之前，只有它的创建者可以修改。",
+      readOnlyNotice: "你没有内置 Agent 的管理权限（admin-agent:manage），只能查看。",
       notFound: "这个 Agent 不存在，或不是平台内置的 Agent。",
-      forbidden:
-        "你没有查看这个 Agent 配置的权限。在权限表注册 Agent 管理权限之前，只有它的创建者可以查看和修改。",
+      forbidden: "你没有查看这个 Agent 配置的权限。",
       runtimeTitle: "运行配置",
       mcpProfile: "MCP 服务",
       mcpProfileHint:

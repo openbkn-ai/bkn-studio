@@ -57,7 +57,7 @@ export const shellZhCN = {
       authorizationManagement: "权限管理",
       licenseManagement: "授权管理",
       accessAddressManagement: "访问地址",
-      agentConfig: "Agent 配置",
+      agentConfig: "内置 Agent",
       modelManagement: "模型配置",
       bknTrace: "BKN Trace",
       observability: "可观测性",

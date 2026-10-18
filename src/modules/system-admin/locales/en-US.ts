@@ -364,6 +364,10 @@ export const systemAdminEnUS = {
         "admin-apikey": {
           manage: "Manage global AppKeys.",
         },
+        "admin-agent": {
+          manage:
+            "Change built-in Agent configuration and shared Prompts, or restore their initial version.",
+        },
       },
       resources: {
         "admin-audit": "System audit log",
@@ -1187,14 +1191,43 @@ export const systemAdminEnUS = {
       },
     },
     agentConfig: {
-      title: "Agent Settings",
+      title: "Built-in Agents",
       description:
-        "Maintain the built-in Agents: model, MCP service, execution caps, publish state, and shared Prompt.",
+        "The built-in Agents platform features depend on: model, MCP service, execution caps, publish state, and shared Prompt. Changes affect those features immediately.",
       listHint: "Built-in Agents are set up with each release and are not created here.",
       searchPlaceholder: "Search by name or ID",
       empty: "No built-in Agents",
       noMatch: "No matching Agents",
-      detailTitle: "Agent Details",
+      detailTitle: "Built-in Agent",
+      builtinTag: "Built-in",
+      confirmChange: "Confirm change",
+      confirmRuntimeTitle: "Change the runtime of “{{name}}”?",
+      confirmPublishPromptTitle: "Publish the shared Prompt as a new version?",
+      confirmRollbackTitle: "Switch to shared Prompt v{{version}}?",
+      confirmPromptBody:
+        "It applies to everyone immediately; you can switch back from the version list.",
+      dangerZone: "Danger zone",
+      restore: "Restore initial version",
+      confirmRestoreTitle: "Restore “{{name}}” to its initial version?",
+      confirmRestoreBody:
+        "Model, MCP service, execution caps and the shared Prompt go back to what was set up with the release, for everyone at once. The current Prompt stays in the version list.",
+      restored: "Restored to the initial version",
+      initialVersion: "Initial",
+      compare: "Compare",
+      compareTitle: "Compare Prompt versions",
+      compareFrom: "Older version",
+      compareTo: "Newer version",
+      deleteVersion: "Delete this version",
+      confirmDeleteVersionTitle: "Delete Prompt v{{version}}?",
+      confirmDeleteVersionBody:
+        "It leaves the version list and can no longer be switched to. The version in use and the initial version cannot be deleted.",
+      versionDeleted: "Deleted",
+      notPublished:
+        "This Agent is not published yet; the features that depend on it are unavailable.",
+      publish: "Publish",
+      confirmPublishTitle: "Publish “{{name}}”?",
+      publishOnce: "Once published, a built-in Agent stays published; it cannot be unpublished.",
+      publishedDone: "Published",
       back: "Back to list",
       layered: "Network and personal settings",
       readOnly: "Read-only",
@@ -1204,10 +1237,9 @@ export const systemAdminEnUS = {
         "This configuration is shared by every knowledge network. Network settings and personal preferences can only add instructions or narrow tools and limits on top of it.",
       introPlain: "This Agent is configured here only; it has no network or personal settings.",
       readOnlyNotice:
-        "You can view this Agent but not change it. Until an Agent management permission is registered, only its creator can change it.",
+        "You do not have built-in Agent management permission (admin-agent:manage); you can only view it.",
       notFound: "This Agent does not exist or is not a built-in Agent.",
-      forbidden:
-        "You cannot view this Agent's configuration. Until an Agent management permission is registered, only its creator can view and change it.",
+      forbidden: "You cannot view this Agent's configuration.",
       runtimeTitle: "Runtime",
       mcpProfile: "MCP service",
       mcpProfileHint:

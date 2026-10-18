@@ -44,6 +44,8 @@ function agent(changes: Partial<SharedAgent>): SharedAgent {
     uses_context_loader: true,
     layered: true,
     can_edit: true,
+    restorable: true,
+    modified: false,
     prompt_version: 2,
     update_user: "admin",
     update_time: 1,

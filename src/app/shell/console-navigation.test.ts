@@ -47,6 +47,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
       ...systemAdminPermissions.authorizations,
       ...systemAdminPermissions.license,
       ...systemAdminPermissions.accessOrigins,
+      ...systemAdminPermissions.agentConfig,
       ...systemAdminPermissions.audit,
     ];
     const group = systemGroup(filterNavByPermission(consoleNavigation, all));
@@ -64,14 +65,13 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     );
   });
 
-  it("仅持有 admin-client:manage → 系统管理显示访问地址和 Agent 配置", () => {
-    // Agent settings borrow admin-client:manage until admin-agent:manage is registered.
+  it("仅持有 admin-client:manage → 系统管理只显示访问地址", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, ["admin-client:manage"]));
     expect(group).toBeDefined();
-    expect(keys(group!.children ?? [])).toEqual(["access-address-management", "agent-config"]);
+    expect(keys(group!.children ?? [])).toEqual(["access-address-management"]);
   });
 
-  it("仅持有 admin-agent:manage → 系统管理只显示 Agent 配置", () => {
+  it("仅持有 admin-agent:manage → 系统管理只显示内置 Agent", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, ["admin-agent:manage"]));
     expect(keys(group!.children ?? [])).toEqual(["agent-config"]);
   });

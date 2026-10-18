@@ -67,7 +67,7 @@ export type AgentConfig = {
   /** Context Loader MCP surface; null is the service default. */
   mcp_profile?: McpProfileChoice | null;
   can_edit_network: boolean;
-  /** Until an Agent management operation is registered, only the Agent's creator. */
+  /** Whether the caller holds admin-agent:manage. */
   can_edit_shared: boolean;
 };
 
@@ -84,9 +84,12 @@ export type SharedAgent = {
   uses_context_loader: boolean;
   /** Whether network and personal settings apply (smart Q&A); others are configured here only. */
   layered: boolean;
-  /** Until an Agent management operation is registered, only the Agent's creator. */
+  /** Whether the caller holds admin-agent:manage. */
   can_edit: boolean;
   prompt_version?: number | null;
+  /** Whether the shipped state is recorded, and whether the Agent differs from it. */
+  restorable: boolean;
+  modified: boolean;
   update_user: string;
   update_time: number;
 };
@@ -103,6 +106,8 @@ export type SharedUpdate = {
 export type SharedPrompt = {
   prompt: { prompt_id: string; current_version: number; content: string };
   versions: { version: number; content: string; create_user: string; create_time: number }[];
+  /** The shipped version, kept for restoring; it cannot be deleted. */
+  initial_version?: number | null;
 };
 
 type Params = { base: string; tokenProvider: AgentTokenProvider };
@@ -189,6 +194,24 @@ export function updateShared(params: AgentParams & { update: SharedUpdate }): Pr
   return request(params, `/admin/agents/${agentPath(params.agentId)}`, {
     method: "PUT",
     body: JSON.stringify(params.update),
+  });
+}
+
+/** Removes a version from the history; the one in use and the initial one cannot go. */
+export function deleteSharedPromptVersion(
+  params: AgentParams & { version: number },
+): Promise<SharedPrompt> {
+  return request(
+    params,
+    `/admin/agents/${agentPath(params.agentId)}/prompt/versions/${params.version}`,
+    { method: "DELETE" },
+  );
+}
+
+/** Back to what the built-in Agent shipped with: model, tools, limits and Prompt version. */
+export function restoreShared(params: AgentParams): Promise<SharedAgent> {
+  return request(params, `/admin/agents/${agentPath(params.agentId)}/restore`, {
+    method: "POST",
   });
 }
 

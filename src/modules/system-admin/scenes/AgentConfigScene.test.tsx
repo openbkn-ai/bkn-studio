@@ -20,21 +20,32 @@ type SettingsModule =
 type SharedAgent =
   import("@/modules/knowledge-network/services/bkn-agent-settings.service").SharedAgent;
 
-const { getShared, getSharedPrompt, updateShared } = vi.hoisted(() => ({
-  getShared: vi.fn<SettingsModule["getShared"]>(),
-  getSharedPrompt: vi.fn<SettingsModule["getSharedPrompt"]>(),
-  updateShared: vi.fn<SettingsModule["updateShared"]>(),
-}));
+const { deleteSharedPromptVersion, getShared, getSharedPrompt, restoreShared, updateShared } =
+  vi.hoisted(() => ({
+    deleteSharedPromptVersion: vi.fn<SettingsModule["deleteSharedPromptVersion"]>(),
+    getShared: vi.fn<SettingsModule["getShared"]>(),
+    getSharedPrompt: vi.fn<SettingsModule["getSharedPrompt"]>(),
+    restoreShared: vi.fn<SettingsModule["restoreShared"]>(),
+    updateShared: vi.fn<SettingsModule["updateShared"]>(),
+  }));
 
 vi.mock(
   "@/modules/knowledge-network/services/bkn-agent-settings.service",
   async (importOriginal) => ({
     ...(await importOriginal<SettingsModule>()),
+    deleteSharedPromptVersion,
     getShared,
     getSharedPrompt,
+    restoreShared,
     updateShared,
   }),
 );
+// Monaco does not run in jsdom; the diff only needs to show which texts it compares.
+vi.mock("@/framework/monaco/MonacoDiffEditor", () => ({
+  MonacoDiffEditor: ({ original, modified }: { original: string; modified: string }) => (
+    <div data-testid="diff">{`${original} => ${modified}`}</div>
+  ),
+}));
 vi.mock("@/modules/model-resources/services/llm.service", () => ({
   listLlmModels: () => Promise.resolve({ items: [{ modelName: "DeepSeek V4-flash" }] }),
 }));
@@ -49,6 +60,15 @@ vi.mock("@/framework/context/use-runtime-config", () => ({
 }));
 
 const SAVE = /^保\s*存$/;
+const CONFIRM = i18n.t("systemAdmin.agentConfig.confirmChange");
+
+/** Confirms the change dialog the page opens before every write. */
+async function confirmChange() {
+  await act(async () => {
+    fireEvent.click(await screen.findByRole("button", { name: CONFIRM }));
+    await Promise.resolve();
+  });
+}
 
 beforeAll(() => {
   Object.defineProperty(window, "matchMedia", {
@@ -92,6 +112,8 @@ function shared(changes: Partial<SharedAgent> = {}): SharedAgent {
     layered: true,
     can_edit: true,
     prompt_version: 3,
+    restorable: true,
+    modified: false,
     update_user: "admin",
     update_time: 1,
     ...changes,
@@ -103,7 +125,9 @@ const PROMPT = {
   versions: [{ version: 3, content: "Shared", create_user: "admin", create_time: 1 }],
 };
 
-describe("AgentConfigScene", () => {
+// Each case renders the full configuration page; several also open a dialog, which shared CI
+// runners can take over the default 10s to finish.
+describe("AgentConfigScene", { timeout: 20_000 }, () => {
   it("shows a read-only Agent without save or publish actions", async () => {
     getShared.mockResolvedValue(shared({ can_edit: false }));
     getSharedPrompt.mockResolvedValue(PROMPT);
@@ -138,16 +162,14 @@ describe("AgentConfigScene", () => {
         i18n.t("knowledgeNetwork.agentChat.config.limitFields.keep_tool_results.label"),
       ),
     ).toBeNull();
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: SAVE }));
-      await Promise.resolve();
-    });
+    fireEvent.change(screen.getByDisplayValue("5"), { target: { value: "4" } });
+    fireEvent.click(screen.getByRole("button", { name: SAVE }));
+    await confirmChange();
     await waitFor(() => expect(updateShared).toHaveBeenCalled());
-    // The hidden context limit is not written back, nor is an MCP surface.
+    // The hidden context limit is not written back, nor is an MCP surface or the status.
     expect(updateShared.mock.calls[0][0].update).toEqual({
       model: "DeepSeek V4-flash",
-      status: "published",
-      limits: { max_turns: 5 },
+      limits: { max_turns: 4 },
     });
   });
 
@@ -168,25 +190,83 @@ describe("AgentConfigScene", () => {
     expect(await screen.findByText(i18n.t("systemAdmin.agentConfig.notFound"))).toBeTruthy();
   });
 
-  it("saves the model, MCP surface, caps and publish state together", async () => {
+  it("has nothing to save until something changes", async () => {
     getShared.mockResolvedValue(shared());
     getSharedPrompt.mockResolvedValue(PROMPT);
-    updateShared.mockResolvedValue(shared());
+    renderScene();
+
+    await screen.findByText(i18n.t("systemAdmin.agentConfig.intro"));
+    // Nothing changed yet, so there is nothing to save.
+    expect(screen.getByRole("button", { name: SAVE }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("confirms a runtime change with what it changes, then saves", async () => {
+    getShared.mockResolvedValue(shared());
+    getSharedPrompt.mockResolvedValue(PROMPT);
+    updateShared.mockResolvedValue(shared({ mcp_profile: "compact" }));
     renderScene();
 
     fireEvent.click(await screen.findByText(i18n.t("systemAdmin.agentConfig.mcpCompact")));
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: SAVE }));
-      await Promise.resolve();
-    });
+    fireEvent.click(screen.getByRole("button", { name: SAVE }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain(
+      `${i18n.t("systemAdmin.agentConfig.mcpDefault")} → ${i18n.t("systemAdmin.agentConfig.mcpCompact")}`,
+    );
+    expect(updateShared).not.toHaveBeenCalled();
 
+    await confirmChange();
     await waitFor(() => expect(updateShared).toHaveBeenCalled());
     expect(updateShared.mock.calls[0][0].update).toEqual({
       model: "DeepSeek V4-flash",
       mcp_profile: "compact",
-      status: "published",
       limits: { max_turns: 40, timeout_s: 300 },
     });
+  });
+
+  it("restores the initial version after confirmation and offers no unpublish", async () => {
+    getShared.mockResolvedValue(shared({ model: "Qwen", restorable: true, modified: true }));
+    getSharedPrompt.mockResolvedValue(PROMPT);
+    restoreShared.mockResolvedValue(shared({ restorable: true, modified: false }));
+    renderScene();
+
+    expect(await screen.findByText(i18n.t("systemAdmin.agentConfig.dangerZone"))).toBeTruthy();
+    // Built-in Agents stay published: there is no status control at all.
+    expect(screen.queryByText(i18n.t("knowledgeNetwork.agentChat.config.status"))).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: i18n.t("systemAdmin.agentConfig.restore") }),
+    );
+    expect(restoreShared).not.toHaveBeenCalled();
+    await confirmChange();
+
+    await waitFor(() => expect(restoreShared).toHaveBeenCalled());
+    expect(getSharedPrompt).toHaveBeenCalledTimes(2);
+    // Back at the shipped state, there is nothing left to restore.
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: i18n.t("systemAdmin.agentConfig.restore") })
+          .hasAttribute("disabled"),
+      ).toBe(true),
+    );
+  });
+
+  it("publishes a never-published built-in Agent once", async () => {
+    getShared.mockResolvedValue(shared({ status: "draft" }));
+    getSharedPrompt.mockResolvedValue(PROMPT);
+    updateShared.mockResolvedValue(shared({ status: "published" }));
+    renderScene();
+
+    expect(await screen.findByText(i18n.t("systemAdmin.agentConfig.notPublished"))).toBeTruthy();
+    // antd spaces out the two-character label ("发 布").
+    fireEvent.click(screen.getByRole("button", { name: /^发\s*布$/ }));
+    await confirmChange();
+
+    await waitFor(() => expect(updateShared).toHaveBeenCalled());
+    expect(updateShared.mock.calls[0][0].update).toEqual({ status: "published" });
+    await waitFor(() =>
+      expect(screen.queryByText(i18n.t("systemAdmin.agentConfig.notPublished"))).toBeNull(),
+    );
   });
 
   it("keeps an unsaved prompt draft when the runtime card is saved", async () => {
@@ -197,14 +277,69 @@ describe("AgentConfigScene", () => {
 
     const editor = await screen.findByDisplayValue("Shared");
     fireEvent.change(editor, { target: { value: "Draft prompt" } });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: SAVE }));
-      await Promise.resolve();
-    });
+    fireEvent.click(screen.getByText(i18n.t("systemAdmin.agentConfig.mcpCompact")));
+    fireEvent.click(screen.getByRole("button", { name: SAVE }));
+    await confirmChange();
 
     await waitFor(() => expect(updateShared).toHaveBeenCalled());
     // The saved runtime comes from the response; nothing is reloaded over the draft.
     expect(getSharedPrompt).toHaveBeenCalledTimes(1);
     expect(screen.getByDisplayValue("Draft prompt")).toBeTruthy();
+  });
+
+  describe("prompt versions", () => {
+    const HISTORY = {
+      prompt: { prompt_id: "p", current_version: 3, content: "Third" },
+      versions: [3, 2, 1].map((version) => ({
+        version,
+        content: ["First", "Second", "Third"][version - 1],
+        create_user: "admin",
+        create_time: version,
+      })),
+      initial_version: 1,
+    };
+
+    async function pickVersion(label: string) {
+      const picker = screen.getAllByRole("combobox")[1];
+      fireEvent.mouseDown(picker);
+      const options = await screen.findAllByText(label, { selector: ".ant-select-item *" });
+      fireEvent.click(options[options.length - 1]);
+    }
+
+    it("compares the chosen version with the one in use", async () => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockResolvedValue(HISTORY);
+      renderScene();
+
+      fireEvent.click(
+        // antd spaces out the two-character label ("对 比").
+        await screen.findByRole("button", { name: /^对\s*比$/ }),
+      );
+      expect((await screen.findByTestId("diff")).textContent).toBe("Second => Third");
+    });
+
+    it("deletes a version only when it is neither in use nor the initial one", async () => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockResolvedValue(HISTORY);
+      deleteSharedPromptVersion.mockResolvedValue({
+        ...HISTORY,
+        versions: HISTORY.versions.filter((v) => v.version !== 2),
+      });
+      renderScene();
+      const deleteButton = () =>
+        screen.queryByRole("button", { name: i18n.t("systemAdmin.agentConfig.deleteVersion") });
+
+      await screen.findByDisplayValue("Third");
+      expect(deleteButton()).toBeNull();
+      await pickVersion("v1");
+      expect(deleteButton()).toBeNull();
+
+      await pickVersion("v2");
+      fireEvent.click(deleteButton()!);
+      await confirmChange();
+      await waitFor(() => expect(deleteSharedPromptVersion).toHaveBeenCalled());
+      expect(deleteSharedPromptVersion.mock.calls[0][0].version).toBe(2);
+      // Three trips through the antd picker; slow on shared runners.
+    }, 40_000);
   });
 });
