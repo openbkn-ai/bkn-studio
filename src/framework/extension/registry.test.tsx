@@ -10,11 +10,13 @@ import "@/app/locales/i18n";
 import { render, screen } from "@testing-library/react";
 import i18n from "i18next";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import type { Entitlement } from "@/framework/entitlement/types";
+import type { CatalogRecord } from "@/shared/catalog/types";
 import {
+  extensionCatalogDetailTabs,
   extensionRoutes,
   extensionStandaloneRoutes,
   extensionWorkspaceActions,
@@ -191,5 +193,107 @@ describe("extension registry", () => {
 
     expect(i18n.getResource("en-US", "translation", "extensionDemo.kept")).toBe("core");
     expect(i18n.getResource("en-US", "translation", "extensionDemo.added")).toBe("extension");
+  });
+
+  describe("catalog detail tabs", () => {
+    const fileCatalog = { connectorType: "objectstorage", id: "catalog-1" } as CatalogRecord;
+    const tableCatalog = { connectorType: "mysql", id: "catalog-2" } as CatalogRecord;
+
+    it("lists only the tabs that match the catalog, ordered, under distinct keys", () => {
+      registerExtension({
+        capability: "file_catalog",
+        catalogDetailTabs: [
+          {
+            id: "understanding",
+            labelKey: "u",
+            match: (catalog) => catalog.connectorType === "objectstorage",
+            order: 30,
+            render: () => null,
+          },
+          {
+            id: "files",
+            labelKey: "f",
+            match: (catalog) => catalog.connectorType === "objectstorage",
+            order: 10,
+            render: () => null,
+          },
+        ],
+        id: "file-catalog",
+      });
+      registerExtension({
+        capability: "other",
+        catalogDetailTabs: [{ id: "extra", labelKey: "x", match: () => true, render: () => null }],
+        id: "other",
+      });
+
+      expect(
+        extensionCatalogDetailTabs(fileCatalog).map((tab) => [tab.key, tab.capability]),
+      ).toEqual([
+        ["file-catalog:files", "file_catalog"],
+        ["file-catalog:understanding", "file_catalog"],
+        ["other:extra", "other"],
+      ]);
+      expect(extensionCatalogDetailTabs(tableCatalog).map((tab) => tab.key)).toEqual([
+        "other:extra",
+      ]);
+    });
+
+    it("leaves out a tab whose match throws and keeps the others", () => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      registerExtension({
+        capability: "broken",
+        catalogDetailTabs: [
+          {
+            id: "boom",
+            labelKey: "b",
+            match: () => {
+              throw new Error("bad match");
+            },
+            render: () => null,
+          },
+        ],
+        id: "broken",
+      });
+      registerExtension({
+        capability: "fine",
+        catalogDetailTabs: [{ id: "ok", labelKey: "o", match: () => true, render: () => null }],
+        id: "fine",
+      });
+
+      expect(extensionCatalogDetailTabs(fileCatalog).map((tab) => tab.key)).toEqual(["fine:ok"]);
+      expect(error).toHaveBeenCalledWith(
+        'Catalog detail tab "broken:boom" failed to match',
+        expect.any(Error),
+      );
+    });
+
+    it("rejects two tabs with the same id in one extension", () => {
+      expect(() =>
+        registerExtension({
+          capability: "file_catalog",
+          catalogDetailTabs: [
+            { id: "files", labelKey: "a", match: () => true, render: () => null },
+            { id: "files", labelKey: "b", match: () => true, render: () => null },
+          ],
+          id: "file-catalog",
+        }),
+      ).toThrow('two catalog detail tabs with id "files"');
+      expect(extensionCatalogDetailTabs(fileCatalog)).toEqual([]);
+    });
+
+    it("cannot gain tabs after the app mounted", () => {
+      freezeExtensions();
+
+      expect(() =>
+        registerExtension({
+          capability: "file_catalog",
+          catalogDetailTabs: [
+            { id: "files", labelKey: "f", match: () => true, render: () => null },
+          ],
+          id: "file-catalog",
+        }),
+      ).toThrow("registered after the app mounted");
+      expect(extensionCatalogDetailTabs(fileCatalog)).toEqual([]);
+    });
   });
 });

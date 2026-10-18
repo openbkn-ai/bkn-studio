@@ -468,6 +468,10 @@ export const dataCatalogEnUS = {
       expand: "Expand",
       collapse: "Collapse",
     },
+    catalogDetail: {
+      resourcesTab: "Resources",
+      tabFailed: "This tab failed to load. Other tabs are not affected.",
+    },
     catalog: {
       authorize: "Authorize",
       notFound: "No resources found for this connection; it may have been deleted",

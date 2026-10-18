@@ -444,6 +444,10 @@ export const dataCatalogZhCN = {
       expand: "展开",
       collapse: "收起",
     },
+    catalogDetail: {
+      resourcesTab: "资源",
+      tabFailed: "该页签加载失败，不影响其他页签。",
+    },
     catalog: {
       authorize: "授权",
       notFound: "未找到该连接下的资源，连接可能已被删除",

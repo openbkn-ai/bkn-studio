@@ -23,6 +23,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { CatalogDetailTabs } from "@/modules/data-catalog/components/CatalogDetailTabs";
 import {
   CatalogTreePanel,
   type CatalogTreeSelection,
@@ -566,14 +567,19 @@ export function DataCatalogScene({ selection, suppressAutoSelect = false }: Data
             </div>
           }
         >
-          <ResourceListPanel
+          <CatalogDetailTabs
             catalog={selectedCatalog}
-            onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
-            onOpenResource={openResourceWorkspace}
-            onResourceDeleted={() => {
-              void refreshResourceTotal().catch(() => undefined);
-              setResourceTotal((current) => Math.max(0, current - 1));
-            }}
+            resources={
+              <ResourceListPanel
+                catalog={selectedCatalog}
+                onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
+                onOpenResource={openResourceWorkspace}
+                onResourceDeleted={() => {
+                  void refreshResourceTotal().catch(() => undefined);
+                  setResourceTotal((current) => Math.max(0, current - 1));
+                }}
+              />
+            }
           />
         </Suspense>
       );

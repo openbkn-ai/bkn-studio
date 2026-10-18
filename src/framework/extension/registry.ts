@@ -13,6 +13,7 @@ import { RequireCapability } from "@/framework/entitlement/RequireCapability";
 import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import type { SupportedLocale } from "@/framework/runtime/types";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
+import type { CatalogRecord } from "@/shared/catalog/types";
 
 /**
  * What another build adds to Studio without this repository knowing about it: routes, the
@@ -45,6 +46,12 @@ export type StudioExtension = {
    * each of its pages is offered.
    */
   workspaceNavItems?: WorkspaceNavEntry[];
+  /**
+   * Tabs in the data-catalog detail, after the built-in resource list, for the catalogs they
+   * match. Unlike buttons, their content is gated: the shell wraps it in the extension's
+   * capability guard, so a licence that falls short shows the upgrade card in the tab.
+   */
+  catalogDetailTabs?: CatalogDetailTab[];
   /** Copy merged into the translation resources, by locale. */
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
 };
@@ -79,6 +86,25 @@ export type WorkspaceNavEntry = {
   path: (networkId: string) => string;
 };
 
+/** A tab in the data-catalog detail for the catalogs it matches, such as object-storage file catalogs. */
+export type CatalogDetailTab = {
+  /** Unique within the extension. */
+  id: string;
+  /** Translation key of the tab label. */
+  labelKey: string;
+  /** Position among extension tabs, ascending; ties keep registration order. Defaults to 100. */
+  order?: number;
+  /** Whether the tab applies to this catalog. An exception hides the tab instead of breaking the panel. */
+  match: (catalog: CatalogRecord) => boolean;
+  /** Tab content. Mounted only while the tab is selected. */
+  render: (catalog: CatalogRecord) => ReactNode;
+};
+
+/** A matching catalog detail tab with the extension context the shell needs to gate it. */
+export type ResolvedCatalogDetailTab = CatalogDetailTab & { capability: string; key: string };
+
+const DEFAULT_CATALOG_DETAIL_TAB_ORDER = 100;
+
 const installed: StudioExtension[] = [];
 let frozen = false;
 
@@ -98,6 +124,15 @@ export function registerExtension(extension: StudioExtension) {
         `Extension "${extension.id}" has a route without an element (${route.path ?? "index"}).`,
       );
     }
+  }
+  const tabIds = new Set<string>();
+  for (const tab of extension.catalogDetailTabs ?? []) {
+    if (tabIds.has(tab.id)) {
+      throw new Error(
+        `Extension "${extension.id}" has two catalog detail tabs with id "${tab.id}".`,
+      );
+    }
+    tabIds.add(tab.id);
   }
   installed.push(extension);
   addExtensionLocales(extension.locales);
@@ -134,6 +169,31 @@ export function extensionWorkspaceNavItems(): (WorkspaceNavEntry & { key: string
       ...item,
       key: `${extension.id}:${item.id}`,
     })),
+  );
+}
+
+/**
+ * The extension tabs that apply to a catalog, ordered. A tab whose match throws is left out and
+ * logged, so one faulty extension cannot take the catalog detail down.
+ */
+export function extensionCatalogDetailTabs(catalog: CatalogRecord): ResolvedCatalogDetailTab[] {
+  const tabs = installed.flatMap((extension) =>
+    (extension.catalogDetailTabs ?? []).flatMap((tab) => {
+      let matches = false;
+      try {
+        matches = tab.match(catalog);
+      } catch (error) {
+        console.error(`Catalog detail tab "${extension.id}:${tab.id}" failed to match`, error);
+      }
+      return matches
+        ? [{ ...tab, capability: extension.capability, key: `${extension.id}:${tab.id}` }]
+        : [];
+    }),
+  );
+  // Array.prototype.sort is stable, so equal orders keep registration order.
+  return tabs.sort(
+    (a, b) =>
+      (a.order ?? DEFAULT_CATALOG_DETAIL_TAB_ORDER) - (b.order ?? DEFAULT_CATALOG_DETAIL_TAB_ORDER),
   );
 }
 
