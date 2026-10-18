@@ -288,7 +288,7 @@ describe("ObjectMetricDetailScene actions", () => {
     expect(definition).toHaveTextContent("仅统计已支付订单的金额。 退款订单不计入。");
     expect(definition?.closest(".ant-descriptions")).toBeNull();
     expect(definition?.parentElement).toHaveTextContent("业务定义");
-    expect(screen.getByText(/逻辑属性：未绑定/)).toBeInTheDocument();
+    expect(await screen.findByText(/逻辑属性：未绑定/)).toBeInTheDocument();
     expect(
       [...container.querySelectorAll(".ant-descriptions-item-label")].map(
         (item) => item.textContent,
