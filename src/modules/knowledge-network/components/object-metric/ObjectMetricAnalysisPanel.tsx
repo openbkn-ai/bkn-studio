@@ -652,9 +652,10 @@ export function ObjectMetricAnalysisPanel({
         <div className={styles.summary}>
           <span>{objectMetricText("m6018e00aca78")}</span>
           <strong>
-            {typeof result.entries[0]?.value === "string"
-              ? result.entries[0].value
+            {typeof summaryEntry?.value === "string"
+              ? summaryEntry.value
               : formatNumber(summaryValue)}
+          </strong>
           </strong>
           {result.model.value.unit?.display_symbol || result.model.value.unit?.code ? (
             <em>{result.model.value.unit.display_symbol ?? result.model.value.unit.code}</em>
