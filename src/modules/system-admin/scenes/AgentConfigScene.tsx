@@ -6,9 +6,9 @@
  */
 
 /**
- * Shared configuration of the built-in smart Q&A Agent: model, Context Loader MCP surface,
- * execution caps, publish state, and the versioned shared Prompt. Network settings and
- * personal preferences narrow this from the Q&A page.
+ * Configuration of one built-in Agent: model, Context Loader MCP surface, execution caps,
+ * publish state, and the versioned shared Prompt. For smart Q&A, network settings and
+ * personal preferences narrow this from the Q&A page. Without edit rights it is read-only.
  */
 
 import {
@@ -31,15 +31,16 @@ import {
 } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
-import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
+import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import {
   BknAgentExecutionError,
   executionRequestError,
 } from "@/modules/knowledge-network/services/bkn-agent-execution.service";
 import {
   AGENT_LIMIT_KEYS,
+  CONTEXT_LIMIT_KEYS,
   getShared,
   getSharedPrompt,
   publishSharedPrompt,
@@ -50,8 +51,10 @@ import {
   type McpProfileChoice,
   type SharedAgent,
   type SharedPrompt,
+  unsetLimitMeansNoCap,
 } from "@/modules/knowledge-network/services/bkn-agent-settings.service";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
+import { useAgentAdminParams } from "@/modules/system-admin/scenes/agent-config-admin";
 
 const P = "systemAdmin.agentConfig";
 const L = "knowledgeNetwork.agentChat.config";
@@ -66,18 +69,12 @@ const MIN: Record<LimitKey, number> = {
   summarize_after_tokens: 4000,
 };
 
-export function AgentConfigScene() {
+export function AgentConfigScene({ agentId }: { agentId: string }) {
   const { t } = useTranslation();
   const { message } = App.useApp();
-  const runtimeConfig = useRuntimeConfig();
-  const tokenProvider = useMemo<AgentTokenProvider>(
-    () => ({
-      getToken: () => runtimeConfig.auth.tokenManager.getAccessToken() ?? "",
-      refresh: () => runtimeConfig.auth.tokenManager.refreshAccessToken(),
-    }),
-    [runtimeConfig],
-  );
-  const params = useMemo(() => ({ base: window.location.origin, tokenProvider }), [tokenProvider]);
+  const navigate = useNavigate();
+  const base = useAgentAdminParams();
+  const params = useMemo(() => ({ ...base, agentId }), [base, agentId]);
 
   const [shared, setShared] = useState<SharedAgent | null>(null);
   const [prompt, setPrompt] = useState<SharedPrompt | null>(null);
@@ -91,7 +88,24 @@ export function AgentConfigScene() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [forbidden, setForbidden] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+
+  // The runtime card and the prompt card save separately; each save applies only its own
+  // response, so a draft in the other card survives.
+  const applyRuntime = useCallback((agent: SharedAgent) => {
+    setShared(agent);
+    setModel(agent.model ?? "");
+    setProfile(agent.mcp_profile ?? "default");
+    setPublished(agent.status === "published");
+    setLimits(agent.limits);
+  }, []);
+
+  const applyPrompt = useCallback((next: SharedPrompt) => {
+    setPrompt(next);
+    setContent(next.prompt.content);
+    setVersion(next.prompt.current_version);
+    setShared((cur) => cur && { ...cur, prompt_version: next.prompt.current_version });
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,57 +116,85 @@ export function AgentConfigScene() {
         getSharedPrompt(params),
         listLlmModels({ page: 1, size: 100 }).catch(() => ({ items: [] })),
       ]);
-      setShared(agent);
-      setModel(agent.model ?? "");
-      setProfile(agent.mcp_profile ?? "default");
-      setPublished(agent.status === "published");
-      setLimits(agent.limits);
-      setPrompt(sharedPrompt);
-      setContent(sharedPrompt.prompt.content);
-      setVersion(sharedPrompt.prompt.current_version);
+      applyRuntime(agent);
+      applyPrompt(sharedPrompt);
       setModels(llms.items.map((m) => m.modelName));
     } catch (e) {
-      if (e instanceof BknAgentExecutionError && e.status === 403) setForbidden(true);
+      if (e instanceof BknAgentExecutionError && e.status === 404) setNotFound(true);
       else setError(executionRequestError(e).message);
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, [applyPrompt, applyRuntime, params]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const run = useCallback(
-    async (action: () => Promise<unknown>, done: string) => {
+    async <T,>(action: () => Promise<T>, done: string, apply: (result: T) => void) => {
       setSaving(true);
       try {
-        await action();
+        apply(await action());
         message.success(t(done));
-        await load();
       } catch (e) {
         message.error(executionRequestError(e).message);
       } finally {
         setSaving(false);
       }
     },
-    [load, message, t],
+    [message, t],
   );
 
+  const back = (
+    <SceneBackButton onClick={() => void navigate("/system/agent-config")}>
+      {t(`${P}.back`)}
+    </SceneBackButton>
+  );
   if (loading && !shared) return <Spin />;
-  if (forbidden) return <Alert type="info" showIcon message={t(`${P}.forbidden`)} />;
+  if (notFound)
+    return (
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        {back}
+        <Alert type="info" showIcon message={t(`${P}.notFound`)} />
+      </Space>
+    );
   if (error) return <Alert type="error" showIcon message={error} />;
   if (!shared || !prompt) return null;
 
   const current = prompt.prompt.current_version;
   const selected = prompt.versions.find((v) => v.version === version);
+  const editable = shared.can_edit;
+  // Context budget limits only apply on the public execution surface.
+  const limitKeys = shared.layered
+    ? AGENT_LIMIT_KEYS
+    : AGENT_LIMIT_KEYS.filter((key) => !CONTEXT_LIMIT_KEYS.includes(key));
 
   return (
     <div>
-      <Typography.Paragraph type="secondary">{t(`${P}.intro`)}</Typography.Paragraph>
+      <Space align="center" size={12} style={{ marginBottom: 12 }} wrap>
+        {back}
+        <Typography.Title level={5} style={{ margin: 0 }}>
+          {shared.name}
+        </Typography.Title>
+        <Typography.Text type="secondary" code>
+          {shared.agent_id}
+        </Typography.Text>
+      </Space>
+      <Typography.Paragraph type="secondary">
+        {t(shared.layered ? `${P}.intro` : `${P}.introPlain`)}
+      </Typography.Paragraph>
+      {editable ? null : (
+        <Alert
+          type="info"
+          showIcon
+          message={t(`${P}.readOnlyNotice`)}
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         <Card title={t(`${P}.runtimeTitle`)}>
-          <Form layout="vertical">
+          <Form layout="vertical" disabled={!editable}>
             <Row gutter={16}>
               <Col xs={24} md={12}>
                 <Form.Item label={t(`${L}.model`)}>
@@ -166,22 +208,24 @@ export function AgentConfigScene() {
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={12}>
-                <Form.Item label={t(`${P}.mcpProfile`)} tooltip={t(`${P}.mcpProfileHint`)}>
-                  <Radio.Group
-                    value={profile}
-                    onChange={(e) => setProfile(e.target.value as McpProfileChoice | "default")}
-                    options={[
-                      { value: "default", label: t(`${P}.mcpDefault`) },
-                      { value: "full", label: t(`${P}.mcpFull`) },
-                      { value: "compact", label: t(`${P}.mcpCompact`) },
-                    ]}
-                  />
-                </Form.Item>
-              </Col>
+              {shared.uses_context_loader ? (
+                <Col xs={24} md={12}>
+                  <Form.Item label={t(`${P}.mcpProfile`)} tooltip={t(`${P}.mcpProfileHint`)}>
+                    <Radio.Group
+                      value={profile}
+                      onChange={(e) => setProfile(e.target.value as McpProfileChoice | "default")}
+                      options={[
+                        { value: "default", label: t(`${P}.mcpDefault`) },
+                        { value: "full", label: t(`${P}.mcpFull`) },
+                        { value: "compact", label: t(`${P}.mcpCompact`) },
+                      ]}
+                    />
+                  </Form.Item>
+                </Col>
+              ) : null}
             </Row>
             <Row gutter={16}>
-              {AGENT_LIMIT_KEYS.map((key) => (
+              {limitKeys.map((key) => (
                 <Col xs={24} md={6} key={key}>
                   <Form.Item
                     label={t(`${L}.limitFields.${key}.label`)}
@@ -192,7 +236,9 @@ export function AgentConfigScene() {
                       min={MIN[key]}
                       precision={0}
                       value={limits[key] ?? null}
-                      placeholder={t(`${L}.serviceDefault`)}
+                      placeholder={t(
+                        unsetLimitMeansNoCap(key) ? `${L}.noCap` : `${L}.serviceDefault`,
+                      )}
                       onChange={(next) => setLimits({ ...limits, [key]: next ?? null })}
                     />
                   </Form.Item>
@@ -207,31 +253,38 @@ export function AgentConfigScene() {
                 unCheckedChildren={t(`${L}.draft`)}
               />
             </Form.Item>
-            <Space style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button
-                type="primary"
-                loading={saving}
-                onClick={() =>
-                  void run(
-                    () =>
-                      updateShared({
-                        ...params,
-                        update: {
-                          model,
-                          mcp_profile: profile === "default" ? null : profile,
-                          status: published ? "published" : "draft",
-                          limits: Object.fromEntries(
-                            Object.entries(limits).filter(([, v]) => v != null),
-                          ),
-                        },
-                      }),
-                    `${L}.saved`,
-                  )
-                }
-              >
-                {t(`${L}.save`)}
-              </Button>
-            </Space>
+            {editable ? (
+              <Space style={{ display: "flex", justifyContent: "flex-end" }}>
+                <Button
+                  type="primary"
+                  loading={saving}
+                  onClick={() =>
+                    void run(
+                      () =>
+                        updateShared({
+                          ...params,
+                          update: {
+                            model,
+                            ...(shared.uses_context_loader
+                              ? { mcp_profile: profile === "default" ? null : profile }
+                              : {}),
+                            status: published ? "published" : "draft",
+                            limits: Object.fromEntries(
+                              Object.entries(limits).filter(
+                                ([key, v]) => v != null && limitKeys.includes(key as LimitKey),
+                              ),
+                            ),
+                          },
+                        }),
+                      `${L}.saved`,
+                      applyRuntime,
+                    )
+                  }
+                >
+                  {t(`${L}.save`)}
+                </Button>
+              </Space>
+            ) : null}
           </Form>
         </Card>
 
@@ -256,13 +309,14 @@ export function AgentConfigScene() {
                   ),
                 }))}
               />
-              {selected && selected.version !== current ? (
+              {editable && selected && selected.version !== current ? (
                 <Button
                   disabled={saving}
                   onClick={() =>
                     void run(
                       () => rollbackSharedPrompt({ ...params, version: selected.version }),
                       `${L}.rolledBack`,
+                      applyPrompt,
                     )
                   }
                 >
@@ -274,21 +328,28 @@ export function AgentConfigScene() {
         >
           <Input.TextArea
             autoSize={{ minRows: 10, maxRows: 28 }}
+            readOnly={!editable}
             value={content}
             onChange={(e) => setContent(e.target.value)}
           />
-          <Space style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-            <Button
-              type="primary"
-              loading={saving}
-              disabled={!content.trim() || content === prompt.prompt.content}
-              onClick={() =>
-                void run(() => publishSharedPrompt({ ...params, content }), `${L}.promptPublished`)
-              }
-            >
-              {t(`${L}.publishPrompt`)}
-            </Button>
-          </Space>
+          {editable ? (
+            <Space style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+              <Button
+                type="primary"
+                loading={saving}
+                disabled={!content.trim() || content === prompt.prompt.content}
+                onClick={() =>
+                  void run(
+                    () => publishSharedPrompt({ ...params, content }),
+                    `${L}.promptPublished`,
+                    applyPrompt,
+                  )
+                }
+              >
+                {t(`${L}.publishPrompt`)}
+              </Button>
+            </Space>
+          ) : null}
         </Card>
       </Space>
     </div>

@@ -17,6 +17,7 @@ export { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
 export { LicenseManagementScene } from "@/modules/system-admin/scenes/LicenseManagementScene";
 export { OAuthAccessOriginsScene } from "@/modules/system-admin/scenes/OAuthAccessOriginsScene";
 export { AgentConfigScene } from "@/modules/system-admin/scenes/AgentConfigScene";
+export { AgentConfigListScene } from "@/modules/system-admin/scenes/AgentConfigListScene";
 export { DirectoryUserPicker } from "@/modules/system-admin/components/DirectoryUserPicker";
 export type { DirectoryUserPickerProps } from "@/modules/system-admin/components/DirectoryUserPicker";
 export { GrantableUserPicker } from "@/modules/system-admin/components/GrantableUserPicker";

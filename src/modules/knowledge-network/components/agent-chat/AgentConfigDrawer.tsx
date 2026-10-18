@@ -44,6 +44,7 @@ import {
   saveNetworkSetting,
   saveUserSetting,
   selectableTools,
+  unsetLimitMeansNoCap,
   type AgentConfig,
   type AgentEffective,
   type AgentLimits,
@@ -58,6 +59,9 @@ import {
 
 const P = "knowledgeNetwork.agentChat.config";
 const INSTRUCTION_MAX = 2000;
+const unsetLabel = (key: LimitKey) =>
+  unsetLimitMeansNoCap(key) ? `${P}.noCap` : `${P}.serviceDefault`;
+
 const MIN: Record<LimitKey, number> = {
   max_turns: 1,
   max_tool_calls: 0,
@@ -92,7 +96,11 @@ function LimitFields({
               label={t(`${P}.limitFields.${key}.label`)}
               tooltip={t(`${P}.limitFields.${key}.hint`)}
               extra={
-                caps ? (cap == null ? t(`${P}.noCap`) : t(`${P}.capValue`, { value: cap })) : null
+                caps
+                  ? cap == null
+                    ? t(unsetLabel(key))
+                    : t(`${P}.capValue`, { value: cap })
+                  : null
               }
             >
               <InputNumber
@@ -102,7 +110,7 @@ function LimitFields({
                 precision={0}
                 disabled={disabled}
                 value={value?.[key] ?? null}
-                placeholder={caps ? t(`${P}.followUpper`) : t(`${P}.serviceDefault`)}
+                placeholder={caps ? t(`${P}.followUpper`) : t(unsetLabel(key))}
                 onChange={(next) => onChange({ ...value, [key]: next ?? null })}
               />
             </Form.Item>
@@ -228,13 +236,18 @@ function SharedSummary({ config }: { config: AgentConfig }) {
         </Descriptions.Item>
         {AGENT_LIMIT_KEYS.map((key) => (
           <Descriptions.Item key={key} label={t(`${P}.limitFields.${key}.label`)}>
-            {config.shared.limits[key] ?? t(`${P}.noCap`)}
+            {config.shared.limits[key] ?? t(unsetLabel(key))}
           </Descriptions.Item>
         ))}
       </Descriptions>
       {config.can_edit_shared ? (
         <Space style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-          <Button type="primary" onClick={() => void navigate("/system/agent-config")}>
+          <Button
+            type="primary"
+            onClick={() =>
+              void navigate(`/system/agent-config/${encodeURIComponent(config.agent_id)}`)
+            }
+          >
             {t(`${P}.openSystemConfig`)}
           </Button>
         </Space>
@@ -286,27 +299,44 @@ export function AgentConfigDrawer({
     }
   }, [env, params, tokenProvider]);
 
+  /**
+   * After saving one layer, refresh the merged view but keep the other tab's form as the user
+   * left it: a network save narrows the personal caps, yet an unsaved personal draft stays.
+   */
+  const refreshAfter = useCallback(
+    async (layer: "network" | "user") => {
+      const next = await getAgentConfig({ ...params, knId: env.knId });
+      setConfig(next);
+      if (layer === "network") setNetwork(next.network.setting);
+      else setUser(next.user.setting);
+    },
+    [env.knId, params],
+  );
+
   useEffect(() => {
     if (open) void load();
   }, [open, load]);
 
   const run = useCallback(
-    async (action: () => Promise<unknown>, done: string) => {
+    async (action: () => Promise<unknown>, done: string, layer: "network" | "user") => {
       setSaving(true);
       try {
         await action();
         message.success(t(done));
-        await load();
+        await refreshAfter(layer);
       } catch (e) {
         message.error(executionRequestError(e).message);
       } finally {
         setSaving(false);
       }
     },
-    [load, message, t],
+    [refreshAfter, message, t],
   );
 
-  const sharedTools = config?.shared.allowed_tools ?? tools;
+  // An explicit shared list may name lifecycle or unscoped tools; never offer those.
+  const sharedTools = config?.shared.allowed_tools
+    ? selectableTools(config.shared.allowed_tools)
+    : tools;
   const networkUpper = config && { limits: config.shared.limits, allowed_tools: sharedTools };
   const narrowed = networkUpper && config ? narrow(networkUpper, config.network.setting) : null;
   const userUpper = narrowed && {
@@ -356,12 +386,14 @@ export function AgentConfigDrawer({
                       () =>
                         saveNetworkSetting({ ...params, knId: env.knId, setting: clean(network) }),
                       `${P}.saved`,
+                      "network",
                     )
                   }
                   onReset={() =>
                     void run(
                       () => resetNetworkSetting({ ...params, knId: env.knId }),
                       `${P}.resetDone`,
+                      "network",
                     )
                   }
                 />
@@ -381,9 +413,10 @@ export function AgentConfigDrawer({
                     void run(
                       () => saveUserSetting({ ...params, setting: clean(user) }),
                       `${P}.saved`,
+                      "user",
                     )
                   }
-                  onReset={() => void run(() => resetUserSetting(params), `${P}.resetDone`)}
+                  onReset={() => void run(() => resetUserSetting(params), `${P}.resetDone`, "user")}
                 />
               ),
             },

@@ -1189,9 +1189,23 @@ export const systemAdminEnUS = {
     agentConfig: {
       title: "Agent Settings",
       description:
-        "Maintain the shared configuration of the built-in smart Q&A Agent: model, MCP service, execution caps, publish state, and shared Prompt.",
+        "Maintain the built-in Agents: model, MCP service, execution caps, publish state, and shared Prompt.",
+      listHint: "Built-in Agents are set up with each release and are not created here.",
+      searchPlaceholder: "Search by name or ID",
+      empty: "No built-in Agents",
+      noMatch: "No matching Agents",
+      detailTitle: "Agent Details",
+      back: "Back to list",
+      layered: "Network and personal settings",
+      readOnly: "Read-only",
+      updateTime: "Updated",
+      promptVersion: "Prompt v{{version}}",
       intro:
         "This configuration is shared by every knowledge network. Network settings and personal preferences can only add instructions or narrow tools and limits on top of it.",
+      introPlain: "This Agent is configured here only; it has no network or personal settings.",
+      readOnlyNotice:
+        "You can view this Agent but not change it. Until an Agent management permission is registered, only its creator can change it.",
+      notFound: "This Agent does not exist or is not a built-in Agent.",
       runtimeTitle: "Runtime",
       mcpProfile: "MCP service",
       mcpProfileHint:
@@ -1199,8 +1213,6 @@ export const systemAdminEnUS = {
       mcpDefault: "Service default",
       mcpFull: "Full",
       mcpCompact: "Compact",
-      forbidden:
-        "You cannot change the shared configuration. Until an Agent management permission is registered, only the Agent's creator can change it.",
     },
     accessOrigins: {
       title: "Access Addresses",

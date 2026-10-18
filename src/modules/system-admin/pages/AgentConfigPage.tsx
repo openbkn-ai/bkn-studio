@@ -5,8 +5,17 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { useParams } from "react-router-dom";
+
+import { AgentConfigListScene } from "@/modules/system-admin/scenes/AgentConfigListScene";
 import { AgentConfigScene } from "@/modules/system-admin/scenes/AgentConfigScene";
 
 export function AgentConfigPage() {
-  return <AgentConfigScene />;
+  return <AgentConfigListScene />;
+}
+
+export function AgentConfigDetailPage() {
+  const { agentId = "" } = useParams();
+  // Keyed so switching Agents starts from a clean form.
+  return <AgentConfigScene agentId={agentId} key={agentId} />;
 }

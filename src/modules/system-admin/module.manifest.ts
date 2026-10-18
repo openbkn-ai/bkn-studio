@@ -46,6 +46,7 @@ export const systemAdminModuleManifest = {
     "authorization/object-grants",
     "license-management/license",
     "oauth/access-origins",
+    "bkn-agent/admin-agents",
   ],
   scenes: [
     {
@@ -82,6 +83,20 @@ export const systemAdminModuleManifest = {
       description:
         "Manage the browser origins allowed to complete BKN Studio OAuth login and logout flows.",
       inputs: [],
+    },
+    {
+      id: "system-admin.agent-config-list",
+      exportName: "AgentConfigListScene",
+      description:
+        "List the built-in BKN Agents (smart Q&A, business provenance, semantic understanding) as cards with publish state, model and edit rights; Agents are seeded per release and not created here.",
+      inputs: [],
+    },
+    {
+      id: "system-admin.agent-config",
+      exportName: "AgentConfigScene",
+      description:
+        "Configure one built-in BKN Agent: model, Context Loader MCP surface, execution and context limits, publish state, and the versioned shared Prompt with rollback. Read-only for callers who may not edit it.",
+      inputs: [{ name: "agentId", type: "string", required: true }],
     },
     {
       id: "system-admin.audit",

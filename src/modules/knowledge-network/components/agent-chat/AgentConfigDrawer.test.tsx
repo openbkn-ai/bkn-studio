@@ -6,7 +6,7 @@
  */
 
 import { App } from "antd";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
@@ -174,6 +174,73 @@ describe("AgentConfigDrawer", () => {
     fireEvent.click(
       await screen.findByText(i18n.t("knowledgeNetwork.agentChat.config.openSystemConfig")),
     );
-    expect(navigate).toHaveBeenCalledWith("/system/agent-config");
+    expect(navigate).toHaveBeenCalledWith("/system/agent-config/studio_smart_qa");
+  });
+
+  it("keeps an unsaved personal draft when the network layer is saved", async () => {
+    getAgentConfig.mockResolvedValue(config({ can_edit_network: true }));
+    saveNetworkSetting.mockResolvedValue(layer({ instruction: "Use fiscal quarters" }, 3));
+    renderDrawer();
+
+    await screen.findByText(i18n.t("knowledgeNetwork.agentChat.config.networkDescription"));
+    fireEvent.click(screen.getByText(i18n.t("knowledgeNetwork.agentChat.config.userTitle")));
+    await screen.findByText(i18n.t("knowledgeNetwork.agentChat.config.userDescription"));
+    const placeholder = i18n.t("knowledgeNetwork.agentChat.config.instructionPlaceholder");
+    const userField = () => {
+      const fields = screen.getAllByPlaceholderText(placeholder);
+      return fields[fields.length - 1] as HTMLTextAreaElement;
+    };
+    fireEvent.change(userField(), { target: { value: "Draft" } });
+
+    fireEvent.click(screen.getByText(i18n.t("knowledgeNetwork.agentChat.config.networkTitle")));
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: SAVE })[0]);
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(getAgentConfig).toHaveBeenCalledTimes(2));
+
+    expect(userField().value).toBe("Draft");
+  });
+
+  it("never offers lifecycle or unscoped tools from an explicit shared list", async () => {
+    getAgentConfig.mockResolvedValue(
+      config({
+        can_edit_network: true,
+        shared: {
+          limits: { max_turns: 40, timeout_s: 300 },
+          allowed_tools: ["search_schema", "bkn_start_interaction", "run_code"],
+        },
+      }),
+    );
+    renderDrawer();
+
+    await screen.findByText(i18n.t("knowledgeNetwork.agentChat.config.networkDescription"));
+    fireEvent.click(
+      screen.getAllByText(i18n.t("knowledgeNetwork.agentChat.config.customTools"))[0],
+    );
+
+    expect(await screen.findByText("search_schema")).toBeTruthy();
+    expect(screen.queryByText("bkn_start_interaction")).toBeNull();
+    expect(screen.queryByText("run_code")).toBeNull();
+  });
+
+  it("says an unset cap is a service default, except the tool-call cap", async () => {
+    getAgentConfig.mockResolvedValue(config());
+    renderDrawer();
+
+    fireEvent.click(
+      await screen.findByText(i18n.t("knowledgeNetwork.agentChat.config.sharedTitle")),
+    );
+    const summary = within(
+      await waitFor(() => document.querySelector<HTMLElement>(".ant-descriptions")!),
+    );
+    const row = (key: string) =>
+      summary
+        .getByText(i18n.t(`knowledgeNetwork.agentChat.config.limitFields.${key}.label`))
+        .closest("tr")!.textContent;
+    expect(row("max_tool_calls")).toContain(i18n.t("knowledgeNetwork.agentChat.config.noCap"));
+    expect(row("max_output_tokens")).toContain(
+      i18n.t("knowledgeNetwork.agentChat.config.serviceDefault"),
+    );
   });
 });

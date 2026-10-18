@@ -1102,10 +1102,23 @@ export const systemAdminZhCN = {
     },
     agentConfig: {
       title: "Agent 配置",
-      description:
-        "维护内置智能问答 Agent 的共享配置：模型、MCP 服务、执行上限、发布状态和共享提示词。",
+      description: "维护平台内置 Agent 的配置：模型、MCP 服务、执行上限、发布状态和共享提示词。",
+      listHint: "平台内置的 Agent，随版本初始化，不在这里新建。",
+      searchPlaceholder: "搜索名称或 ID",
+      empty: "没有内置 Agent",
+      noMatch: "没有匹配的 Agent",
+      detailTitle: "Agent 详情",
+      back: "返回列表",
+      layered: "支持网络和个人配置",
+      readOnly: "只读",
+      updateTime: "更新时间",
+      promptVersion: "提示词 v{{version}}",
       intro:
         "这里是所有知识网络共用的配置。各网络的配置和用户个人偏好只能在此基础上追加提示词、收窄工具和限制。",
+      introPlain: "这个 Agent 只在这里配置，没有网络和个人配置。",
+      readOnlyNotice:
+        "你只能查看这个 Agent 的配置。在权限表注册 Agent 管理权限之前，只有它的创建者可以修改。",
+      notFound: "这个 Agent 不存在，或不是平台内置的 Agent。",
       runtimeTitle: "运行配置",
       mcpProfile: "MCP 服务",
       mcpProfileHint:
@@ -1113,8 +1126,6 @@ export const systemAdminZhCN = {
       mcpDefault: "跟随服务默认",
       mcpFull: "完整版",
       mcpCompact: "精简版",
-      forbidden:
-        "你没有修改共享配置的权限。在权限表注册 Agent 管理权限之前，只有这个 Agent 的创建者可以修改。",
     },
     accessOrigins: {
       title: "访问地址",

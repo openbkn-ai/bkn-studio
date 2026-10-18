@@ -5,12 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  getShared,
+  listShared,
   narrow,
+  rollbackSharedPrompt,
   selectableTools,
 } from "@/modules/knowledge-network/services/bkn-agent-settings.service";
+
+const tokenProvider = { getToken: () => "t", refresh: () => Promise.resolve("t") };
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("bkn-agent settings", () => {
   it("narrows like the server: tools intersect and limits take the minimum", () => {
@@ -33,5 +42,24 @@ describe("bkn-agent settings", () => {
     expect(
       selectableTools(["bkn_start_interaction", "run_code", "search_schema", "run_cypher"]),
     ).toEqual(["search_schema", "run_cypher"]);
+  });
+
+  it("addresses admin calls to the chosen built-in Agent", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify([]), { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const params = { base: "https://h", tokenProvider };
+
+    await listShared(params);
+    await getShared({ ...params, agentId: "catalog-semantic-understanding" });
+    await rollbackSharedPrompt({ ...params, agentId: "business_provenance_optimizer", version: 2 });
+
+    const urls = fetchMock.mock.calls.map((call) => String((call as unknown[])[0]));
+    expect(urls).toEqual([
+      "https://h/api/bkn-agent/v1/admin/agents",
+      "https://h/api/bkn-agent/v1/admin/agents/catalog-semantic-understanding",
+      "https://h/api/bkn-agent/v1/admin/agents/business_provenance_optimizer/prompt/rollback",
+    ]);
   });
 });

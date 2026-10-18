@@ -75,10 +75,20 @@ export type McpProfileChoice = "full" | "compact";
 
 export type SharedAgent = {
   agent_id: string;
+  name: string;
   model?: string | null;
   status: string;
   limits: AgentLimits;
   mcp_profile?: McpProfileChoice | null;
+  /** Whether the Agent loads Context Loader; the MCP surface choice applies only then. */
+  uses_context_loader: boolean;
+  /** Whether network and personal settings apply (smart Q&A); others are configured here only. */
+  layered: boolean;
+  /** Until an Agent management operation is registered, only the Agent's creator. */
+  can_edit: boolean;
+  prompt_version?: number | null;
+  update_user: string;
+  update_time: number;
 };
 
 export type SharedUpdate = {
@@ -164,30 +174,41 @@ export function resetNetworkSetting(params: Params & { knId: string }): Promise<
   );
 }
 
-export function getShared(params: Params): Promise<SharedAgent> {
-  return request(params, `/admin/agents/${agentPath(SMART_QA_AGENT_ID)}`);
+/** The built-in Agents, in seeded order; Agents are not created from the console. */
+export function listShared(params: Params): Promise<SharedAgent[]> {
+  return request(params, "/admin/agents");
 }
 
-export function updateShared(params: Params & { update: SharedUpdate }): Promise<SharedAgent> {
-  return request(params, `/admin/agents/${agentPath(SMART_QA_AGENT_ID)}`, {
+type AgentParams = Params & { agentId: string };
+
+export function getShared(params: AgentParams): Promise<SharedAgent> {
+  return request(params, `/admin/agents/${agentPath(params.agentId)}`);
+}
+
+export function updateShared(params: AgentParams & { update: SharedUpdate }): Promise<SharedAgent> {
+  return request(params, `/admin/agents/${agentPath(params.agentId)}`, {
     method: "PUT",
     body: JSON.stringify(params.update),
   });
 }
 
-export function getSharedPrompt(params: Params): Promise<SharedPrompt> {
-  return request(params, `/admin/agents/${agentPath(SMART_QA_AGENT_ID)}/prompt`);
+export function getSharedPrompt(params: AgentParams): Promise<SharedPrompt> {
+  return request(params, `/admin/agents/${agentPath(params.agentId)}/prompt`);
 }
 
-export function publishSharedPrompt(params: Params & { content: string }): Promise<SharedPrompt> {
-  return request(params, `/admin/agents/${agentPath(SMART_QA_AGENT_ID)}/prompt`, {
+export function publishSharedPrompt(
+  params: AgentParams & { content: string },
+): Promise<SharedPrompt> {
+  return request(params, `/admin/agents/${agentPath(params.agentId)}/prompt`, {
     method: "PUT",
     body: JSON.stringify({ content: params.content }),
   });
 }
 
-export function rollbackSharedPrompt(params: Params & { version: number }): Promise<SharedPrompt> {
-  return request(params, `/admin/agents/${agentPath(SMART_QA_AGENT_ID)}/prompt/rollback`, {
+export function rollbackSharedPrompt(
+  params: AgentParams & { version: number },
+): Promise<SharedPrompt> {
+  return request(params, `/admin/agents/${agentPath(params.agentId)}/prompt/rollback`, {
     method: "POST",
     body: JSON.stringify({ version: params.version }),
   });
@@ -206,6 +227,22 @@ const UNAVAILABLE_TOOLS = new Set([
 export function selectableTools(names: readonly string[]): string[] {
   return names.filter((name) => !isPlatformManagedTool(name) && !UNAVAILABLE_TOOLS.has(name));
 }
+
+/**
+ * How bkn-agent treats a limit left unset everywhere: no tool-call cap at all, while every
+ * other limit falls back to a service or model default.
+ */
+export function unsetLimitMeansNoCap(key: LimitKey): boolean {
+  return key === "max_tool_calls";
+}
+
+/** Limits that only the public execution surface (smart Q&A) applies. */
+export const CONTEXT_LIMIT_KEYS: readonly LimitKey[] = [
+  "keep_tool_results",
+  "data_result_chars",
+  "schema_result_chars",
+  "summarize_after_tokens",
+];
 
 const LIMIT_KEYS = [
   "max_turns",

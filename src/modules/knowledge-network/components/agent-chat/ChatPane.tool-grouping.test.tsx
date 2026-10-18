@@ -216,6 +216,7 @@ describe("ChatPane 工具调用折叠", () => {
         name: "run_cypher",
         status: "failed",
         output: "WITH is not supported",
+        errorKind: "error",
         durationMs: 5,
       },
       call("c2", "run_cypher"),
@@ -265,5 +266,32 @@ describe("ChatPane 工具调用折叠", () => {
     });
 
     expect(screen.getByText("1 个失败")).toBeTruthy();
+  });
+
+  it("history saved before error_kind keeps its failures red", async () => {
+    const legacy = (id: string) => ({
+      id,
+      name: "run_sql",
+      args: {},
+      status: "error",
+      error: "boom",
+      startedAt: 0,
+      latencyMs: 5,
+    });
+    localStorage.setItem(
+      "bkn-studio:agentchat:kn-demo",
+      JSON.stringify({
+        messages: [
+          { role: "user", content: "问一句" },
+          { role: "assistant", content: "答复", toolCalls: [legacy("c1"), legacy("c2")] },
+        ],
+        stats: { tokens: 0, ms: 0 },
+      }),
+    );
+
+    renderPane();
+
+    expect(await screen.findByText("2 个失败")).toBeTruthy();
+    expect(screen.queryByText(/其中 \d+ 次失败/)).toBeNull();
   });
 });

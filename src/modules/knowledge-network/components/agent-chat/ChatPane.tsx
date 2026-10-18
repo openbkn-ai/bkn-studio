@@ -210,6 +210,14 @@ export const MarkdownView = memo(function MarkdownView({
   );
 });
 
+/**
+ * A call that did not go through. History saved before the backend reported error_kind has
+ * failures without it; those keep the red "failed" they were shown with then.
+ */
+function callUnavailable(call: ToolCallView): boolean {
+  return call.status === "error" && (call.errorKind ?? "unavailable") === "unavailable";
+}
+
 /** Streaming reasoning_content display; live reasoning auto-expands. */
 function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
   const { t } = useTranslation();
@@ -257,7 +265,7 @@ function ToolCallCard({
     call.status === "running"
       ? styles.dotRunning
       : call.status === "error"
-        ? call.errorKind === "unavailable"
+        ? callUnavailable(call)
           ? styles.dotError
           : styles.dotWarn
         : styles.dotOk;
@@ -267,7 +275,7 @@ function ToolCallCard({
       ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
       : call.status === "error"
         ? `${t(
-            call.errorKind === "unavailable"
+            callUnavailable(call)
               ? "knowledgeNetwork.agentChat.chatPane.toolCall.failed"
               : "knowledgeNetwork.agentChat.chatPane.toolCall.returnedError",
           )}${call.latencyMs === undefined ? "" : ` - ${call.latencyMs}ms`}`
@@ -355,9 +363,7 @@ function ToolCallSegment({
   // Only calls that did not go through are failures worth flagging; errors a tool
   // returned (bad syntax, say) are trial and error the model works around, and
   // the card shows them individually.
-  const unavailable = calls.filter(
-    (call) => call.status === "error" && call.errorKind === "unavailable",
-  ).length;
+  const unavailable = calls.filter(callUnavailable).length;
   const showFailed = unavailable > 0;
   const statusDot = running ? styles.dotRunning : showFailed ? styles.dotError : styles.dotOk;
   const totalMs = `${calls.reduce((ms, call) => ms + (call.latencyMs ?? 0), 0)}ms`;
@@ -817,6 +823,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                         ? {
                             ...tc,
                             status: "error",
+                            // Cut off by the turn, not refused by the tool.
+                            errorKind: "error",
                             error: interrupted,
                             latencyMs: Math.round(now - tc.startedAt),
                           }
