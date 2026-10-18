@@ -10,7 +10,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
 import { createObjectMetricDefinitionV1 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
-import type { ObjectMetricDataV1 } from "@/modules/knowledge-network/types/object-metric";
+import type {
+  ObjectMetricDataV1,
+  ObjectMetricQueryRequestV1,
+} from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 
 vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAnalysisPanel", () => ({
@@ -49,6 +52,284 @@ afterAll(() => {
 });
 
 describe("ObjectMetricTrialDrawer", () => {
+  it("links participants by exact identity instead of a sample-row key", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [
+        {
+          bucket_key: "all-orders",
+          available_actions: ["participants", "context"],
+          status: "ok",
+          value: 10,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "summary",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    } satisfies ObjectMetricDataV1);
+    const onDrillThrough = vi.fn().mockResolvedValue({
+      participants: [{ instance_identity: { order_id: 10361 }, role: "owner" }],
+      bucket_value: "10",
+      status: "ok",
+    });
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        networkId="kn-1"
+        objectType={
+          {
+            dataProperties: [{ name: "order_id", displayName: "订单 ID" }],
+            primaryKeys: ["order_id"],
+          } as ObjectTypeDetail
+        }
+        onClose={vi.fn()}
+        onDrillThrough={onDrillThrough}
+        onRun={onRun}
+        open
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(await screen.findByRole("row", { name: /10/ }));
+    fireEvent.click(screen.getByRole("button", { name: "查看参与实例" }));
+
+    const link = await screen.findByRole("link", { name: /10361/ });
+    expect(screen.queryByText("当前数据可能已变化，明细与原图表值可能不同。")).toBeNull();
+    expect(link).toHaveAttribute("target", "_blank");
+    const target = new URL(link.getAttribute("href") ?? "", "http://localhost");
+    expect(target.searchParams.get("sampleRow")).toBeNull();
+    expect(JSON.parse(target.searchParams.get("metricInstance") ?? "null")).toEqual({
+      order_id: 10361,
+    });
+  });
+
+  it("shows newly loaded participant rows after loading another server page", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [
+        {
+          bucket_key: "all-orders",
+          available_actions: ["participants"],
+          status: "ok",
+          value: 120,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "summary",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    } satisfies ObjectMetricDataV1);
+    const onDrillThrough = vi
+      .fn()
+      .mockResolvedValueOnce({
+        participants: Array.from({ length: 100 }, (_, index) => ({
+          instance_identity: { order_id: `order-${index}` },
+          role: "owner",
+        })),
+        next_cursor: "next-page",
+        status: "ok",
+      })
+      .mockResolvedValueOnce({
+        participants: Array.from({ length: 20 }, (_, index) => ({
+          instance_identity: { order_id: `order-${index + 100}` },
+          role: "owner",
+        })),
+        status: "ok",
+      });
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onDrillThrough={onDrillThrough}
+        onRun={onRun}
+        open
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(await screen.findByRole("row", { name: /120/ }));
+    fireEvent.click(screen.getByRole("button", { name: "查看参与实例" }));
+    expect(await screen.findByText("order_id: order-0")).toBeInTheDocument();
+    expect(screen.queryByText("order_id: order-100")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
+    expect(await screen.findByText("order_id: order-100")).toBeInTheDocument();
+    expect(onDrillThrough).toHaveBeenCalledTimes(2);
+    expect(onDrillThrough.mock.calls[1][2]).toBe("next-page");
+  });
+
+  it("filters only the selected bucket and restores the prior result without a new request", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    const base: ObjectMetricDataV1 = {
+      entries: [
+        {
+          bucket_key: "bucket-east",
+          available_actions: ["filter", "drill", "participants", "context"],
+          dimension_cells: [
+            { ref: { object_type_id: "order", property_name: "region" }, value: "east" },
+          ],
+          dimensions: { "order.region": "east" },
+          status: "ok",
+          value: 10,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    };
+    const onRun = vi
+      .fn<(query: ObjectMetricQueryRequestV1) => Promise<ObjectMetricDataV1>>()
+      .mockResolvedValueOnce(base)
+      .mockResolvedValueOnce({
+        ...base,
+        entries: [{ status: "ok", value: 10, dimensions: { "order.region": "east" } }],
+      });
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(await screen.findByRole("row", { name: /region: east/ }));
+    fireEvent.click(screen.getByRole("button", { name: "按此值筛选" }));
+    await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
+    expect(onRun.mock.calls[1][0]).toMatchObject({
+      bucket_selection: { bucket_key: "bucket-east", parent_query: onRun.mock.calls[0][0] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "初始结果" }));
+    expect(onRun).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows how to select a group before exposing drill actions and highlights the selected row", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    definition.result_semantics.statistical_grain.group_by_dimensions = [
+      { object_type_id: "order", property_name: "status" },
+    ];
+    definition.query_capabilities.analysis_dimensions = [
+      { object_type_id: "order", property_name: "product_code" },
+    ];
+    const base: ObjectMetricDataV1 = {
+      entries: [
+        {
+          bucket_key: "confirmed-orders",
+          available_actions: ["drill", "context"],
+          dimension_cells: [
+            { ref: { object_type_id: "order", property_name: "status" }, value: "已确认" },
+          ],
+          status: "ok",
+          value: 784,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    };
+    const onRun = vi
+      .fn<(query: ObjectMetricQueryRequestV1) => Promise<ObjectMetricDataV1>>()
+      .mockResolvedValue(base);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    expect(await screen.findByText("先选择一个分组")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "继续下钻" })).toBeDisabled();
+
+    const row = screen.getByRole("row", { name: /status: 已确认.*784/ });
+    expect(row).toHaveAttribute("aria-selected", "false");
+    fireEvent.click(row);
+    expect(row).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByText("先选择一个分组")).not.toBeInTheDocument();
+    expect(screen.getByText("当前分组: status: 已确认")).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "选择下钻维度" }));
+    fireEvent.click(await screen.findByText("product_code"));
+    fireEvent.click(screen.getByRole("button", { name: "继续下钻" }));
+    await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
+    expect(onRun.mock.calls[1][0]).toMatchObject({
+      analysis_dimensions: [{ object_type_id: "order", property_name: "product_code" }],
+      bucket_selection: { bucket_key: "confirmed-orders", parent_query: onRun.mock.calls[0][0] },
+    });
+  });
+
+  it("paginates large trial results while keeping later rows accessible", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    const onRun = vi.fn().mockResolvedValue({
+      entries: Array.from({ length: 51 }, (_, index) => ({
+        dimensions: { row: `row-${index}` },
+        status: "ok" as const,
+        value: index,
+      })),
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    } satisfies ObjectMetricDataV1);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    expect(await screen.findByText("row: row-0")).toBeInTheDocument();
+    expect(screen.queryByText("row: row-50")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("2"));
+    expect(await screen.findByText("row: row-50")).toBeInTheDocument();
+  });
+
   it("keeps a related dimension's technical name when it matches an owner property", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.calculation_scope = "object_set";
@@ -264,6 +545,40 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(screen.queryByText("查询时间范围（可选）")).not.toBeInTheDocument();
   });
 
+  it("only offers a runtime date range when its event-time dimension is unambiguous", () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    const props = {
+      definition,
+      mode: "draft" as const,
+      onClose: vi.fn(),
+      onRun: vi.fn(),
+      open: true,
+    };
+    const { rerender } = render(<ObjectMetricTrialDrawer {...props} />);
+    expect(screen.queryByText("查询时间范围（可选）")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("指标未开放可查询时间维度，本次分析不按时间范围筛选。"),
+    ).toBeInTheDocument();
+
+    definition.query_capabilities.time_dimensions = [
+      { object_type_id: "order", property_name: "signed_at" },
+    ];
+    rerender(<ObjectMetricTrialDrawer {...props} />);
+    expect(screen.getByText("查询时间范围（可选）")).toBeInTheDocument();
+
+    definition.query_capabilities.time_dimensions.push({
+      object_type_id: "order",
+      property_name: "created_at",
+    });
+    rerender(<ObjectMetricTrialDrawer {...props} />);
+    expect(screen.queryByText("查询时间范围（可选）")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "指标开放了多个时间属性，无法确定查询时间范围作用于哪一个；请在下一版本中只保留一个。",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("builds a complete composite identity and converts each primary-key type", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "shipment");
     definition.name = "包裹金额";
@@ -436,9 +751,9 @@ describe("ObjectMetricTrialDrawer", () => {
     );
 
     expect(
-      screen.getByRole("dialog", { name: "试算 · 订单支付额 已发布 · v5" }),
+      screen.getByRole("dialog", { name: "指标分析 · 订单支付额 已发布 · v5" }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(screen.getByRole("button", { name: "运行分析" }));
     expect(await screen.findByText("无数据")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(onRun).toHaveBeenCalledTimes(1);

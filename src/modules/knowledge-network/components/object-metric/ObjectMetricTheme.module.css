@@ -11,6 +11,8 @@
   --metric-placeholder: #5b6b82;
   --metric-control-border: #cbd5e1;
   --metric-divider: #8e9db2;
+  --metric-surface-subtle: #f6f8fc;
+  --metric-text-primary: #0f172a;
 }
 
 :global(:root[data-theme="dark"]) .scope {
@@ -18,6 +20,8 @@
   --metric-placeholder: #a9b8cb;
   --metric-control-border: #475569;
   --metric-divider: #50627a;
+  --metric-surface-subtle: #1b2940;
+  --metric-text-primary: #f8fafc;
 }
 
 .scope :global(.ant-input::placeholder),

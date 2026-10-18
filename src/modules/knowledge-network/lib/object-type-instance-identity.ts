@@ -17,6 +17,34 @@ export function buildSampleRowKey(
   return `row-${fallbackIndex}-${Object.values(row).join("-")}`;
 }
 
+export function parseMetricParticipantIdentity(
+  raw: string,
+  primaryKeys: string[],
+): Record<string, string | number | boolean> | null {
+  if (!raw || raw.length > 2048 || primaryKeys.length === 0) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const values = parsed as Record<string, unknown>;
+    if (
+      Object.keys(values).length !== primaryKeys.length ||
+      primaryKeys.some((key) => {
+        const value = values[key];
+        return (
+          value === "" ||
+          (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") ||
+          (typeof value === "number" && !Number.isSafeInteger(value))
+        );
+      })
+    ) {
+      return null;
+    }
+    return values as Record<string, string | number | boolean>;
+  } catch {
+    return null;
+  }
+}
+
 export function buildInstanceIdentityFromSampleRow(
   row: Record<string, string | number>,
   primaryKeys: string[],

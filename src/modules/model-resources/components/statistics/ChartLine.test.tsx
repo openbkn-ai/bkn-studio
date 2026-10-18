@@ -16,6 +16,7 @@ import { ChartLine } from "./ChartLine";
 const { chart, init } = vi.hoisted(() => {
   const chart = {
     dispose: vi.fn(),
+    on: vi.fn(),
     resize: vi.fn(),
     setOption: vi.fn(),
   };
@@ -37,6 +38,7 @@ describe("ChartLine", () => {
 
     expect(init).toHaveBeenCalledTimes(1);
     expect(chart.setOption).toHaveBeenCalledWith(firstOption, true);
+    expect(chart.on).toHaveBeenCalledWith("click", expect.any(Function));
 
     view.rerender(withTheme("light", <ChartLine option={secondOption} />));
 
@@ -48,5 +50,21 @@ describe("ChartLine", () => {
     expect(chart.dispose).toHaveBeenCalledTimes(1);
     expect(init).toHaveBeenCalledTimes(2);
     expect(init).toHaveBeenLastCalledWith(expect.any(HTMLDivElement), "dark");
+  });
+
+  it("forwards chart clicks to the latest callback without recreating the chart", () => {
+    const firstClick = vi.fn();
+    const nextClick = vi.fn();
+    const option = { series: [] };
+    const view = render(withTheme("light", <ChartLine onClick={firstClick} option={option} />));
+    const click = chart.on.mock.calls.at(-1)?.[1] as
+      ((event: { name: string }) => void) | undefined;
+    expect(click).toBeDefined();
+
+    view.rerender(withTheme("light", <ChartLine onClick={nextClick} option={option} />));
+    click?.({ name: "selected bucket" });
+
+    expect(firstClick).not.toHaveBeenCalled();
+    expect(nextClick).toHaveBeenCalledWith({ name: "selected bucket" });
   });
 });

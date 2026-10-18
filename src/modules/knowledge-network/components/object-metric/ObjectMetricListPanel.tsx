@@ -49,7 +49,9 @@ import {
   deprecateObjectMetricV1,
   listObjectMetricsV1,
   queryObjectMetricDataV1,
+  queryObjectMetricDrillThroughV1,
   trialObjectMetricDataV1,
+  trialObjectMetricDrillThroughV1,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
   getKnowledgeNetworkObjectTypeDetail,
@@ -116,6 +118,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const [listLoading, setListLoading] = useState(false);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [objectMetricCounts, setObjectMetricCounts] = useState<Record<string, number | null>>({});
+  const [visibleObjectTypeIds, setVisibleObjectTypeIds] = useState<string[]>([]);
   const [objectTotal, setObjectTotal] = useState(0);
   const [objectPage, setObjectPage] = useState(initialLocation.objectPage);
   const [objectSidebarCollapsed, setObjectSidebarCollapsed] = useState(
@@ -171,7 +174,19 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const tableViewportRef = useRef<HTMLDivElement>(null);
   const objectListRef = useRef<HTMLDivElement>(null);
   const objectMetricCountCache = useRef(new Map<string, number | null>());
+  const objectMetricCountRequests = useRef(new Set<string>());
+  const countRequestScope = useRef("");
+  const graphOwnerMetricCache = useRef(
+    new Map<string, { entries: ObjectMetricRecordV1[]; total: number }>(),
+  );
   const trialRequestRef = useRef(0);
+
+  useEffect(() => {
+    countRequestScope.current = `${networkId}\0${refreshVersion}`;
+    return () => {
+      countRequestScope.current = "";
+    };
+  }, [networkId, refreshVersion]);
 
   useEffect(() => {
     const expected = new URL(returnTo, "http://metric-navigation.local").searchParams;
@@ -268,10 +283,48 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   }, [objectSidebarCollapsed, objectTypes, selectedObjectTypeId]);
 
   useEffect(() => {
+    if (objectSidebarCollapsed || objectTypes.length === 0) {
+      setVisibleObjectTypeIds([]);
+      return;
+    }
+    const root = objectListRef.current;
+    if (!root || typeof IntersectionObserver === "undefined") {
+      setVisibleObjectTypeIds(objectTypes.map((item) => item.id));
+      return;
+    }
+    setVisibleObjectTypeIds([]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const newlyVisible = entries.flatMap((entry) =>
+          entry.isIntersecting && entry.target instanceof HTMLElement
+            ? [entry.target.dataset.objectTypeId]
+            : [],
+        );
+        setVisibleObjectTypeIds((current) => {
+          const added = newlyVisible.filter(
+            (id): id is string => typeof id === "string" && !current.includes(id),
+          );
+          return added.length ? [...current, ...new Set(added)] : current;
+        });
+      },
+      { root, rootMargin: "160px 0px" },
+    );
+    root
+      .querySelectorAll("button[data-object-type-id]")
+      .forEach((button) => observer.observe(button));
+    return () => observer.disconnect();
+  }, [objectSidebarCollapsed, objectTypes]);
+
+  useEffect(() => {
     let active = true;
     const countKey = (id: string) => `${networkId}\0${id}`;
+    const requestScope = `${networkId}\0${refreshVersion}`;
+    const visibleIds = new Set(visibleObjectTypeIds);
     const pending = objectTypes.filter(
-      (item) => !objectMetricCountCache.current.has(countKey(item.id)),
+      (item) =>
+        visibleIds.has(item.id) &&
+        !objectMetricCountCache.current.has(countKey(item.id)) &&
+        !objectMetricCountRequests.current.has(`${requestScope}\0${item.id}`),
     );
     setObjectMetricCounts(
       Object.fromEntries(
@@ -285,6 +338,8 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     async function loadCounts() {
       while (active && nextIndex < pending.length) {
         const item = pending[nextIndex++];
+        const requestKey = `${requestScope}\0${item.id}`;
+        objectMetricCountRequests.current.add(requestKey);
         let count: number | null = null;
         try {
           const result = await listObjectMetricsV1(
@@ -295,8 +350,10 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
           count = result.total_count;
         } catch {
           // A failed count must not look like an actual zero.
+        } finally {
+          objectMetricCountRequests.current.delete(requestKey);
         }
-        if (active) {
+        if (countRequestScope.current === requestScope) {
           objectMetricCountCache.current.set(countKey(item.id), count);
           setObjectMetricCounts((current) => ({ ...current, [item.id]: count }));
         }
@@ -308,7 +365,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     return () => {
       active = false;
     };
-  }, [networkId, objectTypes, refreshVersion]);
+  }, [networkId, objectTypes, refreshVersion, visibleObjectTypeIds]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedObjectKeyword(objectKeyword.trim()), 250);
@@ -386,6 +443,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
 
   const refresh = useCallback(() => {
     objectMetricCountCache.current.clear();
+    graphOwnerMetricCache.current.clear();
     setObjectMetricCounts({});
     setRefreshVersion((current) => current + 1);
   }, []);
@@ -823,6 +881,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
               initialFocusedMetric={initialGraphMetric}
               metricType={metricType}
               networkId={networkId}
+              ownerMetricCache={graphOwnerMetricCache.current}
               onDeleteDraft={confirmDeleteDraft}
               onDeprecate={confirmDeprecate}
               onEditMetric={(record) => openEditor(record, true)}
@@ -899,6 +958,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
               ? "published"
               : "draft"
           }
+          networkId={networkId}
           objectType={trialObjectType}
           onClose={() => {
             setTrialMetric(undefined);
@@ -913,6 +973,24 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                   query,
                 )
               : trialObjectMetricDataV1(networkId, trialMetric.definition, query)
+          }
+          onDrillThrough={(query, bucketKey, cursor) =>
+            ["published", "deprecated"].includes(trialMetric.definition.lifecycle.status)
+              ? queryObjectMetricDrillThroughV1(
+                  networkId,
+                  trialMetric.definition.id,
+                  trialMetric.definition.version,
+                  query,
+                  bucketKey,
+                  cursor,
+                )
+              : trialObjectMetricDrillThroughV1(
+                  networkId,
+                  trialMetric.definition,
+                  query,
+                  bucketKey,
+                  cursor,
+                )
           }
           open
         />

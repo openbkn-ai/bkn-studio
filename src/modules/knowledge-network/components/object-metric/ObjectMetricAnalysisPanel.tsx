@@ -122,11 +122,38 @@ function formatTime(value: number): string {
     hour: "2-digit",
     minute: "2-digit",
     month: "2-digit",
+    year: "numeric",
   }).format(new Date(value));
 }
 
 function dimensionEntries(entry: ObjectMetricDataEntryV1): Array<[string, unknown]> {
+  if (entry.dimension_cells?.length)
+    return entry.dimension_cells.map(({ ref, value }) => [
+      JSON.stringify([ref.object_type_id, ref.relation_path_alias ?? "", ref.property_name]),
+      value,
+    ]);
   return Object.entries(entry.dimensions ?? {});
+}
+
+function dimensionValue(entry: ObjectMetricDataEntryV1, key: string): unknown {
+  if (entry.dimension_cells?.length) {
+    return entry.dimension_cells.find(
+      ({ ref }) =>
+        JSON.stringify([ref.object_type_id, ref.relation_path_alias ?? "", ref.property_name]) ===
+        key,
+    )?.value;
+  }
+  return entry.dimensions?.[key];
+}
+
+function dimensionDisplayName(key: string, propertyLabels: Record<string, string>): string {
+  try {
+    const [, alias, property] = JSON.parse(key) as [string, string, string];
+    const name = propertyLabels[property] || property;
+    return alias ? `${name} (${alias})` : name;
+  } catch {
+    return propertyLabels[key] || key;
+  }
 }
 
 function dimensionValueLabel(value: unknown): string {
@@ -147,7 +174,7 @@ function categoryLabel(
   if (dimensions.length === 1) return String(dimensions[0]?.[1]);
   if (dimensions.length)
     return dimensions
-      .map(([key, value]) => `${propertyLabels[key] || key}: ${String(value)}`)
+      .map(([key, value]) => `${dimensionDisplayName(key, propertyLabels)}: ${String(value)}`)
       .join(" · ");
   if (entry.instance_identity)
     return Object.entries(entry.instance_identity)
@@ -182,7 +209,7 @@ function buildCategoryOption(
       data: categories,
       type: "category",
     },
-    yAxis: { scale: true, type: "value" },
+    yAxis: { type: "value" },
     series: [
       {
         barMaxWidth: 42,
@@ -201,20 +228,21 @@ function buildStackedBarOption(
   if (hasTime(entries)) {
     const sorted = [...entries].sort((left, right) => (left.time ?? 0) - (right.time ?? 0));
     const times = Array.from(new Set(sorted.map((entry) => entry.time ?? 0)));
-    const names = Array.from(new Set(sorted.map(seriesLabel)));
+    const seriesValues = new Map<string, Map<number, number>>();
+    sorted.forEach((entry) => {
+      const name = seriesLabel(entry);
+      const values = seriesValues.get(name) ?? new Map<number, number>();
+      values.set(entry.time ?? 0, entry.value);
+      seriesValues.set(name, values);
+    });
     return {
       color: palette,
       grid: { containLabel: true, left: 14, right: 20, bottom: 48, top: 22 },
       legend: { bottom: 0, type: "scroll" },
       tooltip: { trigger: "axis" },
       xAxis: { data: times.map(formatTime), type: "category" },
-      yAxis: { scale: true, type: "value" },
-      series: names.map((name) => {
-        const values = new Map(
-          sorted
-            .filter((entry) => seriesLabel(entry) === name)
-            .map((entry) => [entry.time ?? 0, entry.value]),
-        );
+      yAxis: { type: "value" },
+      series: Array.from(seriesValues, ([name, values]) => {
         return {
           barMaxWidth: 42,
           data: times.map((time) => values.get(time) ?? 0),
@@ -235,29 +263,33 @@ function buildStackedBarOption(
 
   const [categoryKey, seriesKey] = dimensionKeys;
   const categories = Array.from(
-    new Set(entries.map((entry) => dimensionValueLabel(entry.dimensions?.[categoryKey]))),
+    new Set(entries.map((entry) => dimensionValueLabel(dimensionValue(entry, categoryKey)))),
   );
   const names = Array.from(
-    new Set(entries.map((entry) => dimensionValueLabel(entry.dimensions?.[seriesKey]))),
+    new Set(entries.map((entry) => dimensionValueLabel(dimensionValue(entry, seriesKey)))),
   );
+  const categorySeriesValues = new Map<string, Map<string, number>>();
+  entries.forEach((entry) => {
+    const category = dimensionValueLabel(dimensionValue(entry, categoryKey));
+    const name = dimensionValueLabel(dimensionValue(entry, seriesKey));
+    const values = categorySeriesValues.get(name) ?? new Map<string, number>();
+    values.set(category, (values.get(category) ?? 0) + entry.value);
+    categorySeriesValues.set(name, values);
+  });
   return {
     color: palette,
     grid: { containLabel: true, left: 14, right: 20, bottom: 48, top: 22 },
     legend: { bottom: 0, type: "scroll" },
     tooltip: { trigger: "axis" },
-    xAxis: { data: categories, name: propertyLabels[categoryKey] || categoryKey, type: "category" },
-    yAxis: { scale: true, type: "value" },
+    xAxis: {
+      data: categories,
+      name: dimensionDisplayName(categoryKey, propertyLabels),
+      type: "category",
+    },
+    yAxis: { type: "value" },
     series: names.map((name) => ({
       barMaxWidth: 42,
-      data: categories.map((category) =>
-        entries
-          .filter(
-            (entry) =>
-              dimensionValueLabel(entry.dimensions?.[categoryKey]) === category &&
-              dimensionValueLabel(entry.dimensions?.[seriesKey]) === name,
-          )
-          .reduce((total, entry) => total + entry.value, 0),
-      ),
+      data: categories.map((category) => categorySeriesValues.get(name)?.get(category) ?? 0),
       name,
       stack: "total",
       type: "bar" as const,
@@ -334,15 +366,15 @@ function buildHeatmapOption(
 
   const [xKey, yKey] = dimensionKeys;
   const xValues = Array.from(
-    new Set(entries.map((entry) => dimensionValueLabel(entry.dimensions?.[xKey]))),
+    new Set(entries.map((entry) => dimensionValueLabel(dimensionValue(entry, xKey)))),
   );
   const yValues = Array.from(
-    new Set(entries.map((entry) => dimensionValueLabel(entry.dimensions?.[yKey]))),
+    new Set(entries.map((entry) => dimensionValueLabel(dimensionValue(entry, yKey)))),
   );
   const values = new Map<string, number>();
   entries.forEach((entry) => {
-    const x = dimensionValueLabel(entry.dimensions?.[xKey]);
-    const y = dimensionValueLabel(entry.dimensions?.[yKey]);
+    const x = dimensionValueLabel(dimensionValue(entry, xKey));
+    const y = dimensionValueLabel(dimensionValue(entry, yKey));
     values.set(`${x}\u0000${y}`, (values.get(`${x}\u0000${y}`) ?? 0) + entry.value);
   });
   const data = Array.from(values.entries()).map(([key, value]) => {
@@ -372,13 +404,13 @@ function buildHeatmapOption(
     },
     xAxis: {
       data: xValues,
-      name: propertyLabels[xKey] || xKey,
+      name: dimensionDisplayName(xKey, propertyLabels),
       splitArea: { show: true },
       type: "category",
     },
     yAxis: {
       data: yValues,
-      name: propertyLabels[yKey] || yKey,
+      name: dimensionDisplayName(yKey, propertyLabels),
       splitArea: { show: true },
       type: "category",
     },
@@ -445,6 +477,7 @@ type ObjectMetricAnalysisPanelProps = {
   identityLabels?: Record<string, string>;
   propertyLabels?: Record<string, string>;
   result: ObjectMetricDataV1;
+  onSelectEntry?: (entry: ObjectMetricDataEntryV1) => void;
 };
 
 const emptyPropertyLabels: Record<string, string> = {};
@@ -453,6 +486,7 @@ export function ObjectMetricAnalysisPanel({
   identityLabels = emptyPropertyLabels,
   propertyLabels = emptyPropertyLabels,
   result,
+  onSelectEntry,
 }: ObjectMetricAnalysisPanelProps) {
   useTranslation();
   const resolvedTheme = useResolvedTheme();
@@ -469,7 +503,7 @@ export function ObjectMetricAnalysisPanel({
     result.entries.length === 1 &&
     entries.length === 1 &&
     entries[0]?.time === undefined &&
-    !Object.keys(entries[0]?.dimensions ?? {}).length;
+    dimensionEntries(entries[0]).length === 0;
   const availableViews = isSingleValue
     ? viewOptions.filter((option) => ["auto", "summary", "table"].includes(option.value))
     : viewOptions;
@@ -499,6 +533,83 @@ export function ObjectMetricAnalysisPanel({
   }, [entries, identityLabels, propertyLabels, resolvedTheme, resolvedView]);
   const manualView = activeView !== "auto";
   const summaryValue = entries.length === 1 ? entries[0]?.value : undefined;
+  const summaryEntry =
+    entries.length === 1
+      ? result.entries.find((entry) => entry.status === "ok" && toNumber(entry.value) !== undefined)
+      : undefined;
+  const hasPrecisionSensitiveValues = result.entries.some(
+    (entry) => typeof entry.value === "string" && toNumber(entry.value) !== undefined,
+  );
+  const selectChartPoint = (event: {
+    data?: unknown;
+    dataIndex?: number;
+    name?: string;
+    seriesName?: string;
+  }) => {
+    if (!onSelectEntry || event.dataIndex === undefined) return;
+    if (resolvedView === "bar" || resolvedView === "pie") {
+      const entry = entries[event.dataIndex];
+      if (entry) onSelectEntry(entry);
+      return;
+    }
+    if (resolvedView === "heatmap") {
+      const first = entries.find((entry) => dimensionEntries(entry).length >= 2);
+      const cell = Array.isArray(event.data) ? event.data : undefined;
+      if (!first || !cell || cell.length < 2) return;
+      const keys = dimensionEntries(first)
+        .slice(0, 2)
+        .map(([key]) => key);
+      const xValues = Array.from(
+        new Set(entries.map((entry) => dimensionValueLabel(dimensionValue(entry, keys[0])))),
+      );
+      const yValues = Array.from(
+        new Set(entries.map((entry) => dimensionValueLabel(dimensionValue(entry, keys[1])))),
+      );
+      const x = xValues[Number(cell[0])];
+      const y = yValues[Number(cell[1])];
+      const candidates = entries.filter(
+        (entry) =>
+          dimensionValueLabel(dimensionValue(entry, keys[0])) === x &&
+          dimensionValueLabel(dimensionValue(entry, keys[1])) === y,
+      );
+      if (candidates.length === 1) onSelectEntry(candidates[0]);
+      return;
+    }
+    if (resolvedView === "stacked_bar" && !hasTime(entries)) {
+      const first = entries.find((entry) => dimensionEntries(entry).length >= 2);
+      if (!first) return;
+      const keys = dimensionEntries(first)
+        .slice(0, 2)
+        .map(([key]) => key);
+      const candidates = entries.filter(
+        (entry) =>
+          dimensionValueLabel(dimensionValue(entry, keys[0])) === event.name &&
+          dimensionValueLabel(dimensionValue(entry, keys[1])) === event.seriesName,
+      );
+      if (candidates.length === 1) onSelectEntry(candidates[0]);
+      return;
+    }
+    const times = Array.from(
+      new Set(
+        [...entries]
+          .sort((left, right) => (left.time ?? 0) - (right.time ?? 0))
+          .map((entry) => entry.time ?? 0),
+      ),
+    );
+    const selectedTime = times[event.dataIndex];
+    const candidates = entries.filter((entry) => {
+      if (entry.time !== undefined)
+        return (
+          entry.time === selectedTime &&
+          (resolvedView === "combo" || seriesLabel(entry) === event.seriesName)
+        );
+      return (
+        categoryLabel(entry, propertyLabels, identityLabels) === event.name &&
+        seriesLabel(entry) === event.seriesName
+      );
+    });
+    if (candidates.length === 1) onSelectEntry(candidates[0]);
+  };
 
   let emptyDescription: string | undefined;
   if (!entries.length) emptyDescription = objectMetricText("m5ce071e63067");
@@ -538,17 +649,24 @@ export function ObjectMetricAnalysisPanel({
         options={availableViews}
         value={activeView}
       />
+      {hasPrecisionSensitiveValues && resolvedView !== "table" ? (
+        <p className={styles.precisionNotice}>{objectMetricText("analysisApproximateChart")}</p>
+      ) : null}
       {resolvedView === "summary" && summaryValue !== undefined ? (
         <div className={styles.summary}>
           <span>{objectMetricText("m6018e00aca78")}</span>
-          <strong>{formatNumber(summaryValue)}</strong>
+          <strong>
+            {typeof summaryEntry?.value === "string"
+              ? summaryEntry.value
+              : formatNumber(summaryValue)}
+          </strong>
           {result.model.value.unit?.display_symbol || result.model.value.unit?.code ? (
             <em>{result.model.value.unit.display_symbol ?? result.model.value.unit.code}</em>
           ) : null}
         </div>
       ) : chartOption ? (
         <div className={styles.chart}>
-          <ChartLine option={chartOption} />
+          <ChartLine option={chartOption} onClick={selectChartPoint} />
         </div>
       ) : resolvedView === "table" ? (
         <div className={styles.tableHint}>{objectMetricText("mf87336ab991b")}</div>

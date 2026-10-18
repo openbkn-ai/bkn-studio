@@ -56,6 +56,7 @@ type Props = {
   initialFocusedMetric?: { id: string; objectTypeId: string; version: number };
   metricType?: ObjectMetricTypeV1;
   networkId: string;
+  ownerMetricCache?: Map<string, { entries: ObjectMetricRecordV1[]; total: number }>;
   onDeleteDraft?: (metric: ObjectMetricRecordV1) => void;
   onDeprecate?: (metric: ObjectMetricRecordV1) => void;
   onEditMetric?: (metric: ObjectMetricRecordV1) => void;
@@ -428,6 +429,7 @@ export function ObjectMetricGraphCanvas({
   initialFocusedMetric,
   metricType,
   networkId,
+  ownerMetricCache,
   onDeleteDraft,
   onDeprecate,
   onEditMetric,
@@ -458,6 +460,10 @@ export function ObjectMetricGraphCanvas({
   });
   const neighborCountCacheRef = useRef(new Map<string, number | null>());
   const neighborCountRequestsRef = useRef(new Map<string, Promise<number | null>>());
+  const localOwnerMetricCacheRef = useRef(
+    new Map<string, { entries: ObjectMetricRecordV1[]; total: number }>(),
+  );
+  const metricCache = ownerMetricCache ?? localOwnerMetricCacheRef.current;
   const [drawerMetric, setDrawerMetric] = useState<ObjectMetricRecordV1>();
   const [drawerDependencyNames, setDrawerDependencyNames] = useState<DrawerDependencyNames>({
     requestKey: "",
@@ -603,8 +609,26 @@ export function ObjectMetricGraphCanvas({
   useEffect(() => {
     if (!selectedObjectTypeId) return;
     let active = true;
-    setMetricLoading(true);
     setMetricError(false);
+    const cached = metricCache.get(metricRequestKey);
+    if (cached) {
+      setMetrics(cached.entries);
+      setDrawerMetric((current) =>
+        current
+          ? cached.entries.find(
+              (entry) =>
+                entry.definition.id === current.definition.id &&
+                entry.definition.version === current.definition.version,
+            )
+          : undefined,
+      );
+      setMetricTotal(cached.total);
+      setMetricComplete(cached.entries.length >= cached.total);
+      setMetricResultKey(metricRequestKey);
+      setMetricLoading(false);
+      return;
+    }
+    setMetricLoading(true);
 
     async function loadOwnerMetrics() {
       const loaded: ObjectMetricRecordV1[] = [];
@@ -639,6 +663,11 @@ export function ObjectMetricGraphCanvas({
         setMetricTotal(total);
         setMetricComplete(loaded.length >= total);
         setMetricResultKey(metricRequestKey);
+        metricCache.set(metricRequestKey, { entries: loaded, total });
+        if (metricCache.size > 6) {
+          const oldest = metricCache.keys().next().value;
+          if (oldest) metricCache.delete(oldest);
+        }
       } catch {
         if (active) {
           setMetrics([]);
@@ -655,7 +684,7 @@ export function ObjectMetricGraphCanvas({
     return () => {
       active = false;
     };
-  }, [metricRequestKey, metricType, networkId, refreshVersion, selectedObjectTypeId]);
+  }, [metricCache, metricRequestKey, metricType, networkId, refreshVersion, selectedObjectTypeId]);
 
   const metricsByRelation = useMemo(() => {
     const groups = new Map<string, ObjectMetricRecordV1[]>();
@@ -818,154 +847,173 @@ export function ObjectMetricGraphCanvas({
     expandedMetrics.forEach((metric) => groups[metric.definition.metric_type].push(metric));
     return groups;
   }, [expandedMetrics]);
-  const loadedMetricsByRef = new Map(
-    metrics.map((metric) => [
-      objectMetricVersionKey(metric.definition.id, metric.definition.version),
-      metric,
-    ]),
-  );
-  const resolveLoadedMetric = (reference: { metric_id: string; version: number }) =>
-    loadedMetricsByRef.get(objectMetricVersionKey(reference.metric_id, reference.version));
-  const visibleMetricKeys = new Set<string>();
-  const revealMetricWithDependencies = (metric: ObjectMetricRecordV1): void => {
-    const key = metricNodeKey(metric);
-    if (visibleMetricKeys.has(key)) return;
-    visibleMetricKeys.add(key);
-    directMetricRefs(metric).forEach((reference) => {
-      const dependency = resolveLoadedMetric(reference);
-      if (dependency) revealMetricWithDependencies(dependency);
-    });
-  };
-  (["atomic", "derived", "composite"] as const).forEach((type) => {
-    metricsByType[type].slice(0, ringVisibleCounts[type]).forEach(revealMetricWithDependencies);
-  });
-  const visibleMetricsByType: Record<ObjectMetricTypeV1, ObjectMetricRecordV1[]> = {
-    atomic: [],
-    derived: [],
-    composite: [],
-  };
-  metrics.forEach((metric) => {
-    if (visibleMetricKeys.has(metricNodeKey(metric))) {
-      visibleMetricsByType[metric.definition.metric_type].push(metric);
-    }
-  });
-  const automaticMetricPositions = new Map<string, Point>();
-  const moreMetricPositions: Partial<Record<ObjectMetricTypeV1, Point>> = {};
-  const hiddenMetricCounts: Record<ObjectMetricTypeV1, number> = {
-    atomic: 0,
-    derived: 0,
-    composite: 0,
-  };
-  const visibleMetrics: ObjectMetricRecordV1[] = [];
-  (["atomic", "derived", "composite"] as const).forEach((type) => {
-    const group = visibleMetricsByType[type];
-    const hidden = metricsByType[type].filter(
-      (metric) => !visibleMetricKeys.has(metricNodeKey(metric)),
-    ).length;
-    hiddenMetricCounts[type] = hidden;
-
-    const dependencyAngle = (metric: ObjectMetricRecordV1) => {
-      const dependencyPoints = directMetricRefs(metric)
-        .map((reference) => {
-          const dependency = resolveLoadedMetric(reference);
-          return dependency ? automaticMetricPositions.get(metricNodeKey(dependency)) : undefined;
-        })
-        .filter((point): point is Point => Boolean(point));
-      if (!dependencyPoints.length) return undefined;
-      const vector = dependencyPoints.reduce(
-        (current, point) => ({
-          x: current.x + Math.cos(pointAngle(point)),
-          y: current.y + Math.sin(pointAngle(point)),
-        }),
-        { x: 0, y: 0 },
-      );
-      return Math.atan2(vector.y, vector.x);
-    };
-    const ordered =
-      type === "atomic"
-        ? orderAtomicMetricsBySharedDownstream(
-            group,
-            Object.values(visibleMetricsByType).flat(),
-            resolveLoadedMetric,
-          )
-        : [...group].sort(compareMetricNames);
-    const slotCount = ordered.length + (hidden > 0 ? 1 : 0);
-    const availableAngles = Array.from(
-      { length: slotCount },
-      (_, index) => metricLayerStartAngles[type] + (2 * Math.PI * index) / slotCount,
+  const {
+    hiddenMetricCounts,
+    moreMetricPositions,
+    visibleDependencyEdges,
+    visibleMetricPositions,
+    visibleMetrics,
+  } = useMemo(() => {
+    const loadedMetricsByRef = new Map(
+      metrics.map((metric) => [
+        objectMetricVersionKey(metric.definition.id, metric.definition.version),
+        metric,
+      ]),
     );
-    const metricsWithDependencies = ordered
-      .map((metric) => ({ angle: dependencyAngle(metric), metric }))
-      .filter(
-        (item): item is { angle: number; metric: ObjectMetricRecordV1 } => item.angle !== undefined,
-      )
-      .sort(
-        (left, right) =>
-          left.angle - right.angle ||
-          left.metric.definition.name.localeCompare(right.metric.definition.name),
-      );
-    const clusterDependencies =
-      type !== "atomic" &&
-      metricsWithDependencies.length > 0 &&
-      slotCount <= MAX_CLUSTERED_METRICS_PER_RING;
-    const assignedAngles: number[] = [];
-    const assignedMetricKeys = new Set<string>();
-    metricsWithDependencies.forEach(({ angle, metric }) => {
-      let assignedAngle: number;
-      if (clusterDependencies) {
-        assignedAngle = clusteredLayerAngle(type, angle, assignedAngles, slotCount);
-      } else {
-        let bestIndex = 0;
-        availableAngles.forEach((candidate, index) => {
-          if (
-            circularDistance(candidate, angle) < circularDistance(availableAngles[bestIndex], angle)
-          ) {
-            bestIndex = index;
-          }
-        });
-        [assignedAngle] = availableAngles.splice(bestIndex, 1);
-      }
-      assignedAngles.push(assignedAngle);
-      automaticMetricPositions.set(metricNodeKey(metric), layerPoint(type, assignedAngle));
-      assignedMetricKeys.add(metricNodeKey(metric));
+    const resolveLoadedMetric = (reference: { metric_id: string; version: number }) =>
+      loadedMetricsByRef.get(objectMetricVersionKey(reference.metric_id, reference.version));
+    const visibleMetricKeys = new Set<string>();
+    const revealMetricWithDependencies = (metric: ObjectMetricRecordV1): void => {
+      const key = metricNodeKey(metric);
+      if (visibleMetricKeys.has(key)) return;
+      visibleMetricKeys.add(key);
+      directMetricRefs(metric).forEach((reference) => {
+        const dependency = resolveLoadedMetric(reference);
+        if (dependency) revealMetricWithDependencies(dependency);
+      });
+    };
+    (["atomic", "derived", "composite"] as const).forEach((type) => {
+      metricsByType[type].slice(0, ringVisibleCounts[type]).forEach(revealMetricWithDependencies);
     });
-    ordered
-      .filter((metric) => !assignedMetricKeys.has(metricNodeKey(metric)))
-      .forEach((metric) => {
-        const assignedAngle = clusterDependencies
-          ? clusteredLayerAngle(type, undefined, assignedAngles, slotCount)
-          : (availableAngles.shift() ?? metricLayerStartAngles[type]);
+    const visibleMetricsByType: Record<ObjectMetricTypeV1, ObjectMetricRecordV1[]> = {
+      atomic: [],
+      derived: [],
+      composite: [],
+    };
+    metrics.forEach((metric) => {
+      if (visibleMetricKeys.has(metricNodeKey(metric))) {
+        visibleMetricsByType[metric.definition.metric_type].push(metric);
+      }
+    });
+    const automaticMetricPositions = new Map<string, Point>();
+    const moreMetricPositions: Partial<Record<ObjectMetricTypeV1, Point>> = {};
+    const hiddenMetricCounts: Record<ObjectMetricTypeV1, number> = {
+      atomic: 0,
+      derived: 0,
+      composite: 0,
+    };
+    const visibleMetrics: ObjectMetricRecordV1[] = [];
+    (["atomic", "derived", "composite"] as const).forEach((type) => {
+      const group = visibleMetricsByType[type];
+      const hidden = metricsByType[type].filter(
+        (metric) => !visibleMetricKeys.has(metricNodeKey(metric)),
+      ).length;
+      hiddenMetricCounts[type] = hidden;
+
+      const dependencyAngle = (metric: ObjectMetricRecordV1) => {
+        const dependencyPoints = directMetricRefs(metric)
+          .map((reference) => {
+            const dependency = resolveLoadedMetric(reference);
+            return dependency ? automaticMetricPositions.get(metricNodeKey(dependency)) : undefined;
+          })
+          .filter((point): point is Point => Boolean(point));
+        if (!dependencyPoints.length) return undefined;
+        const vector = dependencyPoints.reduce(
+          (current, point) => ({
+            x: current.x + Math.cos(pointAngle(point)),
+            y: current.y + Math.sin(pointAngle(point)),
+          }),
+          { x: 0, y: 0 },
+        );
+        return Math.atan2(vector.y, vector.x);
+      };
+      const ordered =
+        type === "atomic"
+          ? orderAtomicMetricsBySharedDownstream(
+              group,
+              Object.values(visibleMetricsByType).flat(),
+              resolveLoadedMetric,
+            )
+          : [...group].sort(compareMetricNames);
+      const slotCount = ordered.length + (hidden > 0 ? 1 : 0);
+      const availableAngles = Array.from(
+        { length: slotCount },
+        (_, index) => metricLayerStartAngles[type] + (2 * Math.PI * index) / slotCount,
+      );
+      const metricsWithDependencies = ordered
+        .map((metric) => ({ angle: dependencyAngle(metric), metric }))
+        .filter(
+          (item): item is { angle: number; metric: ObjectMetricRecordV1 } =>
+            item.angle !== undefined,
+        )
+        .sort(
+          (left, right) =>
+            left.angle - right.angle ||
+            left.metric.definition.name.localeCompare(right.metric.definition.name),
+        );
+      const clusterDependencies =
+        type !== "atomic" &&
+        metricsWithDependencies.length > 0 &&
+        slotCount <= MAX_CLUSTERED_METRICS_PER_RING;
+      const assignedAngles: number[] = [];
+      const assignedMetricKeys = new Set<string>();
+      metricsWithDependencies.forEach(({ angle, metric }) => {
+        let assignedAngle: number;
+        if (clusterDependencies) {
+          assignedAngle = clusteredLayerAngle(type, angle, assignedAngles, slotCount);
+        } else {
+          let bestIndex = 0;
+          availableAngles.forEach((candidate, index) => {
+            if (
+              circularDistance(candidate, angle) <
+              circularDistance(availableAngles[bestIndex], angle)
+            ) {
+              bestIndex = index;
+            }
+          });
+          [assignedAngle] = availableAngles.splice(bestIndex, 1);
+        }
         assignedAngles.push(assignedAngle);
         automaticMetricPositions.set(metricNodeKey(metric), layerPoint(type, assignedAngle));
+        assignedMetricKeys.add(metricNodeKey(metric));
       });
-    visibleMetrics.push(...ordered);
-    if (hidden > 0) {
-      const angle = clusterDependencies
-        ? clusteredLayerAngle(type, undefined, assignedAngles, slotCount)
-        : (availableAngles.shift() ?? metricLayerStartAngles[type]);
-      moreMetricPositions[type] = nodePositions[moreMetricNodeKey(type)] ?? layerPoint(type, angle);
-    }
-  });
-  const visibleMetricPositions = new Map(
-    visibleMetrics.map((metric) => [
-      metricNodeKey(metric),
-      nodePositions[metricNodeKey(metric)] ?? automaticMetricPositions.get(metricNodeKey(metric))!,
-    ]),
-  );
-  const visibleMetricRefs = new Map(
-    visibleMetrics.map((metric) => [
-      objectMetricVersionKey(metric.definition.id, metric.definition.version),
-      metric,
-    ]),
-  );
-  const visibleDependencyEdges = visibleMetrics.flatMap((targetMetric) =>
-    directMetricRefs(targetMetric).flatMap((reference) => {
-      const sourceMetric = visibleMetricRefs.get(
-        objectMetricVersionKey(reference.metric_id, reference.version),
-      );
-      return sourceMetric ? [{ sourceMetric, targetMetric }] : [];
-    }),
-  );
+      ordered
+        .filter((metric) => !assignedMetricKeys.has(metricNodeKey(metric)))
+        .forEach((metric) => {
+          const assignedAngle = clusterDependencies
+            ? clusteredLayerAngle(type, undefined, assignedAngles, slotCount)
+            : (availableAngles.shift() ?? metricLayerStartAngles[type]);
+          assignedAngles.push(assignedAngle);
+          automaticMetricPositions.set(metricNodeKey(metric), layerPoint(type, assignedAngle));
+        });
+      visibleMetrics.push(...ordered);
+      if (hidden > 0) {
+        const angle = clusterDependencies
+          ? clusteredLayerAngle(type, undefined, assignedAngles, slotCount)
+          : (availableAngles.shift() ?? metricLayerStartAngles[type]);
+        moreMetricPositions[type] =
+          nodePositions[moreMetricNodeKey(type)] ?? layerPoint(type, angle);
+      }
+    });
+    const visibleMetricPositions = new Map(
+      visibleMetrics.map((metric) => [
+        metricNodeKey(metric),
+        nodePositions[metricNodeKey(metric)] ??
+          automaticMetricPositions.get(metricNodeKey(metric))!,
+      ]),
+    );
+    const visibleMetricRefs = new Map(
+      visibleMetrics.map((metric) => [
+        objectMetricVersionKey(metric.definition.id, metric.definition.version),
+        metric,
+      ]),
+    );
+    const visibleDependencyEdges = visibleMetrics.flatMap((targetMetric) =>
+      directMetricRefs(targetMetric).flatMap((reference) => {
+        const sourceMetric = visibleMetricRefs.get(
+          objectMetricVersionKey(reference.metric_id, reference.version),
+        );
+        return sourceMetric ? [{ sourceMetric, targetMetric }] : [];
+      }),
+    );
+    return {
+      hiddenMetricCounts,
+      moreMetricPositions,
+      visibleDependencyEdges,
+      visibleMetricPositions,
+      visibleMetrics,
+    };
+  }, [metrics, metricsByType, nodePositions, ringVisibleCounts]);
   const selectedMetricKey = drawerMetric ? metricNodeKey(drawerMetric) : undefined;
   const selectedConnectedKeys = new Set<string>();
   if (selectedMetricKey) {

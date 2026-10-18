@@ -60,25 +60,21 @@ import {
   listObjectMetricsV1,
   listObjectMetricVersionsV1,
   queryObjectMetricDataV1,
+  queryObjectMetricDrillThroughV1,
   trialObjectMetricDataV1,
+  trialObjectMetricDrillThroughV1,
   upgradeObjectMetricLogicPropertyV1,
 } from "@/modules/knowledge-network/services/object-metric.service";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/object-type.service";
-import {
-  listKnowledgeNetworkObjectTypes,
-  listKnowledgeNetworkRelationTypes,
-} from "@/modules/knowledge-network/services/knowledge-network.service";
+import { getKnowledgeNetworkRelationType } from "@/modules/knowledge-network/services/relation-type.service";
 import type {
   MetricPropertyBindingV1,
+  ObjectMetricDefinitionV1,
   ObjectMetricPropertyRefV1,
   ObjectMetricRecordV1,
   ObjectMetricTimeGranularityV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
-import type {
-  KnowledgeNetworkObjectTypeRecord,
-  KnowledgeNetworkRelationTypeRecord,
-} from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectMetricDetailScene.module.css";
 import metricTheme from "@/modules/knowledge-network/components/object-metric/ObjectMetricTheme.module.css";
@@ -112,6 +108,24 @@ const statusNames: Record<ObjectMetricRecordV1["definition"]["lifecycle"]["statu
 };
 
 const dimensionPreviewCount = 3;
+
+function referencedPropertyObjectTypeIds(definition: ObjectMetricDefinitionV1): string[] {
+  const ids = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (!value || typeof value !== "object") return;
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    const fields = value as Record<string, unknown>;
+    if (typeof fields.object_type_id === "string" && typeof fields.property_name === "string") {
+      ids.add(fields.object_type_id);
+    }
+    Object.values(fields).forEach(visit);
+  };
+  visit(definition);
+  return [...ids];
+}
 
 function MetricDimensionList({ items, emptyText }: { items: string[]; emptyText: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -253,10 +267,9 @@ export function ObjectMetricDetailScene() {
   const canModify = useKnowledgeNetworkCanModify(networkId);
   const [record, setRecord] = useState<ObjectMetricRecordV1>();
   const [versions, setVersions] = useState<ObjectMetricRecordV1[]>([]);
-  const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
-  const [relationTypes, setRelationTypes] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
+  const [objectTypeNames, setObjectTypeNames] = useState<Record<string, string>>({});
+  const [relationTypeNames, setRelationTypeNames] = useState<Record<string, string>>({});
   const [lineageMetrics, setLineageMetrics] = useState<ObjectMetricRecordV1[]>([]);
-  const [publishedMetrics, setPublishedMetrics] = useState<ObjectMetricRecordV1[]>([]);
   const [dependencyResolution, setDependencyResolution] = useState<{
     entries: MetricReferenceResolution[];
     rootKey: string;
@@ -288,15 +301,8 @@ export function ObjectMetricDetailScene() {
           if (active) setLoadError("not-found");
           return;
         }
-        const [entries, objects, relations, metrics, allMetrics] = await Promise.all([
+        const [entries, allMetrics] = await Promise.all([
           listObjectMetricVersionsV1(networkId, metricId, { skipErrorToast: true }),
-          listKnowledgeNetworkObjectTypes(networkId, { skipErrorToast: true }),
-          listKnowledgeNetworkRelationTypes(networkId),
-          listObjectMetricsV1(
-            networkId,
-            { limit: 500, status: "published" },
-            { skipErrorToast: true },
-          ),
           listObjectMetricsV1(networkId, { limit: 500 }, { skipErrorToast: true }),
         ]);
         if (!active) return;
@@ -317,9 +323,6 @@ export function ObjectMetricDetailScene() {
             latest,
         );
         setVersions(entries.length ? entries : [latest]);
-        setObjectTypes(objects);
-        setRelationTypes(relations);
-        setPublishedMetrics(metrics.entries);
         setLineageMetrics(allMetrics.entries);
       })
       .catch((error) => {
@@ -357,6 +360,46 @@ export function ObjectMetricDetailScene() {
       active = false;
     };
   }, [networkId, record?.definition.owner_object_type_id, ownerRefresh]);
+
+  useEffect(() => {
+    setObjectTypeNames({});
+    setRelationTypeNames({});
+    if (!record) return;
+    let active = true;
+    const definition = record.definition;
+    const objectTypeIds = referencedPropertyObjectTypeIds(definition).filter(
+      (id) => id !== definition.owner_object_type_id,
+    );
+    const relationTypeIds =
+      definition.specification.kind === "derived"
+        ? [
+            ...new Set(
+              definition.specification.business_qualifiers.relation_path?.steps.map(
+                (step) => step.relation_type_id,
+              ) ?? [],
+            ),
+          ]
+        : [];
+    void Promise.all(
+      objectTypeIds.map(async (id) => {
+        const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, id).catch(() => null);
+        return [id, detail?.name ?? id] as const;
+      }),
+    ).then((entries) => {
+      if (active) setObjectTypeNames(Object.fromEntries(entries));
+    });
+    void Promise.all(
+      relationTypeIds.map(async (id) => {
+        const relation = await getKnowledgeNetworkRelationType(networkId, id).catch(() => null);
+        return [id, relation?.name ?? id] as const;
+      }),
+    ).then((entries) => {
+      if (active) setRelationTypeNames(Object.fromEntries(entries));
+    });
+    return () => {
+      active = false;
+    };
+  }, [networkId, record]);
 
   const dependencyReferenceSignature = record
     ? directObjectMetricReferences(record)
@@ -427,9 +470,7 @@ export function ObjectMetricDetailScene() {
   const definition = record.definition;
   const boundProperty = findMetricLogicProperty(ownerObjectType, definition.id);
   const boundVersion = boundProperty?.metricBinding?.metric_ref.version;
-  const ownerObjectTypeName =
-    ownerObjectType?.name ??
-    objectTypes.find((item) => item.id === definition.owner_object_type_id)?.name;
+  const ownerObjectTypeName = ownerObjectType?.name;
   const displayProperty = (reference: ObjectMetricPropertyRefV1) => {
     const name = objectMetricPropertyDisplayName(reference, ownerObjectType);
     if (
@@ -437,9 +478,7 @@ export function ObjectMetricDetailScene() {
       name !== reference.property_name
     )
       return name;
-    const objectTypeName =
-      objectTypes.find((item) => item.id === reference.object_type_id)?.name ??
-      reference.object_type_id;
+    const objectTypeName = objectTypeNames[reference.object_type_id] ?? reference.object_type_id;
     return `${objectTypeName}.${name}`;
   };
   const bindingStatus =
@@ -647,7 +686,7 @@ export function ObjectMetricDetailScene() {
             }
           >
             <Button autoInsertSpace={false} onClick={() => setTrialOpen(true)}>
-              {objectMetricText("m073728637a26")}
+              {objectMetricText(isPublishedVersion ? "analysisEntry" : "m073728637a26")}
             </Button>
           </Tooltip>
           {canBindLogicProperty ? (
@@ -761,7 +800,7 @@ export function ObjectMetricDetailScene() {
                     v{specification.base_metric.version}
                   </span>
                   <span className={styles.metricReferenceName}>
-                    {publishedMetrics.find(
+                    {lineageCatalog.find(
                       (item) =>
                         item.definition.id === specification.base_metric.metric_id &&
                         item.definition.version === specification.base_metric.version,
@@ -786,11 +825,7 @@ export function ObjectMetricDetailScene() {
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("mf8c41076f5dc")} span={2}>
                 {specification.business_qualifiers.relation_path?.steps
-                  .map(
-                    (step) =>
-                      relationTypes.find((item) => item.id === step.relation_type_id)?.name ??
-                      step.relation_type_id,
-                  )
+                  .map((step) => relationTypeNames[step.relation_type_id] ?? step.relation_type_id)
                   .join(" → ") || objectMetricText("m21f55b7680c9")}
               </Descriptions.Item>
             </Descriptions>
@@ -971,12 +1006,25 @@ export function ObjectMetricDetailScene() {
       <ObjectMetricTrialDrawer
         definition={definition}
         mode={isPublishedVersion ? "published" : "draft"}
+        networkId={networkId}
         objectType={ownerObjectType}
         onClose={() => setTrialOpen(false)}
         onRun={(query) =>
           isPublishedVersion
             ? queryObjectMetricDataV1(networkId, definition.id, definition.version, query)
             : trialObjectMetricDataV1(networkId, definition, query)
+        }
+        onDrillThrough={(query, bucketKey, cursor) =>
+          isPublishedVersion
+            ? queryObjectMetricDrillThroughV1(
+                networkId,
+                definition.id,
+                definition.version,
+                query,
+                bucketKey,
+                cursor,
+              )
+            : trialObjectMetricDrillThroughV1(networkId, definition, query, bucketKey, cursor)
         }
         open={trialOpen}
       />
