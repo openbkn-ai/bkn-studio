@@ -7,7 +7,6 @@
 
 import {
   Alert,
-  Breadcrumb,
   Button,
   DatePicker,
   Descriptions,
@@ -49,6 +48,21 @@ type TrialFormValues = {
   analysisDimensions?: string[];
   identity?: Record<string, string>;
   time?: [import("dayjs").Dayjs, import("dayjs").Dayjs];
+};
+
+type MetricTextKey = Parameters<typeof objectMetricText>[0];
+const aggregationKeys: Record<
+  Extract<ObjectMetricDefinitionV1["specification"], { kind: "atomic" }>["measure"]["aggregation"],
+  MetricTextKey
+> = {
+  avg: "mdb7538b96322",
+  count: "m3a6663a758c9",
+  count_distinct: "m1e96cd1f49bf",
+  count_rows: "m21179deb9a74",
+  identity: "m7ea9fbba115d",
+  max: "m1e7a22820768",
+  min: "mb2dcdcfabb6a",
+  sum: "m2819237ddb01",
 };
 
 function dimensionReferenceKey(reference: {
@@ -142,6 +156,68 @@ function displayMetricBucket(
   return objectMetricText("analysisAllData");
 }
 
+function displayMetricDrillStep(
+  entry: ObjectMetricDataV1["entries"][number],
+  parent: ObjectMetricDataV1["entries"][number] | undefined,
+  propertyLabels: Record<string, string>,
+  identityLabels: Record<string, string>,
+): string {
+  if (parent?.dimension_cells?.length && entry.dimension_cells?.length) {
+    const addedCells = entry.dimension_cells.filter(
+      (cell) =>
+        !parent.dimension_cells?.some(
+          (previous) =>
+            dimensionReferenceKey(previous.ref) === dimensionReferenceKey(cell.ref) &&
+            sameMetricScalarValue(previous.value, cell.value),
+        ),
+    );
+    if (addedCells.length) {
+      return displayMetricDimensions({ ...entry, dimension_cells: addedCells }, propertyLabels);
+    }
+  }
+  return displayMetricBucket(entry, propertyLabels, identityLabels);
+}
+
+function bucketAddsNewConstraint(
+  entry: ObjectMetricDataV1["entries"][number],
+  previous: ObjectMetricDataV1["entries"],
+): boolean {
+  for (const [name, value] of Object.entries(entry.instance_identity ?? {})) {
+    if (!previous.some((item) => sameMetricScalarValue(item.instance_identity?.[name], value)))
+      return true;
+  }
+  if (entry.dimension_cells?.length) {
+    for (const cell of entry.dimension_cells) {
+      if (
+        !previous.some((item) =>
+          item.dimension_cells?.some(
+            (prior) =>
+              dimensionReferenceKey(prior.ref) === dimensionReferenceKey(cell.ref) &&
+              sameMetricScalarValue(prior.value, cell.value),
+          ),
+        )
+      )
+        return true;
+    }
+  } else {
+    for (const [name, value] of Object.entries(entry.dimensions ?? {})) {
+      if (!previous.some((item) => sameMetricScalarValue(item.dimensions?.[name], value)))
+        return true;
+    }
+  }
+  if (entry.time !== undefined && !previous.some((item) => item.time === entry.time)) return true;
+  if (
+    entry.time_bucket &&
+    !previous.some(
+      (item) =>
+        item.time_bucket?.start === entry.time_bucket?.start &&
+        item.time_bucket?.end === entry.time_bucket?.end,
+    )
+  )
+    return true;
+  return false;
+}
+
 function trialErrorMessage(error: unknown): string {
   const details = extractRequestErrorDetails(error);
   if (details.details?.includes("requires numeric operands")) {
@@ -184,7 +260,12 @@ export function ObjectMetricTrialDrawer({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ObjectMetricDataV1>();
   const [history, setHistory] = useState<
-    Array<{ query: ObjectMetricQueryRequestV1; result: ObjectMetricDataV1; label: string }>
+    Array<{
+      query: ObjectMetricQueryRequestV1;
+      result: ObjectMetricDataV1;
+      label: string;
+      sourceBucket?: ObjectMetricDataV1["entries"][number];
+    }>
   >([]);
   const [selected, setSelected] = useState<ObjectMetricDataV1["entries"][number]>();
   const [nextDimension, setNextDimension] = useState<string>();
@@ -209,11 +290,54 @@ export function ObjectMetricTrialDrawer({
     () => result?.entries.map((item, index) => ({ ...item, key: index })) ?? [],
     [result?.entries],
   );
+  const hasInstanceColumn = result?.entries.some((entry) => entry.instance_identity) ?? false;
+  const tableDimensionFields = useMemo(() => {
+    const fields = new Map<
+      string,
+      { key: string; title: string; propertyName: string; referenceKey?: string }
+    >();
+    for (const entry of result?.entries ?? []) {
+      if (entry.dimension_cells?.length) {
+        for (const { ref } of entry.dimension_cells) {
+          const referenceKey = dimensionReferenceKey(ref);
+          if (fields.has(referenceKey)) continue;
+          const name = propertyLabels[ref.property_name] || ref.property_name;
+          fields.set(referenceKey, {
+            key: referenceKey,
+            title: ref.relation_path_alias ? `${name} (${ref.relation_path_alias})` : name,
+            propertyName: ref.property_name,
+            referenceKey,
+          });
+        }
+      } else {
+        for (const propertyName of Object.keys(entry.dimensions ?? {})) {
+          const key = `legacy:${propertyName}`;
+          if (fields.has(key)) continue;
+          fields.set(key, {
+            key,
+            title: propertyLabels[propertyName] || propertyName,
+            propertyName,
+          });
+        }
+      }
+    }
+    return Array.from(fields.values());
+  }, [propertyLabels, result?.entries]);
+  const hasTimeColumn =
+    result?.entries.some((entry) => entry.time !== undefined || entry.time_bucket) ?? false;
+  const hasStatusColumn = result?.entries.some((entry) => entry.status !== "ok") ?? false;
   const usesFixedDerivedTimeWindow =
     definition.specification.kind === "derived" &&
     definition.specification.business_qualifiers.time_window?.mode !== undefined &&
     definition.specification.business_qualifiers.time_window.mode !== "unbounded";
   const supportsRuntimeTimeRange = definition.query_capabilities.time_dimensions.length === 1;
+  const timeNoticeKey = usesFixedDerivedTimeWindow
+    ? "m80365c614b62"
+    : supportsRuntimeTimeRange
+      ? undefined
+      : definition.query_capabilities.time_dimensions.length > 1
+        ? "analysisTimeAmbiguous"
+        : "analysisTimeUnavailable";
   const hasSelectableBuckets = result?.entries.some((entry) => Boolean(entry.bucket_key)) ?? false;
 
   useEffect(() => {
@@ -252,6 +376,7 @@ export function ObjectMetricTrialDrawer({
       setResult(nextResult);
       setHistory([{ query, result: nextResult, label: objectMetricText("analysisRoot") }]);
       setSelected(undefined);
+      setNextDimension(undefined);
     } catch (requestError) {
       setError(trialErrorMessage(requestError));
     } finally {
@@ -266,8 +391,16 @@ export function ObjectMetricTrialDrawer({
         (chosen) => dimensionReferenceKey(chosen) === dimensionReferenceKey(item),
       ),
   );
+  const canFilterSelected =
+    selected !== undefined &&
+    Boolean(selected.bucket_key && selected.available_actions?.includes("filter")) &&
+    bucketAddsNewConstraint(
+      selected,
+      history.flatMap((item) => (item.sourceBucket ? [item.sourceBucket] : [])),
+    );
   const drill = async (dimension?: string) => {
     if (!selected?.bucket_key || !currentQuery) return;
+    if (!dimension && !canFilterSelected) return;
     const ref = definition.query_capabilities.analysis_dimensions.find(
       (item) => dimensionReferenceKey(item) === dimension,
     );
@@ -286,7 +419,13 @@ export function ObjectMetricTrialDrawer({
         {
           query,
           result: nextResult,
-          label: displayMetricBucket(selected, propertyLabels, identityLabels),
+          label: displayMetricDrillStep(
+            selected,
+            items.at(-1)?.sourceBucket,
+            propertyLabels,
+            identityLabels,
+          ),
+          sourceBucket: selected,
         },
       ]);
       setResult(nextResult);
@@ -324,25 +463,83 @@ export function ObjectMetricTrialDrawer({
     }
   };
 
+  const returnToHistory = (index: number) => {
+    const item = history[index];
+    if (!item) return;
+    setHistory((items) => items.slice(0, index + 1));
+    setResult(item.result);
+    setSelected(undefined);
+    setNextDimension(undefined);
+    setError(undefined);
+    setParticipantsOpen(false);
+  };
+
+  const pathControls =
+    history.length > 1 ? (
+      <nav aria-label={objectMetricText("analysisPath")} className={styles.analysisPath}>
+        <span className={styles.analysisPathLabel}>{objectMetricText("analysisPath")}</span>
+        <ol className={styles.analysisPathSteps}>
+          {history.map((item, index) => {
+            const isCurrent = index === history.length - 1;
+            return (
+              <li className={styles.analysisPathStep} key={index}>
+                {index > 0 ? (
+                  <span aria-hidden="true" className={styles.analysisPathSeparator}>
+                    ›
+                  </span>
+                ) : null}
+                {isCurrent ? (
+                  <span aria-current="step" className={styles.analysisPathCurrent}>
+                    <span className={styles.analysisPathCurrentLabel}>
+                      {objectMetricText("analysisCurrentLevel")}
+                    </span>
+                    <span>{item.label}</span>
+                  </span>
+                ) : (
+                  <button
+                    className={styles.analysisPathLink}
+                    onClick={() => returnToHistory(index)}
+                    type="button"
+                  >
+                    {item.label}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        <Button
+          className={styles.analysisPathBack}
+          onClick={() => returnToHistory(history.length - 2)}
+          size="small"
+        >
+          {objectMetricText("analysisBackLevel")}
+        </Button>
+      </nav>
+    ) : null;
+
   return (
     <Drawer
-      rootClassName={metricTheme.scope}
+      rootClassName={`${metricTheme.scope} ${mode === "published" ? styles.analysisDrawer : ""}`}
       destroyOnHidden
       footer={
-        <div className={styles.footer}>
-          <Button
-            aria-label={objectMetricText(mode === "published" ? "analysisRun" : "m073728637a26")}
-            disabled={
-              definition.calculation_scope === "object_instance" && !objectType?.primaryKeys.length
-            }
-            form={formId}
-            htmlType="submit"
-            loading={loading}
-            type="primary"
-          >
-            {objectMetricText(mode === "published" ? "analysisRun" : "m073728637a26")}
-          </Button>
-        </div>
+        mode === "draft" ? (
+          <div className={styles.footer}>
+            <Button
+              aria-label={objectMetricText("m073728637a26")}
+              disabled={
+                definition.calculation_scope === "object_instance" &&
+                !objectType?.primaryKeys.length
+              }
+              form={formId}
+              htmlType="submit"
+              loading={loading}
+              type="primary"
+            >
+              {objectMetricText("m073728637a26")}
+            </Button>
+          </div>
+        ) : null
       }
       forceRender
       onClose={onClose}
@@ -369,283 +566,373 @@ export function ObjectMetricTrialDrawer({
           </Tag>
         </div>
       }
-      width="min(760px, calc(100vw - 24px))"
+      width={mode === "published" ? "min(1200px, 100vw)" : "min(760px, calc(100vw - 24px))"}
     >
-      <h3 className={styles.sectionTitle}>
-        {objectMetricText(mode === "published" ? "analysisConditions" : "trialConditions")}
-      </h3>
-      <Form
-        className={styles.form}
-        form={form}
-        id={formId}
-        layout="vertical"
-        onFinish={(values) => void run(values)}
-      >
-        {definition.calculation_scope === "object_instance" ? (
-          objectType?.primaryKeys.length ? (
-            objectType.primaryKeys.map((name) => {
-              const property = objectType.dataProperties.find((item) => item.name === name);
-              return (
-                <Form.Item
-                  key={name}
-                  label={property?.displayName || name}
-                  name={["identity", name]}
-                  rules={[{ required: true, message: objectMetricText("m803fff99642e") }]}
-                  tooltip={
-                    property?.displayName && property.displayName !== name ? name : undefined
-                  }
-                >
-                  <Input
-                    placeholder={objectMetricText("m52a8e4de05d5", {
-                      p0: property?.displayName || name,
-                    })}
-                  />
-                </Form.Item>
-              );
-            })
-          ) : (
-            <Alert message={objectMetricText("md23ea9c2fae2")} type="error" showIcon />
-          )
-        ) : null}
-        {usesFixedDerivedTimeWindow ? (
-          <p className={styles.fixedTimeNotice}>{objectMetricText("m80365c614b62")}</p>
-        ) : supportsRuntimeTimeRange ? (
-          <Form.Item
-            label={objectMetricText("m76a5dbc71e2b")}
-            name="time"
-            tooltip={objectMetricText("mb4dd619d5bbc")}
-          >
-            <DatePicker.RangePicker showTime style={{ width: "100%" }} />
-          </Form.Item>
-        ) : (
-          <p className={styles.fixedTimeNotice}>
-            {objectMetricText(
-              definition.query_capabilities.time_dimensions.length > 1
-                ? "analysisTimeAmbiguous"
-                : "analysisTimeUnavailable",
-            )}
-          </p>
-        )}
-        {definition.calculation_scope === "object_set" &&
-        definition.query_capabilities.analysis_dimensions.length > 0 ? (
-          <Form.Item
-            extra={objectMetricText("trialDimensionHint")}
-            label={objectMetricText("m2acf103ad6cf")}
-            name="analysisDimensions"
-          >
-            <Select
-              mode="multiple"
-              options={definition.query_capabilities.analysis_dimensions.map((item) => ({
-                label: item.relation_path_alias
-                  ? `${objectMetricPropertyDisplayName(item, objectType)} (${item.relation_path_alias})`
-                  : objectMetricPropertyDisplayName(item, objectType),
-                value: dimensionReferenceKey(item),
-              }))}
-              placeholder={objectMetricText("m6f346a890bc4")}
-            />
-          </Form.Item>
-        ) : null}
-      </Form>
-      {error || result ? (
-        <div className={styles.result} ref={resultRef}>
-          <div className={styles.resultHeader}>
-            <h3 className={styles.sectionTitle}>
-              {objectMetricText(mode === "published" ? "analysisResults" : "trialResults")}
-            </h3>
-            {result ? (
-              <div className={styles.resultMeta}>
-                <Tag
-                  color={
-                    result.status === "ok"
-                      ? "success"
-                      : result.status === "partial"
-                        ? "warning"
-                        : result.status === "unavailable"
-                          ? "error"
-                          : undefined
-                  }
-                >
-                  {trialStatusLabel(result.status)}
-                </Tag>
-                <span>{objectMetricText("m164ba48e7c5d", { p0: result.overall_ms })}</span>
-              </div>
+      <div className={mode === "published" ? styles.analysisWorkspace : styles.trialWorkspace}>
+        <section className={styles.conditions}>
+          <div className={styles.conditionsHeading}>
+            <div className={styles.conditionsIntro}>
+              <h3 className={styles.sectionTitle}>
+                {objectMetricText(mode === "published" ? "analysisConditions" : "trialConditions")}
+              </h3>
+              {mode === "published" && timeNoticeKey ? (
+                <p className={styles.fixedTimeNotice}>{objectMetricText(timeNoticeKey)}</p>
+              ) : null}
+            </div>
+            {mode === "published" ? (
+              <Button
+                className={styles.conditionsRunButton}
+                disabled={
+                  definition.calculation_scope === "object_instance" &&
+                  !objectType?.primaryKeys.length
+                }
+                form={formId}
+                htmlType="submit"
+                loading={loading}
+                type="primary"
+              >
+                {objectMetricText("analysisRun")}
+              </Button>
             ) : null}
           </div>
-          {error ? <Alert message={error} showIcon type="error" /> : null}
-          {result ? (
-            <Space direction="vertical" size={16} className={styles.resultContent}>
-              {history.length > 1 ? (
-                <Breadcrumb
-                  items={history.map((item, index) => ({
-                    title: (
-                      <Button
-                        type="link"
-                        onClick={() => {
-                          setHistory((items) => items.slice(0, index + 1));
-                          setResult(item.result);
-                          setSelected(undefined);
-                        }}
-                      >
-                        {item.label}
-                      </Button>
-                    ),
-                  }))}
+          <Form
+            className={`${styles.form} ${
+              mode === "published" && timeNoticeKey && definition.calculation_scope === "object_set"
+                ? styles.noTimeForm
+                : ""
+            }`}
+            form={form}
+            id={formId}
+            layout="vertical"
+            onFinish={(values) => void run(values)}
+          >
+            {definition.calculation_scope === "object_instance" ? (
+              objectType?.primaryKeys.length ? (
+                objectType.primaryKeys.map((name) => {
+                  const property = objectType.dataProperties.find((item) => item.name === name);
+                  return (
+                    <Form.Item
+                      key={name}
+                      label={property?.displayName || name}
+                      name={["identity", name]}
+                      rules={[{ required: true, message: objectMetricText("m803fff99642e") }]}
+                      tooltip={
+                        property?.displayName && property.displayName !== name ? name : undefined
+                      }
+                    >
+                      <Input
+                        placeholder={objectMetricText("m52a8e4de05d5", {
+                          p0: property?.displayName || name,
+                        })}
+                      />
+                    </Form.Item>
+                  );
+                })
+              ) : (
+                <Alert message={objectMetricText("md23ea9c2fae2")} type="error" showIcon />
+              )
+            ) : null}
+            {timeNoticeKey ? (
+              mode === "draft" ? (
+                <p className={styles.fixedTimeNotice}>{objectMetricText(timeNoticeKey)}</p>
+              ) : null
+            ) : (
+              <Form.Item
+                label={objectMetricText("m76a5dbc71e2b")}
+                name="time"
+                tooltip={objectMetricText("mb4dd619d5bbc")}
+              >
+                <DatePicker.RangePicker
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={[
+                    objectMetricText("analysisStartDateTime"),
+                    objectMetricText("analysisEndDateTime"),
+                  ]}
+                  showTime
+                  style={{ width: "100%" }}
                 />
-              ) : null}
-              {result.warnings?.length ? (
-                <Alert message={result.warnings.join("；")} showIcon type="warning" />
-              ) : null}
-              {result.entries.length ? (
-                <>
+              </Form.Item>
+            )}
+            {definition.calculation_scope === "object_set" &&
+            definition.query_capabilities.analysis_dimensions.length > 0 ? (
+              <Form.Item
+                label={objectMetricText("m2acf103ad6cf")}
+                name="analysisDimensions"
+                tooltip={objectMetricText("trialDimensionHint")}
+              >
+                <Select
+                  mode="multiple"
+                  options={definition.query_capabilities.analysis_dimensions.map((item) => ({
+                    label: item.relation_path_alias
+                      ? `${objectMetricPropertyDisplayName(item, objectType)} (${item.relation_path_alias})`
+                      : objectMetricPropertyDisplayName(item, objectType),
+                    value: dimensionReferenceKey(item),
+                  }))}
+                  placeholder={objectMetricText("m6f346a890bc4")}
+                />
+              </Form.Item>
+            ) : null}
+          </Form>
+        </section>
+        <div className={styles.analysisMain}>
+          {error || result ? (
+            <div className={styles.result} ref={resultRef}>
+              <div className={styles.resultHeader}>
+                <h3 className={styles.sectionTitle}>
+                  {objectMetricText(mode === "published" ? "analysisResults" : "trialResults")}
+                </h3>
+                {result ? (
+                  <div className={styles.resultMeta}>
+                    <Tag
+                      color={
+                        result.status === "ok"
+                          ? "success"
+                          : result.status === "partial"
+                            ? "warning"
+                            : result.status === "unavailable"
+                              ? "error"
+                              : undefined
+                      }
+                    >
+                      {trialStatusLabel(result.status)}
+                    </Tag>
+                    {result.evaluated_at ? (
+                      <span>
+                        {objectMetricText("analysisEvaluatedAt")}:{" "}
+                        {formatMetricTimeLabel(result.evaluated_at)}
+                      </span>
+                    ) : null}
+                    <span>{objectMetricText("m164ba48e7c5d", { p0: result.overall_ms })}</span>
+                  </div>
+                ) : null}
+              </div>
+              {error ? <Alert message={error} showIcon type="error" /> : null}
+              {result ? (
+                <Space direction="vertical" size={16} className={styles.resultContent}>
+                  {result.warnings?.length ? (
+                    <Alert message={result.warnings.join("；")} showIcon type="warning" />
+                  ) : null}
                   <ObjectMetricAnalysisPanel
                     identityLabels={identityLabels}
+                    pathControls={pathControls}
                     propertyLabels={propertyLabels}
                     result={result}
-                    onSelectEntry={setSelected}
-                  />
-                  {selected?.bucket_key ? (
-                    <div aria-live="polite" className={styles.bucketActions} ref={bucketActionsRef}>
-                      <strong>
-                        {objectMetricText("analysisSelectedBucket")}:{" "}
-                        {displayMetricBucket(selected, propertyLabels, identityLabels)}
-                      </strong>
-                      <Space wrap>
-                        {selected.available_actions?.includes("filter") ? (
-                          <Button loading={loading} onClick={() => void drill()}>
-                            {objectMetricText("analysisFilterBucket")}
-                          </Button>
-                        ) : null}
-                        {selected.available_actions?.includes("drill") &&
-                        availableDimensions.length ? (
-                          <>
-                            <Select
-                              aria-label={objectMetricText("analysisNextDimension")}
-                              onChange={setNextDimension}
-                              options={availableDimensions.map((item) => ({
-                                label: objectMetricPropertyDisplayName(item, objectType),
-                                value: dimensionReferenceKey(item),
-                              }))}
-                              placeholder={objectMetricText("analysisNextDimension")}
-                              style={{ minWidth: 160 }}
-                              value={nextDimension}
-                            />
-                            <Button
-                              disabled={!nextDimension}
-                              loading={loading}
-                              onClick={() => void drill(nextDimension)}
-                            >
-                              {objectMetricText("analysisDrill")}
+                    onSelectEntry={(entry) => {
+                      setSelected(entry);
+                      setNextDimension(undefined);
+                    }}
+                    selectionControls={
+                      selected?.bucket_key ? (
+                        <div
+                          aria-live="polite"
+                          className={styles.bucketActions}
+                          ref={bucketActionsRef}
+                        >
+                          <strong>
+                            {objectMetricText("analysisSelectedBucket")}:{" "}
+                            {displayMetricBucket(selected, propertyLabels, identityLabels)}
+                          </strong>
+                          <Space wrap>
+                            {canFilterSelected ? (
+                              <Button loading={loading} onClick={() => void drill()} size="small">
+                                {objectMetricText("analysisFilterBucket")}
+                              </Button>
+                            ) : null}
+                            {selected.available_actions?.includes("drill") &&
+                            availableDimensions.length ? (
+                              <>
+                                <Select
+                                  aria-label={objectMetricText("analysisNextDimension")}
+                                  onChange={setNextDimension}
+                                  options={availableDimensions.map((item) => ({
+                                    label: objectMetricPropertyDisplayName(item, objectType),
+                                    value: dimensionReferenceKey(item),
+                                  }))}
+                                  placeholder={objectMetricText("analysisNextDimension")}
+                                  size="small"
+                                  style={{ minWidth: 160 }}
+                                  value={nextDimension}
+                                />
+                                <Button
+                                  disabled={!nextDimension}
+                                  loading={loading}
+                                  onClick={() => void drill(nextDimension)}
+                                  size="small"
+                                >
+                                  {objectMetricText("analysisDrill")}
+                                </Button>
+                              </>
+                            ) : null}
+                            {selected.available_actions?.includes("participants") &&
+                            onDrillThrough ? (
+                              <Button
+                                loading={participantsLoading}
+                                onClick={() => void loadParticipants()}
+                                size="small"
+                              >
+                                {objectMetricText("analysisParticipants")}
+                              </Button>
+                            ) : null}
+                            <Button onClick={() => setContextOpen(true)} size="small">
+                              {objectMetricText("analysisContext")}
                             </Button>
-                          </>
-                        ) : null}
-                        {selected.available_actions?.includes("participants") && onDrillThrough ? (
-                          <Button
-                            loading={participantsLoading}
-                            onClick={() => void loadParticipants()}
-                          >
-                            {objectMetricText("analysisParticipants")}
-                          </Button>
-                        ) : null}
-                        <Button onClick={() => setContextOpen(true)}>
-                          {objectMetricText("analysisContext")}
-                        </Button>
-                      </Space>
-                    </div>
-                  ) : hasSelectableBuckets ? (
-                    <div aria-live="polite" className={styles.bucketActions} ref={bucketActionsRef}>
-                      <strong>{objectMetricText("analysisSelectBucketTitle")}</strong>
-                      <span className={styles.bucketHint}>
-                        {objectMetricText("analysisSelectBucketHint")}
-                      </span>
-                      {result.entries.some((entry) =>
-                        entry.available_actions?.includes("drill"),
-                      ) ? (
-                        <Button disabled>{objectMetricText("analysisDrill")}</Button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <Table
-                    columns={[
-                      {
-                        dataIndex: "instance_identity",
-                        key: "instance_identity",
-                        render: (value: Record<string, unknown> | undefined) =>
-                          displayMetricFields(value, identityLabels),
-                        title: objectMetricText("m99fc84c8b8ae"),
-                      },
-                      {
-                        dataIndex: "dimensions",
-                        key: "dimensions",
-                        render: (
-                          _value: Record<string, unknown> | undefined,
-                          entry: ObjectMetricDataV1["entries"][number],
-                        ) => displayMetricDimensions(entry, propertyLabels),
-                        title: objectMetricText("m4fa164bacd53"),
-                      },
-                      {
-                        dataIndex: "time",
-                        key: "time",
-                        render: (value: number | undefined) =>
-                          value ? formatMetricTimeLabel(value) : "—",
-                        title: objectMetricText("mbf80e223ad96"),
-                      },
-                      {
-                        dataIndex: "value",
-                        key: "value",
-                        render: displayMetricValue,
-                        title: objectMetricText("m6018e00aca78"),
-                      },
-                      {
-                        dataIndex: "status",
-                        key: "status",
-                        render: (status: ObjectMetricDataV1["entries"][number]["status"]) =>
-                          trialStatusLabel(status),
-                        title: objectMetricText("m0d9a32dba031"),
-                      },
-                    ]}
-                    dataSource={tableEntries}
-                    onRow={(entry) => ({
-                      "aria-selected": Boolean(
-                        entry.bucket_key && selected?.bucket_key === entry.bucket_key,
-                      ),
-                      onClick: () => {
-                        if (entry.bucket_key) setSelected(entry);
-                      },
-                      onKeyDown: (event) => {
-                        if (entry.bucket_key && (event.key === "Enter" || event.key === " ")) {
-                          event.preventDefault();
-                          setSelected(entry);
-                        }
-                      },
-                      tabIndex: entry.bucket_key ? 0 : undefined,
-                    })}
-                    rowClassName={(entry) =>
-                      entry.bucket_key
-                        ? `${styles.selectableResultRow} ${
-                            selected?.bucket_key === entry.bucket_key
-                              ? styles.selectedResultRow
+                            {!canFilterSelected &&
+                            (!selected.available_actions?.includes("drill") ||
+                              !availableDimensions.length) ? (
+                              <span className={styles.bucketTerminalHint}>
+                                {objectMetricText("analysisTerminalHint")}
+                              </span>
+                            ) : null}
+                          </Space>
+                        </div>
+                      ) : hasSelectableBuckets ? (
+                        <div className={styles.bucketHint}>
+                          {objectMetricText("analysisSelectBucketHint")}
+                        </div>
+                      ) : null
+                    }
+                    resultTable={
+                      <div className={styles.resultTable}>
+                        <div className={styles.resultTableSummary} role="status">
+                          <span>
+                            {objectMetricText("analysisTableCount", {
+                              p0: result.entries.length,
+                            })}
+                          </span>
+                          <span>
+                            {result.status === "partial"
+                              ? objectMetricText("analysisTablePartial")
+                              : result.entries.length > 50
+                                ? objectMetricText("analysisTableLocalPages")
+                                : objectMetricText("analysisTableLoaded")}
+                          </span>
+                        </div>
+                        <Table
+                          columns={[
+                            ...(hasInstanceColumn
+                              ? [
+                                  {
+                                    dataIndex: "instance_identity",
+                                    key: "instance_identity",
+                                    render: (value: Record<string, unknown> | undefined) =>
+                                      displayMetricFields(value, identityLabels),
+                                    title: objectMetricText("m99fc84c8b8ae"),
+                                  },
+                                ]
+                              : []),
+                            ...tableDimensionFields.map((field) => ({
+                              key: field.key,
+                              render: (
+                                _value: unknown,
+                                entry: ObjectMetricDataV1["entries"][number],
+                              ) =>
+                                displayMetricValue(
+                                  field.referenceKey
+                                    ? entry.dimension_cells?.find(
+                                        ({ ref }) =>
+                                          dimensionReferenceKey(ref) === field.referenceKey,
+                                      )?.value
+                                    : entry.dimensions?.[field.propertyName],
+                                ),
+                              title: field.title,
+                            })),
+                            ...(hasTimeColumn
+                              ? [
+                                  {
+                                    dataIndex: "time",
+                                    key: "time",
+                                    render: (
+                                      _value: number | undefined,
+                                      entry: ObjectMetricDataV1["entries"][number],
+                                    ) => {
+                                      const value = entry.time_bucket?.start ?? entry.time;
+                                      return value !== undefined
+                                        ? formatMetricTimeLabel(value)
+                                        : "—";
+                                    },
+                                    title: objectMetricText("mbf80e223ad96"),
+                                  },
+                                ]
+                              : []),
+                            {
+                              dataIndex: "value",
+                              key: "value",
+                              render: displayMetricValue,
+                              title: objectMetricText("m6018e00aca78"),
+                            },
+                            ...(hasStatusColumn
+                              ? [
+                                  {
+                                    dataIndex: "status",
+                                    key: "status",
+                                    render: (
+                                      status: ObjectMetricDataV1["entries"][number]["status"],
+                                    ) => trialStatusLabel(status),
+                                    title: objectMetricText("m0d9a32dba031"),
+                                  },
+                                ]
+                              : []),
+                          ]}
+                          dataSource={tableEntries}
+                          onRow={(entry) => ({
+                            "aria-selected": Boolean(
+                              entry.bucket_key && selected?.bucket_key === entry.bucket_key,
+                            ),
+                            onClick: () => {
+                              if (entry.bucket_key) {
+                                setSelected(entry);
+                                setNextDimension(undefined);
+                              }
+                            },
+                            onKeyDown: (event) => {
+                              if (
+                                entry.bucket_key &&
+                                (event.key === "Enter" || event.key === " ")
+                              ) {
+                                event.preventDefault();
+                                setSelected(entry);
+                                setNextDimension(undefined);
+                              }
+                            },
+                            tabIndex: entry.bucket_key ? 0 : undefined,
+                          })}
+                          rowClassName={(entry) =>
+                            entry.bucket_key
+                              ? `${styles.selectableResultRow} ${
+                                  selected?.bucket_key === entry.bucket_key
+                                    ? styles.selectedResultRow
+                                    : ""
+                                }`
                               : ""
-                          }`
-                        : ""
+                          }
+                          locale={{ emptyText: objectMetricText("ma1af72fea205") }}
+                          pagination={
+                            result.entries.length > 50
+                              ? { pageSize: 50, showSizeChanger: false }
+                              : false
+                          }
+                          scroll={{ x: Math.max(680, 180 + tableDimensionFields.length * 180) }}
+                          size="small"
+                        />
+                      </div>
                     }
-                    locale={{ emptyText: objectMetricText("ma1af72fea205") }}
-                    pagination={
-                      result.entries.length > 50 ? { pageSize: 50, showSizeChanger: false } : false
-                    }
-                    scroll={{ x: 680 }}
-                    size="small"
                   />
-                </>
+                </Space>
               ) : null}
-            </Space>
+            </div>
+          ) : mode === "published" ? (
+            <div className={styles.readyHint}>{objectMetricText("analysisReadyHint")}</div>
           ) : null}
         </div>
-      ) : null}
-      <Modal
-        footer={null}
-        onCancel={() => setParticipantsOpen(false)}
+      </div>
+      <Drawer
+        destroyOnHidden
+        onClose={() => setParticipantsOpen(false)}
         open={participantsOpen}
-        title={objectMetricText("analysisParticipants")}
+        title={`${objectMetricText("analysisParticipants")} · ${
+          selected ? displayMetricBucket(selected, propertyLabels, identityLabels) : ""
+        }`}
+        width="min(620px, 100vw)"
       >
         <p>{objectMetricText("analysisLiveNotice")}</p>
         {participants?.status === "partial" || participants?.warnings?.length ? (
@@ -688,12 +975,6 @@ export function ObjectMetricTrialDrawer({
                 );
               },
             },
-            {
-              title: objectMetricText("analysisRole"),
-              dataIndex: "role",
-              render: (role: string) =>
-                role === "owner" ? objectMetricText("analysisOwnerRole") : role,
-            },
           ]}
           dataSource={
             participants?.participants.map((item, index) => ({ ...item, key: index })) ?? []
@@ -709,7 +990,7 @@ export function ObjectMetricTrialDrawer({
             {objectMetricText("analysisLoadMore")}
           </Button>
         ) : null}
-      </Modal>
+      </Drawer>
       <Modal
         footer={null}
         onCancel={() => setContextOpen(false)}
@@ -732,13 +1013,16 @@ export function ObjectMetricTrialDrawer({
               label: objectMetricText("analysisAggregation"),
               children:
                 definition.specification.kind === "atomic"
-                  ? (definition.specification.measure?.aggregation ?? "—")
+                  ? objectMetricText(aggregationKeys[definition.specification.measure.aggregation])
                   : "—",
             },
             {
               key: "scope",
               label: objectMetricText("analysisScope"),
-              children: definition.calculation_scope,
+              children:
+                definition.calculation_scope === "object_instance"
+                  ? objectMetricText("mabe9d02781fc")
+                  : objectMetricText("m9c51e86f9307"),
             },
             {
               key: "dimensions",

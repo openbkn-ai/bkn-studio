@@ -230,7 +230,7 @@ export const networkPart = {
   workspaceExperienceMcp: "MCP 调试",
   workspaceConceptGroups: "概念分组",
   workspaceDescription: "工作区壳层已经迁入，后续会继续补齐旧 Vega 的完整业务页。",
-  workspaceMetrics: "指标",
+  workspaceMetrics: "对象指标",
   workspaceFunctions: "函数",
   workspaceApis: "API",
   workspaceMcpTools: "MCP",

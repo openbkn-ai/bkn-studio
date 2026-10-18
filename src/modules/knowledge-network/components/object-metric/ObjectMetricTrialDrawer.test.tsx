@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
@@ -19,16 +20,29 @@ import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-
 vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAnalysisPanel", () => ({
   ObjectMetricAnalysisPanel: ({
     identityLabels,
+    pathControls,
     propertyLabels,
+    result,
+    resultTable,
+    selectionControls,
   }: {
     identityLabels: Record<string, string>;
+    pathControls?: ReactNode;
     propertyLabels: Record<string, string>;
+    result: ObjectMetricDataV1;
+    resultTable?: ReactNode;
+    selectionControls?: ReactNode;
   }) => (
-    <div
-      data-testid="analysis-labels"
-      data-identity-labels={JSON.stringify(identityLabels)}
-      data-property-labels={JSON.stringify(propertyLabels)}
-    />
+    <section aria-label="图表与数据">
+      <div
+        data-testid="analysis-labels"
+        data-identity-labels={JSON.stringify(identityLabels)}
+        data-property-labels={JSON.stringify(propertyLabels)}
+      />
+      {pathControls}
+      {selectionControls}
+      {result.entries.length ? resultTable : null}
+    </section>
   ),
 }));
 
@@ -52,6 +66,154 @@ afterAll(() => {
 });
 
 describe("ObjectMetricTrialDrawer", () => {
+  it("keeps relation aliases distinct when selecting same-named dimensions", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    definition.query_capabilities.analysis_dimensions = [
+      { object_type_id: "person", relation_path_alias: "buyer", property_name: "region" },
+      { object_type_id: "person", relation_path_alias: "seller", property_name: "region" },
+    ];
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [
+        {
+          dimension_cells: [
+            {
+              ref: {
+                object_type_id: "person",
+                relation_path_alias: "buyer",
+                property_name: "region",
+              },
+              value: "East",
+            },
+            {
+              ref: {
+                object_type_id: "person",
+                relation_path_alias: "seller",
+                property_name: "region",
+              },
+              value: "West",
+            },
+          ],
+          dimensions: { "person.region": "West" },
+          status: "ok",
+          value: 1,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    } satisfies ObjectMetricDataV1);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    const dimensionSelect = document.querySelector(".ant-drawer-body .ant-select-selector");
+    expect(dimensionSelect).not.toBeNull();
+    fireEvent.mouseDown(dimensionSelect!);
+    fireEvent.click(await screen.findByText("region (buyer)"));
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    await waitFor(() =>
+      expect(onRun).toHaveBeenCalledWith({
+        analysis_dimensions: [
+          { object_type_id: "person", relation_path_alias: "buyer", property_name: "region" },
+        ],
+        instance_identities: undefined,
+        time: undefined,
+      }),
+    );
+    expect(await screen.findByRole("columnheader", { name: "region (buyer)" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "region (seller)" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "East" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "West" })).toBeInTheDocument();
+  });
+
+  it("opens published metrics in a wider analysis workspace with conditions above results", () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.name = "销售订单数";
+    definition.calculation_scope = "object_set";
+    definition.lifecycle.status = "published";
+
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="published"
+        onClose={vi.fn()}
+        onRun={vi.fn()}
+        open
+      />,
+    );
+
+    expect(screen.getByText("指标分析 · 销售订单数")).toBeInTheDocument();
+    expect(screen.getByText("设置分析条件并运行，即可查看指标结果。")).toBeInTheDocument();
+    const runButton = screen.getByRole("button", { name: "运行分析" });
+    expect(
+      screen.getByRole("heading", { name: "分析条件" }).parentElement?.parentElement,
+    ).toContainElement(runButton);
+    expect(runButton).toHaveAttribute("form", document.querySelector("form")?.id);
+    expect(screen.queryByRole("button", { name: "试算" })).not.toBeInTheDocument();
+  });
+
+  it("shows business labels instead of internal enum values in calculation context", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    if (definition.specification.kind !== "atomic") throw new Error("expected atomic metric");
+    definition.specification.measure.aggregation = "count";
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [
+        {
+          bucket_key: "confirmed-orders",
+          available_actions: ["context"],
+          dimension_cells: [
+            { ref: { object_type_id: "order", property_name: "status" }, value: "已确认" },
+          ],
+          status: "ok",
+          value: 5,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 1,
+      },
+      overall_ms: 1,
+      status: "ok",
+    } satisfies ObjectMetricDataV1);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="published"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "运行分析" }));
+    fireEvent.click(await screen.findByRole("row", { name: /已确认.*5/ }));
+    fireEvent.click(screen.getByRole("button", { name: "查看计算口径" }));
+
+    expect(await screen.findByText("非空计数")).toBeInTheDocument();
+    expect(screen.getByText("实例集合")).toBeInTheDocument();
+    expect(screen.queryByText("count")).not.toBeInTheDocument();
+    expect(screen.queryByText("object_set")).not.toBeInTheDocument();
+  });
+
   it("links participants by exact identity instead of a sample-row key", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.calculation_scope = "object_set";
@@ -102,6 +264,9 @@ describe("ObjectMetricTrialDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "查看参与实例" }));
 
     const link = await screen.findByRole("link", { name: /10361/ });
+    expect(screen.getByRole("columnheader", { name: "实例" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "参与角色" })).not.toBeInTheDocument();
+    expect(screen.queryByText("归属对象")).not.toBeInTheDocument();
     expect(screen.queryByText("当前数据可能已变化，明细与原图表值可能不同。")).toBeNull();
     expect(link).toHaveAttribute("target", "_blank");
     const target = new URL(link.getAttribute("href") ?? "", "http://localhost");
@@ -217,13 +382,68 @@ describe("ObjectMetricTrialDrawer", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "试算" }));
-    fireEvent.click(await screen.findByRole("row", { name: /region: east/ }));
+    fireEvent.click(await screen.findByRole("row", { name: /east/ }));
     fireEvent.click(screen.getByRole("button", { name: "按此值筛选" }));
     await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
     expect(onRun.mock.calls[1][0]).toMatchObject({
       bucket_selection: { bucket_key: "bucket-east", parent_query: onRun.mock.calls[0][0] },
     });
     fireEvent.click(screen.getByRole("button", { name: "初始结果" }));
+    expect(onRun).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops at a bucket that adds no new filter condition", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    const entry: ObjectMetricDataV1["entries"][number] = {
+      available_actions: ["filter", "context"],
+      bucket_key: "first-bucket",
+      dimension_cells: [
+        { ref: { object_type_id: "order", property_name: "status" }, value: "执行中" },
+      ],
+      status: "ok",
+      value: 1,
+    };
+    const base: ObjectMetricDataV1 = {
+      entries: [entry],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    };
+    const onRun = vi
+      .fn<(query: ObjectMetricQueryRequestV1) => Promise<ObjectMetricDataV1>>()
+      .mockResolvedValueOnce(base)
+      .mockResolvedValueOnce({
+        ...base,
+        entries: [{ ...entry, bucket_key: "same-bucket-from-next-query" }],
+      });
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(await screen.findByRole("row", { name: /执行中.*1/ }));
+    fireEvent.click(screen.getByRole("button", { name: "按此值筛选" }));
+    await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
+    await screen.findByRole("button", { name: "返回上一级" });
+    fireEvent.click(await screen.findByRole("row", { name: /执行中.*1/ }));
+
+    expect(screen.queryByRole("button", { name: "按此值筛选" })).not.toBeInTheDocument();
+    expect(screen.getByText("已到当前分析的最细层级")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "返回上一级" })).toBeEnabled();
     expect(onRun).toHaveBeenCalledTimes(2);
   });
 
@@ -273,15 +493,25 @@ describe("ObjectMetricTrialDrawer", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "试算" }));
-    expect(await screen.findByText("先选择一个分组")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "继续下钻" })).toBeDisabled();
+    expect(
+      await screen.findByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "分析路径" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "继续下钻" })).not.toBeInTheDocument();
 
-    const row = screen.getByRole("row", { name: /status: 已确认.*784/ });
+    const row = screen.getByRole("row", { name: /已确认.*784/ });
     expect(row).toHaveAttribute("aria-selected", "false");
     fireEvent.click(row);
     expect(row).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByText("先选择一个分组")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("当前分组: status: 已确认")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "图表与数据" })).getByText(
+        "当前分组: status: 已确认",
+      ),
+    ).toBeInTheDocument();
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "选择下钻维度" }));
     fireEvent.click(await screen.findByText("product_code"));
@@ -291,6 +521,19 @@ describe("ObjectMetricTrialDrawer", () => {
       analysis_dimensions: [{ object_type_id: "order", property_name: "product_code" }],
       bucket_selection: { bucket_key: "confirmed-orders", parent_query: onRun.mock.calls[0][0] },
     });
+    const path = await screen.findByRole("navigation", { name: "分析路径" });
+    expect(
+      within(screen.getByRole("region", { name: "图表与数据" })).getByRole("navigation", {
+        name: "分析路径",
+      }),
+    ).toBe(path);
+    expect(within(path).getByRole("button", { name: "初始结果" })).toBeInTheDocument();
+    const currentLevel = within(path).getByText("当前").parentElement;
+    expect(currentLevel).toHaveAttribute("aria-current", "step");
+    expect(currentLevel).toHaveTextContent("status: 已确认");
+    fireEvent.click(within(path).getByRole("button", { name: "返回上一级" }));
+    expect(screen.queryByRole("navigation", { name: "分析路径" })).not.toBeInTheDocument();
+    expect(onRun).toHaveBeenCalledTimes(2);
   });
 
   it("paginates large trial results while keeping later rows accessible", async () => {
@@ -324,10 +567,186 @@ describe("ObjectMetricTrialDrawer", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "试算" }));
-    expect(await screen.findByText("row: row-0")).toBeInTheDocument();
+    expect(await screen.findByText("row-0")).toBeInTheDocument();
+    expect(screen.getByText("本次返回 51 组结果")).toBeInTheDocument();
+    expect(screen.getByText("本地分页 · 每页 50 条")).toBeInTheDocument();
     expect(screen.queryByText("row: row-50")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTitle("2"));
-    expect(await screen.findByText("row: row-50")).toBeInTheDocument();
+    expect(await screen.findByText("row-50")).toBeInTheDocument();
+  });
+
+  it("shows only the newly selected dimension at each analysis path level", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    definition.query_capabilities.analysis_dimensions = [
+      { object_type_id: "order", property_name: "product_code" },
+    ];
+    const statusCell = {
+      ref: { object_type_id: "order", property_name: "status" },
+      value: "已确认",
+    };
+    const base: ObjectMetricDataV1 = {
+      entries: [
+        {
+          available_actions: ["drill"],
+          bucket_key: "status-bucket",
+          dimension_cells: [statusCell],
+          status: "ok",
+          value: 784,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    };
+    const onRun = vi
+      .fn<(query: ObjectMetricQueryRequestV1) => Promise<ObjectMetricDataV1>>()
+      .mockResolvedValueOnce(base)
+      .mockResolvedValueOnce({
+        ...base,
+        entries: [
+          {
+            available_actions: ["filter"],
+            bucket_key: "product-bucket",
+            dimension_cells: [
+              statusCell,
+              {
+                ref: { object_type_id: "order", property_name: "product_code" },
+                value: "382-000005",
+              },
+            ],
+            status: "ok",
+            value: 40,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ ...base, entries: [] });
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(await screen.findByRole("row", { name: /已确认.*784/ }));
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "选择下钻维度" }));
+    fireEvent.click(await screen.findByText("product_code"));
+    fireEvent.click(screen.getByRole("button", { name: "继续下钻" }));
+    fireEvent.click(await screen.findByRole("row", { name: /382-000005.*40/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "按此值筛选" })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "按此值筛选" }));
+    await waitFor(() => expect(onRun).toHaveBeenCalledTimes(3));
+
+    const path = await screen.findByRole("navigation", { name: "分析路径" });
+    await waitFor(() => {
+      expect(within(path).getByRole("button", { name: "status: 已确认" })).toBeInTheDocument();
+    });
+    expect(
+      within(screen.getByRole("region", { name: "图表与数据" })).getByRole("navigation", {
+        name: "分析路径",
+      }),
+    ).toBe(path);
+    expect(within(path).getByText("当前").parentElement).toHaveTextContent(
+      "product_code: 382-000005",
+    );
+    expect(within(path).getByText("当前").parentElement).not.toHaveTextContent("status");
+  }, 20_000);
+
+  it("shows only populated result columns for grouped identity data", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [
+        {
+          dimensions: { status: "执行中", order_id: "U00-000170" },
+          status: "ok",
+          value: 1,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    } satisfies ObjectMetricDataV1);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    expect(await screen.findByRole("columnheader", { name: "status" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "order_id" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "维度" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "指标值" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "实例 ID" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "时间（UTC）" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "结果状态" })).not.toBeInTheDocument();
+  });
+
+  it("shows each structured analysis dimension in its own result column", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [
+        {
+          dimension_cells: [
+            { ref: { object_type_id: "order", property_name: "status" }, value: "已确认" },
+            { ref: { object_type_id: "order", property_name: "product_code" }, value: "P-001" },
+          ],
+          status: "ok",
+          value: 21,
+        },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "grouped",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    } satisfies ObjectMetricDataV1);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    expect(await screen.findByRole("columnheader", { name: "status" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "product_code" })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /已确认.*P-001.*21/ })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "维度" })).not.toBeInTheDocument();
   });
 
   it("keeps a related dimension's technical name when it matches an owner property", async () => {
@@ -376,7 +795,8 @@ describe("ObjectMetricTrialDrawer", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "试算" }));
-    expect(await screen.findByText("status: 可用")).toBeInTheDocument();
+    expect(await screen.findByRole("columnheader", { name: "status" })).toBeInTheDocument();
+    expect(screen.getByText("可用")).toBeInTheDocument();
     expect(screen.getByText("订单状态: 已支付")).toBeInTheDocument();
     expect(screen.queryByText("订单状态: 可用")).not.toBeInTheDocument();
     expect(screen.getByTestId("analysis-labels")).toHaveAttribute(
@@ -448,11 +868,12 @@ describe("ObjectMetricTrialDrawer", () => {
         time: undefined,
       }),
     );
-    expect(await screen.findByText("订单状态: 已支付")).toBeInTheDocument();
+    expect(await screen.findByRole("columnheader", { name: "订单状态" })).toBeInTheDocument();
+    expect(screen.getByText("已支付")).toBeInTheDocument();
     expect(screen.getByText("订单主键: 1001")).toBeInTheDocument();
     expect(screen.getByText("耗时 1 ms")).toBeInTheDocument();
     expect(document.querySelector(".ant-alert-success")).toBeNull();
-    expect(screen.getByRole("cell", { name: "计算成功" })).toBeInTheDocument();
+    expect(screen.getByText("计算成功")).toBeInTheDocument();
     expect(screen.queryByText(/status: 已支付|order_id: 1001/)).not.toBeInTheDocument();
   });
 
@@ -565,6 +986,8 @@ describe("ObjectMetricTrialDrawer", () => {
     ];
     rerender(<ObjectMetricTrialDrawer {...props} />);
     expect(screen.getByText("查询时间范围（可选）")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("开始日期时间")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("结束日期时间")).toBeInTheDocument();
 
     definition.query_capabilities.time_dimensions.push({
       object_type_id: "order",

@@ -74,32 +74,44 @@
   scrollbar-gutter: stable;
 }
 .objectList,
-.tableViewport {
+.tableViewport,
+.tableViewport :global(.ant-table-content),
+.tableViewport :global(.ant-table-body) {
   scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 32%, transparent) transparent;
   scrollbar-width: thin;
 }
 .objectList:hover,
-.tableViewport:hover {
+.tableViewport:hover,
+.tableViewport:hover :global(.ant-table-content),
+.tableViewport:hover :global(.ant-table-body) {
   scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 55%, transparent) transparent;
 }
 .objectList::-webkit-scrollbar,
-.tableViewport::-webkit-scrollbar {
+.tableViewport::-webkit-scrollbar,
+.tableViewport :global(.ant-table-content)::-webkit-scrollbar,
+.tableViewport :global(.ant-table-body)::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 .objectList::-webkit-scrollbar-track,
-.tableViewport::-webkit-scrollbar-track {
+.tableViewport::-webkit-scrollbar-track,
+.tableViewport :global(.ant-table-content)::-webkit-scrollbar-track,
+.tableViewport :global(.ant-table-body)::-webkit-scrollbar-track {
   background: transparent;
 }
 .objectList::-webkit-scrollbar-thumb,
-.tableViewport::-webkit-scrollbar-thumb {
+.tableViewport::-webkit-scrollbar-thumb,
+.tableViewport :global(.ant-table-content)::-webkit-scrollbar-thumb,
+.tableViewport :global(.ant-table-body)::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 999px;
   background: color-mix(in srgb, var(--color-text-secondary) 42%, transparent);
   background-clip: padding-box;
 }
 .objectList:hover::-webkit-scrollbar-thumb,
-.tableViewport:hover::-webkit-scrollbar-thumb {
+.tableViewport:hover::-webkit-scrollbar-thumb,
+.tableViewport:hover :global(.ant-table-content)::-webkit-scrollbar-thumb,
+.tableViewport:hover :global(.ant-table-body)::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--color-text-secondary) 65%, transparent);
   background-clip: padding-box;
 }
@@ -244,7 +256,8 @@
   min-width: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .tableLoading {
   position: absolute;

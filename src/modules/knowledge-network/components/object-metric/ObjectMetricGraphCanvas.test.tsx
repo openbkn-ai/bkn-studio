@@ -314,7 +314,7 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(loading.parentElement).toBe(container.querySelector("[class*=canvasContent]"));
   });
 
-  it("keeps shared upstream metrics and their dependents in the same default sector", async () => {
+  it("places dependent metrics to the right and clusters shared upstream metrics", async () => {
     const atomics = ["a", "b", "c", "d", "e", "f"].map((id) => metric(id));
     const children = ["child-1", "child-2"].map((id) => {
       const child = metric(id, "relation-1");
@@ -353,18 +353,17 @@ describe("ObjectMetricGraphCanvas", () => {
         name: /展开销售订单的指标，共 9 个|Expand metrics owned by 销售订单 \(9 total\)/,
       }),
     );
-    const angle = (id: string) => {
+    const position = (id: string) => {
       const node = screen.getByRole("button", { name: new RegExp(`指标 ${id}[，,]`) });
       const match = node?.getAttribute("transform")?.match(/translate\(([-\d.]+) ([-\d.]+)\)/);
       if (!match) throw new Error(`missing position for ${id}`);
-      return Math.atan2(Number(match[2]) - 280, Number(match[1]) - 500);
+      return { x: Number(match[1]), y: Number(match[2]) };
     };
-    const distance = (left: number, right: number) =>
-      Math.abs(Math.atan2(Math.sin(left - right), Math.cos(left - right)));
-    expect(distance(angle("a"), angle("d"))).toBeLessThan(1.3);
-    expect(distance(angle("child-1"), angle("child-2"))).toBeLessThan(0.75);
-    expect(distance(angle("child-1"), angle("a"))).toBeLessThan(0.2);
-    expect(distance(angle("shared"), (angle("a") + angle("d")) / 2)).toBeLessThan(0.5);
+    expect(position("a").x).toBeLessThan(position("child-1").x);
+    expect(position("a").x).toBeLessThan(position("shared").x);
+    expect(position("d").x).toBeLessThan(position("shared").x);
+    expect(Math.abs(position("a").y - position("d").y)).toBeLessThanOrEqual(84);
+    expect(Math.abs(position("child-1").y - position("child-2").y)).toBeLessThanOrEqual(84);
   });
 
   it("captures the metric count itself so a pointer click can expand it", async () => {
@@ -611,6 +610,12 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(document.querySelector(".ant-drawer-open")).toBeNull();
     expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(3);
     expect(container.querySelectorAll('line[class*="metricSpoke"]')).toHaveLength(1);
+    const metricX = (name: string) => {
+      const node = screen.getByRole("button", { name: new RegExp(`指标 ${name}[，,]`) });
+      return Number(node.getAttribute("transform")?.match(/translate\(([-\d.]+)/)?.[1]);
+    };
+    expect(metricX("base")).toBeLessThan(metricX("derived"));
+    expect(metricX("derived")).toBeLessThan(metricX("composite"));
     expect(screen.queryByRole("button", { name: "关联对象 1" })).toBeNull();
     expect(
       screen.getByRole("button", { name: /原子指标：指标 base|Atomic metric: 指标 base/ }),
@@ -653,7 +658,7 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(document.querySelector(".ant-drawer-open")).toBeNull();
   });
 
-  it("loads an exact dependency version for its name without drawing an edge to a newer version", async () => {
+  it("connects a dependency by metric identity while keeping its pinned version in details", async () => {
     const latestBase = metric("base");
     latestBase.definition.version = 2;
     const historicalBase = metric("base");
@@ -671,7 +676,7 @@ describe("ObjectMetricGraphCanvas", () => {
         name: /展开销售订单的指标，共 2 个|Expand metrics owned by 销售订单 \(2 total\)/,
       }),
     );
-    expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(0);
+    expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(1);
     fireEvent.click(
       screen.getByRole("button", {
         name: /衍生指标：指标 derived|Derived metrics: 指标 derived/,
@@ -683,7 +688,7 @@ describe("ObjectMetricGraphCanvas", () => {
       skipErrorToast: true,
     });
     expect(screen.queryByText("base · v1")).not.toBeInTheDocument();
-    expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(0);
+    expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(1);
   });
 
   it("shows an unavailable dependency without exposing its ID when the fetched version is wrong", async () => {
@@ -836,11 +841,11 @@ describe("ObjectMetricGraphCanvas", () => {
       name: /销售订单，共 1 个指标，点击展开指标图|销售订单, 1 metrics; click to expand the metric graph/,
     });
     const spoke = container.querySelector<SVGLineElement>('line[class*="metricSpoke"]')!;
-    fireEvent.pointerDown(owner, { button: 0, clientX: 500, clientY: 280, pointerId: 3 });
-    fireEvent.pointerMove(svg, { clientX: 550, clientY: 300, pointerId: 3 });
-    expect(owner.getAttribute("transform")).toBe("translate(550 300)");
-    expect(`${spoke.getAttribute("x1")},${spoke.getAttribute("y1")}`).toBe("550,300");
-    fireEvent.pointerUp(svg, { clientX: 550, clientY: 300, pointerId: 3 });
+    fireEvent.pointerDown(owner, { button: 0, clientX: 110, clientY: 280, pointerId: 3 });
+    fireEvent.pointerMove(svg, { clientX: 160, clientY: 300, pointerId: 3 });
+    expect(owner.getAttribute("transform")).toBe("translate(160 300)");
+    expect(`${spoke.getAttribute("x1")},${spoke.getAttribute("y1")}`).toBe("160,300");
+    fireEvent.pointerUp(svg, { clientX: 160, clientY: 300, pointerId: 3 });
     fireEvent.click(owner);
     expect(document.querySelector(".ant-drawer-open")).toBeNull();
 
@@ -956,13 +961,50 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(drawer).toHaveTextContent("单位次");
     expect(drawer).not.toHaveTextContent("逻辑属性");
     fireEvent.click(screen.getByRole("button", { name: "详情" }));
-    fireEvent.click(screen.getByRole("button", { name: "更多操作" }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "删除草稿" }));
+    expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "删除草稿" }));
 
     expect(onTrialMetric).toHaveBeenCalledWith(draft);
     expect(onEditMetric).toHaveBeenCalledWith(draft);
     expect(onOpenMetric).toHaveBeenCalledWith(draft);
     expect(onDeleteDraft).toHaveBeenCalledWith(draft);
+  });
+
+  it("shows a registered transaction unit by its business name in the graph detail", async () => {
+    const orderMetric = metric("transaction-count");
+    orderMetric.definition.result_semantics = {
+      statistical_grain: { group_by_dimensions: [] },
+      value: {
+        physical_type: "int64",
+        semantic_type: "count",
+        unit: {
+          system: "registered",
+          quantity_kind: "count",
+          code: "transaction",
+          scale_factor: 1,
+        },
+      },
+      no_data_policy: "zero",
+      partial_data_policy: "reject",
+    };
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [orderMetric], total_count: 1 });
+    renderGraph();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /原子指标：指标 transaction-count|Atomic metric: 指标 transaction-count/,
+      }),
+    );
+
+    const drawer = screen.getByRole("dialog", { name: "指标详情" });
+    expect(drawer).toHaveTextContent("单位交易笔");
+    expect(drawer).not.toHaveTextContent("单位transaction");
   });
 
   it("keeps mutating graph actions hidden without modify permission", async () => {
@@ -1018,11 +1060,8 @@ describe("ObjectMetricGraphCanvas", () => {
       screen.getByRole("button", { name: /原子指标：指标 bound|Atomic metric: 指标 bound/ }),
     );
     expect(screen.getByText("支付金额 · v1")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "更多操作" }));
-    expect(await screen.findByRole("menuitem", { name: /废弃.*请先升级/ })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
+    expect(screen.getByText("废弃").closest("button")).toBeDisabled();
     expect(onDeprecate).not.toHaveBeenCalled();
   });
 

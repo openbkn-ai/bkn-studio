@@ -41,6 +41,91 @@
   max-width: 560px;
 }
 
+.analysisDrawer :global(.ant-drawer-body) {
+  padding: 0;
+}
+
+.analysisWorkspace {
+  min-height: 100%;
+}
+
+.analysisWorkspace .conditions {
+  background: var(--metric-surface-subtle, #f6f8fc);
+  border-bottom: 1px solid var(--metric-control-border);
+  padding: 18px 24px 12px;
+}
+
+.analysisWorkspace .conditionsHeading {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.analysisWorkspace .conditionsIntro {
+  min-width: 0;
+}
+
+.analysisWorkspace .conditionsIntro .sectionTitle {
+  margin: 0;
+}
+
+.analysisWorkspace .conditionsIntro .fixedTimeNotice {
+  color: var(--metric-text-muted);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.analysisWorkspace .conditionsRunButton {
+  flex: none;
+  min-width: 116px;
+}
+
+.analysisWorkspace .form {
+  align-items: start;
+  display: grid;
+  gap: 0 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: none;
+}
+
+.analysisWorkspace .noTimeForm {
+  grid-template-columns: minmax(0, 620px);
+}
+
+.analysisWorkspace .form :global(.ant-form-item) {
+  margin-bottom: 8px;
+}
+
+.analysisWorkspace .form :global(.ant-form-item-label) {
+  padding-bottom: 6px;
+}
+
+.analysisMain {
+  min-width: 0;
+}
+
+.analysisWorkspace .analysisMain {
+  padding: 20px 24px 32px;
+}
+
+.analysisWorkspace .result {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.readyHint {
+  align-items: center;
+  color: var(--metric-text-muted);
+  display: flex;
+  justify-content: center;
+  min-height: 280px;
+  text-align: center;
+}
+
 .fixedTimeNotice {
   margin-bottom: 16px;
 }
@@ -88,25 +173,138 @@
   width: 100%;
 }
 
+.analysisPath {
+  align-items: center;
+  border-top: 1px solid var(--metric-control-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 14px;
+  padding-top: 12px;
+  width: 100%;
+}
+
+.analysisPathLabel {
+  color: var(--metric-text-muted);
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.analysisPathSteps {
+  align-items: center;
+  display: flex;
+  flex: 1 1 320px;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.analysisPathStep {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.analysisPathSeparator {
+  color: var(--metric-text-muted);
+  font-size: 16px;
+}
+
+.analysisPathLink,
+.analysisPathCurrent {
+  align-items: center;
+  border-radius: 4px;
+  display: inline-flex;
+  font-size: 13px;
+  line-height: 1.4;
+  min-height: 30px;
+  padding: 4px 9px;
+}
+
+.analysisPathLink {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--metric-control-border);
+  color: var(--color-primary-600);
+  cursor: pointer;
+}
+
+.analysisPathLink:hover,
+.analysisPathLink:focus-visible {
+  border-color: var(--color-primary-600);
+}
+
+.analysisPathCurrent {
+  background: color-mix(in srgb, var(--color-primary-600) 16%, var(--color-bg-surface));
+  border: 1px solid var(--color-primary-600);
+  color: var(--metric-text-primary);
+  font-weight: 600;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.analysisPathCurrentLabel {
+  color: var(--color-primary-600);
+  font-size: 11px;
+}
+
+.analysisPathBack {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.resultTable {
+  min-width: 0;
+}
+
+.resultTableSummary {
+  align-items: center;
+  color: var(--metric-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 4px 12px;
+  justify-content: space-between;
+  padding: 10px 2px;
+}
+
 .bucketActions {
   background: var(--metric-surface-subtle, #f6f8fc);
-  border: 1px solid var(--metric-control-border);
+  border-left: 3px solid var(--color-primary-600);
+  border-radius: 4px;
   color: var(--metric-text-primary);
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  position: sticky;
+  top: 0;
   width: 100%;
+  z-index: 2;
+}
+
+.bucketActions > strong {
+  align-self: center;
+  flex: 1 1 220px;
+  overflow-wrap: anywhere;
+}
+
+.bucketTerminalHint {
+  align-self: center;
+  color: var(--metric-text-muted);
+  font-size: 12px;
 }
 
 .bucketHint {
   color: var(--metric-text-muted);
   font-size: 13px;
   line-height: 1.5;
-}
-
-.bucketActions :global(.ant-btn:disabled) {
-  align-self: flex-start;
+  margin-top: 10px;
 }
 
 .selectableResultRow {
@@ -124,4 +322,25 @@
 
 .selectedResultRow :global(td:first-child) {
   box-shadow: inset 3px 0 #3b82f6;
+}
+
+@media (max-width: 900px) {
+  .analysisWorkspace .form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .analysisWorkspace .conditions,
+  .analysisWorkspace .analysisMain {
+    padding-inline: 16px;
+  }
+
+  .analysisWorkspace .conditionsHeading {
+    align-items: stretch;
+  }
+
+  .analysisWorkspace .conditionsRunButton {
+    width: 100%;
+  }
 }

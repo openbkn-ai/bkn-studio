@@ -41,6 +41,7 @@ import {
 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
 import { objectMetricBusinessConditionLabel } from "@/modules/knowledge-network/lib/object-metric-condition-label";
 import { objectMetricPropertyDisplayName } from "@/modules/knowledge-network/lib/object-metric-display";
+import { objectMetricUnitDisplayLabel } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
 import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 import {
   objectMetricTimeWindowBusinessLabel,
@@ -924,27 +925,15 @@ export function ObjectMetricDetailScene() {
                 : objectMetricText("m484d55613910")}
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("me659c05e3760")}>
-              <Tooltip
-                title={`${definition.result_semantics.value.physical_type} / ${definition.result_semantics.value.semantic_type}`}
-              >
-                <span>
-                  {objectMetricText(
-                    physicalTypeKeys[definition.result_semantics.value.physical_type],
-                  )}
-                  {" / "}
-                  {objectMetricText(
-                    semanticTypeKeys[definition.result_semantics.value.semantic_type],
-                  )}
-                </span>
-              </Tooltip>
+              {objectMetricText(physicalTypeKeys[definition.result_semantics.value.physical_type])}
+              {" / "}
+              {objectMetricText(semanticTypeKeys[definition.result_semantics.value.semantic_type])}
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("m80b19d68b149")}>
               {definition.result_semantics.value.unit ? (
                 <Tooltip title={definition.result_semantics.value.unit.code}>
                   <span>
-                    {definition.result_semantics.value.unit.display_symbol?.trim()
-                      ? `${definition.result_semantics.value.unit.display_symbol.trim()} (${definition.result_semantics.value.unit.code})`
-                      : definition.result_semantics.value.unit.code}
+                    {objectMetricUnitDisplayLabel(definition.result_semantics.value.unit, true)}
                   </span>
                 </Tooltip>
               ) : (

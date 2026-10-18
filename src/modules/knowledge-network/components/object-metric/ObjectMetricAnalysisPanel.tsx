@@ -6,12 +6,13 @@
  */
 
 import type { EChartsOption } from "echarts";
-import { Empty, Segmented, Tag } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { Empty, Segmented, Select, Tag } from "antd";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { useResolvedTheme } from "@/app/theme/theme-context";
 import { ChartLine } from "@/modules/model-resources/components/statistics/ChartLine";
 import { recommendObjectMetricAnalysisView } from "@/modules/knowledge-network/lib/object-metric-analysis";
+import { objectMetricUnitDisplayLabel } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
 import type {
   ObjectMetricDataEntryV1,
   ObjectMetricDataV1,
@@ -382,8 +383,9 @@ function buildHeatmapOption(
     return [xValues.indexOf(x), yValues.indexOf(y), value];
   });
   const valuesForRange = data.map((item) => Number(item[2]));
-  const min = Math.min(...valuesForRange, 0);
-  const max = Math.max(...valuesForRange, 1);
+  const min = Math.min(...valuesForRange);
+  const rawMax = Math.max(...valuesForRange);
+  const max = rawMax === min ? min + 1 : rawMax;
 
   return {
     grid: { containLabel: true, left: 20, right: 72, bottom: 26, top: 18 },
@@ -475,8 +477,11 @@ function buildComboOption(entries: NumericEntry[]): EChartsOption {
 
 type ObjectMetricAnalysisPanelProps = {
   identityLabels?: Record<string, string>;
+  pathControls?: ReactNode;
   propertyLabels?: Record<string, string>;
   result: ObjectMetricDataV1;
+  resultTable?: ReactNode;
+  selectionControls?: ReactNode;
   onSelectEntry?: (entry: ObjectMetricDataEntryV1) => void;
 };
 
@@ -484,13 +489,17 @@ const emptyPropertyLabels: Record<string, string> = {};
 
 export function ObjectMetricAnalysisPanel({
   identityLabels = emptyPropertyLabels,
+  pathControls,
   propertyLabels = emptyPropertyLabels,
   result,
+  resultTable,
+  selectionControls,
   onSelectEntry,
 }: ObjectMetricAnalysisPanelProps) {
   useTranslation();
   const resolvedTheme = useResolvedTheme();
   const [selectedView, setSelectedView] = useState<ObjectMetricAnalysisView>("auto");
+  const [surface, setSurface] = useState<"auto" | "chart" | "table">("auto");
   const entries = useMemo<NumericEntry[]>(
     () =>
       result.entries.flatMap((entry) => {
@@ -500,20 +509,45 @@ export function ObjectMetricAnalysisPanel({
     [result.entries],
   );
   const isSingleValue =
-    result.entries.length === 1 &&
+    result.model.output_shape === "summary" &&
     entries.length === 1 &&
     entries[0]?.time === undefined &&
     dimensionEntries(entries[0]).length === 0;
-  const availableViews = isSingleValue
-    ? viewOptions.filter((option) => ["auto", "summary", "table"].includes(option.value))
-    : viewOptions;
+  const recommendedView = isSingleValue
+    ? "summary"
+    : entries.length < result.entries.length
+      ? "table"
+      : recommendObjectMetricAnalysisView(entries);
+  const chartable =
+    entries.length > 0 && (entries.length === result.entries.length || isSingleValue);
+  const hasTwoDimensions = entries.some((entry) => dimensionEntries(entry).length >= 2);
+  const availableViews = viewOptions.filter((option) => {
+    if (!entries.length) return option.value === "auto";
+    if (option.value === "table") return false;
+    if (isSingleValue) return option.value === "auto" || option.value === "summary";
+    if (option.value === "summary") return false;
+    if (["line", "area", "combo"].includes(option.value)) return hasTime(entries);
+    if (["heatmap", "stacked_bar"].includes(option.value)) return hasTwoDimensions;
+    if (option.value === "pie") return entries.every((entry) => entry.value >= 0);
+    return true;
+  });
   const activeView = availableViews.some((option) => option.value === selectedView)
     ? selectedView
     : "auto";
-  const resolvedView =
-    activeView === "auto" ? recommendObjectMetricAnalysisView(entries) : activeView;
+  const tableVisible =
+    !chartable || surface === "table" || (surface === "auto" && recommendedView === "table");
+  const resolvedView = tableVisible
+    ? "table"
+    : activeView === "auto"
+      ? recommendedView === "table"
+        ? isSingleValue
+          ? "summary"
+          : "bar"
+        : recommendedView
+      : activeView;
 
-  useEffect(() => setSelectedView("auto"), [result]);
+  const viewFallback =
+    surface === "chart" && (!chartable || (selectedView !== "auto" && activeView === "auto"));
   const chartOption = useMemo<EChartsOption | undefined>(() => {
     if (!entries.length || resolvedView === "summary" || resolvedView === "table") return undefined;
     if (resolvedView === "bar") return buildCategoryOption(entries, propertyLabels, identityLabels);
@@ -643,25 +677,83 @@ export function ObjectMetricAnalysisPanel({
           )}
         </Tag>
       </div>
-      <Segmented<ObjectMetricAnalysisView>
-        className={styles.viewSelector}
-        onChange={(value) => setSelectedView(value)}
-        options={availableViews}
-        value={activeView}
-      />
+      {pathControls}
+      <div className={styles.viewControls}>
+        <Segmented<"chart" | "table">
+          aria-label={objectMetricText("analysisResultView")}
+          onChange={(value) => {
+            setSurface(value);
+            if (value === "chart" && recommendedView === "table" && selectedView === "auto")
+              setSelectedView(isSingleValue ? "summary" : "bar");
+          }}
+          options={[
+            { disabled: !chartable, label: objectMetricText("analysisChart"), value: "chart" },
+            { label: objectMetricText("m22d9e7c54b88"), value: "table" },
+          ]}
+          value={tableVisible ? "table" : "chart"}
+        />
+        {!tableVisible && availableViews.length > 2 ? (
+          <Select<ObjectMetricAnalysisView>
+            aria-label={objectMetricText("analysisChartType")}
+            className={styles.chartTypeSelect}
+            onChange={(value) => setSelectedView(value)}
+            options={availableViews}
+            value={activeView}
+          />
+        ) : null}
+        {surface === "auto" ? (
+          <span className={styles.recommendation}>
+            {objectMetricText("analysisRecommendedView", {
+              p0: viewOptions.find((option) => option.value === recommendedView)?.label ?? "",
+            })}
+          </span>
+        ) : null}
+      </div>
+      {viewFallback ? (
+        <p className={styles.viewFallback} role="status">
+          {objectMetricText("analysisViewFallback")}
+        </p>
+      ) : null}
+      {selectionControls}
       {hasPrecisionSensitiveValues && resolvedView !== "table" ? (
         <p className={styles.precisionNotice}>{objectMetricText("analysisApproximateChart")}</p>
       ) : null}
-      {resolvedView === "summary" && summaryValue !== undefined ? (
-        <div className={styles.summary}>
+      {!result.entries.length ? (
+        <Empty
+          className={styles.empty}
+          description={objectMetricText("ma1af72fea205")}
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        />
+      ) : resolvedView === "summary" && summaryValue !== undefined ? (
+        <div
+          aria-label={
+            summaryEntry?.bucket_key && onSelectEntry
+              ? objectMetricText("analysisSelectSummary")
+              : undefined
+          }
+          className={`${styles.summary} ${summaryEntry?.bucket_key && onSelectEntry ? styles.selectableSummary : ""}`}
+          onClick={() => {
+            if (summaryEntry?.bucket_key) onSelectEntry?.(summaryEntry);
+          }}
+          onKeyDown={(event) => {
+            if (summaryEntry?.bucket_key && (event.key === "Enter" || event.key === " ")) {
+              event.preventDefault();
+              onSelectEntry?.(summaryEntry);
+            }
+          }}
+          role={summaryEntry?.bucket_key && onSelectEntry ? "button" : undefined}
+          tabIndex={summaryEntry?.bucket_key && onSelectEntry ? 0 : undefined}
+        >
           <span>{objectMetricText("m6018e00aca78")}</span>
           <strong>
             {typeof summaryEntry?.value === "string"
               ? summaryEntry.value
               : formatNumber(summaryValue)}
           </strong>
-          {result.model.value.unit?.display_symbol || result.model.value.unit?.code ? (
-            <em>{result.model.value.unit.display_symbol ?? result.model.value.unit.code}</em>
+          {result.model.value.unit ? (
+            <em title={result.model.value.unit.code}>
+              {objectMetricUnitDisplayLabel(result.model.value.unit)}
+            </em>
           ) : null}
         </div>
       ) : chartOption ? (
@@ -669,7 +761,7 @@ export function ObjectMetricAnalysisPanel({
           <ChartLine option={chartOption} onClick={selectChartPoint} />
         </div>
       ) : resolvedView === "table" ? (
-        <div className={styles.tableHint}>{objectMetricText("mf87336ab991b")}</div>
+        (resultTable ?? <div className={styles.tableHint}>{objectMetricText("mf87336ab991b")}</div>)
       ) : (
         <Empty
           className={styles.empty}

@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { ObjectMetricDefinitionV1 } from "@/modules/knowledge-network/types/object-metric";
+import type {
+  ObjectMetricDefinitionV1,
+  ObjectMetricUnitSpecV1,
+} from "@/modules/knowledge-network/types/object-metric";
 import type { objectMetricV1Part } from "@/modules/knowledge-network/locales/zh-CN/object-metric-v1";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 
@@ -104,6 +107,15 @@ const unitCatalog: ObjectMetricUnitOption[] = [
     code: "occurrence",
     get label() {
       return objectMetricText("mded051219c76");
+    },
+    quantityKind: "count",
+    scaleFactor: 1,
+    system: "registered",
+  },
+  {
+    code: "transaction",
+    get label() {
+      return objectMetricText("unitTransactionOption");
     },
     quantityKind: "count",
     scaleFactor: 1,
@@ -369,6 +381,34 @@ const unitCatalog: ObjectMetricUnitOption[] = [
     system: "UCUM",
   },
 ];
+
+const registeredCountUnitNames = {
+  item: "unitDisplayItem",
+  order: "unitDisplayOrder",
+  person: "unitDisplayPerson",
+  record: "unitDisplayRecord",
+  occurrence: "unitDisplayOccurrence",
+  transaction: "unitDisplayTransaction",
+} as const;
+
+export function objectMetricUnitDisplayLabel(
+  unit: ObjectMetricUnitSpecV1,
+  includeCode = false,
+): string {
+  const symbol = unit.display_symbol?.trim();
+  const nameKey =
+    unit.system === "registered" && unit.quantity_kind === "count"
+      ? registeredCountUnitNames[unit.code as keyof typeof registeredCountUnitNames]
+      : undefined;
+  const display = symbol
+    ? symbol
+    : nameKey
+      ? objectMetricText(nameKey)
+      : unit.system === "registered"
+        ? objectMetricText("unitRegisteredCode", { p0: unit.code })
+        : unit.code;
+  return includeCode && !display.includes(unit.code) ? `${display} (${unit.code})` : display;
+}
 
 function allowedQuantityKinds(semanticType?: SemanticType, physicalType?: PhysicalType) {
   if (physicalType === "duration" || semanticType === "duration") return new Set(["duration"]);
