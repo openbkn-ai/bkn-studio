@@ -1,0 +1,38 @@
+# Copyright (c) 2026 OpenBKN
+# SPDX-License-Identifier: LicenseRef-OpenBKN
+# Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+# Conditions. See LICENSE for the full text.
+
+name: Notify EE Studio repin
+
+on:
+  workflow_run:
+    workflows: [ci-quality]
+    types: [completed]
+    branches: [main, "release/**"]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  notify:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.EE_REPIN_TOKEN }}
+      SOURCE_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+    steps:
+      - name: Notify matching EE branch
+        run: |
+          set -euo pipefail
+          if [[ ! "$SOURCE_BRANCH" =~ ^(main|release/[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "No matching EE repin policy for this branch."
+            exit 0
+          fi
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::EE_REPIN_TOKEN is not configured; EE's scheduled check will handle repin."
+            exit 0
+          fi
+          payload="$(jq -cn --arg branch "$SOURCE_BRANCH" '{event_type:"bkn-studio-branch-updated",client_payload:{branch:$branch}}')"
+          gh api --method POST repos/openbkn-ai/openbkn-ee/dispatches --input - <<< "$payload"
