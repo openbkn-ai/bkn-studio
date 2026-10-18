@@ -12,15 +12,6 @@ export const agentChatPart = {
       changes: "What recent changes should I pay attention to?",
       priorityRecords: "Help me find the records that need the most attention.",
     },
-    knContext: {
-      name: "Name: {{name}} ({{id}})",
-      description: "Description: {{description}}",
-      scale: "Scale: {{objectTypes}} object types and {{relations}} relation types",
-      objectTypes: "Object types: {{names}}",
-      objectTypesMore: "Object types: {{names}} and {{count}} total",
-      objectTypesMore_one: "Object type: {{names}} ({{count}} total)",
-      objectTypesMore_other: "Object types: {{names}} ({{count}} total)",
-    },
     templateSuggestions: {
       firstObject: "What data does {{name}} have? Show a few records first.",
       group: "What is happening around {{name}}?",
@@ -58,66 +49,34 @@ export const agentChatPart = {
       connectionInterrupted: "The connection to the model service was interrupted. Try again.",
       chatFailed: "Chat execution failed",
     },
+    execution: {
+      errors: {
+        failed: "Smart Q&A failed. Try again.",
+        timeout: "Smart Q&A timed out. Narrow the question and try again.",
+        unavailable: "A service Smart Q&A depends on is temporarily unavailable. Try again later.",
+        forbidden: "Your account cannot use Smart Q&A or this knowledge network.",
+        agentNotReady:
+          "The Smart Q&A Agent is not published yet. Ask an administrator to configure and publish it.",
+        threadBusy: "The previous turn is still running. Try again shortly.",
+        network: "The connection to Smart Q&A was interrupted. Try again.",
+      },
+    },
     managedTurns: {
       loadSummary: "Load knowledge network summary",
     },
     placeholders: {
-      noLlm: "Connect an LLM in Model Factory before chatting.",
       askAgent: "Ask Agent, for example: {{suggestion}}",
     },
     composer: {
       stop: "Stop",
       send: "Send",
-      settings: "Chat Settings",
       clear: "Clear",
     },
     chatPane: {
-      defaultPrompt:
-        "You are the BKN business knowledge network retrieval assistant. Answer user questions based on object types, relation types, and logical attributes in the current knowledge network.\n" +
-        "Use the tools when you need data; do not fabricate answers. Establish the structure before fetching: when you are unsure which object types exist or what a field is called, look first with search_schema, " +
-        "then filter on the field names it returns — guessing a field name by meaning tends to yield an empty result, and an empty result raises no error.\n" +
-        "kn_id is locked to the current network. You do not need to change it and must not change it.\n" +
-        "The retrieval tools are the main path. For what they cannot answer there are three supplements: run_sql for aggregation, sorting, and counting, so the database returns only the result; " +
-        "run_code for a Python script that calls the tools above by name, suited to chaining several tools, branching on an intermediate result, or keeping bulk data in the sandbox when you only need a conclusion; " +
-        "and run_shell for a shell command to inspect files in the sandbox. All three share one workspace scoped to the conversation, and files written there survive between executions, so a later script can pick up where an earlier one left off.\n" +
-        "Query efficiently: use LIMIT and precise filters, return only needed fields, avoid loading entire tables or oversized results, and do not repeat queries for information already obtained.",
-      evidenceHint: {
-        kn: "which tool was called, what filter conditions were used, or the key SQL points",
-      },
       fallbackSuggestions: {
         relations: "What object types and relations are in this knowledge network?",
         customers: "Find recently active high-value customers.",
         links: "How are the object types related?",
-      },
-      configFields: {
-        maxSteps: {
-          label: "Tool Step Limit",
-          hint: "Maximum tool steps per round to prevent runaway calls",
-        },
-        keepToolResults: {
-          label: "Retained Tool Results",
-          hint: "Keep only the latest N full tool results between steps. 0 means no eviction",
-        },
-        dataToolCap: {
-          label: "Data Result Limit (chars)",
-          hint: "Character limit for run_sql / query_* results. 0 means no truncation",
-        },
-        schemaToolCap: {
-          label: "Schema Result Limit (chars)",
-          hint: "Character limit for get_kn_detail / search_schema and similar tools. 0 means no truncation",
-        },
-        maxHistoryMessages: {
-          label: "History Messages",
-          hint: "Only keep the latest N messages across rounds",
-        },
-        maxTurnChars: {
-          label: "Per-Turn Text Limit (chars)",
-          hint: "Maximum text length for each history message",
-        },
-        maxOutputTokens: {
-          label: "Max Output Tokens",
-          hint: "Maximum output per step including reasoning. Increase for reasoning models such as deepseek. 0 means model default",
-        },
       },
       reasoning: {
         live: "Thinking",
@@ -126,6 +85,7 @@ export const agentChatPart = {
       toolCall: {
         running: "Calling...",
         failed: "Failed",
+        interrupted: "Interrupted before a result arrived",
         clientBlocked: "Blocked by client",
         clientBlockedRequest: "Model input; request blocked by client -> {{name}}",
         clientBlockedReason: "Block reason",
@@ -145,41 +105,7 @@ export const agentChatPart = {
         retry: "Retry Round",
         detail: "Details",
       },
-      messages: {
-        settingsSaved: "Settings saved",
-        promptReset: "System prompt reset to default",
-        configReset: "Parameters reset to default",
-        noModel: "No LLM is available. Configure a default model in Model Factory first.",
-      },
-      system: {
-        contextSection:
-          "## Current Knowledge Network Summary (loaded automatically; call tools for full structure and instances as needed)\n{{context}}",
-        historyTruncated: "{{content}}\n...[history truncated]",
-      },
-      model: {
-        defaultSuffix: "{{modelName}} · Default",
-      },
-      settings: {
-        promptPlaceholder: "System prompt. After saving, it will be sent with the conversation.",
-        resetDefault: "Reset Default",
-        configTitle: "Chat Settings",
-        cancel: "Cancel",
-        confirm: "Confirm",
-        modelConfigTitle: "Model Settings",
-        modelConfigDescription: "Choose the model used for this chat.",
-        modelLabel: "Model",
-        selectModel: "Select model",
-        promptTitle: "System Prompt",
-        promptDescription: "Control the Agent identity, tool strategy, and response style.",
-        paramsTitle: "Parameters",
-        paramsDescription:
-          "Limit tool steps, retained history, and output size to keep answers focused and bounded.",
-      },
       empty: {
-        noLlmTitle: "No LLM Available",
-        noLlmDescription:
-          "Agent chat needs an LLM. Connect one in Model Factory, set it as default, and come back.",
-        goModelFactory: "Connect an LLM in Model Factory",
         start: "Start Validation",
         knIntro:
           "Ask the Agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",

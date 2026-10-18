@@ -12,15 +12,6 @@ export const agentChatPart = {
       changes: "最近有什么值得关注的变化？",
       priorityRecords: "帮我找出最需要重点关注的几条记录",
     },
-    knContext: {
-      name: "名称：{{name}}（{{id}}）",
-      description: "简介：{{description}}",
-      scale: "规模：{{objectTypes}} 个对象类、{{relations}} 个关系类",
-      objectTypes: "对象类：{{names}}",
-      objectTypesMore: "对象类：{{names}} 等 {{count}} 个",
-      objectTypesMore_one: "对象类：{{names}} 等 {{count}} 个",
-      objectTypesMore_other: "对象类：{{names}} 等 {{count}} 个",
-    },
     templateSuggestions: {
       firstObject: "{{name}}有哪些数据？先看几条",
       group: "{{name}}相关的情况怎么样？",
@@ -55,57 +46,33 @@ export const agentChatPart = {
       connectionInterrupted: "与模型服务的连接中断，请重试",
       chatFailed: "对话执行失败",
     },
+    execution: {
+      errors: {
+        failed: "智能问答执行失败，请重试",
+        timeout: "智能问答执行超时，请缩小问题范围后重试",
+        unavailable: "智能问答依赖的服务暂时不可用，请稍后重试",
+        forbidden: "当前账号没有使用智能问答或该知识网络的权限",
+        agentNotReady: "智能问答 Agent 尚未发布，请联系管理员完成配置并发布",
+        threadBusy: "上一轮问答仍在执行，请稍后重试",
+        network: "与智能问答服务的连接中断，请重试",
+      },
+    },
     managedTurns: {
       loadSummary: "载入知识网络摘要",
     },
     placeholders: {
-      noLlm: "请先在「模型工厂」接入大模型后再对话",
       askAgent: "向 Agent 提问，例如：{{suggestion}}",
     },
     composer: {
       stop: "停止",
       send: "发送",
-      settings: "问答配置",
       clear: "清空",
     },
     chatPane: {
-      defaultPrompt:
-        "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
-        "需要数据时用工具查，不要编造。先弄清结构再取数：不清楚有哪些对象类、字段叫什么，先用 search_schema 探一眼，" +
-        "再按返回里的真实字段名过滤——按语义猜字段名往往得到空结果，而空结果不报错。\n" +
-        "kn_id 已锁定为当前网络，无需也不要修改。\n" +
-        "检索工具是主路。它们答不了的那部分，用三个补充手段：run_sql 做聚合/排序/计数，让数据库算完只回结果；" +
-        "run_code 写一段 Python，脚本里可直接调用上面这些工具，适合串联多个工具、按中间结果分支、或中间数据量大而你只需要结论；" +
-        "run_shell 执行 shell 命令，用来看一眼沙箱里的文件。三者共用一个按会话隔离的工作区，落盘的文件在同一对话的多次执行之间保留，下一段脚本可以直接接着用。\n" +
-        "查询要高效：用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。",
-      evidenceHint: {
-        kn: "调了哪个工具、什么过滤条件或 SQL 要点",
-      },
       fallbackSuggestions: {
         relations: "这个知识网络里有哪些对象类和关系？",
         customers: "帮我查最近活跃的高价值客户",
         links: "对象类之间是怎么关联的？",
-      },
-      configFields: {
-        maxSteps: { label: "工具步数上限", hint: "一轮最多调多少步工具（防跑飞兜底）" },
-        keepToolResults: {
-          label: "步间保留结果数",
-          hint: "每步只保留最近 N 个工具结果全文（0=不驱逐）",
-        },
-        dataToolCap: {
-          label: "数据类结果上限(字)",
-          hint: "run_sql / query_* 结果字符上限（0=不截断）",
-        },
-        schemaToolCap: {
-          label: "Schema类结果上限(字)",
-          hint: "get_kn_detail / search_schema 等（0=不截断）",
-        },
-        maxHistoryMessages: { label: "多轮保留条数", hint: "跨轮历史只保留最近 N 条消息" },
-        maxTurnChars: { label: "单轮文本上限(字)", hint: "每条历史消息文本封顶" },
-        maxOutputTokens: {
-          label: "最大输出token",
-          hint: "单步最大输出(含思考)；推理模型(deepseek)调大，0=模型默认",
-        },
       },
       reasoning: {
         live: "思考中",
@@ -114,6 +81,7 @@ export const agentChatPart = {
       toolCall: {
         running: "调用中…",
         failed: "失败",
+        interrupted: "执行中断，未收到结果",
         clientBlocked: "客户端拦截",
         clientBlockedRequest: "模型入参；客户端拦截未发出 → {{name}}",
         clientBlockedReason: "拦截原因",
@@ -133,40 +101,7 @@ export const agentChatPart = {
         retry: "重试本轮",
         detail: "详情",
       },
-      messages: {
-        settingsSaved: "设置已保存",
-        promptReset: "系统提示词已恢复默认",
-        configReset: "参数已恢复默认",
-        noModel: "当前没有可用的大模型，请先在「模型工厂」配置默认模型",
-      },
-      system: {
-        contextSection:
-          "## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n{{context}}",
-        historyTruncated: "{{content}}\n…[历史过长已截断]",
-      },
-      model: {
-        defaultSuffix: "{{modelName}} · 默认",
-      },
-      settings: {
-        promptPlaceholder: "系统提示词，保存后会随对话一起发送",
-        resetDefault: "恢复默认",
-        configTitle: "问答配置",
-        cancel: "取消",
-        confirm: "确定",
-        modelConfigTitle: "模型配置",
-        modelConfigDescription: "选择本次问答使用的模型。",
-        modelLabel: "模型",
-        selectModel: "选择模型",
-        promptTitle: "系统提示词",
-        promptDescription: "控制 Agent 的身份、工具使用策略和回答风格。",
-        paramsTitle: "参数",
-        paramsDescription: "限制工具步数、历史保留和输出长度，避免问答跑偏或结果过大。",
-      },
       empty: {
-        noLlmTitle: "还没有可用的大模型",
-        noLlmDescription:
-          "Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。",
-        goModelFactory: "去模型工厂接入大模型",
         start: "开始验证",
         knIntro:
           "用自然语言向 Agent 提问，它会基于知识网络 {{knId}}{{networkName}} 调用检索工具并作答。{{summary}}",

@@ -35,8 +35,7 @@ const PLATFORM_TOOL_PREFIX = "bkn_";
  * Prefix matching is deliberate because the platform tool surface changes with
  * backend releases and an explicit list would drift.
  *
- * Matching does not hide the tool. buildAgentTools decides whether to bind
- * start/finish to the current client turn or pass other trace tools through.
+ * Matching does not hide the tool; callers decide how to treat platform tools.
  */
 export function isPlatformManagedTool(name: string): boolean {
   return name.startsWith(PLATFORM_TOOL_PREFIX);

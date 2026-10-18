@@ -6,12 +6,12 @@
  */
 
 /**
- * Try-now Agent chat container. ChatPane owns messages, model, prompt, and tuning; this container
- * owns shared resources such as the model list, knowledge-network summary, tools/list cache, and
- * the input composer.
+ * Try-now Agent chat container. ChatPane owns messages and the BKN Agent execution; this container
+ * owns shared resources such as the model list, knowledge-network summary, suggestions, and the
+ * input composer.
  */
 
-import { ClearOutlined, RightOutlined, SettingOutlined } from "@ant-design/icons";
+import { ClearOutlined } from "@ant-design/icons";
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,10 +26,8 @@ import {
 } from "@/modules/knowledge-network/services/agent-chat.service";
 import {
   fetchKnDetail,
-  listMcpTools,
   type ContextLoaderEnv,
   type KnDetail,
-  type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 import {
   createBknLifecycle,
@@ -39,7 +37,7 @@ import {
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { recommendationFingerprint } from "@/modules/knowledge-network/utils/agent-chat-cache";
 
-import { ChatPane, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
+import { ChatPane, type ChatPaneHandle } from "./ChatPane";
 import styles from "./AgentChat.module.css";
 
 /**
@@ -52,48 +50,8 @@ const FALLBACK_SUGGESTIONS = [
   "knowledgeNetwork.agentChat.fallbackSuggestions.priorityRecords",
 ];
 
-/**
- * Summary of the knowledge network injected into the system prompt, not its full structure: name,
- * description, scale, and truncated object-type names. The Agent retrieves full ontology and instances
- * on demand through get_kn_detail, search_schema, and related tools.
- */
 function fallbackSuggestions(t: TFunction): string[] {
   return FALLBACK_SUGGESTIONS.map((key) => t(key));
-}
-
-function buildKnContext(detail: KnDetail, t: TFunction): string {
-  const otNames = detail.object_types.map((o) => o.name || o.id);
-  const shown = otNames.slice(0, 12);
-  const lines = [
-    t("knowledgeNetwork.agentChat.knContext.name", {
-      name: detail.name ?? detail.id,
-      id: detail.id,
-    }),
-  ];
-  if (detail.comment) {
-    lines.push(
-      t("knowledgeNetwork.agentChat.knContext.description", {
-        description: detail.comment.replace(/\s+/g, " ").trim().slice(0, 200),
-      }),
-    );
-  }
-  lines.push(
-    t("knowledgeNetwork.agentChat.knContext.scale", {
-      objectTypes: detail.object_types.length,
-      relations: detail.relation_types.length,
-    }),
-  );
-  if (otNames.length) {
-    lines.push(
-      t(
-        otNames.length > shown.length
-          ? "knowledgeNetwork.agentChat.knContext.objectTypesMore"
-          : "knowledgeNetwork.agentChat.knContext.objectTypes",
-        { names: shown.join(", "), count: otNames.length },
-      ),
-    );
-  }
-  return lines.join("\n");
 }
 
 /**
@@ -189,15 +147,6 @@ function saveCachedSuggestions(knId: string, locale: string, fp: string, list: s
   }
 }
 
-function buildProfile(t: TFunction): PaneProfile {
-  return {
-    emptyTitle: t("knowledgeNetwork.agentChat.profiles.soloEmptyTitle"),
-    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.defaultPrompt"),
-    injectKnContext: true,
-    evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.kn"),
-  };
-}
-
 export function AgentChat({
   env,
   networkName,
@@ -206,7 +155,7 @@ export function AgentChat({
 }: {
   env: ContextLoaderEnv;
   networkName?: string;
-  /** Authentication for retrieval tools (agent-retrieval MCP): OAuth session or bak_ AppKey. */
+  /** Authentication for BKN Agent executions: OAuth session or bak_ AppKey. */
   tokenProvider: AgentTokenProvider;
   /** Authentication for LLMs (mf-model-api): the gateway does not accept bak_, so always use OAuth and fall back to tokenProvider. */
   modelTokenProvider?: AgentTokenProvider;
@@ -214,7 +163,6 @@ export function AgentChat({
   const knId = env.knId;
   const { t, i18n } = useTranslation();
   const activeLocale = normalizeSupportedLocale(i18n.resolvedLanguage ?? i18n.language) ?? "en-US";
-  const profile = useMemo(() => buildProfile(t), [t]);
   const defaultSuggestions = useMemo(() => fallbackSuggestions(t), [t]);
   const llmTokenProvider = useMemo(
     () => modelTokenProvider ?? tokenProvider,
@@ -224,16 +172,13 @@ export function AgentChat({
   const [input, setInput] = useState("");
   const [models, setModels] = useState<LlmModel[]>([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  // Automatically loaded knowledge-network ontology used for system-prompt injection and tailored suggestions.
-  const [knContext, setKnContext] = useState("");
+  // Automatically loaded knowledge-network scale shown in the empty state.
   const [knSummary, setKnSummary] = useState<{ objectTypes: number; relations: number } | null>(
     null,
   );
-  // resource_id set bound to the current network (object_type.data_source.id), used to limit list_resources to this network's tables by default.
-  const [knResourceIds, setKnResourceIds] = useState<string[] | null>(null);
   // Render templates immediately and replace them with generated results when the model is ready.
   const [suggestions, setSuggestions] = useState<string[]>(defaultSuggestions);
-  // Loaded network structure both derives the system-prompt summary and supplies business descriptions for suggestions.
+  // Loaded network structure supplies business descriptions for suggestions.
   const [knDetail, setKnDetail] = useState<KnDetail | null>(null);
 
   // Busy state reported by the pane for send-disable and stop behavior.
@@ -256,7 +201,7 @@ export function AgentChat({
     setSuggestions((prev) => (prev === defaultSuggestions ? prev : defaultSuggestions));
   }, [defaultSuggestions]);
 
-  // Load the model-factory list once; ChatPane selects the default model.
+  // Load the model-factory list once: no model means chat cannot run, and suggestions need one.
   useEffect(() => {
     let cancelled = false;
     listLlmModels({ page: 1, size: 100 })
@@ -274,12 +219,10 @@ export function AgentChat({
     };
   }, []);
 
-  // Load the selected network ontology automatically for system-prompt injection and tailored suggestions, without requiring prior browsing.
+  // Load the selected network ontology automatically for the empty state and tailored suggestions, without requiring prior browsing.
   useEffect(() => {
     let cancelled = false;
-    setKnContext("");
     setKnSummary(null);
-    setKnResourceIds(null);
     setKnDetail(null);
     setSuggestions(defaultSuggestions);
     // Summary prefetch is also a managed business call because get_kn_detail uses /kn/*. It belongs
@@ -291,14 +234,10 @@ export function AgentChat({
     )
       .then((detail) => {
         if (cancelled) return;
-        setKnContext(buildKnContext(detail, t));
         setKnSummary({
           objectTypes: detail.object_types.length,
           relations: detail.relation_types.length,
         });
-        setKnResourceIds(
-          detail.object_types.map((o) => o.data_source?.id).filter((id): id is string => !!id),
-        );
         setKnDetail(detail);
         // Show template results first so the empty state is immediately actionable without waiting for a model.
         setSuggestions(templateSuggestions(detail, t));
@@ -352,52 +291,6 @@ export function AgentChat({
     };
   }, [knDetail, modelsLoaded, models, env, llmTokenProvider, knId, activeLocale, t]);
 
-  // tools/list cache loads once per knId; send lazily awaits its promise.
-  const toolsCacheRef = useRef<{ knId: string; promise: Promise<McpToolDef[]> } | null>(null);
-  const toolsRequestRef = useRef<{ sequence: number; controller: AbortController | null }>({
-    sequence: 0,
-    controller: null,
-  });
-  const envRef = useRef(env);
-  envRef.current = env;
-  const getTools = useCallback((): Promise<McpToolDef[]> => {
-    if (!toolsCacheRef.current || toolsCacheRef.current.knId !== knId) {
-      const sequence = ++toolsRequestRef.current.sequence;
-      toolsRequestRef.current.controller?.abort();
-      const controller = new AbortController();
-      toolsRequestRef.current.controller = controller;
-      const promise = listMcpTools(envRef.current, tokenProvider, controller.signal)
-        .catch((error: unknown) => {
-          // Do not cache failures so the next attempt retries.
-          if (sequence === toolsRequestRef.current.sequence) {
-            toolsCacheRef.current = null;
-          }
-          throw error;
-        })
-        .finally(() => {
-          if (sequence === toolsRequestRef.current.sequence) {
-            toolsRequestRef.current.controller = null;
-          }
-        });
-      toolsCacheRef.current = { knId, promise };
-    }
-    return toolsCacheRef.current.promise;
-  }, [knId, tokenProvider]);
-  useEffect(() => {
-    toolsRequestRef.current.sequence += 1;
-    toolsRequestRef.current.controller?.abort();
-    toolsRequestRef.current.controller = null;
-    toolsCacheRef.current = null;
-  }, [knId]);
-  useEffect(
-    () => () => {
-      toolsRequestRef.current.controller?.abort();
-    },
-    [],
-  );
-
-  const noLlm = modelsLoaded && models.length === 0;
-
   const sendInput = useCallback(() => {
     const text = input.trim();
     if (!text || busy) return;
@@ -419,24 +312,15 @@ export function AgentChat({
   }, []);
 
   const placeholder = useMemo(() => {
-    if (noLlm) return t("knowledgeNetwork.agentChat.placeholders.noLlm");
     return t("knowledgeNetwork.agentChat.placeholders.askAgent", {
       suggestion: suggestions[0] ?? defaultSuggestions[0],
     });
-  }, [noLlm, suggestions, defaultSuggestions, t]);
+  }, [suggestions, defaultSuggestions, t]);
 
   return (
     <div ref={pageScrollRef} className={styles.root}>
       <header className={styles.agentHeader}>
         <div className={styles.headerActions}>
-          <button
-            type="button"
-            className={styles.barBtn}
-            onClick={() => paneRef.current?.openSettings()}
-          >
-            <SettingOutlined /> {t("knowledgeNetwork.agentChat.composer.settings")}{" "}
-            <RightOutlined />
-          </button>
           <button
             type="button"
             className={styles.barBtn}
@@ -454,16 +338,10 @@ export function AgentChat({
             ref={paneRef}
             env={env}
             tokenProvider={tokenProvider}
-            modelTokenProvider={llmTokenProvider}
+            emptyTitle={t("knowledgeNetwork.agentChat.profiles.soloEmptyTitle")}
             networkName={networkName}
-            models={models}
-            modelsLoaded={modelsLoaded}
-            knContext={knContext}
             knSummary={knSummary}
-            getTools={getTools}
-            resourceScope={knResourceIds}
             pageScrollRef={pageScrollRef}
-            profile={profile}
             suggestions={suggestions}
             onPick={sendQuestion}
             onBusyChange={setBusy}
@@ -474,7 +352,6 @@ export function AgentChat({
                 className={styles.cInput}
                 value={input}
                 rows={1}
-                disabled={noLlm}
                 placeholder={placeholder}
                 spellCheck={false}
                 onChange={(e) => setInput(e.target.value)}
@@ -500,7 +377,7 @@ export function AgentChat({
                   type="button"
                   className={styles.sendBtn}
                   onClick={sendInput}
-                  disabled={!input.trim() || noLlm}
+                  disabled={!input.trim()}
                 >
                   {t("knowledgeNetwork.agentChat.composer.send")}
                 </button>

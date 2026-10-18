@@ -6,18 +6,13 @@
  */
 
 /**
- * Agent chat single-session pane extracted from AgentChat. It owns its message history, model
- * selection, prompt, config, stats, and AbortController. The parent drives it through
- * ref { send, stop }.
+ * Agent chat single-session pane extracted from AgentChat. It owns its message history, stats,
+ * and the in-flight execution. The model/tool loop runs in BKN Agent (studio_smart_qa); this pane
+ * submits each question and renders the streamed events. The parent drives it through
+ * ref { send, stop, clear }.
  */
 
-import {
-  DownOutlined,
-  QuestionCircleOutlined,
-  RightOutlined,
-  ThunderboltFilled,
-} from "@ant-design/icons";
-import { App, Drawer, Select, Tooltip } from "antd";
+import { DownOutlined, RightOutlined, ThunderboltFilled } from "@ant-design/icons";
 import {
   forwardRef,
   memo,
@@ -29,60 +24,26 @@ import {
   useRef,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
 
-import type { LlmModel } from "@/modules/model-resources/types/llm";
+import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
+import type { NormalizedAgentError } from "@/modules/knowledge-network/services/agent-error";
 import {
-  DEFAULT_AGENT_CONFIG,
-  buildAgentTools,
-  effectiveToolArgs,
-  formatOutputContract,
-  formatToolResultLimits,
-  guardAgentToolArgs,
-  isTakenOverLifecycleTool,
-  promptFromPersisted,
-  promptToPersist,
-  runAgentChat,
-  type AgentChatTurn,
-  type AgentChunk,
-  type AgentConfig,
-  type AgentTokenProvider,
-} from "@/modules/knowledge-network/services/agent-chat.service";
-import {
-  normalizeAgentError,
-  type NormalizedAgentError,
-} from "@/modules/knowledge-network/services/agent-error";
-import {
-  createBknLifecycle,
-  lifecycleEnv,
-  localConversationStore,
-  type TurnOutcome,
-} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
-import {
-  type BknContext,
-  type ContextLoaderEnv,
-  type McpToolDef,
-} from "@/modules/knowledge-network/services/context-loader.service";
+  BknAgentExecutionError,
+  cancelExecution,
+  executionRequestError,
+  getExecution,
+  newClientRequestId,
+  startExecution,
+  terminalError,
+  type ExecutionEvent,
+} from "@/modules/knowledge-network/services/bkn-agent-execution.service";
+import type { ContextLoaderEnv } from "@/modules/knowledge-network/services/context-loader.service";
 
 import styles from "./AgentChat.module.css";
 import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
-
-/**
- * The default prompt only explains the pane role and tool usage. The output
- * contract is appended by composedSystem; see formatOutputContract.
- */
-export const DEFAULT_PROMPT =
-  "You are a BKN business knowledge-network retrieval assistant. Answer based on object types, relation types, and logical properties in the current knowledge network.\n" +
-  "Call the provided retrieval tools when data is needed, such as search_schema, query_object_instance, query_instance_subgraph, and run_sql. Do not fabricate data.\n" +
-  "kn_id is locked to the current network; do not modify it.\n" +
-  "Query efficiently: push aggregation, sorting, and counting to SQL where possible, use LIMIT and precise filters, select only needed fields, avoid whole-table scans or huge result sets, and do not repeat already retrieved information.";
-
-/** Evidence wording for the knowledge-network profile. */
-export const KN_EVIDENCE_HINT =
-  "which tool was called, what filter conditions were used, or the key SQL points";
 
 const FALLBACK_SUGGESTION_KEYS = [
   "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.relations",
@@ -90,22 +51,9 @@ const FALLBACK_SUGGESTION_KEYS = [
   "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.links",
 ];
 
-const AGENT_NAME = "bkn-agent-smart-qa";
-
-/** Pane profile controlling defaults, context injection, and output-contract wording. */
-export type PaneProfile = {
-  emptyTitle?: string;
-  defaultPrompt: string;
-  /** Whether to append KN summary to the system prompt. */
-  injectKnContext: boolean;
-  /** Evidence wording for the output contract. */
-  evidenceHint: string;
-};
-
 export type ChatPaneHandle = {
   send: (text: string) => void;
   stop: () => void;
-  openSettings: () => void;
   clear: () => void;
 };
 
@@ -116,21 +64,23 @@ type ToolCallView = {
   status: "running" | "done" | "error";
   result?: string;
   error?: string;
+  /** Only present in history from the former browser loop. */
   clientBlocked?: boolean;
   startedAt: number;
   latencyMs?: number;
 };
 
 /**
- * Ordered render segment. A turn interleaves tool calls and text across up to
- * maxSteps steps; parts preserve that order so a run of consecutive calls can
- * collapse into one group and text output starts the next run.
+ * Ordered render segment. A turn interleaves tool calls and text across several
+ * steps; parts preserve that order so a run of consecutive calls can collapse
+ * into one group and text output starts the next run.
  */
 type MessagePart = { kind: "text"; text: string } | { kind: "tools"; ids: string[] };
 
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  /** Only present in history from the former browser loop; BKN Agent does not stream reasoning. */
   reasoning?: string;
   toolCalls?: ToolCallView[];
   /** Render order only; content and toolCalls stay flat for history. */
@@ -149,12 +99,22 @@ type ChatMessage = {
 
 type SessionStats = { tokens: number; ms: number };
 
+/**
+ * History written by the former browser loop also carried model and systemPrompt; those
+ * fields are ignored now, and its messages stay readable. A missing threadId starts a new
+ * server thread on the next send.
+ */
 type Persisted = {
   messages: ChatMessage[];
-  model: string;
-  systemPrompt: string;
   stats?: SessionStats;
+  threadId?: string;
 };
+
+/** The committed answer as the turn's text, keeping its tool calls in place. */
+function withAnswer(m: ChatMessage, answer: string): ChatMessage {
+  const parts = (m.parts ?? []).filter((part) => part.kind === "tools");
+  return { ...m, content: answer, parts: [...parts, { kind: "text", text: answer }] };
+}
 
 function appendTextPart(parts: MessagePart[] | undefined, delta: string): MessagePart[] {
   const next = [...(parts ?? [])];
@@ -180,11 +140,6 @@ function legacyParts(m: ChatMessage): MessagePart[] {
   return parts;
 }
 
-/** Rough token estimate for live streaming display; replaced by real usage at finish. */
-function estimateTokens(chars: number): number {
-  return Math.round(chars / 2.5);
-}
-
 function fmtTokens(n: number): string {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
@@ -201,18 +156,6 @@ function msgsLsKey(knId: string): string {
   return `bkn-studio:agentchat:${knId}`;
 }
 
-/**
- * Managed conversation identity key. The ":solo" suffix is kept from the former per-pane format
- * so existing conversation IDs are reused.
- */
-function conversationLsKey(knId: string): string {
-  return `bkn-studio:agentchat:conv:v2:${knId}:solo`;
-}
-
-function legacyConversationLsKey(knId: string): string {
-  return `bkn-studio:agentchat:conv:${knId}:solo`;
-}
-
 function loadPersisted(key: string): Partial<Persisted> {
   try {
     const raw = localStorage.getItem(key);
@@ -221,31 +164,6 @@ function loadPersisted(key: string): Partial<Persisted> {
     return {};
   }
 }
-
-/** Agent config cache. */
-const CONFIG_LS_KEY = "bkn-studio:agentconfig";
-
-function loadConfig(): AgentConfig {
-  try {
-    const raw = localStorage.getItem(CONFIG_LS_KEY);
-    return raw
-      ? { ...DEFAULT_AGENT_CONFIG, ...(JSON.parse(raw) as Partial<AgentConfig>) }
-      : { ...DEFAULT_AGENT_CONFIG };
-  } catch {
-    return { ...DEFAULT_AGENT_CONFIG };
-  }
-}
-
-/** Config panel field definitions. */
-const CONFIG_FIELD_KEYS: { key: keyof AgentConfig }[] = [
-  { key: "maxSteps" },
-  { key: "keepToolResults" },
-  { key: "dataToolCap" },
-  { key: "schemaToolCap" },
-  { key: "maxHistoryMessages" },
-  { key: "maxTurnChars" },
-  { key: "maxOutputTokens" },
-];
 
 function formatArgs(args: unknown): string {
   try {
@@ -344,7 +262,9 @@ function ToolCallCard({
     : call.status === "running"
       ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
       : call.status === "error"
-        ? t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")
+        ? call.latencyMs === undefined
+          ? t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")
+          : `${t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")} - ${call.latencyMs}ms`
         : `200 - ${call.latencyMs ?? "-"}ms`;
   const requestLabel = call.clientBlocked
     ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlockedRequest", { name: call.name })
@@ -496,28 +416,37 @@ function ErrorBlock({
   );
 }
 
+/** Tool projections arrive as JSON values; cards show them as text. */
+function formatToolValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  // MCP tools return content blocks; show their text rather than the escaped JSON.
+  if (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(
+      (block) =>
+        typeof block === "object" &&
+        block !== null &&
+        (block as { type?: unknown }).type === "text" &&
+        typeof (block as { text?: unknown }).text === "string",
+    )
+  ) {
+    return (value as { text: string }[]).map((block) => block.text).join("\n");
+  }
+  return formatArgs(value);
+}
+
 export type ChatPaneProps = {
   env: ContextLoaderEnv;
-  /** Auth for retrieval tools through agent-retrieval MCP. */
+  /** Credential for BKN Agent executions: OAuth session or bak_ AppKey. */
   tokenProvider: AgentTokenProvider;
-  /** Auth for mf-model-api; falls back to tokenProvider when absent. */
-  modelTokenProvider?: AgentTokenProvider;
-  profile: PaneProfile;
+  emptyTitle?: string;
   networkName?: string;
-  /** Model list fetched once by the parent and shared across panes. */
-  models: LlmModel[];
-  modelsLoaded: boolean;
-  /** KN summary fetched by the parent; injection depends on profile.injectKnContext. */
-  knContext: string;
   knSummary: { objectTypes: number; relations: number } | null;
   /** Empty-state suggestions generated by the parent. */
   suggestions: string[];
   /** Suggestion click callback; the parent routes it through its send guard. */
   onPick?: (question: string) => void;
-  /** Live tools/list shared from parent cache; send lazily fetches when needed. */
-  getTools: () => Promise<McpToolDef[]>;
-  /** resource_id set bound to the current KN, used to scope list_resources. */
-  resourceScope?: readonly string[] | null;
   /**
    * Page-level scroll container for the QA workspace. Messages do not scroll
    * inside the pane; this container owns reading and stick-to-bottom behavior.
@@ -530,43 +459,29 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   {
     env,
     tokenProvider,
-    modelTokenProvider,
-    profile,
+    emptyTitle,
     networkName,
-    models,
-    modelsLoaded,
-    knContext,
     knSummary,
     suggestions,
     onPick,
-    getTools,
-    resourceScope,
     pageScrollRef,
     onBusyChange,
   },
   ref,
 ) {
-  const { message } = App.useApp();
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const knId = env.knId;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
-  const [model, setModel] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState(profile.defaultPrompt);
-  // QA config: model, tools, system prompt, and parameters are managed together.
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [config, setConfigState] = useState<AgentConfig>(loadConfig);
-  const [draftModel, setDraftModel] = useState("");
-  const [draftSystemPrompt, setDraftSystemPrompt] = useState(profile.defaultPrompt);
-  const [draftConfig, setDraftConfig] = useState<AgentConfig>(loadConfig);
   // Cumulative session tokens and elapsed time.
   const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
+  // Server thread for this network's conversation; switching networks uses another history key.
+  const [threadId, setThreadId] = useState<string | undefined>(undefined);
 
   const abortRef = useRef<AbortController | null>(null);
-  // Managed context for display in tool cards; buildAgentTools injects true values.
-  const turnContextRef = useRef<BknContext | null>(null);
+  // Run being streamed, so stop can ask the server to cancel it.
+  const runIdRef = useRef<string | null>(null);
   const requestSequenceRef = useRef(0);
   // Stick-to-bottom flag; user scrolling up disables forced bottom following.
   const stickRef = useRef(true);
@@ -575,7 +490,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
 
-  // Abort in-flight streaming when unmounted.
+  // Abort in-flight streaming when unmounted; the server cancels on disconnect.
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
@@ -588,66 +503,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     requestSequenceRef.current += 1;
     abortRef.current?.abort();
     abortRef.current = null;
+    runIdRef.current = null;
     setBusy(false);
   }, [knId]);
-
-  const setDraftConfigField = useCallback((key: keyof AgentConfig, value: number) => {
-    setDraftConfig((prev) => ({
-      ...prev,
-      [key]: Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : prev[key],
-    }));
-  }, []);
-  const openSettings = useCallback(() => {
-    setDraftModel(model);
-    setDraftSystemPrompt(systemPrompt);
-    setDraftConfig(config);
-    setSettingsOpen(true);
-  }, [config, model, systemPrompt]);
-  const cancelSettings = useCallback(() => {
-    setDraftModel(model);
-    setDraftSystemPrompt(systemPrompt);
-    setDraftConfig(config);
-    setSettingsOpen(false);
-  }, [config, model, systemPrompt]);
-  const saveSettings = useCallback(() => {
-    setModel(draftModel);
-    setSystemPrompt(draftSystemPrompt);
-    setConfigState(draftConfig);
-    try {
-      localStorage.setItem(CONFIG_LS_KEY, JSON.stringify(draftConfig));
-      localStorage.setItem(
-        msgsLsKey(knId),
-        JSON.stringify({
-          messages,
-          model: draftModel,
-          systemPrompt: promptToPersist(draftSystemPrompt, profile.defaultPrompt),
-          stats,
-        } satisfies Persisted),
-      );
-    } catch {
-      /* Ignore unavailable localStorage. */
-    }
-    setSettingsOpen(false);
-    message.success(t("knowledgeNetwork.agentChat.chatPane.messages.settingsSaved"));
-  }, [
-    draftConfig,
-    draftModel,
-    draftSystemPrompt,
-    knId,
-    message,
-    messages,
-    profile.defaultPrompt,
-    stats,
-    t,
-  ]);
-  const resetDraftSystemPrompt = useCallback(() => {
-    setDraftSystemPrompt(profile.defaultPrompt);
-    message.success(t("knowledgeNetwork.agentChat.chatPane.messages.promptReset"));
-  }, [message, profile.defaultPrompt, t]);
-  const resetDraftConfig = useCallback(() => {
-    setDraftConfig({ ...DEFAULT_AGENT_CONFIG });
-    message.success(t("knowledgeNetwork.agentChat.chatPane.messages.configReset"));
-  }, [message, t]);
 
   const updateStickiness = useCallback(() => {
     const el = pageScrollRef.current;
@@ -667,36 +525,26 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   useEffect(() => {
     const saved = loadPersisted(msgsLsKey(knId));
     setMessages(Array.isArray(saved.messages) ? saved.messages : []);
-    if (saved.model) setModel(saved.model);
-    setSystemPrompt(promptFromPersisted(saved.systemPrompt, profile.defaultPrompt));
     setStats(saved.stats ?? { tokens: 0, ms: 0 });
-  }, [knId, profile.defaultPrompt]);
-
-  // Select the default model after model list is ready; persisted choice wins.
-  useEffect(() => {
-    setModel((prev) => {
-      if (prev && models.some((m) => m.modelName === prev)) return prev;
-      return models.find((m) => m.default)?.modelName ?? models[0]?.modelName ?? "";
-    });
-  }, [models]);
+    setThreadId(typeof saved.threadId === "string" ? saved.threadId : undefined);
+  }, [knId]);
 
   const persist = useCallback(
-    (msgs: ChatMessage[], statsSnapshot: SessionStats) => {
+    (msgs: ChatMessage[], statsSnapshot: SessionStats, thread: string | undefined) => {
       try {
         localStorage.setItem(
           msgsLsKey(knId),
           JSON.stringify({
             messages: msgs,
-            model,
-            systemPrompt: promptToPersist(systemPrompt, profile.defaultPrompt),
             stats: statsSnapshot,
+            threadId: thread,
           } satisfies Persisted),
         );
       } catch {
         /* Ignore unavailable localStorage. */
       }
     },
-    [knId, profile.defaultPrompt, model, systemPrompt],
+    [knId],
   );
 
   useEffect(() => {
@@ -712,9 +560,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   // Persist final messages and stats after a turn ends; do not write mid-stream.
   const prevBusyRef = useRef(false);
   useEffect(() => {
-    if (prevBusyRef.current && !busy && messages.length) persist(messages, stats);
+    if (prevBusyRef.current && !busy && messages.length) persist(messages, stats, threadId);
     prevBusyRef.current = busy;
-  }, [busy, messages, stats, persist]);
+  }, [busy, messages, stats, threadId, persist]);
 
   const updateAssistant = useCallback((updater: (prev: ChatMessage) => ChatMessage) => {
     setMessages((prev) => {
@@ -726,135 +574,126 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     });
   }, []);
 
-  const handleChunk = useCallback(
-    (chunk: AgentChunk) => {
-      switch (chunk.type) {
-        case "text":
+  const addError = useCallback(
+    (error: NormalizedAgentError) =>
+      updateAssistant((m) => ({ ...m, errored: true, errors: [...(m.errors ?? []), error] })),
+    [updateAssistant],
+  );
+
+  const handleEvent = useCallback(
+    (event: ExecutionEvent) => {
+      switch (event.type) {
+        case "meta":
+          runIdRef.current = event.runId;
+          if (event.threadId) setThreadId(event.threadId);
+          break;
+        case "token":
           updateAssistant((m) => ({
             ...m,
-            content: m.content + chunk.delta,
-            parts: appendTextPart(m.parts, chunk.delta),
+            content: m.content + event.content,
+            parts: appendTextPart(m.parts, event.content),
           }));
           break;
-        case "reasoning":
-          // Reasoning stays one merged block above the turn. Splitting it per step made the
-          // trace jump around the transcript as each step reopened a new box.
-          updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + chunk.delta }));
-          break;
-        case "tool-call":
+        case "tool_started":
           updateAssistant((m) => ({
             ...m,
-            parts: appendToolPart(m.parts, chunk.id),
+            parts: appendToolPart(m.parts, event.id),
             toolCalls: [
               ...(m.toolCalls ?? []),
-              (() => {
-                const bknContext = turnContextRef.current ?? undefined;
-                const effectiveArgs = effectiveToolArgs(chunk.name, chunk.args, knId, bknContext);
-                const clientBlocked = !!guardAgentToolArgs(chunk.name, effectiveArgs);
-                return {
-                  id: chunk.id,
-                  name: chunk.name,
-                  // Show the effective business request, including injected defaults and bkn_context,
-                  // rather than raw model input. Taken-over lifecycle tools do not call session.callTool
-                  // for a turn, so retain their original arguments instead of displaying a fictitious request.
-                  args:
-                    clientBlocked ||
-                    (turnContextRef.current && isTakenOverLifecycleTool(chunk.name))
-                      ? chunk.args
-                      : effectiveArgs,
-                  status: "running" as const,
-                  clientBlocked,
-                  startedAt: performance.now(),
-                };
-              })(),
+              {
+                id: event.id,
+                name: event.name,
+                args: event.input,
+                status: "running",
+                startedAt: performance.now(),
+              },
             ],
           }));
           break;
-        case "tool-result":
+        case "tool_finished":
           updateAssistant((m) => ({
             ...m,
             toolCalls: (m.toolCalls ?? []).map((tc) =>
-              tc.id === chunk.id
+              tc.id === event.id
                 ? {
                     ...tc,
-                    status: "done",
-                    result: chunk.result,
-                    latencyMs: Math.round(performance.now() - tc.startedAt),
+                    status: event.status === "failed" ? "error" : "done",
+                    result: event.status === "failed" ? undefined : formatToolValue(event.output),
+                    error:
+                      event.status === "failed"
+                        ? formatToolValue(event.error ?? event.output)
+                        : undefined,
+                    latencyMs: event.durationMs ?? Math.round(performance.now() - tc.startedAt),
                   }
                 : tc,
             ),
           }));
           break;
-        case "tool-error":
-          updateAssistant((m) => ({
-            ...m,
-            toolCalls: (m.toolCalls ?? []).map((tc) =>
-              tc.id === chunk.id ? { ...tc, status: "error", error: chunk.error } : tc,
-            ),
-          }));
+        case "usage": {
+          const total = event.usage?.total_tokens;
+          if (typeof total === "number") {
+            updateAssistant((m) => ({ ...m, tokens: total }));
+            setStats((s) => ({ ...s, tokens: s.tokens + total }));
+          }
           break;
-        case "usage":
-          updateAssistant((m) => ({ ...m, tokens: (m.tokens ?? 0) + chunk.totalTokens }));
-          setStats((s) => ({ ...s, tokens: s.tokens + chunk.totalTokens }));
+        }
+        case "terminal":
+          if (event.status === "cancelled") updateAssistant((m) => ({ ...m, stopped: true }));
+          else if (event.status === "failed") addError(terminalError(event.code));
           break;
-        case "error":
-          updateAssistant((m) => ({
-            ...m,
-            errored: true,
-            errors: [
-              ...(m.errors ?? []),
-              { message: chunk.error, detail: chunk.detail, retryable: chunk.retryable ?? false },
-            ],
-          }));
+        case "result":
+          // Tokens normally carry the answer already; a run that streamed none
+          // (a replayed retry, say) still shows the committed one.
+          if (event.answer) updateAssistant((m) => (m.content ? m : withAnswer(m, event.answer)));
           break;
-        case "finish":
         default:
           break;
       }
     },
-    [updateAssistant, knId],
+    [updateAssistant, addError],
   );
 
   /**
-   * Managed lifecycle client for this pane. Conversation identity follows the KN
-   * and only changes on clear; page refresh reuses the server-issued conversation ID.
+   * The stream ended without a terminal event, so read what the server committed. A
+   * committed answer that never streamed fills the bubble; anything else is reported.
    */
-  const lifecycle = useMemo(
-    () =>
-      createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
-        agentName: AGENT_NAME,
-        conversationStore: localConversationStore(
-          conversationLsKey(knId),
-          legacyConversationLsKey(knId),
-        ),
-      }),
-    [env.base, knId, tokenProvider],
+  const recover = useCallback(
+    async (runId: string | null) => {
+      if (!runId) {
+        addError(executionRequestError(new Error("stream ended before the run started")));
+        return;
+      }
+      try {
+        const record = await getExecution({ base: env.base, tokenProvider, runId });
+        if (record.status === "succeeded") {
+          const answer = record.result?.answer ?? "";
+          // A dropped stream may have shown only part of the answer; the committed
+          // one replaces it rather than leaving a silently truncated reply.
+          updateAssistant((m) =>
+            !answer || m.content.trimEnd().endsWith(answer.trimEnd()) ? m : withAnswer(m, answer),
+          );
+        } else if (record.status === "cancelled") {
+          updateAssistant((m) => ({ ...m, stopped: true }));
+        } else if (record.status === "failed") {
+          addError(terminalError(record.error?.code));
+        } else {
+          addError(executionRequestError(new Error(`run is still ${record.status}`)));
+        }
+      } catch (error) {
+        addError(executionRequestError(error));
+      }
+    },
+    [env.base, tokenProvider, updateAssistant, addError],
   );
-
-  // Full system prompt = editable prompt + optional KN summary + caps + output contract.
-  // Dynamic sections stay outside the editable prompt because saved prompt state wins.
-  const composedSystem = useMemo(() => {
-    const sections = [systemPrompt];
-    if (profile.injectKnContext && knContext) {
-      sections.push(`## Current Knowledge Network Summary\n${knContext}`);
-    }
-    const limits = formatToolResultLimits(config);
-    if (limits) sections.push(limits);
-    sections.push(formatOutputContract(profile.evidenceHint));
-    return sections.join("\n\n");
-  }, [profile.injectKnContext, profile.evidenceHint, systemPrompt, knContext, config]);
 
   const send = useCallback(
     async (text: string, options: { replaceLastRound?: boolean } = {}) => {
       const question = text.trim();
       if (!question || busy) return;
-      if (!model) {
-        message.error(t("knowledgeNetwork.agentChat.chatPane.messages.noModel"));
-        return;
-      }
 
       setBusy(true);
       const requestSequence = ++requestSequenceRef.current;
+      const isCurrent = () => requestSequence === requestSequenceRef.current;
       const startedAt = performance.now();
 
       // Retry by removing the failed user+assistant pair and sending again.
@@ -865,19 +704,6 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         messages[messages.length - 2].role === "user"
           ? messages.slice(0, -2)
           : messages;
-
-      // Compress multi-turn context by retaining recent text-only turns with caps.
-      const history: AgentChatTurn[] = kept
-        .filter((m) => m.role === "user" || m.content.trim().length > 0)
-        .slice(-config.maxHistoryMessages)
-        .map((m) => ({
-          role: m.role,
-          content:
-            config.maxTurnChars > 0 && m.content.length > config.maxTurnChars
-              ? `${m.content.slice(0, config.maxTurnChars)}\n...[History truncated]`
-              : m.content,
-        }));
-      history.push({ role: "user", content: question });
       setMessages(() => [
         ...kept,
         { role: "user", content: question },
@@ -886,285 +712,147 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
 
       const controller = new AbortController();
       abortRef.current = controller;
-      // One interaction equals one QA turn. Accumulate answer text separately
-      // because message state is asynchronous and finally needs the final artifact.
-      let turn: Awaited<ReturnType<typeof lifecycle.beginTurn>> = null;
-      let outcome: TurnOutcome = "completed";
-      let declaredOutcome: TurnOutcome | undefined;
-      let answer = "";
-      /** Whether this turn emitted an error chunk; finish must record failed. */
-      let roundFailed = false;
-      try {
-        turn = await lifecycle.beginTurn(question);
-        turnContextRef.current = turn?.nextContext() ?? null;
-        // Lifecycle tools stay visible here; buildAgentTools handles takeover.
-        const allTools = await getTools();
-        const tools = buildAgentTools(allTools, env, knId, config, tokenProvider, {
-          resourceScope,
-          session: lifecycle.session,
-          turn: turn && {
-            ...turn,
-            declareFinish: (declared) => {
-              declaredOutcome = declared;
-            },
-          },
-        });
-
-        await runAgentChat({
-          env,
-          modelName: model,
-          system: composedSystem,
-          history,
-          tools,
-          config,
-          tokenProvider: modelTokenProvider ?? tokenProvider,
+      runIdRef.current = null;
+      const execute = (thread: string | undefined) =>
+        startExecution({
+          base: env.base,
+          tokenProvider,
+          knId,
+          message: question,
+          clientRequestId: newClientRequestId(),
+          threadId: thread,
           signal: controller.signal,
-          onChunk: (chunk) => {
-            if (chunk.type === "text") answer += chunk.delta;
-            // Stream errors are caught inside runAgentChat and returned normally.
-            // Mark the turn failed so Core does not receive completed with an empty artifact.
-            if (chunk.type === "error") roundFailed = true;
-            if (requestSequence === requestSequenceRef.current) handleChunk(chunk);
+          onEvent: (event) => {
+            if (isCurrent()) handleEvent(event);
           },
         });
+      try {
+        let terminal;
+        try {
+          terminal = await execute(threadId);
+        } catch (error) {
+          // The server forgot this thread (for example after a reinstall). History stays
+          // on screen; continue in a new thread instead of failing every later turn.
+          if (
+            threadId &&
+            error instanceof BknAgentExecutionError &&
+            error.status === 404 &&
+            !controller.signal.aborted
+          ) {
+            // Keep the saved thread until a new one actually starts: the same 404
+            // also means the Agent is unpublished, and then the old thread must
+            // survive for when it is published again. meta replaces it on success.
+            terminal = await execute(undefined);
+          } else {
+            throw error;
+          }
+        }
+        if (!terminal && isCurrent() && !controller.signal.aborted) {
+          await recover(runIdRef.current);
+        }
       } catch (error) {
-        if (requestSequence !== requestSequenceRef.current) return;
+        if (!isCurrent()) return;
         if (controller.signal.aborted) {
           // User stopped mid-turn; keep partial content and mark the turn stopped.
-          outcome = "canceled";
           updateAssistant((m) => ({ ...m, stopped: true }));
         } else {
-          outcome = "failed";
-          updateAssistant((m) => ({
-            ...m,
-            errored: true,
-            errors: [...(m.errors ?? []), normalizeAgentError(error)],
-          }));
+          addError(executionRequestError(error));
         }
       } finally {
-        // Finish before setBusy(false) because one conversation allows one active interaction.
-        // Stop returns normally, so use aborted state rather than outcome alone.
-        const finalOutcome: TurnOutcome =
-          roundFailed && outcome === "completed" ? "failed" : outcome;
-        const recordedOutcome: TurnOutcome = controller.signal.aborted
-          ? "canceled"
-          : finalOutcome === "completed"
-            ? (declaredOutcome ?? finalOutcome)
-            : finalOutcome;
-        if (turn) {
-          await turn.finish(recordedOutcome, answer).catch(() => undefined);
-        }
-        if (requestSequence === requestSequenceRef.current) {
-          // Clear only if this is still the current turn.
-          turnContextRef.current = null;
+        if (isCurrent()) {
           abortRef.current = null;
+          runIdRef.current = null;
           const elapsed = performance.now() - startedAt;
-          // Record turn elapsed time on the final assistant message and cumulative stats.
+          const now = performance.now();
+          const interrupted = t("knowledgeNetwork.agentChat.chatPane.toolCall.interrupted");
+          // Record turn elapsed time on the final assistant message and cumulative stats. A
+          // call still running when the turn ended never got a result; close it with its time.
           setMessages((cur) =>
             cur.map((m, i) =>
-              i === cur.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m,
+              i === cur.length - 1 && m.role === "assistant"
+                ? {
+                    ...m,
+                    ms: elapsed,
+                    toolCalls: m.toolCalls?.map((tc) =>
+                      tc.status === "running"
+                        ? {
+                            ...tc,
+                            status: "error",
+                            error: interrupted,
+                            latencyMs: Math.round(now - tc.startedAt),
+                          }
+                        : tc,
+                    ),
+                  }
+                : m,
             ),
           );
           setStats((s) => ({ ...s, ms: s.ms + elapsed }));
-          setBusy(false); // Triggers the persist-on-completion effect below.
+          setBusy(false); // Triggers the persist-on-completion effect above.
         }
       }
     },
     [
       busy,
-      model,
       messages,
-      env,
+      env.base,
       knId,
-      composedSystem,
-      config,
-      getTools,
+      threadId,
       tokenProvider,
-      modelTokenProvider,
-      resourceScope,
-      lifecycle,
-      handleChunk,
+      handleEvent,
+      recover,
       updateAssistant,
-      message,
+      addError,
       t,
     ],
   );
 
   const stop = useCallback(() => {
+    // Ask the server to cancel explicitly; closing the stream also cancels it, so a
+    // failed cancel request needs no handling here.
+    const runId = runIdRef.current;
+    if (runId) {
+      void cancelExecution({ base: env.base, tokenProvider, runId }).catch(() => undefined);
+    }
     abortRef.current?.abort();
-  }, []);
+  }, [env.base, tokenProvider]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
     setStats({ tokens: 0, ms: 0 });
-    // Clearing chat starts a new managed conversation; refresh reuses the saved server ID.
-    lifecycle.reset();
+    // Clearing chat starts a new server thread on the next send.
+    setThreadId(undefined);
     try {
       localStorage.removeItem(msgsLsKey(knId));
     } catch {
       /* ignore */
     }
-  }, [knId, lifecycle]);
+  }, [knId]);
 
   useImperativeHandle(
     ref,
     () => ({
       send: (text: string) => void send(text),
       stop,
-      openSettings,
       clear: clearChat,
     }),
-    [send, stop, openSettings, clearChat],
+    [send, stop, clearChat],
   );
 
-  const modelOptions = useMemo(
-    () =>
-      models.map((m) => ({
-        value: m.modelName,
-        label: m.default
-          ? t("knowledgeNetwork.agentChat.chatPane.model.defaultSuffix", { modelName: m.modelName })
-          : m.modelName,
-      })),
-    [models, t],
-  );
   const empty = messages.length === 0;
   const lastIdx = messages.length - 1;
-  const noLlm = modelsLoaded && models.length === 0;
   const fallbackSuggestionList = useMemo(() => FALLBACK_SUGGESTION_KEYS.map((key) => t(key)), [t]);
   const sugList = suggestions.length > 0 ? suggestions : fallbackSuggestionList;
 
-  const promptEditor = (
-    <textarea
-      className={styles.promptTa}
-      value={draftSystemPrompt}
-      spellCheck={false}
-      onChange={(e) => setDraftSystemPrompt(e.target.value)}
-      placeholder={t("knowledgeNetwork.agentChat.chatPane.settings.promptPlaceholder")}
-    />
-  );
-
-  const paramsGrid = (
-    <div className={styles.cfgGrid}>
-      {CONFIG_FIELD_KEYS.map((f) => (
-        <label key={f.key} className={styles.cfgField}>
-          <span className={styles.cfgLabel}>
-            {t(`knowledgeNetwork.agentChat.chatPane.configFields.${f.key}.label`)}
-            <Tooltip title={t(`knowledgeNetwork.agentChat.chatPane.configFields.${f.key}.hint`)}>
-              <QuestionCircleOutlined className={styles.cfgHintIcon} />
-            </Tooltip>
-          </span>
-          <input
-            type="number"
-            min={0}
-            className={styles.cfgInput}
-            value={draftConfig[f.key]}
-            onChange={(e) => setDraftConfigField(f.key, Number(e.target.value))}
-          />
-        </label>
-      ))}
-    </div>
-  );
   return (
     <div className={styles.paneRoot}>
-      <Drawer
-        title={t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")}
-        placement="right"
-        width={520}
-        open={settingsOpen}
-        onClose={cancelSettings}
-        destroyOnHidden={false}
-        className={styles.configDrawer}
-        footer={
-          <div className={styles.configFooter}>
-            <button type="button" className={styles.cancelBtn} onClick={cancelSettings}>
-              {t("knowledgeNetwork.agentChat.chatPane.settings.cancel")}
-            </button>
-            <button type="button" className={styles.confirmBtn} onClick={saveSettings}>
-              {t("knowledgeNetwork.agentChat.chatPane.settings.confirm")}
-            </button>
-          </div>
-        }
-      >
-        <section className={styles.configSection}>
-          <div className={styles.configSectionHead}>
-            <div>
-              <h3>{t("knowledgeNetwork.agentChat.chatPane.settings.modelConfigTitle")}</h3>
-              <p>{t("knowledgeNetwork.agentChat.chatPane.settings.modelConfigDescription")}</p>
-            </div>
-          </div>
-          <div className={styles.configCard}>
-            <div className={styles.configFieldLabel}>
-              {t("knowledgeNetwork.agentChat.chatPane.settings.modelLabel")}
-            </div>
-            <Select
-              size="small"
-              className={styles.modelSelect}
-              popupClassName={styles.paneMenu}
-              value={draftModel || undefined}
-              onChange={setDraftModel}
-              options={modelOptions}
-              placeholder={t("knowledgeNetwork.agentChat.chatPane.settings.selectModel")}
-              disabled={busy}
-              popupMatchSelectWidth={false}
-            />
-          </div>
-        </section>
-        <section className={styles.configSection}>
-          <div className={styles.configSectionHead}>
-            <div>
-              <h3>
-                <ThunderboltFilled />{" "}
-                {t("knowledgeNetwork.agentChat.chatPane.settings.promptTitle")}
-              </h3>
-              <p>{t("knowledgeNetwork.agentChat.chatPane.settings.promptDescription")}</p>
-            </div>
-            <button type="button" className={styles.linkBtn} onClick={resetDraftSystemPrompt}>
-              {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
-            </button>
-          </div>
-          {promptEditor}
-        </section>
-        <section className={styles.configSection}>
-          <div className={styles.configSectionHead}>
-            <div>
-              <h3>{t("knowledgeNetwork.agentChat.chatPane.settings.paramsTitle")}</h3>
-              <p>{t("knowledgeNetwork.agentChat.chatPane.settings.paramsDescription")}</p>
-            </div>
-            <button type="button" className={styles.linkBtn} onClick={resetDraftConfig}>
-              {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
-            </button>
-          </div>
-          {paramsGrid}
-        </section>
-      </Drawer>
-
       <div className={styles.scroll}>
-        {noLlm ? (
+        {empty ? (
           <div className={styles.intro}>
             <div className={styles.introGlyph}>
               <ThunderboltFilled />
             </div>
-            <h3>{t("knowledgeNetwork.agentChat.chatPane.empty.noLlmTitle")}</h3>
-            <p>{t("knowledgeNetwork.agentChat.chatPane.empty.noLlmDescription")}</p>
-            <div className={styles.sugs}>
-              <button
-                type="button"
-                className={styles.sug}
-                onClick={() => void navigate("/model-resources/models")}
-              >
-                <span className={styles.sugText}>
-                  {t("knowledgeNetwork.agentChat.chatPane.empty.goModelFactory")}
-                </span>
-                <RightOutlined className={styles.sugArrow} />
-              </button>
-            </div>
-          </div>
-        ) : empty ? (
-          <div className={styles.intro}>
-            <div className={styles.introGlyph}>
-              <ThunderboltFilled />
-            </div>
-            <h3>{profile.emptyTitle ?? t("knowledgeNetwork.agentChat.chatPane.empty.start")}</h3>
+            <h3>{emptyTitle ?? t("knowledgeNetwork.agentChat.chatPane.empty.start")}</h3>
             <p>
               {t("knowledgeNetwork.agentChat.chatPane.empty.knIntro", {
                 knId,
@@ -1272,14 +960,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                         ))}
                       </div>
                     ) : null}
-                    {m.role === "assistant" ? (
-                      busy && isLast ? (
-                        <div className={styles.msgMeta}>
-                          - ~
-                          {fmtTokens(estimateTokens((m.reasoning?.length ?? 0) + m.content.length))}{" "}
-                          tokens
-                        </div>
-                      ) : m.tokens || m.ms ? (
+                    {/* Usage arrives with the result; an estimate while streaming read as a wrong count. */}
+                    {m.role === "assistant" && !(busy && isLast) ? (
+                      m.tokens || m.ms ? (
                         <div className={styles.msgMeta}>
                           {m.tokens ? `${fmtTokens(m.tokens)} tokens` : ""}
                           {m.tokens && m.ms ? " - " : ""}
