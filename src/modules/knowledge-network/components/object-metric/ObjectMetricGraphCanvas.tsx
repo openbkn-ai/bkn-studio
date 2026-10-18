@@ -8,29 +8,22 @@
 import {
   AimOutlined,
   ArrowLeftOutlined,
-  MoreOutlined,
   QuestionCircleOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
 } from "@ant-design/icons";
-import {
-  Button,
-  Descriptions,
-  Drawer,
-  Dropdown,
-  Empty,
-  Pagination,
-  Spin,
-  Tooltip,
-  Typography,
-} from "antd";
+import { Button, Descriptions, Drawer, Empty, Pagination, Spin, Tooltip, Typography } from "antd";
 import type { KeyboardEvent, PointerEvent } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
 import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
-import { objectMetricPropertyDisplayName } from "@/modules/knowledge-network/lib/object-metric-display";
+import {
+  objectMetricAggregationDisplayName,
+  objectMetricPropertyDisplayName,
+} from "@/modules/knowledge-network/lib/object-metric-display";
+import { objectMetricUnitDisplayLabel } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
 import {
   objectMetricVersionKey,
   resolveObjectMetricReferences,
@@ -91,8 +84,7 @@ const RELATION_PAGE_SIZE = 6;
 const NEIGHBOR_COUNT_CONCURRENCY = 3;
 const METRIC_SCAN_PAGE_SIZE = 50;
 const MAX_GRAPH_METRICS = 200;
-// Dense rings use the regular spacing to keep layout work bounded during dragging.
-const MAX_CLUSTERED_METRICS_PER_RING = 36;
+const MAX_CLUSTERED_METRICS_PER_COLUMN = 36;
 const EXPANDED_METRIC_BATCH_SIZE = 6;
 const INITIAL_RING_VISIBLE_COUNTS: Record<ObjectMetricTypeV1, number> = {
   atomic: EXPANDED_METRIC_BATCH_SIZE,
@@ -102,20 +94,11 @@ const INITIAL_RING_VISIBLE_COUNTS: Record<ObjectMetricTypeV1, number> = {
 const GRAPH_WIDTH = 1000;
 const GRAPH_HEIGHT = 560;
 const CENTER = { x: GRAPH_WIDTH / 2, y: GRAPH_HEIGHT / 2 };
+const FOCUS_OWNER_POSITION = { x: 110, y: GRAPH_HEIGHT / 2 };
 const FOCUS_OWNER_NODE_KEY = "metric-focus:owner";
 const INITIAL_VIEW: ViewBox = { x: 0, y: 0, width: GRAPH_WIDTH, height: GRAPH_HEIGHT };
 const MIN_ZOOM = 0.65;
 const MAX_ZOOM = 2.5;
-const metricLayerRadii: Record<ObjectMetricTypeV1, Point> = {
-  atomic: { x: 185, y: 115 },
-  derived: { x: 305, y: 180 },
-  composite: { x: 405, y: 220 },
-};
-const metricLayerStartAngles: Record<ObjectMetricTypeV1, number> = {
-  atomic: -Math.PI / 2,
-  derived: -Math.PI / 2 + Math.PI / 12,
-  composite: -Math.PI / 2 + Math.PI / 8,
-};
 const metricTypeOrder: Record<ObjectMetricTypeV1, number> = {
   atomic: 0,
   derived: 1,
@@ -141,22 +124,6 @@ const metricStatusKeys = {
 } as const;
 
 type MetricTextKey = Parameters<typeof objectMetricText>[0];
-const aggregationKeys: Record<
-  Extract<
-    ObjectMetricRecordV1["definition"]["specification"],
-    { kind: "atomic" }
-  >["measure"]["aggregation"],
-  MetricTextKey
-> = {
-  avg: "mdb7538b96322",
-  count: "m3a6663a758c9",
-  count_distinct: "m1e96cd1f49bf",
-  count_rows: "m21179deb9a74",
-  identity: "m7ea9fbba115d",
-  max: "m1e7a22820768",
-  min: "mb2dcdcfabb6a",
-  sum: "m2819237ddb01",
-};
 const physicalTypeKeys: Record<
   ObjectMetricRecordV1["definition"]["result_semantics"]["value"]["physical_type"],
   MetricTextKey
@@ -301,7 +268,7 @@ function orderAtomicMetricsBySharedDownstream(
   }) => ObjectMetricRecordV1 | undefined,
 ): ObjectMetricRecordV1[] {
   const sorted = [...atomicMetrics].sort(compareMetricNames);
-  if (sorted.length < 3 || sorted.length > MAX_CLUSTERED_METRICS_PER_RING) return sorted;
+  if (sorted.length < 3 || sorted.length > MAX_CLUSTERED_METRICS_PER_COLUMN) return sorted;
 
   const atomicKeys = new Set(sorted.map(metricNodeKey));
   const affinity = new Map<string, Map<string, number>>();
@@ -364,57 +331,102 @@ function orderAtomicMetricsBySharedDownstream(
   return ordered;
 }
 
-function pointAngle(point: Point): number {
-  return Math.atan2(point.y - CENTER.y, point.x - CENTER.x);
-}
+type FocusLayoutItem =
+  { kind: "metric"; metric: ObjectMetricRecordV1 } | { kind: "more"; type: ObjectMetricTypeV1 };
 
-function circularDistance(left: number, right: number): number {
-  return Math.abs(Math.atan2(Math.sin(left - right), Math.cos(left - right)));
-}
-
-function layerPoint(type: ObjectMetricTypeV1, angle: number): Point {
-  const radii = metricLayerRadii[type];
-  return {
-    x: CENTER.x + Math.cos(angle) * radii.x,
-    y: CENTER.y + Math.sin(angle) * radii.y,
+function layoutMetricFocus(
+  groups: Record<ObjectMetricTypeV1, ObjectMetricRecordV1[]>,
+  hiddenCounts: Record<ObjectMetricTypeV1, number>,
+  resolveMetric: (reference: {
+    metric_id: string;
+    version: number;
+  }) => ObjectMetricRecordV1 | undefined,
+) {
+  const allMetrics = Object.values(groups).flat();
+  const visibleMetrics = [
+    ...orderAtomicMetricsBySharedDownstream(groups.atomic, allMetrics, resolveMetric),
+    ...[...groups.derived].sort(compareMetricNames),
+    ...[...groups.composite].sort(compareMetricNames),
+  ];
+  const metricOrder = new Map(
+    visibleMetrics.map((metric, index) => [metricNodeKey(metric), index]),
+  );
+  const visibleKeys = new Set(visibleMetrics.map(metricNodeKey));
+  const depths = new Map<string, number>();
+  const depthFor = (metric: ObjectMetricRecordV1, visiting = new Set<string>()): number => {
+    const key = metricNodeKey(metric);
+    if (depths.has(key)) return depths.get(key)!;
+    if (visiting.has(key)) return 1;
+    visiting.add(key);
+    const parentDepths = directMetricRefs(metric)
+      .map(resolveMetric)
+      .filter((parent): parent is ObjectMetricRecordV1 =>
+        Boolean(parent && visibleKeys.has(metricNodeKey(parent)) && metricNodeKey(parent) !== key),
+      )
+      .map((parent) => depthFor(parent, visiting));
+    visiting.delete(key);
+    // A metric's own declared dependencies determine its column, not its metric type.
+    const depth = parentDepths.length ? Math.max(...parentDepths) + 1 : 1;
+    depths.set(key, depth);
+    return depth;
   };
-}
+  visibleMetrics.forEach((metric) => depthFor(metric));
 
-function clusteredLayerAngle(
-  type: ObjectMetricTypeV1,
-  preferredAngle: number | undefined,
-  assignedAngles: number[],
-  slotCount: number,
-): number {
-  const candidateCount = Math.max(72, slotCount * 4);
-  const minimumGap = Math.min((2 * Math.PI) / slotCount, type === "derived" ? 0.42 : 0.35);
-  const candidates = Array.from(
-    { length: candidateCount },
-    (_, index) => metricLayerStartAngles[type] + (2 * Math.PI * index) / candidateCount,
+  const columns = new Map<number, FocusLayoutItem[]>();
+  visibleMetrics.forEach((metric) => {
+    const depth = depths.get(metricNodeKey(metric))!;
+    columns.set(depth, [...(columns.get(depth) ?? []), { kind: "metric", metric }]);
+  });
+  (["atomic", "derived", "composite"] as const).forEach((type) => {
+    if (!hiddenCounts[type]) return;
+    const groupDepths = groups[type].map((metric) => depths.get(metricNodeKey(metric)) ?? 1);
+    const depth = groupDepths.length ? Math.max(...groupDepths) : metricTypeOrder[type] + 1;
+    columns.set(depth, [...(columns.get(depth) ?? []), { kind: "more", type }]);
+  });
+
+  const automaticMetricPositions = new Map<string, Point>();
+  const moreMetricPositions: Partial<Record<ObjectMetricTypeV1, Point>> = {};
+  const sortedDepths = [...columns.keys()].sort((left, right) => left - right);
+  const columnGap = Math.min(
+    220,
+    (GRAPH_WIDTH - FOCUS_OWNER_POSITION.x - 100) / sortedDepths.length,
   );
-  const spaced = candidates.filter((candidate) =>
-    assignedAngles.every((assigned) => circularDistance(candidate, assigned) >= minimumGap - 0.01),
-  );
-  const choices = spaced.length ? spaced : candidates;
-  if (preferredAngle !== undefined) {
-    const radii = metricLayerRadii[type];
-    const targetAngle = Math.atan2(
-      Math.sin(preferredAngle) / radii.y,
-      Math.cos(preferredAngle) / radii.x,
-    );
-    return choices.reduce((best, candidate) =>
-      circularDistance(candidate, targetAngle) < circularDistance(best, targetAngle)
-        ? candidate
-        : best,
-    );
-  }
-  if (!assignedAngles.length) return choices[0];
-  return choices.reduce((best, candidate) =>
-    Math.min(...assignedAngles.map((angle) => circularDistance(candidate, angle))) >
-    Math.min(...assignedAngles.map((angle) => circularDistance(best, angle)))
-      ? candidate
-      : best,
-  );
+  sortedDepths.forEach((depth, columnIndex) => {
+    const items = columns.get(depth)!;
+    const parentY = (item: FocusLayoutItem) => {
+      if (item.kind !== "metric") return undefined;
+      const positions = directMetricRefs(item.metric)
+        .map(resolveMetric)
+        .map((parent) => parent && automaticMetricPositions.get(metricNodeKey(parent)))
+        .filter((position): position is Point => Boolean(position));
+      return positions.length
+        ? positions.reduce((sum, position) => sum + position.y, 0) / positions.length
+        : undefined;
+    };
+    items.sort((left, right) => {
+      const leftY = parentY(left);
+      const rightY = parentY(right);
+      if (leftY !== undefined && rightY !== undefined && leftY !== rightY) return leftY - rightY;
+      if (leftY !== undefined && rightY === undefined) return -1;
+      if (rightY !== undefined && leftY === undefined) return 1;
+      if (left.kind === "more" || right.kind === "more") return left.kind === "more" ? 1 : -1;
+      return (
+        (metricOrder.get(metricNodeKey(left.metric)) ?? 0) -
+        (metricOrder.get(metricNodeKey(right.metric)) ?? 0)
+      );
+    });
+    const rowGap = Math.min(84, (GRAPH_HEIGHT - 120) / Math.max(1, items.length - 1));
+    items.forEach((item, rowIndex) => {
+      const position = {
+        x: FOCUS_OWNER_POSITION.x + columnGap * (columnIndex + 1),
+        y: GRAPH_HEIGHT / 2 + (rowIndex - (items.length - 1) / 2) * rowGap,
+      };
+      if (item.kind === "metric")
+        automaticMetricPositions.set(metricNodeKey(item.metric), position);
+      else moreMetricPositions[item.type] = position;
+    });
+  });
+  return { automaticMetricPositions, moreMetricPositions, visibleMetrics };
 }
 
 function onButtonKeyDown(event: KeyboardEvent<SVGGElement>, action: () => void) {
@@ -799,7 +811,7 @@ export function ObjectMetricGraphCanvas({
   const relationshipOwnerPosition = nodePositions[selectedObjectTypeId] ?? CENTER;
   const ownerNodeKey = expandedGroup ? FOCUS_OWNER_NODE_KEY : selectedObjectTypeId;
   const ownerPosition = expandedGroup
-    ? (nodePositions[FOCUS_OWNER_NODE_KEY] ?? CENTER)
+    ? (nodePositions[FOCUS_OWNER_NODE_KEY] ?? FOCUS_OWNER_POSITION)
     : relationshipOwnerPosition;
   const relationGeometries = useMemo(() => {
     const geometries = new Map<string, ReturnType<typeof edgeGeometry>>();
@@ -860,8 +872,10 @@ export function ObjectMetricGraphCanvas({
         metric,
       ]),
     );
+    const loadedMetricsById = new Map(metrics.map((metric) => [metric.definition.id, metric]));
     const resolveLoadedMetric = (reference: { metric_id: string; version: number }) =>
-      loadedMetricsByRef.get(objectMetricVersionKey(reference.metric_id, reference.version));
+      loadedMetricsByRef.get(objectMetricVersionKey(reference.metric_id, reference.version)) ??
+      loadedMetricsById.get(reference.metric_id);
     const visibleMetricKeys = new Set<string>();
     const revealMetricWithDependencies = (metric: ObjectMetricRecordV1): void => {
       const key = metricNodeKey(metric);
@@ -885,104 +899,25 @@ export function ObjectMetricGraphCanvas({
         visibleMetricsByType[metric.definition.metric_type].push(metric);
       }
     });
-    const automaticMetricPositions = new Map<string, Point>();
-    const moreMetricPositions: Partial<Record<ObjectMetricTypeV1, Point>> = {};
     const hiddenMetricCounts: Record<ObjectMetricTypeV1, number> = {
       atomic: 0,
       derived: 0,
       composite: 0,
     };
-    const visibleMetrics: ObjectMetricRecordV1[] = [];
     (["atomic", "derived", "composite"] as const).forEach((type) => {
-      const group = visibleMetricsByType[type];
-      const hidden = metricsByType[type].filter(
+      hiddenMetricCounts[type] = metricsByType[type].filter(
         (metric) => !visibleMetricKeys.has(metricNodeKey(metric)),
       ).length;
-      hiddenMetricCounts[type] = hidden;
-
-      const dependencyAngle = (metric: ObjectMetricRecordV1) => {
-        const dependencyPoints = directMetricRefs(metric)
-          .map((reference) => {
-            const dependency = resolveLoadedMetric(reference);
-            return dependency ? automaticMetricPositions.get(metricNodeKey(dependency)) : undefined;
-          })
-          .filter((point): point is Point => Boolean(point));
-        if (!dependencyPoints.length) return undefined;
-        const vector = dependencyPoints.reduce(
-          (current, point) => ({
-            x: current.x + Math.cos(pointAngle(point)),
-            y: current.y + Math.sin(pointAngle(point)),
-          }),
-          { x: 0, y: 0 },
-        );
-        return Math.atan2(vector.y, vector.x);
-      };
-      const ordered =
-        type === "atomic"
-          ? orderAtomicMetricsBySharedDownstream(
-              group,
-              Object.values(visibleMetricsByType).flat(),
-              resolveLoadedMetric,
-            )
-          : [...group].sort(compareMetricNames);
-      const slotCount = ordered.length + (hidden > 0 ? 1 : 0);
-      const availableAngles = Array.from(
-        { length: slotCount },
-        (_, index) => metricLayerStartAngles[type] + (2 * Math.PI * index) / slotCount,
-      );
-      const metricsWithDependencies = ordered
-        .map((metric) => ({ angle: dependencyAngle(metric), metric }))
-        .filter(
-          (item): item is { angle: number; metric: ObjectMetricRecordV1 } =>
-            item.angle !== undefined,
-        )
-        .sort(
-          (left, right) =>
-            left.angle - right.angle ||
-            left.metric.definition.name.localeCompare(right.metric.definition.name),
-        );
-      const clusterDependencies =
-        type !== "atomic" &&
-        metricsWithDependencies.length > 0 &&
-        slotCount <= MAX_CLUSTERED_METRICS_PER_RING;
-      const assignedAngles: number[] = [];
-      const assignedMetricKeys = new Set<string>();
-      metricsWithDependencies.forEach(({ angle, metric }) => {
-        let assignedAngle: number;
-        if (clusterDependencies) {
-          assignedAngle = clusteredLayerAngle(type, angle, assignedAngles, slotCount);
-        } else {
-          let bestIndex = 0;
-          availableAngles.forEach((candidate, index) => {
-            if (
-              circularDistance(candidate, angle) <
-              circularDistance(availableAngles[bestIndex], angle)
-            ) {
-              bestIndex = index;
-            }
-          });
-          [assignedAngle] = availableAngles.splice(bestIndex, 1);
-        }
-        assignedAngles.push(assignedAngle);
-        automaticMetricPositions.set(metricNodeKey(metric), layerPoint(type, assignedAngle));
-        assignedMetricKeys.add(metricNodeKey(metric));
-      });
-      ordered
-        .filter((metric) => !assignedMetricKeys.has(metricNodeKey(metric)))
-        .forEach((metric) => {
-          const assignedAngle = clusterDependencies
-            ? clusteredLayerAngle(type, undefined, assignedAngles, slotCount)
-            : (availableAngles.shift() ?? metricLayerStartAngles[type]);
-          assignedAngles.push(assignedAngle);
-          automaticMetricPositions.set(metricNodeKey(metric), layerPoint(type, assignedAngle));
-        });
-      visibleMetrics.push(...ordered);
-      if (hidden > 0) {
-        const angle = clusterDependencies
-          ? clusteredLayerAngle(type, undefined, assignedAngles, slotCount)
-          : (availableAngles.shift() ?? metricLayerStartAngles[type]);
+    });
+    const { automaticMetricPositions, moreMetricPositions, visibleMetrics } = layoutMetricFocus(
+      visibleMetricsByType,
+      hiddenMetricCounts,
+      resolveLoadedMetric,
+    );
+    (["atomic", "derived", "composite"] as const).forEach((type) => {
+      if (moreMetricPositions[type]) {
         moreMetricPositions[type] =
-          nodePositions[moreMetricNodeKey(type)] ?? layerPoint(type, angle);
+          nodePositions[moreMetricNodeKey(type)] ?? moreMetricPositions[type];
       }
     });
     const visibleMetricPositions = new Map(
@@ -998,12 +933,17 @@ export function ObjectMetricGraphCanvas({
         metric,
       ]),
     );
+    const visibleMetricsById = new Map(
+      visibleMetrics.map((metric) => [metric.definition.id, metric]),
+    );
     const visibleDependencyEdges = visibleMetrics.flatMap((targetMetric) =>
       directMetricRefs(targetMetric).flatMap((reference) => {
-        const sourceMetric = visibleMetricRefs.get(
-          objectMetricVersionKey(reference.metric_id, reference.version),
-        );
-        return sourceMetric ? [{ sourceMetric, targetMetric }] : [];
+        const sourceMetric =
+          visibleMetricRefs.get(objectMetricVersionKey(reference.metric_id, reference.version)) ??
+          visibleMetricsById.get(reference.metric_id);
+        return sourceMetric && sourceMetric.definition.id !== targetMetric.definition.id
+          ? [{ sourceMetric, targetMetric }]
+          : [];
       }),
     );
     return {
@@ -1851,44 +1791,24 @@ export function ObjectMetricGraphCanvas({
                   {objectMetricText("m9d0eedd99d2b")}
                 </Button>
               ) : null}
-              {(drawerActions?.canDeleteDraft && onDeleteDraft) ||
-              (drawerActions?.canDeprecate && onDeprecate) ? (
-                <Dropdown
-                  trigger={["click"]}
-                  menu={{
-                    items: [
-                      ...(drawerActions.canDeleteDraft && onDeleteDraft
-                        ? [
-                            {
-                              danger: true,
-                              key: "delete",
-                              label: objectMetricText("m1dfe58237bbf"),
-                            },
-                          ]
-                        : []),
-                      ...(drawerActions.canDeprecate && onDeprecate
-                        ? [
-                            {
-                              danger: true,
-                              disabled: Boolean(drawerActions.deprecateReason),
-                              key: "deprecate",
-                              label: drawerActions.deprecateReason
-                                ? `${objectMetricText("mca0ff1e63793")} · ${drawerActions.deprecateReason}`
-                                : objectMetricText("mca0ff1e63793"),
-                            },
-                          ]
-                        : []),
-                    ],
-                    onClick: ({ key }) => {
-                      if (key === "delete") onDeleteDraft?.(drawerMetric);
-                      if (key === "deprecate") onDeprecate?.(drawerMetric);
-                    },
-                  }}
-                >
-                  <Button aria-label={objectMetricText("graphMoreActions")} icon={<MoreOutlined />}>
-                    {objectMetricText("graphMoreActions")}
-                  </Button>
-                </Dropdown>
+              {drawerActions?.canDeleteDraft && onDeleteDraft ? (
+                <Button autoInsertSpace={false} danger onClick={() => onDeleteDraft(drawerMetric)}>
+                  {objectMetricText("m1dfe58237bbf")}
+                </Button>
+              ) : null}
+              {drawerActions?.canDeprecate && onDeprecate ? (
+                <Tooltip title={drawerActions.deprecateReason}>
+                  <span>
+                    <Button
+                      autoInsertSpace={false}
+                      danger
+                      disabled={Boolean(drawerActions.deprecateReason)}
+                      onClick={() => onDeprecate(drawerMetric)}
+                    >
+                      {objectMetricText("mca0ff1e63793")}
+                    </Button>
+                  </span>
+                </Tooltip>
               ) : null}
             </div>
             <Descriptions column={1} size="small">
@@ -1937,7 +1857,9 @@ export function ObjectMetricGraphCanvas({
               ) : null}
               {drawerAtomicSpecification ? (
                 <Descriptions.Item label={objectMetricText("graphCalculationSummary")}>
-                  {objectMetricText(aggregationKeys[drawerAtomicSpecification.measure.aggregation])}
+                  {objectMetricAggregationDisplayName(
+                    drawerAtomicSpecification.measure.aggregation,
+                  )}
                   {drawerAtomicSource ? ` · ${drawerAtomicSource}` : null}
                 </Descriptions.Item>
               ) : null}
@@ -1950,7 +1872,9 @@ export function ObjectMetricGraphCanvas({
               ) : null}
               {drawerValue?.unit ? (
                 <Descriptions.Item label={objectMetricText("m80b19d68b149")}>
-                  {drawerValue.unit.display_symbol?.trim() || drawerValue.unit.code}
+                  <Tooltip title={drawerValue.unit.code}>
+                    <span>{objectMetricUnitDisplayLabel(drawerValue.unit)}</span>
+                  </Tooltip>
                 </Descriptions.Item>
               ) : null}
               {drawerRelationNames.length ? (

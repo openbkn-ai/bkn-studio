@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  objectMetricUnitDisplayLabel,
   objectMetricUnitOptionGroups,
   objectMetricUnitOptions,
   objectMetricUnitSelectionLocked,
@@ -40,7 +41,7 @@ describe("object metric unit catalog", () => {
   });
 
   it.each([
-    ["count", "int64", ["1", "item", "order", "person", "record", "occurrence"]],
+    ["count", "int64", ["1", "item", "order", "person", "record", "occurrence", "transaction"]],
     ["duration", "duration", ["ms", "s", "min", "h", "d"]],
     ["percentage", "decimal", ["%"]],
     ["ratio", "decimal", ["1"]],
@@ -97,5 +98,23 @@ describe("object metric unit catalog", () => {
       system: "ISO_4217",
     });
     expect(options.filter((item) => item.code === "CNY")).toHaveLength(1);
+  });
+
+  it("shows business names for registered count units without changing their codes", () => {
+    const unit = {
+      code: "transaction",
+      quantity_kind: "count" as const,
+      scale_factor: 1,
+      system: "registered" as const,
+    };
+    expect(
+      objectMetricUnitOptions("count", "int64").find((item) => item.code === unit.code)?.label,
+    ).toBe("交易笔 · transaction");
+    expect(objectMetricUnitDisplayLabel(unit)).toBe("交易笔");
+    expect(objectMetricUnitDisplayLabel(unit, true)).toBe("交易笔 (transaction)");
+    expect(objectMetricUnitDisplayLabel({ ...unit, display_symbol: "笔" })).toBe("笔");
+    expect(objectMetricUnitDisplayLabel({ ...unit, code: "custom_order" })).toBe(
+      "业务单位（代码：custom_order）",
+    );
   });
 });

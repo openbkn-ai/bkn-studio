@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { EChartsOption } from "echarts";
 import { describe, expect, it, vi } from "vitest";
 
@@ -63,18 +63,36 @@ function heatmapColors(): string[] | undefined {
   return visualMap?.inRange?.color;
 }
 
+function chooseChart(label: string) {
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "图形类型" }));
+  fireEvent.click(screen.getByText(label));
+}
+
 describe("ObjectMetricAnalysisPanel", () => {
+  it("keeps selected-bucket actions inside the analysis panel above the chart", () => {
+    render(
+      <ObjectMetricAnalysisPanel
+        result={result}
+        selectionControls={<button type="button">按此值筛选</button>}
+      />,
+    );
+    const panel = screen.getByRole("region", { name: "图表与数据" });
+    const action = within(panel).getByRole("button", { name: "按此值筛选" });
+    const chart = within(panel).getByTestId("metric-chart");
+    expect(action.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("selects the exact result bucket from a bar point", () => {
     const onSelectEntry = vi.fn();
     render(<ObjectMetricAnalysisPanel result={result} onSelectEntry={onSelectEntry} />);
-    fireEvent.click(screen.getByText("柱状"));
+    chooseChart("柱状");
     mocks.onClick?.({ dataIndex: 1 });
     expect(onSelectEntry).toHaveBeenCalledWith(result.entries[1]);
   });
   it("selects a unique stacked-bar bucket without guessing when cells are combined", () => {
     const onSelectEntry = vi.fn();
     render(<ObjectMetricAnalysisPanel result={result} onSelectEntry={onSelectEntry} />);
-    fireEvent.click(screen.getByText("堆叠柱"));
+    chooseChart("堆叠柱");
     mocks.onClick?.({ dataIndex: 0, name: "East", seriesName: "Web" });
     expect(onSelectEntry).toHaveBeenCalledWith(result.entries[0]);
   });
@@ -93,6 +111,8 @@ describe("ObjectMetricAnalysisPanel", () => {
         onSelectEntry={onSelectEntry}
       />,
     );
+    fireEvent.click(screen.getByText("图表"));
+    chooseChart("热力图");
     mocks.onClick?.({ data: [0, 0, 24], dataIndex: 0 });
     expect(onSelectEntry).not.toHaveBeenCalled();
   });
@@ -125,7 +145,7 @@ describe("ObjectMetricAnalysisPanel", () => {
     };
     const { rerender } = render(<ObjectMetricAnalysisPanel result={preciseResult} />);
     expect(screen.getByText("9007199254740993")).toBeInTheDocument();
-    expect(screen.getByText("图形按近似数值绘制；精确值请查看下方结果表格。")).toBeInTheDocument();
+    expect(screen.getByText("图形按近似数值绘制；精确值请切换到数据表查看。")).toBeInTheDocument();
 
     rerender(
       <ObjectMetricAnalysisPanel
@@ -135,7 +155,7 @@ describe("ObjectMetricAnalysisPanel", () => {
         }}
       />,
     );
-    expect(screen.getByText("图形按近似数值绘制；精确值请查看下方结果表格。")).toBeInTheDocument();
+    expect(screen.getByText("图形按近似数值绘制；精确值请切换到数据表查看。")).toBeInTheDocument();
   });
 
   it("uses the valid source entry for a summary when an earlier entry has no data", () => {
@@ -151,13 +171,197 @@ describe("ObjectMetricAnalysisPanel", () => {
         }}
       />,
     );
+    fireEvent.click(screen.getByText("图表"));
     expect(screen.getByText("9007199254740993")).toBeInTheDocument();
+  });
+
+  it("selects a summary bucket from its metric card", () => {
+    const onSelectEntry = vi.fn();
+    const entry = { bucket_key: "all-orders", status: "ok" as const, value: 42 };
+    render(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          entries: [entry],
+          model: { ...result.model, output_shape: "summary" },
+        }}
+        onSelectEntry={onSelectEntry}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "选择指标结果查看分析操作" }));
+    expect(onSelectEntry).toHaveBeenCalledWith(entry);
+  });
+
+  it("uses the business unit name on a summary card", () => {
+    render(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          entries: [{ status: "ok", value: 42 }],
+          model: {
+            ...result.model,
+            output_shape: "summary",
+            value: {
+              ...result.model.value,
+              unit: {
+                code: "transaction",
+                quantity_kind: "count",
+                scale_factor: 1,
+                system: "registered",
+              },
+            },
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("交易笔")).toHaveAttribute("title", "transaction");
+    expect(screen.queryByText("transaction")).not.toBeInTheDocument();
+  });
+
+  it("recommends a table for a one-column identity matrix and keeps charts optional", () => {
+    const resultTable = <div data-testid="result-table">Exact result rows</div>;
+    render(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          entries: [
+            { dimensions: { status: "执行中", order_id: "A" }, status: "ok", value: 1 },
+            { dimensions: { status: "执行中", order_id: "B" }, status: "ok", value: 2 },
+          ],
+        }}
+        resultTable={resultTable}
+      />,
+    );
+
+    expect(screen.getByText("自动推荐：表格")).toBeInTheDocument();
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+    expect(screen.queryByTestId("metric-chart")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("图表"));
+    expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("表格"));
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+  });
+
+  it("shows the localized automatic chart type after a chart becomes table-recommended", () => {
+    const { rerender } = render(<ObjectMetricAnalysisPanel result={result} />);
+    fireEvent.click(screen.getByText("表格"));
+    fireEvent.click(screen.getByText("图表"));
+    rerender(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          entries: Array.from({ length: 21 }, (_, index) => ({
+            dimensions: { product_code: `product-${index}` },
+            status: "ok",
+            value: index + 1,
+          })),
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "图形类型" }).closest(".ant-select"),
+    ).toHaveTextContent("自动");
+    expect(screen.queryByText("auto")).not.toBeInTheDocument();
+  });
+
+  it("keeps an explicitly chosen chart across result changes and falls back for nonnumeric data", () => {
+    const denseEntries = Array.from({ length: 21 }, (_, index) => ({
+      dimensions: { product_code: `product-${index}` },
+      status: "ok" as const,
+      value: index + 1,
+    }));
+    const denseResult = { ...result, entries: denseEntries };
+    const resultTable = <div data-testid="result-table">Exact result rows</div>;
+    const { rerender } = render(
+      <ObjectMetricAnalysisPanel result={denseResult} resultTable={resultTable} />,
+    );
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("图表"));
+    expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
+    rerender(
+      <ObjectMetricAnalysisPanel
+        result={{ ...denseResult, entries: denseEntries.map((entry) => ({ ...entry, value: 40 })) }}
+        resultTable={resultTable}
+      />,
+    );
+    expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
+    expect(screen.queryByTestId("result-table")).not.toBeInTheDocument();
+
+    rerender(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          entries: [{ dimensions: { product_code: "product-0" }, status: "ok", value: "unknown" }],
+        }}
+        resultTable={resultTable}
+      />,
+    );
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+    expect(screen.getByText("当前结果不支持所选图形，已调整为可用展示方式。")).toBeInTheDocument();
+
+    rerender(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          entries: [
+            { dimensions: { product_code: "product-0" }, status: "ok", value: 40 },
+            { dimensions: { product_code: "product-1" }, status: "no_data", value: null },
+          ],
+        }}
+        resultTable={resultTable}
+      />,
+    );
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "图表" })).toBeDisabled();
+  });
+
+  it("keeps an explicitly chosen table when the next result recommends a chart", () => {
+    const resultTable = <div data-testid="result-table">Exact result rows</div>;
+    const { rerender } = render(
+      <ObjectMetricAnalysisPanel result={result} resultTable={resultTable} />,
+    );
+    expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("表格"));
+    rerender(
+      <ObjectMetricAnalysisPanel
+        result={{ ...result, entries: result.entries.map((entry) => ({ ...entry, value: 30 })) }}
+        resultTable={resultTable}
+      />,
+    );
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+    expect(screen.queryByTestId("metric-chart")).not.toBeInTheDocument();
+  });
+
+  it("keeps non-numeric and unavailable rows in the table instead of an empty chart", () => {
+    render(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          entries: [
+            { dimensions: { region: "East" }, status: "ok", value: "正常" },
+            { dimensions: { region: "West" }, status: "no_data", value: null },
+          ],
+        }}
+        resultTable={<div data-testid="result-table">Exact result rows</div>}
+      />,
+    );
+
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+    expect(screen.queryByTestId("metric-chart")).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "图表" })).toBeDisabled();
   });
   it("shows business result shape without a redundant manual-selection badge", () => {
     render(<ObjectMetricAnalysisPanel result={result} />);
 
     expect(screen.getByText("分组结果")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("饼图"));
+    chooseChart("饼图");
     expect(screen.queryByText("手动选择")).not.toBeInTheDocument();
     expect(screen.queryByText("grouped")).not.toBeInTheDocument();
   });
@@ -169,13 +373,13 @@ describe("ObjectMetricAnalysisPanel", () => {
       model: { ...result.model, output_shape: "summary" },
     };
     const { rerender } = render(<ObjectMetricAnalysisPanel result={result} />);
-    fireEvent.click(screen.getByText("饼图"));
+    chooseChart("饼图");
     expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
 
     rerender(<ObjectMetricAnalysisPanel result={summaryResult} />);
     expect(screen.getByText("汇总值")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByText("指标卡")).toBeInTheDocument();
+    expect(screen.getByText("自动推荐：指标卡")).toBeInTheDocument();
     expect(screen.getByText("表格")).toBeInTheDocument();
     expect(screen.queryByText("饼图")).not.toBeInTheDocument();
     expect(screen.queryByTestId("metric-chart")).not.toBeInTheDocument();
@@ -198,7 +402,47 @@ describe("ObjectMetricAnalysisPanel", () => {
         }}
       />,
     );
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "图形类型" }));
     expect(screen.getByText("饼图")).toBeInTheDocument();
+  });
+
+  it("keeps same-named dimensions from different relation aliases distinct in charts", () => {
+    render(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          entries: [
+            {
+              dimension_cells: [
+                {
+                  ref: {
+                    object_type_id: "person",
+                    relation_path_alias: "buyer",
+                    property_name: "region",
+                  },
+                  value: "East",
+                },
+                {
+                  ref: {
+                    object_type_id: "person",
+                    relation_path_alias: "seller",
+                    property_name: "region",
+                  },
+                  value: "West",
+                },
+              ],
+              dimensions: { "person.region": "West" },
+              status: "ok",
+              value: 1,
+            },
+          ],
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByText("图表"));
+    expect(mocks.options.at(-1)?.xAxis).toMatchObject({
+      data: ["region (buyer): East · region (seller): West"],
+    });
   });
 
   it("uses business property labels for chart axes without changing dimension values", () => {
@@ -226,7 +470,7 @@ describe("ObjectMetricAnalysisPanel", () => {
     };
     render(<ObjectMetricAnalysisPanel result={groupedResult} />);
 
-    fireEvent.click(screen.getByText("堆叠柱"));
+    chooseChart("堆叠柱");
     expect(mocks.options.at(-1)?.xAxis).toMatchObject({ data: ["East", "West"] });
     expect(mocks.options.at(-1)?.series).toMatchObject([
       { data: [15, 8], name: "Web" },
@@ -251,12 +495,12 @@ describe("ObjectMetricAnalysisPanel", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("柱状"));
+    chooseChart("柱状");
     expect(mocks.options.at(-1)?.xAxis).toMatchObject({
       data: ["订单号: A", "订单号: B"],
     });
 
-    fireEvent.click(screen.getByText("饼图"));
+    chooseChart("饼图");
     expect(mocks.options.at(-1)?.series).toMatchObject([
       { data: [{ name: "订单号: A" }, { name: "订单号: B" }] },
     ]);
@@ -271,6 +515,7 @@ describe("ObjectMetricAnalysisPanel", () => {
 
     expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
     expect(heatmapColors()?.[0]).toBe("#172554");
+    expect(mocks.options.at(-1)?.visualMap).toMatchObject({ min: 8, max: 12 });
 
     rerender(
       <ThemeContext.Provider value="dark">

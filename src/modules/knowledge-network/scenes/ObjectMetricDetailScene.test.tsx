@@ -215,7 +215,7 @@ describe("ObjectMetricDetailScene actions", () => {
 
     render(<ObjectMetricDetailScene />);
 
-    expect(await screen.findByRole("button", { name: "分析" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "试算" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "绑定逻辑属性" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "创建新版本草稿" })).not.toBeInTheDocument();
   });
@@ -227,7 +227,7 @@ describe("ObjectMetricDetailScene actions", () => {
 
     render(<ObjectMetricDetailScene />);
 
-    expect(await screen.findByRole("button", { name: "分析" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "试算" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "创建新版本草稿" })).not.toBeInTheDocument();
   });
 
@@ -331,6 +331,28 @@ describe("ObjectMetricDetailScene actions", () => {
     expect(screen.getByText("¥ (CNY)")).toBeInTheDocument();
     expect(screen.getByText("无（按实例返回）")).toBeInTheDocument();
     expect(screen.queryByText("decimal / amount")).not.toBeInTheDocument();
+  });
+
+  it("identifies a transaction count unit instead of showing only its code", async () => {
+    const metric = record("published", "object_set");
+    metric.definition.result_semantics.value.unit = {
+      code: "transaction",
+      quantity_kind: "count",
+      scale_factor: 1,
+      system: "registered",
+    };
+    mocks.getObjectMetricV1.mockResolvedValue(metric);
+    mocks.getObjectTypeDetail.mockResolvedValue({
+      id: "order",
+      name: "销售订单",
+      dataProperties: [],
+      logicProperties: [],
+    });
+
+    render(<ObjectMetricDetailScene />);
+
+    expect(await screen.findByText("交易笔 (transaction)")).toBeInTheDocument();
+    expect(screen.queryByText("transaction")).not.toBeInTheDocument();
   });
 
   it("keeps composite dependencies compact and hides the technical expression until requested", async () => {
@@ -474,11 +496,11 @@ describe("ObjectMetricDetailScene actions", () => {
     expect(screen.getByText("coupon_used_count")).toBeInTheDocument();
     const actions = container.querySelector<HTMLElement>("[class*=actions]");
     expect(actions).not.toBeNull();
-    expect(within(actions!).getByRole("button", { name: "分析" })).toBeEnabled();
+    expect(within(actions!).getByRole("button", { name: "试算" })).toBeEnabled();
     expect(await within(actions!).findByRole("button", { name: "绑定逻辑属性" })).toBeEnabled();
     expect(within(actions!).getByRole("button", { name: "创建新版本草稿" })).toBeInTheDocument();
 
-    fireEvent.click(within(actions!).getByRole("button", { name: "分析" }));
+    fireEvent.click(within(actions!).getByRole("button", { name: "试算" }));
     expect(screen.getByTestId("metric-trial-drawer")).toHaveAttribute("data-mode", "published");
     fireEvent.click(screen.getByRole("button", { name: "Run trial" }));
     expect(mocks.queryMetric).toHaveBeenCalledWith("network-1", "metric-1", 1, {});
@@ -498,7 +520,7 @@ describe("ObjectMetricDetailScene actions", () => {
     render(<ObjectMetricDetailScene />);
 
     expect(await screen.findByRole("heading", { name: "已用券次数" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "分析" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "试算" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "绑定逻辑属性" })).not.toBeInTheDocument();
     expect(screen.queryByText("仅适用于单个实例")).not.toBeInTheDocument();
   });

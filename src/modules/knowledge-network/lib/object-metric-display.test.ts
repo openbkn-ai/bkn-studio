@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  objectMetricAggregationDisplayName,
   objectMetricPropertyDisplayLabels,
   objectMetricPropertyDisplayName,
 } from "./object-metric-display";
@@ -22,6 +23,12 @@ const objectType = {
 };
 
 describe("object metric property display", () => {
+  it("uses one business label mapping for aggregation names across metric views", () => {
+    expect(objectMetricAggregationDisplayName("count_rows")).toBe("计数");
+    expect(objectMetricAggregationDisplayName("count")).toBe("非空计数");
+    expect(objectMetricAggregationDisplayName("avg")).toBe("平均值");
+  });
+
   it("uses business names for owner properties, including logical properties", () => {
     expect(
       objectMetricPropertyDisplayName(

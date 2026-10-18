@@ -40,7 +40,11 @@ import {
   replaceObjectMetricDependencyAliases,
 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
 import { objectMetricBusinessConditionLabel } from "@/modules/knowledge-network/lib/object-metric-condition-label";
-import { objectMetricPropertyDisplayName } from "@/modules/knowledge-network/lib/object-metric-display";
+import {
+  objectMetricAggregationDisplayName,
+  objectMetricPropertyDisplayName,
+} from "@/modules/knowledge-network/lib/object-metric-display";
+import { objectMetricUnitDisplayLabel } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
 import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 import {
   objectMetricTimeWindowBusinessLabel,
@@ -149,33 +153,6 @@ function MetricDimensionList({ items, emptyText }: { items: string[]; emptyText:
     </span>
   );
 }
-
-const aggregationNames: Record<string, string> = {
-  get avg() {
-    return objectMetricText("mdb7538b96322");
-  },
-  get count() {
-    return objectMetricText("m3a6663a758c9");
-  },
-  get count_distinct() {
-    return objectMetricText("m1e96cd1f49bf");
-  },
-  get count_rows() {
-    return objectMetricText("m21179deb9a74");
-  },
-  get identity() {
-    return objectMetricText("m7ea9fbba115d");
-  },
-  get max() {
-    return objectMetricText("m1e7a22820768");
-  },
-  get min() {
-    return objectMetricText("mb2dcdcfabb6a");
-  },
-  get sum() {
-    return objectMetricText("m2819237ddb01");
-  },
-};
 
 type MetricTextKey = Parameters<typeof objectMetricText>[0];
 
@@ -778,8 +755,7 @@ export function ObjectMetricDetailScene() {
           {specification.kind === "atomic" ? (
             <Descriptions column={{ xs: 1, sm: 2 }}>
               <Descriptions.Item label={objectMetricText("mb17e03bc6bad")}>
-                {aggregationNames[specification.measure.aggregation] ??
-                  specification.measure.aggregation}
+                {objectMetricAggregationDisplayName(specification.measure.aggregation)}
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("me92a76d3b298")}>
                 {expression ? (
@@ -924,27 +900,15 @@ export function ObjectMetricDetailScene() {
                 : objectMetricText("m484d55613910")}
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("me659c05e3760")}>
-              <Tooltip
-                title={`${definition.result_semantics.value.physical_type} / ${definition.result_semantics.value.semantic_type}`}
-              >
-                <span>
-                  {objectMetricText(
-                    physicalTypeKeys[definition.result_semantics.value.physical_type],
-                  )}
-                  {" / "}
-                  {objectMetricText(
-                    semanticTypeKeys[definition.result_semantics.value.semantic_type],
-                  )}
-                </span>
-              </Tooltip>
+              {objectMetricText(physicalTypeKeys[definition.result_semantics.value.physical_type])}
+              {" / "}
+              {objectMetricText(semanticTypeKeys[definition.result_semantics.value.semantic_type])}
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("m80b19d68b149")}>
               {definition.result_semantics.value.unit ? (
                 <Tooltip title={definition.result_semantics.value.unit.code}>
                   <span>
-                    {definition.result_semantics.value.unit.display_symbol?.trim()
-                      ? `${definition.result_semantics.value.unit.display_symbol.trim()} (${definition.result_semantics.value.unit.code})`
-                      : definition.result_semantics.value.unit.code}
+                    {objectMetricUnitDisplayLabel(definition.result_semantics.value.unit, true)}
                   </span>
                 </Tooltip>
               ) : (

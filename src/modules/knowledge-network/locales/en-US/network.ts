@@ -245,7 +245,7 @@ export const networkPart = {
   workspaceConceptGroups: "Concept groups",
   workspaceDescription:
     "The workspace shell is already in place. The remaining legacy Vega pages will be migrated in later slices.",
-  workspaceMetrics: "Metrics",
+  workspaceMetrics: "Object metrics",
   workspaceFunctions: "Functions",
   workspaceApis: "APIs",
   workspaceMcpTools: "MCP",
