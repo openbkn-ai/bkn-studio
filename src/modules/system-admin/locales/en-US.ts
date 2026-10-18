@@ -1206,6 +1206,8 @@ export const systemAdminEnUS = {
       readOnlyNotice:
         "You can view this Agent but not change it. Until an Agent management permission is registered, only its creator can change it.",
       notFound: "This Agent does not exist or is not a built-in Agent.",
+      forbidden:
+        "You cannot view this Agent's configuration. Until an Agent management permission is registered, only its creator can view and change it.",
       runtimeTitle: "Runtime",
       mcpProfile: "MCP service",
       mcpProfileHint:

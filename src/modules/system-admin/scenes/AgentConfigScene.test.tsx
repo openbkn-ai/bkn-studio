@@ -151,6 +151,15 @@ describe("AgentConfigScene", () => {
     });
   });
 
+  it("explains a refusal from a backend that does not answer read-only", async () => {
+    getShared.mockRejectedValue(new BknAgentExecutionError("forbidden", 403));
+    getSharedPrompt.mockRejectedValue(new BknAgentExecutionError("forbidden", 403));
+    renderScene();
+
+    expect(await screen.findByText(i18n.t("systemAdmin.agentConfig.forbidden"))).toBeTruthy();
+    expect(screen.getByText(i18n.t("systemAdmin.agentConfig.back"))).toBeTruthy();
+  });
+
   it("says so when the Agent is not a built-in one", async () => {
     getShared.mockRejectedValue(new BknAgentExecutionError("missing", 404));
     getSharedPrompt.mockRejectedValue(new BknAgentExecutionError("missing", 404));

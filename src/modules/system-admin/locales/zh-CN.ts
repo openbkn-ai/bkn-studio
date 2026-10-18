@@ -1119,6 +1119,8 @@ export const systemAdminZhCN = {
       readOnlyNotice:
         "你只能查看这个 Agent 的配置。在权限表注册 Agent 管理权限之前，只有它的创建者可以修改。",
       notFound: "这个 Agent 不存在，或不是平台内置的 Agent。",
+      forbidden:
+        "你没有查看这个 Agent 配置的权限。在权限表注册 Agent 管理权限之前，只有它的创建者可以查看和修改。",
       runtimeTitle: "运行配置",
       mcpProfile: "MCP 服务",
       mcpProfileHint:

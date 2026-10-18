@@ -104,7 +104,9 @@ beforeEach(async () => {
 
 afterEach(cleanup);
 
-describe("AgentConfigDrawer", () => {
+// Each case renders both settings tabs with a dozen antd number fields; shared CI runners
+// take well over the default 10s on the tab-switching ones.
+describe("AgentConfigDrawer", { timeout: 20_000 }, () => {
   it("shows the network layer read-only without modify permission", async () => {
     getAgentConfig.mockResolvedValue(config());
     renderDrawer();

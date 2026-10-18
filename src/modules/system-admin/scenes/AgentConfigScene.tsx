@@ -88,7 +88,9 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  // A notice in place of the page, with the way back: missing, or unreadable on a
+  // backend that still refuses non-editors instead of answering read-only.
+  const [blocked, setBlocked] = useState<"notFound" | "forbidden" | null>(null);
 
   // The runtime card and the prompt card save separately; each save applies only its own
   // response, so a draft in the other card survives.
@@ -120,7 +122,8 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
       applyPrompt(sharedPrompt);
       setModels(llms.items.map((m) => m.modelName));
     } catch (e) {
-      if (e instanceof BknAgentExecutionError && e.status === 404) setNotFound(true);
+      if (e instanceof BknAgentExecutionError && e.status === 404) setBlocked("notFound");
+      else if (e instanceof BknAgentExecutionError && e.status === 403) setBlocked("forbidden");
       else setError(executionRequestError(e).message);
     } finally {
       setLoading(false);
@@ -152,14 +155,20 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     </SceneBackButton>
   );
   if (loading && !shared) return <Spin />;
-  if (notFound)
+  if (blocked)
     return (
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         {back}
-        <Alert type="info" showIcon message={t(`${P}.notFound`)} />
+        <Alert type="info" showIcon message={t(`${P}.${blocked}`)} />
       </Space>
     );
-  if (error) return <Alert type="error" showIcon message={error} />;
+  if (error)
+    return (
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        {back}
+        <Alert type="error" showIcon message={error} />
+      </Space>
+    );
   if (!shared || !prompt) return null;
 
   const current = prompt.prompt.current_version;
