@@ -173,7 +173,7 @@ describe("CatalogDetailTabs", () => {
       }
       return <p>file list of {record.id}</p>;
     });
-    const other = { ...catalog, id: "catalog-2" } as CatalogRecord;
+    const other = { ...catalog, id: "catalog-2" };
     const { rerender } = render(detail(professional));
     fireEvent.click(screen.getAllByRole("tab")[1]);
     expect(screen.getByText("该页签加载失败，不影响其他页签。")).toBeInTheDocument();
