@@ -1935,11 +1935,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     void (async () => {
       setLoading(true);
       try {
-        const [objects, relations, metrics, registry] = await Promise.all([
-          listKnowledgeNetworkObjectTypes(networkId).catch(() => []),
-          listKnowledgeNetworkRelationTypes(networkId).catch(() => []),
+        const [objects, relations, metrics, registry, editRecord] = await Promise.all([
+          listKnowledgeNetworkObjectTypes(networkId, { pageConcurrency: 4 }).catch(() => []),
+          mode === "create" && requestedMetricType === "atomic"
+            ? Promise.resolve([])
+            : listKnowledgeNetworkRelationTypes(networkId).catch(() => []),
           listObjectMetricsV1(networkId, { limit: 500, status: "published" }),
           getObjectMetricCapabilitiesV1(),
+          mode === "edit" && metricId
+            ? getObjectMetricV1(networkId, metricId, undefined, { skipErrorToast: true })
+            : Promise.resolve(undefined),
         ]);
         if (!active) return;
         setObjectTypes(objects);
@@ -1948,9 +1953,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         let metricCatalog = metrics.entries;
         let nextRecord: ObjectMetricRecordV1 | undefined;
         if (mode === "edit" && metricId) {
-          nextRecord = await getObjectMetricV1(networkId, metricId, undefined, {
-            skipErrorToast: true,
-          });
+          nextRecord = editRecord;
+          if (!nextRecord) {
+            throw new Error("Missing metric record");
+          }
           if (["published", "deprecated"].includes(nextRecord.definition.lifecycle.status)) {
             void message.info(objectMetricText("m345e77bf06f8"));
             void navigate(
@@ -5126,6 +5132,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           : objectMetricText("m40e232fef99f")
                     }
                     name="timeDimensions"
+                    extra={objectMetricText("analysisSingleTimeDimensionHint")}
                     tooltip={
                       metricType === "atomic"
                         ? objectMetricText("m2fe2ec23e176")
@@ -5133,6 +5140,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     }
                   >
                     <Select
+                      maxCount={1}
                       mode="multiple"
                       notFoundContent={objectMetricText("m60d87d7f6f27")}
                       options={timePropertyOptions}

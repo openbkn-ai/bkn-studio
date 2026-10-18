@@ -122,7 +122,7 @@ async function resolveObjectTypeConceptGroups(
 
 export async function listKnowledgeNetworkObjectTypes(
   networkId: string,
-  options: { allPages?: boolean; skipErrorToast?: boolean } = {},
+  options: { allPages?: boolean; pageConcurrency?: number; skipErrorToast?: boolean } = {},
 ) {
   if (useMock) {
     return wait(
@@ -141,20 +141,22 @@ export async function listKnowledgeNetworkObjectTypes(
   const entries: BackendObjectType[] = [];
   let offset = 0;
   let hasMore = true;
-
-  while (hasMore) {
-    const response = await http.get<BackendListResponse<BackendObjectType>>(
+  const loadPage = (pageOffset: number) =>
+    http.get<BackendListResponse<BackendObjectType>>(
       `/bkn-backend/v1/knowledge-networks/${networkId}/object-types`,
       {
         params: {
           direction: "desc",
           limit: pageSize,
-          offset,
+          offset: pageOffset,
           sort: "update_time",
         },
         skipErrorToast: options.skipErrorToast,
       },
     );
+
+  while (hasMore) {
+    const response = await loadPage(offset);
     const pageEntries = response.data.entries;
     entries.push(...pageEntries);
 
@@ -162,6 +164,20 @@ export async function listKnowledgeNetworkObjectTypes(
       allPages && pageEntries.length === pageSize && entries.length < response.data.total_count,
     );
     if (!hasMore) {
+      break;
+    }
+    const concurrency = Math.min(4, Math.max(1, Math.floor(options.pageConcurrency ?? 1)));
+    if (offset === 0 && concurrency > 1) {
+      const remainingOffsets = Array.from(
+        { length: Math.ceil((response.data.total_count - entries.length) / pageSize) },
+        (_, index) => (index + 1) * pageSize,
+      );
+      for (let index = 0; index < remainingOffsets.length; index += concurrency) {
+        const batch = await Promise.all(
+          remainingOffsets.slice(index, index + concurrency).map(loadPage),
+        );
+        batch.forEach((page) => entries.push(...page.data.entries));
+      }
       break;
     }
     offset += pageEntries.length;
@@ -316,6 +332,28 @@ export async function getObjectTypeSampleData(
     rowTotalCount: response.data.total_count,
     rows,
   };
+}
+
+/** Fetch one authorized object by its exact primary-key identity. */
+export async function getObjectTypeInstanceData(
+  networkId: string,
+  objectTypeId: string,
+  identity: Record<string, string | number | boolean>,
+  properties: string[],
+): Promise<Record<string, unknown> | null> {
+  if (properties.length === 0) return null;
+  if (useMock) return wait(null);
+
+  const response = await http.post<{ datas?: Array<Record<string, unknown>> }>(
+    `/ontology-query/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}/properties`,
+    { _instance_identities: [identity], properties },
+    {
+      headers: { "X-HTTP-Method-Override": "GET" },
+      skipErrorToast: true,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
+  );
+  return response.data.datas?.[0] ?? null;
 }
 
 export async function createKnowledgeNetworkObjectType(

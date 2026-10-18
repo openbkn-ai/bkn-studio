@@ -13,15 +13,18 @@ import { useResolvedTheme } from "@/app/theme/theme-context";
 
 type ChartLineProps = {
   option: EChartsOption;
+  onClick?: (event: echarts.ECElementEvent) => void;
 };
 
-export function ChartLine({ option }: ChartLineProps) {
+export function ChartLine({ option, onClick }: ChartLineProps) {
   const resolvedTheme = useResolvedTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
   const optionRef = useRef(option);
+  const onClickRef = useRef(onClick);
 
   optionRef.current = option;
+  onClickRef.current = onClick;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -33,6 +36,7 @@ export function ChartLine({ option }: ChartLineProps) {
     const chart = echarts.init(container, resolvedTheme === "dark" ? "dark" : undefined);
     chartRef.current = chart;
     chart.setOption(optionRef.current, true);
+    chart.on("click", (event) => onClickRef.current?.(event));
 
     const handleResize = () => {
       chartRef.current?.resize();

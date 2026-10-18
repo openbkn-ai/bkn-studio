@@ -5,7 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, DatePicker, Drawer, Form, Input, Select, Space, Table, Tag } from "antd";
+import {
+  Alert,
+  Breadcrumb,
+  Button,
+  DatePicker,
+  Descriptions,
+  Drawer,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Table,
+  Tag,
+} from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
@@ -14,10 +28,15 @@ import { formatMetricTimeLabel } from "@/modules/knowledge-network/services/shar
 import type {
   ObjectMetricDataV1,
   ObjectMetricDefinitionV1,
+  ObjectMetricDrillThroughV1,
   ObjectMetricQueryRequestV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import {
+  objectMetricBusinessConditionLabel,
+  objectMetricConditionLabel,
+} from "@/modules/knowledge-network/lib/object-metric-condition-label";
 import {
   objectMetricPropertyDisplayLabels,
   objectMetricPropertyDisplayName,
@@ -32,12 +51,30 @@ type TrialFormValues = {
   time?: [import("dayjs").Dayjs, import("dayjs").Dayjs];
 };
 
+function dimensionReferenceKey(reference: {
+  object_type_id: string;
+  property_name: string;
+  relation_path_alias?: string;
+}): string {
+  return JSON.stringify([
+    reference.object_type_id,
+    reference.relation_path_alias ?? "",
+    reference.property_name,
+  ]);
+}
+
 type ObjectMetricTrialDrawerProps = {
   definition: ObjectMetricDefinitionV1;
   mode: "draft" | "published";
+  networkId?: string;
   objectType?: ObjectTypeDetail | null;
   onClose: () => void;
   onRun: (query: ObjectMetricQueryRequestV1) => Promise<ObjectMetricDataV1>;
+  onDrillThrough?: (
+    query: ObjectMetricQueryRequestV1,
+    bucketKey: string,
+    cursor?: string,
+  ) => Promise<ObjectMetricDrillThroughV1>;
   open: boolean;
 };
 
@@ -63,6 +100,13 @@ function displayMetricValue(value: unknown): string {
   return "—";
 }
 
+function sameMetricScalarValue(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  const scalar = (value: unknown): value is string | number | bigint =>
+    typeof value === "string" || typeof value === "number" || typeof value === "bigint";
+  return scalar(left) && scalar(right) && String(left) === String(right);
+}
+
 function displayMetricFields(
   value: Record<string, unknown> | undefined,
   propertyLabels: Record<string, string>,
@@ -71,6 +115,31 @@ function displayMetricFields(
   return Object.entries(value)
     .map(([key, fieldValue]) => `${propertyLabels[key] || key}: ${displayMetricValue(fieldValue)}`)
     .join("、");
+}
+
+function displayMetricDimensions(
+  entry: ObjectMetricDataV1["entries"][number],
+  propertyLabels: Record<string, string>,
+): string {
+  if (!entry.dimension_cells?.length) return displayMetricFields(entry.dimensions, propertyLabels);
+  return entry.dimension_cells
+    .map(({ ref, value }) => {
+      const name = propertyLabels[ref.property_name] || ref.property_name;
+      return `${ref.relation_path_alias ? `${name} (${ref.relation_path_alias})` : name}: ${displayMetricValue(value)}`;
+    })
+    .join("、");
+}
+
+function displayMetricBucket(
+  entry: ObjectMetricDataV1["entries"][number],
+  propertyLabels: Record<string, string>,
+  identityLabels: Record<string, string>,
+): string {
+  const dimensions = displayMetricDimensions(entry, propertyLabels);
+  if (dimensions !== "—") return dimensions;
+  if (entry.time_bucket) return formatMetricTimeLabel(entry.time_bucket.start);
+  if (entry.instance_identity) return displayMetricFields(entry.instance_identity, identityLabels);
+  return objectMetricText("analysisAllData");
 }
 
 function trialErrorMessage(error: unknown): string {
@@ -102,9 +171,11 @@ function trialStatusLabel(
 export function ObjectMetricTrialDrawer({
   definition,
   mode,
+  networkId,
   objectType,
   onClose,
   onRun,
+  onDrillThrough,
   open,
 }: ObjectMetricTrialDrawerProps) {
   useTranslation();
@@ -112,7 +183,18 @@ export function ObjectMetricTrialDrawer({
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ObjectMetricDataV1>();
+  const [history, setHistory] = useState<
+    Array<{ query: ObjectMetricQueryRequestV1; result: ObjectMetricDataV1; label: string }>
+  >([]);
+  const [selected, setSelected] = useState<ObjectMetricDataV1["entries"][number]>();
+  const [nextDimension, setNextDimension] = useState<string>();
+  const [participants, setParticipants] = useState<ObjectMetricDrillThroughV1>();
+  const [participantsPage, setParticipantsPage] = useState(1);
+  const [participantsOpen, setParticipantsOpen] = useState(false);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
+  const bucketActionsRef = useRef<HTMLDivElement>(null);
   const formId = `metric-trial-${definition.id}-${definition.version}`;
   const identityLabels = useMemo(() => objectMetricPropertyDisplayLabels(objectType), [objectType]);
   const propertyLabels = useMemo(
@@ -123,15 +205,26 @@ export function ObjectMetricTrialDrawer({
       ),
     [definition.query_capabilities.analysis_dimensions, objectType],
   );
+  const tableEntries = useMemo(
+    () => result?.entries.map((item, index) => ({ ...item, key: index })) ?? [],
+    [result?.entries],
+  );
   const usesFixedDerivedTimeWindow =
     definition.specification.kind === "derived" &&
     definition.specification.business_qualifiers.time_window?.mode !== undefined &&
     definition.specification.business_qualifiers.time_window.mode !== "unbounded";
+  const supportsRuntimeTimeRange = definition.query_capabilities.time_dimensions.length === 1;
+  const hasSelectableBuckets = result?.entries.some((entry) => Boolean(entry.bucket_key)) ?? false;
 
   useEffect(() => {
     if (result || error)
       resultRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }, [error, result]);
+
+  useEffect(() => {
+    if (selected?.bucket_key)
+      bucketActionsRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  }, [selected]);
 
   const run = async (values: TrialFormValues) => {
     setLoading(true);
@@ -144,22 +237,90 @@ export function ObjectMetricTrialDrawer({
           return [name, parseIdentityValue(values.identity?.[name] ?? "", property?.type)];
         }) ?? [],
       );
-      setResult(
-        await onRun({
-          analysis_dimensions: definition.query_capabilities.analysis_dimensions.filter((item) =>
-            values.analysisDimensions?.includes(item.property_name),
-          ),
-          instance_identities:
-            definition.calculation_scope === "object_instance" ? [identity] : undefined,
-          time: values.time
+      const query: ObjectMetricQueryRequestV1 = {
+        analysis_dimensions: definition.query_capabilities.analysis_dimensions.filter((item) =>
+          values.analysisDimensions?.includes(dimensionReferenceKey(item)),
+        ),
+        instance_identities:
+          definition.calculation_scope === "object_instance" ? [identity] : undefined,
+        time:
+          supportsRuntimeTimeRange && values.time
             ? { start: values.time[0].valueOf(), end: values.time[1].valueOf() }
             : undefined,
-        }),
-      );
+      };
+      const nextResult = await onRun(query);
+      setResult(nextResult);
+      setHistory([{ query, result: nextResult, label: objectMetricText("analysisRoot") }]);
+      setSelected(undefined);
     } catch (requestError) {
       setError(trialErrorMessage(requestError));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const currentQuery = history.at(-1)?.query;
+  const availableDimensions = definition.query_capabilities.analysis_dimensions.filter(
+    (item) =>
+      !currentQuery?.analysis_dimensions?.some(
+        (chosen) => dimensionReferenceKey(chosen) === dimensionReferenceKey(item),
+      ),
+  );
+  const drill = async (dimension?: string) => {
+    if (!selected?.bucket_key || !currentQuery) return;
+    const ref = definition.query_capabilities.analysis_dimensions.find(
+      (item) => dimensionReferenceKey(item) === dimension,
+    );
+    if (dimension && !ref) return;
+    const query: ObjectMetricQueryRequestV1 = {
+      ...currentQuery,
+      analysis_dimensions: [...(currentQuery.analysis_dimensions ?? []), ...(ref ? [ref] : [])],
+      bucket_selection: { parent_query: currentQuery, bucket_key: selected.bucket_key },
+    };
+    setLoading(true);
+    setError(undefined);
+    try {
+      const nextResult = await onRun(query);
+      setHistory((items) => [
+        ...items,
+        {
+          query,
+          result: nextResult,
+          label: displayMetricBucket(selected, propertyLabels, identityLabels),
+        },
+      ]);
+      setResult(nextResult);
+      setSelected(undefined);
+      setNextDimension(undefined);
+    } catch (requestError) {
+      setError(trialErrorMessage(requestError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadParticipants = async (cursor?: string) => {
+    if (!onDrillThrough || !selected?.bucket_key || !currentQuery) return;
+    setParticipantsLoading(true);
+    setError(undefined);
+    try {
+      const page = await onDrillThrough(currentQuery, selected.bucket_key, cursor);
+      setParticipantsPage(
+        cursor && participants ? Math.floor(participants.participants.length / 20) + 1 : 1,
+      );
+      setParticipants((previous) =>
+        cursor && previous
+          ? {
+              ...page,
+              participants: [...previous.participants, ...page.participants],
+            }
+          : page,
+      );
+      setParticipantsOpen(true);
+    } catch (requestError) {
+      setError(trialErrorMessage(requestError));
+    } finally {
+      setParticipantsLoading(false);
     }
   };
 
@@ -170,7 +331,7 @@ export function ObjectMetricTrialDrawer({
       footer={
         <div className={styles.footer}>
           <Button
-            aria-label={objectMetricText("m073728637a26")}
+            aria-label={objectMetricText(mode === "published" ? "analysisRun" : "m073728637a26")}
             disabled={
               definition.calculation_scope === "object_instance" && !objectType?.primaryKeys.length
             }
@@ -179,7 +340,7 @@ export function ObjectMetricTrialDrawer({
             loading={loading}
             type="primary"
           >
-            {objectMetricText("m073728637a26")}
+            {objectMetricText(mode === "published" ? "analysisRun" : "m073728637a26")}
           </Button>
         </div>
       }
@@ -189,7 +350,7 @@ export function ObjectMetricTrialDrawer({
       title={
         <div className={styles.title}>
           <span>
-            {objectMetricText("trialTitle", {
+            {objectMetricText(mode === "published" ? "analysisTitle" : "trialTitle", {
               p0: definition.name || objectMetricText("ma8da957c687c"),
             })}
           </span>
@@ -210,7 +371,9 @@ export function ObjectMetricTrialDrawer({
       }
       width="min(760px, calc(100vw - 24px))"
     >
-      <h3 className={styles.sectionTitle}>{objectMetricText("trialConditions")}</h3>
+      <h3 className={styles.sectionTitle}>
+        {objectMetricText(mode === "published" ? "analysisConditions" : "trialConditions")}
+      </h3>
       <Form
         className={styles.form}
         form={form}
@@ -246,7 +409,7 @@ export function ObjectMetricTrialDrawer({
         ) : null}
         {usesFixedDerivedTimeWindow ? (
           <p className={styles.fixedTimeNotice}>{objectMetricText("m80365c614b62")}</p>
-        ) : (
+        ) : supportsRuntimeTimeRange ? (
           <Form.Item
             label={objectMetricText("m76a5dbc71e2b")}
             name="time"
@@ -254,6 +417,14 @@ export function ObjectMetricTrialDrawer({
           >
             <DatePicker.RangePicker showTime style={{ width: "100%" }} />
           </Form.Item>
+        ) : (
+          <p className={styles.fixedTimeNotice}>
+            {objectMetricText(
+              definition.query_capabilities.time_dimensions.length > 1
+                ? "analysisTimeAmbiguous"
+                : "analysisTimeUnavailable",
+            )}
+          </p>
         )}
         {definition.calculation_scope === "object_set" &&
         definition.query_capabilities.analysis_dimensions.length > 0 ? (
@@ -265,8 +436,10 @@ export function ObjectMetricTrialDrawer({
             <Select
               mode="multiple"
               options={definition.query_capabilities.analysis_dimensions.map((item) => ({
-                label: objectMetricPropertyDisplayName(item, objectType),
-                value: item.property_name,
+                label: item.relation_path_alias
+                  ? `${objectMetricPropertyDisplayName(item, objectType)} (${item.relation_path_alias})`
+                  : objectMetricPropertyDisplayName(item, objectType),
+                value: dimensionReferenceKey(item),
               }))}
               placeholder={objectMetricText("m6f346a890bc4")}
             />
@@ -276,7 +449,9 @@ export function ObjectMetricTrialDrawer({
       {error || result ? (
         <div className={styles.result} ref={resultRef}>
           <div className={styles.resultHeader}>
-            <h3 className={styles.sectionTitle}>{objectMetricText("trialResults")}</h3>
+            <h3 className={styles.sectionTitle}>
+              {objectMetricText(mode === "published" ? "analysisResults" : "trialResults")}
+            </h3>
             {result ? (
               <div className={styles.resultMeta}>
                 <Tag
@@ -299,6 +474,24 @@ export function ObjectMetricTrialDrawer({
           {error ? <Alert message={error} showIcon type="error" /> : null}
           {result ? (
             <Space direction="vertical" size={16} className={styles.resultContent}>
+              {history.length > 1 ? (
+                <Breadcrumb
+                  items={history.map((item, index) => ({
+                    title: (
+                      <Button
+                        type="link"
+                        onClick={() => {
+                          setHistory((items) => items.slice(0, index + 1));
+                          setResult(item.result);
+                          setSelected(undefined);
+                        }}
+                      >
+                        {item.label}
+                      </Button>
+                    ),
+                  }))}
+                />
+              ) : null}
               {result.warnings?.length ? (
                 <Alert message={result.warnings.join("；")} showIcon type="warning" />
               ) : null}
@@ -308,7 +501,69 @@ export function ObjectMetricTrialDrawer({
                     identityLabels={identityLabels}
                     propertyLabels={propertyLabels}
                     result={result}
+                    onSelectEntry={setSelected}
                   />
+                  {selected?.bucket_key ? (
+                    <div aria-live="polite" className={styles.bucketActions} ref={bucketActionsRef}>
+                      <strong>
+                        {objectMetricText("analysisSelectedBucket")}:{" "}
+                        {displayMetricBucket(selected, propertyLabels, identityLabels)}
+                      </strong>
+                      <Space wrap>
+                        {selected.available_actions?.includes("filter") ? (
+                          <Button loading={loading} onClick={() => void drill()}>
+                            {objectMetricText("analysisFilterBucket")}
+                          </Button>
+                        ) : null}
+                        {selected.available_actions?.includes("drill") &&
+                        availableDimensions.length ? (
+                          <>
+                            <Select
+                              aria-label={objectMetricText("analysisNextDimension")}
+                              onChange={setNextDimension}
+                              options={availableDimensions.map((item) => ({
+                                label: objectMetricPropertyDisplayName(item, objectType),
+                                value: dimensionReferenceKey(item),
+                              }))}
+                              placeholder={objectMetricText("analysisNextDimension")}
+                              style={{ minWidth: 160 }}
+                              value={nextDimension}
+                            />
+                            <Button
+                              disabled={!nextDimension}
+                              loading={loading}
+                              onClick={() => void drill(nextDimension)}
+                            >
+                              {objectMetricText("analysisDrill")}
+                            </Button>
+                          </>
+                        ) : null}
+                        {selected.available_actions?.includes("participants") && onDrillThrough ? (
+                          <Button
+                            loading={participantsLoading}
+                            onClick={() => void loadParticipants()}
+                          >
+                            {objectMetricText("analysisParticipants")}
+                          </Button>
+                        ) : null}
+                        <Button onClick={() => setContextOpen(true)}>
+                          {objectMetricText("analysisContext")}
+                        </Button>
+                      </Space>
+                    </div>
+                  ) : hasSelectableBuckets ? (
+                    <div aria-live="polite" className={styles.bucketActions} ref={bucketActionsRef}>
+                      <strong>{objectMetricText("analysisSelectBucketTitle")}</strong>
+                      <span className={styles.bucketHint}>
+                        {objectMetricText("analysisSelectBucketHint")}
+                      </span>
+                      {result.entries.some((entry) =>
+                        entry.available_actions?.includes("drill"),
+                      ) ? (
+                        <Button disabled>{objectMetricText("analysisDrill")}</Button>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <Table
                     columns={[
                       {
@@ -321,8 +576,10 @@ export function ObjectMetricTrialDrawer({
                       {
                         dataIndex: "dimensions",
                         key: "dimensions",
-                        render: (value: Record<string, unknown> | undefined) =>
-                          displayMetricFields(value, propertyLabels),
+                        render: (
+                          _value: Record<string, unknown> | undefined,
+                          entry: ObjectMetricDataV1["entries"][number],
+                        ) => displayMetricDimensions(entry, propertyLabels),
                         title: objectMetricText("m4fa164bacd53"),
                       },
                       {
@@ -346,9 +603,35 @@ export function ObjectMetricTrialDrawer({
                         title: objectMetricText("m0d9a32dba031"),
                       },
                     ]}
-                    dataSource={result.entries.map((item, index) => ({ ...item, key: index }))}
+                    dataSource={tableEntries}
+                    onRow={(entry) => ({
+                      "aria-selected": Boolean(
+                        entry.bucket_key && selected?.bucket_key === entry.bucket_key,
+                      ),
+                      onClick: () => {
+                        if (entry.bucket_key) setSelected(entry);
+                      },
+                      onKeyDown: (event) => {
+                        if (entry.bucket_key && (event.key === "Enter" || event.key === " ")) {
+                          event.preventDefault();
+                          setSelected(entry);
+                        }
+                      },
+                      tabIndex: entry.bucket_key ? 0 : undefined,
+                    })}
+                    rowClassName={(entry) =>
+                      entry.bucket_key
+                        ? `${styles.selectableResultRow} ${
+                            selected?.bucket_key === entry.bucket_key
+                              ? styles.selectedResultRow
+                              : ""
+                          }`
+                        : ""
+                    }
                     locale={{ emptyText: objectMetricText("ma1af72fea205") }}
-                    pagination={false}
+                    pagination={
+                      result.entries.length > 50 ? { pageSize: 50, showSizeChanger: false } : false
+                    }
                     scroll={{ x: 680 }}
                     size="small"
                   />
@@ -358,6 +641,192 @@ export function ObjectMetricTrialDrawer({
           ) : null}
         </div>
       ) : null}
+      <Modal
+        footer={null}
+        onCancel={() => setParticipantsOpen(false)}
+        open={participantsOpen}
+        title={objectMetricText("analysisParticipants")}
+      >
+        <p>{objectMetricText("analysisLiveNotice")}</p>
+        {participants?.status === "partial" || participants?.warnings?.length ? (
+          <Alert
+            showIcon
+            type="warning"
+            message={participants.warnings?.join("；") || objectMetricText("analysisPartial")}
+          />
+        ) : null}
+        {participants &&
+        selected?.value != null &&
+        participants.bucket_value != null &&
+        !sameMetricScalarValue(selected.value, participants.bucket_value) ? (
+          <Alert showIcon type="info" message={objectMetricText("analysisDataChanged")} />
+        ) : null}
+        <Table
+          columns={[
+            {
+              title: objectMetricText("analysisInstance"),
+              dataIndex: "instance_identity",
+              render: (value: Record<string, unknown>) => {
+                const label = displayMetricFields(value, identityLabels);
+                if (!networkId || !objectType?.primaryKeys.length) return label;
+                if (objectType.primaryKeys.some((key) => value[key] == null || value[key] === ""))
+                  return label;
+                const params = new URLSearchParams({
+                  tab: "data",
+                  section: "instance",
+                  metricInstance: JSON.stringify(value),
+                });
+                return (
+                  <Button
+                    type="link"
+                    href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/knowledge-network/workspace/${encodeURIComponent(networkId)}/object-types/${encodeURIComponent(definition.owner_object_type_id)}/detail?${params}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {label}
+                  </Button>
+                );
+              },
+            },
+            {
+              title: objectMetricText("analysisRole"),
+              dataIndex: "role",
+              render: (role: string) =>
+                role === "owner" ? objectMetricText("analysisOwnerRole") : role,
+            },
+          ]}
+          dataSource={
+            participants?.participants.map((item, index) => ({ ...item, key: index })) ?? []
+          }
+          pagination={{ current: participantsPage, onChange: setParticipantsPage, pageSize: 20 }}
+          size="small"
+        />
+        {participants?.next_cursor ? (
+          <Button
+            loading={participantsLoading}
+            onClick={() => void loadParticipants(participants.next_cursor)}
+          >
+            {objectMetricText("analysisLoadMore")}
+          </Button>
+        ) : null}
+      </Modal>
+      <Modal
+        footer={null}
+        onCancel={() => setContextOpen(false)}
+        open={contextOpen}
+        title={objectMetricText("analysisContext")}
+      >
+        <Descriptions
+          column={1}
+          size="small"
+          items={[
+            { key: "metric", label: objectMetricText("analysisMetric"), children: definition.name },
+            {
+              key: "version",
+              label: objectMetricText("analysisVersion"),
+              children:
+                mode === "published" ? `v${definition.version}` : objectMetricText("analysisDraft"),
+            },
+            {
+              key: "aggregation",
+              label: objectMetricText("analysisAggregation"),
+              children:
+                definition.specification.kind === "atomic"
+                  ? (definition.specification.measure?.aggregation ?? "—")
+                  : "—",
+            },
+            {
+              key: "scope",
+              label: objectMetricText("analysisScope"),
+              children: definition.calculation_scope,
+            },
+            {
+              key: "dimensions",
+              label: objectMetricText("analysisDimensions"),
+              children:
+                currentQuery?.analysis_dimensions
+                  ?.map((item) => objectMetricPropertyDisplayName(item, objectType))
+                  .join("、") || "—",
+            },
+            {
+              key: "fixedGrain",
+              label: objectMetricText("analysisFixedGrain"),
+              children:
+                definition.result_semantics.statistical_grain.group_by_dimensions
+                  .map((item) => objectMetricPropertyDisplayName(item, objectType))
+                  .join("、") || "—",
+            },
+            {
+              key: "fixedConditions",
+              label: objectMetricText("analysisFixedConditions"),
+              children:
+                definition.specification.kind === "derived"
+                  ? objectMetricBusinessConditionLabel(
+                      definition.specification.business_qualifiers,
+                      (item) => objectMetricPropertyDisplayName(item, objectType),
+                    )
+                  : "—",
+            },
+            {
+              key: "runtimeFilter",
+              label: objectMetricText("analysisRuntimeFilter"),
+              children: currentQuery?.filter
+                ? objectMetricConditionLabel(currentQuery.filter, (item) =>
+                    objectMetricPropertyDisplayName(item, objectType),
+                  )
+                : "—",
+            },
+            {
+              key: "selectedBucket",
+              label: objectMetricText("analysisSelectedBucket"),
+              children: selected
+                ? displayMetricBucket(selected, propertyLabels, identityLabels)
+                : "—",
+            },
+            {
+              key: "selectedTime",
+              label: objectMetricText("analysisSelectedTime"),
+              children: selected?.time_bucket
+                ? `${formatMetricTimeLabel(selected.time_bucket.start)} — ${formatMetricTimeLabel(selected.time_bucket.end)}`
+                : "—",
+            },
+            {
+              key: "time",
+              label: objectMetricText("analysisTime"),
+              children: currentQuery?.time
+                ? `${formatMetricTimeLabel(currentQuery.time.start)} — ${formatMetricTimeLabel(currentQuery.time.end)}`
+                : "—",
+            },
+            {
+              key: "effectiveWindow",
+              label: objectMetricText("analysisEffectiveWindow"),
+              children: result?.effective_window
+                ? `${formatMetricTimeLabel(result.effective_window.start)} — ${formatMetricTimeLabel(result.effective_window.end)}`
+                : "—",
+            },
+            {
+              key: "dependencies",
+              label: objectMetricText("analysisDependencies"),
+              children:
+                definition.specification.kind === "derived"
+                  ? `${definition.specification.base_metric.metric_id} · v${definition.specification.base_metric.version}`
+                  : definition.specification.kind === "composite"
+                    ? definition.specification.dependencies
+                        .map(
+                          (item) =>
+                            `${item.alias}: ${item.metric_ref.metric_id} · v${item.metric_ref.version}`,
+                        )
+                        .join("、") || "—"
+                    : "—",
+            },
+            {
+              key: "evaluated",
+              label: objectMetricText("analysisEvaluatedAt"),
+              children: result?.evaluated_at ? formatMetricTimeLabel(result.evaluated_at) : "—",
+            },
+          ]}
+        />
+      </Modal>
     </Drawer>
   );
 }

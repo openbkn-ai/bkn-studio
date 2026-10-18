@@ -87,3 +87,41 @@
   display: flex;
   width: 100%;
 }
+
+.bucketActions {
+  background: var(--metric-surface-subtle, #f6f8fc);
+  border: 1px solid var(--metric-control-border);
+  color: var(--metric-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  width: 100%;
+}
+
+.bucketHint {
+  color: var(--metric-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.bucketActions :global(.ant-btn:disabled) {
+  align-self: flex-start;
+}
+
+.selectableResultRow {
+  cursor: pointer;
+}
+
+.selectableResultRow:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+.selectedResultRow :global(td) {
+  background: rgb(59 130 246 / 15%) !important;
+}
+
+.selectedResultRow :global(td:first-child) {
+  box-shadow: inset 3px 0 #3b82f6;
+}

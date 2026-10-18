@@ -16,11 +16,13 @@ const mocks = vi.hoisted(() => ({
   listObjectTypes: vi.fn(),
   listObjectMetrics: vi.fn(),
   navigate: vi.fn(),
+  queryDrillThrough: vi.fn(),
   queryMetric: vi.fn(),
   searchParams: { current: "" },
   setSearchParams: vi.fn(),
   setPageSize: vi.fn(),
   trialMetric: vi.fn(),
+  trialDrillThrough: vi.fn(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -67,23 +69,29 @@ vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricTrialD
   ObjectMetricTrialDrawer: ({
     definition,
     mode,
+    networkId,
     objectType,
     onClose,
+    onDrillThrough,
     onRun,
   }: {
     definition: { name: string };
     mode: string;
+    networkId?: string;
     objectType?: { id: string } | null;
     onClose: () => void;
+    onDrillThrough: (query: Record<string, never>, bucketKey: string) => Promise<unknown>;
     onRun: (query: Record<string, never>) => Promise<unknown>;
   }) => (
     <div
       data-testid="list-metric-trial"
       data-mode={mode}
       data-name={definition.name}
+      data-network-id={networkId}
       data-object-type={objectType?.id ?? ""}
     >
       <button onClick={() => void onRun({})}>Run trial</button>
+      <button onClick={() => void onDrillThrough({}, "selected-bucket")}>View participants</button>
       <button onClick={onClose}>Close trial</button>
     </div>
   ),
@@ -94,7 +102,9 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   deleteObjectMetricDraftV1: vi.fn(),
   deprecateObjectMetricV1: vi.fn(),
   listObjectMetricsV1: mocks.listObjectMetrics,
+  queryObjectMetricDrillThroughV1: mocks.queryDrillThrough,
   queryObjectMetricDataV1: mocks.queryMetric,
+  trialObjectMetricDrillThroughV1: mocks.trialDrillThrough,
   trialObjectMetricDataV1: mocks.trialMetric,
 }));
 vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
@@ -131,11 +141,13 @@ afterEach(() => {
   mocks.listObjectTypes.mockReset();
   mocks.listObjectMetrics.mockReset();
   mocks.navigate.mockReset();
+  mocks.queryDrillThrough.mockReset();
   mocks.queryMetric.mockReset();
   mocks.searchParams.current = "";
   mocks.setSearchParams.mockReset();
   mocks.setPageSize.mockReset();
   mocks.trialMetric.mockReset();
+  mocks.trialDrillThrough.mockReset();
 });
 
 mocks.getObjectDetail.mockResolvedValue(null);
@@ -178,6 +190,74 @@ function metric(index: number): ObjectMetricRecordV1 {
 }
 
 describe("ObjectMetricListPanel pagination", () => {
+  it("loads sidebar counts only for object rows entering the viewport", async () => {
+    let notifyVisibility: IntersectionObserverCallback | undefined;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          notifyVisibility = callback;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    try {
+      mocks.listObjectTypes.mockResolvedValue({
+        entries: [
+          { id: "object-1", name: "对象 1" },
+          { id: "object-2", name: "对象 2" },
+        ],
+        totalCount: 2,
+      });
+      let resolveFirst: ((result: { entries: never[]; total_count: number }) => void) | undefined;
+      mocks.listObjectMetrics.mockImplementation(
+        (_networkId: string, query: { ownerObjectTypeId: string }) =>
+          query.ownerObjectTypeId === "object-1"
+            ? new Promise((resolve) => {
+                resolveFirst = resolve;
+              })
+            : Promise.resolve({ entries: [], total_count: 7 }),
+      );
+      render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+      const first = await screen.findByTitle("对象 1");
+      await waitFor(() => expect(notifyVisibility).toBeDefined());
+      expect(mocks.listObjectMetrics).not.toHaveBeenCalled();
+
+      act(() => {
+        notifyVisibility?.(
+          [{ isIntersecting: true, target: first } as unknown as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
+      });
+      await waitFor(() => expect(mocks.listObjectMetrics).toHaveBeenCalledTimes(1));
+      expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
+        "network-1",
+        { limit: 1, offset: 0, ownerObjectTypeId: "object-1" },
+        { skipErrorToast: true },
+      );
+      expect(screen.getByTitle("对象 2").textContent).toContain("…");
+
+      act(() => {
+        notifyVisibility?.(
+          [
+            {
+              isIntersecting: true,
+              target: screen.getByTitle("对象 2"),
+            } as unknown as IntersectionObserverEntry,
+          ],
+          {} as IntersectionObserver,
+        );
+      });
+      await waitFor(() => expect(mocks.listObjectMetrics).toHaveBeenCalledTimes(2));
+      resolveFirst?.({ entries: [], total_count: 3 });
+      await waitFor(() => expect(screen.getByTitle("对象 1").textContent).toContain("3"));
+      expect(screen.getByTitle("对象 2").textContent).toContain("7");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("does not load unfiltered metrics when no object type matches the sidebar search", async () => {
     mocks.searchParams.current = "view=list&objectQuery=missing";
     mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
@@ -264,6 +344,7 @@ describe("ObjectMetricListPanel pagination", () => {
     const drawer = await screen.findByTestId("list-metric-trial");
     expect(drawer).toHaveAttribute("data-mode", mode);
     expect(drawer).toHaveAttribute("data-name", "订单指标 1");
+    expect(drawer).toHaveAttribute("data-network-id", "network-1");
     expect(drawer).toHaveAttribute("data-object-type", "order");
     fireEvent.click(screen.getByRole("button", { name: "Run trial" }));
     if (service === "queryMetric") {
@@ -272,6 +353,27 @@ describe("ObjectMetricListPanel pagination", () => {
     } else {
       expect(mocks.trialMetric).toHaveBeenCalledWith("network-1", record.definition, {});
       expect(mocks.queryMetric).not.toHaveBeenCalled();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "View participants" }));
+    if (service === "queryMetric") {
+      expect(mocks.queryDrillThrough).toHaveBeenCalledWith(
+        "network-1",
+        "metric-1",
+        1,
+        {},
+        "selected-bucket",
+        undefined,
+      );
+      expect(mocks.trialDrillThrough).not.toHaveBeenCalled();
+    } else {
+      expect(mocks.trialDrillThrough).toHaveBeenCalledWith(
+        "network-1",
+        record.definition,
+        {},
+        "selected-bucket",
+        undefined,
+      );
+      expect(mocks.queryDrillThrough).not.toHaveBeenCalled();
     }
     expect(mocks.navigate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Close trial" }));
@@ -484,15 +586,18 @@ describe("ObjectMetricListPanel pagination", () => {
     fireEvent.change(screen.getByPlaceholderText("搜索当前对象的指标名称或编码"), {
       target: { value: "订单指标 2" },
     });
-    await waitFor(() => {
-      expect(mocks.listObjectMetrics).toHaveBeenCalledWith("network-1", {
-        keyword: "订单指标 2",
-        limit: 10,
-        metricType: undefined,
-        offset: 0,
-        ownerObjectTypeId: "order",
-      });
-    });
+    await waitFor(
+      () => {
+        expect(mocks.listObjectMetrics).toHaveBeenCalledWith("network-1", {
+          keyword: "订单指标 2",
+          limit: 10,
+          metricType: undefined,
+          offset: 0,
+          ownerObjectTypeId: "order",
+        });
+      },
+      { timeout: 5000 },
+    );
   });
 
   it("pages a large object catalog and searches it on the server without loading metrics", async () => {

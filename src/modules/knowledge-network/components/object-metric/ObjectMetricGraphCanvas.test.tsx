@@ -132,6 +132,35 @@ function neighborCountRequestIds() {
 }
 
 describe("ObjectMetricGraphCanvas", () => {
+  it("reuses a previously loaded owner's metric scan when returning to that object", async () => {
+    const ownerMetricCache = new Map();
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+    const props = {
+      networkId: "network-1",
+      onOpenMetric: vi.fn(),
+      onSelectObject: vi.fn(),
+      ownerMetricCache,
+      refreshVersion: 0,
+      selectedObjectTypeName: "销售订单",
+    };
+    const { rerender } = render(
+      <ObjectMetricGraphCanvas {...props} selectedObjectTypeId="order" />,
+    );
+    await waitFor(() => expect(ownerMetricCache.size).toBe(1));
+
+    rerender(<ObjectMetricGraphCanvas {...props} selectedObjectTypeId="other" />);
+    await waitFor(() => expect(ownerMetricCache.size).toBe(2));
+
+    rerender(<ObjectMetricGraphCanvas {...props} selectedObjectTypeId="order" />);
+    await waitFor(() => expect(mocks.listMetrics).toHaveBeenCalledTimes(2));
+    expect(
+      mocks.listMetrics.mock.calls.filter(
+        ([, query]) => (query as { ownerObjectTypeId?: string }).ownerObjectTypeId === "order",
+      ),
+    ).toHaveLength(1);
+  });
+
   it("shows each neighboring object's own metric count without changing the relation count", async () => {
     mocks.listRelations.mockResolvedValue({ entries: [relation(1)], totalCount: 1 });
     mocks.listMetrics.mockImplementation(

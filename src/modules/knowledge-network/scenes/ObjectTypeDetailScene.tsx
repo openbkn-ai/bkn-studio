@@ -45,6 +45,7 @@ import {
 } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTable";
 import { useObjectTypePropertyTableState } from "@/modules/knowledge-network/components/object-type/useObjectTypePropertyTableState";
 import { ObjectTypeDetailLogicPropertyTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailLogicPropertyTrialPanel";
+import { ObjectTypeMetricParticipantPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeMetricParticipantPanel";
 import { buildSampleRowKey } from "@/modules/knowledge-network/lib/object-type-instance-identity";
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
@@ -214,6 +215,7 @@ export function ObjectTypeDetailScene() {
   const activeTab = parseObjectTypeDetailTab(searchParams.get("tab"));
   const selectedLogicPropertyName = searchParams.get("logicProperty");
   const selectedSampleRowKey = searchParams.get("sampleRow");
+  const metricInstanceParam = searchParams.get("metricInstance");
   const selectedLogicTrialRowKeys = useMemo(
     () => (selectedSampleRowKey ? [selectedSampleRowKey] : []),
     [selectedSampleRowKey],
@@ -607,6 +609,7 @@ export function ObjectTypeDetailScene() {
         next.delete("metricId");
         next.delete("logicProperty");
         next.delete("sampleRow");
+        next.delete("metricInstance");
         return next;
       },
       { replace: true },
@@ -1708,6 +1711,15 @@ export function ObjectTypeDetailScene() {
       </div>
 
       <div className={styles.tabPanelContent}>
+        {dataSection === "instance" && metricInstanceParam && canQueryData ? (
+          <ObjectTypeMetricParticipantPanel
+            identityParam={metricInstanceParam}
+            networkId={networkId}
+            objectTypeId={objectTypeId}
+            primaryKeys={objectTypePrimaryKeys}
+            properties={detail.dataProperties}
+          />
+        ) : null}
         {dataSection === "instance" ? (
           <>
             {!boundDataView ? (

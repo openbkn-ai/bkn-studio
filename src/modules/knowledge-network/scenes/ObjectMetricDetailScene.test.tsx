@@ -16,6 +16,9 @@ const mocks = vi.hoisted(() => ({
   createNextDraft: vi.fn(),
   getObjectMetricV1: vi.fn(),
   getObjectTypeDetail: vi.fn(),
+  getRelationType: vi.fn(),
+  listObjectTypes: vi.fn(),
+  listRelationTypes: vi.fn(),
   listMetrics: vi.fn(),
   listVersions: vi.fn(),
   locationSearch: { current: "" },
@@ -53,12 +56,16 @@ vi.mock("@/modules/knowledge-network/services/object-metric.service", () => ({
 }));
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
-  listKnowledgeNetworkObjectTypes: vi.fn().mockResolvedValue([]),
-  listKnowledgeNetworkRelationTypes: vi.fn().mockResolvedValue([]),
+  listKnowledgeNetworkObjectTypes: mocks.listObjectTypes,
+  listKnowledgeNetworkRelationTypes: mocks.listRelationTypes,
 }));
 
 vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
   getKnowledgeNetworkObjectTypeDetail: mocks.getObjectTypeDetail,
+}));
+
+vi.mock("@/modules/knowledge-network/services/relation-type.service", () => ({
+  getKnowledgeNetworkRelationType: mocks.getRelationType,
 }));
 
 vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricLineagePanel", () => ({
@@ -114,6 +121,12 @@ afterEach(() => {
   mocks.getObjectMetricV1.mockReset();
   mocks.getObjectTypeDetail.mockReset();
   mocks.getObjectTypeDetail.mockResolvedValue(null);
+  mocks.getRelationType.mockReset();
+  mocks.getRelationType.mockResolvedValue(null);
+  mocks.listObjectTypes.mockReset();
+  mocks.listObjectTypes.mockResolvedValue([]);
+  mocks.listRelationTypes.mockReset();
+  mocks.listRelationTypes.mockResolvedValue([]);
   mocks.listMetrics.mockReset();
   mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
   mocks.listVersions.mockReset();
@@ -144,6 +157,51 @@ function record(
 }
 
 describe("ObjectMetricDetailScene actions", () => {
+  it("loads only referenced object and relation names instead of full catalogs", async () => {
+    const derived = record("published", "object_set");
+    derived.definition.metric_type = "derived";
+    derived.definition.specification = {
+      kind: "derived",
+      base_metric: { metric_id: "base", version: 1 },
+      business_qualifiers: {
+        event_time: { object_type_id: "related", property_name: "created_at" },
+        relation_path: {
+          alias: "related",
+          cardinality_policy: "preserve_root",
+          purpose: "qualify_root",
+          steps: [
+            {
+              direction: "outgoing",
+              relation_type_id: "relation-1",
+              target_object_type_id: "related",
+            },
+          ],
+        },
+      },
+    };
+    mocks.getObjectMetricV1.mockResolvedValue(derived);
+    mocks.listVersions.mockResolvedValue([derived]);
+    mocks.getObjectTypeDetail.mockImplementation((_networkId: string, id: string) =>
+      Promise.resolve({
+        id,
+        name: id === "related" ? "关联对象" : "销售订单",
+        dataProperties: [],
+        logicProperties: [],
+      }),
+    );
+    mocks.getRelationType.mockResolvedValue({ id: "relation-1", name: "订单关联对象" });
+
+    render(<ObjectMetricDetailScene />);
+    await waitFor(() =>
+      expect(mocks.getRelationType).toHaveBeenCalledWith("network-1", "relation-1"),
+    );
+    expect(await screen.findByText("订单关联对象")).toBeInTheDocument();
+    expect(mocks.getObjectTypeDetail).toHaveBeenCalledWith("network-1", "related");
+    expect(mocks.getRelationType).toHaveBeenCalledWith("network-1", "relation-1");
+    expect(mocks.listObjectTypes).not.toHaveBeenCalled();
+    expect(mocks.listRelationTypes).not.toHaveBeenCalled();
+  });
+
   it("keeps trial available but hides mutation actions without modify permission", async () => {
     const published = record("published", "object_instance");
     mocks.canModify.current = false;
@@ -157,7 +215,7 @@ describe("ObjectMetricDetailScene actions", () => {
 
     render(<ObjectMetricDetailScene />);
 
-    expect(await screen.findByRole("button", { name: "试算" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "分析" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "绑定逻辑属性" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "创建新版本草稿" })).not.toBeInTheDocument();
   });
@@ -169,7 +227,7 @@ describe("ObjectMetricDetailScene actions", () => {
 
     render(<ObjectMetricDetailScene />);
 
-    expect(await screen.findByRole("button", { name: "试算" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "分析" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "创建新版本草稿" })).not.toBeInTheDocument();
   });
 
@@ -416,11 +474,11 @@ describe("ObjectMetricDetailScene actions", () => {
     expect(screen.getByText("coupon_used_count")).toBeInTheDocument();
     const actions = container.querySelector<HTMLElement>("[class*=actions]");
     expect(actions).not.toBeNull();
-    expect(within(actions!).getByRole("button", { name: "试算" })).toBeEnabled();
+    expect(within(actions!).getByRole("button", { name: "分析" })).toBeEnabled();
     expect(await within(actions!).findByRole("button", { name: "绑定逻辑属性" })).toBeEnabled();
     expect(within(actions!).getByRole("button", { name: "创建新版本草稿" })).toBeInTheDocument();
 
-    fireEvent.click(within(actions!).getByRole("button", { name: "试算" }));
+    fireEvent.click(within(actions!).getByRole("button", { name: "分析" }));
     expect(screen.getByTestId("metric-trial-drawer")).toHaveAttribute("data-mode", "published");
     fireEvent.click(screen.getByRole("button", { name: "Run trial" }));
     expect(mocks.queryMetric).toHaveBeenCalledWith("network-1", "metric-1", 1, {});
@@ -440,7 +498,7 @@ describe("ObjectMetricDetailScene actions", () => {
     render(<ObjectMetricDetailScene />);
 
     expect(await screen.findByRole("heading", { name: "已用券次数" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "试算" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "分析" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "绑定逻辑属性" })).not.toBeInTheDocument();
     expect(screen.queryByText("仅适用于单个实例")).not.toBeInTheDocument();
   });

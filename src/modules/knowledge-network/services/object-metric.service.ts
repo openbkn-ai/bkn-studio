@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
 import { mockObjectMetrics } from "@/modules/knowledge-network/services/mock/object-metrics";
 import {
   mockObjectTypeLogicProperties,
@@ -16,6 +17,7 @@ import {
   inferObjectMetricOutputShapeV1,
   type ObjectMetricCapabilitiesV1,
   type ObjectMetricDataV1,
+  type ObjectMetricDrillThroughV1,
   type ObjectMetricDefinitionV1,
   type ObjectMetricListV1,
   type MetricPropertyBindingV1,
@@ -354,7 +356,7 @@ export async function queryObjectMetricDataV1(
   const response = await http.post<ObjectMetricDataV1>(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/data`,
     query,
-    { params: { branch: "main", version } },
+    { params: { branch: "main", version }, transformResponse: transformPrecisionSafeJSONResponse },
   );
   return response.data;
 }
@@ -383,7 +385,50 @@ export async function trialObjectMetricDataV1(
   const response = await http.post<ObjectMetricDataV1>(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/trial`,
     { definition, query },
-    { params: { branch: "main" }, skipErrorToast: true },
+    {
+      params: { branch: "main" },
+      skipErrorToast: true,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
+  );
+  return response.data;
+}
+
+export async function queryObjectMetricDrillThroughV1(
+  networkId: string,
+  metricId: string,
+  version: number,
+  query: ObjectMetricQueryRequestV1,
+  bucketKey: string,
+  cursor?: string,
+): Promise<ObjectMetricDrillThroughV1> {
+  const response = await http.post<ObjectMetricDrillThroughV1>(
+    `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/data/drill-through`,
+    { query, bucket_key: bucketKey, page_size: 100, cursor },
+    {
+      params: { branch: "main", version },
+      skipErrorToast: true,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
+  );
+  return response.data;
+}
+
+export async function trialObjectMetricDrillThroughV1(
+  networkId: string,
+  definition: ObjectMetricDefinitionV1,
+  query: ObjectMetricQueryRequestV1,
+  bucketKey: string,
+  cursor?: string,
+): Promise<ObjectMetricDrillThroughV1> {
+  const response = await http.post<ObjectMetricDrillThroughV1>(
+    `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/trial/drill-through`,
+    { definition, query, bucket_key: bucketKey, page_size: 100, cursor },
+    {
+      params: { branch: "main" },
+      skipErrorToast: true,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
   );
   return response.data;
 }

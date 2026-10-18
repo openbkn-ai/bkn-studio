@@ -275,14 +275,22 @@ export type ObjectMetricQueryRequestV1 = {
   filter?: ObjectMetricConditionV1;
   analysis_dimensions?: ObjectMetricPropertyRefV1[];
   time?: { start: number; end: number };
+  bucket_selection?: {
+    parent_query: ObjectMetricQueryRequestV1;
+    bucket_key: string;
+  };
 };
 
 export type ObjectMetricDataEntryV1 = {
   instance_identity?: Record<string, unknown>;
   dimensions?: Record<string, unknown>;
+  dimension_cells?: Array<{ ref: ObjectMetricPropertyRefV1; value: unknown }>;
   time?: number;
+  time_bucket?: { start: number; end: number };
   value?: unknown;
   status: "ok" | "no_data" | "unavailable";
+  bucket_key?: string;
+  available_actions?: Array<"filter" | "drill" | "participants" | "context">;
 };
 
 export type ObjectMetricDataV1 = {
@@ -298,6 +306,17 @@ export type ObjectMetricDataV1 = {
   status: "ok" | "no_data" | "unavailable" | "partial";
   warnings?: string[];
   overall_ms: number;
+  evaluated_at?: number;
+  effective_window?: { start: number; end: number };
+};
+
+export type ObjectMetricDrillThroughV1 = {
+  participants: Array<{ instance_identity: Record<string, unknown>; role: string }>;
+  next_cursor?: string;
+  bucket_value?: unknown;
+  evaluated_at: number;
+  status: "ok" | "partial";
+  warnings?: string[];
 };
 
 export type MetricPropertyBindingV1 = {
