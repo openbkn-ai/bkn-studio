@@ -57,10 +57,12 @@ export function CatalogDetailTabs({ catalog, resources }: CatalogDetailTabsProps
           key: tab.key,
           label: <CatalogDetailTabLabel tab={tab} />,
           children: (
+            // Keyed by catalog as well, so a failure in one catalog does not stick when another is selected.
             <CatalogDetailTabBoundary
               fallback={
                 <Alert message={t("dataCatalog.catalogDetail.tabFailed")} showIcon type="error" />
               }
+              key={`${catalog.id}:${tab.key}`}
               tabKey={tab.key}
             >
               <GatedCatalogDetailTab catalog={catalog} tab={tab} />

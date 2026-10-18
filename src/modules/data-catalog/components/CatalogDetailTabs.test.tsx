@@ -8,6 +8,7 @@
 import "@/app/locales/i18n";
 
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -37,18 +38,25 @@ function entitlement(overrides: Partial<Entitlement>): Entitlement {
   };
 }
 
-function renderDetail(snapshot: Entitlement | null, loading = false) {
-  return render(
+function detail(snapshot: Entitlement | null, record: CatalogRecord = catalog, loading = false) {
+  return (
     <EntitlementContext.Provider value={{ loading, refresh: async () => {}, snapshot }}>
       <MemoryRouter>
-        <CatalogDetailTabs catalog={catalog} resources={<p>resource list</p>} />
+        <CatalogDetailTabs catalog={record} resources={<p>resource list</p>} />
       </MemoryRouter>
-    </EntitlementContext.Provider>,
+    </EntitlementContext.Provider>
   );
 }
 
+function renderDetail(snapshot: Entitlement | null, loading = false) {
+  return render(detail(snapshot, catalog, loading));
+}
+
 /** graph_explorer is a catalogued Professional capability, so it exercises the edition gate. */
-function registerFilesTab(capability = "graph_explorer", render = () => <p>file list</p>) {
+function registerFilesTab(
+  capability = "graph_explorer",
+  render: (record: CatalogRecord) => ReactNode = () => <p>file list</p>,
+) {
   registerExtension({
     capability,
     catalogDetailTabs: [
@@ -155,5 +163,23 @@ describe("CatalogDetailTabs", () => {
     fireEvent.click(screen.getAllByRole("tab")[0]);
 
     expect(screen.getByText("resource list")).toBeInTheDocument();
+  });
+
+  it("recovers a failed tab when another catalog is selected", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    registerFilesTab("graph_explorer", (record) => {
+      if (record.id === "catalog-1") {
+        throw new Error("render failed");
+      }
+      return <p>file list of {record.id}</p>;
+    });
+    const other = { ...catalog, id: "catalog-2" } as CatalogRecord;
+    const { rerender } = render(detail(professional));
+    fireEvent.click(screen.getAllByRole("tab")[1]);
+    expect(screen.getByText("该页签加载失败，不影响其他页签。")).toBeInTheDocument();
+
+    rerender(detail(professional, other));
+
+    expect(screen.getByText("file list of catalog-2")).toBeInTheDocument();
   });
 });
