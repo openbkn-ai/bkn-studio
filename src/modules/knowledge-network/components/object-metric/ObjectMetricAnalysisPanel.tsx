@@ -533,6 +533,10 @@ export function ObjectMetricAnalysisPanel({
   }, [entries, identityLabels, propertyLabels, resolvedTheme, resolvedView]);
   const manualView = activeView !== "auto";
   const summaryValue = entries.length === 1 ? entries[0]?.value : undefined;
+  const summaryEntry =
+    entries.length === 1
+      ? result.entries.find((entry) => entry.status === "ok" && toNumber(entry.value) !== undefined)
+      : undefined;
   const hasPrecisionSensitiveValues = result.entries.some(
     (entry) => typeof entry.value === "string" && toNumber(entry.value) !== undefined,
   );
@@ -655,7 +659,6 @@ export function ObjectMetricAnalysisPanel({
             {typeof summaryEntry?.value === "string"
               ? summaryEntry.value
               : formatNumber(summaryValue)}
-          </strong>
           </strong>
           {result.model.value.unit?.display_symbol || result.model.value.unit?.code ? (
             <em>{result.model.value.unit.display_symbol ?? result.model.value.unit.code}</em>

@@ -137,6 +137,22 @@ describe("ObjectMetricAnalysisPanel", () => {
     );
     expect(screen.getByText("图形按近似数值绘制；精确值请查看下方结果表格。")).toBeInTheDocument();
   });
+
+  it("uses the valid source entry for a summary when an earlier entry has no data", () => {
+    render(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          entries: [
+            { status: "no_data", value: null },
+            { status: "ok", value: "9007199254740993" },
+          ],
+          model: { ...result.model, output_shape: "summary" },
+        }}
+      />,
+    );
+    expect(screen.getByText("9007199254740993")).toBeInTheDocument();
+  });
   it("shows business result shape without a redundant manual-selection badge", () => {
     render(<ObjectMetricAnalysisPanel result={result} />);
 
