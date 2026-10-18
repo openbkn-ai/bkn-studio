@@ -220,15 +220,15 @@ describe("ObjectMetricAnalysisPanel", () => {
     expect(screen.queryByText("transaction")).not.toBeInTheDocument();
   });
 
-  it("defaults to a chart for numeric identity groups and keeps the exact table available", () => {
+  it("defaults to a chart for small numeric groups and keeps the exact table available", () => {
     const resultTable = <div data-testid="result-table">Exact result rows</div>;
     render(
       <ObjectMetricAnalysisPanel
         result={{
           ...result,
           entries: [
-            { dimensions: { status: "执行中", order_id: "A" }, status: "ok", value: 1 },
-            { dimensions: { status: "执行中", order_id: "B" }, status: "ok", value: 2 },
+            { dimensions: { order_id: "A" }, status: "ok", value: 1 },
+            { dimensions: { order_id: "B" }, status: "ok", value: 2 },
           ],
         }}
         resultTable={resultTable}
@@ -243,7 +243,7 @@ describe("ObjectMetricAnalysisPanel", () => {
     expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
   });
 
-  it("shows the localized automatic chart type after a chart becomes table-recommended", () => {
+  it("shows the localized automatic chart type after switching a table-recommended result to chart", () => {
     const { rerender } = render(<ObjectMetricAnalysisPanel result={result} />);
     fireEvent.click(screen.getByText("表格"));
     fireEvent.click(screen.getByText("图表"));
@@ -267,6 +267,68 @@ describe("ObjectMetricAnalysisPanel", () => {
     expect(screen.queryByText("auto")).not.toBeInTheDocument();
   });
 
+  it("defaults to a table for more than 20 categories and keeps every bucket in the optional chart", () => {
+    const denseEntries = Array.from({ length: 21 }, (_, index) => ({
+      dimensions: { product_code: `product-${index}` },
+      status: "ok" as const,
+      value: index + 1,
+    }));
+    const onSelectEntry = vi.fn();
+    render(
+      <ObjectMetricAnalysisPanel
+        result={{ ...result, entries: denseEntries }}
+        resultTable={<div data-testid="result-table">Exact result rows</div>}
+        onSelectEntry={onSelectEntry}
+      />,
+    );
+
+    expect(screen.getByText("自动推荐：表格")).toBeInTheDocument();
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+    expect(screen.queryByTestId("metric-chart")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("图表"));
+    expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
+    expect(mocks.options.at(-1)?.xAxis).toMatchObject({
+      axisLabel: { interval: "auto" },
+      data: denseEntries.map((entry) => entry.dimensions.product_code),
+    });
+    expect(mocks.options.at(-1)?.dataZoom).toMatchObject([
+      { endValue: 19, filterMode: "none", type: "inside" },
+      { endValue: 19, filterMode: "none", type: "slider" },
+    ]);
+    expect(mocks.options.at(-1)?.series).toMatchObject([
+      { data: denseEntries.map((entry) => entry.value) },
+    ]);
+    mocks.onClick?.({ dataIndex: 20 });
+    expect(onSelectEntry).toHaveBeenCalledWith(denseEntries[20]);
+  });
+
+  it("keeps many time series in a table by default and uses a time axis for manual charts", () => {
+    const entries = Array.from({ length: 7 }, (_, index) => ({
+      dimensions: { region: `region-${index}` },
+      status: "ok" as const,
+      time: Date.parse("2026-01-01T00:00:00Z"),
+      value: index + 1,
+    }));
+    render(
+      <ObjectMetricAnalysisPanel
+        result={{ ...result, entries, model: { ...result.model, output_shape: "time_series" } }}
+        resultTable={<div data-testid="result-table">Exact result rows</div>}
+      />,
+    );
+
+    expect(screen.getByText("自动推荐：表格")).toBeInTheDocument();
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("图表"));
+    expect(mocks.options.at(-1)?.xAxis).toMatchObject({
+      data: [expect.any(String)],
+      type: "category",
+    });
+    expect(mocks.options.at(-1)?.series).toMatchObject(
+      Array.from({ length: 7 }, () => ({ type: "line" })),
+    );
+  });
+
   it("keeps an explicitly chosen chart across result changes and falls back for nonnumeric data", () => {
     const denseEntries = Array.from({ length: 21 }, (_, index) => ({
       dimensions: { product_code: `product-${index}` },
@@ -278,9 +340,10 @@ describe("ObjectMetricAnalysisPanel", () => {
     const { rerender } = render(
       <ObjectMetricAnalysisPanel result={denseResult} resultTable={resultTable} />,
     );
-    expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
-    expect(screen.getByText("自动推荐：柱状")).toBeInTheDocument();
-    chooseChart("柱状");
+    expect(screen.getByTestId("result-table")).toBeInTheDocument();
+    expect(screen.getByText("自动推荐：表格")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("图表"));
+    chooseChart("饼图");
     rerender(
       <ObjectMetricAnalysisPanel
         result={{ ...denseResult, entries: denseEntries.map((entry) => ({ ...entry, value: 40 })) }}
@@ -289,6 +352,7 @@ describe("ObjectMetricAnalysisPanel", () => {
     );
     expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
     expect(screen.queryByTestId("result-table")).not.toBeInTheDocument();
+    expect(mocks.options.at(-1)?.series).toMatchObject([{ type: "pie" }]);
 
     rerender(
       <ObjectMetricAnalysisPanel

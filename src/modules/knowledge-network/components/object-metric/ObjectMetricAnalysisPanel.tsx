@@ -201,16 +201,32 @@ function buildCategoryOption(
   identityLabels: Record<string, string>,
 ): EChartsOption {
   const categories = entries.map((entry) => categoryLabel(entry, propertyLabels, identityLabels));
+  const dense = categories.length > 20;
   return {
     color: palette,
-    grid: { containLabel: true, left: 14, right: 20, bottom: 44, top: 22 },
+    grid: { containLabel: true, left: 14, right: 20, bottom: dense ? 72 : 44, top: 22 },
     tooltip: { trigger: "axis" },
     xAxis: {
-      axisLabel: { interval: 0, rotate: categories.length > 5 ? 22 : 0 },
+      axisLabel: { interval: dense ? "auto" : 0, rotate: categories.length > 5 ? 22 : 0 },
       data: categories,
       type: "category",
     },
     yAxis: { type: "value" },
+    ...(dense
+      ? {
+          dataZoom: [
+            { endValue: 19, filterMode: "none" as const, startValue: 0, type: "inside" as const },
+            {
+              bottom: 10,
+              endValue: 19,
+              filterMode: "none" as const,
+              height: 18,
+              startValue: 0,
+              type: "slider" as const,
+            },
+          ],
+        }
+      : {}),
     series: [
       {
         barMaxWidth: 42,
@@ -518,7 +534,8 @@ export function ObjectMetricAnalysisPanel({
     : entries.length < result.entries.length
       ? "table"
       : recommendObjectMetricAnalysisView(entries);
-  const defaultChartView = recommendedView === "table" ? "bar" : recommendedView;
+  const defaultChartView =
+    recommendedView === "table" ? (hasTime(entries) ? "line" : "bar") : recommendedView;
   const chartable =
     entries.length > 0 && (entries.length === result.entries.length || isSingleValue);
   const hasTwoDimensions = entries.some((entry) => dimensionEntries(entry).length >= 2);
@@ -535,7 +552,8 @@ export function ObjectMetricAnalysisPanel({
   const activeView = availableViews.some((option) => option.value === selectedView)
     ? selectedView
     : "auto";
-  const tableVisible = !chartable || surface === "table";
+  const tableVisible =
+    !chartable || surface === "table" || (surface === "auto" && recommendedView === "table");
   const resolvedView = tableVisible
     ? "table"
     : activeView === "auto"
@@ -699,7 +717,7 @@ export function ObjectMetricAnalysisPanel({
             {objectMetricText("analysisRecommendedView", {
               p0:
                 viewOptions.find(
-                  (option) => option.value === (chartable ? defaultChartView : "table"),
+                  (option) => option.value === (chartable ? recommendedView : "table"),
                 )?.label ?? "",
             })}
           </span>
