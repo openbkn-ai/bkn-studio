@@ -40,7 +40,10 @@ import {
   replaceObjectMetricDependencyAliases,
 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
 import { objectMetricBusinessConditionLabel } from "@/modules/knowledge-network/lib/object-metric-condition-label";
-import { objectMetricPropertyDisplayName } from "@/modules/knowledge-network/lib/object-metric-display";
+import {
+  objectMetricAggregationDisplayName,
+  objectMetricPropertyDisplayName,
+} from "@/modules/knowledge-network/lib/object-metric-display";
 import { objectMetricUnitDisplayLabel } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
 import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 import {
@@ -150,33 +153,6 @@ function MetricDimensionList({ items, emptyText }: { items: string[]; emptyText:
     </span>
   );
 }
-
-const aggregationNames: Record<string, string> = {
-  get avg() {
-    return objectMetricText("mdb7538b96322");
-  },
-  get count() {
-    return objectMetricText("m3a6663a758c9");
-  },
-  get count_distinct() {
-    return objectMetricText("m1e96cd1f49bf");
-  },
-  get count_rows() {
-    return objectMetricText("m21179deb9a74");
-  },
-  get identity() {
-    return objectMetricText("m7ea9fbba115d");
-  },
-  get max() {
-    return objectMetricText("m1e7a22820768");
-  },
-  get min() {
-    return objectMetricText("mb2dcdcfabb6a");
-  },
-  get sum() {
-    return objectMetricText("m2819237ddb01");
-  },
-};
 
 type MetricTextKey = Parameters<typeof objectMetricText>[0];
 
@@ -779,8 +755,7 @@ export function ObjectMetricDetailScene() {
           {specification.kind === "atomic" ? (
             <Descriptions column={{ xs: 1, sm: 2 }}>
               <Descriptions.Item label={objectMetricText("mb17e03bc6bad")}>
-                {aggregationNames[specification.measure.aggregation] ??
-                  specification.measure.aggregation}
+                {objectMetricAggregationDisplayName(specification.measure.aggregation)}
               </Descriptions.Item>
               <Descriptions.Item label={objectMetricText("me92a76d3b298")}>
                 {expression ? (

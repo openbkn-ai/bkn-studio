@@ -37,6 +37,7 @@ import {
   objectMetricConditionLabel,
 } from "@/modules/knowledge-network/lib/object-metric-condition-label";
 import {
+  objectMetricAggregationDisplayName,
   objectMetricPropertyDisplayLabels,
   objectMetricPropertyDisplayName,
 } from "@/modules/knowledge-network/lib/object-metric-display";
@@ -48,21 +49,6 @@ type TrialFormValues = {
   analysisDimensions?: string[];
   identity?: Record<string, string>;
   time?: [import("dayjs").Dayjs, import("dayjs").Dayjs];
-};
-
-type MetricTextKey = Parameters<typeof objectMetricText>[0];
-const aggregationKeys: Record<
-  Extract<ObjectMetricDefinitionV1["specification"], { kind: "atomic" }>["measure"]["aggregation"],
-  MetricTextKey
-> = {
-  avg: "mdb7538b96322",
-  count: "m3a6663a758c9",
-  count_distinct: "m1e96cd1f49bf",
-  count_rows: "m21179deb9a74",
-  identity: "m7ea9fbba115d",
-  max: "m1e7a22820768",
-  min: "mb2dcdcfabb6a",
-  sum: "m2819237ddb01",
 };
 
 function dimensionReferenceKey(reference: {
@@ -1013,7 +999,7 @@ export function ObjectMetricTrialDrawer({
               label: objectMetricText("analysisAggregation"),
               children:
                 definition.specification.kind === "atomic"
-                  ? objectMetricText(aggregationKeys[definition.specification.measure.aggregation])
+                  ? objectMetricAggregationDisplayName(definition.specification.measure.aggregation)
                   : "—",
             },
             {

@@ -19,7 +19,10 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
 import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
-import { objectMetricPropertyDisplayName } from "@/modules/knowledge-network/lib/object-metric-display";
+import {
+  objectMetricAggregationDisplayName,
+  objectMetricPropertyDisplayName,
+} from "@/modules/knowledge-network/lib/object-metric-display";
 import { objectMetricUnitDisplayLabel } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
 import {
   objectMetricVersionKey,
@@ -121,22 +124,6 @@ const metricStatusKeys = {
 } as const;
 
 type MetricTextKey = Parameters<typeof objectMetricText>[0];
-const aggregationKeys: Record<
-  Extract<
-    ObjectMetricRecordV1["definition"]["specification"],
-    { kind: "atomic" }
-  >["measure"]["aggregation"],
-  MetricTextKey
-> = {
-  avg: "mdb7538b96322",
-  count: "m3a6663a758c9",
-  count_distinct: "m1e96cd1f49bf",
-  count_rows: "m21179deb9a74",
-  identity: "m7ea9fbba115d",
-  max: "m1e7a22820768",
-  min: "mb2dcdcfabb6a",
-  sum: "m2819237ddb01",
-};
 const physicalTypeKeys: Record<
   ObjectMetricRecordV1["definition"]["result_semantics"]["value"]["physical_type"],
   MetricTextKey
@@ -1870,7 +1857,9 @@ export function ObjectMetricGraphCanvas({
               ) : null}
               {drawerAtomicSpecification ? (
                 <Descriptions.Item label={objectMetricText("graphCalculationSummary")}>
-                  {objectMetricText(aggregationKeys[drawerAtomicSpecification.measure.aggregation])}
+                  {objectMetricAggregationDisplayName(
+                    drawerAtomicSpecification.measure.aggregation,
+                  )}
                   {drawerAtomicSource ? ` · ${drawerAtomicSource}` : null}
                 </Descriptions.Item>
               ) : null}
