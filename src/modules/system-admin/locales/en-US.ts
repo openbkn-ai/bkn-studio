@@ -1186,6 +1186,22 @@ export const systemAdminEnUS = {
         unknown: "{{error}}",
       },
     },
+    agentConfig: {
+      title: "Agent Settings",
+      description:
+        "Maintain the shared configuration of the built-in smart Q&A Agent: model, MCP service, execution caps, publish state, and shared Prompt.",
+      intro:
+        "This configuration is shared by every knowledge network. Network settings and personal preferences can only add instructions or narrow tools and limits on top of it.",
+      runtimeTitle: "Runtime",
+      mcpProfile: "MCP service",
+      mcpProfileHint:
+        "Context Loader offers a full endpoint (every tool) and a compact one (fewer tools, less context).",
+      mcpDefault: "Service default",
+      mcpFull: "Full",
+      mcpCompact: "Compact",
+      forbidden:
+        "You cannot change the shared configuration. Until an Agent management permission is registered, only the Agent's creator can change it.",
+    },
     accessOrigins: {
       title: "Access Addresses",
       description: "Manage browser origins allowed to complete Studio login and logout flows.",

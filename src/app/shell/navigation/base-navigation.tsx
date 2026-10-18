@@ -13,6 +13,7 @@ import {
   FileTextOutlined,
   GlobalOutlined,
   KeyOutlined,
+  RobotOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
   TeamOutlined,
@@ -81,6 +82,13 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         icon: <GlobalOutlined />,
         path: "/system/access-addresses",
         permission: systemAdminPermissions.accessOrigins,
+      },
+      {
+        key: "agent-config",
+        labelKey: "shell.items.agentConfig",
+        icon: <RobotOutlined />,
+        path: "/system/agent-config",
+        permission: systemAdminPermissions.agentConfig,
       },
       {
         key: "log-management",

@@ -66,6 +66,8 @@ type ToolCallView = {
   error?: string;
   /** Only present in history from the former browser loop. */
   clientBlocked?: boolean;
+  /** For a failed call: unavailable when it did not go through at all. */
+  errorKind?: "unavailable" | "error";
   startedAt: number;
   latencyMs?: number;
 };
@@ -80,7 +82,7 @@ type MessagePart = { kind: "text"; text: string } | { kind: "tools"; ids: string
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
-  /** Only present in history from the former browser loop; BKN Agent does not stream reasoning. */
+  /** The model's streamed thinking, shown collapsed above the answer. */
   reasoning?: string;
   toolCalls?: ToolCallView[];
   /** Render order only; content and toolCalls stay flat for history. */
@@ -255,16 +257,20 @@ function ToolCallCard({
     call.status === "running"
       ? styles.dotRunning
       : call.status === "error"
-        ? styles.dotError
+        ? call.errorKind === "unavailable"
+          ? styles.dotError
+          : styles.dotWarn
         : styles.dotOk;
   const statusText = call.clientBlocked
     ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlocked")
     : call.status === "running"
       ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
       : call.status === "error"
-        ? call.latencyMs === undefined
-          ? t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")
-          : `${t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")} - ${call.latencyMs}ms`
+        ? `${t(
+            call.errorKind === "unavailable"
+              ? "knowledgeNetwork.agentChat.chatPane.toolCall.failed"
+              : "knowledgeNetwork.agentChat.chatPane.toolCall.returnedError",
+          )}${call.latencyMs === undefined ? "" : ` - ${call.latencyMs}ms`}`
         : `200 - ${call.latencyMs ?? "-"}ms`;
   const requestLabel = call.clientBlocked
     ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlockedRequest", { name: call.name })
@@ -318,9 +324,12 @@ function ToolCallCard({
  */
 function ToolCallSegment({
   calls,
+  live = false,
   t,
 }: {
   calls: ToolCallView[];
+  /** The turn is still streaming and this is its latest run of calls. */
+  live?: boolean;
   t: ReturnType<typeof useTranslation>["t"];
 }) {
   const [openCalls, setOpenCalls] = useState<Record<string, boolean>>({});
@@ -339,14 +348,26 @@ function ToolCallSegment({
       </div>
     );
   }
-  const running = calls.some((call) => call.status === "running");
+  // While the turn is still working (the model thinking between calls), the run is
+  // in progress even if no single call is running right now.
+  const running = live || calls.some((call) => call.status === "running");
   const failed = calls.filter((call) => call.status === "error").length;
-  const statusDot = running ? styles.dotRunning : failed > 0 ? styles.dotError : styles.dotOk;
+  // Only calls that did not go through are failures worth flagging; errors a tool
+  // returned (bad syntax, say) are trial and error the model works around, and
+  // the card shows them individually.
+  const unavailable = calls.filter(
+    (call) => call.status === "error" && call.errorKind === "unavailable",
+  ).length;
+  const showFailed = unavailable > 0;
+  const statusDot = running ? styles.dotRunning : showFailed ? styles.dotError : styles.dotOk;
+  const totalMs = `${calls.reduce((ms, call) => ms + (call.latencyMs ?? 0), 0)}ms`;
   const meta = running
     ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
-    : failed > 0
-      ? t("knowledgeNetwork.agentChat.chatPane.toolGroup.failed", { count: failed })
-      : `${calls.reduce((ms, call) => ms + (call.latencyMs ?? 0), 0)}ms`;
+    : showFailed
+      ? t("knowledgeNetwork.agentChat.chatPane.toolGroup.failed", { count: unavailable })
+      : failed > 0
+        ? `${totalMs} · ${t("knowledgeNetwork.agentChat.chatPane.toolGroup.someFailed", { count: failed })}`
+        : totalMs;
   // Once the user has toggled the group, their choice wins over the expanded-card default.
   const open = groupOpen ?? calls.some((call) => openCalls[call.id]);
   return (
@@ -594,6 +615,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             parts: appendTextPart(m.parts, event.content),
           }));
           break;
+        case "reasoning":
+          // One merged block above the turn, as before the migration.
+          updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + event.content }));
+          break;
         case "tool_started":
           updateAssistant((m) => ({
             ...m,
@@ -618,6 +643,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                 ? {
                     ...tc,
                     status: event.status === "failed" ? "error" : "done",
+                    errorKind: event.errorKind,
                     result: event.status === "failed" ? undefined : formatToolValue(event.output),
                     error:
                       event.status === "failed"
@@ -639,7 +665,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         }
         case "terminal":
           if (event.status === "cancelled") updateAssistant((m) => ({ ...m, stopped: true }));
-          else if (event.status === "failed") addError(terminalError(event.code));
+          else if (event.status === "failed")
+            addError(
+              terminalError(event.code, {
+                detail: event.detail,
+                upstream: event.upstream,
+                runId: event.runId,
+              }),
+            );
           break;
         case "result":
           // Tokens normally carry the answer already; a run that streamed none
@@ -675,7 +708,13 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         } else if (record.status === "cancelled") {
           updateAssistant((m) => ({ ...m, stopped: true }));
         } else if (record.status === "failed") {
-          addError(terminalError(record.error?.code));
+          addError(
+            terminalError(record.error?.code, {
+              detail: record.error?.detail,
+              upstream: record.error?.upstream,
+              runId,
+            }),
+          );
         } else {
           addError(executionRequestError(new Error(`run is still ${record.status}`)));
         }
@@ -916,6 +955,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                         part.kind === "tools" ? (
                           <ToolCallSegment
                             key={pi}
+                            live={busy && isLast && pi === renderParts.length - 1}
                             calls={part.ids
                               .map((id) => callById.get(id))
                               .filter((call): call is ToolCallView => !!call)}

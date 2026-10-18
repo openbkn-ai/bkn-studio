@@ -59,6 +59,7 @@ export const shellEnUS = {
       authorizationManagement: "Permission Management",
       licenseManagement: "License Management",
       accessAddressManagement: "Access Addresses",
+      agentConfig: "Agent Settings",
       modelManagement: "Model Configuration",
       bknTrace: "BKN Trace",
       observability: "Observability",

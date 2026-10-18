@@ -35,6 +35,7 @@ export type ExecutionUsage = {
 export type ExecutionEvent =
   | { type: "meta"; runId: string; threadId: string }
   | { type: "token"; content: string }
+  | { type: "reasoning"; content: string }
   | { type: "tool_started"; id: string; name: string; input: unknown }
   | {
       type: "tool_finished";
@@ -43,18 +44,31 @@ export type ExecutionEvent =
       status: "succeeded" | "failed";
       output: unknown;
       error?: unknown;
+      /** unavailable: the call did not go through; error: the tool returned one. */
+      errorKind?: "unavailable" | "error";
       durationMs?: number;
     }
   | { type: "usage"; usage: ExecutionUsage | null }
   | { type: "result"; answer: string }
-  | { type: "terminal"; status: TerminalStatus; code?: string };
+  | {
+      type: "terminal";
+      status: TerminalStatus;
+      code?: string;
+      /** The server's localized text for the code. */
+      detail?: string;
+      /** The upstream service's own error, when it gave one. */
+      upstream?: UpstreamError;
+      runId?: string;
+    };
+
+export type UpstreamError = { code?: string; message?: string };
 
 export type ExecutionRecord = {
   run_id: string;
   thread_id: string;
   status: ExecutionStatus;
   result?: { answer?: string } | null;
-  error?: { code?: string } | null;
+  error?: { code?: string; detail?: string; upstream?: UpstreamError } | null;
 };
 
 /** HTTP-level rejection before a stream starts, carrying the server's localized envelope. */
@@ -101,6 +115,8 @@ export function parseExecutionFrame(frame: string): ExecutionEvent | null {
       return { type: "meta", runId: str(data.run_id) ?? "", threadId: str(data.thread_id) ?? "" };
     case "token":
       return typeof data.content === "string" ? { type: "token", content: data.content } : null;
+    case "reasoning":
+      return typeof data.content === "string" ? { type: "reasoning", content: data.content } : null;
     case "tool_started":
       return {
         type: "tool_started",
@@ -116,6 +132,12 @@ export function parseExecutionFrame(frame: string): ExecutionEvent | null {
         status: data.status === "failed" ? "failed" : "succeeded",
         output: data.output,
         error: data.error,
+        errorKind:
+          data.error_kind === "unavailable"
+            ? "unavailable"
+            : data.status === "failed"
+              ? "error"
+              : undefined,
         durationMs: typeof data.duration_ms === "number" ? data.duration_ms : undefined,
       };
     case "usage":
@@ -127,10 +149,17 @@ export function parseExecutionFrame(frame: string): ExecutionEvent | null {
       return { type: "result", answer: str(asRecord(data.content)?.answer) ?? "" };
     case "terminal": {
       const status = data.status;
+      const error = asRecord(data.error);
+      const upstream = asRecord(error?.upstream);
       return {
         type: "terminal",
         status: status === "succeeded" || status === "cancelled" ? status : "failed",
-        code: str(asRecord(data.error)?.code),
+        code: str(error?.code),
+        detail: str(error?.detail),
+        upstream: upstream
+          ? { code: str(upstream.code), message: str(upstream.message) }
+          : undefined,
+        runId: str(data.run_id),
       };
     }
     default:
@@ -247,24 +276,45 @@ export function cancelExecution(params: RunParams): Promise<ExecutionRecord> {
 /** Terminal codes worth a dedicated message; anything else uses the generic failure text. */
 const TERMINAL_MESSAGE_KEYS: Record<string, string> = {
   "BknAgent.Chat.Timeout": "knowledgeNetwork.agentChat.execution.errors.timeout",
+  "BknAgent.Model.Unavailable": "knowledgeNetwork.agentChat.execution.errors.modelUnavailable",
+  "BknAgent.Model.Rejected": "knowledgeNetwork.agentChat.execution.errors.modelRejected",
   "BknAgent.Execution.Unavailable": "knowledgeNetwork.agentChat.execution.errors.unavailable",
   "BknAgent.Execution.Forbidden": "knowledgeNetwork.agentChat.execution.errors.forbidden",
 };
 
 const RETRYABLE_TERMINAL_CODES = new Set([
   "BknAgent.Chat.Timeout",
+  "BknAgent.Model.Unavailable",
   "BknAgent.Chat.Failed",
   "BknAgent.Execution.Failed",
   "BknAgent.Execution.Unavailable",
 ]);
 
 /** User-facing error for a failed terminal event. */
-export function terminalError(code: string | undefined): NormalizedAgentError {
-  const key =
-    (code && TERMINAL_MESSAGE_KEYS[code]) ?? "knowledgeNetwork.agentChat.execution.errors.failed";
+export function terminalError(
+  code: string | undefined,
+  context: { detail?: string; upstream?: UpstreamError; runId?: string } = {},
+): NormalizedAgentError {
+  const known = code ? TERMINAL_MESSAGE_KEYS[code] : undefined;
+  const base = known
+    ? i18n.t(known)
+    : (context.detail ?? i18n.t("knowledgeNetwork.agentChat.execution.errors.failed"));
+  // The upstream's own message says what actually failed (for example the model
+  // service cannot reach its database); keep it beside the category.
+  const message = context.upstream?.message
+    ? i18n.t("knowledgeNetwork.agentChat.execution.errors.withCause", {
+        message: base,
+        cause: context.upstream.message,
+      })
+    : base;
+  const lines = [
+    code && `code: ${code}`,
+    context.upstream?.code && `upstream: ${context.upstream.code}`,
+    context.runId && `run_id: ${context.runId}`,
+  ].filter(Boolean);
   return {
-    message: i18n.t(key),
-    detail: code,
+    message,
+    detail: lines.length ? lines.join("\n") : undefined,
     retryable: !code || RETRYABLE_TERMINAL_CODES.has(code),
   };
 }

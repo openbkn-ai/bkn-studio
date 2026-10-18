@@ -51,6 +51,10 @@ export const agentChatPart = {
     },
     execution: {
       errors: {
+        modelUnavailable: "The model service is temporarily unavailable. Try again later.",
+        modelRejected:
+          "The model service rejected this request. Check the model configuration or context length.",
+        withCause: "{{message}}: {{cause}}",
         failed: "Smart Q&A failed. Try again.",
         timeout: "Smart Q&A timed out. Narrow the question and try again.",
         unavailable: "A service Smart Q&A depends on is temporarily unavailable. Try again later.",
@@ -59,6 +63,74 @@ export const agentChatPart = {
           "The Smart Q&A Agent is not published yet. Ask an administrator to configure and publish it.",
         threadBusy: "The previous turn is still running. Try again shortly.",
         network: "The connection to Smart Q&A was interrupted. Try again.",
+      },
+    },
+    config: {
+      title: "Q&A settings",
+      sharedTitle: "Shared settings",
+      sharedDescription:
+        "Maintained by platform administrators and shared by every network. The network and personal settings below can only add to or narrow it.",
+      model: "Model",
+      defaultModel: "Platform default model",
+      status: "Status",
+      published: "Published",
+      draft: "Not published",
+      caps: "Execution caps",
+      networkTitle: "This network",
+      networkDescription:
+        "Applies to the current knowledge network for everyone. Use it for this network's terms, definitions, and caveats.",
+      networkReadOnly:
+        "Applies to the current knowledge network. You cannot modify this network, so it is read-only.",
+      userTitle: "My preferences",
+      userDescription: "Applies only to you, after the shared and network settings.",
+      instruction: "Additional instructions",
+      instructionPlaceholder: "For example: lead with the conclusion, then list details in a table",
+      tools: "Available tools",
+      followUpper: "Follow the layer above",
+      limits: "Execution limits",
+      followCap: "Follows cap {{value}}",
+      noCap: "No cap",
+      save: "Save",
+      reset: "Reset",
+      saved: "Saved",
+      resetDone: "Reset to defaults",
+      serviceDefault: "Service default",
+      capValue: "Cap {{value}}",
+      customTools: "Custom",
+      sharedPrompt: "Shared Prompt",
+      promptCurrent: "In use: v{{version}}",
+      inUse: "In use",
+      useThisVersion: "Use this version",
+      rolledBack: "Version switched",
+      publishPrompt: "Publish as new version",
+      promptPublished: "New version published",
+      sharedReadOnly: "Maintained by platform administrators in System Admin.",
+      openSystemConfig: "Edit in System Admin",
+      mcpProfile: "MCP service",
+      mcpDefault: "Service default",
+      mcpFull: "Full",
+      mcpCompact: "Compact",
+      limitFields: {
+        max_turns: { label: "Step cap", hint: "Most steps in one turn" },
+        max_tool_calls: { label: "Tool call cap", hint: "Most tool calls in one turn" },
+        timeout_s: { label: "Timeout (s)", hint: "Longest time one turn may run" },
+        max_output_tokens: { label: "Output cap", hint: "Most tokens one model call may output" },
+        keep_tool_results: {
+          label: "Full results kept",
+          hint: "Only the most recent tool results of this question reach the model in full; earlier ones become placeholders, and earlier questions keep only placeholders",
+        },
+        data_result_chars: {
+          label: "Data result cap (chars)",
+          hint: "Results of run_sql, query_*, run_cypher and similar are truncated beyond this, with a hint to narrow the query",
+        },
+        schema_result_chars: {
+          label: "Schema result cap (chars)",
+          hint: "Truncation length for get_kn_detail, search_schema and similar",
+        },
+        summarize_after_tokens: {
+          label: "Summarize after (tokens)",
+          hint: "Once the context passes this many tokens, older history is condensed into a summary",
+        },
       },
     },
     managedTurns: {
@@ -70,6 +142,7 @@ export const agentChatPart = {
     composer: {
       stop: "Stop",
       send: "Send",
+      settings: "Q&A settings",
       clear: "Clear",
     },
     chatPane: {
@@ -83,6 +156,7 @@ export const agentChatPart = {
         done: "Reasoning",
       },
       toolCall: {
+        returnedError: "Returned an error",
         running: "Calling...",
         failed: "Failed",
         interrupted: "Interrupted before a result arrived",
@@ -100,6 +174,9 @@ export const agentChatPart = {
         failed: "{{count}} failed",
         failed_one: "{{count}} failed",
         failed_other: "{{count}} failed",
+        someFailed: "{{count}} failed",
+        someFailed_one: "{{count}} failed",
+        someFailed_other: "{{count}} failed",
       },
       error: {
         retry: "Retry Round",

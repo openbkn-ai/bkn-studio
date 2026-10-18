@@ -488,8 +488,8 @@
   box-shadow: 0 0 5px rgba(31, 157, 87, 0.6);
 }
 .dotRunning {
-  background: #c9821a;
-  box-shadow: 0 0 5px rgba(201, 130, 26, 0.6);
+  background: #1f9d57;
+  box-shadow: 0 0 5px rgba(31, 157, 87, 0.6);
   animation: breathe 1.4s ease-in-out infinite;
 }
 /* A closed group is the only progress signal while calls are in flight, so it breathes. */
@@ -524,6 +524,12 @@
     animation: none;
   }
 }
+/* The tool ran and returned an error the model can retry around. */
+.dotWarn {
+  background: #c9821a;
+  box-shadow: 0 0 5px rgba(201, 130, 26, 0.45);
+}
+
 .dotError {
   background: #d63a3a;
   box-shadow: 0 0 5px rgba(214, 58, 58, 0.6);

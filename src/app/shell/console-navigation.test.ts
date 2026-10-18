@@ -58,15 +58,22 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
         "authorization-management",
         "license-management",
         "access-address-management",
+        "agent-config",
         "log-management",
       ]),
     );
   });
 
-  it("仅持有 admin-client:manage → 系统管理只显示访问地址", () => {
+  it("仅持有 admin-client:manage → 系统管理显示访问地址和 Agent 配置", () => {
+    // Agent settings borrow admin-client:manage until admin-agent:manage is registered.
     const group = systemGroup(filterNavByPermission(consoleNavigation, ["admin-client:manage"]));
     expect(group).toBeDefined();
-    expect(keys(group!.children ?? [])).toEqual(["access-address-management"]);
+    expect(keys(group!.children ?? [])).toEqual(["access-address-management", "agent-config"]);
+  });
+
+  it("仅持有 admin-agent:manage → 系统管理只显示 Agent 配置", () => {
+    const group = systemGroup(filterNavByPermission(consoleNavigation, ["admin-agent:manage"]));
+    expect(keys(group!.children ?? [])).toEqual(["agent-config"]);
   });
 
   it("仅持有 admin-audit:view → 系统管理只包含原有管理审计日志", () => {

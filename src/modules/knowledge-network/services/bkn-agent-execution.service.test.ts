@@ -69,6 +69,7 @@ describe("parseExecutionFrame", () => {
       status: "failed",
       output: "boom",
       error: "boom",
+      errorKind: "error",
       durationMs: 12,
     });
   });
@@ -180,5 +181,38 @@ describe("error mapping", () => {
         new BknAgentExecutionError("没有权限", 403, "BknAgent.Execution.Forbidden"),
       ),
     ).toMatchObject({ message: "没有权限", retryable: false });
+  });
+
+  it("names the real failure: category plus the upstream's own message", () => {
+    const event = parseExecutionFrame(
+      sse("terminal", {
+        status: "failed",
+        run_id: "run-9",
+        error: {
+          code: "BknAgent.Model.Unavailable",
+          detail: "模型服务暂时不可用。",
+          upstream: { code: "ModelFactory.Down", message: "模型工厂暂时无法访问数据库。" },
+        },
+      }),
+    );
+    expect(event).toMatchObject({ type: "terminal", runId: "run-9" });
+    const terminal = event as Extract<ExecutionEvent, { type: "terminal" }>;
+    const error = terminalError(terminal.code, terminal);
+    expect(error.message).toBe(
+      `${i18n.t("knowledgeNetwork.agentChat.execution.errors.modelUnavailable")}：模型工厂暂时无法访问数据库。`,
+    );
+    expect(error.detail).toContain("upstream: ModelFactory.Down");
+    expect(error.detail).toContain("run_id: run-9");
+    expect(error.retryable).toBe(true);
+  });
+
+  it("does not offer retry when the model rejected the request", () => {
+    expect(terminalError("BknAgent.Model.Rejected").retryable).toBe(false);
+  });
+
+  it("falls back to the server's own text for codes it does not know", () => {
+    expect(terminalError("BknAgent.Something.New", { detail: "服务端说明" }).message).toBe(
+      "服务端说明",
+    );
   });
 });

@@ -1100,6 +1100,22 @@ export const systemAdminZhCN = {
         unknown: "{{error}}",
       },
     },
+    agentConfig: {
+      title: "Agent 配置",
+      description:
+        "维护内置智能问答 Agent 的共享配置：模型、MCP 服务、执行上限、发布状态和共享提示词。",
+      intro:
+        "这里是所有知识网络共用的配置。各网络的配置和用户个人偏好只能在此基础上追加提示词、收窄工具和限制。",
+      runtimeTitle: "运行配置",
+      mcpProfile: "MCP 服务",
+      mcpProfileHint:
+        "Context Loader 提供完整版（全部工具）和精简版（工具更少、上下文更省）两种端点。",
+      mcpDefault: "跟随服务默认",
+      mcpFull: "完整版",
+      mcpCompact: "精简版",
+      forbidden:
+        "你没有修改共享配置的权限。在权限表注册 Agent 管理权限之前，只有这个 Agent 的创建者可以修改。",
+    },
     accessOrigins: {
       title: "访问地址",
       description: "管理允许完成 Studio 登录和退出流程的浏览器地址。",

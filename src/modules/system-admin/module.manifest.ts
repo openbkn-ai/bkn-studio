@@ -32,6 +32,7 @@ export const systemAdminModuleManifest = {
     "admin-license:view",
     "admin-license:manage",
     "admin-client:manage",
+    "admin-agent:manage",
     "admin-audit:view",
   ],
   requiresShell: true,
