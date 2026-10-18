@@ -220,7 +220,7 @@ describe("ObjectMetricAnalysisPanel", () => {
     expect(screen.queryByText("transaction")).not.toBeInTheDocument();
   });
 
-  it("recommends a table for a one-column identity matrix and keeps charts optional", () => {
+  it("defaults to a chart for numeric identity groups and keeps the exact table available", () => {
     const resultTable = <div data-testid="result-table">Exact result rows</div>;
     render(
       <ObjectMetricAnalysisPanel
@@ -235,14 +235,12 @@ describe("ObjectMetricAnalysisPanel", () => {
       />,
     );
 
-    expect(screen.getByText("自动推荐：表格")).toBeInTheDocument();
-    expect(screen.getByTestId("result-table")).toBeInTheDocument();
-    expect(screen.queryByTestId("metric-chart")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByText("图表"));
+    expect(screen.getByText("自动推荐：柱状")).toBeInTheDocument();
     expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
     fireEvent.click(screen.getByText("表格"));
     expect(screen.getByTestId("result-table")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("图表"));
+    expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
   });
 
   it("shows the localized automatic chart type after a chart becomes table-recommended", () => {
@@ -280,10 +278,9 @@ describe("ObjectMetricAnalysisPanel", () => {
     const { rerender } = render(
       <ObjectMetricAnalysisPanel result={denseResult} resultTable={resultTable} />,
     );
-    expect(screen.getByTestId("result-table")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText("图表"));
     expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
+    expect(screen.getByText("自动推荐：柱状")).toBeInTheDocument();
+    chooseChart("柱状");
     rerender(
       <ObjectMetricAnalysisPanel
         result={{ ...denseResult, entries: denseEntries.map((entry) => ({ ...entry, value: 40 })) }}

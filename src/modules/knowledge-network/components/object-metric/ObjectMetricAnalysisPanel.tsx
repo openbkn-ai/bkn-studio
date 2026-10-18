@@ -518,6 +518,7 @@ export function ObjectMetricAnalysisPanel({
     : entries.length < result.entries.length
       ? "table"
       : recommendObjectMetricAnalysisView(entries);
+  const defaultChartView = recommendedView === "table" ? "bar" : recommendedView;
   const chartable =
     entries.length > 0 && (entries.length === result.entries.length || isSingleValue);
   const hasTwoDimensions = entries.some((entry) => dimensionEntries(entry).length >= 2);
@@ -534,20 +535,16 @@ export function ObjectMetricAnalysisPanel({
   const activeView = availableViews.some((option) => option.value === selectedView)
     ? selectedView
     : "auto";
-  const tableVisible =
-    !chartable || surface === "table" || (surface === "auto" && recommendedView === "table");
+  const tableVisible = !chartable || surface === "table";
   const resolvedView = tableVisible
     ? "table"
     : activeView === "auto"
-      ? recommendedView === "table"
-        ? isSingleValue
-          ? "summary"
-          : "bar"
-        : recommendedView
+      ? defaultChartView
       : activeView;
 
   const viewFallback =
-    surface === "chart" && (!chartable || (selectedView !== "auto" && activeView === "auto"));
+    surface !== "table" &&
+    ((surface === "chart" && !chartable) || (selectedView !== "auto" && activeView === "auto"));
   const chartOption = useMemo<EChartsOption | undefined>(() => {
     if (!entries.length || resolvedView === "summary" || resolvedView === "table") return undefined;
     if (resolvedView === "bar") return buildCategoryOption(entries, propertyLabels, identityLabels);
@@ -681,11 +678,7 @@ export function ObjectMetricAnalysisPanel({
       <div className={styles.viewControls}>
         <Segmented<"chart" | "table">
           aria-label={objectMetricText("analysisResultView")}
-          onChange={(value) => {
-            setSurface(value);
-            if (value === "chart" && recommendedView === "table" && selectedView === "auto")
-              setSelectedView(isSingleValue ? "summary" : "bar");
-          }}
+          onChange={setSurface}
           options={[
             { disabled: !chartable, label: objectMetricText("analysisChart"), value: "chart" },
             { label: objectMetricText("m22d9e7c54b88"), value: "table" },
@@ -704,7 +697,10 @@ export function ObjectMetricAnalysisPanel({
         {surface === "auto" ? (
           <span className={styles.recommendation}>
             {objectMetricText("analysisRecommendedView", {
-              p0: viewOptions.find((option) => option.value === recommendedView)?.label ?? "",
+              p0:
+                viewOptions.find(
+                  (option) => option.value === (chartable ? defaultChartView : "table"),
+                )?.label ?? "",
             })}
           </span>
         ) : null}

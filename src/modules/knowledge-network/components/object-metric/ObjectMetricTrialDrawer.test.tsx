@@ -140,7 +140,7 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(screen.getByRole("cell", { name: "West" })).toBeInTheDocument();
   });
 
-  it("opens published metrics in a wider analysis workspace with conditions above results", () => {
+  it("uses the same trial workspace for published metrics", () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.name = "销售订单数";
     definition.calculation_scope = "object_set";
@@ -156,14 +156,16 @@ describe("ObjectMetricTrialDrawer", () => {
       />,
     );
 
-    expect(screen.getByText("指标分析 · 销售订单数")).toBeInTheDocument();
-    expect(screen.getByText("设置分析条件并运行，即可查看指标结果。")).toBeInTheDocument();
-    const runButton = screen.getByRole("button", { name: "运行分析" });
+    expect(screen.getByText("试算 · 销售订单数")).toBeInTheDocument();
+    expect(screen.getByText("设置试算条件并点击试算，即可查看指标结果。")).toBeInTheDocument();
+    const runButton = screen.getByRole("button", { name: "试算" });
     expect(
-      screen.getByRole("heading", { name: "分析条件" }).parentElement?.parentElement,
+      screen.getByRole("heading", { name: "试算条件" }).parentElement?.parentElement,
     ).toContainElement(runButton);
     expect(runButton).toHaveAttribute("form", document.querySelector("form")?.id);
-    expect(screen.queryByRole("button", { name: "试算" })).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog").closest(".ant-drawer")?.className).toContain(
+      "analysisDrawer",
+    );
   });
 
   it("shows business labels instead of internal enum values in calculation context", async () => {
@@ -204,7 +206,7 @@ describe("ObjectMetricTrialDrawer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "运行分析" }));
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
     fireEvent.click(await screen.findByRole("row", { name: /已确认.*5/ }));
     fireEvent.click(screen.getByRole("button", { name: "查看计算口径" }));
 
@@ -915,6 +917,14 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(screen.queryByText("读取真实数据；试算不会保存或修改指标。")).not.toBeInTheDocument();
     expect(screen.getByText("试算 · 订单支付额")).toBeInTheDocument();
     expect(screen.getByText("试算条件")).toBeInTheDocument();
+    expect(screen.getByText("设置试算条件并点击试算，即可查看指标结果。")).toBeInTheDocument();
+    const runButton = screen.getByRole("button", { name: "试算" });
+    expect(
+      screen.getByRole("heading", { name: "试算条件" }).parentElement?.parentElement,
+    ).toContainElement(runButton);
+    expect(screen.getByRole("dialog").closest(".ant-drawer")?.className).toContain(
+      "analysisDrawer",
+    );
     expect(screen.queryByText("按分析维度拆解（可选）")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("订单主键"), {
       target: { value: "1001" },
@@ -929,7 +939,7 @@ describe("ObjectMetricTrialDrawer", () => {
       }),
     );
     expect(await screen.findByText("无数据")).toBeInTheDocument();
-    expect(screen.getByText("试算结果")).toBeInTheDocument();
+    expect(screen.getByText("分析结果")).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "指标值" })).not.toBeInTheDocument();
   });
 
@@ -1174,9 +1184,9 @@ describe("ObjectMetricTrialDrawer", () => {
     );
 
     expect(
-      screen.getByRole("dialog", { name: "指标分析 · 订单支付额 已发布 · v5" }),
+      screen.getByRole("dialog", { name: "试算 · 订单支付额 已发布 · v5" }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "运行分析" }));
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
     expect(await screen.findByText("无数据")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(onRun).toHaveBeenCalledTimes(1);
