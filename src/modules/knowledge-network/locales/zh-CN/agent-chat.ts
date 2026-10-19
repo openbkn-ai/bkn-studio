@@ -62,7 +62,7 @@ export const agentChatPart = {
     },
     config: {
       title: "问答配置",
-      sharedTitle: "共享配置",
+      sharedTitle: "全局 Agent",
       sharedDescription:
         "由平台管理员维护，所有网络共用。下面的网络配置和个人偏好只能在此基础上追加或收窄。",
       model: "模型",
@@ -71,12 +71,12 @@ export const agentChatPart = {
       published: "已发布",
       draft: "未发布",
       caps: "执行上限",
-      networkTitle: "本网络配置",
+      networkTitle: "当前知识网络",
       networkDescription:
         "只对当前知识网络生效，所有用户共用。适合写这个网络特有的术语、口径和注意事项。",
       networkReadOnly: "只对当前知识网络生效。你没有修改这个网络的权限，只能查看。",
       userTitle: "我的偏好",
-      userDescription: "只对你自己生效，在共享配置和本网络配置之后追加。",
+      userDescription: "只对你自己生效，在全局 Agent 和当前知识网络的配置之后追加。",
       instruction: "附加提示词",
       instructionPlaceholder: "例如：回答先给结论，再用表格列出明细",
       tools: "可用工具",

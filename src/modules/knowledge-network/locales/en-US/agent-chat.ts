@@ -67,7 +67,7 @@ export const agentChatPart = {
     },
     config: {
       title: "Q&A settings",
-      sharedTitle: "Shared settings",
+      sharedTitle: "Global Agent",
       sharedDescription:
         "Maintained by platform administrators and shared by every network. The network and personal settings below can only add to or narrow it.",
       model: "Model",
@@ -76,13 +76,14 @@ export const agentChatPart = {
       published: "Published",
       draft: "Not published",
       caps: "Execution caps",
-      networkTitle: "This network",
+      networkTitle: "Current knowledge network",
       networkDescription:
         "Applies to the current knowledge network for everyone. Use it for this network's terms, definitions, and caveats.",
       networkReadOnly:
         "Applies to the current knowledge network. You cannot modify this network, so it is read-only.",
       userTitle: "My preferences",
-      userDescription: "Applies only to you, after the shared and network settings.",
+      userDescription:
+        "Applies only to you, after the global Agent and current knowledge network settings.",
       instruction: "Additional instructions",
       instructionPlaceholder: "For example: lead with the conclusion, then list details in a table",
       tools: "Available tools",
