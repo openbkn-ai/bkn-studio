@@ -172,7 +172,7 @@ export function ResourcePreviewPanel({
   const [result, setResult] = useState<ResourcePreviewResult | null>(null);
   const [fullValue, setFullValue] = useState<{ field: string; text: string }>();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; description?: string } | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [sourceReadDetails, setSourceReadDetails] = useState<{
     description: string;
@@ -246,7 +246,13 @@ export function ResourcePreviewPanel({
         setSourceReadDetails(sourceDenied ? details : null);
         setForbidden(!sourceDenied && isRequestForbidden(loadError));
         const projectionMessage = PROJECTION_ERROR_MESSAGES.get(details.code ?? "");
-        setError(projectionMessage ? t(projectionMessage) : details.description);
+        const explanation = projectionMessage ? t(projectionMessage) : details.description;
+        setError({
+          message: explanation,
+          ...(projectionMessage && details.description !== explanation
+            ? { description: details.description }
+            : {}),
+        });
         setResult(null);
       } finally {
         if (requestVersion === requestVersionRef.current) {
@@ -503,7 +509,7 @@ export function ResourcePreviewPanel({
           type="warning"
         />
       ) : error ? (
-        <Alert message={error} showIcon type="error" />
+        <Alert description={error.description} message={error.message} showIcon type="error" />
       ) : (
         <Spin spinning={loading} wrapperClassName={styles.tableSection}>
           <div className={styles.tableWrap}>

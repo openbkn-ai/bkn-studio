@@ -817,17 +817,42 @@ describe("ResourcePreviewPanel", () => {
     ["VegaBackend.Query.InvalidParameter.OutputField", "invalidOutputField"],
     ["VegaBackend.Query.UnsupportedOutputField", "unsupportedOutputField"],
     ["VegaBackend.Query.NoQueryableFields", "noQueryableFields"],
-  ])("explains projection failure %s without exposing internal details", async (code, key) => {
+  ])(
+    "keeps the backend description alongside the projection explanation for %s",
+    async (code, key) => {
+      previewCatalogResourceMock.mockRejectedValue(
+        Object.assign(new Error("rejected"), {
+          isAxiosError: true,
+          response: {
+            status: 400,
+            data: {
+              error_code: code,
+              description: "Field VALUE of type ARRAY<FLOAT> cannot be queried.",
+            },
+          },
+        }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, columnCount: 1, schema: [{ name: "value", type: "other" }] }}
+        />,
+      );
+      const explanation = await screen.findByText(`dataCatalog.preview.${key}`);
+      expect(explanation.closest(".ant-alert")).toHaveTextContent(
+        "Field VALUE of type ARRAY<FLOAT> cannot be queried.",
+      );
+    },
+  );
+
+  it("does not repeat a backend description identical to the localized explanation", async () => {
+    const explanation = "dataCatalog.preview.noQueryableFields";
     previewCatalogResourceMock.mockRejectedValue(
       Object.assign(new Error("rejected"), {
         isAxiosError: true,
         response: {
           status: 400,
-          data: {
-            error_code: code,
-            description: "generic query failure",
-            error_details: "private driver details",
-          },
+          data: { error_code: "VegaBackend.Query.NoQueryableFields", description: explanation },
         },
       }),
     );
@@ -837,8 +862,8 @@ describe("ResourcePreviewPanel", () => {
         resource={{ ...resource, columnCount: 1, schema: [{ name: "value", type: "other" }] }}
       />,
     );
-    expect(await screen.findByText(`dataCatalog.preview.${key}`)).toBeInTheDocument();
-    expect(screen.queryByText("private driver details")).not.toBeInTheDocument();
+    await screen.findByText(explanation);
+    expect(screen.getAllByText(explanation)).toHaveLength(1);
   });
 
   it("keeps real source failures distinct from invalid projections", async () => {

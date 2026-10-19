@@ -626,10 +626,9 @@ export const dataCatalogEnUS = {
       goEnable: "Open connections",
     },
     preview: {
-      invalidOutputField:
-        "The query contains an unknown or invalid output field. Check the selected fields.",
+      invalidOutputField: "The preview query contains an unknown or invalid field.",
       unsupportedOutputField:
-        "The selected field type cannot be read through this query channel yet.",
+        "This resource contains field types that this query channel cannot read yet.",
       noQueryableFields: "This resource has no queryable fields.",
       filter: "Filter rows",
       applyFilter: "Apply filter",
