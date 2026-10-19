@@ -20,20 +20,31 @@ type SettingsModule =
 type SharedAgent =
   import("@/modules/knowledge-network/services/bkn-agent-settings.service").SharedAgent;
 
-const { deleteSharedPromptVersion, getShared, getSharedPrompt, restoreShared, updateShared } =
-  vi.hoisted(() => ({
-    deleteSharedPromptVersion: vi.fn<SettingsModule["deleteSharedPromptVersion"]>(),
-    getShared: vi.fn<SettingsModule["getShared"]>(),
-    getSharedPrompt: vi.fn<SettingsModule["getSharedPrompt"]>(),
-    restoreShared: vi.fn<SettingsModule["restoreShared"]>(),
-    updateShared: vi.fn<SettingsModule["updateShared"]>(),
-  }));
+const {
+  activateVersion,
+  deleteVersion,
+  getShared,
+  getSharedPrompt,
+  listVersions,
+  restoreShared,
+  updateShared,
+} = vi.hoisted(() => ({
+  activateVersion: vi.fn<SettingsModule["activateVersion"]>(),
+  deleteVersion: vi.fn<SettingsModule["deleteVersion"]>(),
+  listVersions: vi.fn<SettingsModule["listVersions"]>(),
+  getShared: vi.fn<SettingsModule["getShared"]>(),
+  getSharedPrompt: vi.fn<SettingsModule["getSharedPrompt"]>(),
+  restoreShared: vi.fn<SettingsModule["restoreShared"]>(),
+  updateShared: vi.fn<SettingsModule["updateShared"]>(),
+}));
 
 vi.mock(
   "@/modules/knowledge-network/services/bkn-agent-settings.service",
   async (importOriginal) => ({
     ...(await importOriginal<SettingsModule>()),
-    deleteSharedPromptVersion,
+    activateVersion,
+    deleteVersion,
+    listVersions,
     getShared,
     getSharedPrompt,
     restoreShared,
@@ -86,6 +97,7 @@ beforeAll(() => {
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
   vi.resetAllMocks();
+  listVersions.mockResolvedValue([version(1, { current: true, initial: true })]);
 });
 
 afterEach(cleanup);
@@ -120,9 +132,28 @@ function shared(changes: Partial<SharedAgent> = {}): SharedAgent {
   };
 }
 
+type AgentVersion =
+  import("@/modules/knowledge-network/services/bkn-agent-settings.service").AgentVersion;
+
+function version(n: number, changes: Partial<AgentVersion> = {}): AgentVersion {
+  return {
+    version: n,
+    model: "DeepSeek V4-flash",
+    mcp_profile: null,
+    limits: { max_turns: 40 },
+    prompt_version: n,
+    prompt_content: `Prompt ${n}`,
+    changes: n === 1 ? [] : ["limits"],
+    initial: false,
+    current: false,
+    create_user: "admin",
+    create_time: n,
+    ...changes,
+  };
+}
+
 const PROMPT = {
   prompt: { prompt_id: "p", current_version: 3, content: "Shared" },
-  versions: [{ version: 3, content: "Shared", create_user: "admin", create_time: 1 }],
 };
 
 // Each case renders the full configuration page; several also open a dialog, and shared CI
@@ -241,6 +272,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
 
     await waitFor(() => expect(restoreShared).toHaveBeenCalled());
     expect(getSharedPrompt).toHaveBeenCalledTimes(2);
+    expect(listVersions).toHaveBeenCalledTimes(2);
     // Back at the shipped state, there is nothing left to restore.
     await waitFor(() =>
       expect(
@@ -287,59 +319,73 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     expect(screen.getByDisplayValue("Draft prompt")).toBeTruthy();
   });
 
-  describe("prompt versions", () => {
-    const HISTORY = {
-      prompt: { prompt_id: "p", current_version: 3, content: "Third" },
-      versions: [3, 2, 1].map((version) => ({
-        version,
-        content: ["First", "Second", "Third"][version - 1],
-        create_user: "admin",
-        create_time: version,
-      })),
-      initial_version: 1,
-    };
+  describe("versions", () => {
+    const HISTORY = [
+      version(3, { current: true, changes: ["prompt_version"] }),
+      version(2, { limits: { max_turns: 12 } }),
+      version(1, { initial: true }),
+    ];
 
-    async function pickVersion(label: string) {
-      const picker = screen.getAllByRole("combobox")[1];
-      fireEvent.mouseDown(picker);
-      const options = await screen.findAllByText(label, { selector: ".ant-select-item *" });
-      fireEvent.click(options[options.length - 1]);
-    }
+    it("lists versions with what each changed and compares one with the current", async () => {
+      getShared.mockResolvedValue(shared({ version: 3, initial_version: 1 }));
+      getSharedPrompt.mockResolvedValue(PROMPT);
+      listVersions.mockResolvedValue(HISTORY);
+      renderScene();
 
-    it("compares the chosen version with the one in use", async () => {
-      getShared.mockResolvedValue(shared());
-      getSharedPrompt.mockResolvedValue(HISTORY);
+      expect(
+        await screen.findByText(i18n.t("systemAdmin.agentConfig.change.prompt_version")),
+      ).toBeTruthy();
+      expect(screen.getByText(i18n.t("systemAdmin.agentConfig.firstVersion"))).toBeTruthy();
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: i18n.t("systemAdmin.agentConfig.compareVersion", { version: 2 }),
+        }),
+      );
+      expect((await screen.findByTestId("diff")).textContent).toBe("Prompt 2 => Prompt 3");
+      // The runtime difference (step limit 12 → 40) is listed above the Prompt diff.
+      const changed = document.querySelector("tr[class]")!;
+      expect(changed.textContent).toContain("12");
+      expect(changed.textContent).toContain("40");
+    });
+
+    it("deletes only versions that are neither current nor initial", async () => {
+      getShared.mockResolvedValue(shared({ version: 3, initial_version: 1 }));
+      getSharedPrompt.mockResolvedValue(PROMPT);
+      listVersions.mockResolvedValue(HISTORY);
+      deleteVersion.mockResolvedValue(HISTORY.filter((v) => v.version !== 2));
+      renderScene();
+      const button = (key: string, n: number) =>
+        screen.queryByRole("button", {
+          name: i18n.t(`systemAdmin.agentConfig.${key}`, { version: n }),
+        });
+
+      await screen.findByText(i18n.t("systemAdmin.agentConfig.firstVersion"));
+      // The current version has no actions; the initial one can be used but not deleted.
+      expect(button("activateVersion", 3)).toBeNull();
+      expect(button("deleteVersionNamed", 1)).toBeNull();
+      expect(button("activateVersion", 1)).toBeTruthy();
+
+      fireEvent.click(button("deleteVersionNamed", 2)!);
+      await confirmChange();
+      await waitFor(() => expect(deleteVersion).toHaveBeenCalled());
+      expect(deleteVersion.mock.calls[0][0].version).toBe(2);
+    });
+
+    it("switches to an earlier version after confirmation", async () => {
+      getShared.mockResolvedValue(shared({ version: 3, initial_version: 1 }));
+      getSharedPrompt.mockResolvedValue(PROMPT);
+      listVersions.mockResolvedValue(HISTORY);
+      activateVersion.mockResolvedValue(shared({ version: 1 }));
       renderScene();
 
       fireEvent.click(
-        // antd spaces out the two-character label ("对 比").
-        await screen.findByRole("button", { name: /^对\s*比$/ }),
+        await screen.findByRole("button", {
+          name: i18n.t("systemAdmin.agentConfig.activateVersion", { version: 1 }),
+        }),
       );
-      expect((await screen.findByTestId("diff")).textContent).toBe("Second => Third");
-    });
-
-    it("deletes a version only when it is neither in use nor the initial one", async () => {
-      getShared.mockResolvedValue(shared());
-      getSharedPrompt.mockResolvedValue(HISTORY);
-      deleteSharedPromptVersion.mockResolvedValue({
-        ...HISTORY,
-        versions: HISTORY.versions.filter((v) => v.version !== 2),
-      });
-      renderScene();
-      const deleteButton = () =>
-        screen.queryByRole("button", { name: i18n.t("systemAdmin.agentConfig.deleteVersion") });
-
-      await screen.findByDisplayValue("Third");
-      expect(deleteButton()).toBeNull();
-      await pickVersion("v1");
-      expect(deleteButton()).toBeNull();
-
-      await pickVersion("v2");
-      fireEvent.click(deleteButton()!);
       await confirmChange();
-      await waitFor(() => expect(deleteSharedPromptVersion).toHaveBeenCalled());
-      expect(deleteSharedPromptVersion.mock.calls[0][0].version).toBe(2);
-      // Three trips through the antd picker; slow on shared runners.
-    }, 40_000);
+      await waitFor(() => expect(activateVersion).toHaveBeenCalled());
+      expect(activateVersion.mock.calls[0][0].version).toBe(1);
+    });
   });
 });

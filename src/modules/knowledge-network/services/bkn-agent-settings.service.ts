@@ -87,8 +87,11 @@ export type SharedAgent = {
   /** Whether the caller holds admin-agent:manage. */
   can_edit: boolean;
   prompt_version?: number | null;
-  /** Whether the shipped state is recorded, and whether the Agent differs from it. */
+  /** The current Agent version and the initial one restore returns to. */
+  version?: number | null;
+  initial_version?: number | null;
   restorable: boolean;
+  /** Whether the current version is not the initial one. */
   modified: boolean;
   update_user: string;
   update_time: number;
@@ -105,9 +108,24 @@ export type SharedUpdate = {
 
 export type SharedPrompt = {
   prompt: { prompt_id: string; current_version: number; content: string };
-  versions: { version: number; content: string; create_user: string; create_time: number }[];
-  /** The shipped version, kept for restoring; it cannot be deleted. */
-  initial_version?: number | null;
+};
+
+/** What a version changed against the one before it. */
+export type VersionChange = "model" | "tools" | "limits" | "prompt_version";
+
+/** One snapshot of an Agent's whole configuration. */
+export type AgentVersion = {
+  version: number;
+  model?: string | null;
+  mcp_profile?: McpProfileChoice | null;
+  limits?: AgentLimits | null;
+  prompt_version?: number | null;
+  prompt_content?: string | null;
+  changes: VersionChange[];
+  initial: boolean;
+  current: boolean;
+  create_user: string;
+  create_time: number;
 };
 
 type Params = { base: string; tokenProvider: AgentTokenProvider };
@@ -197,15 +215,25 @@ export function updateShared(params: AgentParams & { update: SharedUpdate }): Pr
   });
 }
 
-/** Removes a version from the history; the one in use and the initial one cannot go. */
-export function deleteSharedPromptVersion(
-  params: AgentParams & { version: number },
-): Promise<SharedPrompt> {
+/** The Agent's versions, newest first; deleted ones are left out. */
+export function listVersions(params: AgentParams): Promise<AgentVersion[]> {
+  return request(params, `/admin/agents/${agentPath(params.agentId)}/versions`);
+}
+
+/** Makes a version current: its runtime and Prompt go back onto the Agent. */
+export function activateVersion(params: AgentParams & { version: number }): Promise<SharedAgent> {
   return request(
     params,
-    `/admin/agents/${agentPath(params.agentId)}/prompt/versions/${params.version}`,
-    { method: "DELETE" },
+    `/admin/agents/${agentPath(params.agentId)}/versions/${params.version}/activate`,
+    { method: "POST" },
   );
+}
+
+/** Removes a version; the current and the initial one cannot go. */
+export function deleteVersion(params: AgentParams & { version: number }): Promise<AgentVersion[]> {
+  return request(params, `/admin/agents/${agentPath(params.agentId)}/versions/${params.version}`, {
+    method: "DELETE",
+  });
 }
 
 /** Back to what the built-in Agent shipped with: model, tools, limits and Prompt version. */
@@ -225,15 +253,6 @@ export function publishSharedPrompt(
   return request(params, `/admin/agents/${agentPath(params.agentId)}/prompt`, {
     method: "PUT",
     body: JSON.stringify({ content: params.content }),
-  });
-}
-
-export function rollbackSharedPrompt(
-  params: AgentParams & { version: number },
-): Promise<SharedPrompt> {
-  return request(params, `/admin/agents/${agentPath(params.agentId)}/prompt/rollback`, {
-    method: "POST",
-    body: JSON.stringify({ version: params.version }),
   });
 }
 

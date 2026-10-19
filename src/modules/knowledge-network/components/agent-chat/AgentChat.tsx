@@ -11,7 +11,7 @@
  * input composer.
  */
 
-import { ClearOutlined, SettingOutlined } from "@ant-design/icons";
+import { ClearOutlined, ExclamationCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -328,6 +328,9 @@ export function AgentChat({
         tokenProvider={tokenProvider}
       />
       <header className={styles.agentHeader}>
+        <span className={styles.headerNotice}>
+          <ExclamationCircleOutlined /> {t("knowledgeNetwork.agentChat.composer.validationOnly")}
+        </span>
         <div className={styles.headerActions}>
           <button type="button" className={styles.barBtn} onClick={() => setConfigOpen(true)}>
             <SettingOutlined /> {t("knowledgeNetwork.agentChat.composer.settings")}

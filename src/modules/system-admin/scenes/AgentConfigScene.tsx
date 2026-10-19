@@ -37,6 +37,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { MonacoDiffEditor } from "@/framework/monaco/MonacoDiffEditor";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import {
@@ -46,14 +47,16 @@ import {
 import {
   AGENT_LIMIT_KEYS,
   CONTEXT_LIMIT_KEYS,
-  deleteSharedPromptVersion,
+  activateVersion,
+  deleteVersion,
   getShared,
   getSharedPrompt,
+  listVersions,
   publishSharedPrompt,
   restoreShared,
-  rollbackSharedPrompt,
   updateShared,
   type AgentLimits,
+  type AgentVersion,
   type LimitKey,
   type McpProfileChoice,
   type SharedAgent,
@@ -92,7 +95,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   const [profile, setProfile] = useState<McpProfileChoice | "default">("default");
   const [limits, setLimits] = useState<AgentLimits>({});
   const [content, setContent] = useState("");
-  const [version, setVersion] = useState<number>();
+  const [versions, setVersions] = useState<AgentVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +122,6 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   const applyPrompt = useCallback((next: SharedPrompt) => {
     setPrompt(next);
     setContent(next.prompt.content);
-    setVersion(next.prompt.current_version);
     setShared((cur) => cur && { ...cur, prompt_version: next.prompt.current_version });
   }, []);
 
@@ -127,13 +129,15 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     setLoading(true);
     setError(null);
     try {
-      const [agent, sharedPrompt, llms] = await Promise.all([
+      const [agent, sharedPrompt, history, llms] = await Promise.all([
         getShared(params),
         getSharedPrompt(params),
+        listVersions(params),
         listLlmModels({ page: 1, size: 100 }).catch(() => ({ items: [] })),
       ]);
       applyRuntime(agent);
       applyPrompt(sharedPrompt);
+      setVersions(history);
       setModels(llms.items.map((m) => m.modelName));
     } catch (e) {
       if (e instanceof BknAgentExecutionError && e.status === 404) setBlocked("notFound");
@@ -147,6 +151,14 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // A save writes a new version; refresh the list and version numbers without touching
+  // drafts (setShared alone leaves the form fields as they are).
+  const refreshVersions = useCallback(async () => {
+    const [history, agent] = await Promise.all([listVersions(params), getShared(params)]);
+    setVersions(history);
+    setShared(agent);
+  }, [params]);
 
   /** Ask first; the confirmation names what changes, since it applies to every user at once. */
   const confirmThen = useCallback(
@@ -199,11 +211,8 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     );
   if (!shared || !prompt) return null;
 
-  const current = prompt.prompt.current_version;
-  const initial = prompt.initial_version ?? null;
-  const selected = prompt.versions.find((v) => v.version === version);
-  const versionText = (v: number) =>
-    prompt.versions.find((item) => item.version === v)?.content ?? "";
+  const currentVersion = shared.version ?? null;
+  const versionOf = (v: number) => versions.find((item) => item.version === v);
   const editable = shared.can_edit;
   // Context budget limits only apply on the public execution surface.
   const limitKeys = shared.layered
@@ -261,7 +270,10 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
           },
         }),
       `${L}.saved`,
-      applyRuntime,
+      (agent) => {
+        applyRuntime(agent);
+        void refreshVersions();
+      },
     );
   // A built-in Agent ships as a draft only before its first publish; publishing is one way.
   const publish = () =>
@@ -270,19 +282,55 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
       `${P}.publishedDone`,
       applyStatus,
     );
-  // Restoring replaces both cards on purpose, drafts included.
-  const restore = () =>
+  // Switching versions replaces both cards on purpose, drafts included.
+  const switchTo = (action: () => Promise<SharedAgent>, done: string) =>
     run(
-      async () => ({
-        agent: await restoreShared(params),
-        prompt: await getSharedPrompt(params),
-      }),
-      `${P}.restored`,
-      ({ agent, prompt: restoredPrompt }) => {
+      async () => {
+        const agent = await action();
+        const [nextPrompt, history] = await Promise.all([
+          getSharedPrompt(params),
+          listVersions(params),
+        ]);
+        return { agent, nextPrompt, history };
+      },
+      done,
+      ({ agent, nextPrompt, history }) => {
         applyRuntime(agent);
-        applyPrompt(restoredPrompt);
+        applyPrompt(nextPrompt);
+        setVersions(history);
       },
     );
+  const restore = () => switchTo(() => restoreShared(params), `${P}.restored`);
+  const changeLabel = (version: AgentVersion) =>
+    version.changes.length
+      ? version.changes.map((change) => t(`${P}.change.${change}`)).join(t(`${P}.changeSeparator`))
+      : t(`${P}.firstVersion`);
+  // Runtime differences between two versions, for the compare dialog.
+  const runtimeRows = (left?: AgentVersion, right?: AgentVersion) => {
+    const value = (v: AgentVersion | undefined, key: LimitKey) =>
+      v?.limits?.[key] == null ? unset(key) : String(v.limits[key]);
+    return [
+      {
+        label: t(`${L}.model`),
+        left: left?.model || t(`${L}.defaultModel`),
+        right: right?.model || t(`${L}.defaultModel`),
+      },
+      ...(shared.uses_context_loader
+        ? [
+            {
+              label: t(`${P}.mcpProfile`),
+              left: profileLabel(left?.mcp_profile ?? "default"),
+              right: profileLabel(right?.mcp_profile ?? "default"),
+            },
+          ]
+        : []),
+      ...limitKeys.map((key) => ({
+        label: t(`${L}.limitFields.${key}.label`),
+        left: value(left, key),
+        right: value(right, key),
+      })),
+    ];
+  };
 
   return (
     <div>
@@ -432,90 +480,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
             </Form>
           </Card>
 
-          <Card
-            title={t(`${L}.sharedPrompt`)}
-            extra={
-              <Space>
-                <Select
-                  style={{ minWidth: 160 }}
-                  value={version}
-                  onChange={(next: number) => {
-                    setVersion(next);
-                    setContent(prompt.versions.find((v) => v.version === next)?.content ?? "");
-                  }}
-                  options={prompt.versions.map((v) => ({
-                    value: v.version,
-                    label: (
-                      <span>
-                        v{v.version}{" "}
-                        {v.version === current ? <Tag color="blue">{t(`${L}.inUse`)}</Tag> : null}
-                        {v.version === initial ? <Tag>{t(`${P}.initialVersion`)}</Tag> : null}
-                      </span>
-                    ),
-                  }))}
-                />
-                {prompt.versions.length > 1 ? (
-                  <Button
-                    onClick={() => {
-                      const other =
-                        selected && selected.version !== current
-                          ? selected.version
-                          : prompt.versions.find((v) => v.version !== current)?.version;
-                      if (other !== undefined)
-                        setComparing([Math.min(other, current), Math.max(other, current)]);
-                    }}
-                  >
-                    {t(`${P}.compare`)}
-                  </Button>
-                ) : null}
-                {editable && selected && selected.version !== current ? (
-                  <Button
-                    danger
-                    disabled={saving}
-                    onClick={() =>
-                      confirmThen(
-                        t(`${P}.confirmRollbackTitle`, { version: selected.version }),
-                        t(`${P}.confirmPromptBody`),
-                        () =>
-                          run(
-                            () => rollbackSharedPrompt({ ...params, version: selected.version }),
-                            `${L}.rolledBack`,
-                            applyPrompt,
-                          ),
-                      )
-                    }
-                  >
-                    {t(`${L}.useThisVersion`)}
-                  </Button>
-                ) : null}
-                {editable &&
-                selected &&
-                selected.version !== current &&
-                selected.version !== initial ? (
-                  <Button
-                    danger
-                    type="text"
-                    disabled={saving}
-                    onClick={() =>
-                      confirmThen(
-                        t(`${P}.confirmDeleteVersionTitle`, { version: selected.version }),
-                        t(`${P}.confirmDeleteVersionBody`),
-                        () =>
-                          run(
-                            () =>
-                              deleteSharedPromptVersion({ ...params, version: selected.version }),
-                            `${P}.versionDeleted`,
-                            applyPrompt,
-                          ),
-                      )
-                    }
-                  >
-                    {t(`${P}.deleteVersion`)}
-                  </Button>
-                ) : null}
-              </Space>
-            }
-          >
+          <Card title={t(`${L}.sharedPrompt`)}>
             <Input.TextArea
               autoSize={{ minRows: 10, maxRows: 28 }}
               readOnly={!editable}
@@ -537,7 +502,10 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                         run(
                           () => publishSharedPrompt({ ...params, content }),
                           `${L}.promptPublished`,
-                          applyPrompt,
+                          (next) => {
+                            applyPrompt(next);
+                            void refreshVersions();
+                          },
                         ),
                     )
                   }
@@ -546,6 +514,84 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                 </Button>
               </Space>
             ) : null}
+          </Card>
+
+          <Card title={t(`${P}.versionsTitle`)}>
+            <ul className={styles.versionList}>
+              {versions.map((v) => (
+                <li key={v.version} className={styles.versionRow}>
+                  <div className={styles.versionMain}>
+                    <span className={styles.versionNumber}>v{v.version}</span>
+                    {v.current ? <Tag color="blue">{t(`${L}.inUse`)}</Tag> : null}
+                    {v.initial ? <Tag>{t(`${P}.initialVersion`)}</Tag> : null}
+                    <span className={styles.versionChanges}>{changeLabel(v)}</span>
+                    <Typography.Text type="secondary" className={styles.versionTime}>
+                      {formatDateTimeYmdHms(v.create_time)}
+                    </Typography.Text>
+                  </div>
+                  {v.current || currentVersion === null ? null : (
+                    <Space size={4}>
+                      <Button
+                        size="small"
+                        aria-label={t(`${P}.compareVersion`, { version: v.version })}
+                        onClick={() =>
+                          setComparing([
+                            Math.min(v.version, currentVersion),
+                            Math.max(v.version, currentVersion),
+                          ])
+                        }
+                      >
+                        {t(`${P}.compare`)}
+                      </Button>
+                      {editable ? (
+                        <Button
+                          size="small"
+                          danger
+                          disabled={saving}
+                          aria-label={t(`${P}.activateVersion`, { version: v.version })}
+                          onClick={() =>
+                            confirmThen(
+                              t(`${P}.confirmActivateTitle`, { version: v.version }),
+                              t(`${P}.confirmActivateBody`),
+                              () =>
+                                switchTo(
+                                  () => activateVersion({ ...params, version: v.version }),
+                                  `${P}.activated`,
+                                ),
+                            )
+                          }
+                        >
+                          {t(`${L}.useThisVersion`)}
+                        </Button>
+                      ) : null}
+                      {editable && !v.initial ? (
+                        <Button
+                          size="small"
+                          danger
+                          type="text"
+                          disabled={saving}
+                          aria-label={t(`${P}.deleteVersionNamed`, { version: v.version })}
+                          onClick={() =>
+                            confirmThen(
+                              t(`${P}.confirmDeleteVersionTitle`, { version: v.version }),
+                              t(`${P}.confirmDeleteVersionBody`),
+                              () =>
+                                run(
+                                  () => deleteVersion({ ...params, version: v.version }),
+                                  `${P}.versionDeleted`,
+                                  setVersions,
+                                ),
+                            )
+                          }
+                        >
+                          {t(`${P}.deleteVersion`)}
+                        </Button>
+                      ) : null}
+                    </Space>
+                  )}
+                </li>
+              ))}
+            </ul>
           </Card>
         </Space>
       </section>
@@ -570,18 +616,33 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                   onChange={(next: number) =>
                     setComparing(side === 0 ? [next, comparing[1]] : [comparing[0], next])
                   }
-                  options={prompt.versions.map((v) => ({
+                  options={versions.map((v) => ({
                     value: v.version,
                     label: `v${v.version}`,
                   }))}
                 />
               ))}
             </Space>
+            <table className={styles.compareTable}>
+              <tbody>
+                {runtimeRows(versionOf(comparing[0]), versionOf(comparing[1])).map((row) => (
+                  <tr
+                    key={row.label}
+                    className={row.left === row.right ? undefined : styles.compareChanged}
+                  >
+                    <th>{row.label}</th>
+                    <td>{row.left}</td>
+                    <td>{row.right}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className={styles.compareSubtitle}>{t(`${L}.sharedPrompt`)}</div>
             <MonacoDiffEditor
-              height={480}
+              height={420}
               language="markdown"
-              original={versionText(comparing[0])}
-              modified={versionText(comparing[1])}
+              original={versionOf(comparing[0])?.prompt_content ?? ""}
+              modified={versionOf(comparing[1])?.prompt_content ?? ""}
               // wordWrap only reaches the modified side; the original side needs
               // diffWordWrap, and older Monaco builds ignore that, so set it directly too.
               options={{

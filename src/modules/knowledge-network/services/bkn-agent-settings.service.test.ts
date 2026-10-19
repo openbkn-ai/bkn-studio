@@ -11,7 +11,7 @@ import {
   getShared,
   listShared,
   narrow,
-  rollbackSharedPrompt,
+  activateVersion,
   selectableTools,
 } from "@/modules/knowledge-network/services/bkn-agent-settings.service";
 
@@ -53,13 +53,13 @@ describe("bkn-agent settings", () => {
 
     await listShared(params);
     await getShared({ ...params, agentId: "catalog-semantic-understanding" });
-    await rollbackSharedPrompt({ ...params, agentId: "business_provenance_optimizer", version: 2 });
+    await activateVersion({ ...params, agentId: "business_provenance_optimizer", version: 2 });
 
     const urls = fetchMock.mock.calls.map((call) => String((call as unknown[])[0]));
     expect(urls).toEqual([
       "https://h/api/bkn-agent/v1/admin/agents",
       "https://h/api/bkn-agent/v1/admin/agents/catalog-semantic-understanding",
-      "https://h/api/bkn-agent/v1/admin/agents/business_provenance_optimizer/prompt/rollback",
+      "https://h/api/bkn-agent/v1/admin/agents/business_provenance_optimizer/versions/2/activate",
     ]);
   });
 });
