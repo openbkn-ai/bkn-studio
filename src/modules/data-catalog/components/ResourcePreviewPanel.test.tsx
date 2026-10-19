@@ -845,6 +845,31 @@ describe("ResourcePreviewPanel", () => {
     },
   );
 
+  it.each([
+    ["VegaBackend.Query.InvalidParameter.OutputField", "invalidOutputField"],
+    ["VegaBackend.Query.UnsupportedOutputField", "unsupportedOutputField"],
+    ["VegaBackend.Query.NoQueryableFields", "noQueryableFields"],
+  ])(
+    "uses only the localized projection explanation when %s has no response description",
+    async (code, key) => {
+      previewCatalogResourceMock.mockRejectedValue(
+        Object.assign(new Error("Request failed with status code 400"), {
+          isAxiosError: true,
+          response: { status: 400, data: { error_code: code } },
+        }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, columnCount: 1, schema: [{ name: "value", type: "other" }] }}
+        />,
+      );
+      const explanation = await screen.findByText(`dataCatalog.preview.${key}`);
+      expect(explanation.closest(".ant-alert")?.querySelector(".ant-alert-description")).toBeNull();
+      expect(screen.queryByText("Request failed with status code 400")).not.toBeInTheDocument();
+    },
+  );
+
   it("does not repeat a backend description identical to the localized explanation", async () => {
     const explanation = "dataCatalog.preview.noQueryableFields";
     previewCatalogResourceMock.mockRejectedValue(

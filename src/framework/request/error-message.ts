@@ -24,6 +24,7 @@ type BackendErrorResponseBody = {
 export type RequestErrorDetails = {
   code?: string;
   description: string;
+  descriptionSource?: "response";
   details?: string;
   errorLink?: string;
   solution?: string;
@@ -54,6 +55,7 @@ function optionalString(value: unknown): string | undefined {
 }
 
 export function extractRequestErrorDetails(error: unknown): RequestErrorDetails {
+  let responseDetails: Omit<RequestErrorDetails, "description"> = {};
   if (axios.isAxiosError<BackendErrorResponseBody>(error)) {
     const data = error.response?.data;
     const description = optionalString(data?.description);
@@ -65,31 +67,32 @@ export function extractRequestErrorDetails(error: unknown): RequestErrorDetails 
       errorLink: optionalString(data?.error_link),
       solution: optionalString(data?.solution),
     };
+    responseDetails = common;
     const responseMessage = optionalString(data?.message);
     const responseError = optionalString(data?.error);
 
     if (description) {
-      return { ...common, description };
+      return { ...common, description, descriptionSource: "response" };
     }
 
     if (fallbackDetails) {
-      return { ...common, description: fallbackDetails };
+      return { ...common, description: fallbackDetails, descriptionSource: "response" };
     }
 
     if (responseMessage) {
-      return { ...common, description: responseMessage };
+      return { ...common, description: responseMessage, descriptionSource: "response" };
     }
 
     if (responseError) {
-      return { ...common, description: responseError };
+      return { ...common, description: responseError, descriptionSource: "response" };
     }
   }
 
   if (error instanceof Error && error.message.trim()) {
-    return { description: error.message };
+    return { ...responseDetails, description: error.message };
   }
 
-  return { description: i18n.t("common.requestFailed") };
+  return { ...responseDetails, description: i18n.t("common.requestFailed") };
 }
 
 export function extractRequestErrorMessage(error: unknown) {

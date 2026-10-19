@@ -249,7 +249,9 @@ export function ResourcePreviewPanel({
         const explanation = projectionMessage ? t(projectionMessage) : details.description;
         setError({
           message: explanation,
-          ...(projectionMessage && details.description !== explanation
+          ...(projectionMessage &&
+          details.descriptionSource === "response" &&
+          details.description !== explanation
             ? { description: details.description }
             : {}),
         });
