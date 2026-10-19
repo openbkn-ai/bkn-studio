@@ -39,6 +39,15 @@ const LicenseManagementPage = lazy(async () => {
   return { default: module.LicenseManagementPage };
 });
 
+const AgentConfigPage = lazy(async () => {
+  const module = await import("@/modules/system-admin/pages/AgentConfigPage");
+  return { default: module.AgentConfigPage };
+});
+const AgentConfigDetailPage = lazy(async () => {
+  const module = await import("@/modules/system-admin/pages/AgentConfigPage");
+  return { default: module.AgentConfigDetailPage };
+});
+
 const OAuthAccessOriginsPage = lazy(async () => {
   const module = await import("@/modules/system-admin/pages/OAuthAccessOriginsPage");
   return { default: module.OAuthAccessOriginsPage };
@@ -124,6 +133,27 @@ export const systemAdminRoutes: RouteObject[] = [
       },
     },
     element: guarded(systemAdminPermissions.accessOrigins, <OAuthAccessOriginsPage />),
+  },
+  {
+    path: "system/agent-config",
+    handle: {
+      console: {
+        descriptionKey: "systemAdmin.agentConfig.description",
+        menuKey: "agent-config",
+        titleKey: "systemAdmin.agentConfig.title",
+      },
+    },
+    element: guarded(systemAdminPermissions.agentConfig, <AgentConfigPage />),
+  },
+  {
+    path: "system/agent-config/:agentId",
+    handle: {
+      console: {
+        menuKey: "agent-config",
+        titleKey: "systemAdmin.agentConfig.detailTitle",
+      },
+    },
+    element: guarded(systemAdminPermissions.agentConfig, <AgentConfigDetailPage />),
   },
   {
     path: "system/audit",

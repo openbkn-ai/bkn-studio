@@ -22,10 +22,25 @@
   z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 8px 26px;
+  justify-content: space-between;
+  gap: 12px;
+  /* Bottom border lines up with the workspace sidebar's first divider:
+     8px scroll padding + 36px "Overview" item + 8px divider margin. */
+  box-sizing: border-box;
+  height: 53px;
+  padding: 0 26px;
   border-bottom: 1px solid var(--line);
   background: var(--color-bg-surface);
+}
+/* Smart Q&A sits under capability validation; say so where every question is asked. */
+.headerNotice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  line-height: 18px;
 }
 .headerActions {
   display: flex;
@@ -488,8 +503,8 @@
   box-shadow: 0 0 5px rgba(31, 157, 87, 0.6);
 }
 .dotRunning {
-  background: #c9821a;
-  box-shadow: 0 0 5px rgba(201, 130, 26, 0.6);
+  background: #1f9d57;
+  box-shadow: 0 0 5px rgba(31, 157, 87, 0.6);
   animation: breathe 1.4s ease-in-out infinite;
 }
 /* A closed group is the only progress signal while calls are in flight, so it breathes. */
@@ -524,6 +539,12 @@
     animation: none;
   }
 }
+/* The tool ran and returned an error the model can retry around. */
+.dotWarn {
+  background: #c9821a;
+  box-shadow: 0 0 5px rgba(201, 130, 26, 0.45);
+}
+
 .dotError {
   background: #d63a3a;
   box-shadow: 0 0 5px rgba(214, 58, 58, 0.6);

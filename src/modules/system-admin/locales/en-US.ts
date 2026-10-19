@@ -364,6 +364,10 @@ export const systemAdminEnUS = {
         "admin-apikey": {
           manage: "Manage global AppKeys.",
         },
+        "admin-agent": {
+          manage:
+            "Change built-in Agent configuration and shared Prompts, or restore their initial version.",
+        },
       },
       resources: {
         "admin-audit": "System audit log",
@@ -1185,6 +1189,79 @@ export const systemAdminEnUS = {
           "Online activation is not configured for this deployment. Offline activation remains available.",
         unknown: "{{error}}",
       },
+    },
+    agentConfig: {
+      title: "Built-in Agents",
+      description:
+        "The built-in Agents platform features depend on: model, MCP service, execution caps, publish state, and shared Prompt. Changes affect those features immediately.",
+      listHint: "Built-in platform Agents",
+      searchPlaceholder: "Search by name or ID",
+      empty: "No built-in Agents",
+      noMatch: "No matching Agents",
+      detailTitle: "Built-in Agent",
+      builtinTag: "Built-in",
+      confirmChange: "Confirm change",
+      confirmRuntimeTitle: "Change the runtime of “{{name}}”?",
+      confirmPublishPromptTitle: "Publish the shared Prompt as a new version?",
+      confirmPromptBody:
+        "It becomes a new version and applies to everyone immediately; you can switch back from the version list.",
+      dangerZone: "Danger zone",
+      restore: "Restore initial version",
+      confirmRestoreTitle: "Restore “{{name}}” to its initial version?",
+      confirmRestoreBody:
+        "Model, MCP service, execution caps and the shared Prompt go back to what was set up with the release, for everyone at once. The current Prompt stays in the version list.",
+      restored: "Restored to the initial version",
+      initialVersion: "Initial",
+      compare: "Compare",
+      compareVersion: "Compare v{{version}} with the current version",
+      activateVersion: "Use v{{version}}",
+      deleteVersionNamed: "Delete v{{version}}",
+      versionsTitle: "Versions",
+      firstVersion: "First version",
+      changeSeparator: ", ",
+      change: {
+        model: "Model",
+        tools: "MCP service",
+        limits: "Execution caps",
+        prompt_version: "Prompt",
+      },
+      confirmActivateTitle: "Switch to v{{version}}?",
+      confirmActivateBody:
+        "Runtime settings and the shared Prompt switch to this version for everyone at once.",
+      activated: "Switched",
+      compareTitle: "Compare versions",
+      compareFrom: "Older version",
+      compareTo: "Newer version",
+      deleteVersion: "Delete this version",
+      confirmDeleteVersionTitle: "Delete v{{version}}?",
+      confirmDeleteVersionBody:
+        "It leaves the version list and can no longer be switched to. The current and the initial version cannot be deleted.",
+      versionDeleted: "Deleted",
+      notPublished:
+        "This Agent is not published yet; the features that depend on it are unavailable.",
+      publish: "Publish",
+      confirmPublishTitle: "Publish “{{name}}”?",
+      publishOnce: "Once published, a built-in Agent stays published; it cannot be unpublished.",
+      publishedDone: "Published",
+      back: "Back to list",
+      layered: "Network and personal settings",
+      readOnly: "Read-only",
+      updateTime: "Updated",
+      promptVersion: "Prompt v{{version}}",
+      intro:
+        "This configuration is shared by every knowledge network. Network settings and personal preferences can only add instructions or narrow tools and limits on top of it.",
+      introPlain: "This Agent is configured here only; it has no network or personal settings.",
+      readOnlyNotice:
+        "You do not have built-in Agent management permission (admin-agent:manage); you can only view it.",
+      notFound: "This Agent does not exist or is not a built-in Agent.",
+      forbidden: "You cannot view this Agent's configuration.",
+      runtimeTitle: "Runtime",
+      mcpProfile: "MCP service",
+      mcpProfileHint:
+        "Context Loader offers a full endpoint (every tool) and a compact one (fewer tools, less context).",
+      mcpDefault: "Service default",
+      mcpFull: "Full",
+      mcpCompact: "Compact",
     },
     accessOrigins: {
       title: "Access Addresses",

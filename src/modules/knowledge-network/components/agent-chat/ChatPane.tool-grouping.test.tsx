@@ -206,4 +206,92 @@ describe("ChatPane 工具调用折叠", () => {
     const response = [...document.querySelectorAll("pre")].map((node) => node.textContent);
     expect(response).toContain("object_types:\n  - 产品");
   });
+
+  it("a retried failure in a successful turn does not mark the group failed", async () => {
+    streams([
+      call("c1", "run_cypher"),
+      {
+        type: "tool_finished",
+        id: "c1",
+        name: "run_cypher",
+        status: "failed",
+        output: "WITH is not supported",
+        errorKind: "error",
+        durationMs: 5,
+      },
+      call("c2", "run_cypher"),
+      done("c2", "run_cypher"),
+      token("答复"),
+    ]);
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText("已调用工具 2 次")).toBeTruthy();
+    // Visible without expanding, but not as a failed group.
+    expect(screen.getByText(/其中 1 次失败/)).toBeTruthy();
+    expect(screen.queryByText(/个失败/)).toBeNull();
+  });
+
+  it("a call that did not go through marks the group failed", async () => {
+    startExecution.mockImplementation(({ onEvent }) => {
+      onEvent(call("c1", "run_sql"));
+      onEvent(done("c1", "run_sql"));
+      onEvent(call("c2", "run_sql"));
+      onEvent({
+        type: "tool_finished",
+        id: "c2",
+        name: "run_sql",
+        status: "failed",
+        output: "boom",
+        errorKind: "unavailable",
+        durationMs: 5,
+      });
+      const terminal = {
+        type: "terminal" as const,
+        status: "failed" as const,
+        code: "BknAgent.Chat.Failed",
+      };
+      onEvent(terminal);
+      return Promise.resolve(terminal);
+    });
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText("1 个失败")).toBeTruthy();
+  });
+
+  it("history saved before error_kind keeps its failures red", async () => {
+    const legacy = (id: string) => ({
+      id,
+      name: "run_sql",
+      args: {},
+      status: "error",
+      error: "boom",
+      startedAt: 0,
+      latencyMs: 5,
+    });
+    localStorage.setItem(
+      "bkn-studio:agentchat:kn-demo",
+      JSON.stringify({
+        messages: [
+          { role: "user", content: "问一句" },
+          { role: "assistant", content: "答复", toolCalls: [legacy("c1"), legacy("c2")] },
+        ],
+        stats: { tokens: 0, ms: 0 },
+      }),
+    );
+
+    renderPane();
+
+    expect(await screen.findByText("2 个失败")).toBeTruthy();
+    expect(screen.queryByText(/其中 \d+ 次失败/)).toBeNull();
+  });
 });

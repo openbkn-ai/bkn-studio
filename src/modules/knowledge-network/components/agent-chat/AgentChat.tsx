@@ -11,7 +11,7 @@
  * input composer.
  */
 
-import { ClearOutlined } from "@ant-design/icons";
+import { ClearOutlined, ExclamationCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -37,6 +37,7 @@ import {
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { recommendationFingerprint } from "@/modules/knowledge-network/utils/agent-chat-cache";
 
+import { AgentConfigDrawer } from "./AgentConfigDrawer";
 import { ChatPane, type ChatPaneHandle } from "./ChatPane";
 import styles from "./AgentChat.module.css";
 
@@ -183,6 +184,7 @@ export function AgentChat({
 
   // Busy state reported by the pane for send-disable and stop behavior.
   const [busy, setBusy] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
 
   /** One-time managed session for platform prefetching, not either conversation. */
   const summaryLifecycle = useMemo(
@@ -319,8 +321,20 @@ export function AgentChat({
 
   return (
     <div ref={pageScrollRef} className={styles.root}>
+      <AgentConfigDrawer
+        open={configOpen}
+        onClose={() => setConfigOpen(false)}
+        env={env}
+        tokenProvider={tokenProvider}
+      />
       <header className={styles.agentHeader}>
+        <span className={styles.headerNotice}>
+          <ExclamationCircleOutlined /> {t("knowledgeNetwork.agentChat.composer.validationOnly")}
+        </span>
         <div className={styles.headerActions}>
+          <button type="button" className={styles.barBtn} onClick={() => setConfigOpen(true)}>
+            <SettingOutlined /> {t("knowledgeNetwork.agentChat.composer.settings")}
+          </button>
           <button
             type="button"
             className={styles.barBtn}
