@@ -15,11 +15,15 @@ const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const testFilterRule = vi.hoisted(() => ({ field: "id", operation: ">", value: "10" }));
 
+const translateMock = vi.hoisted(
+  () => (key: string, options?: { source?: string }) =>
+    key === "dataCatalog.preview.sourceReadForbidden" ? `${key}:${options?.source}` : key,
+);
+
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
-    t: (key: string, options?: { source?: string }) =>
-      key === "dataCatalog.preview.sourceReadForbidden" ? `${key}:${options?.source}` : key,
+    t: translateMock,
   }),
 }));
 
@@ -807,6 +811,57 @@ describe("ResourcePreviewPanel", () => {
         screen.getByText("dataCatalog.preview.noQueryPermission").closest(".ant-alert"),
       ).toHaveClass("ant-alert-warning");
     });
+  });
+
+  it.each([
+    ["VegaBackend.Query.InvalidParameter.OutputField", "invalidOutputField"],
+    ["VegaBackend.Query.UnsupportedOutputField", "unsupportedOutputField"],
+    ["VegaBackend.Query.NoQueryableFields", "noQueryableFields"],
+  ])("explains projection failure %s without exposing internal details", async (code, key) => {
+    previewCatalogResourceMock.mockRejectedValue(
+      Object.assign(new Error("rejected"), {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error_code: code,
+            description: "generic query failure",
+            error_details: "private driver details",
+          },
+        },
+      }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "value", type: "other" }] }}
+      />,
+    );
+    expect(await screen.findByText(`dataCatalog.preview.${key}`)).toBeInTheDocument();
+    expect(screen.queryByText("private driver details")).not.toBeInTheDocument();
+  });
+
+  it("keeps real source failures distinct from invalid projections", async () => {
+    previewCatalogResourceMock.mockRejectedValue(
+      Object.assign(new Error("failed"), {
+        isAxiosError: true,
+        response: {
+          status: 500,
+          data: {
+            error_code: "VegaBackend.Resource.InternalError",
+            description: "source unavailable",
+          },
+        },
+      }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+    expect(await screen.findByText("source unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("dataCatalog.preview.invalidOutputField")).not.toBeInTheDocument();
   });
 
   it("shows a source account grant hint for HANA error 258", async () => {

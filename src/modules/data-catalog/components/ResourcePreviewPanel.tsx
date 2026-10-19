@@ -49,6 +49,12 @@ const INDEX_PREVIEW_PAGE_LIMIT = 10_000;
 const PREVIEW_CONTENT_LENGTH = 20;
 const EMPTY_APPLIED_FILTER = emptyFilterGroup();
 
+const PROJECTION_ERROR_MESSAGES = new Map([
+  ["VegaBackend.Query.InvalidParameter.OutputField", "dataCatalog.preview.invalidOutputField"],
+  ["VegaBackend.Query.UnsupportedOutputField", "dataCatalog.preview.unsupportedOutputField"],
+  ["VegaBackend.Query.NoQueryableFields", "dataCatalog.preview.noQueryableFields"],
+]);
+
 function isNumericType(type: string) {
   const lowered = type.toLowerCase();
   return (
@@ -239,7 +245,8 @@ export function ResourcePreviewPanel({
         const sourceDenied = details.code === "VegaBackend.Resource.SourceReadForbidden";
         setSourceReadDetails(sourceDenied ? details : null);
         setForbidden(!sourceDenied && isRequestForbidden(loadError));
-        setError(details.description);
+        const projectionMessage = PROJECTION_ERROR_MESSAGES.get(details.code ?? "");
+        setError(projectionMessage ? t(projectionMessage) : details.description);
         setResult(null);
       } finally {
         if (requestVersion === requestVersionRef.current) {
@@ -255,6 +262,7 @@ export function ResourcePreviewPanel({
       hasBinaryField,
       queriesSource,
       activeFilter,
+      t,
     ],
   );
 
