@@ -982,9 +982,7 @@ function mockPreviewCell(
 ) {
   const type = field.type.toLowerCase();
   if (type === "other") {
-    return usesLocalIndex
-      ? { mode: "unavailable" }
-      : { data: mockOtherContent(field, row), mode: "content" };
+    return usesLocalIndex ? { mode: "unavailable" } : mockOtherContent(field, row);
   }
   if (type !== "binary") {
     return mockCell(field, row);

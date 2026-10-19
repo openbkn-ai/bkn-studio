@@ -456,8 +456,89 @@ describe("ResourcePreviewPanel", () => {
     expect(screen.queryByText("raw bytes")).toBeNull();
   });
 
+  it.each([{ data: "value" }, { mode: "unavailable" }, { mode: "content", data: [1, 2] }])(
+    "preserves source Other objects without interpreting wrapper keys: %j",
+    async (value) => {
+      previewCatalogResourceMock.mockResolvedValue({
+        querySource: "source",
+        rows: [{ value }],
+        total: 1,
+      });
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, schema: [{ name: "value", type: "other" }] }}
+        />,
+      );
+      const text = JSON.stringify(value);
+      if (text.length > 20) {
+        fireEvent.click(await screen.findByRole("button", { name: `${text.slice(0, 20)}…` }));
+      }
+      expect(await screen.findByText(text)).toBeTruthy();
+      expect(screen.queryByText("dataCatalog.preview.fieldContentUnavailable")).toBeNull();
+    },
+  );
+
+  it.each(["other", "binary", "string", "integer", "json"])(
+    "distinguishes missing %s fields from returned NULL and content",
+    async (type) => {
+      previewCatalogResourceMock.mockResolvedValue({
+        rows: [
+          {},
+          { value: null },
+          ...(type === "binary"
+            ? [{ value: { mode: "unavailable", reason: "not_requested" } }]
+            : []),
+        ],
+        total: 3,
+      });
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, schema: [{ name: "value", type }] }}
+        />,
+      );
+      expect(await screen.findByText("dataCatalog.preview.fieldNotReturned")).toBeTruthy();
+      expect(screen.getAllByText("NULL")).toHaveLength(1);
+      if (type !== "binary") return;
+      expect(screen.getByText("dataCatalog.preview.fieldContentUnavailable")).toBeTruthy();
+      fireEvent.mouseEnter(screen.getByText("dataCatalog.preview.fieldContentUnavailable"));
+      expect(await screen.findByText("dataCatalog.preview.contentNotRequested")).toBeTruthy();
+    },
+  );
+
+  it("renders JSON objects with mode and reason as source content", async () => {
+    const value = { mode: "unavailable", reason: "unsupported_source_type" };
+    previewCatalogResourceMock.mockResolvedValue({ rows: [{ value }], total: 1 });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "value", type: "json" }] }}
+      />,
+    );
+    expect(await screen.findByText(JSON.stringify(value))).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.preview.fieldContentUnavailable")).toBeNull();
+  });
+
+  it("preserves Other arrays, empty arrays and actual NULL", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: [{ value: [1, 2] }, { value: [] }, { value: null }],
+      total: 3,
+    });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "value", type: "other" }] }}
+      />,
+    );
+    expect(await screen.findByText("[1,2]")).toBeTruthy();
+    expect(screen.getByText("[]")).toBeTruthy();
+    expect(screen.getAllByText("NULL")).toHaveLength(1);
+  });
+
   it("renders unavailable Other values without exposing their response wrapper", async () => {
     previewCatalogResourceMock.mockResolvedValue({
+      querySource: "local_index",
       rows: [{ legacy_profile: { mode: "unavailable" } }],
       total: 1,
     });
@@ -584,7 +665,7 @@ describe("ResourcePreviewPanel", () => {
     const serialized = JSON.stringify(content);
     writeTextToClipboardMock.mockResolvedValue(undefined);
     previewCatalogResourceMock.mockResolvedValue({
-      rows: [{ service_area: { data: content, mode: "content" } }],
+      rows: [{ service_area: content }],
       total: 1,
     });
 

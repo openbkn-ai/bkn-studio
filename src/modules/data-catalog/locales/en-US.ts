@@ -637,7 +637,13 @@ export const dataCatalogEnUS = {
         "The selected query source does not support the applied filter. Adjust the conditions and apply again.",
       binaryContent: "Binary content ({{count}} bytes)",
       binaryContentUnavailable: "Binary content not loaded",
-      fieldContentUnavailable: "Field content not loaded",
+      fieldNotReturned: "Not returned",
+      fieldNotReturnedHint:
+        "This query did not return the field. Its source value may or may not be NULL.",
+      fieldContentUnavailableHint:
+        "The field content is unavailable for this query. Its source value may or may not be NULL.",
+      contentNotRequested: "This query did not request the field content.",
+      fieldContentUnavailable: "Content unavailable",
       fullValue: "Full value: {{field}}",
       copyFullValue: "Copy full value",
       copyFullValueSuccess: "Full value copied",

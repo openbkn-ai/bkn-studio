@@ -147,22 +147,6 @@ function formatBinaryPreviewCell(
   return { text: t("dataCatalog.preview.binaryContentUnavailable") };
 }
 
-function formatOtherPreviewCell(
-  value: unknown,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): PreviewCellDisplay {
-  if (value !== null && typeof value === "object") {
-    const resourceValue = value as { data?: unknown; mode?: unknown };
-    if (resourceValue.mode === "unavailable") {
-      return { text: t("dataCatalog.preview.fieldContentUnavailable") };
-    }
-    if ("data" in resourceValue) {
-      return formatExpandablePreviewCell(resourceValue.data);
-    }
-  }
-  return formatExpandablePreviewCell(value);
-}
-
 export function ResourcePreviewPanel({
   active,
   disabled = false,
@@ -535,19 +519,43 @@ export function ResourcePreviewPanel({
                     <td className={styles.rowIndex}>{offset + rowIndex + 1}</td>
                     {columns.map((field) => {
                       const value = row[field.name];
-                      const isNull = value === null || value === undefined;
+                      const isNull = Object.hasOwn(row, field.name) && value === null;
+                      const unavailable =
+                        (field.type.trim().toLowerCase() === "binary" ||
+                          (field.type.trim().toLowerCase() === "other" &&
+                            result?.querySource === "local_index")) &&
+                        value !== null &&
+                        typeof value === "object" &&
+                        "mode" in value &&
+                        value.mode === "unavailable";
+                      const stateDisplay: PreviewCellDisplay | undefined =
+                        !Object.hasOwn(row, field.name) || value === undefined
+                          ? {
+                              text: t("dataCatalog.preview.fieldNotReturned"),
+                              tooltip: t("dataCatalog.preview.fieldNotReturnedHint"),
+                            }
+                          : unavailable
+                            ? {
+                                text: t("dataCatalog.preview.fieldContentUnavailable"),
+                                tooltip: t(
+                                  "reason" in value && value.reason === "not_requested"
+                                    ? "dataCatalog.preview.contentNotRequested"
+                                    : "dataCatalog.preview.fieldContentUnavailableHint",
+                                ),
+                              }
+                            : undefined;
                       const binaryDisplay =
                         field.type.trim().toLowerCase() === "binary"
                           ? formatBinaryPreviewCell(value, t)
                           : undefined;
                       const otherDisplay =
                         field.type.trim().toLowerCase() === "other"
-                          ? formatOtherPreviewCell(value, t)
+                          ? formatExpandablePreviewCell(value)
                           : undefined;
                       const textDisplay = isTextPreviewType(field.type)
                         ? formatTextPreviewCell(value)
                         : undefined;
-                      const display = binaryDisplay ?? otherDisplay ?? textDisplay;
+                      const display = stateDisplay ?? binaryDisplay ?? otherDisplay ?? textDisplay;
                       const text = display?.text ?? formatPreviewCell(value);
                       const tooltip = display?.tooltip ?? text;
                       const fullText = display?.fullText;
