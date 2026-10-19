@@ -501,11 +501,46 @@ describe("ResourcePreviewPanel", () => {
       expect(await screen.findByText("dataCatalog.preview.fieldNotReturned")).toBeTruthy();
       expect(screen.getAllByText("NULL")).toHaveLength(1);
       if (type !== "binary") return;
-      expect(screen.getByText("dataCatalog.preview.fieldContentUnavailable")).toBeTruthy();
-      fireEvent.mouseEnter(screen.getByText("dataCatalog.preview.fieldContentUnavailable"));
+      expect(screen.getByText("dataCatalog.preview.binaryContentUnavailable")).toBeTruthy();
+      fireEvent.mouseEnter(screen.getByText("dataCatalog.preview.binaryContentUnavailable"));
       expect(await screen.findByText("dataCatalog.preview.contentNotRequested")).toBeTruthy();
     },
   );
+
+  it("offers a loading hint for unavailable indexed Binary without a reason", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      querySource: "local_index",
+      rows: [{ blob: { mode: "unavailable" } }],
+      total: 1,
+    });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "blob", type: "binary" }] }}
+      />,
+    );
+    const cell = await screen.findByText("dataCatalog.preview.binaryContentUnavailable");
+    expect(screen.queryByText("dataCatalog.preview.fieldContentUnavailable")).toBeNull();
+    fireEvent.mouseEnter(cell);
+    expect(
+      await screen.findByText("dataCatalog.preview.binaryContentUnavailableHint"),
+    ).toBeTruthy();
+  });
+
+  it("preserves Other objects when the response does not identify its query source", async () => {
+    const value = { mode: "unavailable", data: "source content" };
+    previewCatalogResourceMock.mockResolvedValue({ rows: [{ value }], total: 1 });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "value", type: "other" }] }}
+      />,
+    );
+    const text = JSON.stringify(value);
+    fireEvent.click(await screen.findByRole("button", { name: `${text.slice(0, 20)}…` }));
+    expect(await screen.findByText(text)).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.preview.fieldContentUnavailable")).toBeNull();
+  });
 
   it("renders JSON objects with mode and reason as source content", async () => {
     const value = { mode: "unavailable", reason: "unsupported_source_type" };

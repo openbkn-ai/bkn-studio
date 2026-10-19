@@ -637,6 +637,8 @@ export const dataCatalogEnUS = {
         "The selected query source does not support the applied filter. Adjust the conditions and apply again.",
       binaryContent: "Binary content ({{count}} bytes)",
       binaryContentUnavailable: "Binary content not loaded",
+      binaryContentUnavailableHint:
+        'Binary content is not loaded. Where source queries are supported, enable "Query original data" and "Load Binary content" to read it.',
       fieldNotReturned: "Not returned",
       fieldNotReturnedHint:
         "This query did not return the field. Its source value may or may not be NULL.",

@@ -125,9 +125,6 @@ function formatBinaryPreviewCell(
   }
   if (typeof value === "object" && value !== null) {
     const binaryValue = value as { byte_length?: unknown; data?: unknown; mode?: unknown };
-    if (binaryValue.mode === "unavailable") {
-      return { text: t("dataCatalog.preview.binaryContentUnavailable") };
-    }
     if (binaryValue.mode === "content" && typeof binaryValue.data === "string") {
       const content = binaryValue.data;
       if (content.length <= PREVIEW_CONTENT_LENGTH) {
@@ -536,11 +533,17 @@ export function ResourcePreviewPanel({
                             }
                           : unavailable
                             ? {
-                                text: t("dataCatalog.preview.fieldContentUnavailable"),
+                                text: t(
+                                  field.type.trim().toLowerCase() === "binary"
+                                    ? "dataCatalog.preview.binaryContentUnavailable"
+                                    : "dataCatalog.preview.fieldContentUnavailable",
+                                ),
                                 tooltip: t(
                                   "reason" in value && value.reason === "not_requested"
                                     ? "dataCatalog.preview.contentNotRequested"
-                                    : "dataCatalog.preview.fieldContentUnavailableHint",
+                                    : field.type.trim().toLowerCase() === "binary"
+                                      ? "dataCatalog.preview.binaryContentUnavailableHint"
+                                      : "dataCatalog.preview.fieldContentUnavailableHint",
                                 ),
                               }
                             : undefined;

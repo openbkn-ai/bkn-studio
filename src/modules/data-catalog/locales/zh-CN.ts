@@ -600,6 +600,8 @@ export const dataCatalogZhCN = {
         "当前查询来源不支持已应用的筛选条件，筛选已取消。请调整条件后重新应用。",
       binaryContent: "二进制内容（{{count}} 字节）",
       binaryContentUnavailable: "二进制内容未加载",
+      binaryContentUnavailableHint:
+        "二进制内容尚未加载；如需读取原值，请在支持源查询时启用“查询原始数据”和“读取 Binary 内容”。",
       fieldNotReturned: "未返回",
       fieldNotReturnedHint: "本次查询未返回该字段，无法判断源值是否为空。",
       fieldContentUnavailableHint: "当前查询无法提供该字段内容，无法判断源值是否为空。",
