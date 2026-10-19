@@ -397,18 +397,11 @@ describe("resource.service · previewCatalogResource", () => {
     });
 
     expect(result.querySource).toBe("source");
-    expect(result.rows[0]?.location).toEqual({
-      data: { x: 116.4, y: 39.9 },
-      mode: "content",
-    });
-    expect(result.rows[1]?.location).toEqual({
-      data: { x: 116.41000000000001, y: 39.91 },
-      mode: "content",
-    });
-    expect(result.rows[0]?.service_area).toEqual({
-      data: "POLYGON((116.0 39.0,116.1 39.0,116.1 39.1,116.0 39.1,116.0 39.0))",
-      mode: "content",
-    });
+    expect(result.rows[0]?.location).toEqual({ x: 116.4, y: 39.9 });
+    expect(result.rows[1]?.location).toEqual({ x: 116.41000000000001, y: 39.91 });
+    expect(result.rows[0]?.service_area).toEqual(
+      "POLYGON((116.0 39.0,116.1 39.0,116.1 39.1,116.0 39.1,116.0 39.0))",
+    );
   });
 
   it("returns Binary metadata when a source mock resource has no local index name", async () => {
