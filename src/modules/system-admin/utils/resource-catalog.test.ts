@@ -60,6 +60,12 @@ describe("resource-catalog", () => {
     ]);
   });
 
+  it("mirrors the complete task-management prerequisite set in demo mode", () => {
+    expect(
+      operationsForType("catalog").find((item) => item.key === "task_manage")?.requires,
+    ).toEqual(["resource_manage", "view_detail"]);
+  });
+
   it("keeps derived catalog summaries read-only and mirrors Vega visibility requirements", () => {
     const catalogOperations = operationsForType("catalog");
 

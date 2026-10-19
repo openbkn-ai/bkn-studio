@@ -150,6 +150,13 @@ describe("authorization registry contract", () => {
 
     await waitFor(() => expect(result.current.catalog).toBeDefined());
     expect(
+      result.current.operationsForType("catalog").find((item) => item.key === "task_manage"),
+    ).toMatchObject({
+      description:
+        "View, create, cancel, and manage build tasks, discovery tasks, semantic-understanding tasks, and discovery schedules in the data catalog. New grants also include the data catalog resource-management and view permissions.",
+      requires: ["resource_manage", "view_detail"],
+    });
+    expect(
       result.current.operationsForType("catalog").find((item) => item.key === "data_write"),
     ).toMatchObject({
       description:
@@ -161,6 +168,15 @@ describe("authorization registry contract", () => {
     ).toMatchObject({ description: "Use the data agent.", label: "Use" });
 
     await act(() => i18n.changeLanguage("zh-CN"));
+    await waitFor(() =>
+      expect(
+        result.current.operationsForType("catalog").find((item) => item.key === "task_manage"),
+      ).toMatchObject({
+        description:
+          "查看、创建、取消和管理数据目录下的构建任务、资源发现任务、语义理解任务及资源发现调度；新授权同时包含资源管理权限及查看数据目录权限。",
+        requires: ["resource_manage", "view_detail"],
+      }),
+    );
     await waitFor(() =>
       expect(
         result.current.operationsForType("catalog").find((item) => item.key === "data_write"),
