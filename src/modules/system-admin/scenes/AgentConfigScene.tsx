@@ -582,7 +582,15 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
               language="markdown"
               original={versionText(comparing[0])}
               modified={versionText(comparing[1])}
-              options={{ readOnly: true, renderSideBySide: true, wordWrap: "on" }}
+              // wordWrap only reaches the modified side; the original side needs
+              // diffWordWrap, and older Monaco builds ignore that, so set it directly too.
+              options={{
+                readOnly: true,
+                renderSideBySide: true,
+                wordWrap: "on",
+                diffWordWrap: "on",
+              }}
+              onMount={(editor) => editor.getOriginalEditor().updateOptions({ wordWrap: "on" })}
             />
           </>
         ) : null}

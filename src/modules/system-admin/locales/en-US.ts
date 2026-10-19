@@ -1194,7 +1194,7 @@ export const systemAdminEnUS = {
       title: "Built-in Agents",
       description:
         "The built-in Agents platform features depend on: model, MCP service, execution caps, publish state, and shared Prompt. Changes affect those features immediately.",
-      listHint: "Built-in Agents are set up with each release and are not created here.",
+      listHint: "Built-in platform Agents",
       searchPlaceholder: "Search by name or ID",
       empty: "No built-in Agents",
       noMatch: "No matching Agents",

@@ -1107,7 +1107,7 @@ export const systemAdminZhCN = {
       title: "内置 Agent",
       description:
         "平台功能依赖的内置 Agent：模型、MCP 服务、执行上限、发布状态和共享提示词。修改会立即影响依赖它的功能。",
-      listHint: "平台内置的 Agent，随版本初始化，不在这里新建。",
+      listHint: "平台内置的 Agent",
       searchPlaceholder: "搜索名称或 ID",
       empty: "没有内置 Agent",
       noMatch: "没有匹配的 Agent",
