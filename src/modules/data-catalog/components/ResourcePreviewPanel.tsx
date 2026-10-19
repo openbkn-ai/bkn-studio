@@ -12,7 +12,11 @@ import { useTranslation } from "react-i18next";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorDetails, isRequestForbidden } from "@/framework/request/error-message";
+import {
+  extractRequestErrorDetails,
+  isRequestForbidden,
+  type RequestErrorDetails,
+} from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
@@ -174,10 +178,7 @@ export function ResourcePreviewPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{ message: string; description?: string } | null>(null);
   const [forbidden, setForbidden] = useState(false);
-  const [sourceReadDetails, setSourceReadDetails] = useState<{
-    description: string;
-    solution?: string;
-  } | null>(null);
+  const [sourceReadDetails, setSourceReadDetails] = useState<RequestErrorDetails | null>(null);
   const [ignoreLocalIndex, setIgnoreLocalIndex] = useState(false);
   const [binaryContent, setBinaryContent] = useState(false);
   const [filterDraft, setFilterDraft] = useState<FilterGroup>(emptyFilterGroup);
@@ -489,7 +490,9 @@ export function ResourcePreviewPanel({
                     : "dataCatalog.preview.sourceReadForbiddenGenericDescription",
                 )}
               </div>
-              <div>{sourceReadDetails.description}</div>
+              {sourceReadDetails.descriptionSource === "response" ? (
+                <div>{sourceReadDetails.description}</div>
+              ) : null}
               {sourceReadDetails.solution ? <div>{sourceReadDetails.solution}</div> : null}
             </>
           }

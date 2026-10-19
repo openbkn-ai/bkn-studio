@@ -914,6 +914,51 @@ describe("ResourcePreviewPanel", () => {
     expect(screen.queryByText("dataCatalog.preview.invalidOutputField")).not.toBeInTheDocument();
   });
 
+  it.each(["table", "logical_view"] as const)(
+    "keeps the localized source grant hint without Axios fallback text for %s",
+    async (category) => {
+      previewCatalogResourceMock.mockRejectedValue(
+        Object.assign(new Error("Request failed with status code 403"), {
+          isAxiosError: true,
+          response: {
+            status: 403,
+            data: { error_code: "VegaBackend.Resource.SourceReadForbidden" },
+          },
+        }),
+      );
+
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            category,
+            sourceIdentifier: "APP.ORDERS",
+            columnCount: 1,
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+
+      expect(
+        await screen.findByText(
+          category === "table"
+            ? "dataCatalog.preview.sourceReadForbidden:APP.ORDERS"
+            : "dataCatalog.preview.sourceReadForbiddenGeneric",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          category === "table"
+            ? "dataCatalog.preview.sourceReadForbiddenDescription"
+            : "dataCatalog.preview.sourceReadForbiddenGenericDescription",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Request failed with status code 403")).not.toBeInTheDocument();
+      expect(screen.queryByText("dataCatalog.preview.noQueryPermission")).not.toBeInTheDocument();
+    },
+  );
+
   it("shows a source account grant hint for HANA error 258", async () => {
     previewCatalogResourceMock.mockRejectedValue(
       Object.assign(new Error("forbidden"), {
