@@ -125,9 +125,9 @@ const PROMPT = {
   versions: [{ version: 3, content: "Shared", create_user: "admin", create_time: 1 }],
 };
 
-// Each case renders the full configuration page; several also open a dialog, which shared CI
-// runners can take over the default 10s to finish.
-describe("AgentConfigScene", { timeout: 20_000 }, () => {
+// Each case renders the full configuration page; several also open a dialog, and shared CI
+// runners have taken over 20s on those.
+describe("AgentConfigScene", { timeout: 40_000 }, () => {
   it("shows a read-only Agent without save or publish actions", async () => {
     getShared.mockResolvedValue(shared({ can_edit: false }));
     getSharedPrompt.mockResolvedValue(PROMPT);
