@@ -69,7 +69,7 @@ export const agentChatPart = {
       title: "Q&A settings",
       sharedTitle: "Global Agent",
       sharedDescription:
-        "Maintained by platform administrators and shared by every network. The network and personal settings below can only add to or narrow it.",
+        "Maintained by platform administrators in Built-in Agents and shared by every network. The current knowledge network and your preferences can only add to or narrow it.",
       model: "Model",
       defaultModel: "Platform default model",
       status: "Status",

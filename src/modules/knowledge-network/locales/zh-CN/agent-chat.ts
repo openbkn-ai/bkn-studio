@@ -64,7 +64,7 @@ export const agentChatPart = {
       title: "问答配置",
       sharedTitle: "全局 Agent",
       sharedDescription:
-        "由平台管理员维护，所有网络共用。下面的网络配置和个人偏好只能在此基础上追加或收窄。",
+        "由平台管理员在「内置 Agent」中维护，所有网络共用。当前知识网络和我的偏好只能在此基础上追加或收窄。",
       model: "模型",
       defaultModel: "平台默认模型",
       status: "状态",
