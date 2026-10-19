@@ -590,6 +590,9 @@ export const dataCatalogZhCN = {
       goEnable: "去连接页处理",
     },
     preview: {
+      invalidOutputField: "预览查询包含不存在或不合法的字段。",
+      unsupportedOutputField: "该资源包含当前查询通道暂不支持读取的字段类型。",
+      noQueryableFields: "该资源没有可查询字段。",
       filter: "筛选数据",
       applyFilter: "应用筛选",
       clearFilter: "清空筛选",

@@ -41,11 +41,36 @@ describe("extractRequestErrorDetails", () => {
     expect(extractRequestErrorDetails(error)).toEqual({
       code: "VegaBackend.BuildTask.InternalError.CreateFailed",
       description: "创建构建任务失败",
+      descriptionSource: "response",
       details: "Resource has no primary key",
       errorLink: "暂无",
       solution: "请联系管理员",
     });
     expect(extractRequestErrorMessage(error)).toBe("创建构建任务失败");
+  });
+
+  it("preserves an error code without treating the Axios fallback as response text", () => {
+    const error = Object.assign(new Error("Request failed with status code 400"), {
+      isAxiosError: true,
+      response: { data: { error_code: "VegaBackend.Query.NoQueryableFields" }, status: 400 },
+    });
+    const details = extractRequestErrorDetails(error);
+    expect(details.code).toBe("VegaBackend.Query.NoQueryableFields");
+    expect(details.description).toBe("Request failed with status code 400");
+    expect(details.descriptionSource).toBeUndefined();
+  });
+
+  it.each([
+    [{ description: "backend description" }, "backend description"],
+    [{ details: "backend details" }, "backend details"],
+    [{ detail: "backend detail" }, "backend detail"],
+    [{ message: "backend message" }, "backend message"],
+    [{ error: "backend error" }, "backend error"],
+  ])("identifies a description extracted from response body %o", (body, description) => {
+    expect(extractRequestErrorDetails(createAxiosLikeError(body))).toMatchObject({
+      description,
+      descriptionSource: "response",
+    });
   });
 
   it("serializes structured error_details for a local error surface", () => {

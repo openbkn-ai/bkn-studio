@@ -15,11 +15,15 @@ const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const testFilterRule = vi.hoisted(() => ({ field: "id", operation: ">", value: "10" }));
 
+const translateMock = vi.hoisted(
+  () => (key: string, options?: { source?: string }) =>
+    key === "dataCatalog.preview.sourceReadForbidden" ? `${key}:${options?.source}` : key,
+);
+
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
-    t: (key: string, options?: { source?: string }) =>
-      key === "dataCatalog.preview.sourceReadForbidden" ? `${key}:${options?.source}` : key,
+    t: translateMock,
   }),
 }));
 
@@ -808,6 +812,152 @@ describe("ResourcePreviewPanel", () => {
       ).toHaveClass("ant-alert-warning");
     });
   });
+
+  it.each([
+    ["VegaBackend.Query.InvalidParameter.OutputField", "invalidOutputField"],
+    ["VegaBackend.Query.UnsupportedOutputField", "unsupportedOutputField"],
+    ["VegaBackend.Query.NoQueryableFields", "noQueryableFields"],
+  ])(
+    "keeps the backend description alongside the projection explanation for %s",
+    async (code, key) => {
+      previewCatalogResourceMock.mockRejectedValue(
+        Object.assign(new Error("rejected"), {
+          isAxiosError: true,
+          response: {
+            status: 400,
+            data: {
+              error_code: code,
+              description: "Field VALUE of type ARRAY<FLOAT> cannot be queried.",
+            },
+          },
+        }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, columnCount: 1, schema: [{ name: "value", type: "other" }] }}
+        />,
+      );
+      const explanation = await screen.findByText(`dataCatalog.preview.${key}`);
+      expect(explanation.closest(".ant-alert")).toHaveTextContent(
+        "Field VALUE of type ARRAY<FLOAT> cannot be queried.",
+      );
+    },
+  );
+
+  it.each([
+    ["VegaBackend.Query.InvalidParameter.OutputField", "invalidOutputField"],
+    ["VegaBackend.Query.UnsupportedOutputField", "unsupportedOutputField"],
+    ["VegaBackend.Query.NoQueryableFields", "noQueryableFields"],
+  ])(
+    "uses only the localized projection explanation when %s has no response description",
+    async (code, key) => {
+      previewCatalogResourceMock.mockRejectedValue(
+        Object.assign(new Error("Request failed with status code 400"), {
+          isAxiosError: true,
+          response: { status: 400, data: { error_code: code } },
+        }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, columnCount: 1, schema: [{ name: "value", type: "other" }] }}
+        />,
+      );
+      const explanation = await screen.findByText(`dataCatalog.preview.${key}`);
+      expect(explanation.closest(".ant-alert")?.querySelector(".ant-alert-description")).toBeNull();
+      expect(screen.queryByText("Request failed with status code 400")).not.toBeInTheDocument();
+    },
+  );
+
+  it("does not repeat a backend description identical to the localized explanation", async () => {
+    const explanation = "dataCatalog.preview.noQueryableFields";
+    previewCatalogResourceMock.mockRejectedValue(
+      Object.assign(new Error("rejected"), {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: { error_code: "VegaBackend.Query.NoQueryableFields", description: explanation },
+        },
+      }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "value", type: "other" }] }}
+      />,
+    );
+    await screen.findByText(explanation);
+    expect(screen.getAllByText(explanation)).toHaveLength(1);
+  });
+
+  it("keeps real source failures distinct from invalid projections", async () => {
+    previewCatalogResourceMock.mockRejectedValue(
+      Object.assign(new Error("failed"), {
+        isAxiosError: true,
+        response: {
+          status: 500,
+          data: {
+            error_code: "VegaBackend.Resource.InternalError",
+            description: "source unavailable",
+          },
+        },
+      }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+    expect(await screen.findByText("source unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("dataCatalog.preview.invalidOutputField")).not.toBeInTheDocument();
+  });
+
+  it.each(["table", "logical_view"] as const)(
+    "keeps the localized source grant hint without Axios fallback text for %s",
+    async (category) => {
+      previewCatalogResourceMock.mockRejectedValue(
+        Object.assign(new Error("Request failed with status code 403"), {
+          isAxiosError: true,
+          response: {
+            status: 403,
+            data: { error_code: "VegaBackend.Resource.SourceReadForbidden" },
+          },
+        }),
+      );
+
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            category,
+            sourceIdentifier: "APP.ORDERS",
+            columnCount: 1,
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+
+      expect(
+        await screen.findByText(
+          category === "table"
+            ? "dataCatalog.preview.sourceReadForbidden:APP.ORDERS"
+            : "dataCatalog.preview.sourceReadForbiddenGeneric",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          category === "table"
+            ? "dataCatalog.preview.sourceReadForbiddenDescription"
+            : "dataCatalog.preview.sourceReadForbiddenGenericDescription",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Request failed with status code 403")).not.toBeInTheDocument();
+      expect(screen.queryByText("dataCatalog.preview.noQueryPermission")).not.toBeInTheDocument();
+    },
+  );
 
   it("shows a source account grant hint for HANA error 258", async () => {
     previewCatalogResourceMock.mockRejectedValue(

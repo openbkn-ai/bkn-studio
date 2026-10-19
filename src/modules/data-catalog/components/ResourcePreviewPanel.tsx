@@ -12,7 +12,11 @@ import { useTranslation } from "react-i18next";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorDetails, isRequestForbidden } from "@/framework/request/error-message";
+import {
+  extractRequestErrorDetails,
+  isRequestForbidden,
+  type RequestErrorDetails,
+} from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
@@ -48,6 +52,12 @@ const DEFAULT_PAGE_SIZE = 10;
 const INDEX_PREVIEW_PAGE_LIMIT = 10_000;
 const PREVIEW_CONTENT_LENGTH = 20;
 const EMPTY_APPLIED_FILTER = emptyFilterGroup();
+
+const PROJECTION_ERROR_MESSAGES = new Map([
+  ["VegaBackend.Query.InvalidParameter.OutputField", "dataCatalog.preview.invalidOutputField"],
+  ["VegaBackend.Query.UnsupportedOutputField", "dataCatalog.preview.unsupportedOutputField"],
+  ["VegaBackend.Query.NoQueryableFields", "dataCatalog.preview.noQueryableFields"],
+]);
 
 function isNumericType(type: string) {
   const lowered = type.toLowerCase();
@@ -166,12 +176,9 @@ export function ResourcePreviewPanel({
   const [result, setResult] = useState<ResourcePreviewResult | null>(null);
   const [fullValue, setFullValue] = useState<{ field: string; text: string }>();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; description?: string } | null>(null);
   const [forbidden, setForbidden] = useState(false);
-  const [sourceReadDetails, setSourceReadDetails] = useState<{
-    description: string;
-    solution?: string;
-  } | null>(null);
+  const [sourceReadDetails, setSourceReadDetails] = useState<RequestErrorDetails | null>(null);
   const [ignoreLocalIndex, setIgnoreLocalIndex] = useState(false);
   const [binaryContent, setBinaryContent] = useState(false);
   const [filterDraft, setFilterDraft] = useState<FilterGroup>(emptyFilterGroup);
@@ -239,7 +246,16 @@ export function ResourcePreviewPanel({
         const sourceDenied = details.code === "VegaBackend.Resource.SourceReadForbidden";
         setSourceReadDetails(sourceDenied ? details : null);
         setForbidden(!sourceDenied && isRequestForbidden(loadError));
-        setError(details.description);
+        const projectionMessage = PROJECTION_ERROR_MESSAGES.get(details.code ?? "");
+        const explanation = projectionMessage ? t(projectionMessage) : details.description;
+        setError({
+          message: explanation,
+          ...(projectionMessage &&
+          details.descriptionSource === "response" &&
+          details.description !== explanation
+            ? { description: details.description }
+            : {}),
+        });
         setResult(null);
       } finally {
         if (requestVersion === requestVersionRef.current) {
@@ -255,6 +271,7 @@ export function ResourcePreviewPanel({
       hasBinaryField,
       queriesSource,
       activeFilter,
+      t,
     ],
   );
 
@@ -473,7 +490,9 @@ export function ResourcePreviewPanel({
                     : "dataCatalog.preview.sourceReadForbiddenGenericDescription",
                 )}
               </div>
-              <div>{sourceReadDetails.description}</div>
+              {sourceReadDetails.descriptionSource === "response" ? (
+                <div>{sourceReadDetails.description}</div>
+              ) : null}
               {sourceReadDetails.solution ? <div>{sourceReadDetails.solution}</div> : null}
             </>
           }
@@ -495,7 +514,7 @@ export function ResourcePreviewPanel({
           type="warning"
         />
       ) : error ? (
-        <Alert message={error} showIcon type="error" />
+        <Alert description={error.description} message={error.message} showIcon type="error" />
       ) : (
         <Spin spinning={loading} wrapperClassName={styles.tableSection}>
           <div className={styles.tableWrap}>
