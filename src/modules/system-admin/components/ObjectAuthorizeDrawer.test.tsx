@@ -43,7 +43,7 @@ const authorizationRegistry = vi.hoisted(() => ({
         { key: "modify", label: "modify", requires: [] },
         { key: "delete", label: "delete", requires: [] },
         { key: "authorize", label: "authorize", requires: [] },
-        { key: "task_manage", label: "task_manage", requires: [] },
+        { key: "task_manage", label: "task_manage", requires: ["resource_manage", "view_detail"] },
         { key: "resource_manage", label: "resource_manage", requires: ["view_detail"] },
         { key: "query_data", label: "query_data", requires: [] },
       ],
@@ -502,6 +502,40 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(viewOperation.getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(viewOperation);
     expect(viewOperation.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("selects and protects the full task-management dependency chain", async () => {
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await act(async () => {});
+
+    const task = screen.getByRole("button", { name: /task_manage/ });
+    const manage = screen.getByRole("button", { name: /resource_manage/ });
+    const view = screen.getByRole("button", { name: /view_detail/ });
+    fireEvent.click(task);
+    for (const operation of [task, manage, view]) {
+      expect(operation).toHaveAttribute("aria-pressed", "true");
+    }
+    fireEvent.click(manage);
+    fireEvent.click(view);
+    expect(manage).toHaveAttribute("aria-pressed", "true");
+    expect(view).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(task);
+    expect(task).toHaveAttribute("aria-pressed", "false");
+    expect(manage).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(manage);
+    fireEvent.click(view);
+    expect(manage).toHaveAttribute("aria-pressed", "false");
+    expect(view).toHaveAttribute("aria-pressed", "false");
   });
 
   it("renders a stable permission summary and a dedicated empty state", async () => {

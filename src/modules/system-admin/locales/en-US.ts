@@ -136,7 +136,7 @@ export const systemAdminEnUS = {
           authorize:
             "Configure access permissions for the data catalog. Also requires the data catalog view permission.",
           task_manage:
-            "View, create, cancel, and manage build tasks, discovery tasks, semantic-understanding tasks, and discovery schedules in the data catalog. Also requires the data catalog view permission.",
+            "View, create, cancel, and manage build tasks, discovery tasks, semantic-understanding tasks, and discovery schedules in the data catalog. New grants also include the data catalog resource-management and view permissions.",
           resource_manage:
             "Manage data resources and their configuration in the data catalog. When a data resource in the catalog is not explicitly granted modify or delete permission, access falls back to the data catalog resource-management permission. Also requires the data catalog view permission.",
           query_data:

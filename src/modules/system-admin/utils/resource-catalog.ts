@@ -264,6 +264,7 @@ export function requiredOperationsFor(type: string, operation: string): string[]
 // Demo-mode fixture only. Production authoring reads the same explicit edges
 // from bkn-safe's /authz/registry endpoint; never infer an edge from a verb.
 const LOCAL_OPERATION_REQUIREMENTS: Record<string, string[]> = {
+  "catalog:task_manage": ["resource_manage", "view_detail"],
   "catalog:query_data": ["view_detail"],
   "catalog:data_write": ["view_detail"],
   "catalog:resource_manage": ["view_detail"],
