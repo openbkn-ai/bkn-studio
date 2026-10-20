@@ -28,10 +28,17 @@ export function upgradeReason(
   snapshot: EntitlementView | null,
   minEdition: Edition,
   reportedByEndpoint: boolean,
+  missingInFrontend = false,
 ): UpgradeReason {
   // 快照没到就按「还没买」说——不能凭空断言客户的证书已经够了。
   if (!snapshot || !atLeast(snapshot.edition, minEdition)) {
     return "buy";
+  }
+
+  // 前端包里就没有这个页面(社区版前端连着企业版后端):后端报「已装」也帮不上,证够了
+  // 该换的是前端镜像。
+  if (missingInFrontend) {
+    return "image";
   }
 
   // 端点报得出的能力:extensions[] 就是这套部署的装配实况,缺席即确定没装。

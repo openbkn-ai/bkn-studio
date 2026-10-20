@@ -52,6 +52,21 @@ describe("upgradeReason — 三种部署组合", () => {
     expect(upgradeReason(RBAC, snapshot, "professional", true)).toBe("buy");
   });
 
+  // 前端包缺页面(社区版前端连企业版后端):后端报已装、已授权,该换的仍是前端镜像。
+  it("有授权 + 后端已装 + 前端缺页面 → 升级镜像", () => {
+    const snapshot = deployment({
+      capabilities: [RBAC],
+      edition: "enterprise",
+      extensions: [RBAC],
+      licensed: true,
+      state: "valid",
+    });
+
+    expect(upgradeReason(RBAC, snapshot, "professional", true, true)).toBe("image");
+    // 证不够时还是先买证。
+    expect(upgradeReason(RBAC, deployment({}), "professional", true, true)).toBe("buy");
+  });
+
   // 4. 镜像装了但档位不够:换证书,不是换镜像。
   it("镜像装了、档位不够 → 买证书", () => {
     const snapshot = deployment({

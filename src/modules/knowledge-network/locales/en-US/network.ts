@@ -242,6 +242,8 @@ export const networkPart = {
   workspaceAbilityVerification: "Capability verification",
   workspaceExperienceAgent: "Q&A verification",
   workspaceExperienceMcp: "MCP integration",
+  workspaceExperienceCypher: "Data query",
+  workspaceGraphExplorer: "Graph explorer",
   workspaceConceptGroups: "Concept groups",
   workspaceDescription:
     "The workspace shell is already in place. The remaining legacy Vega pages will be migrated in later slices.",

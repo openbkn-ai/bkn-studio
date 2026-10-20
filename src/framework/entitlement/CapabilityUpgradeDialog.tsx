@@ -25,6 +25,11 @@ type CapabilityUpgradeDialogProps = {
   /** 能力 key(登记表拼写)。文案走 `subscription.capabilities.<key>.*`。 */
   capability: string;
   minEdition: Edition;
+  /**
+   * 这个前端包没有该能力的页面(调用方确知,比如扩展没注册)。证够时说「换镜像」而不是
+   * 「去购买」——后端报已装也不改变这一点。
+   */
+  missingInFrontend?: boolean;
   onClose: () => void;
   open: boolean;
 };
@@ -41,6 +46,7 @@ type CapabilityUpgradeDialogProps = {
 export function CapabilityUpgradeDialog({
   capability,
   minEdition,
+  missingInFrontend = false,
   onClose,
   open,
 }: CapabilityUpgradeDialogProps) {
@@ -66,6 +72,7 @@ export function CapabilityUpgradeDialog({
     snapshot,
     minEdition,
     capabilityReportedByEndpoint(capability),
+    missingInFrontend,
   );
   const imageIssue = reason !== "buy";
   const bullets = capabilityBullets(t, capability);

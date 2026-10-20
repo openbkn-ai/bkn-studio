@@ -16,6 +16,7 @@ import { capabilityPart } from "./capability";
 import { propertyAuthorizationPart } from "./property-authorization";
 import { agentChatPart } from "./agent-chat";
 import { contextLoaderPanelPart } from "./context-loader-panel";
+import { cypherQueryPart } from "./cypher-query";
 
 export const knowledgeNetworkEnUS = {
   knowledgeNetwork: {
@@ -30,5 +31,6 @@ export const knowledgeNetworkEnUS = {
     ...propertyAuthorizationPart,
     ...agentChatPart,
     ...contextLoaderPanelPart,
+    ...cypherQueryPart,
   },
 } as const;

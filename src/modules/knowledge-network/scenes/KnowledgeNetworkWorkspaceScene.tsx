@@ -19,10 +19,11 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
+  NodeIndexOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Alert } from "antd";
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -45,6 +46,12 @@ import type { KnowledgeNetworkMutationPayload } from "@/modules/knowledge-networ
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./KnowledgeNetworkWorkspaceScene.module.css";
+
+// The query page brings its editor and chart; load them only when it is opened.
+const CypherQueryScene = lazy(async () => ({
+  default: (await import("@/modules/knowledge-network/components/cypher/CypherQueryScene"))
+    .CypherQueryScene,
+}));
 
 type WorkspaceNavItem = {
   count?: number;
@@ -118,6 +125,12 @@ export function KnowledgeNetworkWorkspaceScene({
         path: `/knowledge-network/workspace/${activeNetworkId}/experience/mcp`,
       },
       {
+        key: "experience-cypher",
+        label: t("knowledgeNetwork.workspaceExperienceCypher"),
+        icon: <NodeIndexOutlined />,
+        path: `/knowledge-network/workspace/${activeNetworkId}/experience/cypher`,
+      },
+      {
         key: "concept-groups",
         label: t("knowledgeNetwork.workspaceConceptGroups"),
         icon: <ApartmentOutlined />,
@@ -186,7 +199,10 @@ export function KnowledgeNetworkWorkspaceScene({
 
   const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
   const experienceNavItems = navigationItems.filter(
-    (item) => item.key === "experience-agent" || item.key === "experience-mcp",
+    (item) =>
+      item.key === "experience-agent" ||
+      item.key === "experience-mcp" ||
+      item.key === "experience-cypher",
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>
@@ -254,6 +270,18 @@ export function KnowledgeNetworkWorkspaceScene({
       return (
         <ExperienceScene embedded initialMode={initialMode} lockMode network={experienceNetwork} />
       );
+    }
+
+    if (section === "experience-cypher") {
+      return detail ? (
+        <Suspense fallback={null}>
+          <CypherQueryScene
+            key={detail.identifier || detail.id}
+            knId={detail.identifier || detail.id}
+            networkId={activeNetworkId}
+          />
+        </Suspense>
+      ) : null;
     }
 
     return (
@@ -360,7 +388,9 @@ export function KnowledgeNetworkWorkspaceScene({
           ) : (
             <div
               className={
-                section === "experience-agent" || section === "metrics"
+                section === "experience-agent" ||
+                section === "experience-cypher" ||
+                section === "metrics"
                   ? `${styles.workspaceSectionPage} ${styles.workspaceSectionFlush}`
                   : styles.workspaceSectionPage
               }

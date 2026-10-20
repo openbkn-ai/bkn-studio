@@ -101,6 +101,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("experience-mcp"),
   ),
   createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/experience/cypher",
+    {
+      descriptionKey: "knowledgeNetwork.cypherQuery.description",
+      titleKey: "knowledgeNetwork.cypherQuery.title",
+    },
+    workspaceSectionPage("experience-cypher"),
+  ),
+  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/concept-groups",
     {
       descriptionKey: "knowledgeNetwork.conceptGroupsDescription",
