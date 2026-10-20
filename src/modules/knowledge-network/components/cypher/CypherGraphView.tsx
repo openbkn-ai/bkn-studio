@@ -43,7 +43,15 @@ function Section({ title, values }: { title: string; values: Record<string, unkn
   );
 }
 
-function InspectorBody({ graph, selection }: { graph: CypherGraph; selection: Selection }) {
+function InspectorBody({
+  graph,
+  selection,
+  onRerun,
+}: {
+  graph: CypherGraph;
+  selection: Selection;
+  onRerun?: () => void;
+}) {
   const { t } = useTranslation();
   if (selection?.kind === "node") {
     const node = graph.nodes[selection.index];
@@ -98,7 +106,7 @@ function InspectorBody({ graph, selection }: { graph: CypherGraph; selection: Se
       </div>
     );
   }
-  return <GraphStyleOverview graph={graph} />;
+  return <GraphStyleOverview graph={graph} onRerun={onRerun} />;
 }
 
 /** The right-hand panel; it folds away so the graph can use the whole width. */
@@ -106,10 +114,12 @@ function Inspector({
   graph,
   selection,
   onCollapse,
+  onRerun,
 }: {
   graph: CypherGraph;
   selection: Selection;
   onCollapse: () => void;
+  onRerun?: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -126,7 +136,7 @@ function Inspector({
           />
         </Tooltip>
       </div>
-      <InspectorBody graph={graph} selection={selection} />
+      <InspectorBody graph={graph} onRerun={onRerun} selection={selection} />
     </div>
   );
 }
@@ -138,6 +148,7 @@ export function CypherGraphView({
   onShowAll,
   settings = NO_SETTINGS,
   onSettingsChange,
+  onRerun,
 }: {
   graph: CypherGraph;
   fileName: string;
@@ -148,6 +159,8 @@ export function CypherGraphView({
   /** This frame's graph settings, and where a change to them goes. */
   settings?: FrameGraphSettings;
   onSettingsChange?: (settings: FrameGraphSettings) => void;
+  /** Runs the frame's query again, for a caption the result did not bring back. */
+  onRerun?: () => void;
 }) {
   const { t } = useTranslation();
   const [selection, setSelection] = useState<Selection>(null);
@@ -203,7 +216,12 @@ export function CypherGraphView({
           />
         </div>
         {detailsOpen ? (
-          <Inspector graph={graph} onCollapse={() => setDetailsOpen(false)} selection={selection} />
+          <Inspector
+            graph={graph}
+            onCollapse={() => setDetailsOpen(false)}
+            onRerun={onRerun}
+            selection={selection}
+          />
         ) : null}
       </div>
     </div>

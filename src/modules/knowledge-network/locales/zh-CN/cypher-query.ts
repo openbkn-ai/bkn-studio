@@ -130,7 +130,7 @@ export const cypherQueryPart = {
       large: "大",
       caption: "节点标题",
       captionDefault: "默认（显示属性或主键）",
-      captionHint: "结果里没有的属性，重新运行后显示",
+      captionHint: "结果里没有的属性会自动重新运行来显示",
     },
     reference: {
       open: "语法参考",

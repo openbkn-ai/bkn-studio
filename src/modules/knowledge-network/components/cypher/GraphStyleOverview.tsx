@@ -46,14 +46,21 @@ function Swatches({ value, onChange }: { value?: string; onChange: (color?: stri
  * The graph's overview: how many nodes of each object type and how many edges of each
  * relationship, each row opening its style (color, size, caption), like Neo4j Browser's legend.
  */
-export function GraphStyleOverview({ graph }: { graph: CypherGraph }) {
+export function GraphStyleOverview({
+  graph,
+  onRerun,
+}: {
+  graph: CypherGraph;
+  /** Runs the query again; a caption the result lacks needs the property fetched. */
+  onRerun?: () => void;
+}) {
   const { t } = useTranslation();
   const { style, setStyle, properties } = useGraphStyle();
   const colors = typeColors(graph, style);
 
   const nodeTypes = new Map<
     string,
-    { name: string; count: number; keys: string[]; computed: Set<string> }
+    { name: string; count: number; keys: string[]; computed: Set<string>; present: Set<string> }
   >();
   for (const node of graph.nodes) {
     const entry = nodeTypes.get(node.objectTypeId) ?? {
@@ -61,7 +68,14 @@ export function GraphStyleOverview({ graph }: { graph: CypherGraph }) {
       count: 0,
       keys: Object.keys(node.key),
       computed: new Set<string>(),
+      present: new Set<string>(),
     };
+    for (const name of [
+      ...Object.keys(node.key),
+      ...Object.keys(node.properties),
+      ...Object.keys(node.computed ?? {}),
+    ])
+      entry.present.add(name);
     entry.count += 1;
     for (const name of Object.keys(node.computed ?? {})) entry.computed.add(name);
     nodeTypes.set(node.objectTypeId, entry);
@@ -137,9 +151,11 @@ export function GraphStyleOverview({ graph }: { graph: CypherGraph }) {
               <Select
                 allowClear
                 classNames={{ popup: { root: styles.settingsPopup } }}
-                onChange={(caption?: string) =>
-                  setStyle((value) => setNodeStyle(value, otId, { caption }))
-                }
+                onChange={(caption?: string) => {
+                  setStyle((value) => setNodeStyle(value, otId, { caption }));
+                  // The new caption must reach the next run's requested properties first.
+                  if (caption && !entry.present.has(caption)) setTimeout(() => onRerun?.(), 0);
+                }}
                 options={captionOptions}
                 placeholder={t("knowledgeNetwork.cypherQuery.style.captionDefault")}
                 showSearch

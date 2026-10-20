@@ -172,16 +172,18 @@ export function CypherQueryScene({
   const [properties, setProperties] = useState<Record<string, ObjectTypeProperty[]>>({});
   const [displayKeys, setDisplayKeys] = useState<Record<string, string>>({});
   const [graphStyle, setGraphStyleState] = useState<GraphStyle>(() => loadGraphStyle(knId));
+  const graphStyleRef = useRef(graphStyle);
   const setGraphStyle = useCallback(
     (change: (style: GraphStyle) => GraphStyle) =>
       setGraphStyleState((current) => {
         const next = change(current);
         saveGraphStyle(knId, next);
+        // A run started right after a change (a new caption) reads the new style.
+        graphStyleRef.current = next;
         return next;
       }),
     [knId],
   );
-  const graphStyleRef = useRef(graphStyle);
   graphStyleRef.current = graphStyle;
   const propertiesRef = useRef(properties);
   propertiesRef.current = properties;

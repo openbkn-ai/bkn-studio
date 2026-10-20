@@ -133,7 +133,7 @@ export const cypherQueryPart = {
       large: "L",
       caption: "Caption",
       captionDefault: "Default (display property or key)",
-      captionHint: "A property the result lacks shows after running again",
+      captionHint: "A property the result lacks is fetched by running the query again",
     },
     reference: {
       open: "Syntax reference",

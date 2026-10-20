@@ -358,6 +358,7 @@ export function CypherFrameCard({
           <CypherGraphView
             fileName={fileName}
             graph={graph}
+            onRerun={onRerun}
             onSettingsChange={onGraphSettings}
             onShowAll={() => setShowAll(true)}
             settings={frame.graphSettings}
