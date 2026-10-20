@@ -6,8 +6,8 @@
  */
 
 import { MenuFoldOutlined } from "@ant-design/icons";
-import { Alert, Button, Empty, Tooltip } from "antd";
-import { useMemo, useState } from "react";
+import { Alert, Button, Empty, Spin, Tooltip } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CypherChart } from "@/modules/knowledge-network/components/cypher/CypherChart";
@@ -16,7 +16,11 @@ import { GraphStyleOverview } from "@/modules/knowledge-network/components/cyphe
 import type { FrameGraphSettings } from "@/modules/knowledge-network/cypher/graph-style";
 import { useGraphStyle } from "@/modules/knowledge-network/cypher/graph-style-context";
 import { buildGraphOption } from "@/modules/knowledge-network/cypher/graph-option";
-import { textOf, type CypherGraph } from "@/modules/knowledge-network/cypher/graph-values";
+import {
+  textOf,
+  type CypherGraph,
+  type CypherGraphNode,
+} from "@/modules/knowledge-network/cypher/graph-values";
 
 import styles from "./CypherQueryScene.module.css";
 
@@ -43,6 +47,47 @@ function Section({ title, values }: { title: string; values: Record<string, unkn
   );
 }
 
+/** One node: its key, all its properties (read back on demand) and its computed values. */
+function NodeDetails({ node }: { node: CypherGraphNode }) {
+  const { t } = useTranslation();
+  const { loadNodeProperties } = useGraphStyle();
+  const [loaded, setLoaded] = useState<{ id: string; properties: Record<string, unknown> } | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!loadNodeProperties) return;
+    const controller = new AbortController();
+    setLoading(true);
+    loadNodeProperties(node, controller.signal)
+      .then((properties) => {
+        if (properties) setLoaded({ id: node.id, properties });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [loadNodeProperties, node]);
+  const properties =
+    loaded?.id === node.id ? { ...node.properties, ...loaded.properties } : node.properties;
+  return (
+    <div className={styles.inspector}>
+      <div className={styles.inspectorTitle}>{node.label}</div>
+      <div className={styles.muted}>
+        {t("knowledgeNetwork.cypherQuery.graph.objectType")}: {node.objectTypeName}
+      </div>
+      <Section title={t("knowledgeNetwork.cypherQuery.graph.key")} values={node.key} />
+      <Section title={t("knowledgeNetwork.cypherQuery.graph.properties")} values={properties} />
+      {loading ? <Spin size="small" /> : null}
+      <Section
+        title={t("knowledgeNetwork.cypherQuery.graph.computed")}
+        values={node.computed ?? {}}
+      />
+    </div>
+  );
+}
+
 function InspectorBody({
   graph,
   selection,
@@ -55,24 +100,7 @@ function InspectorBody({
   const { t } = useTranslation();
   if (selection?.kind === "node") {
     const node = graph.nodes[selection.index];
-    if (!node) return null;
-    return (
-      <div className={styles.inspector}>
-        <div className={styles.inspectorTitle}>{node.label}</div>
-        <div className={styles.muted}>
-          {t("knowledgeNetwork.cypherQuery.graph.objectType")}: {node.objectTypeName}
-        </div>
-        <Section title={t("knowledgeNetwork.cypherQuery.graph.key")} values={node.key} />
-        <Section
-          title={t("knowledgeNetwork.cypherQuery.graph.properties")}
-          values={node.properties}
-        />
-        <Section
-          title={t("knowledgeNetwork.cypherQuery.graph.computed")}
-          values={node.computed ?? {}}
-        />
-      </div>
-    );
+    return node ? <NodeDetails node={node} /> : null;
   }
   if (selection?.kind === "edge") {
     const edge = graph.edges[selection.index];

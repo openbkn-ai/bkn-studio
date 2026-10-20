@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { cypherSuggestions, type CypherCompletionSchema } from "./cypher-completion";
 import { errorMarkFrom } from "./error-mark";
 import { MAX_HISTORY, rememberQuery, stepHistory } from "./cypher-history";
+import { nodeLookupQuery } from "./cypher-samples";
 
 const schema: CypherCompletionSchema = {
   objectTypes: [
@@ -78,5 +79,18 @@ describe("query history", () => {
     expect(stepHistory(2, 3, true)).toBe(2);
     expect(stepHistory(0, 3, false)).toBe(-1);
     expect(stepHistory(-1, 0, true)).toBe(-1);
+  });
+});
+
+describe("nodeLookupQuery", () => {
+  it("reads a node back by its key, escaping string literals", () => {
+    expect(nodeLookupQuery("teams", { key_id: 86 })).toBe(
+      "MATCH (n:teams) WHERE n.key_id = 86 RETURN n LIMIT 1",
+    );
+    expect(nodeLookupQuery("my-type", { code: "O'Neil\\x", n: 2 })).toBe(
+      "MATCH (n:`my-type`) WHERE n.code = 'O\\'Neil\\\\x' AND n.n = 2 RETURN n LIMIT 1",
+    );
+    expect(nodeLookupQuery("teams", { id: null })).toBeNull();
+    expect(nodeLookupQuery("teams", {})).toBeNull();
   });
 });

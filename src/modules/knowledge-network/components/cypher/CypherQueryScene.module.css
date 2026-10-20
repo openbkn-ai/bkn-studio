@@ -504,6 +504,8 @@
 .graphBody {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 260px;
+  /* One row as tall as the body, so a long details panel scrolls instead of growing. */
+  grid-template-rows: minmax(0, 1fr);
   gap: 8px;
   height: 420px;
 }
@@ -685,6 +687,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
   padding: 4px 8px 8px;
   border: 1px solid var(--color-divider);
   border-radius: 6px;
@@ -720,6 +723,7 @@
 
   .graphBody {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
     height: auto;
   }
 

@@ -23,3 +23,23 @@ export function relationTypeSample(relation: {
 }): string {
   return `MATCH (a:${cypherName(relation.sourceId)})-[r:${cypherName(relation.id)}]->(b:${cypherName(relation.targetId)}) RETURN a, r, b LIMIT 25`;
 }
+
+/** A value as a Cypher literal: strings escape `\\` and `'` with a backslash, as run_cypher reads them. */
+export function cypherLiteral(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "boolean") return String(value);
+  if (typeof value === "string") return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+  return null;
+}
+
+/** The query that reads one node back by its key, or null when a key value has no literal. */
+export function nodeLookupQuery(objectTypeId: string, key: Record<string, unknown>): string | null {
+  const conditions: string[] = [];
+  for (const [name, value] of Object.entries(key)) {
+    const literal = cypherLiteral(value);
+    if (literal === null) return null;
+    conditions.push(`n.${cypherName(name)} = ${literal}`);
+  }
+  if (conditions.length === 0) return null;
+  return `MATCH (n:${cypherName(objectTypeId)}) WHERE ${conditions.join(" AND ")} RETURN n LIMIT 1`;
+}

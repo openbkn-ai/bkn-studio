@@ -79,6 +79,7 @@ import {
 } from "@/modules/knowledge-network/cypher/cypher-query.service";
 import {
   cypherName,
+  nodeLookupQuery,
   objectTypeSample,
   relationTypeSample,
 } from "@/modules/knowledge-network/cypher/cypher-samples";
@@ -92,9 +93,11 @@ import {
 import { GraphStyleContext } from "@/modules/knowledge-network/cypher/graph-style-context";
 import {
   GRAPH_NODE_LIMIT,
+  isObjectValue,
   labeledNodeVariables,
   relationTypesInQuery,
   returnedNodeLabels,
+  type CypherGraphNode,
   type CypherSchemaNames,
 } from "@/modules/knowledge-network/cypher/graph-values";
 import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
@@ -368,6 +371,24 @@ export function CypherQueryScene({
       return result;
     },
     [networkId, schema],
+  );
+
+  const loadNodeProperties = useCallback(
+    async (node: CypherGraphNode, signal: AbortSignal) => {
+      const query = nodeLookupQuery(node.objectTypeId, node.key);
+      const wanted = (propertiesRef.current[node.objectTypeId] ?? []).map((item) => item.name);
+      if (!query || wanted.length === 0) return null;
+      const run = await runCypherQuery({
+        env,
+        auth: tokenProvider,
+        query,
+        objectProperties: { n: wanted },
+        signal,
+      });
+      const value = run.ok ? run.result.entries[0]?.n : undefined;
+      return isObjectValue(value) ? (value.properties ?? null) : null;
+    },
+    [env, tokenProvider],
   );
 
   const controllerFor = useCallback((frameId: string) => {
@@ -879,6 +900,7 @@ export function CypherQueryScene({
         setStyle: setGraphStyle,
         properties,
         nodeLimit: graphStyle.nodeLimit ?? GRAPH_NODE_LIMIT,
+        loadNodeProperties,
       }}
     >
       <div className={schemaCollapsed ? `${styles.page} ${styles.pageRail}` : styles.page}>
