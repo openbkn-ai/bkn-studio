@@ -7,9 +7,17 @@
 
 import { describe, expect, it } from "vitest";
 
+import { cypherReferenceEnUS } from "../locales/en-US/cypher-reference";
+import { cypherReferenceZhCN } from "../locales/zh-CN/cypher-reference";
 import { cypherReference } from "./cypher-reference";
 
 describe("cypherReference", () => {
+  it("has the same sections, rules and notes in both languages", () => {
+    const shape = (texts: typeof cypherReferenceZhCN) =>
+      texts.map((section) => [section.rules.length, section.notes?.length ?? 0]);
+    expect(shape(cypherReferenceZhCN)).toEqual(shape(cypherReferenceEnUS));
+  });
+
   it("speaks the reader's language", () => {
     expect(cypherReference("zh-CN").map((section) => section.title)).toContain("不支持");
     expect(cypherReference("en-US").map((section) => section.title)).toContain("Not supported");
