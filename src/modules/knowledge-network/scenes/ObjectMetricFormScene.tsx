@@ -1222,7 +1222,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const [preview, setPreview] = useState<ObjectMetricPreviewV1>();
   const [trialDefinition, setTrialDefinition] = useState<ObjectMetricDefinitionV1>();
   const [aiPrompt, setAiPrompt] = useState("");
-  const [aiOpen, setAiOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(mode === "create" && searchParams.get("ai") === "1");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiChecking, setAiChecking] = useState(false);
   const [aiDiagnostic, setAiDiagnostic] = useState<{

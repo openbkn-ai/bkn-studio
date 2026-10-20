@@ -7,6 +7,8 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  aiCreateMetric: "Create with AI",
+  aiCreateMetricType: "Create {{p0}} with AI",
   aiDesignerInvalidProposal: "The metric designer returned an invalid proposal.",
   aiDesignerRequestFailed: "Metric design request failed (HTTP {{p0}}).",
   aiDesignerMissingStream: "The metric design request did not return an event stream.",

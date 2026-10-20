@@ -13,6 +13,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -448,10 +449,10 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     setRefreshVersion((current) => current + 1);
   }, []);
 
-  const openCreate = (type: ObjectMetricTypeV1) => {
+  const openCreate = (type: ObjectMetricTypeV1, withAi = false) => {
     if (!selectedObjectTypeId) return;
     void navigate(
-      `/knowledge-network/workspace/${networkId}/metrics/create?objectTypeId=${encodeURIComponent(selectedObjectTypeId)}&metricType=${type}`,
+      `/knowledge-network/workspace/${networkId}/metrics/create?objectTypeId=${encodeURIComponent(selectedObjectTypeId)}&metricType=${type}${withAi ? "&ai=1" : ""}`,
       { state: { knowledgeNetworkReturnTo: returnTo } },
     );
   };
@@ -857,21 +858,38 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                 style={{ width: 130 }}
               />
               {canModify ? (
-                <Dropdown
-                  menu={{
-                    items: (["atomic", "derived", "composite"] as ObjectMetricTypeV1[]).map(
-                      (type) => ({
-                        key: type,
-                        label: objectMetricText("m422c8208705c", { p0: typeNames[type] }),
-                      }),
-                    ),
-                    onClick: ({ key }) => openCreate(key as ObjectMetricTypeV1),
-                  }}
-                >
-                  <Button disabled={!selectedObjectTypeId} icon={<PlusOutlined />} type="primary">
-                    {objectMetricText("mc89eb03160da")}
-                  </Button>
-                </Dropdown>
+                <>
+                  <Dropdown
+                    menu={{
+                      items: (["atomic", "derived", "composite"] as ObjectMetricTypeV1[]).map(
+                        (type) => ({
+                          key: type,
+                          label: objectMetricText("aiCreateMetricType", { p0: typeNames[type] }),
+                        }),
+                      ),
+                      onClick: ({ key }) => openCreate(key as ObjectMetricTypeV1, true),
+                    }}
+                  >
+                    <Button disabled={!selectedObjectTypeId} icon={<ThunderboltOutlined />}>
+                      {objectMetricText("aiCreateMetric")}
+                    </Button>
+                  </Dropdown>
+                  <Dropdown
+                    menu={{
+                      items: (["atomic", "derived", "composite"] as ObjectMetricTypeV1[]).map(
+                        (type) => ({
+                          key: type,
+                          label: objectMetricText("m422c8208705c", { p0: typeNames[type] }),
+                        }),
+                      ),
+                      onClick: ({ key }) => openCreate(key as ObjectMetricTypeV1),
+                    }}
+                  >
+                    <Button disabled={!selectedObjectTypeId} icon={<PlusOutlined />} type="primary">
+                      {objectMetricText("mc89eb03160da")}
+                    </Button>
+                  </Dropdown>
+                </>
               ) : null}
             </div>
           </div>

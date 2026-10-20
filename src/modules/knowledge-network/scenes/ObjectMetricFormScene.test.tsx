@@ -14,6 +14,7 @@ import type {
   RunObjectMetricDesignParams,
 } from "@/modules/knowledge-network/services/object-metric-designer.service";
 import { createObjectMetricDefinitionV1 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
+import type { ObjectMetricDefinitionV1 } from "@/modules/knowledge-network/types/object-metric";
 
 const mocks = vi.hoisted(() => {
   const routeParams: { current: { metricId?: string; networkId: string } } = {
@@ -22,7 +23,8 @@ const mocks = vi.hoisted(() => {
   return {
     createObjectMetricDraftV1: vi.fn(),
     trialObjectMetricDataV1: vi.fn(),
-    validateObjectMetricV1: vi.fn(),
+    validateObjectMetricV1:
+      vi.fn<(networkId: string, definition: ObjectMetricDefinitionV1) => Promise<unknown>>(),
     previewObjectMetricV1: vi.fn(),
     listObjectMetricsV1: vi.fn(),
     runObjectMetricDesigner:
@@ -167,6 +169,20 @@ beforeEach(() => {
 });
 
 describe("ObjectMetricFormScene object properties", () => {
+  it("opens the AI designer when arriving from AI creation", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=derived&ai=1";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+
+    render(<ObjectMetricFormScene mode="create" />);
+
+    expect(await screen.findByRole("complementary", { name: "AI 生成指标" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /AI 生成/ })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
   it("requires confirmation and rejects a proposal after the form changes", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
     mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
@@ -665,6 +681,7 @@ describe("ObjectMetricFormScene edit loading", () => {
     fireEvent.click(screen.getByRole("button", { name: "验证当前表单" }));
     await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalled());
     const next = mocks.validateObjectMetricV1.mock.lastCall?.[1];
+    if (!next || next.specification.kind !== "derived") throw new Error("expected derived metric");
     expect(next.specification.base_metric).toEqual({ metric_id: "base-b", version: 1 });
     expect(next.query_capabilities.analysis_dimensions).toEqual([]);
     expect(next.query_capabilities.time_dimensions).toEqual([]);

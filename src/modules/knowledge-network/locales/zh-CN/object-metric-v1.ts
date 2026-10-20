@@ -7,6 +7,8 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  aiCreateMetric: "AI 创建",
+  aiCreateMetricType: "AI 创建{{p0}}",
   aiDesignerInvalidProposal: "指标设计 Agent 返回了无效的修改建议",
   aiDesignerRequestFailed: "指标设计请求失败（HTTP {{p0}}）",
   aiDesignerMissingStream: "指标设计请求未返回事件流",
