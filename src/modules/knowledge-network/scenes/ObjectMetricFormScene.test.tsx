@@ -561,6 +561,118 @@ describe("ObjectMetricFormScene object properties", () => {
 });
 
 describe("ObjectMetricFormScene edit loading", () => {
+  it("resets inherited fields when AI changes a derived metric's base metric", async () => {
+    const ref = (propertyName: string) => ({
+      object_type_id: "order",
+      property_name: propertyName,
+    });
+    const recordFor = (definition: ReturnType<typeof createObjectMetricDefinitionV1>) => ({
+      branch: "main",
+      create_time: 0,
+      creator: { id: "owner", type: "user" },
+      definition,
+      kn_id: "network-1",
+      update_time: 0,
+      updater: { id: "owner", type: "user" },
+    });
+    const baseA = createObjectMetricDefinitionV1("atomic", "order");
+    baseA.id = "base-a";
+    baseA.name = "基础指标 A";
+    baseA.lifecycle.status = "published";
+    baseA.query_capabilities.analysis_dimensions = [ref("region")];
+    baseA.query_capabilities.time_dimensions = [ref("signed_at")];
+    baseA.result_semantics.value = {
+      physical_type: "int64",
+      semantic_type: "count",
+      unit: { code: "1", quantity_kind: "count", scale_factor: 1, system: "UCUM" },
+    };
+    const baseB = createObjectMetricDefinitionV1("atomic", "order");
+    baseB.id = "base-b";
+    baseB.name = "基础指标 B";
+    baseB.lifecycle.status = "published";
+    baseB.query_capabilities.analysis_dimensions = [ref("product")];
+    baseB.query_capabilities.time_dimensions = [ref("created_at")];
+    baseB.result_semantics.value = {
+      physical_type: "decimal",
+      precision: 18,
+      rounding_mode: "half_up",
+      scale: 2,
+      semantic_type: "measure",
+    };
+    const draft = createObjectMetricDefinitionV1("derived", "order");
+    draft.id = "derived-draft";
+    draft.name = "派生指标";
+    draft.code = "derived_draft";
+    draft.description = "基于基础指标的派生统计";
+    draft.query_capabilities.analysis_dimensions = [ref("region")];
+    draft.query_capabilities.time_dimensions = [ref("signed_at")];
+    draft.result_semantics.statistical_grain.group_by_dimensions = [ref("region")];
+    draft.result_semantics.value = baseA.result_semantics.value;
+    if (draft.specification.kind !== "derived") throw new Error("expected derived metric");
+    draft.specification.base_metric = { metric_id: "base-a", version: 1 };
+    draft.specification.business_qualifiers.event_time = ref("signed_at");
+    mocks.getObjectMetricV1.mockResolvedValue(recordFor(draft));
+    mocks.listObjectMetricsV1.mockResolvedValue({
+      entries: [recordFor(baseA), recordFor(baseB)],
+      total_count: 2,
+    });
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      dataProperties: ["region", "signed_at", "product", "created_at"].map((name) => ({
+        displayName: name,
+        name,
+        type: name.endsWith("_at") ? "datetime" : "string",
+      })),
+    });
+    mocks.runObjectMetricDesigner.mockImplementation((params) =>
+      Promise.resolve({
+        answer: "建议更换基础指标",
+        proposal: {
+          base_form_revision: params.baseFormRevision,
+          changes: [
+            {
+              after: "base-b",
+              before: "base-a",
+              field: "derived.base_metric_id",
+              operation: "replace",
+              reason: "用户要求",
+            },
+            {
+              after: 1,
+              before: 1,
+              field: "derived.base_metric_version",
+              operation: "replace",
+              reason: "固定发布版本",
+            },
+          ],
+          kind: "metric_design_proposal",
+          questions: [],
+          summary: "更换基础指标",
+        },
+        runId: "run-derived",
+        threadId: "thread-derived",
+      }),
+    );
+
+    mocks.routeParams.current = { metricId: "derived-draft", networkId: "network-1" };
+    render(<ObjectMetricFormScene mode="edit" />);
+    expect(await screen.findByRole("textbox", { name: "指标名称" })).toHaveValue("派生指标");
+    fireEvent.click(screen.getByRole("button", { name: /AI 生成/ }));
+    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+      target: { value: "改为基础指标 B" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(await screen.findByRole("button", { name: "应用所选修改" }));
+    fireEvent.click(screen.getByRole("button", { name: "验证当前表单" }));
+    await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalled());
+    const next = mocks.validateObjectMetricV1.mock.lastCall?.[1];
+    expect(next.specification.base_metric).toEqual({ metric_id: "base-b", version: 1 });
+    expect(next.query_capabilities.analysis_dimensions).toEqual([]);
+    expect(next.query_capabilities.time_dimensions).toEqual([]);
+    expect(next.result_semantics.statistical_grain.group_by_dimensions).toEqual([]);
+    expect(next.result_semantics.value.physical_type).toBe("decimal");
+    expect(next.specification.business_qualifiers.event_time).toBeUndefined();
+  }, 60_000);
+
   it("returns to the originating object selection even when edit loading fails", async () => {
     const returnTo =
       "/knowledge-network/workspace/network-1/metrics?objectTypeId=customer&view=list";

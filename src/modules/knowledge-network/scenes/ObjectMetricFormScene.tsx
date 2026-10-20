@@ -1515,8 +1515,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       );
       if (base) {
         const key = dependencyKey(base.definition.id, base.definition.version);
+        if (key !== getFieldValue("baseMetric")) {
+          // Match the manual base-metric switch before applying any explicit AI
+          // overrides. Otherwise dimensions, time fields and result semantics
+          // from the previous base metric survive in the draft.
+          selectBaseMetric(key);
+          aiSkipDerivedSyncRef.current = true;
+        }
         commonValues.baseMetric = key;
-        aiSkipDerivedSyncRef.current = key !== getFieldValue("baseMetric");
       }
       if (intent.derived.filters !== undefined) {
         setBusinessCondition(
