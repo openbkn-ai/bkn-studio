@@ -122,6 +122,28 @@ describe("startExecution", () => {
     expect(terminal).toEqual({ type: "terminal", status: "succeeded", code: undefined });
   });
 
+  it("posts another admitted Agent when the caller names it", async () => {
+    fetchMock.mockResolvedValue(
+      streamResponse([sse("terminal", { status: "succeeded", sequence: 1 })]),
+    );
+
+    await startExecution({
+      base: "https://platform.example.com",
+      tokenProvider,
+      agentId: "graph_explorer_cypher",
+      knId: "kn-1",
+      message: "问题",
+      clientRequestId: "req-1",
+      onEvent: () => undefined,
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init?.body as string)).toMatchObject({
+      agent_id: "graph_explorer_cypher",
+      context: { kn_id: "kn-1" },
+    });
+  });
+
   it("returns null when the stream closes without a terminal event", async () => {
     fetchMock.mockResolvedValue(streamResponse([sse("meta", { run_id: "run-1", thread_id: "t" })]));
 

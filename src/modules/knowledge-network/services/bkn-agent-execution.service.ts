@@ -197,6 +197,8 @@ export function newClientRequestId(): string {
 export type StartExecutionParams = {
   base: string;
   tokenProvider: AgentTokenProvider;
+  /** A built-in Agent admitted on the public surface; smart Q&A when omitted. */
+  agentId?: string;
   knId: string;
   message: string;
   /** Idempotency key: reuse it only to retry the same request. */
@@ -219,7 +221,7 @@ export async function startExecution(
     method: "POST",
     headers: { Accept: "text/event-stream", "Content-Type": "application/json" },
     body: JSON.stringify({
-      agent_id: SMART_QA_AGENT_ID,
+      agent_id: params.agentId ?? SMART_QA_AGENT_ID,
       message: params.message,
       client_request_id: params.clientRequestId,
       ...(params.threadId ? { thread_id: params.threadId } : {}),
