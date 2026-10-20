@@ -222,6 +222,13 @@ export const contextLoaderPanelPart = {
       compactHint:
         "Publishes the common tools and calls the rest on demand. Suits clients that load every tool on each turn.",
     },
+    mcpInstructions: {
+      open: "Server instructions",
+      title: "MCP server instructions ({{profile}})",
+      description:
+        "Sent by the server with initialize when a client connects, so the model knows how to use these tools. The server maintains this text, and it changes with the deployed version.",
+      copied: "Server instructions copied",
+    },
     mcpConnect: {
       title: "Let Agents Call OpenBKN Capabilities",
       description:
