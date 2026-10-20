@@ -85,6 +85,8 @@ type ContextLoaderIntegrationPanelProps = {
   curl: string;
   onCopy: (text: string, label?: string) => void;
   toolDefs: McpToolDef[] | null;
+  /** The connected endpoint's initialize instructions, the guide its clients hand the model. */
+  mcpInstructions?: string;
   toolsLoading: boolean;
   toolsError: string | null;
   currentTool: McpToolDef | null;
@@ -376,6 +378,7 @@ export function ContextLoaderIntegrationPanel({
   curl,
   onCopy,
   toolDefs,
+  mcpInstructions,
   toolsLoading,
   toolsError,
   currentTool,
@@ -404,6 +407,7 @@ export function ContextLoaderIntegrationPanel({
   const [mcpConfigKeyError, setMcpConfigKeyError] = useState("");
   const [mcpConfigKeyModalOpen, setMcpConfigKeyModalOpen] = useState(false);
   const [allowInsecureTls, setAllowInsecureTls] = useState(false);
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
   const filterText = filter.trim().toLowerCase();
   const appKeyPlaceholder = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
   const configAppKey = mcpConfigKey || appKeyPlaceholder;
@@ -443,7 +447,58 @@ export function ContextLoaderIntegrationPanel({
     mode === "mcp" ? (
       <div className={styles.mcpProfileBar}>
         {mcpProfileSegmented(true)}
-        <div className={styles.mcpProfileHint}>{mcpProfileHint}</div>
+        <div className={styles.mcpProfileHint}>
+          {mcpProfileHint}
+          {mcpInstructions ? (
+            <button
+              type="button"
+              className={styles.guideLink}
+              onClick={() => setInstructionsOpen(true)}
+            >
+              {t("knowledgeNetwork.contextLoaderPanel.mcpInstructions.open")}
+            </button>
+          ) : null}
+        </div>
+        {mcpInstructions ? (
+          <Modal
+            open={instructionsOpen}
+            onCancel={() => setInstructionsOpen(false)}
+            footer={null}
+            width={760}
+            title={t("knowledgeNetwork.contextLoaderPanel.mcpInstructions.title", {
+              profile:
+                mcpProfile === "compact"
+                  ? t("knowledgeNetwork.contextLoaderPanel.mcpProfile.compact")
+                  : t("knowledgeNetwork.contextLoaderPanel.mcpProfile.full"),
+            })}
+          >
+            {/* The modal renders outside the page, so it needs guideRoot for the page's colour tokens. */}
+            <div className={styles.guideRoot}>
+              <p className={styles.mcpProfileHint}>
+                {t("knowledgeNetwork.contextLoaderPanel.mcpInstructions.description")}
+              </p>
+              <div className={styles.codeBlk}>
+                <div className={`${styles.codeBlkHead} ${styles.mcpInstructionsHead}`}>
+                  <button
+                    type="button"
+                    className={styles.mini}
+                    onClick={() =>
+                      onCopy(
+                        mcpInstructions,
+                        t("knowledgeNetwork.contextLoaderPanel.mcpInstructions.copied"),
+                      )
+                    }
+                  >
+                    <CopyOutlined /> {t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                  </button>
+                </div>
+                <pre className={`${styles.codeBlkPre} ${styles.mcpInstructionsPre}`}>
+                  {mcpInstructions}
+                </pre>
+              </div>
+            </div>
+          </Modal>
+        ) : null}
       </div>
     ) : null;
   // Display names and groups come from tools/list metadata first, with local fallback for old servers.

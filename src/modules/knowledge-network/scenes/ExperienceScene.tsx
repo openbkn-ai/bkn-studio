@@ -47,7 +47,7 @@ import {
   fetchObjectTypes,
   pickQueryableObjectType,
   requestDataAssistantKindOf,
-  listMcpTools,
+  listMcpCatalog,
   mcpOpsFrom,
   mcpPathFor,
   mcpPathOf,
@@ -364,6 +364,7 @@ export function ExperienceScene({
 
   // tools/list cache shared by MCP sidebar, inline schema, and discovery modal.
   const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
+  const [mcpInstructions, setMcpInstructions] = useState<string | undefined>(undefined);
   const [toolsLoading, setToolsLoading] = useState(false);
   const [toolsError, setToolsError] = useState<string | null>(null);
   useEffect(() => {
@@ -371,6 +372,7 @@ export function ExperienceScene({
     toolsControllerRef.current?.abort();
     toolsControllerRef.current = null;
     setToolDefs(null);
+    setMcpInstructions(undefined);
     setToolsError(null);
     setToolsLoading(false);
   }, [knId, mcpProfile]);
@@ -395,10 +397,12 @@ export function ExperienceScene({
       const requestKnId = knId;
       setToolsLoading(true);
       setToolsError(null);
-      listMcpTools(mcpEnv, tokenProvider, controller.signal)
-        .then((list) => {
-          if (sequence === toolsSequenceRef.current && requestKnId === currentKnIdRef.current)
-            setToolDefs(list);
+      listMcpCatalog(mcpEnv, tokenProvider, controller.signal)
+        .then((catalog) => {
+          if (sequence === toolsSequenceRef.current && requestKnId === currentKnIdRef.current) {
+            setToolDefs(catalog.tools);
+            setMcpInstructions(catalog.instructions);
+          }
         })
         .catch((err) => {
           if (
@@ -957,6 +961,7 @@ export function ExperienceScene({
           curl={curl}
           onCopy={copy}
           toolDefs={toolDefs}
+          mcpInstructions={mcpInstructions}
           toolsLoading={toolsLoading}
           toolsError={toolsError}
           currentTool={currentTool}

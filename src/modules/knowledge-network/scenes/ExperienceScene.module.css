@@ -3419,3 +3419,15 @@
 :global(:root[data-theme="dark"]) .page .dbCard {
   background: var(--color-bg-surface);
 }
+
+.mcpInstructionsPre {
+  max-height: 60vh;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.mcpInstructionsHead {
+  justify-content: flex-end;
+}
