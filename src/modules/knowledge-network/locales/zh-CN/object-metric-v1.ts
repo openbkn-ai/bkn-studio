@@ -7,6 +7,12 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  aiDesignerInvalidProposal: "指标设计 Agent 返回了无效的修改建议",
+  aiDesignerRequestFailed: "指标设计请求失败（HTTP {{p0}}）",
+  aiDesignerMissingStream: "指标设计请求未返回事件流",
+  aiDesignerExecutionFailed: "指标设计 Agent 执行失败",
+  aiDesignerIncompleteTurn: "指标设计 Agent 未完成本轮对话",
+  aiDesignerIncompleteResult: "指标设计 Agent 返回不完整",
   aiDiagnosticTitle: "验证与试算",
   aiDiagnosticHint:
     "可先应用建议，再验证当前未保存表单。试算需要你在抽屉中设置条件并手动执行；不会自动保存或发布。",

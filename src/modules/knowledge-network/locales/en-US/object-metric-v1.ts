@@ -7,6 +7,12 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  aiDesignerInvalidProposal: "The metric designer returned an invalid proposal.",
+  aiDesignerRequestFailed: "Metric design request failed (HTTP {{p0}}).",
+  aiDesignerMissingStream: "The metric design request did not return an event stream.",
+  aiDesignerExecutionFailed: "Metric designer execution failed.",
+  aiDesignerIncompleteTurn: "The metric designer did not complete this turn.",
+  aiDesignerIncompleteResult: "The metric designer returned an incomplete result.",
   aiDiagnosticTitle: "Validation and trial",
   aiDiagnosticHint:
     "You can apply a proposal, then validate the current unsaved form. A trial runs only after you set conditions and explicitly start it in the drawer. Nothing is saved or published automatically.",

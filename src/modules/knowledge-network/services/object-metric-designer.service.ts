@@ -7,6 +7,7 @@
 
 import { makeAuthedFetch, type AgentTokenProvider } from "./agent-chat.service";
 import { getExecution, newClientRequestId } from "./bkn-agent-execution.service";
+import { objectMetricText } from "../lib/object-metric-text";
 import type { ObjectMetricAiIntent } from "./object-metric-ai.service";
 
 export const OBJECT_METRIC_DESIGN_PATH = "/api/bkn-agent/v1/metric-design/executions";
@@ -139,7 +140,7 @@ function parseProposal(
     !Array.isArray(proposal.changes) ||
     proposal.changes.length > 30
   ) {
-    throw new Error("指标设计 Agent 返回了无效的修改建议");
+    throw new Error(objectMetricText("aiDesignerInvalidProposal"));
   }
   const seen = new Set<string>();
   for (const rawChange of proposal.changes) {
@@ -156,7 +157,7 @@ function parseProposal(
         (type) => field.startsWith(`${type}.`) && type !== metricType,
       )
     ) {
-      throw new Error("指标设计 Agent 返回了无效的修改建议");
+      throw new Error(objectMetricText("aiDesignerInvalidProposal"));
     }
     seen.add(field);
   }
@@ -190,7 +191,7 @@ async function responseError(response: Response): Promise<Error> {
   return new Error(
     (typeof data?.description === "string" && data.description) ||
       (typeof data?.message === "string" && data.message) ||
-      `指标设计请求失败（HTTP ${response.status}）`,
+      objectMetricText("aiDesignerRequestFailed", { p0: response.status }),
   );
 }
 
@@ -214,7 +215,7 @@ export async function runObjectMetricDesigner(
     signal: params.signal,
   });
   if (!response.ok) throw await responseError(response);
-  if (!response.body) throw new Error("指标设计请求未返回事件流");
+  if (!response.body) throw new Error(objectMetricText("aiDesignerMissingStream"));
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -257,7 +258,7 @@ export async function runObjectMetricDesigner(
         failure =
           typeof asRecord(data.error)?.detail === "string"
             ? (asRecord(data.error)?.detail as string)
-            : "指标设计 Agent 执行失败";
+            : objectMetricText("aiDesignerExecutionFailed");
       }
     }
     if (done) break;
@@ -277,8 +278,10 @@ export async function runObjectMetricDesigner(
     }
     failure = record.error?.detail ?? failure;
   }
-  if (terminal !== "succeeded") throw new Error(failure || "指标设计 Agent 未完成本轮对话");
-  if (!proposal || !runId || !threadId) throw new Error("指标设计 Agent 返回不完整");
+  if (terminal !== "succeeded")
+    throw new Error(failure || objectMetricText("aiDesignerIncompleteTurn"));
+  if (!proposal || !runId || !threadId)
+    throw new Error(objectMetricText("aiDesignerIncompleteResult"));
   return { answer, proposal, runId, threadId };
 }
 
