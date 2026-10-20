@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ApartmentOutlined } from "@ant-design/icons";
+import { CompassOutlined } from "@ant-design/icons";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useHref } from "react-router-dom";
@@ -29,7 +29,7 @@ import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
 const UPGRADE_ENTRIES: { capability: string; icon: ReactNode; labelKey: string }[] = [
   {
     capability: CAPABILITIES.GRAPH_EXPLORER,
-    icon: <ApartmentOutlined />,
+    icon: <CompassOutlined />,
     labelKey: "knowledgeNetwork.workspaceGraphExplorer",
   },
 ];
