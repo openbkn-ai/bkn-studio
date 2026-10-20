@@ -645,9 +645,13 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
               modified={versionOf(comparing[1])?.prompt_content ?? ""}
               // wordWrap only reaches the modified side; the original side needs
               // diffWordWrap, and older Monaco builds ignore that, so set it directly too.
+              // The diff must not start inline either: the dialog is still narrow while it
+              // opens, and Monaco then turns the original side's wrapping off for good
+              // (wordWrapOverride2) without restoring it when it switches to side by side.
               options={{
                 readOnly: true,
                 renderSideBySide: true,
+                useInlineViewWhenSpaceIsLimited: false,
                 wordWrap: "on",
                 diffWordWrap: "on",
               }}

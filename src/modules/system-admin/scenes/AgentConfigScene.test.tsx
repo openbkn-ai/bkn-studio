@@ -53,8 +53,18 @@ vi.mock(
 );
 // Monaco does not run in jsdom; the diff only needs to show which texts it compares.
 vi.mock("@/framework/monaco/MonacoDiffEditor", () => ({
-  MonacoDiffEditor: ({ original, modified }: { original: string; modified: string }) => (
-    <div data-testid="diff">{`${original} => ${modified}`}</div>
+  MonacoDiffEditor: ({
+    original,
+    modified,
+    options,
+  }: {
+    original: string;
+    modified: string;
+    options?: Record<string, unknown>;
+  }) => (
+    <div data-testid="diff" data-options={JSON.stringify(options ?? {})}>
+      {`${original} => ${modified}`}
+    </div>
   ),
 }));
 vi.mock("@/modules/model-resources/services/llm.service", () => ({
@@ -342,6 +352,16 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
         }),
       );
       expect((await screen.findByTestId("diff")).textContent).toBe("Prompt 2 => Prompt 3");
+      // Both sides wrap, and the diff never starts inline while the dialog opens: Monaco would
+      // switch the original side's wrapping off then and not restore it.
+      expect(
+        JSON.parse(screen.getByTestId("diff").getAttribute("data-options") ?? "{}"),
+      ).toMatchObject({
+        renderSideBySide: true,
+        useInlineViewWhenSpaceIsLimited: false,
+        wordWrap: "on",
+        diffWordWrap: "on",
+      });
       // The runtime difference (step limit 12 → 40) is listed above the Prompt diff.
       const changed = document.querySelector("tr[class]")!;
       expect(changed.textContent).toContain("12");
