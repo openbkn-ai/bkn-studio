@@ -71,7 +71,8 @@ export const cypherQueryPart = {
       resultDropped: "结果较大，未保存在本地，请重新运行查看。",
     },
     status: {
-      rows: "{{count}} 行",
+      rows_one: "{{count}} 行",
+      rows_other: "{{count}} 行",
       latency: "{{ms}} ms",
       error: "查询失败",
       code: "错误码：{{code}}",

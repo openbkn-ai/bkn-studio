@@ -74,7 +74,8 @@ export const cypherQueryPart = {
         "The result was too large to keep in this browser. Run the query again to see it.",
     },
     status: {
-      rows: "{{count}} rows",
+      rows_one: "{{count}} row",
+      rows_other: "{{count}} rows",
       latency: "{{ms}} ms",
       error: "Query failed",
       code: "Code: {{code}}",
