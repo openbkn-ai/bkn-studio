@@ -9,6 +9,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
+import type { Entitlement } from "@/framework/entitlement/types";
 import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
 
@@ -41,10 +43,40 @@ function renderItems(collapsed = false) {
 }
 
 describe("WorkspaceExtensionNavItems", () => {
-  it("renders nothing when no build registered a page", () => {
+  it("names the graph explorer with its edition and offers the upgrade when no build has it", async () => {
     renderItems();
 
-    expect(screen.queryByTestId(/^workspace-nav-/)).toBeNull();
+    const entry = screen.getByTestId("workspace-nav-upgrade-graph_explorer");
+    expect(entry.textContent).toContain("knowledgeNetwork.workspaceGraphExplorer");
+    fireEvent.click(entry);
+
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+  });
+
+  it("asks for the enterprise frontend image, not a purchase, when the licence covers the page", async () => {
+    // An enterprise backend that has the graph explorer, reached from a community frontend.
+    const snapshot: Entitlement = {
+      capabilities: ["graph_explorer"],
+      edition: "enterprise",
+      extensions: ["graph_explorer"],
+      features: [],
+      licensed: true,
+      limits: {},
+      state: "valid",
+    };
+    render(
+      <EntitlementContext.Provider value={{ loading: false, refresh: async () => {}, snapshot }}>
+        <MemoryRouter basename="/studio" initialEntries={["/studio"]}>
+          <WorkspaceExtensionNavItems collapsed={false} networkId="network-1" />
+        </MemoryRouter>
+      </EntitlementContext.Provider>,
+    );
+
+    fireEvent.click(screen.getByTestId("workspace-nav-upgrade-graph_explorer"));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain("common.entitlement.imageMissingTitle");
+    expect(dialog.textContent).not.toContain("common.entitlement.upgradeTo");
   });
 
   it("leaves out overview buttons the extension did not also offer here", () => {
@@ -78,6 +110,8 @@ describe("WorkspaceExtensionNavItems", () => {
       "_blank",
       "noopener,noreferrer",
     );
+    // The build has the page, so there is nothing to sell.
+    expect(screen.queryByTestId("workspace-nav-upgrade-graph_explorer")).toBeNull();
   });
 
   it("keeps only the icon when the sidebar is collapsed", () => {
