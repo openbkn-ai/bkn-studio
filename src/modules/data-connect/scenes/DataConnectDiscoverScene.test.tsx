@@ -232,14 +232,16 @@ vi.mock("@/framework/ui/common/AppButton", () => ({
     "aria-label": ariaLabel,
     children,
     disabled,
+    loading,
     onClick,
   }: {
     "aria-label"?: string;
     children?: ReactNode;
     disabled?: boolean;
+    loading?: boolean;
     onClick?: () => void;
   }) => (
-    <button aria-label={ariaLabel} disabled={disabled} onClick={onClick} type="button">
+    <button aria-label={ariaLabel} disabled={disabled || loading} onClick={onClick} type="button">
       {children}
     </button>
   ),
@@ -442,6 +444,42 @@ describe("DataConnectDiscoverScene", () => {
     expect(screen.getByRole("button", { name: "dataConnect.discoverRunNow" })).toBeTruthy();
     expect(getScheduleMock).not.toHaveBeenCalled();
     expect(triggerDiscoverMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps other schedule actions available while a run request is pending", async () => {
+    const run = deferred<{ id: string }>();
+    triggerDiscoverMock.mockReturnValueOnce(run.promise);
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+    const trigger = screen.getByRole("button", { name: "dataConnect.moreActions" });
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("menuitem", { name: "dataConnect.discoverRunSchedule" }));
+    const confirmation = appServicesMock.modal.confirm.mock.calls.at(-1)?.[0] as {
+      onOk: () => Promise<void>;
+    };
+    let completion: Promise<void>;
+    act(() => {
+      completion = confirmation.onOk();
+    });
+    try {
+      expect(trigger).toBeEnabled();
+      fireEvent.click(trigger);
+      expect(
+        screen.getByRole("menuitem", { name: "dataConnect.discoverRunSchedule" }),
+      ).toBeDisabled();
+      for (const name of ["dataConnect.discoverViewTasks", "common.edit", "common.delete"]) {
+        expect(screen.getByRole("menuitem", { name })).toBeEnabled();
+      }
+      fireEvent.click(screen.getByRole("menuitem", { name: "common.edit" }));
+      await waitFor(() => expect(getScheduleMock).toHaveBeenCalledWith("schedule-1"));
+    } finally {
+      await act(async () => {
+        run.resolve({ id: "discover-task-new" });
+        await completion;
+      });
+    }
+    expect(triggerDiscoverMock).toHaveBeenCalledTimes(1);
   });
 
   it("hides schedule management menu items without the global permission", async () => {

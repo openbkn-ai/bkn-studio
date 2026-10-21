@@ -652,7 +652,6 @@ export function DataConnectDiscoverScene({
             <AppButton
               aria-label={t("dataConnect.moreActions")}
               icon={<EllipsisOutlined />}
-              loading={triggeringScheduleId === record.id}
               type="link"
             />
           </Dropdown>
