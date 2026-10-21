@@ -1082,7 +1082,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       ".timelineLayout{height:auto;min-height:0;overflow:visible;grid-template-columns:1fr;}",
     );
     // This checks layout and selection, not latency; 34 cards make jsdom role queries slow.
-  }, 60_000);
+  }, 30_000);
 
   it("opens managed function hierarchy on the default timeline without generating evidence", async () => {
     getConversations.mockResolvedValue({

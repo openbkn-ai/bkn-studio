@@ -343,9 +343,9 @@ export function ResourceListPanel({
     },
     {
       dataIndex: "status",
-      ellipsis: true,
       title: t("dataCatalog.resource.resourceStatus"),
-      width: 104,
+      onHeaderCell: () => ({ className: styles.wrappingHeader }),
+      width: 128,
       render: (value: CatalogResource["status"], record) => {
         if (record.category === "dataset" || !value) {
           return "—";
@@ -368,9 +368,8 @@ export function ResourceListPanel({
     },
     {
       dataIndex: "enabled",
-      ellipsis: true,
       title: t("dataCatalog.resource.enabledStatus"),
-      width: 96,
+      width: 128,
       render: (value: boolean | undefined) => {
         const enabled = value !== false;
         return (
@@ -382,9 +381,9 @@ export function ResourceListPanel({
     },
     {
       dataIndex: "lastDiscoverStatus",
-      ellipsis: true,
       title: t("dataCatalog.resource.discoverStatus"),
-      width: 112,
+      onHeaderCell: () => ({ className: styles.wrappingHeader }),
+      width: 160,
       render: (value: ResourceDiscoverStatus | undefined, record) =>
         record.category !== "dataset" && value ? (
           <Tag className={DISCOVER_STATUS_CLASSES[value]}>
@@ -396,9 +395,9 @@ export function ResourceListPanel({
     },
     {
       dataIndex: "localIndexStatus",
-      ellipsis: true,
       title: t("dataCatalog.resource.indexState"),
-      width: 112,
+      onHeaderCell: () => ({ className: styles.wrappingHeader }),
+      width: 160,
       render: (value: CatalogResource["localIndexStatus"], record) =>
         record.category === "logical_view" ? (
           "—"
@@ -791,7 +790,7 @@ export function ResourceListPanel({
             onChange={handleTableChange}
             pagination={false}
             rowKey="id"
-            scroll={{ x: 1040 }}
+            scroll={{ x: 1200 }}
             tableLayout="fixed"
           />
         )}

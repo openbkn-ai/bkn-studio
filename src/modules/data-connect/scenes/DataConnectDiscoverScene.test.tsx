@@ -7,7 +7,7 @@
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AxiosError, AxiosHeaders } from "axios";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
@@ -18,6 +18,7 @@ import { DataConnectDiscoverScene } from "./DataConnectDiscoverScene";
 const {
   appServicesMock,
   deleteTaskMock,
+  deleteScheduleMock,
   getCatalogMock,
   getScheduleMock,
   listTasksMock,
@@ -33,6 +34,7 @@ const {
     },
   },
   deleteTaskMock: vi.fn(),
+  deleteScheduleMock: vi.fn(),
   getCatalogMock: vi.fn(),
   getScheduleMock: vi.fn(),
   listTasksMock: vi.fn(),
@@ -52,6 +54,40 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 vi.mock("antd", () => ({
+  Dropdown: function Dropdown({
+    children,
+    menu,
+  }: {
+    children: ReactNode;
+    menu: {
+      items: Array<{ key: string; label: ReactNode; disabled?: boolean; onClick?: () => void }>;
+    };
+  }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <div>
+        <div onClick={() => setOpen(true)}>{children}</div>
+        {open ? (
+          <div role="menu">
+            {menu.items.map((item) => (
+              <button
+                key={item.key}
+                role="menuitem"
+                disabled={item.disabled}
+                onClick={() => {
+                  item.onClick?.();
+                  setOpen(false);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  },
+
   Alert: ({
     action,
     children,
@@ -193,15 +229,19 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
 
 vi.mock("@/framework/ui/common/AppButton", () => ({
   AppButton: ({
+    "aria-label": ariaLabel,
     children,
     disabled,
+    loading,
     onClick,
   }: {
+    "aria-label"?: string;
     children?: ReactNode;
     disabled?: boolean;
+    loading?: boolean;
     onClick?: () => void;
   }) => (
-    <button disabled={disabled} onClick={onClick} type="button">
+    <button aria-label={ariaLabel} disabled={disabled || loading} onClick={onClick} type="button">
       {children}
     </button>
   ),
@@ -300,7 +340,7 @@ vi.mock("@/shared/catalog", () => ({
 
 vi.mock("@/modules/data-connect/services/discover.service", () => ({
   createDataConnectDiscoverSchedule: vi.fn(),
-  deleteDataConnectDiscoverSchedule: vi.fn(),
+  deleteDataConnectDiscoverSchedule: deleteScheduleMock,
   deleteDataConnectDiscoverTask: deleteTaskMock,
   getDataConnectDiscoverSchedule: getScheduleMock,
   listDataConnectDiscoverSchedules: listSchedulesMock,
@@ -354,13 +394,20 @@ function deferred<T>() {
 async function openScheduleEditor(expectedRequestCount = 1) {
   await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
   fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
-  fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "dataConnect.moreActions" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "common.edit" }));
   await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(expectedRequestCount));
 }
 
 describe("DataConnectDiscoverScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    appServicesMock.runtimeConfig.currentUser.permissions = [
+      "catalog:task_manage",
+      "catalog:view_detail",
+    ];
+    deleteScheduleMock.mockReset();
+    deleteScheduleMock.mockResolvedValue(undefined);
     getScheduleMock.mockReset();
     getCatalogMock.mockResolvedValue({
       id: "catalog-1",
@@ -378,6 +425,93 @@ describe("DataConnectDiscoverScene", () => {
       isAxiosError: true,
       response: { status: 409 },
     });
+  });
+
+  it("opens schedule actions in a menu and preserves View Tasks navigation", async () => {
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+    expect(screen.queryByRole("menuitem")).toBeNull();
+    expect(screen.queryByRole("button", { name: "common.edit" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.moreActions" }));
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "dataConnect.discoverViewTasks",
+      "common.edit",
+      "dataConnect.discoverRunSchedule",
+      "common.delete",
+    ]);
+    fireEvent.click(screen.getByRole("menuitem", { name: "dataConnect.discoverViewTasks" }));
+    expect(screen.getByRole("button", { name: "dataConnect.discoverRunNow" })).toBeTruthy();
+    expect(getScheduleMock).not.toHaveBeenCalled();
+    expect(triggerDiscoverMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps other schedule actions available while a run request is pending", async () => {
+    const run = deferred<{ id: string }>();
+    triggerDiscoverMock.mockReturnValueOnce(run.promise);
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+    const trigger = screen.getByRole("button", { name: "dataConnect.moreActions" });
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("menuitem", { name: "dataConnect.discoverRunSchedule" }));
+    const confirmation = appServicesMock.modal.confirm.mock.calls.at(-1)?.[0] as {
+      onOk: () => Promise<void>;
+    };
+    let completion: Promise<void>;
+    act(() => {
+      completion = confirmation.onOk();
+    });
+    try {
+      expect(trigger).toBeEnabled();
+      fireEvent.click(trigger);
+      expect(
+        screen.getByRole("menuitem", { name: "dataConnect.discoverRunSchedule" }),
+      ).toBeDisabled();
+      for (const name of ["dataConnect.discoverViewTasks", "common.edit", "common.delete"]) {
+        expect(screen.getByRole("menuitem", { name })).toBeEnabled();
+      }
+      fireEvent.click(screen.getByRole("menuitem", { name: "common.edit" }));
+      await waitFor(() => expect(getScheduleMock).toHaveBeenCalledWith("schedule-1"));
+    } finally {
+      await act(async () => {
+        run.resolve({ id: "discover-task-new" });
+        await completion;
+      });
+    }
+    expect(triggerDiscoverMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides schedule management menu items without the global permission", async () => {
+    appServicesMock.runtimeConfig.currentUser.permissions = ["catalog:view_detail"];
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.moreActions" }));
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "dataConnect.discoverViewTasks",
+    ]);
+  });
+
+  it("confirms deletion before deleting a schedule from the menu", async () => {
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.moreActions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "common.delete" }));
+    expect(deleteScheduleMock).not.toHaveBeenCalled();
+    const confirmation = appServicesMock.modal.confirm.mock.calls.at(-1)?.[0] as {
+      title: string;
+      okButtonProps: { danger: boolean };
+      onOk: () => Promise<void>;
+    };
+    expect(confirmation.title).toBe("dataConnect.discoverDeleteConfirmTitle");
+    expect(confirmation.okButtonProps.danger).toBe(true);
+    await act(async () => {
+      await confirmation.onOk();
+    });
+    expect(deleteScheduleMock).toHaveBeenCalledWith("schedule-1");
+    expect(listSchedulesMock).toHaveBeenCalledTimes(2);
   });
 
   it("refreshes only the current schedule list without reloading the catalog or tasks", async () => {
@@ -556,7 +690,8 @@ describe("DataConnectDiscoverScene", () => {
     fireEvent.click(screen.getByRole("button", { name: "submit schedule 100" }));
 
     await waitFor(() => expect(updateScheduleMock).toHaveBeenCalledTimes(1));
-    fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.moreActions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "common.edit" }));
     await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
 
     expect(screen.getByTestId("schedule-submitting").textContent).toBe("false");
@@ -601,7 +736,8 @@ describe("DataConnectDiscoverScene", () => {
     await waitFor(() => expect(screen.queryByTestId("schedule-submitting")).toBeNull());
     resolveUpdate?.();
 
-    fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.moreActions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "common.edit" }));
     await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
     await waitFor(() =>
       expect(screen.getByTestId("schedule-submitting").textContent).toBe("false"),
@@ -743,7 +879,8 @@ describe("DataConnectDiscoverScene", () => {
 
     await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
-    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverRunSchedule" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.moreActions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "dataConnect.discoverRunSchedule" }));
     const confirmation = appServicesMock.modal.confirm.mock.calls.at(-1)?.[0] as
       { onOk?: () => Promise<void> } | undefined;
     expect(confirmation?.onOk).toBeTypeOf("function");

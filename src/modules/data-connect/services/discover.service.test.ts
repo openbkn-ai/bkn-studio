@@ -151,6 +151,65 @@ describe("discover.service · update schedule", () => {
     vi.unstubAllEnvs();
   });
 
+  it.each(["en-US", "zh-CN"])("formats schedule timestamps consistently in %s", async (locale) => {
+    const { default: i18n } = await import("@/app/locales/i18n");
+    const previousLanguage = i18n.language;
+    await i18n.changeLanguage(locale);
+    try {
+      const timestamp = new Date(2026, 9, 22, 2, 0, 0).getTime();
+      const schedule = {
+        id: "schedule-1",
+        catalog_id: "catalog-1",
+        name: "nightly",
+        cron_expr: "0 2 * * *",
+        enabled: true,
+        strategy: "full_sync",
+      };
+      getMock.mockResolvedValue({
+        data: {
+          entries: [
+            {
+              ...schedule,
+              start_time: timestamp,
+              end_time: timestamp,
+              last_run: timestamp,
+              next_run: timestamp,
+              create_time: timestamp,
+              update_time: timestamp,
+            },
+            { ...schedule, id: "schedule-empty", last_run: 0, next_run: 0, update_time: 0 },
+          ],
+          total_count: 2,
+        },
+      });
+      const { listDataConnectDiscoverSchedules } =
+        await import("@/modules/data-connect/services/discover.service");
+      const result = await listDataConnectDiscoverSchedules({ keyword: "", page: 1, pageSize: 20 });
+      expect(result.items[0]).toMatchObject({
+        startTime: "2026-10-22 02:00:00",
+        endTime: "2026-10-22 02:00:00",
+        lastRun: "2026-10-22 02:00:00",
+        nextRun: "2026-10-22 02:00:00",
+        createTime: "2026-10-22 02:00:00",
+        updateTime: "2026-10-22 02:00:00",
+        expectedUpdateTime: timestamp,
+        lastRunValue: timestamp,
+        nextRunValue: timestamp,
+      });
+      expect(result.items[1]).toMatchObject({
+        startTime: "-",
+        endTime: "-",
+        lastRun: "-",
+        nextRun: "-",
+        createTime: "-",
+        updateTime: "-",
+        expectedUpdateTime: 0,
+      });
+    } finally {
+      await i18n.changeLanguage(previousLanguage);
+    }
+  });
+
   it("sends the version read by the editor", async () => {
     const { updateDataConnectDiscoverSchedule } =
       await import("@/modules/data-connect/services/discover.service");

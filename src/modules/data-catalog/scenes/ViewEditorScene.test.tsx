@@ -249,7 +249,7 @@ describe("ViewEditorScene", () => {
     expect(
       within(fieldPicker.closest(".ant-select") as HTMLElement).getByText("Order ID"),
     ).toBeTruthy();
-  });
+  }, 20_000);
 
   it("stops at five view tags and reports an attempted sixth tag", async () => {
     renderEditor({ catalogId: "cat-1" });

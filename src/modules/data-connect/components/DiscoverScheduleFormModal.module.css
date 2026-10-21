@@ -59,27 +59,28 @@
 
 .field {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
   min-width: 0;
 }
 
 .fieldLabel {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  flex: 0 0 84px;
-  width: 84px;
-  min-height: 32px;
+  justify-content: flex-start;
+  min-height: 20px;
   color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
-  line-height: 32px;
-  text-align: right;
-  white-space: nowrap;
+  line-height: 20px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .requiredMark {
+  flex-shrink: 0;
   margin-right: 2px;
   color: var(--color-error-text);
   font-family: SimSun, sans-serif;
@@ -130,7 +131,7 @@
   align-items: center;
   gap: 10px;
   grid-column: 1 / -1;
-  margin: -2px 0 10px 94px;
+  margin: -2px 0 10px;
 }
 
 .cronPresetsLabel {

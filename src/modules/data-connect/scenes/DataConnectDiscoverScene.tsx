@@ -11,7 +11,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, Switch, Tabs, type MenuProps } from "antd";
+import { Alert, Dropdown, Input, Select, Switch, Tabs, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -481,20 +481,24 @@ export function DataConnectDiscoverScene({
   const scheduleColumns: ColumnsType<DataConnectDiscoverSchedule> = [
     {
       dataIndex: "name",
+      width: 240,
       title: t("dataConnect.discoverScheduleName"),
     },
     {
       dataIndex: "strategy",
+      width: 180,
       title: t("dataConnect.discoverStrategy"),
       render: (value: DataConnectDiscoverSchedule["strategy"]) =>
         t(`dataConnect.discoverStrategies.${value}`),
     },
     {
       dataIndex: "cronExpr",
+      width: 120,
       title: t("dataConnect.discoverCronExpr"),
     },
     {
       dataIndex: "enabled",
+      width: 96,
       title: t("common.status"),
       render: (value: boolean, record) => (
         <PermissionGate permissions="catalog:task_manage">
@@ -537,43 +541,53 @@ export function DataConnectDiscoverScene({
     },
     {
       dataIndex: "lastRun",
+      className: styles.timeText,
+      width: 180,
       title: t("dataConnect.discoverLastRun"),
     },
     {
       dataIndex: "nextRun",
+      className: styles.timeText,
+      width: 180,
       title: t("dataConnect.discoverNextRun"),
     },
     {
       dataIndex: "updateTime",
+      className: styles.timeText,
+      width: 180,
       title: t("dataConnect.updateTime"),
     },
     {
       key: "actions",
+      className: styles.taskActionCell,
       title: t("common.actions"),
-      render: (_, record) => (
-        <Space className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
-          <AppButton
-            onClick={() => {
+      align: "center",
+      width: 96,
+      fixed: "right",
+      render: (_, record) => {
+        const items: NonNullable<MenuProps["items"]> = [
+          {
+            key: "view",
+            label: t("dataConnect.discoverViewTasks"),
+            onClick: () => {
               openTasksForSchedule();
-            }}
-            type="link"
-          >
-            {t("dataConnect.discoverViewTasks")}
-          </AppButton>
-          <PermissionGate permissions="catalog:task_manage">
-            <AppButton
-              onClick={() => {
+            },
+          },
+        ];
+        if (canManageCatalogTasks) {
+          items.push(
+            {
+              key: "edit",
+              label: t("common.edit"),
+              onClick: () => {
                 setScheduleModalState({ mode: "edit", scheduleId: record.id });
-              }}
-              type="link"
-            >
-              {t("common.edit")}
-            </AppButton>
-          </PermissionGate>
-          <PermissionGate permissions="catalog:task_manage">
-            <AppButton
-              loading={triggeringScheduleId === record.id}
-              onClick={() => {
+              },
+            },
+            {
+              key: "run",
+              label: t("dataConnect.discoverRunSchedule"),
+              disabled: triggeringScheduleId === record.id,
+              onClick: () => {
                 const catalogIdentity = catalogInteractionIdentityRef.current;
                 void modal.confirm({
                   title: t("dataConnect.discoverRunScheduleConfirmTitle"),
@@ -598,16 +612,13 @@ export function DataConnectDiscoverScene({
                     }
                   },
                 });
-              }}
-              type="link"
-            >
-              {t("dataConnect.discoverRunSchedule")}
-            </AppButton>
-          </PermissionGate>
-          <PermissionGate permissions="catalog:task_manage">
-            <AppButton
-              danger
-              onClick={() => {
+              },
+            },
+            {
+              key: "delete",
+              label: t("common.delete"),
+              danger: true,
+              onClick: () => {
                 const catalogIdentity = catalogInteractionIdentityRef.current;
                 void modal.confirm({
                   title: t("dataConnect.discoverDeleteConfirmTitle"),
@@ -629,14 +640,23 @@ export function DataConnectDiscoverScene({
                     }
                   },
                 });
-              }}
+              },
+            },
+          );
+        }
+        return (
+          <Dropdown
+            menu={{ items, onClick: ({ domEvent }) => domEvent.stopPropagation() }}
+            trigger={["click"]}
+          >
+            <AppButton
+              aria-label={t("dataConnect.moreActions")}
+              icon={<EllipsisOutlined />}
               type="link"
-            >
-              {t("common.delete")}
-            </AppButton>
-          </PermissionGate>
-        </Space>
-      ),
+            />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -667,9 +687,10 @@ export function DataConnectDiscoverScene({
         ),
     },
     {
+      className: styles.taskFilterHeader,
       dataIndex: "strategy",
       title: t("dataConnect.discoverStrategy"),
-      width: 110,
+      width: 180,
       filters: ["full_sync", "create_only", "cleanup_only", "count_only"].map((value) => ({
         text: t(`dataConnect.discoverStrategies.${value}`),
         value,
@@ -680,9 +701,10 @@ export function DataConnectDiscoverScene({
         t(`dataConnect.discoverStrategies.${value}`),
     },
     {
+      className: styles.taskFilterHeader,
       dataIndex: "triggerType",
       title: t("dataConnect.discoverTriggerType"),
-      width: 100,
+      width: 150,
       filters: ["manual", "scheduled"].map((value) => ({
         text: t(`dataConnect.discoverTriggerTypes.${value}`),
         value,
@@ -695,6 +717,7 @@ export function DataConnectDiscoverScene({
     {
       dataIndex: "queuePriority",
       title: t("dataConnect.discoverQueuePriority"),
+      onHeaderCell: () => ({ className: styles.wrappingHeader }),
       width: 100,
       render: (value: number) => <DiscoverTaskPriority priority={value} />,
     },
@@ -995,6 +1018,7 @@ export function DataConnectDiscoverScene({
           <AppTable<DataConnectDiscoverSchedule>
             columns={scheduleColumns}
             dataSource={schedules}
+            scroll={{ x: 1300 }}
             loading={loadingSchedules}
             pagination={false}
             rowKey="id"
@@ -1079,6 +1103,7 @@ export function DataConnectDiscoverScene({
             onChange={handleTaskTableChange}
             pagination={false}
             rowKey="id"
+            scroll={{ x: 1800 }}
             rowSelection={
               canManageCatalogTasks
                 ? {

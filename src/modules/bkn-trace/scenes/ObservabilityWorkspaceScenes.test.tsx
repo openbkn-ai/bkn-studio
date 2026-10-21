@@ -859,6 +859,7 @@ describe("observability workspace scenes", () => {
         actorQuery: "new actor",
       });
     },
+    20_000,
   );
 
   it.each(["query", "reset", "size"])(
@@ -1656,7 +1657,7 @@ describe("observability workspace scenes", () => {
     await new Promise((resolve) => window.setTimeout(resolve, 2200));
     expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(6);
     expect(screen.getByText("当前没有可读取的活动操作；操作详情不在配置快照中。")).not.toBeNull();
-  }, 18000);
+  }, 30_000);
 
   it("稳定配置没有活动操作时显示中性阶段并不显示操作不可用告警", async () => {
     render(<ObservabilitySettingsScene />);

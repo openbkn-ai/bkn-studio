@@ -227,7 +227,7 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("人工填写");
     expect(await screen.findByText(/原建议不会覆盖当前编辑/)).toBeInTheDocument();
     expect(screen.queryByText("待应用的修改建议")).not.toBeInTheDocument();
-  }, 90_000);
+  }, 60_000);
 
   it("does not undo manual edits made after applying an AI proposal", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -275,7 +275,7 @@ describe("ObjectMetricFormScene object properties", () => {
     fireEvent.click(screen.getByRole("button", { name: "查看表单" }));
     expect(screen.queryByRole("complementary", { name: "AI 生成指标" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "保存草稿" })).toBeVisible();
-  }, 40_000);
+  }, 30_000);
 
   it("validates the unsaved form only on click and sends bounded feedback on the next turn", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -312,7 +312,7 @@ describe("ObjectMetricFormScene object properties", () => {
       form_revision: params.baseFormRevision,
     });
     expect(mocks.trialObjectMetricDataV1).not.toHaveBeenCalled();
-  }, 60_000);
+  }, 30_000);
 
   it("sends local field errors to the designer without calling the metric validation API", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -337,7 +337,7 @@ describe("ObjectMetricFormScene object properties", () => {
       status: "invalid",
     });
     expect(diagnostic?.issues?.some((issue) => issue.code === "form_validation")).toBe(true);
-  }, 60_000);
+  }, 30_000);
 
   it("keeps a diagnostic bound to the same form revision across follow-up turns", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -371,7 +371,7 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(first.baseFormRevision).toBe(second.baseFormRevision);
     expect(first.diagnostic?.form_revision).toBe(first.baseFormRevision);
     expect(second.diagnostic?.form_revision).toBe(second.baseFormRevision);
-  }, 90_000);
+  }, 40_000);
 
   it("applies a selected composite expression without changing dependencies", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -416,7 +416,7 @@ describe("ObjectMetricFormScene object properties", () => {
       "composite.expression": { node_type: "literal", value: 7, value_type: "decimal" },
       "composite.dependencies": [],
     });
-  }, 90_000);
+  }, 60_000);
 
   it("does not silently replace the expression when only composite dependencies are selected", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -477,7 +477,7 @@ describe("ObjectMetricFormScene object properties", () => {
         { alias: "b", metric_ref: { metric_id: "base-b", version: 1 } },
       ],
     });
-  }, 90_000);
+  }, 60_000);
 
   it("requires an explicit drawer action before sharing a bounded trial diagnostic", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -525,7 +525,7 @@ describe("ObjectMetricFormScene object properties", () => {
     });
     expect(diagnostic).not.toHaveProperty("entries");
     expect(diagnostic).not.toHaveProperty("instance_identity");
-  }, 60_000);
+  }, 30_000);
 
   it("reports a denied trial as forbidden rather than unavailable", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -556,7 +556,7 @@ describe("ObjectMetricFormScene object properties", () => {
     fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(1));
     expect(mocks.runObjectMetricDesigner.mock.calls[0][0].diagnostic?.status).toBe("forbidden");
-  }, 60_000);
+  }, 30_000);
 
   it("does not offer a silent fallback or save when object-type detail fails", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -688,7 +688,7 @@ describe("ObjectMetricFormScene edit loading", () => {
     expect(next.result_semantics.statistical_grain.group_by_dimensions).toEqual([]);
     expect(next.result_semantics.value.physical_type).toBe("decimal");
     expect(next.specification.business_qualifiers.event_time).toBeUndefined();
-  }, 60_000);
+  }, 40_000);
 
   it("returns to the originating object selection even when edit loading fails", async () => {
     const returnTo =

@@ -262,7 +262,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
       mcp_profile: "compact",
       limits: { max_turns: 40, timeout_s: 300 },
     });
-  });
+  }, 20_000);
 
   it("restores the initial version after confirmation and offers no unpublish", async () => {
     getShared.mockResolvedValue(shared({ model: "Qwen", restorable: true, modified: true }));
@@ -291,7 +291,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
           .hasAttribute("disabled"),
       ).toBe(true),
     );
-  });
+  }, 30_000);
 
   it("publishes a never-published built-in Agent once", async () => {
     getShared.mockResolvedValue(shared({ status: "draft" }));
@@ -309,7 +309,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     await waitFor(() =>
       expect(screen.queryByText(i18n.t("systemAdmin.agentConfig.notPublished"))).toBeNull(),
     );
-  });
+  }, 20_000);
 
   it("keeps an unsaved prompt draft when the runtime card is saved", async () => {
     getShared.mockResolvedValue(shared());
@@ -327,7 +327,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     // The saved runtime comes from the response; nothing is reloaded over the draft.
     expect(getSharedPrompt).toHaveBeenCalledTimes(1);
     expect(screen.getByDisplayValue("Draft prompt")).toBeTruthy();
-  });
+  }, 20_000);
 
   describe("versions", () => {
     const HISTORY = [
@@ -389,7 +389,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
       await confirmChange();
       await waitFor(() => expect(deleteVersion).toHaveBeenCalled());
       expect(deleteVersion.mock.calls[0][0].version).toBe(2);
-    });
+    }, 20_000);
 
     it("switches to an earlier version after confirmation", async () => {
       getShared.mockResolvedValue(shared({ version: 3, initial_version: 1 }));
@@ -406,6 +406,6 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
       await confirmChange();
       await waitFor(() => expect(activateVersion).toHaveBeenCalled());
       expect(activateVersion.mock.calls[0][0].version).toBe(1);
-    });
+    }, 20_000);
   });
 });

@@ -103,6 +103,20 @@ jobs:
       - name: Theme surface checks
         run: pnpm run theme:scan-surfaces
 
+      - name: Log test runner resources
+        run: |
+          node --input-type=module <<'NODE'
+          import os from "node:os";
+          const availableCpus = os.availableParallelism();
+          console.log(JSON.stringify({
+            nodeVersion: process.version,
+            logicalCpus: os.cpus().length,
+            availableCpus,
+            maxWorkers: "default",
+            workerLimit: Math.max(1, availableCpus - 1),
+          }, null, 2));
+          NODE
+
       - name: Boundary contract tests
         if: needs.scope.outputs.scope == 'modules'
         run: |
@@ -135,7 +149,7 @@ jobs:
   # The selected tests split across parallel shards; together they run exactly
   # the files one job would have run.
   unit:
-    name: ci-quality unit (${{ matrix.shard }}/4)
+    name: ci-quality unit (${{ matrix.shard }}/6)
     needs: scope
     if: needs.scope.outputs.scope != 'none'
     runs-on: ubuntu-latest
@@ -143,7 +157,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
 
@@ -159,11 +173,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Log test runner resources
+        run: |
+          node --input-type=module <<'NODE'
+          import os from "node:os";
+          const availableCpus = os.availableParallelism();
+          console.log(JSON.stringify({
+            nodeVersion: process.version,
+            logicalCpus: os.cpus().length,
+            availableCpus,
+            maxWorkers: "default",
+            workerLimit: Math.max(1, availableCpus - 1),
+          }, null, 2));
+          NODE
+
       - name: Unit tests
         env:
           TEST_SCOPE: ${{ needs.scope.outputs.scope }}
           TEST_PATHS: ${{ needs.scope.outputs.test_paths }}
-          SHARD: ${{ matrix.shard }}/4
+          SHARD: ${{ matrix.shard }}/6
         run: |
           set -euo pipefail
           echo "Unit test scope: $TEST_SCOPE, shard $SHARD"
