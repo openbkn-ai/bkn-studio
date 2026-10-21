@@ -390,7 +390,8 @@ export function KnowledgeNetworkWorkspaceScene({
               className={
                 section === "experience-agent" ||
                 section === "experience-cypher" ||
-                section === "metrics"
+                section === "metrics" ||
+                section === "object-types"
                   ? `${styles.workspaceSectionPage} ${styles.workspaceSectionFlush}`
                   : styles.workspaceSectionPage
               }

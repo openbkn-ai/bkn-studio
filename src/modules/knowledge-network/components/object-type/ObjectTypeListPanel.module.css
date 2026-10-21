@@ -1,0 +1,207 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.panelPage {
+  box-sizing: border-box;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  padding: 8px 10px 10px;
+  overflow: auto;
+}
+
+.graphPage {
+  overflow: hidden;
+}
+
+.pageToolbar {
+  align-items: stretch;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+  padding-bottom: 8px !important;
+}
+
+.viewModeRow,
+.operationRow {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+}
+
+.operationRow {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.graphLayout {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.objectSidebar,
+.graphContent {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+}
+
+.objectSidebar {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.objectSidebarHeader {
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.objectSidebarHeader span {
+  min-width: 24px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-text-secondary) 12%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.objectListArea {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.objectListArea > :global(.ant-spin-nested-loading),
+.objectListArea > :global(.ant-spin-nested-loading) > :global(.ant-spin-container) {
+  height: 100%;
+  min-height: 0;
+}
+
+.objectList {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.objectPagination {
+  display: flex;
+  box-sizing: border-box;
+  min-height: 44px;
+  flex: 0 0 44px;
+  align-items: flex-start;
+  padding: 0 8px 16px;
+}
+
+.objectPagination > div {
+  width: 100%;
+  margin-top: 0;
+}
+
+.objectButton {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.objectButton > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.objectButton:hover {
+  background: var(--color-hover);
+}
+
+.objectButtonSelected {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-100);
+  color: var(--color-text-link);
+  font-weight: 600;
+}
+
+.graphContent {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.graphContent > :global(.ant-spin-nested-loading),
+.graphContent > :global(.ant-spin-nested-loading) > :global(.ant-spin-container) {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.graphContent > :global(.ant-spin-nested-loading) > :global(.ant-spin-container) > :first-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .graphPage {
+    height: auto;
+    min-height: 720px;
+    overflow: auto;
+  }
+
+  .graphLayout {
+    grid-template-columns: 1fr;
+    min-height: 720px;
+    overflow: visible;
+  }
+
+  .objectSidebar {
+    height: auto;
+    max-height: 260px;
+  }
+
+  .objectList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .graphContent {
+    min-height: 540px;
+  }
+}

@@ -12,27 +12,15 @@ import {
   ZoomInOutlined,
   ZoomOutOutlined,
 } from "@ant-design/icons";
-import { Button, Descriptions, Drawer, Empty, Pagination, Spin, Tooltip, Typography } from "antd";
+import { Button, Empty, Pagination, Spin, Tooltip } from "antd";
 import type { KeyboardEvent, PointerEvent } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
-import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
-import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
-import {
-  objectMetricAggregationDisplayName,
-  objectMetricPropertyDisplayName,
-} from "@/modules/knowledge-network/lib/object-metric-display";
-import { objectMetricUnitDisplayLabel } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
-import {
-  objectMetricVersionKey,
-  resolveObjectMetricReferences,
-} from "@/modules/knowledge-network/lib/object-metric-lineage";
+import { ObjectMetricGraphDetailDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricGraphDetailDrawer";
+import { objectMetricVersionKey } from "@/modules/knowledge-network/lib/object-metric-lineage";
 import { rootRelationTypeIds } from "@/modules/knowledge-network/lib/object-metric-relation-usage";
-import {
-  getObjectMetricV1,
-  listObjectMetricsV1,
-} from "@/modules/knowledge-network/services/object-metric.service";
+import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { listObjectMetricsV1 } from "@/modules/knowledge-network/services/object-metric.service";
 import { listKnowledgeNetworkRelationTypePage } from "@/modules/knowledge-network/services/relation-type.service";
 import type {
   ObjectMetricRecordV1,
@@ -75,11 +63,6 @@ type NeighborMetricCounts = {
   requestKey: string;
   values: Record<string, number | null>;
 };
-type DrawerDependencyNames = {
-  requestKey: string;
-  names: Record<string, string | null>;
-};
-
 const RELATION_PAGE_SIZE = 6;
 const NEIGHBOR_COUNT_CONCURRENCY = 3;
 const METRIC_SCAN_PAGE_SIZE = 50;
@@ -116,44 +99,6 @@ const metricTypeNames = {
     return objectMetricText("m3e70c815f275");
   },
 };
-const metricStatusKeys = {
-  deprecated: "m1948aabb85ed",
-  draft: "m2a2fd29bd27a",
-  published: "md334724d6b2f",
-  validated: "m1936eafc0c3c",
-} as const;
-
-type MetricTextKey = Parameters<typeof objectMetricText>[0];
-const physicalTypeKeys: Record<
-  ObjectMetricRecordV1["definition"]["result_semantics"]["value"]["physical_type"],
-  MetricTextKey
-> = {
-  boolean: "mc08142c140ff",
-  date: "m70d0c1b33626",
-  datetime: "m6ac8b7718121",
-  decimal: "m75a7f49573c8",
-  duration: "m3e777ea8f1e8",
-  int64: "m67e2bb6ef67b",
-  string: "mdd81861811e5",
-};
-const semanticTypeKeys: Record<
-  ObjectMetricRecordV1["definition"]["result_semantics"]["value"]["semantic_type"],
-  MetricTextKey
-> = {
-  amount: "mffc624300de8",
-  boolean: "mc08142c140ff",
-  category: "m20fcf2eb775f",
-  count: "m21179deb9a74",
-  date: "m70d0c1b33626",
-  duration: "m04a95e0654d3",
-  measure: "m208d85fd9f3a",
-  percentage: "m03af18e36797",
-  rank: "m6570a98f2850",
-  ratio: "m8a457b6b1337",
-  score: "m96fff2e26c8d",
-  timestamp: "m2d1060334622",
-};
-
 function pageSummary(page: number, total: number) {
   return objectMetricText("graphPageSummary", {
     p0: total ? (page - 1) * RELATION_PAGE_SIZE + 1 : 0,
@@ -477,10 +422,6 @@ export function ObjectMetricGraphCanvas({
   );
   const metricCache = ownerMetricCache ?? localOwnerMetricCacheRef.current;
   const [drawerMetric, setDrawerMetric] = useState<ObjectMetricRecordV1>();
-  const [drawerDependencyNames, setDrawerDependencyNames] = useState<DrawerDependencyNames>({
-    requestKey: "",
-    names: {},
-  });
   const initialFocusRestoredRef = useRef(false);
   const [expandedGroup, setExpandedGroup] = useState<DetailGroup>();
   const [ringVisibleCounts, setRingVisibleCounts] = useState(INITIAL_RING_VISIBLE_COUNTS);
@@ -807,7 +748,6 @@ export function ObjectMetricGraphCanvas({
     relationCurrent,
     selectedObjectTypeId,
   ]);
-  const drawerRelationIds = drawerMetric ? rootRelationTypeIds(drawerMetric) : [];
   const relationshipOwnerPosition = nodePositions[selectedObjectTypeId] ?? CENTER;
   const ownerNodeKey = expandedGroup ? FOCUS_OWNER_NODE_KEY : selectedObjectTypeId;
   const ownerPosition = expandedGroup
@@ -967,77 +907,6 @@ export function ObjectMetricGraphCanvas({
       }
     });
   }
-  const drawerDependencies = useMemo(
-    () => (drawerMetric ? directMetricRefs(drawerMetric) : []),
-    [drawerMetric],
-  );
-  const drawerDependencyRequestKey = JSON.stringify([
-    networkId,
-    refreshVersion,
-    metricResultKey,
-    drawerMetric?.definition.id,
-    drawerMetric?.definition.version,
-    drawerDependencies.map((reference) =>
-      objectMetricVersionKey(reference.metric_id, reference.version),
-    ),
-  ]);
-  useEffect(() => {
-    const unresolved = drawerDependencies.filter(
-      (reference) =>
-        !metrics.some(
-          (metric) =>
-            metric.definition.id === reference.metric_id &&
-            metric.definition.version === reference.version,
-        ),
-    );
-    if (!unresolved.length) return;
-    let active = true;
-    void resolveObjectMetricReferences(unresolved, (id, version) =>
-      getObjectMetricV1(networkId, id, version, { skipErrorToast: true }),
-    ).then((entries) => {
-      if (!active) return;
-      setDrawerDependencyNames({
-        requestKey: drawerDependencyRequestKey,
-        names: Object.fromEntries(
-          entries.map(({ record, reference, key }) => [
-            key,
-            record?.definition.id === reference.metric_id &&
-            record.definition.version === reference.version
-              ? record.definition.name
-              : null,
-          ]),
-        ),
-      });
-    });
-    return () => {
-      active = false;
-    };
-  }, [drawerDependencies, drawerDependencyRequestKey, metrics, networkId]);
-  const drawerRelationNames = drawerRelationIds
-    .map((id) => relationNames.get(id))
-    .filter((name): name is string => Boolean(name));
-  const drawerBoundProperty = drawerMetric
-    ? findMetricLogicProperty(ownerObjectType, drawerMetric.definition.id)
-    : undefined;
-  const drawerAtomicSpecification =
-    drawerMetric?.definition.specification.kind === "atomic"
-      ? drawerMetric.definition.specification
-      : undefined;
-  const drawerAtomicExpression = drawerAtomicSpecification?.measure.expression;
-  const drawerAtomicSource =
-    drawerAtomicExpression?.node_type === "property"
-      ? objectMetricPropertyDisplayName(drawerAtomicExpression.property_ref, ownerObjectType)
-      : undefined;
-  const drawerValue = drawerMetric?.definition.result_semantics?.value;
-  const drawerActions = drawerMetric
-    ? objectMetricActions(drawerMetric, canModify, ownerObjectType)
-    : undefined;
-  const loadedMetricNames = new Map(
-    metrics.map((metric) => [
-      objectMetricVersionKey(metric.definition.id, metric.definition.version),
-      `${metric.definition.name} · v${metric.definition.version}`,
-    ]),
-  );
   const ownerDisplayCount = expandedGroup ? expandedMetrics.length : metricTotal;
   const focusContextName =
     expandedGroup?.kind === "relation"
@@ -1763,159 +1632,23 @@ export function ObjectMetricGraphCanvas({
           />
         </div>
       ) : null}
-      <Drawer
-        className={`${styles.metricDrawer} ${metricTheme.scope}`}
+      <ObjectMetricGraphDetailDrawer
+        canModify={canModify}
+        metric={drawerMetric}
+        metrics={metrics}
+        networkId={networkId}
         onClose={() => setDrawerMetric(undefined)}
+        onDeleteDraft={onDeleteDraft}
+        onDeprecate={onDeprecate}
+        onEditMetric={onEditMetric}
+        onOpenMetric={onOpenMetric}
+        onTrialMetric={onTrialMetric}
         open={Boolean(drawerMetric)}
-        title={objectMetricText("graphMetricDetails")}
-        width={400}
-      >
-        {drawerMetric ? (
-          <div className={styles.drawerContent}>
-            <strong className={styles.drawerMetricName}>{drawerMetric.definition.name}</strong>
-            <div className={styles.drawerActions}>
-              <Button
-                autoInsertSpace={false}
-                onClick={() => onOpenMetric(drawerMetric)}
-                type="primary"
-              >
-                {objectMetricText("m979a332955c8")}
-              </Button>
-              {onTrialMetric ? (
-                <Button autoInsertSpace={false} onClick={() => onTrialMetric(drawerMetric)}>
-                  {objectMetricText("m073728637a26")}
-                </Button>
-              ) : null}
-              {drawerActions?.canEdit && onEditMetric ? (
-                <Button autoInsertSpace={false} onClick={() => onEditMetric(drawerMetric)}>
-                  {objectMetricText("m9d0eedd99d2b")}
-                </Button>
-              ) : null}
-              {drawerActions?.canDeleteDraft && onDeleteDraft ? (
-                <Button autoInsertSpace={false} danger onClick={() => onDeleteDraft(drawerMetric)}>
-                  {objectMetricText("m1dfe58237bbf")}
-                </Button>
-              ) : null}
-              {drawerActions?.canDeprecate && onDeprecate ? (
-                <Tooltip title={drawerActions.deprecateReason}>
-                  <span>
-                    <Button
-                      autoInsertSpace={false}
-                      danger
-                      disabled={Boolean(drawerActions.deprecateReason)}
-                      onClick={() => onDeprecate(drawerMetric)}
-                    >
-                      {objectMetricText("mca0ff1e63793")}
-                    </Button>
-                  </span>
-                </Tooltip>
-              ) : null}
-            </div>
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label={objectMetricText("graphMetricCode")}>
-                <Typography.Text copyable={{ text: drawerMetric.definition.code }} type="secondary">
-                  {drawerMetric.definition.code}
-                </Typography.Text>
-              </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("graphMetricVersion")}>
-                v{drawerMetric.definition.version}
-              </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("m7626be61e570")}>
-                {metricTypeNames[drawerMetric.definition.metric_type]}
-              </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("m6320b4a8722a")}>
-                {drawerMetric.definition.lifecycle?.status
-                  ? objectMetricText(metricStatusKeys[drawerMetric.definition.lifecycle.status])
-                  : "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("m26c439016066")}>
-                {selectedObjectTypeName}
-              </Descriptions.Item>
-              <Descriptions.Item label={objectMetricText("mec7844e49915")}>
-                {objectMetricText(
-                  drawerMetric.definition.calculation_scope === "object_instance"
-                    ? "mabe9d02781fc"
-                    : "m9c51e86f9307",
-                )}
-              </Descriptions.Item>
-              {drawerMetric.definition.calculation_scope === "object_instance" ? (
-                <Descriptions.Item label={objectMetricText("bindingStatusLabel")}>
-                  {ownerObjectType === undefined
-                    ? objectMetricText("bindingLoading")
-                    : ownerObjectType === null
-                      ? objectMetricText("bindingUnknown")
-                      : drawerBoundProperty?.metricBinding
-                        ? drawerBoundProperty.metricBinding.metric_ref.version ===
-                          drawerMetric.definition.version
-                          ? `${drawerBoundProperty.displayName || drawerBoundProperty.name} · v${drawerMetric.definition.version}`
-                          : objectMetricText("graphBindingOtherVersion", {
-                              p0: drawerBoundProperty.displayName || drawerBoundProperty.name,
-                              p1: drawerBoundProperty.metricBinding.metric_ref.version,
-                            })
-                        : objectMetricText("bindingUnbound")}
-                </Descriptions.Item>
-              ) : null}
-              {drawerAtomicSpecification ? (
-                <Descriptions.Item label={objectMetricText("graphCalculationSummary")}>
-                  {objectMetricAggregationDisplayName(
-                    drawerAtomicSpecification.measure.aggregation,
-                  )}
-                  {drawerAtomicSource ? ` · ${drawerAtomicSource}` : null}
-                </Descriptions.Item>
-              ) : null}
-              {drawerValue ? (
-                <Descriptions.Item label={objectMetricText("me659c05e3760")}>
-                  {objectMetricText(physicalTypeKeys[drawerValue.physical_type])}
-                  {" / "}
-                  {objectMetricText(semanticTypeKeys[drawerValue.semantic_type])}
-                </Descriptions.Item>
-              ) : null}
-              {drawerValue?.unit ? (
-                <Descriptions.Item label={objectMetricText("m80b19d68b149")}>
-                  <Tooltip title={drawerValue.unit.code}>
-                    <span>{objectMetricUnitDisplayLabel(drawerValue.unit)}</span>
-                  </Tooltip>
-                </Descriptions.Item>
-              ) : null}
-              {drawerRelationNames.length ? (
-                <Descriptions.Item label={objectMetricText("graphUsedRelations")}>
-                  {drawerRelationNames.join("、")}
-                </Descriptions.Item>
-              ) : null}
-              {drawerDependencies.length ? (
-                <Descriptions.Item label={objectMetricText("graphDirectDependencies")}>
-                  {drawerDependencies
-                    .map((reference, index) => {
-                      const key = objectMetricVersionKey(reference.metric_id, reference.version);
-                      const loadedName = loadedMetricNames.get(key);
-                      if (loadedName) return loadedName;
-                      const resolvedName =
-                        drawerDependencyNames.requestKey === drawerDependencyRequestKey
-                          ? drawerDependencyNames.names[key]
-                          : undefined;
-                      if (resolvedName) return `${resolvedName} · v${reference.version}`;
-                      return objectMetricText(
-                        resolvedName === null
-                          ? "graphDependencyUnavailable"
-                          : "graphDependencyLoading",
-                        { p0: index + 1, p1: reference.version },
-                      );
-                    })
-                    .join("、")}
-                </Descriptions.Item>
-              ) : null}
-            </Descriptions>
-            <div className={styles.drawerBusinessDefinition}>
-              <span className={styles.drawerBusinessDefinitionLabel}>
-                {objectMetricText("m419eb90613fd")}
-              </span>
-              <div className={styles.drawerBusinessDefinitionContent}>
-                {drawerMetric.definition.description || "—"}
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </Drawer>
+        ownerObjectType={ownerObjectType}
+        ownerObjectTypeName={selectedObjectTypeName}
+        relationNames={relationNames}
+        refreshVersion={refreshVersion}
+      />
     </div>
   );
 }

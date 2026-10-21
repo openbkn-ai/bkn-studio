@@ -1,0 +1,492 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.root {
+  --graph-metric-atomic: #0f766e;
+  --graph-metric-derived: #a16207;
+  --graph-metric-composite: #6d28d9;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+:global(:root[data-theme="dark"]) .root {
+  --graph-metric-atomic: #178c9e;
+  --graph-metric-derived: #c77c18;
+  --graph-metric-composite: #8555c7;
+}
+
+.toolbar {
+  display: flex;
+  min-height: 50px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.toolbarIdentity {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.toolbarIdentity strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbarIdentity span {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.root > :global(.ant-alert) {
+  flex: 0 0 auto;
+  margin: 8px 14px 0;
+}
+
+.canvas {
+  background:
+    radial-gradient(circle at center, rgba(22, 119, 255, 0.055), transparent 46%),
+    var(--color-bg-surface);
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas > :global(.ant-spin-nested-loading),
+.canvas > :global(.ant-spin-nested-loading) > :global(.ant-spin-container) {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.svg {
+  cursor: grab;
+  display: block;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  touch-action: none;
+  width: 100%;
+}
+
+.svg:active {
+  cursor: grabbing;
+}
+
+.svg marker path {
+  fill: #7a92b2;
+}
+
+.gridDot {
+  fill: var(--color-text-faint);
+  opacity: 0.28;
+}
+
+.relationEdge,
+.metricEdge,
+.actionEdge {
+  fill: none;
+  stroke-width: 1.6;
+}
+
+.relationEdge {
+  stroke: #7a92b2;
+}
+
+.metricEdge {
+  stroke: #8f75c9;
+  stroke-dasharray: 5 4;
+}
+
+.metricDependencyEdge {
+  fill: none;
+  stroke: var(--graph-metric-composite);
+  stroke-width: 1.6;
+  stroke-opacity: 0.78;
+  pointer-events: none;
+}
+
+.groupEdgeHitArea {
+  fill: none;
+  pointer-events: stroke;
+  stroke: transparent;
+  stroke-width: 18px;
+  cursor: grab;
+}
+
+.groupEdgeHitArea:active {
+  cursor: grabbing;
+}
+
+.metricArrow {
+  fill: var(--graph-metric-composite) !important;
+}
+
+.actionEdge {
+  stroke: #db9b35;
+  stroke-dasharray: 3 4;
+}
+
+.ownerNode,
+.neighborNode,
+.resourceNode,
+.actionNode,
+.groupNode {
+  cursor: grab;
+  outline: none;
+}
+
+.groupNode {
+  cursor: pointer;
+}
+
+.ownerNode:active,
+.neighborNode:active,
+.resourceNode:active,
+.actionNode:active {
+  cursor: grabbing;
+}
+
+.relationNode {
+  cursor: pointer;
+  outline: none;
+}
+
+.ownerNode circle {
+  filter: drop-shadow(0 4px 8px rgba(22, 119, 255, 0.22));
+  stroke: var(--color-text-inverse);
+  stroke-width: 3;
+}
+
+.ownerLabel,
+.relationNode text,
+.neighborNode text,
+.resourceNode text,
+.actionNode text,
+.groupNode text {
+  pointer-events: none;
+  user-select: none;
+}
+
+.ownerLabel,
+.nodeLabel {
+  fill: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--color-bg-surface);
+  stroke-linejoin: round;
+  stroke-width: 4px;
+}
+
+.relationNode rect {
+  fill: var(--color-bg-raised);
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.relationNode text {
+  fill: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.neighborNode circle {
+  stroke: var(--color-text-inverse);
+  stroke-width: 2;
+}
+
+.metricNodeBody {
+  stroke: var(--color-text-inverse);
+  stroke-width: 2;
+}
+
+.metricAtomic .metricNodeBody {
+  fill: var(--graph-metric-atomic);
+}
+
+.metricDerived .metricNodeBody {
+  fill: var(--graph-metric-derived);
+}
+
+.metricComposite .metricNodeBody {
+  fill: var(--graph-metric-composite);
+}
+
+.actionNode > circle {
+  fill: #d89614;
+  stroke: var(--color-text-inverse);
+  stroke-width: 2;
+}
+
+.groupNode rect {
+  fill: color-mix(in srgb, var(--color-bg-raised) 88%, transparent);
+  stroke-width: 2;
+}
+
+.groupNode text {
+  fill: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.metricGroupNode rect {
+  stroke: #8f75c9;
+}
+
+.actionGroupNode rect {
+  stroke: #db9b35;
+}
+
+.metricGroupNode.groupNodeExpanded rect {
+  fill: color-mix(in srgb, var(--graph-metric-composite) 20%, var(--color-bg-raised));
+}
+
+.actionGroupNode.groupNodeExpanded rect {
+  fill: color-mix(in srgb, #d89614 20%, var(--color-bg-raised));
+}
+
+.ownerNode:focus-visible circle,
+.relationNode:focus-visible rect,
+.neighborNode:focus-visible circle,
+.resourceNode:focus-visible .metricNodeBody,
+.actionNode:focus-visible > circle,
+.groupNode:focus-visible rect,
+.ownerNode:hover circle,
+.relationNode:hover rect,
+.neighborNode:hover circle,
+.resourceNode:hover .metricNodeBody,
+.actionNode:hover > circle,
+.groupNode:hover rect {
+  filter: drop-shadow(0 0 6px rgba(22, 119, 255, 0.38));
+  stroke: #1677ff;
+  stroke-width: 3;
+}
+
+.zoomControls {
+  bottom: 14px;
+  display: flex;
+  gap: 6px;
+  position: absolute;
+  right: 14px;
+}
+
+.legend {
+  position: absolute;
+  z-index: 1;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  max-width: calc(100% - 180px);
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-bg-raised) 94%, transparent);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 12%);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.legend strong {
+  color: var(--color-text-primary);
+  font-size: 12px;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.legend span::before {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  margin-right: 4px;
+  border-radius: 50%;
+  content: "";
+}
+
+.currentObjectLegend::before {
+  box-shadow: 0 0 0 2px var(--color-text-inverse);
+  background: var(--color-primary-500);
+  outline: 1px solid var(--color-primary-500);
+}
+
+.relatedObjectLegend::before {
+  background: conic-gradient(#52c41a, #1677ff, #722ed1, #52c41a);
+}
+
+.relationLegend::before {
+  width: 16px !important;
+  height: 7px !important;
+  border: 1px solid var(--color-border);
+  border-radius: 4px !important;
+  background: var(--color-bg-raised);
+}
+
+.metricGroupLegend::before,
+.actionGroupLegend::before {
+  width: 16px !important;
+  height: 8px !important;
+  border-radius: 4px !important;
+  background: var(--color-bg-raised);
+}
+
+.metricGroupLegend::before {
+  border: 1px solid #8f75c9;
+}
+
+.actionGroupLegend::before {
+  border: 1px solid #db9b35;
+}
+
+.atomicMetricLegend::before,
+.derivedMetricLegend::before,
+.compositeMetricLegend::before {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.atomicMetricLegend::before {
+  background: var(--graph-metric-atomic);
+}
+
+.derivedMetricLegend::before {
+  background: var(--graph-metric-derived);
+}
+
+.compositeMetricLegend::before {
+  background: var(--graph-metric-composite);
+}
+
+.metricDependencyLegend::before {
+  width: 16px !important;
+  height: 2px !important;
+  border-radius: 0 !important;
+  background: var(--graph-metric-composite);
+}
+
+.actionLegend::before {
+  background: #d89614;
+}
+
+.canvasNotice {
+  bottom: 52px;
+  left: 14px;
+  max-width: calc(100% - 190px);
+  padding: 5px 9px;
+  position: absolute;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.emptyState {
+  left: 50%;
+  pointer-events: none;
+  position: absolute;
+  top: 68%;
+  transform: translate(-50%, -50%);
+}
+
+.resourceDrawer :global(.ant-drawer-body) {
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.drawerContent {
+  display: grid;
+  gap: 16px;
+}
+
+.drawerResourceName {
+  overflow-wrap: anywhere;
+  font-size: 17px;
+}
+
+.drawerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.drawerDescription {
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.drawerDescriptionLabel {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.drawerDescriptionContent {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.drawerEllipsis,
+.drawerDescriptionEllipsis {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawerEllipsis {
+  max-width: 230px;
+}
+
+@media (max-width: 900px) {
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbarIdentity {
+    justify-content: space-between;
+  }
+
+  .canvas,
+  .canvas > :global(.ant-spin-nested-loading),
+  .canvas > :global(.ant-spin-nested-loading) > :global(.ant-spin-container),
+  .svg {
+    min-height: 420px;
+  }
+}

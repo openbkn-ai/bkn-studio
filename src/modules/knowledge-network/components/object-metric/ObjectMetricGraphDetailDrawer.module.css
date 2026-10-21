@@ -1,0 +1,47 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.drawer :global(.ant-drawer-body) {
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.content {
+  display: grid;
+  gap: 16px;
+}
+
+.metricName {
+  overflow-wrap: anywhere;
+  font-size: 17px;
+}
+
+.drawerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.businessDefinition {
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.businessDefinitionLabel {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.businessDefinitionContent {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
