@@ -313,9 +313,10 @@ export function DiscoverTaskListPanel() {
         ),
     },
     {
+      className: styles.taskFilterHeader,
       dataIndex: "strategy",
       title: t("dataCatalog.taskManagement.columns.strategy"),
-      width: 110,
+      width: 180,
       filters: ["full_sync", "create_only", "cleanup_only", "count_only"].map((value) => ({
         text: t(`dataConnect.discoverStrategies.${value}`),
         value,
@@ -325,9 +326,10 @@ export function DiscoverTaskListPanel() {
       render: (value) => t(`dataConnect.discoverStrategies.${value}`),
     },
     {
+      className: styles.taskFilterHeader,
       dataIndex: "triggerType",
       title: t("dataCatalog.taskManagement.columns.trigger"),
-      width: 100,
+      width: 150,
       filters: ["manual", "scheduled"].map((value) => ({
         text: t(`dataConnect.discoverTriggerTypes.${value}`),
         value,
@@ -473,6 +475,7 @@ export function DiscoverTaskListPanel() {
         loading={loading}
         data={tasks}
         columns={columns}
+        scroll={{ x: 2000 }}
         emptyTitle={t("dataCatalog.taskManagement.discover.empty")}
         isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"}
         onTableChange={handleTableChange}
@@ -722,7 +725,7 @@ export function SemanticUnderstandingTaskListPanel() {
     {
       dataIndex: "applied",
       title: t("dataCatalog.taskManagement.columns.applied"),
-      width: 100,
+      width: 160,
       filters: [true, false].map((value) => ({
         text: t(
           value
@@ -738,7 +741,7 @@ export function SemanticUnderstandingTaskListPanel() {
     {
       dataIndex: "confidence",
       title: t("dataCatalog.taskManagement.columns.confidence"),
-      width: 100,
+      width: 140,
       render: (value) => `${Math.round(value * 100)}%`,
     },
     {
@@ -842,6 +845,7 @@ export function SemanticUnderstandingTaskListPanel() {
         loading={loading}
         data={tasks}
         columns={columns}
+        scroll={{ x: 1800 }}
         emptyTitle={t("dataCatalog.taskManagement.semantic.empty")}
         isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"}
         onTableChange={handleTableChange}
@@ -884,7 +888,9 @@ function TaskTable<T extends { id: string; status: string }>({
   onTableChange,
   selectedKeys,
   onSelectionChange,
+  scroll,
 }: {
+  scroll?: TableProps<T>["scroll"];
   canSelect: boolean;
   error: string | null;
   loading: boolean;
@@ -926,6 +932,7 @@ function TaskTable<T extends { id: string; status: string }>({
                 }
               : undefined
           }
+          scroll={scroll}
           tableLayout="fixed"
         />
       )}

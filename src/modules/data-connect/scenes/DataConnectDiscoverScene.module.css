@@ -212,6 +212,11 @@
   white-space: nowrap;
 }
 
+.panelSection :global(.ant-table-thead > tr > th).wrappingHeader {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
 .actionGroup {
   composes: actionGroup from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 }
@@ -318,4 +323,14 @@
   .filterSelectWide {
     flex: 1;
   }
+}
+
+.taskFilterHeader :global(.ant-table-column-title) {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.taskFilterHeader :global(.ant-table-filter-trigger) {
+  flex-shrink: 0;
 }

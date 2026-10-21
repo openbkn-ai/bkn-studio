@@ -42,12 +42,12 @@
   width: 160px;
 }
 
-/* Columns shrink to fit (fixed layout, no horizontal scroll). Long English titles wrap to a second
-   line instead of spilling over the neighbouring header. */
+/* Long titles wrap instead of spilling over the neighbouring header. */
 .tableSurface :global(.ant-table-thead > tr > th) {
   line-height: 18px;
   white-space: normal;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .tableSurface :global(.ant-table-wrapper),
@@ -108,4 +108,14 @@
     justify-content: flex-start;
     width: 100%;
   }
+}
+
+.taskFilterHeader :global(.ant-table-column-title) {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.taskFilterHeader :global(.ant-table-filter-trigger) {
+  flex-shrink: 0;
 }

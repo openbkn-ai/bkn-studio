@@ -497,7 +497,7 @@ export const dataCatalogEnUS = {
       catalog: "Catalog",
       catalogPlaceholder: "Select a catalog",
       category: "Category",
-      createTime: "Created",
+      createTime: "Created At",
       creator: "Created by",
       enabledStatus: "Enabled",
       discoverStatus: "Discovery Status",
@@ -872,7 +872,7 @@ export const dataCatalogEnUS = {
     },
     task: {
       column: "Task",
-      createTime: "Created",
+      createTime: "Created At",
       indexColumn: "Index",
       detail: "Task Detail",
       buildDetail: "Build Task Detail",

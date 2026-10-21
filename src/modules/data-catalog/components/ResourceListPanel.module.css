@@ -143,6 +143,12 @@
   white-space: nowrap;
 }
 
+.tableSurface :global(.ant-table-thead > tr > th).wrappingHeader {
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
 .tableSurface :global(.ant-table-tbody > tr > td) {
   white-space: nowrap;
 }

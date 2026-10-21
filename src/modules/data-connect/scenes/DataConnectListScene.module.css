@@ -12,11 +12,13 @@
 
 .operationBar {
   composes: operationBar from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  flex-wrap: wrap;
   border-bottom: 0;
 }
 
 .operationPrimary {
   composes: operationPrimary from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  flex: 1 0 auto;
 }
 
 .toolbarActions {
@@ -26,8 +28,10 @@
 .toolbarFilters {
   display: flex;
   align-items: center;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
   gap: 16px;
   justify-content: flex-end;
 }

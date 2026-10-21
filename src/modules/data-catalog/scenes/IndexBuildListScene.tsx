@@ -287,20 +287,20 @@ export function IndexBuildListScene() {
     {
       dataIndex: "mode",
       title: t("dataCatalog.build.mode"),
-      width: 100,
+      width: 140,
       filters: ["batch", "streaming"].map((value) => ({
         text: t(`dataCatalog.modes.${value}`),
         value,
       })),
       filterMultiple: false,
       filteredValue: listFilters.mode ? [listFilters.mode] : null,
-      onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
+      onHeaderCell: () => ({ className: taskPanelStyles.taskFilterHeader }),
       render: (value: BuildTask["mode"]) => <EllipsisText text={t(`dataCatalog.modes.${value}`)} />,
     },
     {
       dataIndex: "executeType",
       title: t("dataCatalog.build.executeType"),
-      width: 100,
+      width: 150,
       filters: ["full", "incremental"].map((value) => ({
         text: t(
           value === "incremental"
@@ -311,7 +311,7 @@ export function IndexBuildListScene() {
       })),
       filterMultiple: false,
       filteredValue: listFilters.executeType ? [listFilters.executeType] : null,
-      onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
+      onHeaderCell: () => ({ className: taskPanelStyles.taskFilterHeader }),
       render: (_value: BuildTask["executeType"], record) => (
         <EllipsisText
           text={
@@ -516,6 +516,7 @@ export function IndexBuildListScene() {
                   }
                 : undefined
             }
+            scroll={{ x: 1800 }}
             tableLayout="fixed"
           />
         )}

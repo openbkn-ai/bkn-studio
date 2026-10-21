@@ -213,8 +213,7 @@
 
   font-weight: 600;
 
-  /* Columns shrink to fit (fixed layout, no horizontal scroll). Long English titles wrap to a second
-     line instead of spilling over the neighbouring header. */
+  /* Long titles wrap instead of spilling over the neighbouring header. */
   line-height: 18px;
 
   white-space: normal;
