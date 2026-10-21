@@ -53,7 +53,7 @@
     align-items: flex-start;
     flex-direction: column;
   }
-  .metaAction {
+  .actions {
     align-self: flex-end;
   }
 }
