@@ -214,6 +214,13 @@ export const bknTraceEnUS = {
         "Shows the selected operation and its explicit links. Numbers identify choices, not execution order.",
       returnFact: "Return to selected fact",
       current: {
+        language: "Generation language",
+        generatedLanguage: "Evidence-chain language: {{language}}",
+        replaceLanguage:
+          "Click “Update evidence” to analyze again in the selected language and replace the current evidence chain.",
+        languageZh: "简体中文",
+        languageEn: "English",
+
         readFailed: "Could not read the saved evidence. Please retry.",
         retryRead: "Retry reading",
         basis:

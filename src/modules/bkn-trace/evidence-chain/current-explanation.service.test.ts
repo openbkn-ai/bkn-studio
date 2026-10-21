@@ -20,10 +20,10 @@ it("reads without generating and submits no version parameters", async () => {
   post.mockResolvedValue(value);
   await readCurrentExplanation("i");
   expect(post).not.toHaveBeenCalled();
-  await generateCurrentExplanation("i");
+  await generateCurrentExplanation("i", "en-US");
   expect(post).toHaveBeenCalledWith(
     "/agent-observability/v1/business-provenance/interactions/i/explanations",
-    {},
+    { locale: "en-US" },
     { skipErrorToast: true, timeout: 120_000 },
   );
 });
@@ -236,4 +236,26 @@ it("accepts the 0.1.6 question-pair, function, graph, and deterministic time-rai
       timeRail: [{ interface_name: "run_sql" }],
     },
   });
+});
+
+it("retains the saved generation language and treats legacy views as Chinese", async () => {
+  const data = {
+    schema_version: "1",
+    interaction_id: "i",
+    status: "ready",
+    generated_at: "2026-10-21T00:00:00Z",
+    view: {
+      interactionId: "i",
+      status: "completed",
+      claims: [],
+      execution: { nodes: [], edges: [] },
+      evidence: { nodes: [], edges: [] },
+    },
+  };
+  get.mockResolvedValue({ data });
+  expect((await readCurrentExplanation("i")).locale).toBe("zh-CN");
+  get.mockResolvedValue({ data: { ...data, locale: "en-US" } });
+  expect((await readCurrentExplanation("i")).locale).toBe("en-US");
+  get.mockResolvedValue({ data: { ...data, locale: "fr-FR" } });
+  await expect(readCurrentExplanation("i")).rejects.toThrow("unsupported explanation locale");
 });

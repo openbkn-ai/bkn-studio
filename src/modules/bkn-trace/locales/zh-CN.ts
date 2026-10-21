@@ -205,6 +205,12 @@ export const bknTraceZhCN = {
       operationScope: "显示所选处理及其明确关联。编号用于选择，不代表执行顺序。",
       returnFact: "返回所选事实",
       current: {
+        language: "生成语言",
+        generatedLanguage: "证据链语言：{{language}}",
+        replaceLanguage: "点击“更新依据”后，将按所选语言重新分析并替换当前证据链。",
+        languageZh: "简体中文",
+        languageEn: "English",
+
         readFailed: "未能读取已保存的依据，请重新读取。",
         retryRead: "重新读取",
         basis: "当前解释依据生成时已记录的数据；可重新整理以检查新增记录。",

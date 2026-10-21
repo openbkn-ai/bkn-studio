@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import "@/app/locales/i18n";
+import i18n from "@/app/locales/i18n";
 const read = vi.hoisted(() => vi.fn());
 const generate = vi.hoisted(() => vi.fn());
 vi.mock("./current-explanation.service", () => ({
@@ -16,7 +16,8 @@ vi.mock("./current-explanation.service", () => ({
   generateCurrentExplanation: generate,
 }));
 import { CurrentExplanationPanel } from "./CurrentExplanationPanel";
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage("zh-CN");
   read.mockReset();
   generate.mockReset();
 });
@@ -28,7 +29,7 @@ it("only generates after the user requests evidence", async () => {
   await screen.findByText(/尚未生成解释/);
   expect(generate).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button"));
-  await waitFor(() => expect(generate).toHaveBeenCalledWith("i"));
+  await waitFor(() => expect(generate).toHaveBeenCalledWith("i", "zh-CN"));
 });
 it("discards a late response from the previous interaction", async () => {
   let resolve: (value: unknown) => void = () => {};
@@ -128,4 +129,60 @@ it("keeps the requested conclusion selected when execution links return to evide
   );
   fireEvent.click(screen.getByRole("button", { name: "查看结论：生产可用库存为 0 个 →" }));
   expect(screen.getByRole("region", { name: "生产可用库存为 0 个的解释路径" })).toBeTruthy();
+});
+
+it("defaults to the UI language and generates only after an explicit click", async () => {
+  await i18n.changeLanguage("en-US");
+  read.mockResolvedValue({ status: "not_generated" });
+  let finish: (value: unknown) => void = () => {};
+  generate.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<CurrentExplanationPanel interactionId="i" />);
+  const select = await screen.findByRole("combobox", { name: "Generation language" });
+  await waitFor(() => expect(select).toBeEnabled());
+  expect(select).toHaveValue("en-US");
+  fireEvent.change(select, { target: { value: "zh-CN" } });
+  expect(generate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "View evidence chain" }));
+  expect(generate).toHaveBeenCalledExactlyOnceWith("i", "zh-CN");
+  expect(select).toBeDisabled();
+  expect(screen.getByRole("button")).toBeDisabled();
+  await act(async () => {
+    finish({ status: "ready", locale: "zh-CN" });
+    await Promise.resolve();
+  });
+  expect(await screen.findByText("Evidence-chain language: 简体中文")).toBeTruthy();
+});
+
+it("does not rewrite a saved chain when the UI language changes", async () => {
+  read.mockResolvedValue({ status: "ready", locale: "zh-CN" });
+  render(<CurrentExplanationPanel interactionId="i" />);
+  await screen.findByText("证据链语言：简体中文");
+  await act(async () => {
+    await i18n.changeLanguage("en-US");
+  });
+  expect(screen.getByRole("combobox")).toHaveValue("en-US");
+  expect(screen.getByText("Evidence-chain language: 简体中文")).toBeTruthy();
+  expect(screen.getByText(/replace the current evidence chain/)).toBeTruthy();
+  expect(generate).not.toHaveBeenCalled();
+  expect(read).toHaveBeenCalledTimes(1);
+});
+
+it("preserves the saved language on failure and resets the default for another interaction", async () => {
+  read.mockResolvedValue({ status: "ready", locale: "zh-CN" });
+  generate.mockRejectedValue(new Error("offline"));
+  const panel = render(<CurrentExplanationPanel interactionId="i" />);
+  await screen.findByText("证据链语言：简体中文");
+  fireEvent.change(screen.getByRole("combobox"), { target: { value: "en-US" } });
+  fireEvent.click(screen.getByRole("button"));
+  await screen.findByRole("alert");
+  expect(screen.getByText("证据链语言：简体中文")).toBeTruthy();
+  expect(screen.getByRole("combobox")).toHaveValue("en-US");
+  panel.rerender(<CurrentExplanationPanel interactionId="other" />);
+  await waitFor(() => expect(read).toHaveBeenCalledWith("other"));
+  expect(screen.getByRole("combobox")).toHaveValue("zh-CN");
 });

@@ -8,6 +8,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Spin } from "antd";
 import { useTranslation } from "react-i18next";
+import { FALLBACK_LOCALE, normalizeSupportedLocale } from "@/framework/i18n/locale";
+import type { SupportedLocale } from "@/framework/runtime/types";
 import { formatDateTime } from "@/framework/i18n/format";
 import { EvidenceChainPanels } from "./EvidenceChainPanels";
 import { BusinessProvenance016 } from "./BusinessProvenance016";
@@ -29,7 +31,11 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
   panel?: TPanel;
   onPanelChange?: (panel: TPanel) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const systemLocale =
+    normalizeSupportedLocale(i18n.resolvedLanguage ?? i18n.language) ?? FALLBACK_LOCALE;
+  const [selection, setSelection] = useState<{ interactionId: string; locale: SupportedLocale }>();
+  const locale = selection?.interactionId === interactionId ? selection.locale : systemLocale;
   const [value, setValue] = useState<CurrentExplanation>();
   const [busy, setBusy] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -56,12 +62,13 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
     };
   }, [interactionId, readAttempt]);
   const generate = async () => {
+    if (busy) return;
     const token = Symbol();
     request.current = token;
     setBusy(true);
     setFailed(false);
     try {
-      const result = await generateCurrentExplanation(interactionId);
+      const result = await generateCurrentExplanation(interactionId, locale);
       if (request.current === token) setValue(result);
     } catch {
       if (request.current === token) setFailed(true);
@@ -81,24 +88,54 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
               })}
             </small>
           )}
-        </div>
-        <button
-          type="button"
-          className={styles.metaAction}
-          disabled={busy}
-          onClick={() =>
-            failed && !value ? setReadAttempt((attempt) => attempt + 1) : void generate()
-          }
-        >
-          {t(
-            failed && !value
-              ? "bknTrace.evidenceChain.current.retryRead"
-              : value?.view
-                ? "bknTrace.evidenceChain.current.refresh"
-                : "bknTrace.evidenceChain.current.generate",
+          {value?.status === "ready" && (
+            <small>
+              {t("bknTrace.evidenceChain.current.generatedLanguage", {
+                language:
+                  (value.locale ?? "zh-CN") === "zh-CN"
+                    ? t("bknTrace.evidenceChain.current.languageZh")
+                    : t("bknTrace.evidenceChain.current.languageEn"),
+              })}
+            </small>
           )}
-        </button>
+        </div>
+        <div className={styles.actions}>
+          <label className={styles.language}>
+            <span>{t("bknTrace.evidenceChain.current.language")}</span>
+            <select
+              aria-label={t("bknTrace.evidenceChain.current.language")}
+              value={locale}
+              disabled={busy}
+              onChange={(event) => {
+                const next = normalizeSupportedLocale(event.target.value);
+                if (next) setSelection({ interactionId, locale: next });
+              }}
+            >
+              <option value="zh-CN">{t("bknTrace.evidenceChain.current.languageZh")}</option>
+              <option value="en-US">{t("bknTrace.evidenceChain.current.languageEn")}</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className={styles.metaAction}
+            disabled={busy}
+            onClick={() =>
+              failed && !value ? setReadAttempt((attempt) => attempt + 1) : void generate()
+            }
+          >
+            {t(
+              failed && !value
+                ? "bknTrace.evidenceChain.current.retryRead"
+                : value?.view
+                  ? "bknTrace.evidenceChain.current.refresh"
+                  : "bknTrace.evidenceChain.current.generate",
+            )}
+          </button>
+        </div>
       </header>
+      {value?.status === "ready" && locale !== (value.locale ?? "zh-CN") && (
+        <p className={styles.languageHint}>{t("bknTrace.evidenceChain.current.replaceLanguage")}</p>
+      )}
       {busy && <Spin />}
       {failed && (
         <Alert
