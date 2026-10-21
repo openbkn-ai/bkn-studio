@@ -5,11 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { SupportedLocale } from "@/framework/runtime/types";
 import { http } from "@/framework/request/http";
 import type { EvidenceChainView } from "./evidence-chain.types";
 export interface CurrentExplanation {
   status: "not_generated" | "ready";
   generatedAt?: string;
+  locale?: SupportedLocale;
   view?: EvidenceChainView;
 }
 function parse(value: unknown, id: string): CurrentExplanation {
@@ -19,6 +21,7 @@ function parse(value: unknown, id: string): CurrentExplanation {
     interaction_id?: unknown;
     status?: unknown;
     generated_at?: string;
+    locale?: unknown;
     view?: EvidenceChainView;
   };
   if (
@@ -230,7 +233,9 @@ function parse(value: unknown, id: string): CurrentExplanation {
     )
       throw new Error("invalid explanation graph");
   }
-  return { status: "ready", generatedAt: row.generated_at, view };
+  if (row.locale !== undefined && row.locale !== "zh-CN" && row.locale !== "en-US")
+    throw new Error("unsupported explanation locale");
+  return { status: "ready", generatedAt: row.generated_at, locale: row.locale ?? "zh-CN", view };
 }
 export async function readCurrentExplanation(id: string): Promise<CurrentExplanation> {
   const response = await http.get<unknown>(
@@ -239,10 +244,13 @@ export async function readCurrentExplanation(id: string): Promise<CurrentExplana
   );
   return parse(response.data, id);
 }
-export async function generateCurrentExplanation(id: string): Promise<CurrentExplanation> {
+export async function generateCurrentExplanation(
+  id: string,
+  locale: SupportedLocale,
+): Promise<CurrentExplanation> {
   const response = await http.post<unknown>(
     `/agent-observability/v1/business-provenance/interactions/${encodeURIComponent(id)}/explanations`,
-    {},
+    { locale },
     { skipErrorToast: true, timeout: 120_000 },
   );
   return parse(response.data, id);
