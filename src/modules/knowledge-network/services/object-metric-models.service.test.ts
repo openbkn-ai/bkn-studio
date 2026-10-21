@@ -30,6 +30,7 @@ describe("listObjectMetricAnswerModels", () => {
     ]);
     expect(get).toHaveBeenCalledWith("/mf-model-manager/v1/llm/list", {
       params: { page: 1, size: 100, model_type: "llm" },
+      skipErrorToast: true,
     });
   });
 });

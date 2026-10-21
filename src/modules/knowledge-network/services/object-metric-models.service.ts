@@ -17,6 +17,7 @@ type ModelListResponse = {
 export async function listObjectMetricAnswerModels(): Promise<ObjectMetricAnswerModel[]> {
   const response = await http.get<ModelListResponse>("/mf-model-manager/v1/llm/list", {
     params: { page: 1, size: 100, model_type: "llm" },
+    skipErrorToast: true,
   });
   return (response.data.data ?? [])
     .filter((item) => item.model_type === "llm" && item.model_id && item.model_name)

@@ -971,10 +971,10 @@ function aiFormAction(prompt: string): "validate" | "trial" | null {
     .replace(/[。.!！?？]+$/gu, "")
     .replace(/\s+/gu, "");
   if (
-    /^(?:\u8bf7|\u5e2e\u6211|\u5e2e\u5fd9|\u5148|\u73b0\u5728)*(?:\u9a8c\u8bc1|\u6821\u9a8c|\u68c0\u67e5)(?:\u4e00\u4e0b|\u4e0b)?(?:\u5f53\u524d|\u8fd9\u4e2a|\u8be5)?(?:\u8868\u5355|\u6307\u6807|\u5b9a\u4e49)?(?:\u662f\u5426\u6b63\u786e|\u6709\u6ca1\u6709\u95ee\u9898|\u6709\u6ca1\u6709\u9519\u8bef)?$/u.test(
+    /^(?:\u8bf7|\u5e2e\u6211|\u5e2e\u5fd9|\u5148|\u73b0\u5728)*(?:\u9a8c\u8bc1|\u6821\u9a8c|\u68c0\u67e5)(?:\u4e00\u4e0b|\u4e0b)?(?:\u5f53\u524d|\u8fd9\u4e2a|\u8be5)?(?:\u8868\u5355|\u6307\u6807(?:\u5b9a\u4e49)?|\u5b9a\u4e49)?(?:\u662f\u5426\u6b63\u786e|\u6709\u6ca1\u6709\u95ee\u9898|\u6709\u6ca1\u6709\u9519\u8bef)?$/u.test(
       compact,
     ) ||
-    /^(?:please\s+)?(?:validate|check)(?:\s+(?:the|this))?(?:\s+current)?(?:\s+(?:form|metric|definition))?$/iu.test(
+    /^(?:please\s+)?(?:validate|check)(?:\s+(?:the|this))?(?:\s+current)?(?:\s+(?:form|metric(?:\s+definition)?|definition))?$/iu.test(
       prompt.trim().replace(/[.!?]+$/u, ""),
     )
   ) {

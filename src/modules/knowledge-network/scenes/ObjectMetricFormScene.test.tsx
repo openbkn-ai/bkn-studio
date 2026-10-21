@@ -361,7 +361,7 @@ describe("ObjectMetricFormScene object properties", () => {
     });
     expect(mocks.validateObjectMetricV1).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
-      target: { value: "验证当前表单" },
+      target: { value: "验证一下当前指标定义是否正确" },
     });
     fireEvent.click(screen.getByLabelText("发送指标描述"));
     await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalledTimes(1));

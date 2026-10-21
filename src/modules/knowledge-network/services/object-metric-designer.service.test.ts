@@ -134,16 +134,15 @@ describe("runObjectMetricDesigner", () => {
     await expect(runObjectMetricDesigner(baseParams)).rejects.toThrow("无效的修改建议");
   });
 
-  it("shows the server's authorization reason when a selected model is denied", async () => {
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ detail: { detail: "当前用户无权使用该模型" } }), {
-        status: 403,
-      }),
-    );
-    await expect(runObjectMetricDesigner({ ...baseParams, modelId: "denied" })).rejects.toThrow(
-      "当前用户无权使用该模型",
-    );
-  });
+  it.each([{ detail: "当前用户无权使用该模型" }, { detail: { detail: "当前用户无权使用该模型" } }])(
+    "shows the server's authorization reason when a selected model is denied",
+    async (body) => {
+      fetchMock.mockResolvedValue(new Response(JSON.stringify(body), { status: 403 }));
+      await expect(runObjectMetricDesigner({ ...baseParams, modelId: "denied" })).rejects.toThrow(
+        "当前用户无权使用该模型",
+      );
+    },
+  );
 
   it("rejects server-owned fields and changes for another metric type", async () => {
     for (const field of ["code", "derived.event_time"]) {
