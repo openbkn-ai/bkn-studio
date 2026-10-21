@@ -215,6 +215,26 @@ describe("ObjectTypeListPanel graph view", () => {
     });
   });
 
+  it("falls back to the first visible object when the URL object is unavailable", async () => {
+    searchParams.set("objectTypeId", "deleted-object");
+    mocks.getObjectType.mockResolvedValue(null);
+
+    render(
+      <ObjectTypeListPanel
+        canDelete={false}
+        canModify={false}
+        networkId="network-1"
+        networkName="Sales"
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await vi.waitFor(() => {
+      expect(mocks.getObjectType).toHaveBeenCalledWith("network-1", "deleted-object");
+      expect(screen.getByTestId("object-resource-graph").dataset.objectTypeId).toBe("order");
+    });
+  });
+
   it("keeps the highlighted object and rendered graph in sync when selecting from the sidebar", async () => {
     mocks.listObjectTypes.mockResolvedValue({ entries: [order, customer], totalCount: 2 });
 

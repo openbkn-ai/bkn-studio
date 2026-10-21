@@ -171,6 +171,8 @@ export const objecttypePart = {
   objectTypeGraphEmpty: "No related resources in this category",
   objectTypeGraphPartial:
     "Up to the first {{count}} items in each category are shown. Use Related to view all data.",
+  objectTypeGraphOverviewPartial:
+    "The overview shows the first {{overviewCount}} relation types. Up to {{pageCount}} items per category are loaded; use the category tabs to view them.",
   objectTypeGraphResourceDetail: "Related resource details",
   objectTypeGraphObjectDetail: "Object type details",
   objectTypeGraphRelationDetail: "Relation type details",

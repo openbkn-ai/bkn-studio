@@ -304,6 +304,28 @@ describe("ObjectTypeResourceGraph", () => {
     });
   });
 
+  it("explains when the overview limits visible relation types", async () => {
+    const relations = Array.from({ length: 5 }, (_, index) => ({
+      ...relation,
+      id: `relation-${index + 1}`,
+      name: `关系 ${index + 1}`,
+      targetObjectTypeId: `target-${index + 1}`,
+      targetObjectTypeName: `对象 ${index + 1}`,
+    }));
+    mocks.listRelations.mockResolvedValue({ entries: relations, totalCount: relations.length });
+    renderGraph();
+
+    expect(
+      await screen.findByText(
+        "全部视图展示前 4 个关系类；每类最多加载 12 项，可通过分类标签查看。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "对象类 对象 5" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("关系类 5"));
+    expect(screen.getByRole("button", { name: "对象类 对象 5" })).toBeInTheDocument();
+  });
+
   it("shows a legend for the visible resource types and follows the active filter", async () => {
     renderGraph();
 
@@ -399,6 +421,31 @@ describe("ObjectTypeResourceGraph", () => {
     expect(
       within(drawer).queryByText("42c042b3-d547-4b21-aec9-a0ebdd65b21cd"),
     ).not.toBeInTheDocument();
+  });
+
+  it("loads an affected object business name outside the visible relation page", async () => {
+    mocks.getActionDetail.mockResolvedValue({
+      ...action,
+      affect: { objectTypeId: "shipment" },
+      executionConfig: {
+        actionSource: { type: "manual" },
+        parameters: [],
+        sourceType: "manual",
+      },
+    });
+    mocks.getObjectType.mockImplementation((_networkId: string, objectTypeId: string) =>
+      Promise.resolve(
+        objectTypeId === "shipment" ? { ...customer, id: "shipment", name: "发货单" } : objectType,
+      ),
+    );
+    renderGraph();
+
+    fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 1" }));
+    fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
+    const drawer = screen.getByRole("dialog", { name: "行动类详情" });
+
+    expect(await within(drawer).findByText("发货单")).toBeInTheDocument();
+    expect(within(drawer).queryByText("shipment")).not.toBeInTheDocument();
   });
 
   it("lays the current object on the left and action types in a right-hand column", async () => {

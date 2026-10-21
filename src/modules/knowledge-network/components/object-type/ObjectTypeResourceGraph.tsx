@@ -70,7 +70,6 @@ type SelectedResource =
   | { kind: "metric"; value: ObjectMetricRecordV1 }
   | { kind: "action"; value: KnowledgeNetworkActionTypeRecord }
   | {
-      current: boolean;
       description: string;
       id: string;
       kind: "object";
@@ -393,7 +392,6 @@ export function ObjectTypeResourceGraph({
   const { t } = useTranslation();
   const graphId = useId().replaceAll(":", "");
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const selectedObjectRequestRef = useRef(0);
   const dragRef = useRef<
     | { key: string; lastX: number; lastY: number; moved: boolean; type: "node" }
     | { lastX: number; lastY: number; moved: boolean; type: "canvas" }
@@ -414,6 +412,9 @@ export function ObjectTypeResourceGraph({
   const [selectedActionObjectType, setSelectedActionObjectType] = useState<
     ObjectTypeDetail | null | undefined
   >();
+  const [selectedActionAffectedObjectName, setSelectedActionAffectedObjectName] = useState<
+    string | null | undefined
+  >();
   const [resolvedActionSource, setResolvedActionSource] = useState<
     ActionTypeActionSource | undefined
   >();
@@ -421,7 +422,6 @@ export function ObjectTypeResourceGraph({
   const [metricOwnerObjectType, setMetricOwnerObjectType] = useState<
     ObjectTypeDetail | null | undefined
   >();
-  const [selectedObjectLoading, setSelectedObjectLoading] = useState(false);
   const [view, setView] = useState<ViewBox>(INITIAL_VIEW);
   const [nodePositions, setNodePositions] = useState<Record<string, Point>>({});
 
@@ -434,8 +434,6 @@ export function ObjectTypeResourceGraph({
     setActions([]);
     setTotals({ actions: 0, metrics: 0, relations: 0 });
     setSelected(undefined);
-    setSelectedObjectLoading(false);
-    selectedObjectRequestRef.current += 1;
     setNodePositions({});
     setView(INITIAL_VIEW);
     setExpandedGroup(null);
@@ -546,12 +544,14 @@ export function ObjectTypeResourceGraph({
     if (!selectedAction) {
       setSelectedActionDetail(undefined);
       setSelectedActionObjectType(undefined);
+      setSelectedActionAffectedObjectName(undefined);
       setSelectedActionLoading(false);
       return;
     }
     let active = true;
     setSelectedActionDetail(undefined);
     setSelectedActionObjectType(undefined);
+    setSelectedActionAffectedObjectName(undefined);
     setSelectedActionLoading(true);
     void (async () => {
       try {
@@ -560,15 +560,29 @@ export function ObjectTypeResourceGraph({
         setSelectedActionDetail(detail);
         const conditionObjectTypeId =
           detail?.condition?.objectTypeId || detail?.objectTypeId || selectedAction.objectTypeId;
-        const objectTypeDetail = await getKnowledgeNetworkObjectTypeDetail(
-          networkId,
-          conditionObjectTypeId,
+        const affectedObjectTypeId = detail?.affect?.objectTypeId;
+        const [conditionObjectType, affectedObjectType] = await Promise.all([
+          getKnowledgeNetworkObjectTypeDetail(networkId, conditionObjectTypeId).catch(() => null),
+          !affectedObjectTypeId || affectedObjectTypeId === objectType.id
+            ? Promise.resolve(null)
+            : getKnowledgeNetworkObjectTypeDetail(networkId, affectedObjectTypeId).catch(
+                () => null,
+              ),
+        ]);
+        if (!active) return;
+        setSelectedActionObjectType(conditionObjectType ?? null);
+        setSelectedActionAffectedObjectName(
+          !affectedObjectTypeId
+            ? null
+            : affectedObjectTypeId === objectType.id
+              ? objectType.name
+              : (affectedObjectType?.name ?? null),
         );
-        if (active) setSelectedActionObjectType(objectTypeDetail ?? null);
       } catch {
         if (active) {
           setSelectedActionDetail(null);
           setSelectedActionObjectType(null);
+          setSelectedActionAffectedObjectName(null);
         }
       } finally {
         if (active) setSelectedActionLoading(false);
@@ -577,7 +591,7 @@ export function ObjectTypeResourceGraph({
     return () => {
       active = false;
     };
-  }, [networkId, refreshVersion, selectedAction]);
+  }, [networkId, objectType.id, objectType.name, refreshVersion, selectedAction]);
 
   useEffect(() => {
     const actionSource = selectedActionDetail?.executionConfig.actionSource;
@@ -829,43 +843,14 @@ export function ObjectTypeResourceGraph({
     );
   };
 
-  const selectObject = (id: string, name: string, current: boolean) => {
-    if (current) {
-      selectedObjectRequestRef.current += 1;
-      setSelected({
-        current: true,
-        description: objectType.description,
-        id: objectType.id,
-        kind: "object",
-        name: objectType.name,
-        value: objectType,
-      });
-      setSelectedObjectLoading(false);
-      return;
-    }
-
-    setSelected({ current: false, description: "", id, kind: "object", name });
-    setSelectedObjectLoading(true);
-    const requestId = selectedObjectRequestRef.current + 1;
-    selectedObjectRequestRef.current = requestId;
-    void getKnowledgeNetworkObjectTypeDetail(networkId, id)
-      .then((detail) => {
-        if (!detail || selectedObjectRequestRef.current !== requestId) return;
-        setSelected((currentSelection) =>
-          currentSelection?.kind === "object" && currentSelection.id === id
-            ? {
-                ...currentSelection,
-                description: detail.description,
-                name: detail.name,
-                value: detail,
-              }
-            : currentSelection,
-        );
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (selectedObjectRequestRef.current === requestId) setSelectedObjectLoading(false);
-      });
+  const selectCurrentObject = () => {
+    setSelected({
+      description: objectType.description,
+      id: objectType.id,
+      kind: "object",
+      name: objectType.name,
+      value: objectType,
+    });
   };
 
   const openSelected = () => {
@@ -955,12 +940,8 @@ export function ObjectTypeResourceGraph({
   const selectedActionDynamicParameterCount =
     selectedActionExecution?.parameters.filter((parameter) => parameter.valueFrom === "input")
       .length ?? 0;
-  const selectedActionAffectedObjectName = selectedActionDetail?.affect?.objectTypeId
-    ? selectedActionDetail.affect.objectTypeId === objectType.id
-      ? objectType.name
-      : relationGroups.find((item) => item.id === selectedActionDetail.affect?.objectTypeId)
-          ?.name || t("knowledgeNetwork.actionTypeEmptyValue")
-    : t("knowledgeNetwork.actionTypeEmptyValue");
+  const selectedActionAffectedObjectLabel =
+    selectedActionAffectedObjectName || t("knowledgeNetwork.actionTypeEmptyValue");
   const selectedActionConditionLabel = actionConditionLabel(
     selectedActionDetail?.condition,
     t,
@@ -1364,10 +1345,10 @@ export function ObjectTypeResourceGraph({
               aria-label={`${t("knowledgeNetwork.objectTypeGraphCurrentObject")} ${objectType.name}`}
               className={styles.ownerNode}
               data-graph-node="true"
-              onClick={() => activate(() => selectObject(objectType.id, objectType.name, true))}
+              onClick={() => activate(selectCurrentObject)}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" && event.key !== " ") return;
-                selectObject(objectType.id, objectType.name, true);
+                selectCurrentObject();
               }}
               onPointerDown={(event) => startNodeDrag(event, "owner")}
               role="button"
@@ -1471,11 +1452,17 @@ export function ObjectTypeResourceGraph({
             />
           </Tooltip>
         </div>
-        {totals.relations > relations.length ||
+        {(section === "all" && relations.length > OVERVIEW_LIMIT) ||
+        totals.relations > relations.length ||
         totals.metrics > metrics.length ||
         totals.actions > actions.length ? (
           <div className={styles.canvasNotice}>
-            {t("knowledgeNetwork.objectTypeGraphPartial", { count: PAGE_SIZE })}
+            {section === "all" && relations.length > OVERVIEW_LIMIT
+              ? t("knowledgeNetwork.objectTypeGraphOverviewPartial", {
+                  overviewCount: OVERVIEW_LIMIT,
+                  pageCount: PAGE_SIZE,
+                })
+              : t("knowledgeNetwork.objectTypeGraphPartial", { count: PAGE_SIZE })}
           </div>
         ) : null}
       </div>
@@ -1497,33 +1484,19 @@ export function ObjectTypeResourceGraph({
 
       <Drawer
         className={styles.resourceDrawer}
-        onClose={() => {
-          selectedObjectRequestRef.current += 1;
-          setSelected(undefined);
-          setSelectedObjectLoading(false);
-        }}
+        onClose={() => setSelected(undefined)}
         open={Boolean(selected && selected.kind !== "metric")}
         title={selectedDrawerTitle}
         width={400}
       >
         {selected && selected.kind !== "metric" ? (
-          <Spin
-            spinning={
-              (selected.kind === "object" && selectedObjectLoading) ||
-              (selected.kind === "action" && selectedActionLoading)
-            }
-          >
+          <Spin spinning={selected.kind === "action" && selectedActionLoading}>
             <div className={styles.drawerContent}>
               <strong className={styles.drawerResourceName}>{selectedTitle}</strong>
               <div className={styles.drawerActions}>
                 <Button autoInsertSpace={false} onClick={openSelected} type="primary">
                   {t("common.detail")}
                 </Button>
-                {selected.kind === "object" && !selected.current ? (
-                  <Button autoInsertSpace={false} onClick={() => onSelectObject(selected.id)}>
-                    {t("knowledgeNetwork.objectTypeGraphFocusObject")}
-                  </Button>
-                ) : null}
                 {selected.kind === "object" && canRequestObjectPermission ? (
                   <ResourcePermissionRequestAction
                     operations={selected.value?.operations}
@@ -1619,7 +1592,7 @@ export function ObjectTypeResourceGraph({
                       <DrawerEllipsis value={selectedActionParameterLabel} />
                     </Descriptions.Item>
                     <Descriptions.Item label={t("knowledgeNetwork.actionTypeAffectedObject")}>
-                      <DrawerEllipsis value={selectedActionAffectedObjectName} />
+                      <DrawerEllipsis value={selectedActionAffectedObjectLabel} />
                     </Descriptions.Item>
                     <Descriptions.Item label={t("knowledgeNetwork.actionTypeAffectDescription")}>
                       <DrawerEllipsis value={selectedActionAffectDescription} />

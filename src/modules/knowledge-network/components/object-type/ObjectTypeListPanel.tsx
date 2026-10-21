@@ -272,10 +272,20 @@ export function ObjectTypeListPanel({
     setSelectedGraphObjectLoading(true);
     void getKnowledgeNetworkObjectTypeDetail(networkId, selectedGraphObjectTypeId)
       .then((result) => {
-        if (!cancelled) setSelectedGraphObjectType(result);
+        if (cancelled) return;
+        if (result) {
+          setSelectedGraphObjectType(result);
+          return;
+        }
+        const first = items[0];
+        setSelectedGraphObjectType(first ?? null);
+        setSelectedGraphObjectTypeId(first?.id ?? "");
       })
       .catch(() => {
-        if (!cancelled) setSelectedGraphObjectType(null);
+        if (cancelled) return;
+        const first = items[0];
+        setSelectedGraphObjectType(first ?? null);
+        setSelectedGraphObjectTypeId(first?.id ?? "");
       })
       .finally(() => {
         if (!cancelled) setSelectedGraphObjectLoading(false);
