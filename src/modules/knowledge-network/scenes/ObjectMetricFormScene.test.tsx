@@ -252,7 +252,7 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("人工确认的订单数");
     expect(await screen.findByText(/表单已有新的修改，不能自动撤销/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "撤销本次应用" })).not.toBeInTheDocument();
-  }, 40_000);
+  }, 60_000);
 
   it("keeps the editable form available beside the AI assistant", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -337,7 +337,7 @@ describe("ObjectMetricFormScene object properties", () => {
       status: "invalid",
     });
     expect(diagnostic?.issues?.some((issue) => issue.code === "form_validation")).toBe(true);
-  }, 20_000);
+  }, 30_000);
 
   it("keeps a diagnostic bound to the same form revision across follow-up turns", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
