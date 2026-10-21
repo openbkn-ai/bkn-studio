@@ -39,4 +39,27 @@ describe("cypherReference", () => {
       expect(query).toMatch(/\bRETURN\b/);
     }
   });
+
+  it("calls in its examples only the functions it lists as supported", () => {
+    // The "Not supported" section names these as the only function calls; an example
+    // calling anything else would contradict it. A call is a name directly before "(",
+    // which keeps out clause keywords such as MATCH (a).
+    const supported = new Set([
+      "count",
+      "sum",
+      "avg",
+      "min",
+      "max",
+      "collect",
+      "size",
+      "coalesce",
+      "date",
+    ]);
+    const called = cypherReference("en-US")
+      .flatMap((section) => section.examples ?? [])
+      .flatMap((example) =>
+        [...example.query.matchAll(/\b([A-Za-z_]+)\(/g)].map((match) => match[1].toLowerCase()),
+      );
+    expect(called.filter((name) => !supported.has(name))).toEqual([]);
+  });
 });
