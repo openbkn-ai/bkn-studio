@@ -87,7 +87,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
     title: "不支持",
     rules: [
       "UNION、UNWIND、变长路径 [:R*1..3]、XOR、乘方 ^、关系属性 r.x。",
-      "date()、coalesce()、size()（只用于 WITH 收集的列表）和聚合以外的函数调用。",
+      "date() / datetime() / localdatetime()、coalesce()、size()（只用于 WITH 收集的列表）和聚合以外的函数调用。",
       "第二个 WITH 之后再 MATCH；做过聚合的 WITH 之后再 collect（比较两个列表时第二个 WITH 的 collect 除外）。",
       "对节点或关系用 DISTINCT（RETURN DISTINCT n、collect(DISTINCT n)）、按节点或关系排序；collect 与 count、sum 等聚合同时返回。",
     ],

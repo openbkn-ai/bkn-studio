@@ -91,7 +91,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     title: "Not supported",
     rules: [
       "UNION, UNWIND, variable-length paths [:R*1..3], XOR, exponentiation ^, relationship properties r.x.",
-      "Function calls other than date(), coalesce(), size() (on a list a WITH collected) and the aggregates.",
+      "Function calls other than date() / datetime() / localdatetime(), coalesce(), size() (on a list a WITH collected) and the aggregates.",
       "MATCH after a second WITH; collect after a WITH that aggregates (except the second WITH's collect when comparing two lists).",
       "DISTINCT on nodes or relationships (RETURN DISTINCT n, collect(DISTINCT n)) and ordering by them; collect beside count, sum and other aggregates.",
     ],

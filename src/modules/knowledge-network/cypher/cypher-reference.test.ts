@@ -54,6 +54,8 @@ describe("cypherReference", () => {
       "size",
       "coalesce",
       "date",
+      "datetime",
+      "localdatetime",
     ]);
     const called = cypherReference("en-US")
       .flatMap((section) => section.examples ?? [])
