@@ -86,6 +86,18 @@ describe("English count pluralization", () => {
       other: "Completed logical-property trials for 2 objects.",
       zero: "Completed logical-property trials for 0 objects.",
     },
+    {
+      key: "systemAdmin.objectGrants.grantReady",
+      one: "Add 1 operation permission for the selected user",
+      other: "Add 2 operation permissions for the selected user",
+      zero: "Add 0 operation permissions for the selected user",
+    },
+    {
+      key: "systemAdmin.objectGrants.grantRoleReady",
+      one: "Add 1 operation permission for the selected role",
+      other: "Add 2 operation permissions for the selected role",
+      zero: "Add 0 operation permissions for the selected role",
+    },
   ])("formats 0/1/2 for $key", async ({ key, one, other, zero }) => {
     await i18n.changeLanguage("en-US");
 

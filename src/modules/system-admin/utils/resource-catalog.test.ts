@@ -20,6 +20,7 @@ describe("resource-catalog", () => {
   it("resolves resource and operation labels from the active locale", async () => {
     await i18n.changeLanguage("en-US");
 
+    expect(resourceTypeLabel("catalog")).toBe("Data catalog");
     expect(resourceTypeLabel("knowledge_network")).toBe("Knowledge network");
     expect(resourceTypeLabel("connector_type")).toBe("Connector type");
     expect(operationLabel("knowledge_network", "query_data")).toBe("Query");

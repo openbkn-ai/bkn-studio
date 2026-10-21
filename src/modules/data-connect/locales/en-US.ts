@@ -141,7 +141,7 @@ export const dataConnectEnUS = {
     discoverManage: "Discover",
     discoverTitle: "Discovery Management",
     discoverDescription:
-      "Manage scheduled discovery plans and review recent discover tasks for data connections.",
+      "Manage scheduled discovery plans and review recent discovery tasks for data connections.",
     discoverToolbarHint:
       "Discovery schedules correspond to discover-schedules in the Vega backend, and recent discovery records correspond to discover-tasks.",
     discoverCurrentConnection: "Current connection",
@@ -151,7 +151,7 @@ export const dataConnectEnUS = {
     discoverScheduleDisableConfirmDescription:
       'Disable schedule "{{name}}"? Automatic discovery will stop until it is enabled again.',
     backToConnections: "Back to Data Connections",
-    discoverCreate: "New Discover Plan",
+    discoverCreate: "New Discovery Plan",
     discoverRunNow: "Discover Now",
     discoverRunSchedule: "Run Now",
     discoverViewTasks: "View Tasks",
@@ -169,8 +169,8 @@ export const dataConnectEnUS = {
     discoverRunScheduleConfirmTitle: "Run now",
     discoverRunScheduleConfirmDescription:
       'Run schedule "{{name}}" now? A task will be created with this schedule strategy.',
-    discoverCreateTitle: "Create Discover Plan",
-    discoverEditTitle: "Edit Discover Plan",
+    discoverCreateTitle: "Create Discovery Plan",
+    discoverEditTitle: "Edit Discovery Plan",
     discoverEditHint:
       "Catalog and enabled status are managed separately. Use the table switch to enable or disable a schedule.",
     discoverSearchPlaceholder: "Search schedule name",
@@ -201,20 +201,20 @@ export const dataConnectEnUS = {
     discoverMessage: "Message",
     discoverFinishTime: "Finish Time",
     discoverLastProgressTime: "Last Progress Update",
-    discoverScheduleTableTitle: "Discover Plans",
+    discoverScheduleTableTitle: "Discovery Plans",
     discoverTaskTableTitle: "Recent Tasks",
     discoverSelectedSchedule: 'Current schedule filter: "{{name}}"',
     discoverClearSelection: "Clear Filter",
-    discoverScheduleEmpty: "No discover plans",
+    discoverScheduleEmpty: "No discovery plans",
     discoverScheduleEmptyDescription:
-      "Create the first discover plan for a data connection and then review task history here.",
+      "Create the first discovery plan for a data connection and then review task history here.",
     discoverTaskEmpty: "No discovery tasks",
     discoverTaskEmptyDescription: "No execution records match the current filters yet.",
     discoverTaskEmptyByScheduleDescription:
       "No tasks are linked to this schedule. Manual discovery and run-now actions are not attached to a schedule. Clear the filter to see all tasks.",
-    discoverDeleteConfirmTitle: "Delete discover plan",
+    discoverDeleteConfirmTitle: "Delete discovery plan",
     discoverDeleteConfirmDescription:
-      'Are you sure you want to delete the discover plan "{{name}}"?',
+      'Are you sure you want to delete the discovery plan "{{name}}"?',
     discoverTaskDeleteConfirmTitle: "Delete discovery task",
     discoverTaskDeleteConfirmDescription:
       'Are you sure you want to delete the discovery task "{{id}}"?',
@@ -233,7 +233,7 @@ export const dataConnectEnUS = {
     discoverResult: "Discovery Result",
     discoverResultMetric: "Metric",
     discoverResultCount: "Count",
-    discoverResultEmpty: "No discover result available",
+    discoverResultEmpty: "No discovery result available",
     discoverResultNew: "New Resources",
     discoverResultUpdated: "Updated Resources",
     discoverResultStale: "Stale Resources",
@@ -266,7 +266,7 @@ export const dataConnectEnUS = {
       customerSyncSchedule: "Daily customer master data sync",
       financeCleanupSchedule: "Finance warehouse cleanup task",
       knowledgeIndexSchedule: "Knowledge index incremental discovery",
-      manualTaskCreated: "Manual discover task created and waiting to run.",
+      manualTaskCreated: "Manual discovery task created and waiting to run.",
       pullingIndexChanges: "Pulling incremental index changes.",
       syncCancelled: "Sync cancelled.",
       syncCompleted: "Sync completed. Processed {{count}} tables.",

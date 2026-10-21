@@ -73,7 +73,7 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   "admin-user": "System user management",
   agent: "Agent",
   agent_tpl: "Agent template",
-  catalog: "Data directory",
+  catalog: "Data catalog",
   connector_type: "Connector type",
   concept_group: "Concept group",
   data_flow: "Data flow",
