@@ -111,6 +111,11 @@ export function freezeExtensions() {
   frozen = true;
 }
 
+/** Whether an installed extension implements this capability, i.e. this build has its pages. */
+export function isExtensionInstalled(capability: string): boolean {
+  return installed.some((extension) => extension.capability === capability);
+}
+
 export function extensionRoutes(): RouteObject[] {
   return installed.flatMap((extension) => gated(extension, extension.routes));
 }

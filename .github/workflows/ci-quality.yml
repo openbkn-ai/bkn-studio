@@ -23,12 +23,15 @@ permissions:
   contents: read
 
 jobs:
-  quality:
-    name: ci-quality
+  # Picks the unit test scope before anything else, so the test shards and the
+  # static checks can start side by side.
+  scope:
+    name: ci-quality scope
     runs-on: ubuntu-latest
-    # Lockfile changes require the full 400+ file unit suite on PRs; the
-    # previous 20-minute limit canceled a healthy run before typecheck/build.
-    timeout-minutes: 40
+    timeout-minutes: 5
+    outputs:
+      scope: ${{ steps.unit-tests.outputs.scope || 'full' }}
+      test_paths: ${{ steps.unit-tests.outputs.test_paths }}
     steps:
       - uses: actions/checkout@v4
         # The module selector needs the PR base commit to be available.
@@ -37,6 +40,35 @@ jobs:
         # full suite.
         with:
           fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Select unit test scope
+        id: unit-tests
+        # Release PRs use the full suite just like direct release pushes.
+        if: github.event_name == 'pull_request' && !startsWith(github.event.pull_request.base.ref, 'release/')
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          if ! git cat-file -e "${BASE_SHA}^{commit}"; then
+            echo "PR base commit is unavailable; using the full unit test suite."
+            echo "scope=full" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          node scripts/select-unit-tests.mjs "$BASE_SHA" | tee -a "$GITHUB_OUTPUT"
+
+  checks:
+    name: ci-quality checks
+    needs: scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
         with:
@@ -71,55 +103,8 @@ jobs:
       - name: Theme surface checks
         run: pnpm run theme:scan-surfaces
 
-      - name: Select unit test scope
-        id: unit-tests
-        # Release PRs use the full suite just like direct release pushes.
-        if: github.event_name == 'pull_request' && !startsWith(github.event.pull_request.base.ref, 'release/')
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-
-          if ! git cat-file -e "${BASE_SHA}^{commit}"; then
-            echo "PR base commit is unavailable; using the full unit test suite."
-            echo "scope=full" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          node scripts/select-unit-tests.mjs "$BASE_SHA" | tee -a "$GITHUB_OUTPUT"
-
-      - name: Unit tests
-        env:
-          TEST_SCOPE: ${{ steps.unit-tests.outputs.scope || 'full' }}
-          TEST_PATHS: ${{ steps.unit-tests.outputs.test_paths }}
-        run: |
-          set -euo pipefail
-          echo "Unit test scope: $TEST_SCOPE"
-
-          case "$TEST_SCOPE" in
-            modules)
-              read -r -a test_paths <<< "$TEST_PATHS"
-              if [ "${#test_paths[@]}" -eq 0 ]; then
-                echo "::error::Module test scope has no test paths."
-                exit 1
-              fi
-              printf 'Selected test paths: %s\n' "${test_paths[*]}"
-              pnpm exec vitest --run "${test_paths[@]}"
-              ;;
-            full)
-              pnpm exec vitest --run
-              ;;
-            none)
-              echo "No unit tests needed for documentation-only changes."
-              ;;
-            *)
-              echo "::error::Unknown unit test scope: $TEST_SCOPE"
-              exit 1
-              ;;
-          esac
-
       - name: Boundary contract tests
-        if: steps.unit-tests.outputs.scope == 'modules'
+        if: needs.scope.outputs.scope == 'modules'
         run: |
           # These tests inspect source files with node:fs, so Vitest's import
           # graph cannot select them from changes to the files they enforce.
@@ -146,3 +131,85 @@ jobs:
 
       - name: Production dependency audit
         run: pnpm audit --prod
+
+  # The selected tests split across parallel shards; together they run exactly
+  # the files one job would have run.
+  unit:
+    name: ci-quality unit (${{ matrix.shard }}/4)
+    needs: scope
+    if: needs.scope.outputs.scope != 'none'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        env:
+          TEST_SCOPE: ${{ needs.scope.outputs.scope }}
+          TEST_PATHS: ${{ needs.scope.outputs.test_paths }}
+          SHARD: ${{ matrix.shard }}/4
+        run: |
+          set -euo pipefail
+          echo "Unit test scope: $TEST_SCOPE, shard $SHARD"
+
+          # A small selection can leave a shard without files; that shard passes.
+          case "$TEST_SCOPE" in
+            modules)
+              read -r -a test_paths <<< "$TEST_PATHS"
+              if [ "${#test_paths[@]}" -eq 0 ]; then
+                echo "::error::Module test scope has no test paths."
+                exit 1
+              fi
+              printf 'Selected test paths: %s\n' "${test_paths[*]}"
+              pnpm exec vitest --run --shard="$SHARD" --passWithNoTests "${test_paths[@]}"
+              ;;
+            full)
+              pnpm exec vitest --run --shard="$SHARD"
+              ;;
+            *)
+              echo "::error::Unknown unit test scope: $TEST_SCOPE"
+              exit 1
+              ;;
+          esac
+
+  # The required status check: passes only when the scope, the checks and every
+  # unit shard passed (shards are skipped only for documentation-only changes).
+  quality:
+    name: ci-quality
+    needs: [scope, checks, unit]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Gate on every ci-quality job
+        env:
+          SCOPE: ${{ needs.scope.result }}
+          CHECKS: ${{ needs.checks.result }}
+          UNIT: ${{ needs.unit.result }}
+          TEST_SCOPE: ${{ needs.scope.outputs.scope }}
+        run: |
+          set -euo pipefail
+          echo "scope=$SCOPE checks=$CHECKS unit=$UNIT (test scope: $TEST_SCOPE)"
+          [ "$SCOPE" = success ] || exit 1
+          [ "$CHECKS" = success ] || exit 1
+          if [ "$TEST_SCOPE" = none ]; then
+            [ "$UNIT" = skipped ] || exit 1
+          else
+            [ "$UNIT" = success ] || exit 1
+          fi

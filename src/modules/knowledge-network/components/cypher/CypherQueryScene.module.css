@@ -1,0 +1,739 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/*
+ * The page fills the workspace and scrolls in two places only: the schema panel and the result
+ * stream. The editor stays in view above the stream.
+ */
+.page {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+  padding: 16px 24px;
+  overflow: hidden;
+}
+
+.pageRail {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ---------------- schema panel ---------------- */
+
+.schemaPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+}
+
+.schemaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.schemaTitle {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.schemaScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 6px 12px;
+}
+
+.schemaGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.schemaGroup:hover {
+  background: var(--color-hover);
+}
+
+.schemaCount {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.schemaEmpty {
+  padding: 2px 28px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.schemaRow {
+  display: flex;
+  align-items: center;
+}
+
+.schemaCaret {
+  flex: none;
+  width: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.schemaItem,
+.schemaProperty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.schemaRelation {
+  width: 100%;
+  padding-left: 24px;
+}
+
+.schemaItem span,
+.schemaProperty span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schemaItem:hover,
+.schemaProperty:hover {
+  background: var(--color-hover);
+  color: var(--color-text-primary);
+}
+
+.schemaProperties {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 4px 30px;
+}
+
+.schemaProperty {
+  width: 100%;
+  font-size: 12px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+
+/* ---------------- editor ---------------- */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.editorCard {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+}
+
+.editorCard [data-testid="cypher-editor"] {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.editorCard :global(.monaco-editor),
+.editorCard :global(.monaco-editor .overflow-guard) {
+  border-radius: 4px;
+}
+
+.editorToolbar,
+.editorActions,
+.editorHints {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editorToolbar {
+  justify-content: space-between;
+}
+
+.editorActions {
+  justify-content: flex-end;
+}
+
+.followUp {
+  display: flex;
+}
+
+.agentHint {
+  margin-right: auto;
+  color: var(--color-warning-text);
+  font-size: 12px;
+}
+
+/* ---------------- stream ---------------- */
+
+.streamHeader {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+}
+
+.stream {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
+  overscroll-behavior: contain;
+}
+
+.frame {
+  flex: none;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  overflow: hidden;
+}
+
+.frameHighlighted {
+  animation: frameFlash 1.6s ease-out;
+}
+
+@keyframes frameFlash {
+  0% {
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px var(--color-primary-bg);
+  }
+  100% {
+    border-color: var(--color-border);
+    box-shadow: none;
+  }
+}
+
+.frameFullscreen {
+  position: fixed;
+  inset: 16px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 48px rgb(0 0 0 / 35%);
+}
+
+.frameFullscreen .frameBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.frameFullscreen .graphBody {
+  height: calc(100vh - 220px);
+}
+
+.frameHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-fill-quaternary);
+}
+
+.iconButton {
+  flex: none;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+.frameTitle {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.frameQuestion {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-primary);
+}
+
+.frameQuery {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.frameQuery code {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.frameQuery:hover code {
+  color: var(--color-text-link);
+}
+
+.frameActions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.frameBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.frameBusy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+}
+
+.viewSwitch {
+  align-self: flex-start;
+}
+
+.statusBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.errorLines {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.answerCollapse :global(.ant-collapse-header) {
+  padding-inline: 0 !important;
+}
+
+.explanation {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--color-primary-border);
+  border-radius: 4px;
+  background: var(--color-fill-quaternary);
+}
+
+.explanationTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.answer {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.answer pre {
+  overflow-x: auto;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
+}
+
+/* ---------------- table ---------------- */
+
+.tableView {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cellValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.graphChip,
+.jsonChip {
+  max-width: 360px;
+  overflow: hidden;
+  padding: 0 6px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 4px;
+  background: var(--color-primary-bg);
+  color: var(--color-text-link);
+  font-size: 12px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.jsonChip {
+  border-color: var(--color-border);
+  background: var(--color-fill-quaternary);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+
+.cellDetail {
+  max-width: 420px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.cellDetailTitle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}
+
+.propertyList {
+  margin: 0;
+  font-size: 12px;
+}
+
+.propertyList > div {
+  display: grid;
+  grid-template-columns: minmax(80px, max-content) minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.propertyList dt {
+  color: var(--color-text-tertiary);
+}
+
+.propertyList dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  word-break: break-all;
+}
+
+.jsonDetail,
+.rawBlock {
+  max-height: 360px;
+  margin: 0;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
+  font-size: 12px;
+}
+
+.rawView {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ---------------- graph ---------------- */
+
+.graphView {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.graphBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  /* One row as tall as the body, so a long details panel scrolls instead of growing. */
+  grid-template-rows: minmax(0, 1fr);
+  gap: 8px;
+  height: 420px;
+}
+
+.graphBodyWide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.inspectorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.overviewRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.overviewRow:hover {
+  background: var(--color-hover);
+}
+
+.overviewRow > span:last-child {
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.overviewName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.overviewDot,
+.overviewLine {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-text-faint);
+}
+
+.overviewLine {
+  height: 2px;
+  border-radius: 1px;
+}
+
+.overviewEdit {
+  opacity: 0;
+  color: var(--color-text-tertiary);
+}
+
+.overviewRow:hover .overviewEdit {
+  opacity: 1;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 260px;
+  padding-top: 4px;
+}
+
+.settingItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settingLabel {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.settingHint {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* Popover controls in the same 12px as their labels. */
+.settings :global(.ant-radio-button-wrapper),
+.settings :global(.ant-select),
+.settings :global(.ant-input-number),
+.settings :global(.ant-btn),
+.settings :global(.ant-input-number-input),
+.settingsPopup :global(.ant-select-item) {
+  font-size: 12px;
+}
+
+.settingsFooter {
+  display: flex;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.swatchActive {
+  border-color: var(--color-text-primary);
+}
+
+.swatchReset {
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-link);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.graphCanvas {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+}
+
+.chartWrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.chartContainer {
+  width: 100%;
+  height: 100%;
+}
+
+.chartTools {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  background: var(--color-bg-raised);
+}
+
+.chartTools .muted {
+  padding: 0 6px;
+}
+
+.inspectorPane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px 8px 8px;
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+}
+
+.inspector {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.inspectorTitle {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  word-break: break-all;
+}
+
+.muted {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 12px 16px;
+  }
+
+  .schemaPanel {
+    max-height: 200px;
+  }
+
+  .graphBody {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    height: auto;
+  }
+
+  .graphCanvas {
+    height: 360px;
+  }
+}
+
+.referenceLink {
+  height: auto;
+  padding: 0;
+  font-size: 12px;
+}

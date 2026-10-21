@@ -16,6 +16,7 @@ import {
   fetchObjectTypes,
   fetchKnDetail,
   fetchKnDetailRest,
+  listMcpCatalog,
   listMcpTools,
   mcpOpsFrom,
   sendRequest,
@@ -740,6 +741,67 @@ describe("listMcpTools", () => {
         headers: { "Accept-Language": "en-US" },
       });
     });
+  });
+});
+
+describe("listMcpCatalog", () => {
+  it("returns the initialize instructions with the tool list, from JSON or SSE", async () => {
+    const env = { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" };
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          '{"jsonrpc":"2.0","id":1,"result":{"instructions":"Start with bkn_start_interaction."}}',
+          {
+            status: 200,
+            headers: { "Mcp-Session-Id": "session-json" },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","result":{"tools":[{"name":"search_schema"}]}}', {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          'event: message\ndata: {"jsonrpc":"2.0","id":1,"result":{"instructions":"Compact guide."}}\n\n',
+          { status: 200, headers: { "Mcp-Session-Id": "session-sse" } },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","result":{"tools":[]}}', { status: 200 }),
+      );
+
+    const json = await listMcpCatalog(env);
+    const sse = await listMcpCatalog({ ...env, mcpProfile: "compact" });
+
+    expect(json.instructions).toBe("Start with bkn_start_interaction.");
+    expect(json.tools.map((tool) => tool.name)).toEqual(["search_schema"]);
+    expect(sse).toEqual({ tools: [], instructions: "Compact guide." });
+  });
+
+  it("leaves instructions undefined when initialize carries none", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","id":1,"result":{"instructions":"  "}}', {
+          status: 200,
+          headers: { "Mcp-Session-Id": "session-blank" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","result":{"tools":[]}}', { status: 200 }),
+      );
+
+    const catalog = await listMcpCatalog({
+      base: "https://platform.example.com",
+      token: "token-1",
+      knId: "kn-demo",
+    });
+
+    expect(catalog.instructions).toBeUndefined();
   });
 });
 

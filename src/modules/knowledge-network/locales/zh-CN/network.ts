@@ -228,6 +228,8 @@ export const networkPart = {
   workspaceAbilityVerification: "能力验证",
   workspaceExperienceAgent: "智能问答",
   workspaceExperienceMcp: "MCP 调试",
+  workspaceExperienceCypher: "数据查询",
+  workspaceGraphExplorer: "图探索",
   workspaceConceptGroups: "概念分组",
   workspaceDescription: "工作区壳层已经迁入，后续会继续补齐旧 Vega 的完整业务页。",
   workspaceMetrics: "对象指标",

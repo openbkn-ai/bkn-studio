@@ -1132,6 +1132,13 @@ function parseMcpEnvelope(text: string): unknown {
   }
 }
 
+/** What one MCP handshake reports: the tool list and the server's instructions to the model. */
+export interface McpCatalog {
+  tools: McpToolDef[];
+  /** initialize result.instructions; undefined when the server sends none. */
+  instructions?: string;
+}
+
 /**
  * Dynamically discovers MCP tools with inputSchema through the full handshake.
  * Used for tool discovery, drift checks, and schema-driven forms.
@@ -1141,9 +1148,18 @@ export async function listMcpTools(
   auth?: McpAuth,
   signal?: AbortSignal,
 ): Promise<McpToolDef[]> {
+  return (await listMcpCatalog(env, auth, signal)).tools;
+}
+
+/** Runs the MCP handshake and returns tools/list together with the initialize instructions. */
+export async function listMcpCatalog(
+  env: ContextLoaderEnv,
+  auth?: McpAuth,
+  signal?: AbortSignal,
+): Promise<McpCatalog> {
   // One full handshake per attempt; 401 is surfaced to the outer refresh path.
   const UNAUTHORIZED = Symbol("unauthorized");
-  const attempt = async (token: string): Promise<McpToolDef[] | typeof UNAUTHORIZED> => {
+  const attempt = async (token: string): Promise<McpCatalog | typeof UNAUTHORIZED> => {
     const url = mcpBase(env);
     const baseHeaders: Record<string, string> = {
       "Content-Type": "application/json",
@@ -1169,9 +1185,11 @@ export async function listMcpTools(
     const sessionId =
       initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
     if (initResp.status === 401 && !sessionId) return UNAUTHORIZED;
+    const initText = await initResp.text();
     if (!initResp.ok && !sessionId) {
-      throw new Error((await initResp.text()) || `MCP initialize failed (${initResp.status})`);
+      throw new Error(initText || `MCP initialize failed (${initResp.status})`);
     }
+    const instructions = initializeInstructions(initText);
     const sessionHeaders = sessionId
       ? { ...baseHeaders, "Mcp-Session-Id": sessionId }
       : baseHeaders;
@@ -1202,7 +1220,7 @@ export async function listMcpTools(
     if (!Array.isArray(tools)) {
       throw new Error("tools/list did not return a tools array");
     }
-    return parseToolDefs(tools);
+    return { tools: parseToolDefs(tools), instructions };
   };
 
   let out = await attempt(auth?.getToken?.() ?? env.token);
@@ -1221,6 +1239,16 @@ export async function listMcpTools(
 /** Treats empty strings as absent so display labels do not render blank. */
 function optionalText(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}
+
+/** Reads result.instructions from an initialize response (JSON or SSE). */
+function initializeInstructions(text: string): string | undefined {
+  const parsed = parseMcpEnvelope(text);
+  const result =
+    parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).result : null;
+  return result && typeof result === "object"
+    ? optionalText((result as Record<string, unknown>).instructions)
+    : undefined;
 }
 
 /** Converts raw tools/list entries to McpToolDef[] with display metadata and schema fallbacks. */
