@@ -30,7 +30,8 @@ export const cypherQueryPart = {
       modeCypher: "Cypher",
       modeAsk: "自然语言",
       cypherPlaceholder: "MATCH (n) RETURN n LIMIT 25",
-      askPlaceholder: "用自然语言描述想查看的对象、关系或统计结果，例如：巴西队的进球有哪些",
+      askPlaceholder:
+        "说清楚要看哪些对象、经过哪些关系，越具体生成越快。例如：巴西队（国家队）的进球事件，以及进球的球员（球员）",
       run: "运行",
       generate: "生成并运行",
       shortcut: "⌘/Ctrl + Enter",

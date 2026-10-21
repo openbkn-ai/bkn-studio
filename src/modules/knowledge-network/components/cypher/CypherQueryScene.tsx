@@ -348,11 +348,13 @@ export function CypherQueryScene({
         (otId) => !(otId in displayKeysRef.current),
       );
       if (missing.length > 0) {
-        const fetched = await getObjectTypeDisplayKeys(networkId, missing).catch(() =>
-          Object.fromEntries(missing.map((otId) => [otId, ""])),
-        );
-        displayKeysRef.current = { ...displayKeysRef.current, ...fetched };
-        setDisplayKeys(displayKeysRef.current);
+        // A failed read (an expired session, say) is not remembered as "no display key":
+        // this run goes without, and the next one asks again.
+        const fetched = await getObjectTypeDisplayKeys(networkId, missing).catch(() => null);
+        if (fetched) {
+          displayKeysRef.current = { ...displayKeysRef.current, ...fetched };
+          setDisplayKeys(displayKeysRef.current);
+        }
       }
       const result: Record<string, string[]> = {};
       const captions = captionKeys(graphStyleRef.current);
@@ -1165,6 +1167,8 @@ export function CypherQueryScene({
                 onLoad={() => {
                   setMode("cypher");
                   setCypherText(frame.query);
+                  // An AI frame brings its question too, so switching modes finds both.
+                  if (frame.ai) setAskText(frame.ai.question);
                 }}
                 onRerun={() => void runInFrame(frame.id, frame.query)}
                 onStop={() => stopFrame(frame)}

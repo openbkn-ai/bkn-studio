@@ -32,7 +32,7 @@ export const cypherQueryPart = {
       modeAsk: "Natural language",
       cypherPlaceholder: "MATCH (n) RETURN n LIMIT 25",
       askPlaceholder:
-        "Describe the objects, relations or numbers you want to see, e.g. Which goals did Brazil score?",
+        "Name the objects and the relations between them; the more specific, the faster. E.g. goal events (goals) of Brazil (teams), with the scoring players (players)",
       run: "Run",
       generate: "Generate and run",
       shortcut: "⌘/Ctrl + Enter",

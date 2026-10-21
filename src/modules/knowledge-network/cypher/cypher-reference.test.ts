@@ -16,6 +16,9 @@ describe("cypherReference", () => {
     const shape = (texts: typeof cypherReferenceZhCN) =>
       texts.map((section) => [section.rules.length, section.notes?.length ?? 0]);
     expect(shape(cypherReferenceZhCN)).toEqual(shape(cypherReferenceEnUS));
+    // Each note belongs to the example in the same place.
+    const examples = cypherReference("zh-CN").map((section) => section.examples?.length ?? 0);
+    expect(cypherReferenceZhCN.map((section) => section.notes?.length ?? 0)).toEqual(examples);
   });
 
   it("speaks the reader's language", () => {

@@ -14,7 +14,6 @@ import {
   EditOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
-  PauseCircleOutlined,
   ReloadOutlined,
   RightOutlined,
   RobotOutlined,
@@ -69,6 +68,11 @@ function RawView({ frame }: { frame: CypherFrame }) {
       <pre className={styles.rawBlock}>{response}</pre>
     </div>
   );
+}
+
+/** A filled square, the usual sign for stopping something that runs. */
+function StopIcon() {
+  return <span aria-hidden className={`anticon ${styles.stopIcon}`} />;
 }
 
 export function CypherFrameCard({
@@ -200,7 +204,7 @@ export function CypherFrameCard({
         {busy
           ? action(
               t("knowledgeNetwork.cypherQuery.frames.stop"),
-              <PauseCircleOutlined />,
+              <StopIcon />,
               onStop,
               "cypher-frame-stop",
             )
@@ -267,9 +271,10 @@ export function CypherFrameCard({
           <span>{text}</span>
           <Button
             data-testid="cypher-frame-stop-inline"
-            icon={<PauseCircleOutlined />}
+            icon={<StopIcon />}
             onClick={onStop}
             size="small"
+            type="text"
           >
             {t("knowledgeNetwork.cypherQuery.frames.stop")}
           </Button>
@@ -412,7 +417,13 @@ export function CypherFrameCard({
                           })
                         : t("knowledgeNetwork.cypherQuery.frames.explaining")}
                     </span>
-                    <Button onClick={onStopExplain} size="small" type="link">
+                    <Button
+                      data-testid="cypher-frame-stop-explain"
+                      icon={<StopIcon />}
+                      onClick={onStopExplain}
+                      size="small"
+                      type="text"
+                    >
                       {t("knowledgeNetwork.cypherQuery.frames.stop")}
                     </Button>
                   </>
