@@ -43,16 +43,92 @@ const DARK_STATUS_TOKENS = {
   blue7: "#93c5fd",
 };
 
+const DEFAULT_PRIMARY = "#1e3a8a";
+const DEFAULT_DARK_PRIMARY = { base: "#3b82f6", hover: "#5b95f7", active: "#2f6fdc" };
+
+function hexToHsl(hex: string): [number, number, number] | null {
+  const match = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex.trim());
+  if (!match) {
+    return null;
+  }
+
+  const [r, g, b] = match.slice(1).map((channel) => Number.parseInt(channel, 16) / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const lightness = (max + min) / 2;
+  if (max === min) {
+    return [0, 0, lightness];
+  }
+
+  const delta = max - min;
+  const saturation = lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+  const hue =
+    max === r
+      ? (g - b) / delta + (g < b ? 6 : 0)
+      : max === g
+        ? (b - r) / delta + 2
+        : (r - g) / delta + 4;
+  return [hue * 60, saturation, lightness];
+}
+
+function hslToHex(hue: number, saturation: number, lightness: number): string {
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = lightness - chroma / 2;
+  const [r, g, b] =
+    hue < 60
+      ? [chroma, x, 0]
+      : hue < 120
+        ? [x, chroma, 0]
+        : hue < 180
+          ? [0, chroma, x]
+          : hue < 240
+            ? [0, x, chroma]
+            : hue < 300
+              ? [x, 0, chroma]
+              : [chroma, 0, x];
+  return `#${[r, g, b]
+    .map((channel) =>
+      Math.round((channel + m) * 255)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
+/**
+ * A brand primary tuned for white surfaces (often a deep navy) disappears on dark ones. Keep the
+ * configured hue but lift its lightness so host / OEM brand colors still apply in dark mode.
+ */
+export function darkPrimaryFor(primaryColor: string) {
+  if (primaryColor.trim().toLowerCase() === DEFAULT_PRIMARY) {
+    return DEFAULT_DARK_PRIMARY;
+  }
+
+  const hsl = hexToHsl(primaryColor);
+  if (!hsl) {
+    return DEFAULT_DARK_PRIMARY;
+  }
+
+  const [hue, saturation] = hsl;
+  return {
+    base: hslToHex(hue, saturation, 0.6),
+    hover: hslToHex(hue, saturation, 0.68),
+    active: hslToHex(hue, saturation, 0.52),
+  };
+}
+
 export function createThemeConfig(
   runtimeConfig: RuntimeConfig,
   resolvedTheme: ResolvedTheme,
 ): ThemeConfig {
   const isDark = resolvedTheme === "dark";
+  const darkPrimary = darkPrimaryFor(runtimeConfig.theme.primaryColor);
 
   return {
     algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
     token: {
-      colorPrimary: isDark ? "#3b82f6" : runtimeConfig.theme.primaryColor,
+      colorPrimary: isDark ? darkPrimary.base : runtimeConfig.theme.primaryColor,
       borderRadius: runtimeConfig.theme.borderRadius,
       colorBgLayout: isDark ? "#111318" : "#f6f8fb",
       colorBgContainer: isDark ? "#1a1d23" : "#ffffff",
@@ -81,9 +157,9 @@ export function createThemeConfig(
         primaryShadow: "none",
         dangerShadow: "none",
         primaryColor: "#ffffff",
-        colorPrimary: isDark ? "#3b82f6" : "#1e3a8a",
-        colorPrimaryHover: isDark ? "#5b95f7" : "#17306f",
-        colorPrimaryActive: isDark ? "#2f6fdc" : "#0f2a4a",
+        colorPrimary: isDark ? darkPrimary.base : "#1e3a8a",
+        colorPrimaryHover: isDark ? darkPrimary.hover : "#17306f",
+        colorPrimaryActive: isDark ? darkPrimary.active : "#0f2a4a",
       },
       Input: {
         activeBorderColor: "#2563eb",

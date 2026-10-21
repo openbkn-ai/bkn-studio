@@ -790,6 +790,8 @@
   .hero::before {
     background-position: right -218px top -62px;
     background-size: 520px auto;
+    /* Intentional: on narrow screens the artwork sits behind the heading, so dim it further. The
+       desktop dimming is baked into the image; this keeps the old ~0.6 → ~0.34 ratio. */
     opacity: 0.6;
   }
 
