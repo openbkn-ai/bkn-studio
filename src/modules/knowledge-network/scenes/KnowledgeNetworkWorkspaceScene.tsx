@@ -11,10 +11,8 @@ import {
   CloudServerOutlined,
   CodeOutlined,
   DatabaseOutlined,
-  DeploymentUnitOutlined,
   FileTextOutlined,
   ForkOutlined,
-  LeftOutlined,
   LineChartOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -71,7 +69,6 @@ function formatNavCount(count?: number) {
 
 export function KnowledgeNetworkWorkspaceScene({
   networkId,
-  onBack,
   section,
 }: KnowledgeNetworkWorkspaceSceneProps) {
   const { t } = useTranslation();
@@ -297,31 +294,6 @@ export function KnowledgeNetworkWorkspaceScene({
   };
   return (
     <section className={styles.workspace}>
-      <div className={styles.workspaceHeader}>
-        <button
-          aria-label={t("common.back")}
-          className={styles.workspaceBackButton}
-          onClick={() => {
-            if (onBack) {
-              onBack();
-              return;
-            }
-            void navigate("/knowledge-network");
-          }}
-          type="button"
-        >
-          <LeftOutlined />
-        </button>
-        <div className={styles.workspaceIdentity}>
-          <span className={styles.workspaceNameIcon} style={{ color: detail?.color ?? "#1677ff" }}>
-            <DeploymentUnitOutlined />
-          </span>
-          <h4 className={styles.workspaceNameTitle}>
-            {detail?.name ?? t("knowledgeNetwork.workspaceTitle")}
-          </h4>
-        </div>
-      </div>
-
       <div className={styles.workspaceLayout}>
         <aside
           className={`${styles.workspaceSide} ${sideCollapsed ? styles.workspaceSideCollapsed : ""}`}

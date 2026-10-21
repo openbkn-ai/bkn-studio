@@ -45,7 +45,7 @@ export const knowledgeNetworkModuleManifest = {
       exportName: "KnowledgeNetworkWorkspaceScene",
       description:
         "Render the knowledge-network workspace shell for overview, modeling, and resource sections.",
-      inputs: ["networkId?", "section", "onBack?"],
+      inputs: ["networkId?", "section"],
     },
     {
       id: "knowledge-network.metric-form",

@@ -14,27 +14,27 @@ import {
 } from "./object-metric-navigation";
 
 describe("object metric navigation", () => {
-  it("round-trips the selected object and list context through the URL", () => {
+  it("round-trips the all-metric list context through the URL", () => {
     const path = objectMetricListPath("network-1", {
+      listObjectTypeId: "order&type",
       metricPage: 3,
       metricQuery: "订单",
+      metricStatus: "published",
       metricType: "atomic",
-      objectPage: 2,
-      objectQuery: "销售",
-      objectTypeId: "order&type",
-      sidebarCollapsed: true,
       view: "list",
     });
     const url = new URL(path, "http://metric-navigation.local");
 
     expect(readObjectMetricListLocation(url.searchParams)).toEqual({
+      listObjectTypeId: "order&type",
       metricPage: 3,
       metricQuery: "订单",
+      metricStatus: "published",
       metricType: "atomic",
-      objectPage: 2,
-      objectQuery: "销售",
-      objectTypeId: "order&type",
-      sidebarCollapsed: true,
+      objectPage: 1,
+      objectQuery: "",
+      objectTypeId: "",
+      sidebarCollapsed: false,
       view: "list",
     });
   });

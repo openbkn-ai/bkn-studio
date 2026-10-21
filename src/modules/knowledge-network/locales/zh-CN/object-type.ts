@@ -141,6 +141,8 @@ export const objecttypePart = {
   objectTypeGraphRelations: "关系类",
   objectTypeGraphMetrics: "指标",
   objectTypeGraphActions: "行动类",
+  objectTypeGraphRelationCount: "{{count}} 个关系类",
+  objectTypeGraphActionCount: "{{count}} 个行动类",
   objectTypeGraphRelationNode: "关系类",
   objectTypeGraphMetricNode: "指标",
   objectTypeGraphActionNode: "行动类",

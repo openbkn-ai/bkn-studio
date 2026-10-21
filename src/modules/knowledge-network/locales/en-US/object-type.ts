@@ -151,6 +151,8 @@ export const objecttypePart = {
   objectTypeGraphRelations: "Relation types",
   objectTypeGraphMetrics: "Metrics",
   objectTypeGraphActions: "Action types",
+  objectTypeGraphRelationCount: "{{count}} relation types",
+  objectTypeGraphActionCount: "{{count}} action types",
   objectTypeGraphRelationNode: "Relation type",
   objectTypeGraphMetricNode: "Metric",
   objectTypeGraphActionNode: "Action type",

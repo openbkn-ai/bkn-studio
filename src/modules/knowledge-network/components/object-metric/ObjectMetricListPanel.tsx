@@ -8,9 +8,6 @@
 import {
   DeleteOutlined,
   EditOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   ThunderboltOutlined,
@@ -21,7 +18,6 @@ import {
   Empty,
   Input,
   Modal,
-  Pagination,
   Segmented,
   Select,
   Space,
@@ -35,9 +31,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectMetricGraphCanvas } from "@/modules/knowledge-network/components/object-metric/ObjectMetricGraphCanvas";
 import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
+import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/shared/ObjectTypeRemoteFilter";
+import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
@@ -67,13 +66,17 @@ import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-
 
 import styles from "./ObjectMetricListPanel.module.css";
 import metricTheme from "./ObjectMetricTheme.module.css";
+import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
+import listStyles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import { useTranslation } from "react-i18next";
 
 type Props = { canModify: boolean; networkId: string };
+type MetricStatus = ObjectMetricRecordV1["definition"]["lifecycle"]["status"];
+type CreateIntent = { type: ObjectMetricTypeV1 };
 
 const PAGE_SIZE_STORAGE_SCOPE = "object-metrics";
-const OBJECT_PAGE_SIZE = 20;
+const OBJECT_PAGE_SIZE = 10;
 const COUNT_CONCURRENCY = 4;
 
 const typeNames: Record<ObjectMetricTypeV1, string> = {
@@ -122,9 +125,6 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const [visibleObjectTypeIds, setVisibleObjectTypeIds] = useState<string[]>([]);
   const [objectTotal, setObjectTotal] = useState(0);
   const [objectPage, setObjectPage] = useState(initialLocation.objectPage);
-  const [objectSidebarCollapsed, setObjectSidebarCollapsed] = useState(
-    initialLocation.sidebarCollapsed,
-  );
   const [listMetrics, setListMetrics] = useState<ObjectMetricRecordV1[]>([]);
   const [trialMetric, setTrialMetric] = useState<ObjectMetricRecordV1>();
   const [trialObjectType, setTrialObjectType] = useState<ObjectTypeDetail | null>();
@@ -144,26 +144,38 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const [metricType, setMetricType] = useState<ObjectMetricTypeV1 | undefined>(
     initialLocation.metricType,
   );
+  const [metricStatus, setMetricStatus] = useState<MetricStatus | undefined>(
+    initialLocation.metricStatus,
+  );
+  const [listObjectTypeId, setListObjectTypeId] = useState(initialLocation.listObjectTypeId);
   const [viewMode, setViewMode] = useState<"graph" | "list">(initialLocation.view);
   const [page, setPage] = useState(initialLocation.metricPage);
   const [pageSize, setPageSize] = usePersistentPageSize(PAGE_SIZE_STORAGE_SCOPE, 10);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [listOwnerDetails, setListOwnerDetails] = useState<
+    Record<string, ObjectTypeDetail | null | undefined>
+  >({});
+  const [createIntent, setCreateIntent] = useState<CreateIntent>();
+  const [createObjectTypeId, setCreateObjectTypeId] = useState("all");
   const returnTo = objectMetricListPath(networkId, {
+    listObjectTypeId,
     metricPage: page,
     metricQuery: metricKeyword,
+    metricStatus,
     metricType,
     objectPage,
     objectQuery: objectKeyword,
     objectTypeId: selectedObjectTypeId,
-    sidebarCollapsed: objectSidebarCollapsed,
+    sidebarCollapsed: false,
     view: viewMode,
   });
   const search = searchParams.toString();
   const listRequestKey = JSON.stringify([
     networkId,
-    selectedObjectTypeId,
+    listObjectTypeId,
     debouncedMetricKeyword,
     metricType,
+    metricStatus,
     page,
     pageSize,
     refreshVersion,
@@ -180,6 +192,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const graphOwnerMetricCache = useRef(
     new Map<string, { entries: ObjectMetricRecordV1[]; total: number }>(),
   );
+  const listOwnerDetailCache = useRef(new Map<string, ObjectTypeDetail | null>());
   const trialRequestRef = useRef(0);
 
   useEffect(() => {
@@ -203,6 +216,10 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   }, [selectedObjectTypeId, selectedObjectTypeName]);
 
   useEffect(() => {
+    if (viewMode !== "graph") {
+      setLoading(false);
+      return;
+    }
     let active = true;
     setLoading(true);
     void listKnowledgeNetworkObjectTypePage(
@@ -252,10 +269,10 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     return () => {
       active = false;
     };
-  }, [debouncedObjectKeyword, networkId, objectPage, refreshVersion]);
+  }, [debouncedObjectKeyword, networkId, objectPage, refreshVersion, viewMode]);
 
   useEffect(() => {
-    if (!selectedObjectTypeId) {
+    if (viewMode !== "graph" || !selectedObjectTypeId) {
       setSelectedObjectDetail(undefined);
       return;
     }
@@ -273,18 +290,18 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     return () => {
       active = false;
     };
-  }, [networkId, selectedObjectTypeId, refreshVersion]);
+  }, [networkId, selectedObjectTypeId, refreshVersion, viewMode]);
 
   useEffect(() => {
-    if (objectSidebarCollapsed || !selectedObjectTypeId) return;
+    if (!selectedObjectTypeId) return;
     const selectedButton = [...(objectListRef.current?.querySelectorAll("button") ?? [])].find(
       (button) => button.dataset.objectTypeId === selectedObjectTypeId,
     );
     selectedButton?.scrollIntoView?.({ block: "nearest" });
-  }, [objectSidebarCollapsed, objectTypes, selectedObjectTypeId]);
+  }, [objectTypes, selectedObjectTypeId]);
 
   useEffect(() => {
-    if (objectSidebarCollapsed || objectTypes.length === 0) {
+    if (viewMode !== "graph" || objectTypes.length === 0) {
       setVisibleObjectTypeIds([]);
       return;
     }
@@ -314,7 +331,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       .querySelectorAll("button[data-object-type-id]")
       .forEach((button) => observer.observe(button));
     return () => observer.disconnect();
-  }, [objectSidebarCollapsed, objectTypes]);
+  }, [objectTypes, viewMode]);
 
   useEffect(() => {
     let active = true;
@@ -382,13 +399,6 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     if (viewMode !== "list") {
       return;
     }
-    if (!selectedObjectTypeId) {
-      setListMetrics([]);
-      setListTotal(0);
-      setListResultKey(listRequestKey);
-      setListLoading(false);
-      return;
-    }
 
     let cancelled = false;
     setListLoading(true);
@@ -397,7 +407,8 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       limit: pageSize,
       metricType,
       offset: (page - 1) * pageSize,
-      ownerObjectTypeId: selectedObjectTypeId,
+      ownerObjectTypeId: listObjectTypeId === "all" ? undefined : listObjectTypeId,
+      status: metricStatus,
     })
       .then((result) => {
         if (cancelled) {
@@ -433,28 +444,69 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   }, [
     debouncedMetricKeyword,
     listRequestKey,
+    listObjectTypeId,
     refreshVersion,
+    metricStatus,
     metricType,
     networkId,
     page,
     pageSize,
-    selectedObjectTypeId,
     viewMode,
   ]);
+
+  useEffect(() => {
+    if (viewMode !== "list" || !listCurrent) return;
+    const ownerIds = [...new Set(listMetrics.map((item) => item.definition.owner_object_type_id))];
+    const missingIds = ownerIds.filter((id) => !listOwnerDetailCache.current.has(id));
+    setListOwnerDetails(
+      Object.fromEntries(
+        ownerIds
+          .filter((id) => listOwnerDetailCache.current.has(id))
+          .map((id) => [id, listOwnerDetailCache.current.get(id)]),
+      ),
+    );
+    if (missingIds.length === 0) return;
+
+    let cancelled = false;
+    void Promise.all(
+      missingIds.map(async (id) => {
+        const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, id).catch(() => null);
+        return [id, detail ?? null] as const;
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      for (const [id, detail] of entries) listOwnerDetailCache.current.set(id, detail);
+      setListOwnerDetails((current) => ({ ...current, ...Object.fromEntries(entries) }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [listCurrent, listMetrics, networkId, viewMode]);
 
   const refresh = useCallback(() => {
     objectMetricCountCache.current.clear();
     graphOwnerMetricCache.current.clear();
+    listOwnerDetailCache.current.clear();
     setObjectMetricCounts({});
+    setListOwnerDetails({});
     setRefreshVersion((current) => current + 1);
   }, []);
 
-  const openCreate = (type: ObjectMetricTypeV1, withAi = false) => {
-    if (!selectedObjectTypeId) return;
+  const navigateToCreate = (objectTypeId: string, type: ObjectMetricTypeV1) => {
     void navigate(
-      `/knowledge-network/workspace/${networkId}/metrics/create?objectTypeId=${encodeURIComponent(selectedObjectTypeId)}&metricType=${type}${withAi ? "&ai=1" : ""}`,
+      `/knowledge-network/workspace/${networkId}/metrics/create?objectTypeId=${encodeURIComponent(objectTypeId)}&metricType=${type}`,
       { state: { knowledgeNetworkReturnTo: returnTo } },
     );
+  };
+
+  const openCreate = (type: ObjectMetricTypeV1) => {
+    const objectTypeId = viewMode === "graph" ? selectedObjectTypeId : listObjectTypeId;
+    if (objectTypeId && objectTypeId !== "all") {
+      navigateToCreate(objectTypeId, type);
+      return;
+    }
+    setCreateObjectTypeId("all");
+    setCreateIntent({ type });
   };
 
   const metricReturnTo = (record: ObjectMetricRecordV1, restoreGraphFocus: boolean) => {
@@ -485,14 +537,17 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     );
   };
 
+  const ownerObjectTypeFor = (record: ObjectMetricRecordV1) => {
+    const ownerId = record.definition.owner_object_type_id;
+    if (selectedObjectDetail?.id === ownerId) return selectedObjectDetail.detail;
+    return listOwnerDetails[ownerId];
+  };
+
   const openTrial = async (record: ObjectMetricRecordV1) => {
     const request = ++trialRequestRef.current;
     setTrialLoadingKey(`${record.definition.id}@${record.definition.version}`);
     try {
-      const cachedDetail =
-        selectedObjectDetail?.id === record.definition.owner_object_type_id
-          ? selectedObjectDetail.detail
-          : undefined;
+      const cachedDetail = ownerObjectTypeFor(record);
       const detail =
         cachedDetail ??
         (await getKnowledgeNetworkObjectTypeDetail(
@@ -516,7 +571,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
     selectedObjectDetail?.id === selectedObjectTypeId ? selectedObjectDetail.detail : undefined;
 
   const confirmDeleteDraft = (record: ObjectMetricRecordV1) => {
-    if (!objectMetricActions(record, canModify, ownerObjectType).canDeleteDraft) return;
+    if (!objectMetricActions(record, canModify, ownerObjectTypeFor(record)).canDeleteDraft) return;
     Modal.confirm({
       content: objectMetricText("m1baf039f0b73", { p0: record.definition.name }),
       okButtonProps: { danger: true },
@@ -530,7 +585,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   };
 
   const confirmDeprecate = (record: ObjectMetricRecordV1) => {
-    const actions = objectMetricActions(record, canModify, ownerObjectType);
+    const actions = objectMetricActions(record, canModify, ownerObjectTypeFor(record));
     if (!actions.canDeprecate || actions.deprecateReason) return;
     Modal.confirm({
       content: objectMetricText("mcb05d2c2df12"),
@@ -574,6 +629,32 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       ),
     },
     {
+      key: "ownerObjectType",
+      title: objectMetricText("m26c439016066"),
+      width: 180,
+      render: (_, record) => {
+        const ownerId = record.definition.owner_object_type_id;
+        const owner = ownerObjectTypeFor(record);
+        const label =
+          owner === undefined ? objectMetricText("bindingLoading") : owner?.name || ownerId;
+        return (
+          <Button
+            className={styles.ownerLink}
+            onClick={() => {
+              setSelectedObjectTypeId(ownerId);
+              setSelectedObjectTypeName(owner?.name ?? ownerId);
+              setViewMode("graph");
+              setPage(1);
+            }}
+            title={label}
+            type="link"
+          >
+            {label}
+          </Button>
+        );
+      },
+    },
+    {
       key: "scope",
       title: objectMetricText("mec7844e49915"),
       width: 112,
@@ -599,10 +680,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       render: (_, record) => {
         if (record.definition.calculation_scope !== "object_instance")
           return objectMetricText("bindingNotApplicable");
-        const detail =
-          selectedObjectDetail?.id === selectedObjectTypeId
-            ? selectedObjectDetail.detail
-            : undefined;
+        const detail = ownerObjectTypeFor(record);
         if (detail === undefined) return objectMetricText("bindingLoading");
         if (detail === null) return objectMetricText("bindingUnknown");
         const property = findMetricLogicProperty(detail, record.definition.id);
@@ -629,7 +707,7 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       width: 212,
       fixed: "right",
       render: (_, record) => {
-        const actions = objectMetricActions(record, canModify, ownerObjectType);
+        const actions = objectMetricActions(record, canModify, ownerObjectTypeFor(record));
         return (
           <Space size={4}>
             <Button onClick={() => openDetail(record)} size="small" type="link">
@@ -684,220 +762,219 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   ];
 
   return (
-    <section className={`${styles.page} ${metricTheme.scope}`}>
-      <div
-        className={`${styles.layout} ${objectSidebarCollapsed ? styles.layoutSidebarCollapsed : ""}`}
-      >
-        <aside
-          className={`${styles.sidebar} ${objectSidebarCollapsed ? styles.sidebarCollapsed : ""}`}
-        >
-          <div className={styles.sidebarHeader}>
-            {objectSidebarCollapsed ? null : (
-              <div className={styles.sidebarSearch}>
-                <Input
-                  allowClear
-                  onChange={(event) => {
-                    objectKeywordRef.current = event.target.value;
-                    setObjectKeyword(event.target.value);
-                    setObjectPage(1);
-                    setSelectedObjectTypeId("");
-                    setSelectedObjectTypeName("");
-                    setPage(1);
-                    if (objectListRef.current) {
-                      objectListRef.current.scrollTop = 0;
-                    }
-                  }}
-                  placeholder={objectMetricText("graphSearchObjectTypes")}
-                  prefix={<SearchOutlined />}
-                  value={objectKeyword}
-                />
-              </div>
-            )}
-            <Tooltip
-              title={objectMetricText(
-                objectSidebarCollapsed ? "graphExpandObjectSidebar" : "graphCollapseObjectSidebar",
-              )}
-            >
-              <Button
-                aria-expanded={!objectSidebarCollapsed}
-                aria-label={objectMetricText(
-                  objectSidebarCollapsed
-                    ? "graphExpandObjectSidebar"
-                    : "graphCollapseObjectSidebar",
-                )}
-                className={styles.sidebarToggle}
-                icon={objectSidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                onClick={() => setObjectSidebarCollapsed((current) => !current)}
-                type="text"
-              />
-            </Tooltip>
+    <section
+      className={`${listStyles.page} ${listStyles.objectTypePage} ${graphStyles.panelPage} ${metricTheme.scope} ${
+        viewMode === "graph" ? graphStyles.graphPage : ""
+      }`}
+    >
+      <div className={`${listStyles.toolbar} ${graphStyles.pageToolbar}`}>
+        <div className={graphStyles.viewModeRow}>
+          <div className={listStyles.toolbarLeft}>
+            <Segmented
+              onChange={(value) => {
+                setViewMode(value as "graph" | "list");
+                setPage(1);
+              }}
+              options={[
+                { label: objectMetricText("m3b51eaa93417"), value: "graph" },
+                { label: objectMetricText("maedd6814ff8c"), value: "list" },
+              ]}
+              value={viewMode}
+            />
           </div>
-          {objectSidebarCollapsed ? null : (
-            <>
-              <div className={styles.objectList} ref={objectListRef}>
-                {objectTypes.map((item) => (
-                  <Button
-                    className={`${styles.objectButton} ${selectedObjectTypeId === item.id ? styles.selected : ""}`}
-                    data-object-type-id={item.id}
-                    key={item.id}
-                    onClick={() => {
-                      setSelectedObjectTypeId(item.id);
-                      setSelectedObjectTypeName(item.name);
-                      setPage(1);
-                    }}
-                    title={item.name}
-                    type="text"
-                  >
-                    <span className={styles.objectName}>{item.name}</span>
-                    <span
-                      aria-label={
-                        typeof objectMetricCounts[item.id] === "number"
-                          ? objectMetricText("graphObjectMetricCount", {
-                              p0: item.name,
-                              p1: objectMetricCounts[item.id]!,
-                            })
-                          : undefined
-                      }
-                      className={styles.objectCount}
-                      title={
-                        typeof objectMetricCounts[item.id] === "number"
-                          ? objectMetricText("graphUnfilteredMetricCount", {
-                              p0: objectMetricCounts[item.id]!,
-                            })
-                          : undefined
-                      }
-                    >
-                      {objectMetricCounts[item.id] === undefined
-                        ? "…"
-                        : objectMetricCounts[item.id] === null
-                          ? "—"
-                          : objectMetricCounts[item.id]}
-                    </span>
-                  </Button>
-                ))}
-                {!objectTypes.length && !loading ? (
-                  <Empty
-                    description={objectMetricText("mc90d408577d0")}
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  />
-                ) : null}
-              </div>
-              <div
-                className={`${styles.objectPagination} ${objectTotal <= OBJECT_PAGE_SIZE ? styles.objectPaginationSingle : ""}`}
-              >
-                <span>{objectMetricText("graphObjectTotal", { p0: objectTotal })}</span>
-                {objectTotal > OBJECT_PAGE_SIZE ? (
-                  <Pagination
-                    current={objectPage}
-                    onChange={(nextPage) => {
-                      setObjectPage(nextPage);
-                      if (objectListRef.current) objectListRef.current.scrollTop = 0;
-                    }}
-                    pageSize={OBJECT_PAGE_SIZE}
-                    showSizeChanger={false}
-                    simple
-                    size="small"
-                    total={objectTotal}
-                  />
-                ) : null}
-              </div>
-            </>
-          )}
-        </aside>
-        <div className={`${styles.content} ${viewMode === "list" ? styles.listContent : ""}`}>
-          <div className={styles.toolbar}>
-            <div className={styles.toolbarLeft}>
-              <div className={styles.toolbarIdentity}>
-                <Tooltip title={selectedObjectTypeId || undefined}>
-                  <strong>{selectedObjectTypeName || objectMetricText("m6be07467be0f")}</strong>
-                </Tooltip>
-              </div>
-              <Segmented
-                className={styles.viewSwitch}
-                onChange={(value) => {
-                  setViewMode(value as "graph" | "list");
-                  setPage(1);
+        </div>
+        <div className={graphStyles.operationRow}>
+          <div className={listStyles.toolbarLeft}>
+            {canModify ? (
+              <Dropdown
+                menu={{
+                  items: (["atomic", "derived", "composite"] as ObjectMetricTypeV1[]).map(
+                    (type) => ({
+                      key: type,
+                      label: typeNames[type],
+                    }),
+                  ),
+                  onClick: ({ key }) => openCreate(key as ObjectMetricTypeV1),
                 }}
-                options={[
-                  { label: objectMetricText("m3b51eaa93417"), value: "graph" },
-                  { label: objectMetricText("maedd6814ff8c"), value: "list" },
-                ]}
-                value={viewMode}
+              >
+                <AppButton
+                  className={listStyles.toolbarButton}
+                  disabled={viewMode === "graph" && !selectedObjectTypeId}
+                  icon={<ThunderboltOutlined />}
+                  type="primary"
+                >
+                  {objectMetricText("aiCreateMetric")}
+                </AppButton>
+              </Dropdown>
+            ) : null}
+          </div>
+          <div className={listStyles.toolbarRight}>
+            {viewMode === "graph" ? (
+              <Input
+                allowClear
+                className={listStyles.searchInput}
+                onChange={(event) => {
+                  objectKeywordRef.current = event.target.value;
+                  setObjectKeyword(event.target.value);
+                  setObjectPage(1);
+                  setSelectedObjectTypeId("");
+                  setSelectedObjectTypeName("");
+                  setPage(1);
+                  if (objectListRef.current) objectListRef.current.scrollTop = 0;
+                }}
+                placeholder={objectMetricText("graphSearchObjectTypes")}
+                prefix={<SearchOutlined className={listStyles.searchIcon} />}
+                value={objectKeyword}
               />
-            </div>
-            <div className={styles.toolbarRight}>
-              <Tooltip title={objectMetricText("m09f60ac5c12e")}>
-                <Button
-                  aria-label={objectMetricText("m09f60ac5c12e")}
-                  icon={<ReloadOutlined />}
-                  loading={loading || listLoading}
-                  onClick={() => void refresh()}
-                />
-              </Tooltip>
-              {viewMode === "list" ? (
+            ) : (
+              <>
                 <Input
                   allowClear
+                  className={listStyles.searchInput}
                   onChange={(event) => {
                     setMetricKeyword(event.target.value);
                     setPage(1);
                   }}
-                  placeholder={objectMetricText("graphSearchListMetrics")}
-                  prefix={<SearchOutlined />}
+                  placeholder={objectMetricText("searchAllMetrics")}
+                  prefix={<SearchOutlined className={listStyles.searchIcon} />}
                   value={metricKeyword}
                 />
-              ) : null}
-              <Select
-                allowClear
-                onChange={(value) => {
-                  setMetricType(value);
-                  setPage(1);
-                }}
-                options={Object.entries(typeNames).map(([value, label]) => ({ label, value }))}
-                placeholder={objectMetricText("m267c4a7a86dd")}
-                value={metricType}
-                style={{ width: 130 }}
-              />
-              {canModify ? (
-                <>
-                  <Dropdown
-                    menu={{
-                      items: (["atomic", "derived", "composite"] as ObjectMetricTypeV1[]).map(
-                        (type) => ({
-                          key: type,
-                          label: objectMetricText("aiCreateMetricType", { p0: typeNames[type] }),
-                        }),
-                      ),
-                      onClick: ({ key }) => openCreate(key as ObjectMetricTypeV1, true),
-                    }}
-                  >
-                    <Button disabled={!selectedObjectTypeId} icon={<ThunderboltOutlined />}>
-                      {objectMetricText("aiCreateMetric")}
-                    </Button>
-                  </Dropdown>
-                  <Dropdown
-                    menu={{
-                      items: (["atomic", "derived", "composite"] as ObjectMetricTypeV1[]).map(
-                        (type) => ({
-                          key: type,
-                          label: objectMetricText("m422c8208705c", { p0: typeNames[type] }),
-                        }),
-                      ),
-                      onClick: ({ key }) => openCreate(key as ObjectMetricTypeV1),
-                    }}
-                  >
-                    <Button disabled={!selectedObjectTypeId} icon={<PlusOutlined />} type="primary">
-                      {objectMetricText("mc89eb03160da")}
-                    </Button>
-                  </Dropdown>
-                </>
-              ) : null}
-            </div>
+                <ObjectTypeRemoteFilter
+                  label={objectMetricText("m26c439016066")}
+                  networkId={networkId}
+                  onChange={(value) => {
+                    setListObjectTypeId(value);
+                    setPage(1);
+                  }}
+                  value={listObjectTypeId}
+                />
+              </>
+            )}
+            {viewMode === "list" ? (
+              <>
+                <Select
+                  allowClear
+                  className={listStyles.filterSelect}
+                  onChange={(value) => {
+                    setMetricType(value);
+                    setPage(1);
+                  }}
+                  options={Object.entries(typeNames).map(([value, label]) => ({ label, value }))}
+                  placeholder={objectMetricText("m267c4a7a86dd")}
+                  value={metricType}
+                />
+                <Select
+                  allowClear
+                  className={listStyles.filterSelect}
+                  onChange={(value) => {
+                    setMetricStatus(value);
+                    setPage(1);
+                  }}
+                  options={Object.entries(statusNames).map(([value, label]) => ({ label, value }))}
+                  placeholder={objectMetricText("allStatuses")}
+                  value={metricStatus}
+                />
+              </>
+            ) : null}
+            <button
+              aria-label={objectMetricText("m09f60ac5c12e")}
+              className={listStyles.iconButton}
+              onClick={() => void refresh()}
+              type="button"
+            >
+              <ReloadOutlined />
+            </button>
           </div>
-          {viewMode === "graph" ? (
+        </div>
+      </div>
+
+      {viewMode === "graph" ? (
+        <div className={graphStyles.graphLayout}>
+          <aside className={graphStyles.objectSidebar}>
+            <div className={graphStyles.objectSidebarHeader}>
+              <strong>{objectMetricText("graphObjectTypes")}</strong>
+              <span>{objectTotal}</span>
+            </div>
+            <div className={graphStyles.objectListArea}>
+              <Spin spinning={loading}>
+                <div className={graphStyles.objectList} ref={objectListRef}>
+                  {objectTypes.map((item) => (
+                    <button
+                      className={`${graphStyles.objectButton} ${
+                        selectedObjectTypeId === item.id ? graphStyles.objectButtonSelected : ""
+                      }`}
+                      data-object-type-id={item.id}
+                      key={item.id}
+                      onClick={() => {
+                        setSelectedObjectTypeId(item.id);
+                        setSelectedObjectTypeName(item.name);
+                        setPage(1);
+                      }}
+                      title={item.name}
+                      type="button"
+                    >
+                      <span
+                        className={styles.objectIconSquare}
+                        style={{ backgroundColor: item.color || "#1677ff" }}
+                      >
+                        {renderResourceIcon(item.icon)}
+                      </span>
+                      <span className={graphStyles.objectButtonName}>{item.name}</span>
+                      <span
+                        aria-label={
+                          typeof objectMetricCounts[item.id] === "number"
+                            ? objectMetricText("graphObjectMetricCount", {
+                                p0: item.name,
+                                p1: objectMetricCounts[item.id]!,
+                              })
+                            : undefined
+                        }
+                        className={graphStyles.objectResourceCount}
+                        title={
+                          typeof objectMetricCounts[item.id] === "number"
+                            ? objectMetricText("graphUnfilteredMetricCount", {
+                                p0: objectMetricCounts[item.id]!,
+                              })
+                            : undefined
+                        }
+                      >
+                        {objectMetricCounts[item.id] === undefined
+                          ? "…"
+                          : objectMetricCounts[item.id] === null
+                            ? "—"
+                            : objectMetricCounts[item.id]}
+                      </span>
+                    </button>
+                  ))}
+                  {!objectTypes.length && !loading ? (
+                    <Empty
+                      description={objectMetricText("mc90d408577d0")}
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ) : null}
+                </div>
+              </Spin>
+            </div>
+            {objectTotal > OBJECT_PAGE_SIZE ? (
+              <div className={graphStyles.objectPagination}>
+                <TablePaginationBar
+                  current={objectPage}
+                  onChange={(nextPage) => {
+                    setObjectPage(nextPage);
+                    if (objectListRef.current) objectListRef.current.scrollTop = 0;
+                  }}
+                  pageSize={OBJECT_PAGE_SIZE}
+                  showLessItems
+                  showSizeChanger={false}
+                  total={objectTotal}
+                />
+              </div>
+            ) : null}
+          </aside>
+          <div className={`${graphStyles.graphContent} ${styles.graphPanel}`}>
             <ObjectMetricGraphCanvas
               canModify={canModify}
               initialFocusedMetric={initialGraphMetric}
-              metricType={metricType}
               networkId={networkId}
               ownerMetricCache={graphOwnerMetricCache.current}
               onDeleteDraft={confirmDeleteDraft}
@@ -916,57 +993,76 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
               selectedObjectTypeId={selectedObjectTypeId}
               selectedObjectTypeName={selectedObjectTypeName}
             />
-          ) : (
-            <div className={styles.listView}>
-              <div className={styles.tableArea}>
-                <div className={styles.tableViewport} ref={tableViewportRef}>
-                  <Table
-                    columns={columns}
-                    dataSource={listCurrent ? listMetrics : []}
-                    locale={{
-                      emptyText: (
-                        <Empty
-                          className={styles.empty}
-                          description={
-                            selectedObjectTypeId
-                              ? objectMetricText("m522159fe536d")
-                              : objectMetricText("m6be07467be0f")
-                          }
-                        />
-                      ),
-                    }}
-                    pagination={false}
-                    rowKey={(record) => `${record.definition.id}-${record.definition.version}`}
-                    scroll={{ x: 1246 }}
-                    tableLayout="fixed"
-                  />
-                </div>
-                {listLoading || !listCurrent ? (
-                  <div className={styles.tableLoading} role="status">
-                    <Spin />
-                  </div>
-                ) : null}
+          </div>
+        </div>
+      ) : (
+        <div className={`${listStyles.tableCard} ${styles.content} ${styles.listContent}`}>
+          <div className={styles.listView}>
+            <div className={styles.tableArea}>
+              <div className={styles.tableViewport} ref={tableViewportRef}>
+                <Table
+                  columns={columns}
+                  dataSource={listCurrent ? listMetrics : []}
+                  locale={{
+                    emptyText: (
+                      <Empty
+                        className={styles.empty}
+                        description={objectMetricText("noMetricsInList")}
+                      />
+                    ),
+                  }}
+                  pagination={false}
+                  rowKey={(record) => `${record.definition.id}-${record.definition.version}`}
+                  scroll={{ x: 1426 }}
+                  tableLayout="fixed"
+                />
               </div>
-              {listCurrent && listTotal > 0 ? (
-                <div className={styles.paginationBar}>
-                  <TablePaginationBar
-                    current={page}
-                    onChange={(nextPage, nextPageSize) => {
-                      setPage(nextPageSize === pageSize ? nextPage : 1);
-                      setPageSize(nextPageSize);
-                      if (tableViewportRef.current) tableViewportRef.current.scrollTop = 0;
-                    }}
-                    pageSize={pageSize}
-                    showSizeChanger
-                    showTotal={(total) => t("common.total", { total })}
-                    total={listTotal}
-                  />
+              {listLoading || !listCurrent ? (
+                <div className={styles.tableLoading} role="status">
+                  <Spin />
                 </div>
               ) : null}
             </div>
-          )}
+            {listCurrent && listTotal > 0 ? (
+              <div className={styles.paginationBar}>
+                <TablePaginationBar
+                  current={page}
+                  onChange={(nextPage, nextPageSize) => {
+                    setPage(nextPageSize === pageSize ? nextPage : 1);
+                    setPageSize(nextPageSize);
+                    if (tableViewportRef.current) tableViewportRef.current.scrollTop = 0;
+                  }}
+                  pageSize={pageSize}
+                  showSizeChanger
+                  showTotal={(total) => t("common.total", { total })}
+                  total={listTotal}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
+      )}
+      <Modal
+        cancelText={t("common.cancel")}
+        okButtonProps={{ disabled: createObjectTypeId === "all" }}
+        okText={objectMetricText("continueCreateMetric")}
+        onCancel={() => setCreateIntent(undefined)}
+        onOk={() => {
+          if (!createIntent || createObjectTypeId === "all") return;
+          const intent = createIntent;
+          setCreateIntent(undefined);
+          navigateToCreate(createObjectTypeId, intent.type);
+        }}
+        open={Boolean(createIntent)}
+        title={objectMetricText("selectMetricOwner")}
+      >
+        <ObjectTypeRemoteFilter
+          label={objectMetricText("m26c439016066")}
+          networkId={networkId}
+          onChange={setCreateObjectTypeId}
+          value={createObjectTypeId}
+        />
+      </Modal>
       {trialMetric ? (
         <ObjectMetricTrialDrawer
           definition={trialMetric.definition}

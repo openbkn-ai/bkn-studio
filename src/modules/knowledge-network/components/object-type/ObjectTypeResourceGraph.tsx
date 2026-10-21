@@ -1147,7 +1147,22 @@ export function ObjectTypeResourceGraph({
             ]}
             value={section}
           />
-        ) : null}
+        ) : (
+          <span className={styles.toolbarSummary}>
+            {t(
+              resourceScope === "relations"
+                ? "knowledgeNetwork.objectTypeGraphRelationCount"
+                : "knowledgeNetwork.objectTypeGraphActionCount",
+              {
+                count: loading
+                  ? "…"
+                  : resourceScope === "relations"
+                    ? totals.relations
+                    : totals.actions,
+              },
+            )}
+          </span>
+        )}
       </div>
 
       {errors.length > 0 ? (

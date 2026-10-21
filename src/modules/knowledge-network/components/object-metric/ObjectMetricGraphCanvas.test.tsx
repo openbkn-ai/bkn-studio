@@ -132,6 +132,20 @@ function neighborCountRequestIds() {
 }
 
 describe("ObjectMetricGraphCanvas", () => {
+  it("renders the object title and overview actions in one toolbar", async () => {
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 2 });
+    mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+
+    const { container } = renderGraph();
+    await waitFor(() => expect(mocks.listRelations).toHaveBeenCalled());
+
+    const toolbar = container.querySelector('[class*="explorerToolbar"]');
+    expect(toolbar?.querySelector('[class*="graphPanelTitle"] strong')).toHaveTextContent(
+      "销售订单",
+    );
+    expect(toolbar?.textContent).toMatch(/0 个指标.*2 条关系|0 metrics.*2 relations/);
+  });
+
   it("reuses a previously loaded owner's metric scan when returning to that object", async () => {
     const ownerMetricCache = new Map();
     mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });

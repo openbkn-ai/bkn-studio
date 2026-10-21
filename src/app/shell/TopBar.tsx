@@ -22,7 +22,7 @@ import { Badge, Dropdown, Modal } from "antd";
 import type { MenuProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useMatches, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useMatches, useNavigate, useParams } from "react-router-dom";
 
 import { getConsoleNavTrail } from "@/app/shell/console-navigation";
 import { useResolvedTheme, useToggleTheme } from "@/app/theme/theme-context";
@@ -39,6 +39,7 @@ import {
 } from "@/framework/runtime/install-status-url";
 import type { SupportedLocale } from "@/framework/runtime/types";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { resolveKnowledgeNetworkListPath } from "@/modules/knowledge-network/lib/knowledge-network-list-navigation";
 import {
   getPermissionRequestTodoSummary,
   onPermissionRequestTodoSummaryChanged,
@@ -46,6 +47,7 @@ import {
 
 export function TopBar() {
   const { t } = useTranslation();
+  const location = useLocation();
   const matches = useMatches();
   const navigate = useNavigate();
   const { networkId } = useParams<{ networkId?: string }>();
@@ -127,10 +129,17 @@ export function TopBar() {
   }, [isKnowledgeNetworkRoute, networkId]);
 
   const rawTrail = getConsoleNavTrail(routeHandle?.console?.menuKey);
+  const listReturnPath =
+    isKnowledgeNetworkRoute && networkId
+      ? resolveKnowledgeNetworkListPath(location.state)
+      : undefined;
   const trail = [
     ...rawTrail.map((item) => ({
       label: t(item.labelKey),
-      path: item.path,
+      path:
+        item.key === "domain-knowledge-network-management" && listReturnPath
+          ? listReturnPath
+          : item.path,
       title: t(item.labelKey),
     })),
     ...(networkName

@@ -13,6 +13,7 @@ import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/obj
 const mocks = vi.hoisted(() => ({
   createNextDraft: vi.fn(),
   getObjectDetail: vi.fn(),
+  getObjectType: vi.fn(),
   listObjectTypes: vi.fn(),
   listObjectMetrics: vi.fn(),
   navigate: vi.fn(),
@@ -51,13 +52,20 @@ vi.mock("@/modules/knowledge-network/components/shared/usePersistentPageSize", (
 
 vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricGraphCanvas", () => ({
   ObjectMetricGraphCanvas: ({
+    metricType,
     onEditMetric,
     onOpenMetric,
+    selectedObjectTypeName,
   }: {
+    metricType?: string;
     onEditMetric: (record: ObjectMetricRecordV1) => void;
     onOpenMetric: (record: ObjectMetricRecordV1) => void;
+    selectedObjectTypeName: string;
   }) => (
-    <div>
+    <div data-metric-type={metricType ?? ""} data-testid="metric-graph">
+      <div className="graphPanelTitle">
+        <strong>{selectedObjectTypeName}</strong>
+      </div>
       metric graph
       <button onClick={() => onOpenMetric(metric(1))}>Open graph metric</button>
       <button onClick={() => onEditMetric(metric(1))}>Edit graph metric</button>
@@ -108,6 +116,7 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   trialObjectMetricDataV1: mocks.trialMetric,
 }));
 vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
+  getKnowledgeNetworkObjectType: mocks.getObjectType,
   getKnowledgeNetworkObjectTypeDetail: mocks.getObjectDetail,
   listKnowledgeNetworkObjectTypePage: mocks.listObjectTypes,
 }));
@@ -138,6 +147,8 @@ afterEach(() => {
   mocks.createNextDraft.mockReset();
   mocks.getObjectDetail.mockReset();
   mocks.getObjectDetail.mockResolvedValue(null);
+  mocks.getObjectType.mockReset();
+  mocks.getObjectType.mockResolvedValue(null);
   mocks.listObjectTypes.mockReset();
   mocks.listObjectMetrics.mockReset();
   mocks.navigate.mockReset();
@@ -151,6 +162,7 @@ afterEach(() => {
 });
 
 mocks.getObjectDetail.mockResolvedValue(null);
+mocks.getObjectType.mockResolvedValue(null);
 
 function metric(index: number): ObjectMetricRecordV1 {
   return {
@@ -190,8 +202,23 @@ function metric(index: number): ObjectMetricRecordV1 {
 }
 
 describe("ObjectMetricListPanel pagination", () => {
-  it("exposes AI creation on the metric list and opens the chosen type with the designer", async () => {
-    mocks.searchParams.current = "objectTypeId=order&view=list";
+  it("hides the metric-type filter in graph mode and does not apply a list filter", async () => {
+    mocks.searchParams.current = "metricType=atomic";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+
+    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+
+    expect(await screen.findByTitle("销售订单")).not.toBeNull();
+    expect(container.querySelector(".ant-select")).toBeNull();
+    expect(screen.getByTestId("metric-graph")).toHaveAttribute("data-metric-type", "");
+  });
+
+  it("shows one creation entry with metric types and opens the chosen type with the designer", async () => {
+    mocks.searchParams.current = "view=list&ownerObjectTypeId=order";
     mocks.listObjectTypes.mockResolvedValue({
       entries: [{ id: "order", name: "销售订单" }],
       totalCount: 1,
@@ -202,18 +229,42 @@ describe("ObjectMetricListPanel pagination", () => {
 
     const aiCreate = await screen.findByRole("button", { name: /AI 创建/ });
     expect(aiCreate).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "新建指标" })).not.toBeInTheDocument();
     fireEvent.mouseEnter(aiCreate);
-    fireEvent.click(await screen.findByRole("menuitem", { name: "AI 创建衍生指标" }));
+    expect((await screen.findAllByRole("menuitem")).map((item) => item.textContent)).toEqual([
+      "原子指标",
+      "衍生指标",
+      "复合指标",
+    ]);
+    fireEvent.click(screen.getByRole("menuitem", { name: "衍生指标" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith(
-      "/knowledge-network/workspace/network-1/metrics/create?objectTypeId=order&metricType=derived&ai=1",
+      "/knowledge-network/workspace/network-1/metrics/create?objectTypeId=order&metricType=derived",
       {
         state: {
           knowledgeNetworkReturnTo:
-            "/knowledge-network/workspace/network-1/metrics?objectTypeId=order&view=list",
+            "/knowledge-network/workspace/network-1/metrics?view=list&ownerObjectTypeId=order",
         },
       },
     );
+  });
+
+  it("asks for an owner object type before creating from the unfiltered list", async () => {
+    mocks.searchParams.current = "view=list";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+
+    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+
+    const aiCreate = await screen.findByRole("button", { name: /AI 创建/ });
+    fireEvent.mouseEnter(aiCreate);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "原子指标" }));
+
+    expect(await screen.findByText("选择指标所属对象类")).toBeInTheDocument();
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
   it("loads sidebar counts only for object rows entering the viewport", async () => {
@@ -284,15 +335,18 @@ describe("ObjectMetricListPanel pagination", () => {
     }
   });
 
-  it("does not load unfiltered metrics when no object type matches the sidebar search", async () => {
+  it("loads all metrics in list mode without requiring a graph object selection", async () => {
     mocks.searchParams.current = "view=list&objectQuery=missing";
     mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
 
-    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
 
-    await waitFor(() => expect(mocks.listObjectTypes).toHaveBeenCalled());
-    await waitFor(() => expect(container.querySelector("[class*=tableLoading]")).toBeNull());
-    expect(mocks.listObjectMetrics).not.toHaveBeenCalled();
+    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
+      "network-1",
+      expect.objectContaining({ ownerObjectTypeId: undefined }),
+    );
   });
 
   it("opens the graph-selected version and returns to the graph", async () => {
@@ -328,7 +382,7 @@ describe("ObjectMetricListPanel pagination", () => {
   });
 
   it("keeps the list loader in the visible viewport instead of the horizontally scrollable table", () => {
-    mocks.searchParams.current = "objectTypeId=order&view=list";
+    mocks.searchParams.current = "view=list&ownerObjectTypeId=order";
     mocks.listObjectTypes.mockResolvedValue({
       entries: [{ id: "order", name: "销售订单" }],
       totalCount: 1,
@@ -352,7 +406,7 @@ describe("ObjectMetricListPanel pagination", () => {
     ["draft", "draft", "trialMetric"],
     ["validated", "draft", "trialMetric"],
   ] as const)("opens the %s metric trial from the list", async (status, mode, service) => {
-    mocks.searchParams.current = "objectTypeId=order&view=list";
+    mocks.searchParams.current = "view=list&ownerObjectTypeId=order";
     const record = metric(1);
     record.definition.lifecycle.status = status;
     mocks.listObjectTypes.mockResolvedValue({
@@ -407,7 +461,7 @@ describe("ObjectMetricListPanel pagination", () => {
   });
 
   it("reserves enough width for business definitions while keeping compact status columns", async () => {
-    mocks.searchParams.current = "objectTypeId=order&view=list";
+    mocks.searchParams.current = "view=list&ownerObjectTypeId=order";
     mocks.listObjectTypes.mockResolvedValue({
       entries: [{ id: "order", name: "销售订单" }],
       totalCount: 1,
@@ -420,12 +474,12 @@ describe("ObjectMetricListPanel pagination", () => {
     const widths = [...container.querySelectorAll<HTMLTableColElement>("colgroup col")]
       .slice(0, 7)
       .map((column) => column.style.width);
-    expect(widths).toEqual(["280px", "100px", "112px", "90px", "152px", "300px", "212px"]);
+    expect(widths).toEqual(["280px", "100px", "180px", "112px", "90px", "152px", "300px"]);
     expect(screen.getByRole("columnheader", { name: "业务定义" })).toBeInTheDocument();
   });
 
   it("loads binding status once for the selected object class", async () => {
-    mocks.searchParams.current = "objectTypeId=order&view=list";
+    mocks.searchParams.current = "view=list&ownerObjectTypeId=order";
     const first = metric(1);
     first.definition.calculation_scope = "object_instance";
     const second = metric(2);
@@ -455,7 +509,7 @@ describe("ObjectMetricListPanel pagination", () => {
     expect(deprecateButtons[1]).toBeEnabled();
   });
   it("restores a selected object outside the first sidebar page from a direct detail return", async () => {
-    mocks.searchParams.current = "objectTypeId=remote&view=list";
+    mocks.searchParams.current = "objectTypeId=remote";
     mocks.getObjectDetail.mockResolvedValue({ id: "remote", name: "远端对象" });
     mocks.listObjectTypes.mockResolvedValue({
       entries: [{ id: "order", name: "销售订单" }],
@@ -466,19 +520,15 @@ describe("ObjectMetricListPanel pagination", () => {
     const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
 
     await waitFor(() => {
-      expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe(
+      expect(container.querySelector('[class*="graphPanelTitle"] strong')?.textContent).toBe(
         "远端对象",
       );
     });
-    expect(container.querySelector('[class*="toolbarIdentity"]')?.textContent).toBe("远端对象");
-    expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
-      "network-1",
-      expect.objectContaining({ ownerObjectTypeId: "remote" }),
-    );
+    expect(mocks.getObjectDetail).toHaveBeenCalledWith("network-1", "remote");
   });
 
-  it("restores the selected object, view and page from the list URL", async () => {
-    mocks.searchParams.current = "objectTypeId=order&objectPage=2&view=list&metricPage=2";
+  it("restores the owner filter and page from the all-metric list URL", async () => {
+    mocks.searchParams.current = "view=list&ownerObjectTypeId=order&metricPage=2";
     mocks.getObjectDetail.mockResolvedValue({ id: "order", name: "销售订单" });
     mocks.listObjectTypes.mockResolvedValue({
       entries: [{ id: "order", name: "销售订单" }],
@@ -489,12 +539,6 @@ describe("ObjectMetricListPanel pagination", () => {
     render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
 
     expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
-    expect(screen.getByTitle("销售订单").className).toMatch(/selected/);
-    expect(mocks.listObjectTypes).toHaveBeenCalledWith(
-      "network-1",
-      expect.objectContaining({ offset: 20 }),
-      { skipErrorToast: true },
-    );
     expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
       "network-1",
       expect.objectContaining({ offset: 10, ownerObjectTypeId: "order" }),
@@ -505,7 +549,7 @@ describe("ObjectMetricListPanel pagination", () => {
       {
         state: {
           knowledgeNetworkReturnTo:
-            "/knowledge-network/workspace/network-1/metrics?objectTypeId=order&objectPage=2&view=list&metricPage=2",
+            "/knowledge-network/workspace/network-1/metrics?view=list&ownerObjectTypeId=order&metricPage=2",
         },
       },
     );
@@ -531,8 +575,7 @@ describe("ObjectMetricListPanel pagination", () => {
       "/knowledge-network/workspace/network-1/metrics/metric-2/edit",
       {
         state: {
-          knowledgeNetworkReturnTo:
-            "/knowledge-network/workspace/network-1/metrics?objectTypeId=order&view=list",
+          knowledgeNetworkReturnTo: "/knowledge-network/workspace/network-1/metrics?view=list",
         },
       },
     );
@@ -564,7 +607,7 @@ describe("ObjectMetricListPanel pagination", () => {
     await waitFor(() => {
       expect(mocks.listObjectTypes).toHaveBeenCalledWith(
         "network-1",
-        expect.objectContaining({ limit: 20, offset: 0 }),
+        expect.objectContaining({ limit: 10, offset: 0 }),
         { skipErrorToast: true },
       );
     });
@@ -581,7 +624,8 @@ describe("ObjectMetricListPanel pagination", () => {
         limit: 10,
         metricType: undefined,
         offset: 0,
-        ownerObjectTypeId: "order",
+        ownerObjectTypeId: undefined,
+        status: undefined,
       });
     });
     expect(await screen.findByText("订单指标 1")).not.toBeNull();
@@ -599,17 +643,15 @@ describe("ObjectMetricListPanel pagination", () => {
         limit: 10,
         metricType: undefined,
         offset: 10,
-        ownerObjectTypeId: "order",
+        ownerObjectTypeId: undefined,
+        status: undefined,
       });
     });
     expect(await screen.findByText("订单指标 11")).not.toBeNull();
     expect(screen.queryByText("订单指标 1")).toBeNull();
     expect(container.querySelectorAll(".ant-table-tbody > tr.ant-table-row")).toHaveLength(10);
 
-    const objectList = container.querySelector<HTMLElement>("[class*=objectList]");
-    expect(objectList).not.toBeNull();
-    objectList!.scrollTop = 200;
-    fireEvent.change(screen.getByPlaceholderText("搜索当前对象的指标名称或编码"), {
+    fireEvent.change(screen.getByPlaceholderText("搜索指标名称或编码"), {
       target: { value: "订单指标 2" },
     });
     await waitFor(
@@ -619,7 +661,8 @@ describe("ObjectMetricListPanel pagination", () => {
           limit: 10,
           metricType: undefined,
           offset: 0,
-          ownerObjectTypeId: "order",
+          ownerObjectTypeId: undefined,
+          status: undefined,
         });
       },
       { timeout: 5000 },
@@ -632,7 +675,7 @@ describe("ObjectMetricListPanel pagination", () => {
       (_networkId: string, query: { limit: number; offset: number; namePattern?: string }) =>
         Promise.resolve({
           entries: Array.from(
-            { length: query.namePattern ? Math.min(20, 25 - query.offset) : 20 },
+            { length: Math.min(query.limit, (query.namePattern ? 25 : 10000) - query.offset) },
             (_, index) => ({
               id: `object-${query.offset + index}`,
               name: query.namePattern
@@ -647,10 +690,10 @@ describe("ObjectMetricListPanel pagination", () => {
     const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
 
     await waitFor(() => {
-      expect(container.querySelectorAll("[class*=objectButton]")).toHaveLength(20);
+      expect(container.querySelectorAll("button[class*=objectButton]")).toHaveLength(10);
     });
     expect(screen.getByText(/10000/)).not.toBeNull();
-    await waitFor(() => expect(mocks.listObjectMetrics).toHaveBeenCalledTimes(20));
+    await waitFor(() => expect(mocks.listObjectMetrics).toHaveBeenCalledTimes(10));
     expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
       "network-1",
       { limit: 1, offset: 0, ownerObjectTypeId: "object-0" },
@@ -658,20 +701,22 @@ describe("ObjectMetricListPanel pagination", () => {
     );
     expect(screen.getByLabelText("对象 0共有 0 个指标（不受类型筛选影响）").textContent).toBe("0");
 
-    const objectList = container.querySelector<HTMLElement>("[class*=objectList]")!;
+    const objectList = container.querySelector<HTMLElement>(
+      'div[class*="objectList"]:not([class*="objectListArea"])',
+    )!;
     objectList.scrollTop = 200;
     fireEvent.change(screen.getByPlaceholderText("搜索对象类"), { target: { value: "目标" } });
     expect(objectList.scrollTop).toBe(0);
     await waitFor(() => {
       expect(mocks.listObjectTypes).toHaveBeenCalledWith(
         "network-1",
-        expect.objectContaining({ limit: 20, namePattern: "目标", offset: 0 }),
+        expect.objectContaining({ limit: 10, namePattern: "目标", offset: 0 }),
         { skipErrorToast: true },
       );
     });
     expect(await screen.findByTitle("目标对象 2")).not.toBeNull();
     fireEvent.click(screen.getByTitle("目标对象 2"));
-    expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe(
+    expect(container.querySelector('[class*="graphPanelTitle"] strong')?.textContent).toBe(
       "目标对象 2",
     );
     mocks.listObjectTypes.mockClear();
@@ -680,27 +725,27 @@ describe("ObjectMetricListPanel pagination", () => {
       await Promise.resolve();
     });
     expect(mocks.listObjectTypes).toHaveBeenCalled();
-    expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe(
+    expect(container.querySelector('[class*="graphPanelTitle"] strong')?.textContent).toBe(
       "目标对象 2",
     );
 
     fireEvent.click(
       container.querySelector('[class*="objectPagination"] .ant-pagination-next button')!,
     );
-    expect(await screen.findByTitle("目标对象 21")).not.toBeNull();
+    expect(await screen.findByTitle("目标对象 11")).not.toBeNull();
     await waitFor(() => {
       expect(mocks.listObjectTypes).toHaveBeenCalledWith(
         "network-1",
-        expect.objectContaining({ namePattern: "目标", offset: 20 }),
+        expect.objectContaining({ namePattern: "目标", offset: 10 }),
         { skipErrorToast: true },
       );
     });
-    expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe(
+    expect(container.querySelector('[class*="graphPanelTitle"] strong')?.textContent).toBe(
       "目标对象 2",
     );
   });
 
-  it("collapses the object catalog and restores it without losing the current selection", async () => {
+  it("uses the same two-row toolbar and graph layout as the object-type page", async () => {
     mocks.listObjectTypes.mockResolvedValue({
       entries: [{ id: "order", name: "销售订单" }],
       totalCount: 1,
@@ -711,15 +756,18 @@ describe("ObjectMetricListPanel pagination", () => {
 
     expect(await screen.findByTitle("销售订单")).not.toBeNull();
     expect(container.querySelector(".ant-pagination")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "收起对象类列表" }));
-    expect(screen.queryByPlaceholderText("搜索对象类")).toBeNull();
-    expect(screen.getByRole("button", { name: "展开对象类列表" })).not.toBeNull();
-    expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe("销售订单");
-
-    fireEvent.click(screen.getByRole("button", { name: "展开对象类列表" }));
     expect(screen.getByPlaceholderText("搜索对象类")).not.toBeNull();
-    expect(screen.getByTitle("销售订单")).not.toBeNull();
+    expect(container.querySelector('[class*="viewModeRow"] .ant-segmented')).not.toBeNull();
+    expect(
+      container.querySelector('[class*="operationRow"] [placeholder="搜索对象类"]'),
+    ).not.toBeNull();
+    expect(container.querySelector('[class*="objectSidebarHeader"]')?.textContent).toContain(
+      "对象类1",
+    );
+    expect(container.querySelector('[class*="graphPanelTitle"] strong')?.textContent).toBe(
+      "销售订单",
+    );
+    expect(screen.queryByRole("button", { name: "收起对象类列表" })).toBeNull();
   });
 
   it("ignores an old object response while a new search is being debounced", async () => {
@@ -745,13 +793,15 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     expect(screen.queryByTitle("旧对象")).toBeNull();
     expect(await screen.findByTitle("目标对象")).not.toBeNull();
-    expect(container.querySelector('[class*="toolbarLeft"] strong')?.textContent).toBe("目标对象");
+    expect(container.querySelector('[class*="graphPanelTitle"] strong')?.textContent).toBe(
+      "目标对象",
+    );
   });
 
   it("limits count requests to four in flight and distinguishes a pending count from zero", async () => {
     const resolveCounts: Array<(value: { entries: []; total_count: number }) => void> = [];
     mocks.listObjectTypes.mockResolvedValue({
-      entries: Array.from({ length: 20 }, (_, index) => ({
+      entries: Array.from({ length: 10 }, (_, index) => ({
         id: `object-${index}`,
         name: `对象 ${index}`,
       })),

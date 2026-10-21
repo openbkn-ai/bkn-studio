@@ -89,6 +89,7 @@ describe("runObjectMetricDesigner", () => {
 
     const result = await runObjectMetricDesigner({
       ...baseParams,
+      modelId: "model-1",
       diagnostic: {
         kind: "trial",
         form_revision: "rev-1",
@@ -112,6 +113,7 @@ describe("runObjectMetricDesigner", () => {
         entry_count: 2,
       },
       message: "改成金额",
+      model_id: "model-1",
     });
     expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer token-1");
     expect(chunks).toEqual(["建议调整"]);
@@ -130,6 +132,17 @@ describe("runObjectMetricDesigner", () => {
       ]),
     );
     await expect(runObjectMetricDesigner(baseParams)).rejects.toThrow("无效的修改建议");
+  });
+
+  it("shows the server's authorization reason when a selected model is denied", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ detail: { detail: "当前用户无权使用该模型" } }), {
+        status: 403,
+      }),
+    );
+    await expect(runObjectMetricDesigner({ ...baseParams, modelId: "denied" })).rejects.toThrow(
+      "当前用户无权使用该模型",
+    );
   });
 
   it("rejects server-owned fields and changes for another metric type", async () => {

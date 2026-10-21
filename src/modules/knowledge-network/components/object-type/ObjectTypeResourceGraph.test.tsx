@@ -272,6 +272,15 @@ afterEach(() => {
 });
 
 describe("ObjectTypeResourceGraph", () => {
+  it.each([
+    ["relations", "1 个关系类"],
+    ["actions", "1 个行动类"],
+  ] as const)("shows the total for the %s graph scope", async (resourceScope, summary) => {
+    renderGraph(false, { resourceScope });
+
+    expect(await screen.findByText(summary)).toBeInTheDocument();
+  });
+
   it("groups metrics and actions in the overview and expands one resource group at a time", async () => {
     renderGraph();
 

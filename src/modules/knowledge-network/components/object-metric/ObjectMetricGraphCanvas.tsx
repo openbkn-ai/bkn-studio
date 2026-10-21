@@ -1072,24 +1072,29 @@ export function ObjectMetricGraphCanvas({
 
   return (
     <div className={`${styles.shell} ${metricTheme.scope}`}>
-      {expandedGroup ? (
-        <div className={styles.metricFocusToolbar}>
-          <Button icon={<ArrowLeftOutlined />} onClick={exitMetricFocus} type="link">
-            {objectMetricText("graphBackToRelations")}
-          </Button>
-          <span>{focusContextName}</span>
-          <strong>{objectMetricText("graphMetricCount", { p0: expandedMetrics.length })}</strong>
-          <Tooltip title={objectMetricText("mb74829d20f7d")}>
-            <Button
-              aria-label={objectMetricText("mb74829d20f7d")}
-              icon={<AimOutlined />}
-              onClick={resetLayout}
-              size="small"
-            />
-          </Tooltip>
+      <div
+        className={`${styles.explorerToolbar} ${expandedGroup ? styles.metricFocusToolbar : ""}`}
+      >
+        <div className={styles.graphPanelTitle} title={selectedObjectTypeName}>
+          <strong>{selectedObjectTypeName}</strong>
         </div>
-      ) : (
-        <div className={styles.explorerToolbar}>
+        {expandedGroup ? (
+          <div className={styles.metricFocusMeta}>
+            <Button icon={<ArrowLeftOutlined />} onClick={exitMetricFocus} type="link">
+              {objectMetricText("graphBackToRelations")}
+            </Button>
+            <span>{focusContextName}</span>
+            <strong>{objectMetricText("graphMetricCount", { p0: expandedMetrics.length })}</strong>
+            <Tooltip title={objectMetricText("mb74829d20f7d")}>
+              <Button
+                aria-label={objectMetricText("mb74829d20f7d")}
+                icon={<AimOutlined />}
+                onClick={resetLayout}
+                size="small"
+              />
+            </Tooltip>
+          </div>
+        ) : (
           <div className={styles.toolbarMeta}>
             <span>
               {objectMetricText("graphObjectOverview", {
@@ -1114,8 +1119,8 @@ export function ObjectMetricGraphCanvas({
               />
             </Tooltip>
           </div>
-        </div>
-      )}
+        )}
+      </div>
       <div className={styles.canvasContent}>
         {relationLoading || !relationCurrent ? (
           <div className={styles.loading} role="status">

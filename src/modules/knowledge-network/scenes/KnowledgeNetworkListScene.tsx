@@ -14,7 +14,7 @@ import {
 import { Alert, Dropdown, Empty, Input, Modal, Select, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useEntitlement } from "@/framework/entitlement/use-entitlement";
@@ -33,6 +33,12 @@ import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { KnowledgeNetworkImportButton } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkImportButton";
 import {
+  buildKnowledgeNetworkListPath,
+  knowledgeNetworkListReturnState,
+  readKnowledgeNetworkListLocation,
+  rememberKnowledgeNetworkListPath,
+} from "@/modules/knowledge-network/lib/knowledge-network-list-navigation";
+import {
   createKnowledgeNetwork,
   deleteKnowledgeNetwork,
   exportKnowledgeNetwork,
@@ -48,30 +54,35 @@ import type {
 
 import styles from "./KnowledgeNetworkListScene.module.css";
 
-const CARD_GRID_PAGE_SIZE = 12;
 const CARD_GRID_PAGE_SIZE_OPTIONS = ["12", "24", "36"];
 
 export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkListSceneProps) {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message } = useAppServices();
   const entitlement = useEntitlement();
   const communityBuild = isCommunityBuild(entitlement);
   const canRequestPermission = !communityBuild && !getRuntimeConfig().currentUser.isSuperAdmin;
+  const [initialListLocation] = useState(() => readKnowledgeNetworkListLocation(location.search));
   const { pageState, query, setKeyword, setPagination } = usePageState({
-    pageSize: CARD_GRID_PAGE_SIZE,
+    keyword: initialListLocation.keyword,
+    page: initialListLocation.page,
+    pageSize: initialListLocation.pageSize,
   });
   const [items, setItems] = useState<KnowledgeNetworkRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
-  const [selectedTag, setSelectedTag] = useState<string>("all");
+  const [selectedTag, setSelectedTag] = useState(initialListLocation.tag);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingRecord, setEditingRecord] = useState<KnowledgeNetworkRecord | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [sortBy, setSortBy] = useState<"name" | "updateTime">(initialListLocation.sortBy);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">(
+    initialListLocation.sortDirection,
+  );
   const [authorizingRecord, setAuthorizingRecord] = useState<KnowledgeNetworkRecord | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<KnowledgeNetworkRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -92,6 +103,24 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
     }),
     [query, selectedTag, sortBy, sortDirection],
   );
+
+  const listReturnPath = useMemo(
+    () =>
+      buildKnowledgeNetworkListPath({
+        keyword: pageState.keyword,
+        page: pageState.page,
+        pageSize: pageState.pageSize,
+        sortBy,
+        sortDirection,
+        tag: selectedTag,
+      }),
+    [pageState, selectedTag, sortBy, sortDirection],
+  );
+
+  useEffect(() => {
+    if (`${location.pathname}${location.search}` === listReturnPath) return;
+    void navigate(listReturnPath, { replace: true });
+  }, [listReturnPath, location.pathname, location.search, navigate]);
 
   const loadListData = useCallback(async () => {
     setLoading(true);
@@ -151,7 +180,10 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
       return;
     }
 
-    void navigate(`/knowledge-network/workspace/${record.id}/overview`);
+    rememberKnowledgeNetworkListPath(listReturnPath);
+    void navigate(`/knowledge-network/workspace/${record.id}/overview`, {
+      state: knowledgeNetworkListReturnState(listReturnPath),
+    });
   };
 
   const openDelete = (record: KnowledgeNetworkRecord) => {
