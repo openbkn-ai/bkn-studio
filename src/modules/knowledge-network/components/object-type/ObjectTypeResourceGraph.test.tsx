@@ -586,6 +586,16 @@ describe("ObjectTypeResourceGraph", () => {
     }
   });
 
+  it("registers graph wheel zoom as a non-passive native listener", () => {
+    const listener = vi.spyOn(SVGSVGElement.prototype, "addEventListener");
+    try {
+      renderGraph();
+      expect(listener).toHaveBeenCalledWith("wheel", expect.any(Function), { passive: false });
+    } finally {
+      listener.mockRestore();
+    }
+  });
+
   it("lays metrics out from left to right by their dependency depth", async () => {
     const derivedMetric = {
       ...metric,

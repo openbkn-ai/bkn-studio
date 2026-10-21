@@ -17,8 +17,8 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -727,7 +727,7 @@ export function ObjectTypeResourceGraph({
     metricDependencies.map(({ metric }) => metricNodeKey(metric)),
   );
 
-  const zoomBy = (factor: number) => {
+  const zoomBy = useCallback((factor: number) => {
     setView((current) => {
       const width = Math.min(
         GRAPH_WIDTH / MIN_ZOOM,
@@ -741,12 +741,18 @@ export function ObjectTypeResourceGraph({
         y: current.y + (current.height - height) / 2,
       };
     });
-  };
+  }, []);
 
-  const onWheel = (event: ReactWheelEvent<SVGSVGElement>) => {
-    event.preventDefault();
-    zoomBy(event.deltaY < 0 ? 1.12 : 0.89);
-  };
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return undefined;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      zoomBy(event.deltaY < 0 ? 1.12 : 0.89);
+    };
+    svg.addEventListener("wheel", onWheel, { passive: false });
+    return () => svg.removeEventListener("wheel", onWheel);
+  }, [zoomBy]);
 
   const graphDelta = (clientX: number, clientY: number, lastX: number, lastY: number) => {
     const bounds = svgRef.current?.getBoundingClientRect();
@@ -1037,7 +1043,6 @@ export function ObjectTypeResourceGraph({
             onPointerDown={startCanvasDrag}
             onPointerMove={onPointerMove}
             onPointerUp={finishDrag}
-            onWheel={onWheel}
             ref={svgRef}
             role="img"
             preserveAspectRatio="xMidYMid meet"
