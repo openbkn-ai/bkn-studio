@@ -51,7 +51,7 @@ export function useObjectTypeGraphExplorer({
   const [selectedLoading, setSelectedLoading] = useState(false);
   const [resourceCounts, setResourceCounts] = useState<Record<string, number | null>>({});
   const countCache = useRef(new Map<string, number | null>());
-  const countRequests = useRef(new Set<string>());
+  const countRequests = useRef(new Map<string, Promise<number | null>>());
   const countRequestScope = useRef("");
 
   useEffect(() => {
@@ -112,11 +112,7 @@ export function useObjectTypeGraphExplorer({
     let active = true;
     const requestScope = `${networkId}\0${resourceScope}\0${refreshVersion}`;
     const countKey = (id: string) => `${networkId}\0${resourceScope}\0${id}`;
-    const pending = items.filter(
-      (item) =>
-        !countCache.current.has(countKey(item.id)) &&
-        !countRequests.current.has(`${requestScope}\0${item.id}`),
-    );
+    const pending = items.filter((item) => !countCache.current.has(countKey(item.id)));
     setResourceCounts(
       Object.fromEntries(
         items
@@ -130,27 +126,33 @@ export function useObjectTypeGraphExplorer({
       while (active && nextIndex < pending.length) {
         const item = pending[nextIndex++];
         const requestKey = `${requestScope}\0${item.id}`;
-        countRequests.current.add(requestKey);
-        let count: number | null = null;
-        try {
-          const result =
-            resourceScope === "relations"
-              ? await listKnowledgeNetworkRelationTypePage(networkId, {
-                  boundObjectTypeId: item.id,
-                  limit: 1,
-                  offset: 0,
-                })
-              : await listKnowledgeNetworkActionTypePage(networkId, {
-                  limit: 1,
-                  objectTypeId: item.id,
-                  offset: 0,
-                });
-          count = result.totalCount;
-        } catch {
-          // A failed count must remain distinct from an actual zero.
-        } finally {
-          countRequests.current.delete(requestKey);
+        let request = countRequests.current.get(requestKey);
+        if (!request) {
+          request = (async () => {
+            try {
+              const result =
+                resourceScope === "relations"
+                  ? await listKnowledgeNetworkRelationTypePage(networkId, {
+                      boundObjectTypeId: item.id,
+                      limit: 1,
+                      offset: 0,
+                    })
+                  : await listKnowledgeNetworkActionTypePage(networkId, {
+                      limit: 1,
+                      objectTypeId: item.id,
+                      offset: 0,
+                    });
+              return result.totalCount;
+            } catch {
+              // A failed count must remain distinct from an actual zero.
+              return null;
+            } finally {
+              countRequests.current.delete(requestKey);
+            }
+          })();
+          countRequests.current.set(requestKey, request);
         }
+        const count = await request;
         if (active && countRequestScope.current === requestScope) {
           countCache.current.set(countKey(item.id), count);
           setResourceCounts((current) => ({ ...current, [item.id]: count }));

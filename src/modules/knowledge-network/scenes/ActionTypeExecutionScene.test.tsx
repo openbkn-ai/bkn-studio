@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren, ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -27,6 +27,10 @@ const mocks = vi.hoisted(() => ({
     },
   },
   getDetail: vi.fn(),
+  locationState: {
+    current: null as { knowledgeNetworkReturnTo?: string } | null,
+  },
+  navigate: vi.fn(),
   needsResolution: vi.fn(),
   permissions: { current: [] as string[] },
   resolveDisplay: vi.fn(),
@@ -40,8 +44,8 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
-  useLocation: () => ({ state: null }),
-  useNavigate: () => vi.fn(),
+  useLocation: () => ({ state: mocks.locationState.current }),
+  useNavigate: () => mocks.navigate,
   useParams: () => ({ actionTypeId: "action-1", networkId: "network-1" }),
   useSearchParams: () => [new URLSearchParams(mocks.search.current), vi.fn()],
 }));
@@ -146,7 +150,9 @@ beforeEach(() => {
   };
   mocks.permissions.current = [];
   mocks.search.current = "";
+  mocks.locationState.current = null;
   mocks.getDetail.mockReset();
+  mocks.navigate.mockReset();
   mocks.needsResolution.mockReset();
   mocks.resolveDisplay.mockReset();
   mocks.needsResolution.mockImplementation((source?: ActionTypeActionSource) =>
@@ -232,5 +238,25 @@ describe("ActionTypeExecutionScene review regressions", () => {
     expect(await screen.findByText("Update order")).not.toBeNull();
     expect(screen.queryByText("knowledgeNetwork.actionTypeExecutionConfigReadonly")).toBeNull();
     expect(screen.getByTestId("execution-header-actions").childElementCount).toBe(0);
+  });
+
+  it("opens the action overview while preserving the original graph return target", async () => {
+    const graphReturnTo =
+      "/knowledge-network/workspace/network-1/action-types?objectTypeId=object-1&graphResourceKind=action&graphResourceId=action-1";
+    mocks.locationState.current = { knowledgeNetworkReturnTo: graphReturnTo };
+    mocks.getDetail.mockResolvedValue(createDetail({ type: "manual" }));
+
+    render(<ActionTypeExecutionScene />);
+
+    const overviewButton = (
+      await screen.findByText("knowledgeNetwork.actionTypeDetailOverview")
+    ).closest("button");
+    expect(overviewButton).not.toBeNull();
+    fireEvent.click(overviewButton!);
+
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/action-types/action-1/detail",
+      { state: { knowledgeNetworkReturnTo: graphReturnTo } },
+    );
   });
 });

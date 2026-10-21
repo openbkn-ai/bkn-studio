@@ -13,11 +13,17 @@ const mocks = vi.hoisted(() => ({
   getObjectType: vi.fn(),
   listObjectTypePage: vi.fn(),
   listRelationTypePage: vi.fn(),
+  navigate: vi.fn(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router-dom")>()),
+  useNavigate: () => mocks.navigate,
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -197,5 +203,42 @@ describe("RelationTypeListPanel", () => {
 
     fireEvent.click(screen.getByText("knowledgeNetwork.objectTypeListView"));
     expect(await screen.findByText("common.delete")).toBeInTheDocument();
+  });
+
+  it("preserves list filters and pagination when opening a relation detail", async () => {
+    mocks.listRelationTypePage.mockResolvedValue({
+      entries: [
+        {
+          description: "Customer owns order",
+          id: "relation-1",
+          mappingType: "direct",
+          name: "Customer order",
+          operations: ["view_detail"],
+          sourceObjectTypeId: "customer",
+          sourceObjectTypeName: "Customer",
+          tags: [],
+          targetObjectTypeId: "order",
+          targetObjectTypeName: "Order",
+          updateTime: "2026-08-20 10:00:00",
+          updaterName: "admin",
+        },
+      ],
+      totalCount: 21,
+    });
+    const query =
+      "view=list&page=2&q=customer&source=customer&target=order&sort=name&order=asc&pageSize=20";
+
+    renderPanel(`/?${query}`);
+
+    fireEvent.click(await screen.findByText("Customer order"));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/relation-types/relation-1/detail",
+      {
+        state: {
+          knowledgeNetworkReturnTo: `/knowledge-network/workspace/network-1/relation-types?${query}`,
+        },
+      },
+    );
   });
 });

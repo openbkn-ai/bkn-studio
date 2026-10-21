@@ -44,6 +44,7 @@ import {
 import { useObjectTypeGraphExplorer } from "@/modules/knowledge-network/components/shared/useObjectTypeGraphExplorer";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
+  knowledgeNetworkReturnState,
   readKnowledgeNetworkGraphSelection,
   writeKnowledgeNetworkGraphSelection,
   type KnowledgeNetworkGraphSelection,
@@ -296,6 +297,9 @@ export function RelationTypeListPanel({
     }
     return [selectedGraphRelationType];
   }, [selectedGraphRelationType, selectedRows, viewMode]);
+  const relationTypeListPath = `/knowledge-network/workspace/${networkId}/relation-types`;
+  const currentReturnQuery = searchParams.toString();
+  const currentReturnTo = `${relationTypeListPath}${currentReturnQuery ? `?${currentReturnQuery}` : ""}`;
 
   const confirmDelete = (records: KnowledgeNetworkRelationTypeRecord[]) => {
     if (records.length === 0) {
@@ -334,18 +338,26 @@ export function RelationTypeListPanel({
 
   const handleOperate = (key: string, record: KnowledgeNetworkRelationTypeRecord) => {
     if (key === "view") {
-      void navigate(`/knowledge-network/workspace/${networkId}/relation-types/${record.id}/detail`);
+      void navigate(
+        `/knowledge-network/workspace/${networkId}/relation-types/${record.id}/detail`,
+        {
+          state: knowledgeNetworkReturnState(currentReturnTo),
+        },
+      );
       return;
     }
 
     if (key === "edit") {
-      void navigate(`/knowledge-network/workspace/${networkId}/relation-types/${record.id}/edit`);
+      void navigate(`/knowledge-network/workspace/${networkId}/relation-types/${record.id}/edit`, {
+        state: knowledgeNetworkReturnState(currentReturnTo),
+      });
       return;
     }
 
     if (key === "mapping") {
       void navigate(
         `/knowledge-network/workspace/${networkId}/relation-types/${record.id}/mapping`,
+        { state: knowledgeNetworkReturnState(currentReturnTo) },
       );
       return;
     }
@@ -359,8 +371,6 @@ export function RelationTypeListPanel({
       confirmDelete([record]);
     }
   };
-
-  const relationTypeListPath = `/knowledge-network/workspace/${networkId}/relation-types`;
 
   const renderObjectTypeLink = (objectTypeId: string, objectTypeName: string) => {
     const label = objectTypeName || "--";
@@ -377,7 +387,7 @@ export function RelationTypeListPanel({
             `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`,
             {
               state: {
-                knowledgeNetworkReturnTo: relationTypeListPath,
+                knowledgeNetworkReturnTo: currentReturnTo,
               },
             },
           );
@@ -403,6 +413,7 @@ export function RelationTypeListPanel({
           onClick={() => {
             void navigate(
               `/knowledge-network/workspace/${networkId}/relation-types/${record.id}/detail`,
+              { state: knowledgeNetworkReturnState(currentReturnTo) },
             );
           }}
           title={value}
@@ -561,7 +572,9 @@ export function RelationTypeListPanel({
             {t("knowledgeNetwork.emptyCreateHint")}
             <AppButton
               onClick={() => {
-                void navigate(`/knowledge-network/workspace/${networkId}/relation-types/create`);
+                void navigate(`/knowledge-network/workspace/${networkId}/relation-types/create`, {
+                  state: knowledgeNetworkReturnState(currentReturnTo),
+                });
               }}
               type="link"
             >
@@ -631,7 +644,7 @@ export function RelationTypeListPanel({
       graphReturnParams.set("objectTypeId", selectedGraphObjectTypeId);
     }
     writeKnowledgeNetworkGraphSelection(graphReturnParams, selection);
-    return `/knowledge-network/workspace/${networkId}/relation-types?${graphReturnParams.toString()}`;
+    return `${relationTypeListPath}?${graphReturnParams.toString()}`;
   };
 
   return (
@@ -668,6 +681,7 @@ export function RelationTypeListPanel({
                       onClick={() => {
                         void navigate(
                           `/knowledge-network/workspace/${networkId}/relation-types/create`,
+                          { state: knowledgeNetworkReturnState(currentReturnTo) },
                         );
                       }}
                       type="primary"

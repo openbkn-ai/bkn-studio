@@ -37,10 +37,14 @@ import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/s
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
-import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import {
+  readPositiveInteger,
+  usePersistentPageSize,
+} from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useObjectTypeGraphExplorer } from "@/modules/knowledge-network/components/shared/useObjectTypeGraphExplorer";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
+  knowledgeNetworkReturnState,
   readKnowledgeNetworkGraphSelection,
   writeKnowledgeNetworkGraphSelection,
   type KnowledgeNetworkGraphSelection,
@@ -82,6 +86,20 @@ function getActionKindLabel(
   }
 }
 
+function readActionKind(value: string | null): "all" | KnowledgeNetworkActionTypeKind {
+  return value === "create" || value === "delete" || value === "notify" || value === "update"
+    ? value
+    : "all";
+}
+
+function readSortBy(value: string | null): "name" | "updateTime" {
+  return value === "name" ? "name" : "updateTime";
+}
+
+function readSortDirection(value: string | null): "asc" | "desc" {
+  return value === "asc" ? "asc" : "desc";
+}
+
 export function ActionTypeListPanel({
   canDelete,
   canModify,
@@ -95,14 +113,20 @@ export function ActionTypeListPanel({
   const [searchParams, setSearchParams] = useSearchParams();
   const { modal } = useAppServices();
   const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
-  const [keyword, setKeyword] = useState("");
+  const [keyword, setKeyword] = useState(() => searchParams.get("q") ?? "");
   const [actionKindFilter, setActionKindFilter] = useState<"all" | KnowledgeNetworkActionTypeKind>(
-    "all",
+    () => readActionKind(searchParams.get("actionKind")),
   );
-  const [objectTypeFilter, setObjectTypeFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
+  const [objectTypeFilter, setObjectTypeFilter] = useState(
+    () => searchParams.get("objectType") ?? "all",
+  );
+  const [sortBy, setSortBy] = useState<"name" | "updateTime">(() =>
+    readSortBy(searchParams.get("sort")),
+  );
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">(() =>
+    readSortDirection(searchParams.get("order")),
+  );
+  const [page, setPage] = useState(() => readPositiveInteger(searchParams.get("page"), 1));
   const [pageSize, setPageSize] = usePersistentPageSize("action-types");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"graph" | "list">(() =>
@@ -196,8 +220,20 @@ export function ActionTypeListPanel({
   ]);
 
   useEffect(() => {
+    const nextKeyword = searchParams.get("q") ?? "";
+    const nextActionKind = readActionKind(searchParams.get("actionKind"));
+    const nextObjectType = searchParams.get("objectType") ?? "all";
+    const nextSortBy = readSortBy(searchParams.get("sort"));
+    const nextSortDirection = readSortDirection(searchParams.get("order"));
+    const nextPage = readPositiveInteger(searchParams.get("page"), 1);
     const nextViewMode = searchParams.get("view") === "list" ? "list" : "graph";
     const nextObjectTypeId = searchParams.get("objectTypeId") ?? "";
+    setKeyword((current) => (current === nextKeyword ? current : nextKeyword));
+    setActionKindFilter((current) => (current === nextActionKind ? current : nextActionKind));
+    setObjectTypeFilter((current) => (current === nextObjectType ? current : nextObjectType));
+    setSortBy((current) => (current === nextSortBy ? current : nextSortBy));
+    setSortDirection((current) => (current === nextSortDirection ? current : nextSortDirection));
+    setPage((current) => (current === nextPage ? current : nextPage));
     setViewMode((current) => (current === nextViewMode ? current : nextViewMode));
     setSelectedGraphObjectTypeId((current) =>
       current === nextObjectTypeId ? current : nextObjectTypeId,
@@ -206,6 +242,17 @@ export function ActionTypeListPanel({
 
   useEffect(() => {
     const nextParams = new URLSearchParams(searchParams);
+    const setOrDelete = (key: string, value: string, fallback: string) => {
+      if (value !== fallback) nextParams.set(key, value);
+      else nextParams.delete(key);
+    };
+    setOrDelete("q", keyword.trim(), "");
+    setOrDelete("actionKind", actionKindFilter, "all");
+    setOrDelete("objectType", objectTypeFilter, "all");
+    setOrDelete("sort", sortBy, "updateTime");
+    setOrDelete("order", sortDirection, "desc");
+    setOrDelete("page", String(page), "1");
+    setOrDelete("pageSize", String(pageSize), "10");
     if (viewMode === "graph") {
       nextParams.delete("view");
       nextParams.delete("actionTypeId");
@@ -220,7 +267,19 @@ export function ActionTypeListPanel({
     if (nextParams.toString() !== searchParams.toString()) {
       setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams, selectedGraphObjectTypeId, setSearchParams, viewMode]);
+  }, [
+    actionKindFilter,
+    keyword,
+    objectTypeFilter,
+    page,
+    pageSize,
+    searchParams,
+    selectedGraphObjectTypeId,
+    setSearchParams,
+    sortBy,
+    sortDirection,
+    viewMode,
+  ]);
 
   const hasActiveFilter = useMemo(
     () => Boolean(keyword.trim()) || actionKindFilter !== "all" || objectTypeFilter !== "all",
@@ -245,6 +304,9 @@ export function ActionTypeListPanel({
     }
     return [selectedGraphActionType];
   }, [selectedGraphActionType, selectedRows, viewMode]);
+  const actionTypeListPath = `/knowledge-network/workspace/${networkId}/action-types`;
+  const currentReturnQuery = searchParams.toString();
+  const currentReturnTo = `${actionTypeListPath}${currentReturnQuery ? `?${currentReturnQuery}` : ""}`;
 
   const confirmDelete = (records: KnowledgeNetworkActionTypeRecord[]) => {
     if (records.length === 0) {
@@ -283,18 +345,23 @@ export function ActionTypeListPanel({
 
   const handleOperate = (key: string, record: KnowledgeNetworkActionTypeRecord) => {
     if (key === "view") {
-      void navigate(`/knowledge-network/workspace/${networkId}/action-types/${record.id}/detail`);
+      void navigate(`/knowledge-network/workspace/${networkId}/action-types/${record.id}/detail`, {
+        state: knowledgeNetworkReturnState(currentReturnTo),
+      });
       return;
     }
 
     if (key === "edit") {
-      void navigate(`/knowledge-network/workspace/${networkId}/action-types/${record.id}/edit`);
+      void navigate(`/knowledge-network/workspace/${networkId}/action-types/${record.id}/edit`, {
+        state: knowledgeNetworkReturnState(currentReturnTo),
+      });
       return;
     }
 
     if (key === "execution") {
       void navigate(
         `/knowledge-network/workspace/${networkId}/action-types/${record.id}/execution`,
+        { state: knowledgeNetworkReturnState(currentReturnTo) },
       );
       return;
     }
@@ -322,6 +389,7 @@ export function ActionTypeListPanel({
           onClick={() => {
             void navigate(
               `/knowledge-network/workspace/${networkId}/action-types/${record.id}/detail`,
+              { state: knowledgeNetworkReturnState(currentReturnTo) },
             );
           }}
           title={value}
@@ -470,7 +538,9 @@ export function ActionTypeListPanel({
             {t("knowledgeNetwork.emptyCreateHint")}
             <AppButton
               onClick={() => {
-                void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`);
+                void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`, {
+                  state: knowledgeNetworkReturnState(currentReturnTo),
+                });
               }}
               type="link"
             >
@@ -525,7 +595,7 @@ export function ActionTypeListPanel({
       graphReturnParams.set("objectTypeId", selectedGraphObjectTypeId);
     }
     writeKnowledgeNetworkGraphSelection(graphReturnParams, selection);
-    return `/knowledge-network/workspace/${networkId}/action-types?${graphReturnParams.toString()}`;
+    return `${actionTypeListPath}?${graphReturnParams.toString()}`;
   };
 
   return (
@@ -558,7 +628,9 @@ export function ActionTypeListPanel({
                   className={styles.toolbarButton}
                   icon={<PlusOutlined />}
                   onClick={() => {
-                    void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`);
+                    void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`, {
+                      state: knowledgeNetworkReturnState(currentReturnTo),
+                    });
                   }}
                   type="primary"
                 >

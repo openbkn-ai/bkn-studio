@@ -31,9 +31,15 @@ vi.mock("@/framework/context/use-app-services", () => ({
   }),
 }));
 
-vi.mock("@/modules/knowledge-network/components/shared/usePersistentPageSize", () => ({
-  usePersistentPageSize: () => [10, vi.fn()],
-}));
+vi.mock(
+  "@/modules/knowledge-network/components/shared/usePersistentPageSize",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/modules/knowledge-network/components/shared/usePersistentPageSize")
+    >()),
+    usePersistentPageSize: () => [10, vi.fn()],
+  }),
+);
 
 vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => ({
   useKnowledgeNetworkCanOperate: () => true,
@@ -261,6 +267,40 @@ describe("ActionTypeListPanel menu access", () => {
 
     fireEvent.click(screen.getByText("knowledgeNetwork.objectTypeListView"));
     expect(await screen.findByText("common.delete")).toBeInTheDocument();
+  });
+
+  it("preserves list filters and pagination when opening an action detail", async () => {
+    listActionTypePage.mockResolvedValue({
+      entries: [
+        {
+          actionKind: "update",
+          color: "#1677ff",
+          description: "Update an order",
+          id: "action-1",
+          name: "Update order",
+          objectTypeId: "object-1",
+          objectTypeName: "Order",
+          operations: ["view_detail"],
+          tags: [],
+          updateTime: "2026-08-20 10:00:00",
+          updaterName: "admin",
+        },
+      ],
+      totalCount: 11,
+    });
+    const returnTo =
+      "/knowledge-network/workspace/network-1/action-types?view=list&page=2&q=update&actionKind=update&objectType=object-1&sort=name&order=asc";
+
+    renderPanel(
+      "/?view=list&page=2&q=update&actionKind=update&objectType=object-1&sort=name&order=asc",
+    );
+
+    fireEvent.click(await screen.findByText("Update order"));
+
+    expect(navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/action-types/action-1/detail",
+      { state: { knowledgeNetworkReturnTo: returnTo } },
+    );
   });
 
   it("restores the selected action when returning from its detail page", async () => {

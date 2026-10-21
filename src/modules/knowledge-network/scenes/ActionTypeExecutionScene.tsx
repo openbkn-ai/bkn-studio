@@ -32,7 +32,10 @@ import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledg
 import { ActionTypeTaskManagementPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
-import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
+import {
+  knowledgeNetworkReturnPath,
+  knowledgeNetworkReturnState,
+} from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   needsActionTypeActionSourceDisplayResolution,
   resolveActionTypeActionSourceDisplayWithTimeout,
@@ -402,7 +405,7 @@ export function ActionTypeExecutionScene() {
           <AppButton
             icon={<EditOutlined />}
             onClick={() => {
-              void navigate(returnPath);
+              void navigate(detailPath, { state: knowledgeNetworkReturnState(returnPath) });
             }}
           >
             {t("knowledgeNetwork.actionTypeDetailOverview")}
