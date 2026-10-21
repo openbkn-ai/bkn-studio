@@ -331,7 +331,7 @@ describe("ObjectTypeResourceGraph", () => {
     });
   });
 
-  it("explains when the overview limits visible relation types", async () => {
+  it("keeps additional relation types in the relation filter without showing a limit notice", async () => {
     const relations = Array.from({ length: 5 }, (_, index) => ({
       ...relation,
       id: `relation-${index + 1}`,
@@ -342,11 +342,8 @@ describe("ObjectTypeResourceGraph", () => {
     mocks.listRelations.mockResolvedValue({ entries: relations, totalCount: relations.length });
     renderGraph();
 
-    expect(
-      await screen.findByText(
-        "全部视图展示前 4 个关系类；每类最多加载 12 项，可通过分类标签查看。",
-      ),
-    ).toBeInTheDocument();
+    await screen.findByRole("button", { name: "关系类 关系 4" });
+    expect(screen.queryByText(/全部视图展示前/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "对象类 对象 5" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("关系类 5"));

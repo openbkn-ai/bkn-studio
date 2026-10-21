@@ -1601,19 +1601,6 @@ export function ObjectTypeResourceGraph({
             />
           </Tooltip>
         </div>
-        {(section === "all" && relations.length > OVERVIEW_LIMIT) ||
-        totals.relations > relations.length ||
-        totals.metrics > metrics.length ||
-        totals.actions > actions.length ? (
-          <div className={styles.canvasNotice}>
-            {section === "all" && relations.length > OVERVIEW_LIMIT
-              ? t("knowledgeNetwork.objectTypeGraphOverviewPartial", {
-                  overviewCount: OVERVIEW_LIMIT,
-                  pageCount: PAGE_SIZE,
-                })
-              : t("knowledgeNetwork.objectTypeGraphPartial", { count: PAGE_SIZE })}
-          </div>
-        ) : null}
       </div>
 
       <ObjectMetricGraphDetailDrawer
