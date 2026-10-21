@@ -26,7 +26,9 @@ jobs:
   quality:
     name: ci-quality
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Lockfile changes require the full 400+ file unit suite on PRs; the
+    # previous 20-minute limit canceled a healthy run before typecheck/build.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         # The module selector needs the PR base commit to be available.
