@@ -351,6 +351,12 @@
   align-self: flex-start;
 }
 
+/* A passive note about the frame, not a warning: keep it at meta-text size. */
+.frameNotice {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
 .statusBar {
   display: flex;
   flex-wrap: wrap;

@@ -10,6 +10,7 @@ import type { EditorProps } from "@monaco-editor/react";
 
 import { useResolvedTheme } from "@/app/theme/theme-context";
 import { ensureMonacoSetup } from "@/framework/monaco/ensure";
+import { monacoThemeFor } from "@/framework/monaco/themes";
 
 const MonacoEditorImpl = lazy(async () => {
   await ensureMonacoSetup();
@@ -27,10 +28,7 @@ export function MonacoEditor({ fallback = null, ...props }: MonacoEditorProps) {
 
   return (
     <Suspense fallback={fallback}>
-      <MonacoEditorImpl
-        {...props}
-        theme={props.theme ?? (resolvedTheme === "dark" ? "vs-dark" : "vs")}
-      />
+      <MonacoEditorImpl {...props} theme={props.theme ?? monacoThemeFor(resolvedTheme)} />
     </Suspense>
   );
 }

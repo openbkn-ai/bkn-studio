@@ -80,7 +80,7 @@
 }
 
 .risk {
-  border: 1px solid #dfe6f2;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
   color: var(--color-text-secondary);
   display: inline-flex;

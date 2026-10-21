@@ -1106,7 +1106,7 @@ export const executionFactoryEnUS = {
     installedStateSyncFailed: "Failed to sync installed state. Installed tags may be inaccurate.",
     loadMoreFailed: "Failed to load more items. Please retry.",
     routeMigrated: "This page has moved. You were redirected to the new capability management hub.",
-    sandboxRuntimeTitle: "Sandbox Runtime Management",
+    sandboxRuntimeTitle: "Sandbox Runtime",
     sandboxRuntimeDescription:
       "Observe sandbox health, session pool pressure, dependency installation, and task sessions used by callable capabilities.",
     navExecutionUnitManagementTooltip:

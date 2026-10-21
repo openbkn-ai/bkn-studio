@@ -10,6 +10,7 @@ import type { DiffEditorProps } from "@monaco-editor/react";
 
 import { useResolvedTheme } from "@/app/theme/theme-context";
 import { ensureMonacoSetup } from "@/framework/monaco/ensure";
+import { monacoThemeFor } from "@/framework/monaco/themes";
 
 const MonacoDiffEditorImpl = lazy(async () => {
   await ensureMonacoSetup();
@@ -28,10 +29,7 @@ export function MonacoDiffEditor({ fallback = null, ...props }: MonacoDiffEditor
 
   return (
     <Suspense fallback={fallback}>
-      <MonacoDiffEditorImpl
-        {...props}
-        theme={props.theme ?? (resolvedTheme === "dark" ? "vs-dark" : "vs")}
-      />
+      <MonacoDiffEditorImpl {...props} theme={props.theme ?? monacoThemeFor(resolvedTheme)} />
     </Suspense>
   );
 }

@@ -96,7 +96,7 @@ export const dataCatalogEnUS = {
       enableSuccess: "Resource enabled.",
       disableSuccess: "Resource disabled.",
     },
-    indexBuildTitle: "Task Management",
+    indexBuildTitle: "Tasks",
     indexBuildDescription:
       "Manage data-resource tasks, including viewing, pausing, restarting, and deleting tasks.",
     taskManagement: {
@@ -473,7 +473,7 @@ export const dataCatalogEnUS = {
       notFound: "No resources found for this connection; it may have been deleted",
       selectPhysicalDescription: "Select a data connection from the physical data source tree.",
       resourceSection: "Resources",
-      goConnection: "Data Connection",
+      goConnection: "Data Connections",
       goScan: "Discover Tasks",
       goDiscoverToDiscover: "Discover resources",
       emptyResourcesPhysical:

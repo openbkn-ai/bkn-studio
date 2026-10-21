@@ -30,4 +30,7 @@ self.MonacoEnvironment = {
   },
 };
 
+import { defineMonacoThemes } from "@/framework/monaco/themes";
+
+defineMonacoThemes(monaco);
 loader.config({ monaco });

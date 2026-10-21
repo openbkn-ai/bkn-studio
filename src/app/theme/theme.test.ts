@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { createThemeConfig } from "@/app/theme/theme";
+import { createThemeConfig, darkPrimaryFor } from "@/app/theme/theme";
 import type { RuntimeConfig } from "@/framework/runtime/types";
 
 const runtimeConfig: RuntimeConfig = {
@@ -85,11 +85,11 @@ describe("createThemeConfig", () => {
     const tableTokens = darkTheme.components?.Table;
 
     expect(darkTheme.algorithm).toBeDefined();
-    expect(darkTheme.token?.colorBgLayout).toBe("#0f172a");
-    expect(darkTheme.token?.colorText).toBe("#f1f5f9");
-    expect(tableTokens?.rowHoverBg).toBe("#243047");
-    expect(tableTokens?.rowSelectedBg).toBe("#1e3a5f");
-    expect(tableTokens?.rowSelectedHoverBg).toBe("#254b78");
+    expect(darkTheme.token?.colorBgLayout).toBe("#111318");
+    expect(darkTheme.token?.colorText).toBe("#e6e8eb");
+    expect(tableTokens?.rowHoverBg).toBe("#20232a");
+    expect(tableTokens?.rowSelectedBg).toBe("#1c2638");
+    expect(tableTokens?.rowSelectedHoverBg).toBe("#223049");
   });
 
   it("uses legible selected tab colors on both themes", () => {
@@ -100,5 +100,29 @@ describe("createThemeConfig", () => {
     expect(darkTabs?.itemSelectedColor).toBe("#93c5fd");
     expect(darkTabs?.itemActiveColor).toBe("#93c5fd");
     expect(darkTabs?.itemHoverColor).toBe("#bfdbfe");
+  });
+
+  it("keeps a host brand primary in dark mode by lifting its lightness", () => {
+    const brandConfig: RuntimeConfig = {
+      ...runtimeConfig,
+      theme: { ...runtimeConfig.theme, primaryColor: "#7c2d12" },
+    };
+    const darkTheme = createThemeConfig(brandConfig, "dark");
+    const derived = darkPrimaryFor("#7c2d12");
+
+    expect(darkTheme.token?.colorPrimary).toBe(derived.base);
+    expect(darkTheme.components?.Button?.colorPrimary).toBe(derived.base);
+    expect(derived.base).not.toBe("#3b82f6");
+    // Same hue family (orange-brown), lifted for dark surfaces.
+    expect(derived.base).toBe("#e5744d");
+  });
+
+  it("maps the default primary to the tuned dark blue", () => {
+    expect(darkPrimaryFor("#1e3a8a")).toEqual({
+      base: "#3b82f6",
+      hover: "#5b95f7",
+      active: "#2f6fdc",
+    });
+    expect(createThemeConfig(runtimeConfig, "dark").token?.colorPrimary).toBe("#3b82f6");
   });
 });

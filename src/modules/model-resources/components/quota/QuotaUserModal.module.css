@@ -49,7 +49,7 @@
 
 .remainAlert {
   margin-bottom: 10px;
-  border-color: #99c5ff;
+  border-color: var(--color-primary-border);
   border-radius: 4px;
   background: var(--color-info-bg);
 }

@@ -213,17 +213,17 @@
 
   font-weight: 600;
 
-  white-space: nowrap;
+  /* Columns shrink to fit (fixed layout, no horizontal scroll). Long English titles wrap to a second
+     line instead of spilling over the neighbouring header. */
+  line-height: 18px;
 
-  overflow: visible;
+  white-space: normal;
 
-  text-overflow: clip;
+  overflow-wrap: break-word;
 }
 
 .tableSurface :global(.ant-table-thead > tr > th.ant-table-cell-ellipsis) {
-  overflow: visible;
-
-  text-overflow: clip;
+  white-space: normal;
 }
 
 .tableSurface :global(.ant-table-tbody > tr > td) {
@@ -231,7 +231,7 @@
 
   padding-bottom: 14px;
 
-  border-bottom: 1px solid #e8edf3;
+  border-bottom: 1px solid var(--color-divider);
 
   color: var(--color-text-primary);
 
@@ -295,11 +295,16 @@
 }
 
 .tableSurface :global(.ant-table-tbody > tr > td *),
-.tableSurface :global(.ant-table-tbody > tr > td .ant-btn),
-.tableSurface :global(.ant-table-tbody > tr > td .ant-tag) {
+.tableSurface :global(.ant-table-tbody > tr > td .ant-btn) {
   font-size: 14px;
 
   font-weight: 400;
+}
+
+/* Status tags stay a step smaller than the cell text so they read as labels, not values. */
+.tableSurface :global(.ant-table-tbody > tr > td .ant-tag),
+.tableSurface :global(.ant-table-tbody > tr > td .ant-tag *) {
+  font-size: 12px;
 }
 
 .tableSurface :global(.ant-table-tbody > tr:hover > td) {

@@ -130,7 +130,7 @@
   padding: 48px 16px;
   text-align: center;
   color: var(--color-text-secondary);
-  border: 1px dashed #bfdbfe;
+  border: 1px dashed var(--color-primary-border);
   border-radius: 0;
   display: flex;
   flex-direction: column;

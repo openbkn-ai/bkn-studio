@@ -8,7 +8,7 @@
 export const modelResourcesEnUS = {
   modelResources: {
     models: {
-      title: "Model Management",
+      title: "Models",
       description:
         "Manage large and small model configurations, including connection tests, monitoring, and API guides.",
       searchPlaceholder: "please enter the model name",
@@ -175,7 +175,7 @@ export const modelResourcesEnUS = {
       },
     },
     quotas: {
-      title: "Quota Management",
+      title: "Quotas",
       description: "Configure model token limits and distribute usage quotas by user.",
       searchPlaceholder: "please enter the model name",
       all: "All",

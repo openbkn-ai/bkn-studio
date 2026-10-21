@@ -93,58 +93,59 @@
   --color-primary-700: #60a5fa;
   --color-primary-600: #3b82f6;
   --color-primary-500: #60a5fa;
-  --color-primary-300: #3b5f8c;
-  --color-primary-100: #1e3a5f;
-  --color-primary-50: #15233b;
+  --color-primary-300: #4a6fa8;
+  --color-primary-100: #1f2d45;
+  --color-primary-50: #1d2534;
   --color-primary-bg: var(--color-primary-100);
-  --color-primary-border: #3b5f8c;
+  --color-primary-border: #365379;
 
-  --color-bg-page: #0f172a;
+  /* Near-neutral cool grays: layers step up in lightness instead of relying on borders. */
+  --color-bg-page: #111318;
   --color-bg-layout: var(--color-bg-page);
-  --color-bg-sidebar: #121c2e;
-  --color-bg-surface: #172033;
-  --color-bg-raised: #1b2638;
-  --color-fill-secondary: #243047;
-  --color-fill-quaternary: #202c40;
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #cbd5e1;
-  --color-text-tertiary: #94a3b8;
-  --color-text-muted: #94a3b8;
-  --color-text-faint: #64748b;
+  --color-bg-sidebar: #15171d;
+  --color-bg-surface: #1a1d23;
+  --color-bg-raised: #20232a;
+  --color-fill-secondary: #262a32;
+  --color-fill-quaternary: #1f2229;
+  --color-text-primary: #e6e8eb;
+  --color-text-secondary: #a8afba;
+  --color-text-tertiary: #7d8592;
+  --color-text-muted: #7d8592;
+  --color-text-faint: #565d69;
   --color-text-link: #93c5fd;
   --color-text-link-hover: #bfdbfe;
   --color-text-link-inverse: #93c5fd;
-  --color-text-disabled: #64748b;
+  --color-text-disabled: #565d69;
   --color-text-inverse: #ffffff;
   --color-text-inverse-muted: rgba(255, 255, 255, 0.75);
   --color-text-accent: #c4b5fd;
   --color-text-teal: #5eead4;
-  --color-border: #334155;
-  --color-divider: #273548;
+  --color-border: #2b2f37;
+  --color-divider: #23262d;
   --color-border-secondary: var(--color-divider);
-  --color-hover: #243047;
+  --color-hover: #23262d;
   --color-accent-bg: #30214d;
   --color-accent-border: #7c5bc0;
   --color-accent-solid: #8b5cf6;
 
-  --color-success-bg: #123527;
-  --color-success-bg-hover: #164a32;
-  --color-success-text: #86efac;
-  --color-success-border: #226340;
-  --color-info-bg: #172f57;
+  --color-success-bg: rgba(74, 222, 128, 0.12);
+  --color-success-bg-hover: rgba(74, 222, 128, 0.18);
+  --color-success-text: #4ade80;
+  --color-success-border: rgba(74, 222, 128, 0.35);
+  --color-info-bg: rgba(96, 165, 250, 0.12);
   --color-info-text: #93c5fd;
-  --color-info-border: #31588b;
-  --color-warning-bg: #3b2c12;
-  --color-warning-text: #fcd34d;
-  --color-warning-border: #825f1d;
-  --color-error-bg: #431d27;
-  --color-error-text: #fca5a5;
-  --color-error-border: #8f3345;
+  --color-info-border: rgba(96, 165, 250, 0.35);
+  --color-warning-bg: rgba(251, 191, 36, 0.12);
+  --color-warning-text: #fbbf24;
+  --color-warning-border: rgba(251, 191, 36, 0.35);
+  --color-error-bg: rgba(248, 113, 113, 0.12);
+  --color-error-text: #f87171;
+  --color-error-border: rgba(248, 113, 113, 0.35);
 
-  --color-interface-panel-bg: #172033;
+  --color-interface-panel-bg: #1a1d23;
   --color-interface-panel-border: rgba(125, 211, 252, 0.2);
   --color-interface-panel-muted: rgba(203, 213, 225, 0.72);
-  --color-interface-code-bg: #0f172a;
+  --color-interface-code-bg: #111318;
   --color-interface-code-text: #e2e8f0;
   --color-interface-success-dot: #34d399;
   --color-interface-success-ring: rgba(52, 211, 153, 0.16);
@@ -181,6 +182,16 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+/* Avoid orphaned last lines (a lone character plus punctuation) in running text. Browsers without
+   support simply ignore it. */
+p,
+dd,
+li,
+figcaption,
+blockquote {
+  text-wrap: pretty;
 }
 
 .console-shell {
@@ -706,7 +717,7 @@ select {
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  padding: 0 14px;
+  padding: 6px 14px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -767,14 +778,21 @@ select {
 }
 
 .console-sidenav-label {
-  /* 与档位徽标同排时,长名省略而不是折行(截图里「角色管理」被挤成了两行)。 */
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* 英文菜单名普遍较长（如 Knowledge Network Management），允许折成两行而不是省略号截断。 */
+  display: -webkit-box;
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 与档位徽标同排时,长名省略而不是折行(截图里「角色管理」被挤成了两行)。 */
+.console-sidenav-link:has(.console-sidenav-tier) .console-sidenav-label {
+  display: block;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

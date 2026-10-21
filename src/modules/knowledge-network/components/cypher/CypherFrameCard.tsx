@@ -285,7 +285,13 @@ export function CypherFrameCard({
       return <Alert message={frame.generationError} showIcon type="warning" />;
     }
     if (frame.resultDropped) {
-      return <Alert message={t("knowledgeNetwork.cypherQuery.frames.resultDropped")} type="info" />;
+      return (
+        <Alert
+          className={styles.frameNotice}
+          message={t("knowledgeNetwork.cypherQuery.frames.resultDropped")}
+          type="info"
+        />
+      );
     }
     if (frame.error) {
       const errorText = [

@@ -106,7 +106,7 @@ function DiscoverTaskPriority({ priority }: { priority: number }) {
   const { t } = useTranslation();
   const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
   return (
-    <LightStatusTag tone={level === "high" ? "error" : level === "low" ? "neutral" : "info"}>
+    <LightStatusTag tone={level === "high" ? "warning" : "neutral"}>
       {t(`dataConnect.discoverTaskPriorities.${level}`, { priority })}
     </LightStatusTag>
   );
