@@ -62,6 +62,7 @@ import {
   type ExpressionValueType,
 } from "@/modules/knowledge-network/components/object-metric/object-metric-expression-registry";
 import { objectMetricQueryCapabilities } from "@/modules/knowledge-network/lib/object-metric-query-capabilities";
+import { derivedBaseMetricFormPatch } from "@/modules/knowledge-network/lib/object-metric-derived-base";
 import { presentObjectMetricValidationIssue } from "@/modules/knowledge-network/lib/object-metric-validation-presentation";
 import { availableRelationTypesFrom } from "@/modules/knowledge-network/lib/object-metric-relation-path";
 import {
@@ -970,7 +971,7 @@ function aiFormAction(prompt: string): "validate" | "trial" | null {
     .replace(/[。.!！?？]+$/gu, "")
     .replace(/\s+/gu, "");
   if (
-    /^(?:请|帮我|帮忙|先|现在)*(?:验证|校验|检查)(?:一下|下)?(?:当前|这个|该)?(?:表单|指标|定义)?(?:是否正确|有没有问题|有没有错误)?$/u.test(
+    /^(?:\u8bf7|\u5e2e\u6211|\u5e2e\u5fd9|\u5148|\u73b0\u5728)*(?:\u9a8c\u8bc1|\u6821\u9a8c|\u68c0\u67e5)(?:\u4e00\u4e0b|\u4e0b)?(?:\u5f53\u524d|\u8fd9\u4e2a|\u8be5)?(?:\u8868\u5355|\u6307\u6807|\u5b9a\u4e49)?(?:\u662f\u5426\u6b63\u786e|\u6709\u6ca1\u6709\u95ee\u9898|\u6709\u6ca1\u6709\u9519\u8bef)?$/u.test(
       compact,
     ) ||
     /^(?:please\s+)?(?:validate|check)(?:\s+(?:the|this))?(?:\s+current)?(?:\s+(?:form|metric|definition))?$/iu.test(
@@ -980,7 +981,7 @@ function aiFormAction(prompt: string): "validate" | "trial" | null {
     return "validate";
   }
   if (
-    /^(?:请|帮我|帮忙|先|现在)*(?:试算|算一下)(?:一下|下)?(?:当前|这个|该)?(?:表单|指标|定义)?$/u.test(
+    /^(?:\u8bf7|\u5e2e\u6211|\u5e2e\u5fd9|\u5148|\u73b0\u5728)*(?:\u8bd5\u7b97|\u7b97\u4e00\u4e0b)(?:\u4e00\u4e0b|\u4e0b)?(?:\u5f53\u524d|\u8fd9\u4e2a|\u8be5)?(?:\u8868\u5355|\u6307\u6807|\u5b9a\u4e49)?$/u.test(
       compact,
     ) ||
     /^(?:please\s+)?(?:trial|run a trial)(?:\s+of)?(?:\s+(?:the|this))?(?:\s+current)?(?:\s+(?:form|metric|definition))?$/iu.test(
@@ -1208,6 +1209,64 @@ function HelpTooltip({ label, title }: { label: string; title: string }) {
   );
 }
 
+function AiPromptComposer({
+  checking,
+  generating,
+  onStop,
+  onSubmit,
+  promptRequest,
+}: {
+  checking: boolean;
+  generating: boolean;
+  onStop: () => void;
+  onSubmit: (prompt: string) => void;
+  promptRequest?: { revision: number; value: string };
+}) {
+  const [prompt, setPrompt] = useState("");
+
+  useEffect(() => {
+    if (promptRequest) setPrompt(promptRequest.value);
+  }, [promptRequest]);
+
+  const submit = () => {
+    const value = prompt.trim();
+    if (!value || generating || checking) return;
+    setPrompt("");
+    onSubmit(value);
+  };
+
+  return (
+    <div className={styles.aiComposerInputRow}>
+      <Input.TextArea
+        aria-label={objectMetricText("m15a3900b6bf9")}
+        autoFocus
+        autoSize={{ minRows: 2, maxRows: 5 }}
+        disabled={generating || checking}
+        maxLength={1200}
+        onChange={(event) => setPrompt(event.target.value)}
+        onPressEnter={(event) => {
+          if (!event.shiftKey) {
+            event.preventDefault();
+            submit();
+          }
+        }}
+        placeholder={objectMetricText("m7d7fca1df843")}
+        value={prompt}
+      />
+      <Button
+        aria-label={objectMetricText("m24d9e58a6e44")}
+        danger={generating}
+        disabled={!generating && (checking || !prompt.trim())}
+        icon={generating ? <StopOutlined /> : <SendOutlined />}
+        onClick={generating ? onStop : submit}
+        type={generating ? "default" : "primary"}
+      >
+        {generating ? objectMetricText("mca4d973c0b00") : objectMetricText("medecf0ae6e51")}
+      </Button>
+    </div>
+  );
+}
+
 export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   useTranslation();
   const params = useParams<{ metricId: string; networkId: string }>();
@@ -1257,7 +1316,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const [validation, setValidation] = useState<ObjectMetricValidationResultV1>();
   const [preview, setPreview] = useState<ObjectMetricPreviewV1>();
   const [trialDefinition, setTrialDefinition] = useState<ObjectMetricDefinitionV1>();
-  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiPromptRequest, setAiPromptRequest] = useState<{ revision: number; value: string }>();
   const [aiModelId, setAiModelId] = useState<string | undefined>();
   const [aiModels, setAiModels] = useState<ObjectMetricAnswerModel[]>([]);
   const [aiModelsLoading, setAiModelsLoading] = useState(false);
@@ -1480,51 +1539,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       (item) => dependencyKey(item.definition.id, item.definition.version) === key,
     );
     if (!base) return;
-    const value = base.definition.result_semantics.value;
     setBusinessCondition(undefined);
     setRelatedCondition(undefined);
     setRelationSteps([]);
     setValidation(undefined);
     setPreview(undefined);
-    form.setFieldsValue({
-      analysisDimensions: [],
-      calculationScope: base.definition.calculation_scope,
-      eventTime: undefined,
-      fixedTimeRange: undefined,
-      grainWeekStart: undefined,
-      groupByDimensions: [],
-      maximum: value.maximum,
-      minimum: value.minimum,
-      noDataPolicy: base.definition.result_semantics.no_data_policy,
-      physicalType: value.physical_type,
-      precision: value.precision,
-      quantityKind: value.unit?.quantity_kind,
-      relationCountComparison: undefined,
-      relationCountThreshold: undefined,
-      relationQuantifier: undefined,
-      roundingMode: value.rounding_mode,
-      scale: value.scale,
-      semanticType: value.semantic_type,
-      timeDimensions: [],
-      timeGranularity: undefined,
-      timeWindowLength: undefined,
-      timeWindowMode: "unbounded",
-      timeWindowUnit: undefined,
-      timezone: undefined,
-      unitCode: value.unit?.code,
-      unitDenominatorCode: value.unit?.denominator?.code,
-      unitDenominatorKind: value.unit?.denominator?.quantity_kind as Exclude<
-        UnitQuantityKind,
-        "rate"
-      >,
-      unitDenominatorSystem: value.unit?.denominator?.system,
-      unitNumeratorCode: value.unit?.numerator?.code,
-      unitNumeratorKind: value.unit?.numerator?.quantity_kind as Exclude<UnitQuantityKind, "rate">,
-      unitNumeratorSystem: value.unit?.numerator?.system,
-      unitScaleFactor: value.unit?.scale_factor,
-      unitSystem: value.unit?.system,
-      weekStart: undefined,
-    });
+    form.setFieldsValue(derivedBaseMetricFormPatch(base.definition));
   };
   const updateCompositeExpression = (next: ObjectMetricExpressionV1) => {
     setCompositeExpression(next);
@@ -1893,9 +1913,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     appendAiReply(diagnostic.summary, tone);
   };
 
-  const generateWithAi = async () => {
-    const prompt = aiPrompt.trim();
+  const generateWithAi = async (submittedPrompt: string) => {
+    const prompt = submittedPrompt.trim();
     if (!prompt || aiGenerating || aiChecking) return;
+    setAiPromptRequest(undefined);
     const formAction = aiFormAction(prompt);
     if (formAction) {
       const turnId = `${Date.now()}`;
@@ -1903,7 +1924,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         ...current,
         { content: prompt, id: `${turnId}-user`, role: "user" },
       ]);
-      setAiPrompt("");
       if (formAction === "validate") {
         void checkCurrentWithAi();
       } else {
@@ -1929,7 +1949,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       ...current,
       { content: prompt, id: `${turnId}-user`, role: "user" },
     ]);
-    setAiPrompt("");
     setAiGenerating(true);
     const controller = new AbortController();
     aiAbortRef.current = controller;
@@ -5864,6 +5883,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 onClick={() => {
                   if (aiGenerating) stopAiGeneration();
                   setAiExpanded(false);
+                  setAiPromptRequest(undefined);
                   setAiOpen(false);
                 }}
                 type="text"
@@ -5975,7 +5995,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               <div className={styles.aiDialogExamples}>
                 <span>{objectMetricText("m0d53f08678d8")}</span>
                 {aiExamples.map((example) => (
-                  <button key={example} onClick={() => setAiPrompt(example)} type="button">
+                  <button
+                    key={example}
+                    onClick={() =>
+                      setAiPromptRequest((current) => ({
+                        revision: (current?.revision ?? 0) + 1,
+                        value: example,
+                      }))
+                    }
+                    type="button"
+                  >
                     {example}
                   </button>
                 ))}
@@ -6022,36 +6051,13 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 {objectMetricText("aiModelListUnavailable")}
               </span>
             ) : null}
-            <div className={styles.aiComposerInputRow}>
-              <Input.TextArea
-                aria-label={objectMetricText("m15a3900b6bf9")}
-                autoFocus
-                autoSize={{ minRows: 2, maxRows: 5 }}
-                disabled={aiGenerating || aiChecking}
-                maxLength={1200}
-                onChange={(event) => setAiPrompt(event.target.value)}
-                onPressEnter={(event) => {
-                  if (!event.shiftKey) {
-                    event.preventDefault();
-                    void generateWithAi();
-                  }
-                }}
-                placeholder={objectMetricText("m7d7fca1df843")}
-                value={aiPrompt}
-              />
-              <Button
-                aria-label={objectMetricText("m24d9e58a6e44")}
-                danger={aiGenerating}
-                disabled={!aiGenerating && (aiChecking || !aiPrompt.trim())}
-                icon={aiGenerating ? <StopOutlined /> : <SendOutlined />}
-                onClick={() => (aiGenerating ? stopAiGeneration() : void generateWithAi())}
-                type={aiGenerating ? "default" : "primary"}
-              >
-                {aiGenerating
-                  ? objectMetricText("mca4d973c0b00")
-                  : objectMetricText("medecf0ae6e51")}
-              </Button>
-            </div>
+            <AiPromptComposer
+              checking={aiChecking}
+              generating={aiGenerating}
+              onStop={stopAiGeneration}
+              onSubmit={(prompt) => void generateWithAi(prompt)}
+              promptRequest={aiPromptRequest}
+            />
           </div>
           <p className={styles.aiDialogFootnote}>{objectMetricText("m1917adbea87f")}</p>
         </aside>

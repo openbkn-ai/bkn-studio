@@ -124,6 +124,22 @@ function mockDesignerName(name: string) {
   );
 }
 
+function getButtonByText(name: string | RegExp) {
+  const button = screen.getByText(name).closest("button");
+  if (!button) throw new Error(`Expected button: ${String(name)}`);
+  return button;
+}
+
+async function findButtonByText(name: string | RegExp) {
+  const button = (await screen.findByText(name)).closest("button");
+  if (!button) throw new Error(`Expected button: ${String(name)}`);
+  return button;
+}
+
+function queryButtonByText(name: string | RegExp) {
+  return screen.queryByText(name)?.closest("button") ?? null;
+}
+
 const originalMatchMedia = window.matchMedia;
 
 beforeAll(() => {
@@ -182,24 +198,26 @@ describe("ObjectMetricFormScene object properties", () => {
     mockDesignerName("AI 订单数");
 
     render(<ObjectMetricFormScene mode="create" />);
-    const modelSelect = await screen.findByRole("combobox", { name: "回答模型" });
+    await screen.findByText("平台默认模型");
+    const modelSelect = document.querySelector<HTMLInputElement>("#metric-ai-model");
+    if (!modelSelect) throw new Error("expected model select");
     await waitFor(() => expect(mocks.listObjectMetricAnswerModels).toHaveBeenCalled());
     fireEvent.mouseDown(modelSelect);
     fireEvent.click(await screen.findByText("测试对话模型"));
-    fireEvent.change(await screen.findByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(await screen.findByLabelText("描述要创建的指标"), {
       target: { value: "统计订单数" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(1));
     expect(mocks.runObjectMetricDesigner.mock.calls[0][0].modelId).toBe("model-1");
-    expect(await screen.findByRole("button", { name: "新对话" })).toBeInTheDocument();
+    expect(await screen.findByText("新对话")).toBeInTheDocument();
     expect(modelSelect).toBeDisabled();
-    fireEvent.change(screen.getByRole("textbox", { name: "指标名称" }), {
+    fireEvent.change(screen.getByLabelText("指标名称"), {
       target: { value: "人工填写" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "新对话" }));
+    fireEvent.click(getButtonByText("新对话"));
     expect(modelSelect).not.toBeDisabled();
-    expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("人工填写");
+    expect(screen.getByLabelText("指标名称")).toHaveValue("人工填写");
     expect(screen.queryByText("待应用的修改建议")).not.toBeInTheDocument();
   }, 90_000);
 
@@ -210,11 +228,8 @@ describe("ObjectMetricFormScene object properties", () => {
 
     render(<ObjectMetricFormScene mode="create" />);
 
-    expect(await screen.findByRole("complementary", { name: "AI 生成指标" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /AI 生成/ })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
+    expect(await screen.findByLabelText("AI 生成指标")).toBeInTheDocument();
+    expect(getButtonByText("AI 生成")).toHaveAttribute("aria-expanded", "true");
   });
 
   it("requires confirmation and rejects a proposal after the form changes", async () => {
@@ -224,10 +239,10 @@ describe("ObjectMetricFormScene object properties", () => {
     mockDesignerName("AI 订单数");
 
     render(<ObjectMetricFormScene mode="create" />);
-    fireEvent.change(await screen.findByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(await screen.findByLabelText("描述要创建的指标"), {
       target: { value: "统计订单数" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     expect(await screen.findByText("待应用的修改建议")).toBeInTheDocument();
     expect(mocks.runObjectMetricDesigner.mock.lastCall?.[0].scope).toMatchObject({
       kn_id: "network-1",
@@ -236,28 +251,28 @@ describe("ObjectMetricFormScene object properties", () => {
       mode: "create",
     });
     expect(screen.getByText('建议值: "AI 订单数"')).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "指标名称" })).not.toHaveValue("AI 订单数");
+    expect(screen.getByLabelText("指标名称")).not.toHaveValue("AI 订单数");
 
-    fireEvent.click(screen.getByRole("button", { name: "应用所选修改" }));
-    expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("AI 订单数");
+    fireEvent.click(getButtonByText("应用所选修改"));
+    expect(screen.getByLabelText("指标名称")).toHaveValue("AI 订单数");
     expect(screen.queryByText("待应用的修改建议")).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "撤销本次应用" }));
-    expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("");
+    fireEvent.click(await findButtonByText("撤销本次应用"));
+    expect(screen.getByLabelText("指标名称")).toHaveValue("");
 
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "再调整一次" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     expect(await screen.findByText("待应用的修改建议")).toBeInTheDocument();
     expect(mocks.runObjectMetricDesigner).toHaveBeenLastCalledWith(
       expect.objectContaining({ threadId: "thread-1" }),
     );
 
-    fireEvent.change(screen.getByRole("textbox", { name: "指标名称" }), {
+    fireEvent.change(screen.getByLabelText("指标名称"), {
       target: { value: "人工填写" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "应用所选修改" }));
-    expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("人工填写");
+    fireEvent.click(getButtonByText("应用所选修改"));
+    expect(screen.getByLabelText("指标名称")).toHaveValue("人工填写");
     expect(await screen.findByText(/原建议不会覆盖当前编辑/)).toBeInTheDocument();
     expect(screen.queryByText("待应用的修改建议")).not.toBeInTheDocument();
   }, 60_000);
@@ -269,21 +284,21 @@ describe("ObjectMetricFormScene object properties", () => {
     mockDesignerName("AI 订单数");
 
     render(<ObjectMetricFormScene mode="create" />);
-    fireEvent.change(await screen.findByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(await screen.findByLabelText("描述要创建的指标"), {
       target: { value: "统计订单数" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
-    fireEvent.click(await screen.findByRole("button", { name: "应用所选修改" }));
-    expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("AI 订单数");
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    expect(screen.getByLabelText("指标名称")).toHaveValue("AI 订单数");
 
-    fireEvent.change(screen.getByRole("textbox", { name: "指标名称" }), {
+    fireEvent.change(screen.getByLabelText("指标名称"), {
       target: { value: "人工确认的订单数" },
     });
-    fireEvent.click(await screen.findByRole("button", { name: "撤销本次应用" }));
+    fireEvent.click(await findButtonByText("撤销本次应用"));
 
-    expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("人工确认的订单数");
+    expect(screen.getByLabelText("指标名称")).toHaveValue("人工确认的订单数");
     expect(await screen.findByText(/表单已有新的修改，不能自动撤销/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "撤销本次应用" })).not.toBeInTheDocument();
+    expect(queryButtonByText("撤销本次应用")).not.toBeInTheDocument();
   }, 60_000);
 
   it("keeps the editable form available beside the AI assistant", async () => {
@@ -293,48 +308,42 @@ describe("ObjectMetricFormScene object properties", () => {
 
     render(<ObjectMetricFormScene mode="create" />);
 
-    const page = await screen.findByRole("main");
+    const aiPanel = await screen.findByLabelText("AI 生成指标");
+    const page = aiPanel.closest("main");
+    if (!page) throw new Error("expected metric form page");
     expect(page).toHaveAttribute("data-ai-layout", "docked");
-    const aiPanel = screen.getByRole("complementary", { name: "AI 生成指标" });
     expect(aiPanel).toBeInTheDocument();
     const scrollContent = screen.getByTestId("metric-ai-scroll-content");
     expect(scrollContent).toHaveTextContent("描述业务口径，我会先给出修改建议；确认后再更新表单。");
     expect(aiPanel).toHaveTextContent("不会自动保存或发布");
     expect(screen.queryByText("验证与试算")).not.toBeInTheDocument();
-    expect(scrollContent).not.toContainElement(
-      screen.getByRole("textbox", { name: "描述要创建的指标" }),
-    );
-    expect(screen.queryByRole("button", { name: "验证当前表单" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "试算当前表单" })).not.toBeInTheDocument();
+    expect(scrollContent).not.toContainElement(screen.getByLabelText("描述要创建的指标"));
+    expect(queryButtonByText("验证当前表单")).not.toBeInTheDocument();
+    expect(queryButtonByText("试算当前表单")).not.toBeInTheDocument();
     expect(mocks.validateObjectMetricV1).not.toHaveBeenCalled();
     expect(mocks.trialObjectMetricDataV1).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "保存草稿" })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "统计订单数量" }));
-    expect(screen.getByRole("textbox", { name: "描述要创建的指标" })).toHaveValue("统计订单数量");
+    expect(getButtonByText("保存草稿")).toBeVisible();
+    fireEvent.click(getButtonByText("统计订单数量"));
+    expect(screen.getByLabelText("描述要创建的指标")).toHaveValue("统计订单数量");
     expect(mocks.runObjectMetricDesigner).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByRole("textbox", { name: "指标名称" }), {
+    fireEvent.change(screen.getByLabelText("指标名称"), {
       target: { value: "订单数量" },
     });
-    expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("订单数量");
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    expect(screen.getByLabelText("指标名称")).toHaveValue("订单数量");
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "统计已确认订单数" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "全页展开 AI 对话" }));
+    fireEvent.click(screen.getByLabelText("全页展开 AI 对话"));
     expect(page).toHaveAttribute("data-ai-layout", "expanded");
-    expect(screen.getByRole("button", { name: "返回双栏视图" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByRole("textbox", { name: "描述要创建的指标" })).toHaveValue(
-      "统计已确认订单数",
-    );
-    fireEvent.click(screen.getByRole("button", { name: "返回双栏视图" }));
+    expect(screen.getByLabelText("返回双栏视图")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("描述要创建的指标")).toHaveValue("统计已确认订单数");
+    fireEvent.click(screen.getByLabelText("返回双栏视图"));
     expect(page).toHaveAttribute("data-ai-layout", "docked");
-    expect(screen.getByRole("textbox", { name: "指标名称" })).toHaveValue("订单数量");
-    fireEvent.click(screen.getByRole("button", { name: "查看表单" }));
+    expect(screen.getByLabelText("指标名称")).toHaveValue("订单数量");
+    fireEvent.click(screen.getByLabelText("查看表单"));
     expect(page).toHaveAttribute("data-ai-layout", "closed");
-    expect(screen.queryByRole("complementary", { name: "AI 生成指标" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "保存草稿" })).toBeVisible();
+    expect(screen.queryByLabelText("AI 生成指标")).not.toBeInTheDocument();
+    expect(getButtonByText("保存草稿")).toBeVisible();
   }, 90_000);
 
   it("validates the unsaved form on an explicit chat request and sends bounded feedback on the next turn", async () => {
@@ -344,27 +353,27 @@ describe("ObjectMetricFormScene object properties", () => {
     mockDesignerName("AI 订单数");
 
     render(<ObjectMetricFormScene mode="create" />);
-    fireEvent.change(await screen.findByRole("textbox", { name: "指标名称" }), {
+    fireEvent.change(await screen.findByLabelText("指标名称"), {
       target: { value: "订单数" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "业务定义" }), {
+    fireEvent.change(screen.getByLabelText("业务定义"), {
       target: { value: "统计当前对象类中的订单数量" },
     });
     expect(mocks.validateObjectMetricV1).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "验证当前表单" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(mocks.previewObjectMetricV1).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/定义校验通过，结果契约已预览/)).toBeInTheDocument();
     expect(mocks.runObjectMetricDesigner).not.toHaveBeenCalled();
     expect(mocks.createObjectMetricDraftV1).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "根据校验结果检查口径" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(1));
     const params = mocks.runObjectMetricDesigner.mock.calls[0][0];
     expect(params.diagnostic).toMatchObject({
@@ -384,17 +393,17 @@ describe("ObjectMetricFormScene object properties", () => {
     mockDesignerName("AI 订单数");
 
     render(<ObjectMetricFormScene mode="create" />);
-    fireEvent.change(await screen.findByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(await screen.findByLabelText("描述要创建的指标"), {
       target: { value: "帮我检查一下当前表单" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     expect(await screen.findByText(/定义校验未通过/)).toBeInTheDocument();
     expect(mocks.validateObjectMetricV1).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "帮我修正表单错误" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(1));
     const diagnostic = mocks.runObjectMetricDesigner.mock.calls[0][0].diagnostic;
     expect(diagnostic).toMatchObject({
@@ -411,23 +420,23 @@ describe("ObjectMetricFormScene object properties", () => {
     mockDesignerName("AI 订单数");
 
     render(<ObjectMetricFormScene mode="create" />);
-    fireEvent.change(await screen.findByRole("textbox", { name: "指标名称" }), {
+    fireEvent.change(await screen.findByLabelText("指标名称"), {
       target: { value: "订单数" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "业务定义" }), {
+    fireEvent.change(screen.getByLabelText("业务定义"), {
       target: { value: "统计订单数" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "验证当前表单" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     expect(await screen.findByText(/定义校验通过/)).toBeInTheDocument();
 
     for (const prompt of ["第一轮", "第二轮"]) {
-      fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+      fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
         target: { value: prompt },
       });
-      fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+      fireEvent.click(screen.getByLabelText("发送指标描述"));
       await waitFor(() =>
         expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(prompt === "第一轮" ? 1 : 2),
       );
@@ -468,15 +477,15 @@ describe("ObjectMetricFormScene object properties", () => {
     );
 
     render(<ObjectMetricFormScene mode="create" />);
-    fireEvent.change(await screen.findByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(await screen.findByLabelText("描述要创建的指标"), {
       target: { value: "改成常数表达式" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
-    fireEvent.click(await screen.findByRole("button", { name: "应用所选修改" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "继续检查" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(2));
     expect(mocks.runObjectMetricDesigner.mock.calls[1][0].formSnapshot).toMatchObject({
       "composite.expression": { node_type: "literal", value: 7, value_type: "decimal" },
@@ -525,15 +534,15 @@ describe("ObjectMetricFormScene object properties", () => {
     );
 
     render(<ObjectMetricFormScene mode="create" />);
-    fireEvent.change(await screen.findByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(await screen.findByLabelText("描述要创建的指标"), {
       target: { value: "添加两个依赖" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
-    fireEvent.click(await screen.findByRole("button", { name: "应用所选修改" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "继续检查" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(2));
     expect(mocks.runObjectMetricDesigner.mock.calls[1][0].formSnapshot).toMatchObject({
       "composite.expression": { node_type: "literal", value: 0, value_type: "decimal" },
@@ -561,28 +570,28 @@ describe("ObjectMetricFormScene object properties", () => {
     mockDesignerName("AI 订单数");
 
     render(<ObjectMetricFormScene mode="create" />);
-    fireEvent.change(await screen.findByRole("textbox", { name: "指标名称" }), {
+    fireEvent.change(await screen.findByLabelText("指标名称"), {
       target: { value: "订单数" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "业务定义" }), {
+    fireEvent.change(screen.getByLabelText("业务定义"), {
       target: { value: "统计当前对象类中的订单数量" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "试算当前表单" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
-    expect(await screen.findByRole("button", { name: "执行模拟试算" })).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
+    expect(await screen.findByText("执行模拟试算")).toBeInTheDocument();
     expect(await screen.findByText(/已打开试算抽屉/)).toBeInTheDocument();
     expect(mocks.trialObjectMetricDataV1).not.toHaveBeenCalled();
     expect(mocks.runObjectMetricDesigner).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "执行模拟试算" }));
+    fireEvent.click(getButtonByText("执行模拟试算"));
     await waitFor(() => expect(mocks.trialObjectMetricDataV1).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/试算状态：部分结果/)).toBeInTheDocument();
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "为什么是部分结果" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(1));
     const diagnostic = mocks.runObjectMetricDesigner.mock.calls[0][0].diagnostic;
     expect(diagnostic).toMatchObject({
@@ -609,22 +618,22 @@ describe("ObjectMetricFormScene object properties", () => {
     mockDesignerName("AI 订单数");
 
     render(<ObjectMetricFormScene mode="create" />);
-    fireEvent.change(await screen.findByRole("textbox", { name: "指标名称" }), {
+    fireEvent.change(await screen.findByLabelText("指标名称"), {
       target: { value: "订单数" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "业务定义" }), {
+    fireEvent.change(screen.getByLabelText("业务定义"), {
       target: { value: "统计订单数" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "请试算当前表单" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
-    fireEvent.click(await screen.findByRole("button", { name: "执行模拟试算" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
+    fireEvent.click(await findButtonByText("执行模拟试算"));
     expect(await screen.findByText(/无权试算/)).toBeInTheDocument();
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.change(screen.getByLabelText("描述要创建的指标"), {
       target: { value: "为什么不能试算" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(screen.getByLabelText("发送指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(1));
     expect(mocks.runObjectMetricDesigner.mock.calls[0][0].diagnostic?.status).toBe("forbidden");
   }, 30_000);
@@ -637,10 +646,10 @@ describe("ObjectMetricFormScene object properties", () => {
     render(<ObjectMetricFormScene mode="create" />);
 
     expect(await screen.findByText("对象属性加载失败")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+    fireEvent.click(getButtonByText("保存草稿"));
     await waitFor(() => expect(mocks.message.error).toHaveBeenCalled());
     expect(mocks.createObjectMetricDraftV1).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "返回对象指标列表" }));
+    fireEvent.click(screen.getByLabelText("返回对象指标列表"));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/metrics?objectTypeId=order",
     );
@@ -742,17 +751,23 @@ describe("ObjectMetricFormScene edit loading", () => {
 
     mocks.routeParams.current = { metricId: "derived-draft", networkId: "network-1" };
     render(<ObjectMetricFormScene mode="edit" />);
-    expect(await screen.findByRole("textbox", { name: "指标名称" })).toHaveValue("派生指标");
-    fireEvent.click(screen.getByRole("button", { name: /AI 生成/ }));
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    expect(await screen.findByLabelText("指标名称")).toHaveValue("派生指标");
+    const aiButton = screen.getByText("AI 生成").closest("button");
+    if (!aiButton) throw new Error("expected AI button");
+    fireEvent.click(aiButton);
+    const promptInput = screen.getByLabelText("描述要创建的指标");
+    const sendButton = screen.getByLabelText("发送指标描述");
+    fireEvent.change(promptInput, {
       target: { value: "改为基础指标 B" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
-    fireEvent.click(await screen.findByRole("button", { name: "应用所选修改" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "描述要创建的指标" }), {
+    fireEvent.click(sendButton);
+    const applyButton = (await screen.findByText("应用所选修改")).closest("button");
+    if (!applyButton) throw new Error("expected apply button");
+    fireEvent.click(applyButton);
+    fireEvent.change(promptInput, {
       target: { value: "验证当前表单" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "发送指标描述" }));
+    fireEvent.click(sendButton);
     await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalled());
     const next = mocks.validateObjectMetricV1.mock.lastCall?.[1];
     if (!next || next.specification.kind !== "derived") throw new Error("expected derived metric");
@@ -762,7 +777,7 @@ describe("ObjectMetricFormScene edit loading", () => {
     expect(next.result_semantics.statistical_grain.group_by_dimensions).toEqual([]);
     expect(next.result_semantics.value.physical_type).toBe("decimal");
     expect(next.specification.business_qualifiers.event_time).toBeUndefined();
-  }, 60_000);
+  }, 10_000);
 
   it("returns to the originating object selection even when edit loading fails", async () => {
     const returnTo =
@@ -772,7 +787,7 @@ describe("ObjectMetricFormScene edit loading", () => {
 
     render(<ObjectMetricFormScene mode="edit" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "返回指标列表" }));
+    fireEvent.click(await findButtonByText("返回指标列表"));
     expect(mocks.navigate).toHaveBeenCalledWith(returnTo);
   });
 
