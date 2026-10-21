@@ -56,6 +56,8 @@ const EXAMPLES: string[][] = [
   [
     "MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType)\nWITH a, count(*) AS n WHERE n > 100\nRETURN a.name AS name, n ORDER BY n DESC",
     "MATCH (a:ObjectType) WHERE a.name = 'X'\nWITH collect(a.id) AS ids\nMATCH (b:OtherType) WHERE b.owner_id IN ids\nRETURN count(*) AS n",
+    "MATCH (a:ObjectType {code: 'A'})-[:RELATION]->(m:OtherType)\nWITH collect(DISTINCT m.code) AS l1\nMATCH (b:ObjectType {code: 'B'})-[:RELATION]->(m2:OtherType)\nWITH l1, collect(DISTINCT m2.code) AS l2\nRETURN size([x IN l1 WHERE x IN l2]) AS common, size(l1) AS n1, size(l2) AS n2",
+    "MATCH (a:ObjectType)<-[:RELATION_A]-(b:OtherType)\nWITH a, count(b) AS total WHERE total >= 10\nMATCH (a)<-[:RELATION_A]-(b2:OtherType)-[:RELATION_B]->(c:ThirdType)\nRETURN a AS source, 'LINKED_TO' AS relationType, c AS target, count(b2) AS n, total\nLIMIT 25",
   ],
   [
     "MATCH (a:ObjectType)<-[:RELATION_A]-(b:OtherType)-[:RELATION_B]->(c:ThirdType)\nRETURN a AS source, 'LINKED_TO' AS relationType, c AS target, count(b) AS n\nLIMIT 25",

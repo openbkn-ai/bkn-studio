@@ -60,10 +60,18 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
   {
     title: "WITH",
     rules: [
-      "聚合后过滤：放在所有 MATCH 之后，如 WITH a, count(*) AS n WHERE n > 100，再 RETURN；后面可以再接 WITH 计算和过滤，只有第一个 WITH 能聚合。",
+      "聚合后过滤：放在所有 MATCH 之后，如 WITH a, count(*) AS n WHERE n > 100，再 RETURN；后面可以再接 WITH 计算和过滤，只有第一个 WITH 能聚合（比较两个列表时第二个 WITH 的 collect 除外）。聚合的 WITH 之后，RETURN 也可以只写 count(*) 等聚合，对分组再统计，返回一行。",
+      "WITH 之后，RETURN 可以直接返回传下来的节点，例如把过滤后的分组画成虚拟边。",
       "把一个属性的值传给下一个 MATCH：WITH DISTINCT a.p AS v（或 collect(a.p) AS vs），再接 MATCH … WHERE b.q = v（或 b.q IN vs）；之后不能再接 WITH。",
+      "比较两个列表（和上一条按值过滤是两种不同的写法）：两段各自 collect 一个属性，第二个 WITH 把第一个列表传下去，并 collect 第二个列表；RETURN 只写 size(l1)、size(l2) 和共有元素个数 size([x IN l1 WHERE x IN l2])，返回一行，不能返回列表本身。",
+      "把节点传给下一个 MATCH：WITH a, count(b) AS total，再接 MATCH (a)-…，第二段可以再聚合，RETURN 和 ORDER BY 可以用 total；查询含聚合时，用到 total 就要把它也作为单独一列返回。WITH 不聚合时，每个节点按匹配到的行数重复传下去，计数会成倍增加。",
     ],
-    notes: ["聚合后过滤", "把值传给下一个 MATCH"],
+    notes: [
+      "聚合后过滤",
+      "把值传给下一个 MATCH",
+      "比较两个列表",
+      "把节点传给下一个 MATCH，画成带数量的虚拟边",
+    ],
   },
   {
     title: "结果怎么显示",
@@ -79,8 +87,8 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
     title: "不支持",
     rules: [
       "UNION、UNWIND、变长路径 [:R*1..3]、XOR、乘方 ^、关系属性 r.x。",
-      "date() 和 coalesce() 以外的函数调用。",
-      "第二个 WITH 之后再 MATCH；做过聚合的 WITH 之后再 collect。",
+      "date() / datetime() / localdatetime()、coalesce()、size()（只用于 WITH 收集的列表）和聚合以外的函数调用。",
+      "第二个 WITH 之后再 MATCH；做过聚合的 WITH 之后再 collect（比较两个列表时第二个 WITH 的 collect 除外）。",
       "对节点或关系用 DISTINCT（RETURN DISTINCT n、collect(DISTINCT n)）、按节点或关系排序；collect 与 count、sum 等聚合同时返回。",
     ],
   },

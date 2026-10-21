@@ -60,10 +60,18 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
   {
     title: "WITH",
     rules: [
-      "Filter after aggregating: after every MATCH, as in WITH a, count(*) AS n WHERE n > 100, then RETURN; more WITHs may compute and filter, and only the first one aggregates.",
+      "Filter after aggregating: after every MATCH, as in WITH a, count(*) AS n WHERE n > 100, then RETURN; more WITHs may compute and filter, and only the first one aggregates (except the second WITH's collect when comparing two lists). After a WITH that aggregates, RETURN may instead hold only aggregates such as count(*) over the groups, returning one row.",
+      "After a WITH, RETURN may return the nodes it passed on, for instance to draw the filtered groups as derived edges.",
       "Pass one property's values to the next MATCH: WITH DISTINCT a.p AS v (or collect(a.p) AS vs), then MATCH … WHERE b.q = v (or b.q IN vs); no WITH may follow.",
+      "Compare two lists (a different form from passing values to the next MATCH above): each of two stages collects one property, and the second WITH passes the first list on and collects the second; RETURN holds only size(l1), size(l2) and the shared count size([x IN l1 WHERE x IN l2]), as one row, and cannot return the lists themselves.",
+      "Pass nodes on to the next MATCH: WITH a, count(b) AS total, then MATCH (a)-…, which may aggregate again, with total usable in RETURN and ORDER BY; when the query aggregates, return total as a column of its own wherever it is used. A WITH that does not aggregate passes each node on once per matched row, which multiplies the counts.",
     ],
-    notes: ["Filter after aggregating", "Pass values to the next MATCH"],
+    notes: [
+      "Filter after aggregating",
+      "Pass values to the next MATCH",
+      "Compare two lists",
+      "Pass nodes on to the next MATCH, drawn as derived edges with a count",
+    ],
   },
   {
     title: "How results show",
@@ -83,8 +91,8 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     title: "Not supported",
     rules: [
       "UNION, UNWIND, variable-length paths [:R*1..3], XOR, exponentiation ^, relationship properties r.x.",
-      "Function calls other than date() and coalesce().",
-      "MATCH after a second WITH; collect after a WITH that aggregates.",
+      "Function calls other than date() / datetime() / localdatetime(), coalesce(), size() (on a list a WITH collected) and the aggregates.",
+      "MATCH after a second WITH; collect after a WITH that aggregates (except the second WITH's collect when comparing two lists).",
       "DISTINCT on nodes or relationships (RETURN DISTINCT n, collect(DISTINCT n)) and ordering by them; collect beside count, sum and other aggregates.",
     ],
   },
