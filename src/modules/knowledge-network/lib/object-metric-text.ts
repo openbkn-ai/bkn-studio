@@ -6,6 +6,8 @@
  */
 
 import i18n from "@/app/locales/i18n";
+import { objectMetricAiProposalFields as enAiProposalFields } from "@/modules/knowledge-network/locales/en-US/object-metric-v1";
+import { objectMetricAiProposalFields as zhAiProposalFields } from "@/modules/knowledge-network/locales/zh-CN/object-metric-v1";
 import type { objectMetricV1Part } from "@/modules/knowledge-network/locales/zh-CN/object-metric-v1";
 
 export function objectMetricText(
@@ -17,4 +19,9 @@ export function objectMetricText(
 
 export function objectMetricLocale(): string {
   return i18n.resolvedLanguage?.startsWith("en") ? "en-US" : "zh-CN";
+}
+
+export function objectMetricAiProposalFieldLabel(path: string): string {
+  const labels = objectMetricLocale() === "en-US" ? enAiProposalFields : zhAiProposalFields;
+  return labels[path] ?? path;
 }

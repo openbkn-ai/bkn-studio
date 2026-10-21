@@ -6,6 +6,7 @@
  */
 
 import {
+  CloseOutlined,
   DeleteOutlined,
   LeftOutlined,
   PlusOutlined,
@@ -17,12 +18,12 @@ import {
 import {
   Alert,
   Button,
+  Checkbox,
   DatePicker,
   Drawer,
   Form,
   Input,
   InputNumber,
-  Modal,
   Radio,
   Result,
   Select,
@@ -32,8 +33,9 @@ import {
   Tag,
   Tooltip,
 } from "antd";
+import axios from "axios";
 import dayjs, { type Dayjs } from "dayjs";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -74,12 +76,24 @@ import {
   objectMetricUnitSelectionLocked,
   type ObjectMetricUnitQuantityKind,
 } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
-import { objectMetricFormErrorCount } from "@/modules/knowledge-network/lib/object-metric-form-validation";
-import { objectMetricReturnPath } from "@/modules/knowledge-network/lib/object-metric-navigation";
 import {
-  generateObjectMetricAiIntent,
-  type ObjectMetricAiIntent,
-} from "@/modules/knowledge-network/services/object-metric-ai.service";
+  objectMetricFormErrorCount,
+  objectMetricFormIssues,
+} from "@/modules/knowledge-network/lib/object-metric-form-validation";
+import { objectMetricReturnPath } from "@/modules/knowledge-network/lib/object-metric-navigation";
+import type { ObjectMetricAiIntent } from "@/modules/knowledge-network/services/object-metric-ai.service";
+import { newClientRequestId } from "@/modules/knowledge-network/services/bkn-agent-execution.service";
+import {
+  proposalToObjectMetricAiIntent,
+  runObjectMetricDesigner,
+  type ObjectMetricDesignDiagnostic,
+} from "@/modules/knowledge-network/services/object-metric-designer.service";
+import {
+  objectMetricAiChanges,
+  objectMetricAiPreviousValue,
+  selectedObjectMetricAiIntent,
+  type ObjectMetricAiEditableSnapshot,
+} from "@/modules/knowledge-network/services/object-metric-ai-proposal";
 import {
   createObjectMetricDraftV1,
   getObjectMetricCapabilitiesV1,
@@ -118,7 +132,10 @@ import type {
 
 import styles from "./ObjectMetricFormScene.module.css";
 import metricTheme from "@/modules/knowledge-network/components/object-metric/ObjectMetricTheme.module.css";
-import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import {
+  objectMetricAiProposalFieldLabel,
+  objectMetricText,
+} from "@/modules/knowledge-network/lib/object-metric-text";
 import { useTranslation } from "react-i18next";
 
 type UnitQuantityKind = ObjectMetricUnitQuantityKind;
@@ -928,6 +945,17 @@ function sanitizeAiExpression(
     : undefined;
 }
 
+function aiDiagnosticFailureStatus(
+  error: unknown,
+): "forbidden" | "unavailable" | "invalid_request" | "failed" {
+  if (isRequestForbidden(error)) return "forbidden";
+  if (isRequestNotFound(error)) return "unavailable";
+  if (axios.isAxiosError(error) && [400, 422].includes(error.response?.status ?? 0)) {
+    return "invalid_request";
+  }
+  return "failed";
+}
+
 function dependencyKey(metricId: string, version: number) {
   return `${metricId}@${version}`;
 }
@@ -1194,9 +1222,35 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const [preview, setPreview] = useState<ObjectMetricPreviewV1>();
   const [trialDefinition, setTrialDefinition] = useState<ObjectMetricDefinitionV1>();
   const [aiPrompt, setAiPrompt] = useState("");
-  const [aiOpen, setAiOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(mode === "create" && searchParams.get("ai") === "1");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiChecking, setAiChecking] = useState(false);
+  const [aiDiagnostic, setAiDiagnostic] = useState<{
+    snapshot: string;
+    formRevision: string;
+    data: Omit<ObjectMetricDesignDiagnostic, "form_revision">;
+    summary: string;
+  }>();
+  const aiTrialRequestedRef = useRef(false);
+  const aiTrialSnapshotRef = useRef<{ snapshot: string; formRevision: string } | null>(null);
+  const aiSkipCompositeDefaultRef = useRef(false);
+  const aiSkipCompositeInferenceRef = useRef(false);
+  const aiSkipDerivedSyncRef = useRef(false);
+  const [aiProposal, setAiProposal] = useState<{
+    intent: ObjectMetricAiIntent;
+    baseState: ObjectMetricAiEditableSnapshot;
+    baseSnapshot: string;
+    candidateSnapshot: string;
+    reasons: Record<string, string>;
+    selectedPaths: string[];
+  }>();
+  const [aiUndo, setAiUndo] = useState<{
+    before: ObjectMetricAiEditableSnapshot;
+    afterSnapshot: string;
+  }>();
+  const aiUndoPendingRef = useRef<ObjectMetricAiEditableSnapshot | null>(null);
   const aiAbortRef = useRef<AbortController | null>(null);
+  const aiThreadRef = useRef<{ scope: string; threadId: string } | null>(null);
   const [aiConversation, setAiConversation] = useState<
     Array<{ content: string; id: string; role: "assistant" | "user"; tone?: "error" }>
   >([]);
@@ -1213,6 +1267,24 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const ownerObjectTypeId = definition?.owner_object_type_id ?? requestedObjectTypeId;
   const returnTo = objectMetricReturnPath(networkId, location.state, ownerObjectTypeId);
   const ownerObjectType = objectTypes.find((item) => item.id === ownerObjectTypeId);
+  const aiScopeKey = JSON.stringify([
+    networkId,
+    ownerObjectTypeId,
+    metricType,
+    mode,
+    record?.definition.id,
+    record?.definition.version,
+  ]);
+  useEffect(() => {
+    aiAbortRef.current?.abort();
+    aiThreadRef.current = null;
+    aiTrialRequestedRef.current = false;
+    aiTrialSnapshotRef.current = null;
+    setAiConversation([]);
+    setAiProposal(undefined);
+    setAiUndo(undefined);
+    setAiDiagnostic(undefined);
+  }, [aiScopeKey]);
   const calculationScope = Form.useWatch("calculationScope", form);
   const aggregation = Form.useWatch("aggregation", form);
   const baseMetricKey = Form.useWatch("baseMetric", form);
@@ -1429,12 +1501,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       if (nextAggregation) commonValues.aggregation = nextAggregation;
       if (nextExpression) {
         setMeasureExpression(nextExpression);
-        applyValueSuggestion(
-          instanceValueSuggestion(nextExpression, properties, nextAggregation),
-          nextAggregation === "count_rows" ||
-            nextAggregation === "count" ||
-            nextAggregation === "count_distinct",
-        );
       }
     }
 
@@ -1449,12 +1515,20 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       );
       if (base) {
         const key = dependencyKey(base.definition.id, base.definition.version);
+        if (key !== getFieldValue("baseMetric")) {
+          // Match the manual base-metric switch before applying any explicit AI
+          // overrides. Otherwise dimensions, time fields and result semantics
+          // from the previous base metric survive in the draft.
+          selectBaseMetric(key);
+          aiSkipDerivedSyncRef.current = true;
+        }
         commonValues.baseMetric = key;
-        selectBaseMetric(key);
       }
-      setBusinessCondition(
-        sanitizeAiCondition(intent.derived.filters, ownerObjectTypeId, allowedProperties),
-      );
+      if (intent.derived.filters !== undefined) {
+        setBusinessCondition(
+          sanitizeAiCondition(intent.derived.filters, ownerObjectTypeId, allowedProperties),
+        );
+      }
       if (intent.derived.event_time && allowedProperties.has(intent.derived.event_time)) {
         commonValues.eventTime = intent.derived.event_time;
       }
@@ -1490,15 +1564,26 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           },
         ];
       });
-      if (nextDependencies.length) {
+      if (intent.composite.dependencies) {
+        aiSkipCompositeDefaultRef.current = true;
+        aiSkipCompositeInferenceRef.current = true;
         setDependencies(nextDependencies);
+      }
+      if (intent.composite.expression) {
+        const expressionDependencies = intent.composite.dependencies
+          ? nextDependencies
+          : dependencies;
         const nextExpression = sanitizeAiExpression(
           intent.composite.expression,
           ownerObjectTypeId,
           allowedProperties,
-          new Set(nextDependencies.map((item) => item.alias)),
+          new Set(expressionDependencies.map((item) => item.alias)),
         );
-        setCompositeExpression(nextExpression ?? defaultCompositeExpression(nextDependencies));
+        if (nextExpression) {
+          aiSkipCompositeDefaultRef.current = true;
+          aiSkipCompositeInferenceRef.current = true;
+          setCompositeExpression(nextExpression);
+        }
       }
     }
 
@@ -1510,12 +1595,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       commonValues.unitCode = result.unit_code;
       commonValues.unitSystem = result.unit_system;
       commonValues.quantityKind = result.quantity_kind;
-      commonValues.unitScaleFactor = result.unit_code ? 1 : undefined;
-      if (result.physical_type === "decimal") {
-        commonValues.precision = 18;
-        commonValues.scale = 2;
-        commonValues.roundingMode = "half_up";
-      }
     }
 
     const validPropertyList = (items?: string[]) =>
@@ -1544,9 +1623,203 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     setPreview(undefined);
   };
 
+  const captureAiEditableState = useCallback(
+    (): ObjectMetricAiEditableSnapshot => ({
+      form: form.getFieldsValue(true) as Record<string, unknown>,
+      businessCondition,
+      compositeExpression,
+      dependencies,
+      measureExpression,
+      relatedCondition,
+      relationSteps,
+    }),
+    [
+      form,
+      businessCondition,
+      compositeExpression,
+      dependencies,
+      measureExpression,
+      relatedCondition,
+      relationSteps,
+    ],
+  );
+
+  const currentAiSnapshot = useCallback(
+    () =>
+      JSON.stringify({
+        scope: {
+          networkId,
+          ownerObjectTypeId,
+          metricType,
+          metricId: record?.definition.id,
+          metricVersion: record?.definition.version,
+        },
+        ...captureAiEditableState(),
+      }),
+    [captureAiEditableState, networkId, ownerObjectTypeId, metricType, record],
+  );
+  const currentAiSnapshotRef = useRef("");
+  const currentAiSnapshotGetterRef = useRef(currentAiSnapshot);
+  currentAiSnapshotRef.current = currentAiSnapshot();
+  currentAiSnapshotGetterRef.current = currentAiSnapshot;
+  const aiFormRevisionRef = useRef<{ snapshot: string; revision: string } | null>(null);
+  const aiFormRevisionFor = (snapshot: string) => {
+    if (aiFormRevisionRef.current?.snapshot !== snapshot) {
+      aiFormRevisionRef.current = { snapshot, revision: newClientRequestId() };
+    }
+    return aiFormRevisionRef.current.revision;
+  };
+  aiFormRevisionFor(currentAiSnapshotRef.current);
+
+  useEffect(() => {
+    const pending = aiUndoPendingRef.current;
+    if (!pending) return;
+    aiUndoPendingRef.current = null;
+    setAiUndo({ before: pending, afterSnapshot: currentAiSnapshot() });
+  }, [aiProposal, currentAiSnapshot]);
+
+  const currentAiCandidateSnapshot = () =>
+    JSON.stringify({
+      properties: properties.map((item) => item.propertyName).sort(),
+      metrics: publishedMetrics
+        .filter((item) => item.definition.owner_object_type_id === ownerObjectTypeId)
+        .map((item) => `${item.definition.id}@${item.definition.version}`)
+        .sort(),
+    });
+
+  const applyAiProposal = () => {
+    if (!aiProposal) return;
+    if (
+      currentAiSnapshot() !== aiProposal.baseSnapshot ||
+      currentAiCandidateSnapshot() !== aiProposal.candidateSnapshot
+    ) {
+      setAiProposal(undefined);
+      setAiConversation((current) => [
+        ...current,
+        {
+          content: objectMetricText("aiProposalStale"),
+          id: `${Date.now()}-stale`,
+          role: "assistant",
+          tone: "error",
+        },
+      ]);
+      return;
+    }
+    if (!aiProposal.selectedPaths.length) return;
+    const selectedIntent = selectedObjectMetricAiIntent(
+      aiProposal.intent,
+      aiProposal.selectedPaths,
+    );
+    const allowedProperties = new Set(properties.map((item) => item.propertyName));
+    const nextDependencies = selectedIntent.composite?.dependencies;
+    const aliases = new Set<string>();
+    if (
+      nextDependencies?.some((requested) => {
+        const selected = publishedMetrics.find(
+          (item) =>
+            item.definition.id === requested.metric_id &&
+            item.definition.version === requested.version &&
+            item.definition.owner_object_type_id === ownerObjectTypeId &&
+            item.definition.calculation_scope ===
+              (selectedIntent.calculation_scope ?? getFieldValue("calculationScope")),
+        );
+        const invalid =
+          !selected || !/^[a-z][a-z0-9_]*$/i.test(requested.alias) || aliases.has(requested.alias);
+        aliases.add(requested.alias);
+        return invalid;
+      })
+    ) {
+      void message.error(objectMetricText("aiProposalCannotApply"));
+      return;
+    }
+    if (
+      selectedIntent.composite?.expression &&
+      !sanitizeAiExpression(
+        selectedIntent.composite.expression,
+        ownerObjectTypeId,
+        allowedProperties,
+        new Set((nextDependencies ?? dependencies).map((item) => item.alias)),
+      )
+    ) {
+      void message.error(objectMetricText("aiProposalCannotApply"));
+      return;
+    }
+    if (
+      selectedIntent.atomic?.expression &&
+      !sanitizeAiExpression(selectedIntent.atomic.expression, ownerObjectTypeId, allowedProperties)
+    ) {
+      void message.error(objectMetricText("aiProposalCannotApply"));
+      return;
+    }
+    if (
+      selectedIntent.derived?.filters &&
+      !sanitizeAiCondition(selectedIntent.derived.filters, ownerObjectTypeId, allowedProperties)
+    ) {
+      void message.error(objectMetricText("aiProposalCannotApply"));
+      return;
+    }
+    aiUndoPendingRef.current = captureAiEditableState();
+    applyAiIntent(selectedIntent);
+    setAiProposal(undefined);
+    setAiConversation((current) => [
+      ...current,
+      {
+        content: objectMetricText("aiProposalApplied"),
+        id: `${Date.now()}-applied`,
+        role: "assistant",
+      },
+    ]);
+  };
+
+  const undoAiApplication = () => {
+    if (!aiUndo) return;
+    if (currentAiSnapshot() !== aiUndo.afterSnapshot) {
+      setAiUndo(undefined);
+      setAiConversation((current) => [
+        ...current,
+        {
+          content: objectMetricText("aiProposalUndoStale"),
+          id: `${Date.now()}-undo-stale`,
+          role: "assistant",
+          tone: "error",
+        },
+      ]);
+      return;
+    }
+    const clearedFields = Object.fromEntries(
+      Object.keys(form.getFieldsValue(true) as Record<string, unknown>).map((key) => [
+        key,
+        undefined,
+      ]),
+    );
+    form.setFieldsValue({ ...clearedFields, ...aiUndo.before.form });
+    setBusinessCondition(aiUndo.before.businessCondition as ObjectMetricConditionV1 | undefined);
+    setCompositeExpression(aiUndo.before.compositeExpression as ObjectMetricExpressionV1);
+    setDependencies(aiUndo.before.dependencies as ObjectMetricDependencyV1[]);
+    setMeasureExpression(aiUndo.before.measureExpression as ObjectMetricExpressionV1);
+    setRelatedCondition(aiUndo.before.relatedCondition as ObjectMetricConditionV1 | undefined);
+    setRelationSteps(aiUndo.before.relationSteps as ObjectMetricRelationStepV1[]);
+    setValidation(undefined);
+    setPreview(undefined);
+    setAiUndo(undefined);
+    setAiConversation((current) => [
+      ...current,
+      {
+        content: objectMetricText("aiProposalUndone"),
+        id: `${Date.now()}-undone`,
+        role: "assistant",
+      },
+    ]);
+  };
+
   const generateWithAi = async () => {
     const prompt = aiPrompt.trim();
     if (!prompt || aiGenerating) return;
+    const baseState = captureAiEditableState();
+    const baseSnapshot = currentAiSnapshot();
+    const candidateSnapshot = currentAiCandidateSnapshot();
+    const baseFormRevision = aiFormRevisionFor(baseSnapshot);
+    setAiProposal(undefined);
     const turnId = `${Date.now()}`;
     setAiConversation((current) => [
       ...current,
@@ -1561,60 +1834,89 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         getToken: () => runtimeConfig.auth.tokenManager.getAccessToken() ?? "",
         refresh: () => runtimeConfig.auth.tokenManager.refreshAccessToken(),
       };
-      const intent = await generateObjectMetricAiIntent({
-        context: {
-          metricType,
-          objectType: { id: ownerObjectTypeId, name: ownerObjectName },
-          properties: properties.map((item) => ({
+      const result = await runObjectMetricDesigner({
+        base: typeof window === "undefined" ? "" : window.location.origin,
+        baseFormRevision,
+        candidates: {
+          properties: properties.slice(0, 200).map((item) => ({
             label: item.label,
             name: item.propertyName,
             type: item.propertyType,
           })),
-          publishedMetrics: publishedMetrics.map((item) => ({
-            id: item.definition.id,
-            name: item.definition.name,
-            objectTypeId: item.definition.owner_object_type_id,
-            scope: item.definition.calculation_scope,
-            type: item.definition.metric_type,
-            version: item.definition.version,
-          })),
+          published_metrics: publishedMetrics
+            .filter((item) => item.definition.owner_object_type_id === ownerObjectTypeId)
+            .slice(0, 200)
+            .map((item) => ({
+              id: item.definition.id,
+              name: item.definition.name,
+              object_type_id: item.definition.owner_object_type_id,
+              scope: item.definition.calculation_scope,
+              type: item.definition.metric_type,
+              version: item.definition.version,
+            })),
         },
-        env: {
-          base: typeof window === "undefined" ? "" : window.location.origin,
-          knId: networkId,
-          token: tokenProvider.getToken(),
+        formSnapshot: {
+          ...baseState.form,
+          "atomic.expression": baseState.measureExpression,
+          "atomic.property_name": objectMetricAiPreviousValue("atomic.property_name", baseState),
+          ...(typeof baseState.form.baseMetric === "string" && baseState.form.baseMetric
+            ? {
+                "derived.base_metric_id": parseDependencyKey(baseState.form.baseMetric).metric_id,
+                "derived.base_metric_version": parseDependencyKey(baseState.form.baseMetric)
+                  .version,
+              }
+            : {}),
+          "derived.filters": baseState.businessCondition,
+          "composite.dependencies": baseState.dependencies,
+          "composite.expression": baseState.compositeExpression,
         },
-        prompt: objectMetricText("m0fa83749ec68", {
-          p0: aiConversation.length
-            ? objectMetricText("mb86e7d4fc5e1", {
-                p0: aiConversation
-                  .map((item) =>
-                    objectMetricText("m3c4b7d4493c1", {
-                      p0:
-                        item.role === "user"
-                          ? objectMetricText("m0d0e1a86b3aa")
-                          : objectMetricText("me5ce5f6da7bd"),
-                      p1: item.content,
-                    }),
-                  )
-                  .join("\n"),
-              })
-            : "",
-          p1: JSON.stringify(form.getFieldsValue(true)),
-          p2: prompt,
-        }),
+        ...(aiDiagnostic?.snapshot === baseSnapshot &&
+        aiDiagnostic.formRevision === baseFormRevision
+          ? {
+              diagnostic: {
+                ...aiDiagnostic.data,
+                form_revision: aiDiagnostic.formRevision,
+              },
+            }
+          : {}),
+        message: prompt,
+        scope: {
+          kn_id: networkId,
+          owner_object_type_id: ownerObjectTypeId,
+          metric_type: metricType,
+          mode,
+          ...(mode === "edit" && record
+            ? { metric_id: record.definition.id, draft_version: record.definition.version }
+            : {}),
+        },
         signal: controller.signal,
         tokenProvider,
+        threadId:
+          aiThreadRef.current?.scope === aiScopeKey ? aiThreadRef.current.threadId : undefined,
       });
       if (controller.signal.aborted) return;
-      applyAiIntent(intent);
-      const notes = intent.notes?.filter(Boolean) ?? [];
+      aiThreadRef.current = { scope: aiScopeKey, threadId: result.threadId };
+      const intent = proposalToObjectMetricAiIntent(result.proposal);
+      const changes = objectMetricAiChanges(intent);
+      if (changes.length) {
+        setAiProposal({
+          intent,
+          baseState,
+          baseSnapshot,
+          candidateSnapshot,
+          reasons: Object.fromEntries(
+            result.proposal.changes.map((item) => [item.field, item.reason]),
+          ),
+          selectedPaths: changes.map((change) => change.path),
+        });
+      }
+      const detail = [result.proposal.summary, ...result.proposal.questions]
+        .filter(Boolean)
+        .join("\n");
       setAiConversation((current) => [
         ...current,
         {
-          content: notes.length
-            ? objectMetricText("m277d595bb888", { p0: notes.join("；") })
-            : objectMetricText("mae87f64d5821"),
+          content: detail || result.answer || objectMetricText("aiProposalEmpty"),
           id: `${turnId}-assistant`,
           role: "assistant",
         },
@@ -2094,6 +2396,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   }, [networkId, ownerObjectTypeId, propertiesReloadKey]);
 
   useEffect(() => {
+    if (aiSkipCompositeDefaultRef.current) {
+      aiSkipCompositeDefaultRef.current = false;
+      return;
+    }
     if (
       metricType !== "composite" ||
       dependencies.length < 2 ||
@@ -2106,6 +2412,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
 
   useEffect(() => {
     if (metricType !== "composite") return;
+    if (aiSkipCompositeInferenceRef.current) {
+      aiSkipCompositeInferenceRef.current = false;
+      return;
+    }
     const dependencyValues = Object.fromEntries(
       dependencies.flatMap((dependency) => {
         const metric = publishedMetrics.find(
@@ -2165,6 +2475,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
 
   useEffect(() => {
     if (metricType !== "derived" || !selectedBaseDefinition) return;
+    if (aiSkipDerivedSyncRef.current) {
+      aiSkipDerivedSyncRef.current = false;
+      return;
+    }
     const value = selectedBaseDefinition.result_semantics.value;
     form.setFieldsValue({
       calculationScope: selectedBaseDefinition.calculation_scope,
@@ -2517,14 +2831,103 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   };
 
   const openTrial = async () => {
-    if (!canBuildDefinition()) return;
+    if (!canBuildDefinition()) return false;
     setValidation(undefined);
     const next = await buildCompleteDefinition();
-    if (!next) return;
+    if (!next) return false;
     const result = await validateObjectMetricV1(networkId, next);
     setValidation(result);
-    if (!result.valid) return;
+    if (!result.valid) return false;
     setTrialDefinition(next);
+    return true;
+  };
+
+  const checkCurrentWithAi = async () => {
+    if (aiChecking || aiGenerating || !canBuildDefinition()) return;
+    const snapshot = currentAiSnapshot();
+    const formRevision = aiFormRevisionFor(snapshot);
+    setAiDiagnostic(undefined);
+    setAiChecking(true);
+    try {
+      const next = await buildCompleteDefinition();
+      if (!next) {
+        if (currentAiSnapshotGetterRef.current() !== snapshot) return;
+        const issues = objectMetricFormIssues({ errorFields: form.getFieldsError() });
+        setAiDiagnostic({
+          snapshot,
+          formRevision,
+          data: { kind: "validation", status: "invalid", issues },
+          summary: objectMetricText("aiDiagnosticInvalid", { p0: issues.length }),
+        });
+        return;
+      }
+      const result = await validateObjectMetricV1(networkId, next);
+      if (currentAiSnapshotGetterRef.current() !== snapshot) return;
+      setValidation(result);
+      const contract = result.valid ? await previewObjectMetricV1(networkId, next) : undefined;
+      if (currentAiSnapshotGetterRef.current() !== snapshot) return;
+      const checked = contract?.validation ?? result;
+      setValidation(checked);
+      const data: Omit<ObjectMetricDesignDiagnostic, "form_revision"> = {
+        kind: "validation",
+        status: checked.valid ? "valid" : "invalid",
+        issues: checked.issues.slice(0, 20).map((issue) => ({
+          code: issue.code.slice(0, 100),
+          field: issue.field.slice(0, 200),
+          message: issue.message.slice(0, 500),
+        })),
+        output_shape: contract?.output_schema.shape ?? checked.output_shape,
+        physical_type: contract?.output_schema.value.physical_type,
+        unit_code: contract?.output_schema.value.unit?.code.slice(0, 100),
+      };
+      setAiDiagnostic({
+        snapshot,
+        formRevision,
+        data,
+        summary: checked.valid
+          ? objectMetricText("aiDiagnosticValid")
+          : objectMetricText("aiDiagnosticInvalid", { p0: checked.issues.length }),
+      });
+    } catch (error) {
+      if (currentAiSnapshotGetterRef.current() === snapshot) {
+        const status = aiDiagnosticFailureStatus(error);
+        const summary = objectMetricText(
+          status === "forbidden"
+            ? "aiDiagnosticForbidden"
+            : status === "unavailable"
+              ? "aiDiagnosticUnavailable"
+              : "aiDiagnosticFailed",
+        );
+        setAiDiagnostic({
+          snapshot,
+          formRevision,
+          data: { kind: "validation", status, warnings: [summary] },
+          summary,
+        });
+      }
+      void message.error(
+        objectMetricText(
+          isRequestForbidden(error)
+            ? "aiDiagnosticForbidden"
+            : isRequestNotFound(error)
+              ? "aiDiagnosticUnavailable"
+              : "aiDiagnosticFailed",
+        ),
+      );
+    } finally {
+      setAiChecking(false);
+    }
+  };
+
+  const openAiTrial = async () => {
+    const snapshot = currentAiSnapshot();
+    const formRevision = aiFormRevisionFor(snapshot);
+    const opened = await openTrial();
+    aiTrialRequestedRef.current = opened;
+    aiTrialSnapshotRef.current =
+      opened && snapshot === currentAiSnapshotGetterRef.current()
+        ? { snapshot, formRevision }
+        : null;
   };
 
   const publish = async () => {
@@ -2629,13 +3032,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             objectMetricText("mf84b7b21ea55"),
             objectMetricText("me6c97a7d8a7c"),
           ];
-  const aiGenerationSucceeded = aiConversation.some(
-    (item) =>
-      item.role === "assistant" && item.content.startsWith(objectMetricText("m93b79e40a429")),
-  );
-
   return (
-    <main className={`${styles.page} ${metricTheme.scope}`}>
+    <main className={`${styles.page} ${aiOpen ? styles.pageWithAi : ""} ${metricTheme.scope}`}>
       <header className={styles.header}>
         <Button
           aria-label={objectMetricText("mcdfb4fd1b61d")}
@@ -2656,7 +3054,15 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </p>
         </div>
         <div className={styles.headerActions}>
-          <Button icon={<ThunderboltOutlined />} onClick={() => setAiOpen(true)} type="primary">
+          <Button
+            aria-expanded={aiOpen}
+            icon={<ThunderboltOutlined />}
+            onClick={() => {
+              if (aiOpen && aiGenerating) stopAiGeneration();
+              setAiOpen((open) => !open);
+            }}
+            type="primary"
+          >
             {objectMetricText("m7714c1cdc14a")}
           </Button>
         </div>
@@ -2683,6 +3089,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             setFormValidationIssueCount(0);
             setValidation(undefined);
             setPreview(undefined);
+            setAiDiagnostic((current) => (current ? { ...current } : current));
           }}
         >
           <Section title={objectMetricText("m15b0d75b1662")}>
@@ -3722,7 +4129,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                               <label>
                                 <span>{objectMetricText("mc815120c6337")}</span>
                                 <Select
-                                  aria-label={objectMetricText("mdc57eff09546", { p0: index + 1 })}
+                                  aria-label={objectMetricText("mdc57eff09546", {
+                                    p0: index + 1,
+                                  })}
                                   onChange={(mode: ObjectMetricObjectAlignmentV1["mode"]) => {
                                     if (mode !== "same_object")
                                       clearUnsupportedCompositeTimeSeries();
@@ -4426,9 +4835,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           }
                           options={
                             calculationScope === "object_instance"
-                              ? [{ label: objectMetricText("me06fb8926b0e"), value: "same_grain" }]
+                              ? [
+                                  {
+                                    label: objectMetricText("me06fb8926b0e"),
+                                    value: "same_grain",
+                                  },
+                                ]
                               : [
-                                  { label: objectMetricText("me06fb8926b0e"), value: "same_grain" },
+                                  {
+                                    label: objectMetricText("me06fb8926b0e"),
+                                    value: "same_grain",
+                                  },
                                   { label: objectMetricText("m4d0093db94fa"), value: "rollup" },
                                 ]
                           }
@@ -5299,104 +5716,211 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </Section>
         </Form>
       </div>
-      <Modal
-        centered
-        className={`${styles.aiDialog} ${metricTheme.scope}`}
-        footer={null}
-        onCancel={() => {
-          if (aiGenerating) stopAiGeneration();
-          setAiOpen(false);
-        }}
-        open={aiOpen}
-        title={
-          <div className={styles.aiDialogTitle}>
-            <span className={styles.aiDialogTitleIcon} aria-hidden="true">
-              <ThunderboltOutlined />
-            </span>
-            <div>
-              <strong>{objectMetricText("m1a09e582c302")}</strong>
-              <span>
-                {metricTypeNames[metricType]} · {ownerObjectName}
+      {aiOpen ? (
+        <aside aria-label={objectMetricText("m1a09e582c302")} className={styles.aiPanel}>
+          <div className={styles.aiPanelHeader}>
+            <div className={styles.aiDialogTitle}>
+              <span className={styles.aiDialogTitleIcon} aria-hidden="true">
+                <ThunderboltOutlined />
               </span>
-            </div>
-          </div>
-        }
-        width={640}
-      >
-        {!aiConversation.length && !aiGenerating ? (
-          <p className={styles.aiDialogIntro}>{objectMetricText("madf4b42e777b")}</p>
-        ) : (
-          <div className={styles.aiConversation} aria-live="polite">
-            {aiConversation.map((item) => (
-              <div
-                className={`${styles.aiMessage} ${
-                  item.role === "user" ? styles.aiMessageUser : styles.aiMessageAssistant
-                } ${item.tone === "error" ? styles.aiMessageError : ""}`}
-                key={item.id}
-              >
-                {item.content}
-              </div>
-            ))}
-            {aiGenerating ? (
-              <div className={`${styles.aiMessage} ${styles.aiMessageAssistant}`}>
-                <span className={styles.aiThinking}>
-                  <i />
-                  <i />
-                  <i />
+              <div>
+                <strong>{objectMetricText("m1a09e582c302")}</strong>
+                <span>
+                  {metricTypeNames[metricType]} · {ownerObjectName}
                 </span>
-                {objectMetricText("m800e5eb6c8b5")}
               </div>
+            </div>
+            <Button
+              aria-label={objectMetricText("m406b2bdda3ce")}
+              icon={<CloseOutlined />}
+              onClick={() => {
+                if (aiGenerating) stopAiGeneration();
+                setAiOpen(false);
+              }}
+              type="text"
+            />
+          </div>
+          {!aiConversation.length && !aiGenerating ? (
+            <p className={styles.aiDialogIntro}>{objectMetricText("madf4b42e777b")}</p>
+          ) : (
+            <div className={styles.aiConversation} aria-live="polite">
+              {aiConversation.map((item) => (
+                <div
+                  className={`${styles.aiMessage} ${
+                    item.role === "user" ? styles.aiMessageUser : styles.aiMessageAssistant
+                  } ${item.tone === "error" ? styles.aiMessageError : ""}`}
+                  key={item.id}
+                >
+                  {item.content}
+                </div>
+              ))}
+              {aiGenerating ? (
+                <div className={`${styles.aiMessage} ${styles.aiMessageAssistant}`}>
+                  <span className={styles.aiThinking}>
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  {objectMetricText("m800e5eb6c8b5")}
+                </div>
+              ) : null}
+            </div>
+          )}
+          {aiProposal && !aiGenerating ? (
+            <div className={styles.aiProposal}>
+              <strong>{objectMetricText("aiProposalTitle")}</strong>
+              <p>{objectMetricText("aiProposalHint")}</p>
+              {objectMetricAiChanges(aiProposal.intent).map((change) => {
+                const before = objectMetricAiPreviousValue(change.path, aiProposal.baseState);
+                const beforeText = before === undefined ? "—" : JSON.stringify(before);
+                const afterText = JSON.stringify(change.value);
+                const linkedPaths = change.path.startsWith("derived.base_metric_")
+                  ? ["derived.base_metric_id", "derived.base_metric_version"]
+                  : [change.path];
+                return (
+                  <Checkbox
+                    checked={aiProposal.selectedPaths.includes(change.path)}
+                    key={change.path}
+                    onChange={(event) =>
+                      setAiProposal((current) =>
+                        current
+                          ? {
+                              ...current,
+                              selectedPaths: event.target.checked
+                                ? [...new Set([...current.selectedPaths, ...linkedPaths])]
+                                : current.selectedPaths.filter(
+                                    (path) => !linkedPaths.includes(path),
+                                  ),
+                            }
+                          : current,
+                      )
+                    }
+                  >
+                    <span className={styles.aiProposalField}>
+                      {objectMetricAiProposalFieldLabel(change.path)}
+                    </span>
+                    <span className={styles.aiProposalDiff}>
+                      <span className={styles.aiProposalValue} title={beforeText}>
+                        {objectMetricText("aiProposalBefore")}: {beforeText}
+                      </span>
+                      <span className={styles.aiProposalValue} title={afterText}>
+                        {objectMetricText("aiProposalAfter")}: {afterText}
+                      </span>
+                    </span>
+                    {aiProposal.reasons[change.path] ? (
+                      <span className={styles.aiProposalReason}>
+                        {aiProposal.reasons[change.path]}
+                      </span>
+                    ) : null}
+                  </Checkbox>
+                );
+              })}
+              <Space>
+                <Button
+                  disabled={!aiProposal.selectedPaths.length}
+                  onClick={applyAiProposal}
+                  type="primary"
+                >
+                  {objectMetricText("aiProposalApply")}
+                </Button>
+                <Button onClick={() => setAiProposal(undefined)}>
+                  {objectMetricText("aiProposalReject")}
+                </Button>
+              </Space>
+            </div>
+          ) : null}
+          {aiUndo && !aiProposal && !aiGenerating ? (
+            <div className={styles.aiUndo}>
+              <span>{objectMetricText("aiProposalApplied")}</span>
+              <Button onClick={undoAiApplication} size="small">
+                {objectMetricText("aiProposalUndo")}
+              </Button>
+            </div>
+          ) : null}
+          <div className={styles.aiDiagnostic}>
+            <strong>{objectMetricText("aiDiagnosticTitle")}</strong>
+            <p>{objectMetricText("aiDiagnosticHint")}</p>
+            <Space wrap>
+              <Button
+                disabled={aiGenerating || aiChecking}
+                loading={aiChecking}
+                onClick={() => void checkCurrentWithAi()}
+                size="small"
+              >
+                {objectMetricText("aiDiagnosticValidate")}
+              </Button>
+              <Button
+                disabled={aiGenerating || aiChecking}
+                onClick={() => void openAiTrial()}
+                size="small"
+              >
+                {objectMetricText("aiDiagnosticTrial")}
+              </Button>
+            </Space>
+            {aiDiagnostic ? (
+              <Alert
+                message={
+                  aiDiagnostic.snapshot === currentAiSnapshotRef.current
+                    ? aiDiagnostic.summary
+                    : objectMetricText("aiDiagnosticStale")
+                }
+                description={
+                  aiDiagnostic.snapshot === currentAiSnapshotRef.current
+                    ? objectMetricText("aiDiagnosticFollowup")
+                    : undefined
+                }
+                showIcon
+                type={
+                  aiDiagnostic.snapshot !== currentAiSnapshotRef.current
+                    ? "warning"
+                    : aiDiagnostic.data.status === "valid" || aiDiagnostic.data.status === "ok"
+                      ? "success"
+                      : "warning"
+                }
+              />
             ) : null}
           </div>
-        )}
-        {aiGenerationSucceeded && !aiGenerating ? (
-          <div className={styles.aiDialogResultActions}>
-            <span>{objectMetricText("mf9494812edfd")}</span>
-            <Button onClick={() => setAiOpen(false)} size="small">
-              {objectMetricText("m406b2bdda3ce")}
+          {!aiConversation.length ? (
+            <div className={styles.aiDialogExamples}>
+              <span>{objectMetricText("m0d53f08678d8")}</span>
+              {aiExamples.map((example) => (
+                <button key={example} onClick={() => setAiPrompt(example)} type="button">
+                  {example}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div className={styles.aiDialogComposer}>
+            <Input.TextArea
+              aria-label={objectMetricText("m15a3900b6bf9")}
+              autoFocus
+              autoSize={{ minRows: 2, maxRows: 5 }}
+              disabled={aiGenerating}
+              maxLength={1200}
+              onChange={(event) => setAiPrompt(event.target.value)}
+              onPressEnter={(event) => {
+                if (!event.shiftKey) {
+                  event.preventDefault();
+                  void generateWithAi();
+                }
+              }}
+              placeholder={objectMetricText("m7d7fca1df843")}
+              value={aiPrompt}
+            />
+            <Button
+              aria-label={objectMetricText("m24d9e58a6e44")}
+              danger={aiGenerating}
+              disabled={!aiGenerating && !aiPrompt.trim()}
+              icon={aiGenerating ? <StopOutlined /> : <SendOutlined />}
+              onClick={() => (aiGenerating ? stopAiGeneration() : void generateWithAi())}
+              type={aiGenerating ? "default" : "primary"}
+            >
+              {aiGenerating ? objectMetricText("mca4d973c0b00") : objectMetricText("medecf0ae6e51")}
             </Button>
           </div>
-        ) : null}
-        {!aiConversation.length ? (
-          <div className={styles.aiDialogExamples}>
-            <span>{objectMetricText("m0d53f08678d8")}</span>
-            {aiExamples.map((example) => (
-              <button key={example} onClick={() => setAiPrompt(example)} type="button">
-                {example}
-              </button>
-            ))}
-          </div>
-        ) : null}
-        <div className={styles.aiDialogComposer}>
-          <Input.TextArea
-            aria-label={objectMetricText("m15a3900b6bf9")}
-            autoFocus
-            autoSize={{ minRows: 2, maxRows: 5 }}
-            disabled={aiGenerating}
-            maxLength={1200}
-            onChange={(event) => setAiPrompt(event.target.value)}
-            onPressEnter={(event) => {
-              if (!event.shiftKey) {
-                event.preventDefault();
-                void generateWithAi();
-              }
-            }}
-            placeholder={objectMetricText("m7d7fca1df843")}
-            value={aiPrompt}
-          />
-          <Button
-            aria-label={objectMetricText("m24d9e58a6e44")}
-            danger={aiGenerating}
-            disabled={!aiGenerating && !aiPrompt.trim()}
-            icon={aiGenerating ? <StopOutlined /> : <SendOutlined />}
-            onClick={() => (aiGenerating ? stopAiGeneration() : void generateWithAi())}
-            type={aiGenerating ? "default" : "primary"}
-          >
-            {aiGenerating ? objectMetricText("mca4d973c0b00") : objectMetricText("medecf0ae6e51")}
-          </Button>
-        </div>
-        <p className={styles.aiDialogFootnote}>{objectMetricText("m1917adbea87f")}</p>
-      </Modal>
+          <p className={styles.aiDialogFootnote}>{objectMetricText("m1917adbea87f")}</p>
+        </aside>
+      ) : null}
       <Drawer
         rootClassName={metricTheme.scope}
         onClose={() => setPreview(undefined)}
@@ -5426,8 +5950,85 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           definition={trialDefinition}
           mode="draft"
           objectType={ownerObjectTypeDetail}
-          onClose={() => setTrialDefinition(undefined)}
-          onRun={(query) => trialObjectMetricDataV1(networkId, trialDefinition, query)}
+          onClose={() => {
+            aiTrialRequestedRef.current = false;
+            aiTrialSnapshotRef.current = null;
+            setTrialDefinition(undefined);
+          }}
+          onRun={async (query) => {
+            const trial = aiTrialSnapshotRef.current;
+            let data: Awaited<ReturnType<typeof trialObjectMetricDataV1>>;
+            try {
+              data = await trialObjectMetricDataV1(networkId, trialDefinition, query);
+            } catch (error) {
+              if (
+                aiTrialRequestedRef.current &&
+                trial &&
+                trial.snapshot === currentAiSnapshotGetterRef.current()
+              ) {
+                const status = aiDiagnosticFailureStatus(error);
+                const summary = objectMetricText(
+                  status === "forbidden"
+                    ? "aiDiagnosticTrialForbidden"
+                    : status === "invalid_request"
+                      ? "aiDiagnosticTrialInvalidRequest"
+                      : status === "unavailable"
+                        ? "aiDiagnosticTrialUnavailable"
+                        : "aiDiagnosticTrialFailed",
+                );
+                setAiDiagnostic({
+                  snapshot: trial.snapshot,
+                  formRevision: trial.formRevision,
+                  data: {
+                    kind: "trial",
+                    status,
+                    warnings: [summary],
+                  },
+                  summary,
+                });
+              }
+              throw error;
+            }
+            if (
+              aiTrialRequestedRef.current &&
+              trial &&
+              trial.snapshot === currentAiSnapshotGetterRef.current()
+            ) {
+              const statusLabel = objectMetricText(
+                data.status === "ok"
+                  ? "trialStatusSuccess"
+                  : data.status === "no_data"
+                    ? "trialStatusNoData"
+                    : data.status === "partial"
+                      ? "trialStatusPartial"
+                      : "trialStatusUnavailable",
+              );
+              setAiDiagnostic({
+                snapshot: trial.snapshot,
+                formRevision: trial.formRevision,
+                data: {
+                  kind: "trial",
+                  status: data.status,
+                  warnings: (data.warnings ?? [])
+                    .slice(0, 10)
+                    .map((warning) => warning.slice(0, 500)),
+                  output_shape: data.model.output_shape,
+                  physical_type: data.model.value.physical_type,
+                  unit_code: data.model.value.unit?.code.slice(0, 100),
+                  entry_count: Math.min(data.entries.length, 10000),
+                  overall_ms: Number.isFinite(data.overall_ms)
+                    ? Math.min(Math.max(Math.round(data.overall_ms), 0), 3600000)
+                    : undefined,
+                },
+                summary: objectMetricText("aiDiagnosticTrialResult", {
+                  p0: statusLabel,
+                  p1: data.entries.length,
+                  p2: data.overall_ms,
+                }),
+              });
+            }
+            return data;
+          }}
           open
         />
       ) : null}

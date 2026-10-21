@@ -80,6 +80,24 @@ describe("parseObjectMetricAiIntent", () => {
     expect(result.notes).toContain("业务条件引用了不可用属性“missing_status”，已跳过");
   });
 
+  it("不会将不存在的度量属性和事件时间应用到表单", () => {
+    const result = parseObjectMetricAiIntent(
+      JSON.stringify({
+        atomic: { aggregation: "sum", property_name: "missing_amount" },
+        derived: { event_time: "missing_time" },
+      }),
+      { allowedProperties: new Set(["payment_amount", "created_at"]) },
+    );
+
+    expect(result.atomic?.aggregation).toBe("sum");
+    expect(result.atomic?.property_name).toBeUndefined();
+    expect(result.derived?.event_time).toBeUndefined();
+    expect(result.notes).toEqual([
+      "AI 引用了不可用的属性“missing_amount”，已跳过",
+      "AI 引用了不可用的属性“missing_time”，已跳过",
+    ]);
+  });
+
   it("条件数组中部分无效时保留有效条件", () => {
     const result = parseObjectMetricAiIntent(
       JSON.stringify({
@@ -111,5 +129,27 @@ describe("parseObjectMetricAiIntent", () => {
     );
 
     expect(result.notes ?? []).toEqual([]);
+  });
+
+  it("跳过模型返回的不支持枚举值，并提示用户", () => {
+    const result = parseObjectMetricAiIntent(
+      JSON.stringify({
+        derived: { time_window_mode: "last_month", time_window_unit: "day" },
+        name: "订单数",
+        query: { time_granularity: "weekly" },
+        result: { no_data_policy: "zero", physical_type: "number" },
+      }),
+    );
+
+    expect(result.derived?.time_window_mode).toBeUndefined();
+    expect(result.derived?.time_window_unit).toBe("day");
+    expect(result.query?.time_granularity).toBeUndefined();
+    expect(result.result?.physical_type).toBeUndefined();
+    expect(result.result?.no_data_policy).toBe("zero");
+    expect(result.notes).toEqual([
+      "AI 返回的 derived.time_window_mode 值“last_month”不受支持，已跳过",
+      "AI 返回的 result.physical_type 值“number”不受支持，已跳过",
+      "AI 返回的 query.time_granularity 值“weekly”不受支持，已跳过",
+    ]);
   });
 });

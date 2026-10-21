@@ -5,18 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { listLlmModels } from "@/modules/model-resources/services/llm.service";
-import {
-  DEFAULT_AGENT_CONFIG,
-  runAgentChat,
-  type AgentTokenProvider,
-} from "@/modules/knowledge-network/services/agent-chat.service";
-import type { ContextLoaderEnv } from "@/modules/knowledge-network/services/context-loader.service";
 import type {
   ObjectMetricConditionV1,
   ObjectMetricExpressionV1,
   ObjectMetricOperandV1,
-  ObjectMetricTypeV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 
@@ -100,20 +92,6 @@ export type ObjectMetricAiIntent = {
   notes?: string[];
 };
 
-export type ObjectMetricAiContext = {
-  metricType: ObjectMetricTypeV1;
-  objectType: { id: string; name: string };
-  properties: Array<{ name: string; label: string; type?: string }>;
-  publishedMetrics: Array<{
-    id: string;
-    version: number;
-    name: string;
-    type: ObjectMetricTypeV1;
-    scope: "object_instance" | "object_set";
-    objectTypeId: string;
-  }>;
-};
-
 function extractJsonObject(text: string): string {
   const withoutFence = text.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
   const start = withoutFence.indexOf("{");
@@ -170,6 +148,33 @@ function optionalString(value: unknown) {
 
 function optionalNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function optionalEnum<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  field: string,
+  warnings: string[],
+): T | undefined {
+  const candidate = optionalString(value);
+  if (!candidate) return undefined;
+  if (allowed.some((item) => item === candidate)) return candidate as T;
+  warnings.push(objectMetricText("aiUnsupportedFieldValue", { p0: field, p1: candidate }));
+  return undefined;
+}
+
+function optionalAllowedProperty(
+  value: unknown,
+  options: ObjectMetricAiParseOptions,
+  warnings: string[],
+) {
+  const propertyName = optionalString(value);
+  if (!propertyName) return undefined;
+  if (options.allowedProperties && !options.allowedProperties.has(propertyName)) {
+    warnings.push(objectMetricText("aiUnsupportedProperty", { p0: propertyName }));
+    return undefined;
+  }
+  return propertyName;
 }
 
 function stringArray(value: unknown) {
@@ -399,7 +404,7 @@ export function parseObjectMetricAiIntent(
         ? (aggregation as NonNullable<ObjectMetricAiIntent["atomic"]>["aggregation"])
         : undefined,
       expression: parseAiExpression(parsed.atomic.expression, options, warnings),
-      property_name: optionalString(parsed.atomic.property_name),
+      property_name: optionalAllowedProperty(parsed.atomic.property_name, options, warnings),
     };
   }
   if (isRecord(parsed.derived)) {
@@ -407,15 +412,28 @@ export function parseObjectMetricAiIntent(
       base_metric_id: optionalString(parsed.derived.base_metric_id),
       base_metric_name: optionalString(parsed.derived.base_metric_name),
       base_metric_version: optionalNumber(parsed.derived.base_metric_version),
-      event_time: optionalString(parsed.derived.event_time),
+      event_time: optionalAllowedProperty(parsed.derived.event_time, options, warnings),
       filters: parseAiCondition(parsed.derived.filters, options, warnings),
       time_window_length: optionalNumber(parsed.derived.time_window_length),
-      time_window_mode: optionalString(parsed.derived.time_window_mode) as NonNullable<
-        ObjectMetricAiIntent["derived"]
-      >["time_window_mode"],
-      time_window_unit: optionalString(parsed.derived.time_window_unit) as NonNullable<
-        ObjectMetricAiIntent["derived"]
-      >["time_window_unit"],
+      time_window_mode: optionalEnum(
+        parsed.derived.time_window_mode,
+        [
+          "unbounded",
+          "rolling",
+          "current_week",
+          "current_month",
+          "current_quarter",
+          "current_year",
+        ],
+        "derived.time_window_mode",
+        warnings,
+      ),
+      time_window_unit: optionalEnum(
+        parsed.derived.time_window_unit,
+        ["minute", "hour", "day", "week", "month", "quarter", "year"],
+        "derived.time_window_unit",
+        warnings,
+      ),
     };
   }
   if (isRecord(parsed.composite)) {
@@ -440,22 +458,60 @@ export function parseObjectMetricAiIntent(
   }
   if (isRecord(parsed.result)) {
     intent.result = {
-      no_data_policy: optionalString(parsed.result.no_data_policy) as NonNullable<
-        ObjectMetricAiIntent["result"]
-      >["no_data_policy"],
-      physical_type: optionalString(parsed.result.physical_type) as NonNullable<
-        ObjectMetricAiIntent["result"]
-      >["physical_type"],
-      quantity_kind: optionalString(parsed.result.quantity_kind) as NonNullable<
-        ObjectMetricAiIntent["result"]
-      >["quantity_kind"],
-      semantic_type: optionalString(parsed.result.semantic_type) as NonNullable<
-        ObjectMetricAiIntent["result"]
-      >["semantic_type"],
+      no_data_policy: optionalEnum(
+        parsed.result.no_data_policy,
+        ["zero", "null", "unavailable"],
+        "result.no_data_policy",
+        warnings,
+      ),
+      physical_type: optionalEnum(
+        parsed.result.physical_type,
+        ["int64", "decimal", "boolean", "string", "date", "datetime", "duration"],
+        "result.physical_type",
+        warnings,
+      ),
+      quantity_kind: optionalEnum(
+        parsed.result.quantity_kind,
+        [
+          "dimensionless",
+          "count",
+          "currency",
+          "duration",
+          "data_size",
+          "rate",
+          "weight",
+          "length",
+          "custom",
+        ],
+        "result.quantity_kind",
+        warnings,
+      ),
+      semantic_type: optionalEnum(
+        parsed.result.semantic_type,
+        [
+          "measure",
+          "count",
+          "amount",
+          "ratio",
+          "percentage",
+          "score",
+          "rank",
+          "timestamp",
+          "duration",
+          "date",
+          "category",
+          "boolean",
+        ],
+        "result.semantic_type",
+        warnings,
+      ),
       unit_code: optionalString(parsed.result.unit_code),
-      unit_system: optionalString(parsed.result.unit_system) as NonNullable<
-        ObjectMetricAiIntent["result"]
-      >["unit_system"],
+      unit_system: optionalEnum(
+        parsed.result.unit_system,
+        ["UCUM", "ISO_4217", "registered"],
+        "result.unit_system",
+        warnings,
+      ),
     };
   }
   if (isRecord(parsed.query)) {
@@ -463,9 +519,12 @@ export function parseObjectMetricAiIntent(
       analysis_dimensions: stringArray(parsed.query.analysis_dimensions),
       group_by_dimensions: stringArray(parsed.query.group_by_dimensions),
       time_dimensions: stringArray(parsed.query.time_dimensions),
-      time_granularity: optionalString(parsed.query.time_granularity) as NonNullable<
-        ObjectMetricAiIntent["query"]
-      >["time_granularity"],
+      time_granularity: optionalEnum(
+        parsed.query.time_granularity,
+        ["minute", "hour", "day", "week", "month", "quarter", "year"],
+        "query.time_granularity",
+        warnings,
+      ),
     };
   }
   if (isRecord(parsed.logic_property)) {
@@ -481,42 +540,4 @@ export function parseObjectMetricAiIntent(
   }
   if (warnings.length) intent.notes = [...new Set(warnings)];
   return intent;
-}
-
-function metricPrompt(context: ObjectMetricAiContext) {
-  return objectMetricText("mb4d00a1030cc", { p0: context.metricType, p1: JSON.stringify(context) });
-}
-
-export async function generateObjectMetricAiIntent(params: {
-  context: ObjectMetricAiContext;
-  prompt: string;
-  env: ContextLoaderEnv;
-  tokenProvider: AgentTokenProvider;
-  signal?: AbortSignal;
-}): Promise<ObjectMetricAiIntent> {
-  const models = await listLlmModels({ page: 1, size: 100 });
-  const modelName =
-    models.items.find((item) => item.default)?.modelName ?? models.items[0]?.modelName;
-  if (!modelName) throw new Error(objectMetricText("m02aa2f1bb8cb"));
-
-  let output = "";
-  let generationError = "";
-  await runAgentChat({
-    env: params.env,
-    modelName,
-    system: metricPrompt(params.context),
-    history: [{ role: "user", content: params.prompt }],
-    tools: {},
-    config: { ...DEFAULT_AGENT_CONFIG, maxSteps: 1, maxOutputTokens: 4096 },
-    tokenProvider: params.tokenProvider,
-    signal: params.signal,
-    onChunk: (chunk) => {
-      if (chunk.type === "text") output += chunk.delta;
-      if (chunk.type === "error") generationError = chunk.error;
-    },
-  });
-  if (generationError) throw new Error(generationError);
-  return parseObjectMetricAiIntent(output, {
-    allowedProperties: new Set(params.context.properties.map((property) => property.name)),
-  });
 }

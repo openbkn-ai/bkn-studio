@@ -190,6 +190,32 @@ function metric(index: number): ObjectMetricRecordV1 {
 }
 
 describe("ObjectMetricListPanel pagination", () => {
+  it("exposes AI creation on the metric list and opens the chosen type with the designer", async () => {
+    mocks.searchParams.current = "objectTypeId=order&view=list";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+
+    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+
+    const aiCreate = await screen.findByRole("button", { name: /AI 创建/ });
+    expect(aiCreate).toBeEnabled();
+    fireEvent.mouseEnter(aiCreate);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "AI 创建衍生指标" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/metrics/create?objectTypeId=order&metricType=derived&ai=1",
+      {
+        state: {
+          knowledgeNetworkReturnTo:
+            "/knowledge-network/workspace/network-1/metrics?objectTypeId=order&view=list",
+        },
+      },
+    );
+  });
+
   it("loads sidebar counts only for object rows entering the viewport", async () => {
     let notifyVisibility: IntersectionObserverCallback | undefined;
     vi.stubGlobal(

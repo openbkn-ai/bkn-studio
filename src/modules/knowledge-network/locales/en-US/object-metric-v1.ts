@@ -7,6 +7,65 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  aiCreateMetric: "Create with AI",
+  aiCreateMetricType: "Create {{p0}} with AI",
+  aiDesignerInvalidProposal: "The metric designer returned an invalid proposal.",
+  aiDesignerRequestFailed: "Metric design request failed (HTTP {{p0}}).",
+  aiDesignerMissingStream: "The metric design request did not return an event stream.",
+  aiDesignerExecutionFailed: "Metric designer execution failed.",
+  aiDesignerIncompleteTurn: "The metric designer did not complete this turn.",
+  aiDesignerIncompleteResult: "The metric designer returned an incomplete result.",
+  aiDiagnosticTitle: "Validation and trial",
+  aiDiagnosticHint:
+    "You can apply a proposal, then validate the current unsaved form. A trial runs only after you set conditions and explicitly start it in the drawer. Nothing is saved or published automatically.",
+  aiDiagnosticValidate: "Validate current form",
+  aiDiagnosticTrial: "Trial current form",
+  aiDiagnosticValid:
+    "Definition validation passed and the output contract was previewed. This does not mean a data trial or publication succeeded.",
+  aiDiagnosticInvalid:
+    "Definition validation failed with {{p0}} issues. Check the field guidance on the page.",
+  aiDiagnosticFailed: "Validation is unavailable. The form was not changed.",
+  aiDiagnosticForbidden:
+    "You do not have permission to validate this metric. The form was not changed.",
+  aiDiagnosticUnavailable:
+    "Object metric validation is unavailable in this environment. The form was not changed.",
+  aiDiagnosticStale:
+    "The form changed; the previous validation or trial no longer represents this definition.",
+  aiDiagnosticFollowup:
+    "Ask a follow-up question to get another proposal based on this diagnostic.",
+  aiDiagnosticTrialResult:
+    "Trial status: {{p0}}; {{p1}} rows returned; {{p2}} ms. This is not a publication guarantee.",
+  aiDiagnosticTrialFailed:
+    "The trial request failed or was denied; no computed result was returned. Check the drawer error and your current permissions.",
+  aiDiagnosticTrialForbidden:
+    "You do not have permission to trial this metric; no result was computed.",
+  aiDiagnosticTrialInvalidRequest:
+    "The trial definition or query is invalid. Check the drawer error.",
+  aiDiagnosticTrialUnavailable:
+    "Trial is unavailable in this environment or the resource does not exist.",
+  aiProposalCannotApply:
+    "The selected dependency or expression is incompatible with the current form. Adjust the selection or ask for a new proposal.",
+  aiProposalApplied:
+    "Selected changes were applied to the current form, but not saved or published.",
+  aiProposalAfter: "Proposed",
+  aiProposalApply: "Apply selected changes",
+  aiProposalBefore: "Current",
+  aiProposalEmpty: "There are no applicable changes yet. Please clarify the metric definition.",
+  aiProposalFound: "{{p0}} proposed changes are ready. Review and select them before applying.",
+  aiProposalFoundWithNotes:
+    "{{p0}} proposed changes are ready: {{p1}}. Review and select them before applying.",
+  aiProposalHint:
+    "Only selected fields are updated. If a combination is incomplete, edit it or validate the form. Nothing is saved or published automatically.",
+  aiProposalReject: "Reject proposal",
+  aiProposalStale:
+    "The form changed. This proposal will not overwrite your edits. Ask again using the latest form.",
+  aiProposalTitle: "Proposed changes",
+  aiProposalUndo: "Undo this application",
+  aiProposalUndone: "The AI changes were undone; the form is back to its previous state.",
+  aiProposalUndoStale:
+    "The form changed again, so it cannot be undone automatically. Revert the affected fields manually.",
+  aiUnsupportedFieldValue: 'AI returned an unsupported value "{{p1}}" for {{p0}}; it was skipped.',
+  aiUnsupportedProperty: 'AI referenced an unavailable property "{{p0}}"; it was skipped.',
   m006ac9135d75: "Select the opening time attribute of the basic metric",
   m00895a6fb076: "Remove a dimension filter",
   m00d84f955fd2: "Passed the verification and can be released",
@@ -765,7 +824,7 @@ export const objectMetricV1Part = {
     "The formula symbol is used to reference this metric in calculation formulas. The system has automatically generated it and usually does not require modification.",
   mad37b165ef82: "Enter date or time",
   madf4b42e777b:
-    "Describe the business caliber, and I will directly fill in the current metric form.",
+    "Describe the metric definition. I will propose changes for your review before updating the form.",
   mae25d81d750f: "Value method",
   mae5a0f0a072e:
     "The statistical time zone in the old configuration cannot be recognized by the server.",
@@ -1329,3 +1388,37 @@ export const objectMetricV1Part = {
   analysisTimeUnavailable:
     "This metric has no queryable time dimension; this analysis does not filter by time range.",
 } as const;
+
+export const objectMetricAiProposalFields: Record<string, string> = {
+  name: "Metric name",
+  code: "Metric code",
+  description: "Business description",
+  calculation_scope: "Calculation scope",
+  "atomic.aggregation": "Aggregation",
+  "atomic.property_name": "Measure property",
+  "atomic.expression": "Calculation expression",
+  "derived.base_metric_id": "Base metric ID",
+  "derived.base_metric_name": "Base metric",
+  "derived.base_metric_version": "Base metric version",
+  "derived.filters": "Business filters",
+  "derived.event_time": "Event time property",
+  "derived.time_window_mode": "Time window mode",
+  "derived.time_window_length": "Time window length",
+  "derived.time_window_unit": "Time window unit",
+  "composite.dependencies": "Metric dependencies",
+  "composite.expression": "Composite expression",
+  "result.no_data_policy": "No-data policy",
+  "result.physical_type": "Result data type",
+  "result.semantic_type": "Result semantic type",
+  "result.unit_code": "Result unit",
+  "result.unit_system": "Unit system",
+  "result.quantity_kind": "Quantity kind",
+  "query.analysis_dimensions": "Analysis dimensions",
+  "query.group_by_dimensions": "Fixed grouping dimensions",
+  "query.time_dimensions": "Queryable time properties",
+  "query.time_granularity": "Time granularity",
+  "logic_property.enabled": "Publish as logical property",
+  "logic_property.property_name": "Logical property name",
+  "logic_property.display_name": "Logical property display name",
+  "logic_property.comment": "Logical property description",
+};

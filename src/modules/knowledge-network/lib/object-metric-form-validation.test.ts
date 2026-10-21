@@ -7,7 +7,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { objectMetricFormErrorCount } from "./object-metric-form-validation";
+import {
+  objectMetricFormErrorCount,
+  objectMetricFormIssues,
+} from "./object-metric-form-validation";
 
 describe("objectMetricFormErrorCount", () => {
   it("counts invalid form fields for the page-level validation summary", () => {
@@ -24,5 +27,17 @@ describe("objectMetricFormErrorCount", () => {
 
   it("does not turn unrelated exceptions into form validation failures", () => {
     expect(objectMetricFormErrorCount(new Error("network failed"))).toBe(0);
+    expect(objectMetricFormIssues(new Error("network failed"))).toEqual([]);
+  });
+
+  it("extracts bounded field-level feedback without form values", () => {
+    expect(
+      objectMetricFormIssues({
+        errorFields: [
+          { errors: ["请输入名称"], name: ["metric", "name"] },
+          { errors: [], name: ["description"] },
+        ],
+      }),
+    ).toEqual([{ code: "form_validation", field: "metric.name", message: "请输入名称" }]);
   });
 });
