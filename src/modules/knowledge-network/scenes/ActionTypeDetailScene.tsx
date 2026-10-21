@@ -8,7 +8,7 @@
 import { Alert } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
@@ -18,6 +18,11 @@ import modalStyles from "@/modules/knowledge-network/components/network/Knowledg
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
+import {
+  clearKnowledgeNetworkGraphSelectionFromPath,
+  knowledgeNetworkReturnPath,
+  knowledgeNetworkReturnState,
+} from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   deleteKnowledgeNetworkActionType,
   getKnowledgeNetworkActionTypeDetail,
@@ -32,6 +37,7 @@ import styles from "./ActionTypeDetailScene.module.css";
 
 export function ActionTypeDetailScene() {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message, modal, runtimeConfig } = useAppServices();
   const { actionTypeId = "", networkId = "" } = useParams<{
@@ -58,6 +64,7 @@ export function ActionTypeDetailScene() {
     actionSource.type === "manual" ||
     (actionSource.type === "tool" ? canViewToolbox : canViewMcp);
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
+  const returnPath = knowledgeNetworkReturnPath(networkId, location.state, listPath);
 
   const confirmDelete = () => {
     if (!detail) {
@@ -74,7 +81,7 @@ export function ActionTypeDetailScene() {
       onOk: async () => {
         await deleteKnowledgeNetworkActionType(networkId, actionTypeId);
         void message.success(t("common.success"));
-        void navigate(listPath);
+        void navigate(clearKnowledgeNetworkGraphSelectionFromPath(returnPath));
       },
       title: t("knowledgeNetwork.actionTypeDeleteTitle"),
       width: 520,
@@ -112,7 +119,7 @@ export function ActionTypeDetailScene() {
       <KnowledgeNetworkResourceConfigShell
         loading
         onBack={() => {
-          void navigate(listPath);
+          void navigate(returnPath);
         }}
         subtitle={t("knowledgeNetwork.actionTypeDetailDescription")}
         title={t("knowledgeNetwork.actionTypeDetailTitle")}
@@ -136,6 +143,7 @@ export function ActionTypeDetailScene() {
                 onClick: () => {
                   void navigate(
                     `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
+                    { state: knowledgeNetworkReturnState(returnPath) },
                   );
                 },
                 operation: "modify",
@@ -147,6 +155,7 @@ export function ActionTypeDetailScene() {
                 onClick: () => {
                   void navigate(
                     `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
+                    { state: knowledgeNetworkReturnState(returnPath) },
                   );
                 },
                 operation: "execute",
@@ -169,7 +178,7 @@ export function ActionTypeDetailScene() {
           />
         }
         onBack={() => {
-          void navigate(listPath);
+          void navigate(returnPath);
         }}
         subtitle={t("knowledgeNetwork.actionTypeDetailDescription")}
         title={detail.name}

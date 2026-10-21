@@ -48,6 +48,11 @@ import { ObjectTypeDetailLogicPropertyTrialPanel } from "@/modules/knowledge-net
 import { ObjectTypeMetricParticipantPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeMetricParticipantPanel";
 import { buildSampleRowKey } from "@/modules/knowledge-network/lib/object-type-instance-identity";
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
+import {
+  clearKnowledgeNetworkGraphSelectionFromPath,
+  knowledgeNetworkReturnPath,
+  knowledgeNetworkReturnState,
+} from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
@@ -137,10 +142,6 @@ function getActionKindLabel(
   const option = buildActionTypeKindSelectOptions(t).find((item) => item.value === actionKind);
   return option?.label ?? actionKind;
 }
-
-type ObjectTypeDetailLocationState = {
-  knowledgeNetworkReturnTo?: string;
-};
 
 type RelatedRelationRole = "source" | "target";
 
@@ -287,12 +288,7 @@ export function ObjectTypeDetailScene() {
   const loadedObjectTypeKeyRef = useRef<string | null>(null);
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
-  const locationState = location.state as ObjectTypeDetailLocationState | null;
-  const returnPath = locationState?.knowledgeNetworkReturnTo?.startsWith(
-    `/knowledge-network/workspace/${networkId}/`,
-  )
-    ? locationState.knowledgeNetworkReturnTo
-    : listPath;
+  const returnPath = knowledgeNetworkReturnPath(networkId, location.state, listPath);
 
   const confirmDelete = () => {
     if (!detail) {
@@ -309,7 +305,7 @@ export function ObjectTypeDetailScene() {
       onOk: async () => {
         await deleteKnowledgeNetworkObjectType(networkId, objectTypeId);
         void message.success(t("common.success"));
-        void navigate(listPath);
+        void navigate(clearKnowledgeNetworkGraphSelectionFromPath(returnPath));
       },
       title: t("knowledgeNetwork.objectTypeDeleteTitle"),
       width: 520,
@@ -2088,6 +2084,7 @@ export function ObjectTypeDetailScene() {
                   onClick: () => {
                     void navigate(
                       `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
+                      { state: knowledgeNetworkReturnState(returnPath) },
                     );
                   },
                   operation: "modify",
@@ -2099,6 +2096,7 @@ export function ObjectTypeDetailScene() {
                   onClick: () => {
                     void navigate(
                       `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/authorization`,
+                      { state: knowledgeNetworkReturnState(returnPath) },
                     );
                   },
                   operation: "authorize",

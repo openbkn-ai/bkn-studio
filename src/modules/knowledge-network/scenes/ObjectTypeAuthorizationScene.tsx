@@ -34,7 +34,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState, type Key } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
@@ -50,6 +50,7 @@ import { ObjectTypeDataAttributeFormDrawer } from "@/modules/knowledge-network/c
 import { RowFilterAuthorizationPanel } from "@/modules/knowledge-network/components/object-type/row-filter/RowFilterAuthorizationPanel";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   getKnowledgeNetworkObjectTypeDetail,
   updateKnowledgeNetworkObjectType,
@@ -163,6 +164,7 @@ function collapseGrantSources(records: GrantRecord[]): GrantSourceRow[] {
 
 export function ObjectTypeAuthorizationScene() {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message, modal, runtimeConfig } = useAppServices();
   const { catalogError, catalogLoading, operationsForType, retryAuthorizationRegistry } =
@@ -176,6 +178,7 @@ export function ObjectTypeAuthorizationScene() {
   const networkAuthorized = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const objectTypeRef = `${networkId}/${objectTypeId}`;
   const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
+  const returnPath = knowledgeNetworkReturnPath(networkId, location.state, detailPath);
   const configurationSearch = useMemo(() => new URLSearchParams(window.location.search), []);
   const configurationRequesterID = configurationSearch.get("requester_id") ?? undefined;
   const currentPermissions = runtimeConfig.currentUser.permissions;
@@ -1715,7 +1718,7 @@ export function ObjectTypeAuthorizationScene() {
       <KnowledgeNetworkResourceConfigShell
         loading
         onBack={() => {
-          void navigate(detailPath);
+          void navigate(returnPath);
         }}
         subtitle={`${networkId} / ${objectTypeId}`}
         title={t("knowledgeNetwork.propertyAuthorizationAction")}
@@ -1762,7 +1765,7 @@ export function ObjectTypeAuthorizationScene() {
           </div>
         ) : null
       }
-      onBack={() => confirmDiscard(() => void navigate(detailPath))}
+      onBack={() => confirmDiscard(() => void navigate(returnPath))}
       subtitle={`${networkId} / ${detail.id}`}
       title={t("knowledgeNetwork.propertyAuthorizationTitle", { name: detail.name })}
     >

@@ -48,6 +48,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
+  useLocation: () => ({ state: null }),
   useNavigate: () => mocks.navigate,
   useParams: () => ({ networkId: "network-1", objectTypeId: "object-1" }),
 }));

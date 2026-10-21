@@ -14,9 +14,9 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, Input, Table } from "antd";
+import { Dropdown, Empty, Input, Segmented, Spin, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -26,23 +26,39 @@ import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import {
+  ObjectTypeResourceGraph,
+  type ObjectTypeGraphSelectedResource,
+} from "@/modules/knowledge-network/components/object-type/ObjectTypeResourceGraph";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
+import { ObjectTypeGraphSidebar } from "@/modules/knowledge-network/components/shared/ObjectTypeGraphSidebar";
 import {
   readPositiveInteger,
   readStoredPageSize,
   writeStoredPageSize,
 } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import { useObjectTypeGraphExplorer } from "@/modules/knowledge-network/components/shared/useObjectTypeGraphExplorer";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
-import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  knowledgeNetworkReturnState,
+  readKnowledgeNetworkGraphSelection,
+  writeKnowledgeNetworkGraphSelection,
+  type KnowledgeNetworkGraphSelection,
+} from "@/modules/knowledge-network/lib/knowledge-network-navigation";
+import type {
+  KnowledgeNetworkObjectTypeRecord,
+  KnowledgeNetworkRelationTypeRecord,
+} from "@/modules/knowledge-network/types/knowledge-network";
 import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/shared/ObjectTypeRemoteFilter";
 import { listKnowledgeNetworkRelationTypePage } from "@/modules/knowledge-network/services/relation-type.service";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
+import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
 
 export { ObjectTypeRemoteFilter as RelationObjectTypeFilter } from "@/modules/knowledge-network/components/shared/ObjectTypeRemoteFilter";
 
@@ -93,6 +109,14 @@ export function RelationTypeListPanel({
       : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"graph" | "list">(() =>
+    searchParams.get("view") === "list" ? "list" : "graph",
+  );
+  const [selectedGraphObjectTypeId, setSelectedGraphObjectTypeId] = useState(
+    () => searchParams.get("objectTypeId") ?? "",
+  );
+  const [selectedGraphRelationType, setSelectedGraphRelationType] =
+    useState<KnowledgeNetworkRelationTypeRecord | null>(null);
   const [authorizingRecord, setAuthorizingRecord] =
     useState<KnowledgeNetworkRelationTypeRecord | null>(null);
 
@@ -102,6 +126,17 @@ export function RelationTypeListPanel({
   const [loadError, setLoadError] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
+  const graphObjects = useObjectTypeGraphExplorer({
+    direction: sortDirection,
+    enabled: viewMode === "graph",
+    keyword: debouncedKeyword,
+    networkId,
+    refreshVersion,
+    resourceScope: "relations",
+    selectedId: selectedGraphObjectTypeId,
+    setSelectedId: setSelectedGraphObjectTypeId,
+    sort: sortBy === "name" ? "name" : "update_time",
+  });
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedKeyword(keyword), 250);
@@ -109,6 +144,11 @@ export function RelationTypeListPanel({
   }, [keyword]);
 
   useEffect(() => {
+    if (viewMode !== "list") {
+      setIsLoading(false);
+      setLoadError(false);
+      return;
+    }
     let cancelled = false;
     setIsLoading(true);
     setLoadError(false);
@@ -161,6 +201,7 @@ export function RelationTypeListPanel({
     sortDirection,
     sourceFilter,
     targetFilter,
+    viewMode,
   ]);
 
   useEffect(() => {
@@ -173,6 +214,8 @@ export function RelationTypeListPanel({
     const nextPageSize = searchParams.has("pageSize")
       ? readPositiveInteger(searchParams.get("pageSize"), 10)
       : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10);
+    const nextViewMode = searchParams.get("view") === "list" ? "list" : "graph";
+    const nextObjectTypeId = searchParams.get("objectTypeId") ?? "";
     setKeyword((current) => (current === nextKeyword ? current : nextKeyword));
     setSourceFilter((current) => (current === nextSource ? current : nextSource));
     setTargetFilter((current) => (current === nextTarget ? current : nextTarget));
@@ -180,6 +223,10 @@ export function RelationTypeListPanel({
     setSortDirection((current) => (current === nextSortDirection ? current : nextSortDirection));
     setPage((current) => (current === nextPage ? current : nextPage));
     setPageSize((current) => (current === nextPageSize ? current : nextPageSize));
+    setViewMode((current) => (current === nextViewMode ? current : nextViewMode));
+    setSelectedGraphObjectTypeId((current) =>
+      current === nextObjectTypeId ? current : nextObjectTypeId,
+    );
   }, [searchParams]);
 
   useEffect(() => {
@@ -196,6 +243,20 @@ export function RelationTypeListPanel({
     setOrDelete("order", sortDirection, "desc");
     setOrDelete("page", String(page), "1");
     setOrDelete("pageSize", String(pageSize), "10");
+    if (viewMode === "graph") {
+      nextParams.delete("view");
+      nextParams.delete("relationTypeId");
+      if (selectedGraphObjectTypeId) {
+        nextParams.set("objectTypeId", selectedGraphObjectTypeId);
+      } else {
+        nextParams.delete("objectTypeId");
+      }
+    } else {
+      nextParams.set("view", "list");
+      nextParams.delete("objectTypeId");
+      nextParams.delete("relationTypeId");
+      writeKnowledgeNetworkGraphSelection(nextParams);
+    }
     if (nextParams.toString() !== searchParams.toString()) {
       setSearchParams(nextParams, { replace: true });
     }
@@ -204,11 +265,13 @@ export function RelationTypeListPanel({
     page,
     pageSize,
     searchParams,
+    selectedGraphObjectTypeId,
     setSearchParams,
     sortBy,
     sortDirection,
     sourceFilter,
     targetFilter,
+    viewMode,
   ]);
 
   const hasActiveFilter = useMemo(
@@ -224,6 +287,19 @@ export function RelationTypeListPanel({
       ),
     [items, selectedRowKeys],
   );
+  const deleteTargets = useMemo(() => {
+    if (viewMode === "list") return selectedRows;
+    if (
+      !selectedGraphRelationType ||
+      !hasKnowledgeNetworkRecordOperation(selectedGraphRelationType, "delete")
+    ) {
+      return [];
+    }
+    return [selectedGraphRelationType];
+  }, [selectedGraphRelationType, selectedRows, viewMode]);
+  const relationTypeListPath = `/knowledge-network/workspace/${networkId}/relation-types`;
+  const currentReturnQuery = searchParams.toString();
+  const currentReturnTo = `${relationTypeListPath}${currentReturnQuery ? `?${currentReturnQuery}` : ""}`;
 
   const confirmDelete = (records: KnowledgeNetworkRelationTypeRecord[]) => {
     if (records.length === 0) {
@@ -250,6 +326,9 @@ export function RelationTypeListPanel({
       okText: t("common.delete"),
       onOk: async () => {
         await onDelete(records);
+        if (records.some((record) => record.id === selectedGraphRelationType?.id)) {
+          setSelectedGraphRelationType(null);
+        }
         setSelectedRowKeys([]);
         setRefreshVersion((current) => current + 1);
       },
@@ -259,18 +338,26 @@ export function RelationTypeListPanel({
 
   const handleOperate = (key: string, record: KnowledgeNetworkRelationTypeRecord) => {
     if (key === "view") {
-      void navigate(`/knowledge-network/workspace/${networkId}/relation-types/${record.id}/detail`);
+      void navigate(
+        `/knowledge-network/workspace/${networkId}/relation-types/${record.id}/detail`,
+        {
+          state: knowledgeNetworkReturnState(currentReturnTo),
+        },
+      );
       return;
     }
 
     if (key === "edit") {
-      void navigate(`/knowledge-network/workspace/${networkId}/relation-types/${record.id}/edit`);
+      void navigate(`/knowledge-network/workspace/${networkId}/relation-types/${record.id}/edit`, {
+        state: knowledgeNetworkReturnState(currentReturnTo),
+      });
       return;
     }
 
     if (key === "mapping") {
       void navigate(
         `/knowledge-network/workspace/${networkId}/relation-types/${record.id}/mapping`,
+        { state: knowledgeNetworkReturnState(currentReturnTo) },
       );
       return;
     }
@@ -284,8 +371,6 @@ export function RelationTypeListPanel({
       confirmDelete([record]);
     }
   };
-
-  const relationTypeListPath = `/knowledge-network/workspace/${networkId}/relation-types`;
 
   const renderObjectTypeLink = (objectTypeId: string, objectTypeName: string) => {
     const label = objectTypeName || "--";
@@ -302,7 +387,7 @@ export function RelationTypeListPanel({
             `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`,
             {
               state: {
-                knowledgeNetworkReturnTo: relationTypeListPath,
+                knowledgeNetworkReturnTo: currentReturnTo,
               },
             },
           );
@@ -328,6 +413,7 @@ export function RelationTypeListPanel({
           onClick={() => {
             void navigate(
               `/knowledge-network/workspace/${networkId}/relation-types/${record.id}/detail`,
+              { state: knowledgeNetworkReturnState(currentReturnTo) },
             );
           }}
           title={value}
@@ -486,7 +572,9 @@ export function RelationTypeListPanel({
             {t("knowledgeNetwork.emptyCreateHint")}
             <AppButton
               onClick={() => {
-                void navigate(`/knowledge-network/workspace/${networkId}/relation-types/create`);
+                void navigate(`/knowledge-network/workspace/${networkId}/relation-types/create`, {
+                  state: knowledgeNetworkReturnState(currentReturnTo),
+                });
               }}
               type="link"
             >
@@ -513,145 +601,368 @@ export function RelationTypeListPanel({
   ) : (
     renderEmptyContent()
   );
+  const selectGraphObject = (record: KnowledgeNetworkObjectTypeRecord) => {
+    const nextParams = new URLSearchParams(searchParams);
+    writeKnowledgeNetworkGraphSelection(nextParams);
+    nextParams.set("objectTypeId", record.id);
+    setSearchParams(nextParams, { replace: true });
+    setSelectedGraphObjectTypeId(record.id);
+    graphObjects.setSelected(record);
+    setSelectedGraphRelationType(null);
+  };
+  const handleGraphResourceSelection = useCallback(
+    (resource?: ObjectTypeGraphSelectedResource) => {
+      setSelectedGraphRelationType(resource?.kind === "relation" ? resource.value : null);
+      const nextParams = new URLSearchParams(searchParams);
+      writeKnowledgeNetworkGraphSelection(
+        nextParams,
+        resource
+          ? {
+              id:
+                resource.kind === "object"
+                  ? resource.id
+                  : resource.kind === "metric"
+                    ? resource.value.definition.id
+                    : resource.value.id,
+              kind: resource.kind,
+              ...(resource.kind === "metric" ? { version: resource.value.definition.version } : {}),
+            }
+          : undefined,
+      );
+      if (nextParams.toString() !== searchParams.toString()) {
+        setSearchParams(nextParams, { replace: true });
+      }
+    },
+    [searchParams, setSearchParams],
+  );
+  const restoredGraphSelection = readKnowledgeNetworkGraphSelection(searchParams);
+  const graphReturnTo = (selection: KnowledgeNetworkGraphSelection) => {
+    const graphReturnParams = new URLSearchParams(searchParams);
+    graphReturnParams.delete("view");
+    graphReturnParams.delete("relationTypeId");
+    if (selectedGraphObjectTypeId) {
+      graphReturnParams.set("objectTypeId", selectedGraphObjectTypeId);
+    }
+    writeKnowledgeNetworkGraphSelection(graphReturnParams, selection);
+    return `${relationTypeListPath}?${graphReturnParams.toString()}`;
+  };
 
   return (
     <>
-      <section className={`${styles.page} ${styles.objectTypePage} ${styles.relationTypePage}`}>
-        <h2 className={styles.title}>{t("knowledgeNetwork.relationTypesTitle")}</h2>
-
-        <div className={styles.toolbar}>
-          <div className={styles.toolbarLeft}>
-            {canModify || canDelete ? (
-              <>
-                {canModify ? (
-                  <AppButton
-                    className={styles.toolbarButton}
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      void navigate(
-                        `/knowledge-network/workspace/${networkId}/relation-types/create`,
-                      );
-                    }}
-                    type="primary"
-                  >
-                    {t("common.create")}
-                  </AppButton>
-                ) : null}
-                {canDelete ? (
-                  <AppButton
-                    className={styles.toolbarButton}
-                    danger
-                    disabled={selectedRows.length === 0}
-                    icon={<DeleteOutlined />}
-                    onClick={() => confirmDelete(selectedRows)}
-                  >
-                    {t("common.delete")}
-                  </AppButton>
-                ) : null}
-              </>
-            ) : null}
+      <section
+        className={`${styles.page} ${styles.objectTypePage} ${styles.relationTypePage} ${graphStyles.panelPage} ${
+          viewMode === "graph" ? graphStyles.graphPage : ""
+        }`}
+      >
+        <div className={`${styles.toolbar} ${graphStyles.pageToolbar}`}>
+          <div className={graphStyles.viewModeRow}>
+            <div className={styles.toolbarLeft}>
+              <Segmented
+                onChange={(value) => {
+                  setViewMode(value as "graph" | "list");
+                  setSelectedRowKeys([]);
+                }}
+                options={[
+                  { label: t("knowledgeNetwork.objectTypeGraphView"), value: "graph" },
+                  { label: t("knowledgeNetwork.objectTypeListView"), value: "list" },
+                ]}
+                value={viewMode}
+              />
+            </div>
           </div>
-          <div className={styles.toolbarRight}>
-            <Input
-              allowClear
-              className={styles.searchInput}
-              onChange={(event) => {
-                setKeyword(event.target.value);
-                setPage(1);
-              }}
-              placeholder={t("knowledgeNetwork.searchPlaceholder")}
-              prefix={<SearchOutlined className={styles.searchIcon} />}
-              value={keyword}
-            />
-            <ObjectTypeRemoteFilter
-              label={t("knowledgeNetwork.relationTypeListSourceObject")}
-              networkId={networkId}
-              onChange={(value) => {
-                setSourceFilter(value);
-                setPage(1);
-              }}
-              value={sourceFilter}
-            />
-            <ObjectTypeRemoteFilter
-              label={t("knowledgeNetwork.relationTypeListTargetObject")}
-              networkId={networkId}
-              onChange={(value) => {
-                setTargetFilter(value);
-                setPage(1);
-              }}
-              value={targetFilter}
-            />
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: "updateTime",
-                    label: t("knowledgeNetwork.sortByUpdateTime"),
-                  },
-                  {
-                    key: "name",
-                    label: t("knowledgeNetwork.sortByName"),
-                  },
-                ],
-                onClick: ({ key }) => {
-                  const nextSortBy = key as "name" | "updateTime";
-                  setSortDirection((current) =>
-                    nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
-                  );
-                  setSortBy(nextSortBy);
+          <div className={graphStyles.operationRow}>
+            <div className={styles.toolbarLeft}>
+              {canModify || canDelete ? (
+                <>
+                  {canModify ? (
+                    <AppButton
+                      className={styles.toolbarButton}
+                      icon={<PlusOutlined />}
+                      onClick={() => {
+                        void navigate(
+                          `/knowledge-network/workspace/${networkId}/relation-types/create`,
+                          { state: knowledgeNetworkReturnState(currentReturnTo) },
+                        );
+                      }}
+                      type="primary"
+                    >
+                      {t("common.create")}
+                    </AppButton>
+                  ) : null}
+                  {canDelete && viewMode === "list" ? (
+                    <AppButton
+                      className={styles.toolbarButton}
+                      danger
+                      disabled={deleteTargets.length === 0}
+                      icon={<DeleteOutlined />}
+                      onClick={() => confirmDelete(deleteTargets)}
+                    >
+                      {t("common.delete")}
+                    </AppButton>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+            <div className={styles.toolbarRight}>
+              <Input
+                allowClear
+                className={styles.searchInput}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
                   setPage(1);
-                },
-              }}
-              trigger={["click"]}
-            >
+                }}
+                placeholder={t("knowledgeNetwork.searchPlaceholder")}
+                prefix={<SearchOutlined className={styles.searchIcon} />}
+                value={keyword}
+              />
+              {viewMode === "list" ? (
+                <>
+                  <ObjectTypeRemoteFilter
+                    label={t("knowledgeNetwork.relationTypeListSourceObject")}
+                    networkId={networkId}
+                    onChange={(value) => {
+                      setSourceFilter(value);
+                      setPage(1);
+                    }}
+                    value={sourceFilter}
+                  />
+                  <ObjectTypeRemoteFilter
+                    label={t("knowledgeNetwork.relationTypeListTargetObject")}
+                    networkId={networkId}
+                    onChange={(value) => {
+                      setTargetFilter(value);
+                      setPage(1);
+                    }}
+                    value={targetFilter}
+                  />
+                </>
+              ) : null}
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: "updateTime",
+                      label: t("knowledgeNetwork.sortByUpdateTime"),
+                    },
+                    {
+                      key: "name",
+                      label: t("knowledgeNetwork.sortByName"),
+                    },
+                  ],
+                  onClick: ({ key }) => {
+                    const nextSortBy = key as "name" | "updateTime";
+                    setSortDirection((current) =>
+                      nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
+                    );
+                    setSortBy(nextSortBy);
+                    setPage(1);
+                  },
+                }}
+                trigger={["click"]}
+              >
+                <button
+                  aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                  className={styles.iconButton}
+                  type="button"
+                >
+                  <SortAscendingOutlined />
+                </button>
+              </Dropdown>
               <button
-                aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                aria-label={t("common.refresh")}
                 className={styles.iconButton}
+                onClick={() => {
+                  setRefreshVersion((current) => current + 1);
+                }}
                 type="button"
               >
-                <SortAscendingOutlined />
+                <ReloadOutlined />
               </button>
-            </Dropdown>
-            <button
-              aria-label={t("common.refresh")}
-              className={styles.iconButton}
-              onClick={() => {
-                setRefreshVersion((current) => current + 1);
-              }}
-              type="button"
-            >
-              <ReloadOutlined />
-            </button>
+            </div>
           </div>
         </div>
 
-        <div className={styles.tableCard}>
-          <Table<KnowledgeNetworkRelationTypeRecord>
-            columns={columns}
-            dataSource={items}
-            loading={isLoading}
-            locale={{ emptyText: tableEmptyText }}
-            pagination={false}
-            rowKey="id"
-            rowSelection={
-              canDelete
-                ? {
-                    selectedRowKeys,
-                    onChange: (nextSelectedRowKeys) => {
-                      setSelectedRowKeys(nextSelectedRowKeys.map(String));
-                    },
-                    getCheckboxProps: (record) => ({
-                      disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
-                    }),
-                  }
-                : undefined
-            }
-            scroll={{ x: 1280 }}
-            size="middle"
-          />
-        </div>
+        {viewMode === "list" ? (
+          <div className={styles.tableCard}>
+            <Table<KnowledgeNetworkRelationTypeRecord>
+              columns={columns}
+              dataSource={items}
+              loading={isLoading}
+              locale={{ emptyText: tableEmptyText }}
+              pagination={false}
+              rowKey="id"
+              rowSelection={
+                canDelete
+                  ? {
+                      selectedRowKeys,
+                      onChange: (nextSelectedRowKeys) => {
+                        setSelectedRowKeys(nextSelectedRowKeys.map(String));
+                      },
+                      getCheckboxProps: (record) => ({
+                        disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                      }),
+                    }
+                  : undefined
+              }
+              scroll={{ x: 1280 }}
+              size="middle"
+            />
+          </div>
+        ) : (
+          <div className={graphStyles.graphLayout}>
+            <ObjectTypeGraphSidebar
+              emptyContent={<Empty description={t("knowledgeNetwork.emptyObjectTypes")} />}
+              items={graphObjects.items}
+              loading={graphObjects.loading}
+              onPageChange={graphObjects.setPage}
+              onSelect={selectGraphObject}
+              page={graphObjects.page}
+              pageSize={graphObjects.pageSize}
+              resourceCountLabel={t("knowledgeNetwork.objectTypeGraphRelations")}
+              resourceCounts={graphObjects.resourceCounts}
+              selectedId={selectedGraphObjectTypeId}
+              totalCount={graphObjects.totalCount}
+            />
+            <div className={graphStyles.graphContent}>
+              <Spin spinning={graphObjects.selectedLoading}>
+                {graphObjects.selected?.id === selectedGraphObjectTypeId ? (
+                  <ObjectTypeResourceGraph
+                    allowAuthorizeObject={false}
+                    allowDeleteObject={false}
+                    allowDeleteRelation
+                    allowEditObject={false}
+                    canAuthorizeObject={canAuthorizeChildren}
+                    canModify={canModify}
+                    canRequestObjectPermission={false}
+                    initialSelectedResource={restoredGraphSelection}
+                    key={graphObjects.selected.id}
+                    metricsAvailable={false}
+                    networkId={networkId}
+                    networkName={networkName}
+                    objectType={graphObjects.selected}
+                    objectTypeColors={Object.fromEntries(
+                      graphObjects.items.map((item) => [item.id, item.color]),
+                    )}
+                    onAuthorizeObject={(objectType) => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/object-types/${objectType.id}/authorization`,
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: objectType.id,
+                              kind: "object",
+                            }),
+                          },
+                        },
+                      );
+                    }}
+                    onAuthorizeRelation={setAuthorizingRecord}
+                    onDeleteObject={() => undefined}
+                    onDeleteRelation={(relation) => confirmDelete([relation])}
+                    onEditObject={(objectTypeId) => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: objectTypeId,
+                              kind: "object",
+                            }),
+                          },
+                        },
+                      );
+                    }}
+                    onExecuteAction={(action) => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/action-types/${action.id}/execution`,
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: action.id,
+                              kind: "action",
+                            }),
+                          },
+                        },
+                      );
+                    }}
+                    onOpenAction={(action) => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/action-types/${action.id}/detail`,
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: action.id,
+                              kind: "action",
+                            }),
+                          },
+                        },
+                      );
+                    }}
+                    onOpenMetric={() => undefined}
+                    onOpenObject={(objectTypeId) => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`,
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: objectTypeId,
+                              kind: "object",
+                            }),
+                          },
+                        },
+                      );
+                    }}
+                    onOpenRelation={(relation) => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/relation-types/${relation.id}/detail`,
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: relation.id,
+                              kind: "relation",
+                            }),
+                          },
+                        },
+                      );
+                    }}
+                    onOpenRelationMapping={(relation) => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/relation-types/${relation.id}/mapping`,
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: relation.id,
+                              kind: "relation",
+                            }),
+                          },
+                        },
+                      );
+                    }}
+                    onSelectedResourceChange={handleGraphResourceSelection}
+                    onSelectObject={(objectTypeId) => {
+                      const nextParams = new URLSearchParams(searchParams);
+                      writeKnowledgeNetworkGraphSelection(nextParams);
+                      nextParams.set("objectTypeId", objectTypeId);
+                      setSearchParams(nextParams, { replace: true });
+                      setSelectedGraphObjectTypeId(objectTypeId);
+                      setSelectedGraphRelationType(null);
+                    }}
+                    onTrialMetric={() => undefined}
+                    permissionRequestsEnabled={permissionRequestsEnabled}
+                    refreshVersion={refreshVersion}
+                    resourceScope="relations"
+                  />
+                ) : !graphObjects.loading &&
+                  !graphObjects.selectedLoading &&
+                  graphObjects.items.length > 0 ? (
+                  <Empty description={t("knowledgeNetwork.emptyObjectTypes")} />
+                ) : null}
+              </Spin>
+            </div>
+          </div>
+        )}
 
-        {totalCount > 0 ? (
+        {viewMode === "list" && totalCount > 0 ? (
           <div className={styles.paginationBar}>
             <TablePaginationBar
               current={page}

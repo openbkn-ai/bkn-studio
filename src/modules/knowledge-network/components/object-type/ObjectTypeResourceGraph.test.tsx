@@ -15,6 +15,7 @@ import type {
   ObjectTypeDetail,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
+import type { KnowledgeNetworkGraphSelection } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 
 const mocks = vi.hoisted(() => ({
   getActionDetail: vi.fn(),
@@ -65,6 +66,10 @@ vi.mock("@/modules/knowledge-network/components/shared/ResourcePermissionRequest
       申请权限
     </button>
   ),
+}));
+
+vi.mock("@/modules/knowledge-network/components/shared/resource-permission-request", () => ({
+  canRequestResourcePermission: () => true,
 }));
 
 import { ObjectTypeResourceGraph } from "./ObjectTypeResourceGraph";
@@ -122,7 +127,7 @@ const relation = {
   id: "order-customer",
   mappingMode: "direct",
   name: "客户关系",
-  operations: ["modify"],
+  operations: ["view_detail", "modify", "delete"],
   sourceObjectTypeId: "order",
   sourceObjectTypeName: "销售订单",
   tags: [],
@@ -172,35 +177,57 @@ const customer = {
 function renderGraph(
   metricsAvailable = true,
   options: {
+    allowAuthorizeObject?: boolean;
+    allowDeleteRelation?: boolean;
+    allowEditObject?: boolean;
     canAuthorizeObject?: boolean;
     canModify?: boolean;
     canRequestObjectPermission?: boolean;
+    enableActionOperations?: boolean;
+    initialSelectedResource?: KnowledgeNetworkGraphSelection;
     objectType?: ObjectTypeDetail;
+    permissionRequestsEnabled?: boolean;
+    resourceScope?: "all" | "relations" | "actions";
   } = {},
 ) {
   const handlers = {
     onAuthorizeObject: vi.fn(),
+    onAuthorizeAction: vi.fn(),
+    onAuthorizeRelation: vi.fn(),
     onDeleteObject: vi.fn(),
+    onDeleteAction: vi.fn(),
+    onDeleteRelation: vi.fn(),
     onExecuteAction: vi.fn(),
     onEditObject: vi.fn(),
+    onEditAction: vi.fn(),
     onOpenAction: vi.fn(),
     onOpenMetric: vi.fn(),
     onOpenObject: vi.fn(),
     onOpenRelation: vi.fn(),
+    onOpenRelationMapping: vi.fn(),
     onSelectObject: vi.fn(),
     onTrialMetric: vi.fn(),
   };
   render(
     <ObjectTypeResourceGraph
+      allowAuthorizeObject={options.allowAuthorizeObject}
+      allowDeleteRelation={options.allowDeleteRelation}
+      allowEditObject={options.allowEditObject}
       canAuthorizeObject={options.canAuthorizeObject ?? true}
       canModify={options.canModify ?? true}
       canRequestObjectPermission={options.canRequestObjectPermission ?? true}
+      initialSelectedResource={options.initialSelectedResource}
       metricsAvailable={metricsAvailable}
       networkId="network-1"
       networkName="销售网络"
       objectType={options.objectType ?? objectType}
+      permissionRequestsEnabled={options.permissionRequestsEnabled}
       refreshVersion={0}
+      resourceScope={options.resourceScope}
       {...handlers}
+      onAuthorizeAction={options.enableActionOperations ? handlers.onAuthorizeAction : undefined}
+      onDeleteAction={options.enableActionOperations ? handlers.onDeleteAction : undefined}
+      onEditAction={options.enableActionOperations ? handlers.onEditAction : undefined}
     />,
   );
   return handlers;
@@ -304,7 +331,7 @@ describe("ObjectTypeResourceGraph", () => {
     });
   });
 
-  it("explains when the overview limits visible relation types", async () => {
+  it("keeps additional relation types in the relation filter without showing a limit notice", async () => {
     const relations = Array.from({ length: 5 }, (_, index) => ({
       ...relation,
       id: `relation-${index + 1}`,
@@ -315,11 +342,8 @@ describe("ObjectTypeResourceGraph", () => {
     mocks.listRelations.mockResolvedValue({ entries: relations, totalCount: relations.length });
     renderGraph();
 
-    expect(
-      await screen.findByText(
-        "全部视图展示前 4 个关系类；每类最多加载 12 项，可通过分类标签查看。",
-      ),
-    ).toBeInTheDocument();
+    await screen.findByRole("button", { name: "关系类 关系 4" });
+    expect(screen.queryByText(/全部视图展示前/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "对象类 对象 5" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("关系类 5"));
@@ -523,8 +547,84 @@ describe("ObjectTypeResourceGraph", () => {
     expect(within(drawer).queryByRole("button", { name: /删\s*除/ })).not.toBeInTheDocument();
   });
 
-  it("shows relation details without an edit action", async () => {
-    const handlers = renderGraph();
+  it("can restrict object nodes to detail-only without hiding relation authorization", async () => {
+    const handlers = renderGraph(true, {
+      allowAuthorizeObject: false,
+      allowDeleteRelation: true,
+      allowEditObject: false,
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "当前对象类 销售订单" }));
+    let drawer = screen.getByRole("dialog", { name: "对象类详情" });
+    expect(within(drawer).getByRole("button", { name: "详情" })).toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: /编\s*辑/ })).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: "配置权限" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
+    fireEvent.click(await screen.findByRole("button", { name: "关系类 客户关系" }));
+    drawer = screen.getByRole("dialog", { name: "关系类详情" });
+    fireEvent.click(within(drawer).getByRole("button", { name: "配置权限" }));
+    expect(handlers.onAuthorizeRelation).toHaveBeenCalledWith(relation);
+  });
+
+  it("aligns action graph operations with the list", async () => {
+    const fullAccessAction = {
+      ...action,
+      operations: ["view_detail", "modify", "execute", "delete"],
+    } as KnowledgeNetworkActionTypeRecord;
+    mocks.listActions.mockResolvedValue({ entries: [fullAccessAction], totalCount: 1 });
+    mocks.getActionDetail.mockResolvedValue({
+      ...fullAccessAction,
+      executionConfig: {
+        actionSource: { type: "manual" },
+        parameters: [],
+        sourceType: "manual",
+      },
+    });
+    const handlers = renderGraph(true, {
+      enableActionOperations: true,
+      permissionRequestsEnabled: true,
+      resourceScope: "actions",
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
+    const drawer = screen.getByRole("dialog", { name: "行动类详情" });
+
+    expect(within(drawer).getByRole("button", { name: "详情" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "申请权限" })).toHaveAttribute(
+      "data-resource-id",
+      "network-1/update-order",
+    );
+    expect(within(drawer).getByRole("button", { name: /编\s*辑/ })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "执行管理" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "配置权限" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: /删\s*除/ })).toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getByRole("button", { name: /编\s*辑/ }));
+    expect(handlers.onEditAction).toHaveBeenCalledWith(fullAccessAction);
+    fireEvent.click(within(drawer).getByRole("button", { name: "执行管理" }));
+    expect(handlers.onExecuteAction).toHaveBeenCalledWith(fullAccessAction);
+    fireEvent.click(within(drawer).getByRole("button", { name: "配置权限" }));
+    expect(handlers.onAuthorizeAction).toHaveBeenCalledWith(fullAccessAction);
+    fireEvent.click(within(drawer).getByRole("button", { name: /删\s*除/ }));
+    expect(handlers.onDeleteAction).toHaveBeenCalledWith(fullAccessAction);
+  });
+
+  it("restores the selected action drawer after returning to the graph", async () => {
+    renderGraph(true, {
+      initialSelectedResource: { id: action.id, kind: "action" },
+      resourceScope: "actions",
+    });
+
+    const drawer = await screen.findByRole("dialog", { name: "行动类详情" });
+    expect(within(drawer).getByText("更新订单")).toBeInTheDocument();
+  });
+
+  it("aligns relation graph operations with the list while keeping edit removed", async () => {
+    const handlers = renderGraph(true, {
+      allowDeleteRelation: true,
+      permissionRequestsEnabled: true,
+    });
 
     fireEvent.click(await screen.findByRole("button", { name: "关系类 客户关系" }));
     const drawer = screen.getByRole("dialog", { name: "关系类详情" });
@@ -532,6 +632,20 @@ describe("ObjectTypeResourceGraph", () => {
     expect(within(drawer).getByRole("row", { name: "终点对象类 客户" })).toBeInTheDocument();
     expect(within(drawer).getByText("描述")).toBeInTheDocument();
     expect(within(drawer).queryByText("业务定义")).not.toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "申请权限" })).toHaveAttribute(
+      "data-resource-id",
+      "network-1/order-customer",
+    );
+    expect(within(drawer).getByRole("button", { name: "映射配置" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "配置权限" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: /删\s*除/ })).toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "映射配置" }));
+    expect(handlers.onOpenRelationMapping).toHaveBeenCalledWith(relation);
+    fireEvent.click(within(drawer).getByRole("button", { name: "配置权限" }));
+    expect(handlers.onAuthorizeRelation).toHaveBeenCalledWith(relation);
+    fireEvent.click(within(drawer).getByRole("button", { name: /删\s*除/ }));
+    expect(handlers.onDeleteRelation).toHaveBeenCalledWith(relation);
 
     fireEvent.click(within(drawer).getByRole("button", { name: "详情" }));
     expect(handlers.onOpenRelation).toHaveBeenCalledWith(relation);

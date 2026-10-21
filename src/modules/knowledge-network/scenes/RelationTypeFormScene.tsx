@@ -9,7 +9,7 @@ import { ShareAltOutlined } from "@ant-design/icons";
 import { Alert, Form, Input, Spin } from "antd";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -26,6 +26,7 @@ import {
   ResourceTagsSelect,
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
+import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   createKnowledgeNetworkRelationType,
   getKnowledgeNetworkRelationTypeDetail,
@@ -62,6 +63,7 @@ type RelationTypeFormSceneProps = {
 
 export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
   const { networkId = "", relationTypeId = "" } = useParams<{
@@ -86,6 +88,7 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
   );
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
+  const returnPath = knowledgeNetworkReturnPath(networkId, location.state, listPath);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -203,7 +206,7 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       cancelText: t("common.cancel"),
       okText: t("knowledgeNetwork.objectTypeUnsavedLeaveOk"),
       onOk: () => {
-        void navigate(listPath);
+        void navigate(returnPath);
       },
     });
   };
@@ -298,7 +301,7 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       }
 
       void message.success(t("common.success"));
-      void navigate(listPath);
+      void navigate(returnPath);
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {

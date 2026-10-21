@@ -27,6 +27,9 @@ const mocks = vi.hoisted(() => ({
   listKnowledgeNetworkObjectTypes: vi.fn(),
   listKnowledgeNetworkRelationTypePage: vi.fn(),
   listKnowledgeNetworkRelationTypes: vi.fn(),
+  locationState: {
+    current: null as { knowledgeNetworkReturnTo: string } | null,
+  },
   modalConfirm: vi.fn(),
   navigate: vi.fn(),
   routeParams: {
@@ -45,7 +48,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
-  useLocation: () => ({ state: null }),
+  useLocation: () => ({ state: mocks.locationState.current }),
   useNavigate: () => mocks.navigate,
   useParams: () => mocks.routeParams.current,
   useSearchParams: () => [new URLSearchParams(mocks.searchParams.current), mocks.setSearchParams],
@@ -160,16 +163,21 @@ vi.mock(
       actions,
       children,
       loading = false,
+      onBack,
       title,
     }: {
       actions?: ReactNode;
       children?: ReactNode;
       loading?: boolean;
+      onBack?: () => void;
       title: ReactNode;
     }) => (
       <div data-loading={String(loading)} data-testid="detail-shell">
         <div data-testid="detail-title">{title}</div>
         <div data-testid="detail-header-actions">{actions}</div>
+        <button onClick={onBack} type="button">
+          back
+        </button>
         {mocks.searchParams.current ? <div data-testid="detail-content">{children}</div> : null}
       </div>
     ),
@@ -194,12 +202,16 @@ beforeEach(() => {
   mocks.listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
   mocks.getObjectTypeSampleData.mockResolvedValue({ columns: [], rows: [] });
   mocks.getKnowledgeNetwork.mockResolvedValue({ id: "network-1", name: "Customer network" });
+  mocks.locationState.current = null;
   mocks.searchParams.current = "";
   mocks.setSearchParams.mockReset();
 });
 
 describe("knowledge network detail scene headers", () => {
   it("shows action type operations granted by the detail record", async () => {
+    const graphReturnTo =
+      "/knowledge-network/workspace/network-1/action-types?objectTypeId=object-1&graphResourceKind=action&graphResourceId=action-1";
+    mocks.locationState.current = { knowledgeNetworkReturnTo: graphReturnTo };
     mocks.routeParams.current = { actionTypeId: "action-1", networkId: "network-1" };
     mocks.getKnowledgeNetworkActionTypeDetail.mockResolvedValue({
       actionKind: "update",
@@ -234,10 +246,17 @@ describe("knowledge network detail scene headers", () => {
     fireEvent.click(screen.getByText("knowledgeNetwork.actionTypeExecutionEntry"));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/action-types/action-1/execution",
+      { state: { knowledgeNetworkReturnTo: graphReturnTo } },
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "back" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(graphReturnTo);
   });
 
   it("shows object type operations granted by the detail record", async () => {
+    const graphReturnTo =
+      "/knowledge-network/workspace/network-1/object-types?view=graph&objectTypeId=object-1&graphResourceKind=object&graphResourceId=object-1";
+    mocks.locationState.current = { knowledgeNetworkReturnTo: graphReturnTo };
     mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
     mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
       color: "#126ee3",
@@ -270,15 +289,28 @@ describe("knowledge network detail scene headers", () => {
     fireEvent.click(screen.getByText("common.edit"));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/object-types/object-1/edit",
+      {
+        state: {
+          knowledgeNetworkReturnTo: graphReturnTo,
+        },
+      },
     );
 
     fireEvent.click(screen.getByText("knowledgeNetwork.propertyAuthorizationAction"));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/object-types/object-1/authorization",
+      {
+        state: {
+          knowledgeNetworkReturnTo: graphReturnTo,
+        },
+      },
     );
 
     fireEvent.click(screen.getByText("common.delete"));
     expect(mocks.modalConfirm).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole("button", { name: "back" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(graphReturnTo);
   });
 
   it("opens the permission request dialog from the requestPermission query and clears it on close", async () => {
@@ -549,6 +581,9 @@ describe("knowledge network detail scene headers", () => {
   });
 
   it("shows relation type operations granted by the detail record", async () => {
+    const graphReturnTo =
+      "/knowledge-network/workspace/network-1/relation-types?objectTypeId=object-1&graphResourceKind=relation&graphResourceId=relation-1";
+    mocks.locationState.current = { knowledgeNetworkReturnTo: graphReturnTo };
     mocks.routeParams.current = { networkId: "network-1", relationTypeId: "relation-1" };
     mocks.getKnowledgeNetworkRelationTypeDetail.mockResolvedValue({
       color: "#126ee3",
@@ -581,6 +616,14 @@ describe("knowledge network detail scene headers", () => {
     fireEvent.click(screen.getByText("knowledgeNetwork.relationTypeMappingEntry"));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/relation-types/relation-1/mapping",
+      {
+        state: {
+          knowledgeNetworkReturnTo: graphReturnTo,
+        },
+      },
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "back" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(graphReturnTo);
   });
 });

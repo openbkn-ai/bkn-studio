@@ -25,10 +25,12 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { ObjectMetricGraphDetailDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricGraphDetailDrawer";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import {
   directObjectMetricReferences,
   objectMetricVersionKey,
 } from "@/modules/knowledge-network/lib/object-metric-lineage";
+import type { KnowledgeNetworkGraphSelection } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   needsActionTypeActionSourceDisplayResolution,
   resolveActionTypeActionSourceDisplayWithTimeout,
@@ -56,6 +58,7 @@ import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/
 import styles from "./ObjectTypeResourceGraph.module.css";
 
 type GraphSection = "all" | "relations" | "metrics" | "actions";
+type ResourceScope = "all" | "relations" | "actions";
 type ExpandableGroup = "metrics" | "actions";
 type Point = { x: number; y: number };
 type ViewBox = { height: number; width: number; x: number; y: number };
@@ -65,7 +68,7 @@ type GraphNeighbor = {
   name: string;
   relations: KnowledgeNetworkRelationTypeRecord[];
 };
-type SelectedResource =
+export type ObjectTypeGraphSelectedResource =
   | { kind: "relation"; value: KnowledgeNetworkRelationTypeRecord }
   | { kind: "metric"; value: ObjectMetricRecordV1 }
   | { kind: "action"; value: KnowledgeNetworkActionTypeRecord }
@@ -78,25 +81,39 @@ type SelectedResource =
     };
 
 type Props = {
+  allowAuthorizeObject?: boolean;
+  allowDeleteObject?: boolean;
+  allowDeleteRelation?: boolean;
+  allowEditObject?: boolean;
   canAuthorizeObject: boolean;
   canModify: boolean;
   canRequestObjectPermission: boolean;
+  initialSelectedResource?: KnowledgeNetworkGraphSelection;
   metricsAvailable: boolean;
   networkId: string;
   networkName: string;
   objectType: KnowledgeNetworkObjectTypeRecord;
   objectTypeColors?: Record<string, string | undefined>;
   onEditObject: (objectTypeId: string) => void;
+  onEditAction?: (action: KnowledgeNetworkActionTypeRecord) => void;
+  onAuthorizeAction?: (action: KnowledgeNetworkActionTypeRecord) => void;
   onAuthorizeObject: (objectType: KnowledgeNetworkObjectTypeRecord) => void;
+  onAuthorizeRelation?: (relation: KnowledgeNetworkRelationTypeRecord) => void;
+  onDeleteAction?: (action: KnowledgeNetworkActionTypeRecord) => void;
   onDeleteObject: (objectType: KnowledgeNetworkObjectTypeRecord) => void;
+  onDeleteRelation?: (relation: KnowledgeNetworkRelationTypeRecord) => void;
   onExecuteAction: (action: KnowledgeNetworkActionTypeRecord) => void;
   onOpenAction: (action: KnowledgeNetworkActionTypeRecord) => void;
   onOpenMetric: (metric: ObjectMetricRecordV1) => void;
   onOpenObject: (objectTypeId: string) => void;
   onOpenRelation: (relation: KnowledgeNetworkRelationTypeRecord) => void;
+  onOpenRelationMapping?: (relation: KnowledgeNetworkRelationTypeRecord) => void;
   onSelectObject: (objectTypeId: string) => void;
+  onSelectedResourceChange?: (resource?: ObjectTypeGraphSelectedResource) => void;
   onTrialMetric: (metric: ObjectMetricRecordV1) => void;
+  permissionRequestsEnabled?: boolean;
   refreshVersion: number;
+  resourceScope?: ResourceScope;
 };
 
 const GRAPH_WIDTH = 1120;
@@ -369,25 +386,39 @@ function DrawerEllipsis({ value }: { value: string }) {
 }
 
 export function ObjectTypeResourceGraph({
+  allowAuthorizeObject = true,
+  allowDeleteObject = true,
+  allowDeleteRelation = false,
+  allowEditObject = true,
   canAuthorizeObject,
   canModify,
   canRequestObjectPermission,
+  initialSelectedResource,
   metricsAvailable,
   networkId,
   networkName,
   objectType,
   objectTypeColors = {},
+  onEditAction,
   onEditObject,
+  onAuthorizeAction,
   onAuthorizeObject,
+  onAuthorizeRelation,
+  onDeleteAction,
   onDeleteObject,
+  onDeleteRelation,
   onExecuteAction,
   onOpenAction,
   onOpenMetric,
   onOpenObject,
   onOpenRelation,
+  onOpenRelationMapping,
   onSelectObject,
+  onSelectedResourceChange,
   onTrialMetric,
+  permissionRequestsEnabled = false,
   refreshVersion,
+  resourceScope = "all",
 }: Props) {
   const { t } = useTranslation();
   const graphId = useId().replaceAll(":", "");
@@ -398,7 +429,10 @@ export function ObjectTypeResourceGraph({
     | null
   >(null);
   const suppressClickRef = useRef(false);
-  const [section, setSection] = useState<GraphSection>("all");
+  const restoredSelectionKeyRef = useRef("");
+  const [section, setSection] = useState<GraphSection>(
+    resourceScope === "all" ? "all" : resourceScope,
+  );
   const [expandedGroup, setExpandedGroup] = useState<ExpandableGroup | null>(null);
   const [relations, setRelations] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
   const [metrics, setMetrics] = useState<ObjectMetricRecordV1[]>([]);
@@ -407,7 +441,7 @@ export function ObjectTypeResourceGraph({
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<GraphError[]>([]);
   const [reloadVersion, setReloadVersion] = useState(0);
-  const [selected, setSelected] = useState<SelectedResource>();
+  const [selected, setSelected] = useState<ObjectTypeGraphSelectedResource>();
   const [selectedActionDetail, setSelectedActionDetail] = useState<ActionTypeDetail | null>();
   const [selectedActionObjectType, setSelectedActionObjectType] = useState<
     ObjectTypeDetail | null | undefined
@@ -446,66 +480,73 @@ export function ObjectTypeResourceGraph({
       ]);
     };
 
-    const relationRequest = listKnowledgeNetworkRelationTypePage(networkId, {
-      boundObjectTypeId: objectType.id,
-      direction: "asc",
-      limit: PAGE_SIZE,
-      offset: 0,
-      sort: "name",
-    })
-      .then((result) => {
-        if (!active) return;
-        setRelations(result.entries);
-        setTotals((current) => ({ ...current, relations: result.totalCount }));
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        setRelations([]);
-        setTotals((current) => ({ ...current, relations: 0 }));
-        reportError("relations", error);
-      });
-
-    const actionRequest = listKnowledgeNetworkActionTypePage(networkId, {
-      direction: "asc",
-      limit: PAGE_SIZE,
-      objectTypeId: objectType.id,
-      offset: 0,
-      sort: "name",
-    })
-      .then((result) => {
-        if (!active) return;
-        setActions(result.entries);
-        setTotals((current) => ({ ...current, actions: result.totalCount }));
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        setActions([]);
-        setTotals((current) => ({ ...current, actions: 0 }));
-        reportError("actions", error);
-      });
-
-    const metricRequest = metricsAvailable
-      ? listObjectMetricsV1(
-          networkId,
-          { limit: PAGE_SIZE, offset: 0, ownerObjectTypeId: objectType.id },
-          { skipErrorToast: true },
-        )
-          .then((result) => {
-            if (!active) return;
-            setMetrics(result.entries);
-            setTotals((current) => ({ ...current, metrics: result.total_count }));
+    const relationRequest =
+      resourceScope === "actions"
+        ? Promise.resolve()
+        : listKnowledgeNetworkRelationTypePage(networkId, {
+            boundObjectTypeId: objectType.id,
+            direction: "asc",
+            limit: PAGE_SIZE,
+            offset: 0,
+            sort: "name",
           })
-          .catch((error: unknown) => {
+            .then((result) => {
+              if (!active) return;
+              setRelations(result.entries);
+              setTotals((current) => ({ ...current, relations: result.totalCount }));
+            })
+            .catch((error: unknown) => {
+              if (!active) return;
+              setRelations([]);
+              setTotals((current) => ({ ...current, relations: 0 }));
+              reportError("relations", error);
+            });
+
+    const actionRequest =
+      resourceScope === "relations"
+        ? Promise.resolve()
+        : listKnowledgeNetworkActionTypePage(networkId, {
+            direction: "asc",
+            limit: PAGE_SIZE,
+            objectTypeId: objectType.id,
+            offset: 0,
+            sort: "name",
+          })
+            .then((result) => {
+              if (!active) return;
+              setActions(result.entries);
+              setTotals((current) => ({ ...current, actions: result.totalCount }));
+            })
+            .catch((error: unknown) => {
+              if (!active) return;
+              setActions([]);
+              setTotals((current) => ({ ...current, actions: 0 }));
+              reportError("actions", error);
+            });
+
+    const metricRequest =
+      metricsAvailable && resourceScope === "all"
+        ? listObjectMetricsV1(
+            networkId,
+            { limit: PAGE_SIZE, offset: 0, ownerObjectTypeId: objectType.id },
+            { skipErrorToast: true },
+          )
+            .then((result) => {
+              if (!active) return;
+              setMetrics(result.entries);
+              setTotals((current) => ({ ...current, metrics: result.total_count }));
+            })
+            .catch((error: unknown) => {
+              if (!active) return;
+              setMetrics([]);
+              setTotals((current) => ({ ...current, metrics: 0 }));
+              reportError("metrics", error);
+            })
+        : Promise.resolve().then(() => {
             if (!active) return;
             setMetrics([]);
             setTotals((current) => ({ ...current, metrics: 0 }));
-            reportError("metrics", error);
-          })
-      : Promise.resolve().then(() => {
-          if (!active) return;
-          setMetrics([]);
-          setTotals((current) => ({ ...current, metrics: 0 }));
-        });
+          });
 
     void Promise.allSettled([relationRequest, metricRequest, actionRequest]).then(() => {
       if (active) setLoading(false);
@@ -514,7 +555,24 @@ export function ObjectTypeResourceGraph({
     return () => {
       active = false;
     };
-  }, [metricsAvailable, networkId, objectType.id, refreshVersion, reloadVersion]);
+  }, [metricsAvailable, networkId, objectType.id, refreshVersion, reloadVersion, resourceScope]);
+
+  useEffect(() => {
+    if (resourceScope !== "all" && section !== resourceScope) {
+      setSection(resourceScope);
+      setNodePositions({});
+      setView(INITIAL_VIEW);
+    }
+  }, [resourceScope, section]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (initialSelectedResource) {
+      const restoreKey = `${objectType.id}:${initialSelectedResource.kind}:${initialSelectedResource.id}:${initialSelectedResource.version ?? ""}`;
+      if (restoredSelectionKeyRef.current !== restoreKey) return;
+    }
+    onSelectedResourceChange?.(selected);
+  }, [initialSelectedResource, loading, objectType.id, onSelectedResourceChange, selected]);
 
   const selectedMetric = selected?.kind === "metric" ? selected.value : undefined;
   useEffect(() => {
@@ -640,6 +698,49 @@ export function ObjectTypeResourceGraph({
     () => new Map(relations.map((relation) => [relation.id, relation.name])),
     [relations],
   );
+
+  useEffect(() => {
+    if (loading || !initialSelectedResource) return;
+    const restoreKey = `${objectType.id}:${initialSelectedResource.kind}:${initialSelectedResource.id}:${initialSelectedResource.version ?? ""}`;
+    if (restoredSelectionKeyRef.current === restoreKey) return;
+    restoredSelectionKeyRef.current = restoreKey;
+
+    if (initialSelectedResource.kind === "object") {
+      if (initialSelectedResource.id === objectType.id) {
+        setSelected({
+          description: objectType.description,
+          id: objectType.id,
+          kind: "object",
+          name: objectType.name,
+          value: objectType,
+        });
+      }
+      return;
+    }
+    if (initialSelectedResource.kind === "relation") {
+      const relation = relations.find((item) => item.id === initialSelectedResource.id);
+      if (relation) setSelected({ kind: "relation", value: relation });
+      return;
+    }
+    if (initialSelectedResource.kind === "action") {
+      const action = actions.find((item) => item.id === initialSelectedResource.id);
+      if (action) {
+        if (section === "all") setExpandedGroup("actions");
+        setSelected({ kind: "action", value: action });
+      }
+      return;
+    }
+    const metric = metrics.find(
+      (item) =>
+        item.definition.id === initialSelectedResource.id &&
+        (!initialSelectedResource.version ||
+          item.definition.version === initialSelectedResource.version),
+    );
+    if (metric) {
+      if (section === "all") setExpandedGroup("metrics");
+      setSelected({ kind: "metric", value: metric });
+    }
+  }, [actions, initialSelectedResource, loading, metrics, objectType, relations, section]);
   const showRelations = section === "all" || section === "relations";
   const showMetrics = metricsAvailable && (section === "all" || section === "metrics");
   const showActions = section === "all" || section === "actions";
@@ -868,20 +969,66 @@ export function ObjectTypeResourceGraph({
 
   const canEditSelected =
     selected?.kind === "object" &&
+    allowEditObject &&
     canModify &&
     selected.value !== undefined &&
     hasKnowledgeNetworkRecordOperation(selected.value, "modify");
   const canExecuteSelected =
     selected?.kind === "action" && hasKnowledgeNetworkRecordOperation(selected.value, "execute");
+  const canEditSelectedAction =
+    selectedAction !== undefined &&
+    onEditAction !== undefined &&
+    hasKnowledgeNetworkRecordOperation(selectedAction, "modify");
+  const canAuthorizeSelectedAction =
+    selectedAction !== undefined &&
+    onAuthorizeAction !== undefined &&
+    canAuthorizeObject &&
+    hasKnowledgeNetworkRecordOperation(selectedAction, "view_detail");
+  const canDeleteSelectedAction =
+    selectedAction !== undefined &&
+    onDeleteAction !== undefined &&
+    hasKnowledgeNetworkRecordOperation(selectedAction, "delete");
+  const canRequestSelectedActionPermission =
+    resourceScope === "actions" &&
+    selectedAction !== undefined &&
+    canRequestResourcePermission(
+      "action_type",
+      selectedAction.operations,
+      permissionRequestsEnabled,
+    );
   const selectedObjectRecord =
     selected?.kind === "object" && selected.value ? selected.value : undefined;
   const canAuthorizeSelectedObject =
+    allowAuthorizeObject &&
     selectedObjectRecord !== undefined &&
     canAuthorizeObject &&
     hasKnowledgeNetworkRecordOperation(selectedObjectRecord, "view_detail");
   const canDeleteSelectedObject =
+    allowDeleteObject &&
     selectedObjectRecord !== undefined &&
     hasKnowledgeNetworkRecordOperation(selectedObjectRecord, "delete");
+  const selectedRelation = selected?.kind === "relation" ? selected.value : undefined;
+  const canMapSelectedRelation =
+    selectedRelation !== undefined &&
+    onOpenRelationMapping !== undefined &&
+    hasKnowledgeNetworkRecordOperation(selectedRelation, "modify");
+  const canAuthorizeSelectedRelation =
+    selectedRelation !== undefined &&
+    onAuthorizeRelation !== undefined &&
+    canAuthorizeObject &&
+    hasKnowledgeNetworkRecordOperation(selectedRelation, "view_detail");
+  const canDeleteSelectedRelation =
+    allowDeleteRelation &&
+    selectedRelation !== undefined &&
+    onDeleteRelation !== undefined &&
+    hasKnowledgeNetworkRecordOperation(selectedRelation, "delete");
+  const canRequestSelectedRelationPermission =
+    selectedRelation !== undefined &&
+    canRequestResourcePermission(
+      "relation_type",
+      selectedRelation.operations,
+      permissionRequestsEnabled,
+    );
 
   const selectedTitle = selected
     ? selected.kind === "object"
@@ -971,34 +1118,36 @@ export function ObjectTypeResourceGraph({
         <div className={styles.toolbarIdentity}>
           <strong title={objectType.name}>{objectType.name}</strong>
         </div>
-        <Segmented
-          onChange={(value) => {
-            setSection(value as GraphSection);
-            setExpandedGroup(null);
-            setNodePositions({});
-            setView(INITIAL_VIEW);
-          }}
-          options={[
-            { label: t("knowledgeNetwork.objectTypeGraphAll"), value: "all" },
-            {
-              label: `${t("knowledgeNetwork.objectTypeGraphRelations")} ${totals.relations}`,
-              value: "relations",
-            },
-            ...(metricsAvailable
-              ? [
-                  {
-                    label: `${t("knowledgeNetwork.objectTypeGraphMetrics")} ${totals.metrics}`,
-                    value: "metrics",
-                  },
-                ]
-              : []),
-            {
-              label: `${t("knowledgeNetwork.objectTypeGraphActions")} ${totals.actions}`,
-              value: "actions",
-            },
-          ]}
-          value={section}
-        />
+        {resourceScope === "all" ? (
+          <Segmented
+            onChange={(value) => {
+              setSection(value as GraphSection);
+              setExpandedGroup(null);
+              setNodePositions({});
+              setView(INITIAL_VIEW);
+            }}
+            options={[
+              { label: t("knowledgeNetwork.objectTypeGraphAll"), value: "all" },
+              {
+                label: `${t("knowledgeNetwork.objectTypeGraphRelations")} ${totals.relations}`,
+                value: "relations",
+              },
+              ...(metricsAvailable
+                ? [
+                    {
+                      label: `${t("knowledgeNetwork.objectTypeGraphMetrics")} ${totals.metrics}`,
+                      value: "metrics",
+                    },
+                  ]
+                : []),
+              {
+                label: `${t("knowledgeNetwork.objectTypeGraphActions")} ${totals.actions}`,
+                value: "actions",
+              },
+            ]}
+            value={section}
+          />
+        ) : null}
       </div>
 
       {errors.length > 0 ? (
@@ -1452,19 +1601,6 @@ export function ObjectTypeResourceGraph({
             />
           </Tooltip>
         </div>
-        {(section === "all" && relations.length > OVERVIEW_LIMIT) ||
-        totals.relations > relations.length ||
-        totals.metrics > metrics.length ||
-        totals.actions > actions.length ? (
-          <div className={styles.canvasNotice}>
-            {section === "all" && relations.length > OVERVIEW_LIMIT
-              ? t("knowledgeNetwork.objectTypeGraphOverviewPartial", {
-                  overviewCount: OVERVIEW_LIMIT,
-                  pageCount: PAGE_SIZE,
-                })
-              : t("knowledgeNetwork.objectTypeGraphPartial", { count: PAGE_SIZE })}
-          </div>
-        ) : null}
       </div>
 
       <ObjectMetricGraphDetailDrawer
@@ -1497,6 +1633,15 @@ export function ObjectTypeResourceGraph({
                 <Button autoInsertSpace={false} onClick={openSelected} type="primary">
                   {t("common.detail")}
                 </Button>
+                {canRequestSelectedRelationPermission && selectedRelation ? (
+                  <ResourcePermissionRequestAction
+                    operations={selectedRelation.operations}
+                    resourceID={`${networkId}/${selectedRelation.id}`}
+                    resourceName={`${networkName} / ${selectedRelation.name}`}
+                    resourceType="relation_type"
+                    trigger="button"
+                  />
+                ) : null}
                 {selected.kind === "object" && canRequestObjectPermission ? (
                   <ResourcePermissionRequestAction
                     operations={selected.value?.operations}
@@ -1506,8 +1651,22 @@ export function ObjectTypeResourceGraph({
                     trigger="button"
                   />
                 ) : null}
+                {canRequestSelectedActionPermission && selectedAction ? (
+                  <ResourcePermissionRequestAction
+                    operations={selectedAction.operations}
+                    resourceID={`${networkId}/${selectedAction.id}`}
+                    resourceName={`${networkName} / ${selectedAction.name}`}
+                    resourceType="action_type"
+                    trigger="button"
+                  />
+                ) : null}
                 {canEditSelected ? (
                   <Button autoInsertSpace={false} onClick={editSelected}>
+                    {t("common.edit")}
+                  </Button>
+                ) : null}
+                {canEditSelectedAction && selectedAction ? (
+                  <Button autoInsertSpace={false} onClick={() => onEditAction?.(selectedAction)}>
                     {t("common.edit")}
                   </Button>
                 ) : null}
@@ -1521,9 +1680,37 @@ export function ObjectTypeResourceGraph({
                     </KnowledgeNetworkAuthorizationActionLabel>
                   </Button>
                 ) : null}
+                {canMapSelectedRelation && selectedRelation ? (
+                  <Button
+                    autoInsertSpace={false}
+                    onClick={() => onOpenRelationMapping?.(selectedRelation)}
+                  >
+                    {t("knowledgeNetwork.relationTypeMappingEntry")}
+                  </Button>
+                ) : null}
+                {canAuthorizeSelectedRelation && selectedRelation ? (
+                  <Button
+                    autoInsertSpace={false}
+                    onClick={() => onAuthorizeRelation?.(selectedRelation)}
+                  >
+                    <KnowledgeNetworkAuthorizationActionLabel>
+                      {t("knowledgeNetwork.authorizeAction")}
+                    </KnowledgeNetworkAuthorizationActionLabel>
+                  </Button>
+                ) : null}
                 {canExecuteSelected && selected.kind === "action" ? (
                   <Button autoInsertSpace={false} onClick={() => onExecuteAction(selected.value)}>
                     {t("knowledgeNetwork.actionTypeExecutionEntry")}
+                  </Button>
+                ) : null}
+                {canAuthorizeSelectedAction && selectedAction ? (
+                  <Button
+                    autoInsertSpace={false}
+                    onClick={() => onAuthorizeAction?.(selectedAction)}
+                  >
+                    <KnowledgeNetworkAuthorizationActionLabel>
+                      {t("knowledgeNetwork.authorizeAction")}
+                    </KnowledgeNetworkAuthorizationActionLabel>
                   </Button>
                 ) : null}
                 {canDeleteSelectedObject && selectedObjectRecord ? (
@@ -1531,6 +1718,24 @@ export function ObjectTypeResourceGraph({
                     autoInsertSpace={false}
                     danger
                     onClick={() => onDeleteObject(selectedObjectRecord)}
+                  >
+                    {t("common.delete")}
+                  </Button>
+                ) : null}
+                {canDeleteSelectedRelation && selectedRelation ? (
+                  <Button
+                    autoInsertSpace={false}
+                    danger
+                    onClick={() => onDeleteRelation?.(selectedRelation)}
+                  >
+                    {t("common.delete")}
+                  </Button>
+                ) : null}
+                {canDeleteSelectedAction && selectedAction ? (
+                  <Button
+                    autoInsertSpace={false}
+                    danger
+                    onClick={() => onDeleteAction?.(selectedAction)}
                   >
                     {t("common.delete")}
                   </Button>

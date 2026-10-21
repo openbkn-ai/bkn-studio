@@ -159,9 +159,6 @@ export const objecttypePart = {
   objectTypeGraphFit: "适应画布",
   objectTypeGraphPartialError: "部分关联资源加载失败",
   objectTypeGraphEmpty: "当前分类暂无关联资源",
-  objectTypeGraphPartial: "每类最多展示前 {{count}} 项，可通过关联列表查看完整数据。",
-  objectTypeGraphOverviewPartial:
-    "全部视图展示前 {{overviewCount}} 个关系类；每类最多加载 {{pageCount}} 项，可通过分类标签查看。",
   objectTypeGraphResourceDetail: "关联资源详情",
   objectTypeGraphObjectDetail: "对象类详情",
   objectTypeGraphRelationDetail: "关系类详情",
