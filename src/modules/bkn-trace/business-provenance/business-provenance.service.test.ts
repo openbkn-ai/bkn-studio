@@ -24,6 +24,51 @@ describe("EE business provenance service", () => {
     postMock.mockReset();
   });
 
+  it("restores shared time-rail payloads by operation and attempt without replacing distinct historical content", async () => {
+    const input = {
+      mode: "inline",
+      media_type: "application/json",
+      byte_length: 20,
+      inline: { original: "中文" },
+    };
+    const retry = { ...input, inline: { original: "retry" } };
+    getMock.mockResolvedValue({
+      data: {
+        interaction_id: "int-shared",
+        time_rail_payloads_shared: true,
+        time_rail: [
+          {
+            operation_id: "op",
+            attempt: 1,
+            input: { ...input, inline: undefined, shared_inline: true },
+            output: { ...retry, inline: undefined, shared_inline: true },
+          },
+          {
+            operation_id: "op",
+            attempt: 2,
+            input: { ...retry, inline: undefined, shared_inline: true },
+            error: { ...input, inline: undefined, shared_inline: true },
+          },
+          { operation_id: "op", attempt: 1, input: { ...input, inline: "distinct" } },
+          { operation_id: "op", attempt: 1, input: { mode: "ref", ref: "original-ref" } },
+        ],
+        operations: [
+          { operation_id: "op", attempt: 1, input, output: retry },
+          { operation_id: "op", attempt: 2, input: retry, error: input },
+        ],
+      },
+    });
+    const { getBusinessProvenanceInteraction } = await import("./business-provenance.service");
+    const value = await getBusinessProvenanceInteraction("int-shared");
+    expect(value.timeRail?.[0]?.input).toEqual(input);
+    expect(value.timeRail?.[0]?.output).toEqual(retry);
+    expect(value.timeRail?.[1]?.input).toEqual(retry);
+    expect(value.timeRail?.[1]?.error).toEqual(input);
+    expect(value.timeRail?.[2]?.input.inline).toBe("distinct");
+    expect(value.timeRail?.[3]?.input).toEqual({ mode: "ref", ref: "original-ref" });
+    expect(value.operations[0]?.input).toEqual(input);
+  });
+
   it("silences the expected missing-EE-route response while reading the conversation list", async () => {
     getMock.mockResolvedValue({ data: { entries: [{ conversation_id: "conv-1" }], total: 1 } });
     const { getBusinessProvenanceConversations } = await import("./business-provenance.service");
@@ -157,7 +202,7 @@ describe("EE business provenance service", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions/int-1",
-      { skipErrorToast: true },
+      { skipErrorToast: true, params: { deduplicate_payloads: true } },
     );
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions/int-1/markdown",

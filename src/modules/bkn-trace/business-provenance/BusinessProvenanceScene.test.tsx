@@ -355,6 +355,61 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.queryByText("saved-evidence:int-two")).toBeNull();
   });
 
+  it("does not let an earlier lazy Markdown response replace the selected round and reuses the loaded text", async () => {
+    getConversations.mockResolvedValue({
+      entries: [{ conversationId: "conv-lazy", questionPreview: "按需加载" }],
+      total: 1,
+    });
+    getInteractions.mockResolvedValue({
+      entries: [
+        { interactionId: "int-first", questionPreview: "第一轮按需" },
+        { interactionId: "int-second", questionPreview: "第二轮按需" },
+      ],
+      total: 2,
+    });
+    getInteraction.mockImplementation((interactionId: string) =>
+      Promise.resolve({
+        interactionId,
+        operations: [],
+        conversationContext: [],
+        derivedFacts: [],
+        contextRelations: [],
+      }),
+    );
+    let finishFirst!: (text: string) => void;
+    getMarkdown.mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          finishFirst = resolve;
+        }),
+    );
+    getMarkdown.mockResolvedValueOnce("# second round original");
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "按需加载" }));
+    fireEvent.click(await screen.findByRole("button", { name: "交给 BKN Agent 分析" }));
+    expect(getMarkdown).toHaveBeenCalledWith("int-first");
+    fireEvent.click(screen.getByRole("button", { name: "关闭 BKN Agent 分析" }));
+    fireEvent.click(screen.getByText("第二轮按需"));
+    await waitFor(() => expect(getAnalysisHistory).toHaveBeenLastCalledWith("int-second"));
+    fireEvent.click(await screen.findByRole("button", { name: "交给 BKN Agent 分析" }));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveValue(
+        "# second round original",
+      ),
+    );
+    await act(() => {
+      finishFirst("# stale first round");
+      return Promise.resolve();
+    });
+    expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveValue(
+      "# second round original",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "关闭 BKN Agent 分析" }));
+    fireEvent.click(screen.getByRole("button", { name: "交给 BKN Agent 分析" }));
+    expect(getMarkdown).toHaveBeenCalledTimes(2);
+    expect(streamAnalysis).not.toHaveBeenCalled();
+  });
+
   it("shows the current input and output above the deterministic timeline", async () => {
     getConversations.mockResolvedValue({
       entries: [
@@ -406,11 +461,15 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.getByRole("button", { name: "下载 Markdown" })).toBeEnabled();
     const analyzeButton = screen.getByRole("button", { name: "交给 BKN Agent 分析" });
     expect(analyzeButton).toBeEnabled();
+    expect(getMarkdown).not.toHaveBeenCalled();
     fireEvent.click(analyzeButton);
     expect(screen.getByText("知识网络优化 BKN Agent")).not.toBeNull();
-    expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveValue(
-      "# 当前交互轮次知识网络优化分析输入\n\n- Operation：`op-1`",
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveValue(
+        "# 当前交互轮次知识网络优化分析输入\n\n- Operation：`op-1`",
+      ),
     );
+    expect(getMarkdown).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveAttribute(
       "readonly",
     );
