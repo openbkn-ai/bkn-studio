@@ -17,6 +17,10 @@ describe("model statistics locales", () => {
     expect(statistics.metrics.usageCount).toBe("Model calls");
     expect(statistics.metrics.times).toBe("calls");
     expect(statistics.charts.timeAndFirstToken).toBe("Model latency and time to first token");
+    expect(modelResourcesEnUS.modelResources.models.monitor.initialSpeed).toBe(
+      "Time to first token",
+    );
+    expect(modelResourcesEnUS.modelResources.quotas.sortAriaLabel).toBe("Sort quotas");
   });
 
   it("localizes token chart legends in Chinese", () => {
@@ -24,5 +28,7 @@ describe("model statistics locales", () => {
 
     expect(statistics.charts.inputTokens).toBe("输入 Tokens");
     expect(statistics.charts.outputTokens).toBe("输出 Tokens");
+    expect(modelResourcesZhCN.modelResources.models.monitor.initialSpeed).toBe("首 Token 耗时");
+    expect(modelResourcesZhCN.modelResources.quotas.sortAriaLabel).toBe("配额排序");
   });
 });

@@ -645,6 +645,7 @@ describe("ObjectAuthorizeDrawer source records", () => {
     );
     fireEvent.click(await screen.findByRole("option", { name: /Readers/ }));
     fireEvent.click(screen.getByRole("button", { name: /view_detail/ }));
+    expect(screen.getByText("systemAdmin.objectGrants.grantRoleReady")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /systemAdmin\.objectGrants\.addGrant/ }));
 
     await waitFor(() =>
@@ -659,6 +660,35 @@ describe("ObjectAuthorizeDrawer source records", () => {
         operations: ["view_detail"],
       }),
     );
+  });
+
+  it("describes a full business access grant as applying to the selected role", async () => {
+    mocks.useCapability.mockReturnValue("not-licensed");
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
+    mocks.listGrantableRolesForObject.mockResolvedValue([
+      { description: "Reads catalogs", id: "role-readers", name: "Readers" },
+    ]);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await screen.findByText("systemAdmin.objectGrants.newGrantTitle");
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.propertyAuthorizationRole"));
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", {
+        name: "knowledgeNetwork.propertyAuthorizationSearchRole",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: /Readers/ }));
+    fireEvent.click(screen.getByRole("button", { name: /full_business_access/ }));
+
+    expect(screen.getByText("systemAdmin.objectGrants.grantRoleBundleReady")).not.toBeNull();
   });
 
   it("does not downgrade an unknown capability snapshot to the Community bundle", async () => {

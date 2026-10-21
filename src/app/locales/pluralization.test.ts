@@ -86,12 +86,38 @@ describe("English count pluralization", () => {
       other: "Completed logical-property trials for 2 objects.",
       zero: "Completed logical-property trials for 0 objects.",
     },
+    {
+      key: "systemAdmin.objectGrants.grantReady",
+      one: "Add 1 operation permission for the selected user",
+      other: "Add 2 operation permissions for the selected user",
+      zero: "Add 0 operation permissions for the selected user",
+    },
+    {
+      key: "systemAdmin.objectGrants.grantRoleReady",
+      one: "Add 1 operation permission for the selected role",
+      other: "Add 2 operation permissions for the selected role",
+      zero: "Add 0 operation permissions for the selected role",
+    },
   ])("formats 0/1/2 for $key", async ({ key, one, other, zero }) => {
     await i18n.changeLanguage("en-US");
 
     expect(i18n.t(key, { count: 0, formattedCount: "0" })).toBe(zero);
     expect(i18n.t(key, { count: 1, formattedCount: "1" })).toBe(one);
     expect(i18n.t(key, { count: 2, formattedCount: "2" })).toBe(other);
+  });
+
+  it("pluralizes the data catalog connection summary for 0/1/2", async () => {
+    await i18n.changeLanguage("en-US");
+
+    expect(
+      i18n.t("dataCatalog.tree.summary", { catalogCount: 0, count: 0, resourceCount: 65 }),
+    ).toBe("0 connections · 65 resources");
+    expect(
+      i18n.t("dataCatalog.tree.summary", { catalogCount: 1, count: 1, resourceCount: 65 }),
+    ).toBe("1 connection · 65 resources");
+    expect(
+      i18n.t("dataCatalog.tree.summary", { catalogCount: 2, count: 2, resourceCount: 65 }),
+    ).toBe("2 connections · 65 resources");
   });
 
   it("preserves a large estimated count in both languages", async () => {

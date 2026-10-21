@@ -36,7 +36,7 @@ export const dataCatalogEnUS = {
       launchConfigTitle: "Current resource config",
       editConfigLink: "Edit",
       launchConfigSummary:
-        "Primary key {{primaryKey}} · incremental {{incremental}} · embedding {{embedding}} · fulltext {{fulltext}} · model {{model}} · analyzer {{analyzer}}",
+        "Primary key {{primaryKey}} · incremental key {{incremental}} · vector {{embedding}} · full-text {{fulltext}} · model {{model}} · analyzer {{analyzer}}",
       viewConfig: "Configure Index",
       viewTasks: "Index Tasks",
       tasksUnavailableForDataset: "Dataset resources do not support index tasks yet.",
@@ -102,14 +102,14 @@ export const dataCatalogEnUS = {
     taskManagement: {
       tabs: {
         indexBuild: "Index Build Tasks",
-        discover: "Discover Tasks",
+        discover: "Discovery Tasks",
         semanticUnderstanding: "Semantic Understanding Tasks",
       },
       columns: {
         task: "Task ID",
         catalog: "Catalog",
         resource: "Associated Resource",
-        strategy: "Discover Strategy",
+        strategy: "Discovery Strategy",
         trigger: "Trigger",
         scope: "Task Scope",
         applyMode: "Apply Mode",
@@ -117,7 +117,7 @@ export const dataCatalogEnUS = {
         applied: "Application Status",
       },
       scope: {
-        catalog: "Data Directory",
+        catalog: "Data Catalog",
         resource: "Data Resource",
       },
       applyMode: {
@@ -149,7 +149,7 @@ export const dataCatalogEnUS = {
         failureReason: "Failure Reason",
       },
       discover: {
-        empty: "No discover tasks",
+        empty: "No discovery tasks",
       },
       semantic: {
         empty: "No semantic-understanding tasks",
@@ -168,7 +168,7 @@ export const dataCatalogEnUS = {
           agentTaskId: "Agent Task ID",
           confidenceThreshold: "Confidence Threshold",
           confidenceDetail: "Confidence Detail",
-          applyDetail: "Apply Detail",
+          applyDetail: "Application Details",
           inputHash: "Input Hash",
           input: "Input Snapshot",
           result: "Understanding Result",
@@ -449,9 +449,9 @@ export const dataCatalogEnUS = {
         build_tasks_running_or_stopping: "{{count}} running or stopping build tasks",
         build_tasks_running_or_stopping_one: "{{count}} running or stopping build task",
         build_tasks_running_or_stopping_other: "{{count}} running or stopping build tasks",
-        discover_tasks_running: "{{count}} running discover tasks",
-        discover_tasks_running_one: "{{count}} running discover task",
-        discover_tasks_running_other: "{{count}} running discover tasks",
+        discover_tasks_running: "{{count}} running discovery tasks",
+        discover_tasks_running_one: "{{count}} running discovery task",
+        discover_tasks_running_other: "{{count}} running discovery tasks",
         semantic_understanding_tasks_running: "{{count}} running semantic tasks",
         semantic_understanding_tasks_running_one: "{{count}} running semantic task",
         semantic_understanding_tasks_running_other: "{{count}} running semantic tasks",
@@ -465,6 +465,8 @@ export const dataCatalogEnUS = {
       loadMore: "Load more",
       loading: "Loading…",
       summary: "{{catalogCount}} connections · {{resourceCount}} resources",
+      summary_one: "{{catalogCount}} connection · {{resourceCount}} resources",
+      summary_other: "{{catalogCount}} connections · {{resourceCount}} resources",
       expand: "Expand",
       collapse: "Collapse",
     },
@@ -553,10 +555,10 @@ export const dataCatalogEnUS = {
       updater: "Updated by",
       sourceIdentifierPlaceholder: "e.g. crm_core.customers or a SQL statement",
       sourceIdentifierHint:
-        "Table name / view definition in the source; resources found by discover fill this automatically.",
+        "Table name or view definition in the source. This value is filled automatically for resources found through discovery.",
       schemaDefinition: "Schema Definition",
       schemaHint:
-        "One field per line: name type. Leave empty to use the default schema (id / name / updated_at); discover can complete it later.",
+        "One field per line: name type. Leave empty to use the default schema (id / name / updated_at); discovery can populate it later.",
       fieldName: "Field Name",
       fieldDisplayName: "Business Name",
       fieldDescription: "Description",
@@ -566,7 +568,9 @@ export const dataCatalogEnUS = {
       fieldOriginalDescription: "Original Description",
       editFields: "Edit description and fields",
       logicalViewReadOnly:
-        "Logical view editing is not yet available in Studio. You can still view its details.",
+        "Studio does not support editing this type of logical view. You can still view its details.",
+      logicalViewIndexReadOnly:
+        "Studio does not support editing index configuration for logical views. You can still view the configuration.",
       editHint:
         "You can edit the resource description, field business names, and field descriptions here.",
       copyValue: "Copy {{label}}",
@@ -581,7 +585,7 @@ export const dataCatalogEnUS = {
       effectiveActive: "Active",
       latestTask: "Latest Build Task",
       noEffectiveIndex:
-        "No effective index yet - once a build succeeds, vector retrieval becomes available.",
+        "No effective index yet. Once a build succeeds, the configured retrieval capabilities become available.",
       noIndexHint:
         "This resource has no index yet. Build one to enable vector retrieval in knowledge networks.",
       rebuildFailedTitle:
@@ -636,6 +640,8 @@ export const dataCatalogEnUS = {
       filterUnavailableForSource:
         "The selected query source does not support the applied filter. Adjust the conditions and apply again.",
       binaryContent: "Binary content ({{count}} bytes)",
+      binaryContent_one: "Binary content ({{count}} byte)",
+      binaryContent_other: "Binary content ({{count}} bytes)",
       binaryContentUnavailable: "Binary content not loaded",
       binaryContentUnavailableHint:
         'Binary content is not loaded. Where source queries are supported, enable "Query original data" and "Load Binary content" to read it.',
@@ -734,7 +740,7 @@ export const dataCatalogEnUS = {
       executeIncrementalDescription:
         "Continue from the build-key checkpoint and process only new or changed rows.",
       schemaLoading: "Loading fields...",
-      schemaEmpty: "This resource has no fields yet; run a discover to discover its schema.",
+      schemaEmpty: "This resource has no fields yet. Run discovery to retrieve its schema.",
       fulltextTypeHint: "Text-type fields only",
       keyFields: "Primary and Incremental Fields",
       keyFieldsHint:

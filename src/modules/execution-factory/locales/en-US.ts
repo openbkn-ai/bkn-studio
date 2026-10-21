@@ -69,11 +69,11 @@ export const executionFactoryEnUS = {
       functionToolboxTop:
         "Create a function toolset for custom logic (not HTTP). After save, add each function in the tool list, then publish for agents.",
       mcpCreateTop:
-        "Register an MCP server so agents can discover and call its tools via MCP. After save, test the connection, publish, and attach in agent config.",
+        "Register an MCP server so agents can discover and call its tools via MCP. After saving, you can test the connection, publish it to the current platform, and select it in the agent configuration.",
       mcpEditTop:
         "Update MCP service metadata and connection settings. Republish after changes so agents pick up the latest config.",
       skillImportTop:
-        "Upload a SKILL pack (ZIP or SKILL.md) to this platform. After publish, agents can load and run the packaged capabilities at runtime.",
+        "Upload a SKILL package (ZIP or SKILL.md) to add its instructions and scripts to the current platform. After publishing, agents can load it and execute its capabilities as needed at runtime.",
       importOpenApiToolsTop:
         "Batch-import OpenAPI paths into this toolset. Each path becomes a tool you can enable, debug, and publish with the set.",
       impexOpenApiOperator:
@@ -119,7 +119,7 @@ export const executionFactoryEnUS = {
     addCapabilityStepMode: "Choose method",
     addCapabilityStepConfigure: "Configure",
     addCapabilityQuickApiTitle: "Add API",
-    addCapabilityQuickApiDesc: "Paste cURL or fill a URL to create a tool automatically",
+    addCapabilityQuickApiDesc: "Paste a cURL command or enter a URL to create a tool automatically",
     addCapabilityImportOpenApiTitle: "Import OpenAPI 3.0",
     addCapabilityImportOpenApiDesc: "Upload JSON/YAML spec to batch-create API tools",
     importOpenApiCapabilityTitle: "Import OpenAPI 3.0 collection",
@@ -223,10 +223,10 @@ export const executionFactoryEnUS = {
     catalogEmpty: "No market execution units",
     catalogEmptyDescription: "No functions are available in the market view.",
     emptyByTab: {
-      mcp: "No MCP servers yet. Create one for agents to call via the MCP protocol.",
-      toolbox: "No toolboxes yet. Create one to manage HTTP and other tools.",
+      mcp: 'No MCP services yet. Click "Add Capability" to register an MCP server.',
+      toolbox: 'No toolsets yet. Use "Add Capability" to connect HTTP APIs or functions.',
       operator: "No functions yet. Register an OpenAPI or function to publish and debug.",
-      skill: "No SKILLs yet. Import a SKILL package to distribute and install.",
+      skill: 'No SKILL packages yet. Click "Add Capability" to upload a ZIP file or SKILL.md.',
     },
     catalogEmptyByTab: {
       mcp: "No MCP services are available to introduce from the market.",
@@ -291,14 +291,14 @@ export const executionFactoryEnUS = {
     operatorCategories: {
       other_category: "Other",
       system: "System Tools",
-      data_process: "Data Process",
-      data_transform: "Data Transform",
-      data_store: "Data Store",
+      data_process: "Data Processing",
+      data_transform: "Data Transformation",
+      data_store: "Data Storage",
       data_analysis: "Data Analysis",
       data_query: "Data Query",
-      data_extract: "Data Extract",
-      data_split: "Data Split",
-      model_train: "Model Train",
+      data_extract: "Data Extraction",
+      data_split: "Data Splitting",
+      model_train: "Model Training",
     },
     toolboxCategories: {
       box_category: "Toolbox",
@@ -849,11 +849,11 @@ export const executionFactoryEnUS = {
     skillSource: "Source",
     skillHistoryTitle: "Release History",
     skillHistoryEmpty: "No release history records.",
-    skillHistoryRepublish: "Republish to Draft",
+    skillHistoryRepublish: "Restore to draft",
     skillHistoryPublish: "Publish Version",
-    skillHistoryRepublishConfirmTitle: "Republish history version",
+    skillHistoryRepublishConfirmTitle: "Restore historical version",
     skillHistoryRepublishConfirmDescription: 'Restore version "{{version}}" to draft state?',
-    skillHistoryPublishConfirmTitle: "Publish history version",
+    skillHistoryPublishConfirmTitle: "Publish historical version",
     skillHistoryPublishConfirmDescription: 'Publish version "{{version}}" as the current release?',
     mcpToolListTitle: "MCP tools - {{count}}",
     mcpToolListTitle_one: "MCP tool - {{count}}",
@@ -1001,7 +1001,7 @@ export const executionFactoryEnUS = {
     formSectionBasic: "Basic Info",
     formSectionPublish: "Publish Options",
     quickPublishHint:
-      "Fill the minimum required fields and save a draft first. Enable publish-on-register for quick POC demos.",
+      'You can first complete the minimum required fields and save a draft. Enable "Publish immediately after registration" to publish in one step after validation passes.',
     directPublishHint:
       "Best for POC environments. Production workflows should publish manually after review.",
     openapiImportHint:

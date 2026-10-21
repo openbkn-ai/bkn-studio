@@ -589,7 +589,11 @@ export function ResourceIndexPanel({
           <Alert message={t("dataCatalog.build.configReadOnly")} showIcon type="warning" />
         ) : null}
         {logicalViewReadOnly ? (
-          <Alert message={t("dataCatalog.resource.logicalViewReadOnly")} showIcon type="info" />
+          <Alert
+            message={t("dataCatalog.resource.logicalViewIndexReadOnly")}
+            showIcon
+            type="info"
+          />
         ) : null}
         <div className={panelStyles.configureCard}>
           <IndexConfigFormPanel

@@ -20,7 +20,9 @@ describe("resource-catalog", () => {
   it("resolves resource and operation labels from the active locale", async () => {
     await i18n.changeLanguage("en-US");
 
+    expect(resourceTypeLabel("catalog")).toBe("Data catalog");
     expect(resourceTypeLabel("knowledge_network")).toBe("Knowledge network");
+    expect(resourceTypeLabel("connector_type")).toBe("Connector type");
     expect(operationLabel("knowledge_network", "query_data")).toBe("Query");
     expect(operationLabel("catalog", "task_manage")).toBe("Manage tasks");
     expect(operationsForType("catalog").map((item) => item.label)).toContain("View");
@@ -115,6 +117,7 @@ describe("resource-catalog", () => {
     await i18n.changeLanguage("zh-CN");
 
     expect(resourceTypeLabel("catalog")).toBe("数据目录");
+    expect(resourceTypeLabel("connector_type")).toBe("连接器类型");
     expect(resourceTypeLabel("resource")).toBe("数据资源");
   });
 

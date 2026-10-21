@@ -94,7 +94,7 @@ describe("GrantableRolePicker", () => {
 
     expect(await screen.findByText("common.requestFailed")).not.toBeNull();
     expect(screen.getByRole("option", { name: /Readers/ })).not.toBeNull();
-    expect(screen.getByText("systemAdmin.userPicker.resultCount:1")).not.toBeNull();
+    expect(screen.getByText("systemAdmin.rolePicker.resultCount:1")).not.toBeNull();
 
     fireEvent.change(
       screen.getByRole("textbox", {

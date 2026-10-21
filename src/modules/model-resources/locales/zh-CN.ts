@@ -160,7 +160,7 @@ export const modelResourcesZhCN = {
       },
       monitor: {
         title: "模型监控",
-        initialSpeed: "首字速度",
+        initialSpeed: "首 Token 耗时",
         initialSpeedSub: "衡量从发送请求到生成第一个词或 token 花费的时间",
         outputSpeed: "输出速度",
         outputSpeedSub: "每秒输出 tokens 数量，越高越好",
@@ -182,6 +182,7 @@ export const modelResourcesZhCN = {
       goToModelConfig: "去模型配置",
       sortByName: "按名称排序",
       sortByCount: "按预估总金额排序",
+      sortAriaLabel: "配额排序",
       finalOperatorTime: "最终操作时间",
       quotaSet: "限额设置",
       userQuota: "分配用户额度",

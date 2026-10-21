@@ -1101,10 +1101,19 @@ export function ObjectAuthorizeDrawer({
                           : "systemAdmin.objectGrants.grantNeedsBundle",
                       )
                     : fineGrained
-                      ? t("systemAdmin.objectGrants.grantReady", {
-                          count: candidateOperations.length,
-                        })
-                      : t("systemAdmin.objectGrants.grantBundleReady")}
+                      ? t(
+                          candidateType === "role"
+                            ? "systemAdmin.objectGrants.grantRoleReady"
+                            : "systemAdmin.objectGrants.grantReady",
+                          {
+                            count: candidateOperations.length,
+                          },
+                        )
+                      : t(
+                          candidateType === "role"
+                            ? "systemAdmin.objectGrants.grantRoleBundleReady"
+                            : "systemAdmin.objectGrants.grantBundleReady",
+                        )}
               </span>
               <AppButton
                 disabled={

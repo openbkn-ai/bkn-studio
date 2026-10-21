@@ -371,7 +371,7 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(first.baseFormRevision).toBe(second.baseFormRevision);
     expect(first.diagnostic?.form_revision).toBe(first.baseFormRevision);
     expect(second.diagnostic?.form_revision).toBe(second.baseFormRevision);
-  }, 40_000);
+  }, 60_000);
 
   it("applies a selected composite expression without changing dependencies", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };

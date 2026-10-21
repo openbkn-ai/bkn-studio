@@ -634,6 +634,7 @@ export function CatalogTreePanel({
           <span>
             {t("dataCatalog.tree.summary", {
               catalogCount: catalogCount as never,
+              count: catalogCount,
               resourceCount: resourceCount as never,
             })}
           </span>

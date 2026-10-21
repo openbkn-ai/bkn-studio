@@ -264,7 +264,7 @@ export function DataConnectListScene({
         content: nextEnabled
           ? t("dataConnect.enableConfirmDescription", { name: record.name })
           : t("dataConnect.disableConfirmDescription", { name: record.name }),
-        okText: nextEnabled ? t("common.enabled") : t("common.disabled"),
+        okText: nextEnabled ? t("common.enable") : t("common.disable"),
         cancelText: t("common.cancel"),
         okButtonProps: nextEnabled ? undefined : { danger: true },
         onOk: async () => {
@@ -367,7 +367,7 @@ export function DataConnectListScene({
         });
         items.push({
           key: "toggle",
-          label: record.enabled ? t("common.disabled") : t("common.enabled"),
+          label: record.enabled ? t("common.disable") : t("common.enable"),
         });
       }
       if (hasCatalogOperation(record, "delete")) {
