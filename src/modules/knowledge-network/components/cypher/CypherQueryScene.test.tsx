@@ -207,6 +207,29 @@ describe("CypherQueryScene", () => {
     expect(localStorage.getItem("bkn-studio.cypher-frames.worldcup")).toContain("Brazil");
   });
 
+  it("asks for display keys again after a failed read instead of dropping them", async () => {
+    mocks.getObjectTypeDisplayKeys.mockRejectedValueOnce(new Error("401"));
+    mocks.runCypherQuery.mockResolvedValue({
+      ok: true,
+      result: { columns: [{ name: "t" }], entries: [{ t: team("Brazil") }] },
+      exchange,
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    await screen.findByTestId("cypher-schema-object-teams");
+
+    const query = "MATCH (t:teams) RETURN t LIMIT 5";
+    fireEvent.change(editor(), { target: { value: query } });
+    fireEvent.keyDown(editor(), { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(mocks.runCypherQuery).toHaveBeenCalledTimes(1));
+    expect(mocks.runCypherQuery.mock.calls[0][0]).not.toHaveProperty("objectProperties.t");
+
+    fireEvent.keyDown(editor(), { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(mocks.runCypherQuery).toHaveBeenCalledTimes(2));
+    expect(mocks.runCypherQuery.mock.calls[1][0]).toMatchObject({
+      objectProperties: { t: ["team_name"] },
+    });
+  });
+
   it("generates a query with the Agent, puts it in the editor and runs it", async () => {
     const query = "MATCH (t:teams) RETURN count(t) AS n";
     mocks.generateCypher.mockResolvedValue({
@@ -409,6 +432,33 @@ describe("CypherQueryScene", () => {
     });
   });
 
+  it("loads an AI frame's query and its question, so both modes keep their text", async () => {
+    mocks.generateCypher.mockResolvedValue({
+      query: "MATCH (t:teams) RETURN t LIMIT 5",
+      answer: "",
+      threadId: "thread-8",
+    });
+    mocks.runCypherQuery.mockResolvedValue({
+      ok: true,
+      result: { columns: [{ name: "t" }], entries: [{ t: team("Brazil") }] },
+      exchange,
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.cypherQuery.editor.modeAsk"));
+    fireEvent.change(editor(), { target: { value: "球队" } });
+    fireEvent.click(screen.getByText("knowledgeNetwork.cypherQuery.editor.generate"));
+    await screen.findByTestId("chart");
+    fireEvent.change(editor(), { target: { value: "别的问题" } });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "knowledgeNetwork.cypherQuery.frames.loadQuery" }),
+    );
+    expect(editor().value).toBe("MATCH (t:teams) RETURN t LIMIT 5");
+    fireEvent.click(screen.getByText("knowledgeNetwork.cypherQuery.editor.modeAsk"));
+    expect(editor().value).toBe("球队");
+  });
+
   it("folds the schema panel and its groups", async () => {
     render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
     await screen.findByTestId("cypher-schema-object-goals");
@@ -440,6 +490,26 @@ describe("CypherQueryScene", () => {
     expect(request.message).toContain("knowledgeNetwork.cypherQuery.frames.explainRequest");
     expect(request.message).toContain("```cypher\nMATCH (t:teams) RETURN t LIMIT 5\n```");
     expect(request.threadId).toBeUndefined();
+  });
+
+  it("stops an explanation with the same button a generation uses", async () => {
+    mocks.explainCypher.mockImplementation(
+      (params: { signal: AbortSignal }) =>
+        new Promise((_, reject) =>
+          params.signal.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          ),
+        ),
+    );
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+
+    fireEvent.change(editor(), { target: { value: "MATCH (t:teams) RETURN t LIMIT 5" } });
+    fireEvent.click(screen.getByTestId("cypher-editor-explain"));
+    const stop = await screen.findByTestId("cypher-frame-stop-explain");
+    expect(stop.classList.contains("ant-btn-link")).toBe(false);
+    fireEvent.click(stop);
+
+    await waitFor(() => expect(screen.queryByTestId("cypher-frame-stop-explain")).toBeNull());
   });
 
   it("explains a failed frame with its error", async () => {
