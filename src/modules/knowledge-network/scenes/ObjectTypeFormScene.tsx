@@ -8,7 +8,7 @@
 import { Form, Input, Select, Spin, Alert } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -38,6 +38,7 @@ import {
   ResourceTagsSelect,
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
+import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   createKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
@@ -77,6 +78,7 @@ type ObjectTypeFormSceneProps = {
 
 export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
   const { networkId = "", objectTypeId = "" } = useParams<{
@@ -105,6 +107,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
   );
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
+  const returnPath = knowledgeNetworkReturnPath(networkId, location.state, listPath);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -247,7 +250,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       cancelText: t("common.cancel"),
       okText: t("knowledgeNetwork.objectTypeUnsavedLeaveOk"),
       onOk: () => {
-        void navigate(listPath);
+        void navigate(returnPath);
       },
     });
   };
@@ -400,7 +403,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       }
 
       void message.success(t("common.success"));
-      void navigate(listPath);
+      void navigate(returnPath);
     } catch (error) {
       const errorMessage = extractRequestErrorMessage(error);
       const logicPropertyName = extractLogicPropertyNameFromError(errorMessage);

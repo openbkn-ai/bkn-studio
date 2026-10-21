@@ -8,7 +8,7 @@
 import { Alert, Spin } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -22,6 +22,7 @@ import {
   type RelationTypeMappingFormValues,
 } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   getKnowledgeNetworkRelationTypeDetail,
   listKnowledgeNetworkObjectTypes,
@@ -36,6 +37,7 @@ import styles from "./KnowledgeNetworkResourceConfigScene.module.css";
 
 export function RelationTypeMappingScene() {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message } = useAppServices();
   const { networkId = "", relationTypeId = "" } = useParams<{
@@ -53,6 +55,11 @@ export function RelationTypeMappingScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
+  const returnPath = knowledgeNetworkReturnPath(
+    networkId,
+    location.state,
+    relationTypeId ? detailPath : listPath,
+  );
 
   useEffect(() => {
     if (!networkId || !relationTypeId) {
@@ -115,7 +122,7 @@ export function RelationTypeMappingScene() {
         targetObjectTypeId: normalizedMapping.mappingRules.targetObjectTypeId,
       });
       void message.success(t("common.success"));
-      void navigate(detailPath);
+      void navigate(returnPath);
     } catch (nextError) {
       void message.error(extractRequestErrorMessage(nextError));
     } finally {
@@ -131,7 +138,7 @@ export function RelationTypeMappingScene() {
         </AppButton>
       }
       onBack={() => {
-        void navigate(relationTypeId ? detailPath : listPath);
+        void navigate(returnPath);
       }}
       subtitle={t("knowledgeNetwork.relationTypeMappingSubtitle")}
       title={detail?.name ?? t("knowledgeNetwork.relationTypeMappingTitle")}

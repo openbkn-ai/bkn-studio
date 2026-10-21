@@ -19,16 +19,17 @@ import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-netwo
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
 import {
+  clearKnowledgeNetworkGraphSelectionFromPath,
+  knowledgeNetworkReturnPath,
+  knowledgeNetworkReturnState,
+} from "@/modules/knowledge-network/lib/knowledge-network-navigation";
+import {
   deleteKnowledgeNetworkRelationType,
   getKnowledgeNetworkRelationTypeDetail,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { RelationTypeDetail } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./RelationTypeDetailScene.module.css";
-
-type RelationTypeDetailLocationState = {
-  knowledgeNetworkReturnTo?: string;
-};
 
 export function RelationTypeDetailScene() {
   const { t } = useTranslation();
@@ -46,12 +47,7 @@ export function RelationTypeDetailScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
-  const locationState = location.state as RelationTypeDetailLocationState | null;
-  const returnPath = locationState?.knowledgeNetworkReturnTo?.startsWith(
-    `/knowledge-network/workspace/${networkId}/`,
-  )
-    ? locationState.knowledgeNetworkReturnTo
-    : listPath;
+  const returnPath = knowledgeNetworkReturnPath(networkId, location.state, listPath);
 
   const confirmDelete = () => {
     if (!detail) {
@@ -68,7 +64,7 @@ export function RelationTypeDetailScene() {
       onOk: async () => {
         await deleteKnowledgeNetworkRelationType(networkId, relationTypeId);
         void message.success(t("common.success"));
-        void navigate(listPath);
+        void navigate(clearKnowledgeNetworkGraphSelectionFromPath(returnPath));
       },
       title: t("knowledgeNetwork.relationTypeDeleteTitle"),
       width: 520,
@@ -126,6 +122,7 @@ export function RelationTypeDetailScene() {
                 onClick: () => {
                   void navigate(
                     `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/edit`,
+                    { state: knowledgeNetworkReturnState(returnPath) },
                   );
                 },
                 operation: "modify",
@@ -137,6 +134,7 @@ export function RelationTypeDetailScene() {
                 onClick: () => {
                   void navigate(
                     `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/mapping`,
+                    { state: knowledgeNetworkReturnState(returnPath) },
                   );
                 },
                 operation: "modify",

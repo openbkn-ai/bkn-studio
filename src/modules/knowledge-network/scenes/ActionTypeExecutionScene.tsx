@@ -14,7 +14,7 @@ import {
 import { Alert, Card, Descriptions, Spin } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -32,6 +32,7 @@ import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledg
 import { ActionTypeTaskManagementPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   needsActionTypeActionSourceDisplayResolution,
   resolveActionTypeActionSourceDisplayWithTimeout,
@@ -62,6 +63,7 @@ const ACTION_TYPE_EXECUTION_OPERATIONS = ["modify"] as const;
 
 export function ActionTypeExecutionScene() {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message, runtimeConfig } = useAppServices();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -114,6 +116,11 @@ export function ActionTypeExecutionScene() {
 
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/detail`;
+  const returnPath = knowledgeNetworkReturnPath(
+    networkId,
+    location.state,
+    actionTypeId ? detailPath : listPath,
+  );
   const activeTab: ExecutionTab =
     searchParams.get("tab") === "config"
       ? "config"
@@ -235,7 +242,7 @@ export function ActionTypeExecutionScene() {
         tags: detail.tags,
       });
       void message.success(t("common.success"));
-      void navigate(detailPath);
+      void navigate(returnPath);
     } catch (nextError) {
       void message.error(extractRequestErrorMessage(nextError));
     } finally {
@@ -395,7 +402,7 @@ export function ActionTypeExecutionScene() {
           <AppButton
             icon={<EditOutlined />}
             onClick={() => {
-              void navigate(detailPath);
+              void navigate(returnPath);
             }}
           >
             {t("knowledgeNetwork.actionTypeDetailOverview")}
@@ -403,7 +410,7 @@ export function ActionTypeExecutionScene() {
         )
       }
       onBack={() => {
-        void navigate(actionTypeId ? detailPath : listPath);
+        void navigate(returnPath);
       }}
       subtitle={t("knowledgeNetwork.actionTypeExecutionDescription")}
       title={detail?.name ?? t("knowledgeNetwork.actionTypeExecutionTitle")}

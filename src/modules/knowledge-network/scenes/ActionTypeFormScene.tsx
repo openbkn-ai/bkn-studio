@@ -9,7 +9,7 @@ import { QuestionCircleOutlined } from "@ant-design/icons";
 import { Alert, Col, Collapse, Form, Input, Row, Select, Spin, Tooltip } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -38,6 +38,7 @@ import {
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
+import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   createKnowledgeNetworkActionType,
   getKnowledgeNetworkActionTypeDetail,
@@ -77,6 +78,7 @@ type ActionTypeFormSceneProps = {
 
 export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
   const { networkId = "", actionTypeId = "" } = useParams<{
@@ -107,6 +109,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   );
 
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
+  const returnPath = knowledgeNetworkReturnPath(networkId, location.state, listPath);
   const watchedObjectTypeId = Form.useWatch("objectTypeId", basicForm);
   const watchedCondition = Form.useWatch("condition", basicForm);
   const conditionObjectTypeId = watchedCondition?.objectTypeId || watchedObjectTypeId;
@@ -230,7 +233,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       cancelText: t("common.cancel"),
       okText: t("knowledgeNetwork.objectTypeUnsavedLeaveOk"),
       onOk: () => {
-        void navigate(listPath);
+        void navigate(returnPath);
       },
     });
   };
@@ -297,7 +300,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       }
 
       void message.success(t("common.success"));
-      void navigate(listPath);
+      void navigate(returnPath);
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {

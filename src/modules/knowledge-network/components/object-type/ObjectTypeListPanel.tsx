@@ -15,7 +15,7 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Segmented, Select, Spin, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -27,9 +27,17 @@ import { getRuntimeConfig } from "@/framework/runtime/config";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
-import { ObjectTypeResourceGraph } from "@/modules/knowledge-network/components/object-type/ObjectTypeResourceGraph";
+import {
+  ObjectTypeResourceGraph,
+  type ObjectTypeGraphSelectedResource,
+} from "@/modules/knowledge-network/components/object-type/ObjectTypeResourceGraph";
 import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import {
+  readKnowledgeNetworkGraphSelection,
+  writeKnowledgeNetworkGraphSelection,
+  type KnowledgeNetworkGraphSelection,
+} from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
@@ -63,7 +71,7 @@ import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
-import graphStyles from "./ObjectTypeListPanel.module.css";
+import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
 
 type ObjectTypeListPanelProps = {
   canDelete: boolean;
@@ -370,6 +378,7 @@ export function ObjectTypeListPanel({
     } else {
       nextParams.set("view", "list");
       nextParams.delete("objectTypeId");
+      writeKnowledgeNetworkGraphSelection(nextParams);
     }
 
     if (nextParams.toString() !== searchParams.toString()) {
@@ -696,12 +705,40 @@ export function ObjectTypeListPanel({
   ) : (
     renderEmptyContent()
   );
-  const graphReturnParams = new URLSearchParams(searchParams);
-  graphReturnParams.set("view", "graph");
-  if (selectedGraphObjectTypeId) {
-    graphReturnParams.set("objectTypeId", selectedGraphObjectTypeId);
-  }
-  const graphReturnTo = `/knowledge-network/workspace/${networkId}/object-types?${graphReturnParams.toString()}`;
+  const restoredGraphSelection = readKnowledgeNetworkGraphSelection(searchParams);
+  const handleGraphResourceSelection = useCallback(
+    (resource?: ObjectTypeGraphSelectedResource) => {
+      const nextParams = new URLSearchParams(searchParams);
+      writeKnowledgeNetworkGraphSelection(
+        nextParams,
+        resource
+          ? {
+              id:
+                resource.kind === "object"
+                  ? resource.id
+                  : resource.kind === "metric"
+                    ? resource.value.definition.id
+                    : resource.value.id,
+              kind: resource.kind,
+              ...(resource.kind === "metric" ? { version: resource.value.definition.version } : {}),
+            }
+          : undefined,
+      );
+      if (nextParams.toString() !== searchParams.toString()) {
+        setSearchParams(nextParams, { replace: true });
+      }
+    },
+    [searchParams, setSearchParams],
+  );
+  const graphReturnTo = (selection: KnowledgeNetworkGraphSelection) => {
+    const graphReturnParams = new URLSearchParams(searchParams);
+    graphReturnParams.set("view", "graph");
+    if (selectedGraphObjectTypeId) {
+      graphReturnParams.set("objectTypeId", selectedGraphObjectTypeId);
+    }
+    writeKnowledgeNetworkGraphSelection(graphReturnParams, selection);
+    return `/knowledge-network/workspace/${networkId}/object-types?${graphReturnParams.toString()}`;
+  };
 
   const openMetricTrial = async (record: ObjectMetricRecordV1) => {
     const request = ++trialRequestRef.current;
@@ -883,6 +920,10 @@ export function ObjectTypeListPanel({
                         className={`${graphStyles.objectButton} ${item.id === selectedGraphObjectTypeId ? graphStyles.objectButtonSelected : ""}`}
                         key={item.id}
                         onClick={() => {
+                          const nextParams = new URLSearchParams(searchParams);
+                          writeKnowledgeNetworkGraphSelection(nextParams);
+                          nextParams.set("objectTypeId", item.id);
+                          setSearchParams(nextParams, { replace: true });
                           setSelectedGraphObjectTypeId(item.id);
                           setSelectedGraphObjectType(item);
                         }}
@@ -925,6 +966,7 @@ export function ObjectTypeListPanel({
                     canRequestObjectPermission={canRequestObjectPermissionFor(
                       selectedGraphObjectType,
                     )}
+                    initialSelectedResource={restoredGraphSelection}
                     key={selectedGraphObjectType.id}
                     metricsAvailable={objectMetricsAvailable}
                     networkId={networkId}
@@ -936,11 +978,28 @@ export function ObjectTypeListPanel({
                     onEditObject={(nextObjectTypeId) => {
                       void navigate(
                         `/knowledge-network/workspace/${networkId}/object-types/${nextObjectTypeId}/edit`,
-                        { state: { knowledgeNetworkReturnTo: graphReturnTo } },
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: nextObjectTypeId,
+                              kind: "object",
+                            }),
+                          },
+                        },
                       );
                     }}
                     onAuthorizeObject={(nextObjectType) => {
-                      handleOperate("authorize", nextObjectType);
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/object-types/${nextObjectType.id}/authorization`,
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: nextObjectType.id,
+                              kind: "object",
+                            }),
+                          },
+                        },
+                      );
                     }}
                     onDeleteObject={(nextObjectType) => {
                       handleOperate("delete", nextObjectType);
@@ -948,34 +1007,75 @@ export function ObjectTypeListPanel({
                     onExecuteAction={(action) => {
                       void navigate(
                         `/knowledge-network/workspace/${networkId}/action-types/${action.id}/execution`,
-                        { state: { knowledgeNetworkReturnTo: graphReturnTo } },
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: action.id,
+                              kind: "action",
+                            }),
+                          },
+                        },
                       );
                     }}
                     onOpenAction={(action) => {
                       void navigate(
                         `/knowledge-network/workspace/${networkId}/action-types/${action.id}/detail`,
-                        { state: { knowledgeNetworkReturnTo: graphReturnTo } },
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: action.id,
+                              kind: "action",
+                            }),
+                          },
+                        },
                       );
                     }}
                     onOpenMetric={(metric) => {
                       void navigate(
                         `/knowledge-network/workspace/${networkId}/metrics/${metric.definition.id}/detail?version=${metric.definition.version}`,
-                        { state: { knowledgeNetworkReturnTo: graphReturnTo } },
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: metric.definition.id,
+                              kind: "metric",
+                              version: metric.definition.version,
+                            }),
+                          },
+                        },
                       );
                     }}
                     onOpenObject={(nextObjectTypeId) => {
                       void navigate(
                         `/knowledge-network/workspace/${networkId}/object-types/${nextObjectTypeId}/detail`,
-                        { state: { knowledgeNetworkReturnTo: graphReturnTo } },
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: nextObjectTypeId,
+                              kind: "object",
+                            }),
+                          },
+                        },
                       );
                     }}
                     onOpenRelation={(relation) => {
                       void navigate(
                         `/knowledge-network/workspace/${networkId}/relation-types/${relation.id}/detail`,
-                        { state: { knowledgeNetworkReturnTo: graphReturnTo } },
+                        {
+                          state: {
+                            knowledgeNetworkReturnTo: graphReturnTo({
+                              id: relation.id,
+                              kind: "relation",
+                            }),
+                          },
+                        },
                       );
                     }}
+                    onSelectedResourceChange={handleGraphResourceSelection}
                     onSelectObject={(nextObjectTypeId) => {
+                      const nextParams = new URLSearchParams(searchParams);
+                      writeKnowledgeNetworkGraphSelection(nextParams);
+                      nextParams.set("objectTypeId", nextObjectTypeId);
+                      setSearchParams(nextParams, { replace: true });
                       setSelectedGraphObjectTypeId(nextObjectTypeId);
                     }}
                     onTrialMetric={(metric) => void openMetricTrial(metric)}

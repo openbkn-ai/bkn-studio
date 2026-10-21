@@ -141,10 +141,24 @@
   text-align: left;
 }
 
-.objectButton > span:last-child {
+.objectButtonName {
+  min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.objectResourceCount {
+  min-width: 24px;
+  flex: 0 0 auto;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-text-secondary) 12%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .objectButton:hover {

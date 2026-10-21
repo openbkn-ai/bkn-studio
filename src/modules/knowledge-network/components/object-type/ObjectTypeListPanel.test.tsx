@@ -182,6 +182,12 @@ describe("ObjectTypeListPanel graph view", () => {
     fireEvent.click(screen.getByRole("button", { name: "authorize-object" }));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/object-types/order/authorization",
+      {
+        state: {
+          knowledgeNetworkReturnTo:
+            "/knowledge-network/workspace/network-1/object-types?view=graph&objectTypeId=order&graphResourceKind=object&graphResourceId=order",
+        },
+      },
     );
     fireEvent.click(screen.getByRole("button", { name: "delete-object" }));
     expect(mocks.confirm).toHaveBeenCalledOnce();
