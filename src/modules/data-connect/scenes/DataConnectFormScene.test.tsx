@@ -1089,55 +1089,51 @@ describe("DataConnectFormScene · connection preflight", () => {
     HEAVY_SCENE_TIMEOUT_MS,
   );
 
-  it(
-    "replaces HANA defaults when switching to PostgreSQL without edited fields",
-    async () => {
-      permissionState.values = new Set(["catalog:create"]);
-      const hana = {
-        available: true,
-        category: "table",
-        description: "",
-        enabled: true,
-        fieldConfig: {
-          port: connectorField("Port", "integer", false),
-          options: connectorField("Options", "object", false),
-        },
-        mode: "local",
-        name: "SAP HANA",
-        type: "hana",
-      } as DataConnectConnectorType;
-      const postgres = {
-        ...hana,
-        name: "PostgreSQL",
-        type: "postgresql",
-      };
-      listDataConnectConnectorTypesMock.mockResolvedValue([hana, postgres]);
-      getDataConnectConnectorTypeMock.mockImplementation((type: string) =>
-        Promise.resolve(type === "hana" ? hana : postgres),
-      );
+  it("replaces HANA defaults when switching to PostgreSQL without edited fields", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    const hana = {
+      available: true,
+      category: "table",
+      description: "",
+      enabled: true,
+      fieldConfig: {
+        port: connectorField("Port", "integer", false),
+        options: connectorField("Options", "object", false),
+      },
+      mode: "local",
+      name: "SAP HANA",
+      type: "hana",
+    } as DataConnectConnectorType;
+    const postgres = {
+      ...hana,
+      name: "PostgreSQL",
+      type: "postgresql",
+    };
+    listDataConnectConnectorTypesMock.mockResolvedValue([hana, postgres]);
+    getDataConnectConnectorTypeMock.mockImplementation((type: string) =>
+      Promise.resolve(type === "hana" ? hana : postgres),
+    );
 
-      render(<DataConnectFormScene mode="create" />);
-      fireEvent.click(await findConnectorCard("SAP HANA"));
-      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
-      expect(await screen.findByDisplayValue("30015")).toBeTruthy();
-      expect(screen.queryByDisplayValue('{"tls":true}')).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "common.previous" }));
-      fireEvent.click(await findConnectorCard("PostgreSQL"));
-      expect(modalConfirmMock).not.toHaveBeenCalled();
-      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
-      await screen.findByPlaceholderText("dataConnect.namePlaceholder");
-      expect(screen.queryByDisplayValue("30015")).toBeNull();
-      expect(screen.getByDisplayValue("5432")).toBeTruthy();
-      fireEvent.click(screen.getByRole("button", { name: "common.testConnection" }));
-      await waitFor(() =>
-        expect(testDataConnectConfigMock).toHaveBeenCalledWith({
-          connectorConfig: { port: 5432 },
-          connectorType: "postgresql",
-        }),
-      );
-    },
-    HEAVY_SCENE_TIMEOUT_MS,
-  );
+    render(<DataConnectFormScene mode="create" />);
+    fireEvent.click(await findConnectorCard("SAP HANA"));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    expect(await screen.findByDisplayValue("30015")).toBeTruthy();
+    expect(screen.queryByDisplayValue('{"tls":true}')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "common.previous" }));
+    fireEvent.click(await findConnectorCard("PostgreSQL"));
+    expect(modalConfirmMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    await screen.findByPlaceholderText("dataConnect.namePlaceholder");
+    expect(screen.queryByDisplayValue("30015")).toBeNull();
+    expect(screen.getByDisplayValue("5432")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "common.testConnection" }));
+    await waitFor(() =>
+      expect(testDataConnectConfigMock).toHaveBeenCalledWith({
+        connectorConfig: { port: 5432 },
+        connectorType: "postgresql",
+      }),
+    );
+  }, 20_000);
 
   it(
     "preserves edited fields until continuing with a different connector",

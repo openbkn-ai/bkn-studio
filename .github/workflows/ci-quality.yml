@@ -103,6 +103,20 @@ jobs:
       - name: Theme surface checks
         run: pnpm run theme:scan-surfaces
 
+      - name: Log test runner resources
+        run: |
+          node --input-type=module <<'NODE'
+          import os from "node:os";
+          const availableCpus = os.availableParallelism();
+          console.log(JSON.stringify({
+            nodeVersion: process.version,
+            logicalCpus: os.cpus().length,
+            availableCpus,
+            maxWorkers: "default",
+            workerLimit: Math.max(1, availableCpus - 1),
+          }, null, 2));
+          NODE
+
       - name: Boundary contract tests
         if: needs.scope.outputs.scope == 'modules'
         run: |
@@ -158,6 +172,20 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Log test runner resources
+        run: |
+          node --input-type=module <<'NODE'
+          import os from "node:os";
+          const availableCpus = os.availableParallelism();
+          console.log(JSON.stringify({
+            nodeVersion: process.version,
+            logicalCpus: os.cpus().length,
+            availableCpus,
+            maxWorkers: "default",
+            workerLimit: Math.max(1, availableCpus - 1),
+          }, null, 2));
+          NODE
 
       - name: Unit tests
         env:

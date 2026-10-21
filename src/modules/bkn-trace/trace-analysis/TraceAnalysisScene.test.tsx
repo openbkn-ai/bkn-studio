@@ -217,7 +217,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     expect(screen.getByText(/"row_count": 6/)).not.toBeNull();
     expect(getTechnicalTrace).toHaveBeenCalledWith("c2c97a9e8afd1259218a9d975ad63e91");
     await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(1));
-  });
+  }, 20_000);
 
   it("opens an exact trace from a related-log deep link", async () => {
     window.history.replaceState(
@@ -294,7 +294,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     });
     expect(screen.queryByRole("button", { name: "stale-page-two" })).toBeNull();
     expect(screen.getByRole("button", { name: "filtered" })).not.toBeNull();
-  });
+  }, 20_000);
 
   it("does not reuse a referenced payload after selecting another operation", async () => {
     vi.mocked(getTechnicalTrace).mockResolvedValue({
