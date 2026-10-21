@@ -22,7 +22,7 @@ for (const locale of ["en-US", "zh-CN"]) {
         if (mode === "create") {
           await page
             .getByRole("button", {
-              name: english ? "New Discover Plan" : "新建探查计划",
+              name: english ? "New Discovery Plan" : "新建探查计划",
               exact: true,
             })
             .first()
