@@ -94,6 +94,20 @@ describe("English count pluralization", () => {
     expect(i18n.t(key, { count: 2, formattedCount: "2" })).toBe(other);
   });
 
+  it("pluralizes the data catalog connection summary for 0/1/2", async () => {
+    await i18n.changeLanguage("en-US");
+
+    expect(
+      i18n.t("dataCatalog.tree.summary", { catalogCount: 0, count: 0, resourceCount: 65 }),
+    ).toBe("0 connections · 65 resources");
+    expect(
+      i18n.t("dataCatalog.tree.summary", { catalogCount: 1, count: 1, resourceCount: 65 }),
+    ).toBe("1 connection · 65 resources");
+    expect(
+      i18n.t("dataCatalog.tree.summary", { catalogCount: 2, count: 2, resourceCount: 65 }),
+    ).toBe("2 connections · 65 resources");
+  });
+
   it("preserves a large estimated count in both languages", async () => {
     const count = "9007199254740993";
 

@@ -38,7 +38,7 @@ export const shellEnUS = {
       indexBuild: "Tasks",
       dataResource: "Data Catalog",
       dataQuality: "Data Quality",
-      executionFactory: "Capability Factory",
+      executionFactory: "Execution Factory",
       executionFactoryLab: "Execution Factory (Lab)",
       executionFactoryLabCapabilities: "Capability Library (Lab)",
       executionFactoryLabCatalog: "Capability Catalog (Lab)",

@@ -21,4 +21,11 @@ describe("Object Metric V1 translations", () => {
       expect(tokens(enUS[key]), key).toEqual(tokens(zhCN[key]));
     }
   });
+
+  it("renders natural English time-window summaries", () => {
+    expect(enUS.mf145846aa1ef).toBe("By {{p0}}");
+    expect(enUS.mb0da3e3a8637).toBe("{{p0}}: data for {{p1}}");
+    expect(enUS.mb57a559179e5).toBe("{{p0}}: data for the last {{p1}} {{p2}}");
+    expect(enUS.mf412ae95d897).toBe("{{p0}}: data from {{p1}} to {{p2}}");
+  });
 });

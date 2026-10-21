@@ -192,7 +192,7 @@ export const homeEnUS = {
       installedVersion: "Installed {{version}}",
       versionUnknown: "Version not recorded",
       llmNote:
-        "Configure a model from manual build before asking questions. That does not change this installation result.",
+        "If no large language model is configured, configure one under Manual build before asking questions. This does not affect the installation result.",
       loadFailed: "The sample catalog could not be loaded",
       cachedCatalog: "The last loaded catalog is shown. Its information may be out of date.",
       progressUnavailable:
@@ -371,7 +371,7 @@ export const homeEnUS = {
             },
             metric: {
               description:
-                "Based on a configured object type, select the measured property and aggregation, then configure units, filters, grouping, and time dimensions. Add analysis dimensions as needed for trend, period-over-period, proportion, and drill-down analysis.",
+                "Based on a configured object type, select the measured property and aggregation, then configure units, filters, grouping, and time dimensions. Add analysis dimensions as needed for trend, year-over-year, proportion, and drill-down analysis.",
               impact:
                 "Metric queries and analysis cannot use a consistent business definition. Q&A and analysis can only rely on raw properties, making business measurements difficult to reuse reliably.",
               outcome:

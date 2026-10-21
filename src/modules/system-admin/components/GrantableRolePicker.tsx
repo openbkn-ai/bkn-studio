@@ -152,7 +152,7 @@ export function GrantableRolePicker({
             <div>
               <strong>{t("knowledgeNetwork.propertyAuthorizationRole")}</strong>
               <span>
-                {t("systemAdmin.userPicker.resultCount", {
+                {t("systemAdmin.rolePicker.resultCount", {
                   count: debouncedSearch ? visibleRoles.length : panelRoles.length,
                 })}
               </span>

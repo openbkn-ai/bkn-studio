@@ -297,7 +297,7 @@ export function QuotaListScene() {
           trigger={["click"]}
         >
           <button
-            aria-label={t("modelResources.quotas.finalOperatorTime")}
+            aria-label={t("modelResources.quotas.sortAriaLabel")}
             className={toolbarStyles.iconButton}
             type="button"
           >

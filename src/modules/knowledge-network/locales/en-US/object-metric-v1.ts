@@ -66,9 +66,9 @@ export const objectMetricV1Part = {
     "The form changed again, so it cannot be undone automatically. Revert the affected fields manually.",
   aiUnsupportedFieldValue: 'AI returned an unsupported value "{{p1}}" for {{p0}}; it was skipped.',
   aiUnsupportedProperty: 'AI referenced an unavailable property "{{p0}}"; it was skipped.',
-  m006ac9135d75: "Select the opening time attribute of the basic metric",
+  m006ac9135d75: "Select a time attribute exposed by the base metric",
   m00895a6fb076: "Remove a dimension filter",
-  m00d84f955fd2: "Passed the verification and can be released",
+  m00d84f955fd2: "Validation passed. Ready to publish.",
   m00ef3c32b1a7: "Failed metric rule verification",
   m01fbad6fcc1a:
     'Please expand the "Advanced Dependency Settings" of the corresponding dependency and select summarization methods such as sum and average.',
@@ -77,7 +77,7 @@ export const objectMetricV1Part = {
   m02aa2f1bb8cb:
     "There is currently no large model available. Please configure the default model in the model factory first.",
   m035d78382d6f: "less than or equal to",
-  m03a815e81997: "Depends on aggregation method",
+  m03a815e81997: "Dependency aggregation method",
   m03af18e36797: "Percentage",
   m03b017610a64:
     "For common scenarios, use the system default values; modifications are only needed when the granularity or result set are inconsistent.",
@@ -212,7 +212,7 @@ export const objectMetricV1Part = {
   m1e5bff31ad22: "The business filter condition is missing a judgment value and has been skipped",
   m1e7a22820768: "maximum value",
   m1e96cd1f49bf: "Deduplication counting",
-  m1ed87cf29094: "Explain statistical objects, business caliber and result meanings",
+  m1ed87cf29094: "Describe what is measured, the business definition, and what the result means",
   m1f0939d62813: "Formula preview",
   m1fb65fe93c19: "Delete the {{p1}}th relationship class step that depends on the metric {{p0}}",
   m1fce8d321e5a: "statistical granularity",
@@ -597,7 +597,8 @@ export const objectMetricV1Part = {
   m7d5873e080fb: "banker rounding",
   m7d5e7c7bcea6: "Time attribute (also used for result bucketing)",
   m7d6fe77cb980: "Metric published as v{{p0}}",
-  m7d7fca1df843: "Describe the metric caliber; Enter to send, Shift + Enter to wrap",
+  m7d7fca1df843:
+    "Describe the metric definition; press Enter to send and Shift+Enter for a new line",
   m7d9782471028: "Reading dependent metrics · v{{p0}} (formula symbol: {{p1}})",
   m7da337decf29: "Please select a metric value type",
   m7dc406c92803: "constant",
@@ -608,7 +609,7 @@ export const objectMetricV1Part = {
   m7f4551dd15d1: "Bloodline and influence",
   m7f85f2218de2:
     "Define which business attributes and time attributes the metric supports for query analysis, without changing the calculation logic and return value of the metric.",
-  m800e5eb6c8b5: "Understanding the business caliber and generating configuration...",
+  m800e5eb6c8b5: "Understanding the business definition and generating the configuration...",
   m80365c614b62: "This trial uses the fixed time range in the current configuration",
   m803fff99642e: "Please enter instance ID",
   m807a2629d94e: "Please reserve a formula symbol for each dependency, such as metric_1.",
@@ -793,7 +794,7 @@ export const objectMetricV1Part = {
   ma6ace5b29ab9: "Dependence metrics",
   ma6bbba71a0a7:
     "Please select a numeric value or duration attribute; if the source field is stored in text, please configure type conversion first.",
-  ma75762e1e47e: "The selected queryable time dimension is not opened by the basic metric.",
+  ma75762e1e47e: "The selected queryable time dimension is not exposed by the base metric.",
   ma757a2b18321: "Calculation time range",
   ma7d66d99c5ec: "2. Calculation range",
   ma80a5b61e0bd: "Parameter {{p0}}",
@@ -837,7 +838,7 @@ export const objectMetricV1Part = {
     "The meaning of the above results is determined by the basic atomic metrics; the current derived metrics can be set independently without data processing and open analysis dimensions.",
   mb081a851d6b8: "Select dimensions",
   mb0cce778c076: "View {{p0}} description",
-  mb0da3e3a8637: "{{p0}}statistics{{p1}} data",
+  mb0da3e3a8637: "{{p0}}: data for {{p1}}",
   mb11260bc678c:
     "Currently, derivative metrics can only add business conditions and time ranges, but cannot modify the above basic calculations.",
   mb17b9571f302: "Mark is not available (this metric result is not available)",
@@ -852,7 +853,7 @@ export const objectMetricV1Part = {
   mb38d573c1406:
     "Select the data attribute in the current object class that is the return value of the metric.",
   mb3ad01d53b9e:
-    "Complete the configuration according to the business caliber, save the draft and verify it for release.",
+    "Complete the configuration based on the business definition, save the draft, then validate and publish it.",
   mb438f5427c90: "heat map",
   mb453a743a203: "metric loading failed",
   mb4614ab230a5: "greater than",
@@ -868,7 +869,7 @@ export const objectMetricV1Part = {
   mb5141d3d19e9: "Yes",
   mb52b75ebd906:
     "Please check this configuration; if the problem persists, contact your administrator for technical details.",
-  mb57a559179e5: "{{p0}} latest statistics{{p1}}{{p2}}",
+  mb57a559179e5: "{{p0}}: data for the last {{p1}} {{p2}}",
   mb5acb826a85a: "4. Result definition",
   mb5acf6b4d6a5: "quarters",
   mb5ec9d293722: "Return null",
@@ -1031,7 +1032,7 @@ export const objectMetricV1Part = {
   md6f22f4bb383:
     "Select a numeric attribute and return the total value of that attribute across all instances.",
   md851e8f8e71b:
-    "Usually the time range of this query is inherited; only year-on-year, month-on-month and other scenarios can be set separately.",
+    "The time range of the current query is usually inherited. Set it separately only for scenarios such as year-over-year or period-over-period comparisons.",
   md856266eea4c: "Maximum value",
   md8db94640516: "Delete the {{p0}}th relationship class step",
   md93f0beda75d: "Please enter a logical attribute name",
@@ -1078,7 +1079,7 @@ export const objectMetricV1Part = {
   me490400910d6:
     "Select an attribute of the current object and return it directly, or you can use a simple function or four arithmetic operations; the formula must refer to at least one object attribute.",
   me4b5641e465c: "Four arithmetic operations",
-  me566a8a69945: "Current business caliber",
+  me566a8a69945: "Current business definition",
   me5675ba4c2fd: "Atomic metric",
   me58563870371:
     "Limit which time data is involved in the calculation; if it is not fixed, the querying party selects the date.",
@@ -1138,7 +1139,7 @@ export const objectMetricV1Part = {
   mf0f0327bc557: "add",
   mf142ffeef6d8: "this quarter",
   mf143bd50d496: "Start trial calculation",
-  mf145846aa1ef: "Press {{p0}}",
+  mf145846aa1ef: "By {{p0}}",
   mf15dd5b505db:
     "Please select the object attribute first and complete the value method. The result type is automatically determined based on properties, functions, and operators.",
   mf1715ddd00d8: "This cycle so far",
@@ -1152,7 +1153,7 @@ export const objectMetricV1Part = {
     "Fixed time caliber will not be overwritten by temporary query conditions during trial calculation.",
   mf3f3e28ec1a3: "right side value",
   mf40f436696fb: "The dependent version does not exist · v{{p0}}",
-  mf412ae95d897: "{{p0}} Statistics {{p1}} to {{p2}}",
+  mf412ae95d897: "{{p0}}: data from {{p1}} to {{p2}}",
   mf41e7d3a2201: "time offset",
   mf4389f020d9b: "Trial calculation available after release",
   mf48551bc8b4d: "Not",
@@ -1174,7 +1175,7 @@ export const objectMetricV1Part = {
   mf741bb6e021d: "Please explain the business meaning expressed by this metric",
   mf7e136727d4d: "Select object properties",
   mf84b7b21ea55: "payment conversion rate",
-  mf854bfeaec18: "Analysis caliber",
+  mf854bfeaec18: "Analysis dimensions",
   mf8679d77f3bc:
     "The result data type is inconsistent with the evaluation result of the value expression.",
   mf87336ab991b: 'See "Trial Calculation Results" below for complete details.',

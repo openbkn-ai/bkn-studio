@@ -517,7 +517,7 @@ export function DataConnectDiscoverScene({
                   : t("dataConnect.discoverScheduleDisableConfirmDescription", {
                       name: record.name,
                     }),
-                okText: checked ? t("common.enabled") : t("common.disabled"),
+                okText: checked ? t("common.enable") : t("common.disable"),
                 cancelText: t("common.cancel"),
                 okButtonProps: checked ? undefined : { danger: true },
                 onOk: async () => {

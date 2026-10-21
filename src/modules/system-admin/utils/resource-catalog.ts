@@ -74,7 +74,7 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   agent: "Agent",
   agent_tpl: "Agent template",
   catalog: "Data directory",
-  connector_type: "Data connection",
+  connector_type: "Connector type",
   concept_group: "Concept group",
   data_flow: "Data flow",
   knowledge_network: "Knowledge network",

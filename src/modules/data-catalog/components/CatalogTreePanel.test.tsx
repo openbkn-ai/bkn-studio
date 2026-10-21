@@ -21,8 +21,14 @@ vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
     i18n: { language: "zh-CN" },
-    t: (key: string, values?: { catalogCount?: number }) =>
-      key === "dataCatalog.tree.summary" ? `catalogs:${values?.catalogCount}` : key,
+    t: (
+      key: string,
+      values?: { catalogCount?: number; count?: number; resourceCount?: number },
+    ) => {
+      if (key !== "dataCatalog.tree.summary") return key;
+      const connectionLabel = values?.count === 1 ? "connection" : "connections";
+      return `${values?.catalogCount} ${connectionLabel} · ${values?.resourceCount} resources`;
+    },
   }),
 }));
 
@@ -211,7 +217,28 @@ describe("CatalogTreePanel", () => {
       />,
     );
 
-    expect(screen.getByTestId("catalog-summary").textContent).toBe("catalogs:253");
+    expect(screen.getByTestId("catalog-summary").textContent).toBe("253 connections · 0 resources");
+  });
+
+  it.each([
+    { count: 0, expected: "0 connections · 65 resources" },
+    { count: 1, expected: "1 connection · 65 resources" },
+    { count: 2, expected: "2 connections · 65 resources" },
+  ])("pluralizes the connection summary for $count connections", ({ count, expected }) => {
+    render(
+      <CatalogTreePanel
+        catalogs={Array.from({ length: count }, (_, index) =>
+          makeCatalog(`physical-${index}`, `Catalog ${index}`, "physical"),
+        )}
+        discoveringCatalogIds={[]}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={65}
+        selection={null}
+      />,
+    );
+
+    expect(screen.getByTestId("catalog-summary").textContent).toBe(expected);
   });
 
   it("preserves backend order for mixed-case and Chinese names while pinning built-in logical catalogs", () => {

@@ -17,7 +17,11 @@ export const systemAdminEnUS = {
       loadMore: "Load more",
       loadMoreHint: "Continue scrolling to load more users.",
       loadedSelectableCount: "{{count}} selectable users loaded",
+      loadedSelectableCount_one: "{{count}} selectable user loaded",
+      loadedSelectableCount_other: "{{count}} selectable users loaded",
       memberCount: "{{count}} people",
+      memberCount_one: "{{count}} person",
+      memberCount_other: "{{count}} people",
       organization: "Organization",
       organizationScope: "Organization scope",
       organizationUnavailable:
@@ -25,7 +29,11 @@ export const systemAdminEnUS = {
       refineSearch:
         "This user list is large, so only the first {{count}} users are shown. Search by name or account to narrow the results.",
       resultCount: "{{count}} users",
+      resultCount_one: "{{count}} user",
+      resultCount_other: "{{count}} users",
       resultRange: "Showing {{from}}–{{to}} of {{count}} users",
+      resultRange_one: "Showing {{from}}–{{to}} of {{count}} user",
+      resultRange_other: "Showing {{from}}–{{to}} of {{count}} users",
       searchAllUsers: "Search name or account",
       searchHint: "Search by name or account across departments",
       searchInlineHint: "Search name or account…",
@@ -35,6 +43,11 @@ export const systemAdminEnUS = {
       searchingAll: "Searching the organization for “{{keyword}}”",
       selectedCount: "{{count}} selected",
       users: "Users",
+    },
+    rolePicker: {
+      resultCount: "{{count}} roles",
+      resultCount_one: "{{count}} role",
+      resultCount_other: "{{count}} roles",
     },
     resourceCatalog: {
       descriptions: {
@@ -265,7 +278,7 @@ export const systemAdminEnUS = {
           execute: "Execute or invoke the API toolbox.",
         },
         mcp: {
-          create: "Create a MCP server.",
+          create: "Create an MCP server.",
           modify:
             "Modify the MCP server configuration. Also requires the MCP server view permission.",
           delete: "Delete the MCP server. Also requires the MCP server view permission.",
@@ -380,7 +393,7 @@ export const systemAdminEnUS = {
         agent_tpl: "Agent template",
         catalog: "Data directory",
         concept_group: "Concept group",
-        connector_type: "Data connection",
+        connector_type: "Connector type",
         data_flow: "Data flow",
         knowledge_network: "Knowledge network",
         large_model: "Large model",
@@ -437,7 +450,7 @@ export const systemAdminEnUS = {
     },
     authorizationRegistry: {
       loadFailed:
-        "Unable to load the current authorization catalog. Permission changes are unavailable until it is retried.",
+        "Unable to load the current permission catalog. Please try again. Permissions cannot be changed until the catalog loads successfully.",
     },
     authorize: {
       title: "Authorize · {{name}}",
@@ -556,6 +569,8 @@ export const systemAdminEnUS = {
       summaryRule: "Rule effect",
       summaryOperations: "Operation scope",
       selectedSubjectCount: "{{count}} users selected",
+      selectedSubjectCount_one: "{{count}} user selected",
+      selectedSubjectCount_other: "{{count}} users selected",
       notSelected: "Not selected",
       confirmGrant: "Confirm authorization",
       editionCommunity: "Community",
@@ -594,7 +609,9 @@ export const systemAdminEnUS = {
       grantNeedsBundle: "Select full business access",
       grantNoChanges: "The permission configuration has not changed",
       grantReady: "Add {{count}} operation permissions for the selected user",
+      grantRoleReady: "Add {{count}} operation permissions for the selected role",
       grantBundleReady: "Grant full business access to the selected user",
+      grantRoleBundleReady: "Grant full business access to the selected role",
       addGrant: "Add grant",
       grantDetails: "Grant details",
       grantUserCount_one: "{{count}} authorized subject",
@@ -985,7 +1002,7 @@ export const systemAdminEnUS = {
         permissionsHint:
           "Choose all resources or a specific resource, then configure allowed operations",
         permissionsReadOnly:
-          "Read-only: configuring role permissions requires the role-permission point",
+          'Read-only: configuring role permissions requires the "Role permission configuration" permission.',
         builtinLocked:
           "Built-in roles are read-only — name, description and permissions cannot be changed.",
       },
@@ -1147,7 +1164,7 @@ export const systemAdminEnUS = {
         trial:
           "First-run trial window. Community capabilities are fully open and no prompts are shown. Import a licence to run at its edition.",
         unlicensed:
-          "No licence file has been imported. Community capabilities keep working; request a licence from the portal to unlock paid ones.",
+          "No license file has been imported. Community capabilities remain available. If you need paid capabilities, request a license from the licensing portal and then import it.",
         valid: "The cluster license is active.",
         validUnbound:
           "A license has been imported but is not bound to this cluster. Complete offline activation for compliance; functionality is not affected.",
