@@ -287,7 +287,7 @@ export const executionFactoryLabEnUS = {
       "Save operator settings updates runtime controls such as timeout and retry policy for future workflow runs.",
     operationDescDisableOrchestration:
       "Disable orchestration takes the operator offline; existing workflow nodes that reference it may fail on their next run.",
-    sandboxRuntimeTitle: "Sandbox Runtime Management",
+    sandboxRuntimeTitle: "Sandbox Runtime",
     sandboxRuntimeDescription:
       "Observe sandbox health, session pool pressure, dependencies, and task sessions used by HTTP, MCP, SKILL, and Function capabilities.",
     sandboxRuntimeRefresh: "Refresh",

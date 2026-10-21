@@ -623,7 +623,7 @@
   gap: 5px;
   height: 28px;
   padding: 0 9px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   background: var(--color-bg-raised);
   color: var(--color-text-secondary);
@@ -1802,7 +1802,7 @@
 
 .schemaTrace summary > span:last-child {
   padding: 2px 7px;
-  border: 1px solid #d7e0ef;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
   color: var(--color-text-secondary);
   font-size: 10px;
@@ -2158,7 +2158,7 @@
   gap: 6px;
   height: 32px;
   padding: 0 14px;
-  border: 1px solid #b6e6cd;
+  border: 1px solid var(--color-success-border);
   border-radius: 4px;
   background: var(--color-success-bg);
   color: var(--color-success-text);
@@ -2939,7 +2939,7 @@
   height: 28px;
   margin-top: 10px;
   padding: 0 10px;
-  border: 1px solid #bfd1ff;
+  border: 1px solid var(--color-primary-border);
   border-radius: 4px;
   color: var(--color-text-link);
   background: var(--color-bg-raised);
@@ -3005,7 +3005,7 @@
 }
 
 .dbCard:hover {
-  border-color: #cdd8ea;
+  border-color: var(--color-border);
   box-shadow: 0 2px 10px rgba(15, 30, 54, 0.05);
 }
 
@@ -3060,7 +3060,7 @@
   align-items: center;
   gap: 5px;
   padding: 3px 10px;
-  border: 1px solid #b6e6cd;
+  border: 1px solid var(--color-success-border);
   border-radius: 20px;
   background: var(--color-success-bg);
   color: var(--color-success-text);

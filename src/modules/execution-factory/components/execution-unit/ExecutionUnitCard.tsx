@@ -176,7 +176,7 @@ export function ExecutionUnitCard({
 
   return (
     <Card
-      className={styles.card}
+      className={`${styles.card} ${isFunction ? styles.cardFunction : ""}`}
       data-testid="execution-unit-card"
       hoverable
       onClick={onClick}
@@ -215,9 +215,7 @@ export function ExecutionUnitCard({
         ) : null}
 
         <div className={styles.header}>
-          <span className={`${styles.iconBox} ${isFunction ? styles.iconBoxFunction : ""}`}>
-            {getTabIcon(activeTab, item.metadataType)}
-          </span>
+          <span className={styles.iconBox}>{getTabIcon(activeTab, item.metadataType)}</span>
           <div className={styles.titleContent}>
             <div className={styles.titleRow}>
               <span className={styles.title}>{item.name}</span>

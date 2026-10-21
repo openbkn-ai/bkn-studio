@@ -50,7 +50,7 @@
   --admin-color-surface-muted: var(--color-interface-panel-bg);
   --admin-color-surface-hover: var(--color-hover);
   --admin-color-surface-subtle: var(--color-interface-panel-bg);
-  --admin-color-primary: var(--color-primary-700);
+  --admin-color-primary: var(--color-primary-600);
   --admin-color-link: var(--color-primary-700);
   --admin-color-link-hover: var(--color-primary-600);
   --admin-color-link-bg: var(--color-primary-100);
@@ -845,10 +845,15 @@
 }
 
 .tableSurface :global(.ant-table-tbody > tr > td *),
-.tableSurface :global(.ant-table-tbody > tr > td .ant-btn),
-.tableSurface :global(.ant-table-tbody > tr > td .ant-tag) {
+.tableSurface :global(.ant-table-tbody > tr > td .ant-btn) {
   font-size: var(--admin-font-size-body);
   font-weight: var(--admin-font-weight-regular);
+}
+
+/* Status tags stay a step smaller than the cell text so they read as labels, not values. */
+.tableSurface :global(.ant-table-tbody > tr > td .ant-tag),
+.tableSurface :global(.ant-table-tbody > tr > td .ant-tag *) {
+  font-size: var(--admin-font-size-tag);
 }
 
 .tableSurface :global(.ant-table-tbody > tr:hover > td) {

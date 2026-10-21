@@ -457,7 +457,7 @@ export const systemAdminEnUS = {
       builtinSkip: "Built-in roles cannot change grants.",
     },
     objectGrants: {
-      title: "Permission Management",
+      title: "Permissions",
       description:
         "On top of role permissions, configure allowed operations on a specific object (catalog / model / function / toolbox, etc.) for a user.",
       create: "New Permission Rule",
@@ -747,7 +747,7 @@ export const systemAdminEnUS = {
       builtinRolePermissionCannotModify: "Built-in role permissions cannot be modified.",
     },
     users: {
-      title: "User Management",
+      title: "Users",
       description: "Pick a department on the left; manage users and accounts on the right.",
       tabUsers: "Users",
       tabDepts: "Departments / Org",
@@ -938,7 +938,7 @@ export const systemAdminEnUS = {
       },
     },
     roles: {
-      title: "Role Management",
+      title: "Roles",
       description:
         "A role is a set of permissions deciding what its members can do on which resources; members currently must be users.",
       create: "New Role",
@@ -1018,7 +1018,7 @@ export const systemAdminEnUS = {
       },
     },
     license: {
-      title: "License Management",
+      title: "License",
       description:
         "View this cluster's license status, copy the device fingerprint, and import or activate a product license.",
       none: "None",

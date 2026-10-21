@@ -38,12 +38,12 @@
 }
 
 .viewTab + .viewTab {
-  border-left: 1px solid #d9e0ea;
+  border-left: 1px solid var(--color-border);
 }
 
 .viewTabTooltipWrapper {
   display: inline-flex;
-  border-left: 1px solid #d9e0ea;
+  border-left: 1px solid var(--color-border);
 }
 
 .viewTabActive {
@@ -73,7 +73,7 @@
 }
 
 .opsCard {
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
 }
 
@@ -83,7 +83,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 10px 16px;
-  border-bottom: 1px solid #e8edf4;
+  border-bottom: 1px solid var(--color-divider);
   background: var(--color-interface-panel-bg);
 }
 
@@ -159,7 +159,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0;
-  border-top: 1px solid #eef2f7;
+  border-top: 1px solid var(--color-divider);
 }
 
 .metaItem {
@@ -167,13 +167,13 @@
   gap: 4px;
   min-width: 0;
   padding: 10px 12px 10px 0;
-  border-bottom: 1px solid #eef2f7;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .metaItem:nth-child(even) {
   padding-right: 0;
   padding-left: 12px;
-  border-left: 1px solid #eef2f7;
+  border-left: 1px solid var(--color-divider);
 }
 
 .metaItemFull {
@@ -243,7 +243,7 @@
   margin-top: 6px;
   padding: 8px 10px;
   overflow: auto;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   background: var(--color-interface-code-bg);
   color: var(--color-interface-code-text);
   font-family: ui-monospace, "SF Mono", Consolas, monospace;

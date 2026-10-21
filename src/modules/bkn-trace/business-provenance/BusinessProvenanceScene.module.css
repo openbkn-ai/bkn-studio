@@ -317,7 +317,7 @@
 .analysisResult {
   margin: 16px 0;
   padding: 16px 18px;
-  border: 1px solid #dfe7f2;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
 }
 .analysisResult h4 {

@@ -39,7 +39,7 @@
 }
 
 .sideNavItem:hover {
-  border-color: #91caff;
+  border-color: var(--color-primary-border);
 }
 
 .sideNavItemActive {

@@ -5,28 +5,46 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/* 卡片与业务知识网络列表卡片对齐：平边框、无投影、图标居左、紧凑内边距。
-   颜色沿用 KN 卡片的同一套 hex，保证并排时视觉一致。 */
+/* 卡片与业务知识网络列表卡片（KnowledgeNetworkCard）对齐：圆角、左侧强调色条、
+   通栏页脚、悬停上浮。强调色按类型区分：OpenAPI 蓝、代码函数紫。 */
 .card {
+  --unit-accent: var(--color-primary-600);
+
   position: relative;
-  min-height: 120px;
+  min-height: 156px;
   height: 100%;
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 6px;
   background: var(--color-bg-surface);
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
   transition:
     background-color 0.18s ease,
-    border-color 0.18s ease;
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.cardFunction {
+  --unit-accent: var(--color-accent-solid);
+}
+
+.card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 3px;
+  background: var(--unit-accent);
+  content: "";
 }
 
 .card:hover,
 .card:focus-visible {
-  border-color: var(--color-primary-border);
-  background: var(--color-hover);
-  box-shadow: none;
+  border-color: color-mix(in srgb, var(--unit-accent) 42%, var(--color-border));
+  background: var(--color-bg-surface);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
   outline: none;
 }
 
@@ -36,8 +54,8 @@
 
 .cardActions {
   position: absolute;
-  top: 10px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
   z-index: 2;
   display: flex;
   gap: 8px;
@@ -52,7 +70,7 @@
   height: 26px;
   padding: 0;
   border: 0;
-  border-radius: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -83,7 +101,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 12px 14px;
+  padding: 16px 18px 0;
 }
 
 /* 图标 + 标题/描述 一横排，图标居左（对齐 KN 卡片 header）。 */
@@ -99,20 +117,13 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-  background: var(--color-hover);
-  color: var(--color-primary-600);
-  font-size: 16px;
-}
-
-/* 代码函数与 OpenAPI 同处「工具集」，用紫色区分。 */
-.iconBoxFunction {
-  border-color: var(--color-accent-border);
-  background: var(--color-accent-bg);
-  color: var(--color-text-accent);
+  width: 42px;
+  height: 42px;
+  border: 1px solid color-mix(in srgb, var(--unit-accent) 18%, var(--color-border));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--unit-accent) 7%, var(--color-hover));
+  color: var(--unit-accent);
+  font-size: 18px;
 }
 
 .titleContent {
@@ -135,8 +146,8 @@
   margin: 0 !important;
   overflow: hidden;
   color: var(--color-text-primary);
-  font-size: 14px !important;
-  font-weight: 500;
+  font-size: 15px !important;
+  font-weight: 600;
   line-height: 22px !important;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -171,15 +182,18 @@
 .metadataTag {
   flex-shrink: 0;
   padding: 0 6px;
-  border-radius: 0;
-  background: var(--color-primary-700);
-  color: var(--color-text-inverse);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 4px;
+  background: var(--color-primary-100);
+  color: var(--color-text-link);
   font-size: 11px;
-  line-height: 18px;
+  line-height: 16px;
 }
 
 .metadataTagFunction {
-  background: #7c3aed;
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-bg);
+  color: var(--color-text-accent);
 }
 
 .metaDivider {
@@ -190,8 +204,8 @@
 .description {
   max-height: 38px;
   min-height: 38px;
-  margin-top: 4px;
-  margin-bottom: 0 !important;
+  margin-top: 8px;
+  margin-bottom: 14px !important;
   overflow: hidden;
   color: var(--color-text-secondary);
   font-size: 13px;
@@ -216,12 +230,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: auto 0 0;
-  padding-top: 9px;
+  /* 通栏页脚：抵消 cardBody 的左右内边距，与 KN 卡片页脚一致。 */
+  margin: auto -18px 0;
+  padding: 10px 18px;
   color: var(--color-text-secondary);
-  font-size: 13px;
-  line-height: 19px;
-  border-top: 1px solid #e8edf3;
+  font-size: 12px;
+  line-height: 18px;
+  border-top: 1px solid var(--color-divider);
+  background: var(--color-interface-panel-bg);
 }
 
 .footerLeft {

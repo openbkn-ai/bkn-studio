@@ -132,7 +132,7 @@
   position: relative;
   height: 8px;
   border-radius: 0;
-  background: rgba(46, 104, 255, 0.1);
+  background: var(--color-fill-secondary);
   overflow: hidden;
 }
 
@@ -144,16 +144,17 @@
   transition: width 0.5s ease;
 }
 
+/* Fills reuse the semantic status colors so a bar matches the status tag beside it. */
 .progressFillVector {
-  background: linear-gradient(90deg, #2e68ff, #4d80ff);
+  background: var(--color-primary-600);
 }
 
 .progressFillDone {
-  background: #65c041;
+  background: var(--color-interface-success-dot);
 }
 
 .progressFillFailed {
-  background: #ef4444;
+  background: var(--color-error-text);
 }
 
 .progressFillMuted {

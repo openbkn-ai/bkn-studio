@@ -7,7 +7,7 @@
 
 export const dataConnectEnUS = {
   dataConnect: {
-    title: "Data Connection",
+    title: "Data Connections",
     description:
       "Manage connector instances provided by the Vega backend within the BKN platform console.",
     permissionRequired:

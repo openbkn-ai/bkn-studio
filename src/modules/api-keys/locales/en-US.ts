@@ -7,7 +7,7 @@
 
 export const apiKeysEnUS = {
   apiKeys: {
-    title: "API Key",
+    title: "API Keys",
     description:
       "Issue long-lived API keys (bak_ prefix) for Context Loader calls through MCP, CLI, or SDK, replacing short-lived login tokens. Identity and permissions match yours.",
     issue: "Issue key",

@@ -247,7 +247,7 @@
 
 .deleteAlert {
   padding: 14px 18px;
-  border: 1px solid #91caff;
+  border: 1px solid var(--color-primary-border);
   border-radius: 18px;
   background: var(--color-info-bg);
   margin-bottom: 28px;

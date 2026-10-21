@@ -77,7 +77,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 9px 12px;
-  border-bottom: 1px solid #e8eef6;
+  border-bottom: 1px solid var(--color-divider);
   background: var(--color-interface-panel-bg);
 }
 
@@ -111,7 +111,7 @@
 }
 
 .grantItem + .grantItem {
-  border-top: 1px solid #edf2f7;
+  border-top: 1px solid var(--color-divider);
 }
 
 .grantOps {

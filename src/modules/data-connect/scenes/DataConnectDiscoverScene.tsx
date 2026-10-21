@@ -111,7 +111,7 @@ function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }
 function DiscoverTaskPriority({ priority }: { priority: number }) {
   const { t } = useTranslation();
   const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
-  const tone = level === "high" ? "error" : level === "low" ? "neutral" : "info";
+  const tone = level === "high" ? "warning" : "neutral";
   return (
     <LightStatusTag tone={tone}>
       {t(`dataConnect.discoverTaskPriorities.${level}`, { priority })}

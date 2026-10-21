@@ -42,8 +42,12 @@
   width: 160px;
 }
 
+/* Columns shrink to fit (fixed layout, no horizontal scroll). Long English titles wrap to a second
+   line instead of spilling over the neighbouring header. */
 .tableSurface :global(.ant-table-thead > tr > th) {
-  white-space: nowrap;
+  line-height: 18px;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .tableSurface :global(.ant-table-wrapper),

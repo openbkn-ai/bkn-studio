@@ -12,7 +12,7 @@
 }
 .pageSurface {
   background: var(--color-bg-raised);
-  border: 1px solid #e2e7ef;
+  border: 1px solid var(--color-border);
   box-sizing: border-box;
   min-height: 100%;
   padding: 24px;
@@ -36,7 +36,7 @@
 .filters {
   align-items: center;
   background: var(--color-bg-raised);
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   display: grid;
   gap: 10px;
@@ -56,7 +56,7 @@
 .executionCard,
 .operationPanel {
   background: var(--color-bg-raised);
-  border: 1px solid #e2e8f2;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgb(27 50 93 / 5%);
 }
@@ -91,7 +91,7 @@
   padding: 18px 20px;
 }
 .summaryTextGrid {
-  border-top: 1px solid #edf0f5;
+  border-top: 1px solid var(--color-divider);
   display: grid;
   gap: 20px;
   grid-template-columns: 1fr 1fr;
@@ -157,7 +157,7 @@
   padding: 20px;
 }
 .timeline {
-  border-left: 2px solid #dbe5f5;
+  border-left: 2px solid var(--color-border);
   display: grid;
   gap: 12px;
   margin: 18px 0 4px 10px;
@@ -166,7 +166,7 @@
 .endpoint,
 .spanNode,
 .operationNode {
-  border: 1px solid #dce4ef;
+  border: 1px solid var(--color-border);
   border-radius: 7px;
   min-height: 66px;
   padding: 12px 14px;
@@ -243,7 +243,7 @@
   top: max(96px, calc(50vh - 260px));
 }
 .operationPanel > header {
-  border-bottom: 1px solid #edf0f5;
+  border-bottom: 1px solid var(--color-divider);
   margin-bottom: 14px;
   padding-bottom: 12px;
 }

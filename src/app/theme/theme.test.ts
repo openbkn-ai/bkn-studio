@@ -85,11 +85,11 @@ describe("createThemeConfig", () => {
     const tableTokens = darkTheme.components?.Table;
 
     expect(darkTheme.algorithm).toBeDefined();
-    expect(darkTheme.token?.colorBgLayout).toBe("#0f172a");
-    expect(darkTheme.token?.colorText).toBe("#f1f5f9");
-    expect(tableTokens?.rowHoverBg).toBe("#243047");
-    expect(tableTokens?.rowSelectedBg).toBe("#1e3a5f");
-    expect(tableTokens?.rowSelectedHoverBg).toBe("#254b78");
+    expect(darkTheme.token?.colorBgLayout).toBe("#111318");
+    expect(darkTheme.token?.colorText).toBe("#e6e8eb");
+    expect(tableTokens?.rowHoverBg).toBe("#20232a");
+    expect(tableTokens?.rowSelectedBg).toBe("#1c2638");
+    expect(tableTokens?.rowSelectedHoverBg).toBe("#223049");
   });
 
   it("uses legible selected tab colors on both themes", () => {
