@@ -64,6 +64,39 @@
   white-space: nowrap;
 }
 
+.toolbarControls,
+.actionFocusControls {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.toolbarControls {
+  flex: 0 1 auto;
+  gap: 12px;
+}
+
+.actionFocusControls {
+  gap: 6px;
+  padding-left: 12px;
+  border-left: 1px solid var(--color-border);
+}
+
+.actionFocusControls strong {
+  max-width: 140px;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actionFocusCount {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .root > :global(.ant-alert) {
   flex: 0 0 auto;
   margin: 8px 14px 0;
@@ -157,6 +190,33 @@
   stroke-dasharray: 3 4;
 }
 
+.actionArrow {
+  fill: #db9b35 !important;
+}
+
+.actionSemanticEdge,
+.actionImpactEdge {
+  fill: none;
+  stroke: #db9b35;
+  stroke-width: 1.8;
+}
+
+.actionImpactEdge {
+  stroke: #8f75c9;
+}
+
+.actionSemanticEdgeHitArea {
+  fill: none;
+  cursor: grab;
+  pointer-events: stroke;
+  stroke: transparent;
+  stroke-width: 18px;
+}
+
+.actionSemanticEdgeHitArea:active {
+  cursor: grabbing;
+}
+
 .ownerNode,
 .neighborNode,
 .resourceNode,
@@ -247,6 +307,66 @@
   fill: #d89614;
   stroke: var(--color-text-inverse);
   stroke-width: 2;
+}
+
+.actionNodeFocused {
+  cursor: grab;
+}
+
+.actionNodeFocused > circle {
+  filter: drop-shadow(0 0 8px rgb(216 150 20 / 42%));
+}
+
+.actionNodeActive > circle {
+  filter: drop-shadow(0 0 10px rgb(22 119 255 / 58%));
+  stroke: #69b1ff;
+  stroke-width: 4;
+}
+
+.actionNodeAvailable {
+  opacity: 0.72;
+}
+
+.actionSemanticNode {
+  cursor: grab;
+}
+
+.actionSemanticNode:active {
+  cursor: grabbing;
+}
+
+.actionSemanticNode rect {
+  fill: color-mix(in srgb, var(--color-bg-raised) 96%, transparent);
+  stroke-width: 1.5;
+}
+
+.actionTriggerNode rect {
+  stroke: #7a92b2;
+}
+
+.actionExecutionNode rect {
+  stroke: #178c9e;
+}
+
+.actionImpactNode rect {
+  stroke: #8f75c9;
+}
+
+.actionSemanticTitle,
+.actionSemanticDescription {
+  pointer-events: none;
+  user-select: none;
+}
+
+.actionSemanticTitle {
+  fill: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.actionSemanticDescription {
+  fill: var(--color-text-secondary);
+  font-size: 11px;
 }
 
 .groupNode rect {
@@ -475,6 +595,10 @@
 
   .toolbarIdentity {
     justify-content: space-between;
+  }
+
+  .toolbarControls {
+    flex-wrap: wrap;
   }
 
   .canvas,
