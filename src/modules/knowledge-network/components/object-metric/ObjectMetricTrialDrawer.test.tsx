@@ -101,7 +101,7 @@ describe("ObjectMetricTrialDrawer", () => {
       expected: "试算缺少知识网络或定义所引用资源的查询权限，或计算属性的完整访问权限。",
     },
     {
-      name: "unknown property with the same public error",
+      name: "unknown property without reason metadata from an older backend",
       mode: "published" as const,
       error: {
         isAxiosError: true,
@@ -111,7 +111,6 @@ describe("ObjectMetricTrialDrawer", () => {
             error_code: "OntologyQuery.ObjectType.InvalidParameter",
             description: "Invalid parameter",
             error_details: "the request contains an unavailable property",
-            metadata: { reason: "property_unavailable" },
           },
         },
       },
