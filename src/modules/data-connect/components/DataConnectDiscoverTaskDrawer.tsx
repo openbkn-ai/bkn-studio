@@ -186,7 +186,7 @@ export function DataConnectDiscoverTaskDrawer({
       render: (_, failure) => (
         <div style={{ overflowWrap: "anywhere" }}>
           {t(`dataConnect.discoverFailureReasons.${failure.code}`, {
-            defaultValue: failure.message,
+            defaultValue: failure.message || failure.code || EMPTY_VALUE,
           })}
         </div>
       ),

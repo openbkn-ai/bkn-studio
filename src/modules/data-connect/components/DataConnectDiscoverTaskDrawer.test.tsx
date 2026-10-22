@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -130,6 +130,28 @@ describe("DataConnectDiscoverTaskDrawer exact count failures", () => {
     expect(
       screen.getByText(dataConnectEnUS.dataConnect.discoverPartialCompletion),
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    { code: "future_code", expected: "future_code" },
+    { code: "", expected: "-" },
+  ])("shows $expected when the failure message is empty", async ({ code, expected }) => {
+    await showTask("en-US", {
+      result: {
+        catalogId: "c1",
+        newCount: 0,
+        staleCount: 0,
+        unchangedCount: 0,
+        restoredCount: 0,
+        updatedCount: 0,
+        failedCount: 1,
+        skippedCount: 0,
+        message: "Count failed",
+        failures: [{ resourceId: "r2", resourceName: "Items", code, message: "" }],
+      },
+    });
+    const row = await screen.findByRole("row", { name: /^Items r2/ });
+    expect(within(row).getByText(expected, { exact: true })).toBeInTheDocument();
   });
 
   it("renders historical results without failure details", async () => {
