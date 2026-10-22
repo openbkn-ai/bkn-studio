@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { FormInstance } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -226,22 +226,50 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     );
   });
 
-  it("follows the UI language until the user chooses an explicit output language", async () => {
+  it("follows UI language changes before an explicit selection and submits that language", async () => {
     createResourceSemanticUnderstandingTaskMock.mockResolvedValue({ id: "task-1" });
-    const panel = (
-      <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />
+    const { container, rerender } = render(
+      <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
     );
-    const { rerender } = render(panel);
-    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
-    expect(screen.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage")).toBeTruthy();
-    expect(screen.getByText("shell.language.zhCN")).toBeTruthy();
+    fireEvent.click(
+      within(container).getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }),
+    );
+    const dialog = within(
+      screen.getByRole("dialog", { name: "dataCatalog.semanticWorkspace.createTitle" }),
+    );
+    expect(
+      dialog.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage"),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(dialog.getByText("shell.language.zhCN")).toBeVisible());
+
     runtimeConfigMock.locale = "en-US";
     rerender(
       <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
     );
-    expect(screen.getByText("shell.language.enUS")).toBeTruthy();
-    fireEvent.mouseDown(screen.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage"));
+    await waitFor(() => expect(dialog.getByText("shell.language.enUS")).toBeVisible());
+    fireEvent.click(dialog.getByRole("button", { name: "dataCatalog.semanticWorkspace.start" }));
+    await waitFor(() =>
+      expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ language: "en-US" }),
+      ),
+    );
+  });
+
+  it("preserves the explicit output language across UI language changes", async () => {
+    createResourceSemanticUnderstandingTaskMock.mockResolvedValue({ id: "task-1" });
+    runtimeConfigMock.locale = "en-US";
+    const { container, rerender } = render(
+      <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
+    );
+    fireEvent.click(
+      within(container).getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }),
+    );
+    const dialog = within(
+      screen.getByRole("dialog", { name: "dataCatalog.semanticWorkspace.createTitle" }),
+    );
+    fireEvent.mouseDown(dialog.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage"));
     fireEvent.click(await screen.findByText("shell.language.zhCN"));
+
     runtimeConfigMock.locale = "zh-CN";
     rerender(
       <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
@@ -250,19 +278,44 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     rerender(
       <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
+    await waitFor(() => expect(dialog.getByText("shell.language.zhCN")).toBeVisible());
+    fireEvent.click(dialog.getByRole("button", { name: "dataCatalog.semanticWorkspace.start" }));
     await waitFor(() =>
-      expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledWith(
+      expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({ language: "zh-CN" }),
       ),
     );
-    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
-    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
+  });
+
+  it("resets the output language to the current UI language when reopening after creation", async () => {
+    createResourceSemanticUnderstandingTaskMock.mockResolvedValue({ id: "task-1" });
+    runtimeConfigMock.locale = "en-US";
+    const { container } = render(
+      <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
+    );
+    const createButton = within(container).getByRole("button", {
+      name: /dataCatalog\.semanticWorkspace\.create/,
+    });
+    fireEvent.click(createButton);
+    const dialogElement = screen.getByRole("dialog", {
+      name: "dataCatalog.semanticWorkspace.createTitle",
+    });
+    const dialog = within(dialogElement);
+    fireEvent.mouseDown(dialog.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage"));
+    fireEvent.click(await screen.findByText("shell.language.zhCN"));
+    fireEvent.click(dialog.getByRole("button", { name: "dataCatalog.semanticWorkspace.start" }));
     await waitFor(() =>
-      expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ language: "en-US" }),
+      expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ language: "zh-CN" }),
       ),
     );
+    await waitFor(() => expect(dialogElement).not.toBeVisible());
+
+    fireEvent.click(createButton);
+    const reopenedDialog = within(
+      screen.getByRole("dialog", { name: "dataCatalog.semanticWorkspace.createTitle" }),
+    );
+    await waitFor(() => expect(reopenedDialog.getByText("shell.language.enUS")).toBeVisible());
   });
 
   it("lets users choose up to twenty sample rows", async () => {
