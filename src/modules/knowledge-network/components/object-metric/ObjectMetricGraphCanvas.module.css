@@ -345,6 +345,56 @@
   font-size: 15px;
 }
 
+.restrictedOwnerEdge {
+  fill: none;
+  stroke: var(--color-text-secondary);
+  stroke-dasharray: 5 6;
+  stroke-opacity: 0.48;
+  stroke-width: 1.5;
+}
+
+.restrictedOwnerNode {
+  cursor: pointer;
+  outline: none;
+}
+
+.restrictedOwnerNode circle {
+  fill: var(--color-bg-raised);
+  stroke: var(--color-text-secondary);
+  stroke-dasharray: 3 3;
+  stroke-width: 2;
+}
+
+.restrictedOwnerNode path,
+.restrictedOwnerNode rect {
+  fill: var(--color-text-secondary);
+  stroke: var(--color-text-secondary);
+  stroke-width: 2;
+}
+
+.restrictedOwnerNode text {
+  fill: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: var(--color-bg-surface);
+  stroke-linejoin: round;
+  stroke-width: 4px;
+}
+
+.restrictedOwnerNode .restrictedOwnerKeyhole {
+  fill: var(--color-bg-raised);
+  stroke: none;
+}
+
+.restrictedOwnerNode:hover circle,
+.restrictedOwnerNode:focus-visible circle {
+  fill: var(--color-hover);
+  stroke: var(--color-primary-500);
+  stroke-width: 4;
+}
+
 .relatedNode:hover circle,
 .relatedNode:focus-visible circle,
 .ownerNode:hover circle,

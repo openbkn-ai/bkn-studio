@@ -7,11 +7,13 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Modal } from "antd";
+import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 
 const mocks = vi.hoisted(() => ({
+  canAuthorize: { current: true },
   checkDeletion: vi.fn(),
   createNextDraft: vi.fn(),
   deleteVersion: vi.fn(),
@@ -19,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   getObjectType: vi.fn(),
   listObjectTypes: vi.fn(),
   listObjectMetrics: vi.fn(),
+  messageWarning: vi.fn(),
   navigate: vi.fn(),
   queryDrillThrough: vi.fn(),
   queryMetric: vi.fn(),
@@ -45,7 +48,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn(), success: vi.fn() },
+    message: { error: vi.fn(), success: vi.fn(), warning: mocks.messageWarning },
   }),
 }));
 
@@ -56,24 +59,77 @@ vi.mock("@/modules/knowledge-network/components/shared/usePersistentPageSize", (
 vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricGraphCanvas", () => ({
   ObjectMetricGraphCanvas: ({
     metricType,
+    objectTypeSearchEmpty,
+    objectTypesLoading,
+    onAuthorizeMetric,
     onEditMetric,
     onOpenMetric,
+    onRestrictedObjectClick,
+    restrictedObjectTypes,
     selectedObjectTypeName,
   }: {
     metricType?: string;
+    objectTypeSearchEmpty?: boolean;
+    objectTypesLoading?: boolean;
+    onAuthorizeMetric?: (record: ObjectMetricRecordV1) => void;
     onEditMetric: (record: ObjectMetricRecordV1) => void;
     onOpenMetric: (record: ObjectMetricRecordV1) => void;
+    onRestrictedObjectClick?: () => void;
+    restrictedObjectTypes?: boolean;
     selectedObjectTypeName: string;
   }) => (
-    <div data-metric-type={metricType ?? ""} data-testid="metric-graph">
+    <div
+      data-metric-type={metricType ?? ""}
+      data-object-search-empty={String(Boolean(objectTypeSearchEmpty))}
+      data-object-types-loading={String(Boolean(objectTypesLoading))}
+      data-restricted-object-types={String(Boolean(restrictedObjectTypes))}
+      data-testid="metric-graph"
+    >
       <div className="graphPanelTitle">
         <strong>{selectedObjectTypeName}</strong>
       </div>
       metric graph
+      {onAuthorizeMetric ? (
+        <button onClick={() => onAuthorizeMetric(metric(1))}>Authorize graph metric</button>
+      ) : null}
       <button onClick={() => onOpenMetric(metric(1))}>Open graph metric</button>
       <button onClick={() => onEditMetric(metric(1))}>Edit graph metric</button>
+      <button onClick={onRestrictedObjectClick}>Open restricted object</button>
     </div>
   ),
+}));
+
+vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => ({
+  useKnowledgeNetworkCanOperate: () => mocks.canAuthorize.current,
+}));
+
+vi.mock(
+  "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel",
+  () => ({
+    KnowledgeNetworkAuthorizationActionLabel: ({ children }: { children: ReactNode }) => children,
+  }),
+);
+
+vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAuthorizeDrawer", () => ({
+  ObjectMetricAuthorizeDrawer: ({
+    metric,
+    networkId,
+    networkName,
+    open,
+  }: {
+    metric?: ObjectMetricRecordV1;
+    networkId: string;
+    networkName?: string;
+    open: boolean;
+  }) =>
+    open ? (
+      <div
+        data-metric-id={metric?.definition.id}
+        data-network-id={networkId}
+        data-network-name={networkName}
+        data-testid="metric-authorization-drawer"
+      />
+    ) : null,
 }));
 
 vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer", () => ({
@@ -148,6 +204,7 @@ afterAll(() => {
 
 afterEach(() => {
   cleanup();
+  mocks.canAuthorize.current = true;
   mocks.checkDeletion.mockReset();
   mocks.checkDeletion.mockImplementation((_networkId: string, metricId: string, version: number) =>
     Promise.resolve({
@@ -168,6 +225,7 @@ afterEach(() => {
   mocks.getObjectType.mockResolvedValue(null);
   mocks.listObjectTypes.mockReset();
   mocks.listObjectMetrics.mockReset();
+  mocks.messageWarning.mockReset();
   mocks.navigate.mockReset();
   mocks.queryDrillThrough.mockReset();
   mocks.queryMetric.mockReset();
@@ -230,6 +288,96 @@ function metric(index: number): ObjectMetricRecordV1 {
 }
 
 describe("ObjectMetricListPanel pagination", () => {
+  it("enables the restricted-object graph only after an empty unfiltered object query", async () => {
+    mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
+
+    render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
+
+    const graph = await screen.findByTestId("metric-graph");
+    await waitFor(() => expect(graph).toHaveAttribute("data-restricted-object-types", "true"));
+    expect(graph).toHaveAttribute("data-object-search-empty", "false");
+    fireEvent.click(screen.getByRole("button", { name: "Open restricted object" }));
+    expect(mocks.messageWarning).toHaveBeenCalledWith("你没有该对象类的查看权限。");
+  });
+
+  it("shows the projected owner name without exposing its id or linking to the graph", async () => {
+    mocks.searchParams.current = "view=list";
+    mocks.getObjectDetail.mockRejectedValue(new Error("forbidden"));
+    mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
+    const record = metric(1);
+    record.owner_object_type_name = "销售订单";
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [record], total_count: 1 });
+
+    render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
+
+    expect(await screen.findByText("销售订单")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "order" })).not.toBeInTheDocument();
+  });
+
+  it("uses neutral owner wording when the object detail request fails", async () => {
+    mocks.searchParams.current = "view=list";
+    mocks.getObjectDetail.mockRejectedValue(new Error("server unavailable"));
+    mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
+
+    render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
+
+    expect(await screen.findByText("对象类信息不可用")).toBeInTheDocument();
+    expect(screen.queryByText("order")).not.toBeInTheDocument();
+  });
+
+  it("opens authorization for a metric from list and graph views", async () => {
+    mocks.searchParams.current = "view=list";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
+
+    render(
+      <ObjectMetricListPanel
+        canDelete={false}
+        canModify={false}
+        networkId="network-1"
+        networkName="销售网络"
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "knowledgeNetwork.authorizeAction" }),
+    );
+    expect(screen.getByTestId("metric-authorization-drawer")).toHaveAttribute(
+      "data-metric-id",
+      "metric-1",
+    );
+    expect(screen.getByTestId("metric-authorization-drawer")).toHaveAttribute(
+      "data-network-name",
+      "销售网络",
+    );
+
+    fireEvent.click(screen.getByText(/^(图谱|graph)$/i));
+    fireEvent.click(await screen.findByRole("button", { name: "Authorize graph metric" }));
+    expect(screen.getByTestId("metric-authorization-drawer")).toHaveAttribute(
+      "data-metric-id",
+      "metric-1",
+    );
+  });
+
+  it("hides metric authorization without knowledge-network authorize permission", async () => {
+    mocks.searchParams.current = "view=list";
+    mocks.canAuthorize.current = false;
+    mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
+
+    render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
+
+    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "knowledgeNetwork.authorizeAction" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("hides the metric-type filter in graph mode and does not apply a list filter", async () => {
     mocks.searchParams.current = "metricType=atomic";
     mocks.listObjectTypes.mockResolvedValue({

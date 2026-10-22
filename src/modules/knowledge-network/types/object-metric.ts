@@ -352,6 +352,7 @@ export type MetricPropertyBindingV1 = {
 
 export type ObjectMetricRecordV1 = {
   definition: ObjectMetricDefinitionV1;
+  owner_object_type_name?: string;
   kn_id: string;
   branch: string;
   creator: { id: string; type: string };

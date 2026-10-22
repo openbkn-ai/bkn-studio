@@ -112,6 +112,13 @@
   min-width: 0;
 }
 
+.restrictedOwnerLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+}
+
 .nameCell strong,
 .bindingCell {
   display: block;

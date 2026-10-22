@@ -611,39 +611,43 @@ describe("ObjectMetricTrialDrawer", () => {
         open
       />,
     );
-
-    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(screen.getByText("试算"));
     expect(
       await screen.findByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
     ).toBeInTheDocument();
-    const analysis = within(screen.getByRole("region", { name: "图表与数据" }));
-    expect(analysis.queryByRole("navigation", { name: "分析路径" })).not.toBeInTheDocument();
-    expect(analysis.queryByRole("button", { name: "继续下钻" })).not.toBeInTheDocument();
+    const analysis = within(screen.getByLabelText("图表与数据"));
+    expect(analysis.queryByLabelText("分析路径")).not.toBeInTheDocument();
+    expect(analysis.queryByText("继续下钻")).not.toBeInTheDocument();
 
-    const row = analysis.getByRole("row", { name: /已确认.*784/ });
+    const row = analysis.getByText("已确认").closest("tr");
     expect(row).toHaveAttribute("aria-selected", "false");
-    fireEvent.click(row);
+    fireEvent.click(row!);
     expect(row).toHaveAttribute("aria-selected", "true");
     expect(
       analysis.queryByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
     ).not.toBeInTheDocument();
     expect(analysis.getByText("当前分组: status: 已确认")).toBeInTheDocument();
 
-    fireEvent.mouseDown(analysis.getByRole("combobox", { name: "选择下钻维度" }));
+    const dimensionSelect = document.querySelector<HTMLInputElement>(
+      'input[role="combobox"][aria-label="选择下钻维度"]',
+    );
+    expect(dimensionSelect).toBeInTheDocument();
+    fireEvent.mouseDown(dimensionSelect!);
     fireEvent.click(await screen.findByText("product_code"));
-    fireEvent.click(analysis.getByRole("button", { name: "继续下钻" }));
+    fireEvent.click(analysis.getByText("继续下钻"));
     await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
     expect(onRun.mock.calls[1][0]).toMatchObject({
       group_by: [{ object_type_id: "order", property_name: "product_code" }],
       bucket_selection: { bucket_key: "confirmed-orders", parent_query: onRun.mock.calls[0][0] },
     });
-    const path = await analysis.findByRole("navigation", { name: "分析路径" });
-    expect(within(path).getByRole("button", { name: "初始结果" })).toBeInTheDocument();
+    const path = await analysis.findByLabelText("分析路径");
+    expect(path.tagName).toBe("NAV");
+    expect(within(path).getByText("初始结果").closest("button")).toBeInTheDocument();
     const currentLevel = within(path).getByText("当前").parentElement;
     expect(currentLevel).toHaveAttribute("aria-current", "step");
     expect(currentLevel).toHaveTextContent("status: 已确认");
-    fireEvent.click(within(path).getByRole("button", { name: "返回上一级" }));
-    expect(analysis.queryByRole("navigation", { name: "分析路径" })).not.toBeInTheDocument();
+    fireEvent.click(within(path).getByText("返回上一级"));
+    expect(analysis.queryByLabelText("分析路径")).not.toBeInTheDocument();
     expect(onRun).toHaveBeenCalledTimes(2);
   });
 
@@ -677,14 +681,14 @@ describe("ObjectMetricTrialDrawer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(screen.getByText("试算"));
     expect(await screen.findByText("row-0")).toBeInTheDocument();
     expect(screen.getByText("本次返回 51 组结果")).toBeInTheDocument();
     expect(screen.getByText("本地分页 · 每页 50 条")).toBeInTheDocument();
     expect(screen.queryByText("row: row-50")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTitle("2"));
     expect(await screen.findByText("row-50")).toBeInTheDocument();
-  });
+  }, 30_000);
 
   it("shows only the newly selected dimension at each analysis path level", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");

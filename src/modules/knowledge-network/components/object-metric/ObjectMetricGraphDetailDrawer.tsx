@@ -7,7 +7,9 @@
 
 import { Button, Descriptions, Drawer, Tooltip, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
+import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
 import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 import {
@@ -35,6 +37,7 @@ type Props = {
   metric?: ObjectMetricRecordV1;
   metrics?: ObjectMetricRecordV1[];
   networkId: string;
+  onAuthorizeMetric?: (metric: ObjectMetricRecordV1) => void;
   onClose: () => void;
   onDeleteVersion?: (metric: ObjectMetricRecordV1) => void;
   onDeprecate?: (metric: ObjectMetricRecordV1) => void;
@@ -110,6 +113,7 @@ export function ObjectMetricGraphDetailDrawer({
   metric,
   metrics = [],
   networkId,
+  onAuthorizeMetric,
   onClose,
   onDeleteVersion,
   onDeprecate,
@@ -122,6 +126,7 @@ export function ObjectMetricGraphDetailDrawer({
   relationNames = new Map(),
   refreshVersion = 0,
 }: Props) {
+  const { t } = useTranslation();
   const [dependencyNames, setDependencyNames] = useState<DependencyNames>({
     requestKey: "",
     values: {},
@@ -217,6 +222,13 @@ export function ObjectMetricGraphDetailDrawer({
             {onTrialMetric ? (
               <Button autoInsertSpace={false} onClick={() => onTrialMetric(metric)}>
                 {objectMetricText("m073728637a26")}
+              </Button>
+            ) : null}
+            {onAuthorizeMetric ? (
+              <Button autoInsertSpace={false} onClick={() => onAuthorizeMetric(metric)}>
+                <KnowledgeNetworkAuthorizationActionLabel>
+                  {t("knowledgeNetwork.authorizeAction")}
+                </KnowledgeNetworkAuthorizationActionLabel>
               </Button>
             ) : null}
             {actions?.canEdit && onEditMetric ? (

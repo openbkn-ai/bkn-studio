@@ -6,12 +6,14 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createObjectMetricDefinitionV1 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 
 const mocks = vi.hoisted(() => ({
+  canAuthorize: { current: true },
   canModify: { current: true },
   createNextDraft: vi.fn(),
   getObjectMetricV1: vi.fn(),
@@ -42,6 +44,33 @@ vi.mock("@/framework/context/use-app-services", () => ({
 
 vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => ({
   useKnowledgeNetworkCanModify: () => mocks.canModify.current,
+  useKnowledgeNetworkCanOperate: () => mocks.canAuthorize.current,
+}));
+
+vi.mock(
+  "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel",
+  () => ({
+    KnowledgeNetworkAuthorizationActionLabel: ({ children }: { children: ReactNode }) => children,
+  }),
+);
+
+vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAuthorizeDrawer", () => ({
+  ObjectMetricAuthorizeDrawer: ({
+    metric,
+    networkId,
+    open,
+  }: {
+    metric?: ObjectMetricRecordV1;
+    networkId: string;
+    open: boolean;
+  }) =>
+    open ? (
+      <div
+        data-metric-id={metric?.definition.id}
+        data-network-id={networkId}
+        data-testid="metric-authorization-drawer"
+      />
+    ) : null,
 }));
 
 vi.mock("@/modules/knowledge-network/services/object-metric.service", () => ({
@@ -116,6 +145,7 @@ afterAll(() => {
 
 afterEach(() => {
   cleanup();
+  mocks.canAuthorize.current = true;
   mocks.canModify.current = true;
   mocks.createNextDraft.mockReset();
   mocks.getObjectMetricV1.mockReset();
@@ -157,6 +187,32 @@ function record(
 }
 
 describe("ObjectMetricDetailScene actions", () => {
+  it("opens the current metric authorization from the detail header", async () => {
+    const published = record("published", "object_set");
+    published.definition.version = 4;
+    mocks.getObjectMetricV1.mockResolvedValue(published);
+    mocks.listVersions.mockResolvedValue([published]);
+
+    render(<ObjectMetricDetailScene />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "配置权限" }));
+    const drawer = screen.getByTestId("metric-authorization-drawer");
+    expect(drawer).toHaveAttribute("data-network-id", "network-1");
+    expect(drawer).toHaveAttribute("data-metric-id", "metric-1");
+  });
+
+  it("hides metric authorization without knowledge-network authorize permission", async () => {
+    const published = record("published", "object_set");
+    mocks.canAuthorize.current = false;
+    mocks.getObjectMetricV1.mockResolvedValue(published);
+    mocks.listVersions.mockResolvedValue([published]);
+
+    render(<ObjectMetricDetailScene />);
+
+    await screen.findByText("已用券次数");
+    expect(screen.queryByRole("button", { name: "配置权限" })).not.toBeInTheDocument();
+  });
+
   it("loads only referenced object and relation names instead of full catalogs", async () => {
     const derived = record("published", "object_set");
     derived.definition.metric_type = "derived";
@@ -294,6 +350,31 @@ describe("ObjectMetricDetailScene actions", () => {
         (item) => item.textContent,
       ),
     ).not.toContain("逻辑属性");
+  });
+
+  it("shows the projected owner name without exposing its id when object details are unavailable", async () => {
+    const metric = record("published", "object_set");
+    metric.definition.owner_object_type_id = "confidential-owner-id";
+    metric.owner_object_type_name = "销售订单";
+    mocks.getObjectMetricV1.mockResolvedValue(metric);
+    mocks.getObjectTypeDetail.mockRejectedValue(new Error("forbidden"));
+
+    render(<ObjectMetricDetailScene />);
+
+    expect(await screen.findByText("销售订单")).toBeInTheDocument();
+    expect(screen.queryByText("confidential-owner-id")).not.toBeInTheDocument();
+  });
+
+  it("uses neutral owner wording when object details fail without a projected name", async () => {
+    const metric = record("published", "object_set");
+    metric.definition.owner_object_type_id = "confidential-owner-id";
+    mocks.getObjectMetricV1.mockResolvedValue(metric);
+    mocks.getObjectTypeDetail.mockRejectedValue(new Error("server unavailable"));
+
+    render(<ObjectMetricDetailScene />);
+
+    expect(await screen.findByText("对象类信息不可用")).toBeInTheDocument();
+    expect(screen.queryByText("confidential-owner-id")).not.toBeInTheDocument();
   });
 
   it("uses business labels for calculation and result metadata while retaining technical values in tooltips", async () => {
