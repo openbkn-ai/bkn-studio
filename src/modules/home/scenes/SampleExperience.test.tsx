@@ -102,6 +102,7 @@ const network = { displayName: "Northwind network", id: "northwind_kn" };
 function sample(overrides: Record<string, unknown> = {}) {
   return {
     displayName: "Northwind",
+    language: "zh-CN",
     expectedTables: 4,
     installationId: null,
     installable: true,
@@ -484,7 +485,9 @@ describe("SampleExperience", () => {
     });
     renderExperience();
     fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.expand" }));
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "0.2.0" } });
+    fireEvent.change(screen.getByRole("combobox", { name: /home.sample.selectVersion/ }), {
+      target: { value: "0.2.0" },
+    });
     await waitFor(() =>
       expect(getSampleReleaseNotes).toHaveBeenCalledWith("northwind", "0.2.0", "zh-CN"),
     );

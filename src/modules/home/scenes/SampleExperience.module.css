@@ -42,6 +42,24 @@
   gap: 10px;
 }
 
+.languageFilter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.languageFilter select {
+  min-width: 100px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
 .catalogSummary {
   display: flex;
   flex: 1;
@@ -184,16 +202,33 @@
   color: var(--color-text-primary);
 }
 
-.offlinePackageList,
-.offlinePackage {
+.offlinePackageActions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
-.offlinePackage {
-  justify-content: space-between;
+.offlinePicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.offlinePicker select {
+  width: min(360px, 100%);
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
 }
 
 .removeOffline {

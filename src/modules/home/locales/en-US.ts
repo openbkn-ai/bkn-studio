@@ -211,6 +211,15 @@ export const homeEnUS = {
       removeOffline: "Remove package",
       offlineDeleting: "Removing…",
       offlineDeleteFailed: "The offline package could not be removed. Try again later.",
+      languageFilter: "Sample language",
+      languageAll: "All",
+      languageChinese: "Chinese",
+      languageEnglish: "English",
+      noLanguageMatches: "No samples match this language. Select All to see every sample.",
+      selectOfflinePackage: "Offline package",
+      viewSample: "View sample",
+      offlinePackageInUse:
+        "This package is installed or required by a task and cannot be deleted yet.",
       sourceLabel: "Source",
       sourceName: "openbkn-ai/bkn-samples",
       stages: {
