@@ -7,7 +7,7 @@
 
 import { App } from "antd";
 import { MemoryRouter } from "react-router-dom";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
@@ -212,6 +212,70 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
       model: "DeepSeek V4-flash",
       limits: { max_turns: 4 },
     });
+  });
+
+  it("lists the Agent's tools by source, outside the danger zone", async () => {
+    getShared.mockResolvedValue(
+      shared({
+        agent_id: "graph_explorer",
+        name: "图探索",
+        uses_context_loader: false,
+        tools: [
+          {
+            type: "builtin",
+            provider: "graph_explorer",
+            names: ["canvas_state", "view_state"],
+            definitions: [
+              {
+                name: "canvas_state",
+                description: "What is on the canvas right now.",
+                parameters: {
+                  properties: {
+                    limit: { type: "integer", description: "Page size" },
+                    object_types: {
+                      anyOf: [{ type: "array", items: { type: "string" } }, { type: "null" }],
+                    },
+                  },
+                  required: ["limit"],
+                },
+              },
+              { name: "view_state", description: "Read the view.", parameters: {} },
+            ],
+          },
+          { type: "context_loader", names: null },
+        ],
+      }),
+    );
+    getSharedPrompt.mockResolvedValue(PROMPT);
+    renderScene("graph_explorer");
+
+    const card = await screen.findByTestId("agent-config-tools");
+    const sources = within(card).getAllByTestId("agent-config-tool-source");
+    expect(sources[0].textContent).toContain(
+      `${i18n.t("systemAdmin.agentConfig.toolSource.builtin")} · graph_explorer`,
+    );
+    expect(within(sources[0]).getByText("canvas_state")).toBeTruthy();
+    expect(within(sources[0]).getByText("view_state")).toBeTruthy();
+    expect(sources[1].textContent).toContain(
+      i18n.t("systemAdmin.agentConfig.toolsAllContextLoader"),
+    );
+    expect(card.closest("section")).toBeNull();
+    // A tool's definition opens from its name.
+    fireEvent.click(within(sources[0]).getByText("canvas_state"));
+    const definition = await within(sources[0]).findByTestId("agent-config-tool-definition");
+    expect(definition.textContent).toContain("What is on the canvas right now.");
+    expect(within(definition).getByText("limit")).toBeTruthy();
+    expect(within(definition).getByText("Page size")).toBeTruthy();
+    expect(within(definition).getByText("array<string>")).toBeTruthy();
+  });
+
+  it("shows no tools card when the service does not report tools", async () => {
+    getShared.mockResolvedValue(shared());
+    getSharedPrompt.mockResolvedValue(PROMPT);
+    renderScene();
+
+    expect(await screen.findByText(i18n.t("systemAdmin.agentConfig.runtimeTitle"))).toBeTruthy();
+    expect(screen.queryByTestId("agent-config-tools")).toBeNull();
   });
 
   it("explains a refusal from a backend that does not answer read-only", async () => {
