@@ -64,6 +64,7 @@ export function cypherResultFrom(payload: unknown): CypherResult | null {
     entries: Array.isArray(body.entries) ? body.entries.filter(isRec) : [],
     ...(isRec(body.value_types) ? { valueTypes: body.value_types } : {}),
     ...(plan ? { plan } : {}),
+    ...(body.limited === true ? { limited: true } : {}),
     ...(execution
       ? {
           execution: {

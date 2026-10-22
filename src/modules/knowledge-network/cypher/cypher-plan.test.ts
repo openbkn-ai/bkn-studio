@@ -49,6 +49,7 @@ describe("cypherPlanFrom", () => {
         limit_source: "default",
         reads: ["teams.x"],
         warnings: ["no LIMIT"],
+        warning_codes: ["default_limit"],
         sql: "SELECT …",
       }),
     ).toEqual({
@@ -64,6 +65,7 @@ describe("cypherPlanFrom", () => {
       reads: ["teams.x"],
       row_filtered: [],
       warnings: ["no LIMIT"],
+      warning_codes: ["default_limit"],
     });
   });
 

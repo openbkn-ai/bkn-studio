@@ -14,7 +14,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
     rules: [
       "MATCH 模式 [WHERE 条件] RETURN 返回项 [ORDER BY …] [SKIP n] [LIMIT n]；可以用 WITH ['a', 'b'] AS codes 开头定义常量，供后面的条件使用。",
       "只读：必须有 RETURN；不能 CREATE、MERGE、SET、DELETE、REMOVE。",
-      "不写 LIMIT 时最多返回 1000 行，LIMIT 上限 10000；一条查询最多 8 条关系、9 个节点。",
+      "不写 LIMIT 时最多返回 1000 行，返回满时状态栏会提示可能还有更多；LIMIT 上限 10000；一条查询最多 8 条关系、9 个节点。",
     ],
     notes: ["", "开头定义常量"],
   },
@@ -23,7 +23,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
     rules: [
       "节点写成 (变量:对象类)，对象类用 id；含 - 等特殊字符时用反引号，如 (a:`my-type`)。节点第一次出现必须写对象类，可带内联属性 {prop: value}。",
       "关系写成 -[r:关系类]->、<-[r:关系类]- 或无向 -[r:关系类]-，必须且只能写一个关系类。给关系起变量名并在 RETURN 里返回，图上才有连线。",
-      "多条路径用逗号并列或写多个 MATCH，同名变量指同一个节点；不共享变量的路径会两两组合。",
+      "多条路径用逗号并列或写多个 MATCH，同名变量指同一个节点；不共享变量的路径会两两组合。有两部分既没连起来、又都没有任何条件时会被拒，请用关系类或 a.code = b.code 这类相等条件连起来，或给其中一边加条件。",
       "OPTIONAL MATCH 写一条关系，把一个新节点挂到前面已经找到的节点上：匹配不到时这一行保留，新节点为空。它引入的节点不能再被后面的 MATCH 或 WHERE 要求。",
     ],
     notes: [

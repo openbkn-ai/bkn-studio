@@ -789,3 +789,7 @@
 .planWhere {
   margin-left: 6px;
 }
+
+.statusLimited {
+  color: var(--color-warning-text);
+}

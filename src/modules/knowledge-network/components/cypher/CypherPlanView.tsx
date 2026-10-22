@@ -38,6 +38,15 @@ export function CypherPlanView({ plan, names }: { plan: CypherPlan; names: Cyphe
   const p = (key: string, options?: Record<string, unknown>) =>
     t(`knowledgeNetwork.cypherQuery.plan.${key}`, options ?? {});
   const objectName = (id: string) => names.objectTypes[id] ?? id;
+  // A warning the page knows by code reads in the reader's language; any other keeps the
+  // backend's own words.
+  const warningText = (warning: string, code?: string) =>
+    code
+      ? t(`knowledgeNetwork.cypherQuery.plan.warningCodes.${code}`, {
+          defaultValue: warning,
+          types: (plan.row_filtered ?? []).map(objectName).join("、"),
+        })
+      : warning;
   const shapeKey = `shapes.${plan.shape}`;
   const shape = t(`knowledgeNetwork.cypherQuery.plan.${shapeKey}`, { defaultValue: plan.shape });
   return (
@@ -46,8 +55,8 @@ export function CypherPlanView({ plan, names }: { plan: CypherPlan; names: Cyphe
         <Alert
           description={
             <ul className={styles.planList}>
-              {plan.warnings.map((warning) => (
-                <li key={warning}>{warning}</li>
+              {plan.warnings.map((warning, index) => (
+                <li key={warning}>{warningText(warning, plan.warning_codes?.[index])}</li>
               ))}
             </ul>
           }

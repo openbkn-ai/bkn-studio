@@ -44,6 +44,15 @@ describe("runCypherQuery", () => {
     });
   });
 
+  it("reads limited, which says the default limit cut the rows", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(reply(200, { columns: [], entries: [{ n: 1 }], limited: true })),
+    );
+    const run = await runCypherQuery({ env, query: "MATCH (t:teams) RETURN t.team_id AS n" });
+    expect(run.ok && run.result.limited).toBe(true);
+  });
+
   it("explains without asking for display properties, and reads the plan", async () => {
     const plan = {
       shape: "match",

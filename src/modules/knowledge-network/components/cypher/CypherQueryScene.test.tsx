@@ -546,6 +546,46 @@ describe("CypherQueryScene", () => {
     expect(screen.queryByTestId("cypher-plan")).toBeNull();
   });
 
+  it("says when a run stopped at the default limit, and words plan warnings by their code", async () => {
+    mocks.runCypherQuery.mockResolvedValueOnce({
+      ok: true,
+      result: { columns: [{ name: "n" }], entries: [{ n: 1 }], limited: true },
+      exchange,
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    await screen.findByTestId("cypher-schema-object-teams");
+
+    fireEvent.change(editor(), { target: { value: "MATCH (t:teams) RETURN t.team_name AS n" } });
+    fireEvent.keyDown(editor(), { key: "Enter", ctrlKey: true });
+    await screen.findByTestId("cypher-limited");
+
+    mocks.runCypherQuery.mockResolvedValueOnce({
+      ok: true,
+      result: {
+        columns: [],
+        entries: [],
+        plan: {
+          shape: "match",
+          objects: [{ alias: "t", object_type_id: "teams" }],
+          columns: [{ name: "n", kind: "property" }],
+          limit: 1000,
+          limit_source: "default",
+          reads: [],
+          warnings: ["no LIMIT: at most 1000 rows come back", "something new"],
+          warning_codes: ["default_limit", ""],
+        },
+      },
+      exchange,
+    });
+    fireEvent.click(screen.getByTestId("cypher-editor-plan"));
+    await screen.findByTestId("cypher-plan");
+    expect(
+      screen.getByText("knowledgeNetwork.cypherQuery.plan.warningCodes.default_limit"),
+    ).toBeTruthy();
+    // A warning without a code keeps the backend's words.
+    expect(screen.getByText("something new")).toBeTruthy();
+  });
+
   it("explains the editor's query in a new frame without running it", async () => {
     mocks.explainCypher.mockResolvedValue({ answer: "查找**巴西队**的进球", threadId: "t-1" });
     render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
