@@ -58,14 +58,18 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
         cancelText: t("common.cancel"),
         content: t(
           pausing
-            ? "dataCatalog.task.pauseResumeConfirmPauseContent"
+            ? isStreaming
+              ? "dataCatalog.task.pauseResumeConfirmPauseContent"
+              : "dataCatalog.task.pauseResumeConfirmStopContent"
             : "dataCatalog.task.pauseResumeConfirmResumeContent",
         ),
         okText: t("common.confirm"),
         onOk: run,
         title: t(
           pausing
-            ? "dataCatalog.task.pauseResumeConfirmPauseTitle"
+            ? isStreaming
+              ? "dataCatalog.task.pauseResumeConfirmPauseTitle"
+              : "dataCatalog.task.pauseResumeConfirmStopTitle"
             : "dataCatalog.task.pauseResumeConfirmResumeTitle",
         ),
       });

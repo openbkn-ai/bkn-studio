@@ -404,7 +404,7 @@ export function ResourceIndexPanel({
             : "dataCatalog.task.resumeBuild",
         )
       : t(
-          activeTask?.mode === "streaming" && activeTask.status === "running"
+          activeTask?.mode === "streaming"
             ? "dataCatalog.task.pauseListening"
             : "dataCatalog.task.stopBuild",
         );
