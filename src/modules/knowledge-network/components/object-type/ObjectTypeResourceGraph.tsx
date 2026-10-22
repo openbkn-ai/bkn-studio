@@ -1274,8 +1274,13 @@ export function ObjectTypeResourceGraph({
       ]);
       if (failures.length > 0) {
         const failedIds = new Set(failures.map(({ action }) => action.id));
+        const fallbackAction = [...expandedActions]
+          .reverse()
+          .find((action) => !failedIds.has(action.id));
         setExpandedActions((current) => current.filter((action) => !failedIds.has(action.id)));
-        setFocusedAction((current) => (current && failedIds.has(current.id) ? undefined : current));
+        setFocusedAction((current) =>
+          current && failedIds.has(current.id) ? fallbackAction : current,
+        );
       }
     });
     return () => {

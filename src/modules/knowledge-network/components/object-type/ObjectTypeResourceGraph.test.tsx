@@ -658,6 +658,42 @@ describe("ObjectTypeResourceGraph", () => {
     },
   );
 
+  it("keeps controls focused on a remaining path when another action fails to expand", async () => {
+    const notifyAction = {
+      ...action,
+      actionKind: "notify",
+      id: "notify-order",
+      name: "短信推送",
+    } as KnowledgeNetworkActionTypeRecord;
+    mocks.listActions.mockResolvedValue({ entries: [action, notifyAction], totalCount: 2 });
+    mocks.getActionDetail.mockImplementation((_networkId: string, actionId: string) =>
+      actionId === notifyAction.id
+        ? Promise.reject(new Error("行动详情服务不可用"))
+        : Promise.resolve({
+            ...action,
+            affect: { comment: "同步订单核对结果", objectTypeId: "order" },
+            condition: { field: "amount", operation: ">", value: "100" },
+            executionConfig: {
+              actionSource: { toolId: "tool-1", toolName: "订单核对工具", type: "tool" },
+              parameters: [],
+              sourceName: "订单核对工具",
+              sourceType: "tool",
+            },
+          }),
+    );
+    renderGraph(false, { resourceScope: "actions" });
+
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    fireEvent.click(await within(graph).findByRole("button", { name: "行动类 更新订单" }));
+    expect(await screen.findByText("已展开 1 条")).toBeInTheDocument();
+    fireEvent.click(within(graph).getByRole("button", { name: "行动类 短信推送" }));
+
+    expect(await screen.findByText(/行动类“短信推送”详情加载失败/)).toBeInTheDocument();
+    expect(screen.getByText("已展开 1 条")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "收起链路" })).toBeInTheDocument();
+    expect(graph.querySelector("[data-action-semantic-focus='update-order']")).not.toBeNull();
+  });
+
   it("opens the current object node drawer and navigates to its details", async () => {
     const handlers = renderGraph();
 
