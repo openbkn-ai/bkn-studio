@@ -31,6 +31,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectMetricGraphCanvas } from "@/modules/knowledge-network/components/object-metric/ObjectMetricGraphCanvas";
@@ -45,7 +46,8 @@ import {
   readObjectMetricListLocation,
 } from "@/modules/knowledge-network/lib/object-metric-navigation";
 import {
-  deleteObjectMetricDraftV1,
+  checkObjectMetricVersionDeletionV1,
+  deleteObjectMetricVersionV1,
   deprecateObjectMetricV1,
   listObjectMetricsV1,
   queryObjectMetricDataV1,
@@ -60,6 +62,7 @@ import {
 import type {
   ObjectMetricRecordV1,
   ObjectMetricTypeV1,
+  ObjectMetricVersionDeletionCheckV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
@@ -71,7 +74,7 @@ import listStyles from "@/modules/knowledge-network/components/shared/ResourceLi
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import { useTranslation } from "react-i18next";
 
-type Props = { canModify: boolean; networkId: string };
+type Props = { canDelete: boolean; canModify: boolean; networkId: string };
 type MetricStatus = ObjectMetricRecordV1["definition"]["lifecycle"]["status"];
 type CreateIntent = { type: ObjectMetricTypeV1 };
 
@@ -105,7 +108,7 @@ const statusNames = {
   },
 };
 
-export function ObjectMetricListPanel({ canModify, networkId }: Props) {
+export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -129,6 +132,8 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const [trialMetric, setTrialMetric] = useState<ObjectMetricRecordV1>();
   const [trialObjectType, setTrialObjectType] = useState<ObjectTypeDetail | null>();
   const [trialLoadingKey, setTrialLoadingKey] = useState<string>();
+  const [deletionPendingKey, setDeletionPendingKey] = useState<string>();
+  const deletionPendingRef = useRef<string | undefined>(undefined);
   const [listTotal, setListTotal] = useState(0);
   const [listResultKey, setListResultKey] = useState("");
   const [selectedObjectTypeId, setSelectedObjectTypeId] = useState(initialLocation.objectTypeId);
@@ -570,22 +575,117 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
   const ownerObjectType =
     selectedObjectDetail?.id === selectedObjectTypeId ? selectedObjectDetail.detail : undefined;
 
-  const confirmDeleteDraft = (record: ObjectMetricRecordV1) => {
-    if (!objectMetricActions(record, canModify, ownerObjectTypeFor(record)).canDeleteDraft) return;
+  const showDeletionBlocked = (check: ObjectMetricVersionDeletionCheckV1) => {
+    const hasReferenceBlockers = check.blockers.length > 0 || check.hidden_blocker_count > 0;
+    Modal.warning({
+      content: (
+        <div>
+          <p>
+            {hasReferenceBlockers
+              ? objectMetricText("metricDeleteBlockedDescription")
+              : objectMetricText("metricDeleteStatusBlocked", { p0: check.status })}
+          </p>
+          {check.blockers.length ? (
+            <ul>
+              {check.blockers.map((blocker) => (
+                <li
+                  key={`${blocker.resource_type}:${blocker.resource_id}:${blocker.version ?? 0}:${blocker.field}`}
+                >
+                  {blocker.resource_type === "metric_version"
+                    ? objectMetricText("metricDeleteMetricBlocker", {
+                        p0: blocker.name || blocker.resource_id,
+                        p1: blocker.version,
+                        p2: blocker.field,
+                      })
+                    : objectMetricText("metricDeletePropertyBlocker", {
+                        p0: blocker.name || blocker.resource_id,
+                        p1: blocker.property_name,
+                        p2: blocker.field,
+                      })}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {check.hidden_blocker_count > 0 ? (
+            <p>
+              {objectMetricText("metricDeleteHiddenBlockers", {
+                count: check.hidden_blocker_count,
+              })}
+            </p>
+          ) : null}
+        </div>
+      ),
+      title: objectMetricText("metricDeleteBlockedTitle"),
+    });
+  };
+
+  const confirmDeleteVersion = async (record: ObjectMetricRecordV1) => {
+    if (
+      !objectMetricActions(record, canModify, canDelete, ownerObjectTypeFor(record))
+        .canDeleteVersion
+    )
+      return;
+    const pendingKey = `${record.definition.id}@${record.definition.version}`;
+    if (deletionPendingRef.current) return;
+    deletionPendingRef.current = pendingKey;
+    setDeletionPendingKey(pendingKey);
+    let check: ObjectMetricVersionDeletionCheckV1;
+    try {
+      check = await checkObjectMetricVersionDeletionV1(
+        networkId,
+        record.definition.id,
+        record.definition.version,
+      );
+    } catch {
+      return;
+    } finally {
+      deletionPendingRef.current = undefined;
+      setDeletionPendingKey(undefined);
+    }
+    if (!check.deletable) {
+      showDeletionBlocked(check);
+      return;
+    }
     Modal.confirm({
-      content: objectMetricText("m1baf039f0b73", { p0: record.definition.name }),
+      content: objectMetricText("metricDeleteVersionConfirm", {
+        p0: record.definition.name,
+        p1: record.definition.version,
+      }),
       okButtonProps: { danger: true },
       onOk: async () => {
-        await deleteObjectMetricDraftV1(networkId, record.definition.id, record.definition.version);
-        void message.success(objectMetricText("md393b7cc3ea3"));
-        refresh();
+        try {
+          await deleteObjectMetricVersionV1(
+            networkId,
+            record.definition.id,
+            record.definition.version,
+            { skipErrorToast: true },
+          );
+          void message.success(objectMetricText("metricDeleteVersionSuccess"));
+          refresh();
+        } catch (error) {
+          try {
+            const latest = await checkObjectMetricVersionDeletionV1(
+              networkId,
+              record.definition.id,
+              record.definition.version,
+              { skipErrorToast: true },
+            );
+            if (!latest.deletable) {
+              showDeletionBlocked(latest);
+              return;
+            }
+          } catch {
+            // Preserve the original delete failure below.
+          }
+          void message.error(extractRequestErrorMessage(error));
+        }
       },
-      title: objectMetricText("m1dfe58237bbf"),
+      title: objectMetricText("metricDeleteVersion"),
     });
   };
 
   const confirmDeprecate = (record: ObjectMetricRecordV1) => {
-    const actions = objectMetricActions(record, canModify, ownerObjectTypeFor(record));
+    const actions = objectMetricActions(record, canModify, canDelete, ownerObjectTypeFor(record));
     if (!actions.canDeprecate || actions.deprecateReason) return;
     Modal.confirm({
       content: objectMetricText("mcb05d2c2df12"),
@@ -707,7 +807,12 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
       width: 212,
       fixed: "right",
       render: (_, record) => {
-        const actions = objectMetricActions(record, canModify, ownerObjectTypeFor(record));
+        const actions = objectMetricActions(
+          record,
+          canModify,
+          canDelete,
+          ownerObjectTypeFor(record),
+        );
         return (
           <Space size={4}>
             <Button onClick={() => openDetail(record)} size="small" type="link">
@@ -730,12 +835,18 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
                 type="text"
               />
             ) : null}
-            {actions.canDeleteDraft ? (
+            {actions.canDeleteVersion ? (
               <Button
-                aria-label={objectMetricText("m7a7c17d22328", { p0: record.definition.name })}
+                aria-label={objectMetricText("metricDeleteVersionLabel", {
+                  p0: record.definition.name,
+                  p1: record.definition.version,
+                })}
                 danger
                 icon={<DeleteOutlined />}
-                onClick={() => confirmDeleteDraft(record)}
+                loading={
+                  deletionPendingKey === `${record.definition.id}@${record.definition.version}`
+                }
+                onClick={() => void confirmDeleteVersion(record)}
                 size="small"
                 type="text"
               />
@@ -973,11 +1084,12 @@ export function ObjectMetricListPanel({ canModify, networkId }: Props) {
           </aside>
           <div className={`${graphStyles.graphContent} ${styles.graphPanel}`}>
             <ObjectMetricGraphCanvas
+              canDelete={canDelete}
               canModify={canModify}
               initialFocusedMetric={initialGraphMetric}
               networkId={networkId}
               ownerMetricCache={graphOwnerMetricCache.current}
-              onDeleteDraft={confirmDeleteDraft}
+              onDeleteVersion={(record) => void confirmDeleteVersion(record)}
               onDeprecate={confirmDeprecate}
               onEditMetric={(record) => openEditor(record, true)}
               onOpenMetric={(record) => openDetail(record, true)}

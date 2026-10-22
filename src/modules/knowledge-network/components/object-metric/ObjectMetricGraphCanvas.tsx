@@ -33,12 +33,13 @@ import styles from "./ObjectMetricGraphCanvas.module.css";
 import metricTheme from "./ObjectMetricTheme.module.css";
 
 type Props = {
+  canDelete?: boolean;
   canModify?: boolean;
   initialFocusedMetric?: { id: string; objectTypeId: string; version: number };
   metricType?: ObjectMetricTypeV1;
   networkId: string;
   ownerMetricCache?: Map<string, { entries: ObjectMetricRecordV1[]; total: number }>;
-  onDeleteDraft?: (metric: ObjectMetricRecordV1) => void;
+  onDeleteVersion?: (metric: ObjectMetricRecordV1) => void;
   onDeprecate?: (metric: ObjectMetricRecordV1) => void;
   onEditMetric?: (metric: ObjectMetricRecordV1) => void;
   onOpenMetric: (metric: ObjectMetricRecordV1) => void;
@@ -382,12 +383,13 @@ function onButtonKeyDown(event: KeyboardEvent<SVGGElement>, action: () => void) 
 }
 
 export function ObjectMetricGraphCanvas({
+  canDelete = false,
   canModify = false,
   initialFocusedMetric,
   metricType,
   networkId,
   ownerMetricCache,
-  onDeleteDraft,
+  onDeleteVersion,
   onDeprecate,
   onEditMetric,
   onOpenMetric,
@@ -1638,12 +1640,13 @@ export function ObjectMetricGraphCanvas({
         </div>
       ) : null}
       <ObjectMetricGraphDetailDrawer
+        canDelete={canDelete}
         canModify={canModify}
         metric={drawerMetric}
         metrics={metrics}
         networkId={networkId}
         onClose={() => setDrawerMetric(undefined)}
-        onDeleteDraft={onDeleteDraft}
+        onDeleteVersion={onDeleteVersion}
         onDeprecate={onDeprecate}
         onEditMetric={onEditMetric}
         onOpenMetric={onOpenMetric}

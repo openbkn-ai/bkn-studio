@@ -6,12 +6,15 @@
  */
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { Modal } from "antd";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 
 const mocks = vi.hoisted(() => ({
+  checkDeletion: vi.fn(),
   createNextDraft: vi.fn(),
+  deleteVersion: vi.fn(),
   getObjectDetail: vi.fn(),
   getObjectType: vi.fn(),
   listObjectTypes: vi.fn(),
@@ -106,8 +109,9 @@ vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricTrialD
 }));
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
+  checkObjectMetricVersionDeletionV1: mocks.checkDeletion,
   createNextObjectMetricDraftV1: mocks.createNextDraft,
-  deleteObjectMetricDraftV1: vi.fn(),
+  deleteObjectMetricVersionV1: mocks.deleteVersion,
   deprecateObjectMetricV1: vi.fn(),
   listObjectMetricsV1: mocks.listObjectMetrics,
   queryObjectMetricDrillThroughV1: mocks.queryDrillThrough,
@@ -144,7 +148,20 @@ afterAll(() => {
 
 afterEach(() => {
   cleanup();
+  mocks.checkDeletion.mockReset();
+  mocks.checkDeletion.mockImplementation((_networkId: string, metricId: string, version: number) =>
+    Promise.resolve({
+      blockers: [],
+      deletable: true,
+      hidden_blocker_count: 0,
+      metric_id: metricId,
+      metric_name: "Metric",
+      status: "draft",
+      version,
+    }),
+  );
   mocks.createNextDraft.mockReset();
+  mocks.deleteVersion.mockReset();
   mocks.getObjectDetail.mockReset();
   mocks.getObjectDetail.mockResolvedValue(null);
   mocks.getObjectType.mockReset();
@@ -163,6 +180,17 @@ afterEach(() => {
 
 mocks.getObjectDetail.mockResolvedValue(null);
 mocks.getObjectType.mockResolvedValue(null);
+mocks.checkDeletion.mockImplementation((_networkId: string, metricId: string, version: number) =>
+  Promise.resolve({
+    blockers: [],
+    deletable: true,
+    hidden_blocker_count: 0,
+    metric_id: metricId,
+    metric_name: "Metric",
+    status: "draft",
+    version,
+  }),
+);
 
 function metric(index: number): ObjectMetricRecordV1 {
   return {
@@ -210,7 +238,9 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
 
-    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    const { container } = render(
+      <ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />,
+    );
 
     expect(await screen.findByTitle("销售订单")).not.toBeNull();
     expect(container.querySelector(".ant-select")).toBeNull();
@@ -225,7 +255,7 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
 
-    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
 
     const aiCreate = await screen.findByRole("button", { name: /AI 创建/ });
     expect(aiCreate).toBeEnabled();
@@ -257,7 +287,7 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
 
-    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
 
     const aiCreate = await screen.findByRole("button", { name: /AI 创建/ });
     fireEvent.mouseEnter(aiCreate);
@@ -296,7 +326,7 @@ describe("ObjectMetricListPanel pagination", () => {
               })
             : Promise.resolve({ entries: [], total_count: 7 }),
       );
-      render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+      render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
       const first = await screen.findByTitle("对象 1");
       await waitFor(() => expect(notifyVisibility).toBeDefined());
       expect(mocks.listObjectMetrics).not.toHaveBeenCalled();
@@ -340,7 +370,7 @@ describe("ObjectMetricListPanel pagination", () => {
     mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
 
-    render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
 
     expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
     expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
@@ -357,7 +387,7 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
 
-    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
     fireEvent.click(await screen.findByRole("button", { name: "Open graph metric" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith(
@@ -389,7 +419,9 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockReturnValue(new Promise(() => {}));
 
-    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    const { container } = render(
+      <ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />,
+    );
     const loading = container.querySelector<HTMLElement>("[class*=tableLoading]");
     const viewport = container.querySelector<HTMLElement>("[class*=tableViewport]");
 
@@ -418,7 +450,7 @@ describe("ObjectMetricListPanel pagination", () => {
     mocks.queryMetric.mockResolvedValue({});
     mocks.trialMetric.mockResolvedValue({});
 
-    render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "试算" }));
     const drawer = await screen.findByTestId("list-metric-trial");
@@ -468,7 +500,9 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
 
-    const { container } = render(<ObjectMetricListPanel canModify networkId="network-1" />);
+    const { container } = render(
+      <ObjectMetricListPanel canDelete canModify networkId="network-1" />,
+    );
 
     expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
     const widths = [...container.querySelectorAll<HTMLTableColElement>("colgroup col")]
@@ -500,7 +534,7 @@ describe("ObjectMetricListPanel pagination", () => {
         },
       ],
     });
-    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
     expect(await screen.findByText("指标属性 · v1")).toHaveAttribute("title", "指标属性 · v1");
     expect(screen.getByText("未绑定")).toBeInTheDocument();
     expect(mocks.getObjectDetail).toHaveBeenCalledTimes(1);
@@ -517,7 +551,9 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
 
-    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    const { container } = render(
+      <ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />,
+    );
 
     await waitFor(() => {
       expect(container.querySelector('[class*="graphPanelTitle"] strong')?.textContent).toBe(
@@ -536,7 +572,7 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 21 });
 
-    render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
 
     expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
     expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
@@ -565,7 +601,7 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [published, draft], total_count: 2 });
 
-    render(<ObjectMetricListPanel canModify networkId="network-1" />);
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
 
     fireEvent.click(screen.getByText(/^(列表|list)$/i));
     expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
@@ -599,7 +635,9 @@ describe("ObjectMetricListPanel pagination", () => {
       },
     );
 
-    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    const { container } = render(
+      <ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />,
+    );
 
     expect(container.querySelector('[class*="toolbarLeft"] .ant-segmented')).not.toBeNull();
     expect(container.querySelector('[class*="toolbarRight"] .ant-segmented')).toBeNull();
@@ -687,7 +725,9 @@ describe("ObjectMetricListPanel pagination", () => {
         }),
     );
 
-    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    const { container } = render(
+      <ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />,
+    );
 
     await waitFor(() => {
       expect(container.querySelectorAll("button[class*=objectButton]")).toHaveLength(10);
@@ -752,7 +792,9 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 22 });
 
-    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    const { container } = render(
+      <ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />,
+    );
 
     expect(await screen.findByTitle("销售订单")).not.toBeNull();
     expect(container.querySelector(".ant-pagination")).toBeNull();
@@ -785,7 +827,9 @@ describe("ObjectMetricListPanel pagination", () => {
     );
     mocks.listObjectMetrics.mockResolvedValue({ entries: [], total_count: 0 });
 
-    const { container } = render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    const { container } = render(
+      <ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />,
+    );
     fireEvent.change(screen.getByPlaceholderText("搜索对象类"), { target: { value: "目标" } });
     await act(async () => {
       resolveInitial({ entries: [{ id: "old", name: "旧对象" }], totalCount: 1 });
@@ -796,6 +840,96 @@ describe("ObjectMetricListPanel pagination", () => {
     expect(container.querySelector('[class*="graphPanelTitle"] strong')?.textContent).toBe(
       "目标对象",
     );
+  });
+
+  it("shows reference details from the deletion preflight instead of opening confirmation", async () => {
+    const warning = vi.spyOn(Modal, "warning").mockImplementation(() => undefined as never);
+    const draft = metric(1);
+    draft.definition.lifecycle.status = "draft";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
+    mocks.checkDeletion.mockResolvedValue({
+      blockers: [
+        {
+          field: "specification.base_metric",
+          name: "下游成交额",
+          resource_id: "dependent-metric",
+          resource_type: "metric_version",
+          version: 2,
+        },
+      ],
+      deletable: false,
+      hidden_blocker_count: 1,
+      metric_id: draft.definition.id,
+      metric_name: draft.definition.name,
+      status: "draft",
+      version: draft.definition.version,
+    });
+
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
+    fireEvent.click(screen.getByText(/^(列表|list)$/i));
+    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /删除指标.*v1/ }));
+
+    await waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
+    expect(warning.mock.calls[0]?.[0]?.title).toBe("无法删除指标版本");
+    render(<div>{warning.mock.calls[0]?.[0]?.content}</div>);
+    expect(screen.getByText(/下游成交额.*v2/)).toBeInTheDocument();
+    expect(screen.getByText(/另有 1 个无权查看的引用/)).toBeInTheDocument();
+    expect(mocks.deleteVersion).not.toHaveBeenCalled();
+    warning.mockRestore();
+  });
+
+  it("prevents duplicate deletion preflights and explains a status blocker", async () => {
+    const warning = vi.spyOn(Modal, "warning").mockImplementation(() => undefined as never);
+    const draft = metric(1);
+    draft.definition.lifecycle.status = "draft";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
+    let resolveCheck!: (value: {
+      blockers: [];
+      deletable: false;
+      hidden_blocker_count: 0;
+      metric_id: string;
+      metric_name: string;
+      status: "published";
+      version: number;
+    }) => void;
+    mocks.checkDeletion.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCheck = resolve;
+      }),
+    );
+
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
+    fireEvent.click(screen.getByText(/^(列表|list)$/i));
+    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    const deleteButton = screen.getByRole("button", { name: /删除指标.*v1/ });
+    fireEvent.click(deleteButton);
+    fireEvent.click(deleteButton);
+    expect(mocks.checkDeletion).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      resolveCheck({
+        blockers: [],
+        deletable: false,
+        hidden_blocker_count: 0,
+        metric_id: draft.definition.id,
+        metric_name: draft.definition.name,
+        status: "published",
+        version: draft.definition.version,
+      });
+    });
+    await waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
+    render(<div>{warning.mock.calls[0]?.[0]?.content}</div>);
+    expect(screen.getByText("状态为 published 的指标版本不可删除。")).toBeInTheDocument();
+    warning.mockRestore();
   });
 
   it("limits count requests to four in flight and distinguishes a pending count from zero", async () => {
@@ -814,7 +948,7 @@ describe("ObjectMetricListPanel pagination", () => {
         }),
     );
 
-    render(<ObjectMetricListPanel canModify={false} networkId="network-1" />);
+    render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
 
     await waitFor(() => expect(mocks.listObjectMetrics).toHaveBeenCalledTimes(4));
     expect(screen.getByTitle("对象 0").textContent).toContain("…");

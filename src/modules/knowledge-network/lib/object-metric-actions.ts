@@ -13,6 +13,7 @@ import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-
 export function objectMetricActions(
   record: ObjectMetricRecordV1,
   canModify: boolean,
+  canDelete: boolean,
   ownerObjectType: ObjectTypeDetail | null | undefined,
 ) {
   const { calculation_scope, id, lifecycle, version } = record.definition;
@@ -30,7 +31,7 @@ export function objectMetricActions(
           : undefined;
 
   return {
-    canDeleteDraft: canModify && isWorkingDraft,
+    canDeleteVersion: canDelete && lifecycle.status !== "published",
     canDeprecate,
     canEdit: canModify && isWorkingDraft,
     deprecateReason,

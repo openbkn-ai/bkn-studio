@@ -14,9 +14,10 @@ import {
 } from "@/modules/knowledge-network/services/mock/state";
 import {
   bindObjectMetricLogicPropertyV1,
+  checkObjectMetricVersionDeletionV1,
   createNextObjectMetricDraftV1,
   createObjectMetricDraftV1,
-  deleteObjectMetricDraftV1,
+  deleteObjectMetricVersionV1,
   deprecateObjectMetricV1,
   getObjectMetricCapabilitiesV1,
   getObjectMetricV1,
@@ -79,7 +80,7 @@ describe("object metric lifecycle", () => {
       mockKnowledgeNetworks.find((network) => network.id === networkId)?.statistics.metricsTotal,
     ).toBe(initialCount + 1);
 
-    await deleteObjectMetricDraftV1(networkId, draft.definition.id, draft.definition.version);
+    await deleteObjectMetricVersionV1(networkId, draft.definition.id, draft.definition.version);
     expect(
       mockKnowledgeNetworks.find((network) => network.id === networkId)?.statistics.metricsTotal,
     ).toBe(initialCount);
@@ -294,13 +295,13 @@ describe("object metric lifecycle", () => {
     expect(next?.definition.lifecycle.status).toBe("draft");
   });
 
-  it("deletes only draft versions and leaves published history readable", async () => {
+  it("deletes working and unreferenced deprecated versions but rejects published versions", async () => {
     const networkId = `kn-${crypto.randomUUID()}`;
     const draftDefinition = createObjectMetricDefinitionV1("atomic", "order");
     draftDefinition.name = "待删除草稿";
     draftDefinition.description = "仅用于测试草稿删除";
     const draft = await createObjectMetricDraftV1(networkId, draftDefinition);
-    await deleteObjectMetricDraftV1(networkId, draft.definition.id, draft.definition.version);
+    await deleteObjectMetricVersionV1(networkId, draft.definition.id, draft.definition.version);
     await expect(getObjectMetricV1(networkId, draft.definition.id)).resolves.toBeUndefined();
 
     const publishedDefinition = createObjectMetricDefinitionV1("atomic", "order");
@@ -317,14 +318,73 @@ describe("object metric lifecycle", () => {
       publishedDraft.definition.id,
       publishedDraft.definition.version,
     );
-    await deleteObjectMetricDraftV1(
+    await expect(
+      deleteObjectMetricVersionV1(
+        networkId,
+        publishedDraft.definition.id,
+        publishedDraft.definition.version,
+      ),
+    ).rejects.toThrow("blocked");
+    await expect(getObjectMetricV1(networkId, publishedDraft.definition.id)).resolves.toMatchObject(
+      { definition: { lifecycle: { status: "published" } } },
+    );
+    await deprecateObjectMetricV1(
       networkId,
       publishedDraft.definition.id,
       publishedDraft.definition.version,
     );
-    await expect(getObjectMetricV1(networkId, publishedDraft.definition.id)).resolves.toMatchObject(
-      { definition: { lifecycle: { status: "published" } } },
+    await deleteObjectMetricVersionV1(
+      networkId,
+      publishedDraft.definition.id,
+      publishedDraft.definition.version,
     );
+    await expect(
+      getObjectMetricV1(networkId, publishedDraft.definition.id),
+    ).resolves.toBeUndefined();
+  });
+
+  it("reports metric-version references before deletion", async () => {
+    const networkId = `kn-${crypto.randomUUID()}`;
+    const targetDefinition = createObjectMetricDefinitionV1("atomic", "order");
+    targetDefinition.name = "基础订单数";
+    targetDefinition.description = "删除目标";
+    const target = await createObjectMetricDraftV1(networkId, targetDefinition);
+
+    const dependentDefinition = createObjectMetricDefinitionV1("derived", "order");
+    dependentDefinition.name = "订单增速";
+    dependentDefinition.description = "引用基础订单数";
+    if (dependentDefinition.specification.kind !== "derived") {
+      throw new Error("expected a derived metric definition");
+    }
+    dependentDefinition.specification.base_metric = {
+      metric_id: target.definition.id,
+      version: target.definition.version,
+    };
+    const dependent = await createObjectMetricDraftV1(networkId, dependentDefinition);
+
+    const check = await checkObjectMetricVersionDeletionV1(
+      networkId,
+      target.definition.id,
+      target.definition.version,
+    );
+    expect(check).toMatchObject({
+      deletable: false,
+      hidden_blocker_count: 0,
+      metric_id: target.definition.id,
+      version: target.definition.version,
+    });
+    expect(check.blockers).toEqual([
+      expect.objectContaining({
+        field: "specification.base_metric",
+        name: dependent.definition.name,
+        resource_id: dependent.definition.id,
+        resource_type: "metric_version",
+        version: dependent.definition.version,
+      }),
+    ]);
+    await expect(
+      deleteObjectMetricVersionV1(networkId, target.definition.id, target.definition.version),
+    ).rejects.toThrow("blocked");
   });
 
   it("reports every common validation error and previews all output shapes", async () => {
