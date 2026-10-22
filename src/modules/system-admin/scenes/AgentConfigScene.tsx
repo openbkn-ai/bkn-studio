@@ -699,7 +699,7 @@ function AgentTools({ sources }: { sources: AgentToolSource[] }) {
                       children: <ToolDefinition definition={definition} />,
                     }))}
                   />
-                ) : source.names ? (
+                ) : source.names?.length ? (
                   source.names.map((name) => (
                     <Tag key={name} className={styles.toolName}>
                       {name}
