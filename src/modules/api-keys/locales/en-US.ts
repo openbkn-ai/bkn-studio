@@ -13,7 +13,7 @@ export const apiKeysEnUS = {
     issue: "Issue key",
     refresh: "Refresh",
     calloutInfo:
-      "A key is a personal Bearer token: paste it into the 立即体验 API Key field, use BKN_TOKEN for CLI / SDK, or configure an MCP client. Identity and permissions match yours; the secret is shown only once at issue time.",
+      "An API Key is your personal Bearer token. Under Domain Knowledge Network → Knowledge Network Integration → MCP Integration, select Configure API Key and paste the key. You can also provide it to the CLI / SDK through BKN_TOKEN or configure it in an MCP client. Calls use your account identity and permissions; the full secret is shown only once when issued, so save it immediately.",
     columns: {
       name: "Name",
       key: "Key",

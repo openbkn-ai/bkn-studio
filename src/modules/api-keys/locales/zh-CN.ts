@@ -13,7 +13,7 @@ export const apiKeysZhCN = {
     issue: "签发 Key",
     refresh: "刷新",
     calloutInfo:
-      "密钥即个人 Bearer 令牌，可填到「立即体验」的 API Key，或通过 BKN_TOKEN 配置 CLI / SDK，也可配置进 MCP 客户端。身份与权限同你本人；明文仅在签发时显示一次。",
+      "API Key 是你的个人 Bearer 令牌。可在「领域知识网络」→「知识网络对接」→「MCP 对接」中点击「配置 API Key」并粘贴密钥，也可通过 BKN_TOKEN 供 CLI / SDK 使用，或配置到 MCP 客户端。调用身份与权限与你的账号一致；密钥明文仅在签发时显示一次，请及时保存。",
     columns: {
       name: "名称",
       key: "密钥",
