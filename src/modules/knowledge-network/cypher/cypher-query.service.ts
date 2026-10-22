@@ -7,6 +7,7 @@
 
 import { http } from "@/framework/request/http";
 import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
+import { cypherPlanFrom } from "@/modules/knowledge-network/cypher/cypher-plan";
 import type { CypherResult } from "@/modules/knowledge-network/cypher/graph-values";
 import type {
   BackendListResponse,
@@ -57,10 +58,12 @@ export function cypherResultFrom(payload: unknown): CypherResult | null {
       }))
     : [];
   const execution = isRec(body.execution) ? body.execution : undefined;
+  const plan = cypherPlanFrom(body.plan);
   return {
     columns,
     entries: Array.isArray(body.entries) ? body.entries.filter(isRec) : [],
     ...(isRec(body.value_types) ? { valueTypes: body.value_types } : {}),
+    ...(plan ? { plan } : {}),
     ...(execution
       ? {
           execution: {
@@ -210,17 +213,24 @@ async function post(
 /**
  * Runs one query as written. `objectProperties` asks returned nodes to carry their display
  * property; the page guesses the returned node variables from the text, so when the backend
- * refuses them the query runs again without.
+ * refuses them the query runs again without. `explain` returns the plan in place of rows.
  */
 export async function runCypherQuery(params: {
   env: ContextLoaderEnv;
   auth?: McpAuth;
   query: string;
   objectProperties?: Record<string, string[]>;
+  /** Check and plan the query without reading any data. */
+  explain?: boolean;
   signal?: AbortSignal;
 }): Promise<CypherRun> {
-  const body: Rec = { kn_id: params.env.knId, query: params.query };
-  const extra = params.objectProperties ?? {};
+  const body: Rec = {
+    kn_id: params.env.knId,
+    query: params.query,
+    ...(params.explain ? { explain: true } : {}),
+  };
+  // A plan returns no nodes, so there is nothing to name.
+  const extra = params.explain ? {} : (params.objectProperties ?? {});
   if (Object.keys(extra).length === 0) return post(params.env, params.auth, body, params.signal);
   const first = await post(
     params.env,

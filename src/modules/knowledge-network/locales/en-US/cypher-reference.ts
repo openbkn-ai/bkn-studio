@@ -88,6 +88,26 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     ],
   },
   {
+    title: "Plan",
+    rules: [
+      "Put EXPLAIN in front of a query, or click Plan, to check and plan it without reading any data. The plan lists the query's shape, nodes, relationships, conditions, grouping, columns, sorting, the most rows it returns, the properties it reads and any warnings.",
+      "A query that would be refused gets the same error and fix as running it would; look at the plan of a query with WITH, several MATCH clauses or several hops before running it.",
+      "Warnings point out: parts of the pattern that no relationship, shared node or equality such as a.code = b.code connects (their rows combine pairwise); at most 1000 rows without LIMIT; rows narrowed by your access policy; collect refused once its evidence reaches 10000 rows.",
+      "The plan does not see where an object type's data lives: a form the next section lists as unsupported on datasets passes the plan and is refused only when run.",
+    ],
+    notes: ["Look at the plan before running"],
+  },
+  {
+    title: "Object types on datasets and indexes",
+    rules: [
+      "When object types are bound to a dataset or an index rather than a SQL data source, or a query spans more than one data source, the server reads each object type's data and joins it in memory, so only the basic forms work.",
+      "Available: MATCH, several hops, OPTIONAL MATCH; WHERE; returning properties and aggregates, ORDER BY, SKIP, LIMIT; WITH filtering after an aggregate and filtering by an earlier stage's values.",
+      "Refused: CASE, coalesce; totals over groups, comparing two lists, passing nodes to the next MATCH; returning nodes, relationships, collect or virtual edges, so such results show as a table only.",
+      "A read that is too large or times out is refused (ReadBudgetExceeded); narrow it with conditions or LIMIT. Only relation types join by key: two nodes connected only by an equality such as a.code = b.code are read in full and combined pairwise, which easily exceeds the limit, and the plan gives no warning for it.",
+    ],
+    notes: ["On a dataset: filter, group and sort"],
+  },
+  {
     title: "Not supported",
     rules: [
       "UNION, UNWIND, variable-length paths [:R*1..3], XOR, exponentiation ^, relationship properties r.x.",
