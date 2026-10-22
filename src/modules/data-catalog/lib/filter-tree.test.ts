@@ -29,11 +29,26 @@ describe("filter-tree", () => {
     }
     expect(filterOperationsForField(wide, "source")).toEqual(["==", "!=", ">", "<"]);
     expect(filterOperationsForField(wide, "local_index")).toEqual(["==", "!="]);
-    for (const value of ["1.2", "1e3", "NaN"]) {
+    // Local indexes store LARGEINT as keyword text, so equality accepts string literals.
+    for (const value of ["1.2", "1e3", "NaN", "abc"]) {
       const rule = parseFilterCondition({ field: "wide", operation: "==", value })!;
       expect(filterValidationError(rule, [wide])).toBe("invalidNumber");
       expect(filterValidationError(rule, [wide], "local_index")).toBeNull();
       expect(filterToBackend(rule, [wide])).toMatchObject({ sub_conditions: [{ value }] });
+    }
+  });
+  it("trims source integer literals while preserving signs, zeros and keyword text", () => {
+    const wide = { name: "wide", type: "large_integer" };
+    for (const value of [" 9007199254740993 ", "\t+010\n", " -09 "]) {
+      const rule = parseFilterCondition({ field: "wide", operation: "==", value })!;
+      expect(filterValidationError(rule, [wide], "source")).toBeNull();
+      expect(filterToBackend(rule, [wide])).toMatchObject({
+        sub_conditions: [{ value: value.trim() }],
+      });
+      expect(filterToBackend(rule, [wide], "local_index")).toMatchObject({
+        sub_conditions: [{ value }],
+      });
+      expect(rule.children[0]).toMatchObject({ value });
     }
   });
   it("uses keyword Feature for exact Text filters on the local index path", () => {

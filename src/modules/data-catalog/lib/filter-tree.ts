@@ -137,6 +137,7 @@ export function filterOperationsForField(
 export function filterToBackend(
   group: FilterGroup,
   fields: ResourceSchemaField[],
+  path: FilterQueryPath = "source",
 ): Record<string, unknown> | null {
   if (!group.children.length) return null;
   const fieldMap = new Map(fields.map((field) => [field.name, field]));
@@ -154,9 +155,11 @@ export function filterToBackend(
       value:
         field && isNumericFilterType(field.type) && !isLargeIntegerType(field.type)
           ? preciseJSON.parse(node.value.trim())
-          : field?.type.trim().toLowerCase() === "boolean"
-            ? node.value === "true"
-            : node.value,
+          : field && isLargeIntegerType(field.type) && path === "source"
+            ? node.value.trim()
+            : field?.type.trim().toLowerCase() === "boolean"
+              ? node.value === "true"
+              : node.value,
     };
   };
   return serialize(group);

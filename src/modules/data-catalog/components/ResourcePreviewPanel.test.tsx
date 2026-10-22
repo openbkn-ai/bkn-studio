@@ -86,6 +86,51 @@ describe("ResourcePreviewPanel", () => {
     Object.assign(testFilterRule, { field: "id", operation: ">", value: "10" });
   });
 
+  it.each(["source", "local_index"] as const)(
+    "serializes large integer filter whitespace for the %s path",
+    async (path) => {
+      previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: path });
+      Object.assign(testFilterRule, {
+        field: "wide",
+        operation: "==",
+        value: " +09007199254740993 ",
+      });
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            localIndexName: path === "local_index" ? "idx_orders" : undefined,
+            localIndexStatus: path === "local_index" ? "available" : "unavailable",
+            schema: [{ name: "wide", type: "large_integer" }],
+          }}
+        />,
+      );
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalled());
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      await waitFor(() =>
+        expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(
+          resource.id,
+          expect.objectContaining({
+            filterCondition: {
+              operation: "and",
+              sub_conditions: [
+                {
+                  field: "wide",
+                  operation: "==",
+                  value_from: "const",
+                  value: path === "source" ? "+09007199254740993" : " +09007199254740993 ",
+                },
+              ],
+            },
+          }),
+        ),
+      );
+    },
+  );
+
   it("shows type, display name, and field name together in Table and View headers", () => {
     previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
     for (const category of ["table", "logical_view"] as const) {

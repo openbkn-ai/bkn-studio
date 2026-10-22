@@ -208,7 +208,7 @@ export function ResourcePreviewPanel({
             : {}),
           ...(ignoreLocalIndex ? { ignoreLocalIndex: true } : {}),
           ...(activeFilter.children.length
-            ? { filterCondition: filterToBackend(activeFilter, resource.schema) }
+            ? { filterCondition: filterToBackend(activeFilter, resource.schema, queryPath) }
             : {}),
           limit: nextLimit,
           offset: nextOffset,
@@ -252,6 +252,7 @@ export function ResourcePreviewPanel({
       binaryContent,
       hasBinaryField,
       queriesSource,
+      queryPath,
       activeFilter,
       t,
     ],
