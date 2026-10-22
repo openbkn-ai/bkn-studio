@@ -62,7 +62,10 @@ type ResourceScope = "all" | "relations" | "actions";
 type ExpandableGroup = "metrics" | "actions";
 type Point = { x: number; y: number };
 type ViewBox = { height: number; width: number; x: number; y: number };
-type GraphError = { key: Exclude<GraphSection, "all">; message: string };
+type GraphError = {
+  key: Exclude<GraphSection, "all"> | `action:${string}`;
+  message: string;
+};
 type GraphNeighbor = {
   id: string;
   name: string;
@@ -70,12 +73,16 @@ type GraphNeighbor = {
 };
 type ActionSemanticPresentation = {
   action: KnowledgeNetworkActionTypeRecord;
-  affectDescription: string;
-  affectedObjectLabel: string;
-  conditionLabel: string;
-  sourceName: string;
-  sourceTypeLabel: string;
+  affectDescription?: string;
+  affectedObjectLabel?: string;
+  condition?: ActionTypeCondition;
+  propertyLabels: Map<string, string>;
+  sourceName?: string;
+  sourceType: ActionTypeDetail["executionConfig"]["sourceType"];
 };
+type ActionSemanticLoadResult =
+  | { presentation: ActionSemanticPresentation }
+  | { action: KnowledgeNetworkActionTypeRecord; error: unknown };
 export type ObjectTypeGraphSelectedResource =
   | { kind: "relation"; value: KnowledgeNetworkRelationTypeRecord }
   | { kind: "metric"; value: ObjectMetricRecordV1 }
@@ -1188,12 +1195,15 @@ export function ObjectTypeResourceGraph({
     let active = true;
     const loadPresentation = async (
       action: KnowledgeNetworkActionTypeRecord,
-    ): Promise<ActionSemanticPresentation> => {
+    ): Promise<ActionSemanticLoadResult> => {
       try {
         const detail = await getKnowledgeNetworkActionTypeDetail(networkId, action.id);
+        if (!detail) {
+          throw new Error(t("knowledgeNetwork.objectTypeGraphActionDetailUnavailable"));
+        }
         const conditionObjectTypeId =
-          detail?.condition?.objectTypeId || detail?.objectTypeId || action.objectTypeId;
-        const affectedObjectTypeId = detail?.affect?.objectTypeId;
+          detail.condition?.objectTypeId || detail.objectTypeId || action.objectTypeId;
+        const affectedObjectTypeId = detail.affect?.objectTypeId;
         const [conditionObjectType, affectedObjectType] = await Promise.all([
           getKnowledgeNetworkObjectTypeDetail(networkId, conditionObjectTypeId).catch(() => null),
           !affectedObjectTypeId || affectedObjectTypeId === objectType.id
@@ -1208,55 +1218,65 @@ export function ObjectTypeResourceGraph({
             ...(conditionObjectType?.logicProperties ?? []),
           ].map((property) => [property.name, property.displayName || property.name]),
         );
-        let actionSource = detail?.executionConfig.actionSource;
+        let actionSource = detail.executionConfig.actionSource;
         if (needsActionTypeActionSourceDisplayResolution(actionSource)) {
           actionSource = await resolveActionTypeActionSourceDisplayWithTimeout(actionSource!).catch(
             () => actionSource,
           );
         }
-        const sourceName =
-          getReadableActionSourceDisplayName(actionSource) ||
-          t("knowledgeNetwork.actionTypeExecutionSourceUnavailable");
-        const affectedObjectLabel = !affectedObjectTypeId
-          ? t("knowledgeNetwork.objectTypeGraphActionNoAffectedObject")
-          : affectedObjectTypeId === objectType.id
-            ? objectType.name
-            : (affectedObjectType?.name ??
-              t("knowledgeNetwork.objectTypeGraphActionNoAffectedObject"));
         return {
-          action,
-          affectDescription:
-            detail?.affect?.comment ||
-            t("knowledgeNetwork.objectTypeGraphActionNoAffectDescription"),
-          affectedObjectLabel,
-          conditionLabel: detail?.condition
-            ? actionConditionLabel(detail.condition, t, propertyLabels)
-            : t("knowledgeNetwork.objectTypeGraphActionNoCondition"),
-          sourceName,
-          sourceTypeLabel: detail?.executionConfig
-            ? actionSourceTypeLabel(detail.executionConfig.sourceType, t)
-            : t("knowledgeNetwork.actionTypeEmptyValue"),
+          presentation: {
+            action,
+            affectDescription: detail.affect?.comment,
+            affectedObjectLabel: !affectedObjectTypeId
+              ? undefined
+              : affectedObjectTypeId === objectType.id
+                ? objectType.name
+                : (affectedObjectType?.name ?? affectedObjectTypeId),
+            condition: detail.condition,
+            propertyLabels,
+            sourceName: getReadableActionSourceDisplayName(actionSource) || undefined,
+            sourceType: detail.executionConfig.sourceType,
+          },
         };
-      } catch {
+      } catch (error: unknown) {
         return {
           action,
-          affectDescription: t("knowledgeNetwork.objectTypeGraphActionNoAffectDescription"),
-          affectedObjectLabel: t("knowledgeNetwork.objectTypeGraphActionNoAffectedObject"),
-          conditionLabel: t("knowledgeNetwork.objectTypeGraphActionNoCondition"),
-          sourceName: t("knowledgeNetwork.actionTypeExecutionSourceUnavailable"),
-          sourceTypeLabel: t("knowledgeNetwork.actionTypeEmptyValue"),
+          error,
         };
       }
     };
 
-    void Promise.all(missingActions.map(loadPresentation)).then((presentations) => {
+    void Promise.all(missingActions.map(loadPresentation)).then((results) => {
       if (!active) return;
-      setActionPresentations((current) => ({
-        ...current,
-        ...Object.fromEntries(
-          presentations.map((presentation) => [presentation.action.id, presentation]),
-        ),
-      }));
+      const presentations = results.flatMap((result) =>
+        "presentation" in result ? [result.presentation] : [],
+      );
+      const failures = results.flatMap((result) => ("error" in result ? [result] : []));
+      if (presentations.length > 0) {
+        setActionPresentations((current) => ({
+          ...current,
+          ...Object.fromEntries(
+            presentations.map((presentation) => [presentation.action.id, presentation]),
+          ),
+        }));
+      }
+      const attemptedKeys = new Set(missingActions.map((action) => `action:${action.id}`));
+      setErrors((current) => [
+        ...current.filter((entry) => !attemptedKeys.has(entry.key)),
+        ...failures.map(({ action, error }) => ({
+          key: `action:${action.id}` as const,
+          message: t("knowledgeNetwork.objectTypeGraphActionDetailLoadError", {
+            message: extractRequestErrorMessage(error),
+            name: action.name,
+          }),
+        })),
+      ]);
+      if (failures.length > 0) {
+        const failedIds = new Set(failures.map(({ action }) => action.id));
+        setExpandedActions((current) => current.filter((action) => !failedIds.has(action.id)));
+        setFocusedAction((current) => (current && failedIds.has(current.id) ? undefined : current));
+      }
     });
     return () => {
       active = false;
@@ -1710,6 +1730,19 @@ export function ObjectTypeResourceGraph({
 
             {expandedActionPresentations.map((presentation) => {
               const { action } = presentation;
+              const conditionLabel = presentation.condition
+                ? actionConditionLabel(presentation.condition, t, presentation.propertyLabels)
+                : t("knowledgeNetwork.objectTypeGraphActionNoCondition");
+              const sourceName =
+                presentation.sourceName ||
+                t("knowledgeNetwork.actionTypeExecutionSourceUnavailable");
+              const sourceTypeLabel = actionSourceTypeLabel(presentation.sourceType, t);
+              const affectedObjectLabel =
+                presentation.affectedObjectLabel ||
+                t("knowledgeNetwork.objectTypeGraphActionNoAffectedObject");
+              const affectDescription =
+                presentation.affectDescription ||
+                t("knowledgeNetwork.objectTypeGraphActionNoAffectDescription");
               const originalActionPosition = position(`action:${action.id}`);
               const laneY = originalActionPosition.y;
               const actionFocusKey = `action-focus:${action.id}`;
@@ -1851,7 +1884,7 @@ export function ObjectTypeResourceGraph({
                   <g
                     aria-label={`${t("knowledgeNetwork.objectTypeGraphActionTrigger", {
                       kind: actionTypeLabel(action.actionKind, t),
-                    })} ${presentation.conditionLabel}`}
+                    })} ${conditionLabel}`}
                     className={`${styles.actionSemanticNode} ${styles.actionTriggerNode}`}
                     data-action-semantic="trigger"
                     data-graph-node="true"
@@ -1873,15 +1906,15 @@ export function ObjectTypeResourceGraph({
                       })}
                     </text>
                     <text className={styles.actionSemanticDescription} textAnchor="middle" y="14">
-                      {truncate(presentation.conditionLabel, 18)}
+                      {truncate(conditionLabel, 18)}
                     </text>
-                    <title>{presentation.conditionLabel}</title>
+                    <title>{conditionLabel}</title>
                   </g>
 
                   <g
                     aria-label={`${t("knowledgeNetwork.objectTypeGraphActionExecution", {
-                      type: presentation.sourceTypeLabel,
-                    })} ${presentation.sourceName}`}
+                      type: sourceTypeLabel,
+                    })} ${sourceName}`}
                     className={`${styles.actionSemanticNode} ${styles.actionExecutionNode}`}
                     data-action-semantic="execution"
                     data-graph-node="true"
@@ -1899,19 +1932,19 @@ export function ObjectTypeResourceGraph({
                     />
                     <text className={styles.actionSemanticTitle} textAnchor="middle" y="-7">
                       {t("knowledgeNetwork.objectTypeGraphActionExecution", {
-                        type: presentation.sourceTypeLabel,
+                        type: sourceTypeLabel,
                       })}
                     </text>
                     <text className={styles.actionSemanticDescription} textAnchor="middle" y="14">
-                      {truncate(presentation.sourceName, 15)}
+                      {truncate(sourceName, 15)}
                     </text>
-                    <title>{presentation.sourceName}</title>
+                    <title>{sourceName}</title>
                   </g>
 
                   <g
                     aria-label={`${t("knowledgeNetwork.objectTypeGraphActionImpact", {
-                      object: presentation.affectedObjectLabel,
-                    })} ${presentation.affectDescription}`}
+                      object: affectedObjectLabel,
+                    })} ${affectDescription}`}
                     className={`${styles.actionSemanticNode} ${styles.actionImpactNode}`}
                     data-action-semantic="impact"
                     data-graph-node="true"
@@ -1930,15 +1963,15 @@ export function ObjectTypeResourceGraph({
                     <text className={styles.actionSemanticTitle} textAnchor="middle" y="-7">
                       {truncate(
                         t("knowledgeNetwork.objectTypeGraphActionImpact", {
-                          object: presentation.affectedObjectLabel,
+                          object: affectedObjectLabel,
                         }),
                         17,
                       )}
                     </text>
                     <text className={styles.actionSemanticDescription} textAnchor="middle" y="14">
-                      {truncate(presentation.affectDescription, 18)}
+                      {truncate(affectDescription, 18)}
                     </text>
-                    <title>{`${presentation.affectedObjectLabel} · ${presentation.affectDescription}`}</title>
+                    <title>{`${affectedObjectLabel} · ${affectDescription}`}</title>
                   </g>
                 </g>
               );

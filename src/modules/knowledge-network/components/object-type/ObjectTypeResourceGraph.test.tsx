@@ -638,6 +638,26 @@ describe("ObjectTypeResourceGraph", () => {
     expect(within(graph).getByRole("button", { name: "行动类 短信推送" })).toBeInTheDocument();
   });
 
+  it.each(["request failure", "empty response"] as const)(
+    "does not render fallback semantics when action details have a %s",
+    async (failureKind) => {
+      if (failureKind === "request failure") {
+        mocks.getActionDetail.mockRejectedValue(new Error("行动详情服务不可用"));
+      } else {
+        mocks.getActionDetail.mockResolvedValue(null);
+      }
+      renderGraph(false, { resourceScope: "actions" });
+
+      const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+      fireEvent.click(await within(graph).findByRole("button", { name: "行动类 更新订单" }));
+
+      expect(await screen.findByText(/行动类“更新订单”详情加载失败/)).toBeInTheDocument();
+      expect(graph.querySelectorAll("[data-action-semantic]")).toHaveLength(0);
+      expect(within(graph).getByRole("button", { name: "行动类 更新订单" })).toBeInTheDocument();
+      expect(screen.queryByText("已展开 1 条")).not.toBeInTheDocument();
+    },
+  );
+
   it("opens the current object node drawer and navigates to its details", async () => {
     const handlers = renderGraph();
 

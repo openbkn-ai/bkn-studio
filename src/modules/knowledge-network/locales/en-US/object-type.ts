@@ -182,6 +182,9 @@ export const objecttypePart = {
   objectTypeGraphActionExecution: "Execute · {{type}}",
   objectTypeGraphActionImpact: "Impact · {{object}}",
   objectTypeGraphActionNoCondition: "No additional condition",
+  objectTypeGraphActionDetailLoadError:
+    'Failed to load details for action type "{{name}}": {{message}}',
+  objectTypeGraphActionDetailUnavailable: "The action detail API returned no data",
   objectTypeGraphActionNoAffectedObject: "Not declared",
   objectTypeGraphActionNoAffectDescription: "No impact details",
   objectTypeGraphActionViewDetail: "View details",

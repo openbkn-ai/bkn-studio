@@ -172,6 +172,8 @@ export const objecttypePart = {
   objectTypeGraphActionExecution: "执行 · {{type}}",
   objectTypeGraphActionImpact: "影响 · {{object}}",
   objectTypeGraphActionNoCondition: "无附加条件",
+  objectTypeGraphActionDetailLoadError: "行动类“{{name}}”详情加载失败：{{message}}",
+  objectTypeGraphActionDetailUnavailable: "接口未返回行动类详情",
   objectTypeGraphActionNoAffectedObject: "未声明",
   objectTypeGraphActionNoAffectDescription: "暂无影响说明",
   objectTypeGraphActionViewDetail: "查看详情",
