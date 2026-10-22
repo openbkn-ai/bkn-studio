@@ -414,6 +414,57 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     },
   );
 
+  it.each(["下载 Markdown", "交给 BKN Agent 分析"])(
+    "ignores a stale Markdown rejection after switching rounds from %s",
+    async (action) => {
+      getConversations.mockResolvedValue({
+        entries: [{ conversationId: "conv-stale", questionPreview: "Stale read" }],
+        total: 1,
+      });
+      getInteractions.mockResolvedValue({
+        entries: [
+          { interactionId: "int-first", questionPreview: "First stale round" },
+          { interactionId: "int-second", questionPreview: "Second stale round" },
+        ],
+        total: 2,
+      });
+      getInteraction.mockImplementation((interactionId: string) =>
+        Promise.resolve({
+          interactionId,
+          operations: [],
+          conversationContext: [],
+          derivedFacts: [],
+          contextRelations: [],
+        }),
+      );
+      let rejectFirst!: (reason: Error) => void;
+      getMarkdown.mockImplementationOnce(
+        () =>
+          new Promise<string>((_resolve, reject) => {
+            rejectFirst = reject;
+          }),
+      );
+      const error = vi.spyOn(message, "error");
+      try {
+        render(<BusinessProvenanceScene />);
+        fireEvent.click(await screen.findByRole("button", { name: "Stale read" }));
+        fireEvent.click(await screen.findByRole("button", { name: action }));
+        if (action === "交给 BKN Agent 分析")
+          fireEvent.click(screen.getByRole("button", { name: "关闭 BKN Agent 分析" }));
+        fireEvent.click(screen.getByText("Second stale round"));
+        await waitFor(() => expect(getAnalysisHistory).toHaveBeenLastCalledWith("int-second"));
+        await act(async () => {
+          rejectFirst(new Error("old read failed"));
+          await Promise.resolve();
+        });
+        expect(error).not.toHaveBeenCalled();
+        expect(writeClipboard).not.toHaveBeenCalled();
+      } finally {
+        error.mockRestore();
+      }
+    },
+  );
+
   it("does not let an earlier lazy Markdown response replace the selected round and reuses the loaded text", async () => {
     getConversations.mockResolvedValue({
       entries: [{ conversationId: "conv-lazy", questionPreview: "按需加载" }],

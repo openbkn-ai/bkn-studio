@@ -1018,7 +1018,9 @@ export function BusinessProvenanceScene() {
       link.click();
       URL.revokeObjectURL(url);
     } catch {
-      message.error(bpText("errors.markdownLoad"));
+      if (loadedInteractionId.current === selectedInteraction.interactionId) {
+        message.error(bpText("errors.markdownLoad"));
+      }
     }
   }, [ensureAnalysisMarkdown, selectedInteraction]);
 
@@ -1459,9 +1461,11 @@ export function BusinessProvenanceScene() {
                     disabled={analysisMarkdownLoading}
                     onClick={() => {
                       setAnalysisPanelOpen(true);
-                      void ensureAnalysisMarkdown().catch(() =>
-                        message.error(bpText("errors.markdownLoad")),
-                      );
+                      void ensureAnalysisMarkdown().catch(() => {
+                        if (loadedInteractionId.current === selectedInteraction.interactionId) {
+                          message.error(bpText("errors.markdownLoad"));
+                        }
+                      });
                     }}
                   >
                     {bpText("actions.analyze")}
