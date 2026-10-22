@@ -340,7 +340,12 @@ export async function getBusinessProvenanceInteraction(
   const timeRail = response.data.time_rail_payloads_shared
     ? response.data.time_rail?.map((item) => {
         const operation = operationsByAttempt.get(`${item.operation_id}:${item.attempt}`);
-        if (!operation) return item;
+        if (!operation) {
+          if (item.input.shared_inline || item.output?.shared_inline || item.error?.shared_inline) {
+            throw new Error("missing shared time-rail operation");
+          }
+          return item;
+        }
         return {
           ...item,
           input: restorePayload(item.input, operation.input) ?? item.input,

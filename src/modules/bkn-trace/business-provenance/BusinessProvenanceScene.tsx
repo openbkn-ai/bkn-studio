@@ -959,6 +959,7 @@ export function BusinessProvenanceScene() {
     const request = { id, promise: Promise.resolve("") };
     request.promise = getBusinessProvenanceMarkdown(id)
       .then((markdown) => {
+        if (!markdown.trim()) throw new Error("empty provenance Markdown");
         if (markdownRequest.current === request) setAnalysisMarkdown(markdown);
         return markdown;
       })
@@ -974,9 +975,17 @@ export function BusinessProvenanceScene() {
 
   const copyMarkdown = useCallback(async () => {
     if (!selectedInteraction) return;
+    let markdown: string;
     try {
-      const markdown = await ensureAnalysisMarkdown();
-      if (loadedInteractionId.current !== selectedInteraction.interactionId) return;
+      markdown = await ensureAnalysisMarkdown();
+    } catch {
+      if (loadedInteractionId.current === selectedInteraction.interactionId) {
+        message.error(bpText("errors.markdownLoad"));
+      }
+      return;
+    }
+    if (loadedInteractionId.current !== selectedInteraction.interactionId) return;
+    try {
       await writeTextToClipboard(markdown);
       message.success(bpText("agent.markdownCopied"));
     } catch {

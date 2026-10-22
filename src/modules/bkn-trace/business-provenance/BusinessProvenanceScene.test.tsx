@@ -10,6 +10,7 @@ import { resolve } from "node:path";
 
 import { act, configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { message } from "antd";
 
 import { BusinessProvenanceScene } from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene";
 
@@ -18,6 +19,8 @@ const getInteractions = vi.hoisted(() => vi.fn());
 const getInteraction = vi.hoisted(() => vi.fn());
 const getMarkdown = vi.hoisted(() => vi.fn());
 const streamAnalysis = vi.hoisted(() => vi.fn());
+const writeClipboard = vi.hoisted(() => vi.fn());
+vi.mock("@/framework/compat/clipboard", () => ({ writeTextToClipboard: writeClipboard }));
 vi.mock("@/modules/bkn-trace/evidence-chain/CurrentExplanationPanel", () => ({
   CurrentExplanationPanel: ({ interactionId }: { interactionId: string }) => (
     <div>saved-evidence:{interactionId}</div>
@@ -62,6 +65,8 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     getInteractions.mockReset();
     getInteraction.mockReset();
     getMarkdown.mockReset();
+    writeClipboard.mockReset();
+    writeClipboard.mockResolvedValue(undefined);
     streamAnalysis.mockReset();
     getAnalysisHistory.mockReset();
     getAnalysisHistory.mockResolvedValue([]);
@@ -354,6 +359,60 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     fireEvent.click(screen.getByRole("tab", { name: "时间链" }));
     expect(screen.queryByText("saved-evidence:int-two")).toBeNull();
   });
+
+  it.each(["request failure", "empty response"])(
+    "reports Markdown loading errors without copying or downloading on %s and permits retry",
+    async (failure) => {
+      getConversations.mockResolvedValue({
+        entries: [{ conversationId: "conv-errors", questionPreview: "Markdown errors" }],
+        total: 1,
+      });
+      getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-errors" }], total: 1 });
+      getInteraction.mockResolvedValue({
+        interactionId: "int-errors",
+        operations: [],
+        conversationContext: [],
+        derivedFacts: [],
+        contextRelations: [],
+      });
+      const error = vi.spyOn(message, "error");
+      const success = vi.spyOn(message, "success");
+      const failNextRead = () => {
+        if (failure === "request failure")
+          getMarkdown.mockRejectedValueOnce(new Error("server unavailable"));
+        else getMarkdown.mockResolvedValueOnce("");
+      };
+      try {
+        render(<BusinessProvenanceScene />);
+        fireEvent.click(await screen.findByRole("button", { name: "Markdown errors" }));
+        const copy = await screen.findByRole("button", { name: "复制 Markdown" });
+        failNextRead();
+        fireEvent.click(copy);
+        await waitFor(() =>
+          expect(error).toHaveBeenCalledWith("知识网络优化事实 Markdown 加载失败"),
+        );
+        expect(writeClipboard).not.toHaveBeenCalled();
+        expect(success).not.toHaveBeenCalled();
+        error.mockClear();
+        failNextRead();
+        fireEvent.click(screen.getByRole("button", { name: "下载 Markdown" }));
+        await waitFor(() =>
+          expect(error).toHaveBeenCalledWith("知识网络优化事实 Markdown 加载失败"),
+        );
+        fireEvent.click(copy);
+        await waitFor(() =>
+          expect(writeClipboard).toHaveBeenCalledWith(expect.stringContaining("# 当前交互轮次")),
+        );
+        writeClipboard.mockRejectedValueOnce(new Error("clipboard denied"));
+        fireEvent.click(copy);
+        await waitFor(() => expect(error).toHaveBeenCalledWith("复制失败"));
+        expect(getMarkdown).toHaveBeenCalledTimes(3);
+      } finally {
+        error.mockRestore();
+        success.mockRestore();
+      }
+    },
+  );
 
   it("does not let an earlier lazy Markdown response replace the selected round and reuses the loaded text", async () => {
     getConversations.mockResolvedValue({

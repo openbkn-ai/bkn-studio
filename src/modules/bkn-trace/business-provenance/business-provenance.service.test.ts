@@ -53,8 +53,8 @@ describe("EE business provenance service", () => {
           { operation_id: "op", attempt: 1, input: { mode: "ref", ref: "original-ref" } },
         ],
         operations: [
-          { operation_id: "op", attempt: 1, input, output: retry },
           { operation_id: "op", attempt: 2, input: retry, error: input },
+          { operation_id: "op", attempt: 1, input, output: retry },
         ],
       },
     });
@@ -66,8 +66,48 @@ describe("EE business provenance service", () => {
     expect(value.timeRail?.[1]?.error).toEqual(input);
     expect(value.timeRail?.[2]?.input.inline).toBe("distinct");
     expect(value.timeRail?.[3]?.input).toEqual({ mode: "ref", ref: "original-ref" });
-    expect(value.operations[0]?.input).toEqual(input);
+    expect(value.operations[1]?.input).toEqual(input);
   });
+
+  it("keeps zero and first attempts distinct when restoring shared inline values", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        time_rail_payloads_shared: true,
+        operations: [
+          { operation_id: "op", attempt: 1, input: { inline: "first" } },
+          { operation_id: "op", attempt: 0, input: { inline: "zero" } },
+        ],
+        time_rail: [0, 1].map((attempt) => ({
+          operation_id: "op",
+          attempt,
+          input: { shared_inline: true },
+        })),
+      },
+    });
+    const { getBusinessProvenanceInteraction } = await import("./business-provenance.service");
+    const value = await getBusinessProvenanceInteraction("int-attempts");
+    expect(value.timeRail?.map((item) => item.input.inline)).toEqual(["zero", "first"]);
+  });
+
+  it.each(["missing operation", "missing inline"])(
+    "rejects %s for an explicitly shared field instead of displaying it as unrecorded",
+    async (reason) => {
+      getMock.mockResolvedValue({
+        data: {
+          time_rail_payloads_shared: true,
+          operations:
+            reason === "missing operation"
+              ? []
+              : [{ operation_id: "op", attempt: 1, input: { mode: "ref", ref: "recorded-ref" } }],
+          time_rail: [{ operation_id: "op", attempt: 1, input: { shared_inline: true } }],
+        },
+      });
+      const { getBusinessProvenanceInteraction } = await import("./business-provenance.service");
+      await expect(getBusinessProvenanceInteraction("int-invalid")).rejects.toThrow(
+        /shared time-rail/,
+      );
+    },
+  );
 
   it("silences the expected missing-EE-route response while reading the conversation list", async () => {
     getMock.mockResolvedValue({ data: { entries: [{ conversation_id: "conv-1" }], total: 1 } });
