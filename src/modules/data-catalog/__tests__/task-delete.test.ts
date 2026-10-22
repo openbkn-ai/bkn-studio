@@ -20,6 +20,11 @@ describe.each(["en-US", "zh-CN"])("task deletion titles (%s)", (language) => {
         "zh-CN": { translation: dataCatalogZhCN },
       },
     });
+    expect(i18n.t("dataCatalog.task.batchDeleteConfirmContent")).toBe(
+      language === "en-US"
+        ? "Deleted task records cannot be recovered."
+        : "删除后任务记录不可恢复。",
+    );
     for (const [key, en, zh] of [
       ["batchDeleteDiscoveryConfirmTitle", "discovery", "探查"],
       ["batchDeleteSemanticConfirmTitle", "semantic understanding", "语义理解"],

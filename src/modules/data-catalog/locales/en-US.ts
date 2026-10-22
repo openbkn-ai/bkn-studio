@@ -946,8 +946,7 @@ export const dataCatalogEnUS = {
       batchDeleteConfirmTitle: "Delete {{count}} build tasks",
       batchDeleteConfirmTitle_one: "Delete {{count}} build task",
       batchDeleteConfirmTitle_other: "Delete {{count}} build tasks",
-      batchDeleteConfirmContent:
-        "Deleted task records cannot be recovered; running tasks are stopped before deletion.",
+      batchDeleteConfirmContent: "Deleted task records cannot be recovered.",
       batchDeletePartial: "Failed to delete: {{failed}}/{{total}}",
       model: "Model",
       finishedAt: "Finished At",

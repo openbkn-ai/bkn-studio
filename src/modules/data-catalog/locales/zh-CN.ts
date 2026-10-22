@@ -871,7 +871,7 @@ export const dataCatalogZhCN = {
       batchDeleteConfirmTitle: "批量删除 {{count}} 个构建任务",
       batchDeleteConfirmTitle_one: "批量删除 {{count}} 个构建任务",
       batchDeleteConfirmTitle_other: "批量删除 {{count}} 个构建任务",
-      batchDeleteConfirmContent: "删除后任务记录不可恢复;运行中的任务会先停止再删除。",
+      batchDeleteConfirmContent: "删除后任务记录不可恢复。",
       batchDeletePartial: "{{failed}}/{{total}} 个任务删除失败",
       model: "模型",
       finishedAt: "完成时间",
