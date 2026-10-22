@@ -18,12 +18,23 @@ import {
 const SAMPLE_API = "/studio/samples";
 const INSTALL_TIMEOUT_MS = 30000;
 
-export async function importSamplePackage(file: File): Promise<void> {
-  await http.post(`${SAMPLE_API}/import`, file, {
+export async function importSamplePackage(file: File): Promise<string> {
+  const response = await http.post<unknown>(`${SAMPLE_API}/import`, file, {
     headers: { "Content-Type": "application/gzip" },
     skipErrorToast: true,
     timeout: 120000,
   });
+  const data = response.data;
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("sample" in data) ||
+    typeof data.sample !== "string" ||
+    !/^[a-z0-9][a-z0-9-]{0,62}$/.test(data.sample)
+  ) {
+    throw new Error("Invalid sample package import response");
+  }
+  return data.sample;
 }
 
 export async function deleteSamplePackage(sampleName: string): Promise<void> {

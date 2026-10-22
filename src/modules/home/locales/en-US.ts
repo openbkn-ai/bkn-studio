@@ -206,8 +206,6 @@ export const homeEnUS = {
       offlineImported: "Offline package imported",
       installProgress: "Installation progress: {{stage}}",
       offlinePackagesTitle: "Imported offline packages",
-      offlinePackagesDescription:
-        "Review cached offline versions. Uninstalled packages can be removed and uploaded again.",
       removeOffline: "Remove package",
       offlineDeleting: "Removing…",
       offlineDeleteFailed: "The offline package could not be removed. Try again later.",
@@ -216,10 +214,9 @@ export const homeEnUS = {
       languageChinese: "Chinese",
       languageEnglish: "English",
       noLanguageMatches: "No samples match this language. Select All to see every sample.",
-      selectOfflinePackage: "Offline package",
       viewSample: "View sample",
-      offlinePackageInUse:
-        "This package is installed or required by a task and cannot be deleted yet.",
+      hiddenOfflinePackages: "{{count}} other offline packages are hidden by the language filter.",
+      showAllLanguages: "Show all packages",
       sourceLabel: "Source",
       sourceName: "openbkn-ai/bkn-samples",
       stages: {

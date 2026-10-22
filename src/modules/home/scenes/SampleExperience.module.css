@@ -189,9 +189,10 @@
 
 .offlinePackages {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
   border: 1px solid var(--color-warning-600, #d48806);
   border-radius: 10px;
   background: color-mix(in srgb, var(--color-warning-600, #d48806) 7%, var(--color-bg-surface));
@@ -200,28 +201,13 @@
 .offlinePackages h3 {
   margin: 0;
   color: var(--color-text-primary);
-}
-
-.offlinePackageActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .offlinePicker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+  flex: 0 1 420px;
   min-width: 0;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-}
-
-.offlinePicker select {
-  width: min(360px, 100%);
   max-width: 100%;
   padding: 6px 10px;
   border: 1px solid var(--color-divider);
@@ -229,6 +215,22 @@
   background: var(--color-bg-surface);
   color: var(--color-text-primary);
   font: inherit;
+}
+
+.showAllPackages {
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-600);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.offlineDeleteError {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-error-600, #cf1322);
 }
 
 .removeOffline {

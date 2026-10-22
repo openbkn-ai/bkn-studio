@@ -13,6 +13,8 @@ import { homeEnUS } from "@/modules/home/locales/en-US";
 import { homeZhCN } from "@/modules/home/locales/zh-CN";
 
 const downloadErrorLocale = vi.hoisted(() => ({ value: null as "zh-CN" | "en-US" | null }));
+const interfaceLocale = vi.hoisted(() => ({ value: "zh-CN" }));
+const importSamplePackage = vi.hoisted(() => vi.fn());
 const listSamples = vi.hoisted(() => vi.fn());
 const createSampleInstallation = vi.hoisted(() => vi.fn());
 const retrySampleInstallation = vi.hoisted(() => vi.fn());
@@ -28,7 +30,7 @@ const scrollIntoView = vi.hoisted(() => vi.fn());
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
-    i18n: { language: "zh-CN", resolvedLanguage: "zh-CN" },
+    i18n: { language: interfaceLocale.value, resolvedLanguage: interfaceLocale.value },
     t: (key: string, values?: Record<string, unknown>) => {
       if (downloadErrorLocale.value) {
         const messages =
@@ -90,6 +92,7 @@ vi.mock("@/modules/home/services/sample-catalog.service", () => ({
   listSampleInstallations,
   refreshSamples,
   deleteSamplePackage,
+  importSamplePackage,
   uninstallSample,
 }));
 
@@ -501,6 +504,8 @@ describe("SampleExperience", () => {
   });
   beforeEach(() => {
     downloadErrorLocale.value = null;
+    interfaceLocale.value = "zh-CN";
+    importSamplePackage.mockReset();
     vi.clearAllMocks();
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
       configurable: true,
@@ -820,6 +825,107 @@ describe("SampleExperience", () => {
       await notesReady;
     });
     expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("defaults to the interface language and exposes unknown languages under All", async () => {
+    interfaceLocale.value = "en-US";
+    listSamples.mockResolvedValue({
+      samples: [
+        sample({ displayName: "Chinese only", language: "zh-CN" }),
+        sample({ name: "english", displayName: "English only", language: "en-US" }),
+        sample({ name: "unknown", displayName: "Unknown language", language: undefined }),
+      ],
+    });
+    renderExperience();
+    expect(await screen.findByRole("heading", { name: "English only" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Chinese only" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Unknown language" })).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "home.sample.languageFilter" }), {
+      target: { value: "all" },
+    });
+    expect(screen.getByRole("heading", { name: "Chinese only" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Unknown language" })).toBeVisible();
+  });
+
+  it("offers a direct way to manage unknown-language packages hidden by the default filter", async () => {
+    listSamples.mockResolvedValue({
+      canImport: true,
+      samples: [
+        sample(),
+        sample({
+          name: "unknown",
+          displayName: "Legacy package",
+          source: "offline",
+          language: undefined,
+        }),
+      ],
+    });
+    renderExperience();
+    const showAll = await screen.findByRole("button", { name: "home.sample.showAllLanguages" });
+    expect(screen.queryByRole("heading", { name: "Legacy package" })).toBeNull();
+    fireEvent.click(showAll);
+    expect(screen.getByRole("combobox", { name: "home.sample.offlinePackagesTitle" })).toHaveValue(
+      "unknown",
+    );
+    expect(screen.getByRole("button", { name: "home.sample.removeOffline" })).toBeEnabled();
+  });
+
+  it("selects the just-imported offline package even when its language differs", async () => {
+    const existing = sample({ source: "offline" });
+    const incoming = sample({
+      name: "harbor",
+      displayName: "Harbor",
+      source: "offline",
+      language: "en-US",
+    });
+    listSamples
+      .mockResolvedValueOnce({ canImport: true, samples: [existing] })
+      .mockResolvedValue({ canImport: true, samples: [existing, incoming] });
+    importSamplePackage.mockResolvedValue("harbor");
+    renderExperience();
+    await screen.findByRole("heading", { name: "Northwind" });
+    const file = new File(["archive"], "package.tar.gz", { type: "application/gzip" });
+    fireEvent.change(screen.getByLabelText("home.sample.importPackage"), {
+      target: { files: [file] },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("combobox", { name: "home.sample.offlinePackagesTitle" }),
+      ).toHaveValue("harbor"),
+    );
+    expect(screen.getByRole("combobox", { name: "home.sample.languageFilter" })).toHaveValue("all");
+    expect(importSamplePackage).toHaveBeenCalledWith(file);
+  });
+
+  it("removes only the selected offline package and falls back to the remaining package", async () => {
+    const first = sample({ source: "offline" });
+    const second = sample({ name: "harbor", displayName: "Harbor", source: "offline" });
+    listSamples
+      .mockResolvedValueOnce({ canImport: true, samples: [first, second] })
+      .mockResolvedValue({ canImport: true, samples: [first] });
+    deleteSamplePackage.mockResolvedValue(undefined);
+    renderExperience();
+    const picker = await screen.findByRole("combobox", {
+      name: "home.sample.offlinePackagesTitle",
+    });
+    fireEvent.change(picker, { target: { value: "harbor" } });
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.removeOffline" }));
+    await waitFor(() => expect(deleteSamplePackage).toHaveBeenCalledWith("harbor"));
+    await waitFor(() => expect(picker).toHaveValue("northwind"));
+  });
+
+  it("shows a removal error beside the package picker and clears it after successful retry", async () => {
+    listSamples.mockResolvedValue({ canImport: true, samples: [sample({ source: "offline" })] });
+    deleteSamplePackage
+      .mockRejectedValueOnce(new Error("unavailable"))
+      .mockResolvedValue(undefined);
+    renderExperience();
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.removeOffline" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("home.sample.offlineDeleteFailed");
+    expect(screen.getAllByText("home.sample.offlineDeleteFailed")).toHaveLength(1);
+    listSamples.mockResolvedValue({ canImport: true, samples: [] });
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.removeOffline" }));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
   it("removes an imported offline package and reloads the catalog", async () => {

@@ -62,6 +62,7 @@ export function SampleExperience() {
   const [importError, setImportError] = useState(false);
   const [offlineDeleting, setOfflineDeleting] = useState<string | null>(null);
   const [offlineSelection, setOfflineSelection] = useState<string | null>(null);
+  const [offlineDeleteErrors, setOfflineDeleteErrors] = useState<Record<string, string>>({});
   const installationsRef = useRef(installations);
   const runningRef = useRef(new Set<string>());
   const catalogRequestRef = useRef(0);
@@ -279,7 +280,8 @@ export function SampleExperience() {
     setImporting(true);
     setImportError(false);
     try {
-      await importSamplePackage(file);
+      const importedSample = await importSamplePackage(file);
+      setOfflineSelection(importedSample);
       setLanguageOverride("all");
       await loadCatalog();
     } catch {
@@ -290,13 +292,13 @@ export function SampleExperience() {
   };
 
   const removeOfflinePackage = async (item: SampleCatalogItem) => {
-    setActionErrors((current) => ({ ...current, [item.name]: "" }));
+    setOfflineDeleteErrors((current) => ({ ...current, [item.name]: "" }));
     setOfflineDeleting(item.name);
     try {
       await deleteSamplePackage(item.name);
       await loadCatalog();
     } catch {
-      setActionErrors((current) => ({
+      setOfflineDeleteErrors((current) => ({
         ...current,
         [item.name]: t("home.sample.offlineDeleteFailed"),
       }));
@@ -311,6 +313,8 @@ export function SampleExperience() {
       languageFilter === "all" || item.language?.toLowerCase().split("-")[0] === languageFilter,
   );
   const offlinePackages = visibleSamples.filter((item) => item.source === "offline");
+  const hiddenOfflineCount =
+    samples.filter((item) => item.source === "offline").length - offlinePackages.length;
   const selectedPackage =
     offlinePackages.find((item) => item.name === offlineSelection) ?? offlinePackages[0];
   const packageInUse =
@@ -454,59 +458,63 @@ export function SampleExperience() {
         <p className={styles.meta}>{t("home.sample.noLanguageMatches")}</p>
       ) : null}
 
-      {selectedPackage ? (
+      {selectedPackage || hiddenOfflineCount > 0 ? (
         <section className={styles.offlinePackages} aria-labelledby="offline-packages-title">
-          <div>
-            <h3 id="offline-packages-title">{t("home.sample.offlinePackagesTitle")}</h3>
-            <p className={styles.meta}>{t("home.sample.offlinePackagesDescription")}</p>
-          </div>
-          <div className={styles.offlinePackageActions}>
-            <label className={styles.offlinePicker}>
-              <span>{t("home.sample.selectOfflinePackage")}</span>
+          <h3 id="offline-packages-title">{t("home.sample.offlinePackagesTitle")}</h3>
+          {selectedPackage ? (
+            <>
               <select
+                className={styles.offlinePicker}
+                aria-labelledby="offline-packages-title"
                 value={selectedPackage.name}
                 disabled={offlineDeleting !== null}
                 onChange={(event) => setOfflineSelection(event.target.value)}
               >
                 {offlinePackages.map((item) => (
                   <option key={item.name} value={item.name}>
-                    {item.displayName} · {item.version}
+                    {item.displayName} · {item.version} · {t(`home.sample.status.${item.status}`)}
                   </option>
                 ))}
               </select>
-            </label>
-            <span className={styles.meta}>{t(`home.sample.status.${selectedPackage.status}`)}</span>
-            <button
-              className={styles.reload}
-              onClick={() => {
-                setExpandedName(selectedPackage.name);
-                document
-                  .getElementById(`sample-card-${selectedPackage.name}`)
-                  ?.scrollIntoView({ block: "start", behavior: "auto" });
-              }}
-              type="button"
-            >
-              {t("home.sample.viewSample")}
-            </button>
-            {catalog?.canImport ? (
               <button
-                className={styles.removeOffline}
-                disabled={offlineDeleting !== null || Boolean(packageInUse)}
-                onClick={() => void removeOfflinePackage(selectedPackage)}
+                className={styles.reload}
+                onClick={() => {
+                  setExpandedName(selectedPackage.name);
+                  document
+                    .getElementById(`sample-card-${selectedPackage.name}`)
+                    ?.scrollIntoView({ block: "start", behavior: "auto" });
+                }}
                 type="button"
               >
-                {offlineDeleting === selectedPackage.name
-                  ? t("home.sample.offlineDeleting")
-                  : t("home.sample.removeOffline")}
+                {t("home.sample.viewSample")}
               </button>
-            ) : null}
-          </div>
-          {packageInUse ? (
-            <p className={styles.meta}>{t("home.sample.offlinePackageInUse")}</p>
+              {catalog?.canImport ? (
+                <button
+                  className={styles.removeOffline}
+                  disabled={offlineDeleting !== null || Boolean(packageInUse)}
+                  onClick={() => void removeOfflinePackage(selectedPackage)}
+                  type="button"
+                >
+                  {offlineDeleting === selectedPackage.name
+                    ? t("home.sample.offlineDeleting")
+                    : t("home.sample.removeOffline")}
+                </button>
+              ) : null}
+            </>
           ) : null}
-          {actionErrors[selectedPackage.name] ? (
-            <p className={styles.error} role="alert">
-              {actionErrors[selectedPackage.name]}
+          {hiddenOfflineCount > 0 ? (
+            <button
+              className={styles.showAllPackages}
+              title={t("home.sample.hiddenOfflinePackages", { count: hiddenOfflineCount })}
+              onClick={() => setLanguageOverride("all")}
+              type="button"
+            >
+              {t("home.sample.showAllLanguages")}
+            </button>
+          ) : null}
+          {selectedPackage && offlineDeleteErrors[selectedPackage.name] ? (
+            <p className={styles.offlineDeleteError} role="alert">
+              {offlineDeleteErrors[selectedPackage.name]}
             </p>
           ) : null}
         </section>
