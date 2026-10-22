@@ -35,6 +35,7 @@ export type SampleKnowledgeNetwork = {
 
 export type SampleCatalogItem = {
   source?: "official" | "offline";
+  language?: string;
   catalogId?: string;
   displayName: string;
   expectedTables: number;
@@ -218,6 +219,7 @@ function parseSample(payload: unknown): SampleCatalogItem | null {
   return {
     source: payload.source === "offline" ? "offline" : "official",
     catalogId: optionalString(payload.catalogId),
+    language: optionalString(payload.language),
     displayName: optionalString(payload.displayName) ?? name,
     expectedTables: finiteCount(payload.expectedTables),
     installationId: optionalString(payload.installationId) ?? null,

@@ -16,6 +16,7 @@ vi.mock("@/framework/request/http", () => ({
 
 import {
   createSampleInstallation,
+  importSamplePackage,
   uninstallSample,
   listSamples,
   SampleRequestError,
@@ -33,6 +34,19 @@ describe("sample catalog service", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
+  });
+
+  it("returns the imported package identity for immediate selection", async () => {
+    postMock.mockResolvedValue({ data: { sample: "northwind", version: "0.1.0" } });
+    const file = new File(["archive"], "package.tar.gz");
+    await expect(importSamplePackage(file)).resolves.toBe("northwind");
+  });
+
+  it("rejects an import response without a valid sample identity", async () => {
+    postMock.mockResolvedValue({ data: { sample: "../invalid" } });
+    await expect(importSamplePackage(new File(["archive"], "package.tar.gz"))).rejects.toThrow(
+      "Invalid sample package import response",
+    );
   });
 
   it("starts an asynchronous uninstall for the selected installation", async () => {

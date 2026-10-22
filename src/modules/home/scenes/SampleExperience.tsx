@@ -40,7 +40,12 @@ import styles from "./SampleExperience.module.css";
 const POLL_INTERVAL_MS = 4000;
 
 export function SampleExperience() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [languageOverride, setLanguageOverride] = useState<"all" | "zh" | "en" | null>(null);
+  const interfaceLanguage = (i18n.resolvedLanguage || i18n.language).toLowerCase().split("-")[0];
+  const languageFilter =
+    languageOverride ??
+    (interfaceLanguage === "zh" || interfaceLanguage === "en" ? interfaceLanguage : "all");
   const navigate = useNavigate();
   const [catalog, setCatalog] = useState<SampleCatalog | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -56,6 +61,8 @@ export function SampleExperience() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState(false);
   const [offlineDeleting, setOfflineDeleting] = useState<string | null>(null);
+  const [offlineSelection, setOfflineSelection] = useState<string | null>(null);
+  const [offlineDeleteErrors, setOfflineDeleteErrors] = useState<Record<string, string>>({});
   const installationsRef = useRef(installations);
   const runningRef = useRef(new Set<string>());
   const catalogRequestRef = useRef(0);
@@ -273,7 +280,9 @@ export function SampleExperience() {
     setImporting(true);
     setImportError(false);
     try {
-      await importSamplePackage(file);
+      const importedSample = await importSamplePackage(file);
+      setOfflineSelection(importedSample);
+      setLanguageOverride("all");
       await loadCatalog();
     } catch {
       setImportError(true);
@@ -283,13 +292,13 @@ export function SampleExperience() {
   };
 
   const removeOfflinePackage = async (item: SampleCatalogItem) => {
-    setActionErrors((current) => ({ ...current, [item.name]: "" }));
+    setOfflineDeleteErrors((current) => ({ ...current, [item.name]: "" }));
     setOfflineDeleting(item.name);
     try {
       await deleteSamplePackage(item.name);
       await loadCatalog();
     } catch {
-      setActionErrors((current) => ({
+      setOfflineDeleteErrors((current) => ({
         ...current,
         [item.name]: t("home.sample.offlineDeleteFailed"),
       }));
@@ -299,6 +308,21 @@ export function SampleExperience() {
   };
 
   const samples = catalog?.samples ?? [];
+  const visibleSamples = samples.filter(
+    (item) =>
+      languageFilter === "all" || item.language?.toLowerCase().split("-")[0] === languageFilter,
+  );
+  const offlinePackages = visibleSamples.filter((item) => item.source === "offline");
+  const hiddenOfflineCount =
+    samples.filter((item) => item.source === "offline").length - offlinePackages.length;
+  const selectedPackage =
+    offlinePackages.find((item) => item.name === offlineSelection) ?? offlinePackages[0];
+  const packageInUse =
+    selectedPackage &&
+    (installingNames.includes(selectedPackage.name) ||
+      ["installed", "installing", "uninstalling", "uninstall_failed"].includes(
+        selectedPackage.status,
+      ));
   const showUnavailable = Boolean(catalog?.sourceRejected);
 
   return (
@@ -370,6 +394,21 @@ export function SampleExperience() {
             ) : null}
           </div>
           <div className={styles.catalogActions}>
+            <label className={styles.languageFilter}>
+              <span>{t("home.sample.languageFilter")}</span>
+              <select
+                value={languageFilter}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === "all" || value === "zh" || value === "en")
+                    setLanguageOverride(value);
+                }}
+              >
+                <option value="all">{t("home.sample.languageAll")}</option>
+                <option value="zh">{t("home.sample.languageChinese")}</option>
+                <option value="en">{t("home.sample.languageEnglish")}</option>
+              </select>
+            </label>
             <button
               className={styles.reload}
               disabled={catalogLoading}
@@ -415,46 +454,74 @@ export function SampleExperience() {
         <p className={styles.meta}>{t("home.sample.empty")}</p>
       ) : null}
 
-      {samples.some((item) => item.source === "offline") ? (
+      {catalog && samples.length > 0 && visibleSamples.length === 0 && !showUnavailable ? (
+        <p className={styles.meta}>{t("home.sample.noLanguageMatches")}</p>
+      ) : null}
+
+      {selectedPackage || hiddenOfflineCount > 0 ? (
         <section className={styles.offlinePackages} aria-labelledby="offline-packages-title">
-          <div>
-            <h3 id="offline-packages-title">{t("home.sample.offlinePackagesTitle")}</h3>
-            <p className={styles.meta}>{t("home.sample.offlinePackagesDescription")}</p>
-          </div>
-          <div className={styles.offlinePackageList}>
-            {samples
-              .filter((item) => item.source === "offline")
-              .map((item) => (
-                <div className={styles.offlinePackage} key={item.name}>
-                  <span className={styles.offlineBadge}>
-                    {item.displayName} · {item.version}
-                  </span>
-                  {catalog?.canImport ? (
-                    <button
-                      className={styles.removeOffline}
-                      disabled={
-                        offlineDeleting === item.name ||
-                        installingNames.includes(item.name) ||
-                        ["installed", "installing", "uninstalling", "uninstall_failed"].includes(
-                          item.status,
-                        )
-                      }
-                      onClick={() => void removeOfflinePackage(item)}
-                      type="button"
-                    >
-                      {offlineDeleting === item.name
-                        ? t("home.sample.offlineDeleting")
-                        : t("home.sample.removeOffline")}
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-          </div>
+          <h3 id="offline-packages-title">{t("home.sample.offlinePackagesTitle")}</h3>
+          {selectedPackage ? (
+            <>
+              <select
+                className={styles.offlinePicker}
+                aria-labelledby="offline-packages-title"
+                value={selectedPackage.name}
+                disabled={offlineDeleting !== null}
+                onChange={(event) => setOfflineSelection(event.target.value)}
+              >
+                {offlinePackages.map((item) => (
+                  <option key={item.name} value={item.name}>
+                    {item.displayName} · {item.version} · {t(`home.sample.status.${item.status}`)}
+                  </option>
+                ))}
+              </select>
+              <button
+                className={styles.reload}
+                onClick={() => {
+                  setExpandedName(selectedPackage.name);
+                  document
+                    .getElementById(`sample-card-${selectedPackage.name}`)
+                    ?.scrollIntoView({ block: "start", behavior: "auto" });
+                }}
+                type="button"
+              >
+                {t("home.sample.viewSample")}
+              </button>
+              {catalog?.canImport ? (
+                <button
+                  className={styles.removeOffline}
+                  disabled={offlineDeleting !== null || Boolean(packageInUse)}
+                  onClick={() => void removeOfflinePackage(selectedPackage)}
+                  type="button"
+                >
+                  {offlineDeleting === selectedPackage.name
+                    ? t("home.sample.offlineDeleting")
+                    : t("home.sample.removeOffline")}
+                </button>
+              ) : null}
+            </>
+          ) : null}
+          {hiddenOfflineCount > 0 ? (
+            <button
+              className={styles.showAllPackages}
+              title={t("home.sample.hiddenOfflinePackages", { count: hiddenOfflineCount })}
+              onClick={() => setLanguageOverride("all")}
+              type="button"
+            >
+              {t("home.sample.showAllLanguages")}
+            </button>
+          ) : null}
+          {selectedPackage && offlineDeleteErrors[selectedPackage.name] ? (
+            <p className={styles.offlineDeleteError} role="alert">
+              {offlineDeleteErrors[selectedPackage.name]}
+            </p>
+          ) : null}
         </section>
       ) : null}
 
       <div className={styles.cards}>
-        {samples.map((item) => {
+        {visibleSamples.map((item) => {
           const liveInstallation = installations[item.name];
           const serverInstalling = liveInstallation?.status === "installing";
           const showLocalProgress =
@@ -708,7 +775,7 @@ function SampleCard({
   const panelId = `sample-details-${item.name}`;
 
   return (
-    <article ref={cardRef} className={styles.card}>
+    <article id={`sample-card-${item.name}`} ref={cardRef} className={styles.card}>
       <div className={styles.cardHead}>
         <div>
           <h3>{item.displayName}</h3>
