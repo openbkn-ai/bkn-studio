@@ -19,7 +19,12 @@ const {
   createResourceSemanticUnderstandingTaskMock,
   listSemanticUnderstandingTasksMock,
   modalConfirmMock,
+  runtimeConfigMock,
 } = vi.hoisted(() => ({
+  runtimeConfigMock: {
+    locale: "zh-CN",
+    currentUser: { permissions: ["catalog:task_manage", "catalog:view_detail"] },
+  },
   createResourceSemanticUnderstandingTaskMock: vi.fn(),
   listSemanticUnderstandingTasksMock: vi.fn(),
   modalConfirmMock: vi.fn<(config: { onOk: () => Promise<void> }) => void>(),
@@ -34,9 +39,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { success: vi.fn() },
     modal: { confirm: modalConfirmMock },
-    runtimeConfig: {
-      currentUser: { permissions: ["catalog:task_manage", "catalog:view_detail"] },
-    },
+    runtimeConfig: runtimeConfigMock,
   }),
 }));
 
@@ -92,6 +95,7 @@ function SemanticUnderstandingTaskFormDefaultsHarness({
 describe("ResourceSemanticUnderstandingPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    runtimeConfigMock.locale = "zh-CN";
     modalConfirmMock.mockImplementation(({ onOk }) => {
       void onOk();
     });
@@ -214,10 +218,50 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     await waitFor(() =>
       expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledWith({
         applyMode: "fill_empty",
+        language: "zh-CN",
         confidenceThreshold: 0.75,
         includeSampleRows: false,
         resourceId: "resource-1",
       }),
+    );
+  });
+
+  it("follows the UI language until the user chooses an explicit output language", async () => {
+    createResourceSemanticUnderstandingTaskMock.mockResolvedValue({ id: "task-1" });
+    const panel = (
+      <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />
+    );
+    const { rerender } = render(panel);
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
+    expect(screen.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.semanticWorkspace.languageChinese")).toBeTruthy();
+    runtimeConfigMock.locale = "en-US";
+    rerender(
+      <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
+    );
+    expect(screen.getByText("dataCatalog.semanticWorkspace.languageEnglish")).toBeTruthy();
+    fireEvent.mouseDown(screen.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage"));
+    fireEvent.click(await screen.findByText("dataCatalog.semanticWorkspace.languageChinese"));
+    runtimeConfigMock.locale = "zh-CN";
+    rerender(
+      <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
+    );
+    runtimeConfigMock.locale = "en-US";
+    rerender(
+      <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
+    await waitFor(() =>
+      expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledWith(
+        expect.objectContaining({ language: "zh-CN" }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
+    await waitFor(() =>
+      expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ language: "en-US" }),
+      ),
     );
   });
 
@@ -241,6 +285,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     await waitFor(() =>
       expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledWith({
         applyMode: "fill_empty",
+        language: "zh-CN",
         confidenceThreshold: 0.75,
         includeSampleRows: true,
         resourceId: "resource-1",
@@ -275,6 +320,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     await waitFor(() =>
       expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledWith({
         applyMode: "fill_empty",
+        language: "zh-CN",
         confidenceThreshold: 0.75,
         includeSampleRows: false,
         resourceId: "resource-1",
