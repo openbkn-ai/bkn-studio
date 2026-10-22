@@ -74,7 +74,7 @@ export const cypherQueryPart = {
       resultDropped: "结果较大，未保存在本地，请重新运行查看。",
     },
     status: {
-      limited: "已达默认上限 {{count}} 行，可能还有更多；写 LIMIT 可调整（最多 10000）",
+      limited: "已达默认上限 {{limit}} 行，可能还有更多；写 LIMIT 可调整（最多 10000）",
       rows_one: "{{count}} 行",
       rows_other: "{{count}} 行",
       latency: "{{ms}} ms",

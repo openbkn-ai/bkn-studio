@@ -422,7 +422,7 @@ export function CypherFrameCard({
           {frame.result.limited ? (
             <span className={styles.statusLimited} data-testid="cypher-limited">
               {t("knowledgeNetwork.cypherQuery.status.limited", {
-                count: frame.result.entries.length,
+                limit: frame.result.entries.length,
               })}
             </span>
           ) : null}

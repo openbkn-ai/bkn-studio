@@ -77,7 +77,7 @@ export const cypherQueryPart = {
     },
     status: {
       limited:
-        "Stopped at the default {{count}} rows; more may match. Write LIMIT to change it (up to 10000)",
+        "Stopped at the default {{limit}} rows; more may match. Write LIMIT to change it (up to 10000)",
       rows_one: "{{count}} row",
       rows_other: "{{count}} rows",
       latency: "{{ms}} ms",
