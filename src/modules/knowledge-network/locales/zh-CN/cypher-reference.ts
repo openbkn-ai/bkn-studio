@@ -37,7 +37,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
   {
     title: "WHERE 条件",
     rules: [
-      "比较：= <> < <= > >=；不等于写 <>，不能写 !=。两边可以都是属性，如 a.x <> a.y，也可以写算术，如 a.amount * a.rate > 100。",
+      "比较：= <> < <= > >=；不等于写 <>（!= 也接受）。两边可以都是属性，如 a.x <> a.y，也可以写算术，如 a.amount * a.rate > 100。",
       "IN 后面是列表：a.code IN ['A', 'B']，或用参数 IN $list。",
       "字符串：STARTS WITH、CONTAINS、ENDS WITH，只用于字符串属性，按字面子串匹配，% 和 _ 不是通配符。",
       "空值：IS NULL、IS NOT NULL；不能写 = null。",
@@ -54,8 +54,9 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
       "算术 + - * / %：两个整数相除会被拒，要小数时一边乘 1.0；% 只用于整数。",
       "CASE WHEN … THEN … ELSE … END 和 coalesce(a, b)：各分支要么都是数字，要么都不是。",
       "DISTINCT 和 ORDER BY 只用于属性、聚合或返回列，不用于节点和关系本身；节点和关系本来就按身份去重。聚合或 DISTINCT 之后只能按返回的值排序。",
+      "UNION ALL 把几段查询的结果接在一起，UNION 还会去掉重复的行，两者不能混用：每段返回同样的列（名称和顺序一致，用 AS 对齐），可以各带 ORDER BY、LIMIT，只能返回值，不能返回节点、关系和 collect。",
     ],
-    notes: ["", "", "CASE 分类计数和算术比例", ""],
+    notes: ["", "", "CASE 分类计数和算术比例", "", "UNION ALL 并列两段计数"],
   },
   {
     title: "WITH",
@@ -106,7 +107,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
   {
     title: "不支持",
     rules: [
-      "UNION、UNWIND、变长路径 [:R*1..3]、XOR、乘方 ^、关系属性 r.x。",
+      "UNWIND、变长路径 [:R*1..3]、XOR、乘方 ^、关系属性 r.x。",
       "date() / datetime() / localdatetime()、coalesce()、size()（只用于 WITH 收集的列表）和聚合以外的函数调用。",
       "第二个 WITH 之后再 MATCH；做过聚合的 WITH 之后再 collect（比较两个列表时第二个 WITH 的 collect 除外）。",
       "对节点或关系用 DISTINCT（RETURN DISTINCT n、collect(DISTINCT n)）、按节点或关系排序；collect 与 count、sum 等聚合同时返回。",

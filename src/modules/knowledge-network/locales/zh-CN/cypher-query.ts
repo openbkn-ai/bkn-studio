@@ -112,6 +112,7 @@ export const cypherQueryPart = {
         totals: "对分组再统计",
         semi_join: "按上一段的值过滤",
         list_comparison: "比较两个列表",
+        union: "合并几段查询",
         carried: "把节点传给下一个 MATCH",
       },
     },
