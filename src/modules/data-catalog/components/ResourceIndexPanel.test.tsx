@@ -15,9 +15,10 @@ import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./shared.module.css";
 
-const { indexConfigFormPanelMock, listBuildTaskPageMock } = vi.hoisted(() => ({
+const { indexConfigFormPanelMock, listBuildTaskPageMock, pauseOrResumeMock } = vi.hoisted(() => ({
   indexConfigFormPanelMock: vi.fn(),
   listBuildTaskPageMock: vi.fn(),
+  pauseOrResumeMock: vi.fn(),
 }));
 
 vi.mock("@/modules/data-catalog/services/build-task.service", async (importOriginal) => ({
@@ -141,7 +142,11 @@ vi.mock("@/modules/data-catalog/components/IndexConfigFormPanel", () => ({
   },
 }));
 vi.mock("@/modules/data-catalog/hooks/use-build-task-actions", () => ({
-  useBuildTaskActions: () => ({ pauseOrResume: vi.fn(), remove: vi.fn(), retry: vi.fn() }),
+  useBuildTaskActions: () => ({
+    pauseOrResume: pauseOrResumeMock,
+    remove: vi.fn(),
+    retry: vi.fn(),
+  }),
 }));
 
 import { ResourceIndexPanel } from "./ResourceIndexPanel";
@@ -396,6 +401,40 @@ describe("ResourceIndexPanel", () => {
     ).toBeDisabled();
     await waitFor(() => expect(onIndexViewChange).toHaveBeenCalledWith("config"));
     expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["batch", "pending", "dataCatalog.task.stopBuild"],
+    ["batch", "running", "dataCatalog.task.stopBuild"],
+    ["streaming", "pending", "dataCatalog.task.pauseListening"],
+    ["streaming", "running", "dataCatalog.task.pauseListening"],
+    ["batch", "stopped", "dataCatalog.task.resumeBuild"],
+    ["streaming", "stopped", "dataCatalog.task.resumeListening"],
+  ] as const)("labels the status action for a %s task that is %s", (mode, status, label) => {
+    const task = buildTask({ mode, status });
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={manageableCatalog}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[task]}
+        />
+      </MemoryRouter>,
+    );
+
+    const button = screen.getByRole("button", { name: label });
+    if (status === "stopped") {
+      expect(button).toBeDisabled();
+      expect(pauseOrResumeMock).not.toHaveBeenCalled();
+    } else {
+      fireEvent.click(button);
+      expect(pauseOrResumeMock).toHaveBeenCalledExactlyOnceWith(task);
+    }
   });
 
   it("does not present a batch task total as the current index document count", () => {
