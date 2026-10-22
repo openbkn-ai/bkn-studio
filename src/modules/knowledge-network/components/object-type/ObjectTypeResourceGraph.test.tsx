@@ -886,6 +886,50 @@ describe("ObjectTypeResourceGraph", () => {
     }
   });
 
+  it("keeps an action node attached to its group after a click without dragging", async () => {
+    renderGraph();
+
+    const actionGroup = await screen.findByRole("button", { name: "展开 行动类 1" });
+    fireEvent.click(actionGroup);
+    const actionNode = screen.getByRole("button", { name: "行动类 更新订单" });
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    vi.spyOn(graph, "getBoundingClientRect").mockReturnValue({
+      bottom: 620,
+      height: 620,
+      left: 0,
+      right: 1120,
+      top: 0,
+      width: 1120,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    const initialPosition = actionNode.getAttribute("transform");
+
+    fireEvent.pointerDown(actionNode, {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      pointerId: 1,
+    });
+    fireEvent.pointerUp(graph, { pointerId: 1 });
+
+    const actionGroupHandle = document.querySelector(
+      '[data-graph-edge-drag-handle="action-group"]',
+    );
+    expect(actionGroupHandle).not.toBeNull();
+    fireEvent.pointerDown(actionGroupHandle!, {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      pointerId: 2,
+    });
+    fireEvent.pointerMove(graph, { clientX: 112, clientY: 62, pointerId: 2 });
+    fireEvent.pointerUp(graph, { pointerId: 2 });
+
+    expect(actionNode.getAttribute("transform")).not.toBe(initialPosition);
+  });
+
   it("registers graph wheel zoom as a non-passive native listener", () => {
     const listener = vi.spyOn(SVGSVGElement.prototype, "addEventListener");
     try {

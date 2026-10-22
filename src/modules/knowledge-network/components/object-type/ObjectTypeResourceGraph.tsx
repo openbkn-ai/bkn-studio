@@ -1692,7 +1692,7 @@ export function ObjectTypeResourceGraph({
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") activateAction(action);
                         }}
-                        onPointerDown={(event) => startNodeDrag(event, key, actionPosition)}
+                        onPointerDown={(event) => startNodeDrag(event, key)}
                         role="button"
                         tabIndex={0}
                         transform={`translate(${actionPosition.x} ${actionPosition.y})`}
