@@ -439,7 +439,7 @@ export const dataCatalogEnUS = {
       logicalDescriptionPlaceholder: "Optional description",
       deleteLogicalTitle: "Delete logical group",
       deleteLogicalDescription:
-        'Delete logical group "{{name}}"? This removes {{resources}} resources and cancels {{semanticTasks}} pending semantic tasks.',
+        'Delete logical group "{{name}}"? This removes {{resources}} resources and deletes {{semanticTasks}} semantic task records.',
       deleteLogicalBlockedTitle: "Logical group cannot be deleted",
       deleteLogicalBlockedDescription: "Resolve the following blockers before trying again:",
       deleteLogicalBlockers: {

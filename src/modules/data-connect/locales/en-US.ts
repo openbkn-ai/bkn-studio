@@ -129,12 +129,20 @@ export const dataConnectEnUS = {
       resources_one: "Resource: {{count}} ({{protected}} protected)",
       resources_other: "Resources: {{count}} ({{protected}} protected)",
       schedules: "Schedules: {{discover}} discovery, {{health}} health check",
-      buildTasks: "Build tasks: cancel {{willCancel}} pending, {{blocking}} blocking",
-      discoverTasks: "Discovery tasks: cancel {{willCancel}} pending, {{blocking}} blocking",
+      buildTasks: "Build tasks: delete {{count}} task records, {{blocking}} blocking",
+      buildTasks_one: "Build tasks: delete {{count}} task record, {{blocking}} blocking",
+      buildTasks_other: "Build tasks: delete {{count}} task records, {{blocking}} blocking",
+      discoverTasks: "Discovery tasks: delete {{count}} task records, {{blocking}} blocking",
+      discoverTasks_one: "Discovery tasks: delete {{count}} task record, {{blocking}} blocking",
+      discoverTasks_other: "Discovery tasks: delete {{count}} task records, {{blocking}} blocking",
       semanticUnderstandingTasks:
-        "Semantic tasks: cancel {{willCancel}} pending, {{blocking}} blocking",
+        "Semantic tasks: delete {{count}} task records, {{blocking}} blocking",
+      semanticUnderstandingTasks_one:
+        "Semantic tasks: delete {{count}} task record, {{blocking}} blocking",
+      semanticUnderstandingTasks_other:
+        "Semantic tasks: delete {{count}} task records, {{blocking}} blocking",
       impactWarning:
-        "Resources and schedules will be deleted, and pending tasks will be cancelled. Task history and indexes are not deleted by this operation.",
+        "Resources, schedules, and all associated task records (including pending tasks and history) will be deleted. Indexes are not deleted by this operation.",
       catalogEmpty:
         'Connection "{{name}}" has no cascading objects. Deletion still cannot be undone.',
     },

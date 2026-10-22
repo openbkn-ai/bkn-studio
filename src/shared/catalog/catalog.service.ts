@@ -64,7 +64,7 @@ type BackendCatalogHealthCheckSchedule = {
 
 type BackendCatalogDeletionTaskImpact = {
   blocking: number;
-  will_cancel: number;
+  will_delete: number;
 };
 
 type BackendCatalogDeletionImpact = {
@@ -227,15 +227,15 @@ export async function previewCatalogDeletion(id: string): Promise<CatalogDeletio
   if (useMock) {
     return wait({
       blockers: [],
-      buildTasks: { blocking: 0, willCancel: 0 },
+      buildTasks: { blocking: 0, willDelete: 0 },
       canDelete: true,
       catalogHealthCheckSchedules: 0,
       catalogId: id,
       discoverSchedules: 0,
-      discoverTasks: { blocking: 0, willCancel: 0 },
+      discoverTasks: { blocking: 0, willDelete: 0 },
       protectedResources: 0,
       resources: 0,
-      semanticUnderstandingTasks: { blocking: 0, willCancel: 0 },
+      semanticUnderstandingTasks: { blocking: 0, willDelete: 0 },
     });
   }
 
@@ -251,7 +251,7 @@ export async function previewCatalogDeletion(id: string): Promise<CatalogDeletio
     taskImpact: BackendCatalogDeletionTaskImpact,
   ): CatalogDeletionTaskImpact => ({
     blocking: taskImpact.blocking,
-    willCancel: taskImpact.will_cancel,
+    willDelete: taskImpact.will_delete,
   });
 
   return {
