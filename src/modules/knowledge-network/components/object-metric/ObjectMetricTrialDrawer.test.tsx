@@ -123,6 +123,67 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(await screen.findByText("存在计算结果，但均不满足结果筛选条件。")).toBeInTheDocument();
   }, 20_000);
 
+  it("clears dimension sorting when the selected group is removed", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    definition.query_capabilities.analysis_dimensions = [
+      { object_type_id: "order", property_name: "status" },
+    ];
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "summary",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "no_data",
+    } satisfies ObjectMetricDataV1);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    const groupSelect = screen
+      .getByText("按维度分组")
+      .closest(".ant-form-item")
+      ?.querySelector(".ant-select-selector");
+    expect(groupSelect).not.toBeNull();
+    fireEvent.mouseDown(groupSelect!);
+    fireEvent.click(await screen.findByText("status"));
+    const orderRow = screen.getByRole("group", { name: "结果排序" });
+    fireEvent.mouseDown(within(orderRow).getByRole("combobox", { name: "结果排序" }));
+    const orderOption = Array.from(
+      document.querySelectorAll(
+        ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content",
+      ),
+    ).find((item) => item.textContent === "status");
+    expect(orderOption).not.toBeNull();
+    fireEvent.click(orderOption!);
+    expect(within(orderRow).getByRole("combobox", { name: "排序方向" })).toBeInTheDocument();
+
+    const removeGroup = groupSelect!
+      .closest(".ant-form-item")
+      ?.querySelector(".ant-select-selection-item-remove");
+    expect(removeGroup).not.toBeNull();
+    fireEvent.click(removeGroup!);
+    expect(within(orderRow).getByText("默认顺序")).toBeInTheDocument();
+    expect(within(orderRow).queryByRole("combobox", { name: "排序方向" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    await waitFor(() => expect(onRun).toHaveBeenCalledOnce());
+    expect(onRun.mock.calls[0][0]).toMatchObject({ group_by: [] });
+    expect(onRun.mock.calls[0][0]).not.toHaveProperty("order_by");
+  }, 20_000);
+
   it("keeps relation aliases distinct when selecting same-named dimensions", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.calculation_scope = "object_set";

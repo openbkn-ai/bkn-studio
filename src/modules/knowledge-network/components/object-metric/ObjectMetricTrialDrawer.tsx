@@ -400,6 +400,15 @@ export function ObjectMetricTrialDrawer({
           ...definition.result_semantics.statistical_grain.group_by_dimensions,
           ...(query.group_by ?? []),
         ].find((item) => dimensionReferenceKey(item) === values.orderKey);
+        if (
+          !ref &&
+          values.orderKey !== "value" &&
+          !(
+            values.orderKey === "time" &&
+            definition.result_semantics.statistical_grain.time_granularity
+          )
+        )
+          throw new Error(objectMetricText("analysisOrderDimensionUnavailable"));
         query.order_by = [
           {
             field: ref ? "dimension" : values.orderKey === "time" ? "time" : "value",
@@ -689,6 +698,19 @@ export function ObjectMetricTrialDrawer({
               >
                 <Select
                   mode="multiple"
+                  onChange={(keys: string[]) => {
+                    const orderKey = form.getFieldValue("orderKey") as string | undefined;
+                    if (
+                      orderKey &&
+                      orderKey !== "value" &&
+                      orderKey !== "time" &&
+                      !definition.result_semantics.statistical_grain.group_by_dimensions.some(
+                        (item) => dimensionReferenceKey(item) === orderKey,
+                      ) &&
+                      !keys.includes(orderKey)
+                    )
+                      form.setFieldsValue({ orderKey: undefined, orderDirection: undefined });
+                  }}
                   options={definition.query_capabilities.analysis_dimensions.map((item) => ({
                     label: item.relation_path_alias
                       ? `${objectMetricPropertyDisplayName(item, objectType)} (${item.relation_path_alias})`

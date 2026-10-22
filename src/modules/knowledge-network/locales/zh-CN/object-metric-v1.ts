@@ -28,6 +28,7 @@ export const objectMetricV1Part = {
   analysisOrderValue: "指标值",
   analysisOrderTime: "时间",
   analysisNoOrder: "默认顺序",
+  analysisOrderDimensionUnavailable: "排序维度已不在当前分组中，请重新选择排序字段。",
   analysisOrderDirection: "排序方向",
   analysisAscending: "升序",
   analysisDescending: "降序",

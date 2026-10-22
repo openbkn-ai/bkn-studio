@@ -28,6 +28,8 @@ export const objectMetricV1Part = {
   analysisOrderValue: "Metric value",
   analysisOrderTime: "Time",
   analysisNoOrder: "Default order",
+  analysisOrderDimensionUnavailable:
+    "The sort dimension is no longer grouped. Choose a sort field again.",
   analysisOrderDirection: "Order direction",
   analysisAscending: "Ascending",
   analysisDescending: "Descending",
