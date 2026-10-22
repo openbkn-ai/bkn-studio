@@ -6,8 +6,11 @@
  */
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createInstance } from "i18next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { dataCatalogEnUS } from "@/modules/data-catalog/locales/en-US";
+import { dataCatalogZhCN } from "@/modules/data-catalog/locales/zh-CN";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 const previewCatalogResourceMock = vi.hoisted(() => vi.fn());
@@ -15,9 +18,14 @@ const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const testFilterRule = vi.hoisted(() => ({ field: "id", operation: ">", value: "10" }));
 
-const translateMock = vi.hoisted(
-  () => (key: string, options?: { source?: string }) =>
-    key === "dataCatalog.preview.sourceReadForbidden" ? `${key}:${options?.source}` : key,
+const translateMock = vi.hoisted(() =>
+  vi.fn((key: string, options?: { source?: string; field?: string; limit?: number }) =>
+    key === "dataCatalog.preview.sourceReadForbidden"
+      ? `${key}:${options?.source}`
+      : key === "dataCatalog.preview.keywordLimitExceeded"
+        ? `${key}:${options?.field}:${options?.limit}`
+        : key,
+  ),
 );
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -1027,6 +1035,178 @@ describe("ResourcePreviewPanel", () => {
         screen.getByText("dataCatalog.preview.noQueryPermission").closest(".ant-alert"),
       ).toHaveClass("ant-alert-warning");
     });
+  });
+
+  it.each([
+    [
+      "en-US",
+      "The value for status exceeds the maximum indexed keyword length (256 UTF-16 code units).",
+    ],
+    ["zh-CN", "字段 status 的筛选值超过关键词最大索引长度（256 个 UTF-16 代码单元）。"],
+  ])("renders the keyword limit explanation in %s", async (language, expected) => {
+    const translator = createInstance();
+    await translator.init({
+      lng: language,
+      resources: {
+        "en-US": { translation: dataCatalogEnUS },
+        "zh-CN": { translation: dataCatalogZhCN },
+      },
+    });
+    const original = translateMock.getMockImplementation()!;
+    translateMock.mockImplementation((key, options) => translator.t(key, options));
+    try {
+      previewCatalogResourceMock.mockRejectedValue(
+        Object.assign(new Error("rejected"), {
+          isAxiosError: true,
+          response: {
+            status: 400,
+            data: {
+              error_code: "VegaBackend.Resource.QueryValueExceedsKeywordLimit",
+              metadata: { field: "status", limit: 256 },
+            },
+          },
+        }),
+      );
+      const { unmount } = render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, schema: [{ name: "status", type: "string" }] }}
+        />,
+      );
+      expect(await screen.findByText(expected)).toBeInTheDocument();
+      unmount();
+    } finally {
+      translateMock.mockImplementation(original);
+    }
+  });
+
+  it("preserves an oversized filter when the user explicitly queries the source", async () => {
+    const value = "CLOSED" + "X".repeat(251);
+    const filterCondition = {
+      operation: "and",
+      sub_conditions: [{ field: "status", operation: "==", value, value_from: "const" }],
+    };
+    Object.assign(testFilterRule, { field: "status", operation: "==", value });
+    previewCatalogResourceMock
+      .mockResolvedValueOnce({ rows: [{ status: "OPEN" }], total: 1, querySource: "local_index" })
+      .mockRejectedValue(
+        Object.assign(new Error("rejected"), {
+          isAxiosError: true,
+          response: {
+            status: 400,
+            data: {
+              error_code: "VegaBackend.Resource.QueryValueExceedsKeywordLimit",
+              description: "Invalid resource parameter",
+              error_details: "private diagnostic",
+              metadata: { field: "status", limit: 256 },
+            },
+          },
+        }),
+      );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          schema: [{ name: "status", type: "string" }],
+          localIndexStatus: "available",
+          localIndexName: "index",
+        }}
+      />,
+    );
+    await screen.findByText("OPEN");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+    expect(
+      await screen.findByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("dataCatalog.preview.keywordLimitSourceHint")).toBeInTheDocument();
+    expect(screen.queryByText("private diagnostic")).not.toBeInTheDocument();
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(resource.id, {
+      filterCondition,
+      limit: 10,
+      offset: 0,
+    });
+    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
+    fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
+    await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3));
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(resource.id, {
+      filterCondition,
+      limit: 10,
+      offset: 0,
+      ignoreLocalIndex: true,
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it.each([
+    undefined,
+    null,
+    "status:256",
+    { field: "status" },
+    { field: "status", limit: -1 },
+    { field: "status", limit: "256" },
+    { field: "status", limit: 1.5 },
+    { field: "", limit: 256 },
+  ])("uses a localized fallback for invalid keyword metadata %j", async (metadata) => {
+    previewCatalogResourceMock.mockRejectedValue(
+      Object.assign(new Error("rejected"), {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error_code: "VegaBackend.Resource.QueryValueExceedsKeywordLimit",
+            description: "private description",
+            error_details: "private diagnostic",
+            metadata,
+          },
+        },
+      }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "status", type: "string" }] }}
+      />,
+    );
+    expect(
+      await screen.findByText("dataCatalog.preview.keywordLimitExceededGeneric"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("private description")).not.toBeInTheDocument();
+    expect(screen.queryByText("private diagnostic")).not.toBeInTheDocument();
+  });
+
+  it("does not infer keyword errors from details or metadata on a generic error code", async () => {
+    previewCatalogResourceMock.mockRejectedValue(
+      Object.assign(new Error("rejected"), {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error_code: "VegaBackend.Resource.InvalidParameter",
+            description: "Invalid resource parameter",
+            error_details:
+              "value for string field status exceeds keyword ignore_above 256 and cannot be compared exactly",
+            metadata: { field: "status", limit: 256 },
+          },
+        },
+      }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "status", type: "string" }] }}
+      />,
+    );
+    expect(await screen.findByText("Invalid resource parameter")).toBeInTheDocument();
+    expect(screen.queryByText(/dataCatalog.preview.keywordLimit/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/exceeds keyword ignore_above/)).not.toBeInTheDocument();
   });
 
   it.each([
