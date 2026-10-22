@@ -34,6 +34,10 @@ export const objectMetricV1Part = {
   analysisAscending: "Ascending",
   analysisDescending: "Descending",
   analysisFilteredOut: "Results were calculated, but none matched the result filter.",
+  querySourceUnavailable:
+    "Object data or a property needed to calculate this metric is unavailable. Check data query access to the related object types, full access to calculation properties, and whether the definition references a field that no longer exists.",
+  trialDependencyPermissionDenied:
+    "The trial lacks query access to the knowledge network or a referenced resource, or full access to a calculation property. Ask an administrator to check permissions for object types, relations, dependent metrics, and calculation properties, then try again.",
   analysisTotalCount: "{{p0}} results",
   aiCreateMetric: "Create with AI",
   allMetrics: "All metrics",

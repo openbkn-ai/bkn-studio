@@ -33,6 +33,10 @@ export const objectMetricV1Part = {
   analysisAscending: "升序",
   analysisDescending: "降序",
   analysisFilteredOut: "存在计算结果，但均不满足结果筛选条件。",
+  querySourceUnavailable:
+    "指标计算所需的对象数据或字段不可用。请检查相关对象类的数据查询权限、计算字段的完整访问权限，以及指标定义是否引用了已失效的字段。",
+  trialDependencyPermissionDenied:
+    "试算缺少知识网络或定义所引用资源的查询权限，或计算属性的完整访问权限。请联系管理员确认对象类、关系类、依赖指标及计算属性的授权后重试。",
   analysisTotalCount: "结果 {{p0}} 条",
   aiCreateMetric: "AI 创建",
   allMetrics: "全部指标",
