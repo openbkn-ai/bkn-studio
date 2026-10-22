@@ -1,0 +1,141 @@
+class AddExternalSmallModel(BaseModel):
+    model_name: StrictStr = Field(description="Model name")
+    model_type: StrictStr = Field(description="Model type", regex=r'^(reranker|embedding)$')
+    model_config: Optional[dict] = Field(default={}, description="Third-party model service configuration")
+    adapter: Optional[bool] = Field(default=False, description="Whether to enable the adapter service")
+    adapter_code: Optional[StrictStr] = Field(default=None, description="Adapter code")
+    batch_size: int = Field(description="Batch size")
+    max_tokens: Optional[int] = Field(default=None, description="Maximum token count")
+    embedding_dim: Optional[int] = Field(default=None, description="Embedding dimension")
+    default: StrictBool = Field(default=False, description="Whether to set this model as the system default")
+    is_private: Optional[bool] = Field(default=False, description="Whether this is a private route used to control validation")
+
+    @root_validator
+    def validate_mutually_exclusive_groups(cls, values):
+        model_config = values.get('model_config', {})
+        adapter = values.get('adapter', False)
+        adapter_code = values.get('adapter_code')
+
+        if model_config and (adapter or adapter_code):
+            raise ValueError("model_config and adapter/adapter_code cannot be set together")
+        if not model_config and not (adapter or adapter_code):
+            raise ValueError("Set either model_config or adapter/adapter_code")
+        return values
+
+    @validator('model_config', pre=False)
+    def check_output_tokens(cls, v, values):
+        key_list = ["api_url", "api_model"]
+        for k in key_list:
+            if k not in v.keys():
+                raise RequestValidationError([{"loc": ('body', k), "type": "value_error.missing"}])
+        return v
+
+    @validator('adapter_code', pre=False)
+    def check_adapter_code(cls, v, values):
+        if 'adapter' in values and values['adapter'] is True and not v:
+            raise RequestValidationError([{"loc": ('body', "adapter_code"), "type": "value_error.missing"}])
+        return v
+
+    @root_validator
+    def validate_embedding_fields(cls, values):
+        model_type = values.get('model_type')
+        max_tokens = values.get('max_tokens')
+        embedding_dim = values.get('embedding_dim')
+        is_private = values.get('is_private', False)
+        
+        # Private routes set max_tokens and embedding_dim defaults in the controller.
+        if model_type == 'embedding' and not is_private:
+            if max_tokens is None:
+                raise RequestValidationError([{"loc": ('body', "max_tokens"), "type": "value_error.missing", "msg": "max_tokens is required when model_type is embedding"}])
+            if embedding_dim is None:
+                raise RequestValidationError([{"loc": ('body', "embedding_dim"), "type": "value_error.missing", "msg": "embedding_dim is required when model_type is embedding"}])
+        
+        return values
+
+
+class TestSmallModel(BaseModel):
+    model_id: Optional[StrictStr] = Field(None, description="Configuration ID", min_length=19, max_length=19)
+    model_name: Optional[StrictStr] = Field(default="", description="Model name")
+    model_type: Optional[StrictStr] = Field(default="", description="Model type", regex=r'^(reranker|embedding)$')
+    model_config: Optional[dict] = Field(default={}, description="Third-party model service configuration")
+    adapter: Optional[bool] = Field(default=False, description="Whether to enable the adapter service")
+    adapter_code: Optional[StrictStr] = Field(default=None, description="Adapter code")
+    batch_size: Optional[int] = Field(description="Batch size")
+    max_tokens: Optional[int] = Field(default=None, description="Maximum token count")
+    embedding_dim: Optional[int] = Field(default=None, description="Embedding dimension")
+    change: Optional[bool] = Field(default=False, description="Whether api_key in model_config was changed")
+    @root_validator
+    def check_fields(cls, values):
+        model_id = values.get('model_id')
+        if model_id is None:
+            model_config = values.get('model_config', {})
+            adapter = values.get('adapter', False)
+            adapter_code = values.get('adapter_code')
+            if model_config and (adapter or adapter_code):
+                raise ValueError("model_config and adapter/adapter_code cannot be set together")
+            if not model_config and not (adapter or adapter_code):
+                raise ValueError("Set either model_config or adapter/adapter_code")
+            # Without model_id, the identifying model fields are required.
+            required_fields = ['model_name', 'model_type']
+            for field in required_fields:
+                if values.get(field) is None:
+                    raise RequestValidationError([{"loc": ('body', field), "type": "value_error.missing"}])
+            model_type = values.get('model_type')
+            max_tokens = values.get('max_tokens')
+            batch_size = values.get('batch_size')
+            embedding_dim = values.get('embedding_dim')
+            if batch_size is None:
+                raise RequestValidationError([{"loc": ('body', "batch_size"), "type": "value_error.missing",
+                                               "msg": "batch_size is required"}])
+            if model_type == 'embedding':
+                if max_tokens is None:
+                    raise RequestValidationError([{"loc": ('body', "max_tokens"), "type": "value_error.missing",
+                                                   "msg": "max_tokens is required when model_type is embedding"}])
+                if embedding_dim is None:
+                    raise RequestValidationError([{"loc": ('body', "embedding_dim"), "type": "value_error.missing",
+                                                   "msg": "embedding_dim is required when model_type is embedding"}])
+
+        else:
+            # With model_id, the other model fields may be omitted.
+            pass
+        return values
+
+    @validator('model_config', pre=False)
+    def check_output_tokens(cls, v, values):
+        key_list = ["api_url", "api_model"]
+        for k in key_list:
+            if k not in v.keys():
+                raise RequestValidationError([{"loc": ('body', k), "type": "value_error.missing"}])
+        return v
+
+
+class EditExternalSmallModel(BaseModel):
+    model_id: StrictStr = Field(description="Configuration ID", min_length=19, max_length=19)
+    model_name: StrictStr = Field(description="Model name")
+    model_type: StrictStr = Field(description="Model type", regex=r'^(reranker|embedding)$')
+    model_config: Optional[dict] = Field(default={}, description="Third-party model service configuration")
+    adapter: Optional[bool] = Field(default=False, description="Whether to enable the adapter service")
+    adapter_code: Optional[StrictStr] = Field(default=None, description="Adapter code")
+    batch_size: int = Field(description="Batch size")
+    max_tokens: Optional[int] = Field(default=None, description="Maximum token count")
+    embedding_dim: Optional[int] = Field(default=None, description="Embedding dimension")
+    change: Optional[bool] = Field(default=False, description="Whether api_key in model_config was changed")
+
+    @root_validator
+    def validate_mutually_exclusive_groups(cls, values):
+        model_config = values.get('model_config', {})
+        adapter = values.get('adapter', False)
+        adapter_code = values.get('adapter_code')
+
+        if model_config and (adapter or adapter_code):
+            raise ValueError("model_config and adapter/adapter_code cannot be set together")
+        if not model_config and not (adapter or adapter_code):
+            raise ValueError("Set either model_config or adapter/adapter_code")
+        return values
+
+    @validator('model_config', pre=False)
+    def check_output_tokens(cls, v, values):
+        key_list = ["api_url", "api_model"]
+        for k in key_list:
+            if k not in v.keys():
+                raise RequestValidationError([{"loc": ('body', k), "type": "value_error.missing"}])

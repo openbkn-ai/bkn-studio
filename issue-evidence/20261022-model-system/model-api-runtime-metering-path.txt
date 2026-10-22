@@ -1,0 +1,76 @@
+                    "Authorization": f"Bearer {self.api_key}"
+                }
+                conn = aiohttp.TCPConnector(verify_ssl=False)
+                async with aiohttp.ClientSession(connector=conn, timeout=base_config.aiohttp_timeout) as session:
+                    async with session.post(self.api_url, json=params, headers=headers) as resp:
+                        res = await resp.text()
+                        result = json.loads(res)
+                        if resp.status == 200:
+                            log_info = logics.AddModelUsedAudit(
+                                model_id=self.model_id, user_id=user_id, input_tokens=result["usage"]["prompt_tokens"],
+                                output_tokens=result["usage"]["completion_tokens"],
+                                total_time=time.perf_counter() - start_time, status="success")
+                            await add_llm_model_call_log(log_info)
+                            if self.model_type == "rlm" and not result["choices"][0]["message"].get("reasoning_content",
+                                                                                                    None):
+                                # Extract the thinking tag.
+                                pattern = r"<think>(.*?)</think>"
+                                match = re.search(pattern, result["choices"][0]["message"]["content"], re.DOTALL)
+                                if match:
+                                    result["choices"][0]["message"]["reasoning_content"] = match.group(1)
+                                    result["choices"][0]["message"]["content"] = re.sub(pattern, "",
+                                                                                        result["choices"][0]["message"][
+                                                                                            "content"], flags=re.DOTALL)
+                                else:
+                                    pattern = r"(.*?)</think>"
+                                    match = re.search(pattern, result["choices"][0]["message"]["content"], re.DOTALL)
+                                    if match:
+                                        result["choices"][0]["message"]["reasoning_content"] = match.group(1)
+                                        result["choices"][0]["message"]["content"] = re.sub(pattern, "",
+                                                                                            result["choices"][0][
+                                                                                                "message"]["content"],
+                                                                                            flags=re.DOTALL)
+                            usage = result.get("usage", {})
+                            prompt_tokens = usage.get("prompt_tokens", 0)
+                            completion_tokens = usage.get("completion_tokens", 0)
+                            total_tokens = usage.get("total_tokens", 0)
+                            if "prompt_tokens_details" not in usage:
+                                usage["prompt_tokens_details"] = {
+                                    "cached_tokens": 0
+                                }
+                            if not usage["prompt_tokens_details"]:
+                                usage["prompt_tokens_details"] = {
+                                    "cached_tokens": 0
+                                }
+                                # Calculate uncached tokens.
+                            cached_tokens = usage["prompt_tokens_details"].get(
+                                "cached_tokens", 0)
+                            usage["prompt_tokens_details"][
+                                "uncached_tokens"] = prompt_tokens - cached_tokens
+                            result["usage"] = usage
+                            if get_logger():
+                                get_logger().info(
+                                    f'{{"model_name":{self.api_model},"resourece_type":"LLM","user_id":{user_id},'
+                                    f'"prompt_tokens":{prompt_tokens},"completion_tokens":{completion_tokens},'
+                                    f'"total_tokens":{total_tokens},"func_module":{func_module},"status":"success"}}')
+                            return result
+                        else:
+                            if get_logger():
+                                get_logger().info(
+                                    f'{{"model_name":{self.api_model},"resourece_type":"LLM","user_id":{user_id},'
+                                    f'"prompt_tokens":0,"completion_tokens":0,'
+                                    f'"total_tokens":0,"func_module":{func_module},"status":"failed"}}')
+                            return openai_error.with_http_status(
+                                openai_error.from_upstream(result, resp.status),
+                                resp.status,
+                                openai_error.retry_after_seconds(
+                                    resp.status, resp.headers))
+            except Exception as e:
+                StandLogger.error(e.args)
+                if get_logger():
+                    get_logger().info(
+                        f'{{"model_name":{self.api_model},"resourece_type":"LLM","user_id":{user_id},'
+                        f'"prompt_tokens":0,"completion_tokens":0,'
+                        f'"total_tokens":0,"func_module":{func_module},"status":"failed"}}')
+                if retry_time <= 0:
+                    raise e
