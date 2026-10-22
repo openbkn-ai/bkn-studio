@@ -683,7 +683,6 @@ export function ObjectAuthorizeDrawer({
             >
               {t("common.viewDetails")}
             </AppButton>
-            <span aria-hidden className={styles.authzActionDivider} />
             <Tooltip
               title={
                 deleteDisabled
@@ -1174,6 +1173,7 @@ export function ObjectAuthorizeDrawer({
             loading={loading}
             pagination={false}
             rowKey="accessorId"
+            scroll={{ x: 720 }}
             size="small"
             tableLayout="fixed"
           />

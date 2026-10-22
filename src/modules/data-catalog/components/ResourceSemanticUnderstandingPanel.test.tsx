@@ -9,6 +9,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { FormInstance } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { deleteSemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+
 import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
@@ -104,6 +106,44 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       removeEventListener: vi.fn(),
       removeListener: vi.fn(),
     }));
+  });
+
+  it("confirms semantic task batch deletion before calling the service", async () => {
+    modalConfirmMock.mockImplementation(() => {});
+    listSemanticUnderstandingTasksMock.mockResolvedValue({
+      items: [
+        {
+          agentId: "resource-semantic-understanding",
+          applied: false,
+          applyMode: "dry_run",
+          catalogId: resource.catalogId,
+          confidence: 0.8,
+          confidenceThreshold: 0.75,
+          createTime: 1,
+          creator: { id: "user-1", type: "user" },
+          id: "finished-task",
+          resourceId: resource.id,
+          scope: "resource",
+          status: "completed",
+        },
+      ],
+      total: 1,
+    });
+    render(
+      <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
+    );
+    await screen.findByText("finished-task");
+    fireEvent.click(
+      screen.getByText("finished-task").closest("tr")!.querySelector("input[type=checkbox]")!,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog.task.batchDelete \(1\)/ }));
+    expect(modalConfirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "dataCatalog.task.batchDeleteSemanticConfirmTitle",
+        content: "dataCatalog.task.deleteConfirmContent",
+      }),
+    );
+    expect(deleteSemanticUnderstandingTask).not.toHaveBeenCalled();
   });
 
   it("shows the empty-state title only once when there are no tasks", async () => {

@@ -937,6 +937,12 @@ export const dataCatalogEnUS = {
       deleteConfirmContentActive:
         "The task is still running and will be stopped before deletion; the record cannot be recovered.",
       batchDelete: "Batch Delete",
+      batchDeleteDiscoveryConfirmTitle: "Delete {{count}} discovery tasks",
+      batchDeleteDiscoveryConfirmTitle_one: "Delete {{count}} discovery task",
+      batchDeleteDiscoveryConfirmTitle_other: "Delete {{count}} discovery tasks",
+      batchDeleteSemanticConfirmTitle: "Delete {{count}} semantic understanding tasks",
+      batchDeleteSemanticConfirmTitle_one: "Delete {{count}} semantic understanding task",
+      batchDeleteSemanticConfirmTitle_other: "Delete {{count}} semantic understanding tasks",
       batchDeleteConfirmTitle: "Delete {{count}} build tasks",
       batchDeleteConfirmTitle_one: "Delete {{count}} build task",
       batchDeleteConfirmTitle_other: "Delete {{count}} build tasks",

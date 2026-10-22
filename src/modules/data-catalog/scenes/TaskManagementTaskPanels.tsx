@@ -218,8 +218,10 @@ export function DiscoverTaskListPanel() {
   const handleBatchDelete = () => {
     if (batchDeleteTargets.length === 0) return;
     void modal.confirm({
-      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: batchDeleteTargets.length }),
-      content: t("dataCatalog.task.batchDeleteConfirmContent"),
+      title: t("dataCatalog.task.batchDeleteDiscoveryConfirmTitle", {
+        count: batchDeleteTargets.length,
+      }),
+      content: t("dataCatalog.task.deleteConfirmContent"),
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },
@@ -584,8 +586,10 @@ export function SemanticUnderstandingTaskListPanel() {
   const handleBatchDelete = () => {
     if (batchDeleteTargets.length === 0) return;
     void modal.confirm({
-      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: batchDeleteTargets.length }),
-      content: t("dataCatalog.task.batchDeleteConfirmContent"),
+      title: t("dataCatalog.task.batchDeleteSemanticConfirmTitle", {
+        count: batchDeleteTargets.length,
+      }),
+      content: t("dataCatalog.task.deleteConfirmContent"),
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },

@@ -10,11 +10,13 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
+  modalConfirmMock,
   listCatalogsMock,
   listDataConnectDiscoverSchedulesMock,
   listDataConnectDiscoverTasksMock,
   listSemanticUnderstandingTasksMock,
 } = vi.hoisted(() => ({
+  modalConfirmMock: vi.fn(),
   listCatalogsMock: vi.fn(),
   listDataConnectDiscoverSchedulesMock: vi.fn(),
   listDataConnectDiscoverTasksMock: vi.fn(),
@@ -29,7 +31,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { error: vi.fn(), success: vi.fn() },
-    modal: { confirm: vi.fn() },
+    modal: { confirm: modalConfirmMock },
     runtimeConfig: {
       currentUser: { permissions: ["catalog:task_manage", "catalog:view_detail"] },
     },
@@ -54,6 +56,9 @@ vi.mock("@/modules/data-catalog/services/semantic-understanding-task.service", (
 vi.mock("@/shared/catalog", () => ({
   listCatalogs: listCatalogsMock,
 }));
+
+import { deleteDataConnectDiscoverTask } from "@/modules/data-connect/services/discover.service";
+import { deleteSemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 
 import {
   DiscoverTaskListPanel,
@@ -110,6 +115,50 @@ describe("TaskManagementTaskPanels", () => {
       removeListener: vi.fn(),
     }));
   });
+
+  it.each(["discover", "semantic"] as const)(
+    "confirms the selected %s task type without deleting before confirmation",
+    async (kind) => {
+      const listMock =
+        kind === "discover" ? listDataConnectDiscoverTasksMock : listSemanticUnderstandingTasksMock;
+      listMock.mockResolvedValue({
+        items: [
+          { ...runningTask(kind), id: "finished-task", status: "completed" },
+          runningTask(kind),
+        ],
+        total: 2,
+      });
+      const Panel =
+        kind === "discover" ? DiscoverTaskListPanel : SemanticUnderstandingTaskListPanel;
+      render(
+        <MemoryRouter>
+          <Panel />
+        </MemoryRouter>,
+      );
+      await screen.findByText("finished-task");
+      const row = screen.getByText("finished-task").closest("tr")!;
+      fireEvent.click(row.querySelector("input[type=checkbox]")!);
+      expect(
+        screen.getByText("running-task").closest("tr")!.querySelector("input[type=checkbox]"),
+      ).toBeDisabled();
+      fireEvent.click(screen.getByRole("button", { name: /dataCatalog.task.batchDelete \(1\)/ }));
+      expect(modalConfirmMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: `dataCatalog.task.batchDelete${kind === "discover" ? "Discovery" : "Semantic"}ConfirmTitle`,
+          content: "dataCatalog.task.deleteConfirmContent",
+        }),
+      );
+      expect(deleteDataConnectDiscoverTask).not.toHaveBeenCalled();
+      expect(deleteSemanticUnderstandingTask).not.toHaveBeenCalled();
+      const confirmation = modalConfirmMock.mock.calls[0][0] as { onOk: () => Promise<void> };
+      await act(async () => {
+        await confirmation.onOk();
+      });
+      expect(
+        kind === "discover" ? deleteDataConnectDiscoverTask : deleteSemanticUnderstandingTask,
+      ).toHaveBeenCalledExactlyOnceWith("finished-task");
+    },
+  );
 
   it("shows the discover-task empty-state title only once", async () => {
     render(
