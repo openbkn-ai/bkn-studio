@@ -7,6 +7,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { cypherQueryPart as enUS } from "../locales/en-US/cypher-query";
+import { cypherQueryPart as zhCN } from "../locales/zh-CN/cypher-query";
 import { cypherPlanFrom, splitExplain, withExplain } from "./cypher-plan";
 
 describe("splitExplain", () => {
@@ -49,6 +51,7 @@ describe("cypherPlanFrom", () => {
         limit_source: "default",
         reads: ["teams.x"],
         warnings: ["no LIMIT"],
+        warning_codes: ["default_limit"],
         sql: "SELECT …",
       }),
     ).toEqual({
@@ -64,11 +67,31 @@ describe("cypherPlanFrom", () => {
       reads: ["teams.x"],
       row_filtered: [],
       warnings: ["no LIMIT"],
+      warning_codes: ["default_limit"],
     });
   });
 
   it("is null without a shape", () => {
     expect(cypherPlanFrom(undefined)).toBeNull();
     expect(cypherPlanFrom({ objects: [] })).toBeNull();
+  });
+});
+
+describe("warning codes", () => {
+  it("keep their place beside warnings when an entry is not a code", () => {
+    const plan = cypherPlanFrom({
+      shape: "match",
+      warnings: ["a", "b"],
+      warning_codes: [null, "default_limit"],
+    });
+    expect(plan?.warning_codes).toEqual(["", "default_limit"]);
+  });
+
+  it("each have a text in both languages", () => {
+    const codes = ["disconnected_parts", "default_limit", "row_filtered", "collect_cap"];
+    for (const part of [zhCN, enUS]) {
+      const texts = part.cypherQuery.plan.warningCodes as Record<string, string>;
+      expect(codes.filter((code) => !texts[code])).toEqual([]);
+    }
   });
 });

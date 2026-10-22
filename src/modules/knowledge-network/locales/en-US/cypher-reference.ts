@@ -14,7 +14,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     rules: [
       "MATCH pattern [WHERE condition] RETURN items [ORDER BY …] [SKIP n] [LIMIT n]; a query may open with WITH ['a', 'b'] AS codes to name constants for its conditions.",
       "Read-only: RETURN is required; no CREATE, MERGE, SET, DELETE or REMOVE.",
-      "Without LIMIT a query returns at most 1000 rows, and LIMIT is capped at 10000; a query holds at most 8 relationships and 9 nodes.",
+      "Without LIMIT a query returns at most 1000 rows, and the status bar says when it filled them; LIMIT is capped at 10000; a query holds at most 8 relationships and 9 nodes.",
     ],
     notes: ["", "Constants up front"],
   },
@@ -23,7 +23,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     rules: [
       "Write a node as (variable:ObjectType), by object type id; quote ids with special characters in backticks, as in (a:`my-type`). A node's first mention names its object type and may carry an inline property map {prop: value}.",
       "Write a relationship as -[r:RELATION]->, <-[r:RELATION]- or undirected -[r:RELATION]-, naming exactly one relation type. Name it and return it, or the graph draws no line.",
-      "Join paths with commas or more MATCH clauses; a variable written twice is the same node, and paths sharing no variable are combined pairwise.",
+      "Join paths with commas or more MATCH clauses; a variable written twice is the same node, and paths sharing no variable are combined pairwise. Two parts neither connected nor narrowed by any condition are refused: connect them with a relation type or an equality such as a.code = b.code, or add a condition to one side.",
       "OPTIONAL MATCH writes one relationship attaching one new node to a node already found: when nothing matches, the row stays and the new node is empty. What it introduces may not be required again by a later MATCH or WHERE.",
     ],
     notes: [

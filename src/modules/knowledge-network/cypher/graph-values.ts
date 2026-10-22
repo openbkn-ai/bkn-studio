@@ -30,6 +30,8 @@ export type CypherResult = {
   execution?: CypherExecution;
   /** Set instead of rows when the query was explained, not run. */
   plan?: CypherPlan;
+  /** The query wrote no LIMIT and filled the default, so more rows may match. */
+  limited?: boolean;
 };
 
 type Rec = Record<string, unknown>;

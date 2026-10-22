@@ -29,6 +29,8 @@ export type CypherPlan = {
   /** Object types whose rows the caller's access policy narrows. */
   row_filtered?: string[];
   warnings?: string[];
+  /** Each warning's code, in the same order, for wording it in the reader's language. */
+  warning_codes?: string[];
 };
 
 type Rec = Record<string, unknown>;
@@ -90,6 +92,10 @@ export function cypherPlanFrom(value: unknown): CypherPlan | null {
     reads: strings(value.reads),
     row_filtered: strings(value.row_filtered),
     warnings: strings(value.warnings),
+    // Paired with warnings by position, so an entry that is not a code keeps its place.
+    warning_codes: Array.isArray(value.warning_codes)
+      ? value.warning_codes.map((item) => (typeof item === "string" ? item : ""))
+      : [],
   };
 }
 

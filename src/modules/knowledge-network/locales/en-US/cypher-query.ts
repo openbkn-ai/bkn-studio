@@ -76,6 +76,8 @@ export const cypherQueryPart = {
         "The result was too large to keep in this browser. Run the query again to see it.",
     },
     status: {
+      limited:
+        "Stopped at the default {{limit}} rows; more may match. Write LIMIT to change it (up to 10000)",
       rows_one: "{{count}} row",
       rows_other: "{{count}} rows",
       latency: "{{ms}} ms",
@@ -99,6 +101,16 @@ export const cypherQueryPart = {
       limitDefault: "{{limit}} rows (the default without LIMIT)",
       reads: "Properties read",
       rowFiltered: "Row access filtered",
+      warningCodes: {
+        disconnected_parts:
+          "Parts of the pattern that no relationship, shared node or equality such as a.code = b.code connects combine pairwise; connect them.",
+        default_limit:
+          "No LIMIT: at most {{limit}} rows come back; write LIMIT to ask for more (up to 10000) or fewer.",
+        row_filtered:
+          "Your access policy narrows the rows of {{types}}, so counts and results cover only the rows you may read.",
+        collect_cap:
+          "collect reads its evidence in full; a query whose evidence reaches 10000 rows is refused, so narrow it with conditions.",
+      },
       shapes: {
         match: "Match",
         aggregate: "Aggregate",
