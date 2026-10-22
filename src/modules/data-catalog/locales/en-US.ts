@@ -905,9 +905,11 @@ export const dataCatalogEnUS = {
       resumeBuild: "Resume Build",
       stopped: "Build stopped",
       buildResumed: "Build resumed",
-      pauseResumeConfirmPauseTitle: "Pause build task?",
+      pauseResumeConfirmStopTitle: "Stop build task?",
+      pauseResumeConfirmStopContent: "This stops the current batch build.",
+      pauseResumeConfirmPauseTitle: "Pause listening?",
       pauseResumeConfirmPauseContent:
-        "This changes the task state and stops its current processing.",
+        "This pauses the streaming task's listening for data changes.",
       pauseResumeConfirmResumeTitle: "Resume build task?",
       pauseResumeConfirmResumeContent: "This changes the task state and resumes processing.",
       rebuild: "Rebuild",
