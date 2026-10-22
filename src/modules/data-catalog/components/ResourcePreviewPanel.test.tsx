@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
@@ -85,6 +85,61 @@ describe("ResourcePreviewPanel", () => {
     vi.clearAllMocks();
     Object.assign(testFilterRule, { field: "id", operation: ">", value: "10" });
   });
+
+  it.each(["source", "local_index"] as const)(
+    "does not reload a view after learning its %s path, then uses that path for filters",
+    async (path) => {
+      const response = { rows: [{ wide: "9" }], total: 1, querySource: path };
+      let resolvePreview!: (value: typeof response) => void;
+      const preview = new Promise<typeof response>((resolve) => {
+        resolvePreview = resolve;
+      });
+      previewCatalogResourceMock.mockReturnValueOnce(preview).mockResolvedValue(response);
+      Object.assign(testFilterRule, {
+        field: "wide",
+        operation: "==",
+        value: " +09007199254740993 ",
+      });
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            category: "logical_view",
+            schema: [{ name: "wide", type: "large_integer" }],
+          }}
+        />,
+      );
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        resolvePreview(response);
+        await preview;
+      });
+      expect(screen.getByRole("cell", { name: "9" })).toBeTruthy();
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+      expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(
+        resource.id,
+        expect.objectContaining({
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [
+              {
+                field: "wide",
+                operation: "==",
+                value_from: "const",
+                value: path === "source" ? "+09007199254740993" : " +09007199254740993 ",
+              },
+            ],
+          },
+        }),
+      );
+    },
+  );
 
   it.each(["source", "local_index"] as const)(
     "serializes large integer filter whitespace for the %s path",
