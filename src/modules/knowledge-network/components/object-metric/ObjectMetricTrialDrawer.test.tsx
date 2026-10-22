@@ -616,43 +616,34 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(
       await screen.findByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "分析路径" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "继续下钻" })).not.toBeInTheDocument();
+    const analysis = within(screen.getByRole("region", { name: "图表与数据" }));
+    expect(analysis.queryByRole("navigation", { name: "分析路径" })).not.toBeInTheDocument();
+    expect(analysis.queryByRole("button", { name: "继续下钻" })).not.toBeInTheDocument();
 
-    const row = screen.getByRole("row", { name: /已确认.*784/ });
+    const row = analysis.getByRole("row", { name: /已确认.*784/ });
     expect(row).toHaveAttribute("aria-selected", "false");
     fireEvent.click(row);
     expect(row).toHaveAttribute("aria-selected", "true");
     expect(
-      screen.queryByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
+      analysis.queryByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("当前分组: status: 已确认")).toBeInTheDocument();
-    expect(
-      within(screen.getByRole("region", { name: "图表与数据" })).getByText(
-        "当前分组: status: 已确认",
-      ),
-    ).toBeInTheDocument();
+    expect(analysis.getByText("当前分组: status: 已确认")).toBeInTheDocument();
 
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "选择下钻维度" }));
+    fireEvent.mouseDown(analysis.getByRole("combobox", { name: "选择下钻维度" }));
     fireEvent.click(await screen.findByText("product_code"));
-    fireEvent.click(screen.getByRole("button", { name: "继续下钻" }));
+    fireEvent.click(analysis.getByRole("button", { name: "继续下钻" }));
     await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
     expect(onRun.mock.calls[1][0]).toMatchObject({
       group_by: [{ object_type_id: "order", property_name: "product_code" }],
       bucket_selection: { bucket_key: "confirmed-orders", parent_query: onRun.mock.calls[0][0] },
     });
-    const path = await screen.findByRole("navigation", { name: "分析路径" });
-    expect(
-      within(screen.getByRole("region", { name: "图表与数据" })).getByRole("navigation", {
-        name: "分析路径",
-      }),
-    ).toBe(path);
+    const path = await analysis.findByRole("navigation", { name: "分析路径" });
     expect(within(path).getByRole("button", { name: "初始结果" })).toBeInTheDocument();
     const currentLevel = within(path).getByText("当前").parentElement;
     expect(currentLevel).toHaveAttribute("aria-current", "step");
     expect(currentLevel).toHaveTextContent("status: 已确认");
     fireEvent.click(within(path).getByRole("button", { name: "返回上一级" }));
-    expect(screen.queryByRole("navigation", { name: "分析路径" })).not.toBeInTheDocument();
+    expect(analysis.queryByRole("navigation", { name: "分析路径" })).not.toBeInTheDocument();
     expect(onRun).toHaveBeenCalledTimes(2);
   });
 
