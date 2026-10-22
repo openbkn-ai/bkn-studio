@@ -600,8 +600,8 @@ export function ResourceSemanticUnderstandingPanel({
               value={outputLanguage}
               onChange={(value: "zh-CN" | "en-US") => setLanguageOverride(value)}
               options={[
-                { value: "zh-CN", label: t("dataCatalog.semanticWorkspace.languageChinese") },
-                { value: "en-US", label: t("dataCatalog.semanticWorkspace.languageEnglish") },
+                { value: "zh-CN", label: t("shell.language.zhCN") },
+                { value: "en-US", label: t("shell.language.enUS") },
               ]}
             />
           </Form.Item>

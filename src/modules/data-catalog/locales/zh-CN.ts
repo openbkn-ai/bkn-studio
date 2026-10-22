@@ -202,8 +202,6 @@ export const dataCatalogZhCN = {
     },
     semanticWorkspace: {
       outputLanguage: "输出语言",
-      languageChinese: "简体中文",
-      languageEnglish: "英语",
       summary: "语义理解结果",
       noResult: "暂无结果",
       applied: "已应用",

@@ -234,14 +234,14 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     const { rerender } = render(panel);
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
     expect(screen.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage")).toBeTruthy();
-    expect(screen.getByText("dataCatalog.semanticWorkspace.languageChinese")).toBeTruthy();
+    expect(screen.getByText("shell.language.zhCN")).toBeTruthy();
     runtimeConfigMock.locale = "en-US";
     rerender(
       <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
     );
-    expect(screen.getByText("dataCatalog.semanticWorkspace.languageEnglish")).toBeTruthy();
+    expect(screen.getByText("shell.language.enUS")).toBeTruthy();
     fireEvent.mouseDown(screen.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage"));
-    fireEvent.click(await screen.findByText("dataCatalog.semanticWorkspace.languageChinese"));
+    fireEvent.click(await screen.findByText("shell.language.zhCN"));
     runtimeConfigMock.locale = "zh-CN";
     rerender(
       <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,

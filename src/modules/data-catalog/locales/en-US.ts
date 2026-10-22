@@ -211,8 +211,6 @@ export const dataCatalogEnUS = {
     },
     semanticWorkspace: {
       outputLanguage: "Output language",
-      languageChinese: "Chinese (Simplified)",
-      languageEnglish: "English",
       summary: "Semantic Understanding Result",
       noResult: "No result",
       applied: "Applied",
