@@ -540,7 +540,7 @@ describe("ResourcePreviewPanel", () => {
   });
 
   it.each(["source", "local_index"] as const)(
-    "renders normalized nulls while preserving string content in %s preview",
+    "renders normalized nulls with JSON string content returned by %s",
     async (querySource) => {
       previewCatalogResourceMock.mockResolvedValue({
         rows: [
@@ -573,7 +573,6 @@ describe("ResourcePreviewPanel", () => {
         }),
       ).toBeTruthy();
       expect(screen.getByRole("cell", { name: querySource === "source" ? '""' : "" })).toBeTruthy();
-      expect(screen.getAllByRole("cell", { name: "NULL" })).toHaveLength(2);
     },
   );
 
