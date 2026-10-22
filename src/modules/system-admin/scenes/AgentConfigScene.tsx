@@ -21,6 +21,7 @@ import {
   Button,
   Card,
   Col,
+  Collapse,
   Form,
   Input,
   InputNumber,
@@ -30,6 +31,7 @@ import {
   Select,
   Space,
   Spin,
+  Table,
   Tag,
   Typography,
 } from "antd";
@@ -56,6 +58,9 @@ import {
   restoreShared,
   updateShared,
   type AgentLimits,
+  type AgentToolDefinition,
+  type AgentToolSource,
+  type ToolParameterSchema,
   type AgentVersion,
   type LimitKey,
   type McpProfileChoice,
@@ -379,6 +384,8 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
           style={{ marginBottom: 16 }}
         />
       )}
+      {/* Read-only, so outside the danger zone. */}
+      {shared.tools ? <AgentTools sources={shared.tools} /> : null}
       <section className={styles.dangerZone} aria-label={t(`${P}.dangerZone`)}>
         <div className={styles.dangerHeader}>
           <span className={styles.dangerTitle}>{t(`${P}.dangerZone`)}</span>
@@ -660,6 +667,113 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
           </>
         ) : null}
       </Modal>
+    </div>
+  );
+}
+
+/** The Agent's tools by source, as configured; changing them is not a product operation. */
+function AgentTools({ sources }: { sources: AgentToolSource[] }) {
+  const { t } = useTranslation();
+  const sourceLabel = (source: AgentToolSource) => {
+    const detail = source.provider ?? source.box_id ?? source.agent_id ?? source.name;
+    const kind = t(`${P}.toolSource.${source.type}`, { defaultValue: source.type });
+    return detail ? `${kind} · ${detail}` : kind;
+  };
+  return (
+    <Card title={t(`${P}.toolsTitle`)} className={styles.tools} data-testid="agent-config-tools">
+      {sources.length === 0 ? (
+        <Typography.Text type="secondary">{t(`${P}.toolsNone`)}</Typography.Text>
+      ) : (
+        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+          {sources.map((source, index) => (
+            <div key={`${source.type}-${index}`} data-testid="agent-config-tool-source">
+              <Typography.Text strong>{sourceLabel(source)}</Typography.Text>
+              <div className={styles.toolNames}>
+                {source.definitions?.length ? (
+                  <Collapse
+                    size="small"
+                    className={styles.toolDefinitions}
+                    items={source.definitions.map((definition) => ({
+                      key: definition.name,
+                      label: <span className={styles.toolName}>{definition.name}</span>,
+                      children: <ToolDefinition definition={definition} />,
+                    }))}
+                  />
+                ) : source.names?.length ? (
+                  source.names.map((name) => (
+                    <Tag key={name} className={styles.toolName}>
+                      {name}
+                    </Tag>
+                  ))
+                ) : (
+                  <Typography.Text type="secondary">
+                    {t(
+                      source.type === "context_loader"
+                        ? `${P}.toolsAllContextLoader`
+                        : `${P}.toolsAtRuntime`,
+                    )}
+                  </Typography.Text>
+                )}
+              </div>
+            </div>
+          ))}
+        </Space>
+      )}
+    </Card>
+  );
+}
+
+/** A parameter's JSON Schema type in short: `array<string>`, alternatives joined, null left out. */
+function schemaType(schema: ToolParameterSchema): string {
+  if (schema.anyOf)
+    return schema.anyOf
+      .filter((option) => option.type !== "null")
+      .map(schemaType)
+      .join(" | ");
+  if (schema.type === "array" && schema.items) return `array<${schemaType(schema.items)}>`;
+  return schema.type ?? "";
+}
+
+function ToolDefinition({ definition }: { definition: AgentToolDefinition }) {
+  const { t } = useTranslation();
+  const properties = Object.entries(definition.parameters?.properties ?? {});
+  const required = new Set(definition.parameters?.required ?? []);
+  return (
+    <div data-testid="agent-config-tool-definition">
+      {definition.description ? (
+        <Typography.Paragraph className={styles.toolDescription}>
+          {definition.description}
+        </Typography.Paragraph>
+      ) : null}
+      {properties.length === 0 ? (
+        <Typography.Text type="secondary">{t(`${P}.toolNoParameters`)}</Typography.Text>
+      ) : (
+        <Table
+          size="small"
+          pagination={false}
+          rowKey="name"
+          dataSource={properties.map(([name, schema]) => ({
+            name,
+            type: schemaType(schema),
+            required: required.has(name),
+            description: schema.description ?? "",
+          }))}
+          columns={[
+            {
+              title: t(`${P}.toolParameter`),
+              dataIndex: "name",
+              render: (name: string) => <span className={styles.toolName}>{name}</span>,
+            },
+            { title: t(`${P}.toolParameterType`), dataIndex: "type" },
+            {
+              title: t(`${P}.toolParameterRequired`),
+              dataIndex: "required",
+              render: (value: boolean) => (value ? t(`${P}.toolParameterRequiredYes`) : ""),
+            },
+            { title: t(`${P}.toolParameterDescription`), dataIndex: "description" },
+          ]}
+        />
+      )}
     </div>
   );
 }

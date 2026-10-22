@@ -113,3 +113,28 @@
   margin-bottom: 8px;
   color: var(--color-text-secondary);
 }
+
+.tools {
+  margin-bottom: 16px;
+}
+
+.toolNames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.toolName {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.toolDefinitions {
+  width: 100%;
+}
+
+.toolDescription {
+  white-space: pre-wrap;
+  font-size: 13px;
+}

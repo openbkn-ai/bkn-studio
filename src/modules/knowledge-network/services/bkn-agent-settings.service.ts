@@ -73,6 +73,38 @@ export type AgentConfig = {
 
 export type McpProfileChoice = "full" | "compact";
 
+/** One source of an Agent's tools as configured; read-only. */
+export type AgentToolSource = {
+  type: string;
+  /** builtin: the provider; agent: the Agent it calls; toolbox: the box. */
+  provider?: string | null;
+  agent_id?: string | null;
+  box_id?: string | null;
+  name?: string | null;
+  /** Tool names it mounts; null means all it offers, or names known only at execution time. */
+  names?: string[] | null;
+  /** What each tool tells the model, when known before execution (built-in tools). */
+  definitions?: AgentToolDefinition[] | null;
+};
+
+export type AgentToolDefinition = {
+  name: string;
+  description?: string | null;
+  /** JSON Schema of the tool's arguments. */
+  parameters?: {
+    properties?: Record<string, ToolParameterSchema>;
+    required?: string[];
+  } | null;
+};
+
+export type ToolParameterSchema = {
+  type?: string;
+  items?: ToolParameterSchema;
+  anyOf?: ToolParameterSchema[];
+  description?: string;
+  default?: unknown;
+};
+
 export type SharedAgent = {
   agent_id: string;
   name: string;
@@ -82,6 +114,8 @@ export type SharedAgent = {
   mcp_profile?: McpProfileChoice | null;
   /** Whether the Agent loads Context Loader; the MCP surface choice applies only then. */
   uses_context_loader: boolean;
+  /** The tools the Agent mounts, by source. Older services omit it. */
+  tools?: AgentToolSource[];
   /** Whether network and personal settings apply (smart Q&A); others are configured here only. */
   layered: boolean;
   /** Whether the caller holds admin-agent:manage. */
