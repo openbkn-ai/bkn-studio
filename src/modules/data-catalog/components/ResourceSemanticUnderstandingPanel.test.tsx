@@ -7,6 +7,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { FormInstance } from "antd";
+import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { deleteSemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
@@ -29,6 +30,15 @@ const {
   listSemanticUnderstandingTasksMock: vi.fn(),
   modalConfirmMock: vi.fn<(config: { onOk: () => Promise<void> }) => void>(),
 }));
+
+vi.mock("antd", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("antd")>();
+  // Keep the real dialog and controls, without frame-dependent entrance styles.
+  function ModalWithoutTransitions(props: ComponentProps<typeof actual.Modal>) {
+    return <actual.Modal {...props} transitionName="" maskTransitionName="" />;
+  }
+  return { ...actual, Modal: Object.assign(ModalWithoutTransitions, actual.Modal) };
+});
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -240,13 +250,13 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     expect(
       dialog.getByLabelText("dataCatalog.semanticWorkspace.outputLanguage"),
     ).toBeInTheDocument();
-    await waitFor(() => expect(dialog.getByText("shell.language.zhCN")).toBeVisible());
+    expect(dialog.getByText("shell.language.zhCN")).toBeVisible();
 
     runtimeConfigMock.locale = "en-US";
     rerender(
       <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
     );
-    await waitFor(() => expect(dialog.getByText("shell.language.enUS")).toBeVisible());
+    expect(dialog.getByText("shell.language.enUS")).toBeVisible();
     fireEvent.click(dialog.getByRole("button", { name: "dataCatalog.semanticWorkspace.start" }));
     await waitFor(() =>
       expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledExactlyOnceWith(
@@ -278,7 +288,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     rerender(
       <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
     );
-    await waitFor(() => expect(dialog.getByText("shell.language.zhCN")).toBeVisible());
+    expect(dialog.getByText("shell.language.zhCN")).toBeVisible();
     fireEvent.click(dialog.getByRole("button", { name: "dataCatalog.semanticWorkspace.start" }));
     await waitFor(() =>
       expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledExactlyOnceWith(
@@ -315,7 +325,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     const reopenedDialog = within(
       screen.getByRole("dialog", { name: "dataCatalog.semanticWorkspace.createTitle" }),
     );
-    await waitFor(() => expect(reopenedDialog.getByText("shell.language.enUS")).toBeVisible());
+    expect(reopenedDialog.getByText("shell.language.enUS")).toBeVisible();
   });
 
   it("lets users choose up to twenty sample rows", async () => {
