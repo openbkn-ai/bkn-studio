@@ -6,6 +6,7 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
@@ -25,6 +26,12 @@ vi.mock("@/modules/knowledge-network/services/object-metric.service", () => ({
 vi.mock("@/modules/knowledge-network/services/relation-type.service", () => ({
   listKnowledgeNetworkRelationTypePage: mocks.listRelations,
 }));
+vi.mock(
+  "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel",
+  () => ({
+    KnowledgeNetworkAuthorizationActionLabel: ({ children }: { children: ReactNode }) => children,
+  }),
+);
 
 import { ObjectMetricGraphCanvas } from "./ObjectMetricGraphCanvas";
 
@@ -132,6 +139,124 @@ function neighborCountRequestIds() {
 }
 
 describe("ObjectMetricGraphCanvas", () => {
+  it("shows authorized owner names without exposing object details when object types are restricted", async () => {
+    const first = metric("restricted-1");
+    first.definition.owner_object_type_id = "hidden-owner-1";
+    first.owner_object_type_name = "销售订单";
+    const second = metric("restricted-2");
+    second.definition.owner_object_type_id = "hidden-owner-2";
+    second.owner_object_type_name = "客户";
+    mocks.listMetrics.mockResolvedValue({ entries: [first, second], total_count: 2 });
+    const onRestrictedObjectClick = vi.fn();
+
+    renderGraph(vi.fn(), vi.fn(), {
+      onRestrictedObjectClick,
+      restrictedObjectTypes: true,
+      selectedObjectTypeId: "",
+      selectedObjectTypeName: "",
+    });
+
+    const lockedOwners = await screen.findAllByRole("button", {
+      name: /详情不可查看|details unavailable/i,
+    });
+    expect(lockedOwners).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /销售订单/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /客户/ })).toBeInTheDocument();
+    expect(mocks.listRelations).not.toHaveBeenCalled();
+    expect(mocks.listMetrics).toHaveBeenCalledWith(
+      "network-1",
+      { limit: 6, metricType: undefined, offset: 0 },
+      { skipErrorToast: true },
+    );
+    expect(screen.queryByText("hidden-owner-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("hidden-owner-2")).not.toBeInTheDocument();
+
+    fireEvent.click(lockedOwners[0]);
+    expect(onRestrictedObjectClick).toHaveBeenCalledTimes(1);
+    expect(document.querySelector(".ant-drawer-open")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /原子指标：指标 restricted-1|Atomic metric: 指标 restricted-1/i,
+      }),
+    );
+    await waitFor(() => expect(document.querySelector(".ant-drawer-open")).not.toBeNull());
+    expect(document.querySelector(".ant-drawer-open")).toHaveTextContent("销售订单");
+  });
+
+  it("groups metrics owned by the same restricted object type under one locked node", async () => {
+    const first = metric("restricted-1");
+    first.owner_object_type_name = "销售订单";
+    const second = metric("restricted-2");
+    second.owner_object_type_name = "销售订单";
+    mocks.listMetrics.mockResolvedValue({ entries: [first, second], total_count: 2 });
+
+    renderGraph(vi.fn(), vi.fn(), {
+      restrictedObjectTypes: true,
+      selectedObjectTypeId: "",
+      selectedObjectTypeName: "",
+    });
+
+    expect(await screen.findAllByRole("button", { name: /销售订单/ })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /指标 restricted-1/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /指标 restricted-2/ })).toBeInTheDocument();
+  });
+
+  it("paginates authorized metrics in the restricted-object graph", async () => {
+    const records = Array.from({ length: 7 }, (_, index) => metric(`restricted-${index + 1}`));
+    mocks.listMetrics.mockImplementation(
+      (_networkId: string, query: { limit: number; offset: number }) =>
+        Promise.resolve({
+          entries: records.slice(query.offset, query.offset + query.limit),
+          total_count: records.length,
+        }),
+    );
+    const { container } = renderGraph(vi.fn(), vi.fn(), {
+      restrictedObjectTypes: true,
+      selectedObjectTypeId: "",
+      selectedObjectTypeName: "",
+    });
+
+    expect(
+      await screen.findByRole("button", {
+        name: /原子指标：指标 restricted-1|Atomic metric: 指标 restricted-1/i,
+      }),
+    ).toBeInTheDocument();
+    fireEvent.click(container.querySelector(".ant-pagination-next button")!);
+
+    expect(
+      await screen.findByRole("button", {
+        name: /原子指标：指标 restricted-7|Atomic metric: 指标 restricted-7/i,
+      }),
+    ).toBeInTheDocument();
+    expect(mocks.listMetrics).toHaveBeenCalledWith(
+      "network-1",
+      { limit: 6, metricType: undefined, offset: 6 },
+      { skipErrorToast: true },
+    );
+  });
+
+  it("does not treat an empty object-type search as a permission restriction", () => {
+    renderGraph(vi.fn(), vi.fn(), {
+      objectTypeSearchEmpty: true,
+      selectedObjectTypeId: "",
+      selectedObjectTypeName: "",
+    });
+
+    expect(
+      screen.getByText(/没有符合当前搜索条件的对象类|No object types match the current search/),
+    ).toBeInTheDocument();
+    expect(mocks.listMetrics).not.toHaveBeenCalled();
+  });
+
+  it("does not load object details before the visible object list is ready", () => {
+    renderGraph(vi.fn(), vi.fn(), { objectTypesLoading: true });
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(mocks.listRelations).not.toHaveBeenCalled();
+    expect(mocks.listMetrics).not.toHaveBeenCalled();
+  });
+
   it("renders the object title and overview actions in one toolbar", async () => {
     mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 2 });
     mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
@@ -983,6 +1108,28 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(onEditMetric).toHaveBeenCalledWith(draft);
     expect(onOpenMetric).toHaveBeenCalledWith(draft);
     expect(onDeleteVersion).toHaveBeenCalledWith(draft);
+  });
+
+  it("opens authorization for the selected metric from the graph detail drawer", async () => {
+    const selected = metric("authorized");
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [selected], total_count: 1 });
+    const onAuthorizeMetric = vi.fn();
+    renderGraph(vi.fn(), vi.fn(), { onAuthorizeMetric });
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /原子指标：指标 authorized|Atomic metric: 指标 authorized/,
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "配置权限" }));
+
+    expect(onAuthorizeMetric).toHaveBeenCalledWith(selected);
   });
 
   it("shows a registered transaction unit by its business name in the graph detail", async () => {

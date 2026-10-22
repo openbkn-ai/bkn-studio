@@ -8,6 +8,7 @@
 import {
   DeleteOutlined,
   EditOutlined,
+  LockOutlined,
   ReloadOutlined,
   SearchOutlined,
   ThunderboltOutlined,
@@ -35,10 +36,13 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectMetricGraphCanvas } from "@/modules/knowledge-network/components/object-metric/ObjectMetricGraphCanvas";
+import { ObjectMetricAuthorizeDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricAuthorizeDrawer";
 import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
+import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/shared/ObjectTypeRemoteFilter";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
 import {
@@ -74,7 +78,7 @@ import listStyles from "@/modules/knowledge-network/components/shared/ResourceLi
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import { useTranslation } from "react-i18next";
 
-type Props = { canDelete: boolean; canModify: boolean; networkId: string };
+type Props = { canDelete: boolean; canModify: boolean; networkId: string; networkName?: string };
 type MetricStatus = ObjectMetricRecordV1["definition"]["lifecycle"]["status"];
 type CreateIntent = { type: ObjectMetricTypeV1 };
 
@@ -108,9 +112,10 @@ const statusNames = {
   },
 };
 
-export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props) {
+export function ObjectMetricListPanel({ canDelete, canModify, networkId, networkName }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const canAuthorizeMetrics = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [searchParams, setSearchParams] = useSearchParams();
   const [initialLocation] = useState(() => readObjectMetricListLocation(searchParams));
   const [initialGraphMetric] = useState(() => {
@@ -124,11 +129,13 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
+  const [objectListError, setObjectListError] = useState(false);
   const [objectMetricCounts, setObjectMetricCounts] = useState<Record<string, number | null>>({});
   const [visibleObjectTypeIds, setVisibleObjectTypeIds] = useState<string[]>([]);
   const [objectTotal, setObjectTotal] = useState(0);
   const [objectPage, setObjectPage] = useState(initialLocation.objectPage);
   const [listMetrics, setListMetrics] = useState<ObjectMetricRecordV1[]>([]);
+  const [authorizingMetric, setAuthorizingMetric] = useState<ObjectMetricRecordV1>();
   const [trialMetric, setTrialMetric] = useState<ObjectMetricRecordV1>();
   const [trialObjectType, setTrialObjectType] = useState<ObjectTypeDetail | null>();
   const [trialLoadingKey, setTrialLoadingKey] = useState<string>();
@@ -227,6 +234,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
     }
     let active = true;
     setLoading(true);
+    setObjectListError(false);
     void listKnowledgeNetworkObjectTypePage(
       networkId,
       {
@@ -240,6 +248,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
     )
       .then((result) => {
         if (!active || objectKeywordRef.current.trim() !== debouncedObjectKeyword) return;
+        setObjectListError(false);
         const maxPage = Math.max(1, Math.ceil(result.totalCount / OBJECT_PAGE_SIZE));
         setObjectTotal(result.totalCount);
         if (objectPage > maxPage) {
@@ -265,6 +274,9 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
         if (active) {
           setObjectTypes([]);
           setObjectTotal(0);
+          setObjectListError(true);
+          setSelectedObjectTypeId("");
+          setSelectedObjectTypeName("");
           void messageRef.current.error(objectMetricText("m51fc5b3bc879"));
         }
       })
@@ -277,7 +289,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
   }, [debouncedObjectKeyword, networkId, objectPage, refreshVersion, viewMode]);
 
   useEffect(() => {
-    if (viewMode !== "graph" || !selectedObjectTypeId) {
+    if (viewMode !== "graph" || loading || objectListError || !selectedObjectTypeId) {
       setSelectedObjectDetail(undefined);
       return;
     }
@@ -295,7 +307,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
     return () => {
       active = false;
     };
-  }, [networkId, selectedObjectTypeId, refreshVersion, viewMode]);
+  }, [loading, networkId, objectListError, selectedObjectTypeId, refreshVersion, viewMode]);
 
   useEffect(() => {
     if (!selectedObjectTypeId) return;
@@ -489,13 +501,14 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
   }, [listCurrent, listMetrics, networkId, viewMode]);
 
   const refresh = useCallback(() => {
+    if (viewMode === "graph") setLoading(true);
     objectMetricCountCache.current.clear();
     graphOwnerMetricCache.current.clear();
     listOwnerDetailCache.current.clear();
     setObjectMetricCounts({});
     setListOwnerDetails({});
     setRefreshVersion((current) => current + 1);
-  }, []);
+  }, [viewMode]);
 
   const navigateToCreate = (objectTypeId: string, type: ObjectMetricTypeV1) => {
     void navigate(
@@ -735,14 +748,25 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
       render: (_, record) => {
         const ownerId = record.definition.owner_object_type_id;
         const owner = ownerObjectTypeFor(record);
-        const label =
-          owner === undefined ? objectMetricText("bindingLoading") : owner?.name || ownerId;
+        if (owner === undefined) return <span>{objectMetricText("bindingLoading")}</span>;
+        if (owner === null) {
+          const label = record.owner_object_type_name || objectMetricText("restrictedOwnerName");
+          return (
+            <Tooltip title={objectMetricText("restrictedObjectPermissionDenied")}>
+              <span className={styles.restrictedOwnerLabel}>
+                <LockOutlined />
+                {label}
+              </span>
+            </Tooltip>
+          );
+        }
+        const label = owner.name;
         return (
           <Button
             className={styles.ownerLink}
             onClick={() => {
               setSelectedObjectTypeId(ownerId);
-              setSelectedObjectTypeName(owner?.name ?? ownerId);
+              setSelectedObjectTypeName(owner.name);
               setViewMode("graph");
               setPage(1);
             }}
@@ -804,7 +828,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
     {
       key: "actions",
       title: objectMetricText("med31fbb483ee"),
-      width: 212,
+      width: 320,
       fixed: "right",
       render: (_, record) => {
         const actions = objectMetricActions(
@@ -826,6 +850,13 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
             >
               {objectMetricText("m073728637a26")}
             </Button>
+            {canAuthorizeMetrics ? (
+              <Button onClick={() => setAuthorizingMetric(record)} size="small" type="link">
+                <KnowledgeNetworkAuthorizationActionLabel>
+                  {t("knowledgeNetwork.authorizeAction")}
+                </KnowledgeNetworkAuthorizationActionLabel>
+              </Button>
+            ) : null}
             {actions.canEdit ? (
               <Button
                 aria-label={objectMetricText("m79bef996428f", { p0: record.definition.name })}
@@ -883,6 +914,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
           <div className={listStyles.toolbarLeft}>
             <Segmented
               onChange={(value) => {
+                if (value === "graph") setLoading(true);
                 setViewMode(value as "graph" | "list");
                 setPage(1);
               }}
@@ -1088,11 +1120,19 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
               canModify={canModify}
               initialFocusedMetric={initialGraphMetric}
               networkId={networkId}
+              objectTypeSearchEmpty={
+                !loading && !objectListError && Boolean(debouncedObjectKeyword) && objectTotal === 0
+              }
+              objectTypesLoading={loading}
               ownerMetricCache={graphOwnerMetricCache.current}
               onDeleteVersion={(record) => void confirmDeleteVersion(record)}
               onDeprecate={confirmDeprecate}
               onEditMetric={(record) => openEditor(record, true)}
               onOpenMetric={(record) => openDetail(record, true)}
+              onRestrictedObjectClick={() =>
+                void message.warning(objectMetricText("restrictedObjectPermissionDenied"))
+              }
+              onAuthorizeMetric={canAuthorizeMetrics ? setAuthorizingMetric : undefined}
               onSelectObject={(objectTypeId, objectTypeName) => {
                 setSelectedObjectTypeId(objectTypeId);
                 setSelectedObjectTypeName(objectTypeName);
@@ -1102,6 +1142,9 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
               onTrialMetric={(record) => void openTrial(record)}
               ownerObjectType={ownerObjectType}
               refreshVersion={refreshVersion}
+              restrictedObjectTypes={
+                !loading && !objectListError && !debouncedObjectKeyword && objectTotal === 0
+              }
               selectedObjectTypeId={selectedObjectTypeId}
               selectedObjectTypeName={selectedObjectTypeName}
             />
@@ -1221,6 +1264,13 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
           open
         />
       ) : null}
+      <ObjectMetricAuthorizeDrawer
+        metric={authorizingMetric}
+        networkId={networkId}
+        networkName={networkName}
+        onClose={() => setAuthorizingMetric(undefined)}
+        open={Boolean(authorizingMetric)}
+      />
     </section>
   );
 }

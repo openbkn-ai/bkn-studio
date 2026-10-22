@@ -38,16 +38,21 @@ type Props = {
   initialFocusedMetric?: { id: string; objectTypeId: string; version: number };
   metricType?: ObjectMetricTypeV1;
   networkId: string;
+  objectTypeSearchEmpty?: boolean;
+  objectTypesLoading?: boolean;
   ownerMetricCache?: Map<string, { entries: ObjectMetricRecordV1[]; total: number }>;
+  onAuthorizeMetric?: (metric: ObjectMetricRecordV1) => void;
   onDeleteVersion?: (metric: ObjectMetricRecordV1) => void;
   onDeprecate?: (metric: ObjectMetricRecordV1) => void;
   onEditMetric?: (metric: ObjectMetricRecordV1) => void;
   onOpenMetric: (metric: ObjectMetricRecordV1) => void;
+  onRestrictedObjectClick?: () => void;
   onSelectObject: (objectTypeId: string, objectTypeName: string) => void;
   onSwitchList?: () => void;
   onTrialMetric?: (metric: ObjectMetricRecordV1) => void;
   ownerObjectType?: ObjectTypeDetail | null;
   refreshVersion: number;
+  restrictedObjectTypes?: boolean;
   selectedObjectTypeId: string;
   selectedObjectTypeName: string;
 };
@@ -65,6 +70,7 @@ type NeighborMetricCounts = {
   values: Record<string, number | null>;
 };
 const RELATION_PAGE_SIZE = 6;
+const RESTRICTED_METRIC_PAGE_SIZE = 6;
 const NEIGHBOR_COUNT_CONCURRENCY = 3;
 const METRIC_SCAN_PAGE_SIZE = 50;
 const MAX_GRAPH_METRICS = 200;
@@ -100,10 +106,10 @@ const metricTypeNames = {
     return objectMetricText("m3e70c815f275");
   },
 };
-function pageSummary(page: number, total: number) {
+function pageSummary(page: number, total: number, pageSize = RELATION_PAGE_SIZE) {
   return objectMetricText("graphPageSummary", {
-    p0: total ? (page - 1) * RELATION_PAGE_SIZE + 1 : 0,
-    p1: Math.min(page * RELATION_PAGE_SIZE, total),
+    p0: total ? (page - 1) * pageSize + 1 : 0,
+    p1: Math.min(page * pageSize, total),
     p2: total,
   });
 }
@@ -388,16 +394,21 @@ export function ObjectMetricGraphCanvas({
   initialFocusedMetric,
   metricType,
   networkId,
+  objectTypeSearchEmpty = false,
+  objectTypesLoading = false,
   ownerMetricCache,
+  onAuthorizeMetric,
   onDeleteVersion,
   onDeprecate,
   onEditMetric,
   onOpenMetric,
+  onRestrictedObjectClick,
   onSelectObject,
   onSwitchList,
   onTrialMetric,
   ownerObjectType,
   refreshVersion,
+  restrictedObjectTypes = false,
   selectedObjectTypeId,
   selectedObjectTypeName,
 }: Props) {
@@ -413,6 +424,7 @@ export function ObjectMetricGraphCanvas({
   const [metricLoading, setMetricLoading] = useState(false);
   const [metricError, setMetricError] = useState(false);
   const [metricResultKey, setMetricResultKey] = useState("");
+  const [restrictedMetricPage, setRestrictedMetricPage] = useState(1);
   const [neighborMetricCounts, setNeighborMetricCounts] = useState<NeighborMetricCounts>({
     requestKey: "",
     values: {},
@@ -454,8 +466,9 @@ export function ObjectMetricGraphCanvas({
   ]);
   const metricRequestKey = JSON.stringify([
     networkId,
-    selectedObjectTypeId,
+    restrictedObjectTypes ? "restricted" : selectedObjectTypeId,
     metricType,
+    restrictedObjectTypes ? restrictedMetricPage : undefined,
     refreshVersion,
   ]);
   const relationCurrent = relationResultKey === relationRequestKey;
@@ -496,13 +509,14 @@ export function ObjectMetricGraphCanvas({
 
   useEffect(() => {
     setRelationPage(1);
+    setRestrictedMetricPage(1);
     setDrawerMetric(undefined);
     setExpandedGroup(undefined);
     setRingVisibleCounts(INITIAL_RING_VISIBLE_COUNTS);
     setView(INITIAL_VIEW);
     relationViewRef.current = INITIAL_VIEW;
     setNodePositions({});
-  }, [networkId, selectedObjectTypeId]);
+  }, [networkId, restrictedObjectTypes, selectedObjectTypeId]);
 
   useEffect(() => {
     setDrawerMetric(undefined);
@@ -524,7 +538,7 @@ export function ObjectMetricGraphCanvas({
   }, [metricType]);
 
   useEffect(() => {
-    if (!selectedObjectTypeId) return;
+    if (objectTypesLoading || !selectedObjectTypeId) return;
     let active = true;
     setRelationLoading(true);
     setRelationError(false);
@@ -559,10 +573,10 @@ export function ObjectMetricGraphCanvas({
     return () => {
       active = false;
     };
-  }, [networkId, relationPage, relationRequestKey, selectedObjectTypeId]);
+  }, [networkId, objectTypesLoading, relationPage, relationRequestKey, selectedObjectTypeId]);
 
   useEffect(() => {
-    if (!selectedObjectTypeId) return;
+    if (objectTypesLoading || (!selectedObjectTypeId && !restrictedObjectTypes)) return;
     let active = true;
     setMetricError(false);
     const cached = metricCache.get(metricRequestKey);
@@ -578,7 +592,7 @@ export function ObjectMetricGraphCanvas({
           : undefined,
       );
       setMetricTotal(cached.total);
-      setMetricComplete(cached.entries.length >= cached.total);
+      setMetricComplete(restrictedObjectTypes || cached.entries.length >= cached.total);
       setMetricResultKey(metricRequestKey);
       setMetricLoading(false);
       return;
@@ -589,6 +603,45 @@ export function ObjectMetricGraphCanvas({
       const loaded: ObjectMetricRecordV1[] = [];
       let total = 0;
       try {
+        if (restrictedObjectTypes) {
+          const result = await listObjectMetricsV1(
+            networkId,
+            {
+              limit: RESTRICTED_METRIC_PAGE_SIZE,
+              metricType,
+              offset: (restrictedMetricPage - 1) * RESTRICTED_METRIC_PAGE_SIZE,
+            },
+            { skipErrorToast: true },
+          );
+          if (!active) return;
+          const maxPage = Math.max(1, Math.ceil(result.total_count / RESTRICTED_METRIC_PAGE_SIZE));
+          if (restrictedMetricPage > maxPage) {
+            setRestrictedMetricPage(maxPage);
+            return;
+          }
+          setMetrics(result.entries);
+          setDrawerMetric((current) =>
+            current
+              ? result.entries.find(
+                  (entry) =>
+                    entry.definition.id === current.definition.id &&
+                    entry.definition.version === current.definition.version,
+                )
+              : undefined,
+          );
+          setMetricTotal(result.total_count);
+          setMetricComplete(true);
+          setMetricResultKey(metricRequestKey);
+          metricCache.set(metricRequestKey, {
+            entries: result.entries,
+            total: result.total_count,
+          });
+          if (metricCache.size > 6) {
+            const oldest = metricCache.keys().next().value;
+            if (oldest) metricCache.delete(oldest);
+          }
+          return;
+        }
         do {
           const result = await listObjectMetricsV1(
             networkId,
@@ -639,7 +692,17 @@ export function ObjectMetricGraphCanvas({
     return () => {
       active = false;
     };
-  }, [metricCache, metricRequestKey, metricType, networkId, refreshVersion, selectedObjectTypeId]);
+  }, [
+    metricCache,
+    metricRequestKey,
+    metricType,
+    networkId,
+    objectTypesLoading,
+    refreshVersion,
+    restrictedMetricPage,
+    restrictedObjectTypes,
+    selectedObjectTypeId,
+  ]);
 
   const metricsByRelation = useMemo(() => {
     const groups = new Map<string, ObjectMetricRecordV1[]>();
@@ -1068,8 +1131,224 @@ export function ObjectMetricGraphCanvas({
     action();
   };
 
+  if (objectTypesLoading) {
+    return (
+      <div className={styles.loading} role="status">
+        <Spin />
+      </div>
+    );
+  }
+
+  if (!selectedObjectTypeId && restrictedObjectTypes) {
+    const restrictedRows = metrics.map((metric, index) => ({
+      metric,
+      y: 64 + index * 88,
+    }));
+    const restrictedOwners = [
+      ...restrictedRows
+        .reduce(
+          (groups, row) => {
+            const ownerId = row.metric.definition.owner_object_type_id;
+            const current = groups.get(ownerId);
+            if (current) {
+              current.rows.push(row);
+            } else {
+              groups.set(ownerId, {
+                name: row.metric.owner_object_type_name || objectMetricText("restrictedOwnerName"),
+                ownerId,
+                rows: [row],
+              });
+            }
+            return groups;
+          },
+          new Map<
+            string,
+            {
+              name: string;
+              ownerId: string;
+              rows: Array<{ metric: ObjectMetricRecordV1; y: number }>;
+            }
+          >(),
+        )
+        .values(),
+    ];
+    return (
+      <div className={`${styles.shell} ${metricTheme.scope}`}>
+        <div className={styles.explorerToolbar}>
+          <div className={styles.graphPanelTitle}>
+            <strong>{objectMetricText("restrictedGraphTitle")}</strong>
+          </div>
+          <div className={styles.toolbarMeta}>
+            <span>
+              {metricCurrent
+                ? objectMetricText("restrictedGraphSummary", { p0: metricTotal })
+                : objectMetricText("bindingLoading")}
+            </span>
+          </div>
+        </div>
+        <div className={styles.canvasContent}>
+          {metricLoading || !metricCurrent ? (
+            <div className={styles.loading} role="status">
+              <Spin />
+            </div>
+          ) : metricError ? (
+            <Empty description={objectMetricText("graphMetricLoadError")} />
+          ) : metrics.length === 0 ? (
+            <Empty description={objectMetricText("noMetricsInList")} />
+          ) : (
+            <svg
+              aria-label={objectMetricText("restrictedGraphAriaLabel")}
+              className={styles.graph}
+              preserveAspectRatio="xMidYMid meet"
+              role="img"
+              viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
+            >
+              <defs>
+                <pattern
+                  id={`${arrowId}-restricted-grid`}
+                  height="28"
+                  patternUnits="userSpaceOnUse"
+                  width="28"
+                >
+                  <circle className={styles.gridDot} cx="1" cy="1" r="1" />
+                </pattern>
+              </defs>
+              <rect
+                fill={`url(#${arrowId}-restricted-grid)`}
+                height={GRAPH_HEIGHT}
+                width={GRAPH_WIDTH}
+                x={0}
+                y={0}
+              />
+              {restrictedRows.map(({ metric, y }) => {
+                const key = metricNodeKey(metric);
+                return (
+                  <g key={key}>
+                    <Tooltip
+                      mouseEnterDelay={0.12}
+                      placement="top"
+                      title={metric.definition.name}
+                      trigger={["hover", "focus"]}
+                    >
+                      <g
+                        aria-label={objectMetricText("graphMetricNodeLabel", {
+                          p0: metricTypeNames[metric.definition.metric_type],
+                          p1: metric.definition.name,
+                        })}
+                        className={`${styles.metricNode} ${
+                          metric.definition.metric_type === "atomic"
+                            ? styles.metricNodeAtomic
+                            : metric.definition.metric_type === "derived"
+                              ? styles.metricNodeDerived
+                              : styles.metricNodeComposite
+                        }`}
+                        data-graph-action="true"
+                        onClick={() => setDrawerMetric(metric)}
+                        onKeyDown={(event) => onButtonKeyDown(event, () => setDrawerMetric(metric))}
+                        role="button"
+                        tabIndex={0}
+                        transform={`translate(650 ${y})`}
+                      >
+                        <circle className={styles.metricNodeBody} r="17" />
+                        <text textAnchor="middle" y="36">
+                          {truncate(metric.definition.name, 18)}
+                        </text>
+                      </g>
+                    </Tooltip>
+                  </g>
+                );
+              })}
+              {restrictedOwners.map(({ name, ownerId, rows }) => {
+                const y = rows.reduce((total, row) => total + row.y, 0) / rows.length;
+                const ownerLabel = objectMetricText("restrictedOwnerNodeLabel", { p0: name });
+                return (
+                  <g key={ownerId}>
+                    {rows.map((row) => (
+                      <path
+                        className={styles.restrictedOwnerEdge}
+                        d={`M 304 ${y} C 420 ${y}, 510 ${row.y}, 626 ${row.y}`}
+                        key={metricNodeKey(row.metric)}
+                      />
+                    ))}
+                    <g
+                      aria-label={ownerLabel}
+                      className={styles.restrictedOwnerNode}
+                      data-graph-action="true"
+                      onClick={onRestrictedObjectClick}
+                      onKeyDown={(event) =>
+                        onButtonKeyDown(event, () => onRestrictedObjectClick?.())
+                      }
+                      role="button"
+                      tabIndex={0}
+                      transform={`translate(280 ${y})`}
+                    >
+                      <circle r="23" />
+                      <path d="M-7 -2 V-7 A7 7 0 0 1 7 -7 V-2" />
+                      <rect height="13" rx="2" width="18" x="-9" y="-2" />
+                      <circle className={styles.restrictedOwnerKeyhole} cx="0" cy="4" r="1.7" />
+                      <text textAnchor="middle" y="43">
+                        {truncate(name, 18)}
+                      </text>
+                      <title>{ownerLabel}</title>
+                    </g>
+                  </g>
+                );
+              })}
+            </svg>
+          )}
+        </div>
+        <div className={styles.notice}>{objectMetricText("restrictedGraphNotice")}</div>
+        <div className={styles.canvasFooter}>
+          <span>
+            {pageSummary(
+              restrictedMetricPage,
+              metricCurrent ? metricTotal : 0,
+              RESTRICTED_METRIC_PAGE_SIZE,
+            )}
+          </span>
+          <Pagination
+            current={restrictedMetricPage}
+            onChange={setRestrictedMetricPage}
+            pageSize={RESTRICTED_METRIC_PAGE_SIZE}
+            showSizeChanger={false}
+            simple
+            size="small"
+            total={metricCurrent ? metricTotal : 0}
+          />
+        </div>
+        <ObjectMetricGraphDetailDrawer
+          canDelete={canDelete}
+          canModify={canModify}
+          metric={drawerMetric}
+          metrics={metrics}
+          networkId={networkId}
+          onAuthorizeMetric={onAuthorizeMetric}
+          onClose={() => setDrawerMetric(undefined)}
+          onDeleteVersion={onDeleteVersion}
+          onDeprecate={onDeprecate}
+          onEditMetric={onEditMetric}
+          onOpenMetric={onOpenMetric}
+          onTrialMetric={onTrialMetric}
+          open={Boolean(drawerMetric)}
+          ownerObjectType={null}
+          ownerObjectTypeName={
+            drawerMetric?.owner_object_type_name || objectMetricText("restrictedOwnerName")
+          }
+          relationNames={new Map()}
+          refreshVersion={refreshVersion}
+        />
+      </div>
+    );
+  }
+
   if (!selectedObjectTypeId) {
-    return <Empty description={objectMetricText("m4093b8d5ac81")} />;
+    return (
+      <Empty
+        description={objectMetricText(
+          objectTypeSearchEmpty ? "graphNoMatchingObjectTypes" : "m4093b8d5ac81",
+        )}
+      />
+    );
   }
 
   return (
@@ -1645,6 +1924,7 @@ export function ObjectMetricGraphCanvas({
         metric={drawerMetric}
         metrics={metrics}
         networkId={networkId}
+        onAuthorizeMetric={onAuthorizeMetric}
         onClose={() => setDrawerMetric(undefined)}
         onDeleteVersion={onDeleteVersion}
         onDeprecate={onDeprecate}

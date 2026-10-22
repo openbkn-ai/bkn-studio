@@ -136,6 +136,7 @@ export function WorkspaceResourceSection({
           canModify={canModify}
           key={networkId}
           networkId={networkId}
+          networkName={networkName}
         />
       );
     case "functions":

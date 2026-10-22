@@ -27,14 +27,19 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import {
+  useKnowledgeNetworkCanModify,
+  useKnowledgeNetworkCanOperate,
+} from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
   extractRequestErrorDetails,
   isRequestForbidden,
   isRequestNotFound,
 } from "@/framework/request/error-message";
 import { ObjectMetricLineagePanel } from "@/modules/knowledge-network/components/object-metric/ObjectMetricLineagePanel";
+import { ObjectMetricAuthorizeDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricAuthorizeDrawer";
 import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
+import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import {
   expressionLabel,
   replaceObjectMetricDependencyAliases,
@@ -231,7 +236,7 @@ function dependencyFailureDescription(error: unknown) {
 }
 
 export function ObjectMetricDetailScene() {
-  useTranslation();
+  const { t } = useTranslation();
   const { metricId = "", networkId = "" } = useParams<{ metricId: string; networkId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -242,6 +247,7 @@ export function ObjectMetricDetailScene() {
       : undefined;
   const { message } = useAppServices();
   const canModify = useKnowledgeNetworkCanModify(networkId);
+  const canAuthorizeMetric = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [record, setRecord] = useState<ObjectMetricRecordV1>();
   const [versions, setVersions] = useState<ObjectMetricRecordV1[]>([]);
   const [objectTypeNames, setObjectTypeNames] = useState<Record<string, string>>({});
@@ -256,6 +262,7 @@ export function ObjectMetricDetailScene() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<"forbidden" | "not-found" | "unknown" | null>(null);
   const [bindingOpen, setBindingOpen] = useState(false);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [upgradeConfirmOpen, setUpgradeConfirmOpen] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
@@ -447,7 +454,7 @@ export function ObjectMetricDetailScene() {
   const definition = record.definition;
   const boundProperty = findMetricLogicProperty(ownerObjectType, definition.id);
   const boundVersion = boundProperty?.metricBinding?.metric_ref.version;
-  const ownerObjectTypeName = ownerObjectType?.name;
+  const ownerObjectTypeName = ownerObjectType?.name || record.owner_object_type_name;
   const displayProperty = (reference: ObjectMetricPropertyRefV1) => {
     const name = objectMetricPropertyDisplayName(reference, ownerObjectType);
     if (
@@ -666,6 +673,13 @@ export function ObjectMetricDetailScene() {
               {objectMetricText(isPublishedVersion ? "analysisEntry" : "m073728637a26")}
             </Button>
           </Tooltip>
+          {canAuthorizeMetric ? (
+            <Button autoInsertSpace={false} onClick={() => setAuthorizeOpen(true)}>
+              <KnowledgeNetworkAuthorizationActionLabel>
+                {t("knowledgeNetwork.authorizeAction")}
+              </KnowledgeNetworkAuthorizationActionLabel>
+            </Button>
+          ) : null}
           {canBindLogicProperty ? (
             <Tooltip title={objectMetricText("md320de80ff41")}>
               <Button onClick={() => setBindingOpen(true)}>
@@ -731,7 +745,10 @@ export function ObjectMetricDetailScene() {
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("m26c439016066")}>
-              {ownerObjectTypeName ?? definition.owner_object_type_id}
+              {ownerObjectTypeName ||
+                (ownerObjectType === undefined
+                  ? objectMetricText("bindingLoading")
+                  : objectMetricText("restrictedOwnerName"))}
             </Descriptions.Item>
             <Descriptions.Item label={objectMetricText("mec7844e49915")}>
               {definition.calculation_scope === "object_instance"
@@ -991,6 +1008,12 @@ export function ObjectMetricDetailScene() {
             : trialObjectMetricDrillThroughV1(networkId, definition, query, bucketKey, cursor)
         }
         open={trialOpen}
+      />
+      <ObjectMetricAuthorizeDrawer
+        metric={record}
+        networkId={networkId}
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
       />
       <Modal
         confirmLoading={upgrading}
