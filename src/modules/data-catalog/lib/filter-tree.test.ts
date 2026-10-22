@@ -20,6 +20,22 @@ const fields = [
 ];
 
 describe("filter-tree", () => {
+  it("keeps large integer input as text and limits index operations", () => {
+    const wide = { name: "wide", type: "large_integer" };
+    for (const value of ["-09", "+010", "170141183460469231731687303715884105727"]) {
+      const rule = parseFilterCondition({ field: "wide", operation: ">", value })!;
+      expect(filterValidationError(rule, [wide])).toBeNull();
+      expect(filterToBackend(rule, [wide])).toMatchObject({ sub_conditions: [{ value }] });
+    }
+    expect(filterOperationsForField(wide, "source")).toEqual(["==", "!=", ">", "<"]);
+    expect(filterOperationsForField(wide, "local_index")).toEqual(["==", "!="]);
+    for (const value of ["1.2", "1e3", "NaN"]) {
+      const rule = parseFilterCondition({ field: "wide", operation: "==", value })!;
+      expect(filterValidationError(rule, [wide])).toBe("invalidNumber");
+      expect(filterValidationError(rule, [wide], "local_index")).toBeNull();
+      expect(filterToBackend(rule, [wide])).toMatchObject({ sub_conditions: [{ value }] });
+    }
+  });
   it("uses keyword Feature for exact Text filters on the local index path", () => {
     const text = { name: "description", type: "text" };
     const rule = parseFilterCondition({ field: "description", operation: "==", value: "open" })!;

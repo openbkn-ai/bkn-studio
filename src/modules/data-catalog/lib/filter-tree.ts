@@ -83,7 +83,14 @@ export function filterValidationError(
     if (!node.value.trim()) return "missingValue";
     if (
       isNumericFilterType(field.type) &&
+      !isLargeIntegerType(field.type) &&
       (!numericLiteral.test(node.value.trim()) || !Number.isFinite(Number(node.value)))
+    )
+      return "invalidNumber";
+    if (
+      path === "source" &&
+      isLargeIntegerType(field.type) &&
+      !/^[+-]?\d+$/.test(node.value.trim())
     )
       return "invalidNumber";
     if (field.type.trim().toLowerCase() === "boolean" && !["true", "false"].includes(node.value))
@@ -93,8 +100,14 @@ export function filterValidationError(
   return validate(group, true);
 }
 
+function isLargeIntegerType(type: string) {
+  return type.trim().toLowerCase() === "large_integer";
+}
+
 export function isNumericFilterType(type: string) {
-  return /^(integer|unsigned integer|float|decimal|numeric|double|bigint|int)/i.test(type.trim());
+  return /^(large_integer|integer|unsigned integer|float|decimal|numeric|double|bigint|int)/i.test(
+    type.trim(),
+  );
 }
 
 export function isFilterableFieldType(type: string) {
@@ -109,6 +122,7 @@ export function filterOperationsForField(
   path: FilterQueryPath = "source",
 ): FilterOperation[] {
   if (!isFilterableFieldType(field.type)) return [];
+  if (isLargeIntegerType(field.type) && path === "local_index") return ["==", "!="];
   if (isNumericFilterType(field.type)) return ["==", "!=", ">", "<"];
   const { features: propertyFeatures } = field;
   if (
@@ -138,7 +152,7 @@ export function filterToBackend(
       operation: node.operation,
       value_from: "const",
       value:
-        field && isNumericFilterType(field.type)
+        field && isNumericFilterType(field.type) && !isLargeIntegerType(field.type)
           ? preciseJSON.parse(node.value.trim())
           : field?.type.trim().toLowerCase() === "boolean"
             ? node.value === "true"

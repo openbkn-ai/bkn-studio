@@ -64,6 +64,7 @@ function isNumericType(type: string) {
   return (
     lowered.startsWith("int") ||
     lowered.startsWith("bigint") ||
+    lowered === "large_integer" ||
     lowered.startsWith("decimal") ||
     lowered.startsWith("numeric") ||
     lowered.startsWith("float") ||

@@ -16,7 +16,10 @@ function FieldTypeBadge({ type }: { type?: string }) {
   const normalized = type?.trim().toLowerCase() ?? "";
   let label = "?";
   let icon: "number" | "boolean" | "date" | null = null;
-  if (/^(integer|int|bigint|smallint)(\b|\()/i.test(normalized)) {
+  if (normalized === "large_integer") {
+    label = "bigint";
+    icon = "number";
+  } else if (/^(integer|int|bigint|smallint)(\b|\()/i.test(normalized)) {
     label = "int";
     icon = "number";
   } else if (/^unsigned integer(\b|\()/i.test(normalized)) {
