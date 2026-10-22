@@ -16,6 +16,7 @@ import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/Ligh
 import styles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 import { getDataConnectDiscoverTask } from "@/modules/data-connect/services/discover.service";
 import type {
+  DataConnectDiscoverResourceFailure,
   DataConnectDiscoverSchedule,
   DataConnectDiscoverTask,
 } from "@/modules/data-connect/types/discover";
@@ -123,7 +124,11 @@ export function DataConnectDiscoverTaskDrawer({
         { key: "new", metric: t("dataConnect.discoverResultNew"), count: task.result.newCount },
         {
           key: "updated",
-          metric: t("dataConnect.discoverResultUpdated"),
+          metric: t(
+            task.strategy === "count_only"
+              ? "dataConnect.discoverResultCounted"
+              : "dataConnect.discoverResultUpdated",
+          ),
           count: task.result.updatedCount,
         },
         {
@@ -161,6 +166,30 @@ export function DataConnectDiscoverTaskDrawer({
       key: "count",
       title: t("dataConnect.discoverResultCount"),
       width: 120,
+    },
+  ];
+
+  const failureColumns: ColumnsType<DataConnectDiscoverResourceFailure> = [
+    {
+      key: "resource",
+      title: t("dataConnect.discoverFailureResource"),
+      render: (_, failure) => (
+        <div style={{ overflowWrap: "anywhere" }}>
+          <div>{failure.resourceName || failure.resourceId}</div>
+          {failure.resourceName ? <small>{failure.resourceId}</small> : null}
+        </div>
+      ),
+    },
+    {
+      key: "reason",
+      title: t("dataConnect.discoverFailureReason"),
+      render: (_, failure) => (
+        <div style={{ overflowWrap: "anywhere" }}>
+          {t(`dataConnect.discoverFailureReasons.${failure.code}`, {
+            defaultValue: failure.message,
+          })}
+        </div>
+      ),
     },
   ];
 
@@ -269,6 +298,11 @@ export function DataConnectDiscoverTaskDrawer({
               <Descriptions.Item label={t("dataConnect.discoverResult")}>
                 {task.result ? (
                   <div>
+                    {task.strategy === "count_only" ? (
+                      <div className={styles.metaLine}>
+                        {t("dataConnect.discoverCountExplanation")}
+                      </div>
+                    ) : null}
                     <Table<DiscoverResultRow>
                       className={styles.resultTable}
                       columns={resultColumns}
@@ -277,6 +311,23 @@ export function DataConnectDiscoverTaskDrawer({
                       rowKey="key"
                       size="small"
                     />
+                    {task.result.failures?.length ? (
+                      <div style={{ marginTop: 12 }}>
+                        <h4>{t("dataConnect.discoverFailureDetails")}</h4>
+                        <Table<DataConnectDiscoverResourceFailure>
+                          className={styles.resultTable}
+                          columns={failureColumns}
+                          dataSource={task.result.failures}
+                          pagination={{
+                            pageSize: 5,
+                            hideOnSinglePage: true,
+                            showSizeChanger: false,
+                          }}
+                          rowKey="resourceId"
+                          size="small"
+                        />
+                      </div>
+                    ) : null}
                     <div className={styles.metaLine}>
                       {t("dataConnect.discoverResultMessage")}: {task.result.message || EMPTY_VALUE}
                     </div>

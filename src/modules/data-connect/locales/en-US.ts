@@ -239,6 +239,24 @@ export const dataConnectEnUS = {
       normal: "Normal ({{priority}})",
     },
     discoverResult: "Discovery Result",
+    discoverResultCounted: "Resources Counted Successfully",
+    discoverCountExplanation:
+      "Counts below are numbers of resources processed by this task, not source row counts. A failed count retains the previous successful value, if any.",
+    discoverFailureDetails: "Failed Resources",
+    discoverFailureResource: "Resource",
+    discoverFailureReason: "Reason",
+    discoverFailureReasons: {
+      source_memory_limit:
+        "The source database reached its memory limit. Reduce source workload or ask an administrator to review its memory limit, then retry.",
+      timeout: "The exact count query timed out. Check source workload and retry.",
+      source_read_forbidden: "The source account does not have permission to read this resource.",
+      count_unavailable: "Exact counting is not supported for this resource.",
+      invalid_count: "The source did not return a valid exact count.",
+      count_failed:
+        "Failed to read the exact count from the source. Contact an administrator to check the task logs.",
+      save_failed:
+        "Failed to save the exact count. The previous count is retained; retry the task.",
+    },
     discoverResultMetric: "Metric",
     discoverResultCount: "Count",
     discoverResultEmpty: "No discovery result available",

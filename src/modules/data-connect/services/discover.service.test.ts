@@ -49,6 +49,39 @@ describe("discover.service · task status contract", () => {
     });
   });
 
+  it("preserves resource-level exact count failures on task detail", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        id: "task-1",
+        catalog_id: "catalog-1",
+        strategy: "count_only",
+        status: "failed",
+        result: {
+          failed_count: 1,
+          failures: [
+            {
+              resource_id: "r1",
+              resource_name: "Orders",
+              code: "source_memory_limit",
+              message: "The source database reached its memory limit.",
+            },
+          ],
+        },
+      },
+    });
+    const { getDataConnectDiscoverTask } =
+      await import("@/modules/data-connect/services/discover.service");
+    const result = await getDataConnectDiscoverTask("task-1");
+    expect(result?.result?.failures).toEqual([
+      {
+        resourceId: "r1",
+        resourceName: "Orders",
+        code: "source_memory_limit",
+        message: "The source database reached its memory limit.",
+      },
+    ]);
+  });
+
   it("preserves cancelled tasks returned by Vega", async () => {
     getMock.mockResolvedValue({
       data: {
