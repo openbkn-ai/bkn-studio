@@ -59,9 +59,9 @@ function hasCascadeImpact(impact: CatalogDeletionImpact) {
     impact.resources > 0 ||
     impact.catalogHealthCheckSchedules > 0 ||
     impact.discoverSchedules > 0 ||
-    impact.buildTasks.willCancel > 0 ||
-    impact.discoverTasks.willCancel > 0 ||
-    impact.semanticUnderstandingTasks.willCancel > 0
+    impact.buildTasks.willDelete > 0 ||
+    impact.discoverTasks.willDelete > 0 ||
+    impact.semanticUnderstandingTasks.willDelete > 0
   );
 }
 

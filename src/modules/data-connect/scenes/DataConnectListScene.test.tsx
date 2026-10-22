@@ -6,18 +6,40 @@
  */
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createInstance } from "i18next";
+import { dataConnectEnUS } from "@/modules/data-connect/locales/en-US";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { CatalogDeletionImpact } from "@/shared/catalog";
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+
+const deletionI18n = createInstance();
+void deletionI18n.init({
+  lng: "en-US",
+  resources: { "en-US": { translation: dataConnectEnUS } },
+  initImmediate: false,
+});
+
+const previewCatalogDeletionMock = vi.hoisted(() => vi.fn());
+const dangerOpenMock = vi.hoisted(() => vi.fn());
+const warningMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/shared/catalog", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/catalog")>()),
+  previewCatalogDeletion: previewCatalogDeletionMock,
+}));
 
 const listDataConnectConnectorTypesMock = vi.hoisted(() => vi.fn());
 const listDataConnectRecordsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, values?: Record<string, unknown>) =>
+      key.startsWith("dataConnect.dangerDelete.") ? deletionI18n.t(key, values ?? {}) : key,
+  }),
 }));
 
 vi.mock("antd", async (importOriginal) => {
@@ -60,7 +82,7 @@ vi.mock("antd", async (importOriginal) => {
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { error: vi.fn(), success: vi.fn() },
-    modal: { confirm: vi.fn(), warning: vi.fn() },
+    modal: { confirm: vi.fn(), warning: warningMock },
   }),
 }));
 
@@ -69,8 +91,13 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 }));
 
 vi.mock("@/framework/safety/DangerDeleteModal", () => ({
-  DeleteImpactAlert: () => null,
-  useDangerDelete: () => ({ node: null, open: vi.fn() }),
+  DeleteImpactAlert: ({ detail, warning }: { detail: ReactNode; warning?: ReactNode }) => (
+    <div>
+      {detail}
+      {warning}
+    </div>
+  ),
+  useDangerDelete: () => ({ node: null, open: dangerOpenMock }),
 }));
 
 vi.mock("@/framework/ui/common/AppTable", () => ({
@@ -379,5 +406,92 @@ describe("DataConnectListScene object permissions", () => {
     });
     expect(screen.getByTestId("record-catalog-current")).toBeInTheDocument();
     expect(screen.queryByText("outdated request failed")).toBeNull();
+  });
+});
+
+describe("DataConnectListScene deletion preflight", () => {
+  function impact(): CatalogDeletionImpact {
+    return {
+      catalogId: "catalog-1",
+      canDelete: true,
+      blockers: [],
+      resources: 0,
+      protectedResources: 0,
+      discoverSchedules: 0,
+      catalogHealthCheckSchedules: 0,
+      buildTasks: { willDelete: 0, blocking: 0 },
+      discoverTasks: { willDelete: 0, blocking: 0 },
+      semanticUnderstandingTasks: { willDelete: 0, blocking: 0 },
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listDataConnectConnectorTypesMock.mockResolvedValue([]);
+    listDataConnectRecordsMock.mockResolvedValue({
+      items: [record("catalog-1", ["delete"])],
+      total: 1,
+    });
+  });
+
+  async function requestDeletion(report: CatalogDeletionImpact) {
+    previewCatalogDeletionMock.mockResolvedValue(report);
+    render(
+      <MemoryRouter>
+        <DataConnectListScene />
+      </MemoryRouter>,
+    );
+    const row = await screen.findByTestId("record-catalog-1");
+    fireEvent.click(within(row).getByRole("button", { name: "common.delete" }));
+    await waitFor(() => expect(previewCatalogDeletionMock).toHaveBeenCalledWith("catalog-1"));
+  }
+
+  it.each(["buildTasks", "discoverTasks", "semanticUnderstandingTasks"] as const)(
+    "requires name confirmation when only %s records will be deleted",
+    async (taskType) => {
+      const report = impact();
+      report[taskType].willDelete = 3;
+      await requestDeletion(report);
+      await waitFor(() => expect(dangerOpenMock).toHaveBeenCalled());
+      const options = dangerOpenMock.mock.calls[0][0] as {
+        requireTypeName: boolean;
+        impact: ReactNode;
+      };
+      expect(options.requireTypeName).toBe(true);
+      render(<>{options.impact}</>);
+      expect(
+        screen.getByText(
+          `${taskType === "buildTasks" ? "Build" : taskType === "discoverTasks" ? "Discovery" : "Semantic"} tasks: delete 3 task records, 0 blocking`,
+        ),
+      ).toBeTruthy();
+      expect(screen.getByText(/all associated task records.*will be deleted/)).toBeTruthy();
+      expect(warningMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("uses the empty catalog confirmation when all counts are zero", async () => {
+    await requestDeletion(impact());
+    await waitFor(() => expect(dangerOpenMock).toHaveBeenCalled());
+    expect(dangerOpenMock.mock.calls[0][0]).toMatchObject({ requireTypeName: false });
+    const options = dangerOpenMock.mock.calls[0][0] as { impact: ReactNode };
+    render(<>{options.impact}</>);
+    expect(
+      screen.getByText(
+        'Connection "catalog-1" has no cascading objects. Deletion still cannot be undone.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it("shows blockers without opening deletion confirmation", async () => {
+    const report = impact();
+    report.canDelete = false;
+    report.blockers = ["discover_tasks_running"];
+    report.discoverTasks = { willDelete: 4, blocking: 1 };
+    await requestDeletion(report);
+    await waitFor(() => expect(warningMock).toHaveBeenCalled());
+    expect(dangerOpenMock).not.toHaveBeenCalled();
+    const options = warningMock.mock.calls[0][0] as { content: ReactNode };
+    render(<>{options.content}</>);
+    expect(screen.getByText("Discovery tasks: delete 4 task records, 1 blocking")).toBeTruthy();
   });
 });

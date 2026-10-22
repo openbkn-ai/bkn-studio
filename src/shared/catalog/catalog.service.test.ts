@@ -243,30 +243,30 @@ describe("catalog.service · deletion preflight", () => {
     deleteMock.mockResolvedValue({
       data: {
         blockers: ["discover_tasks_running"],
-        build_tasks: { blocking: 0, will_cancel: 1 },
+        build_tasks: { blocking: 0, will_delete: 1 },
         can_delete: false,
         catalog_health_check_schedules: 1,
         catalog_id: "catalog-1",
         discover_schedules: 2,
-        discover_tasks: { blocking: 1, will_cancel: 3 },
+        discover_tasks: { blocking: 1, will_delete: 3 },
         protected_resources: 0,
         resources: 4,
-        semantic_understanding_tasks: { blocking: 0, will_cancel: 2 },
+        semantic_understanding_tasks: { blocking: 0, will_delete: 2 },
       },
     });
     const { previewCatalogDeletion } = await import("@/shared/catalog/catalog.service");
 
     await expect(previewCatalogDeletion("catalog-1")).resolves.toEqual({
       blockers: ["discover_tasks_running"],
-      buildTasks: { blocking: 0, willCancel: 1 },
+      buildTasks: { blocking: 0, willDelete: 1 },
       canDelete: false,
       catalogHealthCheckSchedules: 1,
       catalogId: "catalog-1",
       discoverSchedules: 2,
-      discoverTasks: { blocking: 1, willCancel: 3 },
+      discoverTasks: { blocking: 1, willDelete: 3 },
       protectedResources: 0,
       resources: 4,
-      semanticUnderstandingTasks: { blocking: 0, willCancel: 2 },
+      semanticUnderstandingTasks: { blocking: 0, willDelete: 2 },
     });
     expect(deleteMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs/catalog-1", {
       params: { dry_run: true },

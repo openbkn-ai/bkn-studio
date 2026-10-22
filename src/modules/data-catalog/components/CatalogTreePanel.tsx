@@ -464,7 +464,7 @@ export function CatalogTreePanel({
                         content: t("dataCatalog.tree.deleteLogicalDescription", {
                           name: catalog.name,
                           resources: impact.resources,
-                          semanticTasks: impact.semanticUnderstandingTasks.willCancel,
+                          semanticTasks: impact.semanticUnderstandingTasks.willDelete,
                         }),
                         okText: t("common.delete"),
                         cancelText: t("common.cancel"),

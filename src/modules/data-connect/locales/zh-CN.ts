@@ -116,12 +116,12 @@ export const dataConnectZhCN = {
       resources_one: "资源：{{count}} 个（其中受保护资源 {{protected}} 个）",
       resources_other: "资源：{{count}} 个（其中受保护资源 {{protected}} 个）",
       schedules: "计划：探查 {{discover}} 个，健康检查 {{health}} 个",
-      buildTasks: "构建任务：取消待执行 {{willCancel}} 个，阻断 {{blocking}} 个",
-      discoverTasks: "探查任务：取消待执行 {{willCancel}} 个，阻断 {{blocking}} 个",
+      buildTasks: "构建任务：将删除任务记录 {{willDelete}} 个，阻断 {{blocking}} 个",
+      discoverTasks: "探查任务：将删除任务记录 {{willDelete}} 个，阻断 {{blocking}} 个",
       semanticUnderstandingTasks:
-        "语义理解任务：取消待执行 {{willCancel}} 个，阻断 {{blocking}} 个",
+        "语义理解任务：将删除任务记录 {{willDelete}} 个，阻断 {{blocking}} 个",
       impactWarning:
-        "资源和计划将被删除，待执行任务将标记为已取消；任务历史和索引不会在此流程中删除。",
+        "资源、计划及全部关联任务记录（包括待执行任务和历史记录）将被删除；索引不在此流程中删除。",
       catalogEmpty: "连接「{{name}}」下没有需要级联处理的对象，删除仍不可恢复。",
     },
     discoverManage: "探查",
