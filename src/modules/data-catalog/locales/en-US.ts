@@ -210,6 +210,7 @@ export const dataCatalogEnUS = {
       },
     },
     semanticWorkspace: {
+      outputLanguage: "Output language",
       summary: "Semantic Understanding Result",
       noResult: "No result",
       applied: "Applied",

@@ -69,7 +69,7 @@ export function ResourceSemanticUnderstandingPanel({
   resource: CatalogResource;
 }) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const [form] = Form.useForm<CreateSemanticUnderstandingTaskPayload>();
   const includeSampleRows = Form.useWatch("includeSampleRows", form) ?? false;
   const [tasks, setTasks] = useState<SemanticUnderstandingTaskSummary[]>([]);
@@ -79,6 +79,9 @@ export function ResourceSemanticUnderstandingPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [languageOverride, setLanguageOverride] =
+    useState<CreateSemanticUnderstandingTaskPayload["language"]>();
+  const outputLanguage = languageOverride ?? runtimeConfig.locale;
   const [creating, setCreating] = useState(false);
   const [sampleRowsError, setSampleRowsError] = useState<string | null>(null);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
@@ -262,6 +265,7 @@ export function ResourceSemanticUnderstandingPanel({
       try {
         await createResourceSemanticUnderstandingTask({
           ...taskValues,
+          language: outputLanguage,
           ...(taskValues.includeSampleRows ? { sampleMaxRows } : {}),
           resourceId: resource.id,
         });
@@ -501,7 +505,14 @@ export function ResourceSemanticUnderstandingPanel({
         </div>
         <Space>
           {canManageTasks ? (
-            <AppButton icon={<PlusOutlined />} type="primary" onClick={() => setOpen(true)}>
+            <AppButton
+              icon={<PlusOutlined />}
+              type="primary"
+              onClick={() => {
+                setLanguageOverride(undefined);
+                setOpen(true);
+              }}
+            >
               {t("dataCatalog.semanticWorkspace.create")}
             </AppButton>
           ) : null}
@@ -580,6 +591,20 @@ export function ResourceSemanticUnderstandingPanel({
         title={t("dataCatalog.semanticWorkspace.createTitle")}
       >
         <Form form={form} layout="vertical">
+          <Form.Item
+            label={t("dataCatalog.semanticWorkspace.outputLanguage")}
+            htmlFor="semantic-output-language"
+          >
+            <Select
+              id="semantic-output-language"
+              value={outputLanguage}
+              onChange={(value: "zh-CN" | "en-US") => setLanguageOverride(value)}
+              options={[
+                { value: "zh-CN", label: t("shell.language.zhCN") },
+                { value: "en-US", label: t("shell.language.enUS") },
+              ]}
+            />
+          </Form.Item>
           <Form.Item
             label={t("dataCatalog.taskManagement.columns.applyMode")}
             name="applyMode"

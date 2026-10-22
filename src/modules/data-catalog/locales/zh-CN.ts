@@ -201,6 +201,7 @@ export const dataCatalogZhCN = {
       },
     },
     semanticWorkspace: {
+      outputLanguage: "输出语言",
       summary: "语义理解结果",
       noResult: "暂无结果",
       applied: "已应用",

@@ -48,6 +48,19 @@ describe("semantic-understanding task mocks", () => {
 });
 
 describe("createResourceSemanticUnderstandingTask", () => {
+  it.each(["en-US", "zh-CN"] as const)("sends selected output language %s", async (language) => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockResolvedValue({ data: { id: "task-1" } });
+    const { createResourceSemanticUnderstandingTask: createTask } =
+      await import("@/modules/data-catalog/services/semantic-understanding-task.service");
+    await createTask({ resourceId: "resource-1", applyMode: "dry_run", language });
+    expect(postMock).toHaveBeenLastCalledWith(
+      "/vega-backend/v1/semantic-understanding-tasks",
+      expect.objectContaining({ language }),
+    );
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
   });
