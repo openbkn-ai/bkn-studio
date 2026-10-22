@@ -948,6 +948,13 @@ describe("DataConnectDiscoverScene", () => {
     await screen.findByText("task-old");
     fireEvent.click(screen.getByRole("button", { name: "select first task" }));
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.task.batchDelete (1)" }));
+    expect(appServicesMock.modal.confirm).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        title: "dataCatalog.task.batchDeleteDiscoveryConfirmTitle",
+        content: "dataCatalog.task.deleteConfirmContent",
+      }),
+    );
+    expect(deleteTaskMock).not.toHaveBeenCalled();
     const confirmation = appServicesMock.modal.confirm.mock.calls.at(-1)?.[0] as
       { onOk?: () => Promise<void> } | undefined;
     expect(confirmation?.onOk).toBeTypeOf("function");

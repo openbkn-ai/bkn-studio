@@ -587,7 +587,7 @@ export const systemAdminZhCN = {
       deletedUser: "已删除用户",
       creatorNotRecorded: "未记录",
       retryGranteeLookup: "重试",
-      drawerEmptyHelp: "请先在上方选择用户并配置允许操作",
+      drawerEmptyHelp: "请先在上方选择用户或角色并配置允许操作",
       grantSource: "授权来源",
       sourceCount_one: "{{count}} 条来源",
       sourceCount_other: "{{count}} 条来源",
@@ -604,7 +604,7 @@ export const systemAdminZhCN = {
       grantId: "授权记录 ID",
       sourceEmpty: "没有可展示的授权来源。",
       deleteGrant: "删除授权",
-      deleteGrantTitle: "删除用户授权",
+      deleteGrantTitle: "删除授权",
       deleteGrantConfirm:
         "将删除「{{name}}」的 {{count}} 条可直接删除来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
       deleteGrantConfirm_one:
@@ -661,7 +661,7 @@ export const systemAdminZhCN = {
       drawerTitle: "权限配置 · {{name}}",
       drawerHint: "选择用户和明确的资源操作进行授权；最终权限及继承关系以服务端判定为准。",
       drawerReadOnly: "只读：当前账号可以查看该对象的授权，但不能授权或撤权",
-      drawerEmpty: "尚未配置任何用户",
+      drawerEmpty: "尚未配置任何授权",
       addGranteePlaceholder: "选择用户，添加权限主体…",
       removeGrantTitle: "移除权限配置",
       removeGrantConfirm: "确定移除「{{name}}」的权限配置吗？",

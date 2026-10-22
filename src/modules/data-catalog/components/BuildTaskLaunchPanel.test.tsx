@@ -92,6 +92,42 @@ describe("BuildTaskLaunchPanel", () => {
     expect(screen.getByText("dataCatalog.build.executeIncremental")).toBeTruthy();
   });
 
+  it("switches batch execution modes and starts the selected incremental build", async () => {
+    createBuildTaskMock.mockResolvedValue({ id: "incremental-task" });
+    const onStarted = vi.fn();
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={onStarted}
+        resource={resource}
+      />,
+    );
+    const start = screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ });
+    await waitFor(() => expect(start).toBeEnabled());
+    const full = screen.getByRole("radio", { name: /dataCatalog\.build\.executeFull/ });
+    const incremental = screen.getByRole("radio", {
+      name: /dataCatalog\.build\.executeIncremental/,
+    });
+    expect(full).toBeChecked();
+    fireEvent.click(incremental);
+    expect(incremental).toBeChecked();
+    fireEvent.click(full);
+    expect(full).toBeChecked();
+    fireEvent.click(incremental);
+    fireEvent.click(start);
+    await waitFor(() =>
+      expect(createBuildTaskMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceId: resource.id,
+          mode: "batch",
+          executeType: "incremental",
+        }),
+      ),
+    );
+    expect(onStarted).toHaveBeenCalledWith({ id: "incremental-task" });
+  });
+
   it("loads only the latest active task for the resource", async () => {
     render(
       <BuildTaskLaunchPanel

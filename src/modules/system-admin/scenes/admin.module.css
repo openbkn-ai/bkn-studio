@@ -1777,6 +1777,7 @@
 
 .authzRowActions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 3px;
   white-space: nowrap;
@@ -1784,12 +1785,6 @@
 
 .authzRowActions :global(.ant-btn) {
   padding-inline: 3px;
-}
-
-.authzActionDivider {
-  width: 1px;
-  height: 14px;
-  background: var(--admin-color-border-soft);
 }
 
 .authzDrillTitle {

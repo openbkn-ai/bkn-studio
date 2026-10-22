@@ -200,10 +200,10 @@ export function DataConnectDiscoverScene({
     if (!batchDeleteTaskTargets.length) return;
     const catalogIdentity = catalogInteractionIdentityRef.current;
     void modal.confirm({
-      title: t("dataCatalog.task.batchDeleteConfirmTitle", {
+      title: t("dataCatalog.task.batchDeleteDiscoveryConfirmTitle", {
         count: batchDeleteTaskTargets.length,
       }),
-      content: t("dataCatalog.task.batchDeleteConfirmContent"),
+      content: t("dataCatalog.task.deleteConfirmContent"),
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },

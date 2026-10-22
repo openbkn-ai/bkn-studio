@@ -633,7 +633,7 @@ export const systemAdminEnUS = {
       deletedUser: "Deleted user",
       creatorNotRecorded: "Not recorded",
       retryGranteeLookup: "Retry",
-      drawerEmptyHelp: "Select a user and allowed operations above to add authorization",
+      drawerEmptyHelp: "Select a user or role and allowed operations above to add authorization",
       grantSource: "Grant source",
       sourceCount_one: "{{count}} source",
       sourceCount_other: "{{count}} sources",
@@ -651,7 +651,7 @@ export const systemAdminEnUS = {
       grantId: "Grant ID",
       sourceEmpty: "No grant sources to display.",
       deleteGrant: "Delete grant",
-      deleteGrantTitle: "Delete user grant",
+      deleteGrantTitle: "Delete grant",
       deleteGrantConfirm:
         "This deletes {{count}} directly removable sources for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
       deleteGrantConfirm_one:
@@ -711,7 +711,7 @@ export const systemAdminEnUS = {
         "Select a user and explicit resource operations to grant. Effective access and inheritance are determined by the server.",
       drawerReadOnly:
         "Read-only: you can review this object\u2019s grants but cannot grant or revoke",
-      drawerEmpty: "No users configured yet",
+      drawerEmpty: "No grants configured yet",
       addGranteePlaceholder: "Pick a user to add...",
       removeGrantTitle: "Remove permission rule",
       removeGrantConfirm: 'Remove the permission rule for "{{name}}"?',

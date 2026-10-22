@@ -6,9 +6,12 @@
  */
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createInstance } from "i18next";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { systemAdminEnUS } from "@/modules/system-admin/locales/en-US";
+import { systemAdminZhCN } from "@/modules/system-admin/locales/zh-CN";
 import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
 import { PUBLIC_ACCESSOR_ID } from "@/modules/system-admin/utils/object-grant-guards";
 
@@ -20,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   revokeObjectGrantsForObject: vi.fn(),
   upsertObjectGrantForObject: vi.fn(),
   useCapability: vi.fn(),
+  translateGrantCopy: vi.fn<(key: string) => string | undefined>(),
 }));
 const appServices = vi.hoisted(() => ({
   message: { error: vi.fn(), success: vi.fn() },
@@ -58,9 +62,10 @@ vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      key === "systemAdmin.objectGrants.selectedOperationCount"
+      mocks.translateGrantCopy(key) ??
+      (key === "systemAdmin.objectGrants.selectedOperationCount"
         ? `${key}:${String(options?.selected)}/${String(options?.total)}`
-        : key,
+        : key),
   }),
 }));
 vi.mock("@/framework/context/use-app-services", () => ({ useAppServices: () => appServices }));
@@ -152,6 +157,7 @@ function rowDeleteButton(accessorId: string) {
 describe("ObjectAuthorizeDrawer source records", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.translateGrantCopy.mockReset();
     mocks.useCapability.mockReturnValue("available");
     mocks.listGrantableUsersForObject.mockResolvedValue([]);
     mocks.listGrantableRolesForObject.mockResolvedValue([]);
@@ -167,6 +173,91 @@ describe("ObjectAuthorizeDrawer source records", () => {
       removeEventListener: vi.fn(),
       removeListener: vi.fn(),
     }));
+  });
+
+  it.each([
+    ["en-US", "catalog"],
+    ["en-US", "resource"],
+    ["zh-CN", "catalog"],
+    ["zh-CN", "resource"],
+  ])("uses subject-neutral grant copy for %s %s authorization", async (language, objType) => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: language,
+      resources: {
+        "en-US": { translation: systemAdminEnUS },
+        "zh-CN": { translation: systemAdminZhCN },
+      },
+    });
+    const copyKeys = ["drawerEmpty", "drawerEmptyHelp", "deleteGrantTitle"].map(
+      (key) => `systemAdmin.objectGrants.${key}`,
+    );
+    mocks.translateGrantCopy.mockImplementation((key) =>
+      copyKeys.includes(key) ? i18n.t(key) : undefined,
+    );
+    const empty = language === "en-US" ? "No grants configured yet" : "尚未配置任何授权";
+    const help =
+      language === "en-US"
+        ? "Select a user or role and allowed operations above to add authorization"
+        : "请先在上方选择用户或角色并配置允许操作";
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
+    const props = {
+      objId: `${objType}-1`,
+      objType,
+      objName: "Test object",
+      onClose: vi.fn(),
+      open: true,
+    };
+    const view = render(<ObjectAuthorizeDrawer {...props} />);
+    expect(await screen.findByText(empty)).toBeInTheDocument();
+    expect(screen.getByText(help)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("knowledgeNetwork.propertyAuthorizationRole"));
+    expect(screen.getByText(empty)).toBeInTheDocument();
+    expect(screen.getByText(help)).toBeInTheDocument();
+    expect(mocks.upsertObjectGrantForObject).not.toHaveBeenCalled();
+    view.unmount();
+
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [
+        ...(["user", "role"] as const).map((accessorType) =>
+          grant(
+            [source({ accessorId: `${accessorType}-subject`, grantId: `${accessorType}-grant` })],
+            {
+              accessorId: `${accessorType}-subject`,
+              accessorName: `${accessorType}-subject`,
+              accessorType,
+              objId: props.objId,
+              objType,
+            },
+          ),
+        ),
+      ],
+    });
+    render(<ObjectAuthorizeDrawer {...props} />);
+    await screen.findByText("role-subject");
+    for (const subject of ["user", "role"]) {
+      // The composer selection must not affect the grant row being revoked.
+      fireEvent.click(screen.getByText("knowledgeNetwork.propertyAuthorizationUser"));
+      fireEvent.click(rowDeleteButton(`${subject}-subject`));
+      expect(appServices.modal.confirm).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          title: language === "en-US" ? "Delete grant" : "删除授权",
+        }),
+      );
+      expect(mocks.revokeObjectGrantsForObject).toHaveBeenCalledTimes(subject === "user" ? 0 : 1);
+      const confirmation = appServices.modal.confirm.mock.calls.at(-1)![0] as {
+        onOk: () => Promise<void>;
+      };
+      await act(async () => {
+        await confirmation.onOk();
+      });
+      expect(mocks.revokeObjectGrantsForObject).toHaveBeenLastCalledWith([`${subject}-grant`]);
+    }
+    const roleRow = screen.getByText("role-subject").closest("tr")!;
+    fireEvent.click(within(roleRow).getByText("common.viewDetails"));
+    expect(await screen.findByText("role-grant")).toBeInTheDocument();
+    expect(mocks.revokeObjectGrantsForObject).toHaveBeenCalledTimes(2);
   });
 
   it("shows a retryable main error when object grants fail to load", async () => {
@@ -600,7 +691,9 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(screen.getByText("systemAdmin.objectGrants.grantNeedsBundle")).not.toBeNull();
     expect(screen.getByText("systemAdmin.objectGrants.selectedOperationCount:0/1")).not.toBeNull();
     expect(screen.queryByText("empty-admin")).toBeNull();
-    expect(screen.getByText("systemAdmin.objectGrants.effectivePermissions")).not.toBeNull();
+    expect(
+      screen.getByRole("columnheader", { name: "systemAdmin.objectGrants.effectivePermissions" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(bundleButton);
 
