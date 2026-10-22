@@ -26,6 +26,6 @@ describe("API key callout guidance", () => {
   });
 
   it("does not mix Chinese into the English guidance", () => {
-    expect(enUS.apiKeys.calloutInfo).not.toMatch(/[\u3400-\u9fff]/);
+    expect(enUS.apiKeys.calloutInfo).not.toMatch(/[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]/);
   });
 });
