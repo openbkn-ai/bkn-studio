@@ -24,16 +24,24 @@ function metric(status: ObjectMetricRecordV1["definition"]["lifecycle"]["status"
 
 describe("objectMetricActions", () => {
   it("never exposes mutations without modify permission", () => {
-    expect(objectMetricActions(metric("draft"), false, null)).toMatchObject({
-      canDeleteDraft: false,
+    expect(objectMetricActions(metric("draft"), false, false, null)).toMatchObject({
+      canDeleteVersion: false,
+      canDeprecate: false,
+      canEdit: false,
+    });
+  });
+
+  it("uses delete permission independently from modify permission", () => {
+    expect(objectMetricActions(metric("draft"), false, true, null)).toMatchObject({
+      canDeleteVersion: true,
       canDeprecate: false,
       canEdit: false,
     });
   });
 
   it("allows working-draft edit and deletion, but not deprecation", () => {
-    expect(objectMetricActions(metric("validated"), true, null)).toMatchObject({
-      canDeleteDraft: true,
+    expect(objectMetricActions(metric("validated"), true, true, null)).toMatchObject({
+      canDeleteVersion: true,
       canDeprecate: false,
       canEdit: true,
     });
@@ -41,7 +49,7 @@ describe("objectMetricActions", () => {
 
   it("requires a known unbound published version before deprecation", () => {
     const published = metric("published");
-    expect(objectMetricActions(published, true, undefined).deprecateReason).toBeTruthy();
+    expect(objectMetricActions(published, true, true, undefined).deprecateReason).toBeTruthy();
     const owner = {
       logicProperties: [
         {
@@ -49,14 +57,14 @@ describe("objectMetricActions", () => {
         },
       ],
     } as ObjectTypeDetail;
-    expect(objectMetricActions(published, true, owner).deprecateReason).toBeTruthy();
+    expect(objectMetricActions(published, true, true, owner).deprecateReason).toBeTruthy();
     owner.logicProperties[0].metricBinding!.metric_ref.version = 1;
-    expect(objectMetricActions(published, true, owner).deprecateReason).toBeUndefined();
+    expect(objectMetricActions(published, true, true, owner).deprecateReason).toBeUndefined();
   });
 
-  it("does not offer mutation for deprecated versions", () => {
-    expect(objectMetricActions(metric("deprecated"), true, null)).toMatchObject({
-      canDeleteDraft: false,
+  it("offers deletion but no editing for deprecated versions", () => {
+    expect(objectMetricActions(metric("deprecated"), true, true, null)).toMatchObject({
+      canDeleteVersion: true,
       canDeprecate: false,
       canEdit: false,
     });

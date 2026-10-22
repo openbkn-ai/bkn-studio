@@ -1232,6 +1232,17 @@ export const objectMetricV1Part = {
   analysisTimeAmbiguous:
     "指标开放了多个时间属性，无法确定查询时间范围作用于哪一个；请在下一版本中只保留一个。",
   analysisTimeUnavailable: "指标未开放可查询时间维度，本次分析不按时间范围筛选。",
+  metricDeleteVersion: "删除指标版本",
+  metricDeleteVersionConfirm: "确定删除“{{p0}}”的 v{{p1}} 吗？只会删除这个版本，其他版本不受影响。",
+  metricDeleteVersionLabel: "删除指标 {{p0}} 的 v{{p1}}",
+  metricDeleteVersionSuccess: "指标版本已删除",
+  metricDeleteBlockedTitle: "无法删除指标版本",
+  metricDeleteBlockedDescription: "请先删除或升级以下引用：",
+  metricDeleteMetricBlocker: "指标“{{p0}}” v{{p1}}（{{p2}}）",
+  metricDeletePropertyBlocker: "对象类“{{p0}}”的逻辑属性“{{p1}}”（{{p2}}）",
+  metricDeleteHiddenBlockers: "另有 {{count}} 个无权查看的引用。",
+  metricDeleteHiddenBlockers_one: "另有 {{count}} 个无权查看的引用。",
+  metricDeleteHiddenBlockers_other: "另有 {{count}} 个无权查看的引用。",
 } as const;
 
 export const objectMetricAiProposalFields: Record<string, string> = {

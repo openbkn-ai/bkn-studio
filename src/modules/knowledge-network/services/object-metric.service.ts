@@ -20,6 +20,7 @@ import {
   type ObjectMetricDrillThroughV1,
   type ObjectMetricDefinitionV1,
   type ObjectMetricListV1,
+  type ObjectMetricVersionDeletionCheckV1,
   type MetricPropertyBindingV1,
   type ObjectMetricPreviewV1,
   type ObjectMetricQueryRequestV1,
@@ -201,23 +202,101 @@ export async function updateObjectMetricDraftV1(
   return response.data;
 }
 
-export async function deleteObjectMetricDraftV1(
+function mockObjectMetricVersionDeletionCheck(
   networkId: string,
   metricId: string,
   version: number,
+): ObjectMetricVersionDeletionCheckV1 {
+  const target = (mockObjectMetrics[networkId] ?? []).find(
+    (record) => record.definition.id === metricId && record.definition.version === version,
+  );
+  if (!target) throw new Error("Object metric version not found");
+  const blockers: ObjectMetricVersionDeletionCheckV1["blockers"] = [];
+  for (const record of mockObjectMetrics[networkId] ?? []) {
+    if (record.definition.id === metricId && record.definition.version === version) continue;
+    const specification = record.definition.specification;
+    const references =
+      specification.kind === "derived"
+        ? [{ field: "specification.base_metric", ref: specification.base_metric }]
+        : specification.kind === "composite"
+          ? specification.dependencies.map((dependency, index) => ({
+              field: `specification.dependencies[${index}].metric_ref`,
+              ref: dependency.metric_ref,
+            }))
+          : [];
+    for (const reference of references) {
+      if (reference.ref.metric_id === metricId && reference.ref.version === version) {
+        blockers.push({
+          field: reference.field,
+          name: record.definition.name,
+          resource_id: record.definition.id,
+          resource_type: "metric_version",
+          version: record.definition.version,
+        });
+      }
+    }
+  }
+  for (const [objectTypeId, properties] of Object.entries(
+    mockObjectTypeLogicProperties[networkId] ?? {},
+  )) {
+    for (const property of properties) {
+      const reference = property.metricBinding?.metric_ref;
+      if (reference?.metric_id === metricId && reference.version === version) {
+        blockers.push({
+          field: `logic_properties.${property.name}.metric_ref`,
+          name: objectTypeId,
+          property_name: property.name,
+          resource_id: objectTypeId,
+          resource_type: "logic_property",
+        });
+      }
+    }
+  }
+  return {
+    blockers,
+    deletable: target.definition.lifecycle.status !== "published" && blockers.length === 0,
+    hidden_blocker_count: 0,
+    metric_id: metricId,
+    metric_name: target.definition.name,
+    status: target.definition.lifecycle.status,
+    version,
+  };
+}
+
+export async function checkObjectMetricVersionDeletionV1(
+  networkId: string,
+  metricId: string,
+  version: number,
+  options: { skipErrorToast?: boolean } = {},
 ) {
   if (useMock) {
+    return wait(mockObjectMetricVersionDeletionCheck(networkId, metricId, version));
+  }
+  const response = await http.get<ObjectMetricVersionDeletionCheckV1>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/deletion-check`,
+    { params: { version }, skipErrorToast: options.skipErrorToast },
+  );
+  return response.data;
+}
+
+export async function deleteObjectMetricVersionV1(
+  networkId: string,
+  metricId: string,
+  version: number,
+  options: { skipErrorToast?: boolean } = {},
+) {
+  if (useMock) {
+    const check = mockObjectMetricVersionDeletionCheck(networkId, metricId, version);
+    if (!check.deletable) throw new Error("Object metric version deletion is blocked");
     mockObjectMetrics[networkId] = (mockObjectMetrics[networkId] ?? []).filter(
-      (record) =>
-        record.definition.id !== metricId ||
-        record.definition.version !== version ||
-        record.definition.lifecycle.status === "published",
+      (record) => record.definition.id !== metricId || record.definition.version !== version,
     );
     syncKnowledgeNetworkStatistics(networkId);
     return wait(undefined);
   }
   await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}`, {
     params: { version },
+    skipErrorToast: options.skipErrorToast,
   });
 }
 

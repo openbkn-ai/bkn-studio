@@ -30,12 +30,13 @@ import styles from "./ObjectMetricGraphDetailDrawer.module.css";
 import metricTheme from "./ObjectMetricTheme.module.css";
 
 type Props = {
+  canDelete?: boolean;
   canModify: boolean;
   metric?: ObjectMetricRecordV1;
   metrics?: ObjectMetricRecordV1[];
   networkId: string;
   onClose: () => void;
-  onDeleteDraft?: (metric: ObjectMetricRecordV1) => void;
+  onDeleteVersion?: (metric: ObjectMetricRecordV1) => void;
   onDeprecate?: (metric: ObjectMetricRecordV1) => void;
   onEditMetric?: (metric: ObjectMetricRecordV1) => void;
   onOpenMetric: (metric: ObjectMetricRecordV1) => void;
@@ -104,12 +105,13 @@ const semanticTypeKeys: Record<
 };
 
 export function ObjectMetricGraphDetailDrawer({
+  canDelete = false,
   canModify,
   metric,
   metrics = [],
   networkId,
   onClose,
-  onDeleteDraft,
+  onDeleteVersion,
   onDeprecate,
   onEditMetric,
   onOpenMetric,
@@ -193,7 +195,9 @@ export function ObjectMetricGraphDetailDrawer({
       ? objectMetricPropertyDisplayName(atomicExpression.property_ref, ownerObjectType)
       : undefined;
   const value = metric?.definition.result_semantics?.value;
-  const actions = metric ? objectMetricActions(metric, canModify, ownerObjectType) : undefined;
+  const actions = metric
+    ? objectMetricActions(metric, canModify, canDelete, ownerObjectType)
+    : undefined;
 
   return (
     <Drawer
@@ -220,9 +224,9 @@ export function ObjectMetricGraphDetailDrawer({
                 {objectMetricText("m9d0eedd99d2b")}
               </Button>
             ) : null}
-            {actions?.canDeleteDraft && onDeleteDraft ? (
-              <Button autoInsertSpace={false} danger onClick={() => onDeleteDraft(metric)}>
-                {objectMetricText("m1dfe58237bbf")}
+            {actions?.canDeleteVersion && onDeleteVersion ? (
+              <Button autoInsertSpace={false} danger onClick={() => onDeleteVersion(metric)}>
+                {objectMetricText("metricDeleteVersion")}
               </Button>
             ) : null}
             {actions?.canDeprecate && onDeprecate ? (

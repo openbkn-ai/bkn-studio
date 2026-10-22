@@ -942,10 +942,11 @@ describe("ObjectMetricGraphCanvas", () => {
     const onOpenMetric = vi.fn();
     const onTrialMetric = vi.fn();
     const onEditMetric = vi.fn();
-    const onDeleteDraft = vi.fn();
+    const onDeleteVersion = vi.fn();
     renderGraph(vi.fn(), onOpenMetric, {
+      canDelete: true,
       canModify: true,
-      onDeleteDraft,
+      onDeleteVersion,
       onEditMetric,
       onTrialMetric,
     });
@@ -976,12 +977,12 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(drawer).not.toHaveTextContent("逻辑属性");
     fireEvent.click(screen.getByRole("button", { name: "详情" }));
     expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "删除草稿" }));
+    fireEvent.click(screen.getByRole("button", { name: "删除指标版本" }));
 
     expect(onTrialMetric).toHaveBeenCalledWith(draft);
     expect(onEditMetric).toHaveBeenCalledWith(draft);
     expect(onOpenMetric).toHaveBeenCalledWith(draft);
-    expect(onDeleteDraft).toHaveBeenCalledWith(draft);
+    expect(onDeleteVersion).toHaveBeenCalledWith(draft);
   });
 
   it("shows a registered transaction unit by its business name in the graph detail", async () => {
@@ -1027,7 +1028,7 @@ describe("ObjectMetricGraphCanvas", () => {
     mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
     mocks.listMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
     renderGraph(vi.fn(), vi.fn(), {
-      onDeleteDraft: vi.fn(),
+      onDeleteVersion: vi.fn(),
       onEditMetric: vi.fn(),
       onTrialMetric: vi.fn(),
     });

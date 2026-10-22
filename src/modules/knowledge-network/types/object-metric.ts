@@ -350,6 +350,25 @@ export type ObjectMetricListV1 = {
   total_count: number;
 };
 
+export type ObjectMetricDeletionBlockerV1 = {
+  resource_type: "logic_property" | "metric_version";
+  resource_id: string;
+  version?: number;
+  name?: string;
+  field: string;
+  property_name?: string;
+};
+
+export type ObjectMetricVersionDeletionCheckV1 = {
+  metric_id: string;
+  metric_name: string;
+  version: number;
+  status: ObjectMetricDefinitionV1["lifecycle"]["status"];
+  deletable: boolean;
+  blockers: ObjectMetricDeletionBlockerV1[];
+  hidden_blocker_count: number;
+};
+
 export type ObjectMetricValidationIssueV1 = {
   code: string;
   field: string;
