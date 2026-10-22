@@ -47,6 +47,10 @@ import { useTranslation } from "react-i18next";
 
 type TrialFormValues = {
   analysisDimensions?: string[];
+  havingOperator?: NonNullable<ObjectMetricQueryRequestV1["having"]>["operator"];
+  havingValue?: string;
+  orderKey?: string;
+  orderDirection?: "asc" | "desc";
   identity?: Record<string, string>;
   time?: [import("dayjs").Dayjs, import("dayjs").Dayjs];
 };
@@ -242,6 +246,9 @@ export function ObjectMetricTrialDrawer({
 }: ObjectMetricTrialDrawerProps) {
   useTranslation();
   const [form] = Form.useForm<TrialFormValues>();
+  const selectedGroupKeys = Form.useWatch("analysisDimensions", form) ?? [];
+  const selectedHavingOperator = Form.useWatch("havingOperator", form);
+  const selectedOrderKey = Form.useWatch("orderKey", form);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ObjectMetricDataV1>();
@@ -325,6 +332,10 @@ export function ObjectMetricTrialDrawer({
         ? "analysisTimeAmbiguous"
         : "analysisTimeUnavailable";
   const hasSelectableBuckets = result?.entries.some((entry) => Boolean(entry.bucket_key)) ?? false;
+  const canOrderResults =
+    definition.calculation_scope === "object_set" ||
+    Boolean(definition.result_semantics.statistical_grain.time_granularity) ||
+    definition.result_semantics.statistical_grain.group_by_dimensions.length > 0;
 
   useEffect(() => {
     if (result || error)
@@ -348,7 +359,7 @@ export function ObjectMetricTrialDrawer({
         }) ?? [],
       );
       const query: ObjectMetricQueryRequestV1 = {
-        analysis_dimensions: definition.query_capabilities.analysis_dimensions.filter((item) =>
+        group_by: definition.query_capabilities.analysis_dimensions.filter((item) =>
           values.analysisDimensions?.includes(dimensionReferenceKey(item)),
         ),
         instance_identities:
@@ -358,6 +369,54 @@ export function ObjectMetricTrialDrawer({
             ? { start: values.time[0].valueOf(), end: values.time[1].valueOf() }
             : undefined,
       };
+      if (values.havingOperator) {
+        const operator = values.havingOperator;
+        const physicalType = definition.result_semantics.value.physical_type;
+        let value: string | number | boolean | undefined;
+        if (operator !== "is_null" && operator !== "is_not_null") {
+          if (!values.havingValue?.trim())
+            throw new Error(objectMetricText("analysisHavingValueRequired"));
+          if (["int64", "decimal", "duration"].includes(physicalType)) {
+            const number = Number(values.havingValue);
+            if (!Number.isFinite(number))
+              throw new Error(objectMetricText("analysisHavingNumericRequired"));
+            if (physicalType === "int64" && !Number.isSafeInteger(number))
+              throw new Error(objectMetricText("analysisHavingSafeIntegerRequired"));
+            value = number;
+          } else if (physicalType === "boolean") {
+            if (!["true", "false"].includes(values.havingValue))
+              throw new Error(objectMetricText("analysisHavingBooleanRequired"));
+            value = values.havingValue === "true";
+          } else value = values.havingValue;
+        }
+        query.having = {
+          operator,
+          value,
+          unit_code: definition.result_semantics.value.unit?.code,
+        };
+      }
+      if (canOrderResults && values.orderKey) {
+        const ref = [
+          ...definition.result_semantics.statistical_grain.group_by_dimensions,
+          ...(query.group_by ?? []),
+        ].find((item) => dimensionReferenceKey(item) === values.orderKey);
+        if (
+          !ref &&
+          values.orderKey !== "value" &&
+          !(
+            values.orderKey === "time" &&
+            definition.result_semantics.statistical_grain.time_granularity
+          )
+        )
+          throw new Error(objectMetricText("analysisOrderDimensionUnavailable"));
+        query.order_by = [
+          {
+            field: ref ? "dimension" : values.orderKey === "time" ? "time" : "value",
+            dimension: ref,
+            direction: values.orderDirection ?? "asc",
+          },
+        ];
+      }
       const nextResult = await onRun(query);
       setResult(nextResult);
       setHistory([{ query, result: nextResult, label: objectMetricText("analysisRoot") }]);
@@ -371,9 +430,22 @@ export function ObjectMetricTrialDrawer({
   };
 
   const currentQuery = history.at(-1)?.query;
+  const syncResultQueryControls = (query: ObjectMetricQueryRequestV1) => {
+    const order = query.order_by?.[0];
+    form.setFieldsValue({
+      analysisDimensions: query.group_by?.map(dimensionReferenceKey),
+      havingOperator: query.having?.operator,
+      havingValue: query.having?.value === undefined ? undefined : String(query.having.value),
+      orderKey:
+        order?.field === "dimension" && order.dimension
+          ? dimensionReferenceKey(order.dimension)
+          : order?.field,
+      orderDirection: order?.direction ?? "asc",
+    });
+  };
   const availableDimensions = definition.query_capabilities.analysis_dimensions.filter(
     (item) =>
-      !currentQuery?.analysis_dimensions?.some(
+      !currentQuery?.group_by?.some(
         (chosen) => dimensionReferenceKey(chosen) === dimensionReferenceKey(item),
       ),
   );
@@ -393,7 +465,9 @@ export function ObjectMetricTrialDrawer({
     if (dimension && !ref) return;
     const query: ObjectMetricQueryRequestV1 = {
       ...currentQuery,
-      analysis_dimensions: [...(currentQuery.analysis_dimensions ?? []), ...(ref ? [ref] : [])],
+      group_by: [...(currentQuery.group_by ?? []), ...(ref ? [ref] : [])],
+      having: undefined,
+      order_by: undefined,
       bucket_selection: { parent_query: currentQuery, bucket_key: selected.bucket_key },
     };
     setLoading(true);
@@ -415,6 +489,7 @@ export function ObjectMetricTrialDrawer({
         },
       ]);
       setResult(nextResult);
+      syncResultQueryControls(query);
       setSelected(undefined);
       setNextDimension(undefined);
     } catch (requestError) {
@@ -454,6 +529,7 @@ export function ObjectMetricTrialDrawer({
     if (!item) return;
     setHistory((items) => items.slice(0, index + 1));
     setResult(item.result);
+    syncResultQueryControls(item.query);
     setSelected(undefined);
     setNextDimension(undefined);
     setError(undefined);
@@ -616,12 +692,25 @@ export function ObjectMetricTrialDrawer({
             {definition.calculation_scope === "object_set" &&
             definition.query_capabilities.analysis_dimensions.length > 0 ? (
               <Form.Item
-                label={objectMetricText("m2acf103ad6cf")}
+                label={objectMetricText("analysisGroupBy")}
                 name="analysisDimensions"
                 tooltip={objectMetricText("trialDimensionHint")}
               >
                 <Select
                   mode="multiple"
+                  onChange={(keys: string[]) => {
+                    const orderKey = form.getFieldValue("orderKey") as string | undefined;
+                    if (
+                      orderKey &&
+                      orderKey !== "value" &&
+                      orderKey !== "time" &&
+                      !definition.result_semantics.statistical_grain.group_by_dimensions.some(
+                        (item) => dimensionReferenceKey(item) === orderKey,
+                      ) &&
+                      !keys.includes(orderKey)
+                    )
+                      form.setFieldsValue({ orderKey: undefined, orderDirection: undefined });
+                  }}
                   options={definition.query_capabilities.analysis_dimensions.map((item) => ({
                     label: item.relation_path_alias
                       ? `${objectMetricPropertyDisplayName(item, objectType)} (${item.relation_path_alias})`
@@ -631,6 +720,80 @@ export function ObjectMetricTrialDrawer({
                   placeholder={objectMetricText("m6f346a890bc4")}
                 />
               </Form.Item>
+            ) : null}
+            <div
+              aria-label={objectMetricText("analysisHavingOperator")}
+              className={styles.conditionRow}
+              role="group"
+            >
+              <Form.Item label={objectMetricText("analysisHavingOperator")} name="havingOperator">
+                <Select
+                  allowClear
+                  options={(
+                    ["eq", "ne", "gt", "gte", "lt", "lte", "is_null", "is_not_null"] as const
+                  )
+                    .filter(
+                      (operator) =>
+                        definition.result_semantics.value.physical_type !== "boolean" ||
+                        ["eq", "ne", "is_null", "is_not_null"].includes(operator),
+                    )
+                    .map((operator) => ({
+                      label: objectMetricText(`analysisHaving_${operator}`),
+                      value: operator,
+                    }))}
+                  placeholder={objectMetricText("analysisNoHaving")}
+                />
+              </Form.Item>
+              {selectedHavingOperator &&
+              selectedHavingOperator !== "is_null" &&
+              selectedHavingOperator !== "is_not_null" ? (
+                <Form.Item label={objectMetricText("analysisHavingValue")} name="havingValue">
+                  <Input placeholder={objectMetricText("analysisHavingValueHint")} />
+                </Form.Item>
+              ) : null}
+            </div>
+            {canOrderResults ? (
+              <div
+                aria-label={objectMetricText("analysisOrderBy")}
+                className={styles.conditionRow}
+                role="group"
+              >
+                <Form.Item label={objectMetricText("analysisOrderBy")} name="orderKey">
+                  <Select
+                    allowClear
+                    options={[
+                      { label: objectMetricText("analysisOrderValue"), value: "value" },
+                      ...(definition.result_semantics.statistical_grain.time_granularity
+                        ? [{ label: objectMetricText("analysisOrderTime"), value: "time" }]
+                        : []),
+                      ...[
+                        ...definition.result_semantics.statistical_grain.group_by_dimensions,
+                        ...definition.query_capabilities.analysis_dimensions.filter((item) =>
+                          selectedGroupKeys.includes(dimensionReferenceKey(item)),
+                        ),
+                      ].map((item) => ({
+                        label: objectMetricPropertyDisplayName(item, objectType),
+                        value: dimensionReferenceKey(item),
+                      })),
+                    ]}
+                    placeholder={objectMetricText("analysisNoOrder")}
+                  />
+                </Form.Item>
+                {selectedOrderKey ? (
+                  <Form.Item
+                    label={objectMetricText("analysisOrderDirection")}
+                    name="orderDirection"
+                    initialValue="asc"
+                  >
+                    <Select
+                      options={[
+                        { label: objectMetricText("analysisAscending"), value: "asc" },
+                        { label: objectMetricText("analysisDescending"), value: "desc" },
+                      ]}
+                    />
+                  </Form.Item>
+                ) : null}
+              </div>
             ) : null}
           </Form>
         </section>
@@ -654,6 +817,11 @@ export function ObjectMetricTrialDrawer({
                     >
                       {trialStatusLabel(result.status)}
                     </Tag>
+                    {result.total_count !== undefined ? (
+                      <span>
+                        {objectMetricText("analysisTotalCount", { p0: result.total_count })}
+                      </span>
+                    ) : null}
                     {result.evaluated_at ? (
                       <span>
                         {objectMetricText("analysisEvaluatedAt")}:{" "}
@@ -669,6 +837,9 @@ export function ObjectMetricTrialDrawer({
                 <Space direction="vertical" size={16} className={styles.resultContent}>
                   {result.warnings?.length ? (
                     <Alert message={result.warnings.join("；")} showIcon type="warning" />
+                  ) : null}
+                  {result.empty_reason === "filtered_out" ? (
+                    <Alert message={objectMetricText("analysisFilteredOut")} showIcon type="info" />
                   ) : null}
                   <ObjectMetricAnalysisPanel
                     identityLabels={identityLabels}
@@ -986,7 +1157,7 @@ export function ObjectMetricTrialDrawer({
               key: "dimensions",
               label: objectMetricText("analysisDimensions"),
               children:
-                currentQuery?.analysis_dimensions
+                currentQuery?.group_by
                   ?.map((item) => objectMetricPropertyDisplayName(item, objectType))
                   .join("、") || "—",
             },
