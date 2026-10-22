@@ -519,6 +519,33 @@ describe("CypherQueryScene", () => {
     });
   });
 
+  it("keeps rows in view when a plain run's response also carries a plan", async () => {
+    mocks.runCypherQuery.mockResolvedValue({
+      ok: true,
+      result: {
+        columns: [{ name: "n" }],
+        entries: [{ n: 79 }],
+        plan: {
+          shape: "aggregate",
+          objects: [],
+          columns: [{ name: "n", kind: "count" }],
+          limit: 1,
+          limit_source: "default",
+          reads: [],
+        },
+      },
+      exchange,
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    await screen.findByTestId("cypher-schema-object-teams");
+
+    fireEvent.change(editor(), { target: { value: "MATCH (g:goals) RETURN count(*) AS n" } });
+    fireEvent.keyDown(editor(), { key: "Enter", ctrlKey: true });
+
+    await screen.findByText("79");
+    expect(screen.queryByTestId("cypher-plan")).toBeNull();
+  });
+
   it("explains the editor's query in a new frame without running it", async () => {
     mocks.explainCypher.mockResolvedValue({ answer: "查找**巴西队**的进球", threadId: "t-1" });
     render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);

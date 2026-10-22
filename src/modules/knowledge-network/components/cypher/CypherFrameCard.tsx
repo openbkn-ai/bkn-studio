@@ -29,6 +29,7 @@ import { CypherGraphView } from "@/modules/knowledge-network/components/cypher/C
 import { CypherPlanView } from "@/modules/knowledge-network/components/cypher/CypherPlanView";
 import { CypherResultTable } from "@/modules/knowledge-network/components/cypher/CypherResultTable";
 import type { CypherFrame } from "@/modules/knowledge-network/cypher/cypher-frames";
+import { splitExplain } from "@/modules/knowledge-network/cypher/cypher-plan";
 import { downloadText } from "@/modules/knowledge-network/cypher/download";
 import { useGraphStyle } from "@/modules/knowledge-network/cypher/graph-style-context";
 import {
@@ -121,7 +122,8 @@ export function CypherFrameCard({
     [frame.result, holdsGraph, names, nodeLimit, showAll],
   );
   const [chosenView, setChosenView] = useState<View | null>(null);
-  const plan = frame.result?.plan;
+  // The plan replaces the rows only when the query asked for one.
+  const plan = splitExplain(frame.query).explain ? frame.result?.plan : undefined;
   const view: View = chosenView ?? (plan ? "plan" : holdsGraph ? "graph" : "table");
   const busy = frame.status === "generating" || frame.status === "running";
   const latestTool = frame.ai?.tools?.[frame.ai.tools.length - 1];
