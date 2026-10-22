@@ -90,13 +90,23 @@ function CatalogDeletionImpactDetails({
             health: impact.catalogHealthCheckSchedules,
           })}
         </li>
-        <li>{t("dataConnect.dangerDelete.buildTasks", impact.buildTasks)}</li>
-        <li>{t("dataConnect.dangerDelete.discoverTasks", impact.discoverTasks)}</li>
         <li>
-          {t(
-            "dataConnect.dangerDelete.semanticUnderstandingTasks",
-            impact.semanticUnderstandingTasks,
-          )}
+          {t("dataConnect.dangerDelete.buildTasks", {
+            count: impact.buildTasks.willDelete,
+            blocking: impact.buildTasks.blocking,
+          })}
+        </li>
+        <li>
+          {t("dataConnect.dangerDelete.discoverTasks", {
+            count: impact.discoverTasks.willDelete,
+            blocking: impact.discoverTasks.blocking,
+          })}
+        </li>
+        <li>
+          {t("dataConnect.dangerDelete.semanticUnderstandingTasks", {
+            count: impact.semanticUnderstandingTasks.willDelete,
+            blocking: impact.semanticUnderstandingTasks.blocking,
+          })}
         </li>
       </ul>
     </div>

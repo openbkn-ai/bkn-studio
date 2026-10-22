@@ -129,10 +129,18 @@ export const dataConnectEnUS = {
       resources_one: "Resource: {{count}} ({{protected}} protected)",
       resources_other: "Resources: {{count}} ({{protected}} protected)",
       schedules: "Schedules: {{discover}} discovery, {{health}} health check",
-      buildTasks: "Build tasks: delete {{willDelete}} task records, {{blocking}} blocking",
-      discoverTasks: "Discovery tasks: delete {{willDelete}} task records, {{blocking}} blocking",
+      buildTasks: "Build tasks: delete {{count}} task records, {{blocking}} blocking",
+      buildTasks_one: "Build tasks: delete {{count}} task record, {{blocking}} blocking",
+      buildTasks_other: "Build tasks: delete {{count}} task records, {{blocking}} blocking",
+      discoverTasks: "Discovery tasks: delete {{count}} task records, {{blocking}} blocking",
+      discoverTasks_one: "Discovery tasks: delete {{count}} task record, {{blocking}} blocking",
+      discoverTasks_other: "Discovery tasks: delete {{count}} task records, {{blocking}} blocking",
       semanticUnderstandingTasks:
-        "Semantic tasks: delete {{willDelete}} task records, {{blocking}} blocking",
+        "Semantic tasks: delete {{count}} task records, {{blocking}} blocking",
+      semanticUnderstandingTasks_one:
+        "Semantic tasks: delete {{count}} task record, {{blocking}} blocking",
+      semanticUnderstandingTasks_other:
+        "Semantic tasks: delete {{count}} task records, {{blocking}} blocking",
       impactWarning:
         "Resources, schedules, and all associated task records (including pending tasks and history) will be deleted. Indexes are not deleted by this operation.",
       catalogEmpty:

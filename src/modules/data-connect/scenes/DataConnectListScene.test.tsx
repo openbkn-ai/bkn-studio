@@ -446,11 +446,15 @@ describe("DataConnectListScene deletion preflight", () => {
     await waitFor(() => expect(previewCatalogDeletionMock).toHaveBeenCalledWith("catalog-1"));
   }
 
-  it.each(["buildTasks", "discoverTasks", "semanticUnderstandingTasks"] as const)(
-    "requires name confirmation when only %s records will be deleted",
-    async (taskType) => {
+  it.each(
+    (["buildTasks", "discoverTasks", "semanticUnderstandingTasks"] as const).flatMap((taskType) =>
+      [1, 3].map((count) => ({ taskType, count })),
+    ),
+  )(
+    "requires name confirmation and formats $count $taskType record(s)",
+    async ({ taskType, count }) => {
       const report = impact();
-      report[taskType].willDelete = 3;
+      report[taskType].willDelete = count;
       await requestDeletion(report);
       await waitFor(() => expect(dangerOpenMock).toHaveBeenCalled());
       const options = dangerOpenMock.mock.calls[0][0] as {
@@ -461,7 +465,7 @@ describe("DataConnectListScene deletion preflight", () => {
       render(<>{options.impact}</>);
       expect(
         screen.getByText(
-          `${taskType === "buildTasks" ? "Build" : taskType === "discoverTasks" ? "Discovery" : "Semantic"} tasks: delete 3 task records, 0 blocking`,
+          `${taskType === "buildTasks" ? "Build" : taskType === "discoverTasks" ? "Discovery" : "Semantic"} tasks: delete ${count} task ${count === 1 ? "record" : "records"}, 0 blocking`,
         ),
       ).toBeTruthy();
       expect(screen.getByText(/all associated task records.*will be deleted/)).toBeTruthy();
