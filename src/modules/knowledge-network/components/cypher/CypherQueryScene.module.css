@@ -751,3 +751,41 @@
   background: currentColor;
   vertical-align: middle;
 }
+
+/* ---------------- plan ---------------- */
+
+.planView {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.planRow {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.planLabel {
+  flex: 0 0 96px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.planValue {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.planList {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.planWhere {
+  margin-left: 6px;
+}

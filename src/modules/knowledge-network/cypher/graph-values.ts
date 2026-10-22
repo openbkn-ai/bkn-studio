@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { CypherPlan } from "@/modules/knowledge-network/cypher/cypher-plan";
+
 /**
  * Reading run_cypher results: the node, relationship and derived-edge values a query returns,
  * and the parts of a query the page needs before running it (returned node variables and their
@@ -26,6 +28,8 @@ export type CypherResult = {
   /** What each column holds, set when the query returns nodes, relationships, lists or maps. */
   valueTypes?: Record<string, unknown>;
   execution?: CypherExecution;
+  /** Set instead of rows when the query was explained, not run. */
+  plan?: CypherPlan;
 };
 
 type Rec = Record<string, unknown>;

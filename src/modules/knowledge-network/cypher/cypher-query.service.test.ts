@@ -44,6 +44,32 @@ describe("runCypherQuery", () => {
     });
   });
 
+  it("explains without asking for display properties, and reads the plan", async () => {
+    const plan = {
+      shape: "match",
+      objects: [{ alias: "t", object_type_id: "teams" }],
+      columns: [{ name: "t", kind: "node" }],
+      limit: 5,
+      limit_source: "explicit",
+      reads: ["teams.team_name"],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(reply(200, { columns: [], entries: [], plan }));
+    vi.stubGlobal("fetch", fetchMock);
+    const query = "MATCH (t:teams) RETURN t LIMIT 5";
+
+    const run = await runCypherQuery({
+      env,
+      query,
+      explain: true,
+      objectProperties: { t: ["team_name"] },
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ kn_id: "worldcup", query, explain: true });
+    expect(run.ok && run.result.plan).toMatchObject(plan);
+  });
+
   it("asks for display properties, and runs again without them when the backend refuses", async () => {
     const fetchMock = vi
       .fn()

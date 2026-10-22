@@ -64,6 +64,12 @@ const EXAMPLES: string[][] = [
     "MATCH (a:ObjectType)<-[:RELATION_A]-(b:OtherType)-[:RELATION_B]->(c:ThirdType)\nRETURN a AS source, 'LINKED_TO' AS relationType, c AS target, collect({via: b}) AS evidence\nLIMIT 25",
     "MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType)\nRETURN a, count(b) AS n, max(b.amount) AS top\nORDER BY n DESC LIMIT 25",
   ],
+  [
+    "EXPLAIN MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType)\nWITH a, count(b) AS n WHERE n > 10\nRETURN a.name AS name, n ORDER BY n DESC LIMIT 10",
+  ],
+  [
+    "MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType)\nWHERE b.status <> 'closed'\nRETURN a.name AS name, count(b) AS n ORDER BY n DESC LIMIT 10",
+  ],
   [],
 ];
 

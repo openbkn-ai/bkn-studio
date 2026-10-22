@@ -477,6 +477,48 @@ describe("CypherQueryScene", () => {
     expect(screen.getByTestId("cypher-schema-object-goals")).toBeTruthy();
   });
 
+  it("plans the editor's query with the Plan button or an EXPLAIN prefix, reading nothing", async () => {
+    mocks.runCypherQuery.mockResolvedValue({
+      ok: true,
+      result: {
+        columns: [],
+        entries: [],
+        plan: {
+          shape: "match",
+          objects: [{ alias: "t", object_type_id: "teams" }],
+          columns: [{ name: "t", kind: "node" }],
+          limit: 1000,
+          limit_source: "default",
+          reads: ["teams.team_name"],
+          warnings: ["no LIMIT: at most 1000 rows come back"],
+        },
+      },
+      exchange,
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    await screen.findByTestId("cypher-schema-object-teams");
+
+    fireEvent.change(editor(), { target: { value: "MATCH (t:teams) RETURN t" } });
+    fireEvent.click(screen.getByTestId("cypher-editor-plan"));
+
+    await screen.findByTestId("cypher-plan");
+    expect(screen.getByText("no LIMIT: at most 1000 rows come back")).toBeTruthy();
+    expect(screen.getByText("t: 球队")).toBeTruthy();
+    expect(mocks.runCypherQuery.mock.calls[0][0]).toMatchObject({
+      query: "MATCH (t:teams) RETURN t",
+      explain: true,
+      objectProperties: undefined,
+    });
+
+    fireEvent.change(editor(), { target: { value: "explain MATCH (t:teams) RETURN t" } });
+    fireEvent.keyDown(editor(), { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(mocks.runCypherQuery).toHaveBeenCalledTimes(2));
+    expect(mocks.runCypherQuery.mock.calls[1][0]).toMatchObject({
+      query: "MATCH (t:teams) RETURN t",
+      explain: true,
+    });
+  });
+
   it("explains the editor's query in a new frame without running it", async () => {
     mocks.explainCypher.mockResolvedValue({ answer: "查找**巴西队**的进球", threadId: "t-1" });
     render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);

@@ -26,6 +26,7 @@ import remarkGfm from "remark-gfm";
 
 import type { FrameGraphSettings } from "@/modules/knowledge-network/cypher/graph-style";
 import { CypherGraphView } from "@/modules/knowledge-network/components/cypher/CypherGraphView";
+import { CypherPlanView } from "@/modules/knowledge-network/components/cypher/CypherPlanView";
 import { CypherResultTable } from "@/modules/knowledge-network/components/cypher/CypherResultTable";
 import type { CypherFrame } from "@/modules/knowledge-network/cypher/cypher-frames";
 import { downloadText } from "@/modules/knowledge-network/cypher/download";
@@ -39,7 +40,7 @@ import {
 
 import styles from "./CypherQueryScene.module.css";
 
-type View = "table" | "graph" | "raw";
+type View = "table" | "graph" | "raw" | "plan";
 
 function RawView({ frame }: { frame: CypherFrame }) {
   const { t } = useTranslation();
@@ -120,7 +121,8 @@ export function CypherFrameCard({
     [frame.result, holdsGraph, names, nodeLimit, showAll],
   );
   const [chosenView, setChosenView] = useState<View | null>(null);
-  const view: View = chosenView ?? (holdsGraph ? "graph" : "table");
+  const plan = frame.result?.plan;
+  const view: View = chosenView ?? (plan ? "plan" : holdsGraph ? "graph" : "table");
   const busy = frame.status === "generating" || frame.status === "running";
   const latestTool = frame.ai?.tools?.[frame.ai.tools.length - 1];
   const fileName = `cypher-${frame.id}`;
@@ -342,6 +344,37 @@ export function CypherFrameCard({
       );
     }
     if (!frame.result) return null;
+    if (plan) {
+      // An explained query has a plan and no rows.
+      return (
+        <>
+          <Segmented<View>
+            className={styles.viewSwitch}
+            onChange={setChosenView}
+            options={[
+              { value: "plan", label: t("knowledgeNetwork.cypherQuery.views.plan") },
+              { value: "raw", label: t("knowledgeNetwork.cypherQuery.views.raw") },
+            ]}
+            size="small"
+            value={view === "raw" ? "raw" : "plan"}
+          />
+          {view === "raw" ? (
+            <RawView frame={frame} />
+          ) : (
+            <CypherPlanView names={names} plan={plan} />
+          )}
+          {frame.exchange ? (
+            <div className={styles.statusBar}>
+              <span>
+                {t("knowledgeNetwork.cypherQuery.status.latency", {
+                  ms: frame.exchange.latencyMs,
+                })}
+              </span>
+            </div>
+          ) : null}
+        </>
+      );
+    }
     return (
       <>
         <Segmented<View>

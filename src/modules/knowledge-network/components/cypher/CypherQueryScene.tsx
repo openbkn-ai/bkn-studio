@@ -22,6 +22,7 @@ import {
   DatabaseOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  ProfileOutlined,
   ReadOutlined,
   RobotOutlined,
   SettingOutlined,
@@ -71,6 +72,7 @@ import {
   saveHistory,
   stepHistory,
 } from "@/modules/knowledge-network/cypher/cypher-history";
+import { splitExplain, withExplain } from "@/modules/knowledge-network/cypher/cypher-plan";
 import {
   getObjectTypeDisplayKeys,
   getObjectTypeProperties,
@@ -417,11 +419,14 @@ export function CypherQueryScene({
         })),
       );
       try {
+        // `EXPLAIN …` is sent as the query after it, planned but not run.
+        const asked = splitExplain(query);
         const run = await runCypherQuery({
           env,
           auth: tokenProvider,
-          query,
-          objectProperties: await objectPropertiesFor(query),
+          query: asked.query,
+          explain: asked.explain,
+          objectProperties: asked.explain ? undefined : await objectPropertiesFor(asked.query),
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
@@ -1093,6 +1098,19 @@ export function CypherQueryScene({
                 <span className={styles.agentHint}>
                   {t("knowledgeNetwork.cypherQuery.agent.notReadyShort")}
                 </span>
+              ) : null}
+              {mode === "cypher" ? (
+                <Tooltip title={t("knowledgeNetwork.cypherQuery.editor.planHint")}>
+                  <Button
+                    data-testid="cypher-editor-plan"
+                    disabled={!cypherText.trim()}
+                    icon={<ProfileOutlined />}
+                    onClick={() => runNew(withExplain(cypherText.trim()))}
+                    size="small"
+                  >
+                    {t("knowledgeNetwork.cypherQuery.editor.plan")}
+                  </Button>
+                </Tooltip>
               ) : null}
               {mode === "cypher" ? (
                 <Button
