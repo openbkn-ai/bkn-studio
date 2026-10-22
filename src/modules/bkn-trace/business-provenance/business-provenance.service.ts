@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { TimeRailItem } from "../evidence-chain/evidence-chain.types";
+import type { TimeRailItem, TimeRailPayload } from "../evidence-chain/evidence-chain.types";
 
 import i18n from "@/app/locales/i18n";
 import { http } from "@/framework/request/http";
@@ -263,6 +263,7 @@ export async function getBusinessProvenanceInteraction(
 ): Promise<BusinessProvenanceInteraction> {
   const response = await http.get<{
     time_rail?: TimeRailItem[];
+    time_rail_payloads_shared?: boolean;
     interaction_id?: string;
     current_record_integrity?: RecordIntegrity;
     record_integrity_check_failed?: boolean;
@@ -319,9 +320,42 @@ export async function getBusinessProvenanceInteraction(
     }>;
   }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}`, {
     skipErrorToast: true,
+    params: { deduplicate_payloads: true },
   });
+  const operationsByAttempt = new Map(
+    (response.data.operations ?? []).map((operation) => [
+      `${operation.operation_id}:${operation.attempt ?? 1}`,
+      operation,
+    ]),
+  );
+  const restorePayload = (payload: TimeRailPayload | undefined, original: unknown) => {
+    if (!payload?.shared_inline) return payload;
+    if (!original || typeof original !== "object" || !("inline" in original)) {
+      throw new Error("invalid shared time-rail payload");
+    }
+    const restored = { ...payload, inline: original.inline };
+    delete restored.shared_inline;
+    return restored;
+  };
+  const timeRail = response.data.time_rail_payloads_shared
+    ? response.data.time_rail?.map((item) => {
+        const operation = operationsByAttempt.get(`${item.operation_id}:${item.attempt}`);
+        if (!operation) {
+          if (item.input.shared_inline || item.output?.shared_inline || item.error?.shared_inline) {
+            throw new Error("missing shared time-rail operation");
+          }
+          return item;
+        }
+        return {
+          ...item,
+          input: restorePayload(item.input, operation.input) ?? item.input,
+          output: restorePayload(item.output, operation.output),
+          error: restorePayload(item.error, operation.error),
+        };
+      })
+    : response.data.time_rail;
   return {
-    timeRail: response.data.time_rail,
+    timeRail,
     currentRecordIntegrity: response.data.current_record_integrity,
     recordIntegrityCheckFailed: response.data.record_integrity_check_failed,
     interactionId: response.data.interaction_id ?? interactionId,

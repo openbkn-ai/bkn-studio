@@ -199,6 +199,7 @@ export interface PairProvenanceGraph {
 }
 
 export interface TimeRailPayload {
+  shared_inline?: boolean;
   mode: string;
   media_type: string;
   byte_length: number;

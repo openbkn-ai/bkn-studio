@@ -762,6 +762,7 @@ export function BusinessProvenanceScene() {
   const [analysisError, setAnalysisError] = useState<string>();
   const [analysisMarkdown, setAnalysisMarkdown] = useState("");
   const [analysisMarkdownLoading, setAnalysisMarkdownLoading] = useState(false);
+  const markdownRequest = useRef<{ id: string; promise: Promise<string> } | undefined>(undefined);
   const conversationRequest = useRef(0);
   const timelineInspectorRef = useRef<HTMLElement>(null);
 
@@ -884,6 +885,7 @@ export function BusinessProvenanceScene() {
     setInteractionDetailLoading(true);
     setInteractionDetailError(false);
     setProjectionUnavailable(false);
+    markdownRequest.current = undefined;
     setAnalysisMarkdown("");
     setAnalysisMarkdownLoading(false);
     setAnalysisResult(undefined);
@@ -897,17 +899,6 @@ export function BusinessProvenanceScene() {
         if (!current) return;
         setProjection(value);
         setDetailOperation(value.operations[0]);
-        setAnalysisMarkdownLoading(true);
-        void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
-          .then((markdown) => {
-            if (current) setAnalysisMarkdown(markdown);
-          })
-          .catch(() => {
-            if (current) message.error(bpText("errors.markdownLoad"));
-          })
-          .finally(() => {
-            if (current) setAnalysisMarkdownLoading(false);
-          });
         void getBusinessProvenanceAnalysisHistory(selectedInteraction.interactionId)
           .then((entries) => {
             if (!current) return;
@@ -927,17 +918,6 @@ export function BusinessProvenanceScene() {
           return;
         }
         setProjectionUnavailable(true);
-        setAnalysisMarkdownLoading(true);
-        void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
-          .then((markdown) => {
-            if (current) setAnalysisMarkdown(markdown);
-          })
-          .catch(() => {
-            if (current) message.error(bpText("errors.markdownLoad"));
-          })
-          .finally(() => {
-            if (current) setAnalysisMarkdownLoading(false);
-          });
       })
       .finally(() => {
         if (current) setInteractionDetailLoading(false);
@@ -970,15 +950,48 @@ export function BusinessProvenanceScene() {
     }
   }, [analysisMarkdown, selectedInteraction]);
 
+  const ensureAnalysisMarkdown = useCallback((): Promise<string> => {
+    const id = selectedInteraction?.interactionId;
+    if (!id) return Promise.resolve("");
+    if (analysisMarkdown) return Promise.resolve(analysisMarkdown);
+    if (markdownRequest.current?.id === id) return markdownRequest.current.promise;
+    setAnalysisMarkdownLoading(true);
+    const request = { id, promise: Promise.resolve("") };
+    request.promise = getBusinessProvenanceMarkdown(id)
+      .then((markdown) => {
+        if (!markdown.trim()) throw new Error("empty provenance Markdown");
+        if (markdownRequest.current === request) setAnalysisMarkdown(markdown);
+        return markdown;
+      })
+      .finally(() => {
+        if (markdownRequest.current === request) {
+          markdownRequest.current = undefined;
+          setAnalysisMarkdownLoading(false);
+        }
+      });
+    markdownRequest.current = request;
+    return request.promise;
+  }, [analysisMarkdown, selectedInteraction]);
+
   const copyMarkdown = useCallback(async () => {
-    if (!selectedInteraction || !analysisMarkdown) return;
+    if (!selectedInteraction) return;
+    let markdown: string;
     try {
-      await writeTextToClipboard(analysisMarkdown);
+      markdown = await ensureAnalysisMarkdown();
+    } catch {
+      if (loadedInteractionId.current === selectedInteraction.interactionId) {
+        message.error(bpText("errors.markdownLoad"));
+      }
+      return;
+    }
+    if (loadedInteractionId.current !== selectedInteraction.interactionId) return;
+    try {
+      await writeTextToClipboard(markdown);
       message.success(bpText("agent.markdownCopied"));
     } catch {
       message.error(bpText("agent.copyFailed"));
     }
-  }, [analysisMarkdown, selectedInteraction]);
+  }, [ensureAnalysisMarkdown, selectedInteraction]);
 
   const copyPayload = useCallback(async (value: unknown) => {
     const content = payloadText(value);
@@ -991,17 +1004,25 @@ export function BusinessProvenanceScene() {
     void writeTextToClipboard(value).then(() => message.success(bpText("detail.payloadCopied")));
   }, []);
 
-  const downloadMarkdown = useCallback(() => {
-    if (!selectedInteraction || !analysisMarkdown) return;
-    const url = URL.createObjectURL(
-      new Blob([analysisMarkdown], { type: "text/markdown;charset=utf-8" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `knowledge-network-optimization-${selectedInteraction.interactionId}.md`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }, [analysisMarkdown, selectedInteraction]);
+  const downloadMarkdown = useCallback(async () => {
+    if (!selectedInteraction) return;
+    try {
+      const markdown = await ensureAnalysisMarkdown();
+      if (loadedInteractionId.current !== selectedInteraction.interactionId) return;
+      const url = URL.createObjectURL(
+        new Blob([markdown], { type: "text/markdown;charset=utf-8" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `knowledge-network-optimization-${selectedInteraction.interactionId}.md`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      if (loadedInteractionId.current === selectedInteraction.interactionId) {
+        message.error(bpText("errors.markdownLoad"));
+      }
+    }
+  }, [ensureAnalysisMarkdown, selectedInteraction]);
 
   const prepareAnalysis = useCallback(() => {
     setAnalysisResult(undefined);
@@ -1362,7 +1383,7 @@ export function BusinessProvenanceScene() {
                   <Button
                     aria-label={bpText("legacy.copyMarkdown")}
                     icon={<CopyOutlined />}
-                    disabled={analysisMarkdownLoading || !analysisMarkdown}
+                    disabled={analysisMarkdownLoading}
                     onClick={() => void copyMarkdown()}
                   >
                     {bpText("legacy.copyMarkdown")}
@@ -1370,7 +1391,7 @@ export function BusinessProvenanceScene() {
                   <Button
                     aria-label={bpText("legacy.downloadMarkdown")}
                     icon={<DownloadOutlined />}
-                    disabled={analysisMarkdownLoading || !analysisMarkdown}
+                    disabled={analysisMarkdownLoading}
                     onClick={() => void downloadMarkdown()}
                   >
                     {bpText("legacy.downloadMarkdown")}
@@ -1421,7 +1442,7 @@ export function BusinessProvenanceScene() {
                   <Button
                     aria-label={bpText("actions.copyMarkdown")}
                     icon={<CopyOutlined />}
-                    disabled={analysisMarkdownLoading || !analysisMarkdown}
+                    disabled={analysisMarkdownLoading}
                     onClick={() => void copyMarkdown()}
                   >
                     {bpText("actions.copyMarkdown")}
@@ -1429,16 +1450,23 @@ export function BusinessProvenanceScene() {
                   <Button
                     aria-label={bpText("actions.downloadMarkdown")}
                     icon={<DownloadOutlined />}
-                    disabled={analysisMarkdownLoading || !analysisMarkdown}
-                    onClick={downloadMarkdown}
+                    disabled={analysisMarkdownLoading}
+                    onClick={() => void downloadMarkdown()}
                   >
                     {bpText("actions.downloadMarkdown")}
                   </Button>
                   <Button
                     aria-label={bpText("actions.analyze")}
                     type="primary"
-                    disabled={analysisMarkdownLoading || !analysisMarkdown.trim()}
-                    onClick={() => setAnalysisPanelOpen(true)}
+                    disabled={analysisMarkdownLoading}
+                    onClick={() => {
+                      setAnalysisPanelOpen(true);
+                      void ensureAnalysisMarkdown().catch(() => {
+                        if (loadedInteractionId.current === selectedInteraction.interactionId) {
+                          message.error(bpText("errors.markdownLoad"));
+                        }
+                      });
+                    }}
                   >
                     {bpText("actions.analyze")}
                   </Button>
@@ -1785,7 +1813,7 @@ export function BusinessProvenanceScene() {
                   aria-label={bpText("agent.markdownToAnalyze")}
                   value={analysisMarkdown}
                   readOnly
-                  autoSize={{ minRows: 14, maxRows: 24 }}
+                  rows={14}
                   disabled={analysisMarkdownLoading}
                   placeholder={
                     analysisMarkdownLoading

@@ -10,6 +10,7 @@ import { resolve } from "node:path";
 
 import { act, configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { message } from "antd";
 
 import { BusinessProvenanceScene } from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene";
 
@@ -18,6 +19,8 @@ const getInteractions = vi.hoisted(() => vi.fn());
 const getInteraction = vi.hoisted(() => vi.fn());
 const getMarkdown = vi.hoisted(() => vi.fn());
 const streamAnalysis = vi.hoisted(() => vi.fn());
+const writeClipboard = vi.hoisted(() => vi.fn());
+vi.mock("@/framework/compat/clipboard", () => ({ writeTextToClipboard: writeClipboard }));
 vi.mock("@/modules/bkn-trace/evidence-chain/CurrentExplanationPanel", () => ({
   CurrentExplanationPanel: ({ interactionId }: { interactionId: string }) => (
     <div>saved-evidence:{interactionId}</div>
@@ -62,6 +65,8 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     getInteractions.mockReset();
     getInteraction.mockReset();
     getMarkdown.mockReset();
+    writeClipboard.mockReset();
+    writeClipboard.mockResolvedValue(undefined);
     streamAnalysis.mockReset();
     getAnalysisHistory.mockReset();
     getAnalysisHistory.mockResolvedValue([]);
@@ -355,6 +360,166 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.queryByText("saved-evidence:int-two")).toBeNull();
   });
 
+  it.each(["request failure", "empty response"])(
+    "reports Markdown loading errors without copying or downloading on %s and permits retry",
+    async (failure) => {
+      getConversations.mockResolvedValue({
+        entries: [{ conversationId: "conv-errors", questionPreview: "Markdown errors" }],
+        total: 1,
+      });
+      getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-errors" }], total: 1 });
+      getInteraction.mockResolvedValue({
+        interactionId: "int-errors",
+        operations: [],
+        conversationContext: [],
+        derivedFacts: [],
+        contextRelations: [],
+      });
+      const error = vi.spyOn(message, "error");
+      const success = vi.spyOn(message, "success");
+      const failNextRead = () => {
+        if (failure === "request failure")
+          getMarkdown.mockRejectedValueOnce(new Error("server unavailable"));
+        else getMarkdown.mockResolvedValueOnce("");
+      };
+      try {
+        render(<BusinessProvenanceScene />);
+        fireEvent.click(await screen.findByRole("button", { name: "Markdown errors" }));
+        const copy = await screen.findByRole("button", { name: "复制 Markdown" });
+        failNextRead();
+        fireEvent.click(copy);
+        await waitFor(() =>
+          expect(error).toHaveBeenCalledWith("知识网络优化事实 Markdown 加载失败"),
+        );
+        expect(writeClipboard).not.toHaveBeenCalled();
+        expect(success).not.toHaveBeenCalled();
+        error.mockClear();
+        failNextRead();
+        fireEvent.click(screen.getByRole("button", { name: "下载 Markdown" }));
+        await waitFor(() =>
+          expect(error).toHaveBeenCalledWith("知识网络优化事实 Markdown 加载失败"),
+        );
+        fireEvent.click(copy);
+        await waitFor(() =>
+          expect(writeClipboard).toHaveBeenCalledWith(expect.stringContaining("# 当前交互轮次")),
+        );
+        writeClipboard.mockRejectedValueOnce(new Error("clipboard denied"));
+        fireEvent.click(copy);
+        await waitFor(() => expect(error).toHaveBeenCalledWith("复制失败"));
+        expect(getMarkdown).toHaveBeenCalledTimes(3);
+      } finally {
+        error.mockRestore();
+        success.mockRestore();
+      }
+    },
+  );
+
+  it.each(["下载 Markdown", "交给 BKN Agent 分析"])(
+    "ignores a stale Markdown rejection after switching rounds from %s",
+    async (action) => {
+      getConversations.mockResolvedValue({
+        entries: [{ conversationId: "conv-stale", questionPreview: "Stale read" }],
+        total: 1,
+      });
+      getInteractions.mockResolvedValue({
+        entries: [
+          { interactionId: "int-first", questionPreview: "First stale round" },
+          { interactionId: "int-second", questionPreview: "Second stale round" },
+        ],
+        total: 2,
+      });
+      getInteraction.mockImplementation((interactionId: string) =>
+        Promise.resolve({
+          interactionId,
+          operations: [],
+          conversationContext: [],
+          derivedFacts: [],
+          contextRelations: [],
+        }),
+      );
+      let rejectFirst!: (reason: Error) => void;
+      getMarkdown.mockImplementationOnce(
+        () =>
+          new Promise<string>((_resolve, reject) => {
+            rejectFirst = reject;
+          }),
+      );
+      const error = vi.spyOn(message, "error");
+      try {
+        render(<BusinessProvenanceScene />);
+        fireEvent.click(await screen.findByRole("button", { name: "Stale read" }));
+        fireEvent.click(await screen.findByRole("button", { name: action }));
+        if (action === "交给 BKN Agent 分析")
+          fireEvent.click(screen.getByRole("button", { name: "关闭 BKN Agent 分析" }));
+        fireEvent.click(screen.getByText("Second stale round"));
+        await waitFor(() => expect(getAnalysisHistory).toHaveBeenLastCalledWith("int-second"));
+        await act(async () => {
+          rejectFirst(new Error("old read failed"));
+          await Promise.resolve();
+        });
+        expect(error).not.toHaveBeenCalled();
+        expect(writeClipboard).not.toHaveBeenCalled();
+      } finally {
+        error.mockRestore();
+      }
+    },
+  );
+
+  it("does not let an earlier lazy Markdown response replace the selected round and reuses the loaded text", async () => {
+    getConversations.mockResolvedValue({
+      entries: [{ conversationId: "conv-lazy", questionPreview: "按需加载" }],
+      total: 1,
+    });
+    getInteractions.mockResolvedValue({
+      entries: [
+        { interactionId: "int-first", questionPreview: "第一轮按需" },
+        { interactionId: "int-second", questionPreview: "第二轮按需" },
+      ],
+      total: 2,
+    });
+    getInteraction.mockImplementation((interactionId: string) =>
+      Promise.resolve({
+        interactionId,
+        operations: [],
+        conversationContext: [],
+        derivedFacts: [],
+        contextRelations: [],
+      }),
+    );
+    let finishFirst!: (text: string) => void;
+    getMarkdown.mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          finishFirst = resolve;
+        }),
+    );
+    getMarkdown.mockResolvedValueOnce("# second round original");
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "按需加载" }));
+    fireEvent.click(await screen.findByRole("button", { name: "交给 BKN Agent 分析" }));
+    expect(getMarkdown).toHaveBeenCalledWith("int-first");
+    fireEvent.click(screen.getByRole("button", { name: "关闭 BKN Agent 分析" }));
+    fireEvent.click(screen.getByText("第二轮按需"));
+    await waitFor(() => expect(getAnalysisHistory).toHaveBeenLastCalledWith("int-second"));
+    fireEvent.click(await screen.findByRole("button", { name: "交给 BKN Agent 分析" }));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveValue(
+        "# second round original",
+      ),
+    );
+    await act(() => {
+      finishFirst("# stale first round");
+      return Promise.resolve();
+    });
+    expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveValue(
+      "# second round original",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "关闭 BKN Agent 分析" }));
+    fireEvent.click(screen.getByRole("button", { name: "交给 BKN Agent 分析" }));
+    expect(getMarkdown).toHaveBeenCalledTimes(2);
+    expect(streamAnalysis).not.toHaveBeenCalled();
+  });
+
   it("shows the current input and output above the deterministic timeline", async () => {
     getConversations.mockResolvedValue({
       entries: [
@@ -406,11 +571,15 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.getByRole("button", { name: "下载 Markdown" })).toBeEnabled();
     const analyzeButton = screen.getByRole("button", { name: "交给 BKN Agent 分析" });
     expect(analyzeButton).toBeEnabled();
+    expect(getMarkdown).not.toHaveBeenCalled();
     fireEvent.click(analyzeButton);
     expect(screen.getByText("知识网络优化 BKN Agent")).not.toBeNull();
-    expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveValue(
-      "# 当前交互轮次知识网络优化分析输入\n\n- Operation：`op-1`",
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveValue(
+        "# 当前交互轮次知识网络优化分析输入\n\n- Operation：`op-1`",
+      ),
     );
+    expect(getMarkdown).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("textbox", { name: "知识网络优化事实 Markdown" })).toHaveAttribute(
       "readonly",
     );
