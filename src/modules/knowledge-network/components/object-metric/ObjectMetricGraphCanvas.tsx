@@ -435,6 +435,7 @@ export function ObjectMetricGraphCanvas({
     new Map<string, { entries: ObjectMetricRecordV1[]; total: number }>(),
   );
   const metricCache = ownerMetricCache ?? localOwnerMetricCacheRef.current;
+  const restrictedView = restrictedObjectTypes && !selectedObjectTypeId;
   const [drawerMetric, setDrawerMetric] = useState<ObjectMetricRecordV1>();
   const initialFocusRestoredRef = useRef(false);
   const [expandedGroup, setExpandedGroup] = useState<DetailGroup>();
@@ -466,9 +467,9 @@ export function ObjectMetricGraphCanvas({
   ]);
   const metricRequestKey = JSON.stringify([
     networkId,
-    restrictedObjectTypes ? "restricted" : selectedObjectTypeId,
+    restrictedView ? "restricted" : selectedObjectTypeId,
     metricType,
-    restrictedObjectTypes ? restrictedMetricPage : undefined,
+    restrictedView ? restrictedMetricPage : undefined,
     refreshVersion,
   ]);
   const relationCurrent = relationResultKey === relationRequestKey;
@@ -516,7 +517,7 @@ export function ObjectMetricGraphCanvas({
     setView(INITIAL_VIEW);
     relationViewRef.current = INITIAL_VIEW;
     setNodePositions({});
-  }, [networkId, restrictedObjectTypes, selectedObjectTypeId]);
+  }, [networkId, restrictedView, selectedObjectTypeId]);
 
   useEffect(() => {
     setDrawerMetric(undefined);
@@ -576,7 +577,7 @@ export function ObjectMetricGraphCanvas({
   }, [networkId, objectTypesLoading, relationPage, relationRequestKey, selectedObjectTypeId]);
 
   useEffect(() => {
-    if (objectTypesLoading || (!selectedObjectTypeId && !restrictedObjectTypes)) return;
+    if (objectTypesLoading || (!selectedObjectTypeId && !restrictedView)) return;
     let active = true;
     setMetricError(false);
     const cached = metricCache.get(metricRequestKey);
@@ -592,7 +593,7 @@ export function ObjectMetricGraphCanvas({
           : undefined,
       );
       setMetricTotal(cached.total);
-      setMetricComplete(restrictedObjectTypes || cached.entries.length >= cached.total);
+      setMetricComplete(restrictedView || cached.entries.length >= cached.total);
       setMetricResultKey(metricRequestKey);
       setMetricLoading(false);
       return;
@@ -603,7 +604,7 @@ export function ObjectMetricGraphCanvas({
       const loaded: ObjectMetricRecordV1[] = [];
       let total = 0;
       try {
-        if (restrictedObjectTypes) {
+        if (restrictedView) {
           const result = await listObjectMetricsV1(
             networkId,
             {
@@ -700,7 +701,7 @@ export function ObjectMetricGraphCanvas({
     objectTypesLoading,
     refreshVersion,
     restrictedMetricPage,
-    restrictedObjectTypes,
+    restrictedView,
     selectedObjectTypeId,
   ]);
 
@@ -1131,7 +1132,7 @@ export function ObjectMetricGraphCanvas({
     action();
   };
 
-  if (objectTypesLoading) {
+  if (objectTypesLoading || (restrictedView && !metricReady)) {
     return (
       <div className={styles.loading} role="status">
         <Spin />
@@ -1139,7 +1140,7 @@ export function ObjectMetricGraphCanvas({
     );
   }
 
-  if (!selectedObjectTypeId && restrictedObjectTypes) {
+  if (restrictedView && metricReady && !metricError && metricTotal > 0) {
     const restrictedRows = metrics.map((metric, index) => ({
       metric,
       y: 64 + index * 88,

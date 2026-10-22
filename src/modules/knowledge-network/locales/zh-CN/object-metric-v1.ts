@@ -1094,7 +1094,7 @@ export const objectMetricV1Part = {
   restrictedGraphTitle: "已授权指标",
   restrictedGraphSummary: "{{p0}} 个可见指标 · 对象类详情不可查看",
   restrictedGraphAriaLabel: "对象类受限时的已授权指标图谱",
-  restrictedOwnerName: "对象类不可查看",
+  restrictedOwnerName: "对象类信息不可用",
   restrictedOwnerNodeLabel: "对象类“{{p0}}”的详情不可查看，点击了解权限限制",
   restrictedGraphNotice: "仅展示对象类名称；对象类详情及关系已隐藏。当前只显示你有权查看的指标。",
   restrictedObjectPermissionDenied: "你没有该对象类的查看权限。",

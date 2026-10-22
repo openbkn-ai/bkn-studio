@@ -752,7 +752,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
         if (owner === null) {
           const label = record.owner_object_type_name || objectMetricText("restrictedOwnerName");
           return (
-            <Tooltip title={objectMetricText("restrictedObjectPermissionDenied")}>
+            <Tooltip title={objectMetricText("restrictedOwnerName")}>
               <span className={styles.restrictedOwnerLabel}>
                 <LockOutlined />
                 {label}

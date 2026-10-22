@@ -315,6 +315,18 @@ describe("ObjectMetricListPanel pagination", () => {
     expect(screen.queryByRole("button", { name: "order" })).not.toBeInTheDocument();
   });
 
+  it("uses neutral owner wording when the object detail request fails", async () => {
+    mocks.searchParams.current = "view=list";
+    mocks.getObjectDetail.mockRejectedValue(new Error("server unavailable"));
+    mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [metric(1)], total_count: 1 });
+
+    render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
+
+    expect(await screen.findByText("对象类信息不可用")).toBeInTheDocument();
+    expect(screen.queryByText("order")).not.toBeInTheDocument();
+  });
+
   it("opens authorization for a metric from list and graph views", async () => {
     mocks.searchParams.current = "view=list";
     mocks.listObjectTypes.mockResolvedValue({

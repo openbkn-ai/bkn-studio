@@ -365,6 +365,18 @@ describe("ObjectMetricDetailScene actions", () => {
     expect(screen.queryByText("confidential-owner-id")).not.toBeInTheDocument();
   });
 
+  it("uses neutral owner wording when object details fail without a projected name", async () => {
+    const metric = record("published", "object_set");
+    metric.definition.owner_object_type_id = "confidential-owner-id";
+    mocks.getObjectMetricV1.mockResolvedValue(metric);
+    mocks.getObjectTypeDetail.mockRejectedValue(new Error("server unavailable"));
+
+    render(<ObjectMetricDetailScene />);
+
+    expect(await screen.findByText("对象类信息不可用")).toBeInTheDocument();
+    expect(screen.queryByText("confidential-owner-id")).not.toBeInTheDocument();
+  });
+
   it("uses business labels for calculation and result metadata while retaining technical values in tooltips", async () => {
     const metric = record("published", "object_instance");
     if (metric.definition.specification.kind !== "atomic")

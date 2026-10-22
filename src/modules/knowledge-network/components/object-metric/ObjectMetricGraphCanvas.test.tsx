@@ -139,6 +139,45 @@ function neighborCountRequestIds() {
 }
 
 describe("ObjectMetricGraphCanvas", () => {
+  it("keeps the normal empty state when an empty network has no visible metrics", async () => {
+    mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+    const ownerMetricCache = new Map();
+
+    renderGraph(vi.fn(), vi.fn(), {
+      ownerMetricCache,
+      restrictedObjectTypes: true,
+      selectedObjectTypeId: "",
+      selectedObjectTypeName: "",
+    });
+
+    await waitFor(() => expect(ownerMetricCache.size).toBe(1));
+    expect(
+      screen.getByText(/选择一个对象类后查看对象指标图谱|Select an object class to view/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/已授权指标|Authorized metrics/)).not.toBeInTheDocument();
+    expect(mocks.listRelations).not.toHaveBeenCalled();
+  });
+
+  it("scopes metric loading to the selected owner even if the restricted flag is stale", async () => {
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+
+    renderGraph(vi.fn(), vi.fn(), { restrictedObjectTypes: true });
+
+    await waitFor(() => expect(mocks.listMetrics).toHaveBeenCalled());
+    expect(mocks.listMetrics).toHaveBeenCalledWith(
+      "network-1",
+      expect.objectContaining({ ownerObjectTypeId: "order" }),
+      { skipErrorToast: true },
+    );
+    expect(
+      mocks.listMetrics.mock.calls.every(([, rawQuery]) => {
+        const query = rawQuery as { ownerObjectTypeId?: string };
+        return query.ownerObjectTypeId === "order";
+      }),
+    ).toBe(true);
+  });
+
   it("shows authorized owner names without exposing object details when object types are restricted", async () => {
     const first = metric("restricted-1");
     first.definition.owner_object_type_id = "hidden-owner-1";
