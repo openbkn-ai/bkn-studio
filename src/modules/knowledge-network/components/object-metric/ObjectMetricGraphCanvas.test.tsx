@@ -139,7 +139,7 @@ function neighborCountRequestIds() {
 }
 
 describe("ObjectMetricGraphCanvas", () => {
-  it("keeps the normal empty state when an empty network has no visible metrics", async () => {
+  it("shows a neutral empty state when an empty network has no visible metrics", async () => {
     mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
     const ownerMetricCache = new Map();
 
@@ -152,10 +152,26 @@ describe("ObjectMetricGraphCanvas", () => {
 
     await waitFor(() => expect(ownerMetricCache.size).toBe(1));
     expect(
-      screen.getByText(/选择一个对象类后查看对象指标图谱|Select an object class to view/),
+      screen.getByText(/暂无可查看的对象类或指标|No visible object types or metrics/),
     ).toBeInTheDocument();
     expect(screen.queryByText(/已授权指标|Authorized metrics/)).not.toBeInTheDocument();
     expect(mocks.listRelations).not.toHaveBeenCalled();
+  });
+
+  it("shows a load error when the unrestricted metric probe fails", async () => {
+    mocks.listMetrics.mockRejectedValue(new Error("server unavailable"));
+
+    renderGraph(vi.fn(), vi.fn(), {
+      restrictedObjectTypes: true,
+      selectedObjectTypeId: "",
+      selectedObjectTypeName: "",
+    });
+
+    expect(
+      await screen.findByText(/图谱数据加载失败，请重试|Could not load graph data/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/选择一个对象类后查看对象指标图谱/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/已授权指标|Authorized metrics/)).not.toBeInTheDocument();
   });
 
   it("scopes metric loading to the selected owner even if the restricted flag is stale", async () => {

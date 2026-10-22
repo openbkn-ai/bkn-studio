@@ -1140,7 +1140,15 @@ export function ObjectMetricGraphCanvas({
     );
   }
 
-  if (restrictedView && metricReady && !metricError && metricTotal > 0) {
+  if (restrictedView && metricError) {
+    return <Empty description={objectMetricText("graphLoadError")} />;
+  }
+
+  if (restrictedView && metricTotal === 0) {
+    return <Empty description={objectMetricText("graphNoVisibleObjectTypesOrMetrics")} />;
+  }
+
+  if (restrictedView) {
     const restrictedRows = metrics.map((metric, index) => ({
       metric,
       y: 64 + index * 88,
@@ -1188,13 +1196,7 @@ export function ObjectMetricGraphCanvas({
           </div>
         </div>
         <div className={styles.canvasContent}>
-          {metricLoading || !metricCurrent ? (
-            <div className={styles.loading} role="status">
-              <Spin />
-            </div>
-          ) : metricError ? (
-            <Empty description={objectMetricText("graphMetricLoadError")} />
-          ) : metrics.length === 0 ? (
+          {metrics.length === 0 ? (
             <Empty description={objectMetricText("noMetricsInList")} />
           ) : (
             <svg

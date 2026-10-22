@@ -1092,6 +1092,7 @@ export const objectMetricV1Part = {
   createWorkingDraftFromLatest: "创建新版本草稿",
   graphObjectOverview: "{{p0}} 个指标 · {{p1}} 条关系",
   restrictedGraphTitle: "已授权指标",
+  graphNoVisibleObjectTypesOrMetrics: "暂无可查看的对象类或指标",
   restrictedGraphSummary: "{{p0}} 个可见指标 · 对象类详情不可查看",
   restrictedGraphAriaLabel: "对象类受限时的已授权指标图谱",
   restrictedOwnerName: "对象类信息不可用",

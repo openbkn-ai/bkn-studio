@@ -1247,6 +1247,7 @@ export const objectMetricV1Part = {
   createWorkingDraftFromLatest: "Create new version draft",
   graphObjectOverview: "{{p0}} metrics · {{p1}} relations",
   restrictedGraphTitle: "Authorized metrics",
+  graphNoVisibleObjectTypesOrMetrics: "No visible object types or metrics",
   restrictedGraphSummary: "{{p0}} visible metrics · object type details restricted",
   restrictedGraphAriaLabel: "Authorized metric graph with restricted object types",
   restrictedOwnerName: "Object type unavailable",
