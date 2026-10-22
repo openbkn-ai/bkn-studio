@@ -419,6 +419,13 @@ export function CypherFrameCard({
           <span>
             {t("knowledgeNetwork.cypherQuery.status.rows", { count: frame.result.entries.length })}
           </span>
+          {frame.result.limited ? (
+            <span className={styles.statusLimited} data-testid="cypher-limited">
+              {t("knowledgeNetwork.cypherQuery.status.limited", {
+                limit: frame.result.entries.length,
+              })}
+            </span>
+          ) : null}
           {frame.exchange ? (
             <span>
               {t("knowledgeNetwork.cypherQuery.status.latency", { ms: frame.exchange.latencyMs })}

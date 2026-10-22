@@ -133,6 +133,13 @@ async function findConnectorCard(name: string) {
   return card;
 }
 
+// Avoid recalculating accessible names for every connector card on each step.
+function getFormAction(name: string) {
+  const button = screen.getByText(name).closest("button");
+  if (!button) throw new Error(`form action not found: ${name}`);
+  return button;
+}
+
 describe("DataConnectFormScene · connection preflight", () => {
   beforeAll(() => {
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -1160,7 +1167,7 @@ describe("DataConnectFormScene · connection preflight", () => {
 
       render(<DataConnectFormScene mode="create" />);
       fireEvent.click(await findConnectorCard("SAP HANA"));
-      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      fireEvent.click(getFormAction("common.next"));
       const host = await screen.findByPlaceholderText("例如 db.example.internal");
       fireEvent.change(host, { target: { value: "hana.example.com" } });
       fireEvent.change(screen.getByPlaceholderText('例如 {"timeout":30}'), {
@@ -1169,12 +1176,12 @@ describe("DataConnectFormScene · connection preflight", () => {
       fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
         target: { value: "Shared name" },
       });
-      fireEvent.click(screen.getByRole("button", { name: "common.previous" }));
+      fireEvent.click(getFormAction("common.previous"));
       fireEvent.click(await findConnectorCard("SAP HANA"));
       expect(modalConfirmMock).not.toHaveBeenCalled();
-      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      fireEvent.click(getFormAction("common.next"));
       expect(await screen.findByDisplayValue("hana.example.com")).toBeTruthy();
-      fireEvent.click(screen.getByRole("button", { name: "common.previous" }));
+      fireEvent.click(getFormAction("common.previous"));
       fireEvent.click(await findConnectorCard("PostgreSQL"));
       expect(modalConfirmMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1189,20 +1196,20 @@ describe("DataConnectFormScene · connection preflight", () => {
       act(() => onOk());
       fireEvent.click(await findConnectorCard("SAP HANA"));
       expect(modalConfirmMock).toHaveBeenCalledTimes(1);
-      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      fireEvent.click(getFormAction("common.next"));
       expect(await screen.findByDisplayValue("hana.example.com")).toBeTruthy();
       expect(screen.getByDisplayValue('{"tls":true}')).toBeTruthy();
-      fireEvent.click(screen.getByRole("button", { name: "common.previous" }));
+      fireEvent.click(getFormAction("common.previous"));
       fireEvent.click(await findConnectorCard("PostgreSQL"));
       const confirmSwitch = modalConfirmMock.mock.calls[1]?.[0]?.onOk;
       if (!confirmSwitch) throw new Error("Expected connector change confirmation");
       act(() => confirmSwitch());
-      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+      fireEvent.click(getFormAction("common.next"));
       await screen.findByPlaceholderText("dataConnect.namePlaceholder");
       expect(screen.getByDisplayValue("Shared name")).toBeTruthy();
       expect(screen.queryByDisplayValue("hana.example.com")).toBeNull();
       expect(screen.queryByDisplayValue('{"tls":true}')).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "common.testConnection" }));
+      fireEvent.click(getFormAction("common.testConnection"));
       await waitFor(() =>
         expect(testDataConnectConfigMock).toHaveBeenCalledWith({
           connectorConfig: {},

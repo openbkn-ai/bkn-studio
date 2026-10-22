@@ -70,6 +70,12 @@ type BackendDiscoverTask = {
   resource_id?: string;
   resource_name?: string;
   result?: {
+    failures?: Array<{
+      resource_id: string;
+      resource_name: string;
+      code: string;
+      message: string;
+    }>;
     catalog_id?: string;
     failed_count?: number;
     skipped_count?: number;
@@ -88,7 +94,7 @@ type BackendDiscoverTask = {
 };
 
 type BackendDiscoverTaskSummary = Omit<BackendDiscoverTask, "message" | "result"> & {
-  result?: Omit<NonNullable<BackendDiscoverTask["result"]>, "message">;
+  result?: Omit<NonNullable<BackendDiscoverTask["result"]>, "message" | "failures">;
 };
 
 type ListResponse<T> = {
@@ -319,6 +325,12 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
     result: item.result
       ? {
           catalogId: item.result.catalog_id ?? item.catalog_id,
+          failures: item.result.failures?.map((failure) => ({
+            resourceId: failure.resource_id,
+            resourceName: failure.resource_name,
+            code: failure.code,
+            message: failure.message,
+          })),
           failedCount: item.result.failed_count ?? 0,
           skippedCount: item.result.skipped_count ?? 0,
           message: item.result.message ?? "",

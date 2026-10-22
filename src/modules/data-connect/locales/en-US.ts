@@ -129,12 +129,20 @@ export const dataConnectEnUS = {
       resources_one: "Resource: {{count}} ({{protected}} protected)",
       resources_other: "Resources: {{count}} ({{protected}} protected)",
       schedules: "Schedules: {{discover}} discovery, {{health}} health check",
-      buildTasks: "Build tasks: cancel {{willCancel}} pending, {{blocking}} blocking",
-      discoverTasks: "Discovery tasks: cancel {{willCancel}} pending, {{blocking}} blocking",
+      buildTasks: "Build tasks: delete {{count}} task records, {{blocking}} blocking",
+      buildTasks_one: "Build tasks: delete {{count}} task record, {{blocking}} blocking",
+      buildTasks_other: "Build tasks: delete {{count}} task records, {{blocking}} blocking",
+      discoverTasks: "Discovery tasks: delete {{count}} task records, {{blocking}} blocking",
+      discoverTasks_one: "Discovery tasks: delete {{count}} task record, {{blocking}} blocking",
+      discoverTasks_other: "Discovery tasks: delete {{count}} task records, {{blocking}} blocking",
       semanticUnderstandingTasks:
-        "Semantic tasks: cancel {{willCancel}} pending, {{blocking}} blocking",
+        "Semantic tasks: delete {{count}} task records, {{blocking}} blocking",
+      semanticUnderstandingTasks_one:
+        "Semantic tasks: delete {{count}} task record, {{blocking}} blocking",
+      semanticUnderstandingTasks_other:
+        "Semantic tasks: delete {{count}} task records, {{blocking}} blocking",
       impactWarning:
-        "Resources and schedules will be deleted, and pending tasks will be cancelled. Task history and indexes are not deleted by this operation.",
+        "Resources, schedules, and all associated task records (including pending tasks and history) will be deleted. Indexes are not deleted by this operation.",
       catalogEmpty:
         'Connection "{{name}}" has no cascading objects. Deletion still cannot be undone.',
     },
@@ -231,6 +239,24 @@ export const dataConnectEnUS = {
       normal: "Normal ({{priority}})",
     },
     discoverResult: "Discovery Result",
+    discoverResultCounted: "Resources Counted Successfully",
+    discoverCountExplanation:
+      "Counts below are numbers of resources processed by this task, not source row counts. A failed count retains the previous successful value, if any.",
+    discoverFailureDetails: "Failed Resources",
+    discoverFailureResource: "Resource",
+    discoverFailureReason: "Reason",
+    discoverFailureReasons: {
+      source_memory_limit:
+        "The source database reached its memory limit. Reduce source workload or ask an administrator to review its memory limit, then retry.",
+      timeout: "The exact count query timed out. Check source workload and retry.",
+      source_read_forbidden: "The source account does not have permission to read this resource.",
+      count_unavailable: "Exact counting is not supported for this resource.",
+      invalid_count: "The source did not return a valid exact count.",
+      count_failed:
+        "Failed to read the exact count from the source. Contact an administrator to check the task logs.",
+      save_failed:
+        "Failed to save the exact count. The previous count is retained; retry the task.",
+    },
     discoverResultMetric: "Metric",
     discoverResultCount: "Count",
     discoverResultEmpty: "No discovery result available",

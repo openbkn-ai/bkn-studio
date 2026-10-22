@@ -273,7 +273,19 @@ export type ObjectMetricDefinitionV1 = {
 export type ObjectMetricQueryRequestV1 = {
   instance_identities?: Record<string, unknown>[];
   filter?: ObjectMetricConditionV1;
-  analysis_dimensions?: ObjectMetricPropertyRefV1[];
+  group_by?: ObjectMetricPropertyRefV1[];
+  having?: {
+    operator: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "is_null" | "is_not_null";
+    value?: string | number | boolean;
+    unit_code?: string;
+  };
+  order_by?: Array<{
+    field: "value" | "time" | "dimension";
+    dimension?: ObjectMetricPropertyRefV1;
+    direction: "asc" | "desc";
+  }>;
+  page_size?: number;
+  cursor?: string;
   time?: { start: number; end: number };
   bucket_selection?: {
     parent_query: ObjectMetricQueryRequestV1;
@@ -304,6 +316,9 @@ export type ObjectMetricDataV1 = {
   };
   entries: ObjectMetricDataEntryV1[];
   status: "ok" | "no_data" | "unavailable" | "partial";
+  empty_reason?: "filtered_out";
+  total_count?: number;
+  next_cursor?: string;
   warnings?: string[];
   overall_ms: number;
   evaluated_at?: number;

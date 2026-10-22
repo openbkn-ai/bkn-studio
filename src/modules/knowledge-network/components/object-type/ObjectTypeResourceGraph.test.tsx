@@ -509,6 +509,191 @@ describe("ObjectTypeResourceGraph", () => {
     expect(update.y).not.toBe(notify.y);
   });
 
+  it("keeps multiple action semantic paths expanded independently", async () => {
+    const notifyAction = {
+      ...action,
+      actionKind: "notify",
+      id: "notify-order",
+      name: "短信推送",
+    } as KnowledgeNetworkActionTypeRecord;
+    mocks.listActions.mockResolvedValue({ entries: [action, notifyAction], totalCount: 2 });
+    mocks.getActionDetail.mockImplementation((_networkId: string, actionId: string) =>
+      Promise.resolve({
+        ...action,
+        actionKind: actionId === notifyAction.id ? "notify" : action.actionKind,
+        affect: { comment: "同步订单核对结果", objectTypeId: "order" },
+        condition: { field: "amount", operation: ">", value: "100" },
+        executionConfig: {
+          actionSource: { toolId: "tool-1", toolName: "订单核对工具", type: "tool" },
+          parameters: [],
+          sourceName: "订单核对工具",
+          sourceType: "tool",
+        },
+        id: actionId,
+        name: actionId === notifyAction.id ? notifyAction.name : action.name,
+      }),
+    );
+    renderGraph(false, { resourceScope: "actions" });
+
+    const notifyNode = await screen.findByRole("button", { name: "行动类 短信推送" });
+    const initialNotifyPosition = notifyNode.getAttribute("transform");
+    const updateNode = screen.getByRole("button", { name: "行动类 更新订单" });
+    const initialUpdatePosition = updateNode.getAttribute("transform");
+    fireEvent.click(updateNode);
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+
+    expect(screen.queryByRole("dialog", { name: "行动类详情" })).not.toBeInTheDocument();
+    expect(await within(graph).findByText("触发 · 编辑")).toBeInTheDocument();
+    expect(within(graph).getByText("订单金额 大于 100", { selector: "text" })).toBeInTheDocument();
+    expect(within(graph).getByText("执行 · 工具")).toBeInTheDocument();
+    expect(within(graph).getByText("订单核对工具", { selector: "text" })).toBeInTheDocument();
+    expect(within(graph).getByText("影响 · 销售订单")).toBeInTheDocument();
+    expect(within(graph).getByText("同步订单核对结果", { selector: "text" })).toBeInTheDocument();
+    expect(within(graph).getByRole("button", { name: "行动类 短信推送" })).toBeInTheDocument();
+    expect(notifyNode).toHaveAttribute("transform", initialNotifyPosition);
+    const expandedUpdateNode = within(graph).getByRole("button", { name: "行动类 更新订单" });
+    expect(expandedUpdateNode).toHaveAttribute("transform", initialUpdatePosition);
+    const nodeX = (node: Element) =>
+      Number(node.getAttribute("transform")?.match(/translate\(([-\d.]+)/)?.[1]);
+    const triggerNode = graph.querySelector<SVGGElement>('[data-action-semantic="trigger"]');
+    const executionNode = graph.querySelector<SVGGElement>('[data-action-semantic="execution"]');
+    const impactNode = graph.querySelector<SVGGElement>('[data-action-semantic="impact"]');
+    expect(triggerNode).not.toBeNull();
+    expect(executionNode).not.toBeNull();
+    expect(impactNode).not.toBeNull();
+    expect(nodeX(expandedUpdateNode)).toBeLessThan(nodeX(triggerNode!));
+    expect(nodeX(triggerNode!)).toBeLessThan(nodeX(executionNode!));
+    expect(nodeX(executionNode!)).toBeLessThan(nodeX(impactNode!));
+    expect(graph.querySelectorAll("[data-action-semantic]")).toHaveLength(3);
+    expect(graph.querySelectorAll("[data-graph-edge^='action-']")).toHaveLength(4);
+    graph.querySelectorAll("[data-graph-edge^='action-']").forEach((edge) => {
+      expect(edge).toHaveAttribute("marker-end");
+    });
+    const executionEdgeHandle = graph.querySelector<SVGPathElement>(
+      '[data-action-edge-drag-handle="execution"]',
+    );
+    const impactEdge = graph.querySelector<SVGPathElement>('[data-graph-edge="action-impact"]');
+    expect(executionEdgeHandle).not.toBeNull();
+    expect(impactEdge).not.toBeNull();
+    vi.spyOn(graph, "getBoundingClientRect").mockReturnValue({
+      bottom: 620,
+      height: 620,
+      left: 0,
+      right: 1120,
+      top: 0,
+      width: 1120,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    const initialExecutionPosition = executionNode!.getAttribute("transform");
+    const initialImpactEdge = impactEdge!.getAttribute("d");
+
+    fireEvent.pointerDown(executionEdgeHandle!, {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(graph, { clientX: 80, clientY: 40, pointerId: 1 });
+    fireEvent.pointerUp(graph, { pointerId: 1 });
+
+    expect(executionNode).not.toHaveAttribute("transform", initialExecutionPosition);
+    expect(impactEdge).not.toHaveAttribute("d", initialImpactEdge);
+    const draggedExecutionPosition = executionNode!.getAttribute("transform");
+    expect(screen.queryByRole("dialog", { name: "行动类详情" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
+    const drawer = screen.getByRole("dialog", { name: "行动类详情" });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
+    expect(await within(graph).findByText("触发 · 编辑")).toBeInTheDocument();
+
+    fireEvent.click(within(graph).getByRole("button", { name: "行动类 短信推送" }));
+    await waitFor(() => {
+      expect(graph.querySelectorAll("[data-action-semantic-focus]")).toHaveLength(2);
+    });
+    expect(screen.getByText("已展开 2 条")).toBeInTheDocument();
+    expect(within(graph).getAllByText("订单金额 大于 100", { selector: "text" })).toHaveLength(2);
+    expect(graph.querySelectorAll('[data-action-edge-drag-handle="execution"]')).toHaveLength(2);
+    expect(executionNode).toHaveAttribute("transform", draggedExecutionPosition);
+
+    fireEvent.click(within(graph).getByRole("button", { name: "行动类 更新订单" }));
+    expect(screen.getByText("更新订单", { selector: "strong" })).toBeInTheDocument();
+    expect(graph.querySelectorAll("[data-action-semantic-focus]")).toHaveLength(2);
+    fireEvent.click(within(graph).getByRole("button", { name: "行动类 短信推送" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "收起链路" }));
+    await waitFor(() => {
+      expect(graph.querySelectorAll("[data-action-semantic-focus]")).toHaveLength(1);
+    });
+    expect(graph.querySelector("[data-action-semantic-focus='update-order']")).not.toBeNull();
+    expect(screen.getByText("已展开 1 条")).toBeInTheDocument();
+    expect(within(graph).getByRole("button", { name: "行动类 短信推送" })).toBeInTheDocument();
+
+    fireEvent.click(within(graph).getByRole("button", { name: "行动类 短信推送" }));
+    await screen.findByRole("button", { name: "全部收起" });
+    fireEvent.click(screen.getByRole("button", { name: "全部收起" }));
+    expect(graph.querySelectorAll("[data-action-semantic-focus]")).toHaveLength(0);
+    expect(within(graph).getByRole("button", { name: "行动类 更新订单" })).toBeInTheDocument();
+    expect(within(graph).getByRole("button", { name: "行动类 短信推送" })).toBeInTheDocument();
+  });
+
+  it.each(["request failure", "empty response"] as const)(
+    "does not render fallback semantics when action details have a %s",
+    async (failureKind) => {
+      if (failureKind === "request failure") {
+        mocks.getActionDetail.mockRejectedValue(new Error("行动详情服务不可用"));
+      } else {
+        mocks.getActionDetail.mockResolvedValue(null);
+      }
+      renderGraph(false, { resourceScope: "actions" });
+
+      const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+      fireEvent.click(await within(graph).findByRole("button", { name: "行动类 更新订单" }));
+
+      expect(await screen.findByText(/行动类“更新订单”详情加载失败/)).toBeInTheDocument();
+      expect(graph.querySelectorAll("[data-action-semantic]")).toHaveLength(0);
+      expect(within(graph).getByRole("button", { name: "行动类 更新订单" })).toBeInTheDocument();
+      expect(screen.queryByText("已展开 1 条")).not.toBeInTheDocument();
+    },
+  );
+
+  it("keeps controls focused on a remaining path when another action fails to expand", async () => {
+    const notifyAction = {
+      ...action,
+      actionKind: "notify",
+      id: "notify-order",
+      name: "短信推送",
+    } as KnowledgeNetworkActionTypeRecord;
+    mocks.listActions.mockResolvedValue({ entries: [action, notifyAction], totalCount: 2 });
+    mocks.getActionDetail.mockImplementation((_networkId: string, actionId: string) =>
+      actionId === notifyAction.id
+        ? Promise.reject(new Error("行动详情服务不可用"))
+        : Promise.resolve({
+            ...action,
+            affect: { comment: "同步订单核对结果", objectTypeId: "order" },
+            condition: { field: "amount", operation: ">", value: "100" },
+            executionConfig: {
+              actionSource: { toolId: "tool-1", toolName: "订单核对工具", type: "tool" },
+              parameters: [],
+              sourceName: "订单核对工具",
+              sourceType: "tool",
+            },
+          }),
+    );
+    renderGraph(false, { resourceScope: "actions" });
+
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    fireEvent.click(await within(graph).findByRole("button", { name: "行动类 更新订单" }));
+    expect(await screen.findByText("已展开 1 条")).toBeInTheDocument();
+    fireEvent.click(within(graph).getByRole("button", { name: "行动类 短信推送" }));
+
+    expect(await screen.findByText(/行动类“短信推送”详情加载失败/)).toBeInTheDocument();
+    expect(screen.getByText("已展开 1 条")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "收起链路" })).toBeInTheDocument();
+    expect(graph.querySelector("[data-action-semantic-focus='update-order']")).not.toBeNull();
+  });
+
   it("opens the current object node drawer and navigates to its details", async () => {
     const handlers = renderGraph();
 
@@ -597,6 +782,7 @@ describe("ObjectTypeResourceGraph", () => {
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
+    fireEvent.click(await screen.findByRole("button", { name: "查看详情" }));
     const drawer = screen.getByRole("dialog", { name: "行动类详情" });
 
     expect(within(drawer).getByRole("button", { name: "详情" })).toBeInTheDocument();
@@ -754,6 +940,50 @@ describe("ObjectTypeResourceGraph", () => {
       expect(group.getAttribute("transform")).not.toBe(initialPosition);
       expect(handle?.getAttribute("d")).not.toBe(initialLine);
     }
+  });
+
+  it("keeps an action node attached to its group after a click without dragging", async () => {
+    renderGraph();
+
+    const actionGroup = await screen.findByRole("button", { name: "展开 行动类 1" });
+    fireEvent.click(actionGroup);
+    const actionNode = screen.getByRole("button", { name: "行动类 更新订单" });
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    vi.spyOn(graph, "getBoundingClientRect").mockReturnValue({
+      bottom: 620,
+      height: 620,
+      left: 0,
+      right: 1120,
+      top: 0,
+      width: 1120,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    const initialPosition = actionNode.getAttribute("transform");
+
+    fireEvent.pointerDown(actionNode, {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      pointerId: 1,
+    });
+    fireEvent.pointerUp(graph, { pointerId: 1 });
+
+    const actionGroupHandle = document.querySelector(
+      '[data-graph-edge-drag-handle="action-group"]',
+    );
+    expect(actionGroupHandle).not.toBeNull();
+    fireEvent.pointerDown(actionGroupHandle!, {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      pointerId: 2,
+    });
+    fireEvent.pointerMove(graph, { clientX: 112, clientY: 62, pointerId: 2 });
+    fireEvent.pointerUp(graph, { pointerId: 2 });
+
+    expect(actionNode.getAttribute("transform")).not.toBe(initialPosition);
   });
 
   it("registers graph wheel zoom as a non-passive native listener", () => {

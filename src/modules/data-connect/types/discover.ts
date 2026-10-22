@@ -67,7 +67,15 @@ export type DataConnectDiscoverTaskSummary = Omit<DataConnectDiscoverTask, "mess
   result?: DataConnectDiscoverTaskResultSummary;
 };
 
+export type DataConnectDiscoverResourceFailure = {
+  resourceId: string;
+  resourceName: string;
+  code: string;
+  message: string;
+};
+
 export type DataConnectDiscoverResult = {
+  failures?: DataConnectDiscoverResourceFailure[];
   catalogId: string;
   failedCount: number;
   skippedCount?: number;
@@ -79,7 +87,10 @@ export type DataConnectDiscoverResult = {
   updatedCount: number;
 };
 
-export type DataConnectDiscoverTaskResultSummary = Omit<DataConnectDiscoverResult, "message">;
+export type DataConnectDiscoverTaskResultSummary = Omit<
+  DataConnectDiscoverResult,
+  "message" | "failures"
+>;
 
 export type DataConnectDiscoverScheduleListQuery = {
   catalogId?: string;

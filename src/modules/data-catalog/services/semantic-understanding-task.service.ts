@@ -142,6 +142,7 @@ export function mapSemanticUnderstandingTask(
 }
 
 export type CreateSemanticUnderstandingTaskPayload = {
+  language?: "zh-CN" | "en-US";
   applyMode: SemanticUnderstandingTask["applyMode"];
   confidenceThreshold?: number;
   includeSampleRows?: boolean;
@@ -377,6 +378,12 @@ export async function createResourceSemanticUnderstandingTask(
       createTime: now,
       startTime: now,
       finishTime: now,
+      input: JSON.stringify({
+        options: {
+          language: payload.language ?? i18n.resolvedLanguage ?? i18n.language,
+          apply_mode: payload.applyMode,
+        },
+      }),
       resultJson: JSON.stringify({
         quality: {
           resource_effective: true,
@@ -397,6 +404,7 @@ export async function createResourceSemanticUnderstandingTask(
     {
       scope: "resource",
       resource_id: payload.resourceId,
+      ...(payload.language ? { language: payload.language } : {}),
       apply_mode: payload.applyMode,
       confidence_threshold: payload.confidenceThreshold,
       include_sample_rows: includeSampleRows,

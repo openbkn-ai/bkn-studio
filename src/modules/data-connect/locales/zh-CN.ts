@@ -116,12 +116,19 @@ export const dataConnectZhCN = {
       resources_one: "资源：{{count}} 个（其中受保护资源 {{protected}} 个）",
       resources_other: "资源：{{count}} 个（其中受保护资源 {{protected}} 个）",
       schedules: "计划：探查 {{discover}} 个，健康检查 {{health}} 个",
-      buildTasks: "构建任务：取消待执行 {{willCancel}} 个，阻断 {{blocking}} 个",
-      discoverTasks: "探查任务：取消待执行 {{willCancel}} 个，阻断 {{blocking}} 个",
-      semanticUnderstandingTasks:
-        "语义理解任务：取消待执行 {{willCancel}} 个，阻断 {{blocking}} 个",
+      buildTasks: "构建任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
+      buildTasks_one: "构建任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
+      buildTasks_other: "构建任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
+      discoverTasks: "探查任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
+      discoverTasks_one: "探查任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
+      discoverTasks_other: "探查任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
+      semanticUnderstandingTasks: "语义理解任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
+      semanticUnderstandingTasks_one:
+        "语义理解任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
+      semanticUnderstandingTasks_other:
+        "语义理解任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
       impactWarning:
-        "资源和计划将被删除，待执行任务将标记为已取消；任务历史和索引不会在此流程中删除。",
+        "资源、计划及全部关联任务记录（包括待执行任务和历史记录）将被删除；索引不在此流程中删除。",
       catalogEmpty: "连接「{{name}}」下没有需要级联处理的对象，删除仍不可恢复。",
     },
     discoverManage: "探查",
@@ -211,6 +218,22 @@ export const dataConnectZhCN = {
       normal: "普通 ({{priority}})",
     },
     discoverResult: "探查结果",
+    discoverResultCounted: "成功计数资源数",
+    discoverCountExplanation:
+      "以下数量是本次任务处理的资源数，并非源表行数。计数失败时保留上次成功值（如有）。",
+    discoverFailureDetails: "失败资源明细",
+    discoverFailureResource: "资源",
+    discoverFailureReason: "失败原因",
+    discoverFailureReasons: {
+      source_memory_limit:
+        "源数据库已达到内存限制。请降低源端负载，或联系管理员检查内存限制后重试。",
+      timeout: "精确计数查询超时，请检查源端负载后重试。",
+      source_read_forbidden: "源端账号没有读取该资源的权限。",
+      count_unavailable: "该资源不支持精确计数。",
+      invalid_count: "源端未返回有效的精确数量。",
+      count_failed: "无法从源端读取精确数量，请联系管理员查看任务日志。",
+      save_failed: "精确数量保存失败，已保留原有数量，请重试任务。",
+    },
     discoverResultMetric: "指标",
     discoverResultCount: "数量",
     discoverResultEmpty: "暂无探查结果",

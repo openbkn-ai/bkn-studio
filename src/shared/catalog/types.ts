@@ -51,7 +51,7 @@ export type CatalogDeletionBlocker =
 
 export type CatalogDeletionTaskImpact = {
   blocking: number;
-  willCancel: number;
+  willDelete: number;
 };
 
 export type CatalogDeletionImpact = {

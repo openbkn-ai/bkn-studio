@@ -201,6 +201,7 @@ export const dataCatalogZhCN = {
       },
     },
     semanticWorkspace: {
+      outputLanguage: "输出语言",
       summary: "语义理解结果",
       noResult: "暂无结果",
       applied: "已应用",
@@ -415,7 +416,7 @@ export const dataCatalogZhCN = {
       logicalDescriptionPlaceholder: "可选，说明该逻辑分组用途",
       deleteLogicalTitle: "删除逻辑分组",
       deleteLogicalDescription:
-        "确认删除逻辑分组「{{name}}」吗？将删除 {{resources}} 个资源，并取消 {{semanticTasks}} 个待执行语义理解任务。",
+        "确认删除逻辑分组「{{name}}」吗？将删除 {{resources}} 个资源，并删除 {{semanticTasks}} 条语义理解任务记录。",
       deleteLogicalBlockedTitle: "当前无法删除逻辑分组",
       deleteLogicalBlockedDescription: "请先处理以下阻断项，然后重试：",
       deleteLogicalBlockers: {

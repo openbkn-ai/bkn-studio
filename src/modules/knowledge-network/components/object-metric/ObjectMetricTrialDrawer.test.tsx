@@ -66,6 +66,124 @@ afterAll(() => {
 });
 
 describe("ObjectMetricTrialDrawer", () => {
+  it("sends final-value HAVING and ORDER BY through the shared trial query", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    definition.result_semantics.value.physical_type = "int64";
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "summary",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "no_data",
+      empty_reason: "filtered_out",
+    } satisfies ObjectMetricDataV1);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    const havingRow = screen.getByRole("group", { name: "结果筛选" });
+    const orderRow = screen.getByRole("group", { name: "结果排序" });
+    expect(within(havingRow).getByRole("combobox", { name: "结果筛选" })).toBeInTheDocument();
+    expect(within(orderRow).getByRole("combobox", { name: "结果排序" })).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "结果筛选" }));
+    fireEvent.click(await screen.findByText("大于"));
+    expect(within(havingRow).getByRole("textbox", { name: "比较值" })).toBeInTheDocument();
+    expect(within(orderRow).queryByRole("textbox", { name: "比较值" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "比较值" }), { target: { value: "10" } });
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "结果排序" }));
+    fireEvent.click(await screen.findByText("指标值"));
+    expect(within(orderRow).getByRole("combobox", { name: "排序方向" })).toBeInTheDocument();
+    expect(within(havingRow).queryByRole("combobox", { name: "排序方向" })).not.toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "排序方向" }));
+    fireEvent.click(await screen.findByText("降序"));
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+
+    await waitFor(() =>
+      expect(onRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          group_by: [],
+          having: { operator: "gt", value: 10, unit_code: undefined },
+          order_by: [{ field: "value", dimension: undefined, direction: "desc" }],
+        }),
+      ),
+    );
+    expect(await screen.findByText("存在计算结果，但均不满足结果筛选条件。")).toBeInTheDocument();
+  }, 20_000);
+
+  it("clears dimension sorting when the selected group is removed", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    definition.query_capabilities.analysis_dimensions = [
+      { object_type_id: "order", property_name: "status" },
+    ];
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "summary",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "no_data",
+    } satisfies ObjectMetricDataV1);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    const groupSelect = screen
+      .getByText("按维度分组")
+      .closest(".ant-form-item")
+      ?.querySelector(".ant-select-selector");
+    expect(groupSelect).not.toBeNull();
+    fireEvent.mouseDown(groupSelect!);
+    fireEvent.click(await screen.findByText("status"));
+    const orderRow = screen.getByRole("group", { name: "结果排序" });
+    fireEvent.mouseDown(within(orderRow).getByRole("combobox", { name: "结果排序" }));
+    const orderOption = Array.from(
+      document.querySelectorAll(
+        ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content",
+      ),
+    ).find((item) => item.textContent === "status");
+    expect(orderOption).not.toBeNull();
+    fireEvent.click(orderOption!);
+    expect(within(orderRow).getByRole("combobox", { name: "排序方向" })).toBeInTheDocument();
+
+    const removeGroup = groupSelect!
+      .closest(".ant-form-item")
+      ?.querySelector(".ant-select-selection-item-remove");
+    expect(removeGroup).not.toBeNull();
+    fireEvent.click(removeGroup!);
+    expect(within(orderRow).getByText("默认顺序")).toBeInTheDocument();
+    expect(within(orderRow).queryByRole("combobox", { name: "排序方向" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    await waitFor(() => expect(onRun).toHaveBeenCalledOnce());
+    expect(onRun.mock.calls[0][0]).toMatchObject({ group_by: [] });
+    expect(onRun.mock.calls[0][0]).not.toHaveProperty("order_by");
+  }, 20_000);
+
   it("keeps relation aliases distinct when selecting same-named dimensions", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.calculation_scope = "object_set";
@@ -127,7 +245,7 @@ describe("ObjectMetricTrialDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "试算" }));
     await waitFor(() =>
       expect(onRun).toHaveBeenCalledWith({
-        analysis_dimensions: [
+        group_by: [
           { object_type_id: "person", relation_path_alias: "buyer", property_name: "region" },
         ],
         instance_identities: undefined,
@@ -497,20 +615,18 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(
       await screen.findByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText("分析路径")).not.toBeInTheDocument();
-    expect(screen.queryByText("继续下钻")).not.toBeInTheDocument();
+    const analysis = within(screen.getByLabelText("图表与数据"));
+    expect(analysis.queryByLabelText("分析路径")).not.toBeInTheDocument();
+    expect(analysis.queryByText("继续下钻")).not.toBeInTheDocument();
 
-    const row = screen.getByText("已确认").closest("tr");
+    const row = analysis.getByText("已确认").closest("tr");
     expect(row).toHaveAttribute("aria-selected", "false");
     fireEvent.click(row!);
     expect(row).toHaveAttribute("aria-selected", "true");
     expect(
-      screen.queryByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
+      analysis.queryByText("点击图表中的数据点或数据表行，查看可用的分析操作。"),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("当前分组: status: 已确认")).toBeInTheDocument();
-    expect(
-      within(screen.getByLabelText("图表与数据")).getByText("当前分组: status: 已确认"),
-    ).toBeInTheDocument();
+    expect(analysis.getByText("当前分组: status: 已确认")).toBeInTheDocument();
 
     const dimensionSelect = document.querySelector<HTMLInputElement>(
       'input[role="combobox"][aria-label="选择下钻维度"]',
@@ -518,21 +634,20 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(dimensionSelect).toBeInTheDocument();
     fireEvent.mouseDown(dimensionSelect!);
     fireEvent.click(await screen.findByText("product_code"));
-    fireEvent.click(screen.getByText("继续下钻"));
+    fireEvent.click(analysis.getByText("继续下钻"));
     await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
     expect(onRun.mock.calls[1][0]).toMatchObject({
-      analysis_dimensions: [{ object_type_id: "order", property_name: "product_code" }],
+      group_by: [{ object_type_id: "order", property_name: "product_code" }],
       bucket_selection: { bucket_key: "confirmed-orders", parent_query: onRun.mock.calls[0][0] },
     });
-    const path = await screen.findByLabelText("分析路径");
+    const path = await analysis.findByLabelText("分析路径");
     expect(path.tagName).toBe("NAV");
-    expect(within(screen.getByLabelText("图表与数据")).getByLabelText("分析路径")).toBe(path);
     expect(within(path).getByText("初始结果").closest("button")).toBeInTheDocument();
     const currentLevel = within(path).getByText("当前").parentElement;
     expect(currentLevel).toHaveAttribute("aria-current", "step");
     expect(currentLevel).toHaveTextContent("status: 已确认");
     fireEvent.click(within(path).getByText("返回上一级"));
-    expect(screen.queryByLabelText("分析路径")).not.toBeInTheDocument();
+    expect(analysis.queryByLabelText("分析路径")).not.toBeInTheDocument();
     expect(onRun).toHaveBeenCalledTimes(2);
   });
 
@@ -863,7 +978,7 @@ describe("ObjectMetricTrialDrawer", () => {
 
     await waitFor(() =>
       expect(onRun).toHaveBeenCalledWith({
-        analysis_dimensions: [{ object_type_id: "order", property_name: "status" }],
+        group_by: [{ object_type_id: "order", property_name: "status" }],
         instance_identities: undefined,
         time: undefined,
       }),
@@ -924,6 +1039,8 @@ describe("ObjectMetricTrialDrawer", () => {
       "analysisDrawer",
     );
     expect(screen.queryByText("按分析维度拆解（可选）")).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "结果筛选" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "结果排序" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("订单主键"), {
       target: { value: "1001" },
     });
@@ -931,7 +1048,7 @@ describe("ObjectMetricTrialDrawer", () => {
 
     await waitFor(() =>
       expect(onRun).toHaveBeenCalledWith({
-        analysis_dimensions: [],
+        group_by: [],
         instance_identities: [{ order_id: 1001 }],
         time: undefined,
       }),
@@ -1055,7 +1172,7 @@ describe("ObjectMetricTrialDrawer", () => {
 
     await waitFor(() =>
       expect(onRun).toHaveBeenCalledWith({
-        analysis_dimensions: [],
+        group_by: [],
         instance_identities: [{ batch_id: 42, split: false }],
         time: undefined,
       }),
