@@ -62,12 +62,27 @@ type ResourceScope = "all" | "relations" | "actions";
 type ExpandableGroup = "metrics" | "actions";
 type Point = { x: number; y: number };
 type ViewBox = { height: number; width: number; x: number; y: number };
-type GraphError = { key: Exclude<GraphSection, "all">; message: string };
+type GraphError = {
+  key: Exclude<GraphSection, "all"> | `action:${string}`;
+  message: string;
+};
 type GraphNeighbor = {
   id: string;
   name: string;
   relations: KnowledgeNetworkRelationTypeRecord[];
 };
+type ActionSemanticPresentation = {
+  action: KnowledgeNetworkActionTypeRecord;
+  affectDescription?: string;
+  affectedObjectLabel?: string;
+  condition?: ActionTypeCondition;
+  propertyLabels: Map<string, string>;
+  sourceName?: string;
+  sourceType: ActionTypeDetail["executionConfig"]["sourceType"];
+};
+type ActionSemanticLoadResult =
+  | { presentation: ActionSemanticPresentation }
+  | { action: KnowledgeNetworkActionTypeRecord; error: unknown };
 export type ObjectTypeGraphSelectedResource =
   | { kind: "relation"; value: KnowledgeNetworkRelationTypeRecord }
   | { kind: "metric"; value: ObjectMetricRecordV1 }
@@ -124,6 +139,9 @@ const PAGE_SIZE = 12;
 const OVERVIEW_LIMIT = 4;
 const MIN_ZOOM = 0.65;
 const MAX_ZOOM = 2.5;
+const ACTION_FOCUS_TRIGGER_WIDTH = 140;
+const ACTION_FOCUS_SOURCE_WIDTH = 120;
+const ACTION_FOCUS_IMPACT_WIDTH = 150;
 
 function objectNodeColor(objectTypeId: string, configuredColor?: string) {
   if (configuredColor) return configuredColor;
@@ -442,6 +460,11 @@ export function ObjectTypeResourceGraph({
   const [errors, setErrors] = useState<GraphError[]>([]);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [selected, setSelected] = useState<ObjectTypeGraphSelectedResource>();
+  const [focusedAction, setFocusedAction] = useState<KnowledgeNetworkActionTypeRecord>();
+  const [expandedActions, setExpandedActions] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
+  const [actionPresentations, setActionPresentations] = useState<
+    Record<string, ActionSemanticPresentation>
+  >({});
   const [selectedActionDetail, setSelectedActionDetail] = useState<ActionTypeDetail | null>();
   const [selectedActionObjectType, setSelectedActionObjectType] = useState<
     ObjectTypeDetail | null | undefined
@@ -468,6 +491,9 @@ export function ObjectTypeResourceGraph({
     setActions([]);
     setTotals({ actions: 0, metrics: 0, relations: 0 });
     setSelected(undefined);
+    setFocusedAction(undefined);
+    setExpandedActions([]);
+    setActionPresentations({});
     setNodePositions({});
     setView(INITIAL_VIEW);
     setExpandedGroup(null);
@@ -726,6 +752,10 @@ export function ObjectTypeResourceGraph({
       const action = actions.find((item) => item.id === initialSelectedResource.id);
       if (action) {
         if (section === "all") setExpandedGroup("actions");
+        if (section === "actions") {
+          setExpandedActions([action]);
+          setFocusedAction(action);
+        }
         setSelected({ kind: "action", value: action });
       }
       return;
@@ -899,7 +929,13 @@ export function ObjectTypeResourceGraph({
   };
 
   const finishDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (dragRef.current?.moved) suppressClickRef.current = true;
+    const drag = dragRef.current;
+    if (drag?.moved) {
+      suppressClickRef.current = true;
+      window.setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 0);
+    }
     dragRef.current = null;
     if (event.currentTarget.hasPointerCapture?.(event.pointerId))
       event.currentTarget.releasePointerCapture?.(event.pointerId);
@@ -911,9 +947,18 @@ export function ObjectTypeResourceGraph({
     dragRef.current = { lastX: event.clientX, lastY: event.clientY, moved: false, type: "canvas" };
   };
 
-  const startNodeDrag = (event: ReactPointerEvent<SVGElement>, key: string) => {
+  const startNodeDrag = (
+    event: ReactPointerEvent<SVGElement>,
+    key: string,
+    initialPosition?: Point,
+  ) => {
     if (event.button !== 0) return;
     event.stopPropagation();
+    if (initialPosition) {
+      setNodePositions((current) =>
+        current[key] ? current : { ...current, [key]: initialPosition },
+      );
+    }
     const captureTarget = event.target instanceof Element ? event.target : event.currentTarget;
     captureTarget.setPointerCapture?.(event.pointerId);
     dragRef.current = {
@@ -945,6 +990,9 @@ export function ObjectTypeResourceGraph({
   };
 
   const selectCurrentObject = () => {
+    setFocusedAction(undefined);
+    setExpandedActions([]);
+    setActionPresentations({});
     setSelected({
       description: objectType.description,
       id: objectType.id,
@@ -952,6 +1000,35 @@ export function ObjectTypeResourceGraph({
       name: objectType.name,
       value: objectType,
     });
+  };
+
+  const activateAction = (action: KnowledgeNetworkActionTypeRecord) => {
+    if (section === "actions") {
+      setExpandedActions((current) =>
+        current.some((item) => item.id === action.id) ? current : [...current, action],
+      );
+      setFocusedAction(action);
+      return;
+    }
+    setSelected({ kind: "action", value: action });
+  };
+
+  const collapseFocusedAction = () => {
+    if (!focusedAction) return;
+    const remainingActions = expandedActions.filter((action) => action.id !== focusedAction.id);
+    setExpandedActions(remainingActions);
+    setActionPresentations((current) => {
+      const next = { ...current };
+      delete next[focusedAction.id];
+      return next;
+    });
+    setFocusedAction(remainingActions.at(-1));
+  };
+
+  const collapseAllActions = () => {
+    setExpandedActions([]);
+    setActionPresentations({});
+    setFocusedAction(undefined);
   };
 
   const openSelected = () => {
@@ -1111,6 +1188,118 @@ export function ObjectTypeResourceGraph({
   const selectedActionTags = selectedActionRecord?.tags.length
     ? selectedActionRecord.tags.join("、")
     : t("knowledgeNetwork.noTags");
+  useEffect(() => {
+    const missingActions = expandedActions.filter((action) => !actionPresentations[action.id]);
+    if (missingActions.length === 0) return undefined;
+
+    let active = true;
+    const loadPresentation = async (
+      action: KnowledgeNetworkActionTypeRecord,
+    ): Promise<ActionSemanticLoadResult> => {
+      try {
+        const detail = await getKnowledgeNetworkActionTypeDetail(networkId, action.id);
+        if (!detail) {
+          throw new Error(t("knowledgeNetwork.objectTypeGraphActionDetailUnavailable"));
+        }
+        const conditionObjectTypeId =
+          detail.condition?.objectTypeId || detail.objectTypeId || action.objectTypeId;
+        const affectedObjectTypeId = detail.affect?.objectTypeId;
+        const [conditionObjectType, affectedObjectType] = await Promise.all([
+          getKnowledgeNetworkObjectTypeDetail(networkId, conditionObjectTypeId).catch(() => null),
+          !affectedObjectTypeId || affectedObjectTypeId === objectType.id
+            ? Promise.resolve(null)
+            : getKnowledgeNetworkObjectTypeDetail(networkId, affectedObjectTypeId).catch(
+                () => null,
+              ),
+        ]);
+        const propertyLabels = new Map(
+          [
+            ...(conditionObjectType?.dataProperties ?? []),
+            ...(conditionObjectType?.logicProperties ?? []),
+          ].map((property) => [property.name, property.displayName || property.name]),
+        );
+        let actionSource = detail.executionConfig.actionSource;
+        if (needsActionTypeActionSourceDisplayResolution(actionSource)) {
+          actionSource = await resolveActionTypeActionSourceDisplayWithTimeout(actionSource!).catch(
+            () => actionSource,
+          );
+        }
+        return {
+          presentation: {
+            action,
+            affectDescription: detail.affect?.comment,
+            affectedObjectLabel: !affectedObjectTypeId
+              ? undefined
+              : affectedObjectTypeId === objectType.id
+                ? objectType.name
+                : (affectedObjectType?.name ?? affectedObjectTypeId),
+            condition: detail.condition,
+            propertyLabels,
+            sourceName: getReadableActionSourceDisplayName(actionSource) || undefined,
+            sourceType: detail.executionConfig.sourceType,
+          },
+        };
+      } catch (error: unknown) {
+        return {
+          action,
+          error,
+        };
+      }
+    };
+
+    void Promise.all(missingActions.map(loadPresentation)).then((results) => {
+      if (!active) return;
+      const presentations = results.flatMap((result) =>
+        "presentation" in result ? [result.presentation] : [],
+      );
+      const failures = results.flatMap((result) => ("error" in result ? [result] : []));
+      if (presentations.length > 0) {
+        setActionPresentations((current) => ({
+          ...current,
+          ...Object.fromEntries(
+            presentations.map((presentation) => [presentation.action.id, presentation]),
+          ),
+        }));
+      }
+      const attemptedKeys = new Set(missingActions.map((action) => `action:${action.id}`));
+      setErrors((current) => [
+        ...current.filter((entry) => !attemptedKeys.has(entry.key)),
+        ...failures.map(({ action, error }) => ({
+          key: `action:${action.id}` as const,
+          message: t("knowledgeNetwork.objectTypeGraphActionDetailLoadError", {
+            message: extractRequestErrorMessage(error),
+            name: action.name,
+          }),
+        })),
+      ]);
+      if (failures.length > 0) {
+        const failedIds = new Set(failures.map(({ action }) => action.id));
+        const fallbackAction = [...expandedActions]
+          .reverse()
+          .find((action) => !failedIds.has(action.id));
+        setExpandedActions((current) => current.filter((action) => !failedIds.has(action.id)));
+        setFocusedAction((current) =>
+          current && failedIds.has(current.id) ? fallbackAction : current,
+        );
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [
+    actionPresentations,
+    expandedActions,
+    networkId,
+    objectType.id,
+    objectType.name,
+    refreshVersion,
+    t,
+  ]);
+  const expandedActionPresentations = expandedActions.flatMap((action) => {
+    const presentation = actionPresentations[action.id];
+    return presentation ? [presentation] : [];
+  });
+  const expandedActionIds = new Set(expandedActionPresentations.map(({ action }) => action.id));
 
   return (
     <div className={styles.root}>
@@ -1118,51 +1307,80 @@ export function ObjectTypeResourceGraph({
         <div className={styles.toolbarIdentity}>
           <strong title={objectType.name}>{objectType.name}</strong>
         </div>
-        {resourceScope === "all" ? (
-          <Segmented
-            onChange={(value) => {
-              setSection(value as GraphSection);
-              setExpandedGroup(null);
-              setNodePositions({});
-              setView(INITIAL_VIEW);
-            }}
-            options={[
-              { label: t("knowledgeNetwork.objectTypeGraphAll"), value: "all" },
-              {
-                label: `${t("knowledgeNetwork.objectTypeGraphRelations")} ${totals.relations}`,
-                value: "relations",
-              },
-              ...(metricsAvailable
-                ? [
-                    {
-                      label: `${t("knowledgeNetwork.objectTypeGraphMetrics")} ${totals.metrics}`,
-                      value: "metrics",
-                    },
-                  ]
-                : []),
-              {
-                label: `${t("knowledgeNetwork.objectTypeGraphActions")} ${totals.actions}`,
-                value: "actions",
-              },
-            ]}
-            value={section}
-          />
-        ) : (
-          <span className={styles.toolbarSummary}>
-            {t(
-              resourceScope === "relations"
-                ? "knowledgeNetwork.objectTypeGraphRelationCount"
-                : "knowledgeNetwork.objectTypeGraphActionCount",
-              {
-                count: loading
-                  ? "…"
-                  : resourceScope === "relations"
-                    ? totals.relations
-                    : totals.actions,
-              },
-            )}
-          </span>
-        )}
+        <div className={styles.toolbarControls}>
+          {resourceScope === "all" ? (
+            <Segmented
+              onChange={(value) => {
+                setSection(value as GraphSection);
+                setExpandedGroup(null);
+                setFocusedAction(undefined);
+                setExpandedActions([]);
+                setActionPresentations({});
+                setNodePositions({});
+                setView(INITIAL_VIEW);
+              }}
+              options={[
+                { label: t("knowledgeNetwork.objectTypeGraphAll"), value: "all" },
+                {
+                  label: `${t("knowledgeNetwork.objectTypeGraphRelations")} ${totals.relations}`,
+                  value: "relations",
+                },
+                ...(metricsAvailable
+                  ? [
+                      {
+                        label: `${t("knowledgeNetwork.objectTypeGraphMetrics")} ${totals.metrics}`,
+                        value: "metrics",
+                      },
+                    ]
+                  : []),
+                {
+                  label: `${t("knowledgeNetwork.objectTypeGraphActions")} ${totals.actions}`,
+                  value: "actions",
+                },
+              ]}
+              value={section}
+            />
+          ) : (
+            <span className={styles.toolbarSummary}>
+              {t(
+                resourceScope === "relations"
+                  ? "knowledgeNetwork.objectTypeGraphRelationCount"
+                  : "knowledgeNetwork.objectTypeGraphActionCount",
+                {
+                  count: loading
+                    ? "…"
+                    : resourceScope === "relations"
+                      ? totals.relations
+                      : totals.actions,
+                },
+              )}
+            </span>
+          )}
+          {section === "actions" && focusedAction ? (
+            <div className={styles.actionFocusControls}>
+              <strong title={focusedAction.name}>{focusedAction.name}</strong>
+              <span className={styles.actionFocusCount}>
+                {t("knowledgeNetwork.objectTypeGraphActionExpandedCount", {
+                  count: expandedActions.length,
+                })}
+              </span>
+              <Button
+                onClick={() => setSelected({ kind: "action", value: focusedAction })}
+                size="small"
+              >
+                {t("knowledgeNetwork.objectTypeGraphActionViewDetail")}
+              </Button>
+              <Button onClick={collapseFocusedAction} size="small" type="text">
+                {t("knowledgeNetwork.objectTypeGraphActionCollapse")}
+              </Button>
+              {expandedActions.length > 1 ? (
+                <Button onClick={collapseAllActions} size="small" type="text">
+                  {t("knowledgeNetwork.objectTypeGraphActionCollapseAll")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {errors.length > 0 ? (
@@ -1216,6 +1434,16 @@ export function ObjectTypeResourceGraph({
                 refY="4"
               >
                 <path className={styles.metricArrow} d="M 0 0 L 7 4 L 0 8 z" />
+              </marker>
+              <marker
+                id={`${graphId}-action-arrow`}
+                markerHeight="8"
+                markerWidth="8"
+                orient="auto"
+                refX="7"
+                refY="4"
+              >
+                <path className={styles.actionArrow} d="M 0 0 L 7 4 L 0 8 z" />
               </marker>
             </defs>
             <rect
@@ -1463,6 +1691,7 @@ export function ObjectTypeResourceGraph({
             {showActionItems
               ? actionItems.map((action) => {
                   const key = `action:${action.id}`;
+                  if (expandedActionIds.has(action.id)) return null;
                   const actionPosition = position(key);
                   const actionSource =
                     section === "all" ? actionGroupDisplayPosition : ownerPosition;
@@ -1480,14 +1709,13 @@ export function ObjectTypeResourceGraph({
                       />
                       <g
                         aria-label={`${t("knowledgeNetwork.objectTypeGraphActionNode")} ${action.name}`}
-                        className={styles.actionNode}
+                        className={`${styles.actionNode} ${
+                          expandedActionPresentations.length > 0 ? styles.actionNodeAvailable : ""
+                        }`}
                         data-graph-node="true"
-                        onClick={() =>
-                          activate(() => setSelected({ kind: "action", value: action }))
-                        }
+                        onClick={() => activate(() => activateAction(action))}
                         onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ")
-                            setSelected({ kind: "action", value: action });
+                          if (event.key === "Enter" || event.key === " ") activateAction(action);
                         }}
                         onPointerDown={(event) => startNodeDrag(event, key)}
                         role="button"
@@ -1504,6 +1732,255 @@ export function ObjectTypeResourceGraph({
                   );
                 })
               : null}
+
+            {expandedActionPresentations.map((presentation) => {
+              const { action } = presentation;
+              const conditionLabel = presentation.condition
+                ? actionConditionLabel(presentation.condition, t, presentation.propertyLabels)
+                : t("knowledgeNetwork.objectTypeGraphActionNoCondition");
+              const sourceName =
+                presentation.sourceName ||
+                t("knowledgeNetwork.actionTypeExecutionSourceUnavailable");
+              const sourceTypeLabel = actionSourceTypeLabel(presentation.sourceType, t);
+              const affectedObjectLabel =
+                presentation.affectedObjectLabel ||
+                t("knowledgeNetwork.objectTypeGraphActionNoAffectedObject");
+              const affectDescription =
+                presentation.affectDescription ||
+                t("knowledgeNetwork.objectTypeGraphActionNoAffectDescription");
+              const originalActionPosition = position(`action:${action.id}`);
+              const laneY = originalActionPosition.y;
+              const actionFocusKey = `action-focus:${action.id}`;
+              const actionFocusTriggerKey = `${actionFocusKey}:trigger`;
+              const actionFocusActionKey = `${actionFocusKey}:action`;
+              const actionFocusSourceKey = `${actionFocusKey}:source`;
+              const actionFocusImpactKey = `${actionFocusKey}:impact`;
+              const actionFocusActionPosition =
+                nodePositions[actionFocusActionKey] ?? originalActionPosition;
+              const actionFocusTriggerPosition =
+                nodePositions[actionFocusTriggerKey] ??
+                ({ x: originalActionPosition.x + 150, y: laneY } satisfies Point);
+              const actionFocusSourcePosition =
+                nodePositions[actionFocusSourceKey] ??
+                ({ x: originalActionPosition.x + 310, y: laneY } satisfies Point);
+              const actionFocusImpactPosition =
+                nodePositions[actionFocusImpactKey] ??
+                ({ x: originalActionPosition.x + 470, y: laneY } satisfies Point);
+              const actionFocusOwnerEdge = trimmedLine(
+                ownerPosition,
+                actionFocusActionPosition,
+                32,
+                21,
+              );
+              const actionFocusTriggerEdge = trimmedLine(
+                actionFocusActionPosition,
+                actionFocusTriggerPosition,
+                21,
+                ACTION_FOCUS_TRIGGER_WIDTH / 2,
+              );
+              const actionFocusExecutionEdge = trimmedLine(
+                actionFocusTriggerPosition,
+                actionFocusSourcePosition,
+                ACTION_FOCUS_TRIGGER_WIDTH / 2,
+                ACTION_FOCUS_SOURCE_WIDTH / 2,
+              );
+              const actionFocusImpactEdge = trimmedLine(
+                actionFocusSourcePosition,
+                actionFocusImpactPosition,
+                ACTION_FOCUS_SOURCE_WIDTH / 2,
+                ACTION_FOCUS_IMPACT_WIDTH / 2,
+              );
+              const isActive = focusedAction?.id === action.id;
+              return (
+                <g data-action-semantic-focus={action.id} key={action.id}>
+                  <path
+                    className={styles.actionSemanticEdge}
+                    d={`M ${actionFocusTriggerEdge.from.x} ${actionFocusTriggerEdge.from.y} L ${actionFocusTriggerEdge.to.x} ${actionFocusTriggerEdge.to.y}`}
+                    data-action-id={action.id}
+                    data-graph-edge="action-trigger"
+                    markerEnd={`url(#${graphId}-action-arrow)`}
+                  />
+                  <path
+                    className={styles.actionSemanticEdge}
+                    d={`M ${actionFocusOwnerEdge.from.x} ${actionFocusOwnerEdge.from.y} L ${actionFocusOwnerEdge.to.x} ${actionFocusOwnerEdge.to.y}`}
+                    data-action-id={action.id}
+                    data-graph-edge="action-owner"
+                    markerEnd={`url(#${graphId}-action-arrow)`}
+                  />
+                  <path
+                    className={styles.actionSemanticEdge}
+                    d={`M ${actionFocusExecutionEdge.from.x} ${actionFocusExecutionEdge.from.y} L ${actionFocusExecutionEdge.to.x} ${actionFocusExecutionEdge.to.y}`}
+                    data-action-id={action.id}
+                    data-graph-edge="action-execution"
+                    markerEnd={`url(#${graphId}-action-arrow)`}
+                  />
+                  <path
+                    className={styles.actionImpactEdge}
+                    d={`M ${actionFocusImpactEdge.from.x} ${actionFocusImpactEdge.from.y} L ${actionFocusImpactEdge.to.x} ${actionFocusImpactEdge.to.y}`}
+                    data-action-id={action.id}
+                    data-graph-edge="action-impact"
+                    markerEnd={`url(#${graphId}-action-arrow)`}
+                  />
+                  <path
+                    className={styles.actionSemanticEdgeHitArea}
+                    d={`M ${actionFocusTriggerEdge.from.x} ${actionFocusTriggerEdge.from.y} L ${actionFocusTriggerEdge.to.x} ${actionFocusTriggerEdge.to.y}`}
+                    data-action-id={action.id}
+                    data-action-edge-drag-handle="trigger"
+                    data-graph-node="true"
+                    onPointerDown={(event) =>
+                      startNodeDrag(event, actionFocusTriggerKey, actionFocusTriggerPosition)
+                    }
+                  />
+                  <path
+                    className={styles.actionSemanticEdgeHitArea}
+                    d={`M ${actionFocusOwnerEdge.from.x} ${actionFocusOwnerEdge.from.y} L ${actionFocusOwnerEdge.to.x} ${actionFocusOwnerEdge.to.y}`}
+                    data-action-id={action.id}
+                    data-action-edge-drag-handle="action"
+                    data-graph-node="true"
+                    onPointerDown={(event) =>
+                      startNodeDrag(event, actionFocusActionKey, actionFocusActionPosition)
+                    }
+                  />
+                  <path
+                    className={styles.actionSemanticEdgeHitArea}
+                    d={`M ${actionFocusExecutionEdge.from.x} ${actionFocusExecutionEdge.from.y} L ${actionFocusExecutionEdge.to.x} ${actionFocusExecutionEdge.to.y}`}
+                    data-action-id={action.id}
+                    data-action-edge-drag-handle="execution"
+                    data-graph-node="true"
+                    onPointerDown={(event) =>
+                      startNodeDrag(event, actionFocusSourceKey, actionFocusSourcePosition)
+                    }
+                  />
+                  <path
+                    className={styles.actionSemanticEdgeHitArea}
+                    d={`M ${actionFocusImpactEdge.from.x} ${actionFocusImpactEdge.from.y} L ${actionFocusImpactEdge.to.x} ${actionFocusImpactEdge.to.y}`}
+                    data-action-id={action.id}
+                    data-action-edge-drag-handle="impact"
+                    data-graph-node="true"
+                    onPointerDown={(event) =>
+                      startNodeDrag(event, actionFocusImpactKey, actionFocusImpactPosition)
+                    }
+                  />
+
+                  <g
+                    aria-label={`${t("knowledgeNetwork.objectTypeGraphActionNode")} ${action.name}`}
+                    className={`${styles.actionNode} ${styles.actionNodeFocused} ${
+                      isActive ? styles.actionNodeActive : ""
+                    }`}
+                    data-graph-node="true"
+                    onClick={() => activate(() => setFocusedAction(action))}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") setFocusedAction(action);
+                    }}
+                    onPointerDown={(event) =>
+                      startNodeDrag(event, actionFocusActionKey, actionFocusActionPosition)
+                    }
+                    role="button"
+                    tabIndex={0}
+                    transform={`translate(${actionFocusActionPosition.x} ${actionFocusActionPosition.y})`}
+                  >
+                    <circle r="22" />
+                    <text className={styles.nodeLabel} textAnchor="middle" y="43">
+                      {truncate(action.name)}
+                    </text>
+                    <title>{`${actionTypeLabel(action.actionKind, t)} · ${action.name}`}</title>
+                  </g>
+
+                  <g
+                    aria-label={`${t("knowledgeNetwork.objectTypeGraphActionTrigger", {
+                      kind: actionTypeLabel(action.actionKind, t),
+                    })} ${conditionLabel}`}
+                    className={`${styles.actionSemanticNode} ${styles.actionTriggerNode}`}
+                    data-action-semantic="trigger"
+                    data-graph-node="true"
+                    onPointerDown={(event) =>
+                      startNodeDrag(event, actionFocusTriggerKey, actionFocusTriggerPosition)
+                    }
+                    transform={`translate(${actionFocusTriggerPosition.x} ${actionFocusTriggerPosition.y})`}
+                  >
+                    <rect
+                      height="58"
+                      rx="8"
+                      width={ACTION_FOCUS_TRIGGER_WIDTH}
+                      x={-ACTION_FOCUS_TRIGGER_WIDTH / 2}
+                      y="-29"
+                    />
+                    <text className={styles.actionSemanticTitle} textAnchor="middle" y="-7">
+                      {t("knowledgeNetwork.objectTypeGraphActionTrigger", {
+                        kind: actionTypeLabel(action.actionKind, t),
+                      })}
+                    </text>
+                    <text className={styles.actionSemanticDescription} textAnchor="middle" y="14">
+                      {truncate(conditionLabel, 18)}
+                    </text>
+                    <title>{conditionLabel}</title>
+                  </g>
+
+                  <g
+                    aria-label={`${t("knowledgeNetwork.objectTypeGraphActionExecution", {
+                      type: sourceTypeLabel,
+                    })} ${sourceName}`}
+                    className={`${styles.actionSemanticNode} ${styles.actionExecutionNode}`}
+                    data-action-semantic="execution"
+                    data-graph-node="true"
+                    onPointerDown={(event) =>
+                      startNodeDrag(event, actionFocusSourceKey, actionFocusSourcePosition)
+                    }
+                    transform={`translate(${actionFocusSourcePosition.x} ${actionFocusSourcePosition.y})`}
+                  >
+                    <rect
+                      height="58"
+                      rx="8"
+                      width={ACTION_FOCUS_SOURCE_WIDTH}
+                      x={-ACTION_FOCUS_SOURCE_WIDTH / 2}
+                      y="-29"
+                    />
+                    <text className={styles.actionSemanticTitle} textAnchor="middle" y="-7">
+                      {t("knowledgeNetwork.objectTypeGraphActionExecution", {
+                        type: sourceTypeLabel,
+                      })}
+                    </text>
+                    <text className={styles.actionSemanticDescription} textAnchor="middle" y="14">
+                      {truncate(sourceName, 15)}
+                    </text>
+                    <title>{sourceName}</title>
+                  </g>
+
+                  <g
+                    aria-label={`${t("knowledgeNetwork.objectTypeGraphActionImpact", {
+                      object: affectedObjectLabel,
+                    })} ${affectDescription}`}
+                    className={`${styles.actionSemanticNode} ${styles.actionImpactNode}`}
+                    data-action-semantic="impact"
+                    data-graph-node="true"
+                    onPointerDown={(event) =>
+                      startNodeDrag(event, actionFocusImpactKey, actionFocusImpactPosition)
+                    }
+                    transform={`translate(${actionFocusImpactPosition.x} ${actionFocusImpactPosition.y})`}
+                  >
+                    <rect
+                      height="58"
+                      rx="8"
+                      width={ACTION_FOCUS_IMPACT_WIDTH}
+                      x={-ACTION_FOCUS_IMPACT_WIDTH / 2}
+                      y="-29"
+                    />
+                    <text className={styles.actionSemanticTitle} textAnchor="middle" y="-7">
+                      {truncate(
+                        t("knowledgeNetwork.objectTypeGraphActionImpact", {
+                          object: affectedObjectLabel,
+                        }),
+                        17,
+                      )}
+                    </text>
+                    <text className={styles.actionSemanticDescription} textAnchor="middle" y="14">
+                      {truncate(affectDescription, 18)}
+                    </text>
+                    <title>{`${affectedObjectLabel} · ${affectDescription}`}</title>
+                  </g>
+                </g>
+              );
+            })}
 
             <g
               aria-label={`${t("knowledgeNetwork.objectTypeGraphCurrentObject")} ${objectType.name}`}
