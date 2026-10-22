@@ -539,6 +539,44 @@ describe("ResourcePreviewPanel", () => {
     expect(screen.queryByLabelText("dataCatalog.preview.loadBinaryContent")).toBeNull();
   });
 
+  it.each(["source", "local_index"] as const)(
+    "renders normalized nulls while preserving string content in %s preview",
+    async (querySource) => {
+      previewCatalogResourceMock.mockResolvedValue({
+        rows: [
+          { payload: null },
+          { payload: null },
+          { payload: querySource === "source" ? '"null"' : "null" },
+          { payload: querySource === "source" ? '""' : "" },
+        ],
+        total: 4,
+        querySource,
+      });
+
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            columnCount: 1,
+            localIndexName: "idx_orders",
+            localIndexStatus: "available",
+            schema: [{ name: "payload", type: "json" }],
+          }}
+        />,
+      );
+
+      expect(await screen.findAllByRole("cell", { name: "NULL" })).toHaveLength(2);
+      expect(
+        screen.getByRole("cell", {
+          name: querySource === "source" ? '"null"' : "null",
+        }),
+      ).toBeTruthy();
+      expect(screen.getByRole("cell", { name: querySource === "source" ? '""' : "" })).toBeTruthy();
+      expect(screen.getAllByRole("cell", { name: "NULL" })).toHaveLength(2);
+    },
+  );
+
   it("renders binary metadata without rendering its raw value", async () => {
     previewCatalogResourceMock.mockResolvedValue({
       rows: [{ blob: { byte_length: 3 } }, { blob: null }, { blob: "raw bytes" }],
