@@ -14,6 +14,7 @@ type BackendErrorResponseBody = {
   error_code?: string;
   error_details?: unknown;
   error_link?: string;
+  metadata?: unknown;
   message?: string;
   description?: string;
   detail?: unknown;
@@ -27,6 +28,7 @@ export type RequestErrorDetails = {
   descriptionSource?: "response";
   details?: string;
   errorLink?: string;
+  metadata?: Record<string, unknown>;
   solution?: string;
 };
 
@@ -66,6 +68,9 @@ export function extractRequestErrorDetails(error: unknown): RequestErrorDetails 
       details: details ?? fallbackDetails,
       errorLink: optionalString(data?.error_link),
       solution: optionalString(data?.solution),
+      ...(data?.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata)
+        ? { metadata: data.metadata as Record<string, unknown> }
+        : {}),
     };
     responseDetails = common;
     const responseMessage = optionalString(data?.message);

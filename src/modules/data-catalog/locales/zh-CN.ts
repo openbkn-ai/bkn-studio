@@ -593,6 +593,12 @@ export const dataCatalogZhCN = {
       goEnable: "去连接页处理",
     },
     preview: {
+      keywordLimitExceeded:
+        "字段 {{field}} 的筛选值超过关键词最大索引长度（{{limit}} 个 UTF-16 代码单元）。",
+      keywordLimitExceededGeneric: "筛选值超过关键词最大索引长度。",
+      keywordLimitSourceHint: "请缩短筛选值，或勾选“查询原始数据”来查询源数据。",
+      keywordLimitShortenHint: "请缩短筛选值。",
+
       invalidOutputField: "预览查询包含不存在或不合法的字段。",
       unsupportedOutputField: "该资源包含当前查询通道暂不支持读取的字段类型。",
       noQueryableFields: "该资源没有可查询字段。",

@@ -630,6 +630,13 @@ export const dataCatalogEnUS = {
       goEnable: "Open connections",
     },
     preview: {
+      keywordLimitExceeded:
+        "The value for {{field}} exceeds the maximum indexed keyword length ({{limit}} UTF-16 code units).",
+      keywordLimitExceededGeneric: "The filter value exceeds the maximum indexed keyword length.",
+      keywordLimitSourceHint:
+        'Use a shorter value or select "Query original data" to query the source.',
+      keywordLimitShortenHint: "Use a shorter filter value.",
+
       invalidOutputField: "The preview query contains an unknown or invalid field.",
       unsupportedOutputField:
         "This resource contains field types that this query channel cannot read yet.",

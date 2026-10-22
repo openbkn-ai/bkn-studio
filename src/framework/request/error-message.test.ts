@@ -49,6 +49,27 @@ describe("extractRequestErrorDetails", () => {
     expect(extractRequestErrorMessage(error)).toBe("创建构建任务失败");
   });
 
+  it("preserves structured metadata independently of diagnostic details", () => {
+    const result = extractRequestErrorDetails(
+      createAxiosLikeError({
+        error_code: "VegaBackend.Resource.QueryValueExceedsKeywordLimit",
+        description: "Keyword value too long",
+        error_details: "unstructured diagnostic",
+        metadata: { field: "status", limit: 256 },
+      }),
+    );
+    expect(result.code).toBe("VegaBackend.Resource.QueryValueExceedsKeywordLimit");
+    expect(result.metadata).toEqual({ field: "status", limit: 256 });
+    expect(result.details).toBe("unstructured diagnostic");
+  });
+
+  it.each([null, [], "status:256", 256])("ignores invalid metadata %j", (metadata) => {
+    expect(
+      extractRequestErrorDetails(createAxiosLikeError({ description: "failed", metadata }))
+        .metadata,
+    ).toBeUndefined();
+  });
+
   it("preserves an error code without treating the Axios fallback as response text", () => {
     const error = Object.assign(new Error("Request failed with status code 400"), {
       isAxiosError: true,

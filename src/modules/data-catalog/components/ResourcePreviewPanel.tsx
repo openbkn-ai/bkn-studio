@@ -230,6 +230,28 @@ export function ResourcePreviewPanel({
         const sourceDenied = details.code === "VegaBackend.Resource.SourceReadForbidden";
         setSourceReadDetails(sourceDenied ? details : null);
         setForbidden(!sourceDenied && isRequestForbidden(loadError));
+        if (details.code === "VegaBackend.Resource.QueryValueExceedsKeywordLimit") {
+          const field = details.metadata?.field;
+          const limit = details.metadata?.limit;
+          const validParameters =
+            typeof field === "string" &&
+            field.trim().length > 0 &&
+            typeof limit === "number" &&
+            Number.isSafeInteger(limit) &&
+            limit > 0;
+          setError({
+            message: validParameters
+              ? t("dataCatalog.preview.keywordLimitExceeded", { field, limit })
+              : t("dataCatalog.preview.keywordLimitExceededGeneric"),
+            description: t(
+              hasLocalIndex && !ignoreLocalIndex
+                ? "dataCatalog.preview.keywordLimitSourceHint"
+                : "dataCatalog.preview.keywordLimitShortenHint",
+            ),
+          });
+          setResult(null);
+          return;
+        }
         const projectionMessage = PROJECTION_ERROR_MESSAGES.get(details.code ?? "");
         const explanation = projectionMessage ? t(projectionMessage) : details.description;
         setError({
@@ -253,6 +275,7 @@ export function ResourcePreviewPanel({
       ignoreLocalIndex,
       binaryContent,
       hasBinaryField,
+      hasLocalIndex,
       queriesSource,
       filterQueryPath,
       activeFilter,
