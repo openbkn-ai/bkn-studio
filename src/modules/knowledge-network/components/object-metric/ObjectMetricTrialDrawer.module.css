@@ -95,6 +95,14 @@
   grid-template-columns: minmax(0, 620px);
 }
 
+.analysisWorkspace .conditionRow {
+  display: grid;
+  gap: 0 20px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
 .analysisWorkspace .form :global(.ant-form-item) {
   margin-bottom: 8px;
 }
@@ -320,7 +328,8 @@
 }
 
 @media (max-width: 900px) {
-  .analysisWorkspace .form {
+  .analysisWorkspace .form,
+  .analysisWorkspace .conditionRow {
     grid-template-columns: minmax(0, 1fr);
   }
 }

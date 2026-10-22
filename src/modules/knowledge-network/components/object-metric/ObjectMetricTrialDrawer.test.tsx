@@ -66,6 +66,63 @@ afterAll(() => {
 });
 
 describe("ObjectMetricTrialDrawer", () => {
+  it("sends final-value HAVING and ORDER BY through the shared trial query", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    definition.result_semantics.value.physical_type = "int64";
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "summary",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "no_data",
+      empty_reason: "filtered_out",
+    } satisfies ObjectMetricDataV1);
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onRun={onRun}
+        open
+      />,
+    );
+
+    const havingRow = screen.getByRole("group", { name: "结果筛选" });
+    const orderRow = screen.getByRole("group", { name: "结果排序" });
+    expect(within(havingRow).getByRole("combobox", { name: "结果筛选" })).toBeInTheDocument();
+    expect(within(orderRow).getByRole("combobox", { name: "结果排序" })).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "结果筛选" }));
+    fireEvent.click(await screen.findByText("大于"));
+    expect(within(havingRow).getByRole("textbox", { name: "比较值" })).toBeInTheDocument();
+    expect(within(orderRow).queryByRole("textbox", { name: "比较值" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "比较值" }), { target: { value: "10" } });
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "结果排序" }));
+    fireEvent.click(await screen.findByText("指标值"));
+    expect(within(orderRow).getByRole("combobox", { name: "排序方向" })).toBeInTheDocument();
+    expect(within(havingRow).queryByRole("combobox", { name: "排序方向" })).not.toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "排序方向" }));
+    fireEvent.click(await screen.findByText("降序"));
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+
+    await waitFor(() =>
+      expect(onRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          group_by: [],
+          having: { operator: "gt", value: 10, unit_code: undefined },
+          order_by: [{ field: "value", dimension: undefined, direction: "desc" }],
+        }),
+      ),
+    );
+    expect(await screen.findByText("存在计算结果，但均不满足结果筛选条件。")).toBeInTheDocument();
+  }, 20_000);
+
   it("keeps relation aliases distinct when selecting same-named dimensions", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.calculation_scope = "object_set";
@@ -127,7 +184,7 @@ describe("ObjectMetricTrialDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "试算" }));
     await waitFor(() =>
       expect(onRun).toHaveBeenCalledWith({
-        analysis_dimensions: [
+        group_by: [
           { object_type_id: "person", relation_path_alias: "buyer", property_name: "region" },
         ],
         instance_identities: undefined,
@@ -520,7 +577,7 @@ describe("ObjectMetricTrialDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "继续下钻" }));
     await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
     expect(onRun.mock.calls[1][0]).toMatchObject({
-      analysis_dimensions: [{ object_type_id: "order", property_name: "product_code" }],
+      group_by: [{ object_type_id: "order", property_name: "product_code" }],
       bucket_selection: { bucket_key: "confirmed-orders", parent_query: onRun.mock.calls[0][0] },
     });
     const path = await screen.findByRole("navigation", { name: "分析路径" });
@@ -865,7 +922,7 @@ describe("ObjectMetricTrialDrawer", () => {
 
     await waitFor(() =>
       expect(onRun).toHaveBeenCalledWith({
-        analysis_dimensions: [{ object_type_id: "order", property_name: "status" }],
+        group_by: [{ object_type_id: "order", property_name: "status" }],
         instance_identities: undefined,
         time: undefined,
       }),
@@ -933,7 +990,7 @@ describe("ObjectMetricTrialDrawer", () => {
 
     await waitFor(() =>
       expect(onRun).toHaveBeenCalledWith({
-        analysis_dimensions: [],
+        group_by: [],
         instance_identities: [{ order_id: 1001 }],
         time: undefined,
       }),
@@ -1057,7 +1114,7 @@ describe("ObjectMetricTrialDrawer", () => {
 
     await waitFor(() =>
       expect(onRun).toHaveBeenCalledWith({
-        analysis_dimensions: [],
+        group_by: [],
         instance_identities: [{ batch_id: 42, split: false }],
         time: undefined,
       }),
