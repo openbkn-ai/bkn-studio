@@ -101,7 +101,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     title: "Object types on datasets and indexes",
     rules: [
       "When object types are bound to a dataset or an index rather than a SQL data source, or a query spans more than one data source, the server reads each object type's data and joins it in memory, so only the basic forms work.",
-      "Available: MATCH, several hops, OPTIONAL MATCH; WHERE; returning properties and aggregates, ORDER BY, SKIP, LIMIT; WITH filtering after an aggregate and filtering by an earlier stage's values; returning nodes, relationships and virtual edges, drawn as on a SQL data source.",
+      "Available: MATCH, several hops, OPTIONAL MATCH; WHERE; returning properties and aggregates, ORDER BY, SKIP, LIMIT; WITH filtering after an aggregate and filtering by an earlier stage's values; returning nodes, relationships and derived edges, drawn as on a SQL data source.",
       "Refused: CASE, coalesce; totals over groups, comparing two lists, passing nodes to the next MATCH; collect.",
       "A read that is too large or times out is refused (ReadBudgetExceeded); narrow it with conditions or LIMIT. Only relation types join by key: two nodes connected only by an equality such as a.code = b.code are read in full and combined pairwise, which easily exceeds the limit, and the plan gives no warning for it.",
     ],
