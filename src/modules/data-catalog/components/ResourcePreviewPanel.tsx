@@ -64,6 +64,7 @@ function isNumericType(type: string) {
   return (
     lowered.startsWith("int") ||
     lowered.startsWith("bigint") ||
+    lowered === "large_integer" ||
     lowered.startsWith("decimal") ||
     lowered.startsWith("numeric") ||
     lowered.startsWith("float") ||
@@ -192,6 +193,8 @@ export function ResourcePreviewPanel({
     filterValidationError(appliedFilter, resource.schema, queryPath) === null
       ? appliedFilter
       : EMPTY_APPLIED_FILTER;
+  // An unfiltered request does not depend on the query path learned from its response.
+  const filterQueryPath = activeFilter.children.length ? queryPath : "source";
 
   const load = useCallback(
     async (nextOffset: number, nextLimit: number) => {
@@ -207,7 +210,7 @@ export function ResourcePreviewPanel({
             : {}),
           ...(ignoreLocalIndex ? { ignoreLocalIndex: true } : {}),
           ...(activeFilter.children.length
-            ? { filterCondition: filterToBackend(activeFilter, resource.schema) }
+            ? { filterCondition: filterToBackend(activeFilter, resource.schema, filterQueryPath) }
             : {}),
           limit: nextLimit,
           offset: nextOffset,
@@ -251,6 +254,7 @@ export function ResourcePreviewPanel({
       binaryContent,
       hasBinaryField,
       queriesSource,
+      filterQueryPath,
       activeFilter,
       t,
     ],

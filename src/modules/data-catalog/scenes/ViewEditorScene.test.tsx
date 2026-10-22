@@ -868,6 +868,58 @@ describe("ViewEditorScene", () => {
     );
   });
 
+  it.each(["source", "local_index"] as const)(
+    "saves large integer filter whitespace for the %s path",
+    async (path) => {
+      const schema = [
+        { name: "wide", originalName: "wide", type: "large_integer", displayName: "Wide" },
+      ];
+      const view = {
+        ...source,
+        id: "view-1",
+        category: "logical_view",
+        logicType: "derived",
+        name: "orders_view",
+        expectedUpdateTime: 42,
+        schema,
+        logicDefinition: {
+          sourceResourceId: "source-1",
+          filterCondition: { field: "wide", operation: "==", value: " -09007199254740993 " },
+        },
+      } as CatalogResource;
+      const currentSource = {
+        ...source,
+        schema,
+        localIndexName: path === "local_index" ? "idx_orders" : undefined,
+        localIndexStatus: path === "local_index" ? "available" : "unavailable",
+      } as CatalogResource;
+      getResourceMock.mockImplementation((id: string) =>
+        Promise.resolve(id === "view-1" ? view : currentSource),
+      );
+      renderEditor({ resourceId: "view-1" });
+      await screen.findByDisplayValue("orders_view");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+      await waitFor(() =>
+        expect(updateViewMock).toHaveBeenCalledWith(
+          "view-1",
+          expect.objectContaining({
+            filterCondition: {
+              operation: "and",
+              sub_conditions: [
+                {
+                  field: "wide",
+                  operation: "==",
+                  value_from: "const",
+                  value: path === "source" ? "-09007199254740993" : " -09007199254740993 ",
+                },
+              ],
+            },
+          }),
+        ),
+      );
+    },
+  );
+
   it("lets an existing view repair a Text filter after its table gains an index", async () => {
     const view = {
       ...source,
@@ -892,16 +944,19 @@ describe("ViewEditorScene", () => {
     );
     renderEditor({ resourceId: "view-1" });
     expect(await screen.findByText("dataCatalog.viewEditor.filterNeedsReview")).toBeTruthy();
-    expect(
-      screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" }),
-    ).not.toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    const sourcePicker = screen.getByLabelText("dataCatalog.viewEditor.sourceSearch", {
+      selector: "input",
+    });
+    expect(sourcePicker).toHaveRole("combobox");
+    expect(sourcePicker).not.toBeDisabled();
+    const saveButton = screen.getByRole("button", { name: "dataCatalog.viewEditor.save" });
+    fireEvent.click(saveButton);
     expect(await screen.findByText("dataCatalog.filter.errors.invalidField")).toBeTruthy();
     expect(updateViewMock).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeRule" }));
     expect(screen.queryByText("dataCatalog.viewEditor.filterNeedsReview")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    fireEvent.click(saveButton);
     await waitFor(() =>
       expect(updateViewMock).toHaveBeenCalledWith(
         "view-1",

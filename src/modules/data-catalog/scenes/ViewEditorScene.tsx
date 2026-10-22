@@ -487,7 +487,7 @@ export function ViewEditorScene({
         sourceResourceId: source.id,
         filterCondition: unsupportedFilter
           ? view?.logicDefinition?.filterCondition
-          : filterToBackend(filter, latestSource.schema),
+          : filterToBackend(filter, latestSource.schema, sourceFilterQueryPath(latestSource)),
         tags: tags.map(normalizeVegaTag),
       };
       const saved =
