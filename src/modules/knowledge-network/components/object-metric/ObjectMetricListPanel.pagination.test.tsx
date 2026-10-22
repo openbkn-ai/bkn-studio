@@ -883,6 +883,55 @@ describe("ObjectMetricListPanel pagination", () => {
     warning.mockRestore();
   });
 
+  it("prevents duplicate deletion preflights and explains a status blocker", async () => {
+    const warning = vi.spyOn(Modal, "warning").mockImplementation(() => undefined as never);
+    const draft = metric(1);
+    draft.definition.lifecycle.status = "draft";
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
+    let resolveCheck!: (value: {
+      blockers: [];
+      deletable: false;
+      hidden_blocker_count: 0;
+      metric_id: string;
+      metric_name: string;
+      status: "published";
+      version: number;
+    }) => void;
+    mocks.checkDeletion.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCheck = resolve;
+      }),
+    );
+
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
+    fireEvent.click(screen.getByText(/^(列表|list)$/i));
+    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    const deleteButton = screen.getByRole("button", { name: /删除指标.*v1/ });
+    fireEvent.click(deleteButton);
+    fireEvent.click(deleteButton);
+    expect(mocks.checkDeletion).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      resolveCheck({
+        blockers: [],
+        deletable: false,
+        hidden_blocker_count: 0,
+        metric_id: draft.definition.id,
+        metric_name: draft.definition.name,
+        status: "published",
+        version: draft.definition.version,
+      });
+    });
+    await waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
+    render(<div>{warning.mock.calls[0]?.[0]?.content}</div>);
+    expect(screen.getByText("状态为 published 的指标版本不可删除。")).toBeInTheDocument();
+    warning.mockRestore();
+  });
+
   it("limits count requests to four in flight and distinguishes a pending count from zero", async () => {
     const resolveCounts: Array<(value: { entries: []; total_count: number }) => void> = [];
     mocks.listObjectTypes.mockResolvedValue({

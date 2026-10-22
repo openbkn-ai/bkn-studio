@@ -1401,6 +1401,7 @@ export const objectMetricV1Part = {
   metricDeleteVersionSuccess: "Metric version deleted",
   metricDeleteBlockedTitle: "Metric version cannot be deleted",
   metricDeleteBlockedDescription: "Remove or upgrade these references first:",
+  metricDeleteStatusBlocked: "A metric version with status {{p0}} cannot be deleted.",
   metricDeleteMetricBlocker: 'Metric "{{p0}}" v{{p1}} ({{p2}})',
   metricDeletePropertyBlocker: 'Logical property "{{p1}}" on object type "{{p0}}" ({{p2}})',
   metricDeleteHiddenBlockers: "There are {{count}} more references you cannot view.",

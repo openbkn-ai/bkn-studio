@@ -132,6 +132,8 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
   const [trialMetric, setTrialMetric] = useState<ObjectMetricRecordV1>();
   const [trialObjectType, setTrialObjectType] = useState<ObjectTypeDetail | null>();
   const [trialLoadingKey, setTrialLoadingKey] = useState<string>();
+  const [deletionPendingKey, setDeletionPendingKey] = useState<string>();
+  const deletionPendingRef = useRef<string | undefined>(undefined);
   const [listTotal, setListTotal] = useState(0);
   const [listResultKey, setListResultKey] = useState("");
   const [selectedObjectTypeId, setSelectedObjectTypeId] = useState(initialLocation.objectTypeId);
@@ -574,10 +576,15 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
     selectedObjectDetail?.id === selectedObjectTypeId ? selectedObjectDetail.detail : undefined;
 
   const showDeletionBlocked = (check: ObjectMetricVersionDeletionCheckV1) => {
+    const hasReferenceBlockers = check.blockers.length > 0 || check.hidden_blocker_count > 0;
     Modal.warning({
       content: (
         <div>
-          <p>{objectMetricText("metricDeleteBlockedDescription")}</p>
+          <p>
+            {hasReferenceBlockers
+              ? objectMetricText("metricDeleteBlockedDescription")
+              : objectMetricText("metricDeleteStatusBlocked", { p0: check.status })}
+          </p>
           {check.blockers.length ? (
             <ul>
               {check.blockers.map((blocker) => (
@@ -618,6 +625,10 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
         .canDeleteVersion
     )
       return;
+    const pendingKey = `${record.definition.id}@${record.definition.version}`;
+    if (deletionPendingRef.current) return;
+    deletionPendingRef.current = pendingKey;
+    setDeletionPendingKey(pendingKey);
     let check: ObjectMetricVersionDeletionCheckV1;
     try {
       check = await checkObjectMetricVersionDeletionV1(
@@ -627,6 +638,9 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
       );
     } catch {
       return;
+    } finally {
+      deletionPendingRef.current = undefined;
+      setDeletionPendingKey(undefined);
     }
     if (!check.deletable) {
       showDeletionBlocked(check);
@@ -829,6 +843,9 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId }: Props
                 })}
                 danger
                 icon={<DeleteOutlined />}
+                loading={
+                  deletionPendingKey === `${record.definition.id}@${record.definition.version}`
+                }
                 onClick={() => void confirmDeleteVersion(record)}
                 size="small"
                 type="text"

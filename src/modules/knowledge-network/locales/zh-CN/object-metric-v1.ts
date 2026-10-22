@@ -1238,6 +1238,7 @@ export const objectMetricV1Part = {
   metricDeleteVersionSuccess: "指标版本已删除",
   metricDeleteBlockedTitle: "无法删除指标版本",
   metricDeleteBlockedDescription: "请先删除或升级以下引用：",
+  metricDeleteStatusBlocked: "状态为 {{p0}} 的指标版本不可删除。",
   metricDeleteMetricBlocker: "指标“{{p0}}” v{{p1}}（{{p2}}）",
   metricDeletePropertyBlocker: "对象类“{{p0}}”的逻辑属性“{{p1}}”（{{p2}}）",
   metricDeleteHiddenBlockers: "另有 {{count}} 个无权查看的引用。",
