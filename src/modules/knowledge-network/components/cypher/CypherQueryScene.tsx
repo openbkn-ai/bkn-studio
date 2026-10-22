@@ -82,7 +82,9 @@ import {
 import {
   cypherName,
   nodeLookupQuery,
+  objectTypePropertySample,
   objectTypeSample,
+  relationTypePropertySample,
   relationTypeSample,
 } from "@/modules/knowledge-network/cypher/cypher-samples";
 import { errorMarkFrom } from "@/modules/knowledge-network/cypher/error-mark";
@@ -122,6 +124,8 @@ const SCHEMA_COLLAPSED_KEY = "bkn-studio.cypher-schema-collapsed";
 const AGENT_NOTICE_DISMISSED_KEY = "bkn-studio.cypher-agent-notice-dismissed";
 /** get_object_types takes a bounded id list; larger networks are read in parts. */
 const PROPERTY_BATCH = 50;
+/** The refusal a sample gets when its object types live in a dataset or an index. */
+const UNSUPPORTED_CODE = "BknBackend.Cypher.Unsupported";
 
 function readFlag(key: string): boolean {
   try {
@@ -429,7 +433,7 @@ export function CypherQueryScene({
           objectProperties: asked.explain ? undefined : await objectPropertiesFor(asked.query),
           signal: controller.signal,
         });
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) return undefined;
         setFrames((current) =>
           updateFrame(current, frameId, (frame) =>
             run.ok
@@ -437,8 +441,9 @@ export function CypherQueryScene({
               : { ...frame, status: "error", error: run.error, exchange: run.exchange },
           ),
         );
+        return run;
       } catch (error) {
-        if (isAbort(error) || controller.signal.aborted) return;
+        if (isAbort(error) || controller.signal.aborted) return undefined;
         setFrames((current) =>
           updateFrame(current, frameId, (frame) => ({
             ...frame,
@@ -446,6 +451,7 @@ export function CypherQueryScene({
             error: { message: error instanceof Error ? error.message : String(error) },
           })),
         );
+        return undefined;
       } finally {
         if (controllers.current.get(frameId) === controller) controllers.current.delete(frameId);
       }
@@ -719,10 +725,37 @@ export function CypherQueryScene({
     setFrames((current) => current.filter((item) => item.id !== frame.id));
   };
 
-  const runSample = (query: string) => {
+  /**
+   * Runs a sample the schema panel wrote. Object types on a dataset or an index cannot be
+   * returned as nodes, so when the backend refuses the sample, `withProperties` writes one
+   * returning their properties, which runs in the same frame. A sample this simple is refused
+   * as unsupported for no other reason.
+   */
+  const runSample = async (query: string, withProperties: () => string) => {
     setMode("cypher");
     setCypherText(query);
-    runNew(query);
+    const id = newFrameId();
+    addFrame({ id, createdAt: Date.now(), query, status: "running" });
+    const run = await runInFrame(id, query);
+    if (!run || run.ok || run.error.code !== UNSUPPORTED_CODE) return;
+    const rewritten = withProperties();
+    setCypherText(rewritten);
+    setFrames((current) =>
+      updateFrame(current, id, (frame) => ({
+        ...frame,
+        notice: t("knowledgeNetwork.cypherQuery.frames.sampleAsProperties"),
+      })),
+    );
+    await runInFrame(id, rewritten);
+  };
+
+  /** The properties a sample returns for an object type, its display property first. */
+  const sampleProperties = (objectTypeId: string) => {
+    const names = (propertiesRef.current[objectTypeId] ?? []).map((item) => item.name);
+    const display = displayKeysRef.current[objectTypeId];
+    return display && names.includes(display)
+      ? [display, ...names.filter((name) => name !== display)]
+      : names;
   };
 
   const insertIntoEditor = (text: string) => {
@@ -811,7 +844,11 @@ export function CypherQueryScene({
                           <button
                             className={styles.schemaItem}
                             data-testid={`cypher-schema-object-${item.id}`}
-                            onClick={() => runSample(objectTypeSample(item.id))}
+                            onClick={() =>
+                              void runSample(objectTypeSample(item.id), () =>
+                                objectTypePropertySample(item.id, sampleProperties(item.id)),
+                              )
+                            }
                             type="button"
                           >
                             <DatabaseOutlined />
@@ -882,7 +919,15 @@ export function CypherQueryScene({
                     <button
                       className={`${styles.schemaItem} ${styles.schemaRelation}`}
                       data-testid={`cypher-schema-relation-${item.id}`}
-                      onClick={() => runSample(relationTypeSample(item))}
+                      onClick={() =>
+                        void runSample(relationTypeSample(item), () =>
+                          relationTypePropertySample(
+                            item,
+                            sampleProperties(item.sourceId),
+                            sampleProperties(item.targetId),
+                          ),
+                        )
+                      }
                       type="button"
                     >
                       <ApiOutlined />

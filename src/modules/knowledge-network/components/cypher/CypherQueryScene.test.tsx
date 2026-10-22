@@ -185,6 +185,47 @@ describe("CypherQueryScene", () => {
     expect(graphOption?.className).toMatch(/disabled/);
   });
 
+  it("reruns a schema sample with properties when its object type cannot return nodes", async () => {
+    mocks.runCypherQuery
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { message: "dataset", code: "BknBackend.Cypher.Unsupported" },
+        exchange,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        result: { columns: [{ name: "n_team_name" }], entries: [{ n_team_name: "Brazil" }] },
+        exchange,
+      });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    await screen.findByTestId("cypher-schema-object-teams");
+    await waitFor(() => expect(mocks.getObjectTypeProperties).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByTestId("cypher-schema-object-teams"));
+
+    await screen.findByText("Brazil");
+    const rewritten = "MATCH (n:teams) RETURN n.team_name AS n_team_name LIMIT 25";
+    expect(mocks.runCypherQuery.mock.calls.map((call) => call[0].query)).toEqual([
+      "MATCH (n:teams) RETURN n LIMIT 25",
+      rewritten,
+    ]);
+    expect(screen.getByTestId("cypher-frame-notice")).toBeTruthy();
+    expect(screen.getAllByTestId("cypher-frame")).toHaveLength(1);
+    expect(editor().value).toBe(rewritten);
+  });
+
+  it("does not rewrite a sample refused for another reason", async () => {
+    mocks.runCypherQuery.mockResolvedValue({
+      ok: false,
+      error: { message: "forbidden", code: "BknBackend.Cypher.PropertyForbidden" },
+      exchange,
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    fireEvent.click(await screen.findByTestId("cypher-schema-object-teams"));
+    await waitFor(() => expect(mocks.runCypherQuery).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId("cypher-frame-notice")).toBeNull();
+  });
+
   it("runs the editor's query on Ctrl+Enter, asking returned nodes for their display property", async () => {
     mocks.runCypherQuery.mockResolvedValue({
       ok: true,

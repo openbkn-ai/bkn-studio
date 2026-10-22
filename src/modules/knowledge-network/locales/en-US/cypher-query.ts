@@ -41,6 +41,8 @@ export const cypherQueryPart = {
       clear: "Clear",
     },
     frames: {
+      sampleAsProperties:
+        "This object type is stored in a dataset or an index, where a query cannot return nodes, so the sample returns its properties instead (a table only).",
       explainSchema: "Relevant schema (explain from this; no need to look it up):",
       explain: "Ask AI to explain",
       explanation: "AI explanation",

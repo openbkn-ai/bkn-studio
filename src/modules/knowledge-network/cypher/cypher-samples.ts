@@ -24,6 +24,45 @@ export function relationTypeSample(relation: {
   return `MATCH (a:${cypherName(relation.sourceId)})-[r:${cypherName(relation.id)}]->(b:${cypherName(relation.targetId)}) RETURN a, r, b LIMIT 25`;
 }
 
+/** How many properties a sample returns per node in place of the node. */
+export const SAMPLE_PROPERTIES = 8;
+
+/** One node's columns: `variable.property AS prefix_property`, at most `limit` of them. */
+function propertyColumns(variable: string, properties: readonly string[], limit: number): string[] {
+  return properties
+    .slice(0, limit)
+    .map((name) => `${variable}.${cypherName(name)} AS ${cypherName(`${variable}_${name}`)}`);
+}
+
+/**
+ * The object type sample with properties in place of the node, for object types whose data
+ * cannot be returned as nodes (a dataset or an index). Without known properties it counts.
+ */
+export function objectTypePropertySample(
+  objectTypeId: string,
+  properties: readonly string[],
+): string {
+  const columns = propertyColumns("n", properties, SAMPLE_PROPERTIES);
+  if (columns.length === 0) return `MATCH (n:${cypherName(objectTypeId)}) RETURN count(*) AS total`;
+  return `MATCH (n:${cypherName(objectTypeId)}) RETURN ${columns.join(", ")} LIMIT 25`;
+}
+
+/** The relation type sample with the two ends' properties in place of nodes and the relationship. */
+export function relationTypePropertySample(
+  relation: { id: string; sourceId: string; targetId: string },
+  sourceProperties: readonly string[],
+  targetProperties: readonly string[],
+): string {
+  const half = SAMPLE_PROPERTIES / 2;
+  const columns = [
+    ...propertyColumns("a", sourceProperties, half),
+    ...propertyColumns("b", targetProperties, half),
+  ];
+  const pattern = `MATCH (a:${cypherName(relation.sourceId)})-[:${cypherName(relation.id)}]->(b:${cypherName(relation.targetId)})`;
+  if (columns.length === 0) return `${pattern} RETURN count(*) AS total`;
+  return `${pattern} RETURN ${columns.join(", ")} LIMIT 25`;
+}
+
 /** A value as a Cypher literal: strings escape `\\` and `'` with a backslash, as run_cypher reads them. */
 export function cypherLiteral(value: unknown): string | null {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);

@@ -37,6 +37,8 @@ export type CypherFrame = {
   result?: CypherResult;
   error?: CypherRunError;
   exchange?: CypherExchange;
+  /** Why the page ran a different query than the one first asked for. */
+  notice?: string;
   /** The result was too large to keep in storage; run the query again to see it. */
   resultDropped?: boolean;
   /** The Agent's explanation of the query, asked for from the frame or the editor. */

@@ -449,6 +449,15 @@ export function CypherFrameCard({
       {header}
       {collapsed ? null : (
         <div className={styles.frameBody}>
+          {frame.notice ? (
+            <Alert
+              className={styles.frameNotice}
+              data-testid="cypher-frame-notice"
+              message={frame.notice}
+              showIcon
+              type="info"
+            />
+          ) : null}
           {renderBody()}
           {frame.explanation ? (
             <div className={styles.explanation} data-testid="cypher-frame-explanation">

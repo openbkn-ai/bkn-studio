@@ -40,6 +40,8 @@ export const cypherQueryPart = {
       clear: "清空",
     },
     frames: {
+      sampleAsProperties:
+        "这个对象类存放在数据集或索引里，查询不能返回节点，已改为返回它的属性（这类数据只有表格视图）。",
       explainSchema: "相关结构（直接据此解释，无需再查）：",
       explain: "让 AI 解释",
       explanation: "AI 解释",
