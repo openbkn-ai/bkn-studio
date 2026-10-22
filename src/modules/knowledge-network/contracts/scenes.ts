@@ -26,6 +26,5 @@ export type KnowledgeNetworkWorkspaceSection =
 
 export type KnowledgeNetworkWorkspaceSceneProps = {
   networkId?: string;
-  onBack?: () => void;
   section: KnowledgeNetworkWorkspaceSection;
 };

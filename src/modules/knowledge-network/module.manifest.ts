@@ -31,6 +31,7 @@ export const knowledgeNetworkModuleManifest = {
     "bkn-backend/concept-groups",
     "bkn-backend/object-types",
     "bkn-backend/v1/object-metrics",
+    "mf-model-manager/v1",
     "ontology-query/v1/object-metrics",
   ],
   scenes: [
@@ -45,7 +46,7 @@ export const knowledgeNetworkModuleManifest = {
       exportName: "KnowledgeNetworkWorkspaceScene",
       description:
         "Render the knowledge-network workspace shell for overview, modeling, and resource sections.",
-      inputs: ["networkId?", "section", "onBack?"],
+      inputs: ["networkId?", "section"],
     },
     {
       id: "knowledge-network.metric-form",

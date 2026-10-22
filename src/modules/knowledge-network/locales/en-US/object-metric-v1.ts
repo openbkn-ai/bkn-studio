@@ -8,18 +8,25 @@
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
   aiCreateMetric: "Create with AI",
-  aiCreateMetricType: "Create {{p0}} with AI",
+  allMetrics: "All metrics",
+  allStatuses: "All statuses",
+  continueCreateMetric: "Continue",
+  noMetricsInList: "No metrics match the current filters",
+  searchAllMetrics: "Search metric name or code",
+  selectMetricOwner: "Select the metric owner object class",
+  aiAnswerModel: "Answer model",
+  aiPlatformDefaultModel: "Platform default model",
+  aiNewConversation: "New conversation",
+  aiModelListUnavailable: "The model list is unavailable. You can still use the platform default.",
   aiDesignerInvalidProposal: "The metric designer returned an invalid proposal.",
   aiDesignerRequestFailed: "Metric design request failed (HTTP {{p0}}).",
   aiDesignerMissingStream: "The metric design request did not return an event stream.",
   aiDesignerExecutionFailed: "Metric designer execution failed.",
   aiDesignerIncompleteTurn: "The metric designer did not complete this turn.",
   aiDesignerIncompleteResult: "The metric designer returned an incomplete result.",
-  aiDiagnosticTitle: "Validation and trial",
-  aiDiagnosticHint:
-    "You can apply a proposal, then validate the current unsaved form. A trial runs only after you set conditions and explicitly start it in the drawer. Nothing is saved or published automatically.",
-  aiDiagnosticValidate: "Validate current form",
-  aiDiagnosticTrial: "Trial current form",
+  aiExpandPane: "Expand AI chat to full page",
+  aiRestorePane: "Return to split view",
+  aiDiagnosticNotReady: "This form is missing the context needed for validation.",
   aiDiagnosticValid:
     "Definition validation passed and the output contract was previewed. This does not mean a data trial or publication succeeded.",
   aiDiagnosticInvalid:
@@ -30,9 +37,11 @@ export const objectMetricV1Part = {
   aiDiagnosticUnavailable:
     "Object metric validation is unavailable in this environment. The form was not changed.",
   aiDiagnosticStale:
-    "The form changed; the previous validation or trial no longer represents this definition.",
-  aiDiagnosticFollowup:
-    "Ask a follow-up question to get another proposal based on this diagnostic.",
+    "The form changed during validation, so this result was discarded. Ask to validate it again.",
+  aiTrialDrawerOpened:
+    "The trial drawer is open. Set the conditions and explicitly start the trial; it will not run automatically.",
+  aiTrialNeedsValidForm:
+    "The current form did not pass validation. Fix its issues before running a trial.",
   aiDiagnosticTrialResult:
     "Trial status: {{p0}}; {{p1}} rows returned; {{p2}} ms. This is not a publication guarantee.",
   aiDiagnosticTrialFailed:
@@ -181,7 +190,7 @@ export const objectMetricV1Part = {
   m187b88cd44e4: "Manual selection",
   m18dc79b1c5af: "kilometers·km",
   m1917adbea87f:
-    "It will not be automatically saved or published, and will be subject to form verification.",
+    'Enter to send · Shift + Enter for a new line. Ask to "validate the current form" or "run a trial". Nothing is saved or published automatically.',
   m193341f84d98: "No permission to read dependent metrics · v{{p0}}",
   m1936eafc0c3c: "Verified",
   m1948aabb85ed: "Deprecated",
@@ -373,7 +382,6 @@ export const objectMetricV1Part = {
   m4158771021a4: "Additional parameters for the function.",
   m419eb90613fd: "business definition",
   m419edc70d2ad: "upstream metrics",
-  m422c8208705c: "New{{p0}}",
   m4262c45dc797: "Description",
   m426d9c7d04f4: "The metric configuration format returned by AI is incorrect, please try again",
   m42810b33a04f:
@@ -597,8 +605,7 @@ export const objectMetricV1Part = {
   m7d5873e080fb: "banker rounding",
   m7d5e7c7bcea6: "Time attribute (also used for result bucketing)",
   m7d6fe77cb980: "Metric published as v{{p0}}",
-  m7d7fca1df843:
-    "Describe the metric definition; press Enter to send and Shift+Enter for a new line",
+  m7d7fca1df843: "Describe the metric definition or ask a follow-up…",
   m7d9782471028: "Reading dependent metrics · v{{p0}} (formula symbol: {{p1}})",
   m7da337decf29: "Please select a metric value type",
   m7dc406c92803: "constant",
@@ -825,7 +832,7 @@ export const objectMetricV1Part = {
     "The formula symbol is used to reference this metric in calculation formulas. The system has automatically generated it and usually does not require modification.",
   mad37b165ef82: "Enter date or time",
   madf4b42e777b:
-    "Describe the metric definition. I will propose changes for your review before updating the form.",
+    "Describe the metric definition. I will suggest changes and update the form only after your confirmation.",
   mae25d81d750f: "Value method",
   mae5a0f0a072e:
     "The statistical time zone in the old configuration cannot be recognized by the server.",
@@ -957,7 +964,6 @@ export const objectMetricV1Part = {
   mc8475edb7e01: "Business value type",
   mc85054311533: "Select an attribute and count the number of different values for the attribute.",
   mc88821bc9355: "Count",
-  mc89eb03160da: "New metric",
   mc90d408577d0: "No object class yet",
   mc9192ba988f8: "Please select a published metric or delete this empty dependency.",
   mc95ff6b50078: "date range",

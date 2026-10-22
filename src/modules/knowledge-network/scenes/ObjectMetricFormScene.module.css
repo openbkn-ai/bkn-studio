@@ -73,42 +73,93 @@
 }
 
 .pageWithAi {
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) clamp(360px, 32vw, 420px);
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.pageAiExpanded {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.pageAiExpanded .header,
+.pageAiExpanded .body {
+  display: none;
 }
 
 .body {
+  container: metric-form / inline-size;
   width: min(920px, calc(100% - 64px));
   min-width: 0;
   margin: 0 auto;
   padding: 28px 0 152px;
 }
 
+.pageWithAi .body {
+  grid-column: 1;
+  grid-row: 2;
+  height: 100%;
+  padding-right: 16px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
 .aiPanel {
-  position: sticky;
-  top: 78px;
   display: flex;
   flex-direction: column;
   grid-column: 2;
   grid-row: 2;
   gap: 12px;
-  height: calc(100dvh - 78px);
-  min-height: 360px;
+  height: 100%;
+  min-height: 0;
   padding: 18px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   border-left: 1px solid var(--color-border);
   background: var(--color-bg-surface);
 }
 
+.pageAiExpanded .aiPanel {
+  grid-column: 1;
+  grid-row: 1;
+  width: 100%;
+  padding: 20px max(24px, calc((100% - 960px) / 2));
+  border-left: 0;
+}
+
 .aiPanelHeader {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.aiPanelHeader > button {
+.aiPanelActions {
+  display: flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.aiPanelActions > button {
+  flex: 0 0 auto;
+}
+
+.aiPanelContent {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.aiPanelContentEmpty {
+  justify-content: flex-start;
+  padding-top: 12px;
 }
 
 .form {
@@ -149,7 +200,7 @@
 }
 
 .aiDialogIntro {
-  margin: 2px 0 16px;
+  margin: 0;
   color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
@@ -157,13 +208,9 @@
 
 .aiConversation {
   display: flex;
-  flex: 1 0 140px;
   flex-direction: column;
   gap: 12px;
-  min-height: 0;
-  max-height: 38vh;
   padding: 14px;
-  overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: linear-gradient(
@@ -262,16 +309,14 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0 0 14px;
+  margin: 0;
 }
 
 .aiProposal {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 42vh;
   padding: 12px;
-  overflow-y: auto;
   border: 1px solid var(--color-primary-border);
   border-radius: 8px;
   background: var(--color-bg-surface);
@@ -324,22 +369,6 @@
   font-size: 12px;
 }
 
-.aiDiagnostic {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 8px;
-  background: var(--color-bg-surface);
-  font-size: 12px;
-}
-
-.aiDiagnostic p {
-  margin: 0;
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-}
-
 .aiDialogExamples > span {
   flex: 0 0 auto;
   color: var(--metric-text-muted, var(--color-text-secondary));
@@ -368,28 +397,63 @@
 }
 
 .aiDialogComposer {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.aiComposerToolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.aiModelLabel {
+  flex: 0 0 auto;
+  color: var(--metric-text-muted, var(--color-text-secondary));
+  font-size: 12px;
+}
+
+.aiModelSelect {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 240px;
+}
+
+.aiComposerToolbar :global(.ant-btn) {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--color-text-secondary);
+}
+
+.aiModelNotice {
+  color: var(--metric-text-muted, var(--color-text-secondary));
+  font-size: 12px;
+}
+
+.aiComposerInputRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 10px;
-  margin-top: auto;
-  padding: 12px 0 4px;
-  background: var(--color-bg-surface);
 }
 
 .aiDialogComposer :global(.ant-input) {
   resize: none;
 }
 
-.aiDialogComposer :global(.ant-btn) {
+.aiComposerInputRow :global(.ant-btn) {
   width: 86px;
   height: 48px;
 }
 
 .aiDialogFootnote {
+  flex: 0 0 auto;
   margin: 10px 0 0;
   color: var(--metric-text-muted, var(--color-text-secondary));
   font-size: 12px;
@@ -1307,7 +1371,7 @@
 
 .publishActions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 10px;
   margin-top: 24px;
   padding-top: 20px;
@@ -1340,7 +1404,7 @@
   color: var(--color-text-secondary);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 800px) {
   .pageWithAi {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1350,10 +1414,17 @@
     top: 0;
     right: 0;
     z-index: 30;
-    width: min(440px, 100vw);
+    width: 100vw;
     height: 100dvh;
     box-shadow: -12px 0 32px rgb(2 8 23 / 24%);
   }
+
+  .aiExpandButton {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
   .header {
     align-items: flex-start;
     flex-wrap: wrap;
@@ -1372,11 +1443,9 @@
     padding-top: 24px;
     padding-bottom: 112px;
   }
-  .publishActions {
-    justify-content: stretch;
-  }
   .publishActions > * {
-    flex: 1;
+    flex: 1 1 0;
+    max-width: 160px;
   }
   .grid2,
   .grid3,
@@ -1421,11 +1490,28 @@
   }
 }
 
-@media (max-width: 480px) {
-  .aiDialogComposer {
+@container metric-form (max-width: 700px) {
+  .grid2,
+  .grid3,
+  .timeWindowGrid,
+  .detailsGrid,
+  .logicPropertyFields,
+  .scopeGroup {
     grid-template-columns: 1fr;
   }
-  .aiDialogComposer :global(.ant-btn) {
+}
+
+@media (max-width: 480px) {
+  .aiComposerToolbar {
+    flex-wrap: wrap;
+  }
+  .aiModelSelect {
+    max-width: none;
+  }
+  .aiComposerInputRow {
+    grid-template-columns: 1fr;
+  }
+  .aiComposerInputRow :global(.ant-btn) {
     width: 100%;
     height: 40px;
   }

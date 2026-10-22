@@ -5,101 +5,83 @@
  * Conditions. See LICENSE for the full text.
  */
 
-.page {
-  box-sizing: border-box;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  padding: 8px 10px 10px;
-  container-name: metric-page;
-  container-type: inline-size;
-}
-.layout {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  gap: 8px;
-  height: 100%;
-  min-height: 0;
-  align-items: stretch;
-}
-.layoutSidebarCollapsed {
-  grid-template-columns: 40px minmax(0, 1fr);
-}
-.sidebar,
-.content {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
-}
-.sidebar {
-  position: static;
-  display: flex;
-  height: 100%;
-  min-height: 0;
-  max-height: none;
-  align-self: start;
-  flex-direction: column;
-  width: 100%;
-  padding: 10px 8px 8px;
-}
-.sidebarCollapsed {
-  height: 40px;
-  max-height: 40px;
-  padding: 4px;
-}
-.sidebarHeader {
-  display: flex;
+.objectIconSquare {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
   flex: 0 0 auto;
-  gap: 4px;
   align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--color-text-inverse);
+  font-size: 14px;
 }
-.sidebarSearch {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.sidebarToggle {
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  padding: 0 !important;
-}
-.objectList {
+
+.graphPanel > :last-child {
+  width: 100%;
+  height: 100%;
   min-height: 0;
   flex: 1 1 auto;
-  margin-top: 6px;
+  border: 0;
+  border-radius: 0;
+}
+
+.content {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.listContent {
+  width: 100%;
+}
+
+.listView {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.tableArea {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.tableViewport {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-}
-.objectList,
-.tableViewport,
-.tableViewport :global(.ant-table-content),
-.tableViewport :global(.ant-table-body) {
   scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 32%, transparent) transparent;
   scrollbar-width: thin;
 }
-.objectList:hover,
+
 .tableViewport:hover,
 .tableViewport:hover :global(.ant-table-content),
 .tableViewport:hover :global(.ant-table-body) {
   scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 55%, transparent) transparent;
 }
-.objectList::-webkit-scrollbar,
+
 .tableViewport::-webkit-scrollbar,
 .tableViewport :global(.ant-table-content)::-webkit-scrollbar,
 .tableViewport :global(.ant-table-body)::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-.objectList::-webkit-scrollbar-track,
+
 .tableViewport::-webkit-scrollbar-track,
 .tableViewport :global(.ant-table-content)::-webkit-scrollbar-track,
 .tableViewport :global(.ant-table-body)::-webkit-scrollbar-track {
   background: transparent;
 }
-.objectList::-webkit-scrollbar-thumb,
+
 .tableViewport::-webkit-scrollbar-thumb,
 .tableViewport :global(.ant-table-content)::-webkit-scrollbar-thumb,
 .tableViewport :global(.ant-table-body)::-webkit-scrollbar-thumb {
@@ -108,157 +90,7 @@
   background: color-mix(in srgb, var(--color-text-secondary) 42%, transparent);
   background-clip: padding-box;
 }
-.objectList:hover::-webkit-scrollbar-thumb,
-.tableViewport:hover::-webkit-scrollbar-thumb,
-.tableViewport:hover :global(.ant-table-content)::-webkit-scrollbar-thumb,
-.tableViewport:hover :global(.ant-table-body)::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-text-secondary) 65%, transparent);
-  background-clip: padding-box;
-}
-.objectButton {
-  width: 100%;
-  height: 36px;
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 2px;
-  padding: 0 10px;
-  text-align: left;
-}
-.objectName {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.objectCount {
-  flex: 0 0 auto;
-  min-width: 24px;
-  margin-left: 8px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--color-text-secondary) 12%, transparent);
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-.objectPagination {
-  flex: 0 0 auto;
-  min-height: 38px;
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 2px 0;
-  border-top: 1px solid var(--color-border);
-}
-.objectPaginationSingle {
-  justify-content: center;
-}
-.objectPagination > span {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  white-space: nowrap;
-}
-.selected {
-  background: var(--color-primary-bg) !important;
-  color: var(--color-text-link) !important;
-}
-.content {
-  display: flex;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  flex-direction: column;
-}
-.listContent {
-  width: 100%;
-}
 
-.content > :last-child {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-.listContent > .listView {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-}
-.toolbarLeft,
-.toolbarRight {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.toolbarLeft {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.toolbarIdentity {
-  display: flex;
-  min-width: 0;
-  align-items: baseline;
-  gap: 8px;
-}
-.toolbarIdentity strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.viewSwitch {
-  flex: 0 0 auto;
-  margin-left: 8px;
-}
-.toolbarRight {
-  flex: 0 0 auto;
-}
-.toolbarRight :global(.ant-input-affix-wrapper) {
-  width: min(240px, 30vw);
-}
-.nameCell {
-  min-width: 0;
-}
-.nameCell strong {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bindingCell {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.empty {
-  padding: 72px 24px;
-}
-.listView {
-  display: flex;
-  flex-direction: column;
-}
-.tableArea {
-  position: relative;
-  width: 100%;
-  min-width: 0;
-  min-height: 0;
-  flex: 1 1 auto;
-}
-.tableViewport {
-  min-width: 0;
-  width: 100%;
-  height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
 .tableLoading {
   position: absolute;
   z-index: 1;
@@ -267,70 +99,37 @@
   place-items: center;
   background: var(--color-bg-surface);
 }
+
 .paginationBar {
   flex-shrink: 0;
   padding: 12px 16px;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-surface);
 }
-@container metric-page (max-width: 1200px) {
-  .toolbarRight :global(.ant-input-affix-wrapper) {
-    width: 180px;
-  }
-}
-@container metric-page (max-width: 1050px) {
-  .layout {
-    grid-template-columns: 208px minmax(0, 1fr);
-  }
-  .layoutSidebarCollapsed {
-    grid-template-columns: 40px minmax(0, 1fr);
-  }
-  .toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .toolbarRight {
-    flex-wrap: wrap;
-    width: 100%;
-  }
+
+.nameCell,
+.bindingCell {
+  min-width: 0;
 }
 
-@container metric-page (max-width: 760px) {
-  .page {
-    height: auto;
-    min-height: 580px;
-    overflow: auto;
-  }
-  .layout {
-    grid-template-columns: 1fr;
-    height: auto;
-    min-height: 580px;
-  }
-  .sidebarCollapsed {
-    width: 40px;
-    justify-self: end;
-  }
-  .sidebar {
-    height: auto;
-    max-height: 260px;
-    position: static;
-  }
+.nameCell strong,
+.bindingCell {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .sidebarCollapsed {
-    width: 40px;
-    justify-self: end;
-  }
-  .sidebar {
-    height: auto;
-    max-height: 280px;
-    position: static;
-  }
-  .toolbar {
-    flex-direction: column;
-  }
+.ownerLink {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  overflow: hidden;
+  padding: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 72px 24px;
 }

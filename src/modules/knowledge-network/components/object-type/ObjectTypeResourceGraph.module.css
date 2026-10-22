@@ -57,6 +57,13 @@
   white-space: nowrap;
 }
 
+.toolbarSummary {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .root > :global(.ant-alert) {
   flex: 0 0 auto;
   margin: 8px 14px 0;

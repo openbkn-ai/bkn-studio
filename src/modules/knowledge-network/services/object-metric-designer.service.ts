@@ -88,6 +88,7 @@ export type RunObjectMetricDesignParams = {
   message: string;
   diagnostic?: ObjectMetricDesignDiagnostic;
   threadId?: string;
+  modelId?: string;
   signal?: AbortSignal;
   onText?: (text: string) => void;
 };
@@ -188,8 +189,13 @@ async function responseError(response: Response): Promise<Error> {
   } catch {
     // Gateway errors may be plain text.
   }
+  const detail = asRecord(data?.detail);
+  const detailText = typeof data?.detail === "string" ? data.detail : undefined;
   return new Error(
-    (typeof data?.description === "string" && data.description) ||
+    (typeof detail?.detail === "string" && detail.detail) ||
+      (typeof detail?.description === "string" && detail.description) ||
+      detailText ||
+      (typeof data?.description === "string" && data.description) ||
       (typeof data?.message === "string" && data.message) ||
       objectMetricText("aiDesignerRequestFailed", { p0: response.status }),
   );
@@ -205,6 +211,7 @@ export async function runObjectMetricDesigner(
     body: JSON.stringify({
       client_request_id: newClientRequestId(),
       ...(params.threadId ? { thread_id: params.threadId } : {}),
+      ...(params.modelId ? { model_id: params.modelId } : {}),
       scope: params.scope,
       base_form_revision: params.baseFormRevision,
       form_snapshot: params.formSnapshot,

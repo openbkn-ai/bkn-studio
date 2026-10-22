@@ -44,26 +44,44 @@
 
 .explorerToolbar {
   min-height: 50px;
-  justify-content: flex-end;
   border-bottom: 1px solid var(--color-border);
 }
 
 .metricFocusToolbar {
-  min-height: 50px;
-  border-bottom: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-bg-raised) 72%, transparent);
 }
 
-.metricFocusToolbar > span {
+.graphPanelTitle {
   min-width: 0;
   flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphPanelTitle strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.metricFocusMeta {
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.metricFocusMeta > span {
+  min-width: 0;
   overflow: hidden;
   color: var(--color-text-secondary);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.metricFocusToolbar > strong {
+.metricFocusMeta > strong {
   color: var(--color-text-primary);
   font-size: 12px;
   white-space: nowrap;
