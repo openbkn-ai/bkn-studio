@@ -983,6 +983,8 @@ describe("ObjectMetricTrialDrawer", () => {
       "analysisDrawer",
     );
     expect(screen.queryByText("按分析维度拆解（可选）")).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "结果筛选" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "结果排序" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("订单主键"), {
       target: { value: "1001" },
     });

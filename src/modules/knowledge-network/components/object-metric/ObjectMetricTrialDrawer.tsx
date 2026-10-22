@@ -332,6 +332,10 @@ export function ObjectMetricTrialDrawer({
         ? "analysisTimeAmbiguous"
         : "analysisTimeUnavailable";
   const hasSelectableBuckets = result?.entries.some((entry) => Boolean(entry.bucket_key)) ?? false;
+  const canOrderResults =
+    definition.calculation_scope === "object_set" ||
+    Boolean(definition.result_semantics.statistical_grain.time_granularity) ||
+    definition.result_semantics.statistical_grain.group_by_dimensions.length > 0;
 
   useEffect(() => {
     if (result || error)
@@ -391,7 +395,7 @@ export function ObjectMetricTrialDrawer({
           unit_code: definition.result_semantics.value.unit?.code,
         };
       }
-      if (values.orderKey) {
+      if (canOrderResults && values.orderKey) {
         const ref = [
           ...definition.result_semantics.statistical_grain.group_by_dimensions,
           ...(query.group_by ?? []),
@@ -726,47 +730,49 @@ export function ObjectMetricTrialDrawer({
                 </Form.Item>
               ) : null}
             </div>
-            <div
-              aria-label={objectMetricText("analysisOrderBy")}
-              className={styles.conditionRow}
-              role="group"
-            >
-              <Form.Item label={objectMetricText("analysisOrderBy")} name="orderKey">
-                <Select
-                  allowClear
-                  options={[
-                    { label: objectMetricText("analysisOrderValue"), value: "value" },
-                    ...(definition.result_semantics.statistical_grain.time_granularity
-                      ? [{ label: objectMetricText("analysisOrderTime"), value: "time" }]
-                      : []),
-                    ...[
-                      ...definition.result_semantics.statistical_grain.group_by_dimensions,
-                      ...definition.query_capabilities.analysis_dimensions.filter((item) =>
-                        selectedGroupKeys.includes(dimensionReferenceKey(item)),
-                      ),
-                    ].map((item) => ({
-                      label: objectMetricPropertyDisplayName(item, objectType),
-                      value: dimensionReferenceKey(item),
-                    })),
-                  ]}
-                  placeholder={objectMetricText("analysisNoOrder")}
-                />
-              </Form.Item>
-              {selectedOrderKey ? (
-                <Form.Item
-                  label={objectMetricText("analysisOrderDirection")}
-                  name="orderDirection"
-                  initialValue="asc"
-                >
+            {canOrderResults ? (
+              <div
+                aria-label={objectMetricText("analysisOrderBy")}
+                className={styles.conditionRow}
+                role="group"
+              >
+                <Form.Item label={objectMetricText("analysisOrderBy")} name="orderKey">
                   <Select
+                    allowClear
                     options={[
-                      { label: objectMetricText("analysisAscending"), value: "asc" },
-                      { label: objectMetricText("analysisDescending"), value: "desc" },
+                      { label: objectMetricText("analysisOrderValue"), value: "value" },
+                      ...(definition.result_semantics.statistical_grain.time_granularity
+                        ? [{ label: objectMetricText("analysisOrderTime"), value: "time" }]
+                        : []),
+                      ...[
+                        ...definition.result_semantics.statistical_grain.group_by_dimensions,
+                        ...definition.query_capabilities.analysis_dimensions.filter((item) =>
+                          selectedGroupKeys.includes(dimensionReferenceKey(item)),
+                        ),
+                      ].map((item) => ({
+                        label: objectMetricPropertyDisplayName(item, objectType),
+                        value: dimensionReferenceKey(item),
+                      })),
                     ]}
+                    placeholder={objectMetricText("analysisNoOrder")}
                   />
                 </Form.Item>
-              ) : null}
-            </div>
+                {selectedOrderKey ? (
+                  <Form.Item
+                    label={objectMetricText("analysisOrderDirection")}
+                    name="orderDirection"
+                    initialValue="asc"
+                  >
+                    <Select
+                      options={[
+                        { label: objectMetricText("analysisAscending"), value: "asc" },
+                        { label: objectMetricText("analysisDescending"), value: "desc" },
+                      ]}
+                    />
+                  </Form.Item>
+                ) : null}
+              </div>
+            ) : null}
           </Form>
         </section>
         <div className={styles.analysisMain}>
