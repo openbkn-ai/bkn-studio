@@ -66,6 +66,140 @@ afterAll(() => {
 });
 
 describe("ObjectMetricTrialDrawer", () => {
+  it.each([
+    {
+      name: "published query with denied source property",
+      mode: "published" as const,
+      error: {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error_code: "OntologyQuery.ObjectType.InvalidParameter",
+            description: "Invalid parameter",
+            error_details: "the request contains an unavailable property",
+            metadata: { reason: "property_unavailable" },
+          },
+        },
+      },
+      expected: "指标计算所需的对象数据或字段不可用。",
+    },
+    {
+      name: "draft trial with denied dependency",
+      mode: "draft" as const,
+      error: {
+        isAxiosError: true,
+        response: {
+          status: 403,
+          data: {
+            error_code: "Public.Forbidden",
+            description: "Forbidden",
+            error_details: "query_data was not granted for object_type:kn-1/order",
+          },
+        },
+      },
+      expected: "试算缺少知识网络或定义所引用资源的查询权限，或计算属性的完整访问权限。",
+    },
+    {
+      name: "unknown property without reason metadata from an older backend",
+      mode: "published" as const,
+      error: {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error_code: "OntologyQuery.ObjectType.InvalidParameter",
+            description: "Invalid parameter",
+            error_details: "the request contains an unavailable property",
+          },
+        },
+      },
+      expected: "指标计算所需的对象数据或字段不可用。",
+    },
+    {
+      name: "legacy query error without metadata",
+      mode: "published" as const,
+      error: {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error_code: "OntologyQuery.ObjectType.InvalidParameter",
+            description: "Invalid parameter",
+            error_details: "the request contains a property unavailable for this operation",
+          },
+        },
+      },
+      expected: "指标计算所需的对象数据或字段不可用。",
+    },
+    {
+      name: "draft trial with insufficient calculation property access",
+      mode: "draft" as const,
+      error: {
+        isAxiosError: true,
+        response: {
+          status: 403,
+          data: {
+            error_code: "Public.Forbidden",
+            description: "Forbidden",
+            error_details:
+              "query_data with full property access was not granted for every object metric input",
+          },
+        },
+      },
+      expected: "试算缺少知识网络或定义所引用资源的查询权限，或计算属性的完整访问权限。",
+    },
+    {
+      name: "no returnable source properties",
+      mode: "published" as const,
+      error: {
+        isAxiosError: true,
+        response: {
+          status: 403,
+          data: {
+            error_code: "Public.Forbidden",
+            description: "Forbidden",
+            error_details: "the request has no returnable properties",
+            metadata: { reason: "property_unavailable" },
+          },
+        },
+      },
+      expected: "指标计算所需的对象数据或字段不可用。",
+    },
+    {
+      name: "unrelated invalid runtime parameter",
+      mode: "published" as const,
+      error: {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error_code: "OntologyQuery.Metric.InvalidParameter",
+            description: "Invalid parameter",
+            error_details: "unsupported operator",
+          },
+        },
+      },
+      expected: "Invalid parameter：unsupported operator",
+    },
+  ])("shows a scoped error for $name", async ({ mode, error, expected }) => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.calculation_scope = "object_set";
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode={mode}
+        onClose={vi.fn()}
+        onRun={vi.fn().mockRejectedValue(error)}
+        open
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    expect(await screen.findByText(expected, { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText("无数据")).not.toBeInTheDocument();
+  });
+
   it("sends final-value HAVING and ORDER BY through the shared trial query", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.calculation_scope = "object_set";

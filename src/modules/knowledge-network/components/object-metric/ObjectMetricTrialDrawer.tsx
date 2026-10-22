@@ -208,8 +208,29 @@ function bucketAddsNewConstraint(
   return false;
 }
 
-function trialErrorMessage(error: unknown): string {
+function trialErrorMessage(error: unknown, queryMode?: "draft" | "published"): string {
   const details = extractRequestErrorDetails(error);
+  const legacyPropertyUnavailable =
+    (details.code === "OntologyQuery.ObjectType.InvalidParameter" &&
+      (details.details === "the request contains an unavailable property" ||
+        details.details === "the request contains a property unavailable for this operation")) ||
+    (details.code === "Public.Forbidden" &&
+      details.details === "the request has no returnable properties");
+  if (
+    queryMode &&
+    (details.metadata?.reason === "property_unavailable" || legacyPropertyUnavailable)
+  ) {
+    return objectMetricText("querySourceUnavailable");
+  }
+  if (
+    queryMode === "draft" &&
+    details.code === "Public.Forbidden" &&
+    (details.details ===
+      "query_data with full property access was not granted for every object metric input" ||
+      details.details?.startsWith("query_data was not granted for "))
+  ) {
+    return objectMetricText("trialDependencyPermissionDenied");
+  }
   if (details.details?.includes("requires numeric operands")) {
     return objectMetricText("mbaea9b35162e");
   }
@@ -423,7 +444,7 @@ export function ObjectMetricTrialDrawer({
       setSelected(undefined);
       setNextDimension(undefined);
     } catch (requestError) {
-      setError(trialErrorMessage(requestError));
+      setError(trialErrorMessage(requestError, mode));
     } finally {
       setLoading(false);
     }
@@ -493,7 +514,7 @@ export function ObjectMetricTrialDrawer({
       setSelected(undefined);
       setNextDimension(undefined);
     } catch (requestError) {
-      setError(trialErrorMessage(requestError));
+      setError(trialErrorMessage(requestError, mode));
     } finally {
       setLoading(false);
     }
