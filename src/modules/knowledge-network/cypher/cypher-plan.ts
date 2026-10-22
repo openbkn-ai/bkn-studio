@@ -92,7 +92,10 @@ export function cypherPlanFrom(value: unknown): CypherPlan | null {
     reads: strings(value.reads),
     row_filtered: strings(value.row_filtered),
     warnings: strings(value.warnings),
-    warning_codes: strings(value.warning_codes),
+    // Paired with warnings by position, so an entry that is not a code keeps its place.
+    warning_codes: Array.isArray(value.warning_codes)
+      ? value.warning_codes.map((item) => (typeof item === "string" ? item : ""))
+      : [],
   };
 }
 

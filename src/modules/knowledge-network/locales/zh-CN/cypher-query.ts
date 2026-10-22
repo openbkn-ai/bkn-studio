@@ -101,7 +101,8 @@ export const cypherQueryPart = {
       warningCodes: {
         disconnected_parts:
           "模式里有没被关系、共享节点或 a.code = b.code 这类相等条件连起来的部分，它们的行会两两组合；请把它们连起来。",
-        default_limit: "没写 LIMIT：最多返回 1000 行；写 LIMIT 可以要更多（最多 10000）或更少。",
+        default_limit:
+          "没写 LIMIT：最多返回 {{limit}} 行；写 LIMIT 可以要更多（最多 10000）或更少。",
         row_filtered: "你的访问权限收窄了 {{types}} 的行范围，计数和结果只覆盖你能读的行。",
         collect_cap: "collect 会读全部证据；证据达到 10000 行时查询会被拒，请加条件缩小范围。",
       },

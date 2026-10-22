@@ -40,13 +40,15 @@ export function CypherPlanView({ plan, names }: { plan: CypherPlan; names: Cyphe
   const objectName = (id: string) => names.objectTypes[id] ?? id;
   // A warning the page knows by code reads in the reader's language; any other keeps the
   // backend's own words.
-  const warningText = (warning: string, code?: string) =>
-    code
-      ? t(`knowledgeNetwork.cypherQuery.plan.warningCodes.${code}`, {
-          defaultValue: warning,
-          types: (plan.row_filtered ?? []).map(objectName).join("、"),
-        })
-      : warning;
+  const warningText = (warning: string, code?: string) => {
+    // Without the object types to name, the backend's own words say more.
+    if (!code || (code === "row_filtered" && !plan.row_filtered?.length)) return warning;
+    return t(`knowledgeNetwork.cypherQuery.plan.warningCodes.${code}`, {
+      defaultValue: warning,
+      limit: plan.limit,
+      types: (plan.row_filtered ?? []).map(objectName).join("、"),
+    });
+  };
   const shapeKey = `shapes.${plan.shape}`;
   const shape = t(`knowledgeNetwork.cypherQuery.plan.${shapeKey}`, { defaultValue: plan.shape });
   return (

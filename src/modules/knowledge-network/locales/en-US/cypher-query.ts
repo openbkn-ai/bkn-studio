@@ -105,7 +105,7 @@ export const cypherQueryPart = {
         disconnected_parts:
           "Parts of the pattern that no relationship, shared node or equality such as a.code = b.code connects combine pairwise; connect them.",
         default_limit:
-          "No LIMIT: at most 1000 rows come back; write LIMIT to ask for more (up to 10000) or fewer.",
+          "No LIMIT: at most {{limit}} rows come back; write LIMIT to ask for more (up to 10000) or fewer.",
         row_filtered:
           "Your access policy narrows the rows of {{types}}, so counts and results cover only the rows you may read.",
         collect_cap:
