@@ -71,10 +71,17 @@ describe("capability catalog", () => {
   });
 
   // 常量表里的每个 key 都要在册,否则页面上少一行在售能力。
+  // 例外只有登记表里仍是 planned、正在开发的能力:常量先有(入口按它门控),在售目录要等发布
+  // 时才收,否则版本页就在卖还没有的东西。发布时把它加进目录,并从这里移出。
   it("覆盖 CAPABILITIES 里的每个 key", () => {
     const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
+    const inDevelopment: string[] = [CAPABILITIES.KNOWLEDGE_BASE];
 
     for (const key of Object.values(CAPABILITIES)) {
+      if (inDevelopment.includes(key)) {
+        expect(keys).not.toContain(key);
+        continue;
+      }
       expect(keys).toContain(key);
     }
   });

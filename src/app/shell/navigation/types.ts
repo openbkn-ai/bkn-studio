@@ -64,6 +64,13 @@ export type ConsoleNavItem = {
   requiresBusinessPermission?: boolean;
   /** Hide an entry unless the account holds the controlled super_admin role. */
   requiresSuperAdmin?: boolean;
+  /**
+   * The page behind this entry is registered by an extension implementing `capability` (it is
+   * not in this repository). Shown only when this build has that extension, whatever the
+   * entitlement snapshot says: before the snapshot loads, or when it cannot be read,
+   * filterNavByCapability lets items through, and a community build would offer a 404.
+   */
+  extensionPage?: boolean;
 };
 
 export type ConsoleNavContribution = {

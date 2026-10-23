@@ -37,6 +37,7 @@ export const shellZhCN = {
       dataCatalog: "数据目录",
       indexBuild: "任务管理",
       dataResource: "数据目录",
+      knowledgeBase: "知识库",
       dataQuality: "数据质量",
       executionFactory: "执行工厂",
       executionFactoryLab: "执行工厂（实验版）",

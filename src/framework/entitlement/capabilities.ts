@@ -48,6 +48,14 @@ export const CAPABILITIES = {
   GRAPH_EXPLORER: "graph_explorer",
   /** 对象类指标的定义、版本、发布、绑定、查询与试算。专业档起。 */
   OBJECT_METRICS: "object_metrics",
+  /**
+   * 本体知识库:接入文件来源,管理内容版本,解析、切片与原文定位。专业档起。
+   *
+   * 与图探索同一种做法:页面代码在企业版前端镜像里,经 `@/app/extensions/installed` 注册;
+   * bkn-safe-ee 登记装配表,入口按 `capabilityState()` 判。社区构建没有这个页面,入口由
+   * `extensionPage` 直接隐藏(不依赖授权快照)。登记表里目前是 planned,发布时再进能力目录(capability-catalog)。
+   */
+  KNOWLEDGE_BASE: "knowledge_base",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

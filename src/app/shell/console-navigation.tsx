@@ -9,6 +9,7 @@ import { baseConsoleNavigation } from "@/app/shell/navigation/base-navigation";
 import type { ConsoleNavContribution, ConsoleNavItem } from "@/app/shell/navigation/types";
 import { capabilityState } from "@/framework/entitlement/capability-state";
 import type { EntitlementView } from "@/framework/entitlement/types";
+import { isExtensionInstalled } from "@/framework/extension/registry";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
@@ -79,6 +80,26 @@ export function filterConsoleNavigation(
  * Keep this separate from user permission filtering. Permission filtering runs first so an
  * unauthorized item never advertises an upgrade path.
  */
+/**
+ * Drop entries whose page comes from an extension this build does not carry (`extensionPage`).
+ * This is about the binary, not the licence, so it runs regardless of the entitlement snapshot.
+ */
+export function filterNavByInstalledPages(
+  items: ConsoleNavItem[],
+  installed: (capability: string) => boolean = isExtensionInstalled,
+): ConsoleNavItem[] {
+  return items
+    .filter(
+      (item) =>
+        !item.extensionPage || (item.capability !== undefined && installed(item.capability)),
+    )
+    .map((item) =>
+      item.children?.length
+        ? { ...item, children: filterNavByInstalledPages(item.children, installed) }
+        : item,
+    );
+}
+
 export function filterNavByCapability(
   items: ConsoleNavItem[],
   snapshot: EntitlementView | null,
