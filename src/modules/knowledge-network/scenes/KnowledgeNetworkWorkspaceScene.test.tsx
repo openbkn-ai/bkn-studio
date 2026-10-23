@@ -5,13 +5,17 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import type { Entitlement } from "@/framework/entitlement/types";
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
+
+const mocks = vi.hoisted(() => ({
+  navigate: vi.fn(),
+}));
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>();
@@ -35,7 +39,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
   return {
     ...actual,
     useLocation: () => ({ pathname: "/knowledge-network/workspace/network-1/overview" }),
-    useNavigate: () => vi.fn(),
+    useNavigate: () => mocks.navigate,
     useParams: () => ({ networkId: "network-1" }),
   };
 });
@@ -103,14 +107,41 @@ function renderScene(snapshot: Entitlement) {
 }
 
 describe("KnowledgeNetworkWorkspaceScene object metric navigation", () => {
-  it("keeps the object metric entry visible with a Professional badge in Community", () => {
+  beforeEach(() => {
+    mocks.navigate.mockReset();
+  });
+
+  it("opens the upgrade dialog without a count when object metrics are not installed", () => {
     renderScene(entitlement());
 
     const entry = screen.getByRole("button", { name: /对象指标/ });
     expect(within(entry).getByText("专业版")).toBeTruthy();
+    expect(within(entry).queryByText("0")).toBeNull();
+
+    fireEvent.click(entry);
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
-  it("keeps the entry and hides the badge when object metrics are available", () => {
+  it("opens the upgrade dialog without a count when object metrics are not licensed", () => {
+    renderScene(
+      entitlement({
+        extensions: [CAPABILITIES.OBJECT_METRICS],
+      }),
+    );
+
+    const entry = screen.getByRole("button", { name: /对象指标/ });
+    expect(within(entry).getByText("专业版")).toBeTruthy();
+    expect(within(entry).queryByText("0")).toBeNull();
+
+    fireEvent.click(entry);
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("navigates with a count and no badge when object metrics are available", () => {
     renderScene(
       entitlement({
         capabilities: [CAPABILITIES.OBJECT_METRICS],
@@ -123,5 +154,10 @@ describe("KnowledgeNetworkWorkspaceScene object metric navigation", () => {
 
     const entry = screen.getByRole("button", { name: /对象指标/ });
     expect(within(entry).queryByText("专业版")).toBeNull();
+    expect(within(entry).getByText("0")).toBeTruthy();
+
+    fireEvent.click(entry);
+
+    expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/metrics");
   });
 });

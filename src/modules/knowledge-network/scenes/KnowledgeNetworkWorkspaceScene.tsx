@@ -27,8 +27,11 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { Edition } from "@/framework/entitlement/edition";
+import type { CapabilityState } from "@/framework/entitlement/types";
+import { useCapability } from "@/framework/entitlement/use-entitlement";
 import type {
   KnowledgeNetworkWorkspaceSceneProps,
   KnowledgeNetworkWorkspaceSection,
@@ -58,6 +61,7 @@ type WorkspaceNavItem = {
   key: KnowledgeNetworkWorkspaceSection;
   label: string;
   paidCapability?: string;
+  paidCapabilityState?: CapabilityState;
   paidEdition?: Edition;
   path?: string;
 };
@@ -80,6 +84,7 @@ export function KnowledgeNetworkWorkspaceScene({
   const { message } = useAppServices();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
+  const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
   const workspaceData = useWorkspaceData(activeNetworkId, section);
   const {
     detail,
@@ -93,6 +98,7 @@ export function KnowledgeNetworkWorkspaceScene({
   } = workspaceData;
 
   const [networkFormOpen, setNetworkFormOpen] = useState(false);
+  const [upgradeItem, setUpgradeItem] = useState<WorkspaceNavItem | null>(null);
   const [sideCollapsed, setSideCollapsed] = useState(false);
   const childMetricDetailHandlesLoadState =
     section === "metrics" && /\/metrics\/[^/]+\/detail\/?$/.test(location.pathname);
@@ -158,6 +164,7 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <LineChartOutlined />,
         count: detail?.statistics.metricsTotal ?? 0,
         paidCapability: CAPABILITIES.OBJECT_METRICS,
+        paidCapabilityState: objectMetricsCapability,
         paidEdition: "professional",
       },
       {
@@ -189,7 +196,7 @@ export function KnowledgeNetworkWorkspaceScene({
     ];
 
     return items;
-  }, [activeNetworkId, detail, t]);
+  }, [activeNetworkId, detail, objectMetricsCapability, t]);
 
   const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
   const experienceNavItems = navigationItems.filter(
@@ -219,13 +226,23 @@ export function KnowledgeNetworkWorkspaceScene({
   const renderSideNavItem = (item: WorkspaceNavItem, options?: { showCount?: boolean }) => {
     const isActive =
       item.key === section || (item.path !== undefined && location.pathname === item.path);
-    const showCount = options?.showCount ?? item.count !== undefined;
+    const capabilityUnavailable =
+      item.paidCapability !== undefined && item.paidCapabilityState !== "available";
+    const opensUpgradeDialog =
+      capabilityUnavailable &&
+      (item.paidCapabilityState === "not-installed" || item.paidCapabilityState === "not-licensed");
+    const showCount = (options?.showCount ?? item.count !== undefined) && !capabilityUnavailable;
 
     return (
       <button
         className={isActive ? styles.sideItemActive : styles.sideItem}
         key={item.key}
         onClick={() => {
+          if (opensUpgradeDialog) {
+            setUpgradeItem(item);
+            return;
+          }
+
           void navigate(item.path ?? `/knowledge-network/workspace/${activeNetworkId}/${item.key}`);
         }}
         title={item.label}
@@ -391,6 +408,14 @@ export function KnowledgeNetworkWorkspaceScene({
         open={networkFormOpen}
         record={detail}
       />
+      {upgradeItem?.paidCapability && upgradeItem.paidEdition ? (
+        <CapabilityUpgradeDialog
+          capability={upgradeItem.paidCapability}
+          minEdition={upgradeItem.paidEdition}
+          onClose={() => setUpgradeItem(null)}
+          open
+        />
+      ) : null}
     </section>
   );
 }
