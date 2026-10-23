@@ -52,6 +52,7 @@ const EXAMPLES: string[][] = [
     "MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType)\nRETURN a.name AS name, count(b) AS n\nORDER BY n DESC SKIP 5 LIMIT 5",
     "MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType)\nRETURN a.name AS name, count(b) AS n,\n  sum(CASE WHEN b.status = 'done' THEN 1 ELSE 0 END) * 1.0 / count(b) AS done_share\nORDER BY n DESC LIMIT 10",
     "MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType) RETURN a, collect(b.id) AS ids LIMIT 25",
+    "MATCH (a:ObjectType) WHERE a.status = 'open' RETURN 'open' AS kind, count(*) AS n\nUNION ALL\nMATCH (a:ObjectType) WHERE a.status <> 'open' RETURN 'other' AS kind, count(*) AS n",
   ],
   [
     "MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType)\nWITH a, count(*) AS n WHERE n > 100\nRETURN a.name AS name, n ORDER BY n DESC",

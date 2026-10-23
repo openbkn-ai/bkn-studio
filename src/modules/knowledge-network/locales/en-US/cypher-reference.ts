@@ -37,7 +37,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
   {
     title: "WHERE conditions",
     rules: [
-      "Compare with = <> < <= > >=; not-equal is <>, never !=. Both sides may be properties, as in a.x <> a.y, or arithmetic, as in a.amount * a.rate > 100.",
+      "Compare with = <> < <= > >=; not-equal is <> (!= is read as it). Both sides may be properties, as in a.x <> a.y, or arithmetic, as in a.amount * a.rate > 100.",
       "IN takes a list: a.code IN ['A', 'B'], or a parameter IN $list.",
       "Strings: STARTS WITH, CONTAINS, ENDS WITH, on string properties only, matched as a literal substring; % and _ are not wildcards.",
       "Nulls: IS NULL, IS NOT NULL; never = null.",
@@ -54,8 +54,15 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
       "Arithmetic + - * / %: dividing two integers is refused, so multiply one side by 1.0 for a fraction; % takes integers.",
       "CASE WHEN … THEN … ELSE … END and coalesce(a, b): the branches are all numbers or all non-numbers.",
       "DISTINCT and ORDER BY apply to properties, aggregates and returned columns, not to nodes and relationships themselves, which already group by identity. After an aggregate or DISTINCT, order only by a returned value.",
+      "UNION ALL puts the rows of several queries together, and UNION also returns repeated rows once; the two are not mixed. Every part returns the same columns by name and order (align them with AS), may carry its own ORDER BY and LIMIT, and returns values only, not nodes, relationships or collect.",
     ],
-    notes: ["", "", "CASE counts and an arithmetic share", ""],
+    notes: [
+      "",
+      "",
+      "CASE counts and an arithmetic share",
+      "",
+      "Two counts side by side with UNION ALL",
+    ],
   },
   {
     title: "WITH",
@@ -110,7 +117,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
   {
     title: "Not supported",
     rules: [
-      "UNION, UNWIND, variable-length paths [:R*1..3], XOR, exponentiation ^, relationship properties r.x.",
+      "UNWIND, variable-length paths [:R*1..3], XOR, exponentiation ^, relationship properties r.x.",
       "Function calls other than date() / datetime() / localdatetime(), coalesce(), size() (on a list a WITH collected) and the aggregates.",
       "MATCH after a second WITH; collect after a WITH that aggregates (except the second WITH's collect when comparing two lists).",
       "DISTINCT on nodes or relationships (RETURN DISTINCT n, collect(DISTINCT n)) and ordering by them; collect beside count, sum and other aggregates.",

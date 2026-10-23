@@ -117,6 +117,7 @@ export const cypherQueryPart = {
         totals: "Totals over groups",
         semi_join: "Filter by an earlier stage's values",
         list_comparison: "Compare two lists",
+        union: "Several queries put together",
         carried: "Pass nodes to the next MATCH",
       },
     },
