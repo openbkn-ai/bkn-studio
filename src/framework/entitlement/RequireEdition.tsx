@@ -51,6 +51,11 @@ export function RequireEdition({
   const navigate = useNavigate();
   const location = useLocation();
   const { loading, snapshot } = useEntitlementContext();
+  // A standalone page opened in place has no shell to leave through; where it came from is the way back.
+  const returnTo = readReturnTo(location.state);
+  const back = returnTo ? (
+    <AppButton onClick={() => void navigate(returnTo)}>{t("common.back")}</AppButton>
+  ) : null;
 
   /*
     快照没到不能白屏。null 有两种来路:这一次请求还在飞,以及 fetchEntitlement() 抛错后
@@ -62,6 +67,7 @@ export function RequireEdition({
       <Skeleton active paragraph={{ rows: 6 }} />
     ) : (
       <Result
+        extra={back}
         status="warning"
         subTitle={t("common.entitlement.unknownDescription")}
         title={t("common.entitlement.unknownTitle")}
@@ -84,7 +90,6 @@ export function RequireEdition({
   const tierClass = minEdition === "professional" ? "" : "is-enterprise";
   const imageIssue = reason !== "buy";
   const currentEditionName = t(`common.entitlement.editions.${snapshot?.edition ?? "community"}`);
-  const returnTo = readReturnTo(location.state);
 
   return (
     <div className="console-upgrade-locked">
@@ -117,13 +122,7 @@ export function RequireEdition({
           </h3>
 
           <div className="console-upgrade-page-actions">
-            {/*
-              A standalone page opened in place (say from the workspace sidebar) has no shell to
-              leave through; the page it came from is the way back.
-            */}
-            {returnTo ? (
-              <AppButton onClick={() => void navigate(returnTo)}>{t("common.back")}</AppButton>
-            ) : null}
+            {back}
             {imageIssue ? null : (
               <AppButton
                 href={LICENSE_PORTAL_URL}

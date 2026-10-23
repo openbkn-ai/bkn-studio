@@ -83,6 +83,16 @@ describe("RequireEdition · 快照缺席", () => {
   });
 
   // 拉取失败后 Provider 停在 null 且没有重试触发点,得说清原因。
+  it("拉取失败时独立页也带回到来源页的返回", () => {
+    router.state = { returnTo: "/knowledge-network/workspace/network-1/overview" };
+
+    renderGuard(CAPABILITIES.BUSINESS_PROVENANCE, "enterprise");
+    fireEvent.click(screen.getByText("common.back"));
+
+    expect(screen.getByText("common.entitlement.unknownTitle")).toBeTruthy();
+    expect(router.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/overview");
+  });
+
   it("拉取失败给未知态说明", () => {
     renderGuard(CAPABILITIES.BUSINESS_PROVENANCE, "enterprise");
 
