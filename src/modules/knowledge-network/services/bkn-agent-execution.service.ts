@@ -47,9 +47,16 @@ export type ExecutionEvent =
       /** unavailable: the call did not go through; error: the tool returned one. */
       errorKind?: "unavailable" | "error";
       durationMs?: number;
+      /** What a built-in tool planned so far, under its result key, for showing it early. */
+      progress?: Record<string, unknown>;
     }
   | { type: "usage"; usage: ExecutionUsage | null }
-  | { type: "result"; answer: string }
+  | {
+      type: "result";
+      answer: string;
+      /** The whole result, for an Agent whose result carries more than the answer. */
+      content: Record<string, unknown>;
+    }
   | {
       type: "terminal";
       status: TerminalStatus;
@@ -67,7 +74,7 @@ export type ExecutionRecord = {
   run_id: string;
   thread_id: string;
   status: ExecutionStatus;
-  result?: { answer?: string } | null;
+  result?: ({ answer?: string } & Record<string, unknown>) | null;
   error?: { code?: string; detail?: string; upstream?: UpstreamError } | null;
 };
 
@@ -139,14 +146,17 @@ export function parseExecutionFrame(frame: string): ExecutionEvent | null {
               ? "error"
               : undefined,
         durationMs: typeof data.duration_ms === "number" ? data.duration_ms : undefined,
+        ...(asRecord(data.progress) ? { progress: asRecord(data.progress) ?? undefined } : {}),
       };
     case "usage":
       return {
         type: "usage",
         usage: data.available ? asRecord(data.usage) : null,
       };
-    case "result":
-      return { type: "result", answer: str(asRecord(data.content)?.answer) ?? "" };
+    case "result": {
+      const content = asRecord(data.content) ?? {};
+      return { type: "result", answer: str(content.answer) ?? "", content };
+    }
     case "terminal": {
       const status = data.status;
       const error = asRecord(data.error);
@@ -204,6 +214,8 @@ export type StartExecutionParams = {
   /** Idempotency key: reuse it only to retry the same request. */
   clientRequestId: string;
   threadId?: string;
+  /** More request context beside kn_id, for an Agent that needs it (the graph explorer's canvas). */
+  context?: Record<string, unknown>;
   signal?: AbortSignal;
   onEvent: (event: ExecutionEvent) => void;
 };
@@ -225,7 +237,7 @@ export async function startExecution(
       message: params.message,
       client_request_id: params.clientRequestId,
       ...(params.threadId ? { thread_id: params.threadId } : {}),
-      context: { kn_id: params.knId },
+      context: { ...params.context, kn_id: params.knId },
     }),
     signal: params.signal,
   });
