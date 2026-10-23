@@ -676,6 +676,8 @@ describe("ObjectTypeAuthorizationScene", () => {
     expect(mocks.upsertObjectGrantForObject).not.toHaveBeenCalled();
   });
 
+  // This integration path opens and closes the source drawer, updates the grant, then revokes it.
+  // It takes about seven seconds alone and can exceed the global limit under CI shard contention.
   it("allows a built-in administrator's ordinary object permission to be changed", async () => {
     mocks.appServices.runtimeConfig.currentUser.permissions = [
       "admin-authz:grant",
@@ -836,7 +838,7 @@ describe("ObjectTypeAuthorizationScene", () => {
       "grant-modify",
       "grant-view-duplicate",
     ]);
-  });
+  }, 20_000);
 
   it("renders clamped effective access when server decisions are unavailable", async () => {
     mocks.getDetail.mockResolvedValue({
