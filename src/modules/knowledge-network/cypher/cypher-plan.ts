@@ -11,7 +11,7 @@
  * query becomes is never part of it. Fields follow bkn-backend's `CypherPlan`.
  */
 export type CypherPlan = {
-  /** match, aggregate, totals, semi_join, list_comparison or carried. */
+  /** match, aggregate, totals, semi_join, list_comparison, carried or union. */
   shape: string;
   graph?: boolean;
   objects: { alias: string; object_type_id: string }[];

@@ -44,6 +44,8 @@ export const CYPHER_KEYWORDS = [
   "IS NOT NULL",
   "DESC",
   "ASC",
+  "UNION",
+  "UNION ALL",
 ];
 
 export const CYPHER_FUNCTIONS = ["count", "collect", "sum", "avg", "min", "max"];

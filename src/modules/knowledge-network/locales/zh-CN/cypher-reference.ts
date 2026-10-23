@@ -98,7 +98,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
     title: "数据集和索引上的对象类",
     rules: [
       "对象类绑定的是数据集或索引（不是 SQL 数据源），或一条查询跨多个数据源时，服务端逐个对象类读取数据，再在内存里关联，只支持基础写法。",
-      "可以用：MATCH、多跳、OPTIONAL MATCH；WHERE；返回属性和聚合，ORDER BY、SKIP、LIMIT；WITH 聚合后过滤、按上一段的值过滤；返回节点、关系和虚拟边，和 SQL 数据源上一样画图。",
+      "可以用：MATCH、多跳、OPTIONAL MATCH；WHERE；返回属性和聚合，ORDER BY、SKIP、LIMIT；WITH 聚合后过滤、按上一段的值过滤；返回节点、关系和虚拟边，和 SQL 数据源上一样画图；UNION / UNION ALL，每段各自读取。",
       "会被拒：CASE、coalesce；对分组再统计、比较两个列表、把节点传给下一个 MATCH；collect。",
       "要读的数据太多或超时会被拒（ReadBudgetExceeded），加条件或 LIMIT 缩小范围。只有关系类能按键关联：只靠 a.code = b.code 这类相等条件连起来的两个节点会先全部读出再两两组合，容易超限，执行计划也不会提醒。",
     ],
