@@ -9,13 +9,14 @@ import { CrownOutlined } from "@ant-design/icons";
 import { Result, Skeleton } from "antd";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { Edition } from "@/framework/entitlement/edition";
 import { capabilitySatisfied, upgradeReason } from "@/framework/entitlement/upgrade-reason";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
 
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
@@ -48,6 +49,7 @@ export function RequireEdition({
 }: RequireEditionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { loading, snapshot } = useEntitlementContext();
 
   /*
@@ -82,6 +84,7 @@ export function RequireEdition({
   const tierClass = minEdition === "professional" ? "" : "is-enterprise";
   const imageIssue = reason !== "buy";
   const currentEditionName = t(`common.entitlement.editions.${snapshot?.edition ?? "community"}`);
+  const returnTo = readReturnTo(location.state);
 
   return (
     <div className="console-upgrade-locked">
@@ -114,6 +117,13 @@ export function RequireEdition({
           </h3>
 
           <div className="console-upgrade-page-actions">
+            {/*
+              A standalone page opened in place (say from the workspace sidebar) has no shell to
+              leave through; the page it came from is the way back.
+            */}
+            {returnTo ? (
+              <AppButton onClick={() => void navigate(returnTo)}>{t("common.back")}</AppButton>
+            ) : null}
             {imageIssue ? null : (
               <AppButton
                 href={LICENSE_PORTAL_URL}

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
@@ -26,9 +26,18 @@ vi.mock("react-i18next", async (importOriginal) => {
   return { ...original, useTranslation: () => ({ t: (key: string) => key }) };
 });
 
+const router = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  state: null as { returnTo?: string } | null,
+}));
+
 vi.mock("react-router-dom", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-router-dom")>();
-  return { ...original, useNavigate: () => vi.fn() };
+  return {
+    ...original,
+    useNavigate: () => router.navigate,
+    useLocation: () => ({ pathname: "/", search: "", hash: "", key: "k", state: router.state }),
+  };
 });
 
 function entitlement(overrides: Partial<Entitlement>): Entitlement {
@@ -47,6 +56,8 @@ function entitlement(overrides: Partial<Entitlement>): Entitlement {
 beforeEach(() => {
   contextState.loading = false;
   contextState.snapshot = null;
+  router.navigate.mockReset();
+  router.state = null;
 });
 
 function renderGuard(capability: string, minEdition: "professional" | "enterprise") {
@@ -123,6 +134,20 @@ describe("RequireEdition · 核实不了镜像的能力以证书为准", () => {
 
     expect(screen.getByText("common.entitlement.unlockTitle")).toBeTruthy();
     expect(screen.queryByText("protected live content")).toBeNull();
+  });
+
+  it("锁定的独立页带回到来源页的返回", () => {
+    contextState.snapshot = entitlement({});
+
+    renderGuard(CAPABILITIES.BUSINESS_PROVENANCE, "enterprise");
+    expect(screen.queryByText("common.back")).toBeNull();
+
+    router.state = { returnTo: "/knowledge-network/workspace/network-1/experience" };
+    renderGuard(CAPABILITIES.BUSINESS_PROVENANCE, "enterprise");
+    fireEvent.click(screen.getByText("common.back"));
+    expect(router.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/experience",
+    );
   });
 });
 
