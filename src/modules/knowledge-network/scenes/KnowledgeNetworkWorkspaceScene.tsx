@@ -27,7 +27,8 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
-import { useCapability } from "@/framework/entitlement/use-entitlement";
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+import type { Edition } from "@/framework/entitlement/edition";
 import type {
   KnowledgeNetworkWorkspaceSceneProps,
   KnowledgeNetworkWorkspaceSection,
@@ -56,6 +57,8 @@ type WorkspaceNavItem = {
   icon: React.ReactNode;
   key: KnowledgeNetworkWorkspaceSection;
   label: string;
+  paidCapability?: string;
+  paidEdition?: Edition;
   path?: string;
 };
 
@@ -77,8 +80,6 @@ export function KnowledgeNetworkWorkspaceScene({
   const { message } = useAppServices();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
-  const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
-  const objectMetricsVisible = objectMetricsCapability !== "not-installed";
   const workspaceData = useWorkspaceData(activeNetworkId, section);
   const {
     detail,
@@ -151,18 +152,14 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <ThunderboltOutlined />,
         count: detail?.statistics.actionTypesTotal ?? 0,
       },
-    ];
-
-    if (objectMetricsVisible) {
-      items.push({
+      {
         key: "metrics",
         label: t("knowledgeNetwork.workspaceMetrics"),
         icon: <LineChartOutlined />,
         count: detail?.statistics.metricsTotal ?? 0,
-      });
-    }
-
-    items.push(
+        paidCapability: CAPABILITIES.OBJECT_METRICS,
+        paidEdition: "professional",
+      },
       {
         key: "functions",
         label: t("knowledgeNetwork.workspaceFunctions"),
@@ -189,10 +186,10 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <SkillsSparkIcon />,
         count: detail?.statistics.skillsTotal ?? 0,
       },
-    );
+    ];
 
     return items;
-  }, [activeNetworkId, detail, objectMetricsVisible, t]);
+  }, [activeNetworkId, detail, t]);
 
   const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
   const experienceNavItems = navigationItems.filter(
@@ -238,8 +235,15 @@ export function KnowledgeNetworkWorkspaceScene({
           {item.icon}
           {sideCollapsed ? null : <span>{item.label}</span>}
         </span>
-        {showCount && !sideCollapsed ? (
-          <span className={styles.sideItemCount}>{formatNavCount(item.count)}</span>
+        {!sideCollapsed && (item.paidEdition || showCount) ? (
+          <span className={styles.sideItemStatus}>
+            {item.paidEdition ? (
+              <EditionBadge capability={item.paidCapability} edition={item.paidEdition} />
+            ) : null}
+            {showCount ? (
+              <span className={styles.sideItemCount}>{formatNavCount(item.count)}</span>
+            ) : null}
+          </span>
         ) : null}
       </button>
     );
