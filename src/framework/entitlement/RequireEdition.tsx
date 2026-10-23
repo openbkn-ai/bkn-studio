@@ -9,13 +9,14 @@ import { CrownOutlined } from "@ant-design/icons";
 import { Result, Skeleton } from "antd";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { Edition } from "@/framework/entitlement/edition";
 import { capabilitySatisfied, upgradeReason } from "@/framework/entitlement/upgrade-reason";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
 
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
@@ -48,7 +49,13 @@ export function RequireEdition({
 }: RequireEditionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { loading, snapshot } = useEntitlementContext();
+  // A standalone page opened in place has no shell to leave through; where it came from is the way back.
+  const returnTo = readReturnTo(location.state);
+  const back = returnTo ? (
+    <AppButton onClick={() => void navigate(returnTo)}>{t("common.back")}</AppButton>
+  ) : null;
 
   /*
     快照没到不能白屏。null 有两种来路:这一次请求还在飞,以及 fetchEntitlement() 抛错后
@@ -60,6 +67,7 @@ export function RequireEdition({
       <Skeleton active paragraph={{ rows: 6 }} />
     ) : (
       <Result
+        extra={back}
         status="warning"
         subTitle={t("common.entitlement.unknownDescription")}
         title={t("common.entitlement.unknownTitle")}
@@ -114,6 +122,7 @@ export function RequireEdition({
           </h3>
 
           <div className="console-upgrade-page-actions">
+            {back}
             {imageIssue ? null : (
               <AppButton
                 href={LICENSE_PORTAL_URL}

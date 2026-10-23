@@ -65,9 +65,10 @@ export type WorkspaceAction = {
 };
 
 /**
- * A sidebar entry that opens one of the extension's pages for the network on screen, in a new
- * tab: such a page stands on its own, without the workspace sidebar to come back through. Like a
- * workspace action, it is shown whatever the licence says and the page carries the guard.
+ * A sidebar entry that opens one of the extension's pages for the network on screen, in place.
+ * Such a page stands on its own, without the workspace sidebar, so the entry hands it the
+ * workspace page in location state (`returnTo`, see back-navigation.ts) for its back button. Like
+ * a workspace action, it is shown whatever the licence says and the page carries the guard.
  */
 export type WorkspaceNavEntry = {
   /** Unique within the extension. */

@@ -8,7 +8,7 @@
 import { CompassOutlined } from "@ant-design/icons";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useHref } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
@@ -18,6 +18,7 @@ import {
   isExtensionInstalled,
   type WorkspaceNavEntry,
 } from "@/framework/extension/registry";
+import { buildReturnToState } from "@/modules/execution-factory/utils/back-navigation";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 
 import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
@@ -109,14 +110,16 @@ function ExtensionNavItem({
   networkId: string;
 }) {
   const { t } = useTranslation();
-  const href = useHref(item.path(networkId));
+  const location = useLocation();
+  const navigate = useNavigate();
   const label = t(item.labelKey);
 
   return (
     <button
       className={styles.sideItem}
       data-testid={`workspace-nav-${item.id}`}
-      onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
+      // In place, naming this page as the way back: the page has no workspace sidebar of its own.
+      onClick={() => void navigate(item.path(networkId), { state: buildReturnToState(location) })}
       title={label}
       type="button"
     >
