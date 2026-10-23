@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { filterNavByCapability } from "@/app/shell/console-navigation";
+import { consoleNavigation, filterNavByCapability } from "@/app/shell/console-navigation";
 import type { ConsoleNavItem } from "@/app/shell/navigation/types";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import type { EntitlementView } from "@/framework/entitlement/types";
@@ -86,5 +86,29 @@ describe("filterNavByCapability", () => {
     expect(result.map((i) => i.key)).toEqual(["users", "authorizations"]);
     expect(result[1]?.locked).toBeUndefined();
     expect(result[1]?.lockedEdition).toBeUndefined();
+  });
+
+  // 知识库页面只在企业版前端镜像里:社区镜像报不出能力,入口必须隐藏,不能指向一个不存在的路由。
+  it("知识库入口:没装隐藏,装了且授权则显示", () => {
+    const kb =
+      consoleNavigation
+        .find((item) => item.key === "general-business-knowledge-network")
+        ?.children?.filter((child) => child.key === "knowledge-base") ?? [];
+    expect(kb).toHaveLength(1);
+
+    expect(filterNavByCapability(kb, snapshot())).toEqual([]);
+
+    const available = filterNavByCapability(
+      kb,
+      snapshot({
+        capabilities: [CAPABILITIES.KNOWLEDGE_BASE],
+        edition: "professional",
+        extensions: [CAPABILITIES.KNOWLEDGE_BASE],
+        licensed: true,
+        state: "valid",
+      }),
+    );
+    expect(available.map((i) => i.key)).toEqual(["knowledge-base"]);
+    expect(available[0]?.locked).toBeFalsy();
   });
 });
