@@ -52,8 +52,8 @@ export const CAPABILITIES = {
    * 本体知识库:接入文件来源,管理内容版本,解析、切片与原文定位。专业档起。
    *
    * 与图探索同一种做法:页面代码在企业版前端镜像里,经 `@/app/extensions/installed` 注册;
-   * bkn-safe-ee 登记装配表,入口按 `capabilityState()` 判。社区构建没有这个页面,端点也报
-   * 不出它,入口因此隐藏。登记表里目前是 planned,发布时再进能力目录(capability-catalog)。
+   * bkn-safe-ee 登记装配表,入口按 `capabilityState()` 判。社区构建没有这个页面,入口由
+   * `extensionPage` 直接隐藏(不依赖授权快照)。登记表里目前是 planned,发布时再进能力目录(capability-catalog)。
    */
   KNOWLEDGE_BASE: "knowledge_base",
 } as const;

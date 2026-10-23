@@ -7,7 +7,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { consoleNavigation, filterNavByCapability } from "@/app/shell/console-navigation";
+import {
+  consoleNavigation,
+  filterNavByCapability,
+  filterNavByInstalledPages,
+} from "@/app/shell/console-navigation";
 import type { ConsoleNavItem } from "@/app/shell/navigation/types";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import type { EntitlementView } from "@/framework/entitlement/types";
@@ -110,5 +114,20 @@ describe("filterNavByCapability", () => {
     );
     expect(available.map((i) => i.key)).toEqual(["knowledge-base"]);
     expect(available[0]?.locked).toBeFalsy();
+  });
+
+  // 页面不在本仓的入口:社区构建在授权快照到位前(或取不到时)也不能露出一个 404 入口。
+  it("知识库入口:构建里没有扩展就隐藏,与授权快照无关", () => {
+    const group = consoleNavigation.filter(
+      (item) => item.key === "general-business-knowledge-network",
+    );
+    const childKeys = (items: typeof group) => (items[0]?.children ?? []).map((child) => child.key);
+
+    expect(childKeys(filterNavByInstalledPages(group))).not.toContain("knowledge-base");
+    expect(childKeys(filterNavByInstalledPages(group, () => true))).toContain("knowledge-base");
+    // Snapshot not loaded yet: capability filtering passes items through, so the build check is what hides it.
+    expect(childKeys(filterNavByCapability(filterNavByInstalledPages(group), null))).not.toContain(
+      "knowledge-base",
+    );
   });
 });

@@ -11,6 +11,7 @@ import {
   consoleNavigation,
   filterConsoleNavigation,
   filterNavByCapability,
+  filterNavByInstalledPages,
   filterNavByPermission,
 } from "@/app/shell/console-navigation";
 import type { ConsoleNavItem } from "@/app/shell/navigation/types";
@@ -20,8 +21,8 @@ import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeat
 import { isMarketCatalogEnabled } from "@/modules/execution-factory/utils/market-catalog";
 
 /**
- * Apply three independent filters: local feature flags, user permissions, and cluster
- * capabilities. Capability availability is calculated by the server; the client does not infer
+ * Apply four independent filters: pages this build carries, local feature flags, user
+ * permissions, and cluster capabilities. Capability availability is calculated by the server; the client does not infer
  * it from edition ordering.
  */
 export function useConsoleNavigation(): ConsoleNavItem[] {
@@ -33,7 +34,7 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
     () =>
       filterNavByCapability(
         filterNavByPermission(
-          filterConsoleNavigation(consoleNavigation, {
+          filterConsoleNavigation(filterNavByInstalledPages(consoleNavigation), {
             hideCatalog: !features.catalog,
             // Keep the execution-factory menu visible; it no longer follows the capabilities-lab
             // hide_legacy_execution_factory_menu flag.
