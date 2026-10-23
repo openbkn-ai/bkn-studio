@@ -6,7 +6,7 @@
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
@@ -40,6 +40,11 @@ function renderItems(collapsed = false) {
       <WorkspaceExtensionNavItems collapsed={collapsed} networkId="network-1" />
     </MemoryRouter>,
   );
+}
+
+function ReturnToProbe() {
+  const { state } = useLocation() as { state: { returnTo?: string } | null };
+  return <div data-testid="return-to">{state?.returnTo}</div>;
 }
 
 describe("WorkspaceExtensionNavItems", () => {
@@ -96,21 +101,42 @@ describe("WorkspaceExtensionNavItems", () => {
     expect(screen.queryByTestId(/^workspace-nav-/)).toBeNull();
   });
 
-  it("opens a registered page for this network in a new tab", () => {
+  it("opens a registered page for this network in place, naming the workspace as the way back", () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     registerGraphExplorer();
-    renderItems();
+    render(
+      <MemoryRouter
+        basename="/studio"
+        initialEntries={["/studio/knowledge-network/workspace/network-1/experience?tab=mcp"]}
+      >
+        <Routes>
+          <Route
+            element={<WorkspaceExtensionNavItems collapsed={false} networkId="network-1" />}
+            path="/knowledge-network/workspace/:networkId/experience"
+          />
+          <Route
+            element={<ReturnToProbe />}
+            path="/knowledge-network/workspace/:networkId/graph-explorer"
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
 
     fireEvent.click(
       screen.getByRole("button", { name: "knowledgeNetwork.graphExplorer.openAction" }),
     );
 
-    expect(open).toHaveBeenCalledWith(
-      "/studio/knowledge-network/workspace/network-1/graph-explorer",
-      "_blank",
-      "noopener,noreferrer",
+    expect(open).not.toHaveBeenCalled();
+    expect(screen.getByTestId("return-to").textContent).toBe(
+      "/knowledge-network/workspace/network-1/experience?tab=mcp",
     );
-    // The build has the page, so there is nothing to sell.
+  });
+
+  it("leaves the upgrade entry out when the build has the page", () => {
+    registerGraphExplorer();
+    renderItems();
+
+    expect(screen.getByTestId("workspace-nav-graph-explorer")).toBeTruthy();
     expect(screen.queryByTestId("workspace-nav-upgrade-graph_explorer")).toBeNull();
   });
 
