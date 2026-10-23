@@ -88,7 +88,7 @@ describe("generateCypher", () => {
       { type: "meta", runId: "run-1", threadId: "thread-1" },
       { type: "tool_started", id: "c1", name: "get_object_types", input: {} },
       { type: "tool_started", id: "c2", name: "run_cypher", input: {} },
-      { type: "result", answer: "```cypher\nMATCH (p:product)\n```" },
+      { type: "result", answer: "```cypher\nMATCH (p:product)\n```", content: {} },
       { type: "terminal", status: "succeeded" },
     ]);
 
@@ -113,7 +113,7 @@ describe("generateCypher", () => {
   it("continues the given thread when asked to fix a query", async () => {
     stream([
       { type: "meta", runId: "run-2", threadId: "thread-1" },
-      { type: "result", answer: "```cypher\nMATCH (p:product)\n```" },
+      { type: "result", answer: "```cypher\nMATCH (p:product)\n```", content: {} },
       { type: "terminal", status: "succeeded" },
     ]);
     await generateCypher({ ...params, threadId: "thread-1" }, texts);

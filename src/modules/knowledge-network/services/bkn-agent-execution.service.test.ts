@@ -81,6 +81,30 @@ describe("parseExecutionFrame", () => {
     });
   });
 
+  it("passes a built-in tool's progress through", () => {
+    const progress = { canvas_result: { actions: [{ action_id: "1", type: "fit" }] } };
+    expect(
+      parseExecutionFrame(
+        sse("tool_finished", {
+          tool_call_id: "c",
+          name: "canvas_control",
+          status: "succeeded",
+          output: "{}",
+          progress,
+        }),
+      ),
+    ).toMatchObject({ type: "tool_finished", progress });
+  });
+
+  it("keeps the whole result beside the answer", () => {
+    const content = { answer: "好", canvas_result: { canvas_id: "c1", actions: [] } };
+    expect(parseExecutionFrame(sse("result", { content, run_id: "r" }))).toEqual({
+      type: "result",
+      answer: "好",
+      content,
+    });
+  });
+
   it("ignores unknown events and malformed data", () => {
     expect(parseExecutionFrame(sse("structured", { content: {} }))).toBeNull();
     expect(parseExecutionFrame("event: token\ndata: {not json\n\n")).toBeNull();
@@ -141,6 +165,28 @@ describe("startExecution", () => {
     expect(JSON.parse(init?.body as string)).toMatchObject({
       agent_id: "graph_explorer_cypher",
       context: { kn_id: "kn-1" },
+    });
+  });
+
+  it("sends extra context beside the network, which stays the caller's kn_id", async () => {
+    fetchMock.mockResolvedValue(
+      streamResponse([sse("terminal", { status: "succeeded", sequence: 1 })]),
+    );
+
+    await startExecution({
+      base: "https://platform.example.com",
+      tokenProvider,
+      agentId: "graph_explorer",
+      knId: "kn-1",
+      message: "问题",
+      clientRequestId: "req-1",
+      context: { canvas: { canvas_id: "c1", revision: 3 }, kn_id: "other" },
+      onEvent: () => undefined,
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init?.body as string)).toMatchObject({
+      context: { kn_id: "kn-1", canvas: { canvas_id: "c1", revision: 3 } },
     });
   });
 

@@ -286,7 +286,10 @@ describe("ChatPane BKN Agent execution", () => {
   });
 
   it("shows the committed answer when a run streamed only its result", async () => {
-    streams([meta("run-1", "thread-1"), { type: "result", answer: "幂等重放的答复" }]);
+    streams([
+      meta("run-1", "thread-1"),
+      { type: "result", answer: "幂等重放的答复", content: { answer: "幂等重放的答复" } },
+    ]);
     const ref = renderPane();
 
     await send(ref, "问题");
