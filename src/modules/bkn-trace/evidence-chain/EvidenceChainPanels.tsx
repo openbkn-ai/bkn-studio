@@ -24,6 +24,7 @@ import type {
   EvidenceChainView,
 } from "./evidence-chain.types";
 import styles from "./EvidenceChainPanels.module.css";
+import { EvidenceScopeNotices } from "./EvidenceScopeNotices";
 
 function upstream(graph: ChainGraph, roots: string[]): ChainGraph {
   const ids = new Set(roots);
@@ -1280,17 +1281,7 @@ function Panels({
           )}
           {!factMode && <p className={styles.muted}>{t("bknTrace.evidenceChain.bindingNotice")}</p>}
         </section>
-        {view.notices?.[0] && <p className={styles.notice}>{view.notices[0]}</p>}
-        {(view.notices?.length ?? 0) > 1 && (
-          <details className={styles.scopeDetails}>
-            <summary>{t("bknTrace.evidenceChain.scopeDetails")}</summary>
-            {view.notices?.slice(1).map((notice, i) => (
-              <p className={styles.notice} key={i}>
-                {notice}
-              </p>
-            ))}
-          </details>
-        )}
+        <EvidenceScopeNotices notices={view.notices} />
         {!controlledPanel && (
           <nav className={styles.tabs} aria-label={t("bknTrace.evidenceChain.views")}>
             <button
