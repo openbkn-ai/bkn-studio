@@ -31,10 +31,15 @@ import {
   isLongToolSummary,
   toolSummaryPreview,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import { useSelfSignedChoice } from "@/modules/knowledge-network/hooks/useSelfSignedChoice";
+import { useMcpAuthMode } from "@/modules/knowledge-network/hooks/useMcpAuthMode";
 import {
   createClaudeCodeMcpCommand,
+  createClaudeCodeMcpUrlCommand,
   createMcpRemoteJsonConfig,
+  createMcpUrlJsonConfig,
   getMcpConnectionProtocol,
+  isLikelySelfSignedMcpHost,
   withMcpTrailingSlash,
 } from "@/modules/knowledge-network/services/mcp-client-config";
 import {
@@ -49,6 +54,7 @@ import {
 } from "@/modules/knowledge-network/services/mcp-schema-doc";
 
 import styles from "./ExperienceScene.module.css";
+import { McpAuthModeSwitch, McpOauthSteps } from "./McpAuthMode";
 import { McpConnectionSecurity } from "./McpConnectionSecurity";
 
 export type ResponseView = { kind: "json" | "toon"; text: string };
@@ -401,36 +407,50 @@ export function ContextLoaderIntegrationPanel({
   const [callParamsOpen, setCallParamsOpen] = useState(true);
   const [resultOpen, setResultOpen] = useState(true);
   const [mcpResultTab, setMcpResultTab] = useState<"result" | "debug">("result");
-  const [mcpConfigTab, setMcpConfigTab] = useState<"claude" | "cursor" | "generic">("claude");
+  const [mcpConfigTab, setMcpConfigTab] = useState<"claude" | "cursor" | "workbuddy" | "generic">(
+    "claude",
+  );
+  const [mcpAuthMode, setMcpAuthMode] = useMcpAuthMode();
   const [mcpConfigKey, setMcpConfigKey] = useState(appKeyValue);
   const [mcpConfigKeyDraft, setMcpConfigKeyDraft] = useState("");
   const [mcpConfigKeyError, setMcpConfigKeyError] = useState("");
   const [mcpConfigKeyModalOpen, setMcpConfigKeyModalOpen] = useState(false);
-  const [allowInsecureTls, setAllowInsecureTls] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const filterText = filter.trim().toLowerCase();
   const appKeyPlaceholder = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
   const configAppKey = mcpConfigKey || appKeyPlaceholder;
   const mcpUrlWithSlash = withMcpTrailingSlash(mcpUrl);
   const mcpProtocol = getMcpConnectionProtocol(mcpUrlWithSlash);
+  const [allowInsecureTls, setAllowInsecureTls] = useSelfSignedChoice(
+    isLikelySelfSignedMcpHost(mcpUrlWithSlash),
+    mcpProtocol,
+  );
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
   const mcpClientOptions = { allowInsecureTls };
-  const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(
-    mcpUrlWithSlash,
-    configAppKey,
-    mcpClientOptions,
-  );
-  const claudeCliConfig = createClaudeCodeMcpCommand(
-    mcpUrlWithSlash,
-    configAppKey,
-    mcpClientOptions,
-  );
+  const isOauthMode = mcpAuthMode === "oauth";
+  // WorkBuddy is only offered for the sign-in mode; fall back when switching to API Key.
+  const activeMcpConfigTab = !isOauthMode && mcpConfigTab === "workbuddy" ? "claude" : mcpConfigTab;
+  const mcpRemoteJsonConfig = isOauthMode
+    ? createMcpUrlJsonConfig(mcpUrlWithSlash)
+    : createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey, mcpClientOptions);
+  const claudeCliConfig = isOauthMode
+    ? createClaudeCodeMcpUrlCommand(mcpUrlWithSlash)
+    : createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey, mcpClientOptions);
+  const mcpConfigTabs = (
+    [
+      ["claude", "Claude Code"],
+      ["cursor", "Cursor"],
+      ["workbuddy", "WorkBuddy"],
+      ["generic", t("knowledgeNetwork.contextLoaderPanel.mcpConnect.genericTab")],
+    ] satisfies [typeof mcpConfigTab, string][]
+  ).filter(([key]) => isOauthMode || key !== "workbuddy");
   const mcpProfileHint =
     mcpProfile === "compact"
       ? t("knowledgeNetwork.contextLoaderPanel.mcpProfile.compactHint")
       : t("knowledgeNetwork.contextLoaderPanel.mcpProfile.fullHint");
   const mcpProfileSegmented = (block: boolean) => (
     <Segmented<McpProfile>
+      className={styles.choice}
       size="small"
       block={block}
       value={mcpProfile}
@@ -583,10 +603,6 @@ export function ContextLoaderIntegrationPanel({
   }, [appKeyValue]);
 
   useEffect(() => {
-    if (mcpProtocol === "http") setAllowInsecureTls(false);
-  }, [mcpProtocol]);
-
-  useEffect(() => {
     if (sending || response !== null || reqError !== null) {
       setResultOpen(true);
       setMcpResultTab("result");
@@ -625,13 +641,28 @@ export function ContextLoaderIntegrationPanel({
             <p className={styles.mcpConnectDesc}>
               {t("knowledgeNetwork.contextLoaderPanel.mcpConnect.description")}
             </p>
-            <ol className={styles.mcpSteps}>
-              <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepIssueKey")}</li>
-              <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepCopyConfig")}</li>
-              <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepUseAgent")}</li>
-            </ol>
+            {isOauthMode ? (
+              <McpOauthSteps />
+            ) : (
+              <ol className={styles.mcpSteps}>
+                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepIssueKey")}</li>
+                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepCopyConfig")}</li>
+                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepUseAgent")}</li>
+              </ol>
+            )}
           </div>
           <div className={styles.mcpConnectMain}>
+            <div className={styles.mcpProfileRow}>
+              <span className={styles.mcpProfileLabel}>
+                {t("knowledgeNetwork.contextLoaderPanel.mcpAuth.label")}
+              </span>
+              <McpAuthModeSwitch value={mcpAuthMode} onChange={setMcpAuthMode} />
+              <span className={styles.mcpProfileHint}>
+                {isOauthMode
+                  ? t("knowledgeNetwork.contextLoaderPanel.mcpAuth.oauthHint")
+                  : t("knowledgeNetwork.contextLoaderPanel.mcpAuth.apiKeyHint")}
+              </span>
+            </div>
             <div className={styles.mcpProfileRow}>
               <span className={styles.mcpProfileLabel}>
                 {t("knowledgeNetwork.contextLoaderPanel.mcpProfile.label")}
@@ -641,43 +672,43 @@ export function ContextLoaderIntegrationPanel({
             </div>
             <div className={styles.mcpConfigHeader}>
               <div className={styles.mcpConfigTabs}>
-                {[
-                  ["claude", "Claude Code"],
-                  ["cursor", "Cursor"],
-                  ["generic", t("knowledgeNetwork.contextLoaderPanel.mcpConnect.genericTab")],
-                ].map(([key, label]) => (
+                {mcpConfigTabs.map(([key, label]) => (
                   <button
                     key={key}
                     type="button"
-                    className={`${styles.mcpConfigTab} ${mcpConfigTab === key ? styles.mcpConfigTabActive : ""}`}
-                    onClick={() => setMcpConfigTab(key as typeof mcpConfigTab)}
+                    className={`${styles.mcpConfigTab} ${activeMcpConfigTab === key ? styles.mcpConfigTabActive : ""}`}
+                    onClick={() => setMcpConfigTab(key)}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              <div className={styles.mcpConfigMeta}>
-                <Link className={styles.mcpIssueKeyBtn} to={apiKeyPagePath}>
-                  {t("knowledgeNetwork.contextLoaderPanel.appKey.issue")}
-                </Link>
-                <button
-                  type="button"
-                  className={styles.mcpConfigureKeyBtn}
-                  onClick={openMcpConfigKeyModal}
-                >
-                  {mcpConfigKey
-                    ? t("knowledgeNetwork.contextLoaderPanel.appKey.configured")
-                    : t("knowledgeNetwork.contextLoaderPanel.appKey.configure")}
-                </button>
-              </div>
+              {isOauthMode ? null : (
+                <div className={styles.mcpConfigMeta}>
+                  <Link className={styles.mcpIssueKeyBtn} to={apiKeyPagePath}>
+                    {t("knowledgeNetwork.contextLoaderPanel.appKey.issue")}
+                  </Link>
+                  <button
+                    type="button"
+                    className={styles.mcpConfigureKeyBtn}
+                    onClick={openMcpConfigKeyModal}
+                  >
+                    {mcpConfigKey
+                      ? t("knowledgeNetwork.contextLoaderPanel.appKey.configured")
+                      : t("knowledgeNetwork.contextLoaderPanel.appKey.configure")}
+                  </button>
+                </div>
+              )}
             </div>
             <McpConnectionSecurity
               protocol={mcpProtocol}
+              authMode={mcpAuthMode}
+              likelySelfSigned={isLikelySelfSignedMcpHost(mcpUrlWithSlash)}
               allowInsecureTls={allowInsecureTls}
               onAllowInsecureTlsChange={setAllowInsecureTls}
             />
             <div className={styles.mcpConfigBody}>
-              {mcpConfigTab === "claude" ? (
+              {activeMcpConfigTab === "claude" ? (
                 <>
                   <CodeBlock
                     title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.cliTitle")}
@@ -702,7 +733,7 @@ export function ContextLoaderIntegrationPanel({
                   />
                 </>
               ) : null}
-              {mcpConfigTab === "cursor" ? (
+              {activeMcpConfigTab === "cursor" ? (
                 <CodeBlock
                   title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.cursorConfigTitle")}
                   code={mcpRemoteJsonConfig}
@@ -715,7 +746,25 @@ export function ContextLoaderIntegrationPanel({
                   }
                 />
               ) : null}
-              {mcpConfigTab === "generic" ? (
+              {activeMcpConfigTab === "workbuddy" ? (
+                <>
+                  <p className={styles.guideNote}>
+                    {t("knowledgeNetwork.contextLoaderPanel.mcpAuth.workbuddyHint")}
+                  </p>
+                  <CodeBlock
+                    title="~/.workbuddy/mcp.json"
+                    code={mcpRemoteJsonConfig}
+                    json
+                    onCopy={() =>
+                      onCopy(
+                        mcpRemoteJsonConfig,
+                        t("knowledgeNetwork.contextLoaderPanel.mcpAuth.copiedWorkbuddy"),
+                      )
+                    }
+                  />
+                </>
+              ) : null}
+              {activeMcpConfigTab === "generic" ? (
                 <CodeBlock
                   title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.genericConfigTitle")}
                   code={mcpRemoteJsonConfig}

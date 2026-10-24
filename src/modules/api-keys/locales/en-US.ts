@@ -75,5 +75,33 @@ export const apiKeysEnUS = {
         'Regenerating immediately invalidates the old secret of "{{name}}" and produces a new one. Continue?',
       ok: "Confirm regenerate",
     },
+    tabs: {
+      keys: "API keys",
+      clients: "Connected clients",
+    },
+    connectedClients: {
+      title: "Connected clients",
+      description:
+        "Clients you connected by signing in from an agent such as WorkBuddy, Claude Code or Cursor. They act as you and renew their access on their own. Disconnecting one revokes its access at once; it has to connect and sign in again.",
+      columns: {
+        client: "Client",
+        callback: "Callback",
+        grantedAt: "Authorized",
+        actions: "Actions",
+      },
+      actionDisconnect: "Disconnect",
+      disconnectConfirm: {
+        title: "Disconnect this client?",
+        content:
+          "“{{name}}” will lose access to the platform and has to connect and sign in again from the client.",
+        ok: "Disconnect",
+      },
+      disconnectSuccess: "Disconnected",
+      disconnectFailed: "Failed to disconnect",
+      loadFailed: "Failed to load connected clients",
+      emptyTitle: "No connected clients yet",
+      emptyDescription:
+        "Put only the MCP URL into an agent and click Connect; after you sign in it appears here. See Domain Knowledge Network → Knowledge Network Integration → MCP Integration for the setup.",
+    },
   },
 } as const;

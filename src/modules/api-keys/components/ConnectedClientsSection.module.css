@@ -1,0 +1,44 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.section {
+  padding-top: 4px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.intro {
+  margin: 0;
+  max-width: 880px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.clientCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.clientName {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.clientId,
+.callback {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}

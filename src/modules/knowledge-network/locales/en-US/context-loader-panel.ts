@@ -229,6 +229,25 @@ export const contextLoaderPanelPart = {
         "Sent by the server with initialize when a client connects, so the model knows how to use these tools. The server maintains this text, and it changes with the deployed version.",
       copied: "Server instructions copied",
     },
+    mcpAuth: {
+      label: "Connect with",
+      oauth: "Sign in",
+      apiKey: "API Key",
+      oauthHint:
+        "The config holds only the address. Sign in to this platform in the browser on first connect; the client renews access by itself.",
+      apiKeyHint:
+        "Send a long-lived bak_ key in a header. For scripts, services, or clients that cannot sign in.",
+      stepCopy:
+        "Pick your client and copy the config: in WorkBuddy, paste it under Connect → Custom connection → Configure MCP (~/.workbuddy/mcp.json); in Claude Code, run the command; in Cursor, write it to ~/.cursor/mcp.json.",
+      stepSignIn:
+        "Click Connect or Authorize in the client. The browser opens this platform's sign-in page; sign in and approve.",
+      stepRenew:
+        "The client then renews access by itself. To see or disconnect connected clients, go to Connected clients on the API Key page in Account Center.",
+      connectedClients: "View connected clients ->",
+      workbuddyHint:
+        "In WorkBuddy, open Connect → Custom connection → Configure MCP and paste the config below, or write it to ~/.workbuddy/mcp.json.",
+      copiedWorkbuddy: "WorkBuddy config copied",
+    },
     mcpConnect: {
       title: "Let Agents Call OpenBKN Capabilities",
       description:
@@ -259,22 +278,29 @@ export const contextLoaderPanelPart = {
       insecureTitle: "Certificate verification disabled",
       insecureDescription:
         "Use only for a trusted self-signed certificate. The generated config adds NODE_TLS_REJECT_UNAUTHORIZED=0.",
+      oauthHttpsDescription:
+        "The client verifies the server certificate and completes sign-in in the browser.",
+      oauthHttpTitle: "Sign-in usually needs HTTPS",
+      oauthHttpDescription:
+        "This address uses HTTP, and most clients only support sign-in over HTTPS. Enable HTTPS for the platform, or use the API Key option.",
+      oauthInsecureDescription:
+        "Only for a trusted self-signed certificate. Start the client with certificate checks off, e.g. quit WorkBuddy fully, then run open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0.",
+      selfSignedApiKeyDescription:
+        "With certificate checks on, clients will fail to connect. Tick the option on the right to skip the check (trusted environments only), or give the platform a proper certificate.",
+      selfSignedTitle: "This address may use a self-signed certificate",
+      selfSignedDescription:
+        "Tick the option on the right to see how to start the client for testing; use a proper certificate in production.",
     },
     mcpSetup: {
-      title: "Connect MCP (Claude Code / Cursor)",
-      externalPrefix: "This guide is for ",
-      externalClient: "external MCP clients",
-      externalMiddle: " such as Cursor and Claude Code. Use ",
-      externalSuffix:
-        " for authentication. It is a long-lived bak_ key issued and managed in Account Center.",
+      title: "Connect MCP (WorkBuddy / Claude Code / Cursor)",
+      intro:
+        "External MCP clients such as WorkBuddy, Claude Code, and Cursor can connect in two ways:",
+      oauthNote:
+        ": the config holds only the address. Sign in to this platform in the browser on first connect; the client renews access by itself.",
+      apiKeyNote: ": a long-lived bak_ key, for scripts, services, or clients that cannot sign in.",
+      apiKeyHeaderNote: "Issue and manage keys in Account Center. The key goes in the header ",
+      apiKeyHeaderSuffix: ". ",
       issueApiKey: "Issue API Key ->",
-      authDifferenceTitle: "Difference from this page login: ",
-      authDifferencePrefix: "This page uses your ",
-      sessionToken: "session token",
-      authDifferenceMiddle:
-        " (ory_at_, short-lived and only suitable for immediate debugging). Long-lived external clients must use ",
-      authDifferenceSuffix: " (bak_, long-lived, revocable, and rotatable). Both use the same ",
-      authDifferenceEnd: " header, and the gateway identifies them by prefix.",
       cliTitle: "1. CLI one-line setup",
       projectConfigTitle: "2. Or write project .mcp.json",
       commandCopied: "Command copied",

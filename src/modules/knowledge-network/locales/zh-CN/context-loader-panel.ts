@@ -190,6 +190,22 @@ export const contextLoaderPanelPart = {
         "客户端连接时由服务端随 initialize 下发，供模型理解如何使用这组工具。内容由服务端维护，随部署版本变化。",
       copied: "已复制服务说明",
     },
+    mcpAuth: {
+      label: "接入方式",
+      oauth: "登录授权",
+      apiKey: "API Key",
+      oauthHint: "配置里只填地址，首次连接时在浏览器登录本平台，之后客户端自动续期。",
+      apiKeyHint: "请求头带 bak_ 开头的长期 Key，适合脚本、服务或不支持登录授权的客户端。",
+      stepCopy:
+        "选择客户端并复制配置：WorkBuddy 在「连接 → 自定义连接 → 配置 MCP」中粘贴（即 ~/.workbuddy/mcp.json）；Claude Code 直接运行命令；Cursor 写入 ~/.cursor/mcp.json。",
+      stepSignIn: "在客户端里点「连接」或「授权」，浏览器会打开本平台登录页，登录并同意授权。",
+      stepRenew:
+        "之后客户端会自动续期，无需再次登录。要查看或断开已连接的客户端，前往个人中心 API Key 页面的「已连接的客户端」。",
+      connectedClients: "查看已连接的客户端 →",
+      workbuddyHint:
+        "在 WorkBuddy 中打开「连接 → 自定义连接 → 配置 MCP」粘贴下方配置，或直接写入 ~/.workbuddy/mcp.json。",
+      copiedWorkbuddy: "WorkBuddy 配置已复制",
+    },
     mcpConnect: {
       title: "让智能体调用 OpenBKN 能力",
       description:
@@ -219,21 +235,25 @@ export const contextLoaderPanelPart = {
       insecureTitle: "证书校验已关闭",
       insecureDescription:
         "仅用于可信的自签名证书。生成的配置会加入 NODE_TLS_REJECT_UNAUTHORIZED=0。",
+      oauthHttpsDescription: "客户端会校验服务端证书，并在浏览器中完成登录授权。",
+      oauthHttpTitle: "登录授权通常需要 HTTPS",
+      oauthHttpDescription:
+        "当前地址是 HTTP，多数客户端只在 HTTPS 下支持登录授权。建议为平台启用 HTTPS，或改用 API Key 接入。",
+      oauthInsecureDescription:
+        "仅用于可信的自签名证书。需让客户端关闭证书校验后启动，例如 WorkBuddy：先完全退出，再用 open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0 启动。",
+      selfSignedApiKeyDescription:
+        "保持证书校验会让客户端连接失败。可勾选右侧选项跳过校验（仅限可信环境），或为平台配置正式证书。",
+      selfSignedTitle: "该地址可能使用自签名证书",
+      selfSignedDescription: "勾选右侧选项查看测试时的客户端启动方式，正式使用请配置正式证书。",
     },
     mcpSetup: {
-      title: "接入 MCP（Claude Code / Cursor）",
-      externalPrefix: "接入指南用于",
-      externalClient: "外部 MCP 客户端",
-      externalMiddle: "（Cursor、Claude Code 等）。鉴权填 ",
-      externalSuffix: "（bak_ 开头的长期 Key），在个人中心统一签发和管理。",
+      title: "接入 MCP（WorkBuddy / Claude Code / Cursor）",
+      intro: "外部 MCP 客户端（WorkBuddy、Claude Code、Cursor 等）有两种接入方式：",
+      oauthNote: "：配置里只填地址，首次连接时在浏览器登录本平台，之后客户端自动续期。",
+      apiKeyNote: "：使用 bak_ 开头的长期 Key，适合脚本、服务或不支持登录授权的客户端。",
+      apiKeyHeaderNote: "Key 在个人中心签发和管理，放在请求头 ",
+      apiKeyHeaderSuffix: " 中。",
       issueApiKey: "签发 API Key →",
-      authDifferenceTitle: "和本页登录态的差异：",
-      authDifferencePrefix: "本页调试用的是你的",
-      sessionToken: "会话 token",
-      authDifferenceMiddle:
-        "（ory_at_，几十分钟就过期，只够即时调试）；外部客户端要长期可用，必须用 ",
-      authDifferenceSuffix: "（bak_，长期有效、可撤销、可轮换）。两者都放同一个 ",
-      authDifferenceEnd: " 头，网关按前缀自动识别。",
       cliTitle: "① CLI 一行接入",
       projectConfigTitle: "② 或写入项目 .mcp.json",
       commandCopied: "命令已复制",

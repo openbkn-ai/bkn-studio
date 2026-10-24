@@ -7,17 +7,23 @@
 
 import { ApiOutlined, CopyOutlined } from "@ant-design/icons";
 import { Modal, Spin, Tabs } from "antd";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useMcpAuthMode } from "@/modules/knowledge-network/hooks/useMcpAuthMode";
+import { useSelfSignedChoice } from "@/modules/knowledge-network/hooks/useSelfSignedChoice";
 import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
 import {
   createClaudeCodeMcpCommand,
+  createClaudeCodeMcpUrlCommand,
   createMcpRemoteJsonConfig,
+  createMcpUrlJsonConfig,
   getMcpConnectionProtocol,
+  isLikelySelfSignedMcpHost,
 } from "@/modules/knowledge-network/services/mcp-client-config";
 
 import styles from "./ExperienceScene.module.css";
+import { McpAuthModeSwitch, McpOauthSteps } from "./McpAuthMode";
 import { McpConnectionSecurity } from "./McpConnectionSecurity";
 
 const JSON_TOKEN_RE =
@@ -110,20 +116,49 @@ export function McpSetupModal({
   open: boolean;
   onClose: () => void;
   mcpUrl: string;
+  /** API Key page; it also lists the clients connected through sign-in. */
   onManageApiKey: () => void;
   copy: (text: string, label?: string) => void;
 }) {
   const { t } = useTranslation();
-  const [allowInsecureTls, setAllowInsecureTls] = useState(false);
+  const [authMode, setAuthMode] = useMcpAuthMode();
+  const isOauthMode = authMode === "oauth";
+  const [tab, setTab] = useState("claude");
+  // WorkBuddy is only offered for the sign-in mode; fall back when switching to API Key.
+  const activeTab = !isOauthMode && tab === "workbuddy" ? "claude" : tab;
   const tk = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
   const protocol = getMcpConnectionProtocol(mcpUrl);
+  const [allowInsecureTls, setAllowInsecureTls] = useSelfSignedChoice(
+    isLikelySelfSignedMcpHost(mcpUrl),
+    protocol,
+  );
   const options = { allowInsecureTls };
-  const jsonConfig = createMcpRemoteJsonConfig(mcpUrl, tk, options);
-  const claudeCli = createClaudeCodeMcpCommand(mcpUrl, tk, options);
-
-  useEffect(() => {
-    if (protocol === "http") setAllowInsecureTls(false);
-  }, [protocol]);
+  const jsonConfig = isOauthMode
+    ? createMcpUrlJsonConfig(mcpUrl)
+    : createMcpRemoteJsonConfig(mcpUrl, tk, options);
+  const claudeCli = isOauthMode
+    ? createClaudeCodeMcpUrlCommand(mcpUrl)
+    : createClaudeCodeMcpCommand(mcpUrl, tk, options);
+  const workbuddyTab = {
+    key: "workbuddy",
+    label: "WorkBuddy",
+    children: (
+      <>
+        <p className={styles.guideNote}>
+          {t("knowledgeNetwork.contextLoaderPanel.mcpAuth.workbuddyHint")}
+        </p>
+        <CodeBlock
+          title="~/.workbuddy/mcp.json"
+          code={jsonConfig}
+          json
+          onCopy={() =>
+            copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpAuth.copiedWorkbuddy"))
+          }
+          copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+        />
+      </>
+    ),
+  };
 
   return (
     <Modal
@@ -135,32 +170,41 @@ export function McpSetupModal({
     >
       <div className={styles.guideRoot}>
         <p className={styles.guideNote}>
-          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalPrefix")}
-          <b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalClient")}</b>
-          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalMiddle")}
-          <b>{t("knowledgeNetwork.contextLoaderPanel.common.apiKey")}</b>
-          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalSuffix")}
-          <button type="button" className={styles.guideLink} onClick={onManageApiKey}>
-            {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.issueApiKey")}
-          </button>
+          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.intro")}
         </p>
-        <p className={styles.guideNote}>
-          <b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceTitle")}</b>
-          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferencePrefix")}
-          <b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.sessionToken")}</b>
-          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceMiddle")}
-          <b>{t("knowledgeNetwork.contextLoaderPanel.common.apiKey")}</b>
-          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceSuffix")}
-          <code>Authorization: Bearer</code>
-          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceEnd")}
-        </p>
+        <ul className={styles.guideNote}>
+          <li>
+            <b>{t("knowledgeNetwork.contextLoaderPanel.mcpAuth.oauth")}</b>
+            {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.oauthNote")}
+          </li>
+          <li>
+            <b>{t("knowledgeNetwork.contextLoaderPanel.mcpAuth.apiKey")}</b>
+            {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.apiKeyNote")}
+          </li>
+        </ul>
+        <McpAuthModeSwitch value={authMode} onChange={setAuthMode} />
+        {isOauthMode ? (
+          <McpOauthSteps />
+        ) : (
+          <p className={styles.guideNote}>
+            {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.apiKeyHeaderNote")}
+            <code>Authorization: Bearer</code>
+            {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.apiKeyHeaderSuffix")}
+            <button type="button" className={styles.guideLink} onClick={onManageApiKey}>
+              {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.issueApiKey")}
+            </button>
+          </p>
+        )}
         <McpConnectionSecurity
           protocol={protocol}
+          authMode={authMode}
+          likelySelfSigned={isLikelySelfSignedMcpHost(mcpUrl)}
           allowInsecureTls={allowInsecureTls}
           onAllowInsecureTlsChange={setAllowInsecureTls}
         />
         <Tabs
-          defaultActiveKey="claude"
+          activeKey={activeTab}
+          onChange={setTab}
           items={[
             {
               key: "claude",
@@ -220,6 +264,7 @@ export function McpSetupModal({
                 </>
               ),
             },
+            ...(isOauthMode ? [workbuddyTab] : []),
             {
               key: "generic",
               label: t("knowledgeNetwork.contextLoaderPanel.mcpSetup.genericTab"),

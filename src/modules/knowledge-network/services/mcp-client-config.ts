@@ -117,3 +117,42 @@ export function createClaudeCodeMcpCommand(
 
   return lines.join("\n");
 }
+
+/* ---------- Sign-in mode: the client gets only the URL and signs in through the browser ---------- */
+
+/** JSON for clients that sign in by themselves (WorkBuddy, Cursor, generic mcp.json): URL only. */
+export function createMcpUrlJsonConfig(mcpUrl: string): string {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        [mcpServerNameFor(mcpUrl)]: { type: "http", url: withMcpTrailingSlash(mcpUrl) },
+      },
+    },
+    null,
+    2,
+  );
+}
+
+/** Claude Code command for the sign-in mode: the client opens the browser login on first use. */
+export function createClaudeCodeMcpUrlCommand(mcpUrl: string): string {
+  return `claude mcp add --transport http --scope user ${mcpServerNameFor(mcpUrl)} ${withMcpTrailingSlash(mcpUrl)}`;
+}
+
+const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
+
+/**
+ * An https address on an IP literal or a `.local` name almost never has a publicly trusted
+ * certificate, so clients that verify certificates will refuse it unless its CA is trusted.
+ */
+export function isLikelySelfSignedMcpHost(mcpUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(mcpUrl);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  const host = url.hostname.toLowerCase();
+  // URL keeps IPv6 literals in brackets.
+  return host.startsWith("[") || IPV4_RE.test(host) || /\.local\.?$/.test(host);
+}

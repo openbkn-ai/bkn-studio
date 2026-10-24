@@ -404,7 +404,7 @@ export const homeZhCN = {
             },
             integration: {
               description:
-                "按外部智能体平台的接入方式复制 MCP、CLI 或 SDK 配置，使其可以调用 OpenBKN 提供的检索、查询和行动能力。",
+                "把 WorkBuddy、Claude Code、Cursor 等外部智能体接入平台的 MCP 服务：配置里只填地址，首次连接时在浏览器登录一次，之后自动续期；脚本和服务也可以用 API Key、CLI 或 SDK 接入。",
               impact:
                 "外部智能体平台无法接入 OpenBKN，已构建的知识和行动能力不能在目标智能体中使用。",
               outcome: "外部智能体可按配置方式发现并调用 OpenBKN 平台能力。",

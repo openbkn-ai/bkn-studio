@@ -444,7 +444,7 @@ export const homeEnUS = {
             },
             integration: {
               description:
-                "Copy MCP, CLI, or SDK configuration for the target agent platform so it can invoke OpenBKN search, query, and action capabilities.",
+                "Connect agents such as WorkBuddy, Claude Code or Cursor to the platform's MCP service: put only its URL in the config, sign in once in the browser on first connect, and the agent renews its access on its own. Scripts and services can use an API Key, the CLI or the SDK instead.",
               impact:
                 "External agent platforms cannot connect to OpenBKN, leaving the built knowledge and action capabilities unavailable in the target agent.",
               outcome:

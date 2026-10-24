@@ -72,5 +72,32 @@ export const apiKeysZhCN = {
       content: "重新生成会立即作废「{{name}}」的旧明文并产生新明文。确认重新生成？",
       ok: "确认重新生成",
     },
+    tabs: {
+      keys: "API Key",
+      clients: "已连接的客户端",
+    },
+    connectedClients: {
+      title: "已连接的客户端",
+      description:
+        "你在 WorkBuddy、Claude Code、Cursor 等智能体里点「连接」并登录过的客户端。它们以你的身份访问平台，并会自动续期。断开后，该客户端立即失去访问权限，需要在客户端里重新连接并登录。",
+      columns: {
+        client: "客户端",
+        callback: "回调地址",
+        grantedAt: "授权时间",
+        actions: "操作",
+      },
+      actionDisconnect: "断开",
+      disconnectConfirm: {
+        title: "断开这个客户端？",
+        content: "断开后，「{{name}}」将无法再访问平台，需要在客户端里重新连接并登录。",
+        ok: "断开",
+      },
+      disconnectSuccess: "已断开",
+      disconnectFailed: "断开失败",
+      loadFailed: "加载已连接的客户端失败",
+      emptyTitle: "还没有已连接的客户端",
+      emptyDescription:
+        "在智能体里只填 MCP 地址并点「连接」，登录后就会出现在这里。配置方法见「领域知识网络」→「知识网络对接」→「MCP 对接」。",
+    },
   },
 } as const;
