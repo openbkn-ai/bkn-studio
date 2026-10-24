@@ -615,11 +615,7 @@ describe("IndexConfigFormPanel", () => {
       await screen.findByText("dataCatalog.build.resourceUpdateConflict");
       fireEvent.click(screen.getByRole("button", { name: "common.viewDetails" }));
       const diagnostic = screen.getByText((text) => text.startsWith("common.error.details:"));
-      const expectedDetails =
-        detailField === "error_details"
-          ? description
-          : `VegaBackend.Resource.UpdateConflict\n${description}`;
-      expect(diagnostic.textContent).toBe(`common.error.details: ${expectedDetails}`);
+      expect(diagnostic.textContent).toBe(`common.error.details: ${description}`);
     },
   );
 

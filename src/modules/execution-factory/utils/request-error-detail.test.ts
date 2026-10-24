@@ -8,6 +8,39 @@ import { describe, expect, it } from "vitest";
 import { extractRequestErrorDetail } from "./request-error-detail";
 
 describe("extractRequestErrorDetail", () => {
+  it.each(["detail", "details"])("preserves %s alongside a shared code", (field) => {
+    expect(
+      extractRequestErrorDetail({
+        isAxiosError: true,
+        response: {
+          data: {
+            error_code: "Operator.Invalid",
+            description: "Bad input",
+            [field]: "Check the name",
+          },
+        },
+      }),
+    ).toMatchObject({ detail: "Check the name" });
+  });
+  it.each([0, false, "Current detail", { field: "name" }])(
+    "prefers shared detail %j over legacy fields",
+    (detail) => {
+      expect(
+        extractRequestErrorDetail({
+          isAxiosError: true,
+          response: {
+            data: {
+              error_code: "Operator.Invalid",
+              error_details: detail,
+              detail: "old",
+              details: "older",
+            },
+          },
+        }),
+      ).toMatchObject({ detail });
+    },
+  );
+
   it("uses a shared error code when the downstream description is empty", () => {
     expect(
       extractRequestErrorDetail({

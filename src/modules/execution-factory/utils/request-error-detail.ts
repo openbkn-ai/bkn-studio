@@ -44,7 +44,7 @@ export function extractRequestErrorDetail(error: unknown): RequestErrorDetail {
       message: shared.description,
       code: shared.code,
       description: shared.description,
-      detail: data.error_details,
+      detail: data.error_details ?? data.detail ?? data.details,
     };
   }
 

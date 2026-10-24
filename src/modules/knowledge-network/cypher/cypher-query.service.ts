@@ -98,9 +98,14 @@ export function cypherErrorFrom(payload: unknown, status: number, text: string):
     const message = payload.error_code
       ? pick("description") || code
       : pick("description", "message", "error") || code;
-    const detailText = formatErrorDetails(
-      payload.error_details ?? payload.details ?? payload.detail,
-    );
+    const rawDetails = payload.error_details ?? payload.details ?? payload.detail;
+    const detailText =
+      isRec(rawDetails) &&
+      Object.keys(rawDetails).length === 1 &&
+      typeof rawDetails.message === "string" &&
+      rawDetails.message.trim()
+        ? rawDetails.message.trim()
+        : formatErrorDetails(rawDetails);
     return {
       message: [message, detailText].filter(Boolean).join(": ") || text || `HTTP ${status}`,
       ...(code ? { code } : {}),

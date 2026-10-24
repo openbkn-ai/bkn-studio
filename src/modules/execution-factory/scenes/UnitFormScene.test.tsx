@@ -77,10 +77,12 @@ describe("UnitFormScene submission errors", () => {
       text: '{"field":"title","reason":"{{ literal }}"}',
     },
     { detail: [{ field: "title" }], text: '[{"field":"title"}]' },
+    { detail: ["name is required", "type is invalid"], text: "name is required；type is invalid" },
     { detail: 0, text: "0" },
     { detail: false, text: "false" },
     { detail: "Check title", text: "Check title" },
     { detail: null, text: undefined },
+    { detail: [], text: undefined },
   ])("renders detail $detail consistently in the alert and toast", async ({ detail, text }) => {
     mocks.registerOperator.mockRejectedValue({
       isAxiosError: true,

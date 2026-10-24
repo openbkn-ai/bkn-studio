@@ -758,7 +758,7 @@ export function IndexConfigFormPanel({
         ...backendError,
         description: errorMessage,
         details:
-          errorMessage === description
+          errorMessage === description || description === code
             ? backendError.details
             : [...new Set([description, backendError.details].filter(Boolean))].join("\n"),
       });

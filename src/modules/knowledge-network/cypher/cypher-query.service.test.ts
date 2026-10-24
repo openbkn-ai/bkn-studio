@@ -130,6 +130,35 @@ describe("runCypherQuery", () => {
 });
 
 describe("cypherErrorFrom", () => {
+  it.each(["error_details", "details", "detail"])(
+    "reads a message-only %s object as prose",
+    (field) => {
+      expect(
+        cypherErrorFrom(
+          {
+            error_code: "Cypher.Invalid",
+            description: "Bad query",
+            [field]: { message: " line 1: {{ literal }} " },
+          },
+          400,
+          "",
+        ),
+      ).toEqual({
+        code: "Cypher.Invalid",
+        message: "Bad query: line 1: {{ literal }}",
+      });
+    },
+  );
+  it("preserves additional structured facts alongside a message", () => {
+    const detail = { message: "Bad field", field: "title" };
+    expect(
+      cypherErrorFrom(
+        { error_code: "Cypher.Invalid", description: "Bad query", error_details: detail },
+        400,
+        "",
+      ).message,
+    ).toBe(`Bad query: ${JSON.stringify(detail)}`);
+  });
   it.each([undefined, "", "  "])("uses the shared code for description %j", (description) => {
     const payload = {
       error_code: "BknBackend.Cypher.InvalidQuery",

@@ -23,6 +23,19 @@ function createAxiosLikeError(data: unknown) {
 }
 
 describe("extractRequestErrorDetails", () => {
+  it("keeps string-array diagnostics readable", () => {
+    expect(
+      extractRequestErrorDetails(
+        createAxiosLikeError({
+          error_code: "Operator.Invalid",
+          error_details: ["name is required", "{{ literal }}"],
+        }),
+      ),
+    ).toMatchObject({
+      description: "Operator.Invalid",
+      details: "name is required；{{ literal }}",
+    });
+  });
   it("preserves backend error code, description, and details", () => {
     const error = new axios.AxiosError("Request failed", undefined, undefined, undefined, {
       config: { headers: new axios.AxiosHeaders() },
@@ -147,6 +160,21 @@ describe("isRequestNotFound", () => {
 });
 
 describe("shared error migration", () => {
+  it.each(["details", "detail", "message", "error"])(
+    "keeps the shared code ahead of %s for a blank description",
+    (field) => {
+      const result = extractRequestErrorDetails(
+        createAxiosLikeError({
+          error_code: "Vega.Query.Invalid",
+          description: " ",
+          [field]: "Other response text",
+        }),
+      );
+      expect(result.description).toBe("Vega.Query.Invalid");
+      if (field === "details" || field === "detail")
+        expect(result.details).toBe("Other response text");
+    },
+  );
   it.each(["", "  "])("uses the error code for blank description %j", (description) => {
     expect(
       extractRequestErrorDetails(

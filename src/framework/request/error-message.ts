@@ -37,6 +37,10 @@ export function formatErrorDetails(value: unknown): string | undefined {
     return String(value);
   }
 
+  if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+    return value.join("；") || undefined;
+  }
+
   if (value && typeof value === "object") {
     try {
       return JSON.stringify(value);
@@ -74,6 +78,7 @@ export function extractRequestErrorDetails(error: unknown): RequestErrorDetails 
       return { ...common, description, descriptionSource: "response" };
     }
 
+    // Blank shared descriptions use the stable code; details remain available separately.
     if (common.code) {
       return { ...common, description: common.code, descriptionSource: "response" };
     }
