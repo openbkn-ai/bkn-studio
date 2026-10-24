@@ -23,6 +23,19 @@ function createAxiosLikeError(data: unknown) {
 }
 
 describe("extractRequestErrorDetails", () => {
+  it("keeps string-array diagnostics readable", () => {
+    expect(
+      extractRequestErrorDetails(
+        createAxiosLikeError({
+          error_code: "Operator.Invalid",
+          error_details: ["name is required", "{{ literal }}"],
+        }),
+      ),
+    ).toMatchObject({
+      description: "Operator.Invalid",
+      details: "name is required；{{ literal }}",
+    });
+  });
   it("preserves backend error code, description, and details", () => {
     const error = new axios.AxiosError("Request failed", undefined, undefined, undefined, {
       config: { headers: new axios.AxiosHeaders() },
@@ -43,8 +56,6 @@ describe("extractRequestErrorDetails", () => {
       description: "创建构建任务失败",
       descriptionSource: "response",
       details: "Resource has no primary key",
-      errorLink: "暂无",
-      solution: "请联系管理员",
     });
     expect(extractRequestErrorMessage(error)).toBe("创建构建任务失败");
   });
@@ -77,8 +88,8 @@ describe("extractRequestErrorDetails", () => {
     });
     const details = extractRequestErrorDetails(error);
     expect(details.code).toBe("VegaBackend.Query.NoQueryableFields");
-    expect(details.description).toBe("Request failed with status code 400");
-    expect(details.descriptionSource).toBeUndefined();
+    expect(details.description).toBe("VegaBackend.Query.NoQueryableFields");
+    expect(details.descriptionSource).toBe("response");
   });
 
   it.each([
@@ -145,5 +156,70 @@ describe("isRequestNotFound", () => {
     expect(isRequestNotFound({ isAxiosError: true, response: { status: 404 } })).toBe(true);
     expect(isRequestNotFound({ isAxiosError: true, response: { status: 403 } })).toBe(false);
     expect(isRequestNotFound(new Error("not found"))).toBe(false);
+  });
+});
+
+describe("shared error migration", () => {
+  it.each(["details", "detail", "message", "error"])(
+    "keeps the shared code ahead of %s for a blank description",
+    (field) => {
+      const result = extractRequestErrorDetails(
+        createAxiosLikeError({
+          error_code: "Vega.Query.Invalid",
+          description: " ",
+          [field]: "Other response text",
+        }),
+      );
+      expect(result.description).toBe("Vega.Query.Invalid");
+      if (field === "details" || field === "detail")
+        expect(result.details).toBe("Other response text");
+    },
+  );
+  it.each(["", "  "])("uses the error code for blank description %j", (description) => {
+    expect(
+      extractRequestErrorDetails(
+        createAxiosLikeError({
+          error_code: "Vega.Query.Invalid",
+          description,
+          message: "generic",
+          metadata: { field: "title" },
+        }),
+      ),
+    ).toMatchObject({
+      description: "Vega.Query.Invalid",
+      descriptionSource: "response",
+      metadata: { field: "title" },
+    });
+  });
+  it("accepts new messages and ignores legacy guidance", () => {
+    const current = extractRequestErrorDetails(
+      createAxiosLikeError({
+        error_code: "Vega.Query.Invalid",
+        description: "Bad query. Check the limit.",
+        error_details: "{{ literal }}",
+      }),
+    );
+    expect(current.description).toBe("Bad query. Check the limit.");
+    expect(current.details).toBe("{{ literal }}");
+    expect(current).not.toHaveProperty("solution");
+    const legacy = extractRequestErrorDetails(
+      createAxiosLikeError({
+        error_code: "Vega.Query.Invalid",
+        description: "Bad query",
+        solution: "Check the limit",
+        error_link: "https://example.com/errors/query",
+      }),
+    );
+    expect(legacy).not.toHaveProperty("solution");
+    expect(legacy).not.toHaveProperty("errorLink");
+    expect(
+      extractRequestErrorDetails(
+        createAxiosLikeError({
+          description: "Bad query",
+          solution: { unused: true },
+          error_link: [],
+        }),
+      ),
+    ).not.toHaveProperty("solution");
   });
 });

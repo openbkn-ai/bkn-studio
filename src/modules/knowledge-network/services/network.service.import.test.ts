@@ -117,10 +117,24 @@ describe("importKnowledgeNetwork", () => {
     const { importKnowledgeNetwork } =
       await import("@/modules/knowledge-network/services/network.service");
 
-    await expect(importKnowledgeNetwork({ id: "orders" })).rejects.toMatchObject({
+    const error = await importKnowledgeNetwork({ id: "orders" }).catch((reason: unknown) => reason);
+    expect(error).toMatchObject({
       isBindingError: true,
       message: "The knowledge network has incomplete tool bindings",
       details: "toolbox orders-api is missing bound tools: get-order",
     });
+    expect(error).not.toHaveProperty("solution");
   });
+  it.each([undefined, "", "  "])(
+    "preserves the code when an import error description is %j",
+    async (description) => {
+      const errorCode = "BknBackend.KnowledgeNetwork.Proxy.TargetInvalid";
+      postMock.mockRejectedValue({ response: { data: { description, error_code: errorCode } } });
+      const { importKnowledgeNetwork } =
+        await import("@/modules/knowledge-network/services/network.service");
+      await expect(importKnowledgeNetwork({ id: "orders" })).rejects.toMatchObject({
+        message: errorCode,
+      });
+    },
+  );
 });

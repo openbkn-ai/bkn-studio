@@ -290,7 +290,6 @@ describe("KnowledgeNetworkImportButton", () => {
       new KnowledgeNetworkImportBindingError(
         "Import bindings are incomplete",
         "toolbox orders-api is missing bound tools: get-order",
-        "Import with detached bindings to continue.",
       ),
     );
     render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);

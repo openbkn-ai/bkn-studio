@@ -259,9 +259,6 @@ export function KnowledgeNetworkImportButton({
                 {bindingError.details ? (
                   <Typography.Text>{bindingError.details}</Typography.Text>
                 ) : null}
-                {bindingError.solution ? (
-                  <Typography.Text>{bindingError.solution}</Typography.Text>
-                ) : null}
               </Space>
             }
             showIcon

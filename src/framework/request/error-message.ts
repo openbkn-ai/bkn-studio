@@ -13,13 +13,11 @@ type BackendErrorResponseBody = {
   error?: string;
   error_code?: string;
   error_details?: unknown;
-  error_link?: string;
   metadata?: unknown;
   message?: string;
   description?: string;
   detail?: unknown;
   details?: unknown;
-  solution?: string;
 };
 
 export type RequestErrorDetails = {
@@ -27,18 +25,20 @@ export type RequestErrorDetails = {
   description: string;
   descriptionSource?: "response";
   details?: string;
-  errorLink?: string;
   metadata?: Record<string, unknown>;
-  solution?: string;
 };
 
-function formatErrorDetails(value: unknown): string | undefined {
+export function formatErrorDetails(value: unknown): string | undefined {
   if (typeof value === "string" && value.trim()) {
     return value;
   }
 
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
+  }
+
+  if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+    return value.join("；") || undefined;
   }
 
   if (value && typeof value === "object") {
@@ -66,8 +66,6 @@ export function extractRequestErrorDetails(error: unknown): RequestErrorDetails 
     const common = {
       code: optionalString(data?.error_code),
       details: details ?? fallbackDetails,
-      errorLink: optionalString(data?.error_link),
-      solution: optionalString(data?.solution),
       ...(data?.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata)
         ? { metadata: data.metadata as Record<string, unknown> }
         : {}),
@@ -78,6 +76,11 @@ export function extractRequestErrorDetails(error: unknown): RequestErrorDetails 
 
     if (description) {
       return { ...common, description, descriptionSource: "response" };
+    }
+
+    // Blank shared descriptions use the stable code; details remain available separately.
+    if (common.code) {
+      return { ...common, description: common.code, descriptionSource: "response" };
     }
 
     if (fallbackDetails) {

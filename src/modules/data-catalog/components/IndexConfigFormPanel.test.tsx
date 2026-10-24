@@ -577,11 +577,11 @@ describe("IndexConfigFormPanel", () => {
       expect(diagnostic).toHaveTextContent(description);
       if (details) expect(diagnostic).toHaveTextContent(details);
       expect(
-        screen.getByText("common.error.solution: Review the resource configuration"),
-      ).toBeInTheDocument();
+        screen.queryByText("common.error.solution: Review the resource configuration"),
+      ).not.toBeInTheDocument();
       expect(
-        screen.getByText("common.error.link: https://example.com/errors/resource-conflict"),
-      ).toBeInTheDocument();
+        screen.queryByText("common.error.link: https://example.com/errors/resource-conflict"),
+      ).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "common.hideDetails" }));
       expect(screen.queryByText(`common.error.code: ${code}`)).not.toBeInTheDocument();
     },

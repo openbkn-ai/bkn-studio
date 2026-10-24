@@ -574,9 +574,7 @@ export function CypherQueryScene({
 
   const fixFrame = (frame: CypherFrame) => {
     if (!frame.ai?.threadId || !frame.error) return;
-    const error = [frame.error.code, frame.error.message, frame.error.solution]
-      .filter(Boolean)
-      .join(" | ");
+    const error = [frame.error.code, frame.error.message].filter(Boolean).join(" | ");
     void generateAndRun(
       `${t("knowledgeNetwork.cypherQuery.frames.fixWithAi")}：${frame.ai.question}`,
       t("knowledgeNetwork.cypherQuery.frames.fixMessage", { query: frame.query, error }),
@@ -629,7 +627,7 @@ export function CypherQueryScene({
         );
       setExplanation({ status: "running", tools: [] });
       const error = frame.error
-        ? [frame.error.code, frame.error.message, frame.error.solution].filter(Boolean).join(" | ")
+        ? [frame.error.code, frame.error.message].filter(Boolean).join(" | ")
         : undefined;
       try {
         const explained = await explainCypher(

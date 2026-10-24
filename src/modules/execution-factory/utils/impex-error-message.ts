@@ -16,11 +16,6 @@ export type ImpexUserErrorMessage = {
   hint?: string;
 };
 
-const GENERIC_ADMIN_SOLUTIONS = new Set([
-  "\u8bf7\u8054\u7cfb\u7ba1\u7406\u5458",
-  "Please contact your administrator",
-]);
-
 function isResourceConflict(error: unknown): boolean {
   if (!axios.isAxiosError(error)) {
     return false;
@@ -69,10 +64,8 @@ export function resolveImpexUserErrorMessage(
   }
 
   if (detail.description && !detail.message.includes("status code")) {
-    const skipSolution = GENERIC_ADMIN_SOLUTIONS.has(detail.solution ?? "");
     return {
       title: detail.description,
-      hint: detail.solution && !skipSolution ? detail.solution : undefined,
     };
   }
 

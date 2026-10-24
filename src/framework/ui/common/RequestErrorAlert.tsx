@@ -30,19 +30,17 @@ export function RequestErrorAlert({
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [expanded, setExpanded] = useState(false);
-  const hasDetails = Boolean(error.code || error.details || error.solution || error.errorLink);
+  const hasDetails = Boolean(error.code || error.details);
   const copyText = useMemo(
     () =>
       [
         error.description,
         error.code ? t("common.error.code", { value: error.code }) : "",
         error.details ? t("common.error.details", { value: error.details }) : "",
-        error.solution ? t("common.error.solution", { value: error.solution }) : "",
-        error.errorLink ? t("common.error.link", { value: error.errorLink }) : "",
       ]
         .filter(Boolean)
         .join("\n"),
-    [error.code, error.description, error.details, error.errorLink, error.solution, t],
+    [error.code, error.description, error.details, t],
   );
 
   useEffect(() => {
@@ -89,12 +87,6 @@ export function RequestErrorAlert({
               <pre className={styles.detailValue}>
                 {t("common.error.details", { value: error.details })}
               </pre>
-            ) : null}
-            {error.solution ? (
-              <div>{t("common.error.solution", { value: error.solution })}</div>
-            ) : null}
-            {error.errorLink ? (
-              <div>{t("common.error.link", { value: error.errorLink })}</div>
             ) : null}
           </div>
         ) : undefined

@@ -28,7 +28,6 @@ export class KnowledgeNetworkImportBindingError extends Error {
   constructor(
     message: string,
     readonly details?: string,
-    readonly solution?: string,
   ) {
     super(message);
     this.name = "KnowledgeNetworkImportBindingError";
@@ -241,7 +240,7 @@ export function rethrowImportConflict(error: unknown): never {
   ).response?.data;
 
   if (response?.error_code) {
-    throwImportConflict(response.description ?? "Import conflict");
+    throwImportConflict(response.description?.trim() || response.error_code);
   }
 
   throw error;
