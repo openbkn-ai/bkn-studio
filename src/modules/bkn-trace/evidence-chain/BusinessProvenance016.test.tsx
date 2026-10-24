@@ -235,6 +235,45 @@ const view: EvidenceChainView = {
 };
 
 describe("BusinessProvenance016", () => {
+  it("keeps backend scope and evidence-gap notices visible across reading and graph modes", () => {
+    render(
+      <BusinessProvenance016
+        view={{
+          ...view,
+          evidenceStatus: "partial",
+          notices: [
+            "Original output evidence is missing; this attribution remains partial.",
+            "Display coverage is bounded; omitted fields are not missing original evidence.",
+          ],
+        }}
+        evidenceOnly
+      />,
+    );
+    const warning = "Original output evidence is missing; this attribution remains partial.";
+    const coverage =
+      "Display coverage is bounded; omitted fields are not missing original evidence.";
+    expect(screen.getByText(warning)).toBeVisible();
+    const details = screen.getByText("查看读取范围与依据缺口").closest("details");
+    expect(details).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("查看读取范围与依据缺口"));
+    expect(details).toHaveAttribute("open");
+    expect(screen.getByText(coverage)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "图谱模式" }));
+    expect(screen.getByText(warning)).toBeVisible();
+    expect(screen.getByText(coverage)).toBeVisible();
+    fireEvent.click(screen.getByText("查看读取范围与依据缺口"));
+    expect(details).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByRole("button", { name: "阅读模式" }));
+    expect(screen.getByText(warning)).toBeVisible();
+    expect(details).not.toHaveAttribute("open");
+  });
+
+  it("does not add an empty scope notice when the backend returns none", () => {
+    render(<BusinessProvenance016 view={{ ...view, notices: [] }} evidenceOnly />);
+    expect(screen.queryByText("查看读取范围与依据缺口")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "汇总物料可用库存" })).toBeVisible();
+  });
+
   it("uses question pairs as the business entry point and changes the active provenance", () => {
     render(<BusinessProvenance016 view={view} />);
     expect(screen.getByRole("heading", { name: "汇总物料可用库存" })).toBeTruthy();

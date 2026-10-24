@@ -23,6 +23,7 @@ import type {
   TimeRailPayload,
 } from "./evidence-chain.types";
 import styles from "./BusinessProvenance016.module.css";
+import { EvidenceScopeNotices } from "./EvidenceScopeNotices";
 
 type DisplayMode = "reading" | "graph";
 type GraphLayer = "business" | "ontology" | "technical";
@@ -1411,6 +1412,7 @@ export function BusinessProvenance016({
           {fullScreen ? p16Text("workspace.exitFullScreen") : p16Text("workspace.fullScreen")}
         </button>
       </header>
+      <EvidenceScopeNotices notices={view.notices} />
       {!evidenceOnly ? (
         <>
           <section className={styles.questionBanner}>
