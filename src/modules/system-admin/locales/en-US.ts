@@ -1280,6 +1280,7 @@ export const systemAdminEnUS = {
       toolsNone: "No tools",
       toolsAllContextLoader: "All Context Loader tools",
       toolsAtRuntime: "Loaded at execution",
+      toolsNoContextLoader: "None for the model; used only by the built-in tools",
       toolNoParameters: "No parameters",
       toolParameter: "Parameter",
       toolParameterType: "Type",

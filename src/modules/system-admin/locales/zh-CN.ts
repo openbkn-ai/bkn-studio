@@ -1189,6 +1189,7 @@ export const systemAdminZhCN = {
       toolsNone: "未挂载工具",
       toolsAllContextLoader: "全部 Context Loader 工具",
       toolsAtRuntime: "执行时加载",
+      toolsNoContextLoader: "不向模型开放，仅供内置工具内部查询",
       toolNoParameters: "无参数",
       toolParameter: "参数",
       toolParameterType: "类型",
