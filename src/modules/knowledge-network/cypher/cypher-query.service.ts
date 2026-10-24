@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { formatErrorDetails } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 import { cypherPlanFrom } from "@/modules/knowledge-network/cypher/cypher-plan";
@@ -42,8 +43,8 @@ export type CypherRun =
   | { ok: true; result: CypherResult; exchange: CypherExchange }
   | { ok: false; error: CypherRunError; exchange: CypherExchange };
 
-/** The backend's refusal as it gave it: code, message and how to fix the query. */
-export type CypherRunError = { message: string; code?: string; solution?: string };
+/** The backend's refusal: code, description, and diagnostic details. */
+export type CypherRunError = { message: string; code?: string };
 
 /** Reads run_cypher's body into a result. */
 export function cypherResultFrom(payload: unknown): CypherResult | null {
@@ -93,16 +94,16 @@ export function cypherErrorFrom(payload: unknown, status: number, text: string):
       }
       return undefined;
     };
-    const message = pick("description", "message", "error");
-    // bkn-backend puts the parser's own words, with the fix, in `details`.
-    const nested = [payload.details, payload.error_details].find(isRec);
-    const detailText =
-      pick("details", "error_details", "detail") ??
-      (nested && typeof nested.message === "string" ? nested.message : undefined);
+    const code = pick("error_code", "code");
+    const message = payload.error_code
+      ? pick("description") || code
+      : pick("description", "message", "error") || code;
+    const detailText = formatErrorDetails(
+      payload.error_details ?? payload.details ?? payload.detail,
+    );
     return {
       message: [message, detailText].filter(Boolean).join(": ") || text || `HTTP ${status}`,
-      ...(pick("error_code", "code") ? { code: pick("error_code", "code") } : {}),
-      ...(pick("solution", "hint") ? { solution: pick("solution", "hint") } : {}),
+      ...(code ? { code } : {}),
     };
   }
   return { message: text || `HTTP ${status}` };

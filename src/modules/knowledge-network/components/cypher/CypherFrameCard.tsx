@@ -303,9 +303,6 @@ export function CypherFrameCard({
         frame.error.code
           ? t("knowledgeNetwork.cypherQuery.status.code", { code: frame.error.code })
           : "",
-        frame.error.solution
-          ? t("knowledgeNetwork.cypherQuery.status.solution", { solution: frame.error.solution })
-          : "",
       ].filter(Boolean);
       return (
         <>

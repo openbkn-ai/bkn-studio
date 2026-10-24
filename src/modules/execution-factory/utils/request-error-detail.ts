@@ -7,26 +7,27 @@
 
 import axios from "axios";
 
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorDetails,
+  extractRequestErrorMessage,
+} from "@/framework/request/error-message";
 
 export type RequestErrorDetail = {
   message: string;
   code?: string;
   description?: string;
   detail?: unknown;
-  solution?: string;
-  link?: string;
 };
 
 type BackendErrorBody = {
+  error_code?: string;
+  error_details?: unknown;
   code?: string;
   description?: string;
   detail?: unknown;
   details?: unknown;
   error?: string;
   message?: string;
-  solution?: string;
-  link?: string;
 };
 
 export function extractRequestErrorDetail(error: unknown): RequestErrorDetail {
@@ -37,13 +38,20 @@ export function extractRequestErrorDetail(error: unknown): RequestErrorDetail {
   }
 
   const data = error.response?.data;
+  if (data?.error_code) {
+    const shared = extractRequestErrorDetails(error);
+    return {
+      message: shared.description,
+      code: shared.code,
+      description: shared.description,
+      detail: data.error_details,
+    };
+  }
 
   return {
-    message: data?.description ?? data?.message ?? message,
+    message: data?.description?.trim() || data?.message?.trim() || data?.code || message,
     code: data?.code,
     description: data?.description,
     detail: data?.detail ?? data?.details,
-    solution: data?.solution,
-    link: data?.link,
   };
 }

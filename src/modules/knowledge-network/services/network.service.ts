@@ -432,22 +432,22 @@ export async function importKnowledgeNetwork(
             error_code?: string;
             description?: string;
             error_details?: string;
-            solution?: string;
           };
         };
       }
     ).response?.data;
-    const { description, error_code: errorCode, error_details: details, solution } = response ?? {};
+    const { description, error_code: errorCode, error_details: details } = response ?? {};
 
     if (KNOWLEDGE_NETWORK_IMPORT_CONFLICT_ERROR_CODES.has(errorCode ?? "")) {
-      throwImportConflict(description ?? i18n.t("knowledgeNetwork.importConflictTitle"));
+      throwImportConflict(
+        description?.trim() || errorCode || i18n.t("knowledgeNetwork.importConflictTitle"),
+      );
     }
 
     if (errorCode === KNOWLEDGE_NETWORK_IMPORT_BINDING_ERROR_CODE) {
       throw new KnowledgeNetworkImportBindingError(
-        description ?? i18n.t("knowledgeNetwork.importBindingInvalidTitle"),
+        description?.trim() || errorCode || i18n.t("knowledgeNetwork.importBindingInvalidTitle"),
         details,
-        solution,
       );
     }
 

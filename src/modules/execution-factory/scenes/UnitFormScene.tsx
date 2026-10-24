@@ -13,7 +13,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { UnitFormSceneProps } from "@/modules/execution-factory/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorMessage, formatErrorDetails } from "@/framework/request/error-message";
 import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
@@ -281,12 +281,7 @@ export function UnitFormScene({ mode, onBack, onSubmitSuccess, operatorId }: Uni
       const errorDetail = extractRequestErrorDetail(error);
       setSubmitError(errorDetail);
 
-      const detailText =
-        typeof errorDetail.detail === "string"
-          ? errorDetail.detail
-          : Array.isArray(errorDetail.detail)
-            ? errorDetail.detail.join("；")
-            : undefined;
+      const detailText = formatErrorDetails(errorDetail.detail);
       const errorMessage = detailText
         ? `${errorDetail.message}（${detailText}）`
         : errorDetail.message;
@@ -424,13 +419,7 @@ export function UnitFormScene({ mode, onBack, onSubmitSuccess, operatorId }: Uni
                 {submitError ? (
                   <Alert
                     closable
-                    description={
-                      typeof submitError.detail === "string"
-                        ? submitError.detail
-                        : Array.isArray(submitError.detail)
-                          ? submitError.detail.join("；")
-                          : submitError.solution
-                    }
+                    description={formatErrorDetails(submitError.detail)}
                     message={submitError.message || t("executionFactory.submitErrorTitle")}
                     onClose={() => setSubmitError(null)}
                     showIcon

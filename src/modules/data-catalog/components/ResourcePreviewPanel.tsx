@@ -501,7 +501,6 @@ export function ResourcePreviewPanel({
               {sourceReadDetails.descriptionSource === "response" ? (
                 <div>{sourceReadDetails.description}</div>
               ) : null}
-              {sourceReadDetails.solution ? <div>{sourceReadDetails.solution}</div> : null}
             </>
           }
           message={

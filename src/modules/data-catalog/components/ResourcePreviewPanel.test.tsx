@@ -1283,7 +1283,7 @@ describe("ResourcePreviewPanel", () => {
     ["VegaBackend.Query.UnsupportedOutputField", "unsupportedOutputField"],
     ["VegaBackend.Query.NoQueryableFields", "noQueryableFields"],
   ])(
-    "uses only the localized projection explanation when %s has no response description",
+    "shows the localized projection explanation and code when %s has no response description",
     async (code, key) => {
       previewCatalogResourceMock.mockRejectedValue(
         Object.assign(new Error("Request failed with status code 400"), {
@@ -1298,7 +1298,9 @@ describe("ResourcePreviewPanel", () => {
         />,
       );
       const explanation = await screen.findByText(`dataCatalog.preview.${key}`);
-      expect(explanation.closest(".ant-alert")?.querySelector(".ant-alert-description")).toBeNull();
+      expect(
+        explanation.closest(".ant-alert")?.querySelector(".ant-alert-description"),
+      ).toHaveTextContent(code);
       expect(screen.queryByText("Request failed with status code 400")).not.toBeInTheDocument();
     },
   );
@@ -1392,7 +1394,7 @@ describe("ResourcePreviewPanel", () => {
     },
   );
 
-  it("shows a source account grant hint for HANA error 258", async () => {
+  it("preserves the source description and ignores legacy solution", async () => {
     previewCatalogResourceMock.mockRejectedValue(
       Object.assign(new Error("forbidden"), {
         isAxiosError: true,
@@ -1426,7 +1428,7 @@ describe("ResourcePreviewPanel", () => {
       screen.getByText("dataCatalog.preview.sourceReadForbiddenDescription"),
     ).toBeInTheDocument();
     expect(screen.getByText("The underlying view depends on APP.BASE_TABLE")).toBeInTheDocument();
-    expect(screen.getByText("Grant SELECT on APP.BASE_TABLE")).toBeInTheDocument();
+    expect(screen.queryByText("Grant SELECT on APP.BASE_TABLE")).not.toBeInTheDocument();
     expect(screen.queryByText("dataCatalog.preview.noQueryPermission")).toBeNull();
   });
 

@@ -105,7 +105,7 @@ describe("runCypherQuery", () => {
     expect(bodies[1]).not.toHaveProperty("object_properties");
   });
 
-  it("returns the backend's refusal with its code and fix, keeping the exchange", async () => {
+  it("returns the backend's refusal with its code, ignoring legacy guidance", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -124,13 +124,45 @@ describe("runCypherQuery", () => {
     expect(run.error).toEqual({
       message: "unexpected token !=",
       code: "BknBackend.Cypher.SyntaxError",
-      solution: "write not-equal as <>",
     });
     expect(run.exchange.status).toBe(400);
   });
 });
 
 describe("cypherErrorFrom", () => {
+  it.each([undefined, "", "  "])("uses the shared code for description %j", (description) => {
+    const payload = {
+      error_code: "BknBackend.Cypher.InvalidQuery",
+      description,
+      message: "generic",
+    };
+    expect(cypherErrorFrom(payload, 400, JSON.stringify(payload))).toEqual({
+      code: payload.error_code,
+      message: payload.error_code,
+    });
+  });
+
+  it.each(
+    [{ field: "limit", reason: "{{ literal }}" }, ["invalid limit", { limit: 10 }], 0, false].map(
+      (details) => ({ details }),
+    ),
+  )("preserves structured error details %j", ({ details }) => {
+    expect(
+      cypherErrorFrom(
+        {
+          error_code: "BknBackend.Cypher.InvalidQuery",
+          description: "Bad query",
+          error_details: details,
+        },
+        400,
+        "",
+      ),
+    ).toEqual({
+      code: "BknBackend.Cypher.InvalidQuery",
+      message: `Bad query: ${JSON.stringify(details)}`,
+    });
+  });
+
   it("joins bkn-backend's description with its details", () => {
     expect(
       cypherErrorFrom(
@@ -146,7 +178,6 @@ describe("cypherErrorFrom", () => {
     ).toEqual({
       message: "Cypher 查询语法解析失败: line 1, column 32: != is not supported",
       code: "BknBackend.Cypher.SyntaxError",
-      solution: "请按提示位置修正查询语句。",
     });
   });
 

@@ -264,7 +264,7 @@ describe("CypherQueryScene", () => {
     mocks.generateCypher.mockResolvedValueOnce({ query, answer: query, threadId: "thread-1" });
     mocks.runCypherQuery.mockResolvedValueOnce({
       ok: false,
-      error: { message: "unexpected token !=", code: "Cypher.SyntaxError", solution: "use <>" },
+      error: { message: "unexpected token !=", code: "Cypher.SyntaxError" },
       exchange: { ...exchange, status: 400 },
     });
     render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);

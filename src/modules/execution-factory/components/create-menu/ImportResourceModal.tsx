@@ -485,8 +485,6 @@ export function ImportResourceModal({
                   {JSON.stringify(errorDetail.detail, null, 2)}
                 </pre>
               ) : null}
-
-              {errorDetail.solution ? <div>{errorDetail.solution}</div> : null}
             </div>
           }
 
