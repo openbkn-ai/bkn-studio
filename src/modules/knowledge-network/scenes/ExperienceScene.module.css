@@ -3431,3 +3431,33 @@
 .mcpInstructionsHead {
   justify-content: flex-end;
 }
+
+/* Option switches in the MCP panel (connect mode, endpoint). The stock segmented
+   control barely separates the chosen item from the rest in the dark theme. */
+.choice:global(.ant-segmented) {
+  padding: 2px;
+  border: 1px solid var(--color-divider);
+  background: transparent;
+}
+
+.choice :global(.ant-segmented-item) {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.choice :global(.ant-segmented-item-label) {
+  padding: 0 12px;
+}
+
+.choice :global(.ant-segmented-item:hover:not(.ant-segmented-item-selected)) {
+  color: var(--color-text-primary);
+  background: transparent;
+}
+
+.choice :global(.ant-segmented-item-selected),
+.choice :global(.ant-segmented-thumb) {
+  background: var(--color-primary-100);
+  box-shadow: inset 0 0 0 1px var(--color-primary-border);
+  color: var(--color-text-link);
+}

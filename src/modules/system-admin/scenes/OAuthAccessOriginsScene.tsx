@@ -14,7 +14,7 @@ import {
   SyncOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { Alert, Input, Spin, Tooltip } from "antd";
+import { Alert, Input, Spin, Tabs, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
+import { ExternalClientsSection } from "@/modules/system-admin/components/ExternalClientsSection";
 import {
   createOAuthAccessOrigin,
   deleteOAuthAccessOrigin,
@@ -54,6 +55,7 @@ const statusTones: Record<EffectiveSyncState, LightStatusTone> = {
 };
 
 export function OAuthAccessOriginsScene() {
+  const [activeTab, setActiveTab] = useState<"origins" | "clients">("origins");
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [entries, setEntries] = useState<OAuthAccessOrigin[]>([]);
@@ -283,108 +285,136 @@ export function OAuthAccessOriginsScene() {
         <div className={adminStyles.operationPrimary}>
           <GlobalOutlined className={styles.pageIcon} />
           <div>
-            <div className={adminStyles.pageTitle}>{t("systemAdmin.accessOrigins.title")}</div>
+            <div className={adminStyles.pageTitle}>{t("systemAdmin.accessOrigins.pageTitle")}</div>
             <div className={adminStyles.pageSubtitle}>
-              {t("systemAdmin.accessOrigins.description")}
+              {t("systemAdmin.accessOrigins.pageDescription")}
             </div>
           </div>
         </div>
-        <div className={adminStyles.toolbarActions}>
-          <AppButton
-            disabled={loading}
-            icon={<SyncOutlined />}
-            loading={syncing}
-            onClick={() => void handleReconcile()}
-          >
-            {t("systemAdmin.accessOrigins.sync")}
-          </AppButton>
-          <AppButton
-            disabled={syncing}
-            icon={<ReloadOutlined />}
-            loading={loading}
-            onClick={() => void load()}
-          >
-            {t("common.refresh")}
-          </AppButton>
-        </div>
+        {activeTab === "origins" ? (
+          <div className={adminStyles.toolbarActions}>
+            <AppButton
+              disabled={loading}
+              icon={<SyncOutlined />}
+              loading={syncing}
+              onClick={() => void handleReconcile()}
+            >
+              {t("systemAdmin.accessOrigins.sync")}
+            </AppButton>
+            <AppButton
+              disabled={syncing}
+              icon={<ReloadOutlined />}
+              loading={loading}
+              onClick={() => void load()}
+            >
+              {t("common.refresh")}
+            </AppButton>
+          </div>
+        ) : null}
       </div>
 
-      <form className={styles.addForm} onSubmit={(event) => void handleCreate(event)}>
-        <div className={styles.fieldBody}>
-          <div className={styles.fieldLabel}>
-            <label htmlFor="oauth-access-origin">{t("systemAdmin.accessOrigins.form.label")}</label>
-            <Tooltip
-              classNames={{ root: styles.helpTooltip }}
-              title={t("systemAdmin.accessOrigins.form.helpTooltip")}
-            >
-              <span
-                aria-label={t("systemAdmin.accessOrigins.form.helpTooltipLabel")}
-                className={styles.helpIcon}
-                tabIndex={0}
-              >
-                <InfoCircleOutlined />
-              </span>
-            </Tooltip>
-          </div>
-          <Input
-            aria-describedby={inputError ? "oauth-access-origin-error" : "oauth-access-origin-help"}
-            id="oauth-access-origin"
-            onChange={(event) => {
-              setOrigin(event.target.value);
-              setInputError(null);
-              setDuplicateId(null);
-            }}
-            placeholder={t("systemAdmin.accessOrigins.form.placeholder")}
-            status={inputError ? "error" : undefined}
-            value={origin}
-          />
-          <span
-            className={inputError ? styles.fieldError : styles.fieldHelp}
-            id={inputError ? "oauth-access-origin-error" : "oauth-access-origin-help"}
-            role={inputError ? "alert" : undefined}
-          >
-            {inputError ?? t("systemAdmin.accessOrigins.form.help")}
-          </span>
-        </div>
-        <AppButton
-          disabled={!origin.trim()}
-          htmlType="submit"
-          icon={<PlusOutlined />}
-          loading={submitting}
-          type="primary"
-        >
-          {t("systemAdmin.accessOrigins.add")}
-        </AppButton>
-      </form>
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key === "clients" ? "clients" : "origins")}
+        className={adminStyles.authzWorkspaceTabs}
+        items={[
+          {
+            key: "origins",
+            label: t("systemAdmin.accessOrigins.title"),
+            children: (
+              <>
+                <form className={styles.addForm} onSubmit={(event) => void handleCreate(event)}>
+                  <div className={styles.fieldBody}>
+                    <div className={styles.fieldLabel}>
+                      <label htmlFor="oauth-access-origin">
+                        {t("systemAdmin.accessOrigins.form.label")}
+                      </label>
+                      <Tooltip
+                        classNames={{ root: styles.helpTooltip }}
+                        title={t("systemAdmin.accessOrigins.form.helpTooltip")}
+                      >
+                        <span
+                          aria-label={t("systemAdmin.accessOrigins.form.helpTooltipLabel")}
+                          className={styles.helpIcon}
+                          tabIndex={0}
+                        >
+                          <InfoCircleOutlined />
+                        </span>
+                      </Tooltip>
+                    </div>
+                    <Input
+                      aria-describedby={
+                        inputError ? "oauth-access-origin-error" : "oauth-access-origin-help"
+                      }
+                      id="oauth-access-origin"
+                      onChange={(event) => {
+                        setOrigin(event.target.value);
+                        setInputError(null);
+                        setDuplicateId(null);
+                      }}
+                      placeholder={t("systemAdmin.accessOrigins.form.placeholder")}
+                      status={inputError ? "error" : undefined}
+                      value={origin}
+                    />
+                    <span
+                      className={inputError ? styles.fieldError : styles.fieldHelp}
+                      id={inputError ? "oauth-access-origin-error" : "oauth-access-origin-help"}
+                      role={inputError ? "alert" : undefined}
+                    >
+                      {inputError ?? t("systemAdmin.accessOrigins.form.help")}
+                    </span>
+                  </div>
+                  <AppButton
+                    disabled={!origin.trim()}
+                    htmlType="submit"
+                    icon={<PlusOutlined />}
+                    loading={submitting}
+                    type="primary"
+                  >
+                    {t("systemAdmin.accessOrigins.add")}
+                  </AppButton>
+                </form>
 
-      {loadError ? (
-        <Alert
-          action={
-            <AppButton size="small" onClick={() => void load()}>
-              {t("common.retry")}
-            </AppButton>
-          }
-          className={styles.loadError}
-          message={loadError}
-          showIcon
-          type="error"
-        />
-      ) : null}
+                {loadError ? (
+                  <Alert
+                    action={
+                      <AppButton size="small" onClick={() => void load()}>
+                        {t("common.retry")}
+                      </AppButton>
+                    }
+                    className={styles.loadError}
+                    message={loadError}
+                    showIcon
+                    type="error"
+                  />
+                ) : null}
 
-      <Spin spinning={loading && entries.length === 0}>
-        <div className={styles.tableSection}>
-          <AppTable<OAuthAccessOrigin>
-            columns={columns}
-            dataSource={entries}
-            locale={{ emptyText: t("systemAdmin.accessOrigins.empty") }}
-            pagination={false}
-            rowClassName={(entry) => (entry.id === duplicateId ? styles.duplicateRow : "")}
-            rowKey="id"
-            scroll={{ x: 970 }}
-            size="middle"
-          />
-        </div>
-      </Spin>
+                <Spin spinning={loading && entries.length === 0}>
+                  <div className={styles.tableSection}>
+                    <AppTable<OAuthAccessOrigin>
+                      columns={columns}
+                      dataSource={entries}
+                      locale={{ emptyText: t("systemAdmin.accessOrigins.empty") }}
+                      pagination={false}
+                      rowClassName={(entry) =>
+                        entry.id === duplicateId ? styles.duplicateRow : ""
+                      }
+                      rowKey="id"
+                      scroll={{ x: 970 }}
+                      size="middle"
+                    />
+                  </div>
+                </Spin>
+              </>
+            ),
+          },
+          {
+            key: "clients",
+            label: t("systemAdmin.externalClients.title"),
+            children: <ExternalClientsSection />,
+          },
+        ]}
+      />
     </div>
   );
 }

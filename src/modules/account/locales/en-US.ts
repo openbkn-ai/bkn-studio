@@ -23,8 +23,9 @@ export const accountEnUS = {
         description: "Update your login password to keep your account secure.",
       },
       apiKeys: {
-        title: "API keys",
-        description: "Issue and manage API keys for external systems and agent access.",
+        title: "API keys & clients",
+        description:
+          "Issue and manage API keys for external systems and agent access, and review or disconnect connected agent clients.",
       },
       permissionRequests: {
         title: "Permission tickets",

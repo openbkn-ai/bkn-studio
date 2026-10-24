@@ -23,8 +23,9 @@ export const accountZhCN = {
         description: "更新登录密码以保障账户安全。",
       },
       apiKeys: {
-        title: "API Key",
-        description: "签发和管理用于外部系统或智能体接入的 API Key。",
+        title: "API Key 与客户端",
+        description:
+          "签发和管理用于外部系统或智能体接入的 API Key，查看和断开已连接的智能体客户端。",
       },
       permissionRequests: { title: "权限工单", description: "查看和处理资源权限工单。" },
     },

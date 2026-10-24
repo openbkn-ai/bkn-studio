@@ -1301,7 +1301,34 @@ export const systemAdminEnUS = {
       mcpFull: "Full",
       mcpCompact: "Compact",
     },
+    externalClients: {
+      title: "External clients",
+      description:
+        "When a user puts only the MCP URL into an agent such as WorkBuddy, Claude Code or Cursor and signs in, the client registers itself here. Removing one ends every user's access through it at once. Agents register again after each reinstall, so clean up the ones no longer in use here.",
+      refresh: "Refresh",
+      columns: {
+        client: "Client",
+        callback: "Callback",
+        registeredAt: "Registered",
+        registeredFrom: "Registered from",
+        actions: "Actions",
+      },
+      actionRemove: "Remove",
+      removeConfirm: {
+        title: "Remove this external client?",
+        content:
+          "Every user's access through “{{name}}” ends at once. The client registers again the next time someone connects it.",
+        ok: "Remove",
+      },
+      removeSuccess: "Removed",
+      removeFailed: "Failed to remove",
+      loadFailed: "Failed to load external clients",
+      empty: "No external clients have registered yet",
+    },
     accessOrigins: {
+      pageTitle: "Access",
+      pageDescription:
+        "Manage the browser addresses allowed to complete Studio sign-in, and the external clients that signed in from an agent.",
       title: "Access Addresses",
       description: "Manage browser origins allowed to complete Studio login and logout flows.",
       add: "Add access address",

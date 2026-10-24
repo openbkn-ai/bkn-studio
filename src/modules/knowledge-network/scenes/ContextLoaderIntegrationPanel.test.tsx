@@ -107,3 +107,75 @@ describe("ContextLoaderIntegrationPanel server instructions", () => {
     ).toBeNull();
   });
 });
+
+describe("ContextLoaderIntegrationPanel MCP connect guide", () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("defaults to sign-in with a URL-only config and no API key entry", () => {
+    renderPanel({ showMcpConnect: true });
+
+    expect(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.stepSignIn")).toBeTruthy();
+    expect(screen.queryByText("knowledgeNetwork.contextLoaderPanel.appKey.issue")).toBeNull();
+    // A domain name: assume a proper certificate until the user says otherwise.
+    expect(screen.getByRole("checkbox")).toHaveProperty("checked", false);
+    expect(
+      screen.getByText(
+        "claude mcp add --transport http --scope user bkn-agent-retrieval https://platform.example.com/api/agent-retrieval/v1/mcp/",
+      ),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "WorkBuddy" }));
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.workbuddyHint"),
+    ).toBeTruthy();
+  });
+
+  it("ticks the self-signed option by default for an IP address", () => {
+    renderPanel({
+      showMcpConnect: true,
+      mcpUrl: "https://10.211.55.4/api/agent-retrieval/v1/mcp",
+    });
+
+    expect(screen.getByRole("checkbox")).toHaveProperty("checked", true);
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpSecurity.oauthInsecureDescription"),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(screen.getByRole("checkbox")).toHaveProperty("checked", false);
+  });
+
+  it("switches to the API Key mode and remembers the choice", () => {
+    renderPanel({ showMcpConnect: true });
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.apiKey"));
+
+    expect(screen.getByText("knowledgeNetwork.contextLoaderPanel.appKey.issue")).toBeTruthy();
+    expect(screen.getByRole("checkbox")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "WorkBuddy" })).toBeNull();
+    expect(localStorage.getItem("bkn-mcp-connect-auth-mode")).toBe("apiKey");
+
+    cleanup();
+    renderPanel({ showMcpConnect: true });
+    expect(screen.getByText("knowledgeNetwork.contextLoaderPanel.appKey.issue")).toBeTruthy();
+  });
+
+  it("still renders when browser storage is unavailable", () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+
+    renderPanel({ showMcpConnect: true });
+    expect(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.stepSignIn")).toBeTruthy();
+    fireEvent.click(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.apiKey"));
+    expect(screen.getByText("knowledgeNetwork.contextLoaderPanel.appKey.issue")).toBeTruthy();
+
+    getItem.mockRestore();
+    setItem.mockRestore();
+  });
+});

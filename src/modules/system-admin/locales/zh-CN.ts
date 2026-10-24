@@ -1210,7 +1210,34 @@ export const systemAdminZhCN = {
       mcpFull: "完整版",
       mcpCompact: "精简版",
     },
+    externalClients: {
+      title: "外部客户端",
+      description:
+        "用户在 WorkBuddy、Claude Code、Cursor 等智能体里只填 MCP 地址并登录时，客户端会自动在平台登记。删除后，所有用户通过它的访问立即失效；智能体每重装一次会新登记一个，可在这里清理不再使用的。",
+      refresh: "刷新",
+      columns: {
+        client: "客户端",
+        callback: "回调地址",
+        registeredAt: "登记时间",
+        registeredFrom: "登记来源",
+        actions: "操作",
+      },
+      actionRemove: "删除",
+      removeConfirm: {
+        title: "删除这个外部客户端？",
+        content:
+          "删除后，所有用户通过「{{name}}」的访问立即失效；需要时客户端会在下次连接时重新登记。",
+        ok: "删除",
+      },
+      removeSuccess: "已删除",
+      removeFailed: "删除失败",
+      loadFailed: "加载外部客户端失败",
+      empty: "还没有外部客户端登记",
+    },
     accessOrigins: {
+      pageTitle: "接入管理",
+      pageDescription:
+        "管理允许完成 Studio 登录的浏览器地址，以及在智能体里登录过本平台的外部客户端。",
       title: "访问地址",
       description: "管理允许完成 Studio 登录和退出流程的浏览器地址。",
       add: "添加访问地址",

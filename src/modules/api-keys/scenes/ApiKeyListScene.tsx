@@ -6,7 +6,7 @@
  */
 
 import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Tag } from "antd";
+import { Alert, Tabs, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
@@ -19,6 +19,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ApiKeySecretModal } from "@/modules/api-keys/components/ApiKeySecretModal";
+import { ConnectedClientsSection } from "@/modules/api-keys/components/ConnectedClientsSection";
 import { IssueApiKeyModal } from "@/modules/api-keys/components/IssueApiKeyModal";
 import {
   listApiKeys,
@@ -30,6 +31,13 @@ import { readApiKeyReturnTo, saveApiKeyHandoff } from "@/modules/api-keys/utils/
 
 import styles from "./ApiKeyListScene.module.css";
 
+/** `?tab=clients` opens the connected-clients tab, e.g. from the MCP connect guide. */
+export const CONNECTED_CLIENTS_TAB = "clients";
+type ApiKeyTab = "keys" | typeof CONNECTED_CLIENTS_TAB;
+
+const readTab = (search: string): ApiKeyTab =>
+  new URLSearchParams(search).get("tab") === CONNECTED_CLIENTS_TAB ? CONNECTED_CLIENTS_TAB : "keys";
+
 const formatTime = (value?: string | null) =>
   value ? dayjs(value).format("YYYY/MM/DD HH:mm") : null;
 
@@ -39,6 +47,17 @@ export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {
   const location = useLocation();
   const navigate = useNavigate();
   const returnTo = readApiKeyReturnTo(location.search);
+  const activeTab = readTab(location.search);
+  const changeTab = (key: string) => {
+    const params = new URLSearchParams(location.search);
+    if (key === CONNECTED_CLIENTS_TAB) params.set("tab", key);
+    else params.delete("tab");
+    const query = params.toString();
+    void navigate(
+      { pathname: location.pathname, search: query ? `?${query}` : "" },
+      { replace: true },
+    );
+  };
   const [items, setItems] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -185,46 +204,78 @@ export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {
         </div>
       )}
 
-      <Alert type="info" showIcon message={t("apiKeys.calloutInfo")} style={{ marginBottom: 16 }} />
+      <Tabs
+        activeKey={activeTab}
+        onChange={changeTab}
+        items={[
+          {
+            key: "keys",
+            label: t("apiKeys.tabs.keys"),
+            children: (
+              <>
+                <Alert
+                  type="info"
+                  showIcon
+                  message={t("apiKeys.calloutInfo")}
+                  style={{ marginBottom: 16 }}
+                />
 
-      <div className={styles.toolbar}>
-        <AppButton icon={<PlusOutlined />} type="primary" onClick={() => setIssueOpen(true)}>
-          {t("apiKeys.issue")}
-        </AppButton>
-        <AppButton icon={<ReloadOutlined />} onClick={() => void loadData()} loading={loading}>
-          {t("apiKeys.refresh")}
-        </AppButton>
-      </div>
+                <div className={styles.toolbar}>
+                  <AppButton
+                    icon={<PlusOutlined />}
+                    type="primary"
+                    onClick={() => setIssueOpen(true)}
+                  >
+                    {t("apiKeys.issue")}
+                  </AppButton>
+                  <AppButton
+                    icon={<ReloadOutlined />}
+                    onClick={() => void loadData()}
+                    loading={loading}
+                  >
+                    {t("apiKeys.refresh")}
+                  </AppButton>
+                </div>
 
-      {loadError ? (
-        <Alert
-          action={
-            <AppButton onClick={() => void loadData()} size="small">
-              {t("common.retry")}
-            </AppButton>
-          }
-          message={loadError}
-          showIcon
-          style={{ marginBottom: 16 }}
-          type="error"
-        />
-      ) : null}
+                {loadError ? (
+                  <Alert
+                    action={
+                      <AppButton onClick={() => void loadData()} size="small">
+                        {t("common.retry")}
+                      </AppButton>
+                    }
+                    message={loadError}
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                    type="error"
+                  />
+                ) : null}
 
-      <AppTable<ApiKey>
-        columns={columns}
-        dataSource={items}
-        loading={loading}
-        locale={{
-          emptyText: (
-            <EmptyStatePanel
-              description={t("apiKeys.emptyDescription")}
-              title={t("apiKeys.emptyTitle")}
-            />
-          ),
-        }}
-        pagination={false}
-        rowKey="id"
-        scroll={{ x: 900 }}
+                <AppTable<ApiKey>
+                  columns={columns}
+                  dataSource={items}
+                  loading={loading}
+                  locale={{
+                    emptyText: (
+                      <EmptyStatePanel
+                        description={t("apiKeys.emptyDescription")}
+                        title={t("apiKeys.emptyTitle")}
+                      />
+                    ),
+                  }}
+                  pagination={false}
+                  rowKey="id"
+                  scroll={{ x: 900 }}
+                />
+              </>
+            ),
+          },
+          {
+            key: CONNECTED_CLIENTS_TAB,
+            label: t("apiKeys.tabs.clients"),
+            children: <ConnectedClientsSection />,
+          },
+        ]}
       />
 
       <IssueApiKeyModal

@@ -9,8 +9,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   createClaudeCodeMcpCommand,
+  createClaudeCodeMcpUrlCommand,
   createMcpRemoteJsonConfig,
+  createMcpUrlJsonConfig,
   getMcpConnectionProtocol,
+  isLikelySelfSignedMcpHost,
 } from "@/modules/knowledge-network/services/mcp-client-config";
 
 describe("MCP client configuration", () => {
@@ -132,5 +135,46 @@ describe("MCP client configuration", () => {
       mcpServers: Record<string, unknown>;
     };
     expect(Object.keys(config.mcpServers)).toEqual(["bkn-agent-retrieval-compact"]);
+  });
+});
+
+describe("MCP sign-in (URL only) configuration", () => {
+  it("writes only the URL with a trailing slash, no key or header", () => {
+    const mcpUrl = "https://platform.example.com/api/agent-retrieval/v1/mcp";
+
+    expect(JSON.parse(createMcpUrlJsonConfig(mcpUrl))).toEqual({
+      mcpServers: {
+        "bkn-agent-retrieval": {
+          type: "http",
+          url: "https://platform.example.com/api/agent-retrieval/v1/mcp/",
+        },
+      },
+    });
+    expect(createClaudeCodeMcpUrlCommand(mcpUrl)).toBe(
+      "claude mcp add --transport http --scope user bkn-agent-retrieval https://platform.example.com/api/agent-retrieval/v1/mcp/",
+    );
+  });
+
+  it("keeps the compact endpoint name apart in sign-in mode", () => {
+    const mcpUrl = "https://platform.example.com/api/agent-retrieval/v1/mcp-compact/";
+
+    expect(createClaudeCodeMcpUrlCommand(mcpUrl)).toBe(
+      "claude mcp add --transport http --scope user bkn-agent-retrieval-compact https://platform.example.com/api/agent-retrieval/v1/mcp-compact/",
+    );
+    const config = JSON.parse(createMcpUrlJsonConfig(mcpUrl)) as {
+      mcpServers: Record<string, unknown>;
+    };
+    expect(Object.keys(config.mcpServers)).toEqual(["bkn-agent-retrieval-compact"]);
+  });
+
+  it("flags https addresses that likely use a self-signed certificate", () => {
+    expect(isLikelySelfSignedMcpHost("https://10.211.55.4/api/agent-retrieval/v1/mcp/")).toBe(true);
+    expect(isLikelySelfSignedMcpHost("https://[fd00::1]/api/agent-retrieval/v1/mcp/")).toBe(true);
+    expect(isLikelySelfSignedMcpHost("https://bkn.local/api/agent-retrieval/v1/mcp/")).toBe(true);
+    expect(isLikelySelfSignedMcpHost("https://poc.openbkn.ai/api/agent-retrieval/v1/mcp/")).toBe(
+      false,
+    );
+    expect(isLikelySelfSignedMcpHost("http://10.211.55.4/api/agent-retrieval/v1/mcp/")).toBe(false);
+    expect(isLikelySelfSignedMcpHost("not a url")).toBe(false);
   });
 });
