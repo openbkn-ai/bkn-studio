@@ -127,9 +127,9 @@ export const systemAdminRoutes: RouteObject[] = [
     path: "system/access-addresses",
     handle: {
       console: {
-        descriptionKey: "systemAdmin.accessOrigins.description",
+        descriptionKey: "systemAdmin.accessOrigins.pageDescription",
         menuKey: "access-address-management",
-        titleKey: "systemAdmin.accessOrigins.title",
+        titleKey: "systemAdmin.accessOrigins.pageTitle",
       },
     },
     element: guarded(systemAdminPermissions.accessOrigins, <OAuthAccessOriginsPage />),
