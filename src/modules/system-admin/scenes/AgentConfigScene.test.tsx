@@ -242,7 +242,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
               { name: "view_state", description: "Read the view.", parameters: {} },
             ],
           },
-          { type: "context_loader", names: null },
+          { type: "context_loader", names: [] },
         ],
       }),
     );
@@ -256,8 +256,9 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     );
     expect(within(sources[0]).getByText("canvas_state")).toBeTruthy();
     expect(within(sources[0]).getByText("view_state")).toBeTruthy();
+    // graph_explorer's empty allow-list gives the model no Context Loader tool.
     expect(sources[1].textContent).toContain(
-      i18n.t("systemAdmin.agentConfig.toolsAllContextLoader"),
+      i18n.t("systemAdmin.agentConfig.toolsNoContextLoader"),
     );
     expect(card.closest("section")).toBeNull();
     // A tool's definition opens from its name.

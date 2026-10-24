@@ -708,9 +708,13 @@ function AgentTools({ sources }: { sources: AgentToolSource[] }) {
                 ) : (
                   <Typography.Text type="secondary">
                     {t(
-                      source.type === "context_loader"
-                        ? `${P}.toolsAllContextLoader`
-                        : `${P}.toolsAtRuntime`,
+                      source.type !== "context_loader"
+                        ? `${P}.toolsAtRuntime`
+                        : // An empty allow-list opens the session for the Agent's own tools but
+                          // gives the model none of its tools; only a missing one means all.
+                          source.names
+                          ? `${P}.toolsNoContextLoader`
+                          : `${P}.toolsAllContextLoader`,
                     )}
                   </Typography.Text>
                 )}
