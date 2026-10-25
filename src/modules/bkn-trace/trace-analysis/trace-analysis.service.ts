@@ -12,6 +12,8 @@ import type {
   PayloadEnvelope,
 } from "@/modules/bkn-trace/shared/operation-fact.types";
 import type {
+  RootServiceOptions,
+  RootServiceOptionsQuery,
   TechnicalSpanNode,
   TechnicalSpanPage,
   SpanDisplayRange,
@@ -348,4 +350,29 @@ function mapSpanNode(data: BackendSpanNode): TechnicalSpanNode {
     startNano: data.start_nano ?? 0,
     status: data.status ?? "unknown",
   };
+}
+
+export async function listRootServices(
+  query: RootServiceOptionsQuery = {},
+  signal?: AbortSignal,
+): Promise<RootServiceOptions> {
+  const params = traceQueryParams({
+    from: query.from,
+    to: query.to,
+    traceId: query.traceId,
+    status: query.status,
+    tool: query.tool,
+    errorKeyword: query.errorKeyword,
+    limit: 100,
+  });
+  if (query.q) params.q = query.q;
+  const { data } = await http.get<{ entries?: string[] | null; has_more: boolean }>(
+    "/agent-observability/v1/trace-root-services",
+    {
+      params,
+      signal,
+      skipErrorToast: true,
+    },
+  );
+  return { entries: (data.entries ?? []).map((entry) => entry), hasMore: data.has_more };
 }

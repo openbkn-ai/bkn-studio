@@ -32,3 +32,9 @@ existing graph or Operation details. An older backend without `span_display`
 shows its loaded-node count and no active paging entry. A positive, available
 summary cardinality remains explicitly approximate; absent counts stay unknown.
 The UI never invents a continuation cursor or assumes that the returned graph is full.
+
+### Root-service candidates
+
+The root-service filter preserves exact, case-sensitive manual values. Opening its candidate control explicitly requests `/api/agent-observability/v1/trace-root-services`; first render and typing while closed add no discovery requests. Candidates follow current access, time range and other draft filters, excluding the service filter and list pagination. Search fragments are matched by the server; returned canonical names are preserved. Results are bounded to 100 names, with a refinement hint when more are available. Selecting or typing only changes the draft until Query is pressed.
+
+Closing, unmounting or changing other draft filters aborts and clears candidate requests. Empty candidates and failed/unsupported candidate APIs have distinct feedback; manual exact queries remain available, including with older backends. Candidates are never inferred from the current Trace page.

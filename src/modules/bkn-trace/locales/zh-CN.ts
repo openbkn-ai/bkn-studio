@@ -841,6 +841,16 @@ export const bknTraceZhCN = {
       empty: "暂无符合条件的 Trace",
       error: "错误",
       execution: "技术执行链",
+      serviceOptions: {
+        open: "查看根服务候选",
+        loading: "正在查询根服务候选…",
+        scope: "候选受当前权限、时间范围和其他草稿筛选限制；查询时按所选或手输名称精确匹配。",
+        more: "还有更多匹配服务，请输入名称片段缩小候选范围。",
+        empty: "当前时间范围和其他筛选下没有根服务候选，仍可手输完整名称精确查询。",
+        noMatches: "没有匹配此片段的候选，仍可手输完整名称精确查询。",
+        failed: "服务候选暂不可用，仍可手输完整服务名精确查询。",
+        emptyListHint: "请检查时间范围和其他筛选，或查看可选根服务。",
+      },
       filters: {
         error: "错误关键词",
         from: "开始时间",

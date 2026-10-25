@@ -111,3 +111,9 @@ export type TechnicalTraceDetail = {
   partialReasons: string[];
   summary: TechnicalTraceSummary;
 };
+
+export type RootServiceOptionsQuery = Pick<
+  TechnicalTraceQuery,
+  "from" | "to" | "traceId" | "status" | "tool" | "errorKeyword"
+> & { q?: string };
+export type RootServiceOptions = { entries: string[]; hasMore: boolean };
