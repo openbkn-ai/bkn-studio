@@ -365,23 +365,28 @@ export function OntologyGraphView({
       bottom: view.y + view.h + padY,
     };
   }, [view]);
+  const viewportNodes = useMemo(
+    () =>
+      graph.nodes.filter((node) => {
+        const position = posOf(node.id);
+        return (
+          position &&
+          position.x >= viewport.left &&
+          position.x <= viewport.right &&
+          position.y >= viewport.top &&
+          position.y <= viewport.bottom
+        );
+      }),
+    [graph.nodes, posOf, viewport],
+  );
+  const nodeSamplingActive = viewportNodes.length > MAX_VISIBLE_NODES;
   const visibleNodes = useMemo(() => {
-    const candidates = graph.nodes.filter((node) => {
-      const position = posOf(node.id);
-      return (
-        position &&
-        position.x >= viewport.left &&
-        position.x <= viewport.right &&
-        position.y >= viewport.top &&
-        position.y <= viewport.bottom
-      );
-    });
-    if (candidates.length <= MAX_VISIBLE_NODES) return candidates;
-    const stride = Math.ceil(candidates.length / MAX_VISIBLE_NODES);
-    return candidates.filter(
+    if (!nodeSamplingActive) return viewportNodes;
+    const stride = Math.ceil(viewportNodes.length / MAX_VISIBLE_NODES);
+    return viewportNodes.filter(
       (node, index) => index % stride === 0 || node.id === selectedId || neighbors.has(node.id),
     );
-  }, [graph.nodes, neighbors, posOf, selectedId, viewport]);
+  }, [neighbors, nodeSamplingActive, selectedId, viewportNodes]);
   const visibleNodeIds = useMemo(
     () => new Set(visibleNodes.map((node) => node.id)),
     [visibleNodes],
@@ -389,9 +394,15 @@ export function OntologyGraphView({
   const visibleEdges = useMemo(
     () =>
       graph.edges.filter((edge) => {
-        if (!visibleNodeIds.has(edge.sourceId) || !visibleNodeIds.has(edge.targetId)) return false;
-        if (selectedId && edge.sourceId !== selectedId && edge.targetId !== selectedId)
+        // When node LOD sampling is active, avoid drawing edges that terminate at omitted sample
+        // nodes. With normal viewport culling, keep a relation whenever its segment crosses the
+        // viewport, even if one endpoint node is currently outside it.
+        if (
+          nodeSamplingActive &&
+          (!visibleNodeIds.has(edge.sourceId) || !visibleNodeIds.has(edge.targetId))
+        ) {
           return false;
+        }
         const source = posOf(edge.sourceId);
         const target = posOf(edge.targetId);
         if (!source || !target) return false;
@@ -402,20 +413,10 @@ export function OntologyGraphView({
           Math.min(source.y, target.y) > viewport.bottom
         );
       }),
-    [graph.edges, posOf, selectedId, viewport, visibleNodeIds],
+    [graph.edges, nodeSamplingActive, posOf, viewport, visibleNodeIds],
   );
   const zoomLevel = canvasWidth / view.w;
   const nodeLabelsVisible = visibleNodes.length <= 250 || zoomLevel >= 1.4;
-  const batchedEdgePath = useMemo(() => {
-    if (edgeLabelsVisible || selectedId) return "";
-    return visibleEdges
-      .map((edge) => {
-        const source = posOf(edge.sourceId);
-        const target = posOf(edge.targetId);
-        return source && target ? `M${source.x},${source.y}L${target.x},${target.y}` : "";
-      })
-      .join("");
-  }, [edgeLabelsVisible, posOf, selectedId, visibleEdges]);
 
   // In logical-group mode, calculate each group's bounding box from current positions, including drags, and draw dashed boundaries with names.
   const groupHulls = useMemo(() => {
@@ -664,64 +665,60 @@ export function OntologyGraphView({
         ) : null}
 
         <g className={styles.edges}>
-          {batchedEdgePath ? <path className={styles.edgeBatch} d={batchedEdgePath} /> : null}
-          {batchedEdgePath
-            ? null
-            : visibleEdges.map((edge) => {
-                const a = posOf(edge.sourceId);
-                const b = posOf(edge.targetId);
-                if (!a || !b) {
-                  return null;
-                }
-                const ra = radiusById.get(edge.sourceId) ?? NODE_RADIUS;
-                const rb = radiusById.get(edge.targetId) ?? NODE_RADIUS;
-                const dx = b.x - a.x;
-                const dy = b.y - a.y;
-                const len = Math.hypot(dx, dy) || 1;
-                const ux = dx / len;
-                const uy = dy / len;
-                const sx = a.x + ux * ra;
-                const sy = a.y + uy * ra;
-                const ex = b.x - ux * (rb + 12);
-                const ey = b.y - uy * (rb + 12);
-                const mx = (sx + ex) / 2;
-                const my = (sy + ey) / 2;
-                const active =
-                  Boolean(selectedId) &&
-                  (edge.sourceId === selectedId || edge.targetId === selectedId);
-                const dim = Boolean(selectedId) && !active;
-                const label = edge.name || t("knowledgeNetwork.defaultEdgeName");
-                const labelWidth = label.length * 14 + 18;
-                return (
-                  <g
-                    key={edge.id}
-                    className={`${styles.edge} ${active ? styles.edgeActive : ""} ${dim ? styles.edgeDim : ""}`}
-                  >
-                    <line
-                      x1={sx}
-                      y1={sy}
-                      x2={ex}
-                      y2={ey}
-                      markerEnd={`url(#kn-onto-arrow${active ? "-hi" : ""})`}
+          {visibleEdges.map((edge) => {
+            const a = posOf(edge.sourceId);
+            const b = posOf(edge.targetId);
+            if (!a || !b) {
+              return null;
+            }
+            const ra = radiusById.get(edge.sourceId) ?? NODE_RADIUS;
+            const rb = radiusById.get(edge.targetId) ?? NODE_RADIUS;
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const ux = dx / len;
+            const uy = dy / len;
+            const sx = a.x + ux * ra;
+            const sy = a.y + uy * ra;
+            const ex = b.x - ux * (rb + 12);
+            const ey = b.y - uy * (rb + 12);
+            const mx = (sx + ex) / 2;
+            const my = (sy + ey) / 2;
+            const active =
+              Boolean(selectedId) && (edge.sourceId === selectedId || edge.targetId === selectedId);
+            const dim = Boolean(selectedId) && !active;
+            const label = edge.name || t("knowledgeNetwork.defaultEdgeName");
+            const labelWidth = label.length * 14 + 18;
+            return (
+              <g
+                key={edge.id}
+                className={`${styles.edge} ${active ? styles.edgeActive : ""} ${dim ? styles.edgeDim : ""}`}
+              >
+                <line
+                  x1={sx}
+                  y1={sy}
+                  x2={ex}
+                  y2={ey}
+                  markerEnd={`url(#kn-onto-arrow${active ? "-hi" : ""})`}
+                />
+                {edgeLabelsVisible || active ? (
+                  <>
+                    <rect
+                      className={styles.edgeLabelBg}
+                      x={mx - labelWidth / 2}
+                      y={my - 13}
+                      width={labelWidth}
+                      height={24}
+                      rx={12}
                     />
-                    {edgeLabelsVisible || active ? (
-                      <>
-                        <rect
-                          className={styles.edgeLabelBg}
-                          x={mx - labelWidth / 2}
-                          y={my - 13}
-                          width={labelWidth}
-                          height={24}
-                          rx={12}
-                        />
-                        <text className={styles.edgeLabel} x={mx} y={my + 4} textAnchor="middle">
-                          {label}
-                        </text>
-                      </>
-                    ) : null}
-                  </g>
-                );
-              })}
+                    <text className={styles.edgeLabel} x={mx} y={my + 4} textAnchor="middle">
+                      {label}
+                    </text>
+                  </>
+                ) : null}
+              </g>
+            );
+          })}
         </g>
 
         <g className={styles.nodes}>
