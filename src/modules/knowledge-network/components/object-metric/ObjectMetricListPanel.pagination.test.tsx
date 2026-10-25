@@ -756,23 +756,37 @@ describe("ObjectMetricListPanel pagination", () => {
     );
   });
 
-  it("does not silently create a draft when viewing a published metric", async () => {
+  it("does not expose editing for a published metric", async () => {
+    mocks.searchParams.current = "view=list";
     const published = metric(1);
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [published], total_count: 1 });
+
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
+
+    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
+    await openMetricActionMenu();
+    expect(screen.queryByRole("menuitem", { name: "common.edit" })).not.toBeInTheDocument();
+    expect(mocks.createNextDraft).not.toHaveBeenCalled();
+  });
+
+  it("opens an existing draft directly without creating another draft", async () => {
+    mocks.searchParams.current = "view=list";
     const draft = metric(2);
     draft.definition.lifecycle.status = "draft";
     mocks.listObjectTypes.mockResolvedValue({
       entries: [{ id: "order", name: "销售订单" }],
       totalCount: 1,
     });
-    mocks.listObjectMetrics.mockResolvedValue({ entries: [published, draft], total_count: 2 });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
 
     render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
 
-    fireEvent.click(screen.getByText(/^(列表|list)$/i));
-    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
-    await openMetricActionMenu(0);
-    expect(screen.queryByRole("menuitem", { name: "common.edit" })).not.toBeInTheDocument();
-    await openMetricActionMenu(1);
+    expect(await screen.findByText("订单对象指标 2")).toBeInTheDocument();
+    await openMetricActionMenu();
     fireEvent.click(await screen.findByRole("menuitem", { name: "common.edit" }));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/metrics/metric-2/edit",
