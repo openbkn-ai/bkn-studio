@@ -83,9 +83,7 @@ describe("MetricAnalysisView", () => {
     const onNextPage = vi.fn();
     const exactResult = structuredClone(result);
     exactResult.entries[0].value = 53156928.92;
-    (
-      exactResult.entries[0] as (typeof exactResult.entries)[0] & { display_value: string }
-    ).display_value = "53156928.920000000000000001";
+    exactResult.entries[0].display_value = "53156928.920000000000000001";
     render(<MetricAnalysisView onNextPage={onNextPage} result={exactResult} />);
 
     expect(screen.getByText("53156928.920000000000000001")).toBeInTheDocument();
@@ -113,6 +111,33 @@ describe("MetricAnalysisView", () => {
       ),
     );
     expect(await screen.findByText('{"stock_id":"s-1"}')).toBeInTheDocument();
+  });
+
+  it("ignores a participant response after the modal closes and opens for another row", async () => {
+    let resolveFirst!: (value: unknown) => void;
+    const first = new Promise((resolve) => {
+      resolveFirst = resolve;
+    });
+    const onParticipants = vi
+      .fn()
+      .mockReturnValueOnce(first)
+      .mockRejectedValueOnce(new Error("second row failed"));
+    const twoRows = structuredClone(result);
+    twoRows.entries.push({ ...twoRows.entries[0], bucket_key: "second-row" });
+    render(<MetricAnalysisView onParticipants={onParticipants} result={twoRows} />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "查看参与实例" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await act(async () => {
+      resolveFirst({
+        participants: [{ instance_identity: { stock_id: "stale" }, role: "owner" }],
+        status: "ok",
+      });
+      await first;
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: "查看参与实例" })[1]);
+    expect(await screen.findByText("second row failed")).toBeInTheDocument();
+    expect(screen.queryByText('{"stock_id":"stale"}')).not.toBeInTheDocument();
   });
 });
 

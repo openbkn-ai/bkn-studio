@@ -300,6 +300,7 @@ export type ObjectMetricDataEntryV1 = {
   time?: number;
   time_bucket?: { start: number; end: number };
   value?: unknown;
+  display_value?: string;
   status: "ok" | "no_data" | "unavailable";
   bucket_key?: string;
   available_actions?: Array<"filter" | "drill" | "participants" | "context">;

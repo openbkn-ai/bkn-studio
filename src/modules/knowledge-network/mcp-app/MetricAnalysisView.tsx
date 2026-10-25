@@ -6,7 +6,7 @@
  */
 
 import { Alert, Button, Modal, Space, Table, Tag } from "antd";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ObjectMetricAnalysisPanel } from "@/modules/knowledge-network/components/object-metric/ObjectMetricAnalysisPanel";
@@ -37,6 +37,7 @@ export function MetricAnalysisView({ result, busy, error, onNextPage, onParticip
   const [participants, setParticipants] = useState<ObjectMetricDrillThroughV1>();
   const [participantBusy, setParticipantBusy] = useState(false);
   const [participantError, setParticipantError] = useState<string>();
+  const participantRequest = useRef(0);
   const dimensions = useMemo(() => {
     const first = result.entries.find((entry) => entry.dimension_cells?.length || entry.dimensions);
     return first?.dimension_cells?.length
@@ -57,20 +58,24 @@ export function MetricAnalysisView({ result, busy, error, onNextPage, onParticip
 
   const openParticipants = async (entry: ObjectMetricDataEntryV1, cursor?: string) => {
     if (!onParticipants || !entry.bucket_key) return;
+    const request = ++participantRequest.current;
     setSelected(entry);
     setParticipantBusy(true);
     setParticipantError(undefined);
+    if (!cursor) setParticipants(undefined);
     try {
       const next = await onParticipants(entry, cursor);
+      if (request !== participantRequest.current) return;
       setParticipants((previous) =>
         cursor && previous
           ? { ...next, participants: [...previous.participants, ...next.participants] }
           : next,
       );
     } catch (cause) {
+      if (request !== participantRequest.current) return;
       setParticipantError(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      setParticipantBusy(false);
+      if (request === participantRequest.current) setParticipantBusy(false);
     }
   };
   const resultTable = (
@@ -115,10 +120,7 @@ export function MetricAnalysisView({ result, busy, error, onNextPage, onParticip
           title: objectMetricText("mcpValue"),
           key: "value",
           render: (_: unknown, row: ObjectMetricDataEntryV1) =>
-            metricCell(
-              (row as ObjectMetricDataEntryV1 & { display_value?: string }).display_value ??
-                row.value,
-            ),
+            metricCell(row.display_value ?? row.value),
         },
         {
           title: objectMetricText("mcpStatus"),
@@ -188,8 +190,11 @@ export function MetricAnalysisView({ result, busy, error, onNextPage, onParticip
       <Modal
         footer={null}
         onCancel={() => {
+          participantRequest.current += 1;
           setSelected(undefined);
           setParticipants(undefined);
+          setParticipantBusy(false);
+          setParticipantError(undefined);
         }}
         open={Boolean(selected)}
         title={objectMetricText("mcpParticipantsTitle")}
