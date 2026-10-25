@@ -14,6 +14,7 @@ import {
   getTechnicalTrace,
   listTechnicalTraces,
   listTechnicalSpans,
+  listRootServices,
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.service";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -25,6 +26,7 @@ vi.mock("@/modules/bkn-trace/trace-analysis/trace-analysis.service", () => ({
   getTechnicalTrace: vi.fn(),
   listTechnicalTraces: vi.fn(),
   listTechnicalSpans: vi.fn(),
+  listRootServices: vi.fn(),
 }));
 
 vi.mock("./SpanBrowser", () => ({
@@ -68,6 +70,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     vi.mocked(listTechnicalTraces).mockReset();
     vi.mocked(getTechnicalTrace).mockReset();
     vi.mocked(listTechnicalSpans).mockReset();
+    vi.mocked(listRootServices).mockReset();
     vi.mocked(getReferencedPayload).mockReset();
     writeTextMock.mockClear();
     window.history.replaceState({}, "", "/studio/observability/traces");
@@ -291,6 +294,34 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.estimated")).not.toBeNull();
     expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.loadedEstimated")).not.toBeNull();
     expect(listTechnicalSpans).not.toHaveBeenCalled();
+  });
+
+  it("loads service candidates only on explicit opening and queries only after submit", async () => {
+    vi.mocked(listRootServices).mockResolvedValueOnce({
+      entries: ["CanonicalService"],
+      hasMore: false,
+    });
+    render(<TraceAnalysisScene />);
+    await screen.findByRole("button", { name: "c2c97a9e8afd1259218a9d975ad63e91" });
+    expect(listRootServices).not.toHaveBeenCalled();
+    const input = screen.getByPlaceholderText("bknTrace.traceWorkspace.filters.service");
+    fireEvent.change(input, { target: { value: "can" } });
+    expect(listRootServices).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "bknTrace.traceWorkspace.serviceOptions.open" }),
+    ).not.toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknTrace.traceWorkspace.serviceOptions.open" }),
+    );
+    fireEvent.click(await screen.findByTitle("CanonicalService"));
+    expect(listTechnicalTraces).toHaveBeenCalledTimes(1);
+    expect(input).toHaveValue("CanonicalService");
+    fireEvent.click(screen.getByRole("button", { name: /bknTrace.actions.query/ }));
+    await waitFor(() =>
+      expect(listTechnicalTraces).toHaveBeenLastCalledWith(
+        expect.objectContaining({ service: "CanonicalService", page: 1 }),
+      ),
+    );
   });
 
   it("uses the standard level-three page title", async () => {

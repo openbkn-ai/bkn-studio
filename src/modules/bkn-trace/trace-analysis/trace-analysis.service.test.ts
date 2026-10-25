@@ -16,6 +16,43 @@ describe("trace-analysis service", () => {
     getMock.mockReset();
   });
 
+  it("discovers scoped canonical root services without passing the service or list pagination", async () => {
+    getMock.mockResolvedValueOnce({ data: { entries: ["CanonicalService"], has_more: true } });
+    const service = await import("./trace-analysis.service");
+    const signal = new AbortController().signal;
+    const filters = {
+      from: "2026-10-24T00:00:00Z",
+      to: "2026-10-25T00:00:00Z",
+      traceId: "trace",
+      status: "failed",
+      tool: "run_sql",
+      errorKeyword: "timeout",
+      q: "SERVICE",
+      service: "ignored",
+      page: 5,
+      pageSize: 20,
+      cursor: "ignored",
+    };
+    expect(await service.listRootServices(filters, signal)).toEqual({
+      entries: ["CanonicalService"],
+      hasMore: true,
+    });
+    expect(getMock).toHaveBeenCalledExactlyOnceWith("/agent-observability/v1/trace-root-services", {
+      params: {
+        from: filters.from,
+        to: filters.to,
+        trace_id: "trace",
+        status: "failed",
+        tool: "run_sql",
+        error_keyword: "timeout",
+        q: "SERVICE",
+        limit: 100,
+      },
+      signal,
+      skipErrorToast: true,
+    });
+  });
+
   it("maps bounded display metadata without another first-screen request", async () => {
     getMock.mockResolvedValueOnce({
       data: {

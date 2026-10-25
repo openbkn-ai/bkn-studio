@@ -903,6 +903,19 @@ export const bknTraceEnUS = {
       empty: "No matching Traces",
       error: "Error",
       execution: "Technical execution chain",
+      serviceOptions: {
+        open: "Browse root services",
+        loading: "Looking up root services…",
+        scope:
+          "Candidates match your current access, time range and other draft filters. The query uses the selected or typed name exactly.",
+        more: "More services match. Type a fragment to narrow the candidates.",
+        empty:
+          "No root services match the current time range and other filters. You can still type an exact name.",
+        noMatches: "No candidate matches this fragment. You can still type an exact name.",
+        failed:
+          "Service candidates are unavailable. You can still type a complete service name for an exact query.",
+        emptyListHint: "Check the time range and other filters, or browse available root services.",
+      },
       filters: {
         error: "Error keyword",
         from: "Start time",

@@ -45,12 +45,15 @@ import {
   listTechnicalTraces,
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.service";
 import type {
+  RootServiceOptionsQuery,
   TechnicalTraceDetail,
   TechnicalTraceOperation,
   TechnicalTraceQuery,
   TechnicalTraceSummary,
   TechnicalSpanNode,
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.types";
+
+import { RootServicePicker } from "./RootServicePicker";
 
 import { SpanBrowser } from "./SpanBrowser";
 
@@ -64,6 +67,7 @@ export function TraceAnalysisScene() {
     page: 1,
   });
   const { page, query } = listState;
+  const [serviceOptionQuery, setServiceOptionQuery] = useState<RootServiceOptionsQuery>({});
   const [rows, setRows] = useState<TechnicalTraceSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -246,6 +250,19 @@ export function TraceAnalysisScene() {
         form={form}
         initialValues={{}}
         layout="inline"
+        onValuesChange={(_changed, values: TechnicalTraceFilterValues) => {
+          const next = {
+            from: toIsoDateTime(values.from),
+            to: toIsoDateTime(values.to),
+            traceId: values.traceId,
+            status: values.status,
+            tool: values.tool,
+            errorKeyword: values.errorKeyword,
+          };
+          setServiceOptionQuery((current) =>
+            JSON.stringify(current) === JSON.stringify(next) ? current : next,
+          );
+        }}
         onFinish={(values) => {
           setListState({
             page: 1,
@@ -262,7 +279,7 @@ export function TraceAnalysisScene() {
           <Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.traceId")} />
         </Form.Item>
         <Form.Item name="service">
-          <Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.service")} />
+          <RootServicePicker query={serviceOptionQuery} />
         </Form.Item>
         <Form.Item name="tool">
           <Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.tool")} />
@@ -317,7 +334,18 @@ export function TraceAnalysisScene() {
           columns={columns}
           dataSource={rows}
           loading={loading}
-          locale={{ emptyText: <Empty description={t("bknTrace.traceWorkspace.empty")} /> }}
+          locale={{
+            emptyText: (
+              <Empty
+                description={
+                  <>
+                    {t("bknTrace.traceWorkspace.empty")}
+                    <div>{t("bknTrace.traceWorkspace.serviceOptions.emptyListHint")}</div>
+                  </>
+                }
+              />
+            ),
+          }}
           pagination={false}
           rowKey="traceId"
           scroll={{ x: 1080 }}
