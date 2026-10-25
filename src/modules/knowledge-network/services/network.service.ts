@@ -360,14 +360,10 @@ export async function exportKnowledgeNetwork(
 
 export async function importKnowledgeNetwork(
   payload: Record<string, unknown>,
-  importMode?: KnowledgeNetworkImportMode,
+  importMode: KnowledgeNetworkImportMode = "normal",
   bindingPolicy: KnowledgeNetworkBindingPolicy = "preserve",
+  strictMode = false,
 ) {
-  const requestBody = {
-    ...payload,
-    validate_dependency: false,
-  };
-
   if (useMock) {
     const identifier = stringFromUnknown(
       payload.id,
@@ -377,7 +373,7 @@ export async function importKnowledgeNetwork(
       (item) => item.id === identifier || item.identifier === identifier,
     );
 
-    if (exists && !importMode) {
+    if (exists && importMode === "normal") {
       throwImportConflict(i18n.t("knowledgeNetwork.networkIdOrNameExists"));
     }
 
@@ -415,11 +411,11 @@ export async function importKnowledgeNetwork(
   }
 
   try {
-    await http.post("/bkn-backend/v1/knowledge-networks", requestBody, {
+    await http.post("/bkn-backend/v1/knowledge-networks", payload, {
       params: {
         binding_policy: bindingPolicy,
         import_mode: importMode,
-        validate_dependency: false,
+        strict_mode: strictMode,
       },
       skipErrorToast: true,
       timeout: KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS,

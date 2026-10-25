@@ -33,12 +33,12 @@ describe("importKnowledgeNetwork", () => {
 
     expect(postMock).toHaveBeenCalledWith(
       "/bkn-backend/v1/knowledge-networks",
-      { id: "orders", validate_dependency: false },
+      { id: "orders" },
       {
         params: {
           binding_policy: "preserve",
-          import_mode: undefined,
-          validate_dependency: false,
+          import_mode: "normal",
+          strict_mode: false,
         },
         skipErrorToast: true,
         timeout: 60_000,
@@ -54,16 +54,42 @@ describe("importKnowledgeNetwork", () => {
 
     expect(postMock).toHaveBeenCalledWith(
       "/bkn-backend/v1/knowledge-networks",
-      { id: "orders", validate_dependency: false },
+      { id: "orders" },
       {
         params: {
           binding_policy: "detach",
           import_mode: "overwrite",
-          validate_dependency: false,
+          strict_mode: false,
         },
         skipErrorToast: true,
         timeout: 60_000,
       },
+    );
+  });
+
+  it.each([
+    ["normal", false],
+    ["normal", true],
+    ["ignore", false],
+    ["ignore", true],
+    ["overwrite", false],
+    ["overwrite", true],
+  ] as const)("serializes import_mode=%s with strict_mode=%s", async (importMode, strictMode) => {
+    const { importKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
+
+    await importKnowledgeNetwork({ id: "orders" }, importMode, "preserve", strictMode);
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/bkn-backend/v1/knowledge-networks",
+      { id: "orders" },
+      expect.objectContaining({
+        params: {
+          binding_policy: "preserve",
+          import_mode: importMode,
+          strict_mode: strictMode,
+        },
+      }),
     );
   });
 

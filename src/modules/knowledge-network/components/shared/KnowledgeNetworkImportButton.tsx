@@ -6,7 +6,7 @@
  */
 
 import { UploadOutlined } from "@ant-design/icons";
-import { Alert, Form, Input, Modal, Radio, Space, Typography, Upload } from "antd";
+import { Alert, Form, Input, Modal, Radio, Space, Switch, Typography, Upload } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -22,7 +22,10 @@ import {
   readFileReaderText,
   stringFromUnknown,
 } from "@/modules/knowledge-network/services/shared/runtime";
-import type { KnowledgeNetworkBindingPolicy } from "@/modules/knowledge-network/types/knowledge-network";
+import type {
+  KnowledgeNetworkBindingPolicy,
+  KnowledgeNetworkImportMode,
+} from "@/modules/knowledge-network/types/knowledge-network";
 
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import styles from "./KnowledgeNetworkImportButton.module.css";
@@ -33,7 +36,7 @@ type KnowledgeNetworkImportButtonProps = {
 };
 
 type ImportPayload = Record<string, unknown>;
-type ImportSubmitAction = "create" | "import" | "overwrite";
+type ImportSubmitAction = "create" | "ignore" | "import" | "overwrite";
 
 // This matches the bundled gateway body limit, not a guaranteed browser parsing limit.
 const DEFAULT_IMPORT_MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
@@ -50,13 +53,19 @@ function isKnowledgeNetworkBindingPolicy(value: unknown): value is KnowledgeNetw
   return value === "detach" || value === "preserve";
 }
 
+function isKnowledgeNetworkImportMode(value: unknown): value is KnowledgeNetworkImportMode {
+  return value === "ignore" || value === "normal" || value === "overwrite";
+}
+
 export function KnowledgeNetworkImportButton({
   className,
   onImported,
 }: KnowledgeNetworkImportButtonProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const [form] = Form.useForm<{ identifier: string; name: string }>();
+  const [importMode, setImportMode] = useState<KnowledgeNetworkImportMode>("normal");
+  const [strictMode, setStrictMode] = useState(false);
   const [bindingPolicy, setBindingPolicy] = useState<KnowledgeNetworkBindingPolicy>("preserve");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [bindingError, setBindingError] = useState<KnowledgeNetworkImportBindingError | null>(null);
@@ -70,18 +79,21 @@ export function KnowledgeNetworkImportButton({
     setBindingError(null);
     setConflictMessage(null);
     setPendingPayload(null);
+    setImportMode("normal");
+    setStrictMode(false);
+    setBindingPolicy("preserve");
     form.resetFields();
   };
 
   const finishImport = async (
     payload: ImportPayload,
-    importMode?: "ignore" | "overwrite",
+    selectedImportMode: KnowledgeNetworkImportMode,
     action: ImportSubmitAction = "import",
   ) => {
     setSubmittingAction(action);
 
     try {
-      await importKnowledgeNetwork(payload, importMode, bindingPolicy);
+      await importKnowledgeNetwork(payload, selectedImportMode, bindingPolicy, strictMode);
       void message.success(t("knowledgeNetwork.importSuccess"));
       closeImportDialog();
       await onImported();
@@ -110,6 +122,29 @@ export function KnowledgeNetworkImportButton({
     }
   };
 
+  const confirmOverwrite = (payload: ImportPayload, action: ImportSubmitAction) => {
+    void modal.confirm({
+      content: t("knowledgeNetwork.importOverwriteConfirmDescription"),
+      okButtonProps: { danger: true },
+      okText: t("knowledgeNetwork.importOverwrite"),
+      onOk: () => finishImport(payload, "overwrite", action),
+      title: t("knowledgeNetwork.importOverwriteConfirmTitle"),
+    });
+  };
+
+  const submitImport = (
+    payload: ImportPayload,
+    selectedImportMode: KnowledgeNetworkImportMode,
+    action: ImportSubmitAction = "import",
+  ) => {
+    if (selectedImportMode === "overwrite") {
+      confirmOverwrite(payload, action);
+      return;
+    }
+
+    void finishImport(payload, selectedImportMode, action);
+  };
+
   const parseUploadFile = (file: File) => {
     const reader = new FileReader();
 
@@ -117,6 +152,8 @@ export function KnowledgeNetworkImportButton({
       try {
         const payload = JSON.parse(readFileReaderText(event.target?.result)) as ImportPayload;
         setPendingPayload(payload);
+        setImportMode("normal");
+        setStrictMode(false);
         setBindingPolicy("preserve");
         setBindingError(null);
         setConflictMessage(null);
@@ -166,11 +203,23 @@ export function KnowledgeNetworkImportButton({
                   loading={submittingAction === "overwrite"}
                   onClick={() => {
                     if (pendingPayload) {
-                      void finishImport(pendingPayload, "overwrite", "overwrite");
+                      confirmOverwrite(pendingPayload, "overwrite");
                     }
                   }}
                 >
                   {t("knowledgeNetwork.importOverwrite")}
+                </AppButton>,
+                <AppButton
+                  disabled={isSubmitting && submittingAction !== "ignore"}
+                  key="ignore"
+                  loading={submittingAction === "ignore"}
+                  onClick={() => {
+                    if (pendingPayload) {
+                      void finishImport(pendingPayload, "ignore", "ignore");
+                    }
+                  }}
+                >
+                  {t("knowledgeNetwork.importIgnore")}
                 </AppButton>,
                 <AppButton
                   disabled={isSubmitting && submittingAction !== "create"}
@@ -189,7 +238,7 @@ export function KnowledgeNetworkImportButton({
                           id: values.identifier,
                           name: values.name,
                         },
-                        undefined,
+                        "normal",
                         "create",
                       );
                     });
@@ -210,13 +259,80 @@ export function KnowledgeNetworkImportButton({
         onCancel={closeImportDialog}
         onOk={() => {
           if (pendingPayload) {
-            void finishImport(pendingPayload);
+            submitImport(pendingPayload, importMode);
           }
         }}
         open={importDialogOpen}
-        rootClassName={modalStyles.businessModal}
+        rootClassName={`${modalStyles.businessModal} ${styles.importModal}`}
         title={t("knowledgeNetwork.importTitle")}
       >
+        <Typography.Text strong>{t("knowledgeNetwork.importModeTitle")}</Typography.Text>
+        <Typography.Paragraph className={styles.sectionDescription}>
+          {t("knowledgeNetwork.importModeDescription")}
+        </Typography.Paragraph>
+        <Radio.Group
+          disabled={isSubmitting}
+          onChange={(event) => {
+            const nextImportMode: unknown = event.target.value;
+
+            if (isKnowledgeNetworkImportMode(nextImportMode)) {
+              setImportMode(nextImportMode);
+              setBindingError(null);
+              setConflictMessage(null);
+            }
+          }}
+          value={importMode}
+        >
+          <Space direction="vertical" size="middle">
+            <Radio value="normal">
+              <Typography.Text strong>
+                {t("knowledgeNetwork.importModeNormalTitle")}
+              </Typography.Text>
+              <Typography.Paragraph className={styles.optionDescription}>
+                {t("knowledgeNetwork.importModeNormalDescription")}
+              </Typography.Paragraph>
+            </Radio>
+            <Radio value="ignore">
+              <Typography.Text strong>
+                {t("knowledgeNetwork.importModeIgnoreTitle")}
+              </Typography.Text>
+              <Typography.Paragraph className={styles.optionDescription}>
+                {t("knowledgeNetwork.importModeIgnoreDescription")}
+              </Typography.Paragraph>
+            </Radio>
+            <Radio value="overwrite">
+              <Typography.Text strong>
+                {t("knowledgeNetwork.importModeOverwriteTitle")}
+              </Typography.Text>
+              <Typography.Paragraph className={styles.optionDescription}>
+                {t("knowledgeNetwork.importModeOverwriteDescription")}
+              </Typography.Paragraph>
+            </Radio>
+          </Space>
+        </Radio.Group>
+        {importMode === "overwrite" ? (
+          <Alert
+            className={styles.optionAlert}
+            description={t("knowledgeNetwork.importOverwriteRisk")}
+            showIcon
+            type="warning"
+          />
+        ) : null}
+        <div className={styles.strictModeRow}>
+          <div>
+            <Typography.Text strong>{t("knowledgeNetwork.importStrictModeTitle")}</Typography.Text>
+            <Typography.Paragraph className={styles.strictModeDescription}>
+              {t("knowledgeNetwork.importStrictModeDescription")}
+            </Typography.Paragraph>
+          </div>
+          <Switch
+            aria-label={t("knowledgeNetwork.importStrictModeTitle")}
+            checked={strictMode}
+            disabled={isSubmitting}
+            onChange={setStrictMode}
+          />
+        </div>
+        <Typography.Text strong>{t("knowledgeNetwork.importBindingPolicyTitle")}</Typography.Text>
         <Typography.Paragraph>
           {t("knowledgeNetwork.importBindingPolicyDescription")}
         </Typography.Paragraph>
@@ -237,7 +353,7 @@ export function KnowledgeNetworkImportButton({
               <Typography.Text strong>
                 {t("knowledgeNetwork.importBindingPolicyPreserveTitle")}
               </Typography.Text>
-              <Typography.Paragraph className={styles.bindingOptionDescription}>
+              <Typography.Paragraph className={styles.optionDescription}>
                 {t("knowledgeNetwork.importBindingPolicyPreserveDescription")}
               </Typography.Paragraph>
             </Radio>
@@ -245,7 +361,7 @@ export function KnowledgeNetworkImportButton({
               <Typography.Text strong>
                 {t("knowledgeNetwork.importBindingPolicyDetachTitle")}
               </Typography.Text>
-              <Typography.Paragraph className={styles.bindingOptionDescription}>
+              <Typography.Paragraph className={styles.optionDescription}>
                 {t("knowledgeNetwork.importBindingPolicyDetachDescription")}
               </Typography.Paragraph>
             </Radio>

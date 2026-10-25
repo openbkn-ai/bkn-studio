@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   importKnowledgeNetwork: vi.fn(),
   messageError: vi.fn(),
   messageSuccess: vi.fn(),
+  modalConfirm: vi.fn(),
   uploadFileSize: 2,
 }));
 
@@ -69,6 +70,27 @@ vi.mock("antd", () => {
     </div>
   );
 
+  const Switch = ({
+    "aria-label": ariaLabel,
+    checked,
+    disabled,
+    onChange,
+  }: {
+    "aria-label"?: string;
+    checked?: boolean;
+    disabled?: boolean;
+    onChange?: (checked: boolean) => void;
+  }) => (
+    <input
+      aria-label={ariaLabel}
+      checked={checked}
+      disabled={disabled}
+      onChange={(event) => onChange?.(event.target.checked)}
+      role="switch"
+      type="checkbox"
+    />
+  );
+
   return {
     Alert: ({ description }: { description?: ReactNode }) => <div>{description}</div>,
     Form,
@@ -101,6 +123,7 @@ vi.mock("antd", () => {
       ) : null,
     Radio,
     Space: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    Switch,
     Typography: {
       Paragraph: ({ children }: { children?: ReactNode }) => <p>{children}</p>,
       Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
@@ -136,6 +159,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
       error: mocks.messageError,
       success: mocks.messageSuccess,
     },
+    modal: { confirm: mocks.modalConfirm },
   }),
 }));
 
@@ -181,6 +205,7 @@ describe("KnowledgeNetworkImportButton", () => {
     mocks.importKnowledgeNetwork.mockReset();
     mocks.messageError.mockReset();
     mocks.messageSuccess.mockReset();
+    mocks.modalConfirm.mockReset();
     mocks.uploadFileSize = 2;
     mocks.importKnowledgeNetwork.mockRejectedValue(
       new KnowledgeNetworkImportConflictError("Knowledge network ID already exists."),
@@ -242,14 +267,68 @@ describe("KnowledgeNetworkImportButton", () => {
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(screen.getByText("knowledgeNetwork.name")).toBeInTheDocument();
     expect(screen.getByText("knowledgeNetwork.identifier")).toBeInTheDocument();
-    expect(screen.queryByText("knowledgeNetwork.importIgnore")).not.toBeInTheDocument();
+    expect(screen.getByText("knowledgeNetwork.importIgnore")).toBeInTheDocument();
     await waitFor(() => {
       expect(mocks.importKnowledgeNetwork).toHaveBeenCalledWith(
         { id: "orders", name: "Orders" },
-        undefined,
+        "normal",
         "detach",
+        false,
       );
     });
+  });
+
+  it("passes ignore mode and strict validation independently", async () => {
+    mocks.importKnowledgeNetwork.mockResolvedValueOnce(undefined);
+    render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
+
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(screen.getByDisplayValue("ignore"));
+    fireEvent.click(
+      within(dialog).getByRole("switch", { name: "knowledgeNetwork.importStrictModeTitle" }),
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "knowledgeNetwork.importButton" }));
+
+    await waitFor(() => {
+      expect(mocks.importKnowledgeNetwork).toHaveBeenCalledWith(
+        { id: "orders", name: "Orders" },
+        "ignore",
+        "preserve",
+        true,
+      );
+    });
+    expect(mocks.messageSuccess).toHaveBeenCalledWith("knowledgeNetwork.importSuccess");
+  });
+
+  it("requires confirmation before an overwrite import", async () => {
+    mocks.importKnowledgeNetwork.mockResolvedValueOnce(undefined);
+    render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
+
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(screen.getByDisplayValue("overwrite"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "knowledgeNetwork.importButton" }));
+
+    expect(mocks.importKnowledgeNetwork).not.toHaveBeenCalled();
+    expect(mocks.modalConfirm).toHaveBeenCalledTimes(1);
+    expect(mocks.modalConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "knowledgeNetwork.importOverwriteConfirmDescription",
+        okButtonProps: { danger: true },
+        title: "knowledgeNetwork.importOverwriteConfirmTitle",
+      }),
+    );
+
+    const confirmation = mocks.modalConfirm.mock.calls[0]?.[0] as { onOk?: () => Promise<void> };
+    await confirmation.onOk?.();
+
+    expect(mocks.importKnowledgeNetwork).toHaveBeenCalledWith(
+      { id: "orders", name: "Orders" },
+      "overwrite",
+      "preserve",
+      false,
+    );
   });
 
   it("shows loading only on the conflict action being submitted", async () => {
@@ -269,6 +348,8 @@ describe("KnowledgeNetworkImportButton", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.importOverwrite" }));
+    const confirmation = mocks.modalConfirm.mock.calls[0]?.[0] as { onOk?: () => Promise<void> };
+    void confirmation.onOk?.();
 
     await waitFor(() => {
       expect(
@@ -341,6 +422,8 @@ describe("KnowledgeNetworkImportButton", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.importOverwrite" }));
+    const confirmation = mocks.modalConfirm.mock.calls[0]?.[0] as { onOk?: () => Promise<void> };
+    void confirmation.onOk?.();
     await screen.findByText("Import bindings are incomplete");
 
     expect(screen.getByText("Knowledge network ID already exists.")).toBeInTheDocument();
