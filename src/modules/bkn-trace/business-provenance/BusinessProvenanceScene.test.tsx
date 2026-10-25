@@ -8,11 +8,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { act, configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, configure, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { message } from "antd";
 
 import { BusinessProvenanceScene } from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene";
+import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 const getConversations = vi.hoisted(() => vi.fn());
 const getInteractions = vi.hoisted(() => vi.fn());
@@ -56,7 +57,7 @@ vi.mock("react-i18next", async (importOriginal) => {
   };
 });
 
-describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
+describe("BusinessProvenanceScene", () => {
   // Ant Design mounts dialogs asynchronously; allow slower local rendering.
   configure({ asyncUtilTimeout: 5_000 });
   beforeEach(() => {
@@ -87,7 +88,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       total: 1,
     });
     getInteraction.mockRejectedValue({ response: { status: 404 } });
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     const unread = await screen.findByRole("button", { name: "摘要暂不可用" });
     expect(screen.getByRole("button", { name: "已读取的问题" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "未记录问题" })).not.toBeNull();
@@ -117,7 +118,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         operations: [],
       }),
     );
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "刷新测试" }));
     fireEvent.click(await screen.findByText("第二轮"));
     await waitFor(() => expect(getInteraction).toHaveBeenLastCalledWith("int-second"));
@@ -154,7 +155,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       contextRelations: [],
       operations: [],
     });
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "轮数核查" }));
     expect(await screen.findByText("4 轮交互")).not.toBeNull();
     getInteractions.mockResolvedValueOnce({
@@ -195,7 +196,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         contextRelations: [],
         operations: [],
       });
-      render(<BusinessProvenanceScene />);
+      renderWithoutAntdStyles(<BusinessProvenanceScene />);
       fireEvent.click(await screen.findByRole("button", { name: "轮数核查" }));
       await waitFor(() => expect(getAnalysisHistory).toHaveBeenCalledWith("int-count"));
       expect(screen.getByText("4 轮交互")).not.toBeNull();
@@ -226,7 +227,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       operations: [],
     });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
 
     await waitFor(() =>
       expect(getConversations).toHaveBeenCalledWith(
@@ -266,7 +267,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       derivedFacts: [],
       contextRelations: [],
     });
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     expect(await screen.findByText("本次记录完整性核查读取失败，请刷新重试。")).not.toBeNull();
     expect(screen.getAllByText("保留的原始问题").length).toBeGreaterThan(0);
     expect(screen.getByRole("tab", { name: "时间链" })).not.toBeNull();
@@ -301,7 +302,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         operations: [],
       }),
     );
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     await waitFor(() =>
       expect(getConversations).toHaveBeenCalledWith(
         expect.objectContaining({ conversationId: "conv-linked" }),
@@ -337,7 +338,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       contextRelations: [],
       operations: [],
     });
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     await waitFor(() => expect(getInteraction).toHaveBeenCalledWith("int-one"));
     expect(await screen.findByRole("tab", { name: "时间链" })).toHaveAttribute(
       "aria-selected",
@@ -383,7 +384,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         else getMarkdown.mockResolvedValueOnce("");
       };
       try {
-        render(<BusinessProvenanceScene />);
+        renderWithoutAntdStyles(<BusinessProvenanceScene />);
         fireEvent.click(await screen.findByRole("button", { name: "Markdown errors" }));
         const copy = await screen.findByRole("button", { name: "复制 Markdown" });
         failNextRead();
@@ -446,7 +447,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       );
       const error = vi.spyOn(message, "error");
       try {
-        render(<BusinessProvenanceScene />);
+        renderWithoutAntdStyles(<BusinessProvenanceScene />);
         fireEvent.click(await screen.findByRole("button", { name: "Stale read" }));
         fireEvent.click(await screen.findByRole("button", { name: action }));
         if (action === "交给 BKN Agent 分析")
@@ -494,7 +495,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         }),
     );
     getMarkdown.mockResolvedValueOnce("# second round original");
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "按需加载" }));
     fireEvent.click(await screen.findByRole("button", { name: "交给 BKN Agent 分析" }));
     expect(getMarkdown).toHaveBeenCalledWith("int-first");
@@ -560,7 +561,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       ],
     });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "查询世界杯" }));
 
     expect(await screen.findByRole("button", { name: "查看完整本轮输入" })).toHaveTextContent(
@@ -607,7 +608,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       contextRelations: [],
       operations: [],
     });
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "轮次导航" }));
     const collapse = await screen.findByRole("button", { name: "收起交互轮次" });
     const rail = collapse.closest("aside");
@@ -651,7 +652,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         },
       ],
     });
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "检查调用" }));
     expect(await screen.findByRole("button", { name: "失败 1" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "失败 1" }));
@@ -678,7 +679,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       operations: [],
     });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "历史会话" }));
 
     expect(await screen.findByText("轮次未记录")).not.toBeNull();
@@ -708,7 +709,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   it("shows an enterprise image upgrade state when the licensed deployment has no EE route", async () => {
     getConversations.mockRejectedValue({ response: { status: 404 } });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
 
     expect(await screen.findByText("需要升级企业版镜像")).not.toBeNull();
     expect(screen.queryByRole("columnheader", { name: "用户问题" })).toBeNull();
@@ -717,7 +718,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   it("shows one access denied state when the server rejects the current trace scope", async () => {
     getConversations.mockRejectedValue({ response: { status: 403 } });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
 
     expect(await screen.findByText("无权查看业务溯源")).not.toBeNull();
     expect(screen.queryByRole("columnheader", { name: "用户问题" })).toBeNull();
@@ -726,7 +727,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   it("shows a retryable page state for an unexpected conversation load failure", async () => {
     getConversations.mockRejectedValue(new Error("network unavailable"));
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
 
     expect(await screen.findByText("业务会话加载失败")).not.toBeNull();
     expect(screen.getByRole("button", { name: /重\s*试/ })).not.toBeNull();
@@ -735,7 +736,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   it("uses the standard level-three page title", async () => {
     getConversations.mockResolvedValue({ entries: [], total: 0 });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
 
     expect(await screen.findByRole("heading", { level: 3, name: "业务溯源" })).not.toBeNull();
   });
@@ -743,7 +744,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   it("submits supported conversation filters only when the user queries", async () => {
     getConversations.mockResolvedValue({ entries: [], total: 0 });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     await waitFor(() => expect(getConversations).toHaveBeenCalledTimes(1));
 
     fireEvent.change(screen.getByPlaceholderText("搜索问题、结果或会话 ID"), {
@@ -774,7 +775,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   it("submits the conversation filters when the user presses Enter", async () => {
     getConversations.mockResolvedValue({ entries: [], total: 0 });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     await waitFor(() => expect(getConversations).toHaveBeenCalledTimes(1));
 
     const keyword = screen.getByPlaceholderText("搜索问题、结果或会话 ID");
@@ -831,7 +832,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       }),
     );
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "会话 A" }));
     fireEvent.click(screen.getByRole("button", { name: /返回业务溯源列表/ }));
     fireEvent.click(await screen.findByRole("button", { name: "会话 B" }));
@@ -869,7 +870,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     });
     getInteractions.mockReturnValue(pendingInteractions);
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "加载中的会话" }));
 
     expect((await screen.findAllByText("正在加载交互轮次")).length).toBeGreaterThan(0);
@@ -977,7 +978,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         },
       ],
     });
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     expect(screen.getByRole("main").className).toContain("pageSurface");
     await screen.findByRole("columnheader", { name: "记录完整性" });
     expect(screen.getByRole("columnheader", { name: "用户问题" })).not.toBeNull();
@@ -1009,7 +1010,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       total: 1,
     });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
 
     const questionButton = await screen.findByRole("button", { name: question });
     expect(questionButton.getAttribute("aria-label")).toBe(question);
@@ -1152,7 +1153,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       ],
     });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "反查物料相关产品" }));
 
     expect(
@@ -1216,7 +1217,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       })),
     });
 
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "长时间链" }));
     const callCards = await screen.findAllByRole("button", { name: /运行代码（run_code）/ });
     const inspector = screen.getByRole("complementary", { name: "本轮业务调用" });
@@ -1250,8 +1251,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(normalizedStyles).toContain(
       ".timelineLayout{height:auto;min-height:0;overflow:visible;grid-template-columns:1fr;}",
     );
-    // This checks layout and selection, not latency; 34 cards make jsdom role queries slow.
-  }, 30_000);
+  });
 
   it("opens managed function hierarchy on the default timeline without generating evidence", async () => {
     getConversations.mockResolvedValue({
@@ -1310,7 +1310,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
         },
       ],
     });
-    render(<BusinessProvenanceScene />);
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
     fireEvent.click(await screen.findByRole("button", { name: "最多能卖多少" }));
     const expand = await screen.findByRole("button", { name: "展开内部执行（1）" });
     expect(screen.getByRole("tab", { name: "时间链" })).toHaveAttribute("aria-selected", "true");

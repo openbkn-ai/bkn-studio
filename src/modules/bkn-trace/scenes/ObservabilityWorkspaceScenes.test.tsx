@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import dayjs from "dayjs";
 import { AxiosError, AxiosHeaders } from "axios";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
@@ -30,6 +30,7 @@ import {
   getTraceEvidenceOperation,
 } from "@/modules/bkn-trace/services/trace.service";
 import { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
+import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 vi.mock("@/framework/compat/clipboard", () => ({
   writeTextToClipboard: vi.fn().mockResolvedValue(undefined),
@@ -275,7 +276,7 @@ describe("observability workspace scenes", () => {
   afterEach(() => cleanup());
 
   it("日志检索展示操作审计七列、局部结果和来源状态", async () => {
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
     expect(query).toMatchObject({ page: 1, pageSize: 20 });
@@ -299,7 +300,7 @@ describe("observability workspace scenes", () => {
 
   it("从用户管理审计下钻按操作者筛选并展示异常来源原因", async () => {
     window.history.replaceState({}, "", "/system/audit?actor_id=user-a&actor_match=exact");
-    render(<ObservabilityLogsScene mode="audit" />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene mode="audit" />);
 
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
@@ -322,7 +323,7 @@ describe("observability workspace scenes", () => {
 
   it("将旧链接中的 actor_id 保持为自由文本操作者筛选", async () => {
     window.history.replaceState({}, "", "/observability/logs?actor_id=%E5%BC%A0%E4%B8%89");
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
 
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
@@ -349,7 +350,7 @@ describe("observability workspace scenes", () => {
         statusText: "Service Unavailable",
       }),
     );
-    render(<ObservabilityLogsScene mode="audit" />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene mode="audit" />);
     expect(await screen.findByText("bknTrace.errors.auditNotConfigured")).not.toBeNull();
     expect(screen.queryByText("Request failed with status code 503")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
@@ -373,7 +374,7 @@ describe("observability workspace scenes", () => {
         },
       ],
     });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     expect(await screen.findByText("bknTrace.errors.auditNotConfigured")).not.toBeNull();
     expect(screen.getByText("供应链分析助手 的业务会话")).not.toBeNull();
   });
@@ -399,7 +400,7 @@ describe("observability workspace scenes", () => {
         },
       ],
     });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
 
     expect(screen.queryByText(/available-source ·/)).toBeNull();
     expect(
@@ -424,7 +425,7 @@ describe("observability workspace scenes", () => {
         },
       ],
     });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
 
     expect(screen.queryByText(/not-integrated-source ·/)).toBeNull();
     expect(screen.queryByText("bknTrace.logs.partialWarning")).toBeNull();
@@ -475,7 +476,7 @@ describe("observability workspace scenes", () => {
       ],
     });
 
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
 
     expect(await screen.findByText("创建对象类")).not.toBeNull();
     expect(screen.getByText("对象类: 物料")).not.toBeNull();
@@ -549,7 +550,7 @@ describe("observability workspace scenes", () => {
           },
         ],
       });
-      render(<ObservabilityLogsScene />);
+      renderWithoutAntdStyles(<ObservabilityLogsScene />);
       expect(await screen.findByText("bknTrace.logs.publisher.queryAvailable")).not.toBeNull();
       expect(screen.getByText(`bknTrace.logs.publisher.${status}`)).not.toBeNull();
       expect(screen.getByText("bknTrace.logs.publisher.scope")).not.toBeNull();
@@ -580,7 +581,7 @@ describe("observability workspace scenes", () => {
         },
       ],
     });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     expect(await screen.findByText("bknTrace.logs.publisher.queryAvailable")).not.toBeNull();
     expect(screen.getByText("bknTrace.logs.publisher.unknown")).not.toBeNull();
     expect(screen.getByText("bknTrace.logs.publisher.historicalGapSince")).not.toBeNull();
@@ -612,7 +613,7 @@ describe("observability workspace scenes", () => {
         },
       ],
     });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     const unknown = await screen.findByText("bknTrace.logs.publisher.unknown");
     expect(unknown.closest(".ant-alert")?.classList.contains("ant-alert-warning")).toBe(true);
     expect(screen.getByText("bknTrace.logs.publisher.reasons.unsupported")).not.toBeNull();
@@ -654,7 +655,7 @@ describe("observability workspace scenes", () => {
           },
         ],
       });
-      render(<ObservabilityLogsScene />);
+      renderWithoutAntdStyles(<ObservabilityLogsScene />);
       await screen.findByText("bknTrace.logs.publisher.queryAvailable");
       if (publisherGap) {
         expect(screen.getByText("bknTrace.logs.publisher.historicalGap")).not.toBeNull();
@@ -675,7 +676,7 @@ describe("observability workspace scenes", () => {
       "/observability/logs?time_from=2026-08-01T00%3A00%3A00.000Z&time_to=2026-08-03T00%3A00%3A00.000Z",
     );
 
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
 
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
@@ -690,7 +691,7 @@ describe("observability workspace scenes", () => {
       "/observability/logs?q=legacy-keyword&actor=%E5%BC%A0%E4%B8%89&outcome=failure",
     );
 
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
 
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
@@ -701,7 +702,7 @@ describe("observability workspace scenes", () => {
 
   it("系统管理日志入口复用统一工作台并保留对象下钻条件", async () => {
     window.history.replaceState({}, "", "/system/audit?target_type=user&target_id=user-a");
-    render(<AuditLogPage />);
+    renderWithoutAntdStyles(<AuditLogPage />);
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
     expect(query).toMatchObject({
@@ -719,7 +720,7 @@ describe("observability workspace scenes", () => {
       new Error("resource_type is not part of the operation audit query contract"),
     );
 
-    render(<AuditLogPage />);
+    renderWithoutAntdStyles(<AuditLogPage />);
 
     expect(
       await screen.findByText("resource_type is not part of the operation audit query contract"),
@@ -729,7 +730,7 @@ describe("observability workspace scenes", () => {
   });
 
   it("刷新查询时保留已有结果并展示加载反馈", async () => {
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     expect(await screen.findByText("供应链分析助手 的业务会话")).not.toBeNull();
     vi.mocked(listLogs).mockImplementationOnce(() => new Promise(() => undefined));
 
@@ -748,7 +749,7 @@ describe("observability workspace scenes", () => {
       sourceStatus: [],
     });
 
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
 
     expect(await screen.findByText("bknTrace.logs.resultCountUnknown")).not.toBeNull();
     expect(screen.queryByText("bknTrace.logs.resultCount")).toBeNull();
@@ -779,7 +780,7 @@ describe("observability workspace scenes", () => {
           sourceStatus: [],
         });
       });
-      render(<ObservabilityLogsScene mode={mode} />);
+      renderWithoutAntdStyles(<ObservabilityLogsScene mode={mode} />);
       await waitFor(() =>
         expect(document.querySelector('tr[data-row-key="event-0"]')).not.toBeNull(),
       );
@@ -833,7 +834,7 @@ describe("observability workspace scenes", () => {
       .mockRejectedValueOnce(expired)
       .mockResolvedValueOnce({ ...base, nextCursor: "fresh-page-2" })
       .mockResolvedValueOnce({ ...base, nextCursor: undefined });
-    render(<ObservabilityLogsScene mode={mode} />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene mode={mode} />);
     await screen.findByText(" 的业务会话", { exact: false });
     fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
       target: { value: "draft" },
@@ -878,7 +879,7 @@ describe("observability workspace scenes", () => {
       .mockRejectedValueOnce(error("conflict"))
       .mockRejectedValueOnce(error("cursor_stale"))
       .mockResolvedValueOnce({ ...base, nextCursor: "new-page-2" });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     await screen.findByText(" 的业务会话", { exact: false });
     fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
     await screen.findByText("conflict");
@@ -905,7 +906,7 @@ describe("observability workspace scenes", () => {
         nextCursor: "after-filtered-batch",
       })
       .mockResolvedValueOnce({ ...base, nextCursor: undefined });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "bknTrace.logs.nextPage" })).not.toBeDisabled(),
     );
@@ -937,7 +938,7 @@ describe("observability workspace scenes", () => {
         partial: false,
         sourceStatus: [],
       });
-    render(<ObservabilityLogsScene mode="audit" />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene mode="audit" />);
     await screen.findByText("bknTrace.logs.resultCountUnknown");
     expect(screen.queryByText("bknTrace.logs.resultCount")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
@@ -960,7 +961,7 @@ describe("observability workspace scenes", () => {
       partial: false,
       sourceStatus: [],
     });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     await screen.findByText("bknTrace.logs.resultCountUnknown");
     fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
       target: { value: "new actor" },
@@ -1010,7 +1011,7 @@ describe("observability workspace scenes", () => {
         )
         .mockResolvedValueOnce({ ...base, nextCursor: "new-page-2", sourceStatus: [] })
         .mockResolvedValueOnce({ ...base, sourceStatus: [] });
-      render(<ObservabilityLogsScene />);
+      renderWithoutAntdStyles(<ObservabilityLogsScene />);
       await screen.findByText("bknTrace.logs.resultCountUnknown");
       fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
       await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
@@ -1055,7 +1056,7 @@ describe("observability workspace scenes", () => {
       const base = await vi.mocked(listLogs)({});
       vi.mocked(listLogs).mockClear();
       vi.mocked(listLogs).mockResolvedValue({ ...base, nextCursor: "next", sourceStatus: [] });
-      render(<ObservabilityLogsScene />);
+      renderWithoutAntdStyles(<ObservabilityLogsScene />);
       await screen.findByText("Page 1");
       for (const page of [2, 3]) {
         fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
@@ -1098,7 +1099,7 @@ describe("observability workspace scenes", () => {
             data: { error: { code } },
           }),
         );
-      const view = render(<ObservabilityLogsScene />);
+      const view = renderWithoutAntdStyles(<ObservabilityLogsScene />);
       await screen.findByText("Page 1");
       fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
       await screen.findByText(
@@ -1127,7 +1128,7 @@ describe("observability workspace scenes", () => {
       nextCursor: "committed-next",
       sourceStatus: [],
     });
-    const view = render(<ObservabilityLogsScene />);
+    const view = renderWithoutAntdStyles(<ObservabilityLogsScene />);
     await screen.findByText("Page 1");
     fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
       target: { value: "committed actor" },
@@ -1231,7 +1232,7 @@ describe("observability workspace scenes", () => {
         sourceStatus: [],
       });
 
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     fireEvent.click(await screen.findByTitle("2"));
     await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
     const [query] = vi.mocked(listLogs).mock.calls[1] ?? [];
@@ -1253,7 +1254,7 @@ describe("observability workspace scenes", () => {
   });
 
   it("点击日志打开受控详情并可下钻 Trace", async () => {
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     const summary = await screen.findByText("供应链分析助手 的业务会话");
     fireEvent.click(summary);
     await waitFor(() => expect(getLogDetail).toHaveBeenCalledWith("audit-a"));
@@ -1335,7 +1336,7 @@ describe("observability workspace scenes", () => {
       sourceStatus: [],
     });
 
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     expect(await screen.findByText("未命名 Agent 的业务会话")).not.toBeNull();
     expect(screen.getByText("266c6a42-6131-4d62-8f39-853e7093701c")).not.toBeNull();
     expect(screen.queryByText("已认证用户 · 266c6a42…")).toBeNull();
@@ -1380,7 +1381,7 @@ describe("observability workspace scenes", () => {
         status: "healthy",
       },
     ]);
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     await waitFor(() => expect(listLogSources).toHaveBeenCalled());
     expect(
       await screen.findByText("bknTrace.logs.modules.domain_knowledge_network"),
@@ -1422,7 +1423,7 @@ describe("observability workspace scenes", () => {
         status: "unavailable",
       },
     ]);
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     const row = (await screen.findByText("bknTrace.logs.modules.observability")).closest("tr");
     expect(within(row!).getByText("管理操作审计")).not.toBeNull();
     expect(within(row!).getByText("已接入")).not.toBeNull();
@@ -1441,7 +1442,7 @@ describe("observability workspace scenes", () => {
       },
     ]);
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     const dataResourceRow = (
       await screen.findByText("bknTrace.logs.modules.data_resource_knowledge_network")
@@ -1475,7 +1476,7 @@ describe("observability workspace scenes", () => {
       expectedRevision: 9,
     });
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(getTraceEvidenceOperation).toHaveBeenCalledWith("op-9"));
@@ -1521,7 +1522,7 @@ describe("observability workspace scenes", () => {
       expectedRevision: 9,
     });
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     fireEvent.click(
       await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
     );
@@ -1550,7 +1551,7 @@ describe("observability workspace scenes", () => {
   }, 20000);
 
   it("does not expose switch controls without the exact write grant", async () => {
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     expect(await screen.findByText("bknTrace.settings.capturePolicy.title")).not.toBeNull();
     expect(
       screen.queryByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
@@ -1564,7 +1565,7 @@ describe("observability workspace scenes", () => {
     });
     vi.mocked(changeTraceEvidenceConfiguration).mockRejectedValue(new Error("revision conflict"));
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     fireEvent.click(
       await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
     );
@@ -1621,7 +1622,7 @@ describe("observability workspace scenes", () => {
       expectedRevision: 9,
     });
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     fireEvent.click(
       await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
     );
@@ -1678,7 +1679,7 @@ describe("observability workspace scenes", () => {
       expectedRevision: 9,
     });
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     fireEvent.click(
       await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
     );
@@ -1747,7 +1748,7 @@ describe("observability workspace scenes", () => {
       expectedRevision: 9,
     });
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     fireEvent.click(
       await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
     );
@@ -1778,7 +1779,7 @@ describe("observability workspace scenes", () => {
     });
     vi.mocked(getTraceEvidenceOperation).mockRejectedValueOnce(new Error("operation unavailable"));
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     await waitFor(() => expect(getTraceEvidenceOperation).toHaveBeenCalledWith("op-10"));
     expect(screen.getByText("不可用（当前合同未提供）")).not.toBeNull();
@@ -1811,7 +1812,7 @@ describe("observability workspace scenes", () => {
       });
     vi.mocked(getTraceEvidenceOperation).mockRejectedValue(new Error("operation unavailable"));
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(2), {
       timeout: 10000,
     });
@@ -1837,7 +1838,7 @@ describe("observability workspace scenes", () => {
     });
     vi.mocked(getTraceEvidenceOperation).mockRejectedValue(new Error("operation unavailable"));
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(6), {
       timeout: 13000,
     });
@@ -1847,7 +1848,7 @@ describe("observability workspace scenes", () => {
   }, 30_000);
 
   it("稳定配置没有活动操作时显示中性阶段并不显示操作不可用告警", async () => {
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(1));
     expect(getTraceEvidenceOperation).not.toHaveBeenCalled();
@@ -1869,7 +1870,7 @@ describe("observability workspace scenes", () => {
         status: "not_integrated",
       },
     ]);
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     await waitFor(() => expect(listLogSources).toHaveBeenCalled());
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
@@ -1882,14 +1883,14 @@ describe("observability workspace scenes", () => {
   it("非超级管理员仍按服务端能力访问设置页", async () => {
     mockCurrentUser.isSuperAdmin = false;
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     expect(await screen.findByText("bknTrace.settings.capturePolicy.title")).not.toBeNull();
     expect(getAccessProfile).toHaveBeenCalled();
   });
 
   it("设置页只展示可维护的日志保留项，不暴露内部 Trace 存储", async () => {
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     expect(await screen.findByText("bknTrace.settings.storage.runtimeLogs")).not.toBeNull();
     expect(screen.getByText("bknTrace.settings.storage.auditLogs")).not.toBeNull();
@@ -1900,7 +1901,7 @@ describe("observability workspace scenes", () => {
   it("服务端未返回保留策略时展示本地化的中性值", async () => {
     vi.mocked(listLogPolicies).mockResolvedValueOnce([]);
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     expect(await screen.findAllByText("未返回")).toHaveLength(2);
     expect(screen.queryByText("bknTrace.settings.notReturned")).toBeNull();
@@ -1918,7 +1919,7 @@ describe("observability workspace scenes", () => {
       },
     ]);
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     expect(await screen.findAllByText("已接入")).toHaveLength(1);
     expect(screen.queryByText("partial_management_audit_coverage")).toBeNull();
@@ -1932,7 +1933,7 @@ describe("observability workspace scenes", () => {
       logPolicyRead: true,
     });
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     await waitFor(() => expect(getAccessProfile).toHaveBeenCalled());
     expect(screen.queryByText("bknTrace.settings.sources")).toBeNull();
@@ -1957,7 +1958,7 @@ describe("observability workspace scenes", () => {
       },
     ]);
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     const row = (await screen.findByText("bknTrace.logs.modules.domain_knowledge_network")).closest(
       "tr",
@@ -1987,7 +1988,7 @@ describe("observability workspace scenes", () => {
       storageStatus: "ready",
     });
     vi.mocked(listArchiveJobs).mockResolvedValue([]);
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
 
     const [archiveButton] = await screen.findAllByRole("button", {
       name: "bknTrace.settings.archive.action",
@@ -2050,7 +2051,7 @@ describe("observability workspace scenes", () => {
       status: "completed",
     });
 
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     expect(await screen.findByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
     expect(
       screen.getByText("bknTrace.settings.archive.statuses.cleanup_incomplete"),
@@ -2075,7 +2076,7 @@ describe("observability workspace scenes", () => {
   });
 
   it("设置页按高保真顺序展示五个只读维护分区", async () => {
-    render(<ObservabilitySettingsScene />);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     await waitFor(() => expect(listLogSources).toHaveBeenCalled());
 
     const sectionKeys = [
@@ -2105,7 +2106,7 @@ describe("observability workspace scenes", () => {
 
   it("无全局日志能力时不发起日志检索", async () => {
     vi.mocked(getAccessProfile).mockResolvedValue({ ...profile, globalLogSearch: false });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     expect(await screen.findByText("bknTrace.errors.accessDenied")).not.toBeNull();
     expect(listLogs).not.toHaveBeenCalled();
   });
@@ -2113,7 +2114,7 @@ describe("observability workspace scenes", () => {
   it("普通用户可从本人 Trace 关联下钻日志但不能发起全局检索", async () => {
     window.history.replaceState({}, "", "/observability/logs?trace_id=trace-a");
     vi.mocked(getAccessProfile).mockResolvedValue({ ...profile, globalLogSearch: false });
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
     expect(query).toMatchObject({ page: 1, pageSize: 20, traceId: "trace-a" });
@@ -2132,7 +2133,7 @@ describe("observability workspace scenes", () => {
       sourceStatus: [],
     });
 
-    render(<ObservabilityLogsScene />);
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
 
     expect(await screen.findByText("bknTrace.logs.emptyAssociated")).not.toBeNull();
   });
