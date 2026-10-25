@@ -68,6 +68,7 @@ export function OntologyGraphCard({
 }: OntologyGraphCardProps) {
   const { t } = useTranslation();
   const [uncontrolledSelectedId, setUncontrolledSelectedId] = useState<string | null>(null);
+  const selectionControlled = selectedIdProp !== undefined;
   const selectedId = selectedIdProp === undefined ? uncontrolledSelectedId : selectedIdProp;
 
   const controlled = objectTypesProp !== undefined && relationTypesProp !== undefined;
@@ -85,7 +86,7 @@ export function OntologyGraphCard({
     }
     let cancelled = false;
     setLoading(true);
-    if (selectedIdProp === undefined) {
+    if (!selectionControlled) {
       setUncontrolledSelectedId(null);
     }
     Promise.all([
@@ -112,7 +113,7 @@ export function OntologyGraphCard({
     return () => {
       cancelled = true;
     };
-  }, [controlled, networkId, selectedIdProp]);
+  }, [controlled, networkId, selectionControlled]);
 
   const objectTypes = controlled ? objectTypesProp : fetchedObjectTypes;
   const relationTypes = controlled ? relationTypesProp : fetchedRelationTypes;

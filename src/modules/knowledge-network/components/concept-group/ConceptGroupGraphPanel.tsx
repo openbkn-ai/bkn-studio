@@ -96,11 +96,13 @@ export function ConceptGroupGraphPanel({
   const [result, setResult] = useState<KnowledgeNetworkOverviewGraph | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [partialError, setPartialError] = useState<string>();
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(undefined);
+    setPartialError(undefined);
     setResult(null);
     void (async () => {
       let cursor: string | undefined;
@@ -125,8 +127,13 @@ export function ConceptGroupGraphPanel({
           }
         } while (cursor);
       } catch (nextError) {
-        if (!cancelled && !accumulated) {
-          setError(extractRequestErrorMessage(nextError));
+        if (!cancelled) {
+          const message = extractRequestErrorMessage(nextError);
+          if (accumulated) {
+            setPartialError(message);
+          } else {
+            setError(message);
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -202,6 +209,14 @@ export function ConceptGroupGraphPanel({
 
   return (
     <div className={styles.root}>
+      {partialError && !focusedObjectTypeId ? (
+        <Alert
+          description={partialError}
+          message={t("knowledgeNetwork.conceptGroupGraphPartialError")}
+          showIcon
+          type="warning"
+        />
+      ) : null}
       {focusedObjectTypeId ? (
         <FocusedObjectTypeGraph
           initialSelectedResource={initialSelectedResource}

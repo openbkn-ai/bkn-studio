@@ -24,6 +24,7 @@ export const conceptgroupPart = {
   conceptGroupGraphEmpty: "当前分组下没有可查看的对象类。",
   conceptGroupGraphBack: "返回分组图谱",
   conceptGroupGraphObjects: "对象类",
+  conceptGroupGraphPartialError: "部分图谱数据加载失败，当前展示已成功加载的内容。",
   conceptGroupGraphView: "图谱",
   conceptGroupListView: "列表",
   conceptGroupMembersEmpty: "当前分组下还没有关联成员。",

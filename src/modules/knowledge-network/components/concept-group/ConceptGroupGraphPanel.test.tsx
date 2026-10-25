@@ -258,6 +258,47 @@ describe("ConceptGroupGraphPanel", () => {
     );
   });
 
+  it("keeps loaded pages visible and warns when a later page fails", async () => {
+    mocks.getOverviewGraph
+      .mockResolvedValueOnce({
+        graph: { edges: [], nodes: [{ id: "order", name: "Order" }] },
+        nextCursor: "page-2",
+        objectTypeTotal: 2,
+        relationTypeTotal: 0,
+        snapshot: "snapshot-1",
+        truncated: true,
+      })
+      .mockRejectedValueOnce(new Error("page 2 unavailable"));
+
+    render(
+      <ConceptGroupGraphPanel
+        group={{
+          actionTypesTotal: 0,
+          color: "#1677ff",
+          description: "",
+          id: "group-1",
+          name: "Sales",
+          objectTypesTotal: 2,
+          relationTypesTotal: 0,
+          tags: [],
+          updateTime: "",
+        }}
+        networkId="network-1"
+        onSelectedObjectTypeIdChange={vi.fn()}
+        refreshVersion={0}
+        selectedObjectTypeId={null}
+      />,
+    );
+
+    expect(await screen.findByTestId("ontology-graph-card")).toHaveAttribute(
+      "data-objects",
+      "order:group-1",
+    );
+    const warning = await screen.findByRole("alert");
+    expect(warning).toHaveTextContent("knowledgeNetwork.conceptGroupGraphPartialError");
+    expect(warning).toHaveTextContent("page 2 unavailable");
+  });
+
   it("opens the selected object type with the shared full resource graph", async () => {
     mocks.getOverviewGraph.mockResolvedValue({
       graph: { edges: [], nodes: [{ id: "order", name: "Order" }] },
