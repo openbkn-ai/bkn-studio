@@ -287,6 +287,11 @@ function metric(index: number): ObjectMetricRecordV1 {
   };
 }
 
+async function openMetricActionMenu(index = 0) {
+  const actionButtons = await screen.findAllByRole("button", { name: "common.actions" });
+  fireEvent.click(actionButtons[index]);
+}
+
 describe("ObjectMetricListPanel pagination", () => {
   it("enables the restricted-object graph only after an empty unfiltered object query", async () => {
     mocks.listObjectTypes.mockResolvedValue({ entries: [], totalCount: 0 });
@@ -344,8 +349,9 @@ describe("ObjectMetricListPanel pagination", () => {
       />,
     );
 
+    await openMetricActionMenu();
     fireEvent.click(
-      await screen.findByRole("button", { name: "knowledgeNetwork.authorizeAction" }),
+      await screen.findByRole("menuitem", { name: "knowledgeNetwork.authorizeAction" }),
     );
     expect(screen.getByTestId("metric-authorization-drawer")).toHaveAttribute(
       "data-metric-id",
@@ -373,8 +379,9 @@ describe("ObjectMetricListPanel pagination", () => {
     render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
 
     expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
+    await openMetricActionMenu();
     expect(
-      screen.queryByRole("button", { name: "knowledgeNetwork.authorizeAction" }),
+      screen.queryByRole("menuitem", { name: "knowledgeNetwork.authorizeAction" }),
     ).not.toBeInTheDocument();
   });
 
@@ -600,7 +607,8 @@ describe("ObjectMetricListPanel pagination", () => {
 
     render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "试算" }));
+    await openMetricActionMenu();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "试算" }));
     const drawer = await screen.findByTestId("list-metric-trial");
     expect(drawer).toHaveAttribute("data-mode", mode);
     expect(drawer).toHaveAttribute("data-name", "订单对象指标 1");
@@ -654,10 +662,13 @@ describe("ObjectMetricListPanel pagination", () => {
 
     expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
     const widths = [...container.querySelectorAll<HTMLTableColElement>("colgroup col")]
-      .slice(0, 7)
+      .slice(0, 8)
       .map((column) => column.style.width);
-    expect(widths).toEqual(["280px", "100px", "180px", "112px", "90px", "152px", "300px"]);
+    expect(widths).toEqual(["280px", "72px", "100px", "180px", "112px", "90px", "152px", "300px"]);
+    const headers = screen.getAllByRole("columnheader").map((header) => header.textContent);
+    expect(headers.slice(0, 2)).toEqual(["对象指标", "common.actions"]);
     expect(screen.getByRole("columnheader", { name: "业务定义" })).toBeInTheDocument();
+    expect(container.querySelector("table")).toHaveStyle({ width: "1286px" });
   });
 
   it("loads binding status once for the selected object class", async () => {
@@ -689,9 +700,11 @@ describe("ObjectMetricListPanel pagination", () => {
     );
     expect(screen.getByText("未绑定")).toBeInTheDocument();
     expect(mocks.getObjectDetail).toHaveBeenCalledTimes(1);
-    const deprecateButtons = screen.getAllByRole("button", { name: "废弃" });
-    expect(deprecateButtons[0]).toBeDisabled();
-    expect(deprecateButtons[1]).toBeEnabled();
+    await openMetricActionMenu(0);
+    expect(await screen.findByRole("menuitem", { name: "废弃" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
   it("restores a selected object outside the first sidebar page from a direct detail return", async () => {
     mocks.searchParams.current = "objectTypeId=remote";
@@ -730,7 +743,8 @@ describe("ObjectMetricListPanel pagination", () => {
       "network-1",
       expect.objectContaining({ offset: 10, ownerObjectTypeId: "order" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+    await openMetricActionMenu();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "详情" }));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/metrics/metric-1/detail?version=1",
       {
@@ -742,24 +756,38 @@ describe("ObjectMetricListPanel pagination", () => {
     );
   });
 
-  it("does not silently create a draft when viewing a published metric", async () => {
+  it("does not expose editing for a published metric", async () => {
+    mocks.searchParams.current = "view=list";
     const published = metric(1);
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ id: "order", name: "销售订单" }],
+      totalCount: 1,
+    });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [published], total_count: 1 });
+
+    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
+
+    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
+    await openMetricActionMenu();
+    expect(screen.queryByRole("menuitem", { name: "common.edit" })).not.toBeInTheDocument();
+    expect(mocks.createNextDraft).not.toHaveBeenCalled();
+  });
+
+  it("opens an existing draft directly without creating another draft", async () => {
+    mocks.searchParams.current = "view=list";
     const draft = metric(2);
     draft.definition.lifecycle.status = "draft";
     mocks.listObjectTypes.mockResolvedValue({
       entries: [{ id: "order", name: "销售订单" }],
       totalCount: 1,
     });
-    mocks.listObjectMetrics.mockResolvedValue({ entries: [published, draft], total_count: 2 });
+    mocks.listObjectMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
 
     render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
 
-    fireEvent.click(screen.getByText(/^(列表|list)$/i));
-    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "编辑对象指标 订单对象指标 1" }),
-    ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "编辑对象指标 订单对象指标 2" }));
+    expect(await screen.findByText("订单对象指标 2")).toBeInTheDocument();
+    await openMetricActionMenu();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "common.edit" }));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/metrics/metric-2/edit",
       {
@@ -1027,7 +1055,8 @@ describe("ObjectMetricListPanel pagination", () => {
     render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
     fireEvent.click(screen.getByText(/^(列表|list)$/i));
     expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /删除对象指标.*v1/ }));
+    await openMetricActionMenu();
+    fireEvent.click(await screen.findByRole("menuitem", { name: "删除对象指标版本" }));
 
     await waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
     expect(warning.mock.calls[0]?.[0]?.title).toBe("无法删除对象指标版本");
@@ -1065,10 +1094,21 @@ describe("ObjectMetricListPanel pagination", () => {
     render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
     fireEvent.click(screen.getByText(/^(列表|list)$/i));
     expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
-    const deleteButton = screen.getByRole("button", { name: /删除对象指标.*v1/ });
-    fireEvent.click(deleteButton);
-    fireEvent.click(deleteButton);
+    await openMetricActionMenu();
+    const deleteItem = await screen.findByRole("menuitem", { name: "删除对象指标版本" });
+    fireEvent.click(deleteItem);
+    fireEvent.click(deleteItem);
     expect(mocks.checkDeletion).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "common.actions" })).toBeEnabled();
+    await openMetricActionMenu();
+    expect(await screen.findByRole("menuitem", { name: "详情" })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("menuitem", { name: /删除对象指标版本$/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
 
     act(() => {
       resolveCheck({

@@ -6,9 +6,9 @@
  */
 
 import {
-  DeleteOutlined,
-  EditOutlined,
+  EllipsisOutlined,
   LockOutlined,
+  LoadingOutlined,
   ReloadOutlined,
   SearchOutlined,
   ThunderboltOutlined,
@@ -21,13 +21,12 @@ import {
   Modal,
   Segmented,
   Select,
-  Space,
   Spin,
   Table,
   Tag,
   Tooltip,
 } from "antd";
-import type { TableProps } from "antd";
+import type { MenuProps, TableProps } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -712,8 +711,40 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
     });
   };
 
+  const handleOperate = (key: string, record: ObjectMetricRecordV1) => {
+    if (key === "view") {
+      openDetail(record);
+      return;
+    }
+
+    if (key === "trial") {
+      void openTrial(record);
+      return;
+    }
+
+    if (key === "authorize") {
+      setAuthorizingMetric(record);
+      return;
+    }
+
+    if (key === "edit") {
+      void openEditor(record);
+      return;
+    }
+
+    if (key === "delete-version") {
+      void confirmDeleteVersion(record);
+      return;
+    }
+
+    if (key === "deprecate") {
+      confirmDeprecate(record);
+    }
+  };
+
   const columns: TableProps<ObjectMetricRecordV1>["columns"] = [
     {
+      fixed: "left",
       key: "name",
       title: objectMetricText("mb87e67c7dae0"),
       width: 280,
@@ -722,6 +753,89 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
           <strong title={record.definition.name}>{record.definition.name}</strong>
         </div>
       ),
+    },
+    {
+      fixed: "left",
+      key: "actions",
+      title: t("common.actions"),
+      width: 72,
+      render: (_, record) => {
+        const actions = objectMetricActions(
+          record,
+          canModify,
+          canDelete,
+          ownerObjectTypeFor(record),
+        );
+        const recordKey = `${record.definition.id}@${record.definition.version}`;
+        const menuItems: MenuProps["items"] = [
+          { key: "view", label: objectMetricText("m979a332955c8") },
+          {
+            key: "trial",
+            disabled: trialLoadingKey === recordKey,
+            icon: trialLoadingKey === recordKey ? <LoadingOutlined spin /> : undefined,
+            label: objectMetricText("m073728637a26"),
+          },
+          ...(canAuthorizeMetrics
+            ? [
+                {
+                  key: "authorize",
+                  label: (
+                    <KnowledgeNetworkAuthorizationActionLabel>
+                      {t("knowledgeNetwork.authorizeAction")}
+                    </KnowledgeNetworkAuthorizationActionLabel>
+                  ),
+                },
+              ]
+            : []),
+          ...(actions.canEdit ? [{ key: "edit", label: t("common.edit") }] : []),
+          ...(actions.canDeleteVersion
+            ? [
+                {
+                  danger: true,
+                  disabled: deletionPendingKey === recordKey,
+                  icon: deletionPendingKey === recordKey ? <LoadingOutlined spin /> : undefined,
+                  key: "delete-version",
+                  label: objectMetricText("metricDeleteVersion"),
+                },
+              ]
+            : []),
+          ...(actions.canDeprecate
+            ? [
+                {
+                  danger: true,
+                  disabled: !!actions.deprecateReason,
+                  key: "deprecate",
+                  label: (
+                    <Tooltip title={actions.deprecateReason}>
+                      <span>{objectMetricText("mca0ff1e63793")}</span>
+                    </Tooltip>
+                  ),
+                },
+              ]
+            : []),
+        ];
+
+        return (
+          <Dropdown
+            menu={{
+              items: menuItems,
+              onClick: ({ domEvent, key }) => {
+                domEvent.stopPropagation();
+                handleOperate(String(key), record);
+              },
+            }}
+            overlayClassName={listStyles.dropdownMenu}
+            trigger={["click"]}
+          >
+            <AppButton
+              aria-label={t("common.actions")}
+              icon={<EllipsisOutlined style={{ fontSize: 20 }} />}
+              onClick={(event) => event.stopPropagation()}
+              type="text"
+            />
+          </Dropdown>
+        );
+      },
     },
     {
       key: "type",
@@ -824,82 +938,6 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
       ellipsis: true,
       width: 300,
       render: (_, record) => record.definition.description || "--",
-    },
-    {
-      key: "actions",
-      title: objectMetricText("med31fbb483ee"),
-      width: 320,
-      fixed: "right",
-      render: (_, record) => {
-        const actions = objectMetricActions(
-          record,
-          canModify,
-          canDelete,
-          ownerObjectTypeFor(record),
-        );
-        return (
-          <Space size={4}>
-            <Button onClick={() => openDetail(record)} size="small" type="link">
-              {objectMetricText("m979a332955c8")}
-            </Button>
-            <Button
-              loading={trialLoadingKey === `${record.definition.id}@${record.definition.version}`}
-              onClick={() => void openTrial(record)}
-              size="small"
-              type="link"
-            >
-              {objectMetricText("m073728637a26")}
-            </Button>
-            {canAuthorizeMetrics ? (
-              <Button onClick={() => setAuthorizingMetric(record)} size="small" type="link">
-                <KnowledgeNetworkAuthorizationActionLabel>
-                  {t("knowledgeNetwork.authorizeAction")}
-                </KnowledgeNetworkAuthorizationActionLabel>
-              </Button>
-            ) : null}
-            {actions.canEdit ? (
-              <Button
-                aria-label={objectMetricText("m79bef996428f", { p0: record.definition.name })}
-                icon={<EditOutlined />}
-                onClick={() => void openEditor(record)}
-                size="small"
-                type="text"
-              />
-            ) : null}
-            {actions.canDeleteVersion ? (
-              <Button
-                aria-label={objectMetricText("metricDeleteVersionLabel", {
-                  p0: record.definition.name,
-                  p1: record.definition.version,
-                })}
-                danger
-                icon={<DeleteOutlined />}
-                loading={
-                  deletionPendingKey === `${record.definition.id}@${record.definition.version}`
-                }
-                onClick={() => void confirmDeleteVersion(record)}
-                size="small"
-                type="text"
-              />
-            ) : null}
-            {actions.canDeprecate ? (
-              <Tooltip title={actions.deprecateReason}>
-                <span>
-                  <Button
-                    danger
-                    disabled={!!actions.deprecateReason}
-                    onClick={() => confirmDeprecate(record)}
-                    size="small"
-                    type="link"
-                  >
-                    {objectMetricText("mca0ff1e63793")}
-                  </Button>
-                </span>
-              </Tooltip>
-            ) : null}
-          </Space>
-        );
-      },
     },
   ];
 
@@ -1168,7 +1206,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
                   }}
                   pagination={false}
                   rowKey={(record) => `${record.definition.id}-${record.definition.version}`}
-                  scroll={{ x: 1426 }}
+                  scroll={{ x: 1286 }}
                   tableLayout="fixed"
                 />
               </div>
