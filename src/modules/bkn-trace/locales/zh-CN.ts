@@ -771,6 +771,10 @@ export const bknTraceZhCN = {
     traceWorkspace: {
       spanDisplay: {
         rawRecords: "本次查询读取 {{count}} 条原始记录，上限 {{limit}} 条；重复记录可能占用窗口。",
+        rawRecords_one:
+          "本次查询读取 {{count}} 条原始记录，上限 {{limit}} 条；重复记录可能占用窗口。",
+        rawRecords_other:
+          "本次查询读取 {{count}} 条原始记录，上限 {{limit}} 条；重复记录可能占用窗口。",
         permissionLimited: "当前权限不可读",
         title: "Span 展示范围",
         truncated: "当前 Span 仅展示有界查询窗口；这不代表采集缺失",
@@ -783,7 +787,7 @@ export const bknTraceZhCN = {
         window: "已加载开始时间范围：{{first}} — {{last}}",
         legacy: "当前后端未提供展示范围信息，仅显示已加载节点；分页查看不可用。",
         scopeUnavailable: "当前权限未开放原始 Span；这是权限边界，不代表采集缺失。",
-        parentOutside: "父节点位于当前展示窗口之外，仅凭此项不能认定采集缺失。",
+        parentOutside: "父 Span 未在当前展示窗口找到；可能未采集或未加载，可在权限允许时分页核对。",
         browseReasons: {
           denied: "分页查看 Span 需要全局原始 Trace 读取权限。",
           unsupported: "旧版整包 Span 存储不支持有界分页。",
@@ -791,6 +795,8 @@ export const bknTraceZhCN = {
         },
       },
       spanBrowser: {
+        service: "服务",
+        status: "状态",
         title: "分页查看 Span",
         parent: "父 Span ID",
         name: "Span 名称",

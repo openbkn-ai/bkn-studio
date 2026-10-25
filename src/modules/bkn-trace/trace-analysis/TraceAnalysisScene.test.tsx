@@ -242,6 +242,12 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
         browseAllowed: false,
         browseReason,
       };
+      if (browseReason === "global_trace_access_required") {
+        detail.summary.spanCountStatus = "available";
+        detail.summary.spanCount = 1500;
+        detail.spanDisplay.totalCount = 1500;
+        detail.spanDisplay.totalAccuracy = "estimated";
+      }
       vi.mocked(getTechnicalTrace).mockResolvedValue(detail);
       render(<TraceAnalysisScene />);
       fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
@@ -252,6 +258,8 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
       expect(button).toBeDisabled();
       fireEvent.click(button);
       expect(listTechnicalSpans).not.toHaveBeenCalled();
+      expect(screen.queryByText("bknTrace.traceWorkspace.spanDisplay.estimated")).toBeNull();
+      expect(screen.queryByText("bknTrace.traceWorkspace.spanDisplay.loadedEstimated")).toBeNull();
       expect(screen.queryByText("bknTrace.traceWorkspace.diagnostics.spanUnavailable")).toBeNull();
     },
   );
@@ -269,6 +277,20 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     expect(
       screen.getByRole("button", { name: "bknTrace.traceWorkspace.spanBrowser.title" }),
     ).toBeDisabled();
+  });
+
+  it("keeps an older backend's positive available summary count explicitly estimated", async () => {
+    const detail = await vi.mocked(getTechnicalTrace).getMockImplementation()!("trace");
+    detail.summary.spanCountStatus = "available";
+    detail.summary.spanCount = 1500;
+    detail.partialReasons = ["trace_query_truncated"];
+    vi.mocked(getTechnicalTrace).mockResolvedValue(detail);
+    render(<TraceAnalysisScene />);
+    fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
+    await screen.findByText("bknTrace.traceWorkspace.spanDisplay.legacy");
+    expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.estimated")).not.toBeNull();
+    expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.loadedEstimated")).not.toBeNull();
+    expect(listTechnicalSpans).not.toHaveBeenCalled();
   });
 
   it("uses the standard level-three page title", async () => {

@@ -70,7 +70,11 @@ export function SpanBrowser({ traceId, onClose }: { traceId: string; onClose: ()
       ellipsis: true,
     },
     { dataIndex: "name", title: t("bknTrace.traceWorkspace.spanBrowser.name"), ellipsis: true },
-    { dataIndex: "serviceName", title: t("bknTrace.traceWorkspace.source"), ellipsis: true },
+    {
+      dataIndex: "serviceName",
+      title: t("bknTrace.traceWorkspace.spanBrowser.service"),
+      ellipsis: true,
+    },
     {
       dataIndex: "startNano",
       title: t("bknTrace.traceWorkspace.startedAt"),
@@ -80,9 +84,10 @@ export function SpanBrowser({ traceId, onClose }: { traceId: string; onClose: ()
     {
       dataIndex: "durationNano",
       title: t("bknTrace.traceWorkspace.columns.duration"),
-      render: (value: number) => `${Math.round(value / 1_000_000)} ms`,
+      render: (value: number) =>
+        Number.isFinite(value) && value > 0 ? `${Math.round(value / 1_000_000)} ms` : "-",
     },
-    { dataIndex: "status", title: t("bknTrace.traceWorkspace.state") },
+    { dataIndex: "status", title: t("bknTrace.traceWorkspace.spanBrowser.status") },
   ];
   return (
     <Modal

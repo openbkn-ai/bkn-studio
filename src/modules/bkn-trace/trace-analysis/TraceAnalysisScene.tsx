@@ -355,6 +355,15 @@ function TraceDetail({
   const spanScopeUnavailable =
     detail.partialReasons.includes("span_scope_unavailable") ||
     display?.browseReason === "global_trace_access_required";
+  const estimatedTotal = spanScopeUnavailable
+    ? null
+    : display
+      ? display.totalAccuracy === "estimated"
+        ? display.totalCount
+        : null
+      : summary.spanCountStatus === "available" && summary.spanCount > 0
+        ? summary.spanCount
+        : null;
   const reasons = detail.partialReasons.filter((reason) => reason !== "trace_query_truncated");
   const truncated =
     display?.truncated ||
@@ -397,10 +406,8 @@ function TraceDetail({
               ? t("bknTrace.traceWorkspace.spanDisplay.permissionLimited")
               : summary.spanCountStatus === "unavailable"
                 ? t("bknTrace.traceWorkspace.spanUnavailable")
-                : display?.totalAccuracy === "estimated" && display.totalCount !== null
-                  ? t("bknTrace.traceWorkspace.spanDisplay.estimated", {
-                      count: display.totalCount,
-                    })
+                : estimatedTotal !== null
+                  ? t("bknTrace.traceWorkspace.spanDisplay.estimated", { count: estimatedTotal })
                   : t("bknTrace.traceWorkspace.spanDisplay.unknownTotal")}
           </Descriptions.Item>
         </Descriptions>
@@ -424,10 +431,10 @@ function TraceDetail({
         description={
           <div>
             <div>
-              {display?.totalAccuracy === "estimated" && display.totalCount !== null
+              {estimatedTotal !== null
                 ? t("bknTrace.traceWorkspace.spanDisplay.loadedEstimated", {
-                    loaded: display.loadedCount,
-                    total: display.totalCount,
+                    loaded: display?.loadedCount ?? detail.graph?.nodes.length ?? 0,
+                    total: estimatedTotal,
                   })
                 : t("bknTrace.traceWorkspace.spanDisplay.loadedUnknown", {
                     loaded: display?.loadedCount ?? detail.graph?.nodes.length ?? 0,

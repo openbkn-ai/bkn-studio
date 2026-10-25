@@ -822,6 +822,10 @@ export const bknTraceEnUS = {
       spanDisplay: {
         rawRecords:
           "Query read {{count}} raw records (limit {{limit}}); duplicates may occupy the window.",
+        rawRecords_one:
+          "Query read {{count}} raw record (limit {{limit}}); duplicates may occupy the window.",
+        rawRecords_other:
+          "Query read {{count}} raw records (limit {{limit}}); duplicates may occupy the window.",
         permissionLimited: "Restricted by current access",
         title: "Span display range",
         truncated:
@@ -838,7 +842,7 @@ export const bknTraceEnUS = {
         scopeUnavailable:
           "Current access does not include raw Spans; this is a permission boundary, not evidence of missing collection.",
         parentOutside:
-          "A parent is outside the loaded display window; this alone does not establish missing collection.",
+          "The parent Span was not found in the displayed window; it may not have been collected or loaded. Browse Span pages to check where access permits.",
         browseReasons: {
           denied: "Global raw Trace access is required to browse Span pages.",
           unsupported: "Legacy Span envelopes do not support bounded paging.",
@@ -846,6 +850,8 @@ export const bknTraceEnUS = {
         },
       },
       spanBrowser: {
+        service: "Service",
+        status: "Status",
         title: "Browse Span pages",
         parent: "Parent Span ID",
         name: "Span name",

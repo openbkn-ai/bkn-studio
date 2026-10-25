@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, AxiosHeaders } from "axios";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SpanBrowser } from "./SpanBrowser";
@@ -96,6 +96,24 @@ describe("bounded live Span browser", { timeout: 30_000 }, () => {
       undefined,
       expect.any(AbortSignal),
     );
+  });
+
+  it("does not invent a zero duration and uses Span-specific column labels", async () => {
+    const missing = page("duration-missing");
+    missing.entries[0].durationNano = 0;
+    missing.entries[0].startNano = 0;
+    vi.mocked(listTechnicalSpans).mockResolvedValueOnce(missing);
+    render(<SpanBrowser traceId="trace" onClose={vi.fn()} />);
+    await screen.findAllByText("duration-missing");
+    const row = screen.getByRole("row", { name: /duration-missing/ });
+    expect(within(row).queryByText("0 ms")).toBeNull();
+    expect(within(row).getAllByText("-")).toHaveLength(2);
+    expect(
+      screen.getByRole("columnheader", { name: "bknTrace.traceWorkspace.spanBrowser.service" }),
+    ).not.toBeNull();
+    expect(
+      screen.getByRole("columnheader", { name: "bknTrace.traceWorkspace.spanBrowser.status" }),
+    ).not.toBeNull();
   });
 
   it.each([

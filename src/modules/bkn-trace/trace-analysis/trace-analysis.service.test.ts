@@ -89,6 +89,50 @@ describe("trace-analysis service", () => {
     });
   });
 
+  it.each([null, undefined])("accepts an empty terminal page with entries=%s", async (entries) => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        trace_id: "trace",
+        entries,
+        has_more: false,
+        sort: "span_id_asc",
+        consistency: "live",
+      },
+    });
+    const { listTechnicalSpans } = await import("./trace-analysis.service");
+    expect(await listTechnicalSpans("trace")).toMatchObject({ entries: [], hasMore: false });
+  });
+
+  it("does not turn a malformed non-array Span page into an empty success", async () => {
+    getMock.mockResolvedValueOnce({ data: { trace_id: "trace", entries: {}, has_more: false } });
+    const { listTechnicalSpans } = await import("./trace-analysis.service");
+    await expect(listTechnicalSpans("trace")).rejects.toThrow();
+  });
+
+  it("merges and deduplicates graph-only partial diagnostics without another request", async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        summary: { trace_id: "trace" },
+        partial: false,
+        partial_reasons: ["operation_gap"],
+        graph: {
+          data: { nodes: [] },
+          partial: true,
+          partial_reason: ["operation_gap", "trace_query_truncated", "parent_outside_display"],
+        },
+      },
+    });
+    const { getTechnicalTrace } = await import("./trace-analysis.service");
+    const detail = await getTechnicalTrace("trace");
+    expect(detail.partialReasons).toEqual([
+      "operation_gap",
+      "trace_query_truncated",
+      "parent_outside_display",
+    ]);
+    expect(detail.partial).toBe(true);
+    expect(getMock).toHaveBeenCalledTimes(1);
+  });
+
   it("lists technical traces through stable typed filters", async () => {
     getMock.mockResolvedValue({
       data: {

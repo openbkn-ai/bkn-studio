@@ -10,7 +10,9 @@ stored envelopes.
 
 `trace_query_truncated` is a display-limit notice, not proof of missing
 collection. Other partial reasons and Operation diagnostics remain visible.
-`parent_outside_display` explains a parent outside the loaded window.
+`parent_outside_display` means the parent was not found in the loaded window;
+it may not have been collected or may simply not have been loaded. This reason
+alone proves neither state. Authorized paging can help inspect the records.
 `span_scope_unavailable` describes a permission boundary; `span_unavailable`
 retains its collection-gap meaning.
 
@@ -27,5 +29,6 @@ from the first page. Closing or changing Trace cancels pending page requests.
 Forbidden, unsupported legacy storage, invalid cursors, query budgets and
 request failures receive explicit messages. Failed paging does not erase the
 existing graph or Operation details. An older backend without `span_display`
-shows its loaded-node count, an unknown total and no active paging entry; the UI
-never invents a continuation cursor or assumes that the returned graph is full.
+shows its loaded-node count and no active paging entry. A positive, available
+summary cardinality remains explicitly approximate; absent counts stay unknown.
+The UI never invents a continuation cursor or assumes that the returned graph is full.

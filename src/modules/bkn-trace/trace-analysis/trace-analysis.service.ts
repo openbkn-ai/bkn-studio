@@ -161,6 +161,7 @@ export async function getTechnicalTrace(traceId: string): Promise<TechnicalTrace
     `${TRACE_API_PREFIX}/${encodeURIComponent(traceId)}`,
     { skipErrorToast: true },
   );
+  const graph = response.data.graph ? mapTraceGraph(response.data.graph) : undefined;
   return {
     ...(response.data.span_display
       ? {
@@ -180,10 +181,12 @@ export async function getTechnicalTrace(traceId: string): Promise<TechnicalTrace
           },
         }
       : {}),
-    graph: response.data.graph ? mapTraceGraph(response.data.graph) : undefined,
+    graph,
     operations: (response.data.operations ?? []).map(mapOperation),
-    partial: Boolean(response.data.partial),
-    partialReasons: response.data.partial_reasons ?? [],
+    partial: Boolean(response.data.partial || graph?.partial),
+    partialReasons: [
+      ...new Set([...(response.data.partial_reasons ?? []), ...(graph?.partialReasons ?? [])]),
+    ],
     summary: mapTraceSummary(response.data.summary ?? {}),
   };
 }
@@ -195,7 +198,7 @@ export async function listTechnicalSpans(
 ): Promise<TechnicalSpanPage> {
   const response = await http.get<{
     trace_id: string;
-    entries: BackendSpanNode[];
+    entries?: BackendSpanNode[] | null;
     has_more: boolean;
     next_cursor?: string;
     sort: "span_id_asc";
@@ -207,7 +210,7 @@ export async function listTechnicalSpans(
   });
   return {
     traceId: response.data.trace_id,
-    entries: response.data.entries.map(mapSpanNode),
+    entries: (response.data.entries ?? []).map(mapSpanNode),
     hasMore: response.data.has_more,
     nextCursor: response.data.next_cursor,
     sort: response.data.sort,
