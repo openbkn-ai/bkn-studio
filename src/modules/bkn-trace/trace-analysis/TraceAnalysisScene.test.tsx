@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TraceAnalysisScene } from "@/modules/bkn-trace/trace-analysis/TraceAnalysisScene";
@@ -16,6 +16,7 @@ import {
   listTechnicalSpans,
   listRootServices,
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.service";
+import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -40,7 +41,7 @@ vi.mock("./SpanBrowser", () => ({
 
 const writeTextMock = vi.fn().mockResolvedValue(undefined);
 
-describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
+describe("TraceAnalysisScene", () => {
   beforeAll(() => {
     Object.defineProperty(window, "matchMedia", {
       value: vi.fn().mockImplementation(() => ({
@@ -208,7 +209,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
       sort: "span_id_asc",
       consistency: "live",
     });
-    render(<TraceAnalysisScene />);
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
     fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
     await screen.findByText("bknTrace.traceWorkspace.spanDisplay.truncated");
     expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.loadedEstimated")).not.toBeNull();
@@ -252,7 +253,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
         detail.spanDisplay.totalAccuracy = "estimated";
       }
       vi.mocked(getTechnicalTrace).mockResolvedValue(detail);
-      render(<TraceAnalysisScene />);
+      renderWithoutAntdStyles(<TraceAnalysisScene />);
       fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
       await screen.findByText("bknTrace.traceWorkspace.spanDisplay.loadedUnknown");
       const button = screen.getByRole("button", {
@@ -272,7 +273,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     detail.partialReasons = ["trace_query_truncated"];
     detail.summary.spanCountStatus = "available";
     vi.mocked(getTechnicalTrace).mockResolvedValue(detail);
-    render(<TraceAnalysisScene />);
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
     fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
     await screen.findByText("bknTrace.traceWorkspace.spanDisplay.legacy");
     expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.unknownTotal")).not.toBeNull();
@@ -288,7 +289,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     detail.summary.spanCount = 1500;
     detail.partialReasons = ["trace_query_truncated"];
     vi.mocked(getTechnicalTrace).mockResolvedValue(detail);
-    render(<TraceAnalysisScene />);
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
     fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
     await screen.findByText("bknTrace.traceWorkspace.spanDisplay.legacy");
     expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.estimated")).not.toBeNull();
@@ -301,7 +302,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
       entries: ["CanonicalService"],
       hasMore: false,
     });
-    render(<TraceAnalysisScene />);
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
     await screen.findByRole("button", { name: "c2c97a9e8afd1259218a9d975ad63e91" });
     expect(listRootServices).not.toHaveBeenCalled();
     const input = screen.getByPlaceholderText("bknTrace.traceWorkspace.filters.service");
@@ -325,7 +326,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
   });
 
   it("uses the standard level-three page title", async () => {
-    render(<TraceAnalysisScene />);
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
 
     expect(
       await screen.findByRole("heading", { level: 3, name: "bknTrace.traceAnalysis.title" }),
@@ -335,13 +336,13 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
   it("shows a request error without assigning a source state when Trace loading fails", async () => {
     vi.mocked(listTechnicalTraces).mockRejectedValueOnce(new Error("trace query unavailable"));
 
-    render(<TraceAnalysisScene />);
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
 
     expect(await screen.findByText("bknTrace.traceWorkspace.listFailed")).not.toBeNull();
   });
 
   it("opens a real technical Trace into summary, execution chain and raw detail", async () => {
-    const { container } = render(<TraceAnalysisScene />);
+    const { container } = renderWithoutAntdStyles(<TraceAnalysisScene />);
     expect(container.firstElementChild?.className).toContain("pageSurface");
 
     const traceLink = await screen.findByRole("button", {
@@ -374,7 +375,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     expect(screen.getByText(/"row_count": 6/)).not.toBeNull();
     expect(getTechnicalTrace).toHaveBeenCalledWith("c2c97a9e8afd1259218a9d975ad63e91");
     await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(1));
-  }, 20_000);
+  });
 
   it("opens an exact trace from a related-log deep link", async () => {
     window.history.replaceState(
@@ -383,7 +384,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
       "/studio/observability/traces?trace_id=c2c97a9e8afd1259218a9d975ad63e91",
     );
 
-    render(<TraceAnalysisScene />);
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
 
     await waitFor(() =>
       expect(getTechnicalTrace).toHaveBeenCalledWith("c2c97a9e8afd1259218a9d975ad63e91"),
@@ -392,7 +393,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
   });
 
   it("uses Ant Design date pickers for trace time filters", async () => {
-    const { container } = render(<TraceAnalysisScene />);
+    const { container } = renderWithoutAntdStyles(<TraceAnalysisScene />);
 
     await screen.findByRole("button", { name: "c2c97a9e8afd1259218a9d975ad63e91" });
     expect(screen.getByLabelText("bknTrace.traceWorkspace.filters.from")).not.toBeNull();
@@ -426,7 +427,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
         truncated: false,
       });
 
-    render(<TraceAnalysisScene />);
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
     await screen.findByRole("button", { name: "initial" });
     fireEvent.click(screen.getByTitle("2"));
     await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(2));
@@ -451,7 +452,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     });
     expect(screen.queryByRole("button", { name: "stale-page-two" })).toBeNull();
     expect(screen.getByRole("button", { name: "filtered" })).not.toBeNull();
-  }, 20_000);
+  });
 
   it("does not reuse a referenced payload after selecting another operation", async () => {
     vi.mocked(getTechnicalTrace).mockResolvedValue({
@@ -491,7 +492,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     vi.mocked(getReferencedPayload).mockResolvedValue({ operation: "op-a" });
     window.history.replaceState({}, "", "/studio/observability/traces?trace_id=trace-referenced");
 
-    render(<TraceAnalysisScene />);
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
     fireEvent.click(await screen.findByRole("button", { name: /op-a/ }));
     fireEvent.click(
       screen.getByRole("button", { name: "bknTrace.traceWorkspace.loadReferencedPayload" }),
