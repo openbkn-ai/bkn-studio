@@ -17,7 +17,10 @@ import {
   setNodeStyle,
   type NodeSize,
 } from "@/modules/knowledge-network/cypher/graph-style";
-import type { CypherGraph } from "@/modules/knowledge-network/cypher/graph-values";
+import {
+  VALUE_TYPE_PREFIX,
+  type CypherGraph,
+} from "@/modules/knowledge-network/cypher/graph-values";
 
 import styles from "./CypherQueryScene.module.css";
 
@@ -144,29 +147,31 @@ export function GraphStyleOverview({
                 value={current.size ?? "m"}
               />
             </div>
-            <div className={styles.settingItem}>
-              <div className={styles.settingLabel}>
-                {t("knowledgeNetwork.cypherQuery.style.caption")}
+            {otId.startsWith(VALUE_TYPE_PREFIX) ? null : (
+              <div className={styles.settingItem}>
+                <div className={styles.settingLabel}>
+                  {t("knowledgeNetwork.cypherQuery.style.caption")}
+                </div>
+                <Select
+                  allowClear
+                  classNames={{ popup: { root: styles.settingsPopup } }}
+                  onChange={(caption?: string) => {
+                    setStyle((value) => setNodeStyle(value, otId, { caption }));
+                    // The new caption must reach the next run's requested properties first.
+                    if (caption && !entry.present.has(caption)) setTimeout(() => onRerun?.(), 0);
+                  }}
+                  options={captionOptions}
+                  placeholder={t("knowledgeNetwork.cypherQuery.style.captionDefault")}
+                  showSearch
+                  size="small"
+                  style={{ width: "100%" }}
+                  value={current.caption}
+                />
+                <div className={styles.settingHint}>
+                  {t("knowledgeNetwork.cypherQuery.style.captionHint")}
+                </div>
               </div>
-              <Select
-                allowClear
-                classNames={{ popup: { root: styles.settingsPopup } }}
-                onChange={(caption?: string) => {
-                  setStyle((value) => setNodeStyle(value, otId, { caption }));
-                  // The new caption must reach the next run's requested properties first.
-                  if (caption && !entry.present.has(caption)) setTimeout(() => onRerun?.(), 0);
-                }}
-                options={captionOptions}
-                placeholder={t("knowledgeNetwork.cypherQuery.style.captionDefault")}
-                showSearch
-                size="small"
-                style={{ width: "100%" }}
-                value={current.caption}
-              />
-              <div className={styles.settingHint}>
-                {t("knowledgeNetwork.cypherQuery.style.captionHint")}
-              </div>
-            </div>
+            )}
           </div>
         );
         return (
@@ -178,7 +183,9 @@ export function GraphStyleOverview({
             >
               <span className={styles.overviewName}>
                 <span className={styles.overviewDot} style={{ background: colors.get(otId) }} />
-                {entry.name}
+                {otId.startsWith(VALUE_TYPE_PREFIX)
+                  ? t("knowledgeNetwork.cypherQuery.graph.valueNode", { name: entry.name })
+                  : entry.name}
                 <BgColorsOutlined className={styles.overviewEdit} />
               </span>
               <span>{entry.count}</span>

@@ -275,12 +275,30 @@ export function graphValueObjectTypes(entries: readonly Rec[]): string[] {
   return [...ids];
 }
 
-/** A row that is a conclusion derived from a path: `source` / `relationType` / `target`. */
+/** One end of a derived edge: a node, or a value drawn as a node of its own. */
+export type DerivedEnd = ObjectValue | string | number | boolean;
+
+/** A value end longer than this is not drawn: it is prose, not a category. */
+export const VALUE_TEXT_LIMIT = 200;
+
+function isDerivedEnd(value: unknown): value is DerivedEnd {
+  if (isObjectValue(value)) return true;
+  if (!isScalar(value)) return false;
+  const text = textOf(value);
+  return text !== "" && [...text].length <= VALUE_TEXT_LIMIT;
+}
+
+/**
+ * A row that is a conclusion derived from a path: `source` / `relationType` / `target`. One end
+ * may be a value rather than a node, as in `t AS source, 'REGION' AS relationType, t.region AS
+ * target`; a row whose two ends are both values draws nothing.
+ */
 export function derivedEdgeOf(
   row: Rec,
-): { source: ObjectValue; target: ObjectValue; name: string } | null {
+): { source: DerivedEnd; target: DerivedEnd; name: string } | null {
   const { source, target, relationType } = row;
-  if (!isObjectValue(source) || !isObjectValue(target)) return null;
+  if (!isDerivedEnd(source) || !isDerivedEnd(target)) return null;
+  if (!isObjectValue(source) && !isObjectValue(target)) return null;
   if (typeof relationType !== "string" || !relationType.trim()) return null;
   return { source, target, name: relationType.trim() };
 }
@@ -305,6 +323,8 @@ export type CypherGraphNode = {
   properties: Rec;
   /** Scalar columns returned beside the node, such as a count; see buildCypherGraph. */
   computed?: Rec;
+  /** A value a derived edge ends at rather than an object; it has no key or properties. */
+  value?: boolean;
 };
 
 export type CypherGraphEdge = {
@@ -330,6 +350,17 @@ export type CypherGraph = {
 };
 
 export const GRAPH_NODE_LIMIT = 300;
+
+/**
+ * The type a value node is drawn under: one per relation name, so the values of one conclusion
+ * share a color and a row in the overview.
+ */
+export const VALUE_TYPE_PREFIX = "@value:";
+
+/** A value node's id: the same value under the same relation name is one node. */
+export function valueNodeId(name: string, value: string | number | boolean): string {
+  return `value|${name}|${textOf(value)}`;
+}
 
 function nodeId(value: ObjectValue): string {
   const key = objectKey(value);
@@ -376,8 +407,8 @@ function attachComputed(row: Rec, nodes: Map<string, CypherGraphNode>): void {
 /**
  * Turns a result into nodes and edges. Every node value becomes a node and every relationship
  * value an edge. A `source` / `relationType` / `target` row becomes one derived edge between the
- * two nodes, counted by the evidence it carries (nodes or values collected beside it, else a
- * returned number). Scalar columns of other rows are the nodes' computed values: with one node in
+ * two ends, counted by the evidence it carries (nodes or values collected beside it, else a
+ * returned number); an end that is a value becomes a value node, one per relation name and value. Scalar columns of other rows are the nodes' computed values: with one node in
  * the row they all go to it; with several, a column named `<variable>_<name>` goes to that
  * variable's node as `<name>`, and the rest stay in the table. A computed value named as the
  * type's display key becomes the label. Past `limit` nodes, the rest and their edges are left out.
@@ -433,6 +464,22 @@ export function buildCypherGraph(
       });
   };
 
+  const addEnd = (end: DerivedEnd, name: string): string => {
+    if (isObjectValue(end)) return addNode(end);
+    const id = valueNodeId(name, end);
+    if (!nodes.has(id))
+      nodes.set(id, {
+        id,
+        objectTypeId: `${VALUE_TYPE_PREFIX}${name}`,
+        objectTypeName: name,
+        label: textOf(end),
+        key: {},
+        properties: {},
+        value: true,
+      });
+    return id;
+  };
+
   for (const row of result.entries) {
     const conclusion = derivedEdgeOf(row);
     if (!conclusion) {
@@ -443,8 +490,8 @@ export function buildCypherGraph(
       attachComputed(row, nodes);
       continue;
     }
-    const source = addNode(conclusion.source);
-    const target = addNode(conclusion.target);
+    const source = addEnd(conclusion.source, conclusion.name);
+    const target = addEnd(conclusion.target, conclusion.name);
     const evidence = new Set<string>();
     let listed = 0;
     let counted = 0;

@@ -31,6 +31,8 @@ const ARROW_LIMIT = 60;
 
 export const EDGE_COLOR = "#99a3b3";
 export const DERIVED_EDGE_COLOR = "#d48806";
+/** A value node is filled with a faint wash of its color, so it reads hollow on any theme. */
+export const VALUE_NODE_FILL_OPACITY = 0.15;
 
 export type GraphDensity = { size: number; linkDistance: number; repulsion: number };
 
@@ -69,8 +71,9 @@ export function typeColors(
 export type GraphDrawing = { data: GraphData; density: GraphDensity; dragMode: DragMode };
 
 /**
- * The force-directed drawing: nodes colored by object type, modeled relationships as solid
- * arrows, derived edges dashed with their count, each type drawn as `style` says.
+ * The force-directed drawing: nodes colored by object type, value nodes hollow and dashed,
+ * modeled relationships as solid arrows, derived edges dashed with their count, each type drawn
+ * as `style` says.
  */
 export function buildGraphOption(
   graph: CypherGraph,
@@ -92,6 +95,15 @@ export function buildGraphOption(
       size: density.size * NODE_SIZE_SCALE[style.nodes[node.objectTypeId]?.size ?? "m"],
       fill: colors.get(node.objectTypeId),
       labelText: nodeLabels ? shorten(node.label) : "",
+      // A value is not an object: hollow and dashed, in its conclusion's color.
+      ...(node.value
+        ? {
+            fillOpacity: VALUE_NODE_FILL_OPACITY,
+            stroke: colors.get(node.objectTypeId),
+            lineWidth: 2,
+            lineDash: [4, 3],
+          }
+        : {}),
     },
   }));
   const edgeIds = new Set<string>();

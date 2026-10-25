@@ -85,12 +85,14 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     rules: [
       "A result with nodes or relationships draws as a graph, with a table beside it; one without them shows as a table. Nodes returned without their relationships draw no lines.",
       "Derived edge: return a AS source, 'NAME' AS relationType, b AS target per row, drawn as an orange dashed line between the two.",
+      "One end of a derived edge may be a value, such as b.status AS target, drawn as a hollow dashed value node: the same value under the same name is one node, so nodes group by value; a row whose two ends are both values draws no edge, nor does a value that is empty or longer than 200 characters; such a row draws only its nodes.",
       "Its count is the nodes collected in the row (as in collect({via: c}) AS evidence), a list's length or the first number column; rows for the same pair add up.",
       'Computed columns: scalars returned beside one node (count, sum and the like) stay with it, readable in its details and usable as its caption; with several nodes, name a column "<variable>_<name>" to attach it, the rest stay in the table.',
     ],
     notes: [
       "Derived edge with a count",
       "Derived edge with evidence",
+      "Derived edge grouping by value",
       "Nodes with computed columns",
     ],
   },

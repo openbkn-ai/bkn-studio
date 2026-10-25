@@ -47,6 +47,19 @@ function Section({ title, values }: { title: string; values: Record<string, unkn
   );
 }
 
+/** A value a derived edge ends at: there is no object behind it to read. */
+function ValueNodeDetails({ node }: { node: CypherGraphNode }) {
+  const { t } = useTranslation();
+  return (
+    <div className={styles.inspector}>
+      <div className={styles.inspectorTitle}>{node.label}</div>
+      <div className={styles.muted}>
+        {t("knowledgeNetwork.cypherQuery.graph.valueNode", { name: node.objectTypeName })}
+      </div>
+    </div>
+  );
+}
+
 /** One node: its key, all its properties (read back on demand) and its computed values. */
 function NodeDetails({ node }: { node: CypherGraphNode }) {
   const { t } = useTranslation();
@@ -100,7 +113,8 @@ function InspectorBody({
   const { t } = useTranslation();
   if (selection?.kind === "node") {
     const node = graph.nodes[selection.index];
-    return node ? <NodeDetails node={node} /> : null;
+    if (!node) return null;
+    return node.value ? <ValueNodeDetails node={node} /> : <NodeDetails node={node} />;
   }
   if (selection?.kind === "edge") {
     const edge = graph.edges[selection.index];
