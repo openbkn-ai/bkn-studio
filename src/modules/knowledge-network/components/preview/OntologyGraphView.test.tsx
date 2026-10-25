@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { OntologyGraphView } from "./OntologyGraphView";
@@ -42,5 +42,66 @@ describe("OntologyGraphView", () => {
     expect(edgeArrows[0]?.hasAttribute("fill")).toBe(false);
     expect(edgeArrows[1]?.getAttribute("class")).toContain("edgeArrowActive");
     expect(screen.getByText("Places").getAttribute("class")).toContain("edgeLabel");
+  });
+
+  it("uses a scalable canvas and limits low-detail DOM nodes for large graphs", () => {
+    const nodes = Array.from({ length: 1_300 }, (_, index) => ({
+      color: "#2563eb",
+      id: `node-${index}`,
+      name: `Node ${index}`,
+    }));
+    const edges = Array.from({ length: 1_298 }, (_, index) => ({
+      id: `edge-${index}`,
+      name: "connects",
+      sourceId: `node-${index}`,
+      targetId: `node-${index + 2}`,
+    }));
+    const { container } = render(
+      <OntologyGraphView
+        graph={{ edges, nodes }}
+        indexedIds={new Set()}
+        selectedId={null}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const svg = screen.getByLabelText("knowledgeNetwork.previewCanvas");
+    const [, , width] = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
+    expect(width).toBeGreaterThan(1_000);
+    expect(Number(svg.getAttribute("data-rendered-nodes"))).toBeLessThanOrEqual(1_200);
+    expect(svg).toHaveAttribute("data-total-nodes", "1300");
+    expect(container.querySelector("path[class*='edgeBatch']")).not.toBeNull();
+    expect(screen.getByTitle("knowledgeNetwork.previewRearrange")).toHaveTextContent(
+      "knowledgeNetwork.previewLayoutForce",
+    );
+  });
+
+  it("offers logical grouping only when group memberships are available", async () => {
+    const { rerender } = render(
+      <OntologyGraphView
+        graph={graph}
+        indexedIds={new Set()}
+        selectedId={null}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewRearrange"));
+    expect(screen.queryByText("knowledgeNetwork.previewLayoutGroup")).toBeNull();
+
+    rerender(
+      <OntologyGraphView
+        graph={graph}
+        groupNames={new Map([["sales", "Sales"]])}
+        groupOf={new Map(graph.nodes.map((node) => [node.id, "sales"]))}
+        indexedIds={new Set()}
+        selectedId={null}
+        onSelect={vi.fn()}
+      />,
+    );
+    const groupOption = await screen.findByText("knowledgeNetwork.previewLayoutGroup");
+    fireEvent.click(groupOption);
+
+    await waitFor(() => expect(screen.getByText("Sales")).toBeInTheDocument());
   });
 });

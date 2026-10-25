@@ -90,7 +90,7 @@ export const accountZhCN = {
         object_type: "对象类权限申请",
         relation_type: "关系类权限申请",
         action_type: "行动类权限申请",
-        metric: "指标权限申请",
+        metric: "对象指标权限申请",
         catalog: "数据目录权限申请",
         resource: "数据资源权限申请",
         tool_box: "工具箱权限申请",

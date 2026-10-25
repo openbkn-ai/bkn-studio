@@ -60,12 +60,12 @@ export const subscriptionZhCN = {
       },
       object_metrics: {
         bullets: {
-          b1: "按对象类统一管理原子、衍生和复合指标",
+          b1: "按对象类统一管理原子、衍生和复合对象指标",
           b2: "支持校验、预览、版本发布、逻辑属性绑定与血缘查看",
-          b3: "按对象实例或对象集合查询和试算指标结果",
+          b3: "按对象实例或对象集合查询和试算对象指标结果",
         },
-        description: "按对象类定义、验证、发布并查询原子、衍生和复合指标",
-        name: "对象类指标",
+        description: "按对象类定义、验证、发布并查询原子、衍生和复合对象指标",
+        name: "对象指标",
       },
       perm_fine_grained: {
         bullets: {
@@ -104,7 +104,7 @@ export const subscriptionZhCN = {
       localAuth: "本地登录,用户、部门与内置角色管理",
       mcpTooling: "MCP、工具与 Skill 的接入、调试和调用",
       modelingSurfaces: "通过 BKN Studio、CLI、SDK 与 Skill 建模并管理知识网络",
-      modelingTypes: "对象、关系、行动与指标建模",
+      modelingTypes: "对象、关系、行动与对象指标建模",
       oneClickExperience: "支持一键体验，动态加载官方样例",
       queryAndSearch: "关系查询、路径查询与语义检索",
       selfHosted: "源码构建、基础部署、状态检查与升级文档",

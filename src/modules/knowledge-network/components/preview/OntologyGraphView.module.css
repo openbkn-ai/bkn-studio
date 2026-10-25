@@ -176,6 +176,14 @@
     opacity 0.15s ease;
 }
 
+.edgeBatch {
+  fill: none;
+  stroke: var(--color-text-faint);
+  stroke-width: 1.35;
+  opacity: 0.72;
+  vector-effect: non-scaling-stroke;
+}
+
 .edgeActive line {
   stroke: var(--color-primary-600);
   stroke-width: 2.4;

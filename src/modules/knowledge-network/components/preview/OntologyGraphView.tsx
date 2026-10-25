@@ -34,11 +34,10 @@ const HUB_RADIUS = 46;
 const NODE_RADIUS = 38;
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 3;
-const INITIAL_VIEW = { x: 0, y: 0, w: PREVIEW_LAYOUT_WIDTH, h: PREVIEW_LAYOUT_HEIGHT };
 const GROUP_HULL_PAD = 28;
 const FORCE_LAYOUT_NODE_LIMIT = 80;
 const EDGE_LABEL_LIMIT = 120;
-const RENDERED_EDGE_LIMIT = 240;
+const MAX_VISIBLE_NODES = 1_200;
 // Group-boundary colors, assigned stably after sorting by group ID.
 const GROUP_COLORS = [
   "#2e68ff",
@@ -52,6 +51,9 @@ const GROUP_COLORS = [
 ];
 
 type OntologyLayoutMode = "force" | "circle" | "group";
+type OntologyRenderMode = OntologyLayoutMode | "grid";
+type GraphViewBox = { x: number; y: number; w: number; h: number };
+const EMPTY_GROUP_MAP = new Map<string, string>();
 
 type OntologyGraphViewProps = {
   graph: KnowledgeNetworkPreviewGraph;
@@ -71,18 +73,34 @@ function truncate(value: string, max = 6) {
 const CLAMP_PAD = 64;
 const clamp = (value: number, max: number) => Math.max(CLAMP_PAD, Math.min(max - CLAMP_PAD, value));
 
+function scalableCanvas(nodeCount: number) {
+  if (nodeCount <= FORCE_LAYOUT_NODE_LIMIT) {
+    return { width: PREVIEW_LAYOUT_WIDTH, height: PREVIEW_LAYOUT_HEIGHT };
+  }
+  const columns = Math.ceil(Math.sqrt(nodeCount * (PREVIEW_LAYOUT_WIDTH / PREVIEW_LAYOUT_HEIGHT)));
+  const rows = Math.ceil(nodeCount / columns);
+  return {
+    width: Math.max(PREVIEW_LAYOUT_WIDTH, columns * NODE_SPACING + CLAMP_PAD * 2),
+    height: Math.max(PREVIEW_LAYOUT_HEIGHT, rows * NODE_SPACING + CLAMP_PAD * 2),
+  };
+}
+
 /** Circular layout: nodes are evenly distributed around a large circle centered on the canvas. */
-function circleLayout(ids: string[]): { id: string; x: number; y: number }[] {
-  const cx = PREVIEW_LAYOUT_WIDTH / 2;
-  const cy = PREVIEW_LAYOUT_HEIGHT / 2;
-  const r = Math.min(PREVIEW_LAYOUT_WIDTH, PREVIEW_LAYOUT_HEIGHT) * 0.36;
+function circleLayout(
+  ids: string[],
+  canvasWidth: number,
+  canvasHeight: number,
+): { id: string; x: number; y: number }[] {
+  const cx = canvasWidth / 2;
+  const cy = canvasHeight / 2;
+  const r = Math.min(canvasWidth, canvasHeight) * 0.4;
   const n = Math.max(ids.length, 1);
   return ids.map((id, i) => {
     const a = (i / n) * 2 * Math.PI - Math.PI / 2;
     return {
       id,
-      x: clamp(cx + r * Math.cos(a), PREVIEW_LAYOUT_WIDTH),
-      y: clamp(cy + r * Math.sin(a), PREVIEW_LAYOUT_HEIGHT),
+      x: clamp(cx + r * Math.cos(a), canvasWidth),
+      y: clamp(cy + r * Math.sin(a), canvasHeight),
     };
   });
 }
@@ -99,13 +117,15 @@ function placeCluster(
   gcy: number,
   cellW: number,
   cellH: number,
+  canvasWidth: number,
+  canvasHeight: number,
 ): { id: string; x: number; y: number }[] {
   const n = gids.length;
   if (n <= 1) {
     return gids.map((id) => ({
       id,
-      x: clamp(gcx, PREVIEW_LAYOUT_WIDTH),
-      y: clamp(gcy, PREVIEW_LAYOUT_HEIGHT),
+      x: clamp(gcx, canvasWidth),
+      y: clamp(gcy, canvasHeight),
     }));
   }
   const availW = Math.max(0, cellW - CELL_INSET * 2);
@@ -136,6 +156,8 @@ function placeCluster(
 function groupLayout(
   ids: string[],
   groupOf: Map<string, string>,
+  canvasWidth: number,
+  canvasHeight: number,
 ): { id: string; x: number; y: number }[] {
   const buckets = new Map<string, string[]>();
   ids.forEach((id) => {
@@ -150,18 +172,17 @@ function groupLayout(
     // A single group uses the whole canvas as its cell.
     return placeCluster(
       groups[0] ?? [],
-      PREVIEW_LAYOUT_WIDTH / 2,
-      PREVIEW_LAYOUT_HEIGHT / 2,
-      PREVIEW_LAYOUT_WIDTH,
-      PREVIEW_LAYOUT_HEIGHT,
+      canvasWidth / 2,
+      canvasHeight / 2,
+      canvasWidth,
+      canvasHeight,
+      canvasWidth,
+      canvasHeight,
     );
   }
   const total = ids.length || 1;
   // Derive shelf count from canvas aspect ratio, then balance groups by node count; row height is proportional to node count.
-  const shelfCount = Math.max(
-    1,
-    Math.round(Math.sqrt(gn * (PREVIEW_LAYOUT_HEIGHT / PREVIEW_LAYOUT_WIDTH))) || 1,
-  );
+  const shelfCount = Math.max(1, Math.round(Math.sqrt(gn * (canvasHeight / canvasWidth))) || 1);
   const shelves = Array.from({ length: shelfCount }, () => ({
     groups: [] as string[][],
     nodes: 0,
@@ -179,11 +200,21 @@ function groupLayout(
   shelves
     .filter((shelf) => shelf.groups.length > 0)
     .forEach((shelf) => {
-      const shelfH = PREVIEW_LAYOUT_HEIGHT * (shelf.nodes / total);
+      const shelfH = canvasHeight * (shelf.nodes / total);
       let x = 0;
       shelf.groups.forEach((gids) => {
-        const cellW = PREVIEW_LAYOUT_WIDTH * (gids.length / shelf.nodes);
-        out.push(...placeCluster(gids, x + cellW / 2, y + shelfH / 2, cellW, shelfH));
+        const cellW = canvasWidth * (gids.length / shelf.nodes);
+        out.push(
+          ...placeCluster(
+            gids,
+            x + cellW / 2,
+            y + shelfH / 2,
+            cellW,
+            shelfH,
+            canvasWidth,
+            canvasHeight,
+          ),
+        );
         x += cellW;
       });
       y += shelfH;
@@ -202,29 +233,32 @@ export function OntologyGraphView({
   const { t } = useTranslation();
   const [mode, setMode] = useState<OntologyLayoutMode>("force");
   const [showEdgeLabels, setShowEdgeLabels] = useState(true);
-  const effectiveMode =
-    graph.nodes.length > FORCE_LAYOUT_NODE_LIMIT && mode === "force" ? "group" : mode;
+  const logicalGroupingAvailable = Boolean(groupOf?.size);
+  const selectedMode: OntologyLayoutMode =
+    mode === "group" && !logicalGroupingAvailable ? "force" : mode;
+  const renderMode: OntologyRenderMode =
+    graph.nodes.length > FORCE_LAYOUT_NODE_LIMIT && selectedMode === "force"
+      ? "grid"
+      : selectedMode;
   const edgeLabelsVisible = showEdgeLabels && graph.edges.length <= EDGE_LABEL_LIMIT;
-  const renderedEdges = useMemo(() => {
-    if (graph.edges.length <= RENDERED_EDGE_LIMIT) {
-      return graph.edges;
-    }
-    if (selectedId) {
-      return graph.edges.filter(
-        (edge) => edge.sourceId === selectedId || edge.targetId === selectedId,
-      );
-    }
-    return graph.edges.slice(0, RENDERED_EDGE_LIMIT);
-  }, [graph.edges, selectedId]);
 
   // Recompute layout when graph or arrangement changes, not when selecting a node.
-  const { positions, radiusById, hubId } = useMemo(() => {
+  const { positions, radiusById, hubId, canvasWidth, canvasHeight } = useMemo(() => {
     const ids = graph.nodes.map((node) => node.id);
+    const canvas =
+      renderMode === "force"
+        ? { width: PREVIEW_LAYOUT_WIDTH, height: PREVIEW_LAYOUT_HEIGHT }
+        : scalableCanvas(ids.length);
     const layout =
-      effectiveMode === "circle"
-        ? circleLayout(ids)
-        : effectiveMode === "group"
-          ? groupLayout(ids, groupOf ?? new Map<string, string>())
+      renderMode === "circle"
+        ? circleLayout(ids, canvas.width, canvas.height)
+        : renderMode === "group" || renderMode === "grid"
+          ? groupLayout(
+              ids,
+              renderMode === "group" ? (groupOf ?? EMPTY_GROUP_MAP) : EMPTY_GROUP_MAP,
+              canvas.width,
+              canvas.height,
+            )
           : computePreviewGraphLayout(graph);
     const positionMap = new Map(
       layout.map((node) => [node.id, { id: node.id, x: node.x, y: node.y }]),
@@ -250,8 +284,14 @@ export function OntologyGraphView({
       radius.set(node.id, node.id === topId ? HUB_RADIUS : NODE_RADIUS),
     );
 
-    return { positions: positionMap, radiusById: radius, hubId: topId };
-  }, [effectiveMode, graph, groupOf]);
+    return {
+      positions: positionMap,
+      radiusById: radius,
+      hubId: topId,
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+    };
+  }, [graph, groupOf, renderMode]);
 
   const neighbors = useMemo(() => {
     const neighborSet = new Set<string>();
@@ -272,11 +312,15 @@ export function OntologyGraphView({
   );
 
   // Canvas zoom/pan is driven by viewBox; getScreenCTM reflects it automatically and drag math stays unchanged.
-  const [view, setView] = useState(INITIAL_VIEW);
+  const initialView = useMemo<GraphViewBox>(
+    () => ({ x: 0, y: 0, w: canvasWidth, h: canvasHeight }),
+    [canvasHeight, canvasWidth],
+  );
+  const [view, setView] = useState<GraphViewBox>(initialView);
   const panRef = useRef<{
     startX: number;
     startY: number;
-    view: typeof INITIAL_VIEW;
+    view: GraphViewBox;
     moved: boolean;
   } | null>(null);
 
@@ -285,32 +329,97 @@ export function OntologyGraphView({
     setDragged(new Map());
   }, [graph, mode]);
   useEffect(() => {
-    setView(INITIAL_VIEW);
-  }, [graph]);
+    setView(initialView);
+  }, [graph, initialView]);
 
-  const zoomBy = useCallback((factor: number, anchorX?: number, anchorY?: number) => {
-    setView((prev) => {
-      const ax = anchorX ?? prev.x + prev.w / 2;
-      const ay = anchorY ?? prev.y + prev.h / 2;
-      let nw = prev.w / factor;
-      const zoom = PREVIEW_LAYOUT_WIDTH / nw;
-      if (zoom > ZOOM_MAX) nw = PREVIEW_LAYOUT_WIDTH / ZOOM_MAX;
-      if (zoom < ZOOM_MIN) nw = PREVIEW_LAYOUT_WIDTH / ZOOM_MIN;
-      const nh = nw * (PREVIEW_LAYOUT_HEIGHT / PREVIEW_LAYOUT_WIDTH);
-      const k = nw / prev.w;
-      return { x: ax - (ax - prev.x) * k, y: ay - (ay - prev.y) * k, w: nw, h: nh };
-    });
-  }, []);
-  const resetView = useCallback(() => setView(INITIAL_VIEW), []);
+  const zoomBy = useCallback(
+    (factor: number, anchorX?: number, anchorY?: number) => {
+      setView((prev) => {
+        const ax = anchorX ?? prev.x + prev.w / 2;
+        const ay = anchorY ?? prev.y + prev.h / 2;
+        let nw = prev.w / factor;
+        const zoom = canvasWidth / nw;
+        if (zoom > ZOOM_MAX) nw = canvasWidth / ZOOM_MAX;
+        if (zoom < ZOOM_MIN) nw = canvasWidth / ZOOM_MIN;
+        const nh = nw * (canvasHeight / canvasWidth);
+        const k = nw / prev.w;
+        return { x: ax - (ax - prev.x) * k, y: ay - (ay - prev.y) * k, w: nw, h: nh };
+      });
+    },
+    [canvasHeight, canvasWidth],
+  );
+  const resetView = useCallback(() => setView(initialView), [initialView]);
 
   const posOf = useCallback(
     (id: string) => dragged.get(id) ?? positions.get(id) ?? null,
     [dragged, positions],
   );
 
+  const viewport = useMemo(() => {
+    const padX = view.w * 0.12;
+    const padY = view.h * 0.12;
+    return {
+      left: view.x - padX,
+      right: view.x + view.w + padX,
+      top: view.y - padY,
+      bottom: view.y + view.h + padY,
+    };
+  }, [view]);
+  const visibleNodes = useMemo(() => {
+    const candidates = graph.nodes.filter((node) => {
+      const position = posOf(node.id);
+      return (
+        position &&
+        position.x >= viewport.left &&
+        position.x <= viewport.right &&
+        position.y >= viewport.top &&
+        position.y <= viewport.bottom
+      );
+    });
+    if (candidates.length <= MAX_VISIBLE_NODES) return candidates;
+    const stride = Math.ceil(candidates.length / MAX_VISIBLE_NODES);
+    return candidates.filter(
+      (node, index) => index % stride === 0 || node.id === selectedId || neighbors.has(node.id),
+    );
+  }, [graph.nodes, neighbors, posOf, selectedId, viewport]);
+  const visibleNodeIds = useMemo(
+    () => new Set(visibleNodes.map((node) => node.id)),
+    [visibleNodes],
+  );
+  const visibleEdges = useMemo(
+    () =>
+      graph.edges.filter((edge) => {
+        if (!visibleNodeIds.has(edge.sourceId) || !visibleNodeIds.has(edge.targetId)) return false;
+        if (selectedId && edge.sourceId !== selectedId && edge.targetId !== selectedId)
+          return false;
+        const source = posOf(edge.sourceId);
+        const target = posOf(edge.targetId);
+        if (!source || !target) return false;
+        return !(
+          Math.max(source.x, target.x) < viewport.left ||
+          Math.min(source.x, target.x) > viewport.right ||
+          Math.max(source.y, target.y) < viewport.top ||
+          Math.min(source.y, target.y) > viewport.bottom
+        );
+      }),
+    [graph.edges, posOf, selectedId, viewport, visibleNodeIds],
+  );
+  const zoomLevel = canvasWidth / view.w;
+  const nodeLabelsVisible = visibleNodes.length <= 250 || zoomLevel >= 1.4;
+  const batchedEdgePath = useMemo(() => {
+    if (edgeLabelsVisible || selectedId) return "";
+    return visibleEdges
+      .map((edge) => {
+        const source = posOf(edge.sourceId);
+        const target = posOf(edge.targetId);
+        return source && target ? `M${source.x},${source.y}L${target.x},${target.y}` : "";
+      })
+      .join("");
+  }, [edgeLabelsVisible, posOf, selectedId, visibleEdges]);
+
   // In logical-group mode, calculate each group's bounding box from current positions, including drags, and draw dashed boundaries with names.
   const groupHulls = useMemo(() => {
-    if (effectiveMode !== "group" || !groupOf || groupOf.size === 0) return [];
+    if (renderMode !== "group" || !groupOf || groupOf.size === 0) return [];
     const buckets = new Map<string, string[]>();
     graph.nodes.forEach((node) => {
       const gid = groupOf.get(node.id);
@@ -347,8 +456,15 @@ export function OntologyGraphView({
           h: maxY - minY + GROUP_HULL_PAD * 2,
         };
       })
-      .filter((hull): hull is NonNullable<typeof hull> => hull !== null);
-  }, [effectiveMode, groupOf, groupNames, graph, posOf, radiusById]);
+      .filter((hull): hull is NonNullable<typeof hull> => hull !== null)
+      .filter(
+        (hull) =>
+          hull.x + hull.w >= viewport.left &&
+          hull.x <= viewport.right &&
+          hull.y + hull.h >= viewport.top &&
+          hull.y <= viewport.bottom,
+      );
+  }, [groupOf, groupNames, graph, posOf, radiusById, renderMode, viewport]);
 
   const toSvgPoint = useCallback((clientX: number, clientY: number) => {
     const svg = svgRef.current;
@@ -437,15 +553,16 @@ export function OntologyGraphView({
         <Dropdown
           trigger={["click"]}
           menu={{
-            selectedKeys: [effectiveMode],
+            selectedKeys: [selectedMode],
             items: [
               {
-                disabled: graph.nodes.length > FORCE_LAYOUT_NODE_LIMIT,
                 key: "force",
                 label: t("knowledgeNetwork.previewLayoutForce"),
               },
               { key: "circle", label: t("knowledgeNetwork.previewLayoutCircle") },
-              { key: "group", label: t("knowledgeNetwork.previewLayoutGroup") },
+              ...(logicalGroupingAvailable
+                ? [{ key: "group", label: t("knowledgeNetwork.previewLayoutGroup") }]
+                : []),
             ],
             onClick: ({ key }) => {
               setMode(key as OntologyLayoutMode);
@@ -459,9 +576,9 @@ export function OntologyGraphView({
             title={t("knowledgeNetwork.previewRearrange")}
           >
             <RetweetOutlined />
-            {effectiveMode === "circle"
+            {selectedMode === "circle"
               ? t("knowledgeNetwork.previewLayoutCircle")
-              : effectiveMode === "group"
+              : selectedMode === "group"
                 ? t("knowledgeNetwork.previewLayoutGroup")
                 : t("knowledgeNetwork.previewLayoutForce")}
             <DownOutlined className={styles.arrangeCaret} />
@@ -487,6 +604,8 @@ export function OntologyGraphView({
         className={styles.graph}
         viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
         preserveAspectRatio="xMidYMid meet"
+        data-rendered-nodes={visibleNodes.length}
+        data-total-nodes={graph.nodes.length}
         role="img"
         aria-label={t("knowledgeNetwork.previewCanvas")}
         onPointerDown={onCanvasPointerDown}
@@ -520,11 +639,7 @@ export function OntologyGraphView({
           </marker>
         </defs>
 
-        <rect
-          width={PREVIEW_LAYOUT_WIDTH}
-          height={PREVIEW_LAYOUT_HEIGHT}
-          fill="url(#kn-onto-grid)"
-        />
+        <rect width={canvasWidth} height={canvasHeight} fill="url(#kn-onto-grid)" />
 
         {groupHulls.length > 0 ? (
           <g className={styles.groups}>
@@ -549,64 +664,68 @@ export function OntologyGraphView({
         ) : null}
 
         <g className={styles.edges}>
-          {renderedEdges.map((edge) => {
-            const a = posOf(edge.sourceId);
-            const b = posOf(edge.targetId);
-            if (!a || !b) {
-              return null;
-            }
-            const ra = radiusById.get(edge.sourceId) ?? NODE_RADIUS;
-            const rb = radiusById.get(edge.targetId) ?? NODE_RADIUS;
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-            const len = Math.hypot(dx, dy) || 1;
-            const ux = dx / len;
-            const uy = dy / len;
-            const sx = a.x + ux * ra;
-            const sy = a.y + uy * ra;
-            const ex = b.x - ux * (rb + 12);
-            const ey = b.y - uy * (rb + 12);
-            const mx = (sx + ex) / 2;
-            const my = (sy + ey) / 2;
-            const active =
-              Boolean(selectedId) && (edge.sourceId === selectedId || edge.targetId === selectedId);
-            const dim = Boolean(selectedId) && !active;
-            const label = edge.name || t("knowledgeNetwork.defaultEdgeName");
-            const labelWidth = label.length * 14 + 18;
-            return (
-              <g
-                key={edge.id}
-                className={`${styles.edge} ${active ? styles.edgeActive : ""} ${dim ? styles.edgeDim : ""}`}
-              >
-                <line
-                  x1={sx}
-                  y1={sy}
-                  x2={ex}
-                  y2={ey}
-                  markerEnd={`url(#kn-onto-arrow${active ? "-hi" : ""})`}
-                />
-                {edgeLabelsVisible || active ? (
-                  <>
-                    <rect
-                      className={styles.edgeLabelBg}
-                      x={mx - labelWidth / 2}
-                      y={my - 13}
-                      width={labelWidth}
-                      height={24}
-                      rx={12}
+          {batchedEdgePath ? <path className={styles.edgeBatch} d={batchedEdgePath} /> : null}
+          {batchedEdgePath
+            ? null
+            : visibleEdges.map((edge) => {
+                const a = posOf(edge.sourceId);
+                const b = posOf(edge.targetId);
+                if (!a || !b) {
+                  return null;
+                }
+                const ra = radiusById.get(edge.sourceId) ?? NODE_RADIUS;
+                const rb = radiusById.get(edge.targetId) ?? NODE_RADIUS;
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const len = Math.hypot(dx, dy) || 1;
+                const ux = dx / len;
+                const uy = dy / len;
+                const sx = a.x + ux * ra;
+                const sy = a.y + uy * ra;
+                const ex = b.x - ux * (rb + 12);
+                const ey = b.y - uy * (rb + 12);
+                const mx = (sx + ex) / 2;
+                const my = (sy + ey) / 2;
+                const active =
+                  Boolean(selectedId) &&
+                  (edge.sourceId === selectedId || edge.targetId === selectedId);
+                const dim = Boolean(selectedId) && !active;
+                const label = edge.name || t("knowledgeNetwork.defaultEdgeName");
+                const labelWidth = label.length * 14 + 18;
+                return (
+                  <g
+                    key={edge.id}
+                    className={`${styles.edge} ${active ? styles.edgeActive : ""} ${dim ? styles.edgeDim : ""}`}
+                  >
+                    <line
+                      x1={sx}
+                      y1={sy}
+                      x2={ex}
+                      y2={ey}
+                      markerEnd={`url(#kn-onto-arrow${active ? "-hi" : ""})`}
                     />
-                    <text className={styles.edgeLabel} x={mx} y={my + 4} textAnchor="middle">
-                      {label}
-                    </text>
-                  </>
-                ) : null}
-              </g>
-            );
-          })}
+                    {edgeLabelsVisible || active ? (
+                      <>
+                        <rect
+                          className={styles.edgeLabelBg}
+                          x={mx - labelWidth / 2}
+                          y={my - 13}
+                          width={labelWidth}
+                          height={24}
+                          rx={12}
+                        />
+                        <text className={styles.edgeLabel} x={mx} y={my + 4} textAnchor="middle">
+                          {label}
+                        </text>
+                      </>
+                    ) : null}
+                  </g>
+                );
+              })}
         </g>
 
         <g className={styles.nodes}>
-          {graph.nodes.map((node) => {
+          {visibleNodes.map((node) => {
             const position = posOf(node.id);
             if (!position) {
               return null;
@@ -639,15 +758,17 @@ export function OntologyGraphView({
                   />
                 ) : null}
                 <circle className={styles.nodeDisc} cx={position.x} cy={position.y} r={radius} />
-                <text
-                  className={styles.nodeName}
-                  x={position.x}
-                  y={position.y + 5}
-                  textAnchor="middle"
-                >
-                  {truncate(node.name, radius === HUB_RADIUS ? 7 : 6)}
-                </text>
-                {indexedIds.has(node.id) ? (
+                {nodeLabelsVisible || isSelected ? (
+                  <text
+                    className={styles.nodeName}
+                    x={position.x}
+                    y={position.y + 5}
+                    textAnchor="middle"
+                  >
+                    {truncate(node.name, radius === HUB_RADIUS ? 7 : 6)}
+                  </text>
+                ) : null}
+                {indexedIds.has(node.id) && (nodeLabelsVisible || isSelected) ? (
                   <circle
                     className={styles.nodeIndexDot}
                     cx={position.x + radius - 10}

@@ -33,7 +33,9 @@ describe("parseObjectMetricAiIntent", () => {
   });
 
   it("拒绝没有 JSON 对象的输出", () => {
-    expect(() => parseObjectMetricAiIntent("无法生成配置")).toThrow("AI 未返回可识别的指标配置");
+    expect(() => parseObjectMetricAiIntent("无法生成配置")).toThrow(
+      "AI 未返回可识别的对象指标配置",
+    );
   });
 
   it("筛选条件缺少 left 时跳过条件并返回业务提示", () => {

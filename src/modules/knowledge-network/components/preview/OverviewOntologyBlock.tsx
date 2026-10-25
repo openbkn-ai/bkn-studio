@@ -162,8 +162,8 @@ export function OverviewOntologyBlock({
     () =>
       graph.nodes.map((node) => ({
         color: node.color || DEFAULT_COLOR,
-        conceptGroupIds: [],
-        conceptGroupNames: [],
+        conceptGroupIds: node.conceptGroups?.map((group) => group.id) ?? [],
+        conceptGroupNames: node.conceptGroups?.map((group) => group.name) ?? [],
         description: "",
         hasIndex: node.indexStatus?.state === "available",
         icon: node.icon,

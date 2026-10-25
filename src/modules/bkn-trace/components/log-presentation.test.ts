@@ -277,7 +277,7 @@ describe("log presentation", () => {
     ["import", "knowledge_network", "supplychain", "供应链", "导入业务知识网络", "业务知识网络"],
     ["update", "relation_type", "contains", "包含", "更新关系类", "关系类"],
     ["delete", "action_type", "replenish", "补货", "删除行动类型", "行动类型"],
-    ["create", "metric", "inventory_turnover", "库存周转率", "创建指标", "指标"],
+    ["create", "metric", "inventory_turnover", "库存周转率", "创建对象指标", "对象指标"],
     ["create", "risk_type", "inventory_risk", "库存风险", "创建风险类型", "风险类型"],
     ["add_members", "concept_group", "supply", "供应链概念", "向概念分组添加成员", "概念分组"],
     ["remove_members", "concept_group", "supply", "供应链概念", "从概念分组移除成员", "概念分组"],

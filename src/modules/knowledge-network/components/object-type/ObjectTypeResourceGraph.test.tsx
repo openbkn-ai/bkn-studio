@@ -180,6 +180,8 @@ function renderGraph(
     allowAuthorizeObject?: boolean;
     allowDeleteRelation?: boolean;
     allowEditObject?: boolean;
+    allowExecuteAction?: boolean;
+    allowTrialMetric?: boolean;
     canAuthorizeObject?: boolean;
     canModify?: boolean;
     canRequestObjectPermission?: boolean;
@@ -213,6 +215,8 @@ function renderGraph(
       allowAuthorizeObject={options.allowAuthorizeObject}
       allowDeleteRelation={options.allowDeleteRelation}
       allowEditObject={options.allowEditObject}
+      allowExecuteAction={options.allowExecuteAction}
+      allowTrialMetric={options.allowTrialMetric}
       canAuthorizeObject={options.canAuthorizeObject ?? true}
       canModify={options.canModify ?? true}
       canRequestObjectPermission={options.canRequestObjectPermission ?? true}
@@ -286,19 +290,19 @@ describe("ObjectTypeResourceGraph", () => {
 
     expect(await screen.findByRole("button", { name: "关系类 客户关系" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "对象类 客户" })).toBeInTheDocument();
-    const metricGroup = screen.getByRole("button", { name: "展开 指标 1" });
+    const metricGroup = screen.getByRole("button", { name: "展开 对象指标 1" });
     const actionGroup = screen.getByRole("button", { name: "展开 行动类 1" });
     expect(metricGroup).toHaveAttribute("aria-pressed", "false");
     expect(actionGroup).toHaveAttribute("aria-pressed", "false");
-    expect(screen.queryByRole("button", { name: "指标 订单金额" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "对象指标 订单金额" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "行动类 更新订单" })).not.toBeInTheDocument();
 
     fireEvent.click(metricGroup);
-    expect(screen.getByRole("button", { name: "收起 指标 1" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "收起 对象指标 1" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: "指标 订单金额" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "对象指标 订单金额" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "行动类 更新订单" })).not.toBeInTheDocument();
 
     fireEvent.click(actionGroup);
@@ -306,10 +310,10 @@ describe("ObjectTypeResourceGraph", () => {
     expect(actionNode).toBeInTheDocument();
     expect(actionNode.querySelector("circle")).not.toBeNull();
     expect(actionNode.querySelector("path")).toBeNull();
-    expect(screen.queryByRole("button", { name: "指标 订单金额" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "对象指标 订单金额" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "收起 行动类 1" }));
     expect(screen.queryByRole("button", { name: "行动类 更新订单" })).not.toBeInTheDocument();
-    expect(screen.queryByText("关系类 1 · 指标 1 · 行动类 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("关系类 1 · 对象指标 1 · 行动类 1")).not.toBeInTheDocument();
     const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
     expect(within(graph).queryByText(/^O$/)).not.toBeInTheDocument();
     expect(within(graph).queryByText(/^M$/)).not.toBeInTheDocument();
@@ -364,21 +368,21 @@ describe("ObjectTypeResourceGraph", () => {
 
     await screen.findByRole("button", { name: "关系类 客户关系" });
     const legend = screen.getByLabelText("图例");
-    ["当前对象类", "关联对象类", "关系类", "指标", "行动类"].forEach((label) =>
+    ["当前对象类", "关联对象类", "关系类", "对象指标", "行动类"].forEach((label) =>
       expect(within(legend).getByText(label)).toBeInTheDocument(),
     );
-    expect(within(legend).queryByText("原子指标")).not.toBeInTheDocument();
-    expect(within(legend).queryByText("衍生指标")).not.toBeInTheDocument();
-    expect(within(legend).queryByText("复合指标")).not.toBeInTheDocument();
+    expect(within(legend).queryByText("原子对象指标")).not.toBeInTheDocument();
+    expect(within(legend).queryByText("衍生对象指标")).not.toBeInTheDocument();
+    expect(within(legend).queryByText("复合对象指标")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "展开 指标 1" }));
-    expect(within(legend).getByText("原子指标")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "展开 对象指标 1" }));
+    expect(within(legend).getByText("原子对象指标")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("行动类 1"));
     expect(within(legend).getByText("当前对象类")).toBeInTheDocument();
     expect(within(legend).getByText("行动类")).toBeInTheDocument();
     expect(within(legend).queryByText("关联对象类")).not.toBeInTheDocument();
-    expect(within(legend).queryByText("原子指标")).not.toBeInTheDocument();
+    expect(within(legend).queryByText("原子对象指标")).not.toBeInTheDocument();
   });
 
   it("opens the selected resource and keeps metric requests disabled without the capability", async () => {
@@ -387,7 +391,7 @@ describe("ObjectTypeResourceGraph", () => {
     fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 1" }));
     await screen.findByRole("button", { name: "行动类 更新订单" });
     expect(mocks.listMetrics).not.toHaveBeenCalled();
-    expect(screen.queryByRole("radio", { name: /指标/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /对象指标/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "行动类 更新订单" }));
     expect(await screen.findByText("更新订单状态")).toBeInTheDocument();
@@ -427,6 +431,17 @@ describe("ObjectTypeResourceGraph", () => {
     expect(within(drawer).queryByText("业务定义")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "详情" }));
     expect(handlers.onOpenAction).toHaveBeenCalledWith(action);
+  });
+
+  it("can restrict action nodes to detail-only", async () => {
+    renderGraph(false, { allowExecuteAction: false });
+
+    fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 1" }));
+    fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
+    const drawer = await screen.findByRole("dialog", { name: "行动类详情" });
+
+    expect(within(drawer).getByRole("button", { name: "详情" })).toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: "执行管理" })).not.toBeInTheDocument();
   });
 
   it("resolves action source and condition business names instead of showing internal IDs", async () => {
@@ -850,13 +865,13 @@ describe("ObjectTypeResourceGraph", () => {
   it("shows metric metadata and edit action in the metric drawer", async () => {
     const handlers = renderGraph();
 
-    fireEvent.click(await screen.findByRole("button", { name: "展开 指标 1" }));
-    fireEvent.click(await screen.findByRole("button", { name: "指标 订单金额" }));
+    fireEvent.click(await screen.findByRole("button", { name: "展开 对象指标 1" }));
+    fireEvent.click(await screen.findByRole("button", { name: "对象指标 订单金额" }));
     expect(await screen.findByText("v1")).toBeInTheDocument();
     expect(screen.getByText("草稿")).toBeInTheDocument();
-    expect(screen.queryByRole("row", { name: "资源类型 指标" })).not.toBeInTheDocument();
-    expect(screen.getByRole("row", { name: /指标编码 order_amount/ })).toBeInTheDocument();
-    expect(screen.getByRole("row", { name: "指标类型 原子指标" })).toBeInTheDocument();
+    expect(screen.queryByRole("row", { name: "资源类型 对象指标" })).not.toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /对象指标编码 order_amount/ })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: "对象指标类型 原子对象指标" })).toBeInTheDocument();
     expect(screen.getByRole("row", { name: "所属对象类 销售订单" })).toBeInTheDocument();
     expect(screen.getByRole("row", { name: "计算范围 单个实例" })).toBeInTheDocument();
     expect(screen.getByText("业务定义")).toBeInTheDocument();
@@ -868,6 +883,16 @@ describe("ObjectTypeResourceGraph", () => {
     expect(screen.queryByRole("button", { name: /编\s*辑/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /删\s*除/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "废弃" })).not.toBeInTheDocument();
+  });
+
+  it("can restrict metric nodes to detail-only", async () => {
+    renderGraph(true, { allowTrialMetric: false });
+
+    fireEvent.click(await screen.findByRole("button", { name: "展开 对象指标 1" }));
+    fireEvent.click(await screen.findByRole("button", { name: "对象指标 订单金额" }));
+
+    expect(screen.getByRole("button", { name: "详情" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "试算" })).not.toBeInTheDocument();
   });
 
   it("moves the graph focus immediately when a neighboring object is clicked", async () => {
@@ -909,7 +934,7 @@ describe("ObjectTypeResourceGraph", () => {
   it("moves metric and action group nodes with their lines when either line is dragged", async () => {
     renderGraph();
 
-    const metricGroup = await screen.findByRole("button", { name: "展开 指标 1" });
+    const metricGroup = await screen.findByRole("button", { name: "展开 对象指标 1" });
     const actionGroup = screen.getByRole("button", { name: "展开 行动类 1" });
     const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
     vi.spyOn(graph, "getBoundingClientRect").mockReturnValue({
@@ -1035,11 +1060,11 @@ describe("ObjectTypeResourceGraph", () => {
     });
     renderGraph();
 
-    fireEvent.click(await screen.findByText("指标 3"));
+    fireEvent.click(await screen.findByText("对象指标 3"));
     const ownerNode = screen.getByRole("button", { name: "当前对象类 销售订单" });
-    const atomicNode = screen.getByRole("button", { name: "指标 订单金额" });
-    const derivedNode = screen.getByRole("button", { name: "指标 平均订单金额" });
-    const compositeNode = screen.getByRole("button", { name: "指标 订单预测评分" });
+    const atomicNode = screen.getByRole("button", { name: "对象指标 订单金额" });
+    const derivedNode = screen.getByRole("button", { name: "对象指标 平均订单金额" });
+    const compositeNode = screen.getByRole("button", { name: "对象指标 订单预测评分" });
     const x = (node: HTMLElement) =>
       Number(node.getAttribute("transform")?.match(/\(([-\d.]+)/)?.[1]);
 
@@ -1052,7 +1077,7 @@ describe("ObjectTypeResourceGraph", () => {
     expect(derivedNode.querySelector("rect, path")).toBeNull();
     expect(compositeNode.querySelector("rect, path")).toBeNull();
     const legend = screen.getByLabelText("图例");
-    ["原子指标", "衍生指标", "复合指标", "指标依赖"].forEach((label) =>
+    ["原子对象指标", "衍生对象指标", "复合对象指标", "对象指标依赖"].forEach((label) =>
       expect(within(legend).getByText(label)).toBeInTheDocument(),
     );
     expect(document.querySelector("[class*=metricDependencyEdge]")).toHaveAttribute("marker-end");
@@ -1097,11 +1122,11 @@ describe("ObjectTypeResourceGraph", () => {
     });
     renderGraph();
 
-    fireEvent.click(await screen.findByRole("button", { name: "展开 指标 3" }));
-    const metricGroup = screen.getByRole("button", { name: "收起 指标 3" });
-    const atomicNode = screen.getByRole("button", { name: "指标 订单金额" });
-    const derivedNode = screen.getByRole("button", { name: "指标 平均订单金额" });
-    const compositeNode = screen.getByRole("button", { name: "指标 订单预测评分" });
+    fireEvent.click(await screen.findByRole("button", { name: "展开 对象指标 3" }));
+    const metricGroup = screen.getByRole("button", { name: "收起 对象指标 3" });
+    const atomicNode = screen.getByRole("button", { name: "对象指标 订单金额" });
+    const derivedNode = screen.getByRole("button", { name: "对象指标 平均订单金额" });
+    const compositeNode = screen.getByRole("button", { name: "对象指标 订单预测评分" });
     const x = (node: HTMLElement) =>
       Number(node.getAttribute("transform")?.match(/\(([-\d.]+)/)?.[1]);
 
@@ -1121,11 +1146,11 @@ describe("ObjectTypeResourceGraph", () => {
     expect(await screen.findByText("部分关联资源加载失败")).toBeInTheDocument();
     expect(screen.getByText("关系类服务不可用")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "展开 指标 1" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "展开 对象指标 1" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "展开 行动类 1" })).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole("button", { name: "展开 指标 1" }));
-    expect(screen.getByRole("button", { name: "指标 订单金额" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "展开 对象指标 1" }));
+    expect(screen.getByRole("button", { name: "对象指标 订单金额" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "展开 行动类 1" }));
     expect(screen.getByRole("button", { name: "行动类 更新订单" })).toBeInTheDocument();
   });

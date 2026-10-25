@@ -33,7 +33,7 @@ export const networkPart = {
   emptyObjectTypes: "当前没有对象类。",
   emptyRecentObjects: "当前没有最近修改的对象类。",
   emptyRelationTypes: "当前没有关系类。",
-  emptyMetrics: "当前没有指标。",
+  emptyMetrics: "当前没有对象指标。",
   emptyTitle: "暂无知识网络",
   enterWorkspace: "进入工作区",
   authorizeAction: "配置权限",

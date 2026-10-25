@@ -61,7 +61,12 @@ describe("overview-graph.service", () => {
       data: {
         edges: [],
         nodes: [
-          { id: "customer", index_status: { state: "available" }, name: "Customer" },
+          {
+            concept_groups: [{ id: "group-core", name: "Core" }],
+            id: "customer",
+            index_status: { state: "available" },
+            name: "Customer",
+          },
           { id: "order", index_status: { state: "unknown" }, name: "Order" },
         ],
         object_type_total: 2,
@@ -78,7 +83,11 @@ describe("overview-graph.service", () => {
     const result = await getKnowledgeNetworkOverviewGraph("network-1");
 
     expect(result.graph.nodes).toMatchObject([
-      { id: "customer", indexStatus: { state: "available" } },
+      {
+        conceptGroups: [{ id: "group-core", name: "Core" }],
+        id: "customer",
+        indexStatus: { state: "available" },
+      },
       { id: "order", indexStatus: { state: "unknown" } },
     ]);
   });
@@ -97,5 +106,24 @@ describe("overview-graph.service", () => {
         expect.objectContaining({ id: "ot-risk-device", indexStatus: { state: "unavailable" } }),
       ]),
     );
+  });
+
+  it("scopes mock overview totals and edges to the selected concept group", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const { getKnowledgeNetworkOverviewGraph } =
+      await import("@/modules/knowledge-network/services/overview-graph.service");
+
+    const result = await getKnowledgeNetworkOverviewGraph("kn-domain-risk", {
+      conceptGroupId: "cg-risk-core",
+      edgeLimit: 500,
+      nodeLimit: 200,
+    });
+
+    expect(result.objectTypeTotal).toBe(2);
+    expect(result.relationTypeTotal).toBe(1);
+    expect(result.graph.nodes.map((node) => node.id)).toEqual(["ot-risk-order", "ot-risk-device"]);
+    expect(result.graph.edges.map((edge) => edge.id)).toEqual(["rt-risk-bind"]);
+    expect(result.truncated).toBe(false);
   });
 });

@@ -85,7 +85,7 @@ function metric(id: string, relationId?: string): ObjectMetricRecordV1 {
       version: 1,
       metric_type: relationId ? "derived" : "atomic",
       owner_object_type_id: "order",
-      name: `指标 ${id}`,
+      name: `对象指标 ${id}`,
       code: id,
       description: `Description for ${id}`,
       lifecycle: { status: "published" },
@@ -152,9 +152,9 @@ describe("ObjectMetricGraphCanvas", () => {
 
     await waitFor(() => expect(ownerMetricCache.size).toBe(1));
     expect(
-      screen.getByText(/暂无可查看的对象类或指标|No visible object types or metrics/),
+      screen.getByText(/暂无可查看的对象类或对象指标|No visible object types or metrics/),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/已授权指标|Authorized metrics/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/已授权对象指标|Authorized metrics/)).not.toBeInTheDocument();
     expect(mocks.listRelations).not.toHaveBeenCalled();
   });
 
@@ -171,7 +171,7 @@ describe("ObjectMetricGraphCanvas", () => {
       await screen.findByText(/图谱数据加载失败，请重试|Could not load graph data/),
     ).toBeInTheDocument();
     expect(screen.queryByText(/选择一个对象类后查看对象指标图谱/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/已授权指标|Authorized metrics/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/已授权对象指标|Authorized metrics/)).not.toBeInTheDocument();
   });
 
   it("scopes metric loading to the selected owner even if the restricted flag is stale", async () => {
@@ -232,7 +232,7 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: /原子指标：指标 restricted-1|Atomic metric: 指标 restricted-1/i,
+        name: /原子对象指标：对象指标 restricted-1|Atomic metric: 对象指标 restricted-1/i,
       }),
     );
     await waitFor(() => expect(document.querySelector(".ant-drawer-open")).not.toBeNull());
@@ -253,8 +253,8 @@ describe("ObjectMetricGraphCanvas", () => {
     });
 
     expect(await screen.findAllByRole("button", { name: /销售订单/ })).toHaveLength(1);
-    expect(screen.getByRole("button", { name: /指标 restricted-1/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /指标 restricted-2/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /对象指标 restricted-1/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /对象指标 restricted-2/ })).toBeInTheDocument();
   });
 
   it("paginates authorized metrics in the restricted-object graph", async () => {
@@ -274,14 +274,14 @@ describe("ObjectMetricGraphCanvas", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: /原子指标：指标 restricted-1|Atomic metric: 指标 restricted-1/i,
+        name: /原子对象指标：对象指标 restricted-1|Atomic metric: 对象指标 restricted-1/i,
       }),
     ).toBeInTheDocument();
     fireEvent.click(container.querySelector(".ant-pagination-next button")!);
 
     expect(
       await screen.findByRole("button", {
-        name: /原子指标：指标 restricted-7|Atomic metric: 指标 restricted-7/i,
+        name: /原子对象指标：对象指标 restricted-7|Atomic metric: 对象指标 restricted-7/i,
       }),
     ).toBeInTheDocument();
     expect(mocks.listMetrics).toHaveBeenCalledWith(
@@ -323,7 +323,7 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(toolbar?.querySelector('[class*="graphPanelTitle"] strong')).toHaveTextContent(
       "销售订单",
     );
-    expect(toolbar?.textContent).toMatch(/0 个指标.*2 条关系|0 metrics.*2 relations/);
+    expect(toolbar?.textContent).toMatch(/0 个对象指标.*2 条关系|0 metrics.*2 relations/);
   });
 
   it("reuses a previously loaded owner's metric scan when returning to that object", async () => {
@@ -544,11 +544,11 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 9 个|Expand metrics owned by 销售订单 \(9 total\)/,
+        name: /展开销售订单的对象指标，共 9 个|Expand metrics owned by 销售订单 \(9 total\)/,
       }),
     );
     const position = (id: string) => {
-      const node = screen.getByRole("button", { name: new RegExp(`指标 ${id}[，,]`) });
+      const node = screen.getByRole("button", { name: new RegExp(`对象指标 ${id}[，,]`) });
       const match = node?.getAttribute("transform")?.match(/translate\(([-\d.]+) ([-\d.]+)\)/);
       if (!match) throw new Error(`missing position for ${id}`);
       return { x: Number(match[1]), y: Number(match[2]) };
@@ -565,7 +565,7 @@ describe("ObjectMetricGraphCanvas", () => {
     mocks.listMetrics.mockResolvedValue({ entries: [metric("local")], total_count: 1 });
     const { container } = renderGraph();
     const count = await screen.findByRole("button", {
-      name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+      name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
     });
     const owner = container.querySelector<SVGGElement>('g[class*="ownerNode"]')!;
     const countCapture = vi.fn();
@@ -632,7 +632,7 @@ describe("ObjectMetricGraphCanvas", () => {
     const selectObject = vi.fn();
     const { container } = renderGraph(selectObject);
     await screen.findByLabelText(
-      /关系 1，没有指标明确使用这条关系|关系 1, no metric explicitly uses this relation/,
+      /关系 1，没有对象指标明确使用这条关系|关系 1, no metric explicitly uses this relation/,
     );
     expect(container.querySelector('[class*="relationCountAction"]')).toBeNull();
 
@@ -667,7 +667,9 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(related.getAttribute("transform")).toBe("translate(830 280)");
     expect(edge.getAttribute("d")).toBe(originalEdge);
 
-    const owner = screen.getByRole("button", { name: /销售订单，共 0 个指标|销售订单, 0 metrics/ });
+    const owner = screen.getByRole("button", {
+      name: /销售订单，共 0 个对象指标|销售订单, 0 metrics/,
+    });
     fireEvent.pointerDown(owner, { button: 0, clientX: 500, clientY: 280, pointerId: 2 });
     fireEvent.pointerMove(svg, { clientX: 550, clientY: 310, pointerId: 2 });
     expect(owner.getAttribute("transform")).toBe("translate(550 310)");
@@ -686,7 +688,7 @@ describe("ObjectMetricGraphCanvas", () => {
     const { container } = renderGraph();
 
     await screen.findByLabelText(
-      /关系 2，没有指标明确使用这条关系|关系 2, no metric explicitly uses this relation/,
+      /关系 2，没有对象指标明确使用这条关系|关系 2, no metric explicitly uses this relation/,
     );
     expect(container.querySelectorAll('g[class*="relatedNode"]')).toHaveLength(1);
     expect(container.querySelectorAll('g[class*="edgeLabel"]')).toHaveLength(2);
@@ -708,7 +710,7 @@ describe("ObjectMetricGraphCanvas", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /关系 1，1 个指标|关系 1, 1 metrics/ }),
+        screen.getByRole("button", { name: /关系 1，1 个对象指标|关系 1, 1 metrics/ }),
       ).not.toBeNull();
     });
     expect(mocks.listMetrics).toHaveBeenCalledWith(
@@ -726,15 +728,17 @@ describe("ObjectMetricGraphCanvas", () => {
     ).toBe(true);
     expect(container.querySelector('[class*="ownerNode"] text')?.textContent).toBe("2");
     expect(container.querySelector('[class*="relationCountAction"] text')?.textContent).toMatch(
-      /1 个指标|1 metrics/,
+      /1 个对象指标|1 metrics/,
     );
-    expect(screen.queryByText("指标 related")).toBeNull();
-    expect(screen.queryByText("指标 local")).toBeNull();
+    expect(screen.queryByText("对象指标 related")).toBeNull();
+    expect(screen.queryByText("对象指标 local")).toBeNull();
     fireEvent.click(
-      screen.getByRole("button", { name: /销售订单，共 2 个指标|销售订单, 2 metrics/ }),
+      screen.getByRole("button", { name: /销售订单，共 2 个对象指标|销售订单, 2 metrics/ }),
     );
     expect(
-      screen.getByRole("button", { name: /原子指标：指标 local|Atomic metric: 指标 local/ }),
+      screen.getByRole("button", {
+        name: /原子对象指标：对象指标 local|Atomic metric: 对象指标 local/,
+      }),
     ).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /返回对象关系|Back to object relations/ }));
     expect(screen.getByText(/1.?–.?6.*8/)).not.toBeNull();
@@ -742,7 +746,7 @@ describe("ObjectMetricGraphCanvas", () => {
     fireEvent.click(container.querySelector(".ant-pagination-next button")!);
     expect(
       await screen.findByLabelText(
-        /关系 7，没有指标明确使用这条关系|关系 7, no metric explicitly uses this relation/,
+        /关系 7，没有对象指标明确使用这条关系|关系 7, no metric explicitly uses this relation/,
       ),
     ).not.toBeNull();
     expect(container.querySelectorAll('g[class*="relatedNode"]')).toHaveLength(2);
@@ -792,7 +796,7 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 3 个|Expand metrics owned by 销售订单 \(3 total\)/,
+        name: /展开销售订单的对象指标，共 3 个|Expand metrics owned by 销售订单 \(3 total\)/,
       }),
     );
     expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(3);
@@ -805,27 +809,31 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(3);
     expect(container.querySelectorAll('line[class*="metricSpoke"]')).toHaveLength(1);
     const metricX = (name: string) => {
-      const node = screen.getByRole("button", { name: new RegExp(`指标 ${name}[，,]`) });
+      const node = screen.getByRole("button", { name: new RegExp(`对象指标 ${name}[，,]`) });
       return Number(node.getAttribute("transform")?.match(/translate\(([-\d.]+)/)?.[1]);
     };
     expect(metricX("base")).toBeLessThan(metricX("derived"));
     expect(metricX("derived")).toBeLessThan(metricX("composite"));
     expect(screen.queryByRole("button", { name: "关联对象 1" })).toBeNull();
     expect(
-      screen.getByRole("button", { name: /原子指标：指标 base|Atomic metric: 指标 base/ }),
-    ).not.toBeNull();
-    expect(
-      screen.getByRole("button", { name: /衍生指标：指标 derived|Derived metrics: 指标 derived/ }),
+      screen.getByRole("button", {
+        name: /原子对象指标：对象指标 base|Atomic metric: 对象指标 base/,
+      }),
     ).not.toBeNull();
     expect(
       screen.getByRole("button", {
-        name: /复合指标：指标 composite|Composite metric: 指标 composite/,
+        name: /衍生对象指标：对象指标 derived|Derived metrics: 对象指标 derived/,
+      }),
+    ).not.toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: /复合对象指标：对象指标 composite|Composite metric: 对象指标 composite/,
       }),
     ).not.toBeNull();
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: /复合指标：指标 composite|Composite metric: 指标 composite/,
+        name: /复合对象指标：对象指标 composite|Composite metric: 对象指标 composite/,
       }),
     );
     expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(3);
@@ -834,18 +842,20 @@ describe("ObjectMetricGraphCanvas", () => {
     );
     expect(container.querySelectorAll('path[class*="metricDependencyEdgeDimmed"]')).toHaveLength(1);
     expect(container.querySelectorAll('g[class*="metricNodeDimmed"]')).toHaveLength(0);
-    expect(screen.getByText("指标 base · v2、指标 derived · v2")).not.toBeNull();
+    expect(screen.getByText("对象指标 base · v2、对象指标 derived · v2")).not.toBeNull();
     expect(screen.queryByText(/@v1/)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /返回对象关系|Back to object relations/ }));
     fireEvent.click(
       screen.getByRole("button", {
-        name: /展开明确使用关系 1的指标，共 1 个|Expand metrics explicitly using 关系 1 \(1 total\)/,
+        name: /展开明确使用关系 1的对象指标，共 1 个|Expand metrics explicitly using 关系 1 \(1 total\)/,
       }),
     );
     expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(2);
     expect(
-      screen.getByRole("button", { name: /原子指标：指标 base|Atomic metric: 指标 base/ }),
+      screen.getByRole("button", {
+        name: /原子对象指标：对象指标 base|Atomic metric: 对象指标 base/,
+      }),
     ).not.toBeNull();
     expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(1);
     expect(container.querySelectorAll('line[class*="metricSpoke"]')).toHaveLength(1);
@@ -867,13 +877,13 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 2 个|Expand metrics owned by 销售订单 \(2 total\)/,
+        name: /展开销售订单的对象指标，共 2 个|Expand metrics owned by 销售订单 \(2 total\)/,
       }),
     );
     expect(container.querySelectorAll('path[class*="metricDependencyEdge"]')).toHaveLength(1);
     fireEvent.click(
       screen.getByRole("button", {
-        name: /衍生指标：指标 derived|Derived metrics: 指标 derived/,
+        name: /衍生对象指标：对象指标 derived|Derived metrics: 对象指标 derived/,
       }),
     );
 
@@ -898,16 +908,16 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 2 个|Expand metrics owned by 销售订单 \(2 total\)/,
+        name: /展开销售订单的对象指标，共 2 个|Expand metrics owned by 销售订单 \(2 total\)/,
       }),
     );
     fireEvent.click(
       screen.getByRole("button", {
-        name: /衍生指标：指标 derived|Derived metrics: 指标 derived/,
+        name: /衍生对象指标：对象指标 derived|Derived metrics: 对象指标 derived/,
       }),
     );
 
-    expect(await screen.findByText("依赖指标 1 · v1 不可访问")).toBeInTheDocument();
+    expect(await screen.findByText("依赖对象指标 1 · v1 不可访问")).toBeInTheDocument();
     expect(screen.queryByText("base · v1")).not.toBeInTheDocument();
   });
 
@@ -918,13 +928,13 @@ describe("ObjectMetricGraphCanvas", () => {
     const { container } = renderGraph();
 
     const count = await screen.findByRole("button", {
-      name: /展开销售订单的指标，共 7 个|Expand metrics owned by 销售订单 \(7 total\)/,
+      name: /展开销售订单的对象指标，共 7 个|Expand metrics owned by 销售订单 \(7 total\)/,
     });
     fireEvent.click(count);
     expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(6);
     expect(container.querySelector('[class*="expansionToolbar"]')).toBeNull();
     const more = screen.getByRole("button", {
-      name: /继续展开原子指标的剩余 1 个指标|Expand the remaining 1 Atomic metric/,
+      name: /继续展开原子对象指标的剩余 1 个对象指标|Expand the remaining 1 Atomic metric/,
     });
     expect(more.querySelector("text")?.textContent).toBe("+1");
     const svg = container.querySelector<SVGSVGElement>('svg[class*="graph"]')!;
@@ -960,7 +970,7 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(7);
     expect(
       screen.queryByRole("button", {
-        name: /继续展开原子指标的剩余|Expand the remaining.*Atomic metric/,
+        name: /继续展开原子对象指标的剩余|Expand the remaining.*Atomic metric/,
       }),
     ).toBeNull();
     fireEvent.click(count);
@@ -994,7 +1004,7 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     expect(screen.queryByRole("button", { name: "关联对象 1" })).toBeNull();
@@ -1013,7 +1023,7 @@ describe("ObjectMetricGraphCanvas", () => {
     const { container } = renderGraph();
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     const svg = container.querySelector<SVGSVGElement>('svg[class*="graph"]')!;
@@ -1029,10 +1039,10 @@ describe("ObjectMetricGraphCanvas", () => {
       toJSON: () => ({}),
     });
     const node = screen.getByRole("button", {
-      name: /原子指标：指标 metric|Atomic metric: 指标 metric/,
+      name: /原子对象指标：对象指标 metric|Atomic metric: 对象指标 metric/,
     });
     const owner = screen.getByRole("button", {
-      name: /销售订单，共 1 个指标，点击展开指标图|销售订单, 1 metrics; click to expand the metric graph/,
+      name: /销售订单，共 1 个对象指标，点击展开对象指标图|销售订单, 1 metrics; click to expand the metric graph/,
     });
     const spoke = container.querySelector<SVGLineElement>('line[class*="metricSpoke"]')!;
     fireEvent.pointerDown(owner, { button: 0, clientX: 110, clientY: 280, pointerId: 3 });
@@ -1073,17 +1083,17 @@ describe("ObjectMetricGraphCanvas", () => {
     renderGraph(vi.fn(), openMetric);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: /关系 1，1 个指标|关系 1, 1 metrics/ }),
+      await screen.findByRole("button", { name: /关系 1，1 个对象指标|关系 1, 1 metrics/ }),
     );
     expect(
       screen.getByRole("button", {
-        name: /衍生指标：指标 related|Derived metrics: 指标 related/,
+        name: /衍生对象指标：对象指标 related|Derived metrics: 对象指标 related/,
       }),
     ).not.toBeNull();
-    expect(screen.queryByText("指标 local")).toBeNull();
+    expect(screen.queryByText("对象指标 local")).toBeNull();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /衍生指标：指标 related|Derived metrics: 指标 related/,
+        name: /衍生对象指标：对象指标 related|Derived metrics: 对象指标 related/,
       }),
     );
     const businessDefinition = screen.getByText("Description for related");
@@ -1133,15 +1143,17 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /原子指标：指标 working|Atomic metric: 指标 working/ }),
+      screen.getByRole("button", {
+        name: /原子对象指标：对象指标 working|Atomic metric: 对象指标 working/,
+      }),
     );
     fireEvent.click(screen.getByRole("button", { name: "试算" }));
     fireEvent.click(screen.getByRole("button", { name: "编辑" }));
-    const drawer = screen.getByRole("dialog", { name: "指标详情" });
+    const drawer = screen.getByRole("dialog", { name: "对象指标详情" });
     const actions = drawer.querySelector<HTMLElement>("[class*=drawerActions]");
     const descriptions = drawer.querySelector<HTMLElement>(".ant-descriptions");
     expect(actions).not.toBeNull();
@@ -1157,7 +1169,7 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(drawer).not.toHaveTextContent("逻辑属性");
     fireEvent.click(screen.getByRole("button", { name: "详情" }));
     expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "删除指标版本" }));
+    fireEvent.click(screen.getByRole("button", { name: "删除对象指标版本" }));
 
     expect(onTrialMetric).toHaveBeenCalledWith(draft);
     expect(onEditMetric).toHaveBeenCalledWith(draft);
@@ -1174,12 +1186,12 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     fireEvent.click(
       screen.getByRole("button", {
-        name: /原子指标：指标 authorized|Atomic metric: 指标 authorized/,
+        name: /原子对象指标：对象指标 authorized|Atomic metric: 对象指标 authorized/,
       }),
     );
     fireEvent.click(screen.getByRole("button", { name: "配置权限" }));
@@ -1210,16 +1222,16 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     fireEvent.click(
       screen.getByRole("button", {
-        name: /原子指标：指标 transaction-count|Atomic metric: 指标 transaction-count/,
+        name: /原子对象指标：对象指标 transaction-count|Atomic metric: 对象指标 transaction-count/,
       }),
     );
 
-    const drawer = screen.getByRole("dialog", { name: "指标详情" });
+    const drawer = screen.getByRole("dialog", { name: "对象指标详情" });
     expect(drawer).toHaveTextContent("单位交易笔");
     expect(drawer).not.toHaveTextContent("单位transaction");
   });
@@ -1237,11 +1249,13 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /原子指标：指标 working|Atomic metric: 指标 working/ }),
+      screen.getByRole("button", {
+        name: /原子对象指标：对象指标 working|Atomic metric: 对象指标 working/,
+      }),
     );
     expect(screen.getByRole("button", { name: "试算" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
@@ -1270,11 +1284,13 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /原子指标：指标 bound|Atomic metric: 指标 bound/ }),
+      screen.getByRole("button", {
+        name: /原子对象指标：对象指标 bound|Atomic metric: 对象指标 bound/,
+      }),
     );
     expect(screen.getByText("支付金额 · v1")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
@@ -1303,13 +1319,15 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /原子指标：指标 bound|Atomic metric: 指标 bound/ }),
+      screen.getByRole("button", {
+        name: /原子对象指标：对象指标 bound|Atomic metric: 对象指标 bound/,
+      }),
     );
-    expect(screen.getByRole("dialog", { name: "指标详情" })).toHaveTextContent(
+    expect(screen.getByRole("dialog", { name: "对象指标详情" })).toHaveTextContent(
       "当前版本未绑定（支付金额 绑定 v1）",
     );
   });
@@ -1329,18 +1347,20 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /原子指标：指标 working|Atomic metric: 指标 working/ }),
+      screen.getByRole("button", {
+        name: /原子对象指标：对象指标 working|Atomic metric: 对象指标 working/,
+      }),
     );
-    expect(screen.getByRole("dialog", { name: "指标详情" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "对象指标详情" })).toBeInTheDocument();
 
     rerender(<ObjectMetricGraphCanvas {...props} refreshVersion={1} />);
     await waitFor(() => expect(mocks.listMetrics).toHaveBeenCalledTimes(2));
-    expect(screen.getByRole("dialog", { name: "指标详情" })).toBeInTheDocument();
-    expect(screen.getByText("指标 working", { selector: "strong" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "对象指标详情" })).toBeInTheDocument();
+    expect(screen.getByText("对象指标 working", { selector: "strong" })).toBeInTheDocument();
   });
 
   it("restores the selected graph metric after returning from its detail page", async () => {
@@ -1354,11 +1374,11 @@ describe("ObjectMetricGraphCanvas", () => {
       initialFocusedMetric: { id: "selected", objectTypeId: "order", version: 2 },
     });
 
-    expect(await screen.findByRole("dialog", { name: "指标详情" })).toBeInTheDocument();
-    expect(screen.getByText("指标 selected", { selector: "strong" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "对象指标详情" })).toBeInTheDocument();
+    expect(screen.getByText("对象指标 selected", { selector: "strong" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: /原子指标：指标 selected|Atomic metric: 指标 selected/,
+        name: /原子对象指标：对象指标 selected|Atomic metric: 对象指标 selected/,
       }),
     ).toBeInTheDocument();
   });
@@ -1370,12 +1390,12 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     fireEvent.click(
       screen.getByRole("button", {
-        name: /原子指标：指标 local|Atomic metric: 指标 local/,
+        name: /原子对象指标：对象指标 local|Atomic metric: 对象指标 local/,
       }),
     );
 
@@ -1401,12 +1421,12 @@ describe("ObjectMetricGraphCanvas", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     fireEvent.click(
       screen.getByRole("button", {
-        name: /衍生指标：指标 off-page|Derived metrics: 指标 off-page/,
+        name: /衍生对象指标：对象指标 off-page|Derived metrics: 对象指标 off-page/,
       }),
     );
 
@@ -1416,23 +1436,23 @@ describe("ObjectMetricGraphCanvas", () => {
 
   it("shows the full metric name when a truncated graph node is hovered", async () => {
     const longMetric = metric("very-long-metric-name");
-    longMetric.definition.name = "很长的指标名称需要完整展示";
+    longMetric.definition.name = "很长的对象指标名称需要完整展示";
     mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
     mocks.listMetrics.mockResolvedValue({ entries: [longMetric], total_count: 1 });
     renderGraph();
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /展开销售订单的指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
+        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
       }),
     );
     const node = screen.getByRole("button", {
-      name: /原子指标：很长的指标名称需要完整展示|Atomic metric: 很长的指标名称需要完整展示/,
+      name: /原子对象指标：很长的对象指标名称需要完整展示|Atomic metric: 很长的对象指标名称需要完整展示/,
     });
-    expect(node.textContent).toBe("很长的指标名称需要完…");
+    expect(node.textContent).toBe("很长的对象指标名称需…");
 
     fireEvent.mouseEnter(node);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("很长的指标名称需要完整展示");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("很长的对象指标名称需要完整展示");
   });
 
   it("does not treat partially scanned metrics as a complete relation count", async () => {
@@ -1458,7 +1478,7 @@ describe("ObjectMetricGraphCanvas", () => {
     );
     expect(container.querySelector('[class*="ownerNode"] text')?.textContent).toBe("205");
     expect(container.querySelector('[class*="relationCountAction"] text')?.textContent).toMatch(
-      /200\+ 个指标|200\+ metrics/,
+      /200\+ 个对象指标|200\+ metrics/,
     );
     expect(screen.getByText(/前 200 \/ 205|first 200 of 205/)).not.toBeNull();
   });
@@ -1480,7 +1500,7 @@ describe("ObjectMetricGraphCanvas", () => {
     const { rerender } = renderGraph();
     expect(
       await screen.findByLabelText(
-        /关系 1，没有指标明确使用这条关系|关系 1, no metric explicitly uses this relation/,
+        /关系 1，没有对象指标明确使用这条关系|关系 1, no metric explicitly uses this relation/,
       ),
     ).not.toBeNull();
 
@@ -1496,7 +1516,7 @@ describe("ObjectMetricGraphCanvas", () => {
     );
     expect(
       screen.queryByLabelText(
-        /关系 1，没有指标明确使用这条关系|关系 1, no metric explicitly uses this relation/,
+        /关系 1，没有对象指标明确使用这条关系|关系 1, no metric explicitly uses this relation/,
       ),
     ).toBeNull();
     resolveNext({ entries: [], totalCount: 0 });

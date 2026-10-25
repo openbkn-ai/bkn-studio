@@ -48,7 +48,7 @@ describe("object metric validation presentation", () => {
       }),
     ).toEqual({
       location: "业务限定",
-      problem: "当前衍生指标与基础指标没有区别。",
+      problem: "当前衍生对象指标与基础对象指标没有区别。",
       suggestion: "请至少增加当前实例条件、关联实例条件、时间范围、固定分组或时间粒度中的 1 项。",
     });
   });
@@ -89,8 +89,8 @@ describe("object metric validation presentation", () => {
       }),
     ).toEqual({
       location: "事件时间属性",
-      problem: "所选时间属性不在基础指标开放的时间范围内。",
-      suggestion: "请重新选择时间属性，或先在基础原子指标中开放该时间属性。",
+      problem: "所选时间属性不在基础对象指标开放的时间范围内。",
+      suggestion: "请重新选择时间属性，或先在基础原子对象指标中开放该时间属性。",
     });
   });
 
@@ -102,9 +102,9 @@ describe("object metric validation presentation", () => {
         message: "a published dependency metric version is required",
       }),
     ).toEqual({
-      location: "依赖指标",
-      problem: "存在尚未选择指标的依赖项。",
-      suggestion: "请选择一个已发布指标，或删除这条空依赖。",
+      location: "依赖对象指标",
+      problem: "存在尚未选择对象指标的依赖项。",
+      suggestion: "请选择一个已发布对象指标，或删除这条空依赖。",
     });
   });
 
@@ -116,9 +116,9 @@ describe("object metric validation presentation", () => {
         message: 'dependency alias "metric_2" is not declared',
       }),
     ).toEqual({
-      location: "指标运算公式",
-      problem: "公式引用了已经不存在的依赖指标。",
-      suggestion: "请重新选择公式中的指标；如果刚删除过依赖，可重新生成公式。",
+      location: "对象指标运算公式",
+      problem: "公式引用了已经不存在的依赖对象指标。",
+      suggestion: "请重新选择公式中的对象指标；如果刚删除过依赖，可重新生成公式。",
     });
   });
 
@@ -130,7 +130,7 @@ describe("object metric validation presentation", () => {
         message: "technical detail",
       }),
     ).toEqual({
-      location: "依赖指标",
+      location: "依赖对象指标",
       problem: "该依赖已经与结果处于同一对象和粒度，不需要再次汇总。",
       suggestion: "请清除该依赖的汇总方式；同对象、同粒度场景由系统直接对齐。",
     });

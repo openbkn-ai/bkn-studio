@@ -1,0 +1,42 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.root {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.root > :last-child {
+  flex: 1 1 auto;
+}
+
+.state {
+  display: flex;
+  min-height: 360px;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.focusRoot {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.focusState {
+  display: flex;
+  min-height: 360px;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 16px;
+}

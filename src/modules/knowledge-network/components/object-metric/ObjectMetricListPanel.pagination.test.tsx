@@ -269,7 +269,7 @@ function metric(index: number): ObjectMetricRecordV1 {
         unit_registry_version: "1.0",
       },
       metric_type: "atomic",
-      name: `订单指标 ${index}`,
+      name: `订单对象指标 ${index}`,
       owner_object_type_id: "order",
       query_capabilities: { analysis_dimensions: [], time_dimensions: [] },
       result_semantics: {
@@ -372,7 +372,7 @@ describe("ObjectMetricListPanel pagination", () => {
 
     render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
 
-    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "knowledgeNetwork.authorizeAction" }),
     ).not.toBeInTheDocument();
@@ -407,14 +407,14 @@ describe("ObjectMetricListPanel pagination", () => {
 
     const aiCreate = await screen.findByRole("button", { name: /AI 创建/ });
     expect(aiCreate).toBeEnabled();
-    expect(screen.queryByRole("button", { name: "新建指标" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "新建对象指标" })).not.toBeInTheDocument();
     fireEvent.mouseEnter(aiCreate);
     expect((await screen.findAllByRole("menuitem")).map((item) => item.textContent)).toEqual([
-      "原子指标",
-      "衍生指标",
-      "复合指标",
+      "原子对象指标",
+      "衍生对象指标",
+      "复合对象指标",
     ]);
-    fireEvent.click(screen.getByRole("menuitem", { name: "衍生指标" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "衍生对象指标" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/metrics/create?objectTypeId=order&metricType=derived",
@@ -439,9 +439,9 @@ describe("ObjectMetricListPanel pagination", () => {
 
     const aiCreate = await screen.findByRole("button", { name: /AI 创建/ });
     fireEvent.mouseEnter(aiCreate);
-    fireEvent.click(await screen.findByRole("menuitem", { name: "原子指标" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "原子对象指标" }));
 
-    expect(await screen.findByText("选择指标所属对象类")).toBeInTheDocument();
+    expect(await screen.findByText("选择对象指标所属对象类")).toBeInTheDocument();
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
@@ -520,7 +520,7 @@ describe("ObjectMetricListPanel pagination", () => {
 
     render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
 
-    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
     expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
       "network-1",
       expect.objectContaining({ ownerObjectTypeId: undefined }),
@@ -603,7 +603,7 @@ describe("ObjectMetricListPanel pagination", () => {
     fireEvent.click(await screen.findByRole("button", { name: "试算" }));
     const drawer = await screen.findByTestId("list-metric-trial");
     expect(drawer).toHaveAttribute("data-mode", mode);
-    expect(drawer).toHaveAttribute("data-name", "订单指标 1");
+    expect(drawer).toHaveAttribute("data-name", "订单对象指标 1");
     expect(drawer).toHaveAttribute("data-network-id", "network-1");
     expect(drawer).toHaveAttribute("data-object-type", "order");
     fireEvent.click(screen.getByRole("button", { name: "Run trial" }));
@@ -652,7 +652,7 @@ describe("ObjectMetricListPanel pagination", () => {
       <ObjectMetricListPanel canDelete canModify networkId="network-1" />,
     );
 
-    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
     const widths = [...container.querySelectorAll<HTMLTableColElement>("colgroup col")]
       .slice(0, 7)
       .map((column) => column.style.width);
@@ -677,13 +677,16 @@ describe("ObjectMetricListPanel pagination", () => {
       logicProperties: [
         {
           name: "metric_property",
-          displayName: "指标属性",
+          displayName: "对象指标属性",
           metricBinding: { metric_ref: { metric_id: "metric-1", version: 1 } },
         },
       ],
     });
     render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
-    expect(await screen.findByText("指标属性 · v1")).toHaveAttribute("title", "指标属性 · v1");
+    expect(await screen.findByText("对象指标属性 · v1")).toHaveAttribute(
+      "title",
+      "对象指标属性 · v1",
+    );
     expect(screen.getByText("未绑定")).toBeInTheDocument();
     expect(mocks.getObjectDetail).toHaveBeenCalledTimes(1);
     const deprecateButtons = screen.getAllByRole("button", { name: "废弃" });
@@ -722,7 +725,7 @@ describe("ObjectMetricListPanel pagination", () => {
 
     render(<ObjectMetricListPanel canDelete={false} canModify={false} networkId="network-1" />);
 
-    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
+    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
     expect(mocks.listObjectMetrics).toHaveBeenCalledWith(
       "network-1",
       expect.objectContaining({ offset: 10, ownerObjectTypeId: "order" }),
@@ -752,9 +755,11 @@ describe("ObjectMetricListPanel pagination", () => {
     render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
 
     fireEvent.click(screen.getByText(/^(列表|list)$/i));
-    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "编辑指标 订单指标 1" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "编辑指标 订单指标 2" }));
+    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "编辑对象指标 订单对象指标 1" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "编辑对象指标 订单对象指标 2" }));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/metrics/metric-2/edit",
       {
@@ -798,7 +803,7 @@ describe("ObjectMetricListPanel pagination", () => {
       );
     });
     await waitFor(() => {
-      expect(screen.getByLabelText("订单共有 25 个指标（不受类型筛选影响）").textContent).toBe(
+      expect(screen.getByLabelText("订单共有 25 个对象指标（不受类型筛选影响）").textContent).toBe(
         "25",
       );
     });
@@ -814,9 +819,9 @@ describe("ObjectMetricListPanel pagination", () => {
         status: undefined,
       });
     });
-    expect(await screen.findByText("订单指标 1")).not.toBeNull();
-    expect(screen.queryByText("订单指标 11")).toBeNull();
-    expect(screen.getByText("订单指标 1").getAttribute("title")).toBe("订单指标 1");
+    expect(await screen.findByText("订单对象指标 1")).not.toBeNull();
+    expect(screen.queryByText("订单对象指标 11")).toBeNull();
+    expect(screen.getByText("订单对象指标 1").getAttribute("title")).toBe("订单对象指标 1");
     expect(screen.queryByText("order_metric_1@v1")).toBeNull();
     expect(screen.getByText("total:25")).not.toBeNull();
 
@@ -833,17 +838,17 @@ describe("ObjectMetricListPanel pagination", () => {
         status: undefined,
       });
     });
-    expect(await screen.findByText("订单指标 11")).not.toBeNull();
-    expect(screen.queryByText("订单指标 1")).toBeNull();
+    expect(await screen.findByText("订单对象指标 11")).not.toBeNull();
+    expect(screen.queryByText("订单对象指标 1")).toBeNull();
     expect(container.querySelectorAll(".ant-table-tbody > tr.ant-table-row")).toHaveLength(10);
 
-    fireEvent.change(screen.getByPlaceholderText("搜索指标名称或编码"), {
-      target: { value: "订单指标 2" },
+    fireEvent.change(screen.getByPlaceholderText("搜索对象指标名称或编码"), {
+      target: { value: "订单对象指标 2" },
     });
     await waitFor(
       () => {
         expect(mocks.listObjectMetrics).toHaveBeenCalledWith("network-1", {
-          keyword: "订单指标 2",
+          keyword: "订单对象指标 2",
           limit: 10,
           metricType: undefined,
           offset: 0,
@@ -887,7 +892,9 @@ describe("ObjectMetricListPanel pagination", () => {
       { limit: 1, offset: 0, ownerObjectTypeId: "object-0" },
       { skipErrorToast: true },
     );
-    expect(screen.getByLabelText("对象 0共有 0 个指标（不受类型筛选影响）").textContent).toBe("0");
+    expect(screen.getByLabelText("对象 0共有 0 个对象指标（不受类型筛选影响）").textContent).toBe(
+      "0",
+    );
 
     const objectList = container.querySelector<HTMLElement>(
       'div[class*="objectList"]:not([class*="objectListArea"])',
@@ -1019,11 +1026,11 @@ describe("ObjectMetricListPanel pagination", () => {
 
     render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
     fireEvent.click(screen.getByText(/^(列表|list)$/i));
-    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /删除指标.*v1/ }));
+    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /删除对象指标.*v1/ }));
 
     await waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
-    expect(warning.mock.calls[0]?.[0]?.title).toBe("无法删除指标版本");
+    expect(warning.mock.calls[0]?.[0]?.title).toBe("无法删除对象指标版本");
     render(<div>{warning.mock.calls[0]?.[0]?.content}</div>);
     expect(screen.getByText(/下游成交额.*v2/)).toBeInTheDocument();
     expect(screen.getByText(/另有 1 个无权查看的引用/)).toBeInTheDocument();
@@ -1057,8 +1064,8 @@ describe("ObjectMetricListPanel pagination", () => {
 
     render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
     fireEvent.click(screen.getByText(/^(列表|list)$/i));
-    expect(await screen.findByText("订单指标 1")).toBeInTheDocument();
-    const deleteButton = screen.getByRole("button", { name: /删除指标.*v1/ });
+    expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
+    const deleteButton = screen.getByRole("button", { name: /删除对象指标.*v1/ });
     fireEvent.click(deleteButton);
     fireEvent.click(deleteButton);
     expect(mocks.checkDeletion).toHaveBeenCalledTimes(1);
@@ -1076,7 +1083,7 @@ describe("ObjectMetricListPanel pagination", () => {
     });
     await waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
     render(<div>{warning.mock.calls[0]?.[0]?.content}</div>);
-    expect(screen.getByText("状态为 published 的指标版本不可删除。")).toBeInTheDocument();
+    expect(screen.getByText("状态为 published 的对象指标版本不可删除。")).toBeInTheDocument();
     warning.mockRestore();
   });
 
@@ -1102,7 +1109,7 @@ describe("ObjectMetricListPanel pagination", () => {
     expect(screen.getByTitle("对象 0").textContent).toContain("…");
     resolveCounts[0]({ entries: [], total_count: 7 });
     await waitFor(() => {
-      expect(screen.getByLabelText("对象 0共有 7 个指标（不受类型筛选影响）").textContent).toBe(
+      expect(screen.getByLabelText("对象 0共有 7 个对象指标（不受类型筛选影响）").textContent).toBe(
         "7",
       );
       expect(mocks.listObjectMetrics).toHaveBeenCalledTimes(5);

@@ -24,6 +24,7 @@ type BackendOverviewGraph = {
   next_cursor?: string;
   nodes: Array<{
     color?: string;
+    concept_groups?: Array<{ id: string; name: string }>;
     degree?: number;
     icon?: string;
     id: string;
@@ -62,6 +63,7 @@ function mapOverviewGraph(value: BackendOverviewGraph): KnowledgeNetworkOverview
       })),
       nodes: value.nodes.map((node) => ({
         color: node.color?.trim() || "#1677ff",
+        conceptGroups: node.concept_groups,
         icon: node.icon,
         id: node.id,
         indexStatus: node.index_status?.state
@@ -85,13 +87,34 @@ export async function getKnowledgeNetworkOverviewGraph(
   if (useMock) {
     const nodeLimit = query.nodeLimit ?? 60;
     const edgeLimit = query.edgeLimit ?? 120;
-    const objects = (mockObjectTypes[networkId] ?? []).slice(0, nodeLimit);
-    const nodeIds = new Set(objects.map((item) => item.id));
-    const relations = (mockRelationTypes[networkId] ?? [])
-      .filter(
-        (item) => nodeIds.has(item.sourceObjectTypeId) && nodeIds.has(item.targetObjectTypeId),
-      )
-      .slice(0, edgeLimit);
+    const scopedObjects = (mockObjectTypes[networkId] ?? []).filter(
+      (item) => !query.conceptGroupId || item.conceptGroupIds.includes(query.conceptGroupId),
+    );
+    const scopedObjectIds = new Set(scopedObjects.map((item) => item.id));
+    const scopedRelations = (mockRelationTypes[networkId] ?? []).filter(
+      (item) =>
+        scopedObjectIds.has(item.sourceObjectTypeId) &&
+        scopedObjectIds.has(item.targetObjectTypeId),
+    );
+    const cursorMatch = /^mock:(\d+):(\d+)$/.exec(query.cursor ?? "");
+    const nodeOffset = cursorMatch ? Number(cursorMatch[1]) : 0;
+    const edgeOffset = cursorMatch ? Number(cursorMatch[2]) : 0;
+    const objects = scopedObjects.slice(nodeOffset, nodeOffset + nodeLimit);
+    const pageObjectIds = new Set(objects.map((item) => item.id));
+    const relations = query.conceptGroupId
+      ? scopedRelations.slice(edgeOffset, edgeOffset + edgeLimit)
+      : scopedRelations
+          .filter(
+            (item) =>
+              pageObjectIds.has(item.sourceObjectTypeId) &&
+              pageObjectIds.has(item.targetObjectTypeId),
+          )
+          .slice(0, edgeLimit);
+    const nextNodeOffset = nodeOffset + objects.length;
+    const nextEdgeOffset = query.conceptGroupId ? edgeOffset + relations.length : 0;
+    const hasNext = query.conceptGroupId
+      ? nextNodeOffset < scopedObjects.length || nextEdgeOffset < scopedRelations.length
+      : nextNodeOffset < scopedObjects.length;
     return wait({
       graph: {
         nodes: objects.map((item) => ({
@@ -100,6 +123,10 @@ export async function getKnowledgeNetworkOverviewGraph(
           id: item.id,
           indexStatus: item.indexStatus,
           name: item.name,
+          conceptGroups: item.conceptGroupIds.map((id, index) => ({
+            id,
+            name: item.conceptGroupNames[index] ?? id,
+          })),
         })),
         edges: relations.map((item) => ({
           id: item.id,
@@ -109,10 +136,11 @@ export async function getKnowledgeNetworkOverviewGraph(
           targetId: item.targetObjectTypeId,
         })),
       },
-      objectTypeTotal: (mockObjectTypes[networkId] ?? []).length,
-      relationTypeTotal: (mockRelationTypes[networkId] ?? []).length,
+      objectTypeTotal: scopedObjects.length,
+      relationTypeTotal: scopedRelations.length,
+      nextCursor: hasNext ? `mock:${nextNodeOffset}:${nextEdgeOffset}` : undefined,
       snapshot: "mock",
-      truncated: objects.length < (mockObjectTypes[networkId] ?? []).length,
+      truncated: hasNext,
     });
   }
 

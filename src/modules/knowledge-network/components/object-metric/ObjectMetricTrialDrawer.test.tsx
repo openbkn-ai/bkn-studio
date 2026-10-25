@@ -82,7 +82,7 @@ describe("ObjectMetricTrialDrawer", () => {
           },
         },
       },
-      expected: "指标计算所需的对象数据或字段不可用。",
+      expected: "对象指标计算所需的对象数据或字段不可用。",
     },
     {
       name: "draft trial with denied dependency",
@@ -114,7 +114,7 @@ describe("ObjectMetricTrialDrawer", () => {
           },
         },
       },
-      expected: "指标计算所需的对象数据或字段不可用。",
+      expected: "对象指标计算所需的对象数据或字段不可用。",
     },
     {
       name: "legacy query error without metadata",
@@ -130,7 +130,7 @@ describe("ObjectMetricTrialDrawer", () => {
           },
         },
       },
-      expected: "指标计算所需的对象数据或字段不可用。",
+      expected: "对象指标计算所需的对象数据或字段不可用。",
     },
     {
       name: "draft trial with insufficient calculation property access",
@@ -164,7 +164,7 @@ describe("ObjectMetricTrialDrawer", () => {
           },
         },
       },
-      expected: "指标计算所需的对象数据或字段不可用。",
+      expected: "对象指标计算所需的对象数据或字段不可用。",
     },
     {
       name: "unrelated invalid runtime parameter",
@@ -238,7 +238,7 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(within(orderRow).queryByRole("textbox", { name: "比较值" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox", { name: "比较值" }), { target: { value: "10" } });
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "结果排序" }));
-    fireEvent.click(await screen.findByText("指标值"));
+    fireEvent.click(await screen.findByText("对象指标值"));
     expect(within(orderRow).getByRole("combobox", { name: "排序方向" })).toBeInTheDocument();
     expect(within(havingRow).queryByRole("combobox", { name: "排序方向" })).not.toBeInTheDocument();
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "排序方向" }));
@@ -409,7 +409,7 @@ describe("ObjectMetricTrialDrawer", () => {
     );
 
     expect(screen.getByText("试算 · 销售订单数")).toBeInTheDocument();
-    expect(screen.getByText("设置试算条件并点击试算，即可查看指标结果。")).toBeInTheDocument();
+    expect(screen.getByText("设置试算条件并点击试算，即可查看对象指标结果。")).toBeInTheDocument();
     const runButton = screen.getByRole("button", { name: "试算" });
     expect(
       screen.getByRole("heading", { name: "试算条件" }).parentElement?.parentElement,
@@ -950,7 +950,7 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(await screen.findByRole("columnheader", { name: "status" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "order_id" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "维度" })).not.toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "指标值" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "对象指标值" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "实例 ID" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "时间（UTC）" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "结果状态" })).not.toBeInTheDocument();
@@ -1161,10 +1161,12 @@ describe("ObjectMetricTrialDrawer", () => {
       />,
     );
 
-    expect(screen.queryByText("读取真实数据；试算不会保存或修改指标。")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("读取真实数据；试算不会保存或修改对象指标。"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("试算 · 订单支付额")).toBeInTheDocument();
     expect(screen.getByText("试算条件")).toBeInTheDocument();
-    expect(screen.getByText("设置试算条件并点击试算，即可查看指标结果。")).toBeInTheDocument();
+    expect(screen.getByText("设置试算条件并点击试算，即可查看对象指标结果。")).toBeInTheDocument();
     const runButton = screen.getByRole("button", { name: "试算" });
     expect(
       screen.getByRole("heading", { name: "试算条件" }).parentElement?.parentElement,
@@ -1189,7 +1191,7 @@ describe("ObjectMetricTrialDrawer", () => {
     );
     expect(await screen.findByText("无数据")).toBeInTheDocument();
     expect(screen.getByText("分析结果")).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "指标值" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "对象指标值" })).not.toBeInTheDocument();
   });
 
   it("trials a draft derived metric and keeps its fixed time window immutable", () => {
@@ -1220,7 +1222,9 @@ describe("ObjectMetricTrialDrawer", () => {
       />,
     );
 
-    expect(screen.queryByText("读取真实数据；试算不会保存或修改指标。")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("读取真实数据；试算不会保存或修改对象指标。"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("本次试算使用当前配置中的固定时间范围")).toBeInTheDocument();
     expect(screen.queryByText("查询时间范围（可选）")).not.toBeInTheDocument();
   });
@@ -1237,7 +1241,7 @@ describe("ObjectMetricTrialDrawer", () => {
     const { rerender } = render(<ObjectMetricTrialDrawer {...props} />);
     expect(screen.queryByText("查询时间范围（可选）")).not.toBeInTheDocument();
     expect(
-      screen.getByText("指标未开放可查询时间维度，本次分析不按时间范围筛选。"),
+      screen.getByText("对象指标未开放可查询时间维度，本次分析不按时间范围筛选。"),
     ).toBeInTheDocument();
 
     definition.query_capabilities.time_dimensions = [
@@ -1256,7 +1260,7 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(screen.queryByText("查询时间范围（可选）")).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        "指标开放了多个时间属性，无法确定查询时间范围作用于哪一个；请在下一版本中只保留一个。",
+        "对象指标开放了多个时间属性，无法确定查询时间范围作用于哪一个；请在下一版本中只保留一个。",
       ),
     ).toBeInTheDocument();
   });

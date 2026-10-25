@@ -133,7 +133,7 @@ describe("ObjectMetricAnalysisPanel", () => {
         onSelectEntry={onSelectEntry}
       />,
     );
-    mocks.onClick?.({ dataIndex: 1, name: "01/01 00:00", seriesName: "指标值" });
+    mocks.onClick?.({ dataIndex: 1, name: "01/01 00:00", seriesName: "对象指标值" });
     expect(onSelectEntry).toHaveBeenCalledWith(trendEntries[1]);
   });
 
@@ -189,7 +189,7 @@ describe("ObjectMetricAnalysisPanel", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "选择指标结果查看分析操作" }));
+    fireEvent.click(screen.getByRole("button", { name: "选择对象指标结果查看分析操作" }));
     expect(onSelectEntry).toHaveBeenCalledWith(entry);
   });
 
@@ -440,7 +440,7 @@ describe("ObjectMetricAnalysisPanel", () => {
     rerender(<ObjectMetricAnalysisPanel result={summaryResult} />);
     expect(screen.getByText("汇总值")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByText("自动推荐：指标卡")).toBeInTheDocument();
+    expect(screen.getByText("自动推荐：对象指标卡")).toBeInTheDocument();
     expect(screen.getByText("表格")).toBeInTheDocument();
     expect(screen.queryByText("饼图")).not.toBeInTheDocument();
     expect(screen.queryByTestId("metric-chart")).not.toBeInTheDocument();

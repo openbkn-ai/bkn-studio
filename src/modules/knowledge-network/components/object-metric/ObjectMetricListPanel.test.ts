@@ -13,7 +13,7 @@ describe("resolveSelectedObjectTypeId", () => {
   const objects = [{ id: "shipment" }, { id: "order" }, { id: "warehouse" }];
   const records = [{ definition: { owner_object_type_id: "order" } }];
 
-  it("首次进入时优先选择已有指标的对象类", () => {
+  it("首次进入时优先选择已有对象指标的对象类", () => {
     expect(resolveSelectedObjectTypeId("", objects, records)).toBe("order");
   });
 
@@ -21,11 +21,11 @@ describe("resolveSelectedObjectTypeId", () => {
     expect(resolveSelectedObjectTypeId("warehouse", objects, records)).toBe("warehouse");
   });
 
-  it("当前选择失效时回退到已有指标的对象类", () => {
+  it("当前选择失效时回退到已有对象指标的对象类", () => {
     expect(resolveSelectedObjectTypeId("deleted", objects, records)).toBe("order");
   });
 
-  it("没有指标时回退到第一个对象类", () => {
+  it("没有对象指标时回退到第一个对象类", () => {
     expect(resolveSelectedObjectTypeId("", objects, [])).toBe("shipment");
   });
 });
@@ -58,7 +58,7 @@ describe("filterObjectMetrics", () => {
     },
   ];
 
-  it("按对象类、指标类型和关键字生成图谱与列表的共同数据集", () => {
+  it("按对象类、对象指标类型和关键字生成图谱与列表的共同数据集", () => {
     expect(filterObjectMetrics(records, "order", "derived", "取消")).toEqual([records[1]]);
     expect(filterObjectMetrics(records, "order", undefined, "TOTAL_ORDER")).toEqual([records[0]]);
   });
