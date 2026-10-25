@@ -8,6 +8,8 @@
 import { describe, expect, it } from "vitest";
 
 import i18n from "@/app/locales/i18n";
+import { systemAdminEnUS } from "@/modules/system-admin/locales/en-US";
+import { systemAdminZhCN } from "@/modules/system-admin/locales/zh-CN";
 import {
   operationLabel,
   operationsForType,
@@ -17,6 +19,37 @@ import {
 } from "@/modules/system-admin/utils/resource-catalog";
 
 describe("resource-catalog", () => {
+  it("labels the knowledge base type and every operation in both languages", async () => {
+    const operations = operationsForType("knowledge_base").map((item) => item.key);
+    expect(operations).toEqual([
+      "view_detail",
+      "create",
+      "modify",
+      "delete",
+      "authorize",
+      "document_manage",
+      "task_manage",
+      "query_data",
+    ]);
+
+    await i18n.changeLanguage("en-US");
+    expect(resourceTypeLabel("knowledge_base")).toBe("Knowledge base");
+    expect(operationLabel("knowledge_base", "document_manage")).toBe("Document management");
+    await i18n.changeLanguage("zh-CN");
+    expect(resourceTypeLabel("knowledge_base")).toBe("知识库");
+    expect(operationLabel("knowledge_base", "document_manage")).toBe("文档管理");
+
+    // bkn-safe's registry carries Chinese descriptions only; each UI needs its own. `i18n.exists`
+    // resolves through `fallbackLng`, so read each locale's own resource.
+    for (const resource of [systemAdminEnUS, systemAdminZhCN]) {
+      const descriptions =
+        resource.systemAdmin.resourceCatalog.operationDescriptions.knowledge_base;
+      expect(Object.keys(descriptions).sort()).toEqual([...operations].sort());
+    }
+    expect(systemAdminZhCN.systemAdmin.resourceCatalog.operations.document_manage).toBe("文档管理");
+    expect(systemAdminZhCN.systemAdmin.resourceCatalog.resources.knowledge_base).toBe("知识库");
+  });
+
   it("resolves resource and operation labels from the active locale", async () => {
     await i18n.changeLanguage("en-US");
 

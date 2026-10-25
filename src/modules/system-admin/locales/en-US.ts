@@ -66,6 +66,7 @@ export const systemAdminEnUS = {
         data_write: "Write",
         delete: "Delete",
         display: "View",
+        document_manage: "Document management",
         edit: "Edit",
         execute: "Execute",
         grant: "Grant",
@@ -177,6 +178,23 @@ export const systemAdminEnUS = {
           delete: "Delete the connector type. Also requires the connector type view permission.",
           authorize:
             "Configure access permissions for the connector type. Also requires the connector type view permission.",
+        },
+        knowledge_base: {
+          view_detail:
+            "View the knowledge base's settings, sources, documents, chunks, and parse results.",
+          create: "Create knowledge bases and manage knowledge base groups.",
+          modify:
+            "Modify the knowledge base settings, and add, change, or remove sources. Also requires the knowledge base view permission.",
+          delete:
+            "Delete the knowledge base and its documents. Also requires the knowledge base view permission.",
+          authorize:
+            "Configure access permissions for the knowledge base. Also requires the knowledge base view permission.",
+          document_manage:
+            "Upload, delete, enable, or disable documents in the knowledge base, and change their parse settings. Also requires the knowledge base view permission.",
+          task_manage:
+            "Start parsing, sync sources now, and clean chunks again. Also requires the knowledge base view permission.",
+          query_data:
+            "Read the knowledge base's original files, and read chunks and source text through the read API. Also requires the knowledge base view permission.",
         },
         knowledge_network: {
           view_detail:
@@ -395,6 +413,7 @@ export const systemAdminEnUS = {
         concept_group: "Concept group",
         connector_type: "Connector type",
         data_flow: "Data flow",
+        knowledge_base: "Knowledge base",
         knowledge_network: "Knowledge network",
         large_model: "Large model",
         mcp: "MCP service",

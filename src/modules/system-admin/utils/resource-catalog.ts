@@ -31,6 +31,7 @@ const OPERATION_FALLBACK_LABELS: Record<string, string> = {
   data_write: "Write data",
   delete: "Delete",
   display: "View",
+  document_manage: "Document management",
   edit: "Edit",
   execute: "Execute",
   grant: "Grant",
@@ -77,6 +78,7 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   connector_type: "Connector type",
   concept_group: "Concept group",
   data_flow: "Data flow",
+  knowledge_base: "Knowledge base",
   knowledge_network: "Knowledge network",
   large_model: "Large model",
   mcp: "MCP service",
@@ -101,6 +103,17 @@ const CATALOG_CRUD_AUTHZ = [
   "delete",
   "authorize",
   "task_manage",
+];
+// Knowledge bases (openbkn-ee kb-api) are authorized per knowledge base only, never per document.
+const KNOWLEDGE_BASE_AUTHZ = [
+  "view_detail",
+  "create",
+  "modify",
+  "delete",
+  "authorize",
+  "document_manage",
+  "task_manage",
+  "query_data",
 ];
 const CONNECTOR_TYPE_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize"];
 // Child resources delegate sharing through the knowledge-network root. They never carry
@@ -139,6 +152,7 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
   resourceType("catalog", CATALOG_AUTHZ),
   resourceType("resource", RESOURCE_AUTHZ),
   resourceType("connector_type", CONNECTOR_TYPE_AUTHZ),
+  resourceType("knowledge_base", KNOWLEDGE_BASE_AUTHZ),
   resourceType("knowledge_network", [
     "view_detail",
     "create",
@@ -266,6 +280,12 @@ export function requiredOperationsFor(type: string, operation: string): string[]
 const LOCAL_OPERATION_REQUIREMENTS: Record<string, string[]> = {
   "catalog:task_manage": ["resource_manage", "view_detail"],
   "catalog:query_data": ["view_detail"],
+  "knowledge_base:modify": ["view_detail"],
+  "knowledge_base:delete": ["view_detail"],
+  "knowledge_base:authorize": ["view_detail"],
+  "knowledge_base:document_manage": ["view_detail"],
+  "knowledge_base:task_manage": ["view_detail"],
+  "knowledge_base:query_data": ["view_detail"],
   "catalog:data_write": ["view_detail"],
   "catalog:resource_manage": ["view_detail"],
   "resource:modify": ["view_detail"],
