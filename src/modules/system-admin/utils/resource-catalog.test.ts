@@ -17,6 +17,39 @@ import {
 } from "@/modules/system-admin/utils/resource-catalog";
 
 describe("resource-catalog", () => {
+  it("labels the knowledge base type and every operation in both languages", async () => {
+    const operations = operationsForType("knowledge_base").map((item) => item.key);
+    expect(operations).toEqual([
+      "view_detail",
+      "create",
+      "modify",
+      "delete",
+      "authorize",
+      "document_manage",
+      "task_manage",
+      "query_data",
+    ]);
+
+    await i18n.changeLanguage("en-US");
+    expect(resourceTypeLabel("knowledge_base")).toBe("Knowledge base");
+    expect(operationLabel("knowledge_base", "document_manage")).toBe("Document management");
+    await i18n.changeLanguage("zh-CN");
+    expect(resourceTypeLabel("knowledge_base")).toBe("知识库");
+    expect(operationLabel("knowledge_base", "document_manage")).toBe("文档管理");
+
+    // bkn-safe's registry carries Chinese descriptions only; the English UI needs its own.
+    for (const language of ["en-US", "zh-CN"]) {
+      await i18n.changeLanguage(language);
+      for (const operation of operations) {
+        expect(
+          i18n.exists(
+            `systemAdmin.resourceCatalog.operationDescriptions.knowledge_base.${operation}`,
+          ),
+        ).toBe(true);
+      }
+    }
+  });
+
   it("resolves resource and operation labels from the active locale", async () => {
     await i18n.changeLanguage("en-US");
 

@@ -62,6 +62,7 @@ export const systemAdminZhCN = {
         data_write: "写入",
         delete: "删除",
         display: "查看",
+        document_manage: "文档管理",
         edit: "编辑",
         execute: "执行",
         grant: "授权",
@@ -170,6 +171,18 @@ export const systemAdminZhCN = {
           modify: "修改连接器类型配置。需要同时具有连接器类型的查看权限。",
           delete: "删除连接器类型。需要同时具有连接器类型的查看权限。",
           authorize: "配置连接器类型的访问权限。需要同时具有连接器类型的查看权限。",
+        },
+        knowledge_base: {
+          view_detail: "查看知识库的配置、来源、文档、分片与解析结果。",
+          create: "新建知识库，并管理知识库分组。",
+          modify: "修改知识库配置，添加、修改和移除来源。需要同时具有知识库的查看权限。",
+          delete: "删除知识库及其文档。需要同时具有知识库的查看权限。",
+          authorize: "配置知识库的访问权限。需要同时具有知识库的查看权限。",
+          document_manage:
+            "上传、删除、启用或停用知识库中的文档，修改文档的解析设置。需要同时具有知识库的查看权限。",
+          task_manage: "触发解析、立即同步来源、重新清洗分片。需要同时具有知识库的查看权限。",
+          query_data:
+            "读取知识库的原始文件，以及经只读接口读取分片与原文。需要同时具有知识库的查看权限。",
         },
         knowledge_network: {
           view_detail:
@@ -365,6 +378,7 @@ export const systemAdminZhCN = {
         concept_group: "概念分组",
         connector_type: "连接器类型",
         data_flow: "数据流",
+        knowledge_base: "知识库",
         knowledge_network: "知识网络",
         large_model: "大模型",
         mcp: "MCP 服务",

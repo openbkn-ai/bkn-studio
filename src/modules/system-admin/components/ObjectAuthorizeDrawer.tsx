@@ -19,6 +19,7 @@ import {
   InfoCircleOutlined,
   LockOutlined,
   PlusOutlined,
+  ReadOutlined,
   TeamOutlined,
   ToolOutlined,
   UserOutlined,
@@ -91,6 +92,7 @@ type ObjectAuthorizeDrawerProps = {
 const OBJ_ICON: Record<string, ReactNode> = {
   catalog: <DatabaseOutlined />,
   resource: <DatabaseOutlined />,
+  knowledge_base: <ReadOutlined />,
   knowledge_network: <DeploymentUnitOutlined />,
   small_model: <AppstoreOutlined />,
   large_model: <AppstoreOutlined />,
