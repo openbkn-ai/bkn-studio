@@ -967,6 +967,7 @@ export const bknTraceEnUS = {
         healthy: "Current publisher delivering",
         degraded: "Current publisher degraded",
         reasons: {
+          unsupported: "The publisher status is unsupported; current delivery cannot be verified.",
           unknown:
             "Publisher delivery has not been confirmed; an empty result does not establish collection health.",
           unavailable: "Publisher diagnostics are unavailable; query availability is independent.",

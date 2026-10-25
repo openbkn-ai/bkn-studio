@@ -665,9 +665,14 @@ function PublisherSourceStatus({
         (source.droppedRecords !== undefined &&
           source.droppedRecords !== null &&
           source.droppedRecords > 0);
-      const since = collection?.historicalGapSince ?? source.droppedRecordsSince;
-      const reason =
-        status === "unknown"
+      const since =
+        collection?.historicalGap === true
+          ? collection.historicalGapSince
+          : source.droppedRecordsSince;
+      const unsupported = collection?.reason === "unsupported_publisher_status";
+      const reason = unsupported
+        ? "unsupported"
+        : status === "unknown"
           ? collection?.reason === "audit_producer_status_stale"
             ? "stale"
             : collection?.reason === "audit_producer_status_unavailable"
@@ -678,7 +683,7 @@ function PublisherSourceStatus({
         <Alert
           key={source.sourceId}
           showIcon
-          type={historicalGap || status === "degraded" ? "warning" : "info"}
+          type={historicalGap || status === "degraded" || unsupported ? "warning" : "info"}
           message={
             <Space wrap>
               <span>{source.sourceId}</span>
@@ -693,7 +698,7 @@ function PublisherSourceStatus({
                         ? t("bknTrace.logs.publisher.queryNotIntegrated")
                         : t("bknTrace.logs.publisher.queryUnknown")}
               </Tag>
-              <Tag color={status === "degraded" ? "orange" : undefined}>
+              <Tag color={status === "degraded" || unsupported ? "orange" : undefined}>
                 {t(`bknTrace.logs.publisher.${status}`)}
               </Tag>
             </Space>

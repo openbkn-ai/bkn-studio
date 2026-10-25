@@ -912,6 +912,7 @@ export const bknTraceZhCN = {
         healthy: "当前发布实例已送达",
         degraded: "当前发布实例降级",
         reasons: {
+          unsupported: "无法识别发布状态，当前送达情况无法核验。",
           unknown: "尚未确认发布送达；查询结果为空不能证明采集正常。",
           unavailable: "发布诊断暂不可用；查询可用性与发布状态相互独立。",
           stale: "发布诊断已过期，无法确认当前送达状态。",

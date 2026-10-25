@@ -229,7 +229,7 @@ export type LogListQuery = {
 type BackendPublisherCollectionStatus = {
   scope: "bkn-safe-publisher-instance";
   instance_id?: string;
-  status: PublisherCollectionStatus["status"];
+  status: string;
   reason: string;
   observed_at: string | null;
   last_delivered_at: string | null;
@@ -538,6 +538,12 @@ function mapLogRecord(record: BackendLogRecord): LogRecord {
 
 function mapSourceStatus(source: BackendSourceStatus): LogSourceStatus {
   const collection = source.collection_status;
+  const collectionStatus: PublisherCollectionStatus["status"] =
+    collection?.status === "healthy" ||
+    collection?.status === "degraded" ||
+    collection?.status === "unknown"
+      ? collection.status
+      : "unknown";
   return {
     ...(source.status_scope ? { statusScope: source.status_scope } : {}),
     ...(source.dropped_records !== undefined ? { droppedRecords: source.dropped_records } : {}),
@@ -549,8 +555,11 @@ function mapSourceStatus(source: BackendSourceStatus): LogSourceStatus {
           collectionStatus: {
             scope: collection.scope,
             ...(collection.instance_id ? { instanceId: collection.instance_id } : {}),
-            status: collection.status,
-            reason: collection.reason,
+            status: collectionStatus,
+            reason:
+              collection.status === collectionStatus
+                ? collection.reason
+                : "unsupported_publisher_status",
             observedAt: collection.observed_at,
             lastDeliveredAt: collection.last_delivered_at,
             lastFailureAt: collection.last_failure_at,
