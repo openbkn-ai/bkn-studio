@@ -5,7 +5,36 @@
  * Conditions. See LICENSE for the full text.
  */
 
-.bindingOptionDescription {
+.importModal :global(.ant-modal-body) {
+  max-height: min(640px, calc(100vh - 220px));
+  overflow-y: auto;
+}
+
+.sectionDescription {
+  margin: 4px 0 12px !important;
+  color: var(--color-text-secondary);
+  line-height: 22px;
+}
+
+.optionDescription {
+  margin: 4px 0 0 !important;
+  color: var(--color-text-secondary);
+  line-height: 22px;
+}
+
+.optionAlert {
+  margin-top: 12px;
+}
+
+.strictModeRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 20px 0;
+}
+
+.strictModeDescription {
   margin: 4px 0 0 !important;
   color: var(--color-text-secondary);
   line-height: 22px;

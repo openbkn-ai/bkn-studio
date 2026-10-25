@@ -107,7 +107,7 @@ export type KnowledgeNetworkOverviewGraph = {
   truncated: boolean;
 };
 
-export type KnowledgeNetworkImportMode = "ignore" | "overwrite";
+export type KnowledgeNetworkImportMode = "ignore" | "normal" | "overwrite";
 
 /**
  * How an imported network handles bindings to environment-local resources.
