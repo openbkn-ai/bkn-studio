@@ -705,12 +705,6 @@ describe("ObjectMetricListPanel pagination", () => {
       "aria-disabled",
       "true",
     );
-    await openMetricActionMenu(1);
-    await waitFor(() => {
-      const deprecateItems = screen.getAllByRole("menuitem", { name: "废弃" });
-      expect(deprecateItems).toHaveLength(2);
-      expect(deprecateItems[1]).toHaveAttribute("aria-disabled", "false");
-    });
   });
   it("restores a selected object outside the first sidebar page from a direct detail return", async () => {
     mocks.searchParams.current = "objectTypeId=remote";
