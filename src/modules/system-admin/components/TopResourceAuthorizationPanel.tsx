@@ -12,6 +12,7 @@ import {
   DeploymentUnitOutlined,
   DownOutlined,
   FunctionOutlined,
+  ReadOutlined,
   RightOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
@@ -31,6 +32,7 @@ import {
   type TopResourceType,
 } from "@/modules/system-admin/services/authz-objects.service";
 import type { AuthorizableObject } from "@/modules/system-admin/types/authz";
+import { useResourceTypeAvailability } from "@/modules/system-admin/hooks/use-resource-type-availability";
 import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
@@ -44,6 +46,7 @@ type TopResourceAuthorizationPanelProps = {
 
 const ICONS: Record<string, ReactNode> = {
   catalog: <DatabaseOutlined />,
+  knowledge_base: <ReadOutlined />,
   knowledge_network: <DeploymentUnitOutlined />,
   mcp: <ApiOutlined />,
   operator: <FunctionOutlined />,
@@ -61,6 +64,7 @@ export function TopResourceAuthorizationPanel({
   onManage,
 }: TopResourceAuthorizationPanelProps) {
   const { t } = useTranslation();
+  const resourceTypeAvailable = useResourceTypeAvailability();
   const [keyword, setKeyword] = useState("");
   const query = useDebouncedValue(keyword.trim(), 300);
   const [resourceType, setResourceType] = useState<TopResourceType>();
@@ -162,7 +166,7 @@ export function TopResourceAuthorizationPanel({
             setResourceType(value);
             setPage(1);
           }}
-          options={TOP_LEVEL_AUTHZ_RESOURCE_TYPES.map((type) => ({
+          options={TOP_LEVEL_AUTHZ_RESOURCE_TYPES.filter(resourceTypeAvailable).map((type) => ({
             label: resourceTypeLabel(type),
             value: type,
           }))}

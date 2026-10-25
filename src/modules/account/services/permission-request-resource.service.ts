@@ -33,6 +33,8 @@ function resourceReadPath(request: PermissionRequest) {
     if (networkID && childID)
       return `/bkn-backend/v1/knowledge-networks/${encodeURIComponent(networkID)}/${segment[request.resource_type]}/${encodeURIComponent(childID)}`;
   }
+  if (request.resource_type === "knowledge_base")
+    return `/kb/v1/knowledge_base/datasets/${resourceID}`;
   if (request.resource_type === "catalog") return `/vega-backend/v1/catalogs/${resourceID}`;
   if (request.resource_type === "resource") return `/vega-backend/v1/resources/${resourceID}`;
   if (request.resource_type === "tool_box")
@@ -41,6 +43,14 @@ function resourceReadPath(request: PermissionRequest) {
   if (request.resource_type === "skill")
     return `/agent-operator-integration/v1/skills/${resourceID}`;
   return undefined;
+}
+
+// kb-api (professional edition) wraps its body as `{ code, msg, data }`. Refusals carry their HTTP
+// status (403 / 404), so they reach the catch below like any other resource; this only guards the
+// success path, where nothing short of code 0 with a record proves the knowledge base is there.
+function knowledgeBaseCheck(body: unknown): PermissionRequestResourceCheck {
+  const envelope = body as { code?: unknown; data?: unknown } | null;
+  return envelope?.code === 0 && envelope.data ? "exists" : "unavailable";
 }
 
 export async function checkPermissionRequestResource(
@@ -52,6 +62,7 @@ export async function checkPermissionRequestResource(
 
   try {
     const response = await http.get<SingleEntryResponse<unknown>>(path, { skipErrorToast: true });
+    if (request.resource_type === "knowledge_base") return knowledgeBaseCheck(response.data);
     // A single-entry envelope can be empty when the gateway filters a resource
     // the current user cannot read. Only the permission-request status is
     // authoritative for reporting that the resource was deleted.

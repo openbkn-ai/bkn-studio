@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { AxiosError, AxiosHeaders } from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
@@ -36,6 +37,40 @@ describe("checkPermissionRequestResource", () => {
     getMock.mockResolvedValue({ data: { entries: [{ id: "network-1" }] } });
 
     await expect(checkPermissionRequestResource(request)).resolves.toBe("exists");
+  });
+
+  it("reads a knowledge base from kb-api and trusts only a successful envelope", async () => {
+    const knowledgeBase = { ...request, resource_id: "7", resource_type: "knowledge_base" };
+    getMock.mockResolvedValueOnce({
+      data: { code: 0, msg: "ok", data: { id: 7, name: "合同库" } },
+    });
+    await expect(checkPermissionRequestResource(knowledgeBase)).resolves.toBe("exists");
+    expect(getMock).toHaveBeenCalledWith("/kb/v1/knowledge_base/datasets/7", {
+      skipErrorToast: true,
+    });
+
+    // kb-api answers HTTP 200 for its own envelope; a failure code or an empty record is no proof.
+    getMock.mockResolvedValueOnce({ data: { code: 10404, msg: "Not found", data: null } });
+    await expect(checkPermissionRequestResource(knowledgeBase)).resolves.toBe("unavailable");
+    getMock.mockResolvedValueOnce({ data: { code: 0, msg: "ok", data: null } });
+    await expect(checkPermissionRequestResource(knowledgeBase)).resolves.toBe("unavailable");
+
+    // kb-api refuses with real HTTP statuses, so a reader without view_detail is told "forbidden".
+    for (const [status, result] of [
+      [403, "forbidden"],
+      [404, "not_found"],
+    ] as const) {
+      getMock.mockRejectedValueOnce(
+        new AxiosError("refused", undefined, undefined, undefined, {
+          config: { headers: new AxiosHeaders() },
+          data: { code: status, msg: "refused", data: null },
+          headers: {},
+          status,
+          statusText: "",
+        }),
+      );
+      await expect(checkPermissionRequestResource(knowledgeBase)).resolves.toBe(result);
+    }
   });
 
   it("identifies a request marked as resource deleted without reading the resource", async () => {

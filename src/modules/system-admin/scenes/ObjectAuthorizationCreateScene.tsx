@@ -42,6 +42,7 @@ import {
 } from "@/modules/system-admin/utils/authz-catalog";
 import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
+import { useResourceTypeAvailability } from "@/modules/system-admin/hooks/use-resource-type-availability";
 
 import styles from "./admin.module.css";
 
@@ -67,7 +68,7 @@ const GRANT_LIST_PATH = "/system/authorizations";
 const FULL_BUSINESS_ACCESS = "full_business_access" as const;
 
 const OBJECT_TYPE_GROUPS = [
-  { key: "data", types: ["catalog"] },
+  { key: "data", types: ["catalog", "knowledge_base"] },
   { key: "knowledge", types: ["knowledge_network"] },
   { key: "execution", types: ["function", "tool_box", "mcp", "skill"] },
 ] as const;
@@ -97,6 +98,7 @@ export function ObjectAuthorizationCreateScene() {
     useAuthorizationRegistry();
   const fineGrainedCapability = useCapability(CAPABILITIES.PERM_FINE_GRAINED);
   const fineGrained = fineGrainedCapability === "available";
+  const resourceTypeAvailable = useResourceTypeAvailability();
   // Deep link from the object's own page (`?object=catalog::<id>`), so an administrator sent here
   // from a data catalog does not have to find it again among hundreds of objects.
   const [searchParams] = useSearchParams();
@@ -117,7 +119,8 @@ export function ObjectAuthorizationCreateScene() {
   const supportedDeepLinkedType =
     deepLinkedType &&
     isAuthzObjectPickerType(deepLinkedType) &&
-    (fineGrained || isCommunityObjectGrantType(deepLinkedType))
+    (fineGrained || isCommunityObjectGrantType(deepLinkedType)) &&
+    resourceTypeAvailable(deepLinkedType)
       ? deepLinkedType
       : undefined;
   const supportedDeepLinkedObject = supportedDeepLinkedType ? deepLinkedObject : undefined;
@@ -328,11 +331,12 @@ export function ObjectAuthorizationCreateScene() {
             (type) =>
               (AUTHZ_OBJECT_PICKER_TYPES as readonly string[]).includes(type) &&
               (fineGrained || isCommunityObjectGrantType(type)) &&
+              resourceTypeAvailable(type) &&
               Boolean(catalog?.resourceTypes.some((resourceType) => resourceType.id === type)),
           )
           .map((type) => ({ label: resourceTypeLabel(type), value: type })),
       })),
-    [catalog, fineGrained, t],
+    [catalog, fineGrained, resourceTypeAvailable, t],
   );
 
   const toggleOp = (opKey: string) => {

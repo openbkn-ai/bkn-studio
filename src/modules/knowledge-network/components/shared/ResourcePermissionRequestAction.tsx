@@ -12,6 +12,7 @@ import {
   DeploymentUnitOutlined,
   FileTextOutlined,
   LockOutlined,
+  ReadOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
 import {
@@ -107,6 +108,7 @@ type ResourcePermissionRequestActionProps = {
 function requestResourceIcon(resourceType: string) {
   if (resourceType === "knowledge_network") return <DeploymentUnitOutlined />;
   if (["catalog", "resource"].includes(resourceType)) return <DatabaseOutlined />;
+  if (resourceType === "knowledge_base") return <ReadOutlined />;
   if (["tool_box", "function"].includes(resourceType)) return <ToolOutlined />;
   if (resourceType === "mcp") return <ApiOutlined />;
   if (resourceType === "skill") return <FileTextOutlined />;
