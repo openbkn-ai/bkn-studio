@@ -8,6 +8,7 @@
 import {
   EllipsisOutlined,
   LockOutlined,
+  LoadingOutlined,
   ReloadOutlined,
   SearchOutlined,
   ThunderboltOutlined,
@@ -771,6 +772,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
           {
             key: "trial",
             disabled: trialLoadingKey === recordKey,
+            icon: trialLoadingKey === recordKey ? <LoadingOutlined spin /> : undefined,
             label: objectMetricText("m073728637a26"),
           },
           ...(canAuthorizeMetrics
@@ -791,6 +793,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
                 {
                   danger: true,
                   disabled: deletionPendingKey === recordKey,
+                  icon: deletionPendingKey === recordKey ? <LoadingOutlined spin /> : undefined,
                   key: "delete-version",
                   label: objectMetricText("metricDeleteVersion"),
                 },
@@ -811,7 +814,6 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
               ]
             : []),
         ];
-        const operationPending = trialLoadingKey === recordKey || deletionPendingKey === recordKey;
 
         return (
           <Dropdown
@@ -828,7 +830,6 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
             <AppButton
               aria-label={t("common.actions")}
               icon={<EllipsisOutlined style={{ fontSize: 20 }} />}
-              loading={operationPending}
               onClick={(event) => event.stopPropagation()}
               type="text"
             />
@@ -1205,7 +1206,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
                   }}
                   pagination={false}
                   rowKey={(record) => `${record.definition.id}-${record.definition.version}`}
-                  scroll={{ x: 1426 }}
+                  scroll={{ x: 1286 }}
                   tableLayout="fixed"
                 />
               </div>

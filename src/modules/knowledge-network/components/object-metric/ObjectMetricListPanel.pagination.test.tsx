@@ -668,6 +668,7 @@ describe("ObjectMetricListPanel pagination", () => {
     const headers = screen.getAllByRole("columnheader").map((header) => header.textContent);
     expect(headers.slice(0, 2)).toEqual(["对象指标", "common.actions"]);
     expect(screen.getByRole("columnheader", { name: "业务定义" })).toBeInTheDocument();
+    expect(container.querySelector("table")).toHaveStyle({ width: "1286px" });
   });
 
   it("loads binding status once for the selected object class", async () => {
@@ -1090,6 +1091,16 @@ describe("ObjectMetricListPanel pagination", () => {
     fireEvent.click(deleteItem);
     fireEvent.click(deleteItem);
     expect(mocks.checkDeletion).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "common.actions" })).toBeEnabled();
+    await openMetricActionMenu();
+    expect(await screen.findByRole("menuitem", { name: "详情" })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("menuitem", { name: /删除对象指标版本$/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
 
     act(() => {
       resolveCheck({
