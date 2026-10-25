@@ -1,0 +1,106 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+import type { ObjectMetricDataV1 } from "@/modules/knowledge-network/types/object-metric";
+
+import { MetricAnalysisView } from "./MetricAnalysisView";
+import { metricCell } from "./metric-cell";
+
+vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAnalysisPanel", () => ({
+  ObjectMetricAnalysisPanel: ({ resultTable }: { resultTable: React.ReactNode }) => (
+    <section>{resultTable}</section>
+  ),
+}));
+
+beforeAll(() => {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: false,
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  }));
+});
+
+afterAll(() => vi.unstubAllGlobals());
+
+const result: ObjectMetricDataV1 = {
+  model: {
+    metric_id: "inventory_available",
+    version: 1,
+    name: "库存可用量",
+    owner_object_type_id: "stock",
+    output_shape: "grouped",
+    value: {
+      physical_type: "decimal",
+      semantic_type: "measure",
+      unit: { system: "registered", quantity_kind: "count", code: "piece", scale_factor: 1 },
+    },
+  },
+  entries: [
+    {
+      dimensions: { warehouse: "苏州仓" },
+      value: "53156928.920000000000000001",
+      status: "ok",
+      bucket_key: "opaque-key",
+      available_actions: ["participants"],
+    },
+  ],
+  status: "partial",
+  total_count: 29,
+  next_cursor: "opaque-next-page",
+  warnings: ["结果被截断"],
+  overall_ms: 42,
+};
+
+describe("MetricAnalysisView", () => {
+  it("preserves exact decimal values and exposes status, unit, warnings and pagination", () => {
+    const onNextPage = vi.fn();
+    const exactResult = structuredClone(result);
+    exactResult.entries[0].value = 53156928.92;
+    (
+      exactResult.entries[0] as (typeof exactResult.entries)[0] & { display_value: string }
+    ).display_value = "53156928.920000000000000001";
+    render(<MetricAnalysisView onNextPage={onNextPage} result={exactResult} />);
+
+    expect(screen.getByText("53156928.920000000000000001")).toBeInTheDocument();
+    expect(screen.getByText("结果被截断")).toBeInTheDocument();
+    expect(screen.getByText(/总数 29/)).toBeInTheDocument();
+    expect(screen.getByText(/单位 piece/)).toBeInTheDocument();
+    expect(screen.getAllByText("partial").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "加载下一页" }));
+    expect(onNextPage).toHaveBeenCalledOnce();
+  });
+
+  it("uses the selected server bucket key for participant drill-through", async () => {
+    const onParticipants = vi.fn().mockResolvedValue({
+      participants: [{ instance_identity: { stock_id: "s-1" }, role: "owner" }],
+      evaluated_at: 1,
+      status: "ok",
+    });
+    render(<MetricAnalysisView onParticipants={onParticipants} result={result} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "查看参与实例" }));
+    await waitFor(() =>
+      expect(onParticipants).toHaveBeenCalledWith(
+        expect.objectContaining({ bucket_key: "opaque-key" }),
+        undefined,
+      ),
+    );
+    expect(await screen.findByText('{"stock_id":"s-1"}')).toBeInTheDocument();
+  });
+});
+
+describe("metricCell", () => {
+  it("does not round string decimals", () => {
+    expect(metricCell("100508026.490000000000000001")).toBe("100508026.490000000000000001");
+  });
+});

@@ -8,7 +8,8 @@
   "scripts": {
     "check:version": "node scripts/check-version.mjs",
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && pnpm run build:mcp-app",
+    "build:mcp-app": "vite build --config vite.config.mcp-app.ts",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:types": "eslint . --config eslint.config.typechecked.js",
@@ -32,6 +33,8 @@
     "@ant-design/icons": "^6.1.0",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@antv/g6": "5.1.1",
+    "@modelcontextprotocol/client": "^2.4.0",
+    "@modelcontextprotocol/ext-apps": "2.0.3",
     "@monaco-editor/react": "^4.7.0",
     "ai": "^7.0.4",
     "antd": "^5.29.2",
@@ -48,7 +51,8 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.2",
     "remark-gfm": "^4.0.1",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",
@@ -69,6 +73,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.1",
     "vite": "^7.1.10",
+    "vite-plugin-singlefile": "2.3.4",
     "vitest": "^4.1.11"
   }
 }

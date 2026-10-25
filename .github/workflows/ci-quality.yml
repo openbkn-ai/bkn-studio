@@ -141,7 +141,10 @@ jobs:
         run: pnpm exec tsc -b --pretty false
 
       - name: Production build
-        run: pnpm exec vite build
+        run: NODE_OPTIONS=--max-old-space-size=4096 pnpm exec vite build
+
+      - name: MCP App production bundle
+        run: pnpm run build:mcp-app
 
       - name: Production dependency audit
         run: pnpm audit --prod
