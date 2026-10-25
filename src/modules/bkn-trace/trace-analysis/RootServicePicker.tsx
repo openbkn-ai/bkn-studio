@@ -55,12 +55,14 @@ export function RootServicePicker({ value, onChange, query }: Props) {
       if (!controller.signal.aborted) setFeedback("failed");
     }
   };
+  const popupOpen = expanded && entries.length > 0;
   return (
     <div>
       <AutoComplete
         value={value}
         filterOption={false}
-        open={expanded && entries.length > 0}
+        defaultActiveFirstOption={false}
+        open={popupOpen}
         options={entries.map((entry) => ({ value: entry, label: entry }))}
         onChange={(nextValue) => onChange?.(nextValue)}
         onSearch={(search) => {
@@ -89,10 +91,11 @@ export function RootServicePicker({ value, onChange, query }: Props) {
               size="small"
               icon={<DownOutlined />}
               aria-label={t("bknTrace.traceWorkspace.serviceOptions.open")}
-              aria-expanded={expanded}
+              aria-expanded={popupOpen}
+              disabled={feedback === "loading"}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
-                if (expanded) close();
+                if (popupOpen) close();
                 else {
                   input.current?.focus();
                   setExpanded(true);

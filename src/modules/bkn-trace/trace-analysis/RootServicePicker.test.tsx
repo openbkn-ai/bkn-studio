@@ -59,6 +59,7 @@ describe("explicit root service candidates", { timeout: 30_000 }, () => {
     );
     const view = render(<RootServicePicker query={{ tool: "old" }} />);
     open();
+    expect(screen.getByRole("button", { name: key("open") })).toBeDisabled();
     const signal = vi.mocked(listRootServices).mock.calls[0]?.[1];
     view.rerender(<RootServicePicker query={{ tool: "new" }} />);
     expect(signal?.aborted).toBe(true);
@@ -74,6 +75,40 @@ describe("explicit root service candidates", { timeout: 30_000 }, () => {
     view.unmount();
     expect(vi.mocked(listRootServices).mock.calls[2]?.[1]?.aborted).toBe(true);
   });
+  it.each(["empty", "failed"])(
+    "retries %s candidates with one click and reports actual popup state",
+    async (state) => {
+      const mock = vi.mocked(listRootServices);
+      if (state === "failed") mock.mockRejectedValueOnce(new Error("unavailable"));
+      else mock.mockResolvedValueOnce({ entries: [], hasMore: false });
+      mock.mockResolvedValueOnce({ entries: ["CanonicalService"], hasMore: false });
+      render(<RootServicePicker query={{}} />);
+      open();
+      await screen.findByText(key(state));
+      expect(screen.getByRole("button", { name: key("open") })).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      open();
+      expect(await screen.findByTitle("CanonicalService")).toBeInTheDocument();
+      expect(mock).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("does not replace manual text with the first candidate on Enter", async () => {
+    vi.mocked(listRootServices).mockResolvedValue({
+      entries: ["CanonicalService"],
+      hasMore: false,
+    });
+    const onChange = vi.fn();
+    render(<RootServicePicker value="can" onChange={onChange} query={{}} />);
+    open();
+    await screen.findByTitle("CanonicalService");
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter", keyCode: 13, which: 13 });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("combobox")).toHaveValue("can");
+  });
+
   it("searches only while expanded", async () => {
     vi.mocked(listRootServices).mockResolvedValue({ entries: [], hasMore: false });
     render(<RootServicePicker query={{}} />);

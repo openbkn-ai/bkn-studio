@@ -356,22 +356,23 @@ export async function listRootServices(
   query: RootServiceOptionsQuery = {},
   signal?: AbortSignal,
 ): Promise<RootServiceOptions> {
-  const { data } = await http.get<{ entries: string[]; has_more: boolean }>(
+  const params = traceQueryParams({
+    from: query.from,
+    to: query.to,
+    traceId: query.traceId,
+    status: query.status,
+    tool: query.tool,
+    errorKeyword: query.errorKeyword,
+    limit: 100,
+  });
+  if (query.q) params.q = query.q;
+  const { data } = await http.get<{ entries?: string[] | null; has_more: boolean }>(
     "/agent-observability/v1/trace-root-services",
     {
-      params: {
-        from: query.from,
-        to: query.to,
-        trace_id: query.traceId,
-        status: query.status,
-        tool: query.tool,
-        error_keyword: query.errorKeyword,
-        q: query.q,
-        limit: 100,
-      },
+      params,
       signal,
       skipErrorToast: true,
     },
   );
-  return { entries: data.entries.map((entry) => entry), hasMore: data.has_more };
+  return { entries: (data.entries ?? []).map((entry) => entry), hasMore: data.has_more };
 }

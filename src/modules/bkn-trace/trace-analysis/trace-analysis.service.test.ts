@@ -53,6 +53,37 @@ describe("trace-analysis service", () => {
     });
   });
 
+  it.each([null, undefined])("accepts nullish root-service entries %s", async (entries) => {
+    getMock.mockResolvedValueOnce({ data: { entries, has_more: false } });
+    const { listRootServices } = await import("./trace-analysis.service");
+    await expect(listRootServices()).resolves.toEqual({ entries: [], hasMore: false });
+  });
+
+  it("rejects malformed root-service entries instead of hiding them", async () => {
+    getMock.mockResolvedValueOnce({ data: { entries: "invalid", has_more: false } });
+    const { listRootServices } = await import("./trace-analysis.service");
+    await expect(listRootServices()).rejects.toThrow();
+  });
+
+  it("omits cleared root-service query filters", async () => {
+    getMock.mockResolvedValueOnce({ data: { entries: [], has_more: false } });
+    const { listRootServices } = await import("./trace-analysis.service");
+    await listRootServices({
+      from: "",
+      to: "",
+      traceId: "",
+      status: "",
+      tool: "",
+      errorKeyword: "",
+      q: "",
+    });
+    expect(getMock).toHaveBeenLastCalledWith("/agent-observability/v1/trace-root-services", {
+      params: { limit: 100 },
+      signal: undefined,
+      skipErrorToast: true,
+    });
+  });
+
   it("maps bounded display metadata without another first-screen request", async () => {
     getMock.mockResolvedValueOnce({
       data: {
