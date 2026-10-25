@@ -16,10 +16,15 @@ import { createElement, type PropsWithChildren, type ReactElement } from "react"
 // takes seconds and a polling findByRole can exceed the test timeout under CI
 // load. Server mode keeps the rules in the style cache instead of the document.
 // Hidden checks still see the hidden attribute, aria-hidden and inline styles.
-function WithoutAntdStyles({ children }: PropsWithChildren) {
-  return createElement(StyleProvider, { mock: "server" }, children);
-}
-
+// A caller's own wrapper renders inside the provider instead of replacing it.
 export function renderWithoutAntdStyles(ui: ReactElement, options?: RenderOptions) {
-  return render(ui, { wrapper: WithoutAntdStyles, ...options });
+  const { wrapper: Outer, ...rest } = options ?? {};
+  function WithoutAntdStyles({ children }: PropsWithChildren) {
+    return createElement(
+      StyleProvider,
+      { mock: "server" },
+      Outer ? createElement(Outer, null, children) : children,
+    );
+  }
+  return render(ui, { ...rest, wrapper: WithoutAntdStyles });
 }
