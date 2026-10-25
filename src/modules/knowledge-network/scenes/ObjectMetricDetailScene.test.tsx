@@ -297,7 +297,7 @@ describe("ObjectMetricDetailScene actions", () => {
     };
     const base = record("published", "object_set");
     base.definition.id = "base";
-    base.definition.name = "GMV（成交总金额）（基础原子指标）";
+    base.definition.name = "GMV（成交总金额）（基础原子对象指标）";
     mocks.getObjectMetricV1.mockImplementation((_networkId, metricId) =>
       Promise.resolve(metricId === "base" ? base : derived),
     );
@@ -780,7 +780,7 @@ describe("ObjectMetricDetailScene actions", () => {
 
     render(<ObjectMetricDetailScene />);
 
-    expect(await screen.findByText("指标不存在")).toBeInTheDocument();
+    expect(await screen.findByText("对象指标不存在")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "已用券次数" })).not.toBeInTheDocument();
   });
 });

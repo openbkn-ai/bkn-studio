@@ -209,12 +209,12 @@ describe("ObjectMetricLineagePanel", () => {
       kind: "atomic",
       measure: { aggregation: "count_rows" },
     });
-    const released = metric("released_derived", "已发布衍生指标", {
+    const released = metric("released_derived", "已发布衍生对象指标", {
       base_metric: { metric_id: current.definition.id, version: 1 },
       business_qualifiers: {},
       kind: "derived",
     });
-    const draft = metric("draft_derived", "草稿衍生指标", {
+    const draft = metric("draft_derived", "草稿衍生对象指标", {
       base_metric: { metric_id: current.definition.id, version: 1 },
       business_qualifiers: {},
       kind: "derived",
@@ -226,8 +226,8 @@ describe("ObjectMetricLineagePanel", () => {
 
     expect(screen.getByText("已发布引用")).toBeInTheDocument();
     expect(screen.getByText("待发布引用")).toBeInTheDocument();
-    expect(screen.getByText("已发布衍生指标")).toBeInTheDocument();
-    expect(screen.getByText("草稿衍生指标")).toBeInTheDocument();
+    expect(screen.getByText("已发布衍生对象指标")).toBeInTheDocument();
+    expect(screen.getByText("草稿衍生对象指标")).toBeInTheDocument();
     expect(screen.queryByText("下游 2")).not.toBeInTheDocument();
   });
 

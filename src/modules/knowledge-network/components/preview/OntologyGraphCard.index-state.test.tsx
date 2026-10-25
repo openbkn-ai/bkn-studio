@@ -5,15 +5,22 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-const { getCatalogResources, getKnowledgeNetworkConceptGroup, listKnowledgeNetworkConceptGroups } =
-  vi.hoisted(() => ({
-    getCatalogResources: vi.fn(),
-    getKnowledgeNetworkConceptGroup: vi.fn(),
-    listKnowledgeNetworkConceptGroups: vi.fn(),
-  }));
+const {
+  getCatalogResources,
+  getKnowledgeNetworkConceptGroup,
+  listKnowledgeNetworkConceptGroups,
+  listKnowledgeNetworkObjectTypes,
+  listKnowledgeNetworkRelationTypes,
+} = vi.hoisted(() => ({
+  getCatalogResources: vi.fn(),
+  getKnowledgeNetworkConceptGroup: vi.fn(),
+  listKnowledgeNetworkConceptGroups: vi.fn(),
+  listKnowledgeNetworkObjectTypes: vi.fn(),
+  listKnowledgeNetworkRelationTypes: vi.fn(),
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -29,9 +36,28 @@ vi.mock("@/modules/knowledge-network/services/concept-group.service", () => ({
   listKnowledgeNetworkConceptGroups,
 }));
 
+vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
+  listKnowledgeNetworkObjectTypes,
+  listKnowledgeNetworkRelationTypes,
+}));
+
 vi.mock("./OntologyGraphView", () => ({
-  OntologyGraphView: ({ indexedIds }: { indexedIds: Set<string> }) => (
-    <div data-testid="indexed-object-types">{[...indexedIds].join(",")}</div>
+  OntologyGraphView: ({
+    groupNames,
+    groupOf,
+    indexedIds,
+  }: {
+    groupNames: Map<string, string>;
+    groupOf: Map<string, string>;
+    indexedIds: Set<string>;
+  }) => (
+    <div
+      data-group-names={[...groupNames].flat().join(",")}
+      data-groups={[...groupOf].flat().join(",")}
+      data-testid="indexed-object-types"
+    >
+      {[...indexedIds].join(",")}
+    </div>
   ),
 }));
 
@@ -103,5 +129,52 @@ describe("OntologyGraphCard resource authorization regression", () => {
       "object-denied-resource",
     );
     expect(getCatalogResources).not.toHaveBeenCalled();
+  });
+
+  it("uses memberships already returned with overview nodes for logical grouping", async () => {
+    render(
+      <OntologyGraphCard
+        loadConceptGroups={false}
+        networkId="network-1"
+        objectTypes={[
+          {
+            color: "#1677ff",
+            conceptGroupIds: ["group-z", "group-a"],
+            conceptGroupNames: ["Zulu", "Alpha"],
+            description: "",
+            hasIndex: false,
+            id: "customer",
+            name: "Customer",
+            tags: [],
+            updateTime: "",
+            updaterName: "",
+          },
+        ]}
+        relationTypes={[]}
+      />,
+    );
+
+    const graph = await screen.findByTestId("indexed-object-types");
+    expect(graph).toHaveAttribute("data-groups", "customer,group-a");
+    expect(graph).toHaveAttribute("data-group-names", "group-a,Alpha,group-z,Zulu");
+    expect(listKnowledgeNetworkConceptGroups).not.toHaveBeenCalled();
+  });
+
+  it("does not reload uncontrolled graph data when a controlled selection changes", async () => {
+    listKnowledgeNetworkConceptGroups.mockResolvedValue([]);
+    listKnowledgeNetworkObjectTypes.mockResolvedValue([]);
+    listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
+
+    const { rerender } = render(<OntologyGraphCard networkId="network-1" selectedId="customer" />);
+
+    await waitFor(() => {
+      expect(listKnowledgeNetworkObjectTypes).toHaveBeenCalledTimes(1);
+      expect(listKnowledgeNetworkRelationTypes).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(<OntologyGraphCard networkId="network-1" selectedId="order" />);
+
+    expect(listKnowledgeNetworkObjectTypes).toHaveBeenCalledTimes(1);
+    expect(listKnowledgeNetworkRelationTypes).toHaveBeenCalledTimes(1);
   });
 });

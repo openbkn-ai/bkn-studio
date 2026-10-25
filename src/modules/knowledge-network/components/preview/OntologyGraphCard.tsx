@@ -35,23 +35,41 @@ import { buildModelingPreviewGraph } from "@/modules/knowledge-network/utils/bui
 
 import styles from "./OntologyGraphCard.module.css";
 
+const EMPTY_GROUP_MAP = new Map<string, string>();
+
 type OntologyGraphCardProps = {
+  emptyDescription?: string;
+  fillAvailableHeight?: boolean;
   loadConceptGroups?: boolean;
+  logicalGrouping?: boolean;
   networkId: string;
   objectTypes?: KnowledgeNetworkObjectTypeRecord[];
   onExpandNode?: (id: string) => void;
+  onSelectedIdChange?: (id: string | null) => void;
   relationTypes?: KnowledgeNetworkRelationTypeRecord[];
+  selectedId?: string | null;
+  showInspector?: boolean;
+  title?: string;
 };
 
 export function OntologyGraphCard({
+  emptyDescription,
+  fillAvailableHeight = false,
   loadConceptGroups = true,
+  logicalGrouping = true,
   networkId,
   objectTypes: objectTypesProp,
   onExpandNode,
+  onSelectedIdChange,
   relationTypes: relationTypesProp,
+  selectedId: selectedIdProp,
+  showInspector = true,
+  title,
 }: OntologyGraphCardProps) {
   const { t } = useTranslation();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [uncontrolledSelectedId, setUncontrolledSelectedId] = useState<string | null>(null);
+  const selectionControlled = selectedIdProp !== undefined;
+  const selectedId = selectedIdProp === undefined ? uncontrolledSelectedId : selectedIdProp;
 
   const controlled = objectTypesProp !== undefined && relationTypesProp !== undefined;
   const [fetchedObjectTypes, setFetchedObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>(
@@ -68,7 +86,9 @@ export function OntologyGraphCard({
     }
     let cancelled = false;
     setLoading(true);
-    setSelectedId(null);
+    if (!selectionControlled) {
+      setUncontrolledSelectedId(null);
+    }
     Promise.all([
       listKnowledgeNetworkObjectTypes(networkId),
       listKnowledgeNetworkRelationTypes(networkId),
@@ -93,7 +113,7 @@ export function OntologyGraphCard({
     return () => {
       cancelled = true;
     };
-  }, [controlled, networkId]);
+  }, [controlled, networkId, selectionControlled]);
 
   const objectTypes = controlled ? objectTypesProp : fetchedObjectTypes;
   const relationTypes = controlled ? relationTypesProp : fetchedRelationTypes;
@@ -109,19 +129,36 @@ export function OntologyGraphCard({
   );
 
   const handleSelect = (id: string | null) => {
-    setSelectedId(id);
+    if (selectedIdProp === undefined) {
+      setUncontrolledSelectedId(id);
+    }
+    onSelectedIdChange?.(id);
     if (id && id !== selectedId) {
       onExpandNode?.(id);
     }
   };
 
   // Concept-group membership from node to group ID for logical-group clustering. Group details supply member object types.
-  const [groupOf, setGroupOf] = useState<Map<string, string>>(new Map());
-  const [groupNames, setGroupNames] = useState<Map<string, string>>(new Map());
+  const inlineGroups = useMemo(() => {
+    const membership = new Map<string, string>();
+    const names = new Map<string, string>();
+    objectTypes.forEach((objectType) => {
+      const groups = objectType.conceptGroupIds
+        .map((id, index) => ({ id, name: objectType.conceptGroupNames[index] ?? id }))
+        .sort(
+          (left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id),
+        );
+      if (groups[0]) membership.set(objectType.id, groups[0].id);
+      groups.forEach((group) => names.set(group.id, group.name));
+    });
+    return { membership, names };
+  }, [objectTypes]);
+  const [fetchedGroupOf, setFetchedGroupOf] = useState<Map<string, string>>(new Map());
+  const [fetchedGroupNames, setFetchedGroupNames] = useState<Map<string, string>>(new Map());
   useEffect(() => {
-    if (!loadConceptGroups) {
-      setGroupOf(new Map());
-      setGroupNames(new Map());
+    if (!logicalGrouping || !loadConceptGroups || inlineGroups.membership.size > 0) {
+      setFetchedGroupOf(new Map());
+      setFetchedGroupNames(new Map());
       return;
     }
     let cancelled = false;
@@ -148,24 +185,35 @@ export function OntologyGraphCard({
         groups.forEach((group) => {
           details.get(group.id)?.objectTypes.forEach((item) => map.set(item.id, group.id));
         });
-        setGroupOf(map);
-        setGroupNames(new Map(groups.map((group) => [group.id, group.name])));
+        setFetchedGroupOf(map);
+        setFetchedGroupNames(new Map(groups.map((group) => [group.id, group.name])));
       })
       .catch(() => {
         if (!cancelled) {
-          setGroupOf(new Map());
-          setGroupNames(new Map());
+          setFetchedGroupOf(new Map());
+          setFetchedGroupNames(new Map());
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [loadConceptGroups, networkId]);
+  }, [inlineGroups.membership.size, loadConceptGroups, logicalGrouping, networkId]);
+
+  const groupOf = logicalGrouping
+    ? inlineGroups.membership.size > 0
+      ? inlineGroups.membership
+      : fetchedGroupOf
+    : EMPTY_GROUP_MAP;
+  const groupNames = logicalGrouping
+    ? inlineGroups.membership.size > 0
+      ? inlineGroups.names
+      : fetchedGroupNames
+    : EMPTY_GROUP_MAP;
 
   return (
-    <div className={styles.graphCard}>
+    <div className={`${styles.graphCard} ${fillAvailableHeight ? styles.graphCardFill : ""}`}>
       <div className={styles.graphHeader}>
-        <h3 className={styles.graphTitle}>{t("knowledgeNetwork.previewCanvas")}</h3>
+        <h3 className={styles.graphTitle}>{title ?? t("knowledgeNetwork.previewCanvas")}</h3>
         <span className={styles.graphLegend}>
           <DeploymentUnitOutlined />
           {t("knowledgeNetwork.previewGraphLegend")}
@@ -178,10 +226,12 @@ export function OntologyGraphCard({
         </div>
       ) : graph.nodes.length === 0 ? (
         <div className={styles.emptyPanel}>
-          <Empty description={t("knowledgeNetwork.previewEmpty")} />
+          <Empty description={emptyDescription ?? t("knowledgeNetwork.previewEmpty")} />
         </div>
       ) : (
-        <div className={styles.graphLayout}>
+        <div
+          className={`${styles.graphLayout} ${showInspector ? "" : styles.graphLayoutWithoutInspector}`}
+        >
           <div className={styles.graphCanvas}>
             <OntologyGraphView
               graph={graph}
@@ -192,15 +242,17 @@ export function OntologyGraphCard({
               onSelect={handleSelect}
             />
           </div>
-          <aside className={styles.graphAside}>
-            <OntologyInspectorPanel
-              networkId={networkId}
-              objectTypes={objectTypes}
-              relationTypes={relationTypes}
-              selectedId={selectedId}
-              onSelect={handleSelect}
-            />
-          </aside>
+          {showInspector ? (
+            <aside className={styles.graphAside}>
+              <OntologyInspectorPanel
+                networkId={networkId}
+                objectTypes={objectTypes}
+                relationTypes={relationTypes}
+                selectedId={selectedId}
+                onSelect={handleSelect}
+              />
+            </aside>
+          ) : null}
         </div>
       )}
     </div>

@@ -8,12 +8,13 @@
 import { Alert, Form, Input, Spin } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   DEFAULT_RESOURCE_COLOR,
   ResourceColorSelect,
@@ -37,6 +38,7 @@ type ConceptGroupFormSceneProps = {
 
 export function ConceptGroupFormScene({ mode }: ConceptGroupFormSceneProps) {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message } = useAppServices();
   const { conceptGroupId = "", networkId = "" } = useParams<{
@@ -49,7 +51,11 @@ export function ConceptGroupFormScene({ mode }: ConceptGroupFormSceneProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pageTitle, setPageTitle] = useState(t("knowledgeNetwork.conceptGroupCreateTitle"));
 
-  const listPath = `/knowledge-network/workspace/${networkId}/concept-groups`;
+  const listPath = knowledgeNetworkReturnPath(
+    networkId,
+    location.state,
+    `/knowledge-network/workspace/${networkId}/concept-groups`,
+  );
 
   useEffect(() => {
     const loadData = async () => {

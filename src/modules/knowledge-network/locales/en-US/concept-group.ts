@@ -22,6 +22,13 @@ export const conceptgroupPart = {
   conceptGroupEmptyNoSearchResult: "No matching concept groups found.",
   conceptGroupExport: "Export",
   conceptGroupExportSuccess: "Concept group exported successfully.",
+  conceptGroupGraphEmpty: "There are no visible object types in this group.",
+  conceptGroupGraphBack: "Back to group graph",
+  conceptGroupGraphObjects: "Object types",
+  conceptGroupGraphPartialError:
+    "Some graph data could not be loaded. The currently available portion is shown.",
+  conceptGroupGraphView: "Graph",
+  conceptGroupListView: "List",
   conceptGroupMembersEmpty: "There are no related members in this group yet.",
   conceptGroupName: "Concept group name",
   conceptGroupNameRequired: "Please enter a concept group name.",

@@ -305,7 +305,7 @@ describe("object metric lifecycle", () => {
     await expect(getObjectMetricV1(networkId, draft.definition.id)).resolves.toBeUndefined();
 
     const publishedDefinition = createObjectMetricDefinitionV1("atomic", "order");
-    publishedDefinition.name = "已发布指标";
+    publishedDefinition.name = "已发布对象指标";
     publishedDefinition.description = "已发布版本不能被草稿删除接口移除";
     const publishedDraft = await createObjectMetricDraftV1(networkId, publishedDefinition);
     await validateObjectMetricVersionV1(

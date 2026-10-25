@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { AimOutlined, ZoomInOutlined, ZoomOutOutlined } from "@ant-design/icons";
+import { AimOutlined, ArrowLeftOutlined, ZoomInOutlined, ZoomOutOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
@@ -100,6 +100,9 @@ type Props = {
   allowDeleteObject?: boolean;
   allowDeleteRelation?: boolean;
   allowEditObject?: boolean;
+  allowExecuteAction?: boolean;
+  allowTrialMetric?: boolean;
+  backLabel?: string;
   canAuthorizeObject: boolean;
   canModify: boolean;
   canRequestObjectPermission: boolean;
@@ -114,6 +117,7 @@ type Props = {
   onAuthorizeAction?: (action: KnowledgeNetworkActionTypeRecord) => void;
   onAuthorizeObject: (objectType: KnowledgeNetworkObjectTypeRecord) => void;
   onAuthorizeRelation?: (relation: KnowledgeNetworkRelationTypeRecord) => void;
+  onBack?: () => void;
   onDeleteAction?: (action: KnowledgeNetworkActionTypeRecord) => void;
   onDeleteObject: (objectType: KnowledgeNetworkObjectTypeRecord) => void;
   onDeleteRelation?: (relation: KnowledgeNetworkRelationTypeRecord) => void;
@@ -408,6 +412,9 @@ export function ObjectTypeResourceGraph({
   allowDeleteObject = true,
   allowDeleteRelation = false,
   allowEditObject = true,
+  allowExecuteAction = true,
+  allowTrialMetric = true,
+  backLabel,
   canAuthorizeObject,
   canModify,
   canRequestObjectPermission,
@@ -422,6 +429,7 @@ export function ObjectTypeResourceGraph({
   onAuthorizeAction,
   onAuthorizeObject,
   onAuthorizeRelation,
+  onBack,
   onDeleteAction,
   onDeleteObject,
   onDeleteRelation,
@@ -1051,7 +1059,9 @@ export function ObjectTypeResourceGraph({
     selected.value !== undefined &&
     hasKnowledgeNetworkRecordOperation(selected.value, "modify");
   const canExecuteSelected =
-    selected?.kind === "action" && hasKnowledgeNetworkRecordOperation(selected.value, "execute");
+    allowExecuteAction &&
+    selected?.kind === "action" &&
+    hasKnowledgeNetworkRecordOperation(selected.value, "execute");
   const canEditSelectedAction =
     selectedAction !== undefined &&
     onEditAction !== undefined &&
@@ -1305,6 +1315,17 @@ export function ObjectTypeResourceGraph({
     <div className={styles.root}>
       <div className={styles.toolbar}>
         <div className={styles.toolbarIdentity}>
+          {onBack ? (
+            <Tooltip title={backLabel}>
+              <Button
+                aria-label={backLabel}
+                icon={<ArrowLeftOutlined />}
+                onClick={onBack}
+                size="small"
+                type="text"
+              />
+            </Tooltip>
+          ) : null}
           <strong title={objectType.name}>{objectType.name}</strong>
         </div>
         <div className={styles.toolbarControls}>
@@ -2102,7 +2123,7 @@ export function ObjectTypeResourceGraph({
         networkId={networkId}
         onClose={() => setSelected(undefined)}
         onOpenMetric={onOpenMetric}
-        onTrialMetric={onTrialMetric}
+        onTrialMetric={allowTrialMetric ? onTrialMetric : undefined}
         open={Boolean(selectedMetric)}
         ownerObjectType={metricOwnerObjectType}
         ownerObjectTypeName={objectType.name}

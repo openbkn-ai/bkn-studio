@@ -263,7 +263,7 @@ describe("resource-catalog", () => {
     expect(resourceTypeLabel("object_type")).toBe("对象类");
     expect(resourceTypeLabel("relation_type")).toBe("关系类");
     expect(resourceTypeLabel("action_type")).toBe("行动类");
-    expect(resourceTypeLabel("metric")).toBe("指标");
+    expect(resourceTypeLabel("metric")).toBe("对象指标");
     expect(resourceTypeLabel("risk_type")).toBe("风险类");
   });
 

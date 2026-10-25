@@ -86,7 +86,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
     identifier: "domain_supply_network",
     operations: mockKnowledgeNetworkOperations,
     name: "领域供应链知识网络",
-    description: "用于供应商、仓配、履约行动和经营指标建模的领域知识网络。",
+    description: "用于供应商、仓配、履约行动和经营对象指标建模的领域知识网络。",
     color: "#13c2c2",
     icon: "share-alt",
     tags: ["供应链"],
@@ -233,7 +233,7 @@ export const mockConceptGroups: Record<string, ConceptGroupDetail[]> = {
     {
       id: "cg-risk-monitor",
       name: "监控告警",
-      description: "围绕监控指标与告警动作组织的概念分组。",
+      description: "围绕监控对象指标与告警动作组织的概念分组。",
       color: "#fa8c16",
       tags: ["告警"],
       objectTypesTotal: 3,

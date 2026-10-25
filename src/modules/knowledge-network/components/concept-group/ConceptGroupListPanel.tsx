@@ -14,11 +14,11 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, Input, Select, Table } from "antd";
+import { Dropdown, Empty, Input, Segmented, Select, Spin, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { isCommunityBuild } from "@/framework/entitlement/types";
@@ -26,6 +26,9 @@ import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { ConceptGroupGraphPanel } from "@/modules/knowledge-network/components/concept-group/ConceptGroupGraphPanel";
+import { ConceptGroupGraphSidebar } from "@/modules/knowledge-network/components/concept-group/ConceptGroupGraphSidebar";
+import type { ObjectTypeGraphSelectedResource } from "@/modules/knowledge-network/components/object-type/ObjectTypeResourceGraph";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
@@ -33,8 +36,17 @@ import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-netwo
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
-import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import {
+  readPositiveInteger,
+  readStoredPageSize,
+  writeStoredPageSize,
+} from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import {
+  knowledgeNetworkReturnState,
+  readKnowledgeNetworkGraphSelection,
+  writeKnowledgeNetworkGraphSelection,
+} from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import { getKnowledgeNetworkConceptGroup } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { listKnowledgeNetworkConceptGroupPage } from "@/modules/knowledge-network/services/concept-group.service";
 import type {
@@ -45,6 +57,7 @@ import { downloadConceptGroupExport } from "@/modules/knowledge-network/utils/co
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
+import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
 
 type ConceptGroupListPanelProps = {
   canDelete: boolean;
@@ -58,6 +71,16 @@ type ConceptGroupListPanelProps = {
   ) => Promise<void>;
 };
 
+function readSortBy(value: string | null): "name" | "updateTime" {
+  return value === "name" ? "name" : "updateTime";
+}
+
+function readSortDirection(value: string | null): "asc" | "desc" {
+  return value === "asc" ? "asc" : "desc";
+}
+
+const PAGE_SIZE_STORAGE_SCOPE = "concept-groups";
+
 export function ConceptGroupListPanel({
   canDelete,
   canModify,
@@ -69,15 +92,32 @@ export function ConceptGroupListPanel({
   const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { message, modal } = useAppServices();
   const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
-  const [keyword, setKeyword] = useState("");
-  const [selectedTag, setSelectedTag] = useState("all");
-  const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = usePersistentPageSize("concept-groups");
+  const [keyword, setKeyword] = useState(() => searchParams.get("q") ?? "");
+  const [selectedTag, setSelectedTag] = useState(() => searchParams.get("tag") ?? "all");
+  const [sortBy, setSortBy] = useState<"name" | "updateTime">(() =>
+    readSortBy(searchParams.get("sort")),
+  );
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">(() =>
+    readSortDirection(searchParams.get("order")),
+  );
+  const [page, setPage] = useState(() => readPositiveInteger(searchParams.get("page"), 1));
+  const [pageSize, setPageSize] = useState(() =>
+    searchParams.has("pageSize")
+      ? readPositiveInteger(searchParams.get("pageSize"), 10)
+      : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
+  );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"graph" | "list">(() =>
+    searchParams.get("view") === "list" ? "list" : "graph",
+  );
+  const [selectedGraphGroupId, setSelectedGraphGroupId] = useState(
+    () => searchParams.get("conceptGroupId") ?? "",
+  );
+  const [selectedGraphGroup, setSelectedGraphGroup] = useState<ConceptGroupRecord | null>(null);
+  const [selectedGraphGroupLoading, setSelectedGraphGroupLoading] = useState(false);
   const [authorizingRecord, setAuthorizingRecord] = useState<ConceptGroupRecord | null>(null);
   const [items, setItems] = useState<ConceptGroupRecord[]>([]);
   const [tagOptions, setTagOptions] = useState<string[]>([]);
@@ -143,6 +183,185 @@ export function ConceptGroupListPanel({
     sortDirection,
   ]);
 
+  useEffect(() => {
+    if (viewMode !== "graph" || isLoading) return;
+
+    const selectedFromPage = items.find((item) => item.id === selectedGraphGroupId);
+    if (selectedFromPage) {
+      setSelectedGraphGroup(selectedFromPage);
+      setSelectedGraphGroupLoading(false);
+      return;
+    }
+
+    if (!selectedGraphGroupId) {
+      const first = items[0];
+      setSelectedGraphGroup(first ?? null);
+      setSelectedGraphGroupId(first?.id ?? "");
+      setSelectedGraphGroupLoading(false);
+      return;
+    }
+
+    if (selectedGraphGroup?.id === selectedGraphGroupId) return;
+
+    let cancelled = false;
+    setSelectedGraphGroupLoading(true);
+    void getKnowledgeNetworkConceptGroup(networkId, selectedGraphGroupId)
+      .then((result) => {
+        if (cancelled) return;
+        if (result) {
+          setSelectedGraphGroup(result);
+          return;
+        }
+        const first = items[0];
+        setSelectedGraphGroup(first ?? null);
+        setSelectedGraphGroupId(first?.id ?? "");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const first = items[0];
+        setSelectedGraphGroup(first ?? null);
+        setSelectedGraphGroupId(first?.id ?? "");
+      })
+      .finally(() => {
+        if (!cancelled) setSelectedGraphGroupLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoading, items, networkId, selectedGraphGroup, selectedGraphGroupId, viewMode]);
+
+  useEffect(() => {
+    const nextKeyword = searchParams.get("q") ?? "";
+    const nextTag = searchParams.get("tag") ?? "all";
+    const nextSortBy = readSortBy(searchParams.get("sort"));
+    const nextSortDirection = readSortDirection(searchParams.get("order"));
+    const nextPage = readPositiveInteger(searchParams.get("page"), 1);
+    const nextPageSize = searchParams.has("pageSize")
+      ? readPositiveInteger(searchParams.get("pageSize"), 10)
+      : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10);
+    const nextViewMode = searchParams.get("view") === "list" ? "list" : "graph";
+    const nextConceptGroupId = searchParams.get("conceptGroupId") ?? "";
+
+    setKeyword((current) => (current === nextKeyword ? current : nextKeyword));
+    setSelectedTag((current) => (current === nextTag ? current : nextTag));
+    setSortBy((current) => (current === nextSortBy ? current : nextSortBy));
+    setSortDirection((current) => (current === nextSortDirection ? current : nextSortDirection));
+    setPage((current) => (current === nextPage ? current : nextPage));
+    setPageSize((current) => (current === nextPageSize ? current : nextPageSize));
+    setViewMode((current) => (current === nextViewMode ? current : nextViewMode));
+    setSelectedGraphGroupId((current) =>
+      current === nextConceptGroupId ? current : nextConceptGroupId,
+    );
+  }, [searchParams]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchParams);
+
+    writeStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, pageSize);
+    if (keyword.trim()) nextParams.set("q", keyword.trim());
+    else nextParams.delete("q");
+    if (selectedTag !== "all") nextParams.set("tag", selectedTag);
+    else nextParams.delete("tag");
+    if (sortBy !== "updateTime") nextParams.set("sort", sortBy);
+    else nextParams.delete("sort");
+    if (sortDirection !== "desc") nextParams.set("order", sortDirection);
+    else nextParams.delete("order");
+    if (page !== 1) nextParams.set("page", String(page));
+    else nextParams.delete("page");
+    if (pageSize !== 10) nextParams.set("pageSize", String(pageSize));
+    else nextParams.delete("pageSize");
+
+    if (viewMode === "graph") {
+      nextParams.delete("view");
+      if (selectedGraphGroupId) nextParams.set("conceptGroupId", selectedGraphGroupId);
+      else nextParams.delete("conceptGroupId");
+    } else {
+      nextParams.set("view", "list");
+      nextParams.delete("conceptGroupId");
+      nextParams.delete("focusObjectTypeId");
+      writeKnowledgeNetworkGraphSelection(nextParams);
+    }
+
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [
+    keyword,
+    page,
+    pageSize,
+    searchParams,
+    selectedGraphGroupId,
+    selectedTag,
+    setSearchParams,
+    sortBy,
+    sortDirection,
+    viewMode,
+  ]);
+
+  const restoredGraphSelection = readKnowledgeNetworkGraphSelection(searchParams);
+  const focusedGraphObjectTypeId = searchParams.get("focusObjectTypeId");
+  const selectedGraphObjectTypeId =
+    !focusedGraphObjectTypeId && restoredGraphSelection?.kind === "object"
+      ? restoredGraphSelection.id
+      : null;
+  const currentReturnTo = `/knowledge-network/workspace/${networkId}/concept-groups${
+    searchParams.toString() ? `?${searchParams.toString()}` : ""
+  }`;
+  const navigationState = knowledgeNetworkReturnState(currentReturnTo);
+
+  const handleGraphObjectTypeSelection = useCallback(
+    (id: string | null) => {
+      const nextParams = new URLSearchParams(searchParams);
+      writeKnowledgeNetworkGraphSelection(nextParams, id ? { id, kind: "object" } : undefined);
+      if (nextParams.toString() !== searchParams.toString()) {
+        setSearchParams(nextParams, { replace: true });
+      }
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const handleFocusedObjectTypeChange = useCallback(
+    (id: string | null) => {
+      const nextParams = new URLSearchParams(searchParams);
+      if (id) {
+        nextParams.set("focusObjectTypeId", id);
+        writeKnowledgeNetworkGraphSelection(nextParams);
+      } else {
+        nextParams.delete("focusObjectTypeId");
+        writeKnowledgeNetworkGraphSelection(nextParams);
+      }
+      if (nextParams.toString() !== searchParams.toString()) {
+        setSearchParams(nextParams, { replace: true });
+      }
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const handleGraphResourceSelection = useCallback(
+    (resource?: ObjectTypeGraphSelectedResource) => {
+      const nextParams = new URLSearchParams(searchParams);
+      writeKnowledgeNetworkGraphSelection(
+        nextParams,
+        resource
+          ? {
+              id:
+                resource.kind === "object"
+                  ? resource.id
+                  : resource.kind === "metric"
+                    ? resource.value.definition.id
+                    : resource.value.id,
+              kind: resource.kind,
+              ...(resource.kind === "metric" ? { version: resource.value.definition.version } : {}),
+            }
+          : undefined,
+      );
+      if (nextParams.toString() !== searchParams.toString()) {
+        setSearchParams(nextParams, { replace: true });
+      }
+    },
+    [searchParams, setSearchParams],
+  );
+
   const hasActiveFilter = useMemo(
     () => Boolean(keyword.trim()) || selectedTag !== "all",
     [keyword, selectedTag],
@@ -156,6 +375,16 @@ export function ConceptGroupListPanel({
       ),
     [items, selectedRowKeys],
   );
+  const deleteTargets = useMemo(() => {
+    if (viewMode === "list") return selectedRows;
+    if (
+      selectedGraphGroup?.id !== selectedGraphGroupId ||
+      !hasKnowledgeNetworkRecordOperation(selectedGraphGroup, "delete")
+    ) {
+      return [];
+    }
+    return [selectedGraphGroup];
+  }, [selectedGraphGroup, selectedGraphGroupId, selectedRows, viewMode]);
 
   const confirmDelete = (records: ConceptGroupRecord[]) => {
     if (records.length === 0) {
@@ -182,6 +411,16 @@ export function ConceptGroupListPanel({
       okText: t("common.delete"),
       onOk: async () => {
         await onDelete(records);
+        const deletedIds = new Set(records.map((record) => record.id));
+        setItems((current) => current.filter((item) => !deletedIds.has(item.id)));
+        if (deletedIds.has(selectedGraphGroupId)) {
+          setSelectedGraphGroupId("");
+          setSelectedGraphGroup(null);
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.delete("focusObjectTypeId");
+          writeKnowledgeNetworkGraphSelection(nextParams);
+          setSearchParams(nextParams, { replace: true });
+        }
         setSelectedRowKeys([]);
         setRefreshVersion((current) => current + 1);
       },
@@ -205,12 +444,19 @@ export function ConceptGroupListPanel({
 
   const handleOperate = (key: string, record: ConceptGroupRecord) => {
     if (key === "view") {
-      void navigate(`/knowledge-network/workspace/${networkId}/concept-groups/${record.id}/detail`);
+      void navigate(
+        `/knowledge-network/workspace/${networkId}/concept-groups/${record.id}/detail`,
+        {
+          state: navigationState,
+        },
+      );
       return;
     }
 
     if (key === "edit") {
-      void navigate(`/knowledge-network/workspace/${networkId}/concept-groups/${record.id}/edit`);
+      void navigate(`/knowledge-network/workspace/${networkId}/concept-groups/${record.id}/edit`, {
+        state: navigationState,
+      });
       return;
     }
 
@@ -242,6 +488,7 @@ export function ConceptGroupListPanel({
           onClick={() => {
             void navigate(
               `/knowledge-network/workspace/${networkId}/concept-groups/${record.id}/detail`,
+              { state: navigationState },
             );
           }}
           title={value}
@@ -376,7 +623,9 @@ export function ConceptGroupListPanel({
             {t("knowledgeNetwork.emptyCreateHint")}
             <AppButton
               onClick={() => {
-                void navigate(`/knowledge-network/workspace/${networkId}/concept-groups/create`);
+                void navigate(`/knowledge-network/workspace/${networkId}/concept-groups/create`, {
+                  state: navigationState,
+                });
               }}
               type="link"
             >
@@ -391,140 +640,208 @@ export function ConceptGroupListPanel({
 
   return (
     <>
-      <section className={`${styles.page} ${styles.objectTypePage} ${styles.conceptGroupPage}`}>
-        <h2 className={styles.title}>{t("knowledgeNetwork.conceptGroupsTitle")}</h2>
-
-        <div className={styles.toolbar}>
-          <div className={styles.toolbarLeft}>
-            {canModify || canDelete ? (
-              <>
-                {canModify ? (
-                  <AppButton
-                    className={styles.toolbarButton}
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      void navigate(
-                        `/knowledge-network/workspace/${networkId}/concept-groups/create`,
-                      );
-                    }}
-                    type="primary"
-                  >
-                    {t("common.create")}
-                  </AppButton>
-                ) : null}
-                {canDelete ? (
-                  <AppButton
-                    className={styles.toolbarButton}
-                    danger
-                    disabled={selectedRows.length === 0}
-                    icon={<DeleteOutlined />}
-                    onClick={() => confirmDelete(selectedRows)}
-                  >
-                    {t("common.delete")}
-                  </AppButton>
-                ) : null}
-                {canModify ? (
-                  <JsonResourceImportButton
-                    className={styles.toolbarButton}
-                    onImported={() => setRefreshVersion((current) => current + 1)}
-                    onImport={onImport}
-                  />
-                ) : null}
-              </>
-            ) : null}
-          </div>
-          <div className={styles.toolbarRight}>
-            <Input
-              allowClear
-              className={styles.searchInput}
-              onChange={(event) => {
-                setKeyword(event.target.value);
-                setPage(1);
-              }}
-              placeholder={t("knowledgeNetwork.searchPlaceholder")}
-              prefix={<SearchOutlined className={styles.searchIcon} />}
-              value={keyword}
-            />
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>{t("common.tag")}</span>
-              <Select
-                className={styles.filterSelect}
+      <section
+        className={`${styles.page} ${styles.objectTypePage} ${styles.conceptGroupPage} ${graphStyles.panelPage} ${
+          viewMode === "graph" ? graphStyles.graphPage : ""
+        }`}
+      >
+        <div className={`${styles.toolbar} ${graphStyles.pageToolbar}`}>
+          <div className={graphStyles.viewModeRow}>
+            <div className={styles.toolbarLeft}>
+              <Segmented
                 onChange={(value) => {
-                  setSelectedTag(value);
-                  setPage(1);
+                  setViewMode(value as "graph" | "list");
+                  setSelectedRowKeys([]);
                 }}
                 options={[
-                  { label: t("common.all"), value: "all" },
-                  ...tagOptions.map((tag) => ({ label: tag, value: tag })),
+                  { label: t("knowledgeNetwork.conceptGroupGraphView"), value: "graph" },
+                  { label: t("knowledgeNetwork.conceptGroupListView"), value: "list" },
                 ]}
-                value={selectedTag}
+                value={viewMode}
               />
             </div>
-            <Dropdown
-              menu={{
-                items: [
-                  { key: "updateTime", label: t("knowledgeNetwork.sortByUpdateTime") },
-                  { key: "name", label: t("knowledgeNetwork.sortByName") },
-                ],
-                onClick: ({ key }) => {
-                  const nextSortBy = key as "name" | "updateTime";
-                  setSortDirection((current) =>
-                    nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
-                  );
-                  setSortBy(nextSortBy);
+          </div>
+          <div className={graphStyles.operationRow}>
+            <div className={styles.toolbarLeft}>
+              {canModify || canDelete ? (
+                <>
+                  {canModify ? (
+                    <AppButton
+                      className={styles.toolbarButton}
+                      icon={<PlusOutlined />}
+                      onClick={() => {
+                        void navigate(
+                          `/knowledge-network/workspace/${networkId}/concept-groups/create`,
+                          { state: navigationState },
+                        );
+                      }}
+                      type="primary"
+                    >
+                      {t("common.create")}
+                    </AppButton>
+                  ) : null}
+                  {canDelete ? (
+                    <AppButton
+                      className={styles.toolbarButton}
+                      danger
+                      disabled={deleteTargets.length === 0}
+                      icon={<DeleteOutlined />}
+                      onClick={() => confirmDelete(deleteTargets)}
+                    >
+                      {t("common.delete")}
+                    </AppButton>
+                  ) : null}
+                  {canModify ? (
+                    <JsonResourceImportButton
+                      className={styles.toolbarButton}
+                      onImported={() => setRefreshVersion((current) => current + 1)}
+                      onImport={onImport}
+                    />
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+            <div className={styles.toolbarRight}>
+              <Input
+                allowClear
+                className={styles.searchInput}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
                   setPage(1);
-                },
-              }}
-              trigger={["click"]}
-            >
+                }}
+                placeholder={t("knowledgeNetwork.searchPlaceholder")}
+                prefix={<SearchOutlined className={styles.searchIcon} />}
+                value={keyword}
+              />
+              <div className={styles.filterGroup}>
+                <span className={styles.filterLabel}>{t("common.tag")}</span>
+                <Select
+                  className={styles.filterSelect}
+                  onChange={(value) => {
+                    setSelectedTag(value);
+                    setPage(1);
+                  }}
+                  options={[
+                    { label: t("common.all"), value: "all" },
+                    ...tagOptions.map((tag) => ({ label: tag, value: tag })),
+                  ]}
+                  value={selectedTag}
+                />
+              </div>
+              <Dropdown
+                menu={{
+                  items: [
+                    { key: "updateTime", label: t("knowledgeNetwork.sortByUpdateTime") },
+                    { key: "name", label: t("knowledgeNetwork.sortByName") },
+                  ],
+                  onClick: ({ key }) => {
+                    const nextSortBy = key as "name" | "updateTime";
+                    setSortDirection((current) =>
+                      nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
+                    );
+                    setSortBy(nextSortBy);
+                    setPage(1);
+                  },
+                }}
+                trigger={["click"]}
+              >
+                <button
+                  aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                  className={styles.iconButton}
+                  type="button"
+                >
+                  <SortAscendingOutlined />
+                </button>
+              </Dropdown>
               <button
-                aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                aria-label={t("common.refresh")}
                 className={styles.iconButton}
+                onClick={() => {
+                  setRefreshVersion((current) => current + 1);
+                }}
                 type="button"
               >
-                <SortAscendingOutlined />
+                <ReloadOutlined />
               </button>
-            </Dropdown>
-            <button
-              aria-label={t("common.refresh")}
-              className={styles.iconButton}
-              onClick={() => {
-                setRefreshVersion((current) => current + 1);
-              }}
-              type="button"
-            >
-              <ReloadOutlined />
-            </button>
+            </div>
           </div>
         </div>
 
-        <div className={styles.tableCard}>
-          <Table<ConceptGroupRecord>
-            columns={columns}
-            dataSource={items}
-            loading={isLoading}
-            locale={{ emptyText: renderEmptyContent() }}
-            pagination={false}
-            rowKey="id"
-            rowSelection={
-              canDelete
-                ? {
-                    selectedRowKeys,
-                    onChange: (nextSelectedRowKeys) => {
-                      setSelectedRowKeys(nextSelectedRowKeys.map(String));
-                    },
-                    getCheckboxProps: (record) => ({
-                      disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
-                    }),
-                  }
-                : undefined
-            }
-            scroll={{ x: 920 }}
-            size="middle"
-          />
-        </div>
+        {viewMode === "list" ? (
+          <div className={styles.tableCard}>
+            <Table<ConceptGroupRecord>
+              columns={columns}
+              dataSource={items}
+              loading={isLoading}
+              locale={{ emptyText: renderEmptyContent() }}
+              pagination={false}
+              rowKey="id"
+              rowSelection={
+                canDelete
+                  ? {
+                      selectedRowKeys,
+                      onChange: (nextSelectedRowKeys) => {
+                        setSelectedRowKeys(nextSelectedRowKeys.map(String));
+                      },
+                      getCheckboxProps: (record) => ({
+                        disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                      }),
+                    }
+                  : undefined
+              }
+              scroll={{ x: 920 }}
+              size="middle"
+            />
+          </div>
+        ) : (
+          <div className={graphStyles.graphLayout}>
+            <ConceptGroupGraphSidebar
+              emptyContent={renderEmptyContent()}
+              items={items}
+              loading={isLoading}
+              onPageChange={(nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              }}
+              onSelect={(record) => {
+                const nextParams = new URLSearchParams(searchParams);
+                nextParams.set("conceptGroupId", record.id);
+                nextParams.delete("focusObjectTypeId");
+                writeKnowledgeNetworkGraphSelection(nextParams);
+                setSearchParams(nextParams, { replace: true });
+                setSelectedGraphGroupId(record.id);
+                setSelectedGraphGroup(record);
+              }}
+              page={page}
+              pageSize={pageSize}
+              selectedId={selectedGraphGroupId}
+              totalCount={totalCount}
+            />
+            <div className={graphStyles.graphContent}>
+              <Spin spinning={selectedGraphGroupLoading}>
+                {selectedGraphGroup?.id === selectedGraphGroupId ? (
+                  <ConceptGroupGraphPanel
+                    focusedObjectTypeId={focusedGraphObjectTypeId}
+                    group={selectedGraphGroup}
+                    initialSelectedResource={restoredGraphSelection}
+                    key={selectedGraphGroup.id}
+                    networkId={networkId}
+                    networkName={networkName}
+                    onFocusedObjectTypeIdChange={handleFocusedObjectTypeChange}
+                    onSelectedResourceChange={handleGraphResourceSelection}
+                    onSelectedObjectTypeIdChange={handleGraphObjectTypeSelection}
+                    refreshVersion={refreshVersion}
+                    selectedObjectTypeId={selectedGraphObjectTypeId}
+                  />
+                ) : !isLoading && !selectedGraphGroupLoading ? (
+                  renderEmptyContent()
+                ) : null}
+              </Spin>
+            </div>
+          </div>
+        )}
 
-        {totalCount > 0 ? (
+        {viewMode === "list" && totalCount > 0 ? (
           <div className={styles.paginationBar}>
             <TablePaginationBar
               current={page}

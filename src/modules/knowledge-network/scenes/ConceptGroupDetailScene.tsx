@@ -11,7 +11,7 @@ import type { TableProps } from "antd";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -28,6 +28,10 @@ import {
   removeObjectTypesFromKnowledgeNetworkConceptGroup,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import {
+  knowledgeNetworkReturnPath,
+  knowledgeNetworkReturnState,
+} from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import type {
   ConceptGroupDetail,
   ConceptGroupRelatedItem,
@@ -105,6 +109,7 @@ function renderObjectRefCell(
 
 export function ConceptGroupDetailScene() {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
   const { conceptGroupId = "", networkId = "" } = useParams<{
@@ -126,7 +131,11 @@ export function ConceptGroupDetailScene() {
     useKnowledgeNetworkOperationAccessState(networkId, ["modify"]);
   const canModify = operationAccess.modify;
 
-  const listPath = `/knowledge-network/workspace/${networkId}/concept-groups`;
+  const listPath = knowledgeNetworkReturnPath(
+    networkId,
+    location.state,
+    `/knowledge-network/workspace/${networkId}/concept-groups`,
+  );
 
   const confirmDelete = () => {
     if (!detail) {
@@ -435,6 +444,7 @@ export function ConceptGroupDetailScene() {
                 onClick: () => {
                   void navigate(
                     `/knowledge-network/workspace/${networkId}/concept-groups/${conceptGroupId}/edit`,
+                    { state: knowledgeNetworkReturnState(listPath) },
                   );
                 },
                 operation: "modify",

@@ -78,6 +78,7 @@ export type KnowledgeNetworkRecentObject = {
 
 export type KnowledgeNetworkPreviewNode = {
   color: string;
+  conceptGroups?: Array<{ id: string; name: string }>;
   icon?: string;
   id: string;
   indexStatus?: ObjectTypeIndexStatus;

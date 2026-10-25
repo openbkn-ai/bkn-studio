@@ -15,6 +15,10 @@
   overflow: hidden;
 }
 
+.graphCardFill {
+  height: 100%;
+}
+
 .graphHeader {
   display: flex;
   align-items: center;
@@ -45,15 +49,41 @@
 
 .graphLayout {
   display: grid;
+  flex: 1 1 auto;
   grid-template-columns: 1fr 320px;
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
 
+.graphLayoutWithoutInspector {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.graphLayoutWithoutInspector .graphCanvas {
+  border-right: none;
+}
+
 .graphCanvas {
+  box-sizing: border-box;
   min-height: 480px;
   padding: 12px;
   border-right: 1px solid var(--color-divider);
   min-width: 0;
+}
+
+.graphCardFill .graphLayout {
+  overflow: hidden;
+}
+
+.graphCardFill .graphCanvas {
+  height: 100%;
+  min-height: 0;
+}
+
+.graphCardFill .graphAside {
+  box-sizing: border-box;
+  height: 100%;
+  max-height: none;
 }
 
 .graphAside {
@@ -74,10 +104,27 @@
 @media (max-width: 1100px) {
   .graphLayout {
     grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .graphLayoutWithoutInspector {
+    grid-template-rows: auto;
   }
 
   .graphAside {
     max-height: none;
     border-top: 1px solid var(--color-divider);
+  }
+
+  .graphCardFill {
+    height: auto;
+  }
+
+  .graphCardFill .graphLayout {
+    overflow: visible;
+  }
+
+  .graphCardFill .graphCanvas {
+    min-height: 480px;
   }
 }
