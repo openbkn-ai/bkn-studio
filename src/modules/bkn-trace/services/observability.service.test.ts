@@ -73,6 +73,128 @@ describe("observability service", () => {
     expect(isLogCursorStale(new Error("cursor_stale"))).toBe(false);
   });
 
+  it.each(["sources", "logs"] as const)(
+    "preserves publisher diagnostics and unknown values in %s",
+    async (endpoint) => {
+      const collection: Record<string, unknown> = {
+        scope: "bkn-safe-publisher-instance",
+        instance_id: "safe-current",
+        status: "healthy",
+        reason: "delivery_observed",
+        observed_at: "2026-10-24T12:00:00Z",
+        last_delivered_at: "2026-10-24T11:59:00Z",
+        last_failure_at: null,
+        dropped_records: 0,
+        historical_gap: true,
+        historical_gap_since: "2026-10-23T12:00:00Z",
+      };
+      const source = {
+        source_id: "audit-ledger",
+        status: "healthy",
+        status_scope: "query",
+        reliability: "best_effort",
+        dropped_records: 7,
+        dropped_records_since: "2026-10-23T12:00:00Z",
+        collection_status: collection,
+      };
+      const response = () =>
+        endpoint === "sources"
+          ? { data: [source] }
+          : {
+              data: [],
+              count: { value: 0, accuracy: "exact" },
+              partial: false,
+              next_cursor: null,
+              source_status: [source],
+            };
+      const service = await import("./observability.service");
+      const load = async () =>
+        endpoint === "sources"
+          ? service.listLogSources()
+          : (await service.listLogs({})).sourceStatus;
+      getMock.mockResolvedValueOnce({ data: response() });
+      const [mapped] = await load();
+      expect(mapped).toMatchObject({
+        statusScope: "query",
+        droppedRecords: 7,
+        collectionStatus: {
+          scope: "bkn-safe-publisher-instance",
+          instanceId: "safe-current",
+          status: "healthy",
+          reason: "delivery_observed",
+          observedAt: collection.observed_at,
+          lastDeliveredAt: collection.last_delivered_at,
+          lastFailureAt: null,
+          droppedRecords: 0,
+          historicalGap: true,
+          historicalGapSince: collection.historical_gap_since,
+        },
+      });
+      collection.dropped_records = null;
+      collection.historical_gap = null;
+      collection.historical_gap_since = null;
+      getMock.mockResolvedValueOnce({ data: response() });
+      expect((await load())[0].collectionStatus).toMatchObject({
+        droppedRecords: null,
+        historicalGap: null,
+        historicalGapSince: null,
+      });
+      const legacy = { source_id: "audit-ledger", status: "healthy", reliability: "best_effort" };
+      getMock.mockResolvedValueOnce({
+        data:
+          endpoint === "sources" ? { data: [legacy] } : { ...response(), source_status: [legacy] },
+      });
+      const [old] = await load();
+      expect(old).not.toHaveProperty("collectionStatus");
+      expect(old).not.toHaveProperty("droppedRecords");
+    },
+  );
+
+  it.each(["sources", "logs"] as const)(
+    "normalizes future publisher states in %s",
+    async (endpoint) => {
+      const source = {
+        source_id: "audit-ledger",
+        status: "healthy",
+        reliability: "best_effort",
+        collection_status: {
+          scope: "bkn-safe-publisher-instance",
+          status: "unhealthy",
+          reason: "private_future_status_reason",
+          observed_at: null,
+          last_delivered_at: null,
+          last_failure_at: null,
+          dropped_records: null,
+          historical_gap: null,
+          historical_gap_since: null,
+        },
+      };
+      getMock.mockResolvedValueOnce({
+        data:
+          endpoint === "sources"
+            ? { data: [source] }
+            : {
+                data: [],
+                count: { value: 0, accuracy: "exact" },
+                next_cursor: null,
+                partial: false,
+                source_status: [source],
+              },
+      });
+      const service = await import("./observability.service");
+      const sources =
+        endpoint === "sources"
+          ? await service.listLogSources()
+          : (await service.listLogs({})).sourceStatus;
+      expect(sources[0].collectionStatus).toMatchObject({
+        status: "unknown",
+        reason: "unsupported_publisher_status",
+      });
+      expect(JSON.stringify(sources[0])).not.toContain("unhealthy");
+      expect(JSON.stringify(sources[0])).not.toContain("private_future_status_reason");
+    },
+  );
+
   beforeEach(() => {
     vi.resetModules();
     getMock.mockReset();

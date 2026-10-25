@@ -359,6 +359,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       {hasSourceQueryFailure(result?.sourceStatus) ? (
         <SourceFailures sources={result?.sourceStatus ?? []} t={t} />
       ) : null}
+      <PublisherSourceStatus sources={result?.sourceStatus ?? []} t={t} />
       {associated ? (
         <div className={styles.sourceStrip}>
           <AssociatedScopeTag
@@ -638,6 +639,88 @@ function SourceFailures({ sources, t }: { sources: LogListResult["sourceStatus"]
       ))}
     </div>
   );
+}
+
+function PublisherSourceStatus({
+  sources,
+  t,
+}: {
+  sources: LogListResult["sourceStatus"];
+  t: Translate;
+}) {
+  return sources
+    .filter(
+      (source) =>
+        source.collectionStatus?.scope === "bkn-safe-publisher-instance" ||
+        source.collectionMethod === "kafka_audit" ||
+        source.sourceId === "audit-ledger",
+    )
+    .map((source) => {
+      const collection = source.collectionStatus;
+      const status = collection?.status ?? "unknown";
+      // Historical source loss and the current instance counter are independent.
+      // A healthy current publisher never clears recorded history gaps.
+      const historicalGap =
+        collection?.historicalGap === true ||
+        (source.droppedRecords !== undefined &&
+          source.droppedRecords !== null &&
+          source.droppedRecords > 0);
+      const since =
+        collection?.historicalGap === true
+          ? collection.historicalGapSince
+          : source.droppedRecordsSince;
+      const unsupported = collection?.reason === "unsupported_publisher_status";
+      const reason = unsupported
+        ? "unsupported"
+        : status === "unknown"
+          ? collection?.reason === "audit_producer_status_stale"
+            ? "stale"
+            : collection?.reason === "audit_producer_status_unavailable"
+              ? "unavailable"
+              : "unknown"
+          : status;
+      return (
+        <Alert
+          key={source.sourceId}
+          showIcon
+          type={historicalGap || status === "degraded" || unsupported ? "warning" : "info"}
+          message={
+            <Space wrap>
+              <span>{source.sourceId}</span>
+              <Tag>
+                {isHealthySource(source.status)
+                  ? t("bknTrace.logs.publisher.queryAvailable")
+                  : source.status === "degraded"
+                    ? t("bknTrace.logs.publisher.queryDegraded")
+                    : source.status === "unavailable"
+                      ? t("bknTrace.logs.publisher.queryUnavailable")
+                      : source.status === "not_integrated"
+                        ? t("bknTrace.logs.publisher.queryNotIntegrated")
+                        : t("bknTrace.logs.publisher.queryUnknown")}
+              </Tag>
+              <Tag color={status === "degraded" || unsupported ? "orange" : undefined}>
+                {t(`bknTrace.logs.publisher.${status}`)}
+              </Tag>
+            </Space>
+          }
+          description={
+            <Space direction="vertical" size={0}>
+              <span>{t(`bknTrace.logs.publisher.reasons.${reason}`)}</span>
+              {historicalGap ? (
+                <span>
+                  {since
+                    ? t("bknTrace.logs.publisher.historicalGapSince", { since: formatTime(since) })
+                    : t("bknTrace.logs.publisher.historicalGap")}
+                </span>
+              ) : collection?.historicalGap !== false ? (
+                <span>{t("bknTrace.logs.publisher.historicalUnknown")}</span>
+              ) : null}
+              <span>{t("bknTrace.logs.publisher.scope")}</span>
+            </Space>
+          }
+        />
+      );
+    });
 }
 
 function isHealthySource(status: string) {

@@ -131,7 +131,24 @@ export type LogRecord = {
   attributes: Record<string, unknown>;
 };
 
+export type PublisherCollectionStatus = {
+  scope: "bkn-safe-publisher-instance";
+  instanceId?: string;
+  status: "unknown" | "healthy" | "degraded";
+  reason: string;
+  observedAt: string | null;
+  lastDeliveredAt: string | null;
+  lastFailureAt: string | null;
+  droppedRecords: number | null;
+  historicalGap: boolean | null;
+  historicalGapSince: string | null;
+};
+
 export type LogSourceStatus = {
+  statusScope?: "query";
+  collectionStatus?: PublisherCollectionStatus;
+  droppedRecords?: number | null;
+  droppedRecordsSince?: string | null;
   collectionMethod?: string;
   countAccuracy?: string;
   coveredModules: string[];
@@ -209,7 +226,24 @@ export type LogListQuery = {
   traceId?: string;
 };
 
+type BackendPublisherCollectionStatus = {
+  scope: "bkn-safe-publisher-instance";
+  instance_id?: string;
+  status: string;
+  reason: string;
+  observed_at: string | null;
+  last_delivered_at: string | null;
+  last_failure_at: string | null;
+  dropped_records: number | null;
+  historical_gap: boolean | null;
+  historical_gap_since: string | null;
+};
+
 type BackendSourceStatus = {
+  status_scope?: "query";
+  collection_status?: BackendPublisherCollectionStatus;
+  dropped_records?: number | null;
+  dropped_records_since?: string | null;
   collection_method?: string;
   count_accuracy?: string;
   covered_modules?: string[];
@@ -503,7 +537,38 @@ function mapLogRecord(record: BackendLogRecord): LogRecord {
 }
 
 function mapSourceStatus(source: BackendSourceStatus): LogSourceStatus {
+  const collection = source.collection_status;
+  const collectionStatus: PublisherCollectionStatus["status"] =
+    collection?.status === "healthy" ||
+    collection?.status === "degraded" ||
+    collection?.status === "unknown"
+      ? collection.status
+      : "unknown";
   return {
+    ...(source.status_scope ? { statusScope: source.status_scope } : {}),
+    ...(source.dropped_records !== undefined ? { droppedRecords: source.dropped_records } : {}),
+    ...(source.dropped_records_since !== undefined
+      ? { droppedRecordsSince: source.dropped_records_since }
+      : {}),
+    ...(collection
+      ? {
+          collectionStatus: {
+            scope: collection.scope,
+            ...(collection.instance_id ? { instanceId: collection.instance_id } : {}),
+            status: collectionStatus,
+            reason:
+              collection.status === collectionStatus
+                ? collection.reason
+                : "unsupported_publisher_status",
+            observedAt: collection.observed_at,
+            lastDeliveredAt: collection.last_delivered_at,
+            lastFailureAt: collection.last_failure_at,
+            droppedRecords: collection.dropped_records,
+            historicalGap: collection.historical_gap,
+            historicalGapSince: collection.historical_gap_since,
+          },
+        }
+      : {}),
     ...(source.collection_method ? { collectionMethod: source.collection_method } : {}),
     ...(source.count_accuracy ? { countAccuracy: source.count_accuracy } : {}),
     coveredModules: source.covered_modules ?? [],

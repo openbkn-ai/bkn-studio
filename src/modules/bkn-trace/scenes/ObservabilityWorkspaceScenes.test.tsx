@@ -21,6 +21,7 @@ import {
   listLogPolicies,
   listLogs,
   listLogSources,
+  type PublisherCollectionStatus,
 } from "@/modules/bkn-trace/services/observability.service";
 import {
   changeTraceEvidenceConfiguration,
@@ -480,6 +481,192 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("对象类: 物料")).not.toBeNull();
     expect(screen.getByText("供应链管理员")).not.toBeNull();
   });
+
+  it.each([
+    {
+      name: "unknown idle source",
+      status: "unknown",
+      reason: "delivery_not_observed",
+      historicalGap: null,
+    },
+    {
+      name: "unavailable diagnostics",
+      status: "unknown",
+      reason: "audit_producer_status_unavailable",
+      historicalGap: null,
+    },
+    {
+      name: "stale diagnostics",
+      status: "unknown",
+      reason: "audit_producer_status_stale",
+      historicalGap: null,
+    },
+    {
+      name: "delivery failure",
+      status: "degraded",
+      reason: "private_internal_failure_code",
+      historicalGap: true,
+    },
+    {
+      name: "recovered publisher with historical gap",
+      status: "healthy",
+      reason: "delivery_observed",
+      historicalGap: true,
+    },
+    {
+      name: "current delivery without known gap",
+      status: "healthy",
+      reason: "delivery_observed",
+      historicalGap: false,
+    },
+  ] as const)(
+    "separates query availability from $name",
+    async ({ status, reason, historicalGap }) => {
+      const collectionStatus: PublisherCollectionStatus = {
+        scope: "bkn-safe-publisher-instance",
+        instanceId: "safe-current",
+        status,
+        reason,
+        observedAt: null,
+        lastDeliveredAt: null,
+        lastFailureAt: null,
+        droppedRecords: status === "unknown" ? null : 0,
+        historicalGap,
+        historicalGapSince: historicalGap ? "2026-10-23T12:00:00Z" : null,
+      };
+      vi.mocked(listLogs).mockResolvedValueOnce({
+        count: { accuracy: "exact", value: 0 },
+        data: [],
+        partial: false,
+        sourceStatus: [
+          {
+            sourceId: "audit-ledger",
+            status: "healthy",
+            statusScope: "query",
+            reliability: "best_effort",
+            coveredModules: [],
+            collectionStatus,
+          },
+        ],
+      });
+      render(<ObservabilityLogsScene />);
+      expect(await screen.findByText("bknTrace.logs.publisher.queryAvailable")).not.toBeNull();
+      expect(screen.getByText(`bknTrace.logs.publisher.${status}`)).not.toBeNull();
+      expect(screen.getByText("bknTrace.logs.publisher.scope")).not.toBeNull();
+      expect(screen.getByText("bknTrace.logs.emptyRange")).not.toBeNull();
+      expect(screen.queryByText("bknTrace.logs.partialWarning")).toBeNull();
+      expect(screen.queryByText(reason)).toBeNull();
+      expect(screen.queryByText("bknTrace.logs.publisher.historicalGapSince") !== null).toBe(
+        historicalGap === true,
+      );
+      expect(listLogs).toHaveBeenCalledTimes(1);
+      expect(listLogSources).not.toHaveBeenCalled();
+    },
+  );
+
+  it("treats legacy query availability as unknown publishing and keeps durable source gaps", async () => {
+    vi.mocked(listLogs).mockResolvedValueOnce({
+      count: { accuracy: "exact", value: 0 },
+      data: [],
+      partial: false,
+      sourceStatus: [
+        {
+          sourceId: "audit-ledger",
+          status: "healthy",
+          reliability: "best_effort",
+          coveredModules: [],
+          droppedRecords: 4,
+          droppedRecordsSince: "2026-10-23T12:00:00Z",
+        },
+      ],
+    });
+    render(<ObservabilityLogsScene />);
+    expect(await screen.findByText("bknTrace.logs.publisher.queryAvailable")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.publisher.unknown")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.publisher.historicalGapSince")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.logs.publisher.healthy")).toBeNull();
+  });
+
+  it("warns when a publisher status cannot be verified", async () => {
+    vi.mocked(listLogs).mockResolvedValueOnce({
+      count: { accuracy: "exact", value: 0 },
+      data: [],
+      partial: false,
+      sourceStatus: [
+        {
+          sourceId: "audit-ledger",
+          status: "healthy",
+          reliability: "best_effort",
+          coveredModules: [],
+          collectionStatus: {
+            scope: "bkn-safe-publisher-instance",
+            status: "unknown",
+            reason: "unsupported_publisher_status",
+            observedAt: null,
+            lastDeliveredAt: null,
+            lastFailureAt: null,
+            droppedRecords: null,
+            historicalGap: null,
+            historicalGapSince: null,
+          },
+        },
+      ],
+    });
+    render(<ObservabilityLogsScene />);
+    const unknown = await screen.findByText("bknTrace.logs.publisher.unknown");
+    expect(unknown.closest(".ant-alert")?.classList.contains("ant-alert-warning")).toBe(true);
+    expect(screen.getByText("bknTrace.logs.publisher.reasons.unsupported")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.logs.publisher.unhealthy")).toBeNull();
+    expect(screen.queryByText("unsupported_publisher_status")).toBeNull();
+  });
+
+  it.each([true, false])(
+    "keeps historical gap timestamps with their own signal (publisher gap: %s)",
+    async (publisherGap) => {
+      const sourceSince = "2026-09-15T12:00:00Z";
+      currentTranslate = (key, options) =>
+        key === "bknTrace.logs.publisher.historicalGapSince"
+          ? `gap-observed:${String(options?.since)}`
+          : translate(key, options);
+      vi.mocked(listLogs).mockResolvedValueOnce({
+        count: { accuracy: "exact", value: 0 },
+        data: [],
+        partial: false,
+        sourceStatus: [
+          {
+            sourceId: "audit-ledger",
+            status: "healthy",
+            reliability: "best_effort",
+            coveredModules: [],
+            droppedRecords: 7,
+            droppedRecordsSince: sourceSince,
+            collectionStatus: {
+              scope: "bkn-safe-publisher-instance",
+              status: "healthy",
+              reason: "delivery_observed",
+              observedAt: null,
+              lastDeliveredAt: null,
+              lastFailureAt: null,
+              droppedRecords: 0,
+              historicalGap: publisherGap,
+              historicalGapSince: null,
+            },
+          },
+        ],
+      });
+      render(<ObservabilityLogsScene />);
+      await screen.findByText("bknTrace.logs.publisher.queryAvailable");
+      if (publisherGap) {
+        expect(screen.getByText("bknTrace.logs.publisher.historicalGap")).not.toBeNull();
+        expect(screen.queryByText(/^gap-observed:/)).toBeNull();
+      } else {
+        expect(
+          screen.getByText(`gap-observed:${new Date(sourceSince).toLocaleString()}`),
+        ).not.toBeNull();
+        expect(screen.queryByText("bknTrace.logs.publisher.historicalGap")).toBeNull();
+      }
+    },
+  );
 
   it("从链接恢复日志时间范围", async () => {
     window.history.replaceState(
