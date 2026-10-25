@@ -115,6 +115,7 @@ export const accountZhCN = {
         unpublish: "取消发布",
         task_manage: "任务管理",
         resource_manage: "资源管理",
+        document_manage: "文档管理",
         authorize: "授权管理",
         public_access: "公开访问",
         full_business_access: "全部业务权限",

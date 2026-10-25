@@ -103,6 +103,7 @@ export const networkPart = {
     data_write: "Write data",
     resource_manage: "Manage data resources",
     task_manage: "Manage tasks",
+    document_manage: "Manage documents",
     full_business_access: "All business permissions",
   },
   export: "Export",

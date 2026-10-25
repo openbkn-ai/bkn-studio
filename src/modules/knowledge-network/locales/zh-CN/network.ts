@@ -96,6 +96,7 @@ export const networkPart = {
     data_write: "写入数据",
     resource_manage: "管理数据资源",
     task_manage: "管理任务",
+    document_manage: "管理文档",
     full_business_access: "全部业务权限",
   },
   export: "导出",

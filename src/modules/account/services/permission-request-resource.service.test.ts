@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { AxiosError, AxiosHeaders } from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
@@ -53,6 +54,23 @@ describe("checkPermissionRequestResource", () => {
     await expect(checkPermissionRequestResource(knowledgeBase)).resolves.toBe("unavailable");
     getMock.mockResolvedValueOnce({ data: { code: 0, msg: "ok", data: null } });
     await expect(checkPermissionRequestResource(knowledgeBase)).resolves.toBe("unavailable");
+
+    // kb-api refuses with real HTTP statuses, so a reader without view_detail is told "forbidden".
+    for (const [status, result] of [
+      [403, "forbidden"],
+      [404, "not_found"],
+    ] as const) {
+      getMock.mockRejectedValueOnce(
+        new AxiosError("refused", undefined, undefined, undefined, {
+          config: { headers: new AxiosHeaders() },
+          data: { code: status, msg: "refused", data: null },
+          headers: {},
+          status,
+          statusText: "",
+        }),
+      );
+      await expect(checkPermissionRequestResource(knowledgeBase)).resolves.toBe(result);
+    }
   });
 
   it("identifies a request marked as resource deleted without reading the resource", async () => {

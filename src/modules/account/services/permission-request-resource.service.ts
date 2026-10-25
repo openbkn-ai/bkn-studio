@@ -45,8 +45,9 @@ function resourceReadPath(request: PermissionRequest) {
   return undefined;
 }
 
-// kb-api (professional edition) answers `{ code, msg, data }`; only code 0 with a record means
-// the knowledge base is there. Anything else is not a confirmed resource, whatever the HTTP status.
+// kb-api (professional edition) wraps its body as `{ code, msg, data }`. Refusals carry their HTTP
+// status (403 / 404), so they reach the catch below like any other resource; this only guards the
+// success path, where nothing short of code 0 with a record proves the knowledge base is there.
 function knowledgeBaseCheck(body: unknown): PermissionRequestResourceCheck {
   const envelope = body as { code?: unknown; data?: unknown } | null;
   return envelope?.code === 0 && envelope.data ? "exists" : "unavailable";

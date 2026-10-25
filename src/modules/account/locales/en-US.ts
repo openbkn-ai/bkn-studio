@@ -118,6 +118,7 @@ export const accountEnUS = {
         unpublish: "unpublish",
         task_manage: "manage tasks",
         resource_manage: "manage resources",
+        document_manage: "manage documents",
         authorize: "manage authorization",
         public_access: "public access",
         full_business_access: "full business access",

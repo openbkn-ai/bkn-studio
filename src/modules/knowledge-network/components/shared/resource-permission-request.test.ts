@@ -6,6 +6,11 @@
  */
 
 import { describe, expect, it } from "vitest";
+
+import { accountEnUS } from "@/modules/account/locales/en-US";
+import { accountZhCN } from "@/modules/account/locales/zh-CN";
+import { networkPart as networkEnUS } from "@/modules/knowledge-network/locales/en-US/network";
+import { networkPart as networkZhCN } from "@/modules/knowledge-network/locales/zh-CN/network";
 import { capabilityState } from "@/framework/entitlement/capability-state";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { FALLBACK_ENTITLEMENT } from "@/framework/entitlement/types";
@@ -275,6 +280,18 @@ describe("hasRequestableObjectTypePermission", () => {
 describe("canRequestResourcePermission", () => {
   it("does not expose a request entry when the edition disables permission requests", () => {
     expect(canRequestResourcePermission("object_type", [], false)).toBe(false);
+  });
+
+  it("labels every requestable knowledge base operation in both languages", () => {
+    const operations = getMissingResourcePermissionOperations("knowledge_base", []);
+    for (const dictionary of [
+      accountZhCN.account.permissionRequests.operationNames,
+      accountEnUS.account.permissionRequests.operationNames,
+      networkZhCN.permissionOperation,
+      networkEnUS.permissionOperation,
+    ]) {
+      for (const operation of operations) expect(dictionary).toHaveProperty(operation);
+    }
   });
 
   it("lets a knowledge base reader ask for more, but never for authorize", () => {
