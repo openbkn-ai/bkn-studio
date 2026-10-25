@@ -144,6 +144,7 @@ export const cypherQueryPart = {
       fit: "适应全图",
       exportPng: "导出 PNG",
       derivedEdge: "由路径推导的关系",
+      valueNode: "值 · {{name}}",
       relationType: "关系类",
       ends: "两端",
       count: "数量",

@@ -7,9 +7,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildGraphOption } from "./graph-option";
+import { VALUE_NODE_FILL, buildGraphOption } from "./graph-option";
 import {
   GRAPH_NODE_LIMIT,
+  VALUE_TYPE_PREFIX,
   buildCypherGraph,
   cypherCode,
   describeCell,
@@ -18,6 +19,7 @@ import {
   resultToCsv,
   returnedNodeLabels,
   returnedVariables,
+  valueNodeId,
   type CypherSchemaNames,
   type ObjectValue,
 } from "./graph-values";
@@ -145,6 +147,46 @@ describe("graph values", () => {
       "USES (4)",
       "USES (3)",
     ]);
+  });
+
+  it("draws a value end of a derived edge as a value node shared by the same value", () => {
+    const graph = buildCypherGraph(
+      {
+        entries: [
+          { source: team(1, "Argentina"), relationType: "主场结果", target: "胜", score: "3–3" },
+          { source: team(2, "France"), relationType: "主场结果", target: "胜", score: "2–0" },
+          { source: team(3, "Japan"), relationType: "主场结果", target: "未胜", score: "1–1" },
+          { source: "胜", relationType: "主场结果", target: team(4, "Brazil") },
+          // Both ends values, or an empty end: nothing to draw.
+          { source: "胜", relationType: "主场结果", target: "未胜" },
+          { source: team(5, "Spain"), relationType: "主场结果", target: null },
+          { source: team(6, "Ghana"), relationType: "主场结果", target: "" },
+          // A long text is prose, not a category.
+          { source: team(7, "Peru"), relationType: "主场结果", target: "长".repeat(201) },
+        ],
+      },
+      names,
+    );
+    const values = graph.nodes.filter((node) => node.value);
+    expect(values.map((node) => [node.id, node.label, node.objectTypeId])).toEqual([
+      ["value|主场结果|胜", "胜", `${VALUE_TYPE_PREFIX}主场结果`],
+      ["value|主场结果|未胜", "未胜", `${VALUE_TYPE_PREFIX}主场结果`],
+    ]);
+    expect(values.every((node) => Object.keys(node.key).length === 0)).toBe(true);
+    const derived = graph.edges.filter((edge) => edge.derived);
+    expect(derived.map((edge) => [edge.source, edge.target])).toEqual([
+      ["teams:team_id=1", "value|主场结果|胜"],
+      ["teams:team_id=2", "value|主场结果|胜"],
+      ["teams:team_id=3", "value|主场结果|未胜"],
+      ["value|主场结果|胜", "teams:team_id=4"],
+    ]);
+    // The same value under another name is another node.
+    expect(valueNodeId("结论", "胜")).not.toBe(valueNodeId("主场结果", "胜"));
+
+    const drawn = buildGraphOption(graph).data.nodes ?? [];
+    const win = drawn.find((node) => node.id === "value|主场结果|胜");
+    expect(win?.style).toMatchObject({ fill: VALUE_NODE_FILL, lineDash: [4, 3] });
+    expect(drawn.find((node) => node.id === "teams:team_id=1")?.style?.lineDash).toBeUndefined();
   });
 
   it("hangs scalar columns on the row's node, by prefix when the row has several", () => {

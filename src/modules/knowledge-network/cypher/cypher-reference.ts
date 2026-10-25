@@ -63,6 +63,7 @@ const EXAMPLES: string[][] = [
   [
     "MATCH (a:ObjectType)<-[:RELATION_A]-(b:OtherType)-[:RELATION_B]->(c:ThirdType)\nRETURN a AS source, 'LINKED_TO' AS relationType, c AS target, count(b) AS n\nLIMIT 25",
     "MATCH (a:ObjectType)<-[:RELATION_A]-(b:OtherType)-[:RELATION_B]->(c:ThirdType)\nRETURN a AS source, 'LINKED_TO' AS relationType, c AS target, collect({via: b}) AS evidence\nLIMIT 25",
+    "MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType)\nRETURN a AS source, 'STATUS' AS relationType, b.status AS target, count(*) AS n\nLIMIT 25",
     "MATCH (a:ObjectType)<-[:RELATION]-(b:OtherType)\nRETURN a, count(b) AS n, max(b.amount) AS top\nORDER BY n DESC LIMIT 25",
   ],
   [

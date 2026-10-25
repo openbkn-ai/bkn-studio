@@ -149,6 +149,7 @@ export const cypherQueryPart = {
       fit: "Fit to view",
       exportPng: "Export PNG",
       derivedEdge: "Relationship derived from a path",
+      valueNode: "Value · {{name}}",
       relationType: "Relation type",
       ends: "Ends",
       count: "Count",
