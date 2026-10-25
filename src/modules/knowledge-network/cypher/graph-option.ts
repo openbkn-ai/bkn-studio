@@ -31,7 +31,8 @@ const ARROW_LIMIT = 60;
 
 export const EDGE_COLOR = "#99a3b3";
 export const DERIVED_EDGE_COLOR = "#d48806";
-export const VALUE_NODE_FILL = "#ffffff";
+/** A value node is filled with a faint wash of its color, so it reads hollow on any theme. */
+export const VALUE_NODE_FILL_OPACITY = 0.15;
 
 export type GraphDensity = { size: number; linkDistance: number; repulsion: number };
 
@@ -97,7 +98,7 @@ export function buildGraphOption(
       // A value is not an object: hollow and dashed, in its conclusion's color.
       ...(node.value
         ? {
-            fill: VALUE_NODE_FILL,
+            fillOpacity: VALUE_NODE_FILL_OPACITY,
             stroke: colors.get(node.objectTypeId),
             lineWidth: 2,
             lineDash: [4, 3],

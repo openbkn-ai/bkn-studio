@@ -183,7 +183,9 @@ export function GraphStyleOverview({
             >
               <span className={styles.overviewName}>
                 <span className={styles.overviewDot} style={{ background: colors.get(otId) }} />
-                {entry.name}
+                {otId.startsWith(VALUE_TYPE_PREFIX)
+                  ? t("knowledgeNetwork.cypherQuery.graph.valueNode", { name: entry.name })
+                  : entry.name}
                 <BgColorsOutlined className={styles.overviewEdit} />
               </span>
               <span>{entry.count}</span>

@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { VALUE_NODE_FILL, buildGraphOption } from "./graph-option";
+import { VALUE_NODE_FILL_OPACITY, buildGraphOption } from "./graph-option";
 import {
   GRAPH_NODE_LIMIT,
   VALUE_TYPE_PREFIX,
@@ -185,7 +185,11 @@ describe("graph values", () => {
 
     const drawn = buildGraphOption(graph).data.nodes ?? [];
     const win = drawn.find((node) => node.id === "value|主场结果|胜");
-    expect(win?.style).toMatchObject({ fill: VALUE_NODE_FILL, lineDash: [4, 3] });
+    expect(win?.style).toMatchObject({
+      fill: win?.style?.stroke,
+      fillOpacity: VALUE_NODE_FILL_OPACITY,
+      lineDash: [4, 3],
+    });
     expect(drawn.find((node) => node.id === "teams:team_id=1")?.style?.lineDash).toBeUndefined();
   });
 
