@@ -52,6 +52,8 @@ import type {
   TechnicalSpanNode,
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.types";
 
+import { SpanBrowser } from "./SpanBrowser";
+
 const defaultPageSize = 20;
 
 export function TraceAnalysisScene() {
@@ -215,6 +217,7 @@ export function TraceAnalysisScene() {
   if (detail) {
     return (
       <TraceDetail
+        key={detail.summary.traceId}
         detail={detail}
         onBack={closeDetail}
         onCloseOperation={() => setSelectedOperation(undefined)}
@@ -347,6 +350,22 @@ function TraceDetail({
 }) {
   const { t } = useTranslation();
   const summary = detail.summary;
+  const [browsing, setBrowsing] = useState(false);
+  const display = detail.spanDisplay;
+  const spanScopeUnavailable =
+    detail.partialReasons.includes("span_scope_unavailable") ||
+    display?.browseReason === "global_trace_access_required";
+  const reasons = detail.partialReasons.filter((reason) => reason !== "trace_query_truncated");
+  const truncated =
+    display?.truncated ||
+    detail.partialReasons.includes("trace_query_truncated") ||
+    detail.graph?.partialReasons.includes("trace_query_truncated");
+  const browseReason =
+    display?.browseReason === "global_trace_access_required"
+      ? "denied"
+      : display?.browseReason === "legacy_span_envelope"
+        ? "unsupported"
+        : "unavailable";
   const diagnostics = buildDiagnostics(detail);
   const executionEvents = buildExecutionEvents(detail);
   return (
@@ -374,9 +393,15 @@ function TraceDetail({
             {summary.durationMs === undefined ? "-" : `${summary.durationMs} ms`}
           </Descriptions.Item>
           <Descriptions.Item label="Span">
-            {summary.spanCountStatus === "unavailable"
-              ? t("bknTrace.traceWorkspace.spanUnavailable")
-              : summary.spanCount}
+            {spanScopeUnavailable
+              ? t("bknTrace.traceWorkspace.spanDisplay.permissionLimited")
+              : summary.spanCountStatus === "unavailable"
+                ? t("bknTrace.traceWorkspace.spanUnavailable")
+                : display?.totalAccuracy === "estimated" && display.totalCount !== null
+                  ? t("bknTrace.traceWorkspace.spanDisplay.estimated", {
+                      count: display.totalCount,
+                    })
+                  : t("bknTrace.traceWorkspace.spanDisplay.unknownTotal")}
           </Descriptions.Item>
         </Descriptions>
         <div className={styles.summaryTextGrid}>
@@ -388,10 +413,74 @@ function TraceDetail({
         </div>
       </article>
 
-      {detail.partialReasons.length ? (
+      <Alert
+        showIcon
+        type={truncated ? "warning" : "info"}
+        message={t(
+          truncated
+            ? "bknTrace.traceWorkspace.spanDisplay.truncated"
+            : "bknTrace.traceWorkspace.spanDisplay.title",
+        )}
+        description={
+          <div>
+            <div>
+              {display?.totalAccuracy === "estimated" && display.totalCount !== null
+                ? t("bknTrace.traceWorkspace.spanDisplay.loadedEstimated", {
+                    loaded: display.loadedCount,
+                    total: display.totalCount,
+                  })
+                : t("bknTrace.traceWorkspace.spanDisplay.loadedUnknown", {
+                    loaded: display?.loadedCount ?? detail.graph?.nodes.length ?? 0,
+                  })}
+            </div>
+            {display ? (
+              <div>
+                {t("bknTrace.traceWorkspace.spanDisplay.rawRecords", {
+                  count: display.rawRecordCount,
+                  limit: display.rawRecordLimit,
+                })}
+                <br />
+                {t("bknTrace.traceWorkspace.spanDisplay.limit", {
+                  limit: display.displayLimit,
+                })}{" "}
+                {t("bknTrace.traceWorkspace.spanDisplay.sort")}
+              </div>
+            ) : (
+              <div>{t("bknTrace.traceWorkspace.spanDisplay.legacy")}</div>
+            )}
+            {display?.firstStartAt && display.lastStartAt ? (
+              <div>
+                {t("bknTrace.traceWorkspace.spanDisplay.window", {
+                  first: formatTime(display.firstStartAt),
+                  last: formatTime(display.lastStartAt),
+                })}
+              </div>
+            ) : null}
+            <Button disabled={!display?.browseAllowed} onClick={() => setBrowsing(true)}>
+              {t("bknTrace.traceWorkspace.spanBrowser.title")}
+            </Button>
+            {!display?.browseAllowed ? (
+              <div>{t(`bknTrace.traceWorkspace.spanDisplay.browseReasons.${browseReason}`)}</div>
+            ) : null}
+          </div>
+        }
+      />
+      {browsing && display?.browseAllowed ? (
+        <SpanBrowser traceId={summary.traceId} onClose={() => setBrowsing(false)} />
+      ) : null}
+
+      {reasons.length ? (
         <Alert
           className={styles.partialAlert}
-          description={detail.partialReasons.join(" · ")}
+          description={reasons
+            .map((reason) =>
+              reason === "span_scope_unavailable"
+                ? t("bknTrace.traceWorkspace.spanDisplay.scopeUnavailable")
+                : reason === "parent_outside_display"
+                  ? t("bknTrace.traceWorkspace.spanDisplay.parentOutside")
+                  : reason,
+            )
+            .join(" · ")}
           message={t("bknTrace.traceWorkspace.partial")}
           showIcon
           type="warning"
@@ -730,8 +819,10 @@ function formatNanoDuration(durationNano: number) {
 function buildDiagnostics(detail: TechnicalTraceDetail) {
   const diagnostics = new Set<string>();
   if (
-    detail.summary.spanCountStatus === "unavailable" ||
-    detail.partialReasons.includes("span_unavailable")
+    !detail.partialReasons.includes("span_scope_unavailable") &&
+    detail.spanDisplay?.browseReason !== "global_trace_access_required" &&
+    (detail.summary.spanCountStatus === "unavailable" ||
+      detail.partialReasons.includes("span_unavailable"))
   ) {
     diagnostics.add("spanUnavailable");
   }

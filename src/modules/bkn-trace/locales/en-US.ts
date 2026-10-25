@@ -819,6 +819,54 @@ export const bknTraceEnUS = {
       title: "Trace Analysis",
     },
     traceWorkspace: {
+      spanDisplay: {
+        rawRecords:
+          "Query read {{count}} raw records (limit {{limit}}); duplicates may occupy the window.",
+        permissionLimited: "Restricted by current access",
+        title: "Span display range",
+        truncated:
+          "Only a bounded Span query window is displayed; this does not establish missing collection",
+        estimated: "Approximately {{count}}",
+        unknownTotal: "Total unknown",
+        loadedEstimated: "Loaded {{loaded}} / approximately {{total}} Spans",
+        loadedUnknown: "Loaded {{loaded}} Spans; total unknown",
+        limit: "Display limit: {{limit}} Spans.",
+        sort: "Only the loaded window is ordered by start time, then Span ID; it is not necessarily the globally earliest window.",
+        window: "Loaded start-time range: {{first}} — {{last}}",
+        legacy:
+          "This backend did not provide display-range metadata. Only loaded nodes are shown; pagination is unavailable.",
+        scopeUnavailable:
+          "Current access does not include raw Spans; this is a permission boundary, not evidence of missing collection.",
+        parentOutside:
+          "A parent is outside the loaded display window; this alone does not establish missing collection.",
+        browseReasons: {
+          denied: "Global raw Trace access is required to browse Span pages.",
+          unsupported: "Legacy Span envelopes do not support bounded paging.",
+          unavailable: "Span paging is unavailable for this Trace or backend.",
+        },
+      },
+      spanBrowser: {
+        title: "Browse Span pages",
+        parent: "Parent Span ID",
+        name: "Span name",
+        scope:
+          "Live paging by Span ID, up to 100 Spans per page. Refresh to view newly added data. Pages replace the current list and are not added to the execution graph; a parent may be outside this page.",
+        previous: "Previous Span page",
+        next: "Next Span page",
+        empty:
+          "This page contains no Spans. You can return to the previous page or refresh live data.",
+        notLoaded: "No Span page has been loaded.",
+        errors: {
+          denied:
+            "Global raw Trace access is required. Existing authorized details remain available.",
+          unsupported: "This legacy Span storage format does not support bounded paging.",
+          cursor: "The page cursor is invalid. Refresh to restart live paging.",
+          budget:
+            "This Span page exceeds the supported query budget. Existing details are unchanged.",
+          failed:
+            "The Span page could not be loaded. Retry or refresh; existing details are unchanged.",
+        },
+      },
       attempt: "Attempt {{attempt}}",
       back: "Back to traces",
       callDetail: "Call details",

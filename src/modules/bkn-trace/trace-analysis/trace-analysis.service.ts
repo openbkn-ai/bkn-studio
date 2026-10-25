@@ -13,6 +13,8 @@ import type {
 } from "@/modules/bkn-trace/shared/operation-fact.types";
 import type {
   TechnicalSpanNode,
+  TechnicalSpanPage,
+  SpanDisplayRange,
   TechnicalTraceDetail,
   TechnicalTraceGraph,
   TechnicalTraceOperation,
@@ -90,21 +92,37 @@ type BackendTracePage = {
   truncated?: boolean;
 };
 
+type BackendSpanNode = {
+  duration_nano?: number;
+  end_nano?: number;
+  error_message?: string;
+  kind?: string;
+  name?: string;
+  parent_span_id?: string;
+  service_name?: string;
+  span_id?: string;
+  start_nano?: number;
+  status?: string;
+};
+
 type BackendTraceDetail = {
+  span_display?: {
+    loaded_count: number;
+    display_limit: number;
+    raw_record_limit: number;
+    raw_record_count: number;
+    total_count: number | null;
+    total_accuracy: SpanDisplayRange["totalAccuracy"];
+    sort: SpanDisplayRange["sort"];
+    truncated: boolean;
+    first_start_at: string | null;
+    last_start_at: string | null;
+    browse_allowed: boolean;
+    browse_reason?: string;
+  };
   graph?: {
     data?: {
-      nodes?: Array<{
-        duration_nano?: number;
-        end_nano?: number;
-        error_message?: string;
-        kind?: string;
-        name?: string;
-        parent_span_id?: string;
-        service_name?: string;
-        span_id?: string;
-        start_nano?: number;
-        status?: string;
-      }>;
+      nodes?: BackendSpanNode[];
     };
     partial?: boolean;
     partial_reason?: string[];
@@ -144,11 +162,56 @@ export async function getTechnicalTrace(traceId: string): Promise<TechnicalTrace
     { skipErrorToast: true },
   );
   return {
+    ...(response.data.span_display
+      ? {
+          spanDisplay: {
+            loadedCount: response.data.span_display.loaded_count,
+            displayLimit: response.data.span_display.display_limit,
+            rawRecordLimit: response.data.span_display.raw_record_limit,
+            rawRecordCount: response.data.span_display.raw_record_count,
+            totalCount: response.data.span_display.total_count,
+            totalAccuracy: response.data.span_display.total_accuracy,
+            sort: response.data.span_display.sort,
+            truncated: response.data.span_display.truncated,
+            firstStartAt: response.data.span_display.first_start_at,
+            lastStartAt: response.data.span_display.last_start_at,
+            browseAllowed: response.data.span_display.browse_allowed,
+            browseReason: response.data.span_display.browse_reason,
+          },
+        }
+      : {}),
     graph: response.data.graph ? mapTraceGraph(response.data.graph) : undefined,
     operations: (response.data.operations ?? []).map(mapOperation),
     partial: Boolean(response.data.partial),
     partialReasons: response.data.partial_reasons ?? [],
     summary: mapTraceSummary(response.data.summary ?? {}),
+  };
+}
+
+export async function listTechnicalSpans(
+  traceId: string,
+  cursor?: string,
+  signal?: AbortSignal,
+): Promise<TechnicalSpanPage> {
+  const response = await http.get<{
+    trace_id: string;
+    entries: BackendSpanNode[];
+    has_more: boolean;
+    next_cursor?: string;
+    sort: "span_id_asc";
+    consistency: "live";
+  }>(`${TRACE_API_PREFIX}/${encodeURIComponent(traceId)}/spans`, {
+    ...(cursor ? { params: { cursor } } : {}),
+    signal,
+    skipErrorToast: true,
+  });
+  return {
+    traceId: response.data.trace_id,
+    entries: response.data.entries.map(mapSpanNode),
+    hasMore: response.data.has_more,
+    nextCursor: response.data.next_cursor,
+    sort: response.data.sort,
+    consistency: response.data.consistency,
   };
 }
 
@@ -269,9 +332,7 @@ function mapTraceGraph(data: NonNullable<BackendTraceDetail["graph"]>): Technica
   };
 }
 
-function mapSpanNode(
-  data: NonNullable<NonNullable<NonNullable<BackendTraceDetail["graph"]>["data"]>["nodes"]>[number],
-): TechnicalSpanNode {
+function mapSpanNode(data: BackendSpanNode): TechnicalSpanNode {
   return {
     durationNano: data.duration_nano ?? 0,
     endNano: data.end_nano ?? 0,
