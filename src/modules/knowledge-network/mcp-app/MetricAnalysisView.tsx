@@ -7,6 +7,7 @@
 
 import { Alert, Button, Modal, Space, Table, Tag } from "antd";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { ObjectMetricAnalysisPanel } from "@/modules/knowledge-network/components/object-metric/ObjectMetricAnalysisPanel";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
@@ -31,6 +32,7 @@ type Props = {
 };
 
 export function MetricAnalysisView({ result, busy, error, onNextPage, onParticipants }: Props) {
+  useTranslation();
   const [selected, setSelected] = useState<ObjectMetricDataEntryV1>();
   const [participants, setParticipants] = useState<ObjectMetricDrillThroughV1>();
   const [participantBusy, setParticipantBusy] = useState(false);

@@ -5,9 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import type { ObjectMetricDataV1 } from "@/modules/knowledge-network/types/object-metric";
 
 import { MetricAnalysisView } from "./MetricAnalysisView";
@@ -31,6 +32,9 @@ beforeAll(() => {
 });
 
 afterAll(() => vi.unstubAllGlobals());
+afterEach(async () => {
+  await i18n.changeLanguage("zh-CN");
+});
 
 const result: ObjectMetricDataV1 = {
   model: {
@@ -62,6 +66,19 @@ const result: ObjectMetricDataV1 = {
 };
 
 describe("MetricAnalysisView", () => {
+  it("updates result labels when the MCP host changes locale", async () => {
+    render(<MetricAnalysisView onNextPage={vi.fn()} result={result} />);
+    expect(screen.getByRole("button", { name: "加载下一页" })).toBeInTheDocument();
+
+    await act(async () => {
+      await i18n.changeLanguage("en-US");
+    });
+
+    expect(screen.getByRole("button", { name: "Load next page" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Metric value" })).toBeInTheDocument();
+    expect(screen.getByText(/Total 29/)).toBeInTheDocument();
+  });
+
   it("preserves exact decimal values and exposes status, unit, warnings and pagination", () => {
     const onNextPage = vi.fn();
     const exactResult = structuredClone(result);
