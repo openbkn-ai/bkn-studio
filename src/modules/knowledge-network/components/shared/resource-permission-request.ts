@@ -24,6 +24,15 @@ const resourcePermissionOperations: Record<string, readonly string[]> = {
     "data_write",
   ],
   resource: ["view_detail", "query_data", "data_write", "modify", "delete"],
+  // `authorize` is administrative and `create` is type-level, so neither is requested here.
+  knowledge_base: [
+    "view_detail",
+    "modify",
+    "delete",
+    "document_manage",
+    "task_manage",
+    "query_data",
+  ],
   tool_box: ["view", "modify", "delete", "publish", "unpublish", "execute"],
   function: ["view", "modify", "delete", "publish", "unpublish", "execute"],
   mcp: ["view", "modify", "delete", "publish", "unpublish", "execute"],

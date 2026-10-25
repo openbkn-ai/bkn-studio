@@ -13,6 +13,7 @@ import {
   DeploymentUnitOutlined,
   FileTextOutlined,
   LineChartOutlined,
+  ReadOutlined,
   ShareAltOutlined,
   ThunderboltOutlined,
   ToolOutlined,
@@ -100,6 +101,7 @@ function resourceIcon(resourceType: string) {
   if (resourceType === "action_type") return <ThunderboltOutlined />;
   if (resourceType === "metric") return <LineChartOutlined />;
   if (["catalog", "resource"].includes(resourceType)) return <DatabaseOutlined />;
+  if (resourceType === "knowledge_base") return <ReadOutlined />;
   if (["tool_box", "function"].includes(resourceType)) return <ToolOutlined />;
   if (resourceType === "mcp") return <ApiOutlined />;
   if (resourceType === "skill") return <FileTextOutlined />;
@@ -126,6 +128,7 @@ function resourceDetailPath(request: PermissionRequest) {
     if (networkID && childID)
       return `knowledge-network/workspace/${encodeURIComponent(networkID)}/${segment[request.resource_type]}/${encodeURIComponent(childID)}/detail`;
   }
+  if (request.resource_type === "knowledge_base") return `knowledge-base/${encodedID}`;
   if (request.resource_type === "catalog") return `data-catalog/catalog/${encodedID}`;
   if (request.resource_type === "resource") return `data-catalog/resource/${encodedID}`;
   if (request.resource_type === "tool_box") return `execution-factory/toolboxes/${encodedID}/edit`;
@@ -687,6 +690,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
     "metric",
     "catalog",
     "resource",
+    "knowledge_base",
     "tool_box",
     "function",
     "mcp",

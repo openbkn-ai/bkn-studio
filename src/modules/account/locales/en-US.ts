@@ -96,6 +96,7 @@ export const accountEnUS = {
         metric: "Metric permission request",
         catalog: "Data catalog permission request",
         resource: "Data resource permission request",
+        knowledge_base: "Knowledge base permission request",
         tool_box: "Tool box permission request",
         function: "Function permission request",
         mcp: "MCP permission request",

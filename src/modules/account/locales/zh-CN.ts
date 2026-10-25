@@ -93,6 +93,7 @@ export const accountZhCN = {
         metric: "指标权限申请",
         catalog: "数据目录权限申请",
         resource: "数据资源权限申请",
+        knowledge_base: "知识库权限申请",
         tool_box: "工具箱权限申请",
         function: "函数权限申请",
         mcp: "MCP 权限申请",

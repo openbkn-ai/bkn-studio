@@ -12,6 +12,7 @@ import { FALLBACK_ENTITLEMENT } from "@/framework/entitlement/types";
 
 import {
   canRequestResourcePermission,
+  getMissingResourcePermissionOperations,
   canPreviewObjectTypePolicyScope,
   getEffectiveRowFilterPolicies,
   getRequestablePropertyGrants,
@@ -274,5 +275,26 @@ describe("hasRequestableObjectTypePermission", () => {
 describe("canRequestResourcePermission", () => {
   it("does not expose a request entry when the edition disables permission requests", () => {
     expect(canRequestResourcePermission("object_type", [], false)).toBe(false);
+  });
+
+  it("lets a knowledge base reader ask for more, but never for authorize", () => {
+    expect(getMissingResourcePermissionOperations("knowledge_base", ["view_detail"])).toEqual([
+      "modify",
+      "delete",
+      "document_manage",
+      "task_manage",
+      "query_data",
+    ]);
+    // `authorize` stays administrative and `create` is type-level: neither is requestable here.
+    expect(
+      getMissingResourcePermissionOperations("knowledge_base", [
+        "view_detail",
+        "modify",
+        "delete",
+        "document_manage",
+        "task_manage",
+        "query_data",
+      ]),
+    ).toEqual([]);
   });
 });

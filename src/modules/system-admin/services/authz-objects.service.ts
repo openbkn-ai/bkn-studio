@@ -117,6 +117,7 @@ export async function listDomainObjectsPage(
  */
 export const TOP_LEVEL_AUTHZ_RESOURCE_TYPES = [
   "catalog",
+  "knowledge_base",
   "knowledge_network",
   "function",
   "tool_box",

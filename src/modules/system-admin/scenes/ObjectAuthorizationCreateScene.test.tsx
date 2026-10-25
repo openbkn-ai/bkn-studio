@@ -15,6 +15,8 @@ const listUsersPageMock = vi.hoisted(() => vi.fn());
 const upsertObjectGrantMock = vi.hoisted(() => vi.fn());
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const capability = vi.hoisted((): { current: string } => ({ current: "available" }));
+/** Per-capability overrides; anything not listed answers `capability.current`. */
+const capabilities = vi.hoisted((): Record<string, string> => ({}));
 const searchParams = vi.hoisted(() => new URLSearchParams());
 const translation = vi.hoisted(() => ({
   i18n: { exists: () => false, language: "zh-CN" },
@@ -40,7 +42,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/framework/entitlement/use-entitlement", () => ({
-  useCapability: () => capability.current,
+  useCapability: (name: string) => capabilities[name] ?? capability.current,
 }));
 
 vi.mock("@/framework/entitlement/RequireEdition", () => ({
@@ -69,6 +71,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capability.current = "available";
+    for (const name of Object.keys(capabilities)) delete capabilities[name];
     searchParams.delete("object");
     listUsersMock.mockResolvedValue([]);
     listUsersPageMock.mockResolvedValue({ total: 0, users: [] });
@@ -149,6 +152,22 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     expect(
       executionGroup.compareDocumentPosition(operator) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("offers knowledge bases only while the knowledge base product is available", async () => {
+    const { unmount } = render(<ObjectAuthorizationCreateScene />);
+    await act(async () => {});
+    fireEvent.mouseDown(screen.getAllByRole("combobox")[0]);
+    expect(screen.getByText("知识库")).toBeTruthy();
+    unmount();
+
+    // Fine-grained grants alone are not enough: without kb-api there is nothing to list.
+    capabilities.knowledge_base = "not-installed";
+    render(<ObjectAuthorizationCreateScene />);
+    await act(async () => {});
+    fireEvent.mouseDown(screen.getAllByRole("combobox")[0]);
+    expect(screen.getByText("函数集")).toBeTruthy();
+    expect(screen.queryByText("知识库")).toBeNull();
   });
 
   it("keeps the operation code visible and explains a locked prerequisite separately", async () => {

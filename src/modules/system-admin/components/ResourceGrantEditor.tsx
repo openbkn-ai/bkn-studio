@@ -34,6 +34,7 @@ import {
 } from "@/modules/system-admin/utils/resource-catalog";
 import { availableOperationsForGrant } from "@/modules/system-admin/utils/resource-grant-operations";
 import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
+import { useResourceTypeAvailability } from "@/modules/system-admin/hooks/use-resource-type-availability";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
@@ -50,7 +51,7 @@ const sameResource = (a: ResourceRef, b: ResourceRef) => a.type === b.type && a.
 type GrantOperation = { description?: string; key: string; label: string; requires: string[] };
 
 const ROLE_RESOURCE_TYPE_GROUPS = [
-  { key: "data", types: ["catalog"] },
+  { key: "data", types: ["catalog", "knowledge_base"] },
   {
     key: "knowledge",
     types: [
@@ -97,6 +98,7 @@ export function ResourceGrantEditor({
     resourceTypeOptions,
     retryAuthorizationRegistry,
   } = useAuthorizationRegistry();
+  const resourceTypeAvailable = useResourceTypeAvailability();
   const [draftType, setDraftType] = useState<string>(lockedResource?.type ?? "");
   const [draftId, setDraftId] = useState<string>(lockedResource?.id ?? "");
   const [wholeType, setWholeType] = useState<boolean>(!lockedResource);
@@ -121,8 +123,11 @@ export function ResourceGrantEditor({
   const registryReady = Boolean(catalog?.resourceTypes.length) && !catalogLoading && !catalogError;
   const canEdit = !disabled && registryReady;
   const availableRoleTypeOptions = useMemo(
-    () => resourceTypeOptions().filter((option) => isRoleGrantResourceType(option.value)),
-    [resourceTypeOptions],
+    () =>
+      resourceTypeOptions().filter(
+        (option) => isRoleGrantResourceType(option.value) && resourceTypeAvailable(option.value),
+      ),
+    [resourceTypeAvailable, resourceTypeOptions],
   );
   const roleResourceTypeOptions = useMemo(() => {
     const available = new Map(availableRoleTypeOptions.map((option) => [option.value, option]));
