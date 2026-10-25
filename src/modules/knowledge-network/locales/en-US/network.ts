@@ -138,8 +138,6 @@ export const networkPart = {
   importInvalidJson: "The import file is not valid JSON.",
   importFileTooLarge: "The import file exceeds the {{maxSizeMB}} MB gateway limit.",
   importOverwrite: "Overwrite",
-  importIgnoreSuccess:
-    "Import completed. Existing knowledge networks were kept according to the ignore strategy.",
   importModeDescription:
     "Choose what to do when a knowledge network with the same name or ID already exists.",
   importModeIgnoreDescription:
@@ -157,7 +155,6 @@ export const networkPart = {
   importOverwriteConfirmTitle: "Overwrite the knowledge network?",
   importOverwriteRisk:
     "Overwrite replaces existing model content with the same ID. Verify the file before importing.",
-  importOverwriteSuccess: "Imported and overwritten successfully",
   importPending:
     "The import flow will be aligned with the legacy Vega experience in a later slice.",
   importStrictModeDescription:

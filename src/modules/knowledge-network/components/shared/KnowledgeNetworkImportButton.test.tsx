@@ -298,7 +298,7 @@ describe("KnowledgeNetworkImportButton", () => {
         true,
       );
     });
-    expect(mocks.messageSuccess).toHaveBeenCalledWith("knowledgeNetwork.importIgnoreSuccess");
+    expect(mocks.messageSuccess).toHaveBeenCalledWith("knowledgeNetwork.importSuccess");
   });
 
   it("requires confirmation before an overwrite import", async () => {

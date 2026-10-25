@@ -94,15 +94,7 @@ export function KnowledgeNetworkImportButton({
 
     try {
       await importKnowledgeNetwork(payload, selectedImportMode, bindingPolicy, strictMode);
-      void message.success(
-        t(
-          selectedImportMode === "ignore"
-            ? "knowledgeNetwork.importIgnoreSuccess"
-            : selectedImportMode === "overwrite"
-              ? "knowledgeNetwork.importOverwriteSuccess"
-              : "knowledgeNetwork.importSuccess",
-        ),
-      );
+      void message.success(t("knowledgeNetwork.importSuccess"));
       closeImportDialog();
       await onImported();
     } catch (error) {

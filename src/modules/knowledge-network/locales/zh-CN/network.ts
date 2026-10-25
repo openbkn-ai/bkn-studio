@@ -129,7 +129,6 @@ export const networkPart = {
   importInvalidJson: "导入文件不是有效的 JSON。",
   importFileTooLarge: "导入文件超过网关 {{maxSizeMB}} MB 的大小限制。",
   importOverwrite: "覆盖",
-  importIgnoreSuccess: "导入完成，已存在的知识网络已按忽略策略保留。",
   importModeDescription: "选择遇到同名或同 ID 知识网络时的处理方式。",
   importModeIgnoreDescription: "跳过已存在的知识网络，仅导入不存在的内容。",
   importModeIgnoreTitle: "忽略已有内容",
@@ -142,7 +141,6 @@ export const networkPart = {
     "覆盖后，现有知识网络中相同 ID 的模型内容将被导入文件替换。此操作不可撤销。",
   importOverwriteConfirmTitle: "确认覆盖知识网络？",
   importOverwriteRisk: "覆盖会替换相同 ID 的现有模型内容，导入前请确认文件内容正确。",
-  importOverwriteSuccess: "导入并覆盖成功",
   importPending: "导入流程会在后续切片中按旧 Vega 体验继续补齐。",
   importStrictModeDescription:
     "开启后要求模型定义完整，并校验对象类、关系类等依赖是否存在；关闭时允许导入草稿或缺少依赖的模型。",
