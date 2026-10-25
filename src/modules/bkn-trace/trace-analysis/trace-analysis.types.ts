@@ -79,7 +79,32 @@ export type TechnicalTraceOperation = {
   state: string;
 };
 
+export type SpanDisplayRange = {
+  loadedCount: number;
+  displayLimit: number;
+  rawRecordLimit: number;
+  rawRecordCount: number;
+  totalCount: number | null;
+  totalAccuracy: "estimated" | "unknown";
+  sort: "loaded_start_time_asc_span_id_asc";
+  truncated: boolean;
+  firstStartAt: string | null;
+  lastStartAt: string | null;
+  browseAllowed: boolean;
+  browseReason?: string;
+};
+
+export type TechnicalSpanPage = {
+  traceId: string;
+  entries: TechnicalSpanNode[];
+  hasMore: boolean;
+  nextCursor?: string;
+  sort: "span_id_asc";
+  consistency: "live";
+};
+
 export type TechnicalTraceDetail = {
+  spanDisplay?: SpanDisplayRange;
   graph?: TechnicalTraceGraph;
   operations: TechnicalTraceOperation[];
   partial: boolean;

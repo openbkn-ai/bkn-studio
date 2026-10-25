@@ -16,6 +16,123 @@ describe("trace-analysis service", () => {
     getMock.mockReset();
   });
 
+  it("maps bounded display metadata without another first-screen request", async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        summary: { trace_id: "range" },
+        operations: [],
+        span_display: {
+          loaded_count: 1000,
+          display_limit: 1000,
+          raw_record_limit: 1001,
+          raw_record_count: 1001,
+          total_count: 1500,
+          total_accuracy: "estimated",
+          sort: "loaded_start_time_asc_span_id_asc",
+          truncated: true,
+          first_start_at: null,
+          last_start_at: "2026-10-24T12:00:00Z",
+          browse_allowed: false,
+          browse_reason: "global_trace_access_required",
+        },
+      },
+    });
+    const service = await import("./trace-analysis.service");
+    const detail = await service.getTechnicalTrace("range");
+    expect(detail).toHaveProperty("spanDisplay", {
+      loadedCount: 1000,
+      displayLimit: 1000,
+      rawRecordLimit: 1001,
+      rawRecordCount: 1001,
+      totalCount: 1500,
+      totalAccuracy: "estimated",
+      sort: "loaded_start_time_asc_span_id_asc",
+      truncated: true,
+      firstStartAt: null,
+      lastStartAt: "2026-10-24T12:00:00Z",
+      browseAllowed: false,
+      browseReason: "global_trace_access_required",
+    });
+    expect(getMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("loads one bounded Span page with an encoded trace ID and cancellable cursor request", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        trace_id: "trace/a",
+        entries: [{ span_id: "s", name: "page-span", start_nano: 1 }],
+        has_more: true,
+        next_cursor: "next",
+        sort: "span_id_asc",
+        consistency: "live",
+      },
+    });
+    const { listTechnicalSpans } = await import("./trace-analysis.service");
+    const signal = new AbortController().signal;
+    const first = await listTechnicalSpans("trace/a", undefined, signal);
+    expect(first.entries[0]).toMatchObject({ spanId: "s", name: "page-span" });
+    expect(first).toMatchObject({
+      hasMore: true,
+      nextCursor: "next",
+      sort: "span_id_asc",
+      consistency: "live",
+    });
+    expect(getMock).toHaveBeenLastCalledWith("/agent-observability/v1/traces/trace%2Fa/spans", {
+      signal,
+      skipErrorToast: true,
+    });
+    await listTechnicalSpans("trace/a", "next", signal);
+    expect(getMock).toHaveBeenLastCalledWith("/agent-observability/v1/traces/trace%2Fa/spans", {
+      signal,
+      params: { cursor: "next" },
+      skipErrorToast: true,
+    });
+  });
+
+  it.each([null, undefined])("accepts an empty terminal page with entries=%s", async (entries) => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        trace_id: "trace",
+        entries,
+        has_more: false,
+        sort: "span_id_asc",
+        consistency: "live",
+      },
+    });
+    const { listTechnicalSpans } = await import("./trace-analysis.service");
+    expect(await listTechnicalSpans("trace")).toMatchObject({ entries: [], hasMore: false });
+  });
+
+  it("does not turn a malformed non-array Span page into an empty success", async () => {
+    getMock.mockResolvedValueOnce({ data: { trace_id: "trace", entries: {}, has_more: false } });
+    const { listTechnicalSpans } = await import("./trace-analysis.service");
+    await expect(listTechnicalSpans("trace")).rejects.toThrow();
+  });
+
+  it("merges and deduplicates graph-only partial diagnostics without another request", async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        summary: { trace_id: "trace" },
+        partial: false,
+        partial_reasons: ["operation_gap"],
+        graph: {
+          data: { nodes: [] },
+          partial: true,
+          partial_reason: ["operation_gap", "trace_query_truncated", "parent_outside_display"],
+        },
+      },
+    });
+    const { getTechnicalTrace } = await import("./trace-analysis.service");
+    const detail = await getTechnicalTrace("trace");
+    expect(detail.partialReasons).toEqual([
+      "operation_gap",
+      "trace_query_truncated",
+      "parent_outside_display",
+    ]);
+    expect(detail.partial).toBe(true);
+    expect(getMock).toHaveBeenCalledTimes(1);
+  });
+
   it("lists technical traces through stable typed filters", async () => {
     getMock.mockResolvedValue({
       data: {

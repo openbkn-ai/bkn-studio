@@ -13,6 +13,7 @@ import {
   getReferencedPayload,
   getTechnicalTrace,
   listTechnicalTraces,
+  listTechnicalSpans,
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.service";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -23,6 +24,16 @@ vi.mock("@/modules/bkn-trace/trace-analysis/trace-analysis.service", () => ({
   getReferencedPayload: vi.fn(),
   getTechnicalTrace: vi.fn(),
   listTechnicalTraces: vi.fn(),
+  listTechnicalSpans: vi.fn(),
+}));
+
+vi.mock("./SpanBrowser", () => ({
+  SpanBrowser: ({ onClose }: { onClose: () => void }) => (
+    <div>
+      <span>span-browser-open</span>
+      <button onClick={onClose}>close-span-browser</button>
+    </div>
+  ),
 }));
 
 const writeTextMock = vi.fn().mockResolvedValue(undefined);
@@ -56,6 +67,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     vi.clearAllMocks();
     vi.mocked(listTechnicalTraces).mockReset();
     vi.mocked(getTechnicalTrace).mockReset();
+    vi.mocked(listTechnicalSpans).mockReset();
     vi.mocked(getReferencedPayload).mockReset();
     writeTextMock.mockClear();
     window.history.replaceState({}, "", "/studio/observability/traces");
@@ -165,6 +177,120 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
       partial: true,
       partialReasons: ["span_unavailable"],
     });
+  });
+
+  it("discloses display truncation and opens browsing only after explicit action", async () => {
+    const detail = await vi.mocked(getTechnicalTrace).getMockImplementation()!("trace");
+    detail.summary.spanCountStatus = "available";
+    if (detail.graph) detail.graph.nodes = detail.graph.nodes.slice(0, 1);
+    detail.partialReasons = ["trace_query_truncated", "parent_outside_display", "other_diagnostic"];
+    detail.spanDisplay = {
+      loadedCount: 1,
+      displayLimit: 1000,
+      rawRecordLimit: 1001,
+      rawRecordCount: 1001,
+      totalCount: 1500,
+      totalAccuracy: "estimated",
+      sort: "loaded_start_time_asc_span_id_asc",
+      truncated: true,
+      firstStartAt: null,
+      lastStartAt: null,
+      browseAllowed: true,
+    };
+    vi.mocked(getTechnicalTrace).mockResolvedValue(detail);
+    vi.mocked(listTechnicalSpans).mockResolvedValue({
+      traceId: "trace",
+      entries: [],
+      hasMore: false,
+      sort: "span_id_asc",
+      consistency: "live",
+    });
+    render(<TraceAnalysisScene />);
+    fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
+    await screen.findByText("bknTrace.traceWorkspace.spanDisplay.truncated");
+    expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.loadedEstimated")).not.toBeNull();
+    expect(screen.getByText(/bknTrace\.traceWorkspace\.spanDisplay\.rawRecords/)).not.toBeNull();
+    expect(screen.queryByText("trace_query_truncated")).toBeNull();
+    expect(screen.getByText(/other_diagnostic/)).not.toBeNull();
+    expect(screen.queryByText("bknTrace.traceWorkspace.diagnostics.spanUnavailable")).toBeNull();
+    expect(listTechnicalSpans).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknTrace.traceWorkspace.spanBrowser.title" }),
+    );
+    expect(await screen.findByText("span-browser-open")).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "close-span-browser" }));
+    expect(screen.queryByText("span-browser-open")).toBeNull();
+    expect(getTechnicalTrace).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["global_trace_access_required", "legacy_span_envelope", "span_page_unavailable"])(
+    "does not browse when metadata denies %s",
+    async (browseReason) => {
+      const detail = await vi.mocked(getTechnicalTrace).getMockImplementation()!("trace");
+      detail.partialReasons = ["span_scope_unavailable"];
+      detail.spanDisplay = {
+        loadedCount: 0,
+        displayLimit: 1000,
+        rawRecordLimit: 1001,
+        rawRecordCount: 0,
+        totalCount: null,
+        totalAccuracy: "unknown",
+        sort: "loaded_start_time_asc_span_id_asc",
+        truncated: false,
+        firstStartAt: null,
+        lastStartAt: null,
+        browseAllowed: false,
+        browseReason,
+      };
+      if (browseReason === "global_trace_access_required") {
+        detail.summary.spanCountStatus = "available";
+        detail.summary.spanCount = 1500;
+        detail.spanDisplay.totalCount = 1500;
+        detail.spanDisplay.totalAccuracy = "estimated";
+      }
+      vi.mocked(getTechnicalTrace).mockResolvedValue(detail);
+      render(<TraceAnalysisScene />);
+      fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
+      await screen.findByText("bknTrace.traceWorkspace.spanDisplay.loadedUnknown");
+      const button = screen.getByRole("button", {
+        name: "bknTrace.traceWorkspace.spanBrowser.title",
+      });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+      expect(listTechnicalSpans).not.toHaveBeenCalled();
+      expect(screen.queryByText("bknTrace.traceWorkspace.spanDisplay.estimated")).toBeNull();
+      expect(screen.queryByText("bknTrace.traceWorkspace.spanDisplay.loadedEstimated")).toBeNull();
+      expect(screen.queryByText("bknTrace.traceWorkspace.diagnostics.spanUnavailable")).toBeNull();
+    },
+  );
+
+  it("localizes legacy truncation without inventing total metadata or enabling browsing", async () => {
+    const detail = await vi.mocked(getTechnicalTrace).getMockImplementation()!("trace");
+    detail.partialReasons = ["trace_query_truncated"];
+    detail.summary.spanCountStatus = "available";
+    vi.mocked(getTechnicalTrace).mockResolvedValue(detail);
+    render(<TraceAnalysisScene />);
+    fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
+    await screen.findByText("bknTrace.traceWorkspace.spanDisplay.legacy");
+    expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.unknownTotal")).not.toBeNull();
+    expect(screen.queryByText("trace_query_truncated")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "bknTrace.traceWorkspace.spanBrowser.title" }),
+    ).toBeDisabled();
+  });
+
+  it("keeps an older backend's positive available summary count explicitly estimated", async () => {
+    const detail = await vi.mocked(getTechnicalTrace).getMockImplementation()!("trace");
+    detail.summary.spanCountStatus = "available";
+    detail.summary.spanCount = 1500;
+    detail.partialReasons = ["trace_query_truncated"];
+    vi.mocked(getTechnicalTrace).mockResolvedValue(detail);
+    render(<TraceAnalysisScene />);
+    fireEvent.click(await screen.findByRole("button", { name: detail.summary.traceId }));
+    await screen.findByText("bknTrace.traceWorkspace.spanDisplay.legacy");
+    expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.estimated")).not.toBeNull();
+    expect(screen.getByText("bknTrace.traceWorkspace.spanDisplay.loadedEstimated")).not.toBeNull();
+    expect(listTechnicalSpans).not.toHaveBeenCalled();
   });
 
   it("uses the standard level-three page title", async () => {
