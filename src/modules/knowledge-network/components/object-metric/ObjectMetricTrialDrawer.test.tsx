@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
 import { createObjectMetricDefinitionV1 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
+import { serializeObjectMetricBody } from "@/modules/knowledge-network/lib/object-metric-numeric";
 import type {
   ObjectMetricDataV1,
   ObjectMetricQueryRequestV1,
@@ -255,6 +256,14 @@ describe("ObjectMetricTrialDrawer", () => {
       ),
     );
     expect(await screen.findByText("存在计算结果，但均不满足结果筛选条件。")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "比较值" }), {
+      target: { value: "9007199254740993" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
+    expect(serializeObjectMetricBody(onRun.mock.calls[1]?.[0])).toContain(
+      '"having":{"operator":"gt","value":9007199254740993',
+    );
   }, 20_000);
 
   it("clears dimension sorting when the selected group is removed", async () => {
@@ -1310,6 +1319,14 @@ describe("ObjectMetricTrialDrawer", () => {
         instance_identities: [{ batch_id: 42, split: false }],
         time: undefined,
       }),
+    );
+    fireEvent.change(screen.getByLabelText("批次"), {
+      target: { value: "9007199254740993" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
+    expect(serializeObjectMetricBody(onRun.mock.calls[1]?.[0])).toContain(
+      '"instance_identities":[{"batch_id":9007199254740993,"split":false}]',
     );
   });
 

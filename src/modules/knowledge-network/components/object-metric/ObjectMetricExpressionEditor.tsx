@@ -8,6 +8,10 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button, Input, InputNumber, Select, Space } from "antd";
 import { useEffect } from "react";
+import {
+  formatObjectMetricNumericInput,
+  objectMetricAuthoringNumericValue,
+} from "@/modules/knowledge-network/lib/object-metric-numeric";
 
 import {
   acceptedTypesForArgument,
@@ -259,8 +263,14 @@ export function ObjectMetricExpressionEditor({
         value.value_type === "duration" ? (
           <InputNumber
             aria-label={objectMetricText("m906bc76b812a")}
-            onChange={(next) => onChange({ ...value, value: next ?? 0 })}
-            value={Number(value.value ?? 0)}
+            onChange={(next) =>
+              onChange({
+                ...value,
+                value: next === null ? 0 : (objectMetricAuthoringNumericValue(next) ?? 0),
+              })
+            }
+            stringMode
+            value={formatObjectMetricNumericInput(value.value ?? 0)}
           />
         ) : value.value_type === "boolean" ? (
           <Select

@@ -33,6 +33,8 @@ describe("object metric V1 HTTP routes", () => {
       await import("@/modules/knowledge-network/services/object-metric.service");
     const { transformPrecisionSafeJSONResponse } =
       await import("@/framework/request/precision-safe-json");
+    const { serializeObjectMetricBody } =
+      await import("@/modules/knowledge-network/lib/object-metric-numeric");
 
     await listObjectMetricsV1("network-1", { limit: 500, offset: 0 });
     await queryObjectMetricDataV1("network-1", "metric-1", 2);
@@ -50,6 +52,7 @@ describe("object metric V1 HTTP routes", () => {
           status: undefined,
         },
         skipErrorToast: undefined,
+        transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
     expect(postMock).toHaveBeenCalledWith(
@@ -57,6 +60,7 @@ describe("object metric V1 HTTP routes", () => {
       {},
       {
         params: { branch: "main", version: 2 },
+        transformRequest: serializeObjectMetricBody,
         transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
@@ -66,6 +70,7 @@ describe("object metric V1 HTTP routes", () => {
       {
         params: { branch: "main" },
         skipErrorToast: true,
+        transformRequest: serializeObjectMetricBody,
         transformResponse: transformPrecisionSafeJSONResponse,
       },
     );

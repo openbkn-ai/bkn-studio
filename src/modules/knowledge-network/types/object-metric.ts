@@ -276,7 +276,7 @@ export type ObjectMetricQueryRequestV1 = {
   group_by?: ObjectMetricPropertyRefV1[];
   having?: {
     operator: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "is_null" | "is_not_null";
-    value?: string | number | boolean;
+    value?: string | number | boolean | object;
     unit_code?: string;
   };
   order_by?: Array<{

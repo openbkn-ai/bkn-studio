@@ -8,6 +8,10 @@
 import { DeleteOutlined, PlusOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { Button, Input, InputNumber, Radio, Select, Tag, Tooltip } from "antd";
 import { useEffect, useMemo } from "react";
+import {
+  formatObjectMetricNumericInput,
+  objectMetricAuthoringNumericValue,
+} from "@/modules/knowledge-network/lib/object-metric-numeric";
 
 import type { ObjectMetricExpressionPropertyOption } from "@/modules/knowledge-network/components/object-metric/ObjectMetricExpressionEditor";
 import { objectMetricPropertyExpression } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
@@ -186,14 +190,20 @@ function LiteralValueControl({
   }
   if (["decimal", "duration", "int64"].includes(value.value_type)) {
     return (
-      <InputNumber
+      <InputNumber<string>
         aria-label={definition?.label ?? objectMetricText("ma92a585d1fbf")}
         className={styles.valueControl}
-        max={definition?.numericMaximum}
-        min={definition?.numericMinimum}
-        onChange={(next) => onChange({ ...value, value: next ?? 0 })}
+        max={definition?.numericMaximum?.toString()}
+        min={definition?.numericMinimum?.toString()}
+        onChange={(next) =>
+          onChange({
+            ...value,
+            value: next === null ? 0 : (objectMetricAuthoringNumericValue(next) ?? 0),
+          })
+        }
         precision={value.value_type === "int64" ? 0 : undefined}
-        value={Number(value.value ?? 0)}
+        stringMode
+        value={formatObjectMetricNumericInput(value.value ?? 0)}
       />
     );
   }
