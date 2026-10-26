@@ -23,6 +23,11 @@ export const subscriptionEnUS = {
           "Timelines, evidence chains, data provenance, the business semantic graph and interactive tracing for business questions and results.",
         name: "Business provenance",
       },
+      bkn_project_kb: {
+        description:
+          "Use knowledge bases in BKN projects: extract concept models, recognise and link entities, extract properties, relations and events, and fuse them with business data while keeping the source evidence.",
+        name: "Knowledge base building",
+      },
       bkn_trace: {
         description:
           "Technical traces and runtime diagnostics: call chains, latency and error localisation (no business content or evidence chain).",

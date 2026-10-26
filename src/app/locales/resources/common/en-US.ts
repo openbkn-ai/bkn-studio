@@ -111,6 +111,11 @@ export const commonEnUS = {
         industry: "Industry",
       },
       upgrade: "Upgrade",
+      knowledgeBaseUnavailable: {
+        title: "Knowledge base management required",
+        description:
+          "Knowledge base management is not installed or its API is unavailable. Flows that use structured data only are not affected; locked document versions can still reproduce existing results.",
+      },
       banner: {
         unlicensed:
           "The product is not activated. Register for a permanently free Community licence, or apply for a Professional/Enterprise evaluation licence. Community features remain available.",

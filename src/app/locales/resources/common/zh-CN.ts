@@ -123,6 +123,12 @@ export const commonZhCN = {
         industry: "行业版",
       },
       upgrade: "升级",
+      // 专业版扩展所依赖的知识库没装或接口不可用时的空状态;只用结构化数据的流程不受影响。
+      knowledgeBaseUnavailable: {
+        title: "需要知识库数据管理",
+        description:
+          "知识库数据管理未安装或接口暂不可用。只用结构化数据的流程不受影响；已锁定的文档版本仍可用于复现已有结果。",
+      },
       banner: {
         unlicensed:
           "产品尚未激活。请注册账号并领取社区版永久免费授权，或者申请专业版/企业版授权评估。社区功能可继续使用",
