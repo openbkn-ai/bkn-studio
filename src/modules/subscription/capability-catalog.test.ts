@@ -75,7 +75,7 @@ describe("capability catalog", () => {
   // 时才收,否则版本页就在卖还没有的东西。发布时把它加进目录,并从这里移出。
   it("覆盖 CAPABILITIES 里的每个 key", () => {
     const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
-    const inDevelopment: string[] = [CAPABILITIES.KNOWLEDGE_BASE];
+    const inDevelopment: string[] = [CAPABILITIES.KNOWLEDGE_BASE, CAPABILITIES.BKN_PROJECT_KB];
 
     for (const key of Object.values(CAPABILITIES)) {
       if (inDevelopment.includes(key)) {

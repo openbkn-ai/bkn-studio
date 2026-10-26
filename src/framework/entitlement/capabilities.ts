@@ -56,6 +56,15 @@ export const CAPABILITIES = {
    * `extensionPage` 直接隐藏(不依赖授权快照)。登记表里目前是 planned,发布时再进能力目录(capability-catalog)。
    */
   KNOWLEDGE_BASE: "knowledge_base",
+  /**
+   * 知识库构建:BKN 项目的专业版扩展(概念模型抽取、实体识别与链接、属性关系事件抽取、知识融合)。
+   * 专业档起,依赖本体知识库。
+   *
+   * 服务是 openbkn-ee 的 bknproject-kb,页面在企业版前端镜像;bkn-safe-ee 登记装配表。项目页面里
+   * 的专业版入口统一走 `BknProjectKbSlot` 与 `BknProjectKbBadge`,三态见那里。登记表里目前是
+   * planned,发布时再进能力目录(capability-catalog)。
+   */
+  BKN_PROJECT_KB: "bkn_project_kb",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];
