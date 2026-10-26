@@ -145,6 +145,7 @@ export async function listTechnicalTraces(
 ): Promise<TechnicalTracePage> {
   const response = await http.get<BackendTracePage>(TRACE_API_PREFIX, {
     params: traceQueryParams(query),
+    skipErrorToast: true,
   });
   return {
     entries: (response.data.entries ?? []).map(mapTraceSummary),
