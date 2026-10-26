@@ -6,6 +6,7 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +16,7 @@ const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
 vi.mock("antd", () => ({
   App: { useApp: () => ({ message: messageMock }) },
+  Tooltip: ({ children }: { children: ReactNode }) => children,
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -50,9 +52,9 @@ function installHttpClipboardFallback(result: boolean) {
   return copiedTexts;
 }
 
-function renderPage() {
+function renderPage(path = "/knowledge-network/integration") {
   render(
-    <MemoryRouter initialEntries={["/knowledge-network/integration"]}>
+    <MemoryRouter initialEntries={[path]}>
       <KnowledgeNetworkIntegrationPage />
     </MemoryRouter>,
   );
@@ -77,6 +79,14 @@ afterEach(() => {
 });
 
 describe("KnowledgeNetworkIntegrationPage clipboard fallback", () => {
+  it("restores the integration tab from the URL", () => {
+    renderPage("/knowledge-network/integration?tab=sdk");
+
+    expect(
+      screen.getByRole("tab", { name: /knowledgeNetwork\.integration\.tabs\.sdk/ }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
   it("copies SDK and CLI commands when the Clipboard API is unavailable on HTTP", async () => {
     const copiedTexts = installHttpClipboardFallback(true);
     renderPage();

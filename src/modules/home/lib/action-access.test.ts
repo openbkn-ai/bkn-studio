@@ -23,6 +23,15 @@ describe("canAccessHomeAction", () => {
     ).toBe(true);
   });
 
+  it("allows deep links into a configured navigation entry", () => {
+    expect(
+      canAccessHomeAction([], {
+        path: "/knowledge-network/integration?tab=mcp&mcpView=debug",
+        permissions: "knowledge-network:view",
+      }),
+    ).toBe(true);
+  });
+
   it("keeps non-navigation actions permission-gated", () => {
     expect(
       canAccessHomeAction([], {

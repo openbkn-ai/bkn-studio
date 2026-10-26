@@ -27,6 +27,8 @@ vi.mock("react-i18next", async (importOriginal) => {
         ({
           "common.entitlement.editions.professional": "专业版",
           "common.entitlement.editionsShort.professional": "专业版",
+          "knowledgeNetwork.workspaceExperienceMcp": "MCP 调试",
+          "knowledgeNetwork.workspaceMcpTools": "MCP 资源",
           "knowledgeNetwork.workspaceMetrics": "对象指标",
         })[key] ?? key,
     }),
@@ -159,5 +161,14 @@ describe("KnowledgeNetworkWorkspaceScene object metric navigation", () => {
     fireEvent.click(entry);
 
     expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/metrics");
+  });
+});
+
+describe("KnowledgeNetworkWorkspaceScene MCP navigation", () => {
+  it("removes the standalone debugger entry while keeping MCP resource management", () => {
+    renderScene(entitlement());
+
+    expect(screen.queryByRole("button", { name: "MCP 调试" })).toBeNull();
+    expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
   });
 });

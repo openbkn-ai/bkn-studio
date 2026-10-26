@@ -10,12 +10,37 @@ export const integrationPart = {
     title: "Integrate OpenBKN Capabilities",
     description:
       "Provide a unified integration entry for agent platforms and business systems. MCP is for agent tool calls, CLI is for terminals and agents, and SDK is for Node.js services.",
+    descriptionHelpLabel: "View integration method help",
     modeLabel: "Integration Method",
     tabsAriaLabel: "Knowledge network integration methods",
     tabs: {
       mcp: "MCP Integration",
       cli: "CLI Integration",
       sdk: "SDK Integration",
+    },
+    mcpWorkspace: {
+      tabsAriaLabel: "MCP integration workspace",
+      tabs: {
+        connect: "Client setup",
+        debug: "Tool debugging",
+      },
+      networkLabel: "Knowledge network",
+      networkLoading: "Loading knowledge networks…",
+      networkPlaceholder: "Select a knowledge network",
+      networkNoMatch: "No matching knowledge networks",
+      openNetwork: "View knowledge network",
+      retry: "Retry",
+      loadFailedTitle: "Failed to load knowledge networks",
+      loadFailedDescription: "The available knowledge networks could not be loaded. Please retry.",
+      selectNetworkTitle: "Select a knowledge network to debug",
+      selectNetworkDescription:
+        "MCP tool calls require an explicit knowledge-network context. Selecting one loads the tools available for that network.",
+      noNetworksTitle: "No knowledge networks available for debugging",
+      noNetworksDescription:
+        "Create a knowledge network first, or ask an administrator for access to one.",
+      networkUnavailableTitle: "The original knowledge network is unavailable",
+      networkUnavailableDescription:
+        "The knowledge network in this link does not exist or is not accessible to the current account. Select another network.",
     },
     packageLabel: "View npm package",
     copy: "Copy",

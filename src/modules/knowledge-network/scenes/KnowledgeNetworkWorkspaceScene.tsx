@@ -123,12 +123,6 @@ export function KnowledgeNetworkWorkspaceScene({
         path: `/knowledge-network/workspace/${activeNetworkId}/experience/agent`,
       },
       {
-        key: "experience-mcp",
-        label: t("knowledgeNetwork.workspaceExperienceMcp"),
-        icon: <ForkOutlined />,
-        path: `/knowledge-network/workspace/${activeNetworkId}/experience/mcp`,
-      },
-      {
         key: "experience-cypher",
         label: t("knowledgeNetwork.workspaceExperienceCypher"),
         icon: <NodeIndexOutlined />,
@@ -200,10 +194,7 @@ export function KnowledgeNetworkWorkspaceScene({
 
   const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
   const experienceNavItems = navigationItems.filter(
-    (item) =>
-      item.key === "experience-agent" ||
-      item.key === "experience-mcp" ||
-      item.key === "experience-cypher",
+    (item) => item.key === "experience-agent" || item.key === "experience-cypher",
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>

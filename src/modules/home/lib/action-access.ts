@@ -20,7 +20,8 @@ const NAVIGATION_ENTRY_PATHS = new Set([
 ]);
 
 export function canAccessHomeAction(currentPermissions: string[], action: HomeActionAccess) {
-  if (action.path && NAVIGATION_ENTRY_PATHS.has(action.path)) {
+  const navigationPath = action.path?.split("?", 1)[0];
+  if (navigationPath && NAVIGATION_ENTRY_PATHS.has(navigationPath)) {
     return true;
   }
 

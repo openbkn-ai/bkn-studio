@@ -5,14 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ApiOutlined, CodeOutlined, CopyOutlined, ForkOutlined } from "@ant-design/icons";
-import { App } from "antd";
-import { useMemo, useState, type ReactNode } from "react";
+import { CopyOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { App, Tooltip } from "antd";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { gatewayOrigin } from "@/framework/auth/oauth";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
-import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
+import { McpIntegrationWorkspace } from "@/modules/knowledge-network/scenes/McpIntegrationWorkspace";
 
 import styles from "./KnowledgeNetworkIntegrationPage.module.css";
 
@@ -24,12 +25,6 @@ type CodeExample = { code: string; label: string; title: string };
 const platformOrigin =
   gatewayOrigin() ||
   (typeof window !== "undefined" ? window.location.origin : "https://your-platform");
-
-const tabIcons: Record<IntegrationTab, ReactNode> = {
-  cli: <CodeOutlined />,
-  mcp: <ForkOutlined />,
-  sdk: <ApiOutlined />,
-};
 
 const cliExampleKeys: CliExampleKey[] = ["setup", "context", "agent-skill"];
 const sdkExampleKeys: SdkExampleKey[] = ["quick-start", "instance-query", "dynamic-tool"];
@@ -253,20 +248,35 @@ function SdkIntegrationPanel() {
 
 export function KnowledgeNetworkIntegrationPage() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<IntegrationTab>("mcp");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const activeTab: IntegrationTab =
+    requestedTab === "cli" || requestedTab === "sdk" ? requestedTab : "mcp";
   const tabs: IntegrationTab[] = ["mcp", "cli", "sdk"];
+
+  const selectTab = (nextTab: IntegrationTab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", nextTab);
+    if (nextTab !== "mcp") {
+      next.delete("mcpView");
+      next.delete("networkId");
+    }
+    setSearchParams(next);
+  };
 
   return (
     <section className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerCopy}>
           <h1 className={styles.title}>{t("knowledgeNetwork.integration.title")}</h1>
-          <p className={styles.description}>{t("knowledgeNetwork.integration.description")}</p>
+          <Tooltip title={t("knowledgeNetwork.integration.description")} placement="bottomLeft">
+            <QuestionCircleOutlined
+              className={styles.descriptionHelp}
+              aria-label={t("knowledgeNetwork.integration.descriptionHelpLabel")}
+              tabIndex={0}
+            />
+          </Tooltip>
         </div>
-      </header>
-
-      <div className={styles.modeSection}>
-        <span className={styles.modeLabel}>{t("knowledgeNetwork.integration.modeLabel")}</span>
         <div
           className={styles.tabs}
           role="tablist"
@@ -279,23 +289,20 @@ export function KnowledgeNetworkIntegrationPage() {
               role="tab"
               aria-selected={activeTab === key}
               className={`${styles.tab} ${activeTab === key ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab(key)}
+              onClick={() => selectTab(key)}
             >
-              <span className={styles.tabIcon} aria-hidden>
-                {tabIcons[key]}
-              </span>
               <span className={styles.tabLabel}>
                 {t(`knowledgeNetwork.integration.tabs.${key}`)}
               </span>
             </button>
           ))}
         </div>
-      </div>
+      </header>
 
       <div className={styles.panel}>
         {activeTab === "mcp" ? (
           <div className={styles.experienceHost}>
-            <ExperienceScene embedded initialMode="mcp" lockMode showMcpConnect />
+            <McpIntegrationWorkspace />
           </div>
         ) : activeTab === "cli" ? (
           <CliIntegrationPanel />
