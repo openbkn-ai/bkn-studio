@@ -11,7 +11,7 @@ import type { EntitlementView } from "@/framework/entitlement/types";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 /**
- * BKN 项目里专业版扩展(`bkn_project_kb`)的三态:
+ * BKN 项目里知识库扩展的三态。扩展没有自己的能力 key,按 `knowledge_base` 判(bkn-foundry#2522):
  *
  *   hidden  社区版镜像(not-installed),或快照未到(unknown)→ 不出现任何专业版入口和用词
  *   locked  专业版镜像 + 社区版授权(not-licensed)→ 入口可见,带「专业版」徽标,加遮罩不可操作
@@ -23,7 +23,7 @@ import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 export type BknProjectKbMode = "hidden" | "locked" | "enabled";
 
 export function bknProjectKbMode(snapshot: EntitlementView | null): BknProjectKbMode {
-  switch (capabilityState(CAPABILITIES.BKN_PROJECT_KB, snapshot)) {
+  switch (capabilityState(CAPABILITIES.KNOWLEDGE_BASE, snapshot)) {
     case "available":
       return "enabled";
     case "not-licensed":

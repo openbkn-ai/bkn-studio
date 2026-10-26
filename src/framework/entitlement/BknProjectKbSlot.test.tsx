@@ -36,8 +36,8 @@ vi.mock("react-router-dom", async (importOriginal) => {
   };
 });
 
+// The project's knowledge base extension has no key of its own: it is gated on knowledge_base.
 const KB = CAPABILITIES.KNOWLEDGE_BASE;
-const EXT = CAPABILITIES.BKN_PROJECT_KB;
 
 function entitlement(overrides: Partial<Entitlement>): Entitlement {
   return {
@@ -52,15 +52,15 @@ function entitlement(overrides: Partial<Entitlement>): Entitlement {
   };
 }
 
-/** 社区版镜像:扩展没装。 */
+/** 社区版镜像:知识库没装。 */
 const mirror = entitlement({ licensed: true, state: "valid" });
 /** 专业版镜像 + 社区版授权:装了没买。 */
-const communityLicensed = entitlement({ extensions: [EXT, KB], licensed: true, state: "valid" });
+const communityLicensed = entitlement({ extensions: [KB], licensed: true, state: "valid" });
 /** 专业版授权。 */
 const professional = entitlement({
-  capabilities: [EXT, KB],
+  capabilities: [KB],
   edition: "professional",
-  extensions: [EXT, KB],
+  extensions: [KB],
   licensed: true,
   state: "valid",
 });
@@ -84,6 +84,10 @@ beforeEach(() => {
 });
 
 describe("bknProjectKbMode", () => {
+  it("has no capability key of its own", () => {
+    expect(Object.values(CAPABILITIES)).not.toContain("bkn_project_kb");
+  });
+
   it("maps the capability state onto hidden, locked and enabled", () => {
     expect(bknProjectKbMode(null)).toBe("hidden");
     expect(bknProjectKbMode(mirror)).toBe("hidden");
@@ -116,7 +120,7 @@ describe("BknProjectKbSlot", () => {
     expect(container.querySelector(".console-upgrade-locked-content")?.textContent).toBe("preview");
     expect(container.querySelector(".console-upgrade-locked-content")).toHaveAttribute("inert");
     expect(screen.queryByRole("button", { name: "extract" })).toBeNull();
-    expect(screen.getByText("subscription.capabilities.bkn_project_kb.name")).toBeInTheDocument();
+    expect(screen.getByText("subscription.capabilities.knowledge_base.name")).toBeInTheDocument();
   });
 
   it("mounts nothing under the mask when no preview is given", () => {
@@ -155,16 +159,6 @@ describe("BknProjectKbSlot", () => {
     );
     expect(container.querySelector(".console-upgrade-mask")).toBeNull();
     expect(screen.getByRole("button", { name: "extract" })).toBeInTheDocument();
-  });
-
-  it("shows the empty state when the knowledge base module is not available", () => {
-    contextState.snapshot = { ...professional, capabilities: [EXT], extensions: [EXT] };
-    renderSlot();
-
-    expect(screen.queryByRole("button", { name: "extract" })).toBeNull();
-    expect(
-      screen.getByText("common.entitlement.knowledgeBaseUnavailable.title"),
-    ).toBeInTheDocument();
   });
 
   it("shows the empty state when the caller finds the knowledge base API down", () => {

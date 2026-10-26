@@ -54,17 +54,11 @@ export const CAPABILITIES = {
    * 与图探索同一种做法:页面代码在企业版前端镜像里,经 `@/app/extensions/installed` 注册;
    * bkn-safe-ee 登记装配表,入口按 `capabilityState()` 判。社区构建没有这个页面,入口由
    * `extensionPage` 直接隐藏(不依赖授权快照)。登记表里目前是 planned,发布时再进能力目录(capability-catalog)。
+   *
+   * BKN 项目里的知识库扩展(概念模型抽取、实体识别与链接、属性关系事件抽取、知识融合)也按它门控,
+   * 不另设 key(bkn-foundry#2522):同为专业档,扩展本就依赖知识库。三态见 `bkn-project-kb-mode.ts`。
    */
   KNOWLEDGE_BASE: "knowledge_base",
-  /**
-   * 知识库构建:BKN 项目的专业版扩展(概念模型抽取、实体识别与链接、属性关系事件抽取、知识融合)。
-   * 专业档起,依赖本体知识库。
-   *
-   * 服务是 openbkn-ee 的 bknproject-kb,页面在企业版前端镜像;bkn-safe-ee 登记装配表。项目页面里
-   * 的专业版入口统一走 `BknProjectKbSlot` 与 `BknProjectKbBadge`,三态见那里。登记表里目前是
-   * planned,发布时再进能力目录(capability-catalog)。
-   */
-  BKN_PROJECT_KB: "bkn_project_kb",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];
