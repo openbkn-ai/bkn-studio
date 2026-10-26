@@ -147,6 +147,27 @@ describe("McpIntegrationWorkspace", () => {
     );
   });
 
+  it("preserves the selected network while viewing client setup", async () => {
+    mocks.listKnowledgeNetworks.mockResolvedValue({
+      items: [network("network-1", "sales_kn", "Sales")],
+      total: 1,
+    });
+    renderWorkspace("/knowledge-network/integration?tab=mcp&mcpView=debug&networkId=network-1");
+
+    expect(await screen.findByTestId("experience-scene")).toHaveTextContent("debug:sales_kn");
+
+    fireEvent.click(
+      screen.getByRole("tab", {
+        name: "knowledgeNetwork.integration.mcpWorkspace.tabs.connect",
+      }),
+    );
+
+    expect(screen.getByTestId("experience-scene")).toHaveTextContent("connect");
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/knowledge-network/integration?tab=mcp&mcpView=connect&networkId=network-1",
+    );
+  });
+
   it("does not silently replace an unavailable network from a legacy link", async () => {
     mocks.listKnowledgeNetworks.mockResolvedValue({
       items: [network("network-1", "sales_kn", "Sales")],

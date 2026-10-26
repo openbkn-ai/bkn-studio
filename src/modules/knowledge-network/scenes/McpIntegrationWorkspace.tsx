@@ -110,9 +110,6 @@ export function McpIntegrationWorkspace() {
       const next = new URLSearchParams(searchParams);
       next.set("tab", "mcp");
       next.set("mcpView", nextView);
-      if (nextView === "connect") {
-        next.delete("networkId");
-      }
       setSearchParams(next);
     },
     [searchParams, setSearchParams],
