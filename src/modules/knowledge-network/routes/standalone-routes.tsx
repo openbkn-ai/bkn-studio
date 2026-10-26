@@ -36,6 +36,7 @@ import {
   type KnowledgeNetworkChildRecordLoader,
 } from "@/modules/knowledge-network/routes/KnowledgeNetworkChildModifyRouteGate";
 import { KnowledgeNetworkModifyRouteGate } from "@/modules/knowledge-network/routes/KnowledgeNetworkModifyRouteGate";
+import { LegacyMcpExperienceRedirect } from "@/modules/knowledge-network/routes/LegacyMcpExperienceRedirect";
 import { createKnowledgeNetworkRoute } from "@/modules/knowledge-network/routes/route-factory";
 import {
   getKnowledgeNetworkActionTypeDetail,
@@ -98,7 +99,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.experienceMcpDescription",
       titleKey: "knowledgeNetwork.experienceMcpTitle",
     },
-    workspaceSectionPage("experience-mcp"),
+    <LegacyMcpExperienceRedirect />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/experience/cypher",

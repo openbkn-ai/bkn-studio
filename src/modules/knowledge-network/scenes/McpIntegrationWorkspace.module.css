@@ -1,0 +1,159 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.workspace {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.viewBar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 46px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
+}
+
+.viewTabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.viewTab {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.viewTab:hover {
+  background: var(--color-hover);
+  color: var(--color-text-link);
+}
+
+.viewTabActive {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+.networkPicker {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.networkPicker label {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.networkSelect {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: min(360px, 34vw);
+}
+
+.retryButton {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-link);
+  cursor: pointer;
+}
+
+.openNetworkLink {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 4px;
+  color: var(--color-text-link);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.openNetworkLink:hover {
+  color: var(--color-primary-700);
+}
+
+.content {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content > section {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.emptyState {
+  display: grid;
+  flex: 1 1 auto;
+  place-content: center;
+  justify-items: center;
+  padding: 48px 24px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.emptyState h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.emptyState p {
+  max-width: 540px;
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .viewBar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding-block: 8px;
+  }
+
+  .networkSelect {
+    width: 100%;
+  }
+
+  .networkPicker {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}

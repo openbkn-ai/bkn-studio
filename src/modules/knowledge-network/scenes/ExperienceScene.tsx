@@ -191,6 +191,7 @@ type ExperienceSceneProps = {
   initialMode?: ContextLoaderMode;
   lockMode?: boolean;
   network?: ExperienceNetworkIdentity | null;
+  networkId?: string;
   showMcpConnect?: boolean;
 };
 
@@ -199,6 +200,7 @@ export function ExperienceScene({
   initialMode = "agent",
   lockMode = false,
   network: providedNetwork,
+  networkId: providedNetworkId,
   showMcpConnect = false,
 }: ExperienceSceneProps) {
   const navigate = useNavigate();
@@ -206,8 +208,8 @@ export function ExperienceScene({
   const { t } = useTranslation();
   const runtimeConfig = useRuntimeConfig();
   const { message } = App.useApp();
-  const { networkId } = useParams<{ networkId: string }>();
-  const id = networkId ?? "";
+  const { networkId: routeNetworkId } = useParams<{ networkId: string }>();
+  const id = providedNetworkId ?? routeNetworkId ?? providedNetwork?.id ?? "";
   const currentPath = `${location.pathname}${location.search}`;
   const apiKeyHandoffId = (location.state as { apiKeyHandoffId?: unknown } | null)?.apiKeyHandoffId;
   const apiKeyPagePath = buildApiKeyPagePath(currentPath);
@@ -315,7 +317,7 @@ export function ExperienceScene({
     [invalidateFill, invalidateRequest],
   );
 
-  const knId = network?.slug ?? "kn_legal";
+  const knId = network?.slug ?? "";
   const currentKnIdRef = useRef(knId);
   currentKnIdRef.current = knId;
   const env: ContextLoaderEnv = useMemo(() => ({ base, token, knId }), [base, token, knId]);
@@ -428,8 +430,10 @@ export function ExperienceScene({
   );
   // Fetch once when entering MCP mode; failures are shown inline only.
   useEffect(() => {
-    if (mode === "mcp" && !toolDefs && !toolsLoading && !toolsError) loadTools();
-  }, [mode, toolDefs, toolsLoading, toolsError, loadTools]);
+    if (mode === "mcp" && !showMcpConnect && knId && !toolDefs && !toolsLoading && !toolsError) {
+      loadTools();
+    }
+  }, [mode, showMcpConnect, knId, toolDefs, toolsLoading, toolsError, loadTools]);
 
   // The MCP surface is the deployment's: tools/list decides what is in this list, and the local
   // ops only describe what it reports. See mcpOpsFrom.

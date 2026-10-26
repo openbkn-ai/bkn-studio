@@ -303,7 +303,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         impactKey: "home.platform.stages.validate.required.mcpDebug.impact",
         optional: true,
         outcomeKey: "home.platform.stages.validate.required.mcpDebug.outcome",
-        path: "/knowledge-network",
+        path: "/knowledge-network/integration?tab=mcp&mcpView=debug",
         permissionMode: "any",
         permissions: ["knowledge-network:preview", "knowledge-network:metric:query"],
         titleKey: "home.platform.stages.validate.required.mcpDebug.title",
