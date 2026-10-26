@@ -353,12 +353,13 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       result?.sourceStatus.some((source) => source.reason === "audit_consumer_not_configured") ? (
         <Alert message={t("bknTrace.errors.auditNotConfigured")} showIcon type="warning" />
       ) : null}
-      {hasSourceQueryFailure(result?.sourceStatus) ? (
+      {hasIncompleteQuery(result?.sourceStatus) ? (
         <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" />
       ) : null}
       {hasHistoricalLogLoss(result?.sourceStatus) ? (
         <Alert message={t("bknTrace.logs.historyWarning")} showIcon type="warning" />
-      ) : result?.sourceStatus.some((source) => source.collectionStatus?.status === "degraded") ? (
+      ) : null}
+      {result?.sourceStatus.some((source) => source.collectionStatus?.status === "degraded") ? (
         <Alert message={t("bknTrace.logs.collectionWarning")} showIcon type="warning" />
       ) : null}
       {associated ? (
@@ -623,8 +624,11 @@ function AssociatedScopeTag({
   return <Tag color="blue">{scope.conversationId || scope.traceId || scope.requestId}</Tag>;
 }
 
-function hasSourceQueryFailure(sources: LogListResult["sourceStatus"] | undefined) {
-  return sources?.some((source) => source.status === "unavailable") ?? false;
+function hasIncompleteQuery(sources: LogListResult["sourceStatus"] | undefined) {
+  return (
+    sources?.some((source) => source.status === "unavailable" || source.status === "degraded") ??
+    false
+  );
 }
 
 function hasHistoricalLogLoss(sources: LogListResult["sourceStatus"] | undefined) {

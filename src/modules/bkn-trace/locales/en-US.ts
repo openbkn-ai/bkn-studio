@@ -1020,7 +1020,7 @@ export const bknTraceEnUS = {
       endTime: "End time",
       modulePlaceholder: "All business modules",
       outcomePlaceholder: "Outcome",
-      partialWarning: "Some logs could not be retrieved. The current result may be incomplete.",
+      partialWarning: "The current search results may be incomplete.",
       associatedTarget: { resource: "Related resource", user: "User" },
       collectionWarning:
         "Some recent operations may not have been recorded. Search results may be incomplete.",

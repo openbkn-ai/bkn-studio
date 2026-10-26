@@ -402,6 +402,34 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText(/network_timeout|unavailable-source/)).toBeNull();
   });
 
+  it.each(["source_status_probe_failed", "telemetry_dropped", "partial_management_audit_coverage"])(
+    "查询覆盖不完整时保留结果并提示风险：%s",
+    async (reason) => {
+      const result = await vi.mocked(listLogs)({});
+      vi.mocked(listLogs).mockResolvedValueOnce({
+        ...result,
+        partial: true,
+        sourceStatus: [
+          {
+            sourceId: "private-source",
+            status: "degraded",
+            reliability: "best_effort",
+            coveredModules: [],
+            reason,
+          },
+        ],
+      });
+      renderWithoutAntdStyles(<ObservabilityLogsScene />);
+      expect(await screen.findByText("bknTrace.logs.partialWarning")).not.toBeNull();
+      expect(screen.getByText("供应链分析助手 的业务会话")).not.toBeNull();
+      expect(
+        screen.queryByText(
+          /private-source|source_status_probe_failed|telemetry_dropped|partial_management_audit_coverage/,
+        ),
+      ).toBeNull();
+    },
+  );
+
   it("未接入来源不会被显示为查询故障", () => {
     vi.mocked(listLogs).mockResolvedValueOnce({
       count: { accuracy: "partial", value: 0 },
@@ -560,7 +588,7 @@ describe("observability workspace scenes", () => {
         historicalGap === true,
       );
       expect(screen.queryByText("bknTrace.logs.collectionWarning") !== null).toBe(
-        status === "degraded" && historicalGap !== true,
+        status === "degraded",
       );
       expect(listLogs).toHaveBeenCalledTimes(1);
       expect(listLogSources).not.toHaveBeenCalled();

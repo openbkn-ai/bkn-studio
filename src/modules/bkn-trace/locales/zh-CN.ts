@@ -954,7 +954,7 @@ export const bknTraceZhCN = {
       endTime: "结束时间",
       modulePlaceholder: "全部业务模块",
       outcomePlaceholder: "结果",
-      partialWarning: "部分日志暂时无法查询，当前结果可能不完整。",
+      partialWarning: "当前查询结果可能不完整。",
       associatedTarget: { resource: "关联对象", user: "用户" },
       collectionWarning: "部分新操作日志可能未被记录，查询结果可能不完整。",
       historyWarning: "部分历史日志已丢失，可能无法查询。",
