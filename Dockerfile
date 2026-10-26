@@ -33,7 +33,7 @@ COPY . .
 ARG VITE_USE_MOCK=false
 ENV VITE_USE_MOCK=${VITE_USE_MOCK}
 RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm exec vite build
-RUN pnpm run build:mcp-app
+RUN pnpm run build:mcp-apps
 
 ########################### Stage 1 — runtime ###########################
 FROM ${NGINX_IMAGE} AS prod

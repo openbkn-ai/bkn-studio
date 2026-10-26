@@ -16,7 +16,7 @@
   },
   "include": [
     "vite.config.ts",
-    "vite.config.mcp-app.ts",
+    "vite.config.metric-analysis-mcp-app.ts",
     "eslint.config.js",
     "scripts/vite-dev-auth-plugin.ts"
   ]

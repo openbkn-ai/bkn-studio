@@ -8,8 +8,9 @@
   "scripts": {
     "check:version": "node scripts/check-version.mjs",
     "dev": "vite",
-    "build": "tsc -b && vite build && pnpm run build:mcp-app",
-    "build:mcp-app": "vite build --config vite.config.mcp-app.ts",
+    "build": "tsc -b && vite build && pnpm run build:mcp-apps",
+    "build:mcp-apps": "pnpm run build:metric-analysis-mcp-app",
+    "build:metric-analysis-mcp-app": "vite build --config vite.config.metric-analysis-mcp-app.ts",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:types": "eslint . --config eslint.config.typechecked.js",
