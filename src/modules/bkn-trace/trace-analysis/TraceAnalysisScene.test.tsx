@@ -18,7 +18,13 @@ import {
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.service";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
+  useTranslation: () => ({
+    t: (key: string, options?: { value?: string }) =>
+      options?.value ? `${key}: ${options.value}` : key,
+  }),
+}));
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: { error: vi.fn(), success: vi.fn() } }),
 }));
@@ -338,7 +344,60 @@ describe("TraceAnalysisScene", () => {
 
     renderWithoutAntdStyles(<TraceAnalysisScene />);
 
-    expect(await screen.findByText("bknTrace.traceWorkspace.listFailed")).not.toBeNull();
+    expect(await screen.findByText("trace query unavailable")).not.toBeNull();
+  });
+
+  it("shows the Trace reason locally and clears it after a successful list retry", async () => {
+    const reason = "to cannot be earlier than from";
+    vi.mocked(listTechnicalTraces).mockRejectedValueOnce(
+      Object.assign(new Error("HTTP 400"), {
+        isAxiosError: true,
+        response: {
+          data: {
+            error_code: "INVALID_ARGUMENT",
+            code: "INVALID_ARGUMENT",
+            message: reason,
+            trace_id: "trace-list",
+          },
+        },
+      }),
+    );
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
+    expect(await screen.findByText(reason)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "common.viewDetails" }));
+    expect(screen.getByText("common.error.code: INVALID_ARGUMENT")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /bknTrace.actions.refresh/ }));
+    await screen.findByRole("button", { name: "c2c97a9e8afd1259218a9d975ad63e91" });
+    expect(screen.queryByText(reason)).not.toBeInTheDocument();
+  });
+
+  it("shows a detail reason without a toast and clears it before reopening", async () => {
+    const reason = "Trace not found";
+    vi.mocked(getTechnicalTrace).mockRejectedValueOnce(
+      Object.assign(new Error("HTTP 404"), {
+        isAxiosError: true,
+        response: {
+          data: {
+            error_code: "NOT_FOUND",
+            code: "NOT_FOUND",
+            message: reason,
+            trace_id: "trace-detail",
+          },
+        },
+      }),
+    );
+    renderWithoutAntdStyles(<TraceAnalysisScene />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "c2c97a9e8afd1259218a9d975ad63e91" }),
+    );
+    expect(await screen.findByText(reason)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.traceWorkspace.back" }));
+    expect(screen.queryByText(reason)).not.toBeInTheDocument();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "c2c97a9e8afd1259218a9d975ad63e91" }),
+    );
+    await waitFor(() => expect(getTechnicalTrace).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(reason)).not.toBeInTheDocument();
   });
 
   it("opens a real technical Trace into summary, execution chain and raw detail", async () => {

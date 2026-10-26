@@ -16,6 +16,27 @@ describe("trace-analysis service", () => {
     getMock.mockReset();
   });
 
+  it("leaves list errors to the local alert without losing the original error", async () => {
+    const error = Object.assign(new Error("HTTP 400"), {
+      isAxiosError: true,
+      response: {
+        data: {
+          error_code: "INVALID_ARGUMENT",
+          code: "INVALID_ARGUMENT",
+          message: "invalid time range",
+          trace_id: "trace-list",
+        },
+      },
+    });
+    getMock.mockRejectedValueOnce(error);
+    const { listTechnicalTraces } = await import("./trace-analysis.service");
+    await expect(listTechnicalTraces({ limit: 20 })).rejects.toBe(error);
+    expect(getMock).toHaveBeenCalledExactlyOnceWith("/agent-observability/v1/traces", {
+      params: { limit: 20 },
+      skipErrorToast: true,
+    });
+  });
+
   it("discovers scoped canonical root services without passing the service or list pagination", async () => {
     getMock.mockResolvedValueOnce({ data: { entries: ["CanonicalService"], has_more: true } });
     const service = await import("./trace-analysis.service");
@@ -253,6 +274,7 @@ describe("trace-analysis service", () => {
         tool: "run_sql",
         trace_id: "trace-1",
       },
+      skipErrorToast: true,
     });
     expect(page.entries[0]).toMatchObject({
       agentName: "Claude",
