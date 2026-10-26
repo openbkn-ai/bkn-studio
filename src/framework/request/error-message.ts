@@ -12,6 +12,8 @@ import i18n from "@/app/locales/i18n";
 type BackendErrorResponseBody = {
   error?: string;
   error_code?: string;
+  code?: string;
+  trace_id?: string;
   error_details?: unknown;
   metadata?: unknown;
   message?: string;
@@ -76,6 +78,18 @@ export function extractRequestErrorDetails(error: unknown): RequestErrorDetails 
 
     if (description) {
       return { ...common, description, descriptionSource: "response" };
+    }
+
+    // Trace has an independent DTO: matching code aliases and trace_id,
+    // without the shared Error description property (even a blank one).
+    if (
+      common.code &&
+      data?.code === common.code &&
+      typeof data.trace_id === "string" &&
+      !Object.hasOwn(data, "description") &&
+      responseMessage
+    ) {
+      return { ...common, description: responseMessage, descriptionSource: "response" };
     }
 
     // Blank shared descriptions use the stable code; details remain available separately.

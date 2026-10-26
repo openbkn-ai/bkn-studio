@@ -36,6 +36,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
+import {
+  extractRequestErrorDetails,
+  type RequestErrorDetails,
+} from "@/framework/request/error-message";
+import { RequestErrorAlert } from "@/framework/ui/common/RequestErrorAlert";
 import { useAppServices } from "@/framework/context/use-app-services";
 import type { PayloadEnvelope } from "@/modules/bkn-trace/shared/operation-fact.types";
 import styles from "@/modules/bkn-trace/trace-analysis/TraceAnalysisScene.module.css";
@@ -71,11 +76,11 @@ export function TraceAnalysisScene() {
   const [rows, setRows] = useState<TechnicalTraceSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState(false);
+  const [listError, setListError] = useState<RequestErrorDetails>();
   const [partialReasons, setPartialReasons] = useState<string[]>([]);
   const [detail, setDetail] = useState<TechnicalTraceDetail>();
   const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState(false);
+  const [detailError, setDetailError] = useState<RequestErrorDetails>();
   const [selectedOperation, setSelectedOperation] = useState<TechnicalTraceOperation>();
   const listRequest = useRef(0);
 
@@ -91,7 +96,7 @@ export function TraceAnalysisScene() {
   async function loadList(nextQuery: TechnicalTraceQuery, nextPage: number) {
     const request = ++listRequest.current;
     setLoading(true);
-    setListError(false);
+    setListError(undefined);
     try {
       const result = await listTechnicalTraces({
         ...nextQuery,
@@ -103,8 +108,8 @@ export function TraceAnalysisScene() {
       setRows(result.entries);
       setTotal(result.total);
       setPartialReasons(result.partialReasons);
-    } catch {
-      if (request === listRequest.current) setListError(true);
+    } catch (error) {
+      if (request === listRequest.current) setListError(extractRequestErrorDetails(error));
     } finally {
       if (request === listRequest.current) setLoading(false);
     }
@@ -112,7 +117,7 @@ export function TraceAnalysisScene() {
 
   async function openTrace(traceId: string) {
     setDetailLoading(true);
-    setDetailError(false);
+    setDetailError(undefined);
     setSelectedOperation(undefined);
     try {
       const result = await getTechnicalTrace(traceId);
@@ -122,14 +127,15 @@ export function TraceAnalysisScene() {
         "",
         `${window.location.pathname}?trace_id=${encodeURIComponent(traceId)}`,
       );
-    } catch {
-      setDetailError(true);
+    } catch (error) {
+      setDetailError(extractRequestErrorDetails(error));
     } finally {
       setDetailLoading(false);
     }
   }
 
   function closeDetail() {
+    setDetailError(undefined);
     setDetail(undefined);
     setSelectedOperation(undefined);
     window.history.replaceState({}, "", window.location.pathname);
@@ -210,12 +216,10 @@ export function TraceAnalysisScene() {
   if (detailLoading) return <Skeleton active />;
   if (detailError) {
     return (
-      <Alert
-        action={<Button onClick={closeDetail}>{t("bknTrace.traceWorkspace.back")}</Button>}
-        message={t("bknTrace.traceWorkspace.detailFailed")}
-        showIcon
-        type="error"
-      />
+      <div>
+        <RequestErrorAlert autoDismissMs={0} error={detailError} onDismiss={closeDetail} />
+        <Button onClick={closeDetail}>{t("bknTrace.traceWorkspace.back")}</Button>
+      </div>
     );
   }
   if (detail) {
@@ -319,7 +323,11 @@ export function TraceAnalysisScene() {
       </Form>
 
       {listError ? (
-        <Alert message={t("bknTrace.traceWorkspace.listFailed")} showIcon type="error" />
+        <RequestErrorAlert
+          autoDismissMs={0}
+          error={listError}
+          onDismiss={() => setListError(undefined)}
+        />
       ) : null}
       {partialReasons.length ? (
         <Alert

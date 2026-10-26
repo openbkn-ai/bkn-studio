@@ -223,3 +223,58 @@ describe("shared error migration", () => {
     ).not.toHaveProperty("solution");
   });
 });
+
+describe("independent Trace HTTP errors", () => {
+  it.each([
+    ["INVALID_ARGUMENT", "limit 必须是 1 到 200 之间的整数"],
+    ["INVALID_ARGUMENT", "limit must be an integer between 1 and 200"],
+    ["INVALID_ARGUMENT", "from 必须是 RFC3339 时间戳"],
+    ["INVALID_ARGUMENT", "from must be an RFC3339 timestamp"],
+    ["INVALID_ARGUMENT", "page_size 必须是 1 到 200 之间的整数"],
+    ["INVALID_ARGUMENT", "page_size must be an integer between 1 and 200"],
+    ["NOT_FOUND", "Trace 不存在"],
+    ["NOT_FOUND", "trace not found"],
+  ])("keeps Trace %s reason %s", (code, message) => {
+    expect(
+      extractRequestErrorDetails(
+        createAxiosLikeError({
+          error_code: code,
+          code,
+          message,
+          trace_id: "trace-test",
+          details: { field: "limit" },
+          metadata: { retryable: false },
+        }),
+      ),
+    ).toMatchObject({
+      code,
+      description: message,
+      descriptionSource: "response",
+      details: '{"field":"limit"}',
+      metadata: { retryable: false },
+    });
+  });
+  it.each(["", null, " "])(
+    "keeps an explicit shared description %j authoritative",
+    (description) => {
+      expect(
+        extractRequestErrorMessage(
+          createAxiosLikeError({
+            error_code: "INVALID_ARGUMENT",
+            code: "INVALID_ARGUMENT",
+            message: "Trace-like message",
+            trace_id: "",
+            description,
+          }),
+        ),
+      ).toBe("INVALID_ARGUMENT");
+    },
+  );
+  it.each([
+    { error_code: "INVALID_ARGUMENT", message: "generic" },
+    { error_code: "INVALID_ARGUMENT", code: "other", message: "generic", trace_id: "" },
+    { error_code: "INVALID_ARGUMENT", code: "INVALID_ARGUMENT", message: "", trace_id: "" },
+  ])("retains code fallback for %j", (data) => {
+    expect(extractRequestErrorMessage(createAxiosLikeError(data))).toBe("INVALID_ARGUMENT");
+  });
+});

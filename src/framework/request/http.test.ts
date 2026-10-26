@@ -33,6 +33,34 @@ describe("http request headers", () => {
     setRuntimeConfig(createRuntimeConfig());
   });
 
+  it.each(["from 必须是 RFC3339 时间戳", "from must be an RFC3339 timestamp"])(
+    "passes the Trace reason to the global error handler: %s",
+    async (reason) => {
+      const notify = vi.fn();
+      setRequestErrorHandler(notify);
+      const rejected: AxiosAdapter = (config) =>
+        Promise.reject(
+          Object.assign(new Error("HTTP 400"), {
+            isAxiosError: true,
+            config,
+            response: {
+              status: 400,
+              data: {
+                error_code: "INVALID_ARGUMENT",
+                code: "INVALID_ARGUMENT",
+                message: reason,
+                trace_id: "trace-list",
+              },
+            },
+          }),
+        );
+      await expect(
+        http.get("/agent-observability/v1/traces", { adapter: rejected }),
+      ).rejects.toThrow("HTTP 400");
+      expect(notify).toHaveBeenCalledWith(reason);
+    },
+  );
+
   it("sends the selected locale through the standard language header", async () => {
     setRuntimeConfig(createRuntimeConfig({ locale: "en-US" }));
 
