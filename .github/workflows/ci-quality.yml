@@ -144,7 +144,7 @@ jobs:
         run: NODE_OPTIONS=--max-old-space-size=4096 pnpm exec vite build
 
       - name: MCP App production bundle
-        run: pnpm run build:mcp-app
+        run: pnpm run build:mcp-apps
 
       - name: Production dependency audit
         run: pnpm audit --prod
