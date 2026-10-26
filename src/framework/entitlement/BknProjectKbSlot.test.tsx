@@ -69,8 +69,7 @@ function renderSlot(props: { knowledgeBaseUnavailable?: boolean } = {}) {
   return render(
     <>
       <span>
-        concept-model
-        <BknProjectKbBadge />
+        <BknProjectKbBadge>concept-model</BknProjectKbBadge>
       </span>
       <BknProjectKbSlot preview={<p>preview</p>} {...props}>
         <button type="button">extract</button>
@@ -98,14 +97,14 @@ describe("BknProjectKbSlot", () => {
     contextState.snapshot = mirror;
     const { container } = renderSlot();
 
-    expect(container.textContent).toBe("concept-model");
+    expect(container.textContent).toBe("");
     expect(container.querySelector(".console-edition-badge")).toBeNull();
   });
 
   it("shows nothing while the licence snapshot is unknown", () => {
     const { container } = renderSlot();
 
-    expect(container.textContent).toBe("concept-model");
+    expect(container.textContent).toBe("");
   });
 
   it("badges and masks the entry under a community licence, and does not mount it", () => {
@@ -120,11 +119,25 @@ describe("BknProjectKbSlot", () => {
     expect(screen.getByText("subscription.capabilities.bkn_project_kb.name")).toBeInTheDocument();
   });
 
+  it("mounts nothing under the mask when no preview is given", () => {
+    contextState.snapshot = communityLicensed;
+    const { container } = render(
+      <BknProjectKbSlot>
+        <button type="button">extract</button>
+      </BknProjectKbSlot>,
+    );
+
+    expect(container.querySelector(".console-upgrade-mask")).not.toBeNull();
+    expect(container.querySelector(".console-upgrade-locked-content")).toBeNull();
+    expect(screen.queryByRole("button", { name: "extract" })).toBeNull();
+  });
+
   it("enables the entry with a professional licence, keeping the badge without the mask", () => {
     contextState.snapshot = professional;
     const { container } = renderSlot();
 
     expect(screen.getByRole("button", { name: "extract" })).toBeEnabled();
+    expect(screen.getByText("concept-model")).toBeInTheDocument();
     expect(container.querySelector(".console-upgrade-mask")).toBeNull();
     expect(container.querySelector(".console-edition-badge-professional")).not.toBeNull();
   });
