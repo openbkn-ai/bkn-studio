@@ -356,10 +356,11 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       {hasSourceQueryFailure(result?.sourceStatus) ? (
         <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" />
       ) : null}
-      {hasSourceQueryFailure(result?.sourceStatus) ? (
-        <SourceFailures sources={result?.sourceStatus ?? []} t={t} />
+      {hasHistoricalLogLoss(result?.sourceStatus) ? (
+        <Alert message={t("bknTrace.logs.historyWarning")} showIcon type="warning" />
+      ) : result?.sourceStatus.some((source) => source.collectionStatus?.status === "degraded") ? (
+        <Alert message={t("bknTrace.logs.collectionWarning")} showIcon type="warning" />
       ) : null}
-      <PublisherSourceStatus sources={result?.sourceStatus ?? []} t={t} />
       {associated ? (
         <div className={styles.sourceStrip}>
           <AssociatedScopeTag
@@ -626,117 +627,13 @@ function hasSourceQueryFailure(sources: LogListResult["sourceStatus"] | undefine
   return sources?.some((source) => source.status === "unavailable") ?? false;
 }
 
-function SourceFailures({ sources, t }: { sources: LogListResult["sourceStatus"]; t: Translate }) {
-  const failed = sources.filter((source) => source.reason && source.status === "unavailable");
-  if (!failed.length) return null;
+function hasHistoricalLogLoss(sources: LogListResult["sourceStatus"] | undefined) {
   return (
-    <div className={styles.sourceStrip}>
-      {failed.map((source) => (
-        <Tag color="orange" key={source.sourceId}>
-          {source.sourceId} · {sourceStatusLabel(source.status, t)} ·{" "}
-          {sourceFailureLabel(source.reason!, t)}
-        </Tag>
-      ))}
-    </div>
-  );
-}
-
-function PublisherSourceStatus({
-  sources,
-  t,
-}: {
-  sources: LogListResult["sourceStatus"];
-  t: Translate;
-}) {
-  return sources
-    .filter(
+    sources?.some(
       (source) =>
-        source.collectionStatus?.scope === "bkn-safe-publisher-instance" ||
-        source.collectionMethod === "kafka_audit" ||
-        source.sourceId === "audit-ledger",
-    )
-    .map((source) => {
-      const collection = source.collectionStatus;
-      const status = collection?.status ?? "unknown";
-      // Historical source loss and the current instance counter are independent.
-      // A healthy current publisher never clears recorded history gaps.
-      const historicalGap =
-        collection?.historicalGap === true ||
-        (source.droppedRecords !== undefined &&
-          source.droppedRecords !== null &&
-          source.droppedRecords > 0);
-      const since =
-        collection?.historicalGap === true
-          ? collection.historicalGapSince
-          : source.droppedRecordsSince;
-      const unsupported = collection?.reason === "unsupported_publisher_status";
-      const reason = unsupported
-        ? "unsupported"
-        : status === "unknown"
-          ? collection?.reason === "audit_producer_status_stale"
-            ? "stale"
-            : collection?.reason === "audit_producer_status_unavailable"
-              ? "unavailable"
-              : "unknown"
-          : status;
-      return (
-        <Alert
-          key={source.sourceId}
-          showIcon
-          type={historicalGap || status === "degraded" || unsupported ? "warning" : "info"}
-          message={
-            <Space wrap>
-              <span>{source.sourceId}</span>
-              <Tag>
-                {isHealthySource(source.status)
-                  ? t("bknTrace.logs.publisher.queryAvailable")
-                  : source.status === "degraded"
-                    ? t("bknTrace.logs.publisher.queryDegraded")
-                    : source.status === "unavailable"
-                      ? t("bknTrace.logs.publisher.queryUnavailable")
-                      : source.status === "not_integrated"
-                        ? t("bknTrace.logs.publisher.queryNotIntegrated")
-                        : t("bknTrace.logs.publisher.queryUnknown")}
-              </Tag>
-              <Tag color={status === "degraded" || unsupported ? "orange" : undefined}>
-                {t(`bknTrace.logs.publisher.${status}`)}
-              </Tag>
-            </Space>
-          }
-          description={
-            <Space direction="vertical" size={0}>
-              <span>{t(`bknTrace.logs.publisher.reasons.${reason}`)}</span>
-              {historicalGap ? (
-                <span>
-                  {since
-                    ? t("bknTrace.logs.publisher.historicalGapSince", { since: formatTime(since) })
-                    : t("bknTrace.logs.publisher.historicalGap")}
-                </span>
-              ) : collection?.historicalGap !== false ? (
-                <span>{t("bknTrace.logs.publisher.historicalUnknown")}</span>
-              ) : null}
-              <span>{t("bknTrace.logs.publisher.scope")}</span>
-            </Space>
-          }
-        />
-      );
-    });
-}
-
-function isHealthySource(status: string) {
-  return status === "available" || status === "healthy";
-}
-
-function sourceStatusLabel(status: string, t: Translate) {
-  if (isHealthySource(status)) return t("bknTrace.logs.sourceStatus.healthy");
-  if (status === "unavailable") return t("bknTrace.logs.sourceStatus.unavailable");
-  if (status === "not_integrated") return t("bknTrace.logs.sourceStatus.notIntegrated");
-  return status;
-}
-
-function sourceFailureLabel(reason: string, t: Translate) {
-  const key = reason === "source_query_failed" || reason === "source_timeout" ? reason : undefined;
-  return key ? t(`bknTrace.logs.sourceFailures.${key}`) : reason;
+        source.collectionStatus?.historicalGap === true || (source.droppedRecords ?? 0) > 0,
+    ) ?? false
+  );
 }
 
 function canSearchLogs(profile: TraceAccessProfile, scope: AssociatedLogScope) {

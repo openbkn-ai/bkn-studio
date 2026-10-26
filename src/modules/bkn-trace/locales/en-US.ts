@@ -1020,41 +1020,11 @@ export const bknTraceEnUS = {
       endTime: "End time",
       modulePlaceholder: "All business modules",
       outcomePlaceholder: "Outcome",
-      partialWarning:
-        "Some integrated log sources are temporarily unavailable. The current result may be incomplete.",
+      partialWarning: "Some logs could not be retrieved. The current result may be incomplete.",
       associatedTarget: { resource: "Related resource", user: "User" },
-      publisher: {
-        queryAvailable: "Query available",
-        queryUnavailable: "Query unavailable",
-        queryNotIntegrated: "Query not integrated",
-        queryUnknown: "Query status unknown",
-        historicalUnknown: "Historical completeness has not been verified.",
-        queryDegraded: "Query degraded",
-        unknown: "Publisher status unknown",
-        healthy: "Current publisher delivering",
-        degraded: "Current publisher degraded",
-        reasons: {
-          unsupported: "The publisher status is unsupported; current delivery cannot be verified.",
-          unknown:
-            "Publisher delivery has not been confirmed; an empty result does not establish collection health.",
-          unavailable: "Publisher diagnostics are unavailable; query availability is independent.",
-          stale: "Publisher diagnostics are stale; current delivery cannot be confirmed.",
-          healthy: "Delivery was observed from the current publisher instance.",
-          degraded: "The current publisher reports delivery problems; records may be missing.",
-        },
-        historicalGap:
-          "Recorded history has a known gap. Current delivery does not recover previously lost records.",
-        historicalGapSince:
-          "Historical loss was first observed at {{since}}. Current delivery does not recover previously lost records.",
-        scope:
-          "Publisher diagnostics cover one BKN Safe instance, not all replicas or the full collection pipeline.",
-      },
-      sourceFailures: { source_query_failed: "Query failed", source_timeout: "Query timed out" },
-      sourceStatus: {
-        healthy: "Healthy",
-        unavailable: "Unavailable",
-        notIntegrated: "Not integrated",
-      },
+      collectionWarning:
+        "Some recent operations may not have been recorded. Search results may be incomplete.",
+      historyWarning: "Some historical logs were lost and may be unavailable in search results.",
       resultCount: "{{count}} verifiable facts",
       resultCount_one: "{{count}} verifiable fact",
       resultCount_other: "{{count}} verifiable facts",
