@@ -35,9 +35,13 @@ const NODE_RADIUS = 38;
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 3;
 const GROUP_HULL_PAD = 28;
+const GROUP_CELL_GAP = 32;
+const GROUP_CANVAS_PAD = 32;
 const FORCE_LAYOUT_NODE_LIMIT = 80;
 const EDGE_LABEL_LIMIT = 120;
 const MAX_VISIBLE_NODES = 1_200;
+const UNGROUPED_ID = "__ungrouped";
+const UNGROUPED_COLOR = "#64748b";
 // Group-boundary colors, assigned stably after sorting by group ID.
 const GROUP_COLORS = [
   "#2e68ff",
@@ -110,6 +114,13 @@ const NODE_SPACING = NODE_RADIUS * 2 + NODE_GAP; // 理想中心距
 const MIN_SPACING = NODE_RADIUS * 2; // 最小中心距：相切，绝不重叠
 const CELL_INSET = GROUP_HULL_PAD + NODE_RADIUS; // cell 边到节点中心可用区的内缩（留出 hull 边距）
 
+type PositionedNode = { id: string; x: number; y: number };
+type ClusterCell = {
+  height: number;
+  ids: string[];
+  width: number;
+};
+
 /** Arrange nodes in each group as an almost-square grid centered in its cell. Compress spacing only to MIN_SPACING, preserving non-overlap. */
 function placeCluster(
   gids: string[],
@@ -119,7 +130,7 @@ function placeCluster(
   cellH: number,
   canvasWidth: number,
   canvasHeight: number,
-): { id: string; x: number; y: number }[] {
+): PositionedNode[] {
   const n = gids.length;
   if (n <= 1) {
     return gids.map((id) => ({
@@ -149,77 +160,86 @@ function placeCluster(
 }
 
 /**
- * Clusters by concept group: each receives an equal-density cell with area proportional to node
- * count, distributed across horizontal shelves and then gridded internally. Large groups get larger
- * cells without overlap, smaller groups avoid wasted space, and all remain within the fixed canvas.
+ * Clusters by concept group using cells sized from their actual node grids. Cells are packed into
+ * rows with a fixed gutter, so small adjacent groups cannot overflow proportional cells and overlap.
  */
 function groupLayout(
   ids: string[],
   groupOf: Map<string, string>,
-  canvasWidth: number,
-  canvasHeight: number,
-): { id: string; x: number; y: number }[] {
+): { canvasHeight: number; canvasWidth: number; positions: PositionedNode[] } {
   const buckets = new Map<string, string[]>();
   ids.forEach((id) => {
-    const g = groupOf.get(id) ?? "__ungrouped";
+    const g = groupOf.get(id) ?? UNGROUPED_ID;
     const arr = buckets.get(g) ?? [];
     arr.push(id);
     buckets.set(g, arr);
   });
-  const groups = [...buckets.values()];
-  const gn = groups.length;
-  if (gn <= 1) {
-    // A single group uses the whole canvas as its cell.
-    return placeCluster(
-      groups[0] ?? [],
-      canvasWidth / 2,
-      canvasHeight / 2,
-      canvasWidth,
-      canvasHeight,
-      canvasWidth,
-      canvasHeight,
-    );
-  }
-  const total = ids.length || 1;
-  // Derive shelf count from canvas aspect ratio, then balance groups by node count; row height is proportional to node count.
-  const shelfCount = Math.max(1, Math.round(Math.sqrt(gn * (canvasHeight / canvasWidth))) || 1);
-  const shelves = Array.from({ length: shelfCount }, () => ({
-    groups: [] as string[][],
-    nodes: 0,
-  }));
-  // Place larger groups into the shelf with the fewest nodes to balance total row height.
-  [...groups]
-    .sort((a, b) => b.length - a.length)
-    .forEach((gids) => {
-      const target = shelves.reduce((min, s) => (s.nodes < min.nodes ? s : min));
-      target.groups.push(gids);
-      target.nodes += gids.length;
+
+  const cells: ClusterCell[] = [...buckets.entries()]
+    .sort(([left], [right]) => {
+      if (left === UNGROUPED_ID) return -1;
+      if (right === UNGROUPED_ID) return 1;
+      return left.localeCompare(right);
+    })
+    .map(([, clusterIds]) => {
+      const columns = Math.max(1, Math.ceil(Math.sqrt(clusterIds.length)));
+      const rows = Math.ceil(clusterIds.length / columns);
+      return {
+        height: (rows - 1) * NODE_SPACING + CELL_INSET * 2,
+        ids: clusterIds,
+        width: (columns - 1) * NODE_SPACING + CELL_INSET * 2,
+      };
     });
-  const out: { id: string; x: number; y: number }[] = [];
-  let y = 0;
-  shelves
-    .filter((shelf) => shelf.groups.length > 0)
-    .forEach((shelf) => {
-      const shelfH = canvasHeight * (shelf.nodes / total);
-      let x = 0;
-      shelf.groups.forEach((gids) => {
-        const cellW = canvasWidth * (gids.length / shelf.nodes);
-        out.push(
-          ...placeCluster(
-            gids,
-            x + cellW / 2,
-            y + shelfH / 2,
-            cellW,
-            shelfH,
-            canvasWidth,
-            canvasHeight,
-          ),
-        );
-        x += cellW;
-      });
-      y += shelfH;
+
+  const baseCanvas = scalableCanvas(ids.length);
+  const targetRowWidth = baseCanvas.width;
+  const rows: ClusterCell[][] = [];
+  cells.forEach((cell) => {
+    const row = rows.at(-1);
+    const rowWidth = row?.reduce((sum, item) => sum + item.width, 0) ?? 0;
+    const gaps = row ? row.length * GROUP_CELL_GAP : 0;
+    if (row && rowWidth + gaps + cell.width <= targetRowWidth) {
+      row.push(cell);
+    } else {
+      rows.push([cell]);
+    }
+  });
+
+  const rowWidths = rows.map(
+    (row) =>
+      row.reduce((sum, cell) => sum + cell.width, 0) + Math.max(0, row.length - 1) * GROUP_CELL_GAP,
+  );
+  const rowHeights = rows.map((row) => Math.max(...row.map((cell) => cell.height)));
+  const contentWidth = Math.max(0, ...rowWidths);
+  const contentHeight =
+    rowHeights.reduce((sum, height) => sum + height, 0) +
+    Math.max(0, rows.length - 1) * GROUP_CELL_GAP;
+  const canvasWidth = Math.max(baseCanvas.width, contentWidth + GROUP_CANVAS_PAD * 2);
+  const canvasHeight = Math.max(baseCanvas.height, contentHeight + GROUP_CANVAS_PAD * 2);
+  const positions: PositionedNode[] = [];
+  let y = (canvasHeight - contentHeight) / 2;
+
+  rows.forEach((row, rowIndex) => {
+    const rowHeight = rowHeights[rowIndex];
+    let x = (canvasWidth - rowWidths[rowIndex]) / 2;
+    row.forEach((cell) => {
+      positions.push(
+        ...placeCluster(
+          cell.ids,
+          x + cell.width / 2,
+          y + rowHeight / 2,
+          cell.width,
+          cell.height,
+          canvasWidth,
+          canvasHeight,
+        ),
+      );
+      x += cell.width + GROUP_CELL_GAP;
     });
-  return out;
+    y += rowHeight + GROUP_CELL_GAP;
+  });
+
+  return { canvasHeight, canvasWidth, positions };
 }
 
 export function OntologyGraphView({
@@ -245,21 +265,28 @@ export function OntologyGraphView({
   // Recompute layout when graph or arrangement changes, not when selecting a node.
   const { positions, radiusById, hubId, canvasWidth, canvasHeight } = useMemo(() => {
     const ids = graph.nodes.map((node) => node.id);
-    const canvas =
-      renderMode === "force"
+    const grouped =
+      renderMode === "group" ? groupLayout(ids, groupOf ?? EMPTY_GROUP_MAP) : undefined;
+    const canvas = grouped
+      ? { width: grouped.canvasWidth, height: grouped.canvasHeight }
+      : renderMode === "force"
         ? { width: PREVIEW_LAYOUT_WIDTH, height: PREVIEW_LAYOUT_HEIGHT }
         : scalableCanvas(ids.length);
     const layout =
-      renderMode === "circle"
+      grouped?.positions ??
+      (renderMode === "circle"
         ? circleLayout(ids, canvas.width, canvas.height)
-        : renderMode === "group" || renderMode === "grid"
-          ? groupLayout(
+        : renderMode === "grid"
+          ? placeCluster(
               ids,
-              renderMode === "group" ? (groupOf ?? EMPTY_GROUP_MAP) : EMPTY_GROUP_MAP,
+              canvas.width / 2,
+              canvas.height / 2,
+              canvas.width,
+              canvas.height,
               canvas.width,
               canvas.height,
             )
-          : computePreviewGraphLayout(graph);
+          : computePreviewGraphLayout(graph));
     const positionMap = new Map(
       layout.map((node) => [node.id, { id: node.id, x: node.x, y: node.y }]),
     );
@@ -418,20 +445,25 @@ export function OntologyGraphView({
   const zoomLevel = canvasWidth / view.w;
   const nodeLabelsVisible = visibleNodes.length <= 250 || zoomLevel >= 1.4;
 
-  // In logical-group mode, calculate each group's bounding box from current positions, including drags, and draw dashed boundaries with names.
+  // In logical-group mode, calculate each cluster's bounding box from current positions, including
+  // drags. Ungrouped nodes also receive a labeled boundary so the partition is explicit.
   const groupHulls = useMemo(() => {
     if (renderMode !== "group" || !groupOf || groupOf.size === 0) return [];
     const buckets = new Map<string, string[]>();
     graph.nodes.forEach((node) => {
-      const gid = groupOf.get(node.id);
-      if (!gid) return; // 未分组节点不画边界
+      const gid = groupOf.get(node.id) ?? UNGROUPED_ID;
       const arr = buckets.get(gid) ?? [];
       arr.push(node.id);
       buckets.set(gid, arr);
     });
-    const gids = [...buckets.keys()].sort();
+    const gids = [...buckets.keys()].sort((left, right) => {
+      if (left === UNGROUPED_ID) return -1;
+      if (right === UNGROUPED_ID) return 1;
+      return left.localeCompare(right);
+    });
+    let namedGroupIndex = 0;
     return gids
-      .map((gid, gi) => {
+      .map((gid) => {
         const ids = buckets.get(gid) ?? [];
         let minX = Infinity;
         let minY = Infinity;
@@ -447,10 +479,14 @@ export function OntologyGraphView({
           maxY = Math.max(maxY, p.y + r);
         });
         if (!Number.isFinite(minX)) return null;
+        const ungrouped = gid === UNGROUPED_ID;
+        const color = ungrouped
+          ? UNGROUPED_COLOR
+          : GROUP_COLORS[namedGroupIndex++ % GROUP_COLORS.length];
         return {
           gid,
-          name: groupNames?.get(gid) ?? "",
-          color: GROUP_COLORS[gi % GROUP_COLORS.length],
+          name: ungrouped ? t("knowledgeNetwork.previewUngrouped") : (groupNames?.get(gid) ?? gid),
+          color,
           x: minX - GROUP_HULL_PAD,
           y: minY - GROUP_HULL_PAD,
           w: maxX - minX + GROUP_HULL_PAD * 2,
@@ -465,7 +501,7 @@ export function OntologyGraphView({
           hull.y + hull.h >= viewport.top &&
           hull.y <= viewport.bottom,
       );
-  }, [groupOf, groupNames, graph, posOf, radiusById, renderMode, viewport]);
+  }, [groupOf, groupNames, graph, posOf, radiusById, renderMode, t, viewport]);
 
   const toSvgPoint = useCallback((clientX: number, clientY: number) => {
     const svg = svgRef.current;

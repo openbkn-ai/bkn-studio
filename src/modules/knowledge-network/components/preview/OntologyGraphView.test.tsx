@@ -45,7 +45,7 @@ describe("OntologyGraphView", () => {
 
     fireEvent.click(screen.getByTitle("knowledgeNetwork.previewHideEdgeLabels"));
     const relationLine = container.querySelector("g[class*='edge'] > line");
-    expect(relationLine).toHaveAttribute("marker-end", "url(#kn-onto-arrow)");
+    expect(relationLine?.getAttribute("marker-end")).toBe("url(#kn-onto-arrow)");
   });
 
   it("uses a scalable canvas and limits low-detail DOM nodes for large graphs", () => {
@@ -73,13 +73,13 @@ describe("OntologyGraphView", () => {
     const [, , width] = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
     expect(width).toBeGreaterThan(1_000);
     expect(Number(svg.getAttribute("data-rendered-nodes"))).toBeLessThanOrEqual(1_200);
-    expect(svg).toHaveAttribute("data-total-nodes", "1300");
+    expect(svg.getAttribute("data-total-nodes")).toBe("1300");
     const relationLines = container.querySelectorAll("g[class*='edge'] > line");
     expect(relationLines.length).toBeGreaterThan(0);
     relationLines.forEach((line) =>
-      expect(line).toHaveAttribute("marker-end", "url(#kn-onto-arrow)"),
+      expect(line.getAttribute("marker-end")).toBe("url(#kn-onto-arrow)"),
     );
-    expect(screen.getByTitle("knowledgeNetwork.previewRearrange")).toHaveTextContent(
+    expect(screen.getByTitle("knowledgeNetwork.previewRearrange").textContent).toContain(
       "knowledgeNetwork.previewLayoutForce",
     );
   });
@@ -135,6 +135,57 @@ describe("OntologyGraphView", () => {
     const groupOption = await screen.findByText("knowledgeNetwork.previewLayoutGroup");
     fireEvent.click(groupOption);
 
-    await waitFor(() => expect(screen.getByText("Sales")).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Sales")).not.toBeNull());
+  });
+
+  it("keeps concept-group boundaries separate and identifies ungrouped nodes", async () => {
+    const nodes = Array.from({ length: 20 }, (_, index) => ({
+      color: "#2563eb",
+      id: `node-${index}`,
+      name: `Node ${index}`,
+    }));
+    const groupOf = new Map<string, string>([
+      ["node-16", "group-a"],
+      ["node-17", "group-a"],
+      ["node-18", "group-b"],
+      ["node-19", "group-b"],
+    ]);
+    const { container } = render(
+      <OntologyGraphView
+        graph={{ edges: [], nodes }}
+        groupNames={
+          new Map([
+            ["group-a", "Group A"],
+            ["group-b", "Group B"],
+          ])
+        }
+        groupOf={groupOf}
+        indexedIds={new Set()}
+        selectedId={null}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewRearrange"));
+    fireEvent.click(await screen.findByText("knowledgeNetwork.previewLayoutGroup"));
+
+    await screen.findByText("knowledgeNetwork.previewUngrouped");
+    const hulls = [...container.querySelectorAll("rect[class*='groupHull']")].map((element) => ({
+      height: Number(element.getAttribute("height")),
+      width: Number(element.getAttribute("width")),
+      x: Number(element.getAttribute("x")),
+      y: Number(element.getAttribute("y")),
+    }));
+    expect(hulls).toHaveLength(3);
+    hulls.forEach((left, leftIndex) => {
+      hulls.slice(leftIndex + 1).forEach((right) => {
+        const separated =
+          left.x + left.width <= right.x ||
+          right.x + right.width <= left.x ||
+          left.y + left.height <= right.y ||
+          right.y + right.height <= left.y;
+        expect(separated).toBe(true);
+      });
+    });
   });
 });
