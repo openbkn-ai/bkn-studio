@@ -14,6 +14,7 @@ export const bknProjectModuleManifest = {
   requiresShell: true,
   services: [
     "bkn-project/v1/projects",
+    "bkn-project/v1/lineages",
     "bkn-backend/v1/knowledge-networks",
     "vega-backend/catalogs",
   ],
@@ -25,6 +26,12 @@ export const bknProjectModuleManifest = {
       exportName: "ProjectListScene",
       description: "Projects of the visible knowledge networks: search, archive filter, create.",
       inputs: [],
+    },
+    {
+      id: "bkn-project.workspace",
+      exportName: "ProjectWorkspaceScene",
+      description: "A project workspace: its own navigation and the overview of the project.",
+      inputs: ["projectId", "section"],
     },
   ],
 } as const;

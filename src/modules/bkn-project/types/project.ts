@@ -64,3 +64,10 @@ export type ProjectCatalog = {
   id: string;
   name: string;
 };
+
+/** A release of a project's lineage, as the overview and workspace header show it. */
+export type ProjectRelease = {
+  createTime: number;
+  networkId: string;
+  version: string;
+};

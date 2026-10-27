@@ -8,4 +8,5 @@
 export { bknProjectModuleManifest } from "@/modules/bkn-project/module.manifest";
 export { bknProjectRouteContribution } from "@/modules/bkn-project/routes";
 export { ProjectListScene } from "@/modules/bkn-project/scenes/ProjectListScene";
+export { ProjectWorkspaceScene } from "@/modules/bkn-project/scenes/ProjectWorkspaceScene";
 export type * from "@/modules/bkn-project/types/project";
