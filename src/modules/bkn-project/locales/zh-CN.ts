@@ -99,11 +99,8 @@ export const bknProjectZhCN = {
       comingSoonDescription: "后续版本会在这里提供完整功能。",
     },
     overview: {
-      statusNotDrafted: "还没有草稿",
-      scenarioStructured: "只有结构化数据",
       fields: {
         network: "目标网络",
-        scenario: "场景",
         owner: "负责人",
         updated: "更新时间",
         id: "ID",

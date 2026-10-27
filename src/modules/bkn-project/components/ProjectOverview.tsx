@@ -23,7 +23,8 @@ const PLACEHOLDER = "—";
 type StatTile = {
   key: string;
   label: string;
-  section: ProjectSection;
+  /** The page the tile opens; a tile without one is not clickable. */
+  section?: ProjectSection;
   sub: string;
   value: string;
 };
@@ -74,7 +75,6 @@ export function ProjectOverview({
     {
       key: "instances",
       label: t("bknProject.overview.tiles.instances"),
-      section: "overview",
       sub: t("bknProject.overview.tiles.instancesSub"),
       value: PLACEHOLDER,
     },
@@ -97,13 +97,8 @@ export function ProjectOverview({
   return (
     <div className={styles.overview}>
       <section className={styles.card} data-region="info">
-        <p className={styles.status}>{t("bknProject.overview.statusNotDrafted")}</p>
         <div className={styles.fields}>
           {field(t("bknProject.overview.fields.network"), networkName)}
-          {field(
-            t("bknProject.overview.fields.scenario"),
-            t("bknProject.overview.scenarioStructured"),
-          )}
           {field(
             t("bknProject.overview.fields.owner"),
             ownerIsCaller ? t("bknProject.list.ownerYou") : project.owner.id,
@@ -114,18 +109,30 @@ export function ProjectOverview({
       </section>
 
       <div className={styles.tiles} data-region="stats">
-        {tiles.map((tile) => (
-          <button
-            className={styles.tile}
-            key={tile.key}
-            onClick={() => go(tile.section)}
-            type="button"
-          >
-            <span className={styles.tileLabel}>{tile.label}</span>
-            <span className={styles.tileValue}>{tile.value}</span>
-            <span className={styles.tileSub}>{tile.sub}</span>
-          </button>
-        ))}
+        {tiles.map((tile) => {
+          const body = (
+            <>
+              <span className={styles.tileLabel}>{tile.label}</span>
+              <span className={styles.tileValue}>{tile.value}</span>
+              <span className={styles.tileSub}>{tile.sub}</span>
+            </>
+          );
+          const { section } = tile;
+          return section ? (
+            <button
+              className={styles.tileLink}
+              key={tile.key}
+              onClick={() => go(section)}
+              type="button"
+            >
+              {body}
+            </button>
+          ) : (
+            <div className={styles.tile} key={tile.key}>
+              {body}
+            </div>
+          );
+        })}
       </div>
 
       <section className={styles.card} data-region="model">

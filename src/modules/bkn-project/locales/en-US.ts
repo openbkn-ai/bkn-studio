@@ -104,11 +104,8 @@ export const bknProjectEnUS = {
       comingSoonDescription: "A later version brings the full feature here.",
     },
     overview: {
-      statusNotDrafted: "No draft yet",
-      scenarioStructured: "Structured data only",
       fields: {
         network: "Target network",
-        scenario: "Scenario",
         owner: "Owner",
         updated: "Updated",
         id: "ID",

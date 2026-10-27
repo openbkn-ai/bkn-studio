@@ -98,7 +98,9 @@ describe("ProjectWorkspaceScene", () => {
       node.getAttribute("data-region"),
     );
     expect(regions).toEqual(["info", "stats", "model", "columns"]);
-    expect(container.querySelectorAll('[data-region="stats"] > button')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-region="stats"] > *')).toHaveLength(4);
+    // The instance tile has no page in the community image, so only three tiles open one.
+    expect(container.querySelectorAll('[data-region="stats"] > button')).toHaveLength(3);
     expect(container.querySelector(".ant-alert")).toBeNull();
     expect(
       screen.getByText('bknProject.overview.tiles.sourcesValue:{"count":2}'),
