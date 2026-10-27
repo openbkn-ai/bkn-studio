@@ -14,6 +14,7 @@ import { getRuntimeConfig } from "@/framework/runtime/config";
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _errorNotified?: boolean;
   _retry?: boolean;
+  skipAuthRefresh?: boolean;
   skipErrorToast?: boolean;
 };
 
@@ -77,6 +78,26 @@ async function refreshAccessToken() {
   return refreshPromise;
 }
 
+async function isSessionRejected(config: RetryableRequestConfig): Promise<boolean> {
+  if (config.url === "/safe/v1/me") {
+    return true;
+  }
+
+  // A business endpoint can return 401 even with a valid refreshed token.
+  // Confirm the session through the account endpoint before clearing it.
+  try {
+    const response = await axios.get("/safe/v1/me", {
+      adapter: config.adapter,
+      baseURL: getRuntimeConfig().apiBaseUrl,
+      headers: { Authorization: config.headers.get("Authorization") },
+      timeout: 3000,
+    });
+    return response.status === 401;
+  } catch (error) {
+    return axios.isAxiosError(error) && error.response?.status === 401;
+  }
+}
+
 export function setRequestErrorHandler(handler: RequestErrorHandler) {
   requestErrorHandler = handler;
 }
@@ -102,21 +123,24 @@ http.interceptors.response.use(
     const config = axiosError?.config as RetryableRequestConfig | undefined;
     const status = axiosError?.response?.status;
 
-    if (status === 401 && config && !config._retry) {
-      config._retry = true;
+    if (status === 401 && !config?.skipAuthRefresh) {
+      if (config && !config._retry) {
+        config._retry = true;
 
-      try {
-        const refreshedToken = await refreshAccessToken();
+        try {
+          const refreshedToken = await refreshAccessToken();
 
-        if (refreshedToken) {
-          config.headers.set("Authorization", `Bearer ${refreshedToken}`);
-          return http(config);
+          if (refreshedToken) {
+            config.headers.set("Authorization", `Bearer ${refreshedToken}`);
+            return http(config);
+          }
+        } catch {
+          // A revoked refresh token ends the session below.
         }
-      } catch {
+        runtimeConfig.auth.tokenManager.onAuthFailure?.();
+      } else if (config && (await isSessionRejected(config))) {
         runtimeConfig.auth.tokenManager.onAuthFailure?.();
       }
-
-      runtimeConfig.auth.tokenManager.onAuthFailure?.();
     }
 
     await decodeBlobErrorBody(error);

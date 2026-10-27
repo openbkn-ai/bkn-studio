@@ -27,6 +27,7 @@ interface ImportMetaEnv {
 declare module "axios" {
   interface AxiosRequestConfig {
     skipErrorToast?: boolean;
+    skipAuthRefresh?: boolean;
   }
 }
 
