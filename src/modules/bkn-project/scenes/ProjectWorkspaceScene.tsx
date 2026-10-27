@@ -16,6 +16,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage, isRequestNotFound } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { ProjectModel } from "@/modules/bkn-project/components/ProjectModel";
 import { ProjectOverview } from "@/modules/bkn-project/components/ProjectOverview";
 import { ProjectWorkspaceNav } from "@/modules/bkn-project/components/ProjectWorkspaceNav";
 import {
@@ -157,6 +158,8 @@ export function ProjectWorkspaceScene({
               ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
               project={project}
             />
+          ) : section === "model" ? (
+            <ProjectModel project={project} />
           ) : KNOWLEDGE_BASE_SECTIONS.includes(section) ? (
             <BknProjectKbSlot>
               <EmptyStatePanel title={t("bknProject.workspace.comingSoon")} />
