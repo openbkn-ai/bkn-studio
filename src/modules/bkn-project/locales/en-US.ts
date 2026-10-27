@@ -148,8 +148,14 @@ export const bknProjectEnUS = {
       },
       tabs: {
         objects: "Object types {{count}}",
+        objects_one: "Object type {{count}}",
+        objects_other: "Object types {{count}}",
         relations: "Relation types {{count}}",
+        relations_one: "Relation type {{count}}",
+        relations_other: "Relation types {{count}}",
         valueTypes: "Value types {{count}}",
+        valueTypes_one: "Value type {{count}}",
+        valueTypes_other: "Value types {{count}}",
         excluded: "Left out {{count}}",
       },
       state: {
@@ -179,9 +185,9 @@ export const bknProjectEnUS = {
       },
       identityPending: "Waiting for you",
       cardinality: {
-        one_to_one: "One to one",
-        many_to_one: "Many to one",
-        many_to_many: "Many to many",
+        oneToOne: "One to one",
+        manyToOne: "Many to one",
+        manyToMany: "Many to many",
       },
       excluded: {
         fieldsTitle: "Fields left out",

@@ -33,6 +33,13 @@ import styles from "./DraftTables.module.css";
 
 const PAGE_SIZE = 50;
 
+// Keys must not end in _one: i18next would read them as plural forms.
+const CARDINALITY: Record<string, string> = {
+  many_to_many: "manyToMany",
+  many_to_one: "manyToOne",
+  one_to_one: "oneToOne",
+};
+
 export function AdoptionTag({ adopted }: { adopted: boolean }) {
   const { t } = useTranslation();
   return (
@@ -179,7 +186,7 @@ export function DraftRelationsTable({
       key: "cardinality",
       width: 110,
       render: (value: string) =>
-        t(`bknProject.model.cardinality.${value}`, { defaultValue: value }),
+        CARDINALITY[value] ? t(`bknProject.model.cardinality.${CARDINALITY[value]}`) : value,
     },
     {
       title: t("bknProject.model.columns.evidence"),

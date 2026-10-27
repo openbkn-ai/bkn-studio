@@ -140,8 +140,14 @@ export const bknProjectZhCN = {
       },
       tabs: {
         objects: "对象类 {{count}}",
+        objects_one: "对象类 {{count}}",
+        objects_other: "对象类 {{count}}",
         relations: "关系类 {{count}}",
+        relations_one: "关系类 {{count}}",
+        relations_other: "关系类 {{count}}",
         valueTypes: "值类型 {{count}}",
+        valueTypes_one: "值类型 {{count}}",
+        valueTypes_other: "值类型 {{count}}",
         excluded: "未纳入 {{count}}",
       },
       state: {
@@ -171,9 +177,9 @@ export const bknProjectZhCN = {
       },
       identityPending: "待你决定",
       cardinality: {
-        one_to_one: "一对一",
-        many_to_one: "多对一",
-        many_to_many: "多对多",
+        oneToOne: "一对一",
+        manyToOne: "多对一",
+        manyToMany: "多对多",
       },
       excluded: {
         fieldsTitle: "未纳入的字段",
