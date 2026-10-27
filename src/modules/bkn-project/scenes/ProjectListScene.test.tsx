@@ -6,6 +6,7 @@
  */
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -49,6 +50,17 @@ vi.mock("@/shared/catalog", () => ({
 }));
 
 import { ProjectListScene } from "./ProjectListScene";
+
+function renderScene() {
+  return render(
+    <MemoryRouter initialEntries={["/bkn-project"]}>
+      <Routes>
+        <Route element={<ProjectListScene />} path="/bkn-project" />
+        <Route element={<div>opened overview</div>} path="/bkn-project/:projectId/overview" />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
 
 function project(overrides: Partial<Project>): Project {
   return {
@@ -100,7 +112,7 @@ describe("ProjectListScene", () => {
       nextCursor: null,
       total: 2,
     });
-    render(<ProjectListScene />);
+    renderScene();
 
     const mine = (await screen.findByText("Orders")).closest("tr") as HTMLElement;
     expect(within(mine).getByText("Orders network")).toBeInTheDocument();
@@ -121,7 +133,7 @@ describe("ProjectListScene", () => {
 
   it("searches by name and shows archived projects on request, from the first page", async () => {
     listProjectsMock.mockResolvedValue({ items: [], nextCursor: null, total: 0 });
-    render(<ProjectListScene />);
+    renderScene();
     await waitFor(() => expect(listProjectsMock).toHaveBeenCalledTimes(1));
 
     fireEvent.change(screen.getByPlaceholderText("bknProject.list.searchPlaceholder"), {
@@ -153,7 +165,7 @@ describe("ProjectListScene", () => {
         nextCursor: null,
         total: 1,
       });
-    render(<ProjectListScene />);
+    renderScene();
 
     fireEvent.click(screen.getByText("bknProject.list.showArchived"));
     expect(await screen.findByText("Newest")).toBeInTheDocument();
@@ -163,21 +175,12 @@ describe("ProjectListScene", () => {
     expect(screen.getByText("Newest")).toBeInTheDocument();
   });
 
-  it("reloads the first page once after creating, from any page", async () => {
-    createProjectMock.mockResolvedValue(project({ id: "p9", knId: "orders", name: "Created" }));
-    listProjectsMock
-      .mockResolvedValueOnce({ items: [project({})], nextCursor: "c2", total: 21 })
-      .mockResolvedValueOnce({ items: [project({ id: "p5" })], nextCursor: null, total: 21 })
-      .mockResolvedValue({
-        items: [project({ id: "p9", name: "Created" })],
-        nextCursor: null,
-        total: 22,
-      });
-    render(<ProjectListScene />);
-    fireEvent.click(await screen.findByText("bknProject.list.nextPage"));
-    await waitFor(() => expect(listProjectsMock).toHaveBeenCalledTimes(2));
+  it("opens the new project's overview after creating it", async () => {
+    createProjectMock.mockResolvedValue(project({ id: "p9", name: "Created" }));
+    listProjectsMock.mockResolvedValue({ items: [], nextCursor: null, total: 0 });
+    renderScene();
 
-    fireEvent.click(screen.getByText("bknProject.list.create"));
+    fireEvent.click(await screen.findByText("bknProject.list.create"));
     fireEvent.click(await screen.findByText("bknProject.create.newNetwork"));
     fireEvent.change(screen.getByPlaceholderText("bknProject.create.namePlaceholder"), {
       target: { value: "Created" },
@@ -187,10 +190,16 @@ describe("ProjectListScene", () => {
     });
     fireEvent.click(screen.getByText("bknProject.create.submit"));
 
-    expect(await screen.findByText("Created")).toBeInTheDocument();
-    expect(listProjectsMock).toHaveBeenCalledTimes(3);
-    expect(listProjectsMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ cursor: undefined }),
+    expect(await screen.findByText("opened overview")).toBeInTheDocument();
+  });
+
+  it("links each project name to its overview", async () => {
+    listProjectsMock.mockResolvedValue({ items: [project({})], nextCursor: null, total: 1 });
+    renderScene();
+
+    expect((await screen.findByText("Orders")).closest("a")).toHaveAttribute(
+      "href",
+      "/bkn-project/p1/overview",
     );
   });
 
@@ -203,7 +212,7 @@ describe("ProjectListScene", () => {
         total: 21,
       })
       .mockResolvedValueOnce({ items: [project({})], nextCursor: "c2", total: 21 });
-    render(<ProjectListScene />);
+    renderScene();
 
     fireEvent.click(await screen.findByText("bknProject.list.nextPage"));
     expect(await screen.findByText("Last")).toBeInTheDocument();
@@ -222,7 +231,7 @@ describe("ProjectListScene", () => {
       .mockResolvedValueOnce({ items: [project({})], nextCursor: "stale", total: 21 })
       .mockRejectedValueOnce(axiosError("BknProject.InvalidParameter.Cursor"))
       .mockResolvedValueOnce({ items: [project({})], nextCursor: "c2", total: 21 });
-    render(<ProjectListScene />);
+    renderScene();
 
     fireEvent.click(await screen.findByText("bknProject.list.nextPage"));
 
@@ -235,7 +244,7 @@ describe("ProjectListScene", () => {
 
   it("reads the catalogs once for the list and the new-project dialog", async () => {
     listProjectsMock.mockResolvedValue({ items: [], nextCursor: null, total: 0 });
-    render(<ProjectListScene />);
+    renderScene();
 
     fireEvent.click(await screen.findByText("bknProject.list.create"));
 
@@ -248,7 +257,7 @@ describe("ProjectListScene", () => {
     listCatalogsMock
       .mockRejectedValueOnce(new Error("down"))
       .mockResolvedValueOnce({ items: [{ id: "c1", name: "ERP" }], total: 1 });
-    render(<ProjectListScene />);
+    renderScene();
     await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledTimes(1));
 
     fireEvent.click(screen.getByText("bknProject.list.create"));
@@ -264,7 +273,7 @@ describe("ProjectListScene", () => {
       .mockResolvedValueOnce({ items: [project({})], nextCursor: null, total: 7 })
       .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValueOnce({ items: [], nextCursor: null, total: 0 });
-    render(<ProjectListScene />);
+    renderScene();
     expect(await screen.findByText('bknProject.list.total:{"count":7}')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("bknProject.list.refresh"));
@@ -284,7 +293,7 @@ describe("ProjectListScene", () => {
       total: 2,
     });
     setArchivedMock.mockResolvedValue(project({}));
-    render(<ProjectListScene />);
+    renderScene();
 
     fireEvent.click(await screen.findByText("bknProject.list.archive"));
     const { onOk } = confirmMock.mock.calls[0][0] as { onOk: () => Promise<void> };

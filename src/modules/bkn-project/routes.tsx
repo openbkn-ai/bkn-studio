@@ -16,6 +16,11 @@ const ProjectListPage = lazy(async () => {
   return { default: module.ProjectListPage };
 });
 
+const ProjectWorkspacePage = lazy(async () => {
+  const module = await import("@/modules/bkn-project/pages/ProjectWorkspacePage");
+  return { default: module.ProjectWorkspacePage };
+});
+
 function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
@@ -34,7 +39,28 @@ export const bknProjectRoutes: RouteObject[] = [
   },
 ];
 
+const workspaceConsole = {
+  descriptionKey: "bknProject.workspace.description",
+  menuKey: "bkn-project",
+  titleKey: "bknProject.workspace.title",
+};
+
+// A project workspace replaces the console navigation with its own, so it lives outside the shell.
+export const bknProjectStandaloneRoutes: RouteObject[] = [
+  {
+    path: "/bkn-project/:projectId",
+    handle: { console: workspaceConsole },
+    element: withRouteLoading(<ProjectWorkspacePage />),
+  },
+  {
+    path: "/bkn-project/:projectId/:section",
+    handle: { console: workspaceConsole },
+    element: withRouteLoading(<ProjectWorkspacePage />),
+  },
+];
+
 export const bknProjectRouteContribution: AppRouteContribution = {
   moduleId: "bkn-project",
   routes: bknProjectRoutes,
+  standaloneRoutes: bknProjectStandaloneRoutes,
 };

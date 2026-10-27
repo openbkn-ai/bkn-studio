@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { AxiosError, type AxiosResponse } from "axios";
+
 import { http } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import type {
@@ -13,6 +15,7 @@ import type {
   ProjectListQuery,
   ProjectListResult,
   ProjectNetwork,
+  ProjectRelease,
 } from "@/modules/bkn-project/types/project";
 
 const API_PREFIX = "/bkn-project/v1/projects";
@@ -97,6 +100,21 @@ const mockProjects: BackendProject[] = [
   },
 ];
 
+/** The 404 bkn-project answers for a project that is missing or not visible. */
+function mockNotFound(id: string) {
+  const response = {
+    data: { description: `project ${id} not found`, error_code: "BknProject.Project.NotFound" },
+    status: 404,
+  } as AxiosResponse;
+  return new AxiosError(
+    `project ${id} not found`,
+    "ERR_BAD_REQUEST",
+    undefined,
+    undefined,
+    response,
+  );
+}
+
 function mockOtherProjects(project: BackendProject): number {
   return mockProjects.filter(
     (other) => other.id !== project.id && other.kn_id === project.kn_id && !other.archived,
@@ -173,7 +191,7 @@ export async function setProjectArchived(id: string, archived: boolean): Promise
   if (useMock) {
     const project = mockProjects.find((item) => item.id === id);
     if (!project) {
-      throw new Error(`project ${id} not found`);
+      throw mockNotFound(id);
     }
     project.archived = archived;
     project.update_time = Date.now();
@@ -199,4 +217,59 @@ export async function listProjectNetworks(): Promise<ProjectNetwork[]> {
     { skipErrorToast: true, params: { limit: -1, sort: "update_time", direction: "desc" } },
   );
   return (response.data.entries ?? []).map(({ id, name }) => ({ id, name }));
+}
+
+export async function getProject(id: string): Promise<Project> {
+  if (useMock) {
+    const project = mockProjects.find((item) => item.id === id);
+    if (!project) {
+      throw mockNotFound(id);
+    }
+    return wait(mapProject({ ...project, other_projects: mockOtherProjects(project) }));
+  }
+  const response = await http.get<BackendProject>(`${API_PREFIX}/${encodeURIComponent(id)}`, {
+    skipErrorToast: true,
+  });
+  return mapProject(response.data);
+}
+
+/** Returns a network the caller can see, or null when it cannot be read. */
+export async function getProjectNetwork(knId: string): Promise<ProjectNetwork | null> {
+  if (useMock) {
+    return wait(mockNetworks.find((network) => network.id === knId) ?? null);
+  }
+  try {
+    const response = await http.get<ProjectNetwork>(
+      `/bkn-backend/v1/knowledge-networks/${encodeURIComponent(knId)}`,
+      { skipErrorToast: true },
+    );
+    return { id: response.data.id, name: response.data.name };
+  } catch {
+    return null;
+  }
+}
+
+/** Returns the newest release of the network's lineage, or null before the first one. */
+export async function getLatestRelease(knId: string): Promise<ProjectRelease | null> {
+  if (useMock) {
+    return wait(
+      knId === "supply_chain"
+        ? {
+            createTime: Date.parse("2026-10-20T09:00:00Z"),
+            networkId: "supply_chain_v1_0_0",
+            version: "1.0.0",
+          }
+        : null,
+    );
+  }
+  const response = await http.get<{
+    entries: { create_time: number; network_id: string; version: string }[] | null;
+  }>(`/bkn-project/v1/lineages/${encodeURIComponent(knId)}/releases`, {
+    params: { limit: 1 },
+    skipErrorToast: true,
+  });
+  const newest = response.data.entries?.[0];
+  return newest
+    ? { createTime: newest.create_time, networkId: newest.network_id, version: newest.version }
+    : null;
 }

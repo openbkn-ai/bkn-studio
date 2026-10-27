@@ -11,6 +11,7 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import {
@@ -27,6 +28,7 @@ import {
   setProjectArchived,
 } from "@/modules/bkn-project/services/project.service";
 import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
+import { projectSectionPath } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectListScene.module.css";
@@ -41,6 +43,7 @@ const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
 export function ProjectListScene() {
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
+  const navigate = useNavigate();
   const currentUserId = runtimeConfig.currentUser.id;
 
   const [keyword, setKeyword] = useState("");
@@ -158,11 +161,7 @@ export function ProjectListScene() {
   const handleCreated = (project: Project) => {
     setCreateOpen(false);
     message.success(t("bknProject.create.success"));
-    if (!networks.some((network) => network.id === project.knId)) {
-      void loadReferences();
-    }
-    // A new paging state reloads the first page, where the new project is.
-    resetPaging();
+    void navigate(projectSectionPath(project.id, "overview"));
   };
 
   const changeArchived = async (project: Project, archived: boolean) => {
@@ -194,7 +193,9 @@ export function ProjectListScene() {
       width: 260,
       render: (value: string, record) => (
         <div className={styles.stack}>
-          <span className={styles.name}>{value}</span>
+          <Link className={styles.name} to={projectSectionPath(record.id, "overview")}>
+            {value}
+          </Link>
           <code className={styles.id}>{record.id}</code>
           {record.archived ? <Tag>{t("bknProject.list.archivedTag")}</Tag> : null}
         </div>
