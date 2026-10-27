@@ -29,6 +29,7 @@ import {
   type ObjectMetricValidationResultV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import { serializeObjectMetricBody } from "@/modules/knowledge-network/lib/object-metric-numeric";
 import type { BackendLogicProperty } from "@/modules/knowledge-network/services/mappers/backend-types";
 
 function clone<T>(value: T): T {
@@ -114,6 +115,7 @@ export async function listObjectMetricsV1(
         status: query.status,
       },
       skipErrorToast: options.skipErrorToast,
+      transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
   return response.data;
@@ -134,7 +136,11 @@ export async function getObjectMetricV1(
   }
   const response = await http.get<ObjectMetricRecordV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}`,
-    { params: { version }, skipErrorToast: options.skipErrorToast },
+    {
+      params: { version },
+      skipErrorToast: options.skipErrorToast,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
   );
   return response.data;
 }
@@ -168,6 +174,10 @@ export async function createObjectMetricDraftV1(
   const response = await http.post<ObjectMetricRecordV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics`,
     definition,
+    {
+      transformRequest: serializeObjectMetricBody,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
   );
   return response.data;
 }
@@ -198,6 +208,10 @@ export async function updateObjectMetricDraftV1(
   const response = await http.put<ObjectMetricRecordV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}`,
     definition,
+    {
+      transformRequest: serializeObjectMetricBody,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
   );
   return response.data;
 }
@@ -337,7 +351,10 @@ export async function listObjectMetricVersionsV1(
   }
   const response = await http.get<ObjectMetricRecordV1[]>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/versions`,
-    { skipErrorToast: options.skipErrorToast },
+    {
+      skipErrorToast: options.skipErrorToast,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
   );
   return response.data;
 }
@@ -352,6 +369,7 @@ export async function validateObjectMetricV1(
   const response = await http.post<ObjectMetricValidationResultV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/validate`,
     definition,
+    { transformRequest: serializeObjectMetricBody },
   );
   return response.data;
 }
@@ -412,6 +430,7 @@ export async function previewObjectMetricV1(
   const response = await http.post<ObjectMetricPreviewV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/preview`,
     definition,
+    { transformRequest: serializeObjectMetricBody },
   );
   return response.data;
 }
@@ -443,7 +462,11 @@ export async function queryObjectMetricDataV1(
   const response = await http.post<ObjectMetricDataV1>(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/data`,
     query,
-    { params: { branch: "main", version }, transformResponse: transformPrecisionSafeJSONResponse },
+    {
+      params: { branch: "main", version },
+      transformRequest: serializeObjectMetricBody,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
   );
   return response.data;
 }
@@ -475,6 +498,7 @@ export async function trialObjectMetricDataV1(
     {
       params: { branch: "main" },
       skipErrorToast: true,
+      transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
@@ -495,6 +519,7 @@ export async function queryObjectMetricDrillThroughV1(
     {
       params: { branch: "main", version },
       skipErrorToast: true,
+      transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
@@ -514,6 +539,7 @@ export async function trialObjectMetricDrillThroughV1(
     {
       params: { branch: "main" },
       skipErrorToast: true,
+      transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );

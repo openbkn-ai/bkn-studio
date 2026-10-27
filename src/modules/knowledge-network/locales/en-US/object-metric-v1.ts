@@ -13,7 +13,7 @@ export const objectMetricV1Part = {
   analysisHavingValueHint: "Compare against the final metric value",
   analysisHavingValueRequired: "Enter a comparison value",
   analysisHavingNumericRequired: "The comparison value must be a valid number",
-  analysisHavingSafeIntegerRequired: "The integer comparison value must be a browser-safe integer",
+  analysisHavingSafeIntegerRequired: "The integer comparison value must be a 64-bit integer",
   analysisHavingBooleanRequired: "Enter true or false",
   analysisHaving_eq: "Equals",
   analysisHaving_ne: "Does not equal",

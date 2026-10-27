@@ -9,6 +9,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ObjectMetricExpressionV1 } from "@/modules/knowledge-network/types/object-metric";
+import { serializeObjectMetricBody } from "@/modules/knowledge-network/lib/object-metric-numeric";
 
 import { AtomicInstanceExpressionBuilder } from "./AtomicInstanceExpressionBuilder";
 import { objectMetricPropertyExpression } from "./object-metric-model";
@@ -48,6 +49,28 @@ const amountProperty: ObjectMetricExpressionV1 = {
 afterEach(cleanup);
 
 describe("AtomicInstanceExpressionBuilder", () => {
+  it("keeps a long decimal literal exact through editing and serialization", () => {
+    const onChange = vi.fn();
+    render(
+      <AtomicInstanceExpressionBuilder
+        onChange={onChange}
+        properties={properties}
+        value={{
+          left: amountProperty,
+          node_type: "binary",
+          operator: "add",
+          right: { node_type: "literal", value: 0, value_type: "decimal" },
+        }}
+      />,
+    );
+    fireEvent.change(screen.getByRole("spinbutton"), {
+      target: { value: "0.1234567890123456789012345" },
+    });
+    expect(onChange).toHaveBeenCalled();
+    expect(serializeObjectMetricBody(onChange.mock.lastCall?.[0])).toContain(
+      '"value":0.1234567890123456789012345',
+    );
+  });
   it("renders business parameter names and a readable formula preview", () => {
     render(
       <AtomicInstanceExpressionBuilder
