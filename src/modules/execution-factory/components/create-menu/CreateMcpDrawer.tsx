@@ -14,6 +14,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { localizeCategoryOptions } from "@/modules/execution-factory/utils/detail-display";
 import {
   getMcpDetail,
   registerMcp,
@@ -346,7 +347,7 @@ export function CreateMcpDrawer({
         name="category"
         rules={[{ required: true, message: t("common.required") }]}
       >
-        <Select options={categories} />
+        <Select options={localizeCategoryOptions(categories, t)} />
       </Form.Item>
 
       {creationType === "custom" ? (

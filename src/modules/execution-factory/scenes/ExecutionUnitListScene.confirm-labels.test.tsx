@@ -196,6 +196,52 @@ describe("ExecutionUnitListScene lifecycle confirmation labels (#491)", () => {
       await i18n.changeLanguage(locale);
     });
 
+    it("localizes category filters consistently with cards and preserves their values", async () => {
+      api.listOperatorCategories.mockResolvedValue([
+        { categoryType: "data_process", name: "数据处理" },
+        { categoryType: "custom_team", name: "团队自定义" },
+      ]);
+      api.listToolboxes.mockResolvedValue({
+        items: [
+          {
+            boxId: "box-1",
+            name: "Category Toolbox",
+            metadataType: "openapi",
+            categoryType: "data_process",
+            categoryName: "数据处理",
+            status: "unpublish",
+          },
+        ],
+        total: 1,
+      });
+      renderScene("?activeTab=toolbox&toolboxView=openapi");
+      await screen.findByText("Category Toolbox");
+      const label = locale === "en-US" ? "Data Processing" : "数据处理";
+      const card = screen.getByText("Category Toolbox").closest(".ant-card") as HTMLElement;
+      expect(within(card).getByText(label)).toBeInTheDocument();
+      const group = screen.getByText(i18n.t("executionFactory.typeFilter"))
+        .parentElement as HTMLElement;
+      const select = within(group).getByRole("combobox");
+      fireEvent.mouseDown(select);
+      fireEvent.click(
+        await screen.findByText(label, { selector: ".ant-select-item-option-content" }),
+      );
+      await waitFor(() =>
+        expect(api.listToolboxes).toHaveBeenLastCalledWith(
+          expect.objectContaining({ category: "data_process" }),
+        ),
+      );
+      await act(() => i18n.changeLanguage(locale === "en-US" ? "zh-CN" : "en-US"));
+      await waitFor(() =>
+        expect(group.querySelector(".ant-select-selection-item")).toHaveTextContent(
+          locale === "en-US" ? "数据处理" : "Data Processing",
+        ),
+      );
+      fireEvent.mouseDown(select);
+      expect(await screen.findByText("团队自定义")).toBeInTheDocument();
+      expect(await screen.findByText(i18n.t("executionFactory.allCategory"))).toBeInTheDocument();
+    });
+
     it("names the MCP publish confirmation after the action instead of Save", async () => {
       api.listMcps.mockResolvedValue({
         items: [
