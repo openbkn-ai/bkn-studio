@@ -16,6 +16,10 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
+  RESOURCE_NAME_COUNT,
+  RESOURCE_NAME_MAX_LENGTH,
+} from "@/modules/knowledge-network/lib/resource-constraints";
+import {
   DEFAULT_RESOURCE_COLOR,
   ResourceColorSelect,
 } from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
@@ -162,12 +166,12 @@ export function ConceptGroupFormScene({ mode }: ConceptGroupFormSceneProps) {
                 required: true,
               },
               {
-                max: 40,
+                max: RESOURCE_NAME_MAX_LENGTH,
                 message: t("knowledgeNetwork.objectTypeNameMaxLength"),
               },
             ]}
           >
-            <Input maxLength={40} showCount />
+            <Input count={RESOURCE_NAME_COUNT} showCount />
           </Form.Item>
           <Form.Item label={t("knowledgeNetwork.color")} name="color">
             <ResourceColorSelect inModal={false} />

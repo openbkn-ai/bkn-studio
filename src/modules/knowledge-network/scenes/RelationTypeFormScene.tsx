@@ -28,6 +28,12 @@ import {
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
+  RESOURCE_IDENTIFIER_PATTERN,
+  RESOURCE_ID_MAX_LENGTH,
+  RESOURCE_NAME_COUNT,
+  RESOURCE_NAME_MAX_LENGTH,
+} from "@/modules/knowledge-network/lib/resource-constraints";
+import {
   createKnowledgeNetworkRelationType,
   getKnowledgeNetworkRelationTypeDetail,
   getKnowledgeNetworkObjectType,
@@ -46,8 +52,6 @@ const RelationTypeMappingEditor = lazy(async () => {
     await import("@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor");
   return { default: module.RelationTypeMappingEditor };
 });
-
-const IDENTIFIER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 
 type BasicFormValues = {
   color: string;
@@ -375,28 +379,28 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
                   required: true,
                 },
                 {
-                  max: 40,
+                  max: RESOURCE_NAME_MAX_LENGTH,
                   message: t("knowledgeNetwork.objectTypeNameMaxLength"),
                 },
               ]}
             >
-              <Input maxLength={40} showCount />
+              <Input count={RESOURCE_NAME_COUNT} showCount />
             </Form.Item>
             <Form.Item
               label="ID"
               name="id"
               rules={[
                 {
-                  max: 40,
+                  max: RESOURCE_ID_MAX_LENGTH,
                   message: t("knowledgeNetwork.objectTypeNameMaxLength"),
                 },
                 {
                   message: t("knowledgeNetwork.objectTypeIdPattern"),
-                  pattern: IDENTIFIER_PATTERN,
+                  pattern: RESOURCE_IDENTIFIER_PATTERN,
                 },
               ]}
             >
-              <Input disabled={mode === "edit"} />
+              <Input disabled={mode === "edit"} maxLength={RESOURCE_ID_MAX_LENGTH} showCount />
             </Form.Item>
             <Form.Item
               label={t("common.tag")}

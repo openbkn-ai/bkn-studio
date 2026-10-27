@@ -118,6 +118,11 @@ describe("ConceptGroupFormScene resource authorization regression", () => {
 
       render(<ConceptGroupFormScene mode="edit" />);
 
+      const nameInput = await screen.findByDisplayValue(name);
+      const maximumUnicodeName = "😀".repeat(128);
+      fireEvent.change(nameInput, { target: { value: `${maximumUnicodeName}😀` } });
+      expect(nameInput).toHaveValue(maximumUnicodeName);
+      fireEvent.change(nameInput, { target: { value: name } });
       const descriptionInput = await screen.findByDisplayValue("Original description");
       fireEvent.change(descriptionInput, { target: { value: "Updated description" } });
       fireEvent.click(screen.getByRole("button", { name: "common.save" }));

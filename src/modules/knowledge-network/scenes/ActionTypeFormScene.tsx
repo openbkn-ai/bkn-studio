@@ -40,6 +40,12 @@ import {
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
+  RESOURCE_IDENTIFIER_PATTERN,
+  RESOURCE_ID_MAX_LENGTH,
+  RESOURCE_NAME_COUNT,
+  RESOURCE_NAME_MAX_LENGTH,
+} from "@/modules/knowledge-network/lib/resource-constraints";
+import {
   createKnowledgeNetworkActionType,
   getKnowledgeNetworkActionTypeDetail,
   getKnowledgeNetworkObjectTypeDetail,
@@ -56,8 +62,6 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ActionTypeFormScene.module.css";
-
-const IDENTIFIER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 
 type BasicFormValues = {
   actionKind: KnowledgeNetworkActionTypeKind;
@@ -337,12 +341,16 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                       required: true,
                     },
                     {
-                      max: 40,
+                      max: RESOURCE_NAME_MAX_LENGTH,
                       message: t("knowledgeNetwork.objectTypeNameMaxLength"),
                     },
                   ]}
                 >
-                  <Input maxLength={40} placeholder={t("knowledgeNetwork.pleaseInput")} />
+                  <Input
+                    count={RESOURCE_NAME_COUNT}
+                    placeholder={t("knowledgeNetwork.pleaseInput")}
+                    showCount
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -351,18 +359,20 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                   name="id"
                   rules={[
                     {
-                      max: 40,
+                      max: RESOURCE_ID_MAX_LENGTH,
                       message: t("knowledgeNetwork.objectTypeNameMaxLength"),
                     },
                     {
                       message: t("knowledgeNetwork.objectTypeIdPattern"),
-                      pattern: IDENTIFIER_PATTERN,
+                      pattern: RESOURCE_IDENTIFIER_PATTERN,
                     },
                   ]}
                 >
                   <Input
                     disabled={mode === "edit"}
+                    maxLength={RESOURCE_ID_MAX_LENGTH}
                     placeholder={t("knowledgeNetwork.pleaseInput")}
+                    showCount
                   />
                 </Form.Item>
               </Col>

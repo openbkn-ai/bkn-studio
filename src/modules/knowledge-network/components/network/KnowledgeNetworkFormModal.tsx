@@ -23,6 +23,12 @@ import {
   ResourceTagsSelect,
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
+import {
+  RESOURCE_IDENTIFIER_PATTERN,
+  RESOURCE_ID_MAX_LENGTH,
+  RESOURCE_NAME_COUNT,
+  RESOURCE_NAME_MAX_LENGTH,
+} from "@/modules/knowledge-network/lib/resource-constraints";
 
 type KnowledgeNetworkFormModalProps = {
   mode: "create" | "edit";
@@ -33,8 +39,6 @@ type KnowledgeNetworkFormModalProps = {
 };
 
 type FormValues = KnowledgeNetworkMutationPayload;
-
-const IDENTIFIER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 
 export function KnowledgeNetworkFormModal({
   mode,
@@ -97,23 +101,38 @@ export function KnowledgeNetworkFormModal({
           name="name"
           rules={[
             { required: true, message: t("knowledgeNetwork.nameRequired") },
-            { max: 40, message: t("knowledgeNetwork.nameMaxLength", { len: 40 }) },
+            {
+              max: RESOURCE_NAME_MAX_LENGTH,
+              message: t("knowledgeNetwork.nameMaxLength", { len: RESOURCE_NAME_MAX_LENGTH }),
+            },
           ]}
         >
-          <Input placeholder={t("knowledgeNetwork.pleaseInput")} />
+          <Input
+            count={RESOURCE_NAME_COUNT}
+            placeholder={t("knowledgeNetwork.pleaseInput")}
+            showCount
+          />
         </Form.Item>
         <Form.Item
           label={t("knowledgeNetwork.identifier")}
           name="identifier"
           rules={[
-            { max: 40, message: t("knowledgeNetwork.identifierMaxLength", { len: 40 }) },
             {
-              pattern: IDENTIFIER_PATTERN,
+              max: RESOURCE_ID_MAX_LENGTH,
+              message: t("knowledgeNetwork.identifierMaxLength", { len: RESOURCE_ID_MAX_LENGTH }),
+            },
+            {
+              pattern: RESOURCE_IDENTIFIER_PATTERN,
               message: t("knowledgeNetwork.identifierPattern"),
             },
           ]}
         >
-          <Input disabled={mode === "edit"} placeholder={t("knowledgeNetwork.pleaseInput")} />
+          <Input
+            disabled={mode === "edit"}
+            maxLength={RESOURCE_ID_MAX_LENGTH}
+            placeholder={t("knowledgeNetwork.pleaseInput")}
+            showCount
+          />
         </Form.Item>
         <Form.Item label={t("knowledgeNetwork.color")} name="color">
           <ResourceColorSelect inModal />
