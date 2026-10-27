@@ -21,6 +21,7 @@ export const sampleExperiencePart = {
     referenceAnswer: "Reference answer",
     referenceQuery: "Reference query",
     runReference: "Run reference query",
+    drawReference: "Draw reference on canvas",
     compareHint: "Does the page's output reach the same conclusion as the reference answer?",
     match: "Same",
     mismatch: "Different",

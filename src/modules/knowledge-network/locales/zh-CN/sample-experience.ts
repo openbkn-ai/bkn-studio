@@ -21,6 +21,7 @@ export const sampleExperiencePart = {
     referenceAnswer: "参考答案",
     referenceQuery: "参考查询",
     runReference: "运行参考查询",
+    drawReference: "在画布上画出参考结果",
     compareHint: "对照页面输出，结论是否与参考答案一致？",
     match: "一致",
     mismatch: "不一致",

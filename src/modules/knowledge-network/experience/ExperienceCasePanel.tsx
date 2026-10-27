@@ -82,7 +82,7 @@ export function ExperienceCasePanel({
   running: boolean;
   /** Puts the question into the page's input and starts it. */
   onTry: (question: string) => void;
-  /** Data query only: runs the case's reference query in the page. */
+  /** Data query and graph exploration: runs the case's reference query (or graph) in the page. */
   onRunReference?: (query: string) => void;
 }) {
   const { t } = useTranslation();
@@ -159,6 +159,9 @@ export function ExperienceCasePanel({
   }
 
   const verdict = verdicts[current.id];
+  // Data query compares against the reference query, graph exploration against the reference graph.
+  const reference =
+    surface === "query" ? current.cypher.query : surface === "graph" ? current.cypher.graph : null;
 
   return (
     <aside className={styles.panel} data-testid="experience-panel">
@@ -240,19 +243,17 @@ export function ExperienceCasePanel({
               {t("knowledgeNetwork.sampleExperience.referenceAnswer")}
             </span>
             <p>{current.answer}</p>
-            {surface === "query" && current.cypher.query ? (
+            {reference ? (
               <>
                 <span className={styles.answerLabel}>
                   {t("knowledgeNetwork.sampleExperience.referenceQuery")}
                 </span>
-                <pre className={styles.code}>{current.cypher.query}</pre>
+                <pre className={styles.code}>{reference}</pre>
                 {onRunReference ? (
-                  <Button
-                    disabled={running}
-                    onClick={() => onRunReference(current.cypher.query as string)}
-                    size="small"
-                  >
-                    {t("knowledgeNetwork.sampleExperience.runReference")}
+                  <Button disabled={running} onClick={() => onRunReference(reference)} size="small">
+                    {surface === "graph"
+                      ? t("knowledgeNetwork.sampleExperience.drawReference")
+                      : t("knowledgeNetwork.sampleExperience.runReference")}
                   </Button>
                 ) : null}
               </>

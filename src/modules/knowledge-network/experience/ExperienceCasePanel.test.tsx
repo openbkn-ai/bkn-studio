@@ -32,6 +32,16 @@ const RESPONSE = {
           cypher: { query: "MATCH (s:salesorder) RETURN count(s) AS value" },
         },
         {
+          id: "F-01",
+          title: "First-level main materials",
+          explanation: "One BOM hop.",
+          question: "Which first-level main materials does 382-000005 use?",
+          answer: "382-000005 uses 323-000101 and 323-000102.",
+          expected: { material_codes: ["323-000101", "323-000102"] },
+          surfaces: ["agent", "graph"],
+          cypher: { graph: "MATCH (p:product)-[r:prod2bom]->(b:bom) RETURN p, r, b" },
+        },
+        {
           id: "S-02",
           title: "Sellable is not a promise",
           explanation: "Two business measures.",
@@ -67,13 +77,17 @@ describe("parseSampleExperience", () => {
     const parsed = experience();
     expect(parsed.sample).toBe("supply-chain-en");
     expect(parsed.businessDate).toBe("2026-08-25");
-    expect(parsed.cases.map((item) => item.id)).toEqual(["M-04", "S-02"]);
+    expect(parsed.cases.map((item) => item.id)).toEqual(["M-04", "F-01", "S-02"]);
   });
 
   it("offers each page only its own cases", () => {
-    expect(casesFor(experience(), "agent").map((item) => item.id)).toEqual(["M-04", "S-02"]);
+    expect(casesFor(experience(), "agent").map((item) => item.id)).toEqual([
+      "M-04",
+      "F-01",
+      "S-02",
+    ]);
     expect(casesFor(experience(), "query").map((item) => item.id)).toEqual(["M-04"]);
-    expect(casesFor(experience(), "graph")).toEqual([]);
+    expect(casesFor(experience(), "graph").map((item) => item.id)).toEqual(["F-01"]);
   });
 
   it("reads a response without cases as no experience", () => {
@@ -131,8 +145,8 @@ describe("ExperienceCasePanel", () => {
     fireEvent.click(screen.getByText("Show reference answer"));
     fireEvent.click(screen.getByText("Same"));
 
-    expect(screen.getByTestId("experience-question").textContent).toContain("U00-000151");
-    expect(screen.getByText("1/2 done")).toBeTruthy();
+    expect(screen.getByTestId("experience-question").textContent).toContain("382-000005");
+    expect(screen.getByText("1/3 done")).toBeTruthy();
     const stored = JSON.parse(
       localStorage.getItem("bkn-studio.sample-experience.supply-chain-en.0.1.12.agent") ?? "{}",
     ) as { verdicts: Record<string, string> };
@@ -148,12 +162,12 @@ describe("ExperienceCasePanel", () => {
         surface="agent"
       />,
     );
-    for (const verdict of ["Same", "Different"]) {
+    for (const verdict of ["Same", "Different", "Same"]) {
       fireEvent.click(screen.getByTestId("experience-try"));
       fireEvent.click(screen.getByText("Show reference answer"));
       fireEvent.click(screen.getByText(verdict));
     }
-    expect(screen.getByTestId("experience-summary").textContent).toContain("1 same, 1 different");
+    expect(screen.getByTestId("experience-summary").textContent).toContain("2 same, 1 different");
   });
 
   it("offers the reference query on the data query page", () => {
@@ -174,14 +188,32 @@ describe("ExperienceCasePanel", () => {
     expect(onRunReference).toHaveBeenCalledWith("MATCH (s:salesorder) RETURN count(s) AS value");
   });
 
-  it("renders nothing for a page without cases", () => {
-    const { container } = render(
+  it("offers to draw the reference graph on the graph exploration page", () => {
+    const onRunReference = vi.fn();
+    render(
       <ExperienceCasePanel
         experience={experience()}
+        onRunReference={onRunReference}
         onTry={vi.fn()}
         running={false}
         surface="graph"
       />,
+    );
+    fireEvent.click(screen.getByTestId("experience-try"));
+    fireEvent.click(screen.getByText("Show reference answer"));
+    fireEvent.click(screen.getByText("Draw reference on canvas"));
+    expect(onRunReference).toHaveBeenCalledWith(
+      "MATCH (p:product)-[r:prod2bom]->(b:bom) RETURN p, r, b",
+    );
+  });
+
+  it("renders nothing for a page without cases", () => {
+    const only = {
+      ...experience(),
+      cases: experience().cases.filter((item) => item.id !== "F-01"),
+    };
+    const { container } = render(
+      <ExperienceCasePanel experience={only} onTry={vi.fn()} running={false} surface="graph" />,
     );
     expect(container.innerHTML).toBe("");
   });
