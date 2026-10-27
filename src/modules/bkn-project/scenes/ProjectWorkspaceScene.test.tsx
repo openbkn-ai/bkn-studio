@@ -37,6 +37,10 @@ vi.mock("@/framework/entitlement/BknProjectKbSlot", () => ({
   BknProjectKbSlot: () => null,
 }));
 
+vi.mock("@/modules/bkn-project/components/ProjectModel", () => ({
+  ProjectModel: ({ project }: { project: { id: string } }) => <div>model of {project.id}</div>,
+}));
+
 vi.mock("@/modules/bkn-project/services/project.service", () => ({
   getLatestRelease: getLatestReleaseMock,
   getProject: getProjectMock,
@@ -59,7 +63,7 @@ const project: Project = {
   updateTime: 1,
 };
 
-function renderScene(section: "overview" | "model" = "overview") {
+function renderScene(section: "model" | "overview" | "requirements" = "overview") {
   return render(
     <MemoryRouter>
       <ProjectWorkspaceScene projectId="p1" section={section} />
@@ -136,12 +140,18 @@ describe("ProjectWorkspaceScene", () => {
     expect(screen.getByText("bknProject.workspace.backToList")).toBeInTheDocument();
   });
 
-  it("shows a page still under construction", async () => {
+  it("shows the ontology modeling page of the project", async () => {
     renderScene("model");
 
-    expect(await screen.findByText("bknProject.workspace.comingSoon")).toBeInTheDocument();
+    expect(await screen.findByText("model of p1")).toBeInTheDocument();
     expect(
       screen.getByText("bknProject.workspace.sections.model", { selector: "h2" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows a page still under construction", async () => {
+    renderScene("requirements");
+
+    expect(await screen.findByText("bknProject.workspace.comingSoon")).toBeInTheDocument();
   });
 });

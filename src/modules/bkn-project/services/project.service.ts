@@ -76,7 +76,7 @@ const mockProjects: BackendProject[] = [
     archived: false,
     baseline_network_id: "supply_chain_v1_0_0",
     branch: "project/p-001",
-    catalog_ids: ["erp_sales"],
+    catalog_ids: ["cat-001"],
     create_time: Date.parse("2026-10-20T09:00:00Z"),
     id: "p-001",
     kn_id: "supply_chain",

@@ -1,0 +1,145 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import type { ProjectAccount } from "@/modules/bkn-project/types/project";
+
+/**
+ * A project's ontology draft, drafted from the tables of its data catalogs. bkn-project
+ * owns every rule; the page shows what it answers and never derives adoption itself.
+ */
+export type DraftStatus = "drafting" | "failed" | "ready";
+
+/** A table of a data catalog, as the draft refers to it. */
+export type DraftTable = {
+  catalogId: string;
+  name: string;
+  /** Why the table could not be read; only on unreadable tables. */
+  reason?: string;
+  resourceId: string;
+};
+
+/**
+ * How an object type's records are identified, and what counting the key over the full
+ * table found. `source` and `reason` are open: unknown values are shown generically.
+ */
+export type DraftKeyEvidence = {
+  computed: boolean;
+  distinct: number;
+  field?: string;
+  nulls: number;
+  reason?: string;
+  rows: number;
+  source: string;
+};
+
+export type DraftProperty = {
+  description: string;
+  displayName: string;
+  mappedField: string;
+  missingDescription: boolean;
+  name: string;
+  sourceOfRecord: string;
+  type: string;
+  valueTypeId?: string;
+};
+
+export type DraftObjectType = {
+  adopted: boolean;
+  description: string;
+  displayKey: string;
+  id: string;
+  key: DraftKeyEvidence;
+  name: string;
+  needsIdentity: boolean;
+  primaryKeys: string[];
+  properties: DraftProperty[];
+  table: DraftTable;
+};
+
+export type DraftFieldMapping = {
+  sourceProperty: string;
+  targetProperty: string;
+};
+
+/** What joining the relation's fields over the full tables found. */
+export type DraftJoinEvidence = {
+  computed: boolean;
+  hitRate: number;
+  hits: number;
+  nulls: number;
+  orphans: number;
+  reason?: string;
+  rows: number;
+  sourceDistinct: number;
+};
+
+export type DraftRelationType = {
+  adopted: boolean;
+  cardinality: string;
+  description: string;
+  evidence: DraftJoinEvidence;
+  id: string;
+  linkTable?: DraftTable;
+  mapping: DraftFieldMapping[];
+  name: string;
+  /** foreign_key, name_match or link_table; open like the key source. */
+  origin: string;
+  source: string;
+  target: string;
+  /** confirmed for a declared foreign key, unconfirmed for an inferred one. */
+  verification: string;
+};
+
+export type DraftValueType = {
+  adopted: boolean;
+  baseType: string;
+  codeTable: DraftTable;
+  description: string;
+  id: string;
+  name: string;
+  usedBy: { objectType: string; property: string }[];
+  values: { display: string; value: string }[];
+};
+
+/** A field drafting left out of its object type, and why. */
+export type DraftExcludedField = {
+  field: string;
+  keyword?: string;
+  objectType: string;
+  reason: string;
+};
+
+/** A change a person made to the draft; the newest decisions come last. */
+export type DraftDecision = {
+  action: string;
+  after: unknown;
+  before: unknown;
+  by: ProjectAccount;
+  itemId: string;
+  kind: string;
+  time: number;
+};
+
+export type DraftItems = {
+  decisions: DraftDecision[];
+  excluded: DraftExcludedField[];
+  objectTypes: DraftObjectType[];
+  relationTypes: DraftRelationType[];
+  unreadable: DraftTable[];
+  valueTypes: DraftValueType[];
+};
+
+export type Draft = {
+  createTime: number;
+  drafter: ProjectAccount;
+  /** interrupted, timeout, or vega-backend's reply; only when failed. */
+  error: string;
+  items: DraftItems;
+  projectId: string;
+  status: DraftStatus;
+  updateTime: number;
+};

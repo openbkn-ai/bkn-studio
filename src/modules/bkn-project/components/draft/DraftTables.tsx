@@ -1,0 +1,373 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import type { ColumnsType } from "antd/es/table";
+import { useTranslation } from "react-i18next";
+
+import { AppTable } from "@/framework/ui/common/AppTable";
+import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import {
+  joinCountPhrase,
+  keyCountPhrase,
+  keySourcePhrase,
+  keyWarnings,
+  originPhrase,
+  excludedReasonText,
+  reasonDetail,
+  say,
+  verificationPhrase,
+} from "@/modules/bkn-project/components/draft/evidence";
+import type {
+  DraftExcludedField,
+  DraftObjectType,
+  DraftRelationType,
+  DraftTable,
+  DraftValueType,
+} from "@/modules/bkn-project/types/draft";
+
+import styles from "./DraftTables.module.css";
+
+const PAGE_SIZE = 50;
+
+// Keys must not end in _one: i18next would read them as plural forms.
+const CARDINALITY: Record<string, string> = {
+  many_to_many: "manyToMany",
+  many_to_one: "manyToOne",
+  one_to_one: "oneToOne",
+};
+
+export function AdoptionTag({ adopted }: { adopted: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <LightStatusTag tone={adopted ? "success" : "neutral"}>
+      {t(adopted ? "bknProject.model.state.adopted" : "bknProject.model.state.notAdopted")}
+    </LightStatusTag>
+  );
+}
+
+/** The identity of an object type with its basis, its counts and their warnings. */
+export function IdentityEvidence({ objectType }: { objectType: DraftObjectType }) {
+  const { t } = useTranslation();
+  const { key } = objectType;
+  const detail = reasonDetail(key.reason);
+  return (
+    <div className={styles.evidence}>
+      {objectType.needsIdentity ? (
+        <LightStatusTag tone="warning">{t("bknProject.model.identityPending")}</LightStatusTag>
+      ) : (
+        <code className={styles.mono}>{objectType.primaryKeys.join(", ")}</code>
+      )}
+      <span className={styles.muted}>
+        {say(t, keySourcePhrase(key.source))} · {say(t, keyCountPhrase(key))}
+      </span>
+      {keyWarnings(key).map((warning) => (
+        <span className={styles.warning} key={warning.key}>
+          {say(t, warning)}
+        </span>
+      ))}
+      {detail ? (
+        <details className={styles.details}>
+          <summary>{t("bknProject.model.failed.details")}</summary>
+          {detail}
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function TableSource({
+  table,
+  catalogNames,
+}: {
+  catalogNames: Record<string, string>;
+  table: DraftTable;
+}) {
+  return (
+    <span className={styles.muted}>
+      {table.name} · {catalogNames[table.catalogId] ?? table.catalogId}
+    </span>
+  );
+}
+
+export function DraftObjectsTable({
+  catalogNames,
+  items,
+  onOpen,
+}: {
+  catalogNames: Record<string, string>;
+  items: DraftObjectType[];
+  onOpen: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const columns: ColumnsType<DraftObjectType> = [
+    {
+      title: t("bknProject.model.columns.objectType"),
+      dataIndex: "name",
+      key: "name",
+      render: (value: string, record) => (
+        <button className={styles.link} onClick={() => onOpen(record.id)} type="button">
+          <strong>{value}</strong>
+          {record.description ? <span className={styles.muted}>{record.description}</span> : null}
+        </button>
+      ),
+    },
+    {
+      title: t("bknProject.model.columns.state"),
+      key: "state",
+      width: 120,
+      render: (_value, record) =>
+        record.needsIdentity ? (
+          <LightStatusTag tone="warning">
+            {t("bknProject.model.state.needsIdentity")}
+          </LightStatusTag>
+        ) : (
+          <AdoptionTag adopted={record.adopted} />
+        ),
+    },
+    {
+      title: t("bknProject.model.columns.identity"),
+      key: "identity",
+      render: (_value, record) => <IdentityEvidence objectType={record} />,
+    },
+    {
+      title: t("bknProject.model.columns.properties"),
+      key: "properties",
+      width: 90,
+      render: (_value, record) => record.properties.length,
+    },
+    {
+      title: t("bknProject.model.columns.source"),
+      key: "source",
+      render: (_value, record) => <TableSource catalogNames={catalogNames} table={record.table} />,
+    },
+  ];
+  return (
+    <AppTable<DraftObjectType>
+      columns={columns}
+      dataSource={items}
+      pagination={items.length > PAGE_SIZE ? { pageSize: PAGE_SIZE } : false}
+      rowKey="id"
+      size="middle"
+    />
+  );
+}
+
+export function DraftRelationsTable({
+  items,
+  objectNames,
+  unadoptedEnds,
+}: {
+  items: DraftRelationType[];
+  objectNames: Record<string, string>;
+  /** Relations adopted while an end is not, marked for people to unadopt. */
+  unadoptedEnds: ReadonlySet<string>;
+}) {
+  const { t } = useTranslation();
+  const columns: ColumnsType<DraftRelationType> = [
+    {
+      title: t("bknProject.model.columns.relationType"),
+      dataIndex: "name",
+      key: "name",
+      render: (value: string) => <strong>{value}</strong>,
+    },
+    {
+      title: t("bknProject.model.columns.ends"),
+      key: "ends",
+      render: (_value, record) =>
+        `${objectNames[record.source] ?? record.source} → ${objectNames[record.target] ?? record.target}`,
+    },
+    {
+      title: t("bknProject.model.columns.cardinality"),
+      dataIndex: "cardinality",
+      key: "cardinality",
+      width: 110,
+      render: (value: string) =>
+        CARDINALITY[value] ? t(`bknProject.model.cardinality.${CARDINALITY[value]}`) : value,
+    },
+    {
+      title: t("bknProject.model.columns.evidence"),
+      key: "evidence",
+      render: (_value, record) => {
+        const detail = reasonDetail(record.evidence.reason);
+        return (
+          <div className={styles.evidence}>
+            <span>
+              {say(t, originPhrase(record.origin))} ·{" "}
+              {say(t, verificationPhrase(record.verification))}
+            </span>
+            <span className={styles.muted}>{say(t, joinCountPhrase(record.evidence))}</span>
+            {detail ? (
+              <details className={styles.details}>
+                <summary>{t("bknProject.model.failed.details")}</summary>
+                {detail}
+              </details>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
+      title: t("bknProject.model.columns.state"),
+      key: "state",
+      width: 140,
+      render: (_value, record) => (
+        <div className={styles.evidence}>
+          <AdoptionTag adopted={record.adopted} />
+          {unadoptedEnds.has(record.id) ? (
+            <LightStatusTag tone="warning">
+              {t("bknProject.model.state.unadoptedEnd")}
+            </LightStatusTag>
+          ) : null}
+        </div>
+      ),
+    },
+  ];
+  return (
+    <AppTable<DraftRelationType>
+      columns={columns}
+      dataSource={items}
+      pagination={items.length > PAGE_SIZE ? { pageSize: PAGE_SIZE } : false}
+      rowKey="id"
+      size="middle"
+    />
+  );
+}
+
+export function DraftValueTypesTable({
+  catalogNames,
+  items,
+}: {
+  catalogNames: Record<string, string>;
+  items: DraftValueType[];
+}) {
+  const { t } = useTranslation();
+  const columns: ColumnsType<DraftValueType> = [
+    {
+      title: t("bknProject.model.columns.valueType"),
+      dataIndex: "name",
+      key: "name",
+      render: (value: string) => <strong>{value}</strong>,
+    },
+    {
+      title: t("bknProject.model.columns.baseType"),
+      dataIndex: "baseType",
+      key: "baseType",
+      width: 110,
+    },
+    {
+      title: t("bknProject.model.columns.values"),
+      key: "values",
+      render: (_value, record) => (
+        <span className={styles.muted}>
+          {record.values.map((value) => `${value.value} ${value.display}`.trim()).join("; ")}
+        </span>
+      ),
+    },
+    {
+      title: t("bknProject.model.columns.codeTable"),
+      key: "codeTable",
+      render: (_value, record) => (
+        <TableSource catalogNames={catalogNames} table={record.codeTable} />
+      ),
+    },
+    {
+      title: t("bknProject.model.columns.usedBy"),
+      key: "usedBy",
+      render: (_value, record) =>
+        record.usedBy.map((ref) => `${ref.objectType}.${ref.property}`).join(", "),
+    },
+    {
+      title: t("bknProject.model.columns.state"),
+      key: "state",
+      width: 120,
+      render: (_value, record) => <AdoptionTag adopted={record.adopted} />,
+    },
+  ];
+  return (
+    <AppTable<DraftValueType>
+      columns={columns}
+      dataSource={items}
+      pagination={false}
+      rowKey="id"
+      size="middle"
+    />
+  );
+}
+
+/** Fields drafting left out, and tables it could not read. */
+export function DraftExcludedPanel({
+  catalogNames,
+  excluded,
+  objectNames,
+  unreadable,
+}: {
+  catalogNames: Record<string, string>;
+  excluded: DraftExcludedField[];
+  objectNames: Record<string, string>;
+  unreadable: DraftTable[];
+}) {
+  const { t } = useTranslation();
+  const fieldColumns: ColumnsType<DraftExcludedField> = [
+    {
+      title: t("bknProject.model.columns.objectType"),
+      key: "objectType",
+      render: (_value, record) => objectNames[record.objectType] ?? record.objectType,
+    },
+    {
+      title: t("bknProject.model.columns.field"),
+      dataIndex: "field",
+      key: "field",
+      render: (value: string) => <code className={styles.mono}>{value}</code>,
+    },
+    {
+      title: t("bknProject.model.columns.reason"),
+      key: "reason",
+      render: (_value, record) => excludedReasonText(t, record.reason, record.keyword),
+    },
+  ];
+  const tableColumns: ColumnsType<DraftTable> = [
+    {
+      title: t("bknProject.model.columns.table"),
+      key: "table",
+      render: (_value, record) => <TableSource catalogNames={catalogNames} table={record} />,
+    },
+    {
+      title: t("bknProject.model.columns.reason"),
+      key: "reason",
+      render: (_value, record) => excludedReasonText(t, record.reason),
+    },
+  ];
+  return (
+    <div className={styles.stack}>
+      {excluded.length ? (
+        <section>
+          <h3 className={styles.sectionTitle}>{t("bknProject.model.excluded.fieldsTitle")}</h3>
+          <p className={styles.muted}>{t("bknProject.model.excluded.fieldsTip")}</p>
+          <AppTable<DraftExcludedField>
+            columns={fieldColumns}
+            dataSource={excluded}
+            pagination={false}
+            rowKey={(record) => `${record.objectType}.${record.field}`}
+            size="middle"
+          />
+        </section>
+      ) : null}
+      {unreadable.length ? (
+        <section>
+          <h3 className={styles.sectionTitle}>{t("bknProject.model.excluded.unreadableTitle")}</h3>
+          <AppTable<DraftTable>
+            columns={tableColumns}
+            dataSource={unreadable}
+            pagination={false}
+            rowKey="resourceId"
+            size="middle"
+          />
+        </section>
+      ) : null}
+    </div>
+  );
+}
