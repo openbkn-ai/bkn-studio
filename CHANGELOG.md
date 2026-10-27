@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Clear the login session when token refresh fails or a refreshed token is rejected, including disabled accounts; ordinary permission denials keep the user signed in.
+
 - Preserve independent Trace HTTP error reasons in shared request handling and local list/detail alerts, retaining shared Error fallback rules and clearing stale errors on retry. (bkn-foundry#2511)
 
 - Trace root-service filters now offer explicitly requested, scoped service candidates while preserving exact manual queries and compatibility with older backends.

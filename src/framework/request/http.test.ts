@@ -150,6 +150,69 @@ describe("http request headers", () => {
     expect(missingRoute.mock.calls[0]?.[0].skipErrorToast).toBe(true);
   });
 
+  it.each(["missing", "revoked", "rejected-after-refresh"])(
+    "ends the session once when credentials are %s",
+    async (failure) => {
+      const onAuthFailure = vi.fn();
+      const refreshAccessToken = vi.fn(() =>
+        failure === "revoked"
+          ? Promise.reject(new Error("invalid_grant"))
+          : Promise.resolve(failure === "missing" ? null : "refreshed-token"),
+      );
+      setRuntimeConfig(
+        createRuntimeConfig({
+          auth: {
+            tokenManager: {
+              getAccessToken: () => "old-token",
+              refreshAccessToken,
+              onAuthFailure,
+            },
+          },
+        }),
+      );
+      const rejected = vi.fn<AxiosAdapter>((config) =>
+        Promise.reject(
+          Object.assign(new Error("HTTP 401"), {
+            isAxiosError: true,
+            config,
+            response: { status: 401 },
+          }),
+        ),
+      );
+
+      await expect(http.get("/safe/v1/me", { adapter: rejected })).rejects.toThrow("HTTP 401");
+
+      expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+      expect(onAuthFailure).toHaveBeenCalledTimes(1);
+      expect(rejected).toHaveBeenCalledTimes(failure === "rejected-after-refresh" ? 2 : 1);
+    },
+  );
+
+  it("keeps the session on an ordinary permission denial", async () => {
+    const onAuthFailure = vi.fn();
+    const refreshAccessToken = vi.fn();
+    setRuntimeConfig(
+      createRuntimeConfig({
+        auth: {
+          tokenManager: { getAccessToken: () => "token", refreshAccessToken, onAuthFailure },
+        },
+      }),
+    );
+    const denied: AxiosAdapter = (config) =>
+      Promise.reject(
+        Object.assign(new Error("HTTP 403"), {
+          isAxiosError: true,
+          config,
+          response: { status: 403 },
+        }),
+      );
+
+    await expect(http.get("/restricted", { adapter: denied })).rejects.toThrow("HTTP 403");
+
+    expect(refreshAccessToken).not.toHaveBeenCalled();
+    expect(onAuthFailure).not.toHaveBeenCalled();
+  });
+
   it("reports the backend description when a download fails with a blob body", async () => {
     const notify = vi.fn();
     setRequestErrorHandler(notify);

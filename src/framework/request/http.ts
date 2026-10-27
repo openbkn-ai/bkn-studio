@@ -102,20 +102,23 @@ http.interceptors.response.use(
     const config = axiosError?.config as RetryableRequestConfig | undefined;
     const status = axiosError?.response?.status;
 
-    if (status === 401 && config && !config._retry) {
-      config._retry = true;
+    if (status === 401) {
+      if (config && !config._retry) {
+        config._retry = true;
 
-      try {
-        const refreshedToken = await refreshAccessToken();
+        try {
+          const refreshedToken = await refreshAccessToken();
 
-        if (refreshedToken) {
-          config.headers.set("Authorization", `Bearer ${refreshedToken}`);
-          return http(config);
+          if (refreshedToken) {
+            config.headers.set("Authorization", `Bearer ${refreshedToken}`);
+            return http(config);
+          }
+        } catch {
+          // A revoked refresh token ends the session below.
         }
-      } catch {
-        runtimeConfig.auth.tokenManager.onAuthFailure?.();
       }
-
+      // Also terminate when a refreshed token is rejected (for example when
+      // the account was disabled). Do not refresh or replay this request again.
       runtimeConfig.auth.tokenManager.onAuthFailure?.();
     }
 
