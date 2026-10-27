@@ -1243,6 +1243,12 @@ export const systemAdminEnUS = {
       confirmChange: "Confirm change",
       confirmRuntimeTitle: "Change the runtime of “{{name}}”?",
       confirmPublishPromptTitle: "Publish the shared Prompt as a new version?",
+      promptVersionUnavailable:
+        "The next Prompt version is unavailable. Refresh the page or upgrade the Agent service before publishing.",
+      promptVersionConflict:
+        "The target Prompt version already exists or the version history has changed. Your draft is retained; check the version history before publishing again.",
+      promptPublishUncertain:
+        "The publication result could not be confirmed. Your draft is retained; check the version history before publishing again.",
       confirmPromptBody:
         "It becomes a new version and applies to everyone immediately; you can switch back from the version list.",
       dangerZone: "Danger zone",

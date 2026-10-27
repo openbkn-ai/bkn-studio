@@ -25,6 +25,7 @@ const {
   deleteVersion,
   getShared,
   getSharedPrompt,
+  publishSharedPrompt,
   listVersions,
   restoreShared,
   updateShared,
@@ -34,6 +35,7 @@ const {
   listVersions: vi.fn<SettingsModule["listVersions"]>(),
   getShared: vi.fn<SettingsModule["getShared"]>(),
   getSharedPrompt: vi.fn<SettingsModule["getSharedPrompt"]>(),
+  publishSharedPrompt: vi.fn<SettingsModule["publishSharedPrompt"]>(),
   restoreShared: vi.fn<SettingsModule["restoreShared"]>(),
   updateShared: vi.fn<SettingsModule["updateShared"]>(),
 }));
@@ -47,6 +49,7 @@ vi.mock(
     listVersions,
     getShared,
     getSharedPrompt,
+    publishSharedPrompt,
     restoreShared,
     updateShared,
   }),
@@ -164,11 +167,94 @@ function version(n: number, changes: Partial<AgentVersion> = {}): AgentVersion {
 
 const PROMPT = {
   prompt: { prompt_id: "p", current_version: 3, content: "Shared" },
+  next_version: 4,
 };
 
 // Each case renders the full configuration page; several also open a dialog, and shared CI
 // runners have taken over 20s on those.
 describe("AgentConfigScene", { timeout: 40_000 }, () => {
+  it("publishes the server's next historical Prompt version", async () => {
+    getShared.mockResolvedValue(shared());
+    // A rollback can make the active version smaller than the next target.
+    getSharedPrompt.mockResolvedValue({ ...PROMPT, next_version: 12 });
+    publishSharedPrompt.mockResolvedValue({
+      prompt: { ...PROMPT.prompt, current_version: 12, content: "Edited" },
+      next_version: 13,
+    });
+    renderScene();
+    fireEvent.change(await screen.findByDisplayValue("Shared"), { target: { value: "Edited" } });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("knowledgeNetwork.agentChat.config.publishPrompt"),
+      }),
+    );
+    await confirmChange();
+    await waitFor(() => expect(publishSharedPrompt).toHaveBeenCalledTimes(1));
+    expect(publishSharedPrompt.mock.calls[0][0]).toMatchObject({ content: "Edited", version: 12 });
+  });
+
+  it("refreshes a conflicting publication without discarding the draft or publishing again", async () => {
+    getShared.mockResolvedValue(shared());
+    getSharedPrompt.mockResolvedValueOnce(PROMPT).mockResolvedValue({
+      prompt: { ...PROMPT.prompt, current_version: 4, content: "Other administrator" },
+      next_version: 5,
+    });
+    publishSharedPrompt.mockRejectedValue(
+      new BknAgentExecutionError("Version exists", 409, "BknAgent.Prompt.VersionConflict"),
+    );
+    renderScene();
+    fireEvent.change(await screen.findByDisplayValue("Shared"), { target: { value: "My draft" } });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("knowledgeNetwork.agentChat.config.publishPrompt"),
+      }),
+    );
+    await confirmChange();
+    expect(
+      await screen.findByText(i18n.t("systemAdmin.agentConfig.promptVersionConflict")),
+    ).toBeTruthy();
+    expect(screen.getByDisplayValue("My draft")).toBeTruthy();
+    expect(getSharedPrompt).toHaveBeenCalledTimes(2);
+    expect(publishSharedPrompt).toHaveBeenCalledTimes(1);
+    expect(publishSharedPrompt.mock.calls[0][0].version).toBe(4);
+  });
+
+  it("retains the draft and reports uncertainty if publication and reconciliation both fail", async () => {
+    getShared.mockResolvedValue(shared());
+    getSharedPrompt.mockResolvedValueOnce(PROMPT).mockRejectedValue(new TypeError("Offline"));
+    publishSharedPrompt.mockRejectedValue(new TypeError("Offline"));
+    renderScene();
+    fireEvent.change(await screen.findByDisplayValue("Shared"), { target: { value: "My draft" } });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("knowledgeNetwork.agentChat.config.publishPrompt"),
+      }),
+    );
+    await confirmChange();
+    expect(
+      await screen.findByText(i18n.t("systemAdmin.agentConfig.promptPublishUncertain")),
+    ).toBeTruthy();
+    expect(screen.getByDisplayValue("My draft")).toBeTruthy();
+    expect(publishSharedPrompt).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fall back to automatic version allocation on an older backend", async () => {
+    getShared.mockResolvedValue(shared());
+    getSharedPrompt.mockResolvedValue({ prompt: PROMPT.prompt });
+    renderScene();
+    fireEvent.change(await screen.findByDisplayValue("Shared"), { target: { value: "Edited" } });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("knowledgeNetwork.agentChat.config.publishPrompt"),
+      }),
+    );
+    await confirmChange();
+    expect(
+      await screen.findByText(i18n.t("systemAdmin.agentConfig.promptVersionUnavailable")),
+    ).toBeTruthy();
+    expect(publishSharedPrompt).not.toHaveBeenCalled();
+  });
+
   it("shows a read-only Agent without save or publish actions", async () => {
     getShared.mockResolvedValue(shared({ can_edit: false }));
     getSharedPrompt.mockResolvedValue(PROMPT);
