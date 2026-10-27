@@ -338,7 +338,7 @@ export function DraftExcludedPanel({
     {
       title: t("bknProject.model.columns.reason"),
       key: "reason",
-      render: (_value, record) => excludedReasonText(t, record.reason ?? ""),
+      render: (_value, record) => excludedReasonText(t, record.reason),
     },
   ];
   return (

@@ -63,12 +63,17 @@ export function ProjectModel({ project }: { project: Project }) {
   const [tab, setTab] = useState<Tab>("objects");
   const [openId, setOpenId] = useState<string | null>(null);
 
+  // Counts every read, failed or not, so a drafting draft is read again after a failure too.
+  const [reads, setReads] = useState(0);
+
   const loadDraft = useCallback(async () => {
     try {
       setDraft(await getDraft(project.id));
       setLoadError(null);
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
+    } finally {
+      setReads((count) => count + 1);
     }
   }, [project.id]);
 
@@ -99,7 +104,7 @@ export function ProjectModel({ project }: { project: Project }) {
     }
     const timer = window.setTimeout(() => void loadDraft(), DRAFT_POLL_MS);
     return () => window.clearTimeout(timer);
-  }, [draft, drafting, loadDraft]);
+  }, [drafting, loadDraft, reads]);
 
   const generate = async () => {
     setGenerating(true);
@@ -161,6 +166,14 @@ export function ProjectModel({ project }: { project: Project }) {
 
   const notices = (
     <>
+      {loadError ? (
+        <Alert
+          description={loadError}
+          message={t("bknProject.model.loadFailed")}
+          showIcon
+          type="warning"
+        />
+      ) : null}
       {generateError ? (
         <Alert
           closable

@@ -11,6 +11,7 @@ import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.servic
 
 import {
   countReasonPhrase,
+  excludedReasonText,
   formatRate,
   joinCountPhrase,
   keyCountPhrase,
@@ -57,8 +58,9 @@ describe("draft evidence", () => {
     expect(countReasonPhrase("composite_key")).toEqual({ key: `${P}.countReason.composite_key` });
     expect(reasonDetail("composite_key")).toBeUndefined();
     expect(countReasonPhrase(undefined)).toEqual({ key: `${P}.countReason.none` });
+    // In the count slot an unknown reason still reads as "not counted", not as another basis.
     expect(countReasonPhrase("sampled_only")).toEqual({
-      key: `${P}.other`,
+      key: `${P}.countReason.other`,
       params: { value: "sampled_only" },
     });
   });
@@ -123,5 +125,15 @@ describe("draft evidence", () => {
     expect(missingCatalogs(["new"], draft, new Set(["new"]))).toEqual(["old"]);
     expect(missingCatalogs(["gone"], null, new Set(["new"]))).toEqual(["gone"]);
     expect(missingCatalogs(["old"], draft, new Set(["old"]))).toEqual([]);
+  });
+});
+
+describe("left-out reasons", () => {
+  const t = ((key: string, options?: Record<string, unknown>) =>
+    options?.defaultValue ?? key) as unknown as Parameters<typeof excludedReasonText>[0];
+
+  it("names a missing reason rather than showing empty brackets", () => {
+    expect(excludedReasonText(t, undefined)).toBe("bknProject.model.excluded.reason.none");
+    expect(excludedReasonText(t, "")).toBe("bknProject.model.excluded.reason.none");
   });
 });

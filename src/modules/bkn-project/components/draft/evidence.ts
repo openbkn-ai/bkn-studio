@@ -49,7 +49,10 @@ export function countReasonPhrase(reason: string | undefined): Phrase {
     return { key: `${PREFIX}.countReason.none` };
   }
   const code = reason.split(":", 1)[0].trim();
-  return known("countReason", COUNT_REASONS, code);
+  // In the count slot an unknown reason still reads as "not counted", not as another basis.
+  return COUNT_REASONS.includes(code)
+    ? { key: `${PREFIX}.countReason.${code}` }
+    : { key: `${PREFIX}.countReason.other`, params: { value: code } };
 }
 
 /** The full reason, when it says more than its code: shown only in the details. */
@@ -141,7 +144,10 @@ export function missingCatalogs(
 }
 
 /** Why a field was left out or a table could not be read; unknown reasons read as other. */
-export function excludedReasonText(t: TFunction, reason: string, keyword?: string) {
+export function excludedReasonText(t: TFunction, reason: string | undefined, keyword?: string) {
+  if (!reason) {
+    return t("bknProject.model.excluded.reason.none");
+  }
   return t(`bknProject.model.excluded.reason.${reason}`, {
     defaultValue: t("bknProject.model.excluded.reason.other", { value: reason }),
     keyword,

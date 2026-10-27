@@ -199,6 +199,7 @@ export const bknProjectEnUS = {
           not_visible: "You cannot see this table",
           no_structure: "The table has no structure yet",
           other: "Other ({{value}})",
+          none: "No reason given",
         },
       },
       detail: {
@@ -241,6 +242,7 @@ export const bknProjectEnUS = {
           query_failed: "Counting failed",
           cross_catalog: "Tables in different catalogs are not counted",
           link_table: "Counted through the link table later",
+          other: "Not counted ({{value}})",
         },
         keyCount: "{{rows}} rows, {{distinct}} distinct, {{nulls}} empty",
         joinCount: "{{rows}} rows, {{hits}} matched ({{rate}}), {{orphans}} without a match",

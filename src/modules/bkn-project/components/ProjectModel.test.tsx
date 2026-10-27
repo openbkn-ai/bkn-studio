@@ -139,6 +139,28 @@ describe("ProjectModel", () => {
     expect(getDraftMock).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps reading a drafting draft after a failed read, and says the read failed", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getDraftMock
+      .mockResolvedValueOnce({ ...ready(), status: "drafting" })
+      .mockRejectedValueOnce(new Error("gateway timeout"))
+      .mockResolvedValueOnce(ready());
+    renderModel();
+
+    expect(await screen.findByText("bknProject.model.drafting.title")).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+    });
+    expect(await screen.findByText("bknProject.model.loadFailed")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+    });
+    expect(await screen.findByText(/bknProject.model.summary/)).toBeInTheDocument();
+    expect(getDraftMock).toHaveBeenCalledTimes(3);
+    expect(screen.queryByText("bknProject.model.loadFailed")).not.toBeInTheDocument();
+  });
+
   it("explains a failed draft; only a data source's reply goes to the details", async () => {
     getDraftMock.mockResolvedValue({ ...ready(), error: "timeout", status: "failed" });
     const view = renderModel();

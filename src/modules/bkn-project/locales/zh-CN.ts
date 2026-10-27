@@ -191,6 +191,7 @@ export const bknProjectZhCN = {
           not_visible: "你无权查看这张表",
           no_structure: "这张表还没有结构",
           other: "其他（{{value}}）",
+          none: "未说明原因",
         },
       },
       detail: {
@@ -233,6 +234,7 @@ export const bknProjectZhCN = {
           query_failed: "计数失败",
           cross_catalog: "跨数据目录的表不计数",
           link_table: "经中间表，稍后计数",
+          other: "未计数（{{value}}）",
         },
         keyCount: "{{rows}} 行，{{distinct}} 个不同值，{{nulls}} 个空值",
         joinCount: "全表 {{rows}} 行，命中 {{hits}}（{{rate}}），找不到的 {{orphans}}",
