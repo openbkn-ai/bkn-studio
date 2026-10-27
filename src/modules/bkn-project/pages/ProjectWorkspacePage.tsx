@@ -7,8 +7,10 @@
 
 import { Navigate, useParams } from "react-router-dom";
 
+import { RouteLoading } from "@/app/router/RouteLoading";
 import { TopBar } from "@/app/shell/TopBar";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { ProjectWorkspaceScene } from "@/modules/bkn-project/scenes/ProjectWorkspaceScene";
 import {
   isProjectSection,
@@ -23,12 +25,18 @@ import {
 export function ProjectWorkspacePage() {
   const { projectId = "", section } = useParams<{ projectId: string; section?: string }>();
   const kbMode = useBknProjectKbMode();
+  const { loading: entitlementLoading } = useEntitlementContext();
 
-  // An unknown page, or a knowledge-base page the community image does not have, opens the overview.
-  if (
-    !isProjectSection(section) ||
-    (kbMode === "hidden" && KNOWLEDGE_BASE_SECTIONS.includes(section))
-  ) {
+  if (!isProjectSection(section)) {
+    return <Navigate replace to={projectSectionPath(projectId, "overview")} />;
+  }
+  if (KNOWLEDGE_BASE_SECTIONS.includes(section) && kbMode === "hidden") {
+    // Hidden also means the entitlement has not arrived yet; leaving then would drop a deep link
+    // to a knowledge-base page in a professional deployment.
+    if (entitlementLoading) {
+      return <RouteLoading />;
+    }
+    // The community image has no knowledge-base pages: open the overview.
     return <Navigate replace to={projectSectionPath(projectId, "overview")} />;
   }
 

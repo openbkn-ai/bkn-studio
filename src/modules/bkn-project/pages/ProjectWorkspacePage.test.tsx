@@ -11,10 +11,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 
-const kb = vi.hoisted((): { mode: BknProjectKbMode } => ({ mode: "hidden" }));
+const kb = vi.hoisted((): { loading: boolean; mode: BknProjectKbMode } => ({
+  loading: false,
+  mode: "hidden",
+}));
 
 vi.mock("@/framework/entitlement/bkn-project-kb-mode", () => ({
   useBknProjectKbMode: () => kb.mode,
+}));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useEntitlementContext: () => ({ loading: kb.loading }),
 }));
 
 vi.mock("@/app/shell/TopBar", () => ({ TopBar: () => <header>top bar</header> }));
@@ -42,6 +49,7 @@ function renderAt(path: string) {
 
 describe("ProjectWorkspacePage", () => {
   beforeEach(() => {
+    kb.loading = false;
     kb.mode = "hidden";
   });
 
@@ -65,6 +73,13 @@ describe("ProjectWorkspacePage", () => {
   it("opens the overview for a knowledge-base page in the community image", () => {
     renderAt("/bkn-project/p1/instances");
     expect(screen.getByText("scene p1 overview")).toBeInTheDocument();
+  });
+
+  it("waits for the entitlement before leaving a knowledge-base page", () => {
+    kb.loading = true;
+    renderAt("/bkn-project/p1/instances");
+
+    expect(screen.queryByText(/scene p1/)).toBeNull();
   });
 
   it("keeps a knowledge-base page when it is only licensed away", () => {
