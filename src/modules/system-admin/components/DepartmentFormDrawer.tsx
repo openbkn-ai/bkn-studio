@@ -14,7 +14,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { createDepartment, updateDepartment } from "@/modules/system-admin/services/admin.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
-import { buildDeptTree } from "@/modules/system-admin/utils/admin-helpers";
+import { buildDeptTree, departmentSubtreeIds } from "@/modules/system-admin/utils/admin-helpers";
 
 import { DirectoryUserPicker } from "./DirectoryUserPicker";
 import styles from "@/modules/system-admin/scenes/admin.module.css";
@@ -53,15 +53,17 @@ export function DepartmentFormDrawer({
   const isEdit = Boolean(department);
   const isRoot = isEdit && !department?.parentId;
 
-  const parentOptions = useMemo(
-    () => [
+  const parentOptions = useMemo(() => {
+    const excluded = department
+      ? departmentSubtreeIds(departments, department.id)
+      : new Set<string>();
+    return [
       { label: t("systemAdmin.users.deptDrawer.rootNode"), value: "" },
       ...buildDeptTree(departments)
-        .filter(({ dept }) => !department || dept.id !== department.id)
+        .filter(({ dept }) => !excluded.has(dept.id))
         .map(({ dept, depth }) => ({ label: `${"　".repeat(depth)}${dept.name}`, value: dept.id })),
-    ],
-    [department, departments, t],
-  );
+    ];
+  }, [department, departments, t]);
 
   useEffect(() => {
     if (!open) {

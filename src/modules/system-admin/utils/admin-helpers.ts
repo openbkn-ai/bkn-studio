@@ -15,13 +15,25 @@ import type {
 /** Flattens a department tree with nesting depth for indented rendering and selection controls. */
 export function buildDeptTree(departments: AdminDepartment[]): DeptTreeEntry[] {
   const out: DeptTreeEntry[] = [];
-  const walk = (parentId: string | null, depth: number) => {
-    for (const dept of departments.filter((item) => item.parentId === parentId)) {
-      out.push({ dept, depth });
-      walk(dept.id, depth + 1);
+  const children = new Map<string | null, AdminDepartment[]>();
+  for (const dept of departments) {
+    const siblings = children.get(dept.parentId) ?? [];
+    siblings.push(dept);
+    children.set(dept.parentId, siblings);
+  }
+  const pending = (children.get(null) ?? []).map((dept) => ({ dept, depth: 0 })).reverse();
+  const seen = new Set<string>();
+  while (pending.length) {
+    const entry = pending.pop()!;
+    if (seen.has(entry.dept.id)) {
+      continue;
     }
-  };
-  walk(null, 0);
+    seen.add(entry.dept.id);
+    out.push(entry);
+    for (const dept of [...(children.get(entry.dept.id) ?? [])].reverse()) {
+      pending.push({ dept, depth: entry.depth + 1 });
+    }
+  }
   return out;
 }
 
@@ -47,6 +59,36 @@ export function childDepartments(
   return departments.filter((item) => item.parentId === parentId);
 }
 
+/** Includes the department itself; terminates for cycles and deep trees. */
+function collectDepartmentIds(children: Map<string, string[]>, id: string): Set<string> {
+  const seen = new Set<string>();
+  const pending = [id];
+  while (pending.length) {
+    const current = pending.pop()!;
+    if (seen.has(current)) {
+      continue;
+    }
+    seen.add(current);
+    for (const child of children.get(current) ?? []) {
+      pending.push(child);
+    }
+  }
+  return seen;
+}
+
+/** Departments that must be excluded when choosing a new parent. */
+export function departmentSubtreeIds(departments: AdminDepartment[], id: string): Set<string> {
+  const children = new Map<string, string[]>();
+  for (const dept of departments) {
+    if (dept.parentId) {
+      const siblings = children.get(dept.parentId) ?? [];
+      siblings.push(dept.id);
+      children.set(dept.parentId, siblings);
+    }
+  }
+  return collectDepartmentIds(children, id);
+}
+
 /** Member count for each department including child departments, with users deduplicated. */
 export function computeSubtreeMemberCounts(
   departments: AdminDepartment[],
@@ -59,22 +101,6 @@ export function computeSubtreeMemberCounts(
       siblings.push(dept.id);
       childrenOf.set(dept.parentId, siblings);
     }
-  }
-  const subtreeIds = new Map<string, string[]>();
-  const collectSubtree = (id: string): string[] => {
-    const cached = subtreeIds.get(id);
-    if (cached) {
-      return cached;
-    }
-    const ids = [id];
-    for (const child of childrenOf.get(id) ?? []) {
-      ids.push(...collectSubtree(child));
-    }
-    subtreeIds.set(id, ids);
-    return ids;
-  };
-  for (const dept of departments) {
-    collectSubtree(dept.id);
   }
   const usersByDept = new Map<string, Set<string>>();
   for (const user of users) {
@@ -90,7 +116,7 @@ export function computeSubtreeMemberCounts(
   const out = new Map<string, number>();
   for (const dept of departments) {
     const unique = new Set<string>();
-    for (const deptId of subtreeIds.get(dept.id) ?? [dept.id]) {
+    for (const deptId of collectDepartmentIds(childrenOf, dept.id)) {
       for (const userId of usersByDept.get(deptId) ?? []) {
         unique.add(userId);
       }
