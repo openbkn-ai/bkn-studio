@@ -120,6 +120,7 @@ export async function changePassword(
       old_password: oldPassword,
       new_password: newPassword,
     },
-    { skipErrorToast: true },
+    // This endpoint checks the submitted password, so its 401 is a form error.
+    { skipErrorToast: true, skipAuthRefresh: true },
   );
 }
