@@ -26,12 +26,6 @@ export const subscriptionZhCN = {
         description: "业务问题与结果的时间链、证据链、数据溯源、业务语义图与交互式追溯",
         name: "业务溯源",
       },
-      // 名称与描述取自 license-server 登记表 seed;能力仍是 planned,不进在售目录,这里只供遮罩与升级弹窗。
-      bkn_project_kb: {
-        description:
-          "在 BKN 项目中引用知识库：抽取概念模型，识别并链接实体，抽取属性、关系与事件，与业务数据融合并保留原文依据",
-        name: "知识库构建",
-      },
       bkn_trace: {
         description: "技术 Trace 与运行诊断:调用链、耗时与错误定位(不含业务正文与证据链)",
         name: "运行诊断 Trace",
@@ -63,6 +57,11 @@ export const subscriptionZhCN = {
         },
         description: "从具体实例出发,在画布上展开邻居、追踪路径;也能打开 Agent 给出的图谱链接",
         name: "图探索",
+      },
+      // 能力仍是 planned,不进在售目录;这里只供遮罩与升级弹窗(含 BKN 项目里的知识库扩展)。
+      knowledge_base: {
+        description: "接入对象存储、文件服务等来源的文件，管理内容版本，完成解析、切片与原文定位",
+        name: "本体知识库",
       },
       object_metrics: {
         bullets: {
