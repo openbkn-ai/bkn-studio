@@ -240,6 +240,18 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
         // Refresh the server baseline, but keep the editor draft for comparison.
         try {
           const next = await getSharedPrompt(params);
+          if (
+            next.prompt.prompt_id === prompt.prompt.prompt_id &&
+            next.prompt.current_version === version &&
+            next.prompt.content === content
+          ) {
+            // The requested content is active at the exact target version.
+            // A failed history refresh cannot undo this confirmed outcome.
+            applyPrompt(next);
+            message.success(t(`${L}.promptPublished`));
+            await refreshVersions().catch(() => undefined);
+            return;
+          }
           setPrompt(next);
           await refreshVersions();
         } catch {
