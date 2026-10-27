@@ -24,6 +24,15 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* A sample's experience card takes a third column beside the results. */
+.withExperience {
+  grid-template-columns: 240px minmax(0, 1fr) auto;
+}
+
+.pageRail.withExperience {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 /* ---------------- schema panel ---------------- */
 
 .schemaPanel {
@@ -792,4 +801,14 @@
 
 .statusLimited {
   color: var(--color-warning-text);
+}
+
+/* Narrow screens stack the card under the results and let the page scroll to it. */
+@media (max-width: 900px) {
+  .withExperience,
+  .pageRail.withExperience {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    overflow-y: auto;
+  }
 }

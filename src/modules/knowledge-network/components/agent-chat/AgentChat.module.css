@@ -67,6 +67,25 @@
 .soloPanel {
   width: 100%;
 }
+/* With a sample's experience set, its card stays beside the conversation while the page scrolls. */
+.withExperience {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding-right: 16px;
+}
+.withExperience .soloPanel {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.experienceAside {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex: none;
+  max-height: calc(100vh - 160px);
+  padding-top: 16px;
+}
 
 /* Single conversation panel root (ChatPane) */
 .paneRoot {
@@ -1060,4 +1079,19 @@
   font-family: var(--mono);
   font-size: 11px;
   color: var(--faint);
+}
+
+/* Narrow screens put the experience card above the conversation instead of beside it. */
+@media (max-width: 900px) {
+  .withExperience {
+    flex-direction: column;
+    align-items: stretch;
+    padding-right: 0;
+  }
+  .experienceAside {
+    position: static;
+    order: -1;
+    max-height: none;
+    padding: 16px 16px 0;
+  }
 }

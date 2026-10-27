@@ -93,6 +93,8 @@ import {
   type GraphStyle,
 } from "@/modules/knowledge-network/cypher/graph-style";
 import { GraphStyleContext } from "@/modules/knowledge-network/cypher/graph-style-context";
+import { ExperienceCasePanel } from "@/modules/knowledge-network/experience/ExperienceCasePanel";
+import { useSampleExperience } from "@/modules/knowledge-network/experience/useSampleExperience";
 import {
   GRAPH_NODE_LIMIT,
   isObjectValue,
@@ -542,6 +544,11 @@ export function CypherQueryScene({
     [addFrame, agentTexts, base, controllerFor, knId, runInFrame, t, tokenProvider],
   );
 
+  const experience = useSampleExperience(knId);
+  const working = frames.some(
+    (frame) => frame.status === "generating" || frame.status === "running",
+  );
+
   const submit = () => {
     if (mode === "cypher") {
       const query = cypherText.trim();
@@ -908,7 +915,15 @@ export function CypherQueryScene({
         loadNodeProperties,
       }}
     >
-      <div className={schemaCollapsed ? `${styles.page} ${styles.pageRail}` : styles.page}>
+      <div
+        className={[
+          styles.page,
+          schemaCollapsed ? styles.pageRail : "",
+          experience ? styles.withExperience : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {schemaPanel}
 
         <div className={styles.main}>
@@ -1199,6 +1214,24 @@ export function CypherQueryScene({
             ))}
           </div>
         </div>
+        {experience ? (
+          <ExperienceCasePanel
+            experience={experience}
+            onRunReference={(query) => {
+              setMode("cypher");
+              setCypherText(query);
+              runNew(query);
+            }}
+            onTry={(question) => {
+              // The question goes to the Cypher generation Agent, as if typed in Ask mode.
+              setMode("ask");
+              setFollowUp(null);
+              void generateAndRun(question, question);
+            }}
+            running={working}
+            surface="query"
+          />
+        ) : null}
       </div>
       <CypherReference
         onClose={() => setReferenceOpen(false)}
