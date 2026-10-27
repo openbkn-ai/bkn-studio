@@ -205,6 +205,28 @@ export async function setProjectArchived(id: string, archived: boolean): Promise
 }
 
 /**
+ * Replaces the data catalogs the project drafts from; only its owner may. The draft is kept:
+ * drafting again reads the new catalogs.
+ */
+export async function setProjectCatalogs(id: string, catalogIds: string[]): Promise<Project> {
+  if (useMock) {
+    const project = mockProjects.find((item) => item.id === id);
+    if (!project) {
+      throw mockNotFound(id);
+    }
+    project.catalog_ids = [...new Set(catalogIds)];
+    project.update_time = Date.now();
+    return wait(mapProject({ ...project, other_projects: mockOtherProjects(project) }));
+  }
+  const response = await http.put<BackendProject>(
+    `${API_PREFIX}/${encodeURIComponent(id)}/catalogs`,
+    { catalog_ids: catalogIds },
+    { skipErrorToast: true },
+  );
+  return mapProject(response.data);
+}
+
+/**
  * Lists every knowledge network the caller can see, in one request: bkn-backend filters by
  * permission, the same way bkn-project decides which projects are visible.
  */

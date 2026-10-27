@@ -50,3 +50,9 @@
 .details summary {
   cursor: pointer;
 }
+
+.muted {
+  margin: 0 0 12px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}

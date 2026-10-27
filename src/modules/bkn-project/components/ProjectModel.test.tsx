@@ -15,7 +15,14 @@ const getDraftMock = vi.hoisted(() => vi.fn());
 const generateDraftMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
 const editDraftItemMock = vi.hoisted(() => vi.fn());
-const messageMock = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn(), warning: vi.fn() }));
+const messageMock = vi.hoisted(() => ({
+  error: vi.fn(),
+  info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
+}));
+const setProjectCatalogsMock = vi.hoisted(() => vi.fn());
+const onProjectChange = vi.hoisted(() => vi.fn());
 const confirmMock = vi.hoisted(() => vi.fn<(config: { onOk: () => Promise<void> }) => void>());
 const translate = vi.hoisted(
   () => (key: string, options?: Record<string, unknown>) =>
@@ -36,6 +43,11 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
   editDraftItem: editDraftItemMock,
   generateDraft: generateDraftMock,
   getDraft: getDraftMock,
+}));
+
+vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/project.service")>()),
+  setProjectCatalogs: setProjectCatalogsMock,
 }));
 
 vi.mock("@/shared/catalog", async (importOriginal) => ({
@@ -78,8 +90,14 @@ function edited(change: (draft: ReturnType<typeof ready>) => void) {
   return draft;
 }
 
-function renderModel(override: Partial<Project> = {}) {
-  return render(<ProjectModel project={{ ...project, ...override }} />);
+function renderModel(override: Partial<Project> = {}, ownerIsCaller = true) {
+  return render(
+    <ProjectModel
+      onProjectChange={onProjectChange}
+      ownerIsCaller={ownerIsCaller}
+      project={{ ...project, ...override }}
+    />,
+  );
 }
 
 describe("ProjectModel", () => {
@@ -116,9 +134,12 @@ describe("ProjectModel", () => {
     expect(screen.getByRole("button", { name: "bknProject.model.generate" })).toBeEnabled();
     view.unmount();
 
+    // Without catalogs there is nothing to draft from: the owner is offered to choose them.
     renderModel({ catalogIds: [] });
     expect(await screen.findByText("bknProject.model.empty.noCatalogs")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "bknProject.model.generate" })).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "bknProject.model.generate" }),
+    ).not.toBeInTheDocument();
   });
 
   it("drafts and shows bkn-project's localized refusal when drafting cannot start", async () => {
@@ -456,5 +477,74 @@ describe("ProjectModel", () => {
     expect(confirmMock).toHaveBeenCalledWith(
       expect.objectContaining({ content: "bknProject.model.regenerateConfirm.contentUncounted" }),
     );
+  });
+
+  it("lets the owner replace catalogs that are gone, keeping the ones still there", async () => {
+    getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
+    setProjectCatalogsMock.mockResolvedValue({ ...project, catalogIds: ["cat-001"] });
+    renderModel({ catalogIds: ["cat-001", "old-catalog"] });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknProject.model.catalogs.change" }),
+    );
+
+    // The catalogs that are gone are named, so people know what saving removes.
+    expect(await screen.findByText(/bknProject.model.catalogs.removed/)).toHaveTextContent(
+      "old-catalog",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => expect(setProjectCatalogsMock).toHaveBeenCalledWith("p1", ["cat-001"]));
+    expect(onProjectChange).toHaveBeenCalledWith(
+      expect.objectContaining({ catalogIds: ["cat-001"] }),
+    );
+    expect(messageMock.success).toHaveBeenCalledWith("bknProject.model.catalogs.saved");
+  });
+
+  it("asks someone else to contact the owner instead of offering the change", async () => {
+    getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
+    renderModel({ catalogIds: ["old-catalog"] }, false);
+
+    expect(await screen.findByText("bknProject.model.notice.askOwner")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "bknProject.model.catalogs.change" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers the owner of a project without catalogs to choose them", async () => {
+    getDraftMock.mockResolvedValue(null);
+    const view = renderModel({ catalogIds: [] });
+    expect(
+      await screen.findByRole("button", { name: "bknProject.model.catalogs.choose" }),
+    ).toBeInTheDocument();
+    view.unmount();
+
+    renderModel({ catalogIds: [] }, false);
+    expect(
+      await screen.findByText("bknProject.model.empty.noCatalogsAskOwner"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "bknProject.model.catalogs.choose" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the catalog dialog open and says why when saving fails", async () => {
+    getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
+    setProjectCatalogsMock.mockRejectedValue(
+      new AxiosError("403", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { description: "Only the owner may.", error_code: "BknProject.Project.NotOwner" },
+        status: 403,
+      } as AxiosResponse),
+    );
+    renderModel({ catalogIds: ["cat-001", "old-catalog"] });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknProject.model.catalogs.change" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "common.save" }));
+
+    expect(await screen.findByText("Only the owner may.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "common.save" })).toBeInTheDocument();
+    expect(onProjectChange).not.toHaveBeenCalled();
   });
 });

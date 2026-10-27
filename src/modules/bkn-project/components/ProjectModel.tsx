@@ -16,6 +16,7 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
+import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import {
   adoptBlocker,
   draftErrorCode,
@@ -68,7 +69,16 @@ function failureKey(error: string) {
  * The ontology modeling page: the project's draft, read-only. Every rule lives in
  * bkn-project; the page shows what it answers and the evidence behind each item.
  */
-export function ProjectModel({ project }: { project: Project }) {
+export function ProjectModel({
+  onProjectChange,
+  ownerIsCaller,
+  project,
+}: {
+  onProjectChange: (project: Project) => void;
+  /** Only the owner may replace the project's catalogs; others are asked to contact them. */
+  ownerIsCaller: boolean;
+  project: Project;
+}) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   // undefined while loading, null before the first draft.
@@ -81,6 +91,7 @@ export function ProjectModel({ project }: { project: Project }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ item: EditableItem; kind: DraftItemKind } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [changingCatalogs, setChangingCatalogs] = useState(false);
 
   // Counts every read, failed or not, so a drafting draft is read again after a failure too.
   const [reads, setReads] = useState(0);
@@ -246,6 +257,27 @@ export function ProjectModel({ project }: { project: Project }) {
   }
 
   const noCatalogs = project.catalogIds.length === 0;
+  // Offered once the visible catalogs are known: the dialog starts from them.
+  const canChangeCatalogs = ownerIsCaller && catalogs !== null;
+  const changeCatalogsButton = (label: string, primary = false) =>
+    canChangeCatalogs ? (
+      <AppButton onClick={() => setChangingCatalogs(true)} type={primary ? "primary" : "default"}>
+        {t(label)}
+      </AppButton>
+    ) : null;
+  const catalogsDialog =
+    changingCatalogs && catalogs ? (
+      <ProjectCatalogsModal
+        catalogs={catalogs}
+        onCancel={() => setChangingCatalogs(false)}
+        onSaved={(next) => {
+          setChangingCatalogs(false);
+          onProjectChange(next);
+          message.success(t("bknProject.model.catalogs.saved"));
+        }}
+        project={project}
+      />
+    ) : null;
   const generateButton = (
     <AppButton
       disabled={drafting || noCatalogs || project.archived}
@@ -279,6 +311,8 @@ export function ProjectModel({ project }: { project: Project }) {
       ) : null}
       {missing.length ? (
         <Alert
+          action={changeCatalogsButton("bknProject.model.catalogs.change")}
+          description={ownerIsCaller ? undefined : t("bknProject.model.notice.askOwner")}
           message={t("bknProject.model.notice.missingCatalogs", {
             names: missing.map((id) => catalogNames[id] ?? id).join(", "),
           })}
@@ -301,12 +335,21 @@ export function ProjectModel({ project }: { project: Project }) {
       <div className={styles.page}>
         {notices}
         <EmptyStatePanel
-          action={generateButton}
+          action={
+            noCatalogs
+              ? changeCatalogsButton("bknProject.model.catalogs.choose", true)
+              : generateButton
+          }
           description={t(
-            noCatalogs ? "bknProject.model.empty.noCatalogs" : "bknProject.model.empty.description",
+            noCatalogs
+              ? ownerIsCaller
+                ? "bknProject.model.empty.noCatalogs"
+                : "bknProject.model.empty.noCatalogsAskOwner"
+              : "bknProject.model.empty.description",
           )}
           title={t("bknProject.model.empty.title")}
         />
+        {catalogsDialog}
       </div>
     );
   }
@@ -372,8 +415,10 @@ export function ProjectModel({ project }: { project: Project }) {
           ) : null}
         </span>
         <span className={styles.spacer} />
+        {missing.length ? null : changeCatalogsButton("bknProject.model.catalogs.change")}
         {generateButton}
       </div>
+      {catalogsDialog}
       {notices}
       {draft.status === "drafting" ? (
         <EmptyStatePanel
