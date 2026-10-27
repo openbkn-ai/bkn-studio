@@ -243,6 +243,22 @@ describe("ProjectListScene", () => {
     expect(listCatalogsMock).toHaveBeenCalledTimes(1);
   });
 
+  it("reads the catalogs again when the dialog opens after they failed", async () => {
+    listProjectsMock.mockResolvedValue({ items: [], nextCursor: null, total: 0 });
+    listCatalogsMock
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValueOnce({ items: [{ id: "c1", name: "ERP" }], total: 1 });
+    render(<ProjectListScene />);
+    await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByText("bknProject.list.create"));
+
+    await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByText("bknProject.create.catalogsLoadFailed")).toBeNull(),
+    );
+  });
+
   it("shows a load failure with a retry, and no stale total", async () => {
     listProjectsMock
       .mockResolvedValueOnce({ items: [project({})], nextCursor: null, total: 7 })

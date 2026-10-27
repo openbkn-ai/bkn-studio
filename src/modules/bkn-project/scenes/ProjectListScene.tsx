@@ -147,6 +147,14 @@ export function ProjectListScene() {
     resetPaging();
   };
 
+  // Networks or catalogs that failed to load are read again when the dialog that needs them opens.
+  const openCreate = () => {
+    if (networksError || catalogsError) {
+      void loadReferences();
+    }
+    setCreateOpen(true);
+  };
+
   const handleCreated = (project: Project) => {
     setCreateOpen(false);
     message.success(t("bknProject.create.success"));
@@ -270,7 +278,7 @@ export function ProjectListScene() {
           <h2 className={styles.title}>{t("bknProject.title")}</h2>
           <p className={styles.intro}>{t("bknProject.description")}</p>
         </div>
-        <AppButton icon={<PlusOutlined />} type="primary" onClick={() => setCreateOpen(true)}>
+        <AppButton icon={<PlusOutlined />} type="primary" onClick={openCreate}>
           {t("bknProject.list.create")}
         </AppButton>
       </div>
