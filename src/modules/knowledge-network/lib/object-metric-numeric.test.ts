@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   formatObjectMetricNumericInput,
   objectMetricAuthoringNumericValue,
+  objectMetricInt64InputError,
   parseObjectMetricNumericInput,
   serializeObjectMetricBody,
 } from "./object-metric-numeric";
@@ -53,6 +54,17 @@ describe("object metric numeric input", () => {
     const value = parseObjectMetricNumericInput(input);
     expect(value).not.toBeUndefined();
     expect(serializeObjectMetricBody({ value })).toBe(`{"value":${expected}}`);
+  });
+
+  it.each(["1.0", "1e3", "+1", "007", "-9223372036854775808", "9223372036854775807"])(
+    "accepts compatible int64 input %s",
+    (input) => expect(objectMetricInt64InputError(input)).toBeUndefined(),
+  );
+
+  it("distinguishes fractional int64 input from range overflow", () => {
+    expect(objectMetricInt64InputError("1.5")).toBe("not_integer");
+    expect(objectMetricInt64InputError("9223372036854775808")).toBe("out_of_range");
+    expect(objectMetricInt64InputError("-9223372036854775809")).toBe("out_of_range");
   });
 
   it("keeps duration literals numeric at the API boundary", () => {

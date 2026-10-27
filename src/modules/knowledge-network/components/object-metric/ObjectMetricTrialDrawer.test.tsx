@@ -264,6 +264,14 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(serializeObjectMetricBody(onRun.mock.calls[1]?.[0])).toContain(
       '"having":{"operator":"gt","value":9007199254740993',
     );
+    fireEvent.change(screen.getByRole("textbox", { name: "比较值" }), {
+      target: { value: "1e3" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    await waitFor(() => expect(onRun).toHaveBeenCalledTimes(3));
+    expect(onRun.mock.calls[2]?.[0]).toEqual(
+      expect.objectContaining({ having: { operator: "gt", value: 1000, unit_code: undefined } }),
+    );
   }, 20_000);
 
   it("clears dimension sorting when the selected group is removed", async () => {

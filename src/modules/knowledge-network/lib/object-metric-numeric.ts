@@ -15,6 +15,8 @@ const preservingJSON = JSONBig();
 // through BigNumber before they reach the JSON wire contract. This keeps UI
 // inputs such as 007, +1, .5, and 1. compatible without emitting invalid JSON.
 const numericInput = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+const int64Minimum = new BigNumber("-9223372036854775808");
+const int64Maximum = new BigNumber("9223372036854775807");
 // Duration values are numeric quantities in the object-metric API, not ISO-8601 text.
 const numericTypes = new Set(["int64", "decimal", "duration"]);
 
@@ -28,6 +30,16 @@ export function parseObjectMetricNumericInput(value: string): number | BigNumber
   return Number.isFinite(ordinary) && new BigNumber(String(ordinary)).isEqualTo(exact)
     ? ordinary
     : exact;
+}
+
+/** Explain why a valid numeric input cannot be used as a signed 64-bit integer. */
+export function objectMetricInt64InputError(
+  value: string,
+): "not_integer" | "out_of_range" | undefined {
+  const exact = new BigNumber(value.trim());
+  if (!exact.isInteger()) return "not_integer";
+  if (exact.isLessThan(int64Minimum) || exact.isGreaterThan(int64Maximum)) return "out_of_range";
+  return undefined;
 }
 
 /** Authoring state keeps ordinary numbers unchanged and precise values as text. */

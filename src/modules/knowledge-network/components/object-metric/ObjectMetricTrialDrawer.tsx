@@ -34,6 +34,7 @@ import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import {
   formatObjectMetricNumericInput,
+  objectMetricInt64InputError,
   parseObjectMetricNumericInput,
 } from "@/modules/knowledge-network/lib/object-metric-numeric";
 import {
@@ -401,25 +402,25 @@ export function ObjectMetricTrialDrawer({
         const physicalType = definition.result_semantics.value.physical_type;
         let value: unknown;
         if (operator !== "is_null" && operator !== "is_not_null") {
-          if (!values.havingValue?.trim())
-            throw new Error(objectMetricText("analysisHavingValueRequired"));
+          const havingValue = values.havingValue?.trim() ?? "";
+          if (!havingValue) throw new Error(objectMetricText("analysisHavingValueRequired"));
           if (["int64", "decimal", "duration"].includes(physicalType)) {
-            const number = parseObjectMetricNumericInput(values.havingValue);
+            const number = parseObjectMetricNumericInput(havingValue);
             if (number === undefined)
               throw new Error(objectMetricText("analysisHavingNumericRequired"));
-            if (
-              physicalType === "int64" &&
-              (!/^[-+]?\d+$/.test(values.havingValue.trim()) ||
-                BigInt(values.havingValue.trim()) < -(1n << 63n) ||
-                BigInt(values.havingValue.trim()) > (1n << 63n) - 1n)
-            )
-              throw new Error(objectMetricText("analysisHavingSafeIntegerRequired"));
+            if (physicalType === "int64") {
+              const int64Error = objectMetricInt64InputError(havingValue);
+              if (int64Error === "not_integer")
+                throw new Error(objectMetricText("analysisHavingIntegerRequired"));
+              if (int64Error === "out_of_range")
+                throw new Error(objectMetricText("analysisHavingSafeIntegerRequired"));
+            }
             value = number;
           } else if (physicalType === "boolean") {
-            if (!["true", "false"].includes(values.havingValue))
+            if (!["true", "false"].includes(havingValue))
               throw new Error(objectMetricText("analysisHavingBooleanRequired"));
-            value = values.havingValue === "true";
-          } else value = values.havingValue;
+            value = havingValue === "true";
+          } else value = havingValue;
         }
         query.having = {
           operator,

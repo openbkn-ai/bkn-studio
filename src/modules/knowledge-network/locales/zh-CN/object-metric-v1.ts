@@ -13,6 +13,7 @@ export const objectMetricV1Part = {
   analysisHavingValueHint: "输入最终对象指标值的比较条件",
   analysisHavingValueRequired: "请输入结果筛选的比较值",
   analysisHavingNumericRequired: "比较值必须是有效数字",
+  analysisHavingIntegerRequired: "整数比较值必须是整数",
   analysisHavingSafeIntegerRequired: "整数比较值须在 64 位整数范围内",
   analysisHavingBooleanRequired: "布尔值只能输入 true 或 false",
   analysisHaving_eq: "等于",
