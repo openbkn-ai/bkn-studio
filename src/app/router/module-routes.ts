@@ -10,6 +10,7 @@ import type { RouteObject } from "react-router-dom";
 import type { AppRouteContribution } from "@/app/router/types";
 import { accountRouteContribution } from "@/modules/account/routes";
 import { apiKeysRouteContribution } from "@/modules/api-keys/routes";
+import { bknProjectRouteContribution } from "@/modules/bkn-project/routes";
 import { bknTraceRouteContribution } from "@/modules/bkn-trace/routes";
 import { dataCatalogRouteContribution } from "@/modules/data-catalog/routes";
 import { dataConnectRouteContribution } from "@/modules/data-connect/routes";
@@ -30,6 +31,7 @@ const routeContributions: AppRouteContribution[] = [
   modelResourcesRouteContribution,
   executionFactoryLabRouteContribution,
   bknTraceRouteContribution,
+  bknProjectRouteContribution,
   systemAdminRouteContribution,
   subscriptionRouteContribution,
   apiKeysRouteContribution,

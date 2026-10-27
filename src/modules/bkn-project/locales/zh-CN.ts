@@ -1,0 +1,78 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+export const bknProjectZhCN = {
+  bknProject: {
+    title: "项目",
+    description: "每个项目把需求、本体和发布组织在一起，面向一个业务知识网络。",
+    list: {
+      cardTitle: "项目",
+      cardTip: "多个项目可以修改同一个知识网络；发布时会检查线上版本是否已被其他项目改变。",
+      searchPlaceholder: "搜索项目名",
+      showArchived: "显示已归档",
+      create: "新建项目",
+      refresh: "刷新",
+      total: "共 {{count}} 个",
+      total_one: "共 {{count}} 个",
+      total_other: "共 {{count}} 个",
+      prevPage: "上一页",
+      nextPage: "下一页",
+      loadFailed: "项目加载失败",
+      emptyTitle: "还没有项目",
+      emptyDescription: "新建一个项目，从结构化数据开始构建业务知识网络。",
+      emptyFiltered: "没有匹配的项目",
+      columns: {
+        project: "项目",
+        network: "目标业务知识网络",
+        catalogs: "引用的数据目录",
+        owner: "负责人",
+        updated: "更新时间",
+        actions: "操作",
+      },
+      sameNetwork: "同网络 · 另有 {{count}} 个项目",
+      sameNetwork_one: "同网络 · 另有 {{count}} 个项目",
+      sameNetwork_other: "同网络 · 另有 {{count}} 个项目",
+      archivedTag: "已归档",
+      ownerYou: "我",
+      archive: "归档",
+      unarchive: "恢复",
+      archiveConfirm: {
+        title: "归档项目「{{name}}」？",
+        content: "归档后默认列表不再显示，已发布的版本不受影响，可以随时恢复。",
+        ok: "归档",
+      },
+      archiveSuccess: "已归档",
+      unarchiveSuccess: "已恢复",
+      archiveFailed: "操作失败",
+    },
+    create: {
+      title: "新建项目",
+      submit: "创建",
+      success: "项目已创建",
+      failed: "创建失败",
+      name: "项目名称",
+      namePlaceholder: "例如：交期异常预警",
+      nameRequired: "请填写项目名称",
+      nameTooLong: "项目名称不超过 {{max}} 个字符",
+      target: "目标业务知识网络",
+      existing: "选择已有知识网络",
+      existingDescription: "在已有网络上修订；基线为它的线上版本",
+      networkPlaceholder: "选择知识网络",
+      networkRequired: "请选择知识网络",
+      networksLoadFailed: "知识网络加载失败",
+      newNetwork: "新建知识网络",
+      newNetworkDescription: "从空网络开始；首次发布生成 v1.0.0",
+      newNetworkName: "知识网络名称",
+      newNetworkNamePlaceholder: "例如：交期管理知识网络",
+      newNetworkNameRequired: "请填写知识网络名称",
+      catalogs: "数据来源",
+      catalogsHint: "选择结构化数据所在的数据目录；项目只引用，不复制数据。",
+      catalogsPlaceholder: "选择数据目录",
+      catalogsLoadFailed: "数据目录加载失败",
+    },
+  },
+};

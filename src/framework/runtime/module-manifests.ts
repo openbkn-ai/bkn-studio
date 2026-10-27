@@ -7,6 +7,7 @@
 
 import { dataCatalogModuleManifest } from "@/modules/data-catalog/module.manifest";
 import { bknTraceModuleManifest } from "@/modules/bkn-trace/module.manifest";
+import { bknProjectModuleManifest } from "@/modules/bkn-project/module.manifest";
 import { dataConnectModuleManifest } from "@/modules/data-connect/module.manifest";
 import { executionFactoryLabModuleManifest } from "@/modules/execution-factory-lab/module.manifest";
 import { executionFactoryModuleManifest } from "@/modules/execution-factory/module.manifest";
@@ -24,6 +25,7 @@ export const runtimeModuleManifests = [
   modelResourcesModuleManifest,
   executionFactoryLabModuleManifest,
   bknTraceModuleManifest,
+  bknProjectModuleManifest,
   systemAdminModuleManifest,
 ] as const;
 

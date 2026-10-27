@@ -29,6 +29,7 @@ export const shellEnUS = {
     items: {
       home: "Home",
       globalBusinessKnowledgeNetwork: "Global Business Knowledge Network",
+      bknProject: "BKN Project",
       domainKnowledgeNetwork: "Domain Knowledge Network",
       knowledgeNetworkManagement: "Knowledge Networks",
       knowledgeNetworkIntegration: "Knowledge Network Integration",
