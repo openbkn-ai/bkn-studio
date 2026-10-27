@@ -126,6 +126,8 @@ export const bknProjectEnUS = {
           "Drafting again replaces this draft and discards the {{count}} decision made on it.",
         content_other:
           "Drafting again replaces this draft and discards the {{count}} decisions made on it.",
+        contentUncounted:
+          "Drafting again replaces this draft and discards every decision made on it.",
         ok: "Discard and draft again",
       },
       adoptBlocked: {

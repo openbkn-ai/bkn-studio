@@ -117,6 +117,7 @@ export const bknProjectZhCN = {
         content: "重新起草会替换当前草稿，并丢弃在它上面做的 {{count}} 条决定。",
         content_one: "重新起草会替换当前草稿，并丢弃在它上面做的 {{count}} 条决定。",
         content_other: "重新起草会替换当前草稿，并丢弃在它上面做的 {{count}} 条决定。",
+        contentUncounted: "重新起草会替换当前草稿，并丢弃在它上面做的所有决定。",
         ok: "丢弃并重新起草",
       },
       adoptBlocked: {

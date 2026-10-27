@@ -443,4 +443,18 @@ describe("ProjectModel", () => {
       await screen.findByText("bknProject.model.adoptBlocked.endsNotAdopted"),
     ).toBeInTheDocument();
   });
+
+  it("asks without a number when the decisions cannot be read again", async () => {
+    getDraftMock.mockResolvedValueOnce(ready()).mockRejectedValue(new Error("gateway timeout"));
+    generateDraftMock.mockRejectedValueOnce(conflict("HasDecisions"));
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.regenerate" }));
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1));
+    // Never a made-up count on a confirmation that discards work.
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "bknProject.model.regenerateConfirm.contentUncounted" }),
+    );
+  });
 });

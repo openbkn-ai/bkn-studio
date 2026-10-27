@@ -86,6 +86,7 @@ describe("draft edits", () => {
     expect(model.edit.stale).toBeTruthy();
     expect(model.actions.adoptItem).toContain("{{name}}");
     expect(model.regenerateConfirm.content_other).toContain("{{count}}");
+    expect(model.regenerateConfirm.contentUncounted).toBeTruthy();
     for (const blocker of ["archived", "endsNotAdopted", "needsIdentity"] as const) {
       expect(model.adoptBlocked[blocker]).toBeTruthy();
     }

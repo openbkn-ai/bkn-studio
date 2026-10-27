@@ -141,7 +141,8 @@ export function ProjectModel({ project }: { project: Project }) {
         if (fresh) {
           setDraft(fresh);
         }
-        confirmRegenerate(fresh?.items.decisions.length ?? 1);
+        // Without the reloaded draft the count is unknown; the page never guesses one.
+        confirmRegenerate(fresh ? fresh.items.decisions.length : null);
       } else {
         setGenerateError(extractRequestErrorMessage(error));
       }
@@ -150,10 +151,13 @@ export function ProjectModel({ project }: { project: Project }) {
     }
   };
 
-  function confirmRegenerate(count: number) {
+  function confirmRegenerate(count: number | null) {
     void modal.confirm({
       cancelText: t("common.cancel"),
-      content: t("bknProject.model.regenerateConfirm.content", { count }),
+      content:
+        count === null
+          ? t("bknProject.model.regenerateConfirm.contentUncounted")
+          : t("bknProject.model.regenerateConfirm.content", { count }),
       okButtonProps: { danger: true },
       okText: t("bknProject.model.regenerateConfirm.ok"),
       onOk: () => generate(true),
