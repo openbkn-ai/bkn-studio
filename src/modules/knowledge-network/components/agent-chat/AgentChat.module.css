@@ -1080,3 +1080,18 @@
   font-size: 11px;
   color: var(--faint);
 }
+
+/* Narrow screens put the experience card above the conversation instead of beside it. */
+@media (max-width: 900px) {
+  .withExperience {
+    flex-direction: column;
+    align-items: stretch;
+    padding-right: 0;
+  }
+  .experienceAside {
+    position: static;
+    order: -1;
+    max-height: none;
+    padding: 16px 16px 0;
+  }
+}

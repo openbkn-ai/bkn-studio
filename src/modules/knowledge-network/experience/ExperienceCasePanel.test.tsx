@@ -14,6 +14,7 @@ import { ExperienceCasePanel } from "./ExperienceCasePanel";
 import { casesFor, parseSampleExperience, type SampleExperience } from "./sample-experience";
 
 const RESPONSE = {
+  knowledgeNetwork: "supply_ontology_en",
   sample: "supply-chain-en",
   version: "0.1.12",
   experienceSet: {
@@ -148,7 +149,9 @@ describe("ExperienceCasePanel", () => {
     expect(screen.getByTestId("experience-question").textContent).toContain("382-000005");
     expect(screen.getByText("1/3 done")).toBeTruthy();
     const stored = JSON.parse(
-      localStorage.getItem("bkn-studio.sample-experience.supply-chain-en.0.1.12.agent") ?? "{}",
+      localStorage.getItem(
+        "bkn-studio.sample-experience.supply_ontology_en.supply-chain-en.0.1.12.agent",
+      ) ?? "{}",
     ) as { verdicts: Record<string, string> };
     expect(stored.verdicts).toEqual({ "M-04": "match" });
   });
@@ -168,6 +171,27 @@ describe("ExperienceCasePanel", () => {
       fireEvent.click(screen.getByText(verdict));
     }
     expect(screen.getByTestId("experience-summary").textContent).toContain("2 same, 1 different");
+  });
+
+  it("starts over from a hidden answer even when the last case was showing one", () => {
+    render(
+      <ExperienceCasePanel
+        experience={experience()}
+        onTry={vi.fn()}
+        running={false}
+        surface="agent"
+      />,
+    );
+    for (const verdict of ["Same", "Same", "Same"]) {
+      fireEvent.click(screen.getByTestId("experience-try"));
+      fireEvent.click(screen.getByText("Show reference answer"));
+      fireEvent.click(screen.getByText(verdict));
+    }
+    fireEvent.click(screen.getByTestId("experience-try"));
+    fireEvent.click(screen.getByText("Show reference answer"));
+    fireEvent.click(screen.getByText("Start over"));
+    expect(screen.queryByTestId("experience-answer")).toBeNull();
+    expect(screen.getByText("0/3 done")).toBeTruthy();
   });
 
   it("offers the reference query on the data query page", () => {

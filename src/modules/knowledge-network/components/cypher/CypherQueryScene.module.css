@@ -802,3 +802,13 @@
 .statusLimited {
   color: var(--color-warning-text);
 }
+
+/* Narrow screens stack the card under the results and let the page scroll to it. */
+@media (max-width: 900px) {
+  .withExperience,
+  .pageRail.withExperience {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    overflow-y: auto;
+  }
+}

@@ -27,6 +27,7 @@ export type ExperienceCase = {
 };
 
 export type SampleExperience = {
+  knowledgeNetwork: string;
   sample: string;
   version: string;
   businessDate: string;
@@ -80,6 +81,7 @@ export function parseSampleExperience(value: unknown): SampleExperience | null {
   const cases = spec.cases.map(parseCase).filter((item): item is ExperienceCase => item !== null);
   if (cases.length === 0) return null;
   return {
+    knowledgeNetwork: typeof value.knowledgeNetwork === "string" ? value.knowledgeNetwork : "",
     sample,
     version: typeof value.version === "string" ? value.version : "",
     businessDate: typeof spec.businessDate === "string" ? spec.businessDate : "",

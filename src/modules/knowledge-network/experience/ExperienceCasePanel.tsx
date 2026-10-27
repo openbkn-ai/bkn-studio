@@ -38,7 +38,8 @@ type Phase = "idle" | "trying" | "answered";
 const COLLAPSED_KEY = "bkn-studio.sample-experience.collapsed";
 
 function progressKey(experience: SampleExperience, surface: ExperienceSurface): string {
-  return `bkn-studio.sample-experience.${experience.sample}.${experience.version}.${surface}`;
+  // Keyed by network too: reinstalling the same version creates a new network to try afresh.
+  return `bkn-studio.sample-experience.${experience.knowledgeNetwork}.${experience.sample}.${experience.version}.${surface}`;
 }
 
 function readProgress(key: string): Progress {
@@ -195,7 +196,13 @@ export function ExperienceCasePanel({
             matched,
             mismatched: cases.length - matched,
           })}
-          <Button onClick={() => save({ index: 0, verdicts: {} })} size="small">
+          <Button
+            onClick={() => {
+              save({ index: 0, verdicts: {} });
+              setPhase("idle");
+            }}
+            size="small"
+          >
             {t("knowledgeNetwork.sampleExperience.restart")}
           </Button>
         </div>
