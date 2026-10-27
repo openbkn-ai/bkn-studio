@@ -118,6 +118,31 @@ export const bknProjectEnUS = {
       regenerate: "Draft again",
       generateFailed: "Failed to start drafting",
       loadFailed: "Failed to load the draft",
+      regenerateConfirm: {
+        title: "Draft again?",
+        content:
+          "Drafting again replaces this draft and discards the {{count}} decisions made on it.",
+        content_one:
+          "Drafting again replaces this draft and discards the {{count}} decision made on it.",
+        content_other:
+          "Drafting again replaces this draft and discards the {{count}} decisions made on it.",
+        ok: "Discard and draft again",
+      },
+      actions: {
+        adoptItem: "Adopt {{name}}",
+        edit: "Edit {{name}}",
+      },
+      edit: {
+        title: "Edit {{name}}",
+        name: "Name",
+        nameRequired: "Enter a name",
+        description: "Description",
+        stale:
+          "Someone changed this draft, so it was reloaded. Make your change again if it is still needed.",
+        cascade: "Also stopped adopting {{count}} relation types that connect it",
+        cascade_one: "Also stopped adopting {{count}} relation type that connects it",
+        cascade_other: "Also stopped adopting {{count}} relation types that connect it",
+      },
       empty: {
         title: "No ontology draft yet",
         description:

@@ -8,10 +8,14 @@
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockGet, mockPost } = vi.hoisted(() => ({ mockGet: vi.fn(), mockPost: vi.fn() }));
+const { mockGet, mockPatch, mockPost } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPatch: vi.fn(),
+  mockPost: vi.fn(),
+}));
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: mockGet, post: mockPost },
+  http: { get: mockGet, patch: mockPatch, post: mockPost },
 }));
 
 // useMock is read when the module loads, so each case stubs the env and imports afresh.
@@ -98,5 +102,34 @@ describe("draft.service", () => {
       { skipErrorToast: true },
     );
     expect(draft.status).toBe("drafting");
+  });
+
+  it("agrees to discard the decisions only when asked", async () => {
+    const { generateDraft, mockDraft } = await importService();
+    mockPost.mockResolvedValue({ data: { ...mockDraft("p1"), status: "drafting" } });
+
+    await generateDraft("p1", { discardDecisions: true });
+
+    expect(mockPost).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p1/ontology/draft:generate",
+      { discard_decisions: true },
+      { skipErrorToast: true },
+    );
+  });
+
+  it("edits one item with the draft's update time and only the fields given", async () => {
+    const { editDraftItem, mockDraft } = await importService();
+    mockPatch.mockResolvedValue({ data: { ...mockDraft("p1"), update_time: 42 } });
+
+    const draft = await editDraftItem("p 1", "object_types", "sales orders", 7, {
+      adopted: false,
+    });
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%201/ontology/draft/items/object_types/sales%20orders",
+      { adopted: false, update_time: 7 },
+      { skipErrorToast: true },
+    );
+    expect(draft.updateTime).toBe(42);
   });
 });

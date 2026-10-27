@@ -5,9 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EditOutlined } from "@ant-design/icons";
+import { Switch } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import {
@@ -21,8 +25,10 @@ import {
   say,
   verificationPhrase,
 } from "@/modules/bkn-project/components/draft/evidence";
+import type { EditableItem } from "@/modules/bkn-project/components/draft/edit";
 import type {
   DraftExcludedField,
+  DraftItemKind,
   DraftObjectType,
   DraftRelationType,
   DraftTable,
@@ -47,6 +53,57 @@ export function AdoptionTag({ adopted }: { adopted: boolean }) {
       {t(adopted ? "bknProject.model.state.adopted" : "bknProject.model.state.notAdopted")}
     </LightStatusTag>
   );
+}
+
+/** What the tables may do to an item; the page decides and sends every edit. */
+export type DraftItemActions = {
+  canAdopt: (kind: DraftItemKind, item: EditableItem) => boolean;
+  /** True on an archived project, and while an edit is being sent. */
+  disabled: boolean;
+  onAdopt: (kind: DraftItemKind, item: EditableItem, adopted: boolean) => void;
+  onEdit: (kind: DraftItemKind, item: EditableItem) => void;
+};
+
+function AdoptSwitch({
+  actions,
+  item,
+  kind,
+}: {
+  actions: DraftItemActions;
+  item: EditableItem;
+  kind: DraftItemKind;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Switch
+      aria-label={t("bknProject.model.actions.adoptItem", { name: item.name })}
+      checked={item.adopted}
+      disabled={actions.disabled || !actions.canAdopt(kind, item)}
+      onChange={(adopted) => actions.onAdopt(kind, item, adopted)}
+      size="small"
+    />
+  );
+}
+
+function editColumn<T extends EditableItem>(
+  kind: DraftItemKind,
+  actions: DraftItemActions,
+  t: TFunction,
+): ColumnsType<T>[number] {
+  return {
+    key: "edit",
+    width: 56,
+    render: (_value, record) => (
+      <AppButton
+        aria-label={t("bknProject.model.actions.edit", { name: record.name })}
+        disabled={actions.disabled}
+        icon={<EditOutlined />}
+        onClick={() => actions.onEdit(kind, record)}
+        size="small"
+        type="text"
+      />
+    ),
+  };
 }
 
 /** The identity of an object type with its basis, its counts and their warnings. */
@@ -94,10 +151,12 @@ function TableSource({
 }
 
 export function DraftObjectsTable({
+  actions,
   catalogNames,
   items,
   onOpen,
 }: {
+  actions: DraftItemActions;
   catalogNames: Record<string, string>;
   items: DraftObjectType[];
   onOpen: (id: string) => void;
@@ -118,15 +177,19 @@ export function DraftObjectsTable({
     {
       title: t("bknProject.model.columns.state"),
       key: "state",
-      width: 120,
-      render: (_value, record) =>
-        record.needsIdentity ? (
-          <LightStatusTag tone="warning">
-            {t("bknProject.model.state.needsIdentity")}
-          </LightStatusTag>
-        ) : (
-          <AdoptionTag adopted={record.adopted} />
-        ),
+      width: 140,
+      render: (_value, record) => (
+        <div className={styles.state}>
+          <AdoptSwitch actions={actions} item={record} kind="object_types" />
+          {record.needsIdentity ? (
+            <LightStatusTag tone="warning">
+              {t("bknProject.model.state.needsIdentity")}
+            </LightStatusTag>
+          ) : (
+            <AdoptionTag adopted={record.adopted} />
+          )}
+        </div>
+      ),
     },
     {
       title: t("bknProject.model.columns.identity"),
@@ -144,6 +207,7 @@ export function DraftObjectsTable({
       key: "source",
       render: (_value, record) => <TableSource catalogNames={catalogNames} table={record.table} />,
     },
+    editColumn<DraftObjectType>("object_types", actions, t),
   ];
   return (
     <AppTable<DraftObjectType>
@@ -157,10 +221,12 @@ export function DraftObjectsTable({
 }
 
 export function DraftRelationsTable({
+  actions,
   items,
   objectNames,
   unadoptedEnds,
 }: {
+  actions: DraftItemActions;
   items: DraftRelationType[];
   objectNames: Record<string, string>;
   /** Relations adopted while an end is not, marked for people to unadopt. */
@@ -213,9 +279,10 @@ export function DraftRelationsTable({
     {
       title: t("bknProject.model.columns.state"),
       key: "state",
-      width: 140,
+      width: 160,
       render: (_value, record) => (
-        <div className={styles.evidence}>
+        <div className={styles.state}>
+          <AdoptSwitch actions={actions} item={record} kind="relation_types" />
           <AdoptionTag adopted={record.adopted} />
           {unadoptedEnds.has(record.id) ? (
             <LightStatusTag tone="warning">
@@ -225,6 +292,7 @@ export function DraftRelationsTable({
         </div>
       ),
     },
+    editColumn<DraftRelationType>("relation_types", actions, t),
   ];
   return (
     <AppTable<DraftRelationType>
@@ -238,9 +306,11 @@ export function DraftRelationsTable({
 }
 
 export function DraftValueTypesTable({
+  actions,
   catalogNames,
   items,
 }: {
+  actions: DraftItemActions;
   catalogNames: Record<string, string>;
   items: DraftValueType[];
 }) {
@@ -283,9 +353,15 @@ export function DraftValueTypesTable({
     {
       title: t("bknProject.model.columns.state"),
       key: "state",
-      width: 120,
-      render: (_value, record) => <AdoptionTag adopted={record.adopted} />,
+      width: 140,
+      render: (_value, record) => (
+        <div className={styles.state}>
+          <AdoptSwitch actions={actions} item={record} kind="value_types" />
+          <AdoptionTag adopted={record.adopted} />
+        </div>
+      ),
     },
+    editColumn<DraftValueType>("value_types", actions, t),
   ];
   return (
     <AppTable<DraftValueType>

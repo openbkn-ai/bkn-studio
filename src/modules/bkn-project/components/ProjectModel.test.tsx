@@ -14,6 +14,9 @@ import type { Project } from "@/modules/bkn-project/types/project";
 const getDraftMock = vi.hoisted(() => vi.fn());
 const generateDraftMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
+const editDraftItemMock = vi.hoisted(() => vi.fn());
+const messageMock = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn(), warning: vi.fn() }));
+const confirmMock = vi.hoisted(() => vi.fn());
 const translate = vi.hoisted(
   () => (key: string, options?: Record<string, unknown>) =>
     options ? `${key}:${JSON.stringify(options)}` : key,
@@ -24,8 +27,13 @@ vi.mock("react-i18next", async (importOriginal) => ({
   useTranslation: () => ({ t: translate }),
 }));
 
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ message: messageMock, modal: { confirm: confirmMock } }),
+}));
+
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
+  editDraftItem: editDraftItemMock,
   generateDraft: generateDraftMock,
   getDraft: getDraftMock,
 }));
@@ -54,6 +62,21 @@ const project: Project = {
 };
 
 const ready = () => mapDraft(mockDraft("p1"));
+
+function conflict(code: string) {
+  return new AxiosError("409", "ERR_BAD_REQUEST", undefined, undefined, {
+    data: { description: `${code} described`, error_code: `BknProject.Draft.${code}` },
+    status: 409,
+  } as AxiosResponse);
+}
+
+/** The draft after an edit: bkn-project replies it with a new update time. */
+function edited(change: (draft: ReturnType<typeof ready>) => void) {
+  const draft = ready();
+  change(draft);
+  draft.updateTime += 1;
+  return draft;
+}
 
 function renderModel(override: Partial<Project> = {}) {
   return render(<ProjectModel project={{ ...project, ...override }} />);
@@ -232,5 +255,170 @@ describe("ProjectModel", () => {
     expect(screen.getAllByText(/bknProject.model.excluded.reason.privacy/)[0]).toHaveTextContent(
       '"keyword":"phone"',
     );
+  });
+
+  it("unadopts with the draft's update time and says which relations went with it", async () => {
+    const current = ready();
+    getDraftMock.mockResolvedValue(current);
+    editDraftItemMock.mockResolvedValue(
+      edited((draft) => {
+        draft.items.objectTypes[0].adopted = false;
+        draft.items.relationTypes[0].adopted = false;
+      }),
+    );
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("switch", { name: /"name":"customers"/ }));
+
+    await waitFor(() =>
+      expect(editDraftItemMock).toHaveBeenCalledWith(
+        "p1",
+        "object_types",
+        "customers",
+        current.updateTime,
+        { adopted: false },
+      ),
+    );
+    expect(messageMock.info).toHaveBeenCalledWith(
+      expect.stringContaining('bknProject.model.edit.cascade:{"count":1'),
+    );
+    expect(await screen.findByRole("switch", { name: /"name":"customers"/ })).not.toBeChecked();
+  });
+
+  it("does not offer adopting an object type that waits for its identity", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderModel();
+
+    expect(await screen.findByRole("switch", { name: /"name":"material_bom"/ })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: /"name":"sales_orders"/ })).toBeEnabled();
+  });
+
+  it("reloads a draft someone else changed and does not replay the edit", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    editDraftItemMock.mockRejectedValue(conflict("Stale"));
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("switch", { name: /"name":"customers"/ }));
+
+    await waitFor(() => expect(getDraftMock).toHaveBeenCalledTimes(2));
+    expect(messageMock.warning).toHaveBeenCalledWith("bknProject.model.edit.stale");
+    expect(editDraftItemMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows bkn-project's localized refusal of an edit", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    editDraftItemMock.mockRejectedValue(conflict("ProjectArchived"));
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("switch", { name: /"name":"customers"/ }));
+
+    await waitFor(() =>
+      expect(messageMock.error).toHaveBeenCalledWith("ProjectArchived described"),
+    );
+    expect(getDraftMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("renames an item with only what changed, and offers nothing for an empty edit", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    editDraftItemMock.mockResolvedValue(
+      edited((draft) => {
+        draft.items.objectTypes[0].name = "Client";
+      }),
+    );
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: /edit:.*"name":"customers"/ }));
+    const save = await screen.findByRole("button", { name: "common.save" });
+    expect(save).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("bknProject.model.edit.name"), {
+      target: { value: " Client " },
+    });
+    fireEvent.click(save);
+
+    await waitFor(() =>
+      expect(editDraftItemMock).toHaveBeenCalledWith(
+        "p1",
+        "object_types",
+        "customers",
+        expect.any(Number),
+        { name: "Client" },
+      ),
+    );
+  });
+
+  it("asks before drafting again over decisions, and agrees to discard them", async () => {
+    const current = ready();
+    current.items.decisions = [
+      {
+        action: "unadopt",
+        after: false,
+        before: true,
+        by: { id: "me", type: "user" },
+        itemId: "customers",
+        kind: "object_types",
+        time: 1,
+      },
+    ];
+    getDraftMock.mockResolvedValue(current);
+    generateDraftMock.mockResolvedValue({ ...ready(), status: "drafting" });
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.regenerate" }));
+
+    expect(generateDraftMock).not.toHaveBeenCalled();
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: 'bknProject.model.regenerateConfirm.content:{"count":1}',
+      }),
+    );
+    await act(async () => {
+      await confirmMock.mock.calls[0][0].onOk();
+    });
+    expect(generateDraftMock).toHaveBeenCalledWith("p1", { discardDecisions: true });
+  });
+
+  it("drafts again without asking when nobody decided anything", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    generateDraftMock.mockResolvedValue({ ...ready(), status: "drafting" });
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.regenerate" }));
+
+    await waitFor(() => expect(generateDraftMock).toHaveBeenCalledWith("p1"));
+    expect(confirmMock).not.toHaveBeenCalled();
+  });
+
+  it("asks again when someone decided something since the draft was read", async () => {
+    const decided = ready();
+    decided.items.decisions = [
+      {
+        action: "rename",
+        after: "Client",
+        before: "customers",
+        by: { id: "other", type: "user" },
+        itemId: "customers",
+        kind: "object_types",
+        time: 2,
+      },
+    ];
+    getDraftMock.mockResolvedValueOnce(ready()).mockResolvedValue(decided);
+    generateDraftMock.mockRejectedValueOnce(conflict("HasDecisions"));
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.regenerate" }));
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1));
+    expect(getDraftMock).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("bknProject.model.generateFailed")).not.toBeInTheDocument();
+  });
+
+  it("offers no edits on an archived project", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderModel({ archived: true });
+
+    expect(await screen.findByRole("switch", { name: /"name":"customers"/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /edit:.*"name":"customers"/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "bknProject.model.regenerate" })).toBeDisabled();
   });
 });

@@ -143,3 +143,13 @@ export type Draft = {
   status: DraftStatus;
   updateTime: number;
 };
+
+/** The kinds of draft item a person edits, as bkn-project names them in the path. */
+export type DraftItemKind = "object_types" | "relation_types" | "value_types";
+
+/** A person's edit of one draft item; fields left out stay as they are. */
+export type DraftItemEdit = {
+  adopted?: boolean;
+  description?: string;
+  name?: string;
+};

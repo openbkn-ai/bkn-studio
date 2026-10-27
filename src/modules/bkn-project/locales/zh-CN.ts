@@ -112,6 +112,27 @@ export const bknProjectZhCN = {
       regenerate: "重新起草",
       generateFailed: "起草未能开始",
       loadFailed: "草稿加载失败",
+      regenerateConfirm: {
+        title: "重新起草？",
+        content: "重新起草会替换当前草稿，并丢弃在它上面做的 {{count}} 条决定。",
+        content_one: "重新起草会替换当前草稿，并丢弃在它上面做的 {{count}} 条决定。",
+        content_other: "重新起草会替换当前草稿，并丢弃在它上面做的 {{count}} 条决定。",
+        ok: "丢弃并重新起草",
+      },
+      actions: {
+        adoptItem: "采纳{{name}}",
+        edit: "编辑{{name}}",
+      },
+      edit: {
+        title: "编辑「{{name}}」",
+        name: "名称",
+        nameRequired: "请输入名称",
+        description: "描述",
+        stale: "草稿已被他人修改，已重新加载。如果仍需要，请重新操作。",
+        cascade: "同时取消采纳了连接它的 {{count}} 个关系类",
+        cascade_one: "同时取消采纳了连接它的 {{count}} 个关系类",
+        cascade_other: "同时取消采纳了连接它的 {{count}} 个关系类",
+      },
       empty: {
         title: "还没有本体草稿",
         description: "AI 会根据表结构起草对象类、关系类和值类型；确认草稿之前不会生效。",

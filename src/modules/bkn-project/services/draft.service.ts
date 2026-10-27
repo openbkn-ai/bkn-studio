@@ -5,11 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { AxiosError, type AxiosResponse } from "axios";
+
 import { http } from "@/framework/request/http";
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import type {
   Draft,
+  DraftItemEdit,
+  DraftItemKind,
   DraftKeyEvidence,
   DraftObjectType,
   DraftRelationType,
@@ -411,6 +415,66 @@ const mockDrafts: Record<string, BackendDraft> = {
   "p-002": mockDraft("p-002", "fi_ar_receipts"),
 };
 
+/** The 409 bkn-project answers, for the mock to refuse as it does. */
+function mockConflict(code: string, description: string) {
+  return new AxiosError(description, "ERR_BAD_REQUEST", undefined, undefined, {
+    data: { description, error_code: `BknProject.Draft.${code}` },
+    status: 409,
+  } as AxiosResponse);
+}
+
+type MockItem = { adopted: boolean; description: string; id: string; name: string };
+
+function editMockDraft(
+  projectId: string,
+  kind: DraftItemKind,
+  itemId: string,
+  updateTime: number,
+  edit: DraftItemEdit,
+): BackendDraft {
+  const draft = mockDrafts[projectId];
+  if (!draft || draft.update_time !== updateTime) {
+    throw mockConflict("Stale", "The draft changed since it was read; reload it.");
+  }
+  const items: MockItem[] = draft.items[kind] ?? [];
+  const item = items.find((candidate) => candidate.id === itemId);
+  if (!item) {
+    throw mockConflict("ItemNotFound", `No item ${itemId}.`);
+  }
+  const now = Date.now();
+  const decide = (action: string, before: unknown, after: unknown) =>
+    (draft.items.decisions ??= []).push({
+      action,
+      after,
+      before,
+      by: mockDrafter,
+      item_id: itemId,
+      kind,
+      time: now,
+    });
+  if (edit.adopted !== undefined && edit.adopted !== item.adopted) {
+    item.adopted = edit.adopted;
+    decide(edit.adopted ? "adopt" : "unadopt", !edit.adopted, edit.adopted);
+    if (kind === "object_types" && !edit.adopted) {
+      for (const relation of draft.items.relation_types ?? []) {
+        if (relation.adopted && (relation.source === itemId || relation.target === itemId)) {
+          relation.adopted = false;
+        }
+      }
+    }
+  }
+  if (edit.name !== undefined && edit.name !== item.name) {
+    decide("rename", item.name, edit.name);
+    item.name = edit.name;
+  }
+  if (edit.description !== undefined && edit.description !== item.description) {
+    decide("describe", item.description, edit.description);
+    item.description = edit.description;
+  }
+  draft.update_time = now;
+  return draft;
+}
+
 /* ------------------------------- API ------------------------------- */
 
 const draftPath = (projectId: string) =>
@@ -435,16 +499,49 @@ export async function getDraft(projectId: string): Promise<Draft | null> {
   }
 }
 
-/** Starts drafting from the tables of the project's catalogs; replies the draft, drafting. */
-export async function generateDraft(projectId: string): Promise<Draft> {
+/**
+ * Starts drafting from the tables of the project's catalogs; replies the draft, drafting.
+ * Drafting over decisions people made is refused unless they agree to discard them.
+ */
+export async function generateDraft(
+  projectId: string,
+  options: { discardDecisions?: boolean } = {},
+): Promise<Draft> {
   if (useMock) {
+    const decisions = mockDrafts[projectId]?.items.decisions ?? [];
+    if (decisions.length && !options.discardDecisions) {
+      throw mockConflict("HasDecisions", "The draft has decisions.");
+    }
     const draft = mockDraft(projectId);
     mockDrafts[projectId] = draft;
     return wait(mapDraft({ ...draft, status: "drafting" }));
   }
   const response = await http.post<BackendDraft>(
     `${draftPath(projectId)}:generate`,
-    {},
+    options.discardDecisions ? { discard_decisions: true } : {},
+    { skipErrorToast: true },
+  );
+  return mapDraft(response.data);
+}
+
+/**
+ * Edits one item of a ready draft made at `updateTime`; replies the draft. bkn-project records
+ * the change as a decision and, for an object type no longer adopted, stops adopting the
+ * relation types that connect it.
+ */
+export async function editDraftItem(
+  projectId: string,
+  kind: DraftItemKind,
+  itemId: string,
+  updateTime: number,
+  edit: DraftItemEdit,
+): Promise<Draft> {
+  if (useMock) {
+    return wait(mapDraft(editMockDraft(projectId, kind, itemId, updateTime, edit)));
+  }
+  const response = await http.patch<BackendDraft>(
+    `${draftPath(projectId)}/items/${kind}/${encodeURIComponent(itemId)}`,
+    { ...edit, update_time: updateTime },
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
