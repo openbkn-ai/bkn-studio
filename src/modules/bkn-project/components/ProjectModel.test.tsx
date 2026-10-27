@@ -422,4 +422,25 @@ describe("ProjectModel", () => {
     expect(screen.getByRole("button", { name: /edit:.*"name":"customers"/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "bknProject.model.regenerate" })).toBeDisabled();
   });
+
+  it("says why a relation unadopted with its object type cannot be adopted again", async () => {
+    getDraftMock.mockResolvedValue(
+      edited((draft) => {
+        draft.items.objectTypes[0].adopted = false;
+        draft.items.relationTypes[0].adopted = false;
+      }),
+    );
+    renderModel();
+
+    fireEvent.click(await screen.findByText(/bknProject.model.tabs.relations/));
+    const relationSwitch = await screen.findByRole("switch", {
+      name: /"name":"sales_orders_to_customers"/,
+    });
+    expect(relationSwitch).toBeDisabled();
+
+    fireEvent.mouseEnter(relationSwitch.parentElement as HTMLElement);
+    expect(
+      await screen.findByText("bknProject.model.adoptBlocked.endsNotAdopted"),
+    ).toBeInTheDocument();
+  });
 });
