@@ -47,6 +47,16 @@ export function resolveToolboxCategoryLabel(
   return record.categoryName ?? record.categoryType ?? "-";
 }
 
+export function localizeCategoryOptions(
+  options: ReadonlyArray<{ value: string; label: string }>,
+  t: (key: string) => string,
+) {
+  return options.map((item) => ({
+    ...item,
+    label: resolveToolboxCategoryLabel({ categoryType: item.value, categoryName: item.label }, t),
+  }));
+}
+
 export function resolveSkillCategoryLabel(
   record: { category?: string; categoryName?: string },
   t: (key: string) => string,

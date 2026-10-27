@@ -66,6 +66,7 @@ import {
   type ToolboxPublishIssue,
 } from "@/modules/execution-factory/utils/toolbox-publish-preflight";
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { localizeCategoryOptions } from "@/modules/execution-factory/utils/detail-display";
 import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
 import type {
   OperatorRecord,
@@ -425,15 +426,14 @@ export function ExecutionUnitListScene({
 
     void (async () => {
       const items = await listOperatorCategories();
-      setCategoryOptions([
-        { value: "", label: t("executionFactory.allCategory") },
-        ...items.map((item) => ({
+      setCategoryOptions(
+        items.map((item) => ({
           value: item.categoryType,
           label: item.name,
         })),
-      ]);
+      );
     })();
-  }, [activeTab, t]);
+  }, [activeTab]);
 
   useEffect(() => {
     setCategory("");
@@ -1475,7 +1475,10 @@ export function ExecutionUnitListScene({
                 <span className={styles.filterLabel}>{t("executionFactory.typeFilter")}</span>
                 <Select
                   onChange={setCategory}
-                  options={categoryOptions}
+                  options={[
+                    { value: "", label: t("executionFactory.allCategory") },
+                    ...localizeCategoryOptions(categoryOptions, t),
+                  ]}
                   style={{ minWidth: 160 }}
                   value={category}
                 />

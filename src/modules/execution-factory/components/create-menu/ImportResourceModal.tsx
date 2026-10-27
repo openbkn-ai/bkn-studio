@@ -24,6 +24,7 @@ import { CapabilityBusinessIntro } from "@/modules/execution-factory/components/
 import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
 
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { localizeCategoryOptions } from "@/modules/execution-factory/utils/detail-display";
 
 import { importComponentFile } from "@/modules/execution-factory/services/impex.service";
 
@@ -390,7 +391,7 @@ export function ImportResourceModal({
 
                   rules={[{ required: true, message: t("common.required") }]}
                 >
-                  <Select options={categories} />
+                  <Select options={localizeCategoryOptions(categories, t)} />
                 </Form.Item>
 
                 {activeTab === "toolbox" ? (

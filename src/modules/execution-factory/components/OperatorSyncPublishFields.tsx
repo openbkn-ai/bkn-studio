@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { OperatorExecuteControlFields } from "@/modules/execution-factory/components/OperatorExecuteControlFields";
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { localizeCategoryOptions } from "@/modules/execution-factory/utils/detail-display";
 
 import styles from "./create-menu/create-menu.module.css";
 
@@ -72,7 +73,7 @@ export function OperatorSyncPublishFields({
             initialValue="other_category"
             rules={[{ required: true, message: t("common.required") }]}
           >
-            <Select options={categories} />
+            <Select options={localizeCategoryOptions(categories, t)} />
           </Form.Item>
           <OperatorExecuteControlFields namePrefix={[namePrefix, "executeControl"]} />
           <Form.Item name={[namePrefix, "directPublish"]} valuePropName="checked">
