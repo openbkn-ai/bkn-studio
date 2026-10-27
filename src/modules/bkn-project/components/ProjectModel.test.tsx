@@ -547,4 +547,21 @@ describe("ProjectModel", () => {
     expect(screen.getByRole("button", { name: "common.save" })).toBeInTheDocument();
     expect(onProjectChange).not.toHaveBeenCalled();
   });
+
+  it("tells the owner the catalog list failed to load and lets them retry", async () => {
+    getDraftMock.mockResolvedValue(null);
+    listCatalogsMock
+      .mockRejectedValueOnce(new Error("gateway timeout"))
+      .mockResolvedValue({ items: [{ id: "cat-001", name: "ERP" }], total: 1 });
+    renderModel({ catalogIds: [] });
+
+    // Not a silently missing button: the owner learns why and can try again.
+    expect(await screen.findByText("bknProject.model.catalogs.loadFailed")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+
+    expect(
+      await screen.findByRole("button", { name: "bknProject.model.catalogs.choose" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("bknProject.model.catalogs.loadFailed")).not.toBeInTheDocument();
+  });
 });

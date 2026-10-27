@@ -111,20 +111,28 @@ export function ProjectModel({
     void loadDraft();
   }, [loadDraft]);
 
+  // Without the list, catalogs show by id, nothing is reported missing and they cannot be
+  // changed; the owner is told and may try again.
+  const [catalogsFailed, setCatalogsFailed] = useState(false);
+  const [catalogReads, setCatalogReads] = useState(0);
   useEffect(() => {
     let active = true;
     listCatalogs(catalogListAllQuery({ pageSize: 500 }), { skipErrorToast: true })
       .then((result) => {
         if (active) {
           setCatalogs(new Map(result.items.map(({ id, name }) => [id, name])));
+          setCatalogsFailed(false);
         }
       })
-      // Without the list, catalogs show by id and nothing is reported missing.
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) {
+          setCatalogsFailed(true);
+        }
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [catalogReads]);
 
   // A draft that is drafting is read again until it is done; leaving the page stops it.
   const drafting = draft?.status === "drafting";
@@ -291,6 +299,18 @@ export function ProjectModel({
 
   const notices = (
     <>
+      {ownerIsCaller && catalogsFailed ? (
+        <Alert
+          action={
+            <AppButton onClick={() => setCatalogReads((count) => count + 1)} size="small">
+              {t("common.retry")}
+            </AppButton>
+          }
+          message={t("bknProject.model.catalogs.loadFailed")}
+          showIcon
+          type="warning"
+        />
+      ) : null}
       {loadError ? (
         <Alert
           description={loadError}

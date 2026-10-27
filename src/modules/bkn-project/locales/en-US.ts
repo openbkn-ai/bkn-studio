@@ -141,7 +141,9 @@ export const bknProjectEnUS = {
         title: "The project's data catalogs",
         label: "Data catalogs",
         hint: "AI drafts the ontology from the tables in these catalogs. Changing them keeps the current draft; the new catalogs are read when you draft again.",
-        removed: "Data catalogs {{names}} no longer exist and will be removed from the project.",
+        removed:
+          "Data catalogs {{names}} no longer exist or you cannot see them; saving removes them from the project.",
+        loadFailed: "The data catalogs could not be listed, so they cannot be changed for now.",
         saved: "Data catalogs changed. Drafting reads the new catalogs.",
       },
       actions: {
