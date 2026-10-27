@@ -284,7 +284,7 @@ export const objecttypePart = {
   objectTypeLogicYes: "是",
   objectTypeManualCreateProperty: "手动新建",
   objectTypeName: "对象类名称",
-  objectTypeNameMaxLength: "长度不能超过 40 个字符。",
+  objectTypeNameMaxLength: "长度不能超过 128 个字符。",
   objectTypeNameRequired: "请输入对象类名称。",
   objectTypeNoConceptGroups: "当前没有关联概念分组。",
   objectTypeNotIndexed: "资源未建索引",

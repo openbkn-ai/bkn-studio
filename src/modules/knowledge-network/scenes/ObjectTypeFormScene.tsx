@@ -40,6 +40,12 @@ import {
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
+  RESOURCE_IDENTIFIER_PATTERN,
+  RESOURCE_ID_MAX_LENGTH,
+  RESOURCE_NAME_COUNT,
+  RESOURCE_NAME_MAX_LENGTH,
+} from "@/modules/knowledge-network/lib/resource-constraints";
+import {
   createKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkConceptGroups,
@@ -56,7 +62,6 @@ import type {
 
 import styles from "./ObjectTypeFormScene.module.css";
 
-const IDENTIFIER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 const LOGIC_PROPERTY_ERROR_PATTERNS = [
   /\u903b\u8f91\u5c5e\u6027\[([^\]]+)\]/i,
   /logic property\[([^\]]+)\]/i,
@@ -479,23 +484,29 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
               name="name"
               rules={[
                 { message: t("knowledgeNetwork.objectTypeNameRequired"), required: true },
-                { max: 40, message: t("knowledgeNetwork.objectTypeNameMaxLength") },
+                {
+                  max: RESOURCE_NAME_MAX_LENGTH,
+                  message: t("knowledgeNetwork.objectTypeNameMaxLength"),
+                },
               ]}
             >
-              <Input maxLength={40} showCount />
+              <Input count={RESOURCE_NAME_COUNT} showCount />
             </Form.Item>
             <Form.Item
               label="ID"
               name="id"
               rules={[
-                { max: 40, message: t("knowledgeNetwork.objectTypeNameMaxLength") },
+                {
+                  max: RESOURCE_ID_MAX_LENGTH,
+                  message: t("knowledgeNetwork.objectTypeNameMaxLength"),
+                },
                 {
                   message: t("knowledgeNetwork.objectTypeIdPattern"),
-                  pattern: IDENTIFIER_PATTERN,
+                  pattern: RESOURCE_IDENTIFIER_PATTERN,
                 },
               ]}
             >
-              <Input disabled={mode === "edit"} />
+              <Input disabled={mode === "edit"} maxLength={RESOURCE_ID_MAX_LENGTH} showCount />
             </Form.Item>
             <Form.Item label={t("knowledgeNetwork.iconField")} name="icon">
               <ResourceIconSelect inModal={false} />

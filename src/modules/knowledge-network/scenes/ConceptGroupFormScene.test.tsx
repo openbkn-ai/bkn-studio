@@ -118,6 +118,11 @@ describe("ConceptGroupFormScene resource authorization regression", () => {
 
       render(<ConceptGroupFormScene mode="edit" />);
 
+      const nameInput = await screen.findByDisplayValue(name);
+      const maximumUnicodeName = "😀".repeat(128);
+      fireEvent.change(nameInput, { target: { value: `${maximumUnicodeName}😀` } });
+      expect(nameInput).toHaveValue(maximumUnicodeName);
+      fireEvent.change(nameInput, { target: { value: name } });
       const descriptionInput = await screen.findByDisplayValue("Original description");
       fireEvent.change(descriptionInput, { target: { value: "Updated description" } });
       fireEvent.click(screen.getByRole("button", { name: "common.save" }));
@@ -136,4 +141,35 @@ describe("ConceptGroupFormScene resource authorization regression", () => {
       expect(getCatalogResources).not.toHaveBeenCalled();
     },
   );
+
+  it("accepts a name containing exactly 128 Unicode code points", async () => {
+    getKnowledgeNetworkConceptGroup.mockResolvedValue({
+      actionTypes: [],
+      color: "#1677ff",
+      description: "Original description",
+      id: "group-1",
+      name: "Original group",
+      objectTypes: [],
+      relationTypes: [],
+      tags: [],
+    });
+    getCatalogResources.mockRejectedValue(new Error("403 resource detail denied"));
+    updateKnowledgeNetworkConceptGroup.mockResolvedValue(null);
+
+    render(<ConceptGroupFormScene mode="edit" />);
+
+    const maximumUnicodeName = "😀".repeat(128);
+    const nameInput = await screen.findByDisplayValue("Original group");
+    fireEvent.change(nameInput, { target: { value: maximumUnicodeName } });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => {
+      expect(updateKnowledgeNetworkConceptGroup).toHaveBeenCalledWith("network-1", "group-1", {
+        color: "#1677ff",
+        description: "Original description",
+        name: maximumUnicodeName,
+        tags: [],
+      });
+    });
+  });
 });

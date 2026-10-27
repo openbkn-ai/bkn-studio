@@ -312,7 +312,7 @@ export const objecttypePart = {
   objectTypeLogicYes: "Yes",
   objectTypeManualCreateProperty: "Create manually",
   objectTypeName: "Object type name",
-  objectTypeNameMaxLength: "Must be 40 characters or fewer.",
+  objectTypeNameMaxLength: "Must be 128 characters or fewer.",
   objectTypeNameRequired: "Please enter an object type name.",
   objectTypeNoConceptGroups: "No related concept groups yet.",
   objectTypeNotIndexed: "Resource not indexed",
