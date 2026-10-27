@@ -24,6 +24,15 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* A sample's experience card takes a third column beside the results. */
+.withExperience {
+  grid-template-columns: 240px minmax(0, 1fr) auto;
+}
+
+.pageRail.withExperience {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 /* ---------------- schema panel ---------------- */
 
 .schemaPanel {

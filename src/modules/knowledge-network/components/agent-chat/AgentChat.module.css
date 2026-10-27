@@ -67,6 +67,25 @@
 .soloPanel {
   width: 100%;
 }
+/* With a sample's experience set, its card stays beside the conversation while the page scrolls. */
+.withExperience {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding-right: 16px;
+}
+.withExperience .soloPanel {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.experienceAside {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex: none;
+  max-height: calc(100vh - 160px);
+  padding-top: 16px;
+}
 
 /* Single conversation panel root (ChatPane) */
 .paneRoot {

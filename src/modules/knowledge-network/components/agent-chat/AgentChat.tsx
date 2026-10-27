@@ -35,6 +35,8 @@ import {
   memoryConversationStore,
   withManagedTurn,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import { ExperienceCasePanel } from "@/modules/knowledge-network/experience/ExperienceCasePanel";
+import { useSampleExperience } from "@/modules/knowledge-network/experience/useSampleExperience";
 import { recommendationFingerprint } from "@/modules/knowledge-network/utils/agent-chat-cache";
 
 import { AgentConfigDrawer } from "./AgentConfigDrawer";
@@ -197,6 +199,7 @@ export function AgentChat({
   );
 
   const paneRef = useRef<ChatPaneHandle>(null);
+  const experience = useSampleExperience(knId);
   const pageScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -346,7 +349,9 @@ export function AgentChat({
         </div>
       </header>
 
-      <div className={styles.soloStage}>
+      <div
+        className={experience ? `${styles.soloStage} ${styles.withExperience}` : styles.soloStage}
+      >
         <div className={styles.soloPanel}>
           <ChatPane
             ref={paneRef}
@@ -399,6 +404,16 @@ export function AgentChat({
             </div>
           </div>
         </div>
+        {experience ? (
+          <div className={styles.experienceAside}>
+            <ExperienceCasePanel
+              experience={experience}
+              onTry={sendQuestion}
+              running={busy}
+              surface="agent"
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );
