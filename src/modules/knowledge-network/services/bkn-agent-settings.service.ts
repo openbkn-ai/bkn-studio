@@ -142,6 +142,8 @@ export type SharedUpdate = {
 
 export type SharedPrompt = {
   prompt: { prompt_id: string; current_version: number; content: string };
+  /** Maximum historical Prompt version + 1, including after a rollback. */
+  next_version?: number;
 };
 
 /** What a version changed against the one before it. */
@@ -282,11 +284,11 @@ export function getSharedPrompt(params: AgentParams): Promise<SharedPrompt> {
 }
 
 export function publishSharedPrompt(
-  params: AgentParams & { content: string },
+  params: AgentParams & { content: string; version: number },
 ): Promise<SharedPrompt> {
-  return request(params, `/admin/agents/${agentPath(params.agentId)}/prompt`, {
-    method: "PUT",
-    body: JSON.stringify({ content: params.content }),
+  return request(params, `/admin/agents/${agentPath(params.agentId)}/prompt/versions`, {
+    method: "POST",
+    body: JSON.stringify({ content: params.content, version: params.version }),
   });
 }
 

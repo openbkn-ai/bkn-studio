@@ -35,7 +35,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -103,6 +103,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   const [versions, setVersions] = useState<AgentVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const publishing = useRef(false);
   const [error, setError] = useState<string | null>(null);
   // A notice in place of the page, with the way back: missing, or unreadable on a
   // backend that still refuses non-editors instead of answering read-only.
@@ -215,6 +216,44 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
       </Space>
     );
   if (!shared || !prompt) return null;
+
+  const publishPrompt = async () => {
+    if (publishing.current) return;
+    const version = prompt.next_version;
+    if (version == null || !Number.isSafeInteger(version) || version < 1) {
+      message.error(t(`${P}.promptVersionUnavailable`));
+      return;
+    }
+    publishing.current = true;
+    setSaving(true);
+    try {
+      // Capture one version per confirmation; transport retries reuse this body.
+      const next = await publishSharedPrompt({ ...params, content, version });
+      applyPrompt(next);
+      message.success(t(`${L}.promptPublished`));
+      await refreshVersions().catch(() => undefined);
+    } catch (e) {
+      const conflict = e instanceof BknAgentExecutionError && e.status === 409;
+      const uncertain =
+        e instanceof TypeError || (e instanceof BknAgentExecutionError && e.status >= 500);
+      if (conflict || uncertain) {
+        // Refresh the server baseline, but keep the editor draft for comparison.
+        try {
+          const next = await getSharedPrompt(params);
+          setPrompt(next);
+          await refreshVersions();
+        } catch {
+          // The result remains unknown; never allocate another version here.
+        }
+        message.warning(t(`${P}.${conflict ? "promptVersionConflict" : "promptPublishUncertain"}`));
+      } else {
+        message.error(executionRequestError(e).message);
+      }
+    } finally {
+      publishing.current = false;
+      setSaving(false);
+    }
+  };
 
   const currentVersion = shared.version ?? null;
   const versionOf = (v: number) => versions.find((item) => item.version === v);
@@ -505,15 +544,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                     confirmThen(
                       t(`${P}.confirmPublishPromptTitle`),
                       t(`${P}.confirmPromptBody`),
-                      () =>
-                        run(
-                          () => publishSharedPrompt({ ...params, content }),
-                          `${L}.promptPublished`,
-                          (next) => {
-                            applyPrompt(next);
-                            void refreshVersions();
-                          },
-                        ),
+                      publishPrompt,
                     )
                   }
                 >

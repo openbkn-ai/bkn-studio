@@ -1151,6 +1151,11 @@ export const systemAdminZhCN = {
       confirmChange: "确认修改",
       confirmRuntimeTitle: "修改「{{name}}」的运行配置？",
       confirmPublishPromptTitle: "将共享提示词发布为新版本？",
+      promptVersionUnavailable: "无法获取下一个提示词版本，请刷新页面或升级 Agent 服务后再发布。",
+      promptVersionConflict:
+        "目标提示词版本已存在或版本历史已变化。已保留编辑草稿，请核对版本记录后再决定是否重新发布。",
+      promptPublishUncertain:
+        "暂时无法确认发布结果。已保留编辑草稿，请核对版本记录后再决定是否重新发布。",
       confirmPromptBody: "发布后成为新版本，立即对所有使用者生效，可以在版本列表里切回之前的版本。",
       dangerZone: "危险操作",
       restore: "恢复初始版本",

@@ -13,15 +13,74 @@ import {
   narrow,
   activateVersion,
   selectableTools,
+  publishSharedPrompt,
 } from "@/modules/knowledge-network/services/bkn-agent-settings.service";
+import { BknAgentExecutionError } from "./bkn-agent-execution.service";
 
 const tokenProvider = { getToken: () => "t", refresh: () => Promise.resolve("t") };
 
+function requestBody(init: RequestInit | undefined): unknown {
+  if (typeof init?.body !== "string") throw new Error("Expected a JSON string request body");
+  return JSON.parse(init.body) as unknown;
+}
+
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 describe("bkn-agent settings", () => {
+  it("reuses the requested Prompt version after a committed response is lost", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response("Gateway timeout", { status: 504 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: "BknAgent.Prompt.VersionConflict",
+            description: "Version exists",
+          }),
+          { status: 409 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const result = publishSharedPrompt({
+      base: "https://h",
+      tokenProvider,
+      agentId: "studio_smart_qa",
+      content: "Edited",
+      version: 12,
+    }).catch((error: unknown) => error);
+    await vi.runAllTimersAsync();
+    expect(await result).toBeInstanceOf(BknAgentExecutionError);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(url).toBe("https://h/api/bkn-agent/v1/admin/agents/studio_smart_qa/prompt/versions");
+      expect(init?.method).toBe("POST");
+      expect(requestBody(init)).toEqual({ content: "Edited", version: 12 });
+    }
+  });
+
+  it("keeps the target version unchanged through repeated network failures", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("Failed to fetch"));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = publishSharedPrompt({
+      base: "https://h",
+      tokenProvider,
+      agentId: "studio_smart_qa",
+      content: "Edited",
+      version: 12,
+    }).catch((error: unknown) => error);
+    await vi.runAllTimersAsync();
+    expect(await result).toBeInstanceOf(TypeError);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls.map(([, init]) => requestBody(init))).toEqual(
+      Array(3).fill({ content: "Edited", version: 12 }),
+    );
+  });
+
   it("narrows like the server: tools intersect and limits take the minimum", () => {
     const upper = {
       limits: { max_turns: 40, timeout_s: 300, max_tool_calls: null },
