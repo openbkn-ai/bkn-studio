@@ -11,6 +11,7 @@ const criticalRoutes = [
   { name: "home", path: "/studio/" },
   { name: "knowledge network", path: "/studio/knowledge-network" },
   { name: "data catalog", path: "/studio/data-catalog" },
+  { name: "bkn project", path: "/studio/bkn-project" },
   { name: "execution factory", path: "/studio/execution-factory/units" },
 ];
 

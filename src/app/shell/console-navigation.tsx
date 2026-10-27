@@ -11,6 +11,7 @@ import { capabilityState } from "@/framework/entitlement/capability-state";
 import type { EntitlementView } from "@/framework/entitlement/types";
 import { isExtensionInstalled } from "@/framework/extension/registry";
 import { hasPermissions } from "@/framework/permission/has-permissions";
+import { bknProjectNavigation } from "@/modules/bkn-project/navigation";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
@@ -23,6 +24,7 @@ import { modelResourcesNavigation } from "@/modules/model-resources/navigation";
 
 const navigationContributions: ConsoleNavContribution[] = [
   homeNavigation,
+  bknProjectNavigation,
   knowledgeNetworkNavigation,
   dataConnectNavigation,
   dataCatalogNavigation,

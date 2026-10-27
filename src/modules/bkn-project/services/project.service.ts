@@ -1,0 +1,202 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import { http } from "@/framework/request/http";
+import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
+import type {
+  CreateProjectInput,
+  Project,
+  ProjectListQuery,
+  ProjectListResult,
+  ProjectNetwork,
+} from "@/modules/bkn-project/types/project";
+
+const API_PREFIX = "/bkn-project/v1/projects";
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+
+type BackendProject = {
+  archived: boolean;
+  baseline_network_id: string;
+  branch: string;
+  catalog_ids: string[] | null;
+  create_time: number;
+  id: string;
+  kn_id: string;
+  name: string;
+  other_projects: number;
+  owner: { id: string; type: string };
+  update_time: number;
+};
+
+type BackendProjectList = {
+  entries: BackendProject[] | null;
+  next_cursor: string | null;
+  total: number;
+};
+
+export function mapProject(item: BackendProject): Project {
+  return {
+    archived: item.archived,
+    baselineNetworkId: item.baseline_network_id,
+    branch: item.branch,
+    catalogIds: item.catalog_ids ?? [],
+    createTime: item.create_time,
+    id: item.id,
+    knId: item.kn_id,
+    name: item.name,
+    otherProjects: item.other_projects,
+    owner: item.owner,
+    updateTime: item.update_time,
+  };
+}
+
+/* ----------------------------- Mock (local development) ----------------------------- */
+// The development user owns its own mock projects, so the owner-only actions show up locally.
+const mockOwner = { id: defaultDevRuntimeUser.id ?? "mock-user", type: "user" };
+
+const wait = async <T>(value: T, delay = 180) =>
+  new Promise<T>((resolve) => {
+    window.setTimeout(() => resolve(value), delay);
+  });
+
+const mockNetworks: ProjectNetwork[] = [
+  { id: "supply_chain", name: "Supply Chain" },
+  { id: "finance_ar", name: "Accounts Receivable" },
+];
+
+const mockProjects: BackendProject[] = [
+  {
+    archived: false,
+    baseline_network_id: "supply_chain_v1_0_0",
+    branch: "project/p-001",
+    catalog_ids: ["erp_sales"],
+    create_time: Date.parse("2026-10-20T09:00:00Z"),
+    id: "p-001",
+    kn_id: "supply_chain",
+    name: "Delivery Delay Warning",
+    other_projects: 1,
+    owner: mockOwner,
+    update_time: Date.parse("2026-10-26T10:00:00Z"),
+  },
+  {
+    archived: false,
+    baseline_network_id: "supply_chain_v1_0_0",
+    branch: "project/p-002",
+    catalog_ids: ["fi_ar_receipts"],
+    create_time: Date.parse("2026-10-22T09:00:00Z"),
+    id: "p-002",
+    kn_id: "supply_chain",
+    name: "Receipts Matching",
+    other_projects: 1,
+    owner: { id: "another-user", type: "user" },
+    update_time: Date.parse("2026-10-25T10:00:00Z"),
+  },
+];
+
+function mockOtherProjects(project: BackendProject): number {
+  return mockProjects.filter(
+    (other) => other.id !== project.id && other.kn_id === project.kn_id && !other.archived,
+  ).length;
+}
+
+function mockList(query: ProjectListQuery): ProjectListResult {
+  const name = query.name.trim().toLowerCase();
+  const items = mockProjects
+    .filter((project) => query.archived === "all" || String(project.archived) === query.archived)
+    .filter((project) => !name || project.name.toLowerCase().includes(name))
+    .sort((left, right) => right.create_time - left.create_time)
+    .map((project) => mapProject({ ...project, other_projects: mockOtherProjects(project) }));
+  return { items: items.slice(0, query.limit), nextCursor: null, total: items.length };
+}
+
+/* ------------------------------- API ------------------------------- */
+
+/** Lists the projects of the networks the caller can see, newest first, a cursor page at a time. */
+export async function listProjects(query: ProjectListQuery): Promise<ProjectListResult> {
+  if (useMock) {
+    return wait(mockList(query));
+  }
+  const response = await http.get<BackendProjectList>(API_PREFIX, {
+    skipErrorToast: true,
+    params: {
+      archived: query.archived,
+      cursor: query.cursor || undefined,
+      limit: query.limit,
+      name: query.name.trim() || undefined,
+    },
+  });
+  return {
+    items: (response.data.entries ?? []).map(mapProject),
+    nextCursor: response.data.next_cursor,
+    total: response.data.total,
+  };
+}
+
+export async function createProject(input: CreateProjectInput): Promise<Project> {
+  if (useMock) {
+    const now = Date.now();
+    const knId = input.knId ?? `new_${now}`;
+    const created: BackendProject = {
+      archived: false,
+      baseline_network_id: knId,
+      branch: `project/mock-${now}`,
+      catalog_ids: input.catalogIds,
+      create_time: now,
+      id: `mock-${now}`,
+      kn_id: knId,
+      name: input.name.trim(),
+      other_projects: 0,
+      owner: mockOwner,
+      update_time: now,
+    };
+    if (input.newKnName) {
+      mockNetworks.unshift({ id: knId, name: input.newKnName.trim() });
+    }
+    mockProjects.unshift(created);
+    return wait(mapProject({ ...created, other_projects: mockOtherProjects(created) }));
+  }
+  const response = await http.post<BackendProject>(API_PREFIX, {
+    catalog_ids: input.catalogIds,
+    kn_id: input.knId || undefined,
+    name: input.name.trim(),
+    new_kn: input.newKnName ? { name: input.newKnName.trim() } : undefined,
+  });
+  return mapProject(response.data);
+}
+
+/** Archives or unarchives a project; only its owner may. */
+export async function setProjectArchived(id: string, archived: boolean): Promise<Project> {
+  if (useMock) {
+    const project = mockProjects.find((item) => item.id === id);
+    if (!project) {
+      throw new Error(`project ${id} not found`);
+    }
+    project.archived = archived;
+    project.update_time = Date.now();
+    return wait(mapProject({ ...project, other_projects: mockOtherProjects(project) }));
+  }
+  const action = archived ? "archive" : "unarchive";
+  const response = await http.post<BackendProject>(
+    `${API_PREFIX}/${encodeURIComponent(id)}:${action}`,
+  );
+  return mapProject(response.data);
+}
+
+/**
+ * Lists every knowledge network the caller can see, in one request: bkn-backend filters by
+ * permission, the same way bkn-project decides which projects are visible.
+ */
+export async function listProjectNetworks(): Promise<ProjectNetwork[]> {
+  if (useMock) {
+    return wait([...mockNetworks]);
+  }
+  const response = await http.get<{ entries: ProjectNetwork[] | null }>(
+    "/bkn-backend/v1/knowledge-networks",
+    { skipErrorToast: true, params: { limit: -1, sort: "update_time", direction: "desc" } },
+  );
+  return (response.data.entries ?? []).map(({ id, name }) => ({ id, name }));
+}
