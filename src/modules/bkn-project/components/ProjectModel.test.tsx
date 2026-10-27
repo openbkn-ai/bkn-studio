@@ -211,7 +211,8 @@ describe("ProjectModel", () => {
     expect(
       screen.getByText(/bknProject.model.evidence.countReason.query_failed/),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Public.Forbidden/)).not.toBeVisible();
+    // A data source's raw reply means nothing to people here; the page only says counting did not finish.
+    expect(screen.queryByText(/Public.Forbidden/)).not.toBeInTheDocument();
     // material_bom waits for its identity, and its adopted relation waits to be unadopted.
     expect(screen.getByText(/bknProject.model.pending/)).toHaveTextContent('{"count":2}');
     expect(screen.getByText(/bknProject.model.notice.unadoptedEnds/)).toBeInTheDocument();

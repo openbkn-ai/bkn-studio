@@ -19,7 +19,6 @@ import {
   keyWarnings,
   missingCatalogs,
   originPhrase,
-  reasonDetail,
   relationsWithUnadoptedEnds,
   verificationPhrase,
 } from "./evidence";
@@ -51,12 +50,10 @@ describe("draft evidence", () => {
     });
   });
 
-  it("says why nothing was counted by the reason's code; the reply stays in the details", () => {
+  it("says why nothing was counted by the reason's code only", () => {
     const failed = "query_failed: vega-backend returned HTTP 403: Public.Forbidden";
     expect(countReasonPhrase(failed)).toEqual({ key: `${P}.countReason.query_failed` });
-    expect(reasonDetail(failed)).toBe("vega-backend returned HTTP 403: Public.Forbidden");
     expect(countReasonPhrase("composite_key")).toEqual({ key: `${P}.countReason.composite_key` });
-    expect(reasonDetail("composite_key")).toBeUndefined();
     expect(countReasonPhrase(undefined)).toEqual({ key: `${P}.countReason.none` });
     // In the count slot an unknown reason still reads as "not counted", not as another basis.
     expect(countReasonPhrase("sampled_only")).toEqual({

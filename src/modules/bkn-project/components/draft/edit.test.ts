@@ -12,7 +12,7 @@ import { bknProjectEnUS } from "@/modules/bkn-project/locales/en-US";
 import { bknProjectZhCN } from "@/modules/bkn-project/locales/zh-CN";
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
 
-import { canAdopt, draftErrorCode, nameEdit, unadoptedWith } from "./edit";
+import { adoptBlocker, canAdopt, draftErrorCode, nameEdit, unadoptedWith } from "./edit";
 
 const draft = () => mapDraft(mockDraft("p1"));
 
@@ -48,6 +48,17 @@ describe("draft edits", () => {
     expect(canAdopt(current, "relation_types", bomToOrders)).toBe(false);
   });
 
+  it("says why an item cannot be adopted, so the page can tell people what to do first", () => {
+    const current = draft();
+    const [customers, , materialBom] = current.items.objectTypes;
+    const bomToOrders = current.items.relationTypes[1];
+
+    expect(adoptBlocker(current, "object_types", materialBom)).toBe("needsIdentity");
+    expect(adoptBlocker(current, "object_types", customers)).toBeNull();
+    bomToOrders.adopted = false;
+    expect(adoptBlocker(current, "relation_types", bomToOrders)).toBe("endsNotAdopted");
+  });
+
   it("sends only what changed, trimmed, and nothing for an empty edit", () => {
     const item = { description: "old", name: "Customer" };
     expect(nameEdit(item, { description: "old", name: " Client " })).toEqual({ name: "Client" });
@@ -75,5 +86,8 @@ describe("draft edits", () => {
     expect(model.edit.stale).toBeTruthy();
     expect(model.actions.adoptItem).toContain("{{name}}");
     expect(model.regenerateConfirm.content_other).toContain("{{count}}");
+    for (const blocker of ["archived", "endsNotAdopted", "needsIdentity"] as const) {
+      expect(model.adoptBlocked[blocker]).toBeTruthy();
+    }
   });
 });

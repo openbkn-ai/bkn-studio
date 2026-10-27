@@ -41,8 +41,8 @@ export const verificationPhrase = (verification: string) =>
   known("verification", VERIFICATIONS, verification);
 
 /**
- * Why nothing was counted. A failed query carries vega-backend's reply after the code
- * ("query_failed: …"); the reply stays in the details, the page says the count failed.
+ * Why nothing was counted. A failed query carries the data source's reply after the code
+ * ("query_failed: …"); the page only says counting did not finish, never the reply.
  */
 export function countReasonPhrase(reason: string | undefined): Phrase {
   if (!reason) {
@@ -53,15 +53,6 @@ export function countReasonPhrase(reason: string | undefined): Phrase {
   return COUNT_REASONS.includes(code)
     ? { key: `${PREFIX}.countReason.${code}` }
     : { key: `${PREFIX}.countReason.other`, params: { value: code } };
-}
-
-/** The full reason, when it says more than its code: shown only in the details. */
-export function reasonDetail(reason: string | undefined): string | undefined {
-  if (!reason) {
-    return undefined;
-  }
-  const at = reason.indexOf(":");
-  return at < 0 ? undefined : reason.slice(at + 1).trim() || undefined;
 }
 
 export const formatRate = (rate: number) => `${(rate * 100).toFixed(1).replace(/\.0$/, "")}%`;

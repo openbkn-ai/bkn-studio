@@ -17,7 +17,7 @@ import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
 import {
-  canAdopt,
+  adoptBlocker,
   draftErrorCode,
   type EditableItem,
   unadoptedWith,
@@ -309,9 +309,10 @@ export function ProjectModel({ project }: { project: Project }) {
 
   const { items } = draft;
   const actions: DraftItemActions = {
-    canAdopt: (kind, item) => canAdopt(draft, kind, item),
-    // bkn-project refuses edits on an archived project; one edit is sent at a time.
-    disabled: project.archived || saving,
+    adoptBlocker: (kind, item) => adoptBlocker(draft, kind, item),
+    // bkn-project refuses edits on an archived project.
+    archived: project.archived,
+    busy: saving,
     onAdopt: (kind, item, adopted) => void sendEdit(kind, item.id, { adopted }),
     onEdit: (kind, item) => setEditing({ item, kind }),
   };

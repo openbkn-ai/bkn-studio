@@ -29,27 +29,37 @@ export function draftErrorCode(error: unknown): string | undefined {
   return code?.startsWith(DRAFT_ERROR_PREFIX) ? code.slice(DRAFT_ERROR_PREFIX.length) : undefined;
 }
 
+/** Why an item cannot be adopted now, as people can act on it. */
+export type AdoptBlocker = "endsNotAdopted" | "needsIdentity";
+
 /**
- * Whether the adoption switch may be turned. Unadopting is always accepted; adopting is refused
- * for an object type waiting for its identity, and for a relation type whose ends are not both
- * adopted. The page offers only what bkn-project would accept.
+ * Why the adoption switch may not be turned on, or null when it may. Unadopting is always
+ * accepted; adopting is refused for an object type waiting for its identity, and for a relation
+ * type whose ends are not both adopted. The page offers only what bkn-project would accept.
  */
-export function canAdopt(draft: Draft, kind: DraftItemKind, item: EditableItem): boolean {
+export function adoptBlocker(
+  draft: Draft,
+  kind: DraftItemKind,
+  item: EditableItem,
+): AdoptBlocker | null {
   if (item.adopted) {
-    return true;
+    return null;
   }
   if (kind === "object_types") {
-    return !(item as DraftObjectType).needsIdentity;
+    return (item as DraftObjectType).needsIdentity ? "needsIdentity" : null;
   }
   if (kind === "relation_types") {
     const relation = item as DraftRelationType;
     const adopted = new Set(
       draft.items.objectTypes.filter((objectType) => objectType.adopted).map(({ id }) => id),
     );
-    return adopted.has(relation.source) && adopted.has(relation.target);
+    return adopted.has(relation.source) && adopted.has(relation.target) ? null : "endsNotAdopted";
   }
-  return true;
+  return null;
 }
+
+export const canAdopt = (draft: Draft, kind: DraftItemKind, item: EditableItem) =>
+  adoptBlocker(draft, kind, item) === null;
 
 /** Relations adopted before an edit and not after: those unadopting an object type took along. */
 export function unadoptedWith(before: Draft, after: Draft): DraftRelationType[] {
