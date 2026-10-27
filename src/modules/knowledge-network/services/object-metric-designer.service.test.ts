@@ -89,7 +89,6 @@ describe("runObjectMetricDesigner", () => {
 
     const result = await runObjectMetricDesigner({
       ...baseParams,
-      modelId: "model-1",
       diagnostic: {
         kind: "trial",
         form_revision: "rev-1",
@@ -113,8 +112,8 @@ describe("runObjectMetricDesigner", () => {
         entry_count: 2,
       },
       message: "改成金额",
-      model_id: "model-1",
     });
+    expect(JSON.parse(init?.body as string)).not.toHaveProperty("model_id");
     expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer token-1");
     expect(chunks).toEqual(["建议调整"]);
     expect(result).toEqual({ answer: "建议调整", proposal, runId: "run-1", threadId: "thread-1" });
@@ -135,12 +134,10 @@ describe("runObjectMetricDesigner", () => {
   });
 
   it.each([{ detail: "当前用户无权使用该模型" }, { detail: { detail: "当前用户无权使用该模型" } }])(
-    "shows the server's authorization reason when a selected model is denied",
+    "shows the server's authorization reason when execution is denied",
     async (body) => {
       fetchMock.mockResolvedValue(new Response(JSON.stringify(body), { status: 403 }));
-      await expect(runObjectMetricDesigner({ ...baseParams, modelId: "denied" })).rejects.toThrow(
-        "当前用户无权使用该模型",
-      );
+      await expect(runObjectMetricDesigner(baseParams)).rejects.toThrow("当前用户无权使用该模型");
     },
   );
 
@@ -160,5 +157,24 @@ describe("runObjectMetricDesigner", () => {
       );
       await expect(runObjectMetricDesigner(baseParams)).rejects.toThrow("无效的修改建议");
     }
+  });
+
+  it("shows the validation field, reason, and run ID for a failed proposal", async () => {
+    const error = {
+      code: "BknAgent.MetricDesign.ProposalInvalid",
+      detail: "对象指标修改建议不符合字段要求",
+      stage: "repair",
+      field: "composite.expression",
+      reason: "proposal field does not match metric type",
+    };
+    fetchMock.mockResolvedValueOnce(
+      streamResponse([
+        sse("meta", { run_id: "run-2533", thread_id: "thread-1" }) +
+          sse("terminal", { status: "failed", error }),
+      ]),
+    );
+    await expect(runObjectMetricDesigner(baseParams)).rejects.toThrow(
+      /composite\.expression[\s\S]*proposal field does not match metric type[\s\S]*run-2533/,
+    );
   });
 });

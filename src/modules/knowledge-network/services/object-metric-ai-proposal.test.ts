@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   objectMetricAiChanges,
+  objectMetricDesignFormSnapshot,
   objectMetricAiPreviousValue,
   selectedObjectMetricAiIntent,
 } from "./object-metric-ai-proposal";
@@ -44,5 +45,44 @@ describe("object metric AI proposal", () => {
     expect(objectMetricAiPreviousValue("name", snapshot)).toBe("人工名称");
     expect(objectMetricAiPreviousValue("query.time_dimensions", snapshot)).toEqual(["created_at"]);
     expect(objectMetricAiPreviousValue("atomic.property_name", snapshot)).toBe("amount");
+  });
+
+  it("sends only the current metric type to the designer", () => {
+    const snapshot = {
+      form: {
+        name: "",
+        code: "server-owned",
+        aggregation: "count_rows",
+        baseMetric: "amount@2",
+        timeWindowMode: "unbounded",
+        groupByDimensions: ["status"],
+        grainPolicy: "same_grain",
+      },
+      businessCondition: { node_type: "group", children: [] },
+      measureExpression: { node_type: "literal", value: 1 },
+      compositeExpression: { node_type: "literal", value: 0 },
+      dependencies: [],
+      relationSteps: [],
+    };
+
+    expect(objectMetricDesignFormSnapshot(snapshot, "derived")).toEqual({
+      name: "",
+      baseMetric: "amount@2",
+      timeWindowMode: "unbounded",
+      groupByDimensions: ["status"],
+      "derived.filters": snapshot.businessCondition,
+    });
+    expect(objectMetricDesignFormSnapshot(snapshot, "atomic")).toEqual({
+      name: "",
+      aggregation: "count_rows",
+      groupByDimensions: ["status"],
+      "atomic.expression": snapshot.measureExpression,
+    });
+    expect(objectMetricDesignFormSnapshot(snapshot, "composite")).toEqual({
+      name: "",
+      groupByDimensions: ["status"],
+      "composite.dependencies": [],
+      "composite.expression": snapshot.compositeExpression,
+    });
   });
 });

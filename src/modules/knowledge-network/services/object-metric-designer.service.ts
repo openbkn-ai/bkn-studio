@@ -88,7 +88,6 @@ export type RunObjectMetricDesignParams = {
   message: string;
   diagnostic?: ObjectMetricDesignDiagnostic;
   threadId?: string;
-  modelId?: string;
   signal?: AbortSignal;
   onText?: (text: string) => void;
 };
@@ -201,6 +200,21 @@ async function responseError(response: Response): Promise<Error> {
   );
 }
 
+function designFailure(error: unknown, runId: string): string {
+  const data = asRecord(error);
+  const detail =
+    typeof data?.detail === "string" ? data.detail : objectMetricText("aiDesignerExecutionFailed");
+  const parts = [detail];
+  if (typeof data?.field === "string" && data.field !== "changes") {
+    parts.push(objectMetricText("aiDesignerFailureField", { p0: data.field }));
+  }
+  if (typeof data?.reason === "string") {
+    parts.push(objectMetricText("aiDesignerFailureReason", { p0: data.reason }));
+  }
+  if (runId) parts.push(objectMetricText("aiDesignerFailureRunId", { p0: runId }));
+  return parts.join("\n");
+}
+
 export async function runObjectMetricDesigner(
   params: RunObjectMetricDesignParams,
 ): Promise<ObjectMetricDesignResult> {
@@ -211,7 +225,6 @@ export async function runObjectMetricDesigner(
     body: JSON.stringify({
       client_request_id: newClientRequestId(),
       ...(params.threadId ? { thread_id: params.threadId } : {}),
-      ...(params.modelId ? { model_id: params.modelId } : {}),
       scope: params.scope,
       base_form_revision: params.baseFormRevision,
       form_snapshot: params.formSnapshot,
@@ -262,10 +275,7 @@ export async function runObjectMetricDesigner(
       } else if (name === "terminal") {
         terminal =
           data.status === "succeeded" || data.status === "cancelled" ? data.status : "failed";
-        failure =
-          typeof asRecord(data.error)?.detail === "string"
-            ? (asRecord(data.error)?.detail as string)
-            : objectMetricText("aiDesignerExecutionFailed");
+        failure = designFailure(data.error, runId);
       }
     }
     if (done) break;
@@ -283,7 +293,7 @@ export async function runObjectMetricDesigner(
     if (result?.proposal) {
       proposal = parseProposal(result.proposal, params.baseFormRevision, params.scope.metric_type);
     }
-    failure = record.error?.detail ?? failure;
+    failure = designFailure(record.error, runId);
   }
   if (terminal !== "succeeded")
     throw new Error(failure || objectMetricText("aiDesignerIncompleteTurn"));
