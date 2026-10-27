@@ -8,9 +8,7 @@
   "scripts": {
     "check:version": "node scripts/check-version.mjs",
     "dev": "vite",
-    "build": "tsc -b && vite build && pnpm run build:mcp-apps",
-    "build:mcp-apps": "pnpm run build:metric-analysis-mcp-app",
-    "build:metric-analysis-mcp-app": "vite build --config vite.config.metric-analysis-mcp-app.ts",
+    "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:types": "eslint . --config eslint.config.typechecked.js",
@@ -35,7 +33,6 @@
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@antv/g6": "5.1.1",
     "@modelcontextprotocol/client": "^2.4.0",
-    "@modelcontextprotocol/ext-apps": "2.0.3",
     "@monaco-editor/react": "^4.7.0",
     "ai": "^7.0.4",
     "antd": "^5.29.2",
@@ -76,7 +73,6 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.1",
     "vite": "^7.1.10",
-    "vite-plugin-singlefile": "2.3.4",
     "vitest": "^4.1.11"
   }
 }

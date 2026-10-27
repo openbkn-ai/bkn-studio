@@ -33,9 +33,6 @@ importers:
       '@modelcontextprotocol/client':
         specifier: ^2.4.0
         version: 2.4.0
-      '@modelcontextprotocol/ext-apps':
-        specifier: 2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.4.0)(@modelcontextprotocol/core@2.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.6.6)
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.52.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -151,9 +148,6 @@ importers:
       vite:
         specifier: ^7.1.10
         version: 7.3.5(@types/node@24.12.4)(yaml@2.9.0)
-      vite-plugin-singlefile:
-        specifier: 2.3.4
-        version: 2.3.4(rollup@4.61.0)(vite@7.3.5(@types/node@24.12.4)(yaml@2.9.0))
       vitest:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@24.12.4)(jsdom@27.4.0)(vite@7.3.5(@types/node@24.12.4)(yaml@2.9.0))
@@ -682,24 +676,6 @@ packages:
   '@modelcontextprotocol/core@2.4.0':
     resolution: {integrity: sha512-z8QBKqdfXLPzkLQuG4xp8hrVEMm1PZ1IgxMN2sMbJiFiAKOWXnAzogXn2W4aqIBlP1ea6U5yiqVquvUNM1Cj6Q==}
     engines: {node: '>=20'}
-
-  '@modelcontextprotocol/ext-apps@2.0.3':
-    resolution: {integrity: sha512-Tn+4+cyhO4f4cQSDxNyLiIfEE+qlTTuIbWBJB8JTinEXOhDYgCT4wDTQplxD9MBYZH5pCYGC59GaxiwIT4bu8w==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      '@modelcontextprotocol/client': ^2.0.0
-      '@modelcontextprotocol/core': ^2.0.0
-      '@modelcontextprotocol/server': ^2.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
-      zod: 4.6.6
-    peerDependenciesMeta:
-      '@modelcontextprotocol/server':
-        optional: true
-      react:
-        optional: true
-      react-dom:
-        optional: true
 
   '@monaco-editor/loader@1.7.0':
     resolution: {integrity: sha512-gIwR1HrJrrx+vfyOhYmCZ0/JcWqG5kbfG7+d3f/C1LXk2EvzAbHSg3MQ5lO2sMlo9izoAZ04shohfKLVT6crVA==}
@@ -2748,16 +2724,6 @@ packages:
   vfile@6.0.3:
     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
 
-  vite-plugin-singlefile@2.3.4:
-    resolution: {integrity: sha512-1FAhlTCL6KJDpSUudrVU+gspapvS+tmKCg70vwNaAU6tyXn3E/C6+NnwQIze06byhBRv7VggZ78K0h+J/Rsdrg==}
-    engines: {node: '>18.0.0'}
-    peerDependencies:
-      rollup: ^4.59.0
-      vite: ^5.4.21 || ^6.0.0 || ^7.0.0 || ^8.0.0
-    peerDependenciesMeta:
-      rollup:
-        optional: true
-
   vite@7.3.5:
     resolution: {integrity: sha512-KuOaNhcnGFN2zIPGA7wRmzF+lJA1sea7rHq17aiJ++9lzY1WWG6Jpwqwe1KNbRVPIqHmr8GLYx7jbrQcN/7/ww==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -3507,16 +3473,6 @@ snapshots:
   '@modelcontextprotocol/core@2.4.0':
     dependencies:
       zod: 4.6.6
-
-  '@modelcontextprotocol/ext-apps@2.0.3(@modelcontextprotocol/client@2.4.0)(@modelcontextprotocol/core@2.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.6.6)':
-    dependencies:
-      '@modelcontextprotocol/client': 2.4.0
-      '@modelcontextprotocol/core': 2.4.0
-      '@standard-schema/spec': 1.1.0
-      zod: 4.6.6
-    optionalDependencies:
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
 
   '@monaco-editor/loader@1.7.0':
     dependencies:
@@ -5930,13 +5886,6 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
-
-  vite-plugin-singlefile@2.3.4(rollup@4.61.0)(vite@7.3.5(@types/node@24.12.4)(yaml@2.9.0)):
-    dependencies:
-      picomatch: 4.0.7
-      vite: 7.3.5(@types/node@24.12.4)(yaml@2.9.0)
-    optionalDependencies:
-      rollup: 4.61.0
 
   vite@7.3.5(@types/node@24.12.4)(yaml@2.9.0):
     dependencies:
