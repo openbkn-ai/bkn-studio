@@ -182,17 +182,31 @@ describe("ProjectListScene", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("shows a load failure with a retry", async () => {
-    listProjectsMock.mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce({
-      items: [],
-      nextCursor: null,
-      total: 0,
-    });
+  it("reads the catalogs once for the list and the new-project dialog", async () => {
+    listProjectsMock.mockResolvedValue({ items: [], nextCursor: null, total: 0 });
     render(<ProjectListScene />);
 
-    fireEvent.click(await screen.findByText("common.retry"));
+    fireEvent.click(await screen.findByText("bknProject.list.create"));
 
-    await waitFor(() => expect(listProjectsMock).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("bknProject.create.title")).toBeInTheDocument();
+    expect(listCatalogsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a load failure with a retry, and no stale total", async () => {
+    listProjectsMock
+      .mockResolvedValueOnce({ items: [project({})], nextCursor: null, total: 7 })
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce({ items: [], nextCursor: null, total: 0 });
+    render(<ProjectListScene />);
+    expect(await screen.findByText('bknProject.list.total:{"count":7}')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("bknProject.list.refresh"));
+    expect(await screen.findByText("bknProject.list.loadFailed")).toBeInTheDocument();
+    expect(screen.getByText('bknProject.list.total:{"count":0}')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("common.retry"));
+
+    await waitFor(() => expect(listProjectsMock).toHaveBeenCalledTimes(3));
     expect(await screen.findByText("bknProject.list.emptyTitle")).toBeInTheDocument();
   });
 

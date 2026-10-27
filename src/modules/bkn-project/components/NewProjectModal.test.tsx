@@ -9,7 +9,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createProjectMock = vi.hoisted(() => vi.fn());
-const listCatalogsMock = vi.hoisted(() => vi.fn());
 const translate = vi.hoisted(() => (key: string) => key);
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -21,18 +20,15 @@ vi.mock("@/modules/bkn-project/services/project.service", () => ({
   createProject: createProjectMock,
 }));
 
-vi.mock("@/shared/catalog", () => ({
-  catalogListAllQuery: (overrides: object) => overrides,
-  listCatalogs: listCatalogsMock,
-}));
-
 import { NewProjectModal } from "./NewProjectModal";
 
 const networks = [{ id: "orders", name: "Orders network" }];
 
-function renderModal(onCreated = vi.fn()) {
+function renderModal(onCreated = vi.fn(), catalogsError: string | null = null) {
   render(
     <NewProjectModal
+      catalogs={[{ id: "c1", name: "ERP" }]}
+      catalogsError={catalogsError}
       networks={networks}
       networksError={null}
       onCancel={vi.fn()}
@@ -66,7 +62,6 @@ describe("NewProjectModal", () => {
         removeListener: vi.fn(),
       })),
     );
-    listCatalogsMock.mockResolvedValue({ items: [{ id: "c1", name: "ERP" }], total: 1 });
   });
 
   it("requires a name and a network before creating", async () => {
@@ -83,7 +78,6 @@ describe("NewProjectModal", () => {
     const created = { id: "p1" };
     createProjectMock.mockResolvedValue(created);
     const onCreated = renderModal();
-    await waitFor(() => expect(listCatalogsMock).toHaveBeenCalled());
 
     fireEvent.change(screen.getByPlaceholderText("bknProject.create.namePlaceholder"), {
       target: { value: "Orders" },
@@ -142,10 +136,10 @@ describe("NewProjectModal", () => {
     expect(screen.getByText("bknProject.create.title")).toBeInTheDocument();
   });
 
-  it("shows when the catalogs cannot be loaded", async () => {
-    listCatalogsMock.mockRejectedValue({});
-    renderModal();
+  it("shows why the catalogs could not be loaded", () => {
+    renderModal(vi.fn(), "catalogs are down");
 
-    expect(await screen.findByText("bknProject.create.catalogsLoadFailed")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.create.catalogsLoadFailed")).toBeInTheDocument();
+    expect(screen.getByText("catalogs are down")).toBeInTheDocument();
   });
 });

@@ -58,3 +58,9 @@ export type ProjectNetwork = {
   id: string;
   name: string;
 };
+
+/** A data catalog a project may reference. */
+export type ProjectCatalog = {
+  id: string;
+  name: string;
+};

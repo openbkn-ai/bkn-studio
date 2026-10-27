@@ -6,13 +6,11 @@
  */
 
 import { Alert, Form, Input, Modal, Radio, Select } from "antd";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { createProject } from "@/modules/bkn-project/services/project.service";
-import type { Project, ProjectNetwork } from "@/modules/bkn-project/types/project";
-import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
+import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
 
 import styles from "./NewProjectModal.module.css";
 
@@ -29,15 +27,17 @@ type FormValues = {
   newKnName?: string;
 };
 
-type Option = { label: string; value: string };
-
 export function NewProjectModal({
+  catalogs,
+  catalogsError,
   networks,
   networksError,
   onCancel,
   onCreated,
   open,
 }: {
+  catalogs: ProjectCatalog[];
+  catalogsError: string | null;
   networks: ProjectNetwork[];
   networksError: string | null;
   onCancel: () => void;
@@ -47,32 +47,7 @@ export function NewProjectModal({
   const { t } = useTranslation();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
-  const [catalogs, setCatalogs] = useState<Option[]>([]);
-  const [catalogsError, setCatalogsError] = useState<string | null>(null);
   const mode = Form.useWatch("mode", form) ?? "existing";
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    let cancelled = false;
-    setCatalogsError(null);
-    listCatalogs(catalogListAllQuery({ pageSize: 500 }), { skipErrorToast: true })
-      .then((result) => {
-        if (!cancelled) {
-          setCatalogs(result.items.map((item) => ({ label: item.name, value: item.id })));
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setCatalogs([]);
-          setCatalogsError(extractRequestErrorMessage(error));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
 
   const handleClose = () => {
     form.resetFields();
@@ -195,7 +170,7 @@ export function NewProjectModal({
           <Select
             mode="multiple"
             optionFilterProp="label"
-            options={catalogs}
+            options={catalogs.map((catalog) => ({ label: catalog.name, value: catalog.id }))}
             placeholder={t("bknProject.create.catalogsPlaceholder")}
           />
         </Form.Item>

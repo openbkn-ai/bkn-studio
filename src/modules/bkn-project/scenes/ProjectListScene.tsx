@@ -26,7 +26,7 @@ import {
   listProjects,
   setProjectArchived,
 } from "@/modules/bkn-project/services/project.service";
-import type { Project, ProjectNetwork } from "@/modules/bkn-project/types/project";
+import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectListScene.module.css";
@@ -58,7 +58,8 @@ export function ProjectListScene() {
 
   const [networks, setNetworks] = useState<ProjectNetwork[]>([]);
   const [networksError, setNetworksError] = useState<string | null>(null);
-  const [catalogNames, setCatalogNames] = useState<Record<string, string>>({});
+  const [catalogs, setCatalogs] = useState<ProjectCatalog[]>([]);
+  const [catalogsError, setCatalogsError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   const loadProjects = useCallback(async () => {
@@ -80,6 +81,7 @@ export function ProjectListScene() {
         return;
       }
       setItems([]);
+      setTotal(0);
       setNextCursor(null);
       setLoadError(extractRequestErrorMessage(error));
     } finally {
@@ -95,14 +97,17 @@ export function ProjectListScene() {
       setNetworks([]);
       setNetworksError(extractRequestErrorMessage(error));
     }
+    // One read serves the catalog names of the list and the picker of the new-project dialog.
+    setCatalogsError(null);
     try {
       const result = await listCatalogs(catalogListAllQuery({ pageSize: 500 }), {
         skipErrorToast: true,
       });
-      setCatalogNames(Object.fromEntries(result.items.map((item) => [item.id, item.name])));
-    } catch {
-      // Catalog ids stand in for names the list cannot read.
-      setCatalogNames({});
+      setCatalogs(result.items.map(({ id, name }) => ({ id, name })));
+    } catch (error) {
+      // The list falls back to catalog ids; the dialog shows the failure.
+      setCatalogs([]);
+      setCatalogsError(extractRequestErrorMessage(error));
     }
   }, []);
 
@@ -115,6 +120,7 @@ export function ProjectListScene() {
   }, [loadReferences]);
 
   const networkNames = Object.fromEntries(networks.map((network) => [network.id, network.name]));
+  const catalogNames = Object.fromEntries(catalogs.map((catalog) => [catalog.id, catalog.name]));
 
   const resetPaging = () => setCursors([undefined]);
 
@@ -334,6 +340,8 @@ export function ProjectListScene() {
       ) : null}
 
       <NewProjectModal
+        catalogs={catalogs}
+        catalogsError={catalogsError}
         networks={networks}
         networksError={networksError}
         onCancel={() => setCreateOpen(false)}
