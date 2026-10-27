@@ -18,13 +18,14 @@ import {
   SunOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Badge, Dropdown, Modal } from "antd";
+import { Badge, Modal } from "antd";
 import type { MenuProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate, useParams } from "react-router-dom";
 
 import { getConsoleNavTrail } from "@/app/shell/console-navigation";
+import { UserPill } from "@/app/shell/UserPill";
 import { useResolvedTheme, useToggleTheme } from "@/app/theme/theme-context";
 import openBknLogo from "@/assets/brand/openbkn-logo-compact.webp";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
@@ -380,19 +381,11 @@ export function TopBar() {
         >
           {resolvedTheme === "dark" ? <SunOutlined /> : <MoonOutlined />}
         </button>
-        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={["click"]}>
-          <button className="console-user-pill" type="button">
-            <span className="console-user-avatar" aria-hidden>
-              <UserOutlined />
-            </span>
-            <span className="console-user-copy">
-              <strong>{runtimeConfig.currentUser.name}</strong>
-              {runtimeConfig.currentUser.roles.length > 0 ? (
-                <span>{runtimeConfig.currentUser.roles.join("、")}</span>
-              ) : null}
-            </span>
-          </button>
-        </Dropdown>
+        <UserPill
+          menuItems={userMenuItems}
+          name={runtimeConfig.currentUser.name}
+          roles={runtimeConfig.currentUser.roles}
+        />
       </div>
       <Modal
         centered
