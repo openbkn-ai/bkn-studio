@@ -27,16 +27,6 @@
   font-size: 12px;
 }
 
-.details {
-  color: var(--color-text-tertiary);
-  font-size: 12px;
-  word-break: break-all;
-}
-
-.details summary {
-  cursor: pointer;
-}
-
 .link {
   display: flex;
   flex-direction: column;
@@ -65,4 +55,11 @@
   color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
+}
+
+.state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
