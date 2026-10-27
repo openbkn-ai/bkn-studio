@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Segmented, Spin } from "antd";
+import { Alert, Segmented, Space, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -236,6 +236,11 @@ export function ProjectModel({
       catalogs ? missingCatalogs(project.catalogIds, draft ?? null, new Set(catalogs.keys())) : [],
     [catalogs, draft, project.catalogIds],
   );
+  // The project's own catalogs that are gone are fixed by changing them; catalogs only the draft
+  // still reads are fixed by drafting again, so the two notices offer different actions.
+  const projectMissing = missing.filter((id) => project.catalogIds.includes(id));
+  const draftMissing = missing.filter((id) => !project.catalogIds.includes(id));
+  const catalogLabels = (ids: string[]) => ids.map((id) => catalogNames[id] ?? id).join(", ");
   const unadoptedEnds = useMemo(
     () => (draft?.status === "ready" ? relationsWithUnadoptedEnds(draft) : []),
     [draft],
@@ -266,7 +271,8 @@ export function ProjectModel({
 
   const noCatalogs = project.catalogIds.length === 0;
   // Offered once the visible catalogs are known: the dialog starts from them.
-  const canChangeCatalogs = ownerIsCaller && catalogs !== null;
+  // No change on an archived project, as for every other change on this page.
+  const canChangeCatalogs = ownerIsCaller && catalogs !== null && !project.archived;
   const changeCatalogsButton = (label: string, primary = false) =>
     canChangeCatalogs ? (
       <AppButton onClick={() => setChangingCatalogs(true)} type={primary ? "primary" : "default"}>
@@ -329,12 +335,21 @@ export function ProjectModel({
           type="error"
         />
       ) : null}
-      {missing.length ? (
+      {projectMissing.length ? (
         <Alert
           action={changeCatalogsButton("bknProject.model.catalogs.change")}
           description={ownerIsCaller ? undefined : t("bknProject.model.notice.askOwner")}
           message={t("bknProject.model.notice.missingCatalogs", {
-            names: missing.map((id) => catalogNames[id] ?? id).join(", "),
+            names: catalogLabels(projectMissing),
+          })}
+          showIcon
+          type="warning"
+        />
+      ) : null}
+      {draftMissing.length ? (
+        <Alert
+          message={t("bknProject.model.notice.draftReadsMissing", {
+            names: catalogLabels(draftMissing),
           })}
           showIcon
           type="warning"
@@ -356,9 +371,14 @@ export function ProjectModel({
         {notices}
         <EmptyStatePanel
           action={
-            noCatalogs
-              ? changeCatalogsButton("bknProject.model.catalogs.choose", true)
-              : generateButton
+            noCatalogs ? (
+              changeCatalogsButton("bknProject.model.catalogs.choose", true)
+            ) : (
+              <Space>
+                {generateButton}
+                {changeCatalogsButton("bknProject.model.catalogs.change")}
+              </Space>
+            )
           }
           description={t(
             noCatalogs
@@ -435,7 +455,7 @@ export function ProjectModel({
           ) : null}
         </span>
         <span className={styles.spacer} />
-        {missing.length ? null : changeCatalogsButton("bknProject.model.catalogs.change")}
+        {projectMissing.length ? null : changeCatalogsButton("bknProject.model.catalogs.change")}
         {generateButton}
       </div>
       {catalogsDialog}

@@ -254,14 +254,14 @@ describe("ProjectModel", () => {
 
   it("reports catalogs that are gone, and nothing when the catalogs cannot be listed", async () => {
     getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
-    const view = renderModel();
+    const view = renderModel({ catalogIds: ["old-catalog"] });
     expect(await screen.findByText(/bknProject.model.notice.missingCatalogs/)).toHaveTextContent(
       "old-catalog",
     );
     view.unmount();
 
     listCatalogsMock.mockRejectedValue(new Error("down"));
-    renderModel();
+    renderModel({ catalogIds: ["old-catalog"] });
     await screen.findByText(/bknProject.model.summary/);
     expect(screen.queryByText(/bknProject.model.notice.missingCatalogs/)).not.toBeInTheDocument();
   });
@@ -563,5 +563,47 @@ describe("ProjectModel", () => {
       await screen.findByRole("button", { name: "bknProject.model.catalogs.choose" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("bknProject.model.catalogs.loadFailed")).not.toBeInTheDocument();
+  });
+
+  it("offers no catalog change on an archived project, as no other change", async () => {
+    getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
+    const view = renderModel({ archived: true, catalogIds: ["old-catalog"] });
+    expect(await screen.findByText(/bknProject.model.notice.missingCatalogs/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "bknProject.model.catalogs.change" }),
+    ).not.toBeInTheDocument();
+    view.unmount();
+
+    getDraftMock.mockResolvedValue(null);
+    renderModel({ archived: true, catalogIds: [] });
+    expect(await screen.findByText("bknProject.model.empty.title")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "bknProject.model.catalogs.choose" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks to draft again when only the draft still reads a catalog that is gone", async () => {
+    // The project's catalogs were already changed; the draft's tables still come from the old one.
+    getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
+    renderModel({ catalogIds: ["cat-001"] });
+
+    expect(await screen.findByText(/bknProject.model.notice.draftReadsMissing/)).toHaveTextContent(
+      "old-catalog",
+    );
+    expect(screen.queryByText(/bknProject.model.notice.missingCatalogs/)).not.toBeInTheDocument();
+    // Changing catalogs again would not help, so the notice does not offer it.
+    expect(
+      screen.getAllByRole("button", { name: "bknProject.model.catalogs.change" }),
+    ).toHaveLength(1);
+  });
+
+  it("lets the owner change catalogs before the first draft", async () => {
+    getDraftMock.mockResolvedValue(null);
+    renderModel();
+
+    expect(
+      await screen.findByRole("button", { name: "bknProject.model.catalogs.change" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "bknProject.model.generate" })).toBeEnabled();
   });
 });

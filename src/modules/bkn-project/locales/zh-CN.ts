@@ -167,6 +167,8 @@ export const bknProjectZhCN = {
         details: "技术详情（反馈问题时可附上）",
       },
       notice: {
+        draftReadsMissing:
+          "草稿里有些表来自已不存在或你无权查看的数据目录 {{names}}，重新起草后会改读项目当前的数据目录。",
         askOwner: "请联系项目负责人更换数据目录。",
         missingCatalogs:
           "数据目录 {{names}} 已不存在或你无权查看。在更换项目的数据目录之前，选唯一标识、恢复字段和重新起草都会失败。",

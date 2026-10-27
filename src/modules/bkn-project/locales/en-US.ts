@@ -182,6 +182,8 @@ export const bknProjectEnUS = {
         details: "Technical details (include them when reporting a problem)",
       },
       notice: {
+        draftReadsMissing:
+          "Some tables of the draft come from data catalogs {{names}}, which no longer exist or you cannot see. Drafting again reads the project's current catalogs.",
         askOwner: "Ask the project owner to change the data catalogs.",
         missingCatalogs:
           "Data catalogs {{names}} no longer exist, or you cannot see them. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
