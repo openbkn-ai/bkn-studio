@@ -16,7 +16,7 @@ const generateDraftMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
 const editDraftItemMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn(), warning: vi.fn() }));
-const confirmMock = vi.hoisted(() => vi.fn());
+const confirmMock = vi.hoisted(() => vi.fn<(config: { onOk: () => Promise<void> }) => void>());
 const translate = vi.hoisted(
   () => (key: string, options?: Record<string, unknown>) =>
     options ? `${key}:${JSON.stringify(options)}` : key,
