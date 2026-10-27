@@ -1011,14 +1011,17 @@ export function ObjectTypeResourceGraph({
   };
 
   const activateAction = (action: KnowledgeNetworkActionTypeRecord) => {
-    if (section === "actions") {
-      setExpandedActions((current) =>
-        current.some((item) => item.id === action.id) ? current : [...current, action],
-      );
-      setFocusedAction(action);
-      return;
+    if (section !== "actions") {
+      setSection("actions");
+      setExpandedGroup(null);
+      setNodePositions({});
+      setView(INITIAL_VIEW);
     }
-    setSelected({ kind: "action", value: action });
+    setSelected(undefined);
+    setExpandedActions((current) =>
+      current.some((item) => item.id === action.id) ? current : [...current, action],
+    );
+    setFocusedAction(action);
   };
 
   const collapseFocusedAction = () => {

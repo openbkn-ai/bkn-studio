@@ -385,7 +385,7 @@ describe("ObjectTypeResourceGraph", () => {
     expect(within(legend).queryByText("原子对象指标")).not.toBeInTheDocument();
   });
 
-  it("opens the selected resource and keeps metric requests disabled without the capability", async () => {
+  it("expands an action from the overview before opening its details without the metric capability", async () => {
     const handlers = renderGraph(false);
 
     fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 1" }));
@@ -394,6 +394,12 @@ describe("ObjectTypeResourceGraph", () => {
     expect(screen.queryByRole("radio", { name: /对象指标/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "行动类 更新订单" }));
+    expect(screen.queryByRole("dialog", { name: "行动类详情" })).not.toBeInTheDocument();
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    expect(await within(graph).findByText("触发 · 编辑")).toBeInTheDocument();
+    expect(graph.querySelectorAll("[data-action-semantic]")).toHaveLength(3);
+    expect(screen.getByText("已展开 1 条")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
     expect(await screen.findByText("更新订单状态")).toBeInTheDocument();
     const drawer = screen.getByRole("dialog", { name: "行动类详情" });
     const actions = drawer.querySelector<HTMLElement>("[class*=drawerActions]");
@@ -433,11 +439,34 @@ describe("ObjectTypeResourceGraph", () => {
     expect(handlers.onOpenAction).toHaveBeenCalledWith(action);
   });
 
+  it("keeps other actions available after focusing one from the overview", async () => {
+    const notifyAction = {
+      ...action,
+      actionKind: "notify",
+      id: "notify-order",
+      name: "短信推送",
+    } as KnowledgeNetworkActionTypeRecord;
+    mocks.listActions.mockResolvedValue({ entries: [action, notifyAction], totalCount: 2 });
+    renderGraph();
+
+    fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "行动类 短信推送" }));
+
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    await waitFor(() => {
+      expect(graph.querySelector('[data-action-semantic-focus="notify-order"]')).not.toBeNull();
+    });
+    expect(screen.getByRole("radio", { name: "行动类 2" })).toBeChecked();
+    expect(within(graph).getByRole("button", { name: "行动类 更新订单" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "行动类详情" })).not.toBeInTheDocument();
+  });
+
   it("can restrict action nodes to detail-only", async () => {
     renderGraph(false, { allowExecuteAction: false });
 
     fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 1" }));
     fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
+    fireEvent.click(await screen.findByRole("button", { name: "查看详情" }));
     const drawer = await screen.findByRole("dialog", { name: "行动类详情" });
 
     expect(within(drawer).getByRole("button", { name: "详情" })).toBeInTheDocument();
@@ -459,6 +488,10 @@ describe("ObjectTypeResourceGraph", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 1" }));
     fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
+    expect(
+      await screen.findByText("订单工具箱/订单核对工具", { selector: "text" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
     const drawer = screen.getByRole("dialog", { name: "行动类详情" });
 
     expect(await within(drawer).findByText("订单工具箱/订单核对工具")).toHaveAttribute(
@@ -490,6 +523,8 @@ describe("ObjectTypeResourceGraph", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 1" }));
     fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
+    expect(await screen.findByText("影响 · 发货单")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
     const drawer = screen.getByRole("dialog", { name: "行动类详情" });
 
     expect(await within(drawer).findByText("发货单")).toBeInTheDocument();
