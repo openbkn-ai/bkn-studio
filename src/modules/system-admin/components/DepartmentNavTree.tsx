@@ -19,6 +19,7 @@ import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { BusinessTree, BusinessTreePanel } from "@/framework/ui/common/BusinessTreePanel";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
+import { buildDeptTree, departmentSubtreeIds } from "@/modules/system-admin/utils/admin-helpers";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 import navStyles from "@/modules/system-admin/components/DepartmentNavTree.module.css";
@@ -138,22 +139,20 @@ export function DepartmentNavTree({
       return new Set(departments.map((dept) => dept.id));
     }
     const visible = new Set<string>();
-    const collectDescendants = (id: string) => {
-      for (const child of departments.filter((dept) => dept.parentId === id)) {
-        visible.add(child.id);
-        collectDescendants(child.id);
-      }
-    };
     for (const dept of departments) {
       if (!dept.name.toLowerCase().includes(debouncedDeptSearch)) {
         continue;
       }
       let current: AdminDepartment | undefined = dept;
-      while (current) {
+      const ancestors = new Set<string>();
+      while (current && !ancestors.has(current.id)) {
+        ancestors.add(current.id);
         visible.add(current.id);
         current = current.parentId ? byId.get(current.parentId) : undefined;
       }
-      collectDescendants(dept.id);
+      for (const id of departmentSubtreeIds(departments, dept.id)) {
+        visible.add(id);
+      }
     }
     return visible;
   }, [byId, debouncedDeptSearch, departments]);
@@ -287,17 +286,22 @@ export function DepartmentNavTree({
   );
 
   const treeData = useMemo(() => {
-    const childrenOf = (parentId: string | null): DataNode[] =>
-      departments
-        .filter((dept) => dept.parentId === parentId)
-        .filter((dept) => visibleDeptIds.has(dept.id))
-        .map((dept) => ({
-          key: dept.id,
-          title: renderDeptTitle(dept),
-          children: childrenOf(dept.id),
-        }));
-
-    return childrenOf(null);
+    const roots: DataNode[] = [];
+    const nodes = new Map<string, DataNode>();
+    for (const { dept } of buildDeptTree(departments)) {
+      if (!visibleDeptIds.has(dept.id)) {
+        continue;
+      }
+      const node: DataNode = { key: dept.id, title: renderDeptTitle(dept), children: [] };
+      nodes.set(dept.id, node);
+      const parent = dept.parentId ? nodes.get(dept.parentId) : undefined;
+      if (parent) {
+        parent.children?.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+    return roots;
   }, [departments, renderDeptTitle, visibleDeptIds]);
 
   const handleSelect: TreeProps["onSelect"] = (keys, info) => {
@@ -325,14 +329,7 @@ export function DepartmentNavTree({
       return;
     }
 
-    const descendants = new Set<string>();
-    const collect = (id: string) => {
-      for (const child of departments.filter((d) => d.parentId === id)) {
-        descendants.add(child.id);
-        collect(child.id);
-      }
-    };
-    collect(dragKey);
+    const descendants = departmentSubtreeIds(departments, dragKey);
     if (newParentId && descendants.has(newParentId)) {
       void message.error(t("systemAdmin.users.deptNode.cycleError"));
       return;
