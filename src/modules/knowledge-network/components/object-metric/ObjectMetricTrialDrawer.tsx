@@ -33,6 +33,11 @@ import type {
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import {
+  formatObjectMetricNumericInput,
+  objectMetricInt64InputError,
+  parseObjectMetricNumericInput,
+} from "@/modules/knowledge-network/lib/object-metric-numeric";
+import {
   objectMetricBusinessConditionLabel,
   objectMetricConditionLabel,
 } from "@/modules/knowledge-network/lib/object-metric-condition-label";
@@ -85,10 +90,12 @@ type ObjectMetricTrialDrawerProps = {
 function parseIdentityValue(value: string, type?: string): unknown {
   const normalized = type?.toLowerCase();
   if (["integer", "int", "int32", "int64", "long"].includes(normalized ?? "")) {
-    const number = Number(value);
-    return Number.isSafeInteger(number) ? number : value;
+    return parseObjectMetricNumericInput(value) ?? value;
   }
-  if (["decimal", "double", "float", "number"].includes(normalized ?? "")) {
+  if (["decimal", "number"].includes(normalized ?? "")) {
+    return parseObjectMetricNumericInput(value) ?? value;
+  }
+  if (["double", "float"].includes(normalized ?? "")) {
     const number = Number(value);
     return Number.isFinite(number) ? number : value;
   }
@@ -393,22 +400,27 @@ export function ObjectMetricTrialDrawer({
       if (values.havingOperator) {
         const operator = values.havingOperator;
         const physicalType = definition.result_semantics.value.physical_type;
-        let value: string | number | boolean | undefined;
+        let value: unknown;
         if (operator !== "is_null" && operator !== "is_not_null") {
-          if (!values.havingValue?.trim())
-            throw new Error(objectMetricText("analysisHavingValueRequired"));
+          const havingValue = values.havingValue?.trim() ?? "";
+          if (!havingValue) throw new Error(objectMetricText("analysisHavingValueRequired"));
           if (["int64", "decimal", "duration"].includes(physicalType)) {
-            const number = Number(values.havingValue);
-            if (!Number.isFinite(number))
+            const number = parseObjectMetricNumericInput(havingValue);
+            if (number === undefined)
               throw new Error(objectMetricText("analysisHavingNumericRequired"));
-            if (physicalType === "int64" && !Number.isSafeInteger(number))
-              throw new Error(objectMetricText("analysisHavingSafeIntegerRequired"));
+            if (physicalType === "int64") {
+              const int64Error = objectMetricInt64InputError(havingValue);
+              if (int64Error === "not_integer")
+                throw new Error(objectMetricText("analysisHavingIntegerRequired"));
+              if (int64Error === "out_of_range")
+                throw new Error(objectMetricText("analysisHavingSafeIntegerRequired"));
+            }
             value = number;
           } else if (physicalType === "boolean") {
-            if (!["true", "false"].includes(values.havingValue))
+            if (!["true", "false"].includes(havingValue))
               throw new Error(objectMetricText("analysisHavingBooleanRequired"));
-            value = values.havingValue === "true";
-          } else value = values.havingValue;
+            value = havingValue === "true";
+          } else value = havingValue;
         }
         query.having = {
           operator,
@@ -456,7 +468,10 @@ export function ObjectMetricTrialDrawer({
     form.setFieldsValue({
       analysisDimensions: query.group_by?.map(dimensionReferenceKey),
       havingOperator: query.having?.operator,
-      havingValue: query.having?.value === undefined ? undefined : String(query.having.value),
+      havingValue:
+        query.having?.value === undefined
+          ? undefined
+          : formatObjectMetricNumericInput(query.having.value),
       orderKey:
         order?.field === "dimension" && order.dimension
           ? dimensionReferenceKey(order.dimension)

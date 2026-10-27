@@ -7,6 +7,10 @@
 
 import { ApartmentOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button, Input, InputNumber, Select } from "antd";
+import {
+  formatObjectMetricNumericInput,
+  objectMetricAuthoringNumericValue,
+} from "@/modules/knowledge-network/lib/object-metric-numeric";
 
 import type {
   ObjectMetricConditionV1,
@@ -211,8 +215,7 @@ function literalText(value: unknown) {
 
 function literalValue(value: string, valueType: string) {
   if (valueType === "int64" || valueType === "decimal") {
-    const number = Number(value);
-    return value.trim() !== "" && Number.isFinite(number) ? number : value;
+    return objectMetricAuthoringNumericValue(value) ?? value;
   }
   if (valueType === "boolean") return value === "true";
   return value;
@@ -254,9 +257,17 @@ function ValueEditor({
       <InputNumber
         aria-label={objectMetricText("mb964a92285bc")}
         className={styles.valueControl}
-        onChange={(value) => onChange(literalOperand(expectedValueType, value ?? undefined))}
+        onChange={(value) =>
+          onChange(
+            literalOperand(
+              expectedValueType,
+              value === null ? undefined : objectMetricAuthoringNumericValue(value),
+            ),
+          )
+        }
         placeholder={objectMetricText("m110e4c3fca51")}
-        value={operand.value === undefined ? null : Number(operand.value)}
+        stringMode
+        value={operand.value === undefined ? null : formatObjectMetricNumericInput(operand.value)}
       />
     );
   }
