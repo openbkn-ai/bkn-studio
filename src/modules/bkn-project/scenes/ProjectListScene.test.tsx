@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@/modules/bkn-project/types/project";
 
 const listProjectsMock = vi.hoisted(() => vi.fn());
+const createProjectMock = vi.hoisted(() => vi.fn());
 const listNetworksMock = vi.hoisted(() => vi.fn());
 const setArchivedMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
@@ -36,7 +37,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/bkn-project/services/project.service", () => ({
-  createProject: vi.fn(),
+  createProject: createProjectMock,
   listProjectNetworks: listNetworksMock,
   listProjects: listProjectsMock,
   setProjectArchived: setArchivedMock,
@@ -141,6 +142,56 @@ describe("ProjectListScene", () => {
       ),
     );
     expect(await screen.findByText("bknProject.list.emptyFiltered")).toBeInTheDocument();
+  });
+
+  it("keeps the newest result when an older request answers last", async () => {
+    let answerFirst: (value: unknown) => void = () => undefined;
+    listProjectsMock
+      .mockReturnValueOnce(new Promise((resolve) => (answerFirst = resolve)))
+      .mockResolvedValueOnce({
+        items: [project({ id: "p2", name: "Newest" })],
+        nextCursor: null,
+        total: 1,
+      });
+    render(<ProjectListScene />);
+
+    fireEvent.click(screen.getByText("bknProject.list.showArchived"));
+    expect(await screen.findByText("Newest")).toBeInTheDocument();
+
+    answerFirst({ items: [project({ name: "Stale" })], nextCursor: null, total: 1 });
+    await waitFor(() => expect(screen.queryByText("Stale")).toBeNull());
+    expect(screen.getByText("Newest")).toBeInTheDocument();
+  });
+
+  it("reloads the first page once after creating, from any page", async () => {
+    createProjectMock.mockResolvedValue(project({ id: "p9", knId: "orders", name: "Created" }));
+    listProjectsMock
+      .mockResolvedValueOnce({ items: [project({})], nextCursor: "c2", total: 21 })
+      .mockResolvedValueOnce({ items: [project({ id: "p5" })], nextCursor: null, total: 21 })
+      .mockResolvedValue({
+        items: [project({ id: "p9", name: "Created" })],
+        nextCursor: null,
+        total: 22,
+      });
+    render(<ProjectListScene />);
+    fireEvent.click(await screen.findByText("bknProject.list.nextPage"));
+    await waitFor(() => expect(listProjectsMock).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(screen.getByText("bknProject.list.create"));
+    fireEvent.click(await screen.findByText("bknProject.create.newNetwork"));
+    fireEvent.change(screen.getByPlaceholderText("bknProject.create.namePlaceholder"), {
+      target: { value: "Created" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("bknProject.create.newNetworkNamePlaceholder"), {
+      target: { value: "Net" },
+    });
+    fireEvent.click(screen.getByText("bknProject.create.submit"));
+
+    expect(await screen.findByText("Created")).toBeInTheDocument();
+    expect(listProjectsMock).toHaveBeenCalledTimes(3);
+    expect(listProjectsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: undefined }),
+    );
   });
 
   it("pages with the cursor the backend returns, and back", async () => {

@@ -9,7 +9,7 @@ import { InfoCircleOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/ic
 import { Alert, Checkbox, Input, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -62,7 +62,12 @@ export function ProjectListScene() {
   const [catalogsError, setCatalogsError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Each load takes a number; only the latest one may write the list, so a slow answer to an
+  // earlier filter or page never replaces the current one.
+  const latestLoad = useRef(0);
+
   const loadProjects = useCallback(async () => {
+    const load = ++latestLoad.current;
     setLoading(true);
     setLoadError(null);
     try {
@@ -72,10 +77,16 @@ export function ProjectListScene() {
         limit: PROJECT_PAGE_SIZE,
         name,
       });
+      if (load !== latestLoad.current) {
+        return;
+      }
       setItems(result.items);
       setTotal(result.total);
       setNextCursor(result.nextCursor);
     } catch (error) {
+      if (load !== latestLoad.current) {
+        return;
+      }
       if (cursors.length > 1 && extractRequestErrorDetails(error).code === INVALID_CURSOR_CODE) {
         setCursors([undefined]);
         return;
@@ -85,7 +96,9 @@ export function ProjectListScene() {
       setNextCursor(null);
       setLoadError(extractRequestErrorMessage(error));
     } finally {
-      setLoading(false);
+      if (load === latestLoad.current) {
+        setLoading(false);
+      }
     }
   }, [cursors, name, showArchived]);
 
@@ -140,8 +153,8 @@ export function ProjectListScene() {
     if (!networks.some((network) => network.id === project.knId)) {
       void loadReferences();
     }
+    // A new paging state reloads the first page, where the new project is.
     resetPaging();
-    void loadProjects();
   };
 
   const changeArchived = async (project: Project, archived: boolean) => {
