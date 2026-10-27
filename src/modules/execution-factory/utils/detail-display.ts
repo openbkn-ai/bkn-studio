@@ -34,10 +34,13 @@ export function resolveToolboxCategoryLabel(
   t: (key: string) => string,
 ) {
   if (record.categoryType) {
-    const key = `executionFactory.toolboxCategories.${record.categoryType}`;
-    const translated = t(key);
-    if (translated !== key) {
-      return translated;
+    // Toolsets use the same predefined categories as operators, alongside toolbox-only ones.
+    for (const dictionary of ["toolboxCategories", "operatorCategories"]) {
+      const key = `executionFactory.${dictionary}.${record.categoryType}`;
+      const translated = t(key);
+      if (translated !== key) {
+        return translated;
+      }
     }
   }
 

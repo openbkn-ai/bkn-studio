@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { resolveToolboxCategoryLabel } from "@/modules/execution-factory/utils/detail-display";
 
 type CapabilityCategoryFieldsProps = {
   name?: string;
@@ -60,7 +61,13 @@ export function CapabilityCategoryFields({
     >
       <Select
         loading={categories.length === 0}
-        options={categories}
+        options={categories.map((item) => ({
+          ...item,
+          label: resolveToolboxCategoryLabel(
+            { categoryType: item.value, categoryName: item.label },
+            t,
+          ),
+        }))}
         showSearch
         optionFilterProp="label"
       />
