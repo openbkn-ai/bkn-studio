@@ -186,6 +186,7 @@
 .metaItem {
   display: inline-flex;
   flex-shrink: 0;
+  margin-inline-start: auto;
   align-items: center;
   gap: 6px;
   min-width: 0;
