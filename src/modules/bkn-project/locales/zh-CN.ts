@@ -183,6 +183,7 @@ export const bknProjectZhCN = {
         unadoptedEnd: "关系类「{{name}}」连接的对象类没有采纳，请取消采纳它。",
         unadopt: "取消采纳",
         unadoptItem: "取消采纳{{name}}",
+        noneTitle: "还没有修改",
         none: "还没有做过修改。在草稿上采纳、改名、选唯一标识和恢复字段，都会记在这里。",
         kind: {
           object_types: "对象类",

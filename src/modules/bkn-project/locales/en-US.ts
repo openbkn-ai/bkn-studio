@@ -196,6 +196,7 @@ export const bknProjectEnUS = {
           "Relation type {{name}} connects an object type that is not adopted; unadopt it.",
         unadopt: "Unadopt",
         unadoptItem: "Unadopt {{name}}",
+        noneTitle: "No changes yet",
         none: "Nothing changed yet. Adopting, renaming, choosing identities and restoring fields on the draft are all listed here.",
         kind: {
           object_types: "object type",

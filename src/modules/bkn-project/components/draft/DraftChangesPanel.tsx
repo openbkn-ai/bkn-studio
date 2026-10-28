@@ -34,7 +34,7 @@ export function DraftChangesPanel({
   unadoptedEnds,
 }: {
   actions: DraftItemActions;
-  currentUserId: string | undefined;
+  currentUserId: string | null | undefined;
   /** Names of people, when the caller may read them. */
   directory: ReadonlyMap<string, string>;
   draft: Draft;
@@ -47,7 +47,12 @@ export function DraftChangesPanel({
   const disabled = actions.archived || actions.busy;
 
   if (!waiting.length && !unadoptedEnds.length && !decisions.length) {
-    return <EmptyStatePanel description={t("bknProject.model.changes.none")} />;
+    return (
+      <EmptyStatePanel
+        description={t("bknProject.model.changes.none")}
+        title={t("bknProject.model.changes.noneTitle")}
+      />
+    );
   }
 
   return (

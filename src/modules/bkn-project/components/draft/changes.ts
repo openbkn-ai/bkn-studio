@@ -91,7 +91,7 @@ export function describeDecision(
 export function whoDecided(
   t: TFunction,
   by: ProjectAccount,
-  currentUserId: string | undefined,
+  currentUserId: string | null | undefined,
   directory: ReadonlyMap<string, string>,
 ): string {
   if (by.id === currentUserId) {
