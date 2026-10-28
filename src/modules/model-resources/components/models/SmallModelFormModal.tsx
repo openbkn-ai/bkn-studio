@@ -19,7 +19,10 @@ import {
   testSmallModel,
   updateSmallModel,
 } from "@/modules/model-resources/services/small-model.service";
-import type { SmallModel } from "@/modules/model-resources/types/small-model";
+import type {
+  SmallModel,
+  SmallModelSavePayload,
+} from "@/modules/model-resources/types/small-model";
 import { getAdaptationCodeTemplate } from "@/modules/model-resources/utils/adapter-templates";
 import {
   buildSmallModelSavePayload,
@@ -122,10 +125,7 @@ export function SmallModelFormModal({
 
   const isView = modalMode === "view";
 
-  const handleTest = async (silent = false) => {
-    const values = await form.validateFields();
-    const payload = buildSmallModelSavePayload(values, record ?? undefined);
-
+  const handleTest = async (payload: SmallModelSavePayload) => {
     setTesting(true);
 
     try {
@@ -134,18 +134,20 @@ export function SmallModelFormModal({
         throw new Error(t("modelResources.models.testFailed"));
       }
 
-      if (!silent) {
-        message.success(t("modelResources.models.testSuccess"));
-      }
-
       return true;
     } catch (error) {
-      if (!silent) {
-        message.error(extractRequestErrorMessage(error));
-      }
+      message.error(extractRequestErrorMessage(error));
       return false;
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    const values = await form.validateFields();
+    const payload = buildSmallModelSavePayload(values, record ?? undefined);
+    if (await handleTest(payload)) {
+      message.success(t("modelResources.models.testSuccess"));
     }
   };
 
@@ -156,7 +158,7 @@ export function SmallModelFormModal({
     setSubmitting(true);
 
     try {
-      const tested = await handleTest(true);
+      const tested = await handleTest(payload);
       if (!tested) {
         return;
       }
@@ -233,7 +235,7 @@ export function SmallModelFormModal({
       destroyOnHidden
       footer={
         isView ? (
-          <AppButton loading={testing} onClick={() => void handleTest()}>
+          <AppButton loading={testing} onClick={() => void handleTestConnection()}>
             {t("modelResources.models.modal.testConnection")}
           </AppButton>
         ) : (
@@ -241,7 +243,7 @@ export function SmallModelFormModal({
             <AppButton loading={submitting} type="primary" onClick={() => void handleSubmit()}>
               {t("common.save")}
             </AppButton>
-            <AppButton loading={testing} onClick={() => void handleTest()}>
+            <AppButton loading={testing} onClick={() => void handleTestConnection()}>
               {t("modelResources.models.modal.testConnection")}
             </AppButton>
             <AppButton onClick={() => onClose(false)}>{t("common.cancel")}</AppButton>
@@ -256,7 +258,7 @@ export function SmallModelFormModal({
     >
       <Form
         colon={isView}
-        disabled={isView}
+        disabled={isView || testing || submitting}
         form={form}
         labelAlign="left"
         labelCol={{ span: 6 }}
@@ -320,7 +322,7 @@ export function SmallModelFormModal({
           >
             <AdaptationCodeEditor
               placeholder={t("modelResources.models.modal.adapterPlaceholder")}
-              readOnly={isView}
+              readOnly={isView || testing || submitting}
             />
           </Form.Item>
         )}
