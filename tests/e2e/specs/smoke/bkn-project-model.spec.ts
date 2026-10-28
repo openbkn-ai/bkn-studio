@@ -42,8 +42,9 @@ test("bkn project: draft, choose an identity, adopt, and see the changes", async
   const changes = page.getByTestId("draft-change");
   await expect(changes).toHaveCount(2);
   // Newest first: the adoption, then the identity it needed.
-  await expect(changes.nth(0)).toContainText("material_bom");
-  await expect(changes.nth(1)).toContainText("material_code");
+  // The identity's line names material_bom too, so each line is matched by what only it says.
+  await expect(changes.nth(0)).toContainText("采纳了对象类「material_bom」");
+  await expect(changes.nth(1)).toContainText("选择了唯一标识 material_code");
 
   expect(pageErrors).toEqual([]);
 });
