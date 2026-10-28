@@ -150,6 +150,27 @@ afterEach(() => {
 });
 
 describe("ObjectTypeListPanel graph view", () => {
+  it("exposes the full object name on hover", async () => {
+    const longName = "objectName".repeat(15);
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ ...order, name: longName }],
+      totalCount: 1,
+    });
+
+    render(
+      <ObjectTypeListPanel
+        canDelete={false}
+        canModify={false}
+        networkId="network-1"
+        networkName="Sales"
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const name = await screen.findByText(longName);
+    expect(name).toHaveAttribute("title", longName);
+  });
+
   it("offers list and graph modes and selects the first visible object for the graph", async () => {
     const onDelete = vi.fn().mockResolvedValue(undefined);
     render(
