@@ -19,7 +19,7 @@ const NO_INDEX = new Set<string>();
 
 /**
  * The draft's concept model: what is adopted, drawn as object types and the relations between
- * them. Clicking an object type opens it when the page can.
+ * them. Clicking an object type opens it when the page can; otherwise it is highlighted.
  */
 export function DraftConceptGraph({
   draft,
@@ -55,7 +55,9 @@ export function DraftConceptGraph({
               onOpen?.(id);
             }
           }}
-          selectedId={selectedId}
+          // A click on the selected node unselects it. Where a click opens the object type,
+          // nothing stays selected, so clicking the same node after closing it opens it again.
+          selectedId={onOpen ? null : selectedId}
         />
       </div>
     );

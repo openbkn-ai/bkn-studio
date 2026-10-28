@@ -6,6 +6,7 @@
  */
 
 import type { KnowledgeNetworkPreviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
+import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 
 /** Nodes take the theme's primary color, so the graph follows light and dark themes. */
@@ -17,17 +18,19 @@ const NODE_COLOR = "var(--color-primary-600)";
  * not; it is left out, as it would not be published.
  */
 export function draftGraph(draft: Draft): KnowledgeNetworkPreviewGraph {
-  const nodes = draft.items.objectTypes.filter((item) => item.adopted);
-  const adopted = new Set(nodes.map((item) => item.id));
+  // The same rule as the notice about relations whose ends are not adopted.
+  const unadoptedEnds = new Set(relationsWithUnadoptedEnds(draft).map((item) => item.id));
   return {
     edges: draft.items.relationTypes
-      .filter((item) => item.adopted && adopted.has(item.source) && adopted.has(item.target))
+      .filter((item) => item.adopted && !unadoptedEnds.has(item.id))
       .map((item) => ({
         id: item.id,
         name: item.name,
         sourceId: item.source,
         targetId: item.target,
       })),
-    nodes: nodes.map((item) => ({ color: NODE_COLOR, id: item.id, name: item.name })),
+    nodes: draft.items.objectTypes
+      .filter((item) => item.adopted)
+      .map((item) => ({ color: NODE_COLOR, id: item.id, name: item.name })),
   };
 }

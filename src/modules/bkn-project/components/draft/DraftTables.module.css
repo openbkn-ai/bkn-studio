@@ -90,7 +90,8 @@
 }
 
 .graph {
-  height: 360px;
+  /* As knowledge-network's canvas: any lower, and the fitted graph is too small to read. */
+  height: 480px;
   overflow: hidden;
   border: 1px solid var(--color-border-secondary);
   border-radius: 8px;
