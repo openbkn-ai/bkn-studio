@@ -198,6 +198,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("skills"),
   ),
   createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/knowledge-bases",
+    {
+      descriptionKey: "knowledgeNetwork.knowledgeBasesDescription",
+      titleKey: "knowledgeNetwork.workspaceKnowledgeBases",
+    },
+    workspaceSectionPage("knowledge-bases"),
+  ),
+  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/metrics",
     {
       descriptionKey: "knowledgeNetwork.metricsDescription",

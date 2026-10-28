@@ -28,6 +28,7 @@ vi.mock("react-i18next", async (importOriginal) => {
           "common.entitlement.editions.professional": "专业版",
           "common.entitlement.editionsShort.professional": "专业版",
           "knowledgeNetwork.workspaceExperienceMcp": "MCP 调试",
+          "knowledgeNetwork.workspaceKnowledgeBases": "知识库",
           "knowledgeNetwork.workspaceMcpTools": "MCP 资源",
           "knowledgeNetwork.workspaceMetrics": "对象指标",
         })[key] ?? key,
@@ -161,6 +162,49 @@ describe("KnowledgeNetworkWorkspaceScene object metric navigation", () => {
     fireEvent.click(entry);
 
     expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/metrics");
+  });
+});
+
+describe("KnowledgeNetworkWorkspaceScene knowledge-base navigation", () => {
+  beforeEach(() => {
+    mocks.navigate.mockReset();
+  });
+
+  it("names no knowledge base in the community image", () => {
+    renderScene(entitlement());
+
+    expect(screen.queryByRole("button", { name: /知识库/ })).toBeNull();
+  });
+
+  it("marks the entry as professional without the license, and opens the masked section", () => {
+    renderScene(entitlement({ extensions: [CAPABILITIES.KNOWLEDGE_BASE] }));
+
+    const entry = screen.getByRole("button", { name: /知识库/ });
+    expect(within(entry).getByText("专业版")).toBeTruthy();
+
+    fireEvent.click(entry);
+
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/knowledge-bases",
+    );
+  });
+
+  it("opens the section when the knowledge base is licensed", () => {
+    renderScene(
+      entitlement({
+        capabilities: [CAPABILITIES.KNOWLEDGE_BASE],
+        edition: "professional",
+        extensions: [CAPABILITIES.KNOWLEDGE_BASE],
+        licensed: true,
+        state: "valid",
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /知识库/ }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/knowledge-bases",
+    );
   });
 });
 
