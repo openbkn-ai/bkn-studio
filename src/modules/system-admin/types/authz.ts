@@ -31,6 +31,9 @@ export type GrantRecord = {
   authoritySource: GrantAuthoritySource;
   /** Authenticated user that created this independently managed source. */
   createdBy?: string;
+  /** Display identity supplied by the authorized object-scoped read. */
+  createdByName?: string;
+  createdByAccount?: string;
   effect: GrantEffect;
   grantId: string;
   inherited: boolean;

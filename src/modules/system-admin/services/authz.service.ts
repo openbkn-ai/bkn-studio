@@ -561,6 +561,8 @@ type BackendGrantRecord = {
   accessor_id?: string;
   authority_source?: GrantRecord["authoritySource"];
   created_by?: string | null;
+  created_by_name?: string;
+  created_by_account?: string;
   effect?: GrantRecord["effect"];
   grant_id?: string;
   inherited?: boolean;
@@ -584,6 +586,8 @@ function mapGrantRecord(item: BackendGrantRecord, accessorId: string): GrantReco
     accessorId: item.accessor_id ?? accessorId,
     authoritySource: item.authority_source ?? "system",
     createdBy: item.created_by ?? undefined,
+    createdByName: item.created_by_name,
+    createdByAccount: item.created_by_account,
     effect: item.effect ?? "allow",
     grantId: item.grant_id ?? "",
     inherited: item.inherited === true,

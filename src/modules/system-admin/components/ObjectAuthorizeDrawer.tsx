@@ -313,6 +313,12 @@ export function ObjectAuthorizeDrawer({
             : t("systemAdmin.objectGrants.creatorNotRecorded"),
         };
       }
+      if (source.createdByName || source.createdByAccount) {
+        return {
+          name: source.createdByName || source.createdByAccount,
+          sub: source.createdByAccount,
+        };
+      }
       const user = grantUserMap.get(id);
       if (user) {
         return { name: user.name, sub: user.account };

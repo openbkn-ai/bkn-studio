@@ -95,6 +95,8 @@ describe("object-grant backend contract", () => {
           accessor_id: "user-1",
           authority_source: "admin_authz",
           created_by: "admin-1",
+          created_by_name: "Administrator",
+          created_by_account: "admin",
           effect: "allow",
           grant_id: "grant-allow-modify",
           inherited: false,
@@ -121,6 +123,9 @@ describe("object-grant backend contract", () => {
       "grant-deny-view",
     ]);
     expect(result.grants?.[0]?.createdBy).toBe("admin-1");
+    expect(result.grants?.[0]?.createdByName).toBe("Administrator");
+    expect(result.grants?.[0]?.createdByAccount).toBe("admin");
+    expect(result.grants?.[1]?.createdByName).toBeUndefined();
     expect(result.accessorType).toBe("role");
     expect(result.effectiveDecisions).toEqual([
       expect.objectContaining({

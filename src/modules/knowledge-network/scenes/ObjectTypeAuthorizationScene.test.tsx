@@ -387,6 +387,8 @@ describe("ObjectTypeAuthorizationScene", () => {
               active: true,
               authoritySource: "owner_delegate",
               createdBy: "u-other",
+              createdByName: "Other Grantor",
+              createdByAccount: "other.account",
               effect: "allow",
               grantId: "grant-view-other",
               inherited: false,
@@ -419,6 +421,9 @@ describe("ObjectTypeAuthorizationScene", () => {
     const row = (await screen.findByText("Owner B")).closest("tr");
     fireEvent.click(within(row as HTMLElement).getByText("common.viewDetails"));
     const sourceDrawer = await screen.findByRole("dialog");
+    expect(within(sourceDrawer).getByText("Other Grantor")).toBeInTheDocument();
+    expect(within(sourceDrawer).getByText("other.account")).toBeInTheDocument();
+    expect(within(sourceDrawer).queryByText("u-other")).not.toBeInTheDocument();
     const deleteActions = within(sourceDrawer).getAllByText("systemAdmin.objectGrants.deleteGrant");
     expect((deleteActions[0].closest("button") as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(deleteActions[0]);
