@@ -190,7 +190,7 @@ export const modelResourcesEnUS = {
       sortByName: "Sort by name",
       sortByCount: "Sort by estimated total amount",
       sortAriaLabel: "Sort quotas",
-      finalOperatorTime: "Final Operated Time",
+      finalOperatorTime: "Last operation time",
       quotaSet: "Limit settings",
       userQuota: "Allocate user quota",
       columns: {
@@ -200,7 +200,7 @@ export const modelResourcesEnUS = {
         tokensCount: "Number of tokens",
         price: "Reference unit price",
         totalPrice: "Estimated total amount",
-        updateTime: "Final Operated Time",
+        updateTime: "Last operation time",
       },
       units: {
         thousand: "K",
