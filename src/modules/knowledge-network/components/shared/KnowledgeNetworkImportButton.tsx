@@ -479,6 +479,7 @@ export function KnowledgeNetworkImportButton({
           }
           onCancel={() => setSkipReport(null)}
           open
+          rootClassName={modalStyles.businessModal}
           title={t("knowledgeNetwork.packageImport.skippedTitle", {
             count: skipReport.skipped.length,
           })}
