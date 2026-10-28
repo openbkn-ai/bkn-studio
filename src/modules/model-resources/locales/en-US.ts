@@ -167,7 +167,7 @@ export const modelResourcesEnUS = {
       monitor: {
         title: "Model monitoring",
         initialSpeed: "Time to first token",
-        initialSpeedSub: "Time from request to the first generated token",
+        initialSpeedSub: "Time from request to the first generated token, in seconds",
         outputSpeed: "Output speed",
         outputSpeedSub: "Output tokens per second",
         tokenThroughput: "Token throughput",
