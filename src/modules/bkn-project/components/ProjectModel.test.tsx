@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -69,6 +69,7 @@ vi.mock("@/shared/catalog", async (importOriginal) => ({
 }));
 
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
+import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { DRAFT_POLL_MS, ProjectModel } from "./ProjectModel";
 
@@ -103,24 +104,15 @@ function edited(change: (draft: ReturnType<typeof ready>) => void) {
   return draft;
 }
 
-/**
- * The open dialog. Queries by role inside it skip the tables behind it: searching the whole page
- * by role is slow enough to push these tests past the time limit in CI.
- */
+/** The open dialog: queries inside it skip the page behind it. */
 async function openDialog() {
-  return within(
-    await waitFor(() => {
-      const element = document.querySelector<HTMLElement>(".ant-modal");
-      if (!element) {
-        throw new Error("no dialog is open");
-      }
-      return element;
-    }),
-  );
+  return within(await screen.findByRole("dialog"));
 }
 
 function renderModel(override: Partial<Project> = {}, ownerIsCaller = true) {
-  return render(
+  // Without Ant Design's injected styles, as a query by role matches each element against them
+  // and would take seconds per query on this page.
+  return renderWithoutAntdStyles(
     <ProjectModel
       onProjectChange={onProjectChange}
       ownerIsCaller={ownerIsCaller}
@@ -295,6 +287,20 @@ describe("ProjectModel", () => {
     renderModel({ catalogIds: ["old-catalog"] });
     await screen.findByText(/bknProject.model.summary/);
     expect(screen.queryByText(/bknProject.model.notice.missingCatalogs/)).not.toBeInTheDocument();
+  });
+
+  it("draws the concept model, and says how to fill it while nothing is adopted", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    const view = renderModel();
+    expect(await screen.findByTestId("draft-concept-graph")).toBeInTheDocument();
+    view.unmount();
+
+    getDraftMock.mockResolvedValue(
+      edited((draft) => draft.items.objectTypes.forEach((item) => (item.adopted = false))),
+    );
+    renderModel();
+    expect(await screen.findByText("bknProject.model.graph.empty")).toBeInTheDocument();
+    expect(screen.queryByTestId("draft-concept-graph")).not.toBeInTheDocument();
   });
 
   it("opens an object type with its identity, properties and the fields left out", async () => {

@@ -99,6 +99,11 @@ export const bknProjectZhCN = {
       comingSoonDescription: "后续版本会在这里提供完整功能。",
     },
     model: {
+      graph: {
+        title: "本体概念模型",
+        empty: "还没有采纳的对象类",
+        emptyDescription: "采纳对象类后，这里会画出它们以及它们之间的关系。",
+      },
       status: {
         ready: "草稿",
         drafting: "起草中",

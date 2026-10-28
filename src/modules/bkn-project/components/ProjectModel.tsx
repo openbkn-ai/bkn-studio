@@ -14,6 +14,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftConceptGraph";
 import { DraftChangesPanel } from "@/modules/bkn-project/components/draft/DraftChangesPanel";
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
 import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityDialog";
@@ -574,6 +575,11 @@ export function ProjectModel({
         />
       ) : (
         <>
+          <DraftConceptGraph
+            draft={draft}
+            onOpen={setOpenId}
+            title={t("bknProject.model.graph.title")}
+          />
           <Segmented<Tab> onChange={setTab} options={tabs} value={activeTab} />
           {activeTab === "objects" ? (
             <DraftObjectsTable
