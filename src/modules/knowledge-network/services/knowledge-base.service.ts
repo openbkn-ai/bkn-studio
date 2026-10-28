@@ -15,7 +15,8 @@ export const KNOWLEDGE_BASE_QUERY_OPERATION = "query_data";
 /** A knowledge base the caller may mount: one they can query. */
 export type QueryableKnowledgeBase = {
   description: string;
-  documentCount: number;
+  /** Absent when kb-api did not report it; not the same as an empty knowledge base. */
+  documentCount?: number;
   id: string;
   name: string;
 };
@@ -39,7 +40,7 @@ export function mapQueryableKnowledgeBases(
     .filter((item) => item.operations?.includes(KNOWLEDGE_BASE_QUERY_OPERATION))
     .map((item) => ({
       description: item.description ?? "",
-      documentCount: item.document_count ?? 0,
+      documentCount: item.document_count,
       id: String(item.id),
       name: item.name,
     }));

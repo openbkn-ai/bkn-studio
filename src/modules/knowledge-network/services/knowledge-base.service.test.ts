@@ -68,4 +68,10 @@ describe("mapQueryableKnowledgeBases", () => {
       mapQueryableKnowledgeBases([{ id: 1, name: "Seen", operations: ["view_detail"] }]),
     ).toEqual([]);
   });
+
+  it("keeps a document count kb-api did not report as unknown, not as zero", () => {
+    expect(
+      mapQueryableKnowledgeBases([{ id: 1, name: "Uncounted", operations: ["query_data"] }]),
+    ).toEqual([{ description: "", documentCount: undefined, id: "1", name: "Uncounted" }]);
+  });
 });
