@@ -68,10 +68,10 @@ vi.mock("@/shared/catalog", async (importOriginal) => ({
   listCatalogs: listCatalogsMock,
 }));
 
-import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
+import { DRAFT_POLL_MS, mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
-import { DRAFT_POLL_MS, ProjectModel } from "./ProjectModel";
+import { ProjectModel } from "./ProjectModel";
 
 const project: Project = {
   archived: false,

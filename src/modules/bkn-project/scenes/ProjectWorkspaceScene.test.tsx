@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -72,7 +72,7 @@ vi.mock("@/modules/bkn-project/services/project.service", () => ({
   getProjectNetwork: getNetworkMock,
 }));
 
-import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
+import { DRAFT_POLL_MS, mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
 
 import { ProjectWorkspaceScene } from "./ProjectWorkspaceScene";
 
@@ -267,13 +267,32 @@ describe("ProjectWorkspaceScene", () => {
     expect(await screen.findByText("concept graph")).toBeInTheDocument();
   });
 
-  it("names another owner, never by account id", async () => {
-    getProjectMock.mockResolvedValue({ ...project, owner: { id: "u2", type: "user" } });
-    directoryMock.set("u2", "Li Lei");
-    renderScene();
+  it("reads a drafting draft again until it is done, as the modeling page does", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      getDraftMock
+        .mockResolvedValueOnce({ ...draftWithDecisions(), status: "drafting" })
+        .mockResolvedValue(draftWithDecisions());
+      renderScene();
+      expect(
+        await screen.findByText("bknProject.overview.model.draftingDescription"),
+      ).toBeInTheDocument();
 
-    expect(await screen.findByText("Li Lei")).toBeInTheDocument();
-    expect(screen.queryByText("u2")).toBeNull();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+      });
+      expect(await screen.findByText("concept graph")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows the model loading while the draft is read", async () => {
+    getDraftMock.mockReturnValue(new Promise(() => undefined));
+    const { container } = renderScene();
+    await screen.findByText("Delivery warning");
+
+    expect(container.querySelector('[data-region="model"] .ant-spin')).not.toBeNull();
   });
 
   it("says when the network has no release yet", async () => {

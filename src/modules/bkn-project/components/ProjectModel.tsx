@@ -40,6 +40,7 @@ import {
 } from "@/modules/bkn-project/components/draft/evidence";
 import {
   chooseIdentity,
+  DRAFT_POLL_MS,
   editDraftItem,
   generateDraft,
   getDraft,
@@ -57,9 +58,6 @@ import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccoun
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectModel.module.css";
-
-/** How often a draft that is drafting is read again. */
-export const DRAFT_POLL_MS = 5000;
 
 const TABS = ["changes", "excluded", "objects", "relations", "valueTypes"] as const;
 type Tab = (typeof TABS)[number];

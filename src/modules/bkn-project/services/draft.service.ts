@@ -569,6 +569,9 @@ function restoreMockField(
 const draftPath = (projectId: string) =>
   `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/draft`;
 
+/** How often a draft that is drafting is read again, by every page that shows it. */
+export const DRAFT_POLL_MS = 5000;
+
 /** Returns the project's draft, or null before the first one. */
 export async function getDraft(projectId: string): Promise<Draft | null> {
   if (useMock) {

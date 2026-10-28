@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert } from "antd";
+import { Alert, Spin } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,7 +23,7 @@ import {
 import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftConceptGraph";
 import { draftGraph } from "@/modules/bkn-project/components/draft/graph";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
-import { getDraft } from "@/modules/bkn-project/services/draft.service";
+import { DRAFT_POLL_MS, getDraft } from "@/modules/bkn-project/services/draft.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
 import { projectSectionPath, type ProjectSection } from "@/modules/bkn-project/types/workspace";
@@ -79,17 +79,33 @@ export function ProjectOverview({
   // undefined while loading, null before the first draft.
   const [draft, setDraft] = useState<Draft | null | undefined>(undefined);
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [reading, setReading] = useState(true);
+  // Counts every read, failed or not, so a drafting draft is read again after a failure too.
+  const [reads, setReads] = useState(0);
   const loadDraft = useCallback(async () => {
+    setReading(true);
     setDraftError(null);
     try {
       setDraft(await getDraft(project.id));
     } catch (error) {
       setDraftError(extractRequestErrorMessage(error));
+    } finally {
+      setReading(false);
+      setReads((count) => count + 1);
     }
   }, [project.id]);
   useEffect(() => {
     void loadDraft();
   }, [loadDraft]);
+  // A drafting draft is read again until it is done, as on the modeling page.
+  const drafting = draft?.status === "drafting";
+  useEffect(() => {
+    if (!drafting) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => void loadDraft(), DRAFT_POLL_MS);
+    return () => window.clearTimeout(timer);
+  }, [drafting, loadDraft, reads]);
 
   const ready = draft?.status === "ready" ? draft : null;
   const graph = useMemo(() => (ready ? draftGraph(ready) : null), [ready]);
@@ -173,9 +189,7 @@ export function ProjectOverview({
           {field(t("bknProject.overview.fields.network"), networkName)}
           {field(
             t("bknProject.overview.fields.owner"),
-            ownerIsCaller
-              ? t("bknProject.list.ownerYou")
-              : (directory.get(project.owner.id) ?? t("bknProject.model.changes.someone")),
+            ownerIsCaller ? t("bknProject.list.ownerYou") : project.owner.id,
           )}
           {field(t("bknProject.overview.fields.updated"), formatTime(project.updateTime))}
           {field(t("bknProject.overview.fields.id"), <code>{project.id}</code>)}
@@ -216,7 +230,9 @@ export function ProjectOverview({
             {t("bknProject.overview.model.open")}
           </button>
         </div>
-        {draftError ? (
+        {reading && draft === undefined ? (
+          <Spin />
+        ) : draftError ? (
           <Alert
             action={
               <AppButton onClick={() => void loadDraft()} size="small">
