@@ -14,6 +14,9 @@ overrides:
   postcss: 8.5.23
   zod: 4.6.6
 
+patchedDependencies:
+  '@monaco-editor/react@4.7.0': d01caef4d68e55e69dd1ca7be8d0ba21945d8b6ea4e0627c431ad5bbbf7eca18
+
 importers:
 
   .:
@@ -35,7 +38,7 @@ importers:
         version: 2.4.0
       '@monaco-editor/react':
         specifier: ^4.7.0
-        version: 4.7.0(monaco-editor@0.52.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 4.7.0(patch_hash=d01caef4d68e55e69dd1ca7be8d0ba21945d8b6ea4e0627c431ad5bbbf7eca18)(monaco-editor@0.52.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       ai:
         specifier: ^7.0.4
         version: 7.0.4(zod@4.6.6)
@@ -3478,7 +3481,7 @@ snapshots:
     dependencies:
       state-local: 1.0.7
 
-  '@monaco-editor/react@4.7.0(monaco-editor@0.52.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@monaco-editor/react@4.7.0(patch_hash=d01caef4d68e55e69dd1ca7be8d0ba21945d8b6ea4e0627c431ad5bbbf7eca18)(monaco-editor@0.52.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@monaco-editor/loader': 1.7.0
       monaco-editor: 0.52.2
