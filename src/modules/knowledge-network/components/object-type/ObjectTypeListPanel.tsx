@@ -935,7 +935,9 @@ export function ObjectTypeListPanel({
                         >
                           {renderResourceIcon(item.icon)}
                         </span>
-                        <span>{item.name}</span>
+                        <span className={graphStyles.objectButtonName} title={item.name}>
+                          {item.name}
+                        </span>
                       </button>
                     ))}
                     {!isLoading && items.length === 0 ? renderEmptyContent() : null}

@@ -150,6 +150,31 @@ afterEach(() => {
 });
 
 describe("ObjectTypeListPanel graph view", () => {
+  it.each([
+    ["continuous English", "objectName".repeat(15)],
+    ["Chinese", "超长对象类名称".repeat(15)],
+    ["mixed Chinese and English", "客户Customer对象Object".repeat(10)],
+  ])("constrains long %s names and exposes the full name on hover", async (_case, longName) => {
+    mocks.listObjectTypes.mockResolvedValue({
+      entries: [{ ...order, name: longName }],
+      totalCount: 1,
+    });
+
+    render(
+      <ObjectTypeListPanel
+        canDelete={false}
+        canModify={false}
+        networkId="network-1"
+        networkName="Sales"
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const name = await screen.findByText(longName);
+    expect(name.className).toContain("objectButtonName");
+    expect(name).toHaveAttribute("title", longName);
+  });
+
   it("offers list and graph modes and selects the first visible object for the graph", async () => {
     const onDelete = vi.fn().mockResolvedValue(undefined);
     render(

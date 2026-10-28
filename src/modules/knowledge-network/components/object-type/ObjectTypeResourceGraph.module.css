@@ -525,12 +525,23 @@
   background: #d89614;
 }
 
-.emptyState {
+.emptyHint {
   left: 50%;
+  max-width: calc(100% - 32px);
+  overflow: hidden;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-raised) 94%, transparent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+  color: var(--color-text-secondary);
+  font-size: 13px;
   pointer-events: none;
   position: absolute;
-  top: 68%;
+  text-overflow: ellipsis;
+  top: calc(50% + 88px);
   transform: translate(-50%, -50%);
+  white-space: nowrap;
 }
 
 .resourceDrawer :global(.ant-drawer-body) {

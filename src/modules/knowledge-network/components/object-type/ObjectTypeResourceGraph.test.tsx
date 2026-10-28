@@ -276,6 +276,54 @@ afterEach(() => {
 });
 
 describe("ObjectTypeResourceGraph", () => {
+  it("keeps the current object and shows lightweight category-specific empty hints", async () => {
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
+    mocks.listActions.mockResolvedValue({ entries: [], totalCount: 0 });
+    renderGraph();
+
+    expect(await screen.findByText("当前对象类暂无关联资源")).toHaveAttribute("role", "status");
+    expect(screen.getByRole("button", { name: "当前对象类 销售订单" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("关系类 0"));
+    expect(screen.getByText("当前对象类暂无关联关系")).toHaveAttribute("role", "status");
+
+    fireEvent.click(screen.getByText("对象指标 0"));
+    expect(screen.getByText("当前对象类暂无关联指标")).toHaveAttribute("role", "status");
+
+    fireEvent.click(screen.getByText("行动类 0"));
+    expect(screen.getByText("当前对象类暂无关联行动")).toHaveAttribute("role", "status");
+  });
+
+  it("shows a retryable error without presenting failed requests as empty data", async () => {
+    mocks.listRelations.mockRejectedValue(new Error("关系类服务不可用"));
+    mocks.listMetrics.mockRejectedValue(new Error("指标服务不可用"));
+    mocks.listActions.mockRejectedValue(new Error("行动类服务不可用"));
+    renderGraph();
+
+    expect(await screen.findByText("关联资源加载失败")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /重\s*试/ })).toBeInTheDocument();
+    expect(screen.queryByText("当前对象类暂无关联资源")).not.toBeInTheDocument();
+  });
+
+  it("retries failed resource requests and then presents a successful empty result", async () => {
+    mocks.listRelations
+      .mockRejectedValueOnce(new Error("关系类服务不可用"))
+      .mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics
+      .mockRejectedValueOnce(new Error("指标服务不可用"))
+      .mockResolvedValue({ entries: [], total_count: 0 });
+    mocks.listActions
+      .mockRejectedValueOnce(new Error("行动类服务不可用"))
+      .mockResolvedValue({ entries: [], totalCount: 0 });
+    renderGraph();
+
+    fireEvent.click(await screen.findByRole("button", { name: /重\s*试/ }));
+
+    expect(await screen.findByText("当前对象类暂无关联资源")).toBeInTheDocument();
+    expect(screen.queryByText("关联资源加载失败")).not.toBeInTheDocument();
+  });
+
   it.each([
     ["relations", "1 个关系类"],
     ["actions", "1 个行动类"],
@@ -1188,5 +1236,6 @@ describe("ObjectTypeResourceGraph", () => {
     expect(screen.getByRole("button", { name: "对象指标 订单金额" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "展开 行动类 1" }));
     expect(screen.getByRole("button", { name: "行动类 更新订单" })).toBeInTheDocument();
+    expect(screen.queryByText("当前对象类暂无关联资源")).not.toBeInTheDocument();
   });
 });

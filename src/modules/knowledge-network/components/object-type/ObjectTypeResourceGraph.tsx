@@ -6,17 +6,7 @@
  */
 
 import { AimOutlined, ArrowLeftOutlined, ZoomInOutlined, ZoomOutOutlined } from "@ant-design/icons";
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Drawer,
-  Empty,
-  Segmented,
-  Spin,
-  Tooltip,
-  Typography,
-} from "antd";
+import { Alert, Button, Descriptions, Drawer, Segmented, Spin, Tooltip, Typography } from "antd";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -793,6 +783,24 @@ export function ObjectTypeResourceGraph({
     (showMetricItems ? metricItems.length : 0) +
     (showActionGroup ? 1 : 0) +
     (showActionItems ? actionItems.length : 0);
+  const primaryErrorKeys = new Set<GraphError["key"]>();
+  if (resourceScope !== "actions") primaryErrorKeys.add("relations");
+  if (metricsAvailable && resourceScope === "all") primaryErrorKeys.add("metrics");
+  if (resourceScope !== "relations") primaryErrorKeys.add("actions");
+  const primaryErrors = errors.filter((error) => primaryErrorKeys.has(error.key));
+  const hasVisibleSectionError = primaryErrors.some(
+    (error) => section === "all" || error.key === section,
+  );
+  const allPrimaryRequestsFailed =
+    primaryErrorKeys.size > 0 && primaryErrors.length === primaryErrorKeys.size;
+  const emptyMessageKey =
+    section === "relations"
+      ? "knowledgeNetwork.objectTypeGraphRelationsEmpty"
+      : section === "metrics"
+        ? "knowledgeNetwork.objectTypeGraphMetricsEmpty"
+        : section === "actions"
+          ? "knowledgeNetwork.objectTypeGraphActionsEmpty"
+          : "knowledgeNetwork.objectTypeGraphEmpty";
 
   const metricGroupPosition = useMemo(
     () => overviewGroupPosition("metrics", expandedGroup),
@@ -1415,9 +1423,13 @@ export function ObjectTypeResourceGraph({
             </Button>
           }
           description={errors.map((entry) => entry.message).join("；")}
-          message={t("knowledgeNetwork.objectTypeGraphPartialError")}
+          message={t(
+            allPrimaryRequestsFailed
+              ? "knowledgeNetwork.objectTypeGraphLoadError"
+              : "knowledgeNetwork.objectTypeGraphPartialError",
+          )}
           showIcon
-          type="warning"
+          type={allPrimaryRequestsFailed ? "error" : "warning"}
         />
       ) : null}
 
@@ -2085,9 +2097,9 @@ export function ObjectTypeResourceGraph({
           ) : null}
         </div>
 
-        {!loading && visibleResourceCount === 0 ? (
-          <div className={styles.emptyState}>
-            <Empty description={t("knowledgeNetwork.objectTypeGraphEmpty")} />
+        {!loading && visibleResourceCount === 0 && !hasVisibleSectionError ? (
+          <div className={styles.emptyHint} role="status">
+            {t(emptyMessageKey)}
           </div>
         ) : null}
 
