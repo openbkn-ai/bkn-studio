@@ -80,6 +80,7 @@ export type UserQuotaRecord = {
 
 export type UserQuotaListResult = {
   items: UserQuotaRecord[];
+  /** Unallocated raw tokens; configuration values use numType units instead. */
   inputTokensRemain: number;
   outputTokensRemain: number;
 };

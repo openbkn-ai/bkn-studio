@@ -21,6 +21,7 @@ import type {
   UserQuotaRecord,
   UserQuotaSaveItem,
 } from "@/modules/model-resources/types/quota";
+import { TOKEN_UNIT_VALUE } from "@/modules/model-resources/utils/quota-units";
 import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
 
@@ -306,15 +307,23 @@ export async function listUserQuotas(confId: string): Promise<UserQuotaListResul
   if (useMock) {
     const quota = mockModelQuotas.find((item) => item.confId === confId);
     const items = mockUserQuotas.filter((item) => item.modelQuotaId === confId);
-    const inputRemain =
-      (quota?.inputTokens ?? 0) - items.reduce((sum, item) => sum + (item.inputTokens ?? 0), 0);
-    const outputRemain =
-      (quota?.outputTokens ?? 0) - items.reduce((sum, item) => sum + (item.outputTokens ?? 0), 0);
+    const remainingTokens = (type: "inputTokens" | "outputTokens", index: number) => {
+      const configured = quota?.[type] ?? 0;
+      if (configured === -1) {
+        return -1;
+      }
+      const total = configured * (TOKEN_UNIT_VALUE[quota?.numType[index] ?? 0] ?? 1);
+      const allocated = items.reduce(
+        (sum, item) => sum + (item[type] ?? 0) * (TOKEN_UNIT_VALUE[item.numType[index] ?? 0] ?? 1),
+        0,
+      );
+      return Math.max(total - allocated, 0);
+    };
 
     return {
       items,
-      inputTokensRemain: Math.max(inputRemain, 0),
-      outputTokensRemain: Math.max(outputRemain, 0),
+      inputTokensRemain: remainingTokens("inputTokens", 0),
+      outputTokensRemain: quota?.billingType === 1 ? remainingTokens("outputTokens", 1) : 0,
     };
   }
 

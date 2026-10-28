@@ -5,29 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import BigNumber from "bignumber.js";
+import type { TFunction } from "i18next";
+
+import { TOKEN_UNIT_VALUE } from "./quota-units";
+
 import type { ModelQuota } from "@/modules/model-resources/types/quota";
 
 const CURRENCY_SYMBOL: Record<number, string> = {
   0: "\uffe5",
   1: "$",
-};
-
-const TOKEN_UNIT_LABEL: Record<number, string> = {
-  1: "\u5343",
-  2: "\u4e07",
-  3: "\u4ebf",
-  4: "\u767e\u4e07",
-  5: "\u5343\u4e07",
-  6: "\u4ebf",
-};
-
-const TOKEN_UNIT_VALUE: Record<number, number> = {
-  1: 1_000,
-  2: 10_000,
-  3: 100_000_000,
-  4: 1_000_000,
-  5: 10_000_000,
-  6: 100_000_000,
 };
 
 const PRICE_UNIT: Record<string, number> = {
@@ -44,25 +31,46 @@ export function isQuotaConfigured(record: Pick<ModelQuota, "inputTokens">) {
   return record.inputTokens !== -1;
 }
 
-export function formatTokenUnit(numType?: number) {
-  if (!numType) {
-    return "";
-  }
-
-  return TOKEN_UNIT_LABEL[numType === 3 ? 6 : numType] ?? "";
+export function formatTokenUnit(numType: number | undefined, t: TFunction) {
+  const option = QUOTA_NUM_TYPE_OPTIONS.find(
+    ({ value }) => value === (numType === 3 ? 6 : numType),
+  );
+  return option ? t(option.labelKey) : "";
 }
 
+/** Formats a configuration value already expressed in its selected unit. */
 export function formatQuotaTokenAmount(
   tokens: number | undefined,
   numType: number | undefined,
   monthLabel: string,
+  t: TFunction,
 ) {
   if (tokens === undefined || tokens === -1) {
     return "--";
   }
 
-  const unit = formatTokenUnit(numType);
-  return `${tokens}${unit}/${monthLabel}`;
+  const unit = formatTokenUnit(numType, t);
+  return `${tokens} ${unit ? `${unit} ` : ""}tokens/${monthLabel}`;
+}
+
+/** Remaining allocation comes from the API as raw tokens, not configuration values. */
+export function formatQuotaRemainingTokens(
+  tokens: number | undefined,
+  numType: number | undefined,
+  monthLabel: string,
+  t: TFunction,
+) {
+  if (tokens === undefined || tokens === -1) {
+    return "--";
+  }
+
+  const amount = new BigNumber(tokens).dividedBy(TOKEN_UNIT_VALUE[numType ?? 0] ?? 1);
+  // Preserve exact balances without expanding tiny quantities into long decimals.
+  if ((amount.decimalPlaces() ?? 0) > 3) {
+    return `${new BigNumber(tokens).toFormat()} tokens/${monthLabel}`;
+  }
+  const unit = formatTokenUnit(numType, t);
+  return `${amount.toFixed()} ${unit ? `${unit} ` : ""}tokens/${monthLabel}`;
 }
 
 export function formatReferPrice(

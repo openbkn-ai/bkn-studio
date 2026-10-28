@@ -231,6 +231,7 @@ export const modelResourcesZhCN = {
         outputQuota: "输出 tokens",
         duplicateUser: "该用户已在列表中。",
         quotaEmpty: "请完整填写用户配额。",
+        quotaExceeded: "{{quota}}的新增分配量超过剩余可分配额度，请减少分配量或刷新后重试。",
         saveSuccess: "用户配额已保存。",
         remainUnified: "剩余可分配额度：{{amount}}",
         remainSeparate: "剩余可分配额度：输入 {{input}}，输出 {{output}}",

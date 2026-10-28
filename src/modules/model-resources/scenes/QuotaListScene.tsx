@@ -181,17 +181,17 @@ export function QuotaListScene() {
             <div className={styles.multiLineCell}>
               <div>
                 {inLabel}：
-                {formatQuotaTokenAmount(record.inputTokens, record.numType[0], monthLabel)}
+                {formatQuotaTokenAmount(record.inputTokens, record.numType[0], monthLabel, t)}
               </div>
               <div>
                 {outLabel}：
-                {formatQuotaTokenAmount(record.outputTokens, record.numType[1], monthLabel)}
+                {formatQuotaTokenAmount(record.outputTokens, record.numType[1], monthLabel, t)}
               </div>
             </div>
           );
         }
 
-        return formatQuotaTokenAmount(record.inputTokens, record.numType[0], monthLabel);
+        return formatQuotaTokenAmount(record.inputTokens, record.numType[0], monthLabel, t);
       },
     },
     {

@@ -20,10 +20,11 @@ import {
 } from "@/modules/model-resources/services/quota.service";
 import type { ModelQuota, UserQuotaRecord } from "@/modules/model-resources/types/quota";
 import {
-  formatQuotaTokenAmount,
+  formatQuotaRemainingTokens,
   isQuotaConfigured,
   QUOTA_NUM_TYPE_OPTIONS,
 } from "@/modules/model-resources/utils/quota-display";
+import { isQuotaAllocationExceeded } from "@/modules/model-resources/utils/quota-allocation";
 import { DirectoryUserPicker } from "@/modules/system-admin";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
 
@@ -47,6 +48,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
   const [inputRemain, setInputRemain] = useState(0);
   const [outputRemain, setOutputRemain] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [quotaLoaded, setQuotaLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>();
   const [selectedUser, setSelectedUser] = useState<AdminUser>();
@@ -66,6 +68,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
     }
 
     setLoading(true);
+    setQuotaLoaded(false);
 
     try {
       const result = await listUserQuotas(record.confId);
@@ -73,6 +76,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
       setOriginalItems(result.items);
       setInputRemain(result.inputTokensRemain);
       setOutputRemain(result.outputTokensRemain);
+      setQuotaLoaded(true);
     } catch (error) {
       message.error(extractRequestErrorMessage(error));
     } finally {
@@ -129,7 +133,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
   };
 
   const handleSubmit = async () => {
-    if (!record) {
+    if (!record || loading || !quotaLoaded) {
       return;
     }
 
@@ -142,6 +146,23 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
     if (invalid) {
       message.warning(t("modelResources.quotas.userModal.quotaEmpty"));
       return;
+    }
+
+    if (isQuotaConfigured(record)) {
+      const exceeded = isQuotaAllocationExceeded(items, originalItems, inputRemain, "inputTokens")
+        ? "inputQuota"
+        : record.billingType === 1 &&
+            isQuotaAllocationExceeded(items, originalItems, outputRemain, "outputTokens")
+          ? "outputQuota"
+          : null;
+      if (exceeded) {
+        message.warning(
+          t("modelResources.quotas.userModal.quotaExceeded", {
+            quota: t(`modelResources.quotas.userModal.${exceeded}`),
+          }),
+        );
+        return;
+      }
     }
 
     const currentIds = new Set(items.map((item) => item.userId));
@@ -213,11 +234,16 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
           message={
             isSeparateBilling
               ? t("modelResources.quotas.userModal.remainSeparate", {
-                  input: formatQuotaTokenAmount(inputRemain, record.numType[0], monthLabel),
-                  output: formatQuotaTokenAmount(outputRemain, record.numType[1], monthLabel),
+                  input: formatQuotaRemainingTokens(inputRemain, record.numType[0], monthLabel, t),
+                  output: formatQuotaRemainingTokens(
+                    outputRemain,
+                    record.numType[1],
+                    monthLabel,
+                    t,
+                  ),
                 })
               : t("modelResources.quotas.userModal.remainUnified", {
-                  amount: formatQuotaTokenAmount(inputRemain, record.numType[0], monthLabel),
+                  amount: formatQuotaRemainingTokens(inputRemain, record.numType[0], monthLabel, t),
                 })
           }
           type="info"
@@ -332,7 +358,12 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
 
       <div className={styles.footer}>
         <AppButton onClick={() => onClose(false)}>{t("common.cancel")}</AppButton>
-        <AppButton loading={submitting} type="primary" onClick={() => void handleSubmit()}>
+        <AppButton
+          disabled={loading || !quotaLoaded}
+          loading={submitting}
+          type="primary"
+          onClick={() => void handleSubmit()}
+        >
           {t("common.save")}
         </AppButton>
       </div>

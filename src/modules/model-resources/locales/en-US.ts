@@ -238,6 +238,8 @@ export const modelResourcesEnUS = {
         outputQuota: "Output tokens",
         duplicateUser: "This user is already in the list.",
         quotaEmpty: "Please complete all user quota fields.",
+        quotaExceeded:
+          "{{quota}} allocation exceeds the remaining available quota. Reduce the allocation or refresh and try again.",
         saveSuccess: "User quotas saved.",
         remainUnified: "Remaining quota: {{amount}}",
         remainSeparate: "Remaining quota: input {{input}}, output {{output}}",
