@@ -60,6 +60,7 @@ export function ObjectTypeGraphSidebar({
                 }`}
                 key={item.id}
                 onClick={() => onSelect(item)}
+                title={item.name}
                 type="button"
               >
                 <span

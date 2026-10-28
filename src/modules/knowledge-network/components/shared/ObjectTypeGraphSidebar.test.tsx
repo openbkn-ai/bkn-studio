@@ -5,8 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { ObjectTypeGraphSidebar } from "./ObjectTypeGraphSidebar";
 
@@ -35,6 +37,33 @@ afterAll(() => {
 });
 
 describe("ObjectTypeGraphSidebar", () => {
+  it("exposes the full object name on hover", () => {
+    const longName = "objectName".repeat(15);
+    const item = {
+      color: "#1677ff",
+      id: "order",
+      name: longName,
+    } as KnowledgeNetworkObjectTypeRecord;
+
+    render(
+      <ObjectTypeGraphSidebar
+        emptyContent={null}
+        items={[item]}
+        loading={false}
+        onPageChange={vi.fn()}
+        onSelect={vi.fn()}
+        page={1}
+        pageSize={10}
+        resourceCountLabel="resources"
+        resourceCounts={{ order: 0 }}
+        selectedId="order"
+        totalCount={1}
+      />,
+    );
+
+    expect(screen.getByTitle(longName)).toBeInTheDocument();
+  });
+
   it("keeps pagination compact when there are many pages", () => {
     const { container } = render(
       <ObjectTypeGraphSidebar

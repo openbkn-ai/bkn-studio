@@ -539,7 +539,7 @@
   pointer-events: none;
   position: absolute;
   text-overflow: ellipsis;
-  top: calc(50% + 88px);
+  top: min(calc(50% + 88px), calc(100% - 24px));
   transform: translate(-50%, -50%);
   white-space: nowrap;
 }
