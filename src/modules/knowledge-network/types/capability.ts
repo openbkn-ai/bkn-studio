@@ -105,3 +105,19 @@ export type AttachCapabilityInput = {
   capabilityType: CapabilityType;
   comment?: string;
 };
+
+/** Why importing a BKN package left a declared capability unbound; see `capabilitySkipReason`. */
+export type CapabilityImportSkip = {
+  /** The tool set or MCP server the package named, when it named one. */
+  boxName: string;
+  capabilityType: string;
+  /** What the package called it: ids belong to the environment it came from. */
+  name: string;
+  reason: string;
+};
+
+/** What a BKN package import did with the capabilities the package declared. */
+export type CapabilityImportReport = {
+  bound: number;
+  skipped: CapabilityImportSkip[];
+};

@@ -164,3 +164,113 @@ describe("importKnowledgeNetwork", () => {
     },
   );
 });
+
+describe("importKnowledgeNetworkPackage", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("uploads the package as a file with the chosen options, and reads what it skipped", async () => {
+    postMock.mockResolvedValue({
+      data: {
+        capabilities: {
+          bound: 2,
+          skipped: [
+            {
+              capability_type: "knowledge_base",
+              declared_id: "7",
+              detail: "two knowledge bases are called Contracts",
+              name: "Contracts",
+              reason: "ambiguous_name",
+            },
+            {
+              box_name: "orders-api",
+              capability_type: "function",
+              name: "get-order",
+              reason: "not_found",
+            },
+          ],
+        },
+        kn_id: "orders",
+      },
+    });
+    const { importKnowledgeNetworkPackage } =
+      await import("@/modules/knowledge-network/services/network.service");
+    const file = new File(["tar"], "orders.tar");
+
+    const report = await importKnowledgeNetworkPackage(file, "overwrite", "preserve", true);
+
+    const [url, body, config] = postMock.mock.calls[0] as [string, FormData, unknown];
+    expect(url).toBe("/bkn-backend/v1/bkns");
+    expect(body.get("file")).toBe(file);
+    expect(config).toEqual({
+      params: { binding_policy: "preserve", import_mode: "overwrite", strict_mode: true },
+      skipErrorToast: true,
+      timeout: 60_000,
+    });
+    // Ids and free-text details belong to the environment the package came from: not kept.
+    expect(report).toEqual({
+      bound: 2,
+      skipped: [
+        {
+          boxName: "",
+          capabilityType: "knowledge_base",
+          name: "Contracts",
+          reason: "ambiguous_name",
+        },
+        {
+          boxName: "orders-api",
+          capabilityType: "function",
+          name: "get-order",
+          reason: "not_found",
+        },
+      ],
+    });
+  });
+
+  it("reads a reply without a capability report as nothing bound or skipped", async () => {
+    postMock.mockResolvedValue({ data: { kn_id: "orders" } });
+    const { importKnowledgeNetworkPackage } =
+      await import("@/modules/knowledge-network/services/network.service");
+
+    await expect(importKnowledgeNetworkPackage(new File(["tar"], "orders.tar"))).resolves.toEqual({
+      bound: 0,
+      skipped: [],
+    });
+  });
+
+  it("reads a name already in use as a conflict, as for a JSON import", async () => {
+    postMock.mockRejectedValue({
+      response: {
+        data: {
+          description: "A knowledge network called Orders exists",
+          error_code: "BknBackend.KnowledgeNetwork.KNNameExisted",
+        },
+      },
+    });
+    const { importKnowledgeNetworkPackage } =
+      await import("@/modules/knowledge-network/services/network.service");
+    const { KnowledgeNetworkImportConflictError } =
+      await import("@/modules/knowledge-network/services/shared/runtime");
+
+    await expect(
+      importKnowledgeNetworkPackage(new File(["tar"], "orders.tar")),
+    ).rejects.toBeInstanceOf(KnowledgeNetworkImportConflictError);
+  });
+});
+
+describe("isKnowledgeNetworkPackage", () => {
+  it("tells a BKN package from a JSON file by its name", async () => {
+    const { isKnowledgeNetworkPackage } =
+      await import("@/modules/knowledge-network/services/network.service");
+
+    expect(["a.tar", "a.TAR.GZ", "a.tgz", "a.zip"].every(isKnowledgeNetworkPackage)).toBe(true);
+    expect(["a.json", "a.gz", "tar"].some(isKnowledgeNetworkPackage)).toBe(false);
+  });
+});
