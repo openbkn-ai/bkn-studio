@@ -9,7 +9,7 @@ import { LeftOutlined } from "@ant-design/icons";
 import { Alert, Spin } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -48,6 +48,7 @@ export function ProjectWorkspaceScene({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { runtimeConfig } = useAppServices();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -160,6 +161,7 @@ export function ProjectWorkspaceScene({
             />
           ) : section === "model" ? (
             <ProjectModel
+              initialTab={searchParams.get("tab")}
               onProjectChange={(next) =>
                 setLoaded((current) => (current ? { ...current, project: next } : current))
               }

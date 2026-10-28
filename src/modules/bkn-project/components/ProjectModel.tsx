@@ -40,6 +40,7 @@ import {
 } from "@/modules/bkn-project/components/draft/evidence";
 import {
   chooseIdentity,
+  DRAFT_POLL_MS,
   editDraftItem,
   generateDraft,
   getDraft,
@@ -58,10 +59,10 @@ import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectModel.module.css";
 
-/** How often a draft that is drafting is read again. */
-export const DRAFT_POLL_MS = 5000;
-
-type Tab = "changes" | "excluded" | "objects" | "relations" | "valueTypes";
+const TABS = ["changes", "excluded", "objects", "relations", "valueTypes"] as const;
+type Tab = (typeof TABS)[number];
+const isTab = (value: string | null | undefined): value is Tab =>
+  (TABS as readonly string[]).includes(value ?? "");
 
 /** How sending an edit ended: the dialog closes unless it failed for another reason. */
 type EditOutcome = "done" | "failed" | "stale";
@@ -83,10 +84,13 @@ function failureKey(error: string) {
  * bkn-project; the page shows what it answers and the evidence behind each item.
  */
 export function ProjectModel({
+  initialTab,
   onProjectChange,
   ownerIsCaller,
   project,
 }: {
+  /** The tab a link asked for, such as the overview's "View all" changes; others are ignored. */
+  initialTab?: string | null;
   onProjectChange: (project: Project) => void;
   /** Only the owner may replace the project's catalogs; others are asked to contact them. */
   ownerIsCaller: boolean;
@@ -101,7 +105,7 @@ export function ProjectModel({
   const [catalogs, setCatalogs] = useState<Catalogs>(null);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("objects");
+  const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "objects");
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ item: EditableItem; kind: DraftItemKind } | null>(null);
   const [saving, setSaving] = useState(false);

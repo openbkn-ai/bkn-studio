@@ -394,6 +394,11 @@ export const bknProjectEnUS = {
         questionsSub: "Estimated once requirements are drafted",
         ontology: "Ontology",
         ontologySub: "Shown once drafted from tables",
+        ontologyValue: "{{objects}} object types · {{relations}} relations",
+        ontologyAdoptedSub: "Adopted object and relation types",
+        ontologyPendingSub: "Adopted so far · {{count}} items wait for you",
+        ontologyPendingSub_one: "Adopted so far · {{count}} item waits for you",
+        ontologyPendingSub_other: "Adopted so far · {{count}} items wait for you",
         sources: "Data sources",
         sourcesValue: "{{count}} catalogs",
         sourcesValue_one: "{{count}} catalog",
@@ -408,10 +413,16 @@ export const bknProjectEnUS = {
         empty: "No ontology draft yet",
         emptyDescription:
           "Once the ontology is drafted from tables, its object and relation types show here.",
+        draftingDescription:
+          "AI is drafting from the tables; the concept model shows here when it is done.",
+        failedDescription:
+          "This draft did not finish. Open ontology modeling to see why and draft again.",
+        loadFailed: "The ontology draft cannot be read right now",
       },
       changes: {
         title: "Recent changes",
         empty: "No changes yet",
+        all: "View all",
       },
       versions: {
         title: "Versions and builds",
@@ -419,6 +430,8 @@ export const bknProjectEnUS = {
         draft: "Draft",
         latestRelease: "Latest release",
         unpublished: "Not published yet",
+        noDraft: "No draft yet",
+        draftUpdated: "Updated {{time}}",
       },
     },
   },
