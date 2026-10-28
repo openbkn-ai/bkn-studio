@@ -6,7 +6,7 @@
  */
 
 import { Alert, Checkbox, Empty, Input, Modal, Spin, Tag } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -59,16 +59,27 @@ export function KnowledgeBasePicker({
   const [saving, setSaving] = useState(false);
   const [saveFailure, setSaveFailure] = useState<KnowledgeBaseBindingFailure | null>(null);
 
+  // Only the latest search may answer: an earlier one that answers last would show its list under
+  // the newer keyword.
+  const requestRef = useRef(0);
   const load = useCallback(async (name: string) => {
+    const request = ++requestRef.current;
     setLoading(true);
     setListFailure(null);
     try {
-      setItems(await listQueryableKnowledgeBases(name));
-      setSearched(name.trim());
+      const result = await listQueryableKnowledgeBases(name);
+      if (request === requestRef.current) {
+        setItems(result);
+        setSearched(name.trim());
+      }
     } catch (error) {
-      setListFailure(knowledgeBaseBindingFailure(error));
+      if (request === requestRef.current) {
+        setListFailure(knowledgeBaseBindingFailure(error));
+      }
     } finally {
-      setLoading(false);
+      if (request === requestRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 

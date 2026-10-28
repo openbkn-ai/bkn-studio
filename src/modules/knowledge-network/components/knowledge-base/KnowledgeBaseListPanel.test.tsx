@@ -242,6 +242,40 @@ describe("KnowledgeBaseListPanel", () => {
     expect(dialog.getByRole("button", { name: "request Incidents" })).toBeInTheDocument();
   });
 
+  it("keeps the latest search when an earlier one answers last", async () => {
+    let answerFirst: (items: unknown[]) => void = () => undefined;
+    listKnowledgeBasesMock
+      .mockResolvedValueOnce([])
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answerFirst = resolve;
+          }),
+      )
+      .mockResolvedValueOnce([{ description: "", id: "12", name: "Incidents" }]);
+    renderWithoutAntdStyles(<KnowledgeBaseListPanel canModify networkId="kn-1" />);
+
+    fireEvent.click(await screen.findByText("knowledgeNetwork.knowledgeBasesMount"));
+    const dialog = within(await screen.findByRole("dialog"));
+    const search = await dialog.findByPlaceholderText(
+      "knowledgeNetwork.knowledgeBasesPicker.search",
+    );
+    const searchButton = dialog.getByRole("button", { name: /search/ });
+    fireEvent.change(search, { target: { value: "con" } });
+    fireEvent.click(searchButton);
+    fireEvent.change(search, { target: { value: "inc" } });
+    fireEvent.click(searchButton);
+    await waitFor(() => expect(listKnowledgeBasesMock).toHaveBeenCalledTimes(3));
+    expect(await dialog.findByText("Incidents")).toBeInTheDocument();
+
+    await act(async () => {
+      answerFirst([{ description: "", id: "11", name: "Contracts" }]);
+      await Promise.resolve();
+    });
+    expect(dialog.getByText("Incidents")).toBeInTheDocument();
+    expect(dialog.queryByText("Contracts")).toBeNull();
+  });
+
   it("tells an empty list from a search with no match", async () => {
     listKnowledgeBasesMock.mockResolvedValue([]);
     renderWithoutAntdStyles(<KnowledgeBaseListPanel canModify networkId="kn-1" />);
