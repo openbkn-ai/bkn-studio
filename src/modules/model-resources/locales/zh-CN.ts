@@ -121,6 +121,7 @@ export const modelResourcesZhCN = {
         batchSize: "批次大小",
         maxNumberOfTokens: "单次最大Token数量",
         maxNumberOfDocuments: "最大Document数量",
+        maxDocumentsHint: "单次重排请求允许的最大文档数。留空表示不设本地限制；超限请求将被拒绝。",
         quotaTitle: "模型token使用配额功能",
         quotaTitleDescribe1:
           "- 开启功能后，需前往[配额管理]分配模型的使用限额上限并给用户分配相应额度。",

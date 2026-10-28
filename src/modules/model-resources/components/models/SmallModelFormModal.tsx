@@ -361,6 +361,8 @@ export function SmallModelFormModal({
             <Form.Item
               label={t("modelResources.models.modal.maxNumberOfDocuments")}
               name="maxDocuments"
+              rules={[{ type: "integer", min: 1, max: 2147483647 }]}
+              extra={t("modelResources.models.modal.maxDocumentsHint")}
             >
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>

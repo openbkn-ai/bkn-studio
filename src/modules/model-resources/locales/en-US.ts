@@ -124,6 +124,8 @@ export const modelResourcesEnUS = {
         batchSize: "Batch size",
         maxNumberOfTokens: "Max tokens per request",
         maxNumberOfDocuments: "Max documents",
+        maxDocumentsHint:
+          "Maximum input documents per rerank request. Leave empty for no local limit; excess documents are rejected.",
         quotaTitle: "Model token quota",
         quotaTitleDescribe1:
           "- After enabling this feature, go to [Quota Management] to set model limits and assign user quotas.",
