@@ -27,7 +27,7 @@ type BackendSmallModel = {
   embedding_dim?: number;
   batch_size?: number;
   max_tokens?: number;
-  max_documents?: number;
+  max_documents?: number | null;
   create_by?: string;
   create_time?: string;
   update_by?: string;
@@ -85,7 +85,7 @@ function mapSmallModel(item: BackendSmallModel): SmallModel {
     embeddingDim: item.embedding_dim,
     batchSize: item.batch_size,
     maxTokens: item.max_tokens,
-    maxDocuments: item.max_documents,
+    maxDocuments: item.max_documents ?? undefined,
     createBy: item.create_by,
     createTime: item.create_time,
     updateBy: item.update_by,
@@ -125,8 +125,8 @@ function mapSavePayload(payload: SmallModelSavePayload, includeDefault = false) 
     body.max_tokens = payload.maxTokens;
   }
 
-  if (payload.maxDocuments !== undefined) {
-    body.max_documents = payload.maxDocuments;
+  if (payload.modelType === "reranker") {
+    body.max_documents = payload.maxDocuments ?? null;
   }
 
   if (payload.modelId) {
