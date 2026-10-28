@@ -193,11 +193,73 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     expect(publishSharedPrompt.mock.calls[0][0]).toMatchObject({ content: "Edited", version: 12 });
   });
 
-  it("refreshes a conflicting publication without discarding the draft or publishing again", async () => {
+  it.each([
+    {
+      name: "a replay conflict",
+      failure: new BknAgentExecutionError("Version exists", 409),
+      historyFails: false,
+    },
+    {
+      name: "a gateway timeout",
+      failure: new BknAgentExecutionError("Gateway timeout", 504),
+      historyFails: false,
+    },
+    { name: "a network failure", failure: new TypeError("Offline"), historyFails: false },
+    {
+      name: "a conflict followed by a history refresh failure",
+      failure: new BknAgentExecutionError("Version exists", 409),
+      historyFails: true,
+    },
+  ])("confirms a committed publication after $name", async ({ failure, historyFails }) => {
+    getShared.mockResolvedValue(shared());
+    const committed = {
+      prompt: { ...PROMPT.prompt, current_version: 4, content: "My draft" },
+      next_version: 5,
+    };
+    getSharedPrompt.mockResolvedValueOnce(PROMPT).mockResolvedValue(committed);
+    publishSharedPrompt.mockRejectedValue(failure);
+    if (historyFails)
+      listVersions.mockResolvedValueOnce([]).mockRejectedValue(new TypeError("Offline"));
+    renderScene();
+    fireEvent.change(await screen.findByDisplayValue("Shared"), { target: { value: "My draft" } });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("knowledgeNetwork.agentChat.config.publishPrompt"),
+      }),
+    );
+    await confirmChange();
+    expect(
+      await screen.findByText(i18n.t("knowledgeNetwork.agentChat.config.promptPublished")),
+    ).toBeTruthy();
+    expect(screen.queryByText(i18n.t("systemAdmin.agentConfig.promptVersionConflict"))).toBeNull();
+    expect(screen.queryByText(i18n.t("systemAdmin.agentConfig.promptPublishUncertain"))).toBeNull();
+    expect(publishSharedPrompt).toHaveBeenCalledTimes(1);
+    expect(getSharedPrompt).toHaveBeenCalledTimes(2);
+    expect(
+      screen
+        .getByRole("button", { name: i18n.t("knowledgeNetwork.agentChat.config.publishPrompt") })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
+  it.each([
+    {
+      name: "different content",
+      current: { ...PROMPT.prompt, current_version: 4, content: "Other administrator" },
+    },
+    {
+      name: "a different active version",
+      current: { ...PROMPT.prompt, current_version: 5, content: "My draft" },
+    },
+    {
+      name: "a different Prompt",
+      current: { prompt_id: "another-prompt", current_version: 4, content: "My draft" },
+    },
+  ])("keeps a publication with $name as a conflict", async ({ current }) => {
     getShared.mockResolvedValue(shared());
     getSharedPrompt.mockResolvedValueOnce(PROMPT).mockResolvedValue({
-      prompt: { ...PROMPT.prompt, current_version: 4, content: "Other administrator" },
-      next_version: 5,
+      prompt: current,
+      next_version: current.current_version + 1,
     });
     publishSharedPrompt.mockRejectedValue(
       new BknAgentExecutionError("Version exists", 409, "BknAgent.Prompt.VersionConflict"),
