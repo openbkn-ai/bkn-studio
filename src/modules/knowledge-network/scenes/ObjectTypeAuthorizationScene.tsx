@@ -885,6 +885,12 @@ export function ObjectTypeAuthorizationScene() {
           : t("systemAdmin.objectGrants.creatorNotRecorded"),
       };
     }
+    if (source.createdByName || source.createdByAccount) {
+      return {
+        name: source.createdByName || source.createdByAccount,
+        sub: source.createdByAccount,
+      };
+    }
     const user = directoryUser(id);
     if (user) {
       return { name: user.name, sub: user.account };

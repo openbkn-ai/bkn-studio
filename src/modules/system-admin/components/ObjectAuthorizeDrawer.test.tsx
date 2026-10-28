@@ -433,6 +433,41 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(screen.getByText("grantor.account")).not.toBeNull();
   });
 
+  it.each(["user", "role"] as const)(
+    "shows a %s grant creator absent from the grantee cache",
+    async (accessorType) => {
+      mocks.listObjectGrantsForObject.mockResolvedValue({
+        accounts: [],
+        grants: [
+          grant(
+            [
+              source({
+                createdBy: "u-grantor",
+                createdByName: "Administrator",
+                createdByAccount: "admin",
+              }),
+            ],
+            { accessorName: "Readers", accessorType },
+          ),
+        ],
+      });
+      render(
+        <ObjectAuthorizeDrawer
+          objId="catalog-1"
+          objName="Catalog"
+          objType="catalog"
+          onClose={vi.fn()}
+          open
+        />,
+      );
+      await act(async () => {});
+      fireEvent.click(screen.getByText("common.viewDetails"));
+      expect(screen.getByText("Administrator")).toBeInTheDocument();
+      expect(screen.getByText("admin")).toBeInTheDocument();
+      expect(screen.queryByText("u-grantor")).not.toBeInTheDocument();
+    },
+  );
+
   it("falls back to the raw grantee id without querying the administrator directory", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
