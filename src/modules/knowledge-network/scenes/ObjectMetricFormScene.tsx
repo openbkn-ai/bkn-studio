@@ -59,6 +59,7 @@ import {
 import {
   expressionValueType,
   normalizeExpressionValueType,
+  objectMetricFunctionDefinitions,
   type ExpressionValueType,
 } from "@/modules/knowledge-network/components/object-metric/object-metric-expression-registry";
 import { objectMetricQueryCapabilities } from "@/modules/knowledge-network/lib/object-metric-query-capabilities";
@@ -92,11 +93,8 @@ import {
   type ObjectMetricDesignDiagnostic,
 } from "@/modules/knowledge-network/services/object-metric-designer.service";
 import {
-  listObjectMetricAnswerModels,
-  type ObjectMetricAnswerModel,
-} from "@/modules/knowledge-network/services/object-metric-models.service";
-import {
   objectMetricAiChanges,
+  objectMetricDesignFormSnapshot,
   objectMetricAiPreviousValue,
   selectedObjectMetricAiIntent,
   type ObjectMetricAiEditableSnapshot,
@@ -864,32 +862,135 @@ function sanitizeAiCondition(
   condition: ObjectMetricConditionV1 | undefined,
   ownerObjectTypeId: string,
   allowedProperties: Set<string>,
+  capabilities?: ObjectMetricCapabilitiesV1,
 ): ObjectMetricConditionV1 | undefined {
   if (!condition || typeof condition !== "object") return undefined;
   if (condition.node_type === "group") {
-    if (!Array.isArray(condition.children)) return undefined;
-    const children = condition.children.flatMap((child) => {
-      const next = sanitizeAiCondition(child, ownerObjectTypeId, allowedProperties);
-      return next ? [next] : [];
-    });
-    if (!children.length) return undefined;
-    return { ...condition, children };
+    if (
+      !["and", "or", "not"].includes(condition.boolean_operator) ||
+      (capabilities !== undefined &&
+        !capabilities.boolean_operators.includes(condition.boolean_operator)) ||
+      !Array.isArray(condition.children) ||
+      !condition.children.length ||
+      (condition.boolean_operator === "not" && condition.children.length !== 1) ||
+      Object.keys(condition).some(
+        (key) => !["node_type", "boolean_operator", "children"].includes(key),
+      )
+    )
+      return undefined;
+    const children = condition.children.map((child) =>
+      sanitizeAiCondition(child, ownerObjectTypeId, allowedProperties, capabilities),
+    );
+    if (children.some((child) => !child)) return undefined;
+    return {
+      node_type: "group",
+      boolean_operator: condition.boolean_operator,
+      children: children as ObjectMetricConditionV1[],
+    };
   }
   if (
     condition.node_type !== "predicate" ||
     !condition.left ||
     condition.left.source !== "property" ||
     !condition.left.property_ref?.property_name ||
-    !allowedProperties.has(condition.left.property_ref.property_name)
+    (condition.left.property_ref.object_type_id !== undefined &&
+      condition.left.property_ref.object_type_id !== ownerObjectTypeId) ||
+    !allowedProperties.has(condition.left.property_ref.property_name) ||
+    Object.keys(condition).some(
+      (key) => !["node_type", "left", "comparison_operator", "right"].includes(key),
+    )
   ) {
     return undefined;
   }
+  const operator = condition.comparison_operator;
+  const noRight = [
+    "is_empty",
+    "is_not_empty",
+    "is_null",
+    "is_not_null",
+    "is_true",
+    "is_false",
+  ].includes(operator);
+  const twoRight = ["between", "not_between"].includes(operator);
+  const manyRight = ["in", "not_in"].includes(operator);
+  const supported = [
+    "eq",
+    "neq",
+    "gt",
+    "gte",
+    "lt",
+    "lte",
+    "between",
+    "not_between",
+    "in",
+    "not_in",
+    "contains",
+    "not_contains",
+    "starts_with",
+    "ends_with",
+    "is_empty",
+    "is_not_empty",
+    "is_null",
+    "is_not_null",
+    "is_true",
+    "is_false",
+    "before",
+    "before_or_equal",
+    "after",
+    "after_or_equal",
+  ].includes(operator);
+  const right = condition.right ?? [];
+  if (
+    !supported ||
+    (capabilities !== undefined && !capabilities.comparison_operators.includes(operator)) ||
+    !Array.isArray(right) ||
+    (noRight
+      ? right.length !== 0
+      : twoRight
+        ? right.length !== 2
+        : manyRight
+          ? right.length === 0
+          : right.length !== 1) ||
+    right.some(
+      (operand) =>
+        !operand ||
+        typeof operand !== "object" ||
+        (operand.source === "property"
+          ? !operand.property_ref?.property_name ||
+            (operand.property_ref.object_type_id !== undefined &&
+              operand.property_ref.object_type_id !== ownerObjectTypeId) ||
+            !allowedProperties.has(operand.property_ref.property_name) ||
+            Object.keys(operand).some((key) => !["source", "property_ref"].includes(key))
+          : operand.source !== "literal" ||
+            !("value_type" in operand) ||
+            !("value" in operand) ||
+            Object.keys(operand).some((key) => !["source", "value_type", "value"].includes(key))),
+    )
+  )
+    return undefined;
   return {
-    ...condition,
+    node_type: "predicate",
     left: {
       source: "property",
       property_ref: propertyRef(ownerObjectTypeId, condition.left.property_ref.property_name),
     },
+    comparison_operator: operator,
+    ...(condition.right
+      ? {
+          right: condition.right.map((operand) =>
+            operand.source === "property"
+              ? {
+                  source: "property" as const,
+                  property_ref: propertyRef(ownerObjectTypeId, operand.property_ref.property_name),
+                }
+              : {
+                  source: "literal" as const,
+                  value_type: operand.value_type,
+                  value: operand.value,
+                },
+          ),
+        }
+      : {}),
   };
 }
 
@@ -903,17 +1004,39 @@ function sanitizeAiExpression(
     return undefined;
   }
   if (expression.node_type === "property") {
-    if (!allowedProperties.has(expression.property_ref.property_name)) return undefined;
+    if (
+      !expression.property_ref ||
+      expression.property_ref.object_type_id !== ownerObjectTypeId ||
+      !allowedProperties.has(expression.property_ref.property_name) ||
+      Object.keys(expression).some(
+        (key) => !["node_type", "property_ref", "value_type"].includes(key),
+      )
+    )
+      return undefined;
     return {
       ...expression,
       property_ref: propertyRef(ownerObjectTypeId, expression.property_ref.property_name),
     };
   }
   if (expression.node_type === "dependency") {
-    return allowedDependencyAliases?.has(expression.dependency_alias) ? expression : undefined;
+    return allowedDependencyAliases?.has(expression.dependency_alias) &&
+      Object.keys(expression).every((key) => ["node_type", "dependency_alias"].includes(key))
+      ? expression
+      : undefined;
   }
-  if (expression.node_type === "literal") return expression;
+  if (expression.node_type === "literal") {
+    return typeof expression.value_type === "string" &&
+      "value" in expression &&
+      Object.keys(expression).every((key) => ["node_type", "value_type", "value"].includes(key))
+      ? expression
+      : undefined;
+  }
   if (expression.node_type === "unary") {
+    if (
+      expression.operator !== "negate" ||
+      Object.keys(expression).some((key) => !["node_type", "operator", "left"].includes(key))
+    )
+      return undefined;
     const left = sanitizeAiExpression(
       expression.left,
       ownerObjectTypeId,
@@ -923,6 +1046,13 @@ function sanitizeAiExpression(
     return left ? { ...expression, left } : undefined;
   }
   if (expression.node_type === "binary") {
+    if (
+      !["add", "subtract", "multiply", "divide", "modulo"].includes(expression.operator) ||
+      Object.keys(expression).some(
+        (key) => !["node_type", "operator", "left", "right"].includes(key),
+      )
+    )
+      return undefined;
     const left = sanitizeAiExpression(
       expression.left,
       ownerObjectTypeId,
@@ -937,7 +1067,21 @@ function sanitizeAiExpression(
     );
     return left && right ? { ...expression, left, right } : undefined;
   }
-  if (expression.node_type !== "call" || !Array.isArray(expression.arguments)) return undefined;
+  if (
+    expression.node_type !== "call" ||
+    !Array.isArray(expression.arguments) ||
+    Object.keys(expression).some((key) => !["node_type", "function", "arguments"].includes(key))
+  )
+    return undefined;
+  const functionDefinition = objectMetricFunctionDefinitions.find(
+    (item) => item.value === expression.function,
+  );
+  if (
+    !functionDefinition ||
+    expression.arguments.length < functionDefinition.minArguments ||
+    expression.arguments.length > (functionDefinition.maxArguments ?? 20)
+  )
+    return undefined;
   const arguments_ = expression.arguments.flatMap((argument) => {
     const next = sanitizeAiExpression(
       argument,
@@ -1317,10 +1461,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const [preview, setPreview] = useState<ObjectMetricPreviewV1>();
   const [trialDefinition, setTrialDefinition] = useState<ObjectMetricDefinitionV1>();
   const [aiPromptRequest, setAiPromptRequest] = useState<{ revision: number; value: string }>();
-  const [aiModelId, setAiModelId] = useState<string | undefined>();
-  const [aiModels, setAiModels] = useState<ObjectMetricAnswerModel[]>([]);
-  const [aiModelsLoading, setAiModelsLoading] = useState(false);
-  const [aiModelsUnavailable, setAiModelsUnavailable] = useState(false);
   const [aiOpen, setAiOpen] = useState(mode === "create");
   const [aiExpanded, setAiExpanded] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -1362,28 +1502,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     [],
   );
 
-  useEffect(() => {
-    if (!aiOpen) return;
-    let active = true;
-    setAiModelsLoading(true);
-    void listObjectMetricAnswerModels()
-      .then((models) => {
-        if (active) {
-          setAiModels(models);
-          setAiModelsUnavailable(false);
-        }
-      })
-      .catch(() => {
-        if (active) setAiModelsUnavailable(true);
-      })
-      .finally(() => {
-        if (active) setAiModelsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [aiOpen]);
-
   const definition = record?.definition;
   const metricType = definition?.metric_type ?? requestedMetricType;
   const ownerObjectTypeId = definition?.owner_object_type_id ?? requestedObjectTypeId;
@@ -1400,7 +1518,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   useEffect(() => {
     aiAbortRef.current?.abort();
     aiThreadRef.current = null;
-    setAiModelId(undefined);
     aiTrialRequestedRef.current = false;
     aiTrialSnapshotRef.current = null;
     setAiConversation([]);
@@ -1534,6 +1651,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       item.definition.metric_type === "atomic" &&
       item.definition.owner_object_type_id === ownerObjectTypeId,
   );
+  const resolveAiBaseMetric = (requestedId?: string, requestedVersion?: number) => {
+    const current = parseDependencyKey(getFieldValue("baseMetric"));
+    const id = requestedId ?? current.metric_id;
+    const version = requestedVersion ?? current.version;
+    return compatibleAtomicMetrics.find(
+      (item) => item.definition.id === id && item.definition.version === version,
+    );
+  };
   const selectBaseMetric = (key: string) => {
     const base = compatibleAtomicMetrics.find(
       (item) => dependencyKey(item.definition.id, item.definition.version) === key,
@@ -1589,14 +1714,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     }
 
     if (metricType === "derived" && intent.derived) {
+      const requestedId = intent.derived.base_metric_id;
       const requestedVersion = intent.derived.base_metric_version;
-      const base = compatibleAtomicMetrics.find(
-        (item) =>
-          (intent.derived?.base_metric_id
-            ? item.definition.id === intent.derived.base_metric_id
-            : item.definition.name === intent.derived?.base_metric_name) &&
-          (!requestedVersion || item.definition.version === requestedVersion),
-      );
+      const base =
+        requestedId !== undefined || requestedVersion !== undefined
+          ? resolveAiBaseMetric(requestedId, requestedVersion)
+          : compatibleAtomicMetrics.find(
+              (item) => item.definition.name === intent.derived?.base_metric_name,
+            );
       if (base) {
         const key = dependencyKey(base.definition.id, base.definition.version);
         if (key !== getFieldValue("baseMetric")) {
@@ -1610,7 +1735,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       }
       if (intent.derived.filters !== undefined) {
         setBusinessCondition(
-          sanitizeAiCondition(intent.derived.filters, ownerObjectTypeId, allowedProperties),
+          sanitizeAiCondition(
+            intent.derived.filters,
+            ownerObjectTypeId,
+            allowedProperties,
+            capabilities,
+          ),
         );
       }
       if (intent.derived.event_time && allowedProperties.has(intent.derived.event_time)) {
@@ -1676,6 +1806,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       commonValues.noDataPolicy = result.no_data_policy;
       commonValues.physicalType = result.physical_type;
       commonValues.semanticType = result.semantic_type;
+      if (result.physical_type === "decimal") {
+        commonValues.precision = getFieldValue("precision") ?? 18;
+        commonValues.scale = getFieldValue("scale") ?? 2;
+        commonValues.roundingMode = getFieldValue("roundingMode") ?? "half_up";
+      }
       commonValues.unitCode = result.unit_code;
       commonValues.unitSystem = result.unit_system;
       commonValues.quantityKind = result.quantity_kind;
@@ -1795,6 +1930,15 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       aiProposal.selectedPaths,
     );
     const allowedProperties = new Set(properties.map((item) => item.propertyName));
+    const requestedBaseId = selectedIntent.derived?.base_metric_id;
+    const requestedBaseVersion = selectedIntent.derived?.base_metric_version;
+    if (
+      (requestedBaseId !== undefined || requestedBaseVersion !== undefined) &&
+      !resolveAiBaseMetric(requestedBaseId, requestedBaseVersion)
+    ) {
+      void message.error(objectMetricText("aiProposalCannotApply"));
+      return;
+    }
     const nextDependencies = selectedIntent.composite?.dependencies;
     const aliases = new Set<string>();
     if (
@@ -1837,7 +1981,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     }
     if (
       selectedIntent.derived?.filters &&
-      !sanitizeAiCondition(selectedIntent.derived.filters, ownerObjectTypeId, allowedProperties)
+      !sanitizeAiCondition(
+        selectedIntent.derived.filters,
+        ownerObjectTypeId,
+        allowedProperties,
+        capabilities,
+      )
     ) {
       void message.error(objectMetricText("aiProposalCannotApply"));
       return;
@@ -1979,19 +2128,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             })),
         },
         formSnapshot: {
-          ...baseState.form,
-          "atomic.expression": baseState.measureExpression,
-          "atomic.property_name": objectMetricAiPreviousValue("atomic.property_name", baseState),
-          ...(typeof baseState.form.baseMetric === "string" && baseState.form.baseMetric
+          ...objectMetricDesignFormSnapshot(baseState, metricType),
+          ...(metricType === "derived" &&
+          typeof baseState.form.baseMetric === "string" &&
+          baseState.form.baseMetric
             ? {
                 "derived.base_metric_id": parseDependencyKey(baseState.form.baseMetric).metric_id,
                 "derived.base_metric_version": parseDependencyKey(baseState.form.baseMetric)
                   .version,
               }
             : {}),
-          "derived.filters": baseState.businessCondition,
-          "composite.dependencies": baseState.dependencies,
-          "composite.expression": baseState.compositeExpression,
         },
         ...(aiDiagnostic?.snapshot === baseSnapshot &&
         aiDiagnostic.formRevision === baseFormRevision
@@ -2003,7 +2149,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             }
           : {}),
         message: prompt,
-        modelId: aiModelId,
         scope: {
           kn_id: networkId,
           owner_object_type_id: ownerObjectTypeId,
@@ -6013,22 +6158,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </div>
           <div className={styles.aiDialogComposer}>
             <div className={styles.aiComposerToolbar}>
-              <label className={styles.aiModelLabel} htmlFor="metric-ai-model">
-                {objectMetricText("aiAnswerModel")}
-              </label>
-              <Select
-                aria-label={objectMetricText("aiAnswerModel")}
-                className={styles.aiModelSelect}
-                disabled={aiGenerating || aiChecking || Boolean(aiThreadRef.current)}
-                id="metric-ai-model"
-                loading={aiModelsLoading}
-                onChange={(value: string) => setAiModelId(value || undefined)}
-                options={[
-                  { label: objectMetricText("aiPlatformDefaultModel"), value: "" },
-                  ...aiModels.map((model) => ({ label: model.name, value: model.id })),
-                ]}
-                value={aiModelId ?? ""}
-              />
+              <span className={styles.aiModelLabel}>{objectMetricText("aiAnswerModel")}</span>
+              <span className={styles.aiModelSelect}>
+                {objectMetricText("aiPlatformDefaultModel")}
+              </span>
               {aiConversation.length ? (
                 <Button
                   disabled={aiGenerating || aiChecking}
@@ -6046,11 +6179,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 </Button>
               ) : null}
             </div>
-            {aiModelsUnavailable ? (
-              <span className={styles.aiModelNotice}>
-                {objectMetricText("aiModelListUnavailable")}
-              </span>
-            ) : null}
             <AiPromptComposer
               checking={aiChecking}
               generating={aiGenerating}

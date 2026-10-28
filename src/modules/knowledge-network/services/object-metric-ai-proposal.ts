@@ -6,6 +6,7 @@
  */
 
 import type { ObjectMetricAiIntent } from "./object-metric-ai.service";
+import type { ObjectMetricTypeV1 } from "../types/object-metric";
 
 export type ObjectMetricAiChange = {
   path: string;
@@ -21,6 +22,56 @@ export type ObjectMetricAiEditableSnapshot = {
   relatedCondition?: unknown;
   relationSteps: unknown;
 };
+
+const commonDesignFields = new Set([
+  "name",
+  "description",
+  "calculationScope",
+  "noDataPolicy",
+  "physicalType",
+  "semanticType",
+  "unitCode",
+  "unitSystem",
+  "quantityKind",
+  "analysisDimensions",
+  "groupByDimensions",
+  "timeDimensions",
+  "timeGranularity",
+]);
+
+const designFieldsByType: Record<ObjectMetricTypeV1, Set<string>> = {
+  atomic: new Set(["aggregation"]),
+  derived: new Set([
+    "baseMetric",
+    "eventTime",
+    "timeWindowMode",
+    "timeWindowLength",
+    "timeWindowUnit",
+  ]),
+  composite: new Set(),
+};
+
+/** Only send current-type fields to the model; keep the full snapshot locally for revision checks. */
+export function objectMetricDesignFormSnapshot(
+  snapshot: ObjectMetricAiEditableSnapshot,
+  metricType: ObjectMetricTypeV1,
+): Record<string, unknown> {
+  const form = Object.fromEntries(
+    Object.entries(snapshot.form).filter(
+      ([field]) => commonDesignFields.has(field) || designFieldsByType[metricType].has(field),
+    ),
+  );
+  if (metricType === "atomic") {
+    form["atomic.expression"] = snapshot.measureExpression;
+    form["atomic.property_name"] = objectMetricAiPreviousValue("atomic.property_name", snapshot);
+  } else if (metricType === "derived") {
+    form["derived.filters"] = snapshot.businessCondition;
+  } else {
+    form["composite.dependencies"] = snapshot.dependencies;
+    form["composite.expression"] = snapshot.compositeExpression;
+  }
+  return Object.fromEntries(Object.entries(form).filter(([, value]) => value !== undefined));
+}
 
 const formFields: Record<string, string> = {
   name: "name",
