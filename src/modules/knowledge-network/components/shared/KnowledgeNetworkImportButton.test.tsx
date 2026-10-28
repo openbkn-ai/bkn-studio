@@ -21,9 +21,11 @@ const mocks = vi.hoisted(() => ({
     validateFields: vi.fn(),
   },
   importKnowledgeNetwork: vi.fn(),
+  importKnowledgeNetworkPackage: vi.fn(),
   messageError: vi.fn(),
   messageSuccess: vi.fn(),
   modalConfirm: vi.fn(),
+  uploadFileName: "knowledge-network.json",
   uploadFileSize: 2,
 }));
 
@@ -139,7 +141,7 @@ vi.mock("antd", () => {
         <button
           onClick={() =>
             beforeUpload({
-              name: "knowledge-network.json",
+              name: mocks.uploadFileName,
               size: mocks.uploadFileSize,
             } as File)
           }
@@ -193,6 +195,7 @@ vi.mock(
       typeof import("@/modules/knowledge-network/services/knowledge-network.service")
     >()),
     importKnowledgeNetwork: mocks.importKnowledgeNetwork,
+    importKnowledgeNetworkPackage: mocks.importKnowledgeNetworkPackage,
   }),
 );
 
@@ -203,9 +206,11 @@ describe("KnowledgeNetworkImportButton", () => {
     mocks.form.resetFields.mockReset();
     mocks.form.setFieldsValue.mockReset();
     mocks.importKnowledgeNetwork.mockReset();
+    mocks.importKnowledgeNetworkPackage.mockReset();
     mocks.messageError.mockReset();
     mocks.messageSuccess.mockReset();
     mocks.modalConfirm.mockReset();
+    mocks.uploadFileName = "knowledge-network.json";
     mocks.uploadFileSize = 2;
     mocks.importKnowledgeNetwork.mockRejectedValue(
       new KnowledgeNetworkImportConflictError("Knowledge network ID already exists."),
@@ -428,5 +433,119 @@ describe("KnowledgeNetworkImportButton", () => {
 
     expect(screen.getByText("Knowledge network ID already exists.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "common.create" })).toBeInTheDocument();
+  });
+
+  describe("a BKN package", () => {
+    beforeEach(() => {
+      mocks.uploadFileName = "orders.tar.gz";
+    });
+
+    it("imports the package with the chosen options, without reading it as JSON", async () => {
+      const readAsText = vi.fn();
+      vi.stubGlobal(
+        "FileReader",
+        class {
+          readAsText = readAsText;
+        },
+      );
+      mocks.importKnowledgeNetworkPackage.mockResolvedValueOnce({ bound: 3, skipped: [] });
+      const onImported = vi.fn();
+      render(<KnowledgeNetworkImportButton onImported={onImported} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
+      const dialog = await screen.findByRole("dialog");
+      expect(
+        within(dialog).getByText('knowledgeNetwork.packageImport.file:{"name":"orders.tar.gz"}'),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByDisplayValue("ignore"));
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "knowledgeNetwork.importButton" }),
+      );
+
+      await waitFor(() =>
+        expect(mocks.importKnowledgeNetworkPackage).toHaveBeenCalledWith(
+          expect.objectContaining({ name: "orders.tar.gz" }),
+          "ignore",
+          "preserve",
+          false,
+        ),
+      );
+      expect(readAsText).not.toHaveBeenCalled();
+      expect(mocks.messageSuccess).toHaveBeenCalledWith(
+        'knowledgeNetwork.packageImport.successBound:{"count":3}',
+      );
+      expect(onImported).toHaveBeenCalled();
+    });
+
+    it("lists what it could not bind, each with its reason in words", async () => {
+      mocks.importKnowledgeNetworkPackage.mockResolvedValueOnce({
+        bound: 1,
+        skipped: [
+          {
+            boxName: "",
+            capabilityType: "knowledge_base",
+            name: "Contracts",
+            reason: "ambiguous_name",
+          },
+          {
+            boxName: "orders-api",
+            capabilityType: "function",
+            name: "get-order",
+            reason: "brand_new",
+          },
+        ],
+      });
+      render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
+      fireEvent.click(
+        within(await screen.findByRole("dialog")).getByRole("button", {
+          name: "knowledgeNetwork.importButton",
+        }),
+      );
+
+      // The import dialog closes; the result opens in its place.
+      const title = await screen.findByText(
+        'knowledgeNetwork.packageImport.skippedTitle:{"count":2}',
+      );
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+      const result = title.closest('[role="dialog"]') as HTMLElement;
+      expect(
+        within(result).getByText(
+          'knowledgeNetwork.packageImport.skipItem:{"box":"","name":"Contracts","type":"knowledgeNetwork.packageImport.type.knowledge_base"}',
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(result).getByText("knowledgeNetwork.packageImport.reason.ambiguous_name"),
+      ).toBeInTheDocument();
+      // A reason this release does not know reads as another reason, never as the raw value.
+      expect(
+        within(result).getByText("knowledgeNetwork.packageImport.reason.other"),
+      ).toBeInTheDocument();
+      expect(within(result).queryByText(/brand_new/)).toBeNull();
+      expect(mocks.messageSuccess).not.toHaveBeenCalled();
+    });
+
+    it("offers no copy under a new name on a conflict, as a package cannot be renamed", async () => {
+      mocks.importKnowledgeNetworkPackage.mockRejectedValueOnce(
+        new KnowledgeNetworkImportConflictError("Knowledge network ID already exists."),
+      );
+      render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
+      fireEvent.click(
+        within(await screen.findByRole("dialog")).getByRole("button", {
+          name: "knowledgeNetwork.importButton",
+        }),
+      );
+
+      expect(
+        await screen.findByText("knowledgeNetwork.packageImport.conflictTip"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("knowledgeNetwork.importOverwrite")).toBeInTheDocument();
+      expect(screen.getByText("knowledgeNetwork.importIgnore")).toBeInTheDocument();
+      expect(screen.queryByText("common.create")).toBeNull();
+      expect(screen.queryByText("knowledgeNetwork.name")).toBeNull();
+    });
   });
 });

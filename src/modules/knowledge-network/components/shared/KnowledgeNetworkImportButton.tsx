@@ -16,6 +16,8 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   KnowledgeNetworkImportBindingError,
   importKnowledgeNetwork,
+  importKnowledgeNetworkPackage,
+  isKnowledgeNetworkPackage,
   KnowledgeNetworkImportConflictError,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
@@ -23,9 +25,14 @@ import {
   stringFromUnknown,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
+  CapabilityImportReport,
   KnowledgeNetworkBindingPolicy,
   KnowledgeNetworkImportMode,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  capabilitySkipReasonKey,
+  capabilitySkipTypeKey,
+} from "@/modules/knowledge-network/utils/capability-import-skip";
 
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import styles from "./KnowledgeNetworkImportButton.module.css";
@@ -37,6 +44,14 @@ type KnowledgeNetworkImportButtonProps = {
 
 type ImportPayload = Record<string, unknown>;
 type ImportSubmitAction = "create" | "ignore" | "import" | "overwrite";
+/**
+ * What is being imported: a JSON export, which the dialog can rename on a conflict, or a BKN
+ * package, which also brings the capabilities it declares and reports the ones it could not bind.
+ */
+type ImportSource = { kind: "json"; payload: ImportPayload } | { file: File; kind: "package" };
+
+/** Files the import accepts: a JSON export, or a BKN package as studio exports it. */
+const IMPORT_ACCEPT = ".json,.tar,.tar.gz,.tgz,.zip";
 
 // This matches the bundled gateway body limit, not a guaranteed browser parsing limit.
 const DEFAULT_IMPORT_MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
@@ -71,14 +86,16 @@ export function KnowledgeNetworkImportButton({
   const [bindingError, setBindingError] = useState<KnowledgeNetworkImportBindingError | null>(null);
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const [submittingAction, setSubmittingAction] = useState<ImportSubmitAction | null>(null);
-  const [pendingPayload, setPendingPayload] = useState<ImportPayload | null>(null);
+  const [pendingSource, setPendingSource] = useState<ImportSource | null>(null);
+  // Shown after a package import that could not bind every capability it declared.
+  const [skipReport, setSkipReport] = useState<CapabilityImportReport | null>(null);
   const isSubmitting = submittingAction !== null;
 
   const closeImportDialog = () => {
     setImportDialogOpen(false);
     setBindingError(null);
     setConflictMessage(null);
-    setPendingPayload(null);
+    setPendingSource(null);
     setImportMode("normal");
     setStrictMode(false);
     setBindingPolicy("preserve");
@@ -86,26 +103,49 @@ export function KnowledgeNetworkImportButton({
   };
 
   const finishImport = async (
-    payload: ImportPayload,
+    source: ImportSource,
     selectedImportMode: KnowledgeNetworkImportMode,
     action: ImportSubmitAction = "import",
   ) => {
     setSubmittingAction(action);
 
     try {
-      await importKnowledgeNetwork(payload, selectedImportMode, bindingPolicy, strictMode);
-      void message.success(t("knowledgeNetwork.importSuccess"));
+      if (source.kind === "package") {
+        const report = await importKnowledgeNetworkPackage(
+          source.file,
+          selectedImportMode,
+          bindingPolicy,
+          strictMode,
+        );
+        if (report.skipped.length) {
+          setSkipReport(report);
+        } else {
+          void message.success(
+            report.bound
+              ? t("knowledgeNetwork.packageImport.successBound", { count: report.bound })
+              : t("knowledgeNetwork.importSuccess"),
+          );
+        }
+      } else {
+        await importKnowledgeNetwork(source.payload, selectedImportMode, bindingPolicy, strictMode);
+        void message.success(t("knowledgeNetwork.importSuccess"));
+      }
       closeImportDialog();
       await onImported();
     } catch (error) {
       if (error instanceof KnowledgeNetworkImportConflictError) {
         setBindingError(null);
-        setPendingPayload(payload);
+        setPendingSource(source);
         setConflictMessage(error.message);
-        form.setFieldsValue({
-          name: stringFromUnknown(payload.name),
-          identifier: stringFromUnknown(payload.id, stringFromUnknown(payload.code)),
-        });
+        if (source.kind === "json") {
+          form.setFieldsValue({
+            name: stringFromUnknown(source.payload.name),
+            identifier: stringFromUnknown(
+              source.payload.id,
+              stringFromUnknown(source.payload.code),
+            ),
+          });
+        }
         return;
       }
 
@@ -122,27 +162,38 @@ export function KnowledgeNetworkImportButton({
     }
   };
 
-  const confirmOverwrite = (payload: ImportPayload, action: ImportSubmitAction) => {
+  const confirmOverwrite = (source: ImportSource, action: ImportSubmitAction) => {
     void modal.confirm({
       content: t("knowledgeNetwork.importOverwriteConfirmDescription"),
       okButtonProps: { danger: true },
       okText: t("knowledgeNetwork.importOverwrite"),
-      onOk: () => finishImport(payload, "overwrite", action),
+      onOk: () => finishImport(source, "overwrite", action),
       title: t("knowledgeNetwork.importOverwriteConfirmTitle"),
     });
   };
 
   const submitImport = (
-    payload: ImportPayload,
+    source: ImportSource,
     selectedImportMode: KnowledgeNetworkImportMode,
     action: ImportSubmitAction = "import",
   ) => {
     if (selectedImportMode === "overwrite") {
-      confirmOverwrite(payload, action);
+      confirmOverwrite(source, action);
       return;
     }
 
-    void finishImport(payload, selectedImportMode, action);
+    void finishImport(source, selectedImportMode, action);
+  };
+
+  const openImportDialog = (source: ImportSource) => {
+    setPendingSource(source);
+    setImportMode("normal");
+    setStrictMode(false);
+    setBindingPolicy("preserve");
+    setBindingError(null);
+    setConflictMessage(null);
+    form.resetFields();
+    setImportDialogOpen(true);
   };
 
   const parseUploadFile = (file: File) => {
@@ -151,14 +202,7 @@ export function KnowledgeNetworkImportButton({
     reader.onload = (event) => {
       try {
         const payload = JSON.parse(readFileReaderText(event.target?.result)) as ImportPayload;
-        setPendingPayload(payload);
-        setImportMode("normal");
-        setStrictMode(false);
-        setBindingPolicy("preserve");
-        setBindingError(null);
-        setConflictMessage(null);
-        form.resetFields();
-        setImportDialogOpen(true);
+        openImportDialog({ kind: "json", payload });
       } catch {
         void message.error(t("knowledgeNetwork.importInvalidJson"));
       }
@@ -170,7 +214,7 @@ export function KnowledgeNetworkImportButton({
   return (
     <>
       <Upload
-        accept=".json"
+        accept={IMPORT_ACCEPT}
         beforeUpload={(file) => {
           if (file.size > IMPORT_MAX_FILE_SIZE_BYTES) {
             void message.error(
@@ -178,7 +222,11 @@ export function KnowledgeNetworkImportButton({
             );
             return false;
           }
-          parseUploadFile(file);
+          if (isKnowledgeNetworkPackage(file.name)) {
+            openImportDialog({ file, kind: "package" });
+          } else {
+            parseUploadFile(file);
+          }
           return false;
         }}
         showUploadList={false}
@@ -202,8 +250,8 @@ export function KnowledgeNetworkImportButton({
                   key="overwrite"
                   loading={submittingAction === "overwrite"}
                   onClick={() => {
-                    if (pendingPayload) {
-                      confirmOverwrite(pendingPayload, "overwrite");
+                    if (pendingSource) {
+                      confirmOverwrite(pendingSource, "overwrite");
                     }
                   }}
                 >
@@ -214,39 +262,45 @@ export function KnowledgeNetworkImportButton({
                   key="ignore"
                   loading={submittingAction === "ignore"}
                   onClick={() => {
-                    if (pendingPayload) {
-                      void finishImport(pendingPayload, "ignore", "ignore");
+                    if (pendingSource) {
+                      void finishImport(pendingSource, "ignore", "ignore");
                     }
                   }}
                 >
                   {t("knowledgeNetwork.importIgnore")}
                 </AppButton>,
-                <AppButton
-                  disabled={isSubmitting && submittingAction !== "create"}
-                  key="create"
-                  loading={submittingAction === "create"}
-                  onClick={() => {
-                    void form.validateFields().then((values) => {
-                      if (!pendingPayload) {
-                        return;
-                      }
+                // A package's name and id cannot be edited here, so it cannot be imported as a copy.
+                pendingSource?.kind === "json" ? (
+                  <AppButton
+                    disabled={isSubmitting && submittingAction !== "create"}
+                    key="create"
+                    loading={submittingAction === "create"}
+                    onClick={() => {
+                      void form.validateFields().then((values) => {
+                        if (pendingSource?.kind !== "json") {
+                          return;
+                        }
 
-                      return finishImport(
-                        {
-                          ...pendingPayload,
-                          code: values.identifier,
-                          id: values.identifier,
-                          name: values.name,
-                        },
-                        "normal",
-                        "create",
-                      );
-                    });
-                  }}
-                  type="primary"
-                >
-                  {t("common.create")}
-                </AppButton>,
+                        return finishImport(
+                          {
+                            kind: "json",
+                            payload: {
+                              ...pendingSource.payload,
+                              code: values.identifier,
+                              id: values.identifier,
+                              name: values.name,
+                            },
+                          },
+                          "normal",
+                          "create",
+                        );
+                      });
+                    }}
+                    type="primary"
+                  >
+                    {t("common.create")}
+                  </AppButton>
+                ) : null,
                 <AppButton disabled={isSubmitting} key="cancel" onClick={closeImportDialog}>
                   {t("common.cancel")}
                 </AppButton>,
@@ -254,18 +308,23 @@ export function KnowledgeNetworkImportButton({
             : undefined
         }
         maskClosable={!isSubmitting}
-        okButtonProps={{ disabled: !pendingPayload || isSubmitting }}
+        okButtonProps={{ disabled: !pendingSource || isSubmitting }}
         okText={t("knowledgeNetwork.importButton")}
         onCancel={closeImportDialog}
         onOk={() => {
-          if (pendingPayload) {
-            submitImport(pendingPayload, importMode);
+          if (pendingSource) {
+            submitImport(pendingSource, importMode);
           }
         }}
         open={importDialogOpen}
         rootClassName={`${modalStyles.businessModal} ${styles.importModal}`}
         title={t("knowledgeNetwork.importTitle")}
       >
+        {pendingSource?.kind === "package" ? (
+          <Typography.Paragraph className={styles.sectionDescription}>
+            {t("knowledgeNetwork.packageImport.file", { name: pendingSource.file.name })}
+          </Typography.Paragraph>
+        ) : null}
         <Typography.Text strong>{t("knowledgeNetwork.importModeTitle")}</Typography.Text>
         <Typography.Paragraph className={styles.sectionDescription}>
           {t("knowledgeNetwork.importModeDescription")}
@@ -384,22 +443,73 @@ export function KnowledgeNetworkImportButton({
         {conflictMessage ? (
           <>
             <Alert description={conflictMessage} showIcon type="error" />
-            <Typography.Paragraph>{t("knowledgeNetwork.importConflictTip")}</Typography.Paragraph>
-            <Form form={form} layout="vertical">
-              <Form.Item
-                label={t("knowledgeNetwork.name")}
-                name="name"
-                rules={[{ required: true, message: t("knowledgeNetwork.nameRequired") }]}
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item label={t("knowledgeNetwork.identifier")} name="identifier">
-                <Input />
-              </Form.Item>
-            </Form>
+            {pendingSource?.kind === "package" ? (
+              <Typography.Paragraph>
+                {t("knowledgeNetwork.packageImport.conflictTip")}
+              </Typography.Paragraph>
+            ) : (
+              <>
+                <Typography.Paragraph>
+                  {t("knowledgeNetwork.importConflictTip")}
+                </Typography.Paragraph>
+                <Form form={form} layout="vertical">
+                  <Form.Item
+                    label={t("knowledgeNetwork.name")}
+                    name="name"
+                    rules={[{ required: true, message: t("knowledgeNetwork.nameRequired") }]}
+                  >
+                    <Input />
+                  </Form.Item>
+                  <Form.Item label={t("knowledgeNetwork.identifier")} name="identifier">
+                    <Input />
+                  </Form.Item>
+                </Form>
+              </>
+            )}
           </>
         ) : null}
       </Modal>
+
+      {skipReport ? (
+        <Modal
+          footer={
+            <AppButton onClick={() => setSkipReport(null)} type="primary">
+              {t("knowledgeNetwork.packageImport.done")}
+            </AppButton>
+          }
+          onCancel={() => setSkipReport(null)}
+          open
+          rootClassName={modalStyles.businessModal}
+          title={t("knowledgeNetwork.packageImport.skippedTitle", {
+            count: skipReport.skipped.length,
+          })}
+        >
+          <Typography.Paragraph className={styles.sectionDescription}>
+            {t("knowledgeNetwork.packageImport.skippedDescription", { count: skipReport.bound })}
+          </Typography.Paragraph>
+          <ul className={styles.skipList}>
+            {skipReport.skipped.map((skip, index) => (
+              <li className={styles.skipItem} key={`${skip.capabilityType}-${skip.name}-${index}`}>
+                <Typography.Text strong>
+                  {t(
+                    skip.boxName
+                      ? "knowledgeNetwork.packageImport.skipItemInBox"
+                      : "knowledgeNetwork.packageImport.skipItem",
+                    {
+                      box: skip.boxName,
+                      name: skip.name || t("knowledgeNetwork.packageImport.unnamed"),
+                      type: t(capabilitySkipTypeKey(skip.capabilityType)),
+                    },
+                  )}
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  {t(capabilitySkipReasonKey(skip.reason))}
+                </Typography.Text>
+              </li>
+            ))}
+          </ul>
+        </Modal>
+      ) : null}
     </>
   );
 }
