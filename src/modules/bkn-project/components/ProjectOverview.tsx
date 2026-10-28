@@ -84,9 +84,10 @@ export function ProjectOverview({
   const [reads, setReads] = useState(0);
   const loadDraft = useCallback(async () => {
     setReading(true);
-    setDraftError(null);
     try {
       setDraft(await getDraft(project.id));
+      // Cleared only once a read succeeds, so a failing poll does not flash the warning away.
+      setDraftError(null);
     } catch (error) {
       setDraftError(extractRequestErrorMessage(error));
     } finally {

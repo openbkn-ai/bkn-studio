@@ -287,6 +287,32 @@ describe("ProjectWorkspaceScene", () => {
     }
   });
 
+  it("keeps the warning up while a drafting draft is read again after failing", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      getDraftMock
+        .mockResolvedValueOnce({ ...draftWithDecisions(), status: "drafting" })
+        .mockRejectedValueOnce(new Error("down"))
+        .mockReturnValue(new Promise(() => undefined));
+      renderScene();
+      await screen.findByText("bknProject.overview.model.draftingDescription");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+      });
+      expect(await screen.findByText("bknProject.overview.model.loadFailed")).toBeInTheDocument();
+
+      // The next read is under way: the warning stays rather than flashing back to "drafting".
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+      });
+      expect(getDraftMock).toHaveBeenCalledTimes(3);
+      expect(screen.getByText("bknProject.overview.model.loadFailed")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("shows the model loading while the draft is read", async () => {
     getDraftMock.mockReturnValue(new Promise(() => undefined));
     const { container } = renderScene();
