@@ -13,6 +13,7 @@ import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
 import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import type {
+  CapabilityImportReport,
   KnowledgeNetworkExportFormat,
   KnowledgeNetworkBindingPolicy,
   KnowledgeNetworkImportMode,
@@ -421,32 +422,140 @@ export async function importKnowledgeNetwork(
       timeout: KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS,
     });
   } catch (error) {
-    const response = (
-      error as {
-        response?: {
-          data?: {
-            error_code?: string;
-            description?: string;
-            error_details?: string;
-          };
+    rethrowImportError(error);
+  }
+}
+
+/**
+ * Reads bkn-backend's refusal of a network import, from a JSON body or a BKN package alike: a
+ * name or id already in use becomes a conflict the dialog resolves, an invalid binding target
+ * keeps its details, and anything else is rethrown as is.
+ */
+function rethrowImportError(error: unknown): never {
+  const response = (
+    error as {
+      response?: {
+        data?: {
+          error_code?: string;
+          description?: string;
+          error_details?: string;
         };
-      }
-    ).response?.data;
-    const { description, error_code: errorCode, error_details: details } = response ?? {};
-
-    if (KNOWLEDGE_NETWORK_IMPORT_CONFLICT_ERROR_CODES.has(errorCode ?? "")) {
-      throwImportConflict(
-        description?.trim() || errorCode || i18n.t("knowledgeNetwork.importConflictTitle"),
-      );
+      };
     }
+  ).response?.data;
+  const { description, error_code: errorCode, error_details: details } = response ?? {};
 
-    if (errorCode === KNOWLEDGE_NETWORK_IMPORT_BINDING_ERROR_CODE) {
-      throw new KnowledgeNetworkImportBindingError(
-        description?.trim() || errorCode || i18n.t("knowledgeNetwork.importBindingInvalidTitle"),
-        details,
-      );
+  if (KNOWLEDGE_NETWORK_IMPORT_CONFLICT_ERROR_CODES.has(errorCode ?? "")) {
+    throwImportConflict(
+      description?.trim() || errorCode || i18n.t("knowledgeNetwork.importConflictTitle"),
+    );
+  }
+
+  if (errorCode === KNOWLEDGE_NETWORK_IMPORT_BINDING_ERROR_CODE) {
+    throw new KnowledgeNetworkImportBindingError(
+      description?.trim() || errorCode || i18n.t("knowledgeNetwork.importBindingInvalidTitle"),
+      details,
+    );
+  }
+
+  throw error;
+}
+
+/** File names bkn-backend reads as a BKN package: a tar archive, gzipped or not, or a zip. */
+const KNOWLEDGE_NETWORK_PACKAGE_SUFFIXES = [".tar", ".tar.gz", ".tgz", ".zip"];
+
+export function isKnowledgeNetworkPackage(fileName: string) {
+  const lower = fileName.toLowerCase();
+  return KNOWLEDGE_NETWORK_PACKAGE_SUFFIXES.some((suffix) => lower.endsWith(suffix));
+}
+
+type BackendCapabilityImportReport = {
+  bound?: number;
+  skipped?: Array<{
+    box_name?: string;
+    capability_type?: string;
+    name?: string;
+    reason?: string;
+  }> | null;
+};
+
+export function mapCapabilityImportReport(
+  report: BackendCapabilityImportReport | null | undefined,
+): CapabilityImportReport {
+  return {
+    bound: report?.bound ?? 0,
+    skipped: (report?.skipped ?? []).map((skip) => ({
+      boxName: skip.box_name ?? "",
+      capabilityType: skip.capability_type ?? "",
+      name: skip.name ?? "",
+      reason: skip.reason ?? "",
+    })),
+  };
+}
+
+/**
+ * Imports a BKN package (`POST /bkns`), the format studio exports. Unlike a JSON import it also
+ * mounts the capabilities the package declares, and replies what it could not mount and why.
+ */
+export async function importKnowledgeNetworkPackage(
+  file: File,
+  importMode: KnowledgeNetworkImportMode = "normal",
+  bindingPolicy: KnowledgeNetworkBindingPolicy = "preserve",
+  strictMode = false,
+): Promise<CapabilityImportReport> {
+  if (useMock) {
+    const identifier = file.name.replace(/\.(tar\.gz|tgz|tar|zip)$/i, "");
+    if (!mockKnowledgeNetworks.some((item) => item.id === identifier)) {
+      mockKnowledgeNetworks.unshift({
+        color: "#1677ff",
+        createTime: formatTimestamp(Date.now()),
+        creatorName: "Imported User",
+        description: "",
+        icon: "deployment-unit",
+        id: identifier,
+        identifier,
+        name: identifier,
+        operations: MOCK_KNOWLEDGE_NETWORK_OPERATIONS,
+        statistics: emptyStatistics(),
+        tags: [],
+        updateTime: formatTimestamp(Date.now()),
+        updaterName: "Imported User",
+      });
     }
+    // A package from another environment: one knowledge base and one skill could not be bound.
+    return wait(
+      mapCapabilityImportReport(
+        bindingPolicy === "detach"
+          ? { bound: 0, skipped: [] }
+          : {
+              bound: 3,
+              skipped: [
+                { capability_type: "knowledge_base", name: "Contracts", reason: "ambiguous_name" },
+                { capability_type: "skill", name: "delivery-risk", reason: "not_found" },
+              ],
+            },
+      ),
+    );
+  }
 
-    throw error;
+  const form = new FormData();
+  form.append("file", file);
+  try {
+    const response = await http.post<{ capabilities?: BackendCapabilityImportReport | null }>(
+      "/bkn-backend/v1/bkns",
+      form,
+      {
+        params: {
+          binding_policy: bindingPolicy,
+          import_mode: importMode,
+          strict_mode: strictMode,
+        },
+        skipErrorToast: true,
+        timeout: KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS,
+      },
+    );
+    return mapCapabilityImportReport(response.data?.capabilities);
+  } catch (error) {
+    rethrowImportError(error);
   }
 }

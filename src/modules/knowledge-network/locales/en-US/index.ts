@@ -13,6 +13,7 @@ import { actiontypePart } from "./action-type";
 import { integrationPart } from "./integration";
 import { metricPart } from "./metric";
 import { capabilityPart } from "./capability";
+import { packageImportPart } from "./package-import";
 import { propertyAuthorizationPart } from "./property-authorization";
 import { agentChatPart } from "./agent-chat";
 import { contextLoaderPanelPart } from "./context-loader-panel";
@@ -29,6 +30,7 @@ export const knowledgeNetworkEnUS = {
     ...integrationPart,
     ...metricPart,
     ...capabilityPart,
+    ...packageImportPart,
     ...propertyAuthorizationPart,
     ...agentChatPart,
     ...contextLoaderPanelPart,
