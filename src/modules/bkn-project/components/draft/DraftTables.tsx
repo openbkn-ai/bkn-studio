@@ -20,11 +20,16 @@ import {
   keySourcePhrase,
   keyWarnings,
   originPhrase,
+  propertyTypeKey,
   excludedReasonText,
   say,
   verificationPhrase,
 } from "@/modules/bkn-project/components/draft/evidence";
-import type { AdoptBlocker, EditableItem } from "@/modules/bkn-project/components/draft/edit";
+import {
+  type AdoptBlocker,
+  type EditableItem,
+  restorable,
+} from "@/modules/bkn-project/components/draft/edit";
 import type {
   DraftExcludedField,
   DraftItemKind,
@@ -62,7 +67,9 @@ export type DraftItemActions = {
   /** True while an edit is being sent: one at a time. */
   busy: boolean;
   onAdopt: (kind: DraftItemKind, item: EditableItem, adopted: boolean) => void;
+  onChooseIdentity: (objectType: DraftObjectType) => void;
   onEdit: (kind: DraftItemKind, item: EditableItem) => void;
+  onRestore: (field: DraftExcludedField) => void;
 };
 
 function AdoptSwitch({
@@ -187,7 +194,30 @@ export function DraftObjectsTable({
     {
       title: t("bknProject.model.columns.identity"),
       key: "identity",
-      render: (_value, record) => <IdentityEvidence objectType={record} />,
+      render: (_value, record) => (
+        <div className={styles.evidence}>
+          <IdentityEvidence objectType={record} />
+          <AppButton
+            aria-label={t(
+              record.needsIdentity
+                ? "bknProject.model.identity.choose"
+                : "bknProject.model.identity.change",
+              { name: record.name },
+            )}
+            className={record.needsIdentity ? undefined : styles.inlineAction}
+            disabled={actions.archived || actions.busy}
+            onClick={() => actions.onChooseIdentity(record)}
+            size="small"
+            type={record.needsIdentity ? "primary" : "link"}
+          >
+            {t(
+              record.needsIdentity
+                ? "bknProject.model.identity.chooseLabel"
+                : "bknProject.model.identity.changeLabel",
+            )}
+          </AppButton>
+        </div>
+      ),
     },
     {
       title: t("bknProject.model.columns.properties"),
@@ -312,6 +342,7 @@ export function DraftValueTypesTable({
       dataIndex: "baseType",
       key: "baseType",
       width: 110,
+      render: (value: string) => t(propertyTypeKey(value)),
     },
     {
       title: t("bknProject.model.columns.values"),
@@ -360,11 +391,13 @@ export function DraftValueTypesTable({
 
 /** Fields drafting left out, and tables it could not read. */
 export function DraftExcludedPanel({
+  actions,
   catalogNames,
   excluded,
   objectNames,
   unreadable,
 }: {
+  actions: DraftItemActions;
   catalogNames: Record<string, string>;
   excluded: DraftExcludedField[];
   objectNames: Record<string, string>;
@@ -387,6 +420,24 @@ export function DraftExcludedPanel({
       title: t("bknProject.model.columns.reason"),
       key: "reason",
       render: (_value, record) => excludedReasonText(t, record.reason, record.keyword),
+    },
+    {
+      key: "restore",
+      width: 96,
+      render: (_value, record) =>
+        restorable(record) ? (
+          <AppButton
+            aria-label={t("bknProject.model.restore.action", {
+              field: record.field,
+              objectType: objectNames[record.objectType] ?? record.objectType,
+            })}
+            disabled={actions.archived || actions.busy}
+            onClick={() => actions.onRestore(record)}
+            size="small"
+          >
+            {t("bknProject.model.restore.label")}
+          </AppButton>
+        ) : null,
     },
   ];
   const tableColumns: ColumnsType<DraftTable> = [

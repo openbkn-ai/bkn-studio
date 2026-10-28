@@ -15,12 +15,14 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
+import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityDialog";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
 import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import {
   adoptBlocker,
   draftErrorCode,
   type EditableItem,
+  restoredProperty,
   unadoptedWith,
 } from "@/modules/bkn-project/components/draft/edit";
 import {
@@ -35,11 +37,19 @@ import {
   relationsWithUnadoptedEnds,
 } from "@/modules/bkn-project/components/draft/evidence";
 import {
+  chooseIdentity,
   editDraftItem,
   generateDraft,
   getDraft,
+  restoreField,
 } from "@/modules/bkn-project/services/draft.service";
-import type { Draft, DraftItemEdit, DraftItemKind } from "@/modules/bkn-project/types/draft";
+import type {
+  Draft,
+  DraftExcludedField,
+  DraftItemEdit,
+  DraftItemKind,
+  DraftObjectType,
+} from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
@@ -91,6 +101,7 @@ export function ProjectModel({
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ item: EditableItem; kind: DraftItemKind } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [choosingIdentity, setChoosingIdentity] = useState<DraftObjectType | null>(null);
   const [changingCatalogs, setChangingCatalogs] = useState(false);
 
   // Counts every read, failed or not, so a drafting draft is read again after a failure too.
@@ -195,31 +206,29 @@ export function ProjectModel({
   };
 
   /**
-   * Sends one edit made on the draft as read, and shows the draft bkn-project replies. A draft
-   * someone else changed is reloaded and the edit is not replayed: it was made on what they
-   * changed.
+   * Sends one change made on the draft as read, and shows the draft bkn-project replies. A draft
+   * someone else changed is reloaded and the change is not replayed: it was made on what they
+   * changed. `refused` handles a refusal the caller can explain better than bkn-project's text.
    */
-  const sendEdit = async (
-    kind: DraftItemKind,
-    itemId: string,
-    edit: DraftItemEdit,
+  const send = async (
+    request: (updateTime: number) => Promise<Draft>,
+    done?: (before: Draft, next: Draft) => void,
+    refused?: (code: string | undefined) => string | null,
   ): Promise<EditOutcome> => {
     if (!draft) {
       return "failed";
     }
     setSaving(true);
     try {
-      const next = await editDraftItem(project.id, kind, itemId, draft.updateTime, edit);
-      const cascaded =
-        kind === "object_types" && edit.adopted === false ? unadoptedWith(draft, next) : [];
+      const next = await request(draft.updateTime);
       setDraft(next);
-      if (cascaded.length) {
-        message.info(t("bknProject.model.edit.cascade", { count: cascaded.length }));
-      }
+      done?.(draft, next);
       return "done";
     } catch (error) {
-      if (draftErrorCode(error) === "Stale") {
-        message.warning(t("bknProject.model.edit.stale"));
+      const code = draftErrorCode(error);
+      const explained = code === "Stale" ? t("bknProject.model.edit.stale") : refused?.(code);
+      if (explained) {
+        message.warning(explained);
         await loadDraft();
         return "stale";
       }
@@ -228,6 +237,67 @@ export function ProjectModel({
     } finally {
       setSaving(false);
     }
+  };
+
+  const sendEdit = (kind: DraftItemKind, itemId: string, edit: DraftItemEdit) =>
+    send(
+      (updateTime) => editDraftItem(project.id, kind, itemId, updateTime, edit),
+      (before, next) => {
+        const cascaded =
+          kind === "object_types" && edit.adopted === false ? unadoptedWith(before, next) : [];
+        if (cascaded.length) {
+          message.info(t("bknProject.model.edit.cascade", { count: cascaded.length }));
+        }
+      },
+    );
+
+  const sendIdentity = (objectType: DraftObjectType, properties: string[]) =>
+    send(
+      (updateTime) => chooseIdentity(project.id, objectType.id, updateTime, properties),
+      (_before, next) => {
+        const after = next.items.objectTypes.find((item) => item.id === objectType.id);
+        // Choosing does not adopt: say what is left to do when there is something.
+        message.success(
+          t(
+            after && !after.adopted
+              ? "bknProject.model.identity.savedAdopt"
+              : "bknProject.model.identity.saved",
+            { name: objectType.name },
+          ),
+        );
+      },
+    );
+
+  const restore = (field: DraftExcludedField, objectName: string) => {
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t(
+        field.keyword
+          ? "bknProject.model.restore.confirm"
+          : "bknProject.model.restore.confirmNoKeyword",
+        { field: field.field, keyword: field.keyword, objectType: objectName },
+      ),
+      okText: t("bknProject.model.restore.label"),
+      onOk: () =>
+        send(
+          (updateTime) => restoreField(project.id, updateTime, field.objectType, field.field),
+          (_before, next) => {
+            // Name the property only as bkn-project replied it; it may carry a suffix.
+            const property = restoredProperty(next, field.objectType, field.field);
+            message.success(
+              property
+                ? t("bknProject.model.restore.saved", {
+                    objectType: objectName,
+                    property: property.name,
+                  })
+                : t("bknProject.model.restore.savedNoName", { objectType: objectName }),
+            );
+          },
+          // Restored by someone else meanwhile: say so plainly and show the draft as it is.
+          (code) => (code === "ItemNotFound" ? t("bknProject.model.restore.already") : null),
+        ),
+      title: t("bknProject.model.restore.title"),
+    });
   };
 
   const catalogNames = useMemo(() => Object.fromEntries(catalogs ?? []), [catalogs]);
@@ -395,17 +465,19 @@ export function ProjectModel({
   }
 
   const { items } = draft;
+  const objectNames = Object.fromEntries(items.objectTypes.map((item) => [item.id, item.name]));
   const actions: DraftItemActions = {
     adoptBlocker: (kind, item) => adoptBlocker(draft, kind, item),
     // bkn-project refuses edits on an archived project.
     archived: project.archived,
     busy: saving,
     onAdopt: (kind, item, adopted) => void sendEdit(kind, item.id, { adopted }),
+    onChooseIdentity: setChoosingIdentity,
     onEdit: (kind, item) => setEditing({ item, kind }),
+    onRestore: (field) => restore(field, objectNames[field.objectType] ?? field.objectType),
   };
   const pending =
     items.objectTypes.filter((item) => item.needsIdentity).length + unadoptedEnds.length;
-  const objectNames = Object.fromEntries(items.objectTypes.map((item) => [item.id, item.name]));
   const leftOut = items.excluded.length + items.unreadable.length;
   const tabs: { label: string; value: Tab }[] = [
     {
@@ -507,6 +579,7 @@ export function ProjectModel({
             />
           ) : (
             <DraftExcludedPanel
+              actions={actions}
               catalogNames={catalogNames}
               excluded={items.excluded}
               objectNames={objectNames}
@@ -519,6 +592,17 @@ export function ProjectModel({
             objectType={items.objectTypes.find((item) => item.id === openId) ?? null}
             onClose={() => setOpenId(null)}
           />
+          {choosingIdentity ? (
+            <IdentityDialog
+              objectType={choosingIdentity}
+              onCancel={() => setChoosingIdentity(null)}
+              onSave={async (properties) => {
+                if ((await sendIdentity(choosingIdentity, properties)) !== "failed") {
+                  setChoosingIdentity(null);
+                }
+              }}
+            />
+          ) : null}
           {editing ? (
             <DraftItemDialog
               item={editing.item}

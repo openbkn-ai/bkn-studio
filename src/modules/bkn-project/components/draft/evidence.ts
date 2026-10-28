@@ -139,8 +139,34 @@ export function excludedReasonText(t: TFunction, reason: string | undefined, key
   if (!reason) {
     return t("bknProject.model.excluded.reason.none");
   }
-  return t(`bknProject.model.excluded.reason.${reason}`, {
+  // A privacy reason without its keyword reads without the keyword, not with empty brackets.
+  const key = reason === "privacy" && !keyword ? "privacyNoKeyword" : reason;
+  return t(`bknProject.model.excluded.reason.${key}`, {
     defaultValue: t("bknProject.model.excluded.reason.other", { value: reason }),
     keyword,
   });
 }
+
+/** Property types in people's words: kinds of values, not storage type names. */
+const PROPERTY_TYPES: Record<string, string> = {
+  binary: "binary",
+  boolean: "boolean",
+  date: "date",
+  datetime: "datetime",
+  decimal: "number",
+  float: "number",
+  integer: "integer",
+  ip: "ip",
+  json: "structured",
+  point: "location",
+  shape: "location",
+  string: "text",
+  text: "text",
+  time: "time",
+  timestamp: "datetime",
+  "unsigned integer": "integer",
+  vector: "vector",
+};
+
+export const propertyTypeKey = (type: string) =>
+  `bknProject.model.propertyType.${PROPERTY_TYPES[type] ?? "other"}`;
