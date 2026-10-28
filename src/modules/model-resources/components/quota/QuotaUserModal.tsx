@@ -20,7 +20,7 @@ import {
 } from "@/modules/model-resources/services/quota.service";
 import type { ModelQuota, UserQuotaRecord } from "@/modules/model-resources/types/quota";
 import {
-  formatQuotaTokenAmount,
+  formatQuotaRemainingTokens,
   isQuotaConfigured,
   QUOTA_NUM_TYPE_OPTIONS,
 } from "@/modules/model-resources/utils/quota-display";
@@ -213,11 +213,16 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
           message={
             isSeparateBilling
               ? t("modelResources.quotas.userModal.remainSeparate", {
-                  input: formatQuotaTokenAmount(inputRemain, record.numType[0], monthLabel),
-                  output: formatQuotaTokenAmount(outputRemain, record.numType[1], monthLabel),
+                  input: formatQuotaRemainingTokens(inputRemain, record.numType[0], monthLabel, t),
+                  output: formatQuotaRemainingTokens(
+                    outputRemain,
+                    record.numType[1],
+                    monthLabel,
+                    t,
+                  ),
                 })
               : t("modelResources.quotas.userModal.remainUnified", {
-                  amount: formatQuotaTokenAmount(inputRemain, record.numType[0], monthLabel),
+                  amount: formatQuotaRemainingTokens(inputRemain, record.numType[0], monthLabel, t),
                 })
           }
           type="info"
