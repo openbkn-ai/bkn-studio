@@ -14,7 +14,6 @@ import {
   buildSmallModelCurlExample,
   getModelApiBaseUrl,
   getModelApiHost,
-  resolveModelApiName,
 } from "@/modules/model-resources/utils/model-api-guide";
 
 import { ModelApiGuideCodeBlock } from "./ModelApiGuideCodeBlock";
@@ -31,9 +30,8 @@ export function SmallModelApiGuideDrawer({ onClose, open, record }: SmallModelAp
   const { t } = useTranslation();
 
   const host = getModelApiHost();
-  const modelName = record
-    ? resolveModelApiName(record.modelName, record.modelConfig?.apiModel)
-    : "";
+  // The platform resolves registered names; upstream apiModel is provider configuration.
+  const modelName = record?.modelName ?? "";
 
   const tableRows = useMemo(
     () => [
