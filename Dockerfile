@@ -20,7 +20,6 @@ WORKDIR /app
 
 # Lockfile-only layer first so the dependency install caches across source edits.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY patches/ ./patches/
 RUN pnpm install --frozen-lockfile
 
 COPY . .
