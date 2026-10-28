@@ -105,6 +105,8 @@ function mapCapabilityType(value: string | undefined): CapabilityType {
       return "function";
     case "mcp_tool":
       return "mcp_tool";
+    case "knowledge_base":
+      return "knowledge_base";
     default:
       return "skill";
   }

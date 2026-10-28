@@ -38,7 +38,9 @@ import type {
   RelationTypeResourceRowMapping,
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import type { BackendKnowledgeBase } from "@/modules/knowledge-network/services/knowledge-base.service";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
+import { CAPABILITY_STATUS_MISSING } from "@/modules/knowledge-network/types/capability";
 import { countMockObjectMetrics } from "@/modules/knowledge-network/services/mock/object-metrics";
 
 const mockKnowledgeNetworkOperations = [
@@ -1115,7 +1117,77 @@ export function removeMockActionTypeExecutionLogs(networkId: string, actionTypeI
  * the execution factory, and inventing them here would hide the fallback the panel has to render
  * whenever that backfill is unavailable.
  */
-export const mockCapabilityBindings: Record<string, CapabilityBindingRecord[]> = {};
+export const mockCapabilityBindings: Record<string, CapabilityBindingRecord[]> = {
+  // Knowledge bases (professional edition): one mounted, one whose knowledge base is gone.
+  "kn-domain-supply": [
+    {
+      boundAsBox: false,
+      boxId: "",
+      boxName: "",
+      branch: "main",
+      capabilityId: "11",
+      capabilityType: "knowledge_base",
+      comment: "",
+      createTime: "2026-10-27 10:00:00",
+      creatorName: "Local Admin",
+      description: "",
+      id: "binding-kb-11",
+      metadataType: "",
+      name: "Supplier contracts",
+      sources: [{ kind: "manual", refs: [] }],
+      status: "",
+      updateTime: "2026-10-27 10:00:00",
+      updaterName: "Local Admin",
+    },
+    {
+      boundAsBox: false,
+      boxId: "",
+      boxName: "",
+      branch: "main",
+      capabilityId: "19",
+      capabilityType: "knowledge_base",
+      comment: "",
+      createTime: "2026-10-26 10:00:00",
+      creatorName: "Local Admin",
+      description: "",
+      id: "binding-kb-19",
+      metadataType: "",
+      name: "",
+      sources: [{ kind: "manual", refs: [] }],
+      status: CAPABILITY_STATUS_MISSING,
+      updateTime: "2026-10-26 10:00:00",
+      updaterName: "Local Admin",
+    },
+  ],
+};
+
+/**
+ * Knowledge bases as kb-api lists them to the caller, with the operations they hold. One can be
+ * seen but not queried, so the picker has something to leave out.
+ */
+export const mockKnowledgeBases: BackendKnowledgeBase[] = [
+  {
+    description: "Signed supplier contracts and their amendments.",
+    document_count: 128,
+    id: 11,
+    name: "Supplier contracts",
+    operations: ["view_detail", "query_data"],
+  },
+  {
+    description: "Delivery and quality incident reports.",
+    document_count: 342,
+    id: 12,
+    name: "Delivery incidents",
+    operations: ["view_detail", "query_data", "document_manage"],
+  },
+  {
+    description: "Board minutes.",
+    document_count: 40,
+    id: 13,
+    name: "Board minutes",
+    operations: ["view_detail"],
+  },
+];
 
 export function listMockCapabilities(
   networkId: string,
@@ -1197,7 +1269,11 @@ export function attachMockCapabilities(
           : toolBoxKinds.get(boxId) === "openapi"
             ? "openapi"
             : "function",
-      name: "",
+      // The backend backfills a knowledge base's name from kb-api; tools stay unnamed (see above).
+      name:
+        input.capabilityType === "knowledge_base"
+          ? (mockKnowledgeBases.find((item) => String(item.id) === capabilityId)?.name ?? "")
+          : "",
       sources: [{ kind: input.allTools ? "box" : "manual", refs: [] }],
       status: "",
       updateTime: timestamp,
