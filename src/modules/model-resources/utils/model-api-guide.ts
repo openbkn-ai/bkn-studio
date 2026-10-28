@@ -17,10 +17,6 @@ export function getModelApiBaseUrl(host = window.location.host) {
   return `https://${host}/api/mf-model-api/v1/`;
 }
 
-export function resolveModelApiName(modelName: string, apiModel?: string) {
-  return apiModel?.trim() || modelName;
-}
-
 export function buildLlmCurlExample(params: { apiKey?: string; host?: string; modelName: string }) {
   const host = params.host ?? getModelApiHost();
   const apiKey = params.apiKey ?? MODEL_API_KEY_PLACEHOLDER;
