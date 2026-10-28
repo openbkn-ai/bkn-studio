@@ -11,6 +11,7 @@
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -24,11 +25,18 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.toolbarLeft {
+  flex-shrink: 0;
 }
 
 .toolbarRight {
   flex-shrink: 0;
   justify-content: flex-end;
+  margin-inline-start: auto;
 }
 
 .toolbarButton {
@@ -42,6 +50,7 @@
 
 .searchInput {
   width: 240px;
+  max-width: 100%;
 }
 
 .searchInput :global(.ant-input-search) {
@@ -66,6 +75,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  max-width: 100%;
 }
 
 .filterLabel {
@@ -77,6 +87,7 @@
 
 .typeFilter {
   width: 190px;
+  min-width: 0;
 }
 
 .typeFilter :global(.ant-select-selector) {
@@ -91,6 +102,7 @@
 
 .iconButton {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 32px;
