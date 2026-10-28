@@ -12,7 +12,7 @@ export const packageImportPart = {
       execution_factory_unreachable: "The execution factory could not be reached",
       knowledge_base_service_unreachable: "The knowledge-base service could not be reached",
       not_found: "Not found in this environment",
-      not_supported: "This deployment has no knowledge-base service",
+      not_supported: "This deployment does not support this kind of capability",
       not_usable: "Found, but not published or disabled",
       other: "Another reason",
     },
