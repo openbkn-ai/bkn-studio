@@ -68,10 +68,10 @@ vi.mock("@/shared/catalog", async (importOriginal) => ({
   listCatalogs: listCatalogsMock,
 }));
 
-import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
+import { DRAFT_POLL_MS, mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
-import { DRAFT_POLL_MS, ProjectModel } from "./ProjectModel";
+import { ProjectModel } from "./ProjectModel";
 
 const project: Project = {
   archived: false,
@@ -109,11 +109,16 @@ async function openDialog() {
   return within(await screen.findByRole("dialog"));
 }
 
-function renderModel(override: Partial<Project> = {}, ownerIsCaller = true) {
+function renderModel(
+  override: Partial<Project> = {},
+  ownerIsCaller = true,
+  initialTab: string | null = null,
+) {
   // Without Ant Design's injected styles, as a query by role matches each element against them
   // and would take seconds per query on this page.
   return renderWithoutAntdStyles(
     <ProjectModel
+      initialTab={initialTab}
       onProjectChange={onProjectChange}
       ownerIsCaller={ownerIsCaller}
       project={{ ...project, ...override }}
@@ -301,6 +306,16 @@ describe("ProjectModel", () => {
     renderModel();
     expect(await screen.findByText("bknProject.model.graph.empty")).toBeInTheDocument();
     expect(screen.queryByTestId("draft-concept-graph")).not.toBeInTheDocument();
+  });
+
+  it("opens on the tab a link asks for, and on the objects for any other", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    const view = renderModel({}, true, "changes");
+    expect(await screen.findByText("bknProject.model.changes.waitingTitle")).toBeInTheDocument();
+    view.unmount();
+
+    renderModel({}, true, "nonsense");
+    expect(await screen.findByRole("switch", { name: /"name":"customers"/ })).toBeInTheDocument();
   });
 
   it("opens an object type with its identity, properties and the fields left out", async () => {

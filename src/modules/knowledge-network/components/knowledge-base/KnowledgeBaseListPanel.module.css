@@ -1,0 +1,87 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 24px;
+}
+
+.titleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.usageTip {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  cursor: help;
+}
+
+/*
+ * A knowledge base that is gone stays listed, greyed, until someone unmounts it. Dimmed rather than
+ * recoloured: the shared list styles set every cell's colour with a more specific selector.
+ */
+.missingRow > td {
+  opacity: 0.55;
+}
+
+.pickerList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 360px;
+  margin-top: 12px;
+  overflow-y: auto;
+}
+
+.pickerItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.pickerItem:hover {
+  background: var(--color-fill-quaternary);
+}
+
+.pickerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.hint {
+  margin: 0 0 12px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.requests {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
