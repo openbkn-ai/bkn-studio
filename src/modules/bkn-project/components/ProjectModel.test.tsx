@@ -248,7 +248,9 @@ describe("ProjectModel", () => {
     // A data source's raw reply means nothing to people here; the page only says counting did not finish.
     expect(screen.queryByText(/Public.Forbidden/)).not.toBeInTheDocument();
     // material_bom waits for its identity, and its adopted relation waits to be unadopted.
-    expect(screen.getByText(/bknProject.model.pending/)).toHaveTextContent('{"count":2}');
+    expect(screen.getByRole("button", { name: /bknProject.model.pending/ })).toHaveTextContent(
+      '{"count":2}',
+    );
     expect(screen.getByText(/bknProject.model.notice.unadoptedEnds/)).toBeInTheDocument();
   });
 
@@ -855,5 +857,16 @@ describe("ProjectModel", () => {
     fireEvent.click(await screen.findByRole("button", { name: /bknProject.model.pending/ }));
 
     expect(await screen.findByText("bknProject.model.changes.waitingTitle")).toBeInTheDocument();
+  });
+
+  it("shows on the changes tab how many items wait, not only the decisions", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderModel();
+
+    // No decisions yet, two items wait: the tab says both, as the header does.
+    const tab = await screen.findByText(/bknProject.model.tabs.changes/);
+    expect(tab.closest(".ant-segmented-item")).toHaveTextContent(
+      'bknProject.model.pending:{"count":2}',
+    );
   });
 });

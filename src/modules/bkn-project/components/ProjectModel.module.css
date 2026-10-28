@@ -58,3 +58,9 @@
   color: var(--color-text-secondary);
   font-size: 13px;
 }
+
+.tabPending {
+  margin-left: 6px;
+  color: var(--color-warning-text);
+  font-weight: 600;
+}

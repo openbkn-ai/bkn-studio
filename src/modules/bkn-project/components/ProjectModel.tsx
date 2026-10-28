@@ -6,7 +6,7 @@
  */
 
 import { Alert, Segmented, Space, Spin } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -482,7 +482,7 @@ export function ProjectModel({
   const pending =
     items.objectTypes.filter((item) => item.needsIdentity).length + unadoptedEnds.length;
   const leftOut = items.excluded.length + items.unreadable.length;
-  const tabs: { label: string; value: Tab }[] = [
+  const tabs: { label: ReactNode; value: Tab }[] = [
     {
       label: t("bknProject.model.tabs.objects", { count: items.objectTypes.length }),
       value: "objects",
@@ -508,7 +508,17 @@ export function ProjectModel({
         ]
       : []),
     {
-      label: t("bknProject.model.tabs.changes", { count: items.decisions.length }),
+      // The tab lists what waits before the decisions, so it counts both, as the header does.
+      label: (
+        <span>
+          {t("bknProject.model.tabs.changes", { count: items.decisions.length })}
+          {pending ? (
+            <span className={styles.tabPending}>
+              {t("bknProject.model.pending", { count: pending })}
+            </span>
+          ) : null}
+        </span>
+      ),
       value: "changes",
     },
   ];
