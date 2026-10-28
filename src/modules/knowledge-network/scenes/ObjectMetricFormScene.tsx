@@ -862,11 +862,14 @@ function sanitizeAiCondition(
   condition: ObjectMetricConditionV1 | undefined,
   ownerObjectTypeId: string,
   allowedProperties: Set<string>,
+  capabilities?: ObjectMetricCapabilitiesV1,
 ): ObjectMetricConditionV1 | undefined {
   if (!condition || typeof condition !== "object") return undefined;
   if (condition.node_type === "group") {
     if (
       !["and", "or", "not"].includes(condition.boolean_operator) ||
+      (capabilities !== undefined &&
+        !capabilities.boolean_operators.includes(condition.boolean_operator)) ||
       !Array.isArray(condition.children) ||
       !condition.children.length ||
       (condition.boolean_operator === "not" && condition.children.length !== 1) ||
@@ -876,7 +879,7 @@ function sanitizeAiCondition(
     )
       return undefined;
     const children = condition.children.map((child) =>
-      sanitizeAiCondition(child, ownerObjectTypeId, allowedProperties),
+      sanitizeAiCondition(child, ownerObjectTypeId, allowedProperties, capabilities),
     );
     if (children.some((child) => !child)) return undefined;
     return {
@@ -890,7 +893,8 @@ function sanitizeAiCondition(
     !condition.left ||
     condition.left.source !== "property" ||
     !condition.left.property_ref?.property_name ||
-    condition.left.property_ref.object_type_id !== ownerObjectTypeId ||
+    (condition.left.property_ref.object_type_id !== undefined &&
+      condition.left.property_ref.object_type_id !== ownerObjectTypeId) ||
     !allowedProperties.has(condition.left.property_ref.property_name) ||
     Object.keys(condition).some(
       (key) => !["node_type", "left", "comparison_operator", "right"].includes(key),
@@ -938,6 +942,7 @@ function sanitizeAiCondition(
   const right = condition.right ?? [];
   if (
     !supported ||
+    (capabilities !== undefined && !capabilities.comparison_operators.includes(operator)) ||
     !Array.isArray(right) ||
     (noRight
       ? right.length !== 0
@@ -951,7 +956,9 @@ function sanitizeAiCondition(
         !operand ||
         typeof operand !== "object" ||
         (operand.source === "property"
-          ? operand.property_ref?.object_type_id !== ownerObjectTypeId ||
+          ? !operand.property_ref?.property_name ||
+            (operand.property_ref.object_type_id !== undefined &&
+              operand.property_ref.object_type_id !== ownerObjectTypeId) ||
             !allowedProperties.has(operand.property_ref.property_name) ||
             Object.keys(operand).some((key) => !["source", "property_ref"].includes(key))
           : operand.source !== "literal" ||
@@ -968,7 +975,22 @@ function sanitizeAiCondition(
       property_ref: propertyRef(ownerObjectTypeId, condition.left.property_ref.property_name),
     },
     comparison_operator: operator,
-    ...(condition.right ? { right: condition.right } : {}),
+    ...(condition.right
+      ? {
+          right: condition.right.map((operand) =>
+            operand.source === "property"
+              ? {
+                  source: "property" as const,
+                  property_ref: propertyRef(ownerObjectTypeId, operand.property_ref.property_name),
+                }
+              : {
+                  source: "literal" as const,
+                  value_type: operand.value_type,
+                  value: operand.value,
+                },
+          ),
+        }
+      : {}),
   };
 }
 
@@ -1629,6 +1651,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       item.definition.metric_type === "atomic" &&
       item.definition.owner_object_type_id === ownerObjectTypeId,
   );
+  const resolveAiBaseMetric = (requestedId?: string, requestedVersion?: number) => {
+    const current = parseDependencyKey(getFieldValue("baseMetric"));
+    const id = requestedId ?? current.metric_id;
+    const version = requestedVersion ?? current.version;
+    return compatibleAtomicMetrics.find(
+      (item) => item.definition.id === id && item.definition.version === version,
+    );
+  };
   const selectBaseMetric = (key: string) => {
     const base = compatibleAtomicMetrics.find(
       (item) => dependencyKey(item.definition.id, item.definition.version) === key,
@@ -1684,14 +1714,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     }
 
     if (metricType === "derived" && intent.derived) {
+      const requestedId = intent.derived.base_metric_id;
       const requestedVersion = intent.derived.base_metric_version;
-      const base = compatibleAtomicMetrics.find(
-        (item) =>
-          (intent.derived?.base_metric_id
-            ? item.definition.id === intent.derived.base_metric_id
-            : item.definition.name === intent.derived?.base_metric_name) &&
-          (!requestedVersion || item.definition.version === requestedVersion),
-      );
+      const base =
+        requestedId !== undefined || requestedVersion !== undefined
+          ? resolveAiBaseMetric(requestedId, requestedVersion)
+          : compatibleAtomicMetrics.find(
+              (item) => item.definition.name === intent.derived?.base_metric_name,
+            );
       if (base) {
         const key = dependencyKey(base.definition.id, base.definition.version);
         if (key !== getFieldValue("baseMetric")) {
@@ -1705,7 +1735,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       }
       if (intent.derived.filters !== undefined) {
         setBusinessCondition(
-          sanitizeAiCondition(intent.derived.filters, ownerObjectTypeId, allowedProperties),
+          sanitizeAiCondition(
+            intent.derived.filters,
+            ownerObjectTypeId,
+            allowedProperties,
+            capabilities,
+          ),
         );
       }
       if (intent.derived.event_time && allowedProperties.has(intent.derived.event_time)) {
@@ -1899,13 +1934,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     const requestedBaseVersion = selectedIntent.derived?.base_metric_version;
     if (
       (requestedBaseId !== undefined || requestedBaseVersion !== undefined) &&
-      (!requestedBaseId ||
-        !requestedBaseVersion ||
-        !compatibleAtomicMetrics.some(
-          (item) =>
-            item.definition.id === requestedBaseId &&
-            item.definition.version === requestedBaseVersion,
-        ))
+      !resolveAiBaseMetric(requestedBaseId, requestedBaseVersion)
     ) {
       void message.error(objectMetricText("aiProposalCannotApply"));
       return;
@@ -1952,7 +1981,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     }
     if (
       selectedIntent.derived?.filters &&
-      !sanitizeAiCondition(selectedIntent.derived.filters, ownerObjectTypeId, allowedProperties)
+      !sanitizeAiCondition(
+        selectedIntent.derived.filters,
+        ownerObjectTypeId,
+        allowedProperties,
+        capabilities,
+      )
     ) {
       void message.error(objectMetricText("aiProposalCannotApply"));
       return;

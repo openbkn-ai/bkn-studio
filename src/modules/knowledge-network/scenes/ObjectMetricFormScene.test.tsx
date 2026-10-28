@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => {
       vi.fn<(params: RunObjectMetricDesignParams) => Promise<ObjectMetricDesignResult>>(),
     listObjectMetricAnswerModels: vi.fn(),
     getKnowledgeNetworkObjectTypeDetail: vi.fn(),
+    getObjectMetricCapabilitiesV1: vi.fn(),
     getObjectMetricV1: vi.fn(),
     locationState: { current: null as { knowledgeNetworkReturnTo?: string } | null },
     message: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
@@ -68,7 +69,7 @@ vi.mock(
     trialObjectMetricDataV1: mocks.trialObjectMetricDataV1,
     validateObjectMetricV1: mocks.validateObjectMetricV1,
     previewObjectMetricV1: mocks.previewObjectMetricV1,
-    getObjectMetricCapabilitiesV1: vi.fn().mockResolvedValue(undefined),
+    getObjectMetricCapabilitiesV1: mocks.getObjectMetricCapabilitiesV1,
     getObjectMetricV1: mocks.getObjectMetricV1,
     listKnowledgeNetworkObjectTypes: vi.fn().mockResolvedValue([]),
     listKnowledgeNetworkRelationTypes: vi.fn().mockResolvedValue([]),
@@ -165,6 +166,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  mocks.getObjectMetricCapabilitiesV1.mockResolvedValue(undefined);
   mocks.listObjectMetricAnswerModels.mockResolvedValue([{ id: "model-1", name: "测试对话模型" }]);
   mocks.createObjectMetricDraftV1.mockResolvedValue(undefined);
   mocks.listObjectMetricsV1.mockResolvedValue({ entries: [], total_count: 0 });
@@ -504,6 +506,156 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(mocks.createObjectMetricDraftV1).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [
+      "comparison operator",
+      {
+        node_type: "predicate",
+        left: {
+          source: "property",
+          property_ref: { object_type_id: "order", property_name: "amount" },
+        },
+        comparison_operator: "gt",
+        right: [{ source: "literal", value_type: "int64", value: 0 }],
+      },
+    ],
+    [
+      "boolean operator",
+      {
+        node_type: "group",
+        boolean_operator: "or",
+        children: [
+          {
+            node_type: "predicate",
+            left: {
+              source: "property",
+              property_ref: { object_type_id: "order", property_name: "amount" },
+            },
+            comparison_operator: "eq",
+            right: [{ source: "literal", value_type: "int64", value: 0 }],
+          },
+        ],
+      },
+    ],
+  ])("rejects an AI filter using a disabled %s", async (_kind, condition) => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=derived";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      dataProperties: [{ displayName: "金额", name: "amount", type: "int64" }],
+    });
+    mocks.getObjectMetricCapabilitiesV1.mockResolvedValue({
+      aggregations: [],
+      boolean_operators: ["and"],
+      comparison_operators: ["eq"],
+      expression_operators: [],
+      functions: [],
+      quantity_kinds: [],
+      semantic_types: [],
+      time_granularities: [],
+    });
+    mocks.runObjectMetricDesigner.mockImplementation((params) =>
+      Promise.resolve({
+        answer: "建议筛选条件",
+        proposal: {
+          kind: "metric_design_proposal",
+          base_form_revision: params.baseFormRevision,
+          summary: "筛选条件",
+          questions: [],
+          changes: [
+            {
+              field: "derived.filters",
+              operation: "replace",
+              before: undefined,
+              after: condition,
+              reason: "用户要求",
+            },
+          ],
+        },
+        runId: "run-disabled-operator",
+        threadId: "thread-disabled-operator",
+      }),
+    );
+
+    render(<ObjectMetricFormScene mode="create" />);
+    fireEvent.change(await screen.findByLabelText("描述要创建的对象指标"), {
+      target: { value: "按条件筛选" },
+    });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    expect(mocks.message.error).toHaveBeenCalled();
+    expect(screen.getByText("待应用的修改建议")).toBeInTheDocument();
+  });
+
+  it("rebuilds both AI property operands from the current owner and property names", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=derived";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      dataProperties: ["amount", "limit"].map((name) => ({
+        displayName: name,
+        name,
+        type: "int64",
+      })),
+    });
+    mocks.runObjectMetricDesigner.mockImplementation((params) =>
+      Promise.resolve({
+        answer: "建议比较两个属性",
+        proposal: {
+          kind: "metric_design_proposal",
+          base_form_revision: params.baseFormRevision,
+          summary: "比较属性",
+          questions: [],
+          changes: [
+            {
+              field: "derived.filters",
+              operation: "replace",
+              before: undefined,
+              after: {
+                node_type: "predicate",
+                left: { source: "property", property_ref: { property_name: "amount" } },
+                comparison_operator: "gt",
+                right: [
+                  {
+                    source: "property",
+                    property_ref: { property_name: "limit", property_id: "untrusted" },
+                  },
+                ],
+              },
+              reason: "用户要求",
+            },
+          ],
+        },
+        runId: "run-property-filter",
+        threadId: "thread-property-filter",
+      }),
+    );
+
+    render(<ObjectMetricFormScene mode="create" />);
+    const prompt = await screen.findByLabelText("描述要创建的对象指标");
+    fireEvent.change(prompt, { target: { value: "金额大于限额" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    expect(mocks.message.error).not.toHaveBeenCalled();
+    fireEvent.change(prompt, { target: { value: "检查当前条件" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(2));
+    expect(
+      mocks.runObjectMetricDesigner.mock.lastCall?.[0].formSnapshot["derived.filters"],
+    ).toEqual({
+      node_type: "predicate",
+      left: {
+        source: "property",
+        property_ref: { object_type_id: "order", property_name: "amount" },
+      },
+      comparison_operator: "gt",
+      right: [
+        {
+          source: "property",
+          property_ref: { object_type_id: "order", property_name: "limit" },
+        },
+      ],
+    });
+  });
+
   it("rejects an AI expression with an unsupported nested node", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
     mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
@@ -524,13 +676,13 @@ describe("ObjectMetricFormScene object properties", () => {
               operation: "replace",
               before: undefined,
               after: {
-                node_type: "binary_op",
+                node_type: "binary",
                 operator: "multiply",
                 left: {
                   node_type: "property",
-                  property_name: "amount",
+                  property_ref: { object_type_id: "order", property_name: "amount" },
                 },
-                right: { node_type: "literal", value_type: "int64", value: 2 },
+                right: { node_type: "literal", value: 2 },
               },
               reason: "用户要求",
             },
@@ -602,6 +754,69 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(mocks.message.error).toHaveBeenCalled();
     expect(screen.getByText("待应用的修改建议")).toBeInTheDocument();
     expect(mocks.createObjectMetricDraftV1).not.toHaveBeenCalled();
+  });
+
+  it("applies a base version-only change together with other selected fields", async () => {
+    const baseV1 = createObjectMetricDefinitionV1("atomic", "order");
+    baseV1.id = "amount";
+    baseV1.version = 1;
+    baseV1.lifecycle.status = "published";
+    const baseV2 = createObjectMetricDefinitionV1("atomic", "order");
+    baseV2.id = "amount";
+    baseV2.version = 2;
+    baseV2.lifecycle.status = "published";
+    const draft = createObjectMetricDefinitionV1("derived", "order");
+    draft.id = "derived-draft";
+    draft.name = "原名称";
+    if (draft.specification.kind !== "derived") throw new Error("expected derived metric");
+    draft.specification.base_metric = { metric_id: "amount", version: 1 };
+    mocks.getObjectMetricV1.mockResolvedValue({ definition: draft });
+    mocks.listObjectMetricsV1.mockResolvedValue({
+      entries: [{ definition: baseV1 }, { definition: baseV2 }],
+      total_count: 2,
+    });
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    mocks.runObjectMetricDesigner.mockImplementation((params) =>
+      Promise.resolve({
+        answer: "建议升级基准版本",
+        proposal: {
+          kind: "metric_design_proposal",
+          base_form_revision: params.baseFormRevision,
+          summary: "升级版本并改名",
+          questions: [],
+          changes: [
+            {
+              field: "derived.base_metric_version",
+              operation: "replace",
+              before: 1,
+              after: 2,
+              reason: "采用新版本",
+            },
+            {
+              field: "name",
+              operation: "replace",
+              before: "原名称",
+              after: "新名称",
+              reason: "改名",
+            },
+          ],
+        },
+        runId: "run-version-only",
+        threadId: "thread-version-only",
+      }),
+    );
+
+    mocks.routeParams.current = { metricId: "derived-draft", networkId: "network-1" };
+    render(<ObjectMetricFormScene mode="edit" />);
+    expect(await screen.findByLabelText("对象指标名称")).toHaveValue("原名称");
+    fireEvent.click(getButtonByText("AI 生成"));
+    const prompt = screen.getByLabelText("描述要创建的对象指标");
+    fireEvent.change(prompt, { target: { value: "基准指标升到第二版并改名" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    expect(mocks.message.error).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("对象指标名称")).toHaveValue("新名称");
+    expect(screen.getByText("已锁定发布版本 v2")).toBeInTheDocument();
   });
 
   it("requires confirmation and rejects a proposal after the form changes", async () => {
