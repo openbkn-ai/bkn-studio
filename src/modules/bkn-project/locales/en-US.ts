@@ -168,6 +168,9 @@ export const bknProjectEnUS = {
         confirm:
           "{{field}} may hold personal information (keyword: {{keyword}}), so it was left out of the ontology. Restored, it becomes a property of {{objectType}}, and everyone who can read this knowledge network can see its values.",
         saved: "Restored as property {{property}} of {{objectType}}.",
+        savedNoName: "The field was restored to {{objectType}}.",
+        confirmNoKeyword:
+          "{{field}} may hold personal information, so it was left out of the ontology. Restored, it becomes a property of {{objectType}}, and everyone who can read this knowledge network can see its values.",
         already: "This field was restored already; the draft was reloaded.",
       },
       propertyType: {
@@ -282,6 +285,7 @@ export const bknProjectEnUS = {
         unreadableTitle: "Tables that could not be read",
         reason: {
           privacy: "Personal information (keyword: {{keyword}})",
+          privacyNoKeyword: "May hold personal information",
           unsupported_type: "This field type is not supported yet",
           not_visible: "You cannot see this table",
           no_structure: "The fields of this table could not be read yet",

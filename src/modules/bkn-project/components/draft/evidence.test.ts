@@ -135,6 +135,17 @@ describe("left-out reasons", () => {
     expect(excludedReasonText(t, "")).toBe("bknProject.model.excluded.reason.none");
   });
 
+  it("leaves the keyword out of a privacy reason that has none, not empty brackets", () => {
+    // Both keys exist, so read the key asked for rather than the fallback.
+    const t = ((key: string) => key) as unknown as Parameters<typeof excludedReasonText>[0];
+    expect(excludedReasonText(t, "privacy", "phone")).toBe(
+      "bknProject.model.excluded.reason.privacy",
+    );
+    expect(excludedReasonText(t, "privacy")).toBe(
+      "bknProject.model.excluded.reason.privacyNoKeyword",
+    );
+  });
+
   it("names property types as kinds of values, and unknown ones as other", () => {
     expect(propertyTypeKey("unsigned integer")).toBe("bknProject.model.propertyType.integer");
     expect(propertyTypeKey("string")).toBe("bknProject.model.propertyType.text");

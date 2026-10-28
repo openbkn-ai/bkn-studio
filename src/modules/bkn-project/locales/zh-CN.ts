@@ -156,6 +156,9 @@ export const bknProjectZhCN = {
         confirm:
           "「{{field}}」可能含个人信息（关键词：{{keyword}}），所以没有放进本体。恢复后，它会成为「{{objectType}}」的一个属性，能读这个知识网络的人都能看到这列数据。",
         saved: "已恢复为「{{objectType}}」的属性 {{property}}。",
+        savedNoName: "已把这个字段恢复到「{{objectType}}」。",
+        confirmNoKeyword:
+          "「{{field}}」可能含个人信息，所以没有放进本体。恢复后，它会成为「{{objectType}}」的一个属性，能读这个知识网络的人都能看到这列数据。",
         already: "这个字段已经被恢复了，已重新加载草稿。",
       },
       propertyType: {
@@ -265,6 +268,7 @@ export const bknProjectZhCN = {
         unreadableTitle: "读不到的表",
         reason: {
           privacy: "个人信息（关键词：{{keyword}}）",
+          privacyNoKeyword: "可能含个人信息",
           unsupported_type: "暂不支持这种字段类型",
           not_visible: "你无权查看这张表",
           no_structure: "还没有读到这张表的字段",

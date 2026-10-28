@@ -731,4 +731,31 @@ describe("ProjectModel", () => {
       await screen.findByRole("button", { name: /restore.action:.*"field":"contact_phone"/ }),
     ).toBeDisabled();
   });
+
+  it("restores a field without a keyword, and never names a property it did not see", async () => {
+    const current = ready();
+    current.items.excluded[0].keyword = undefined;
+    getDraftMock.mockResolvedValue(current);
+    // The reply lacks the property: the page must not report a name it guessed.
+    restoreFieldMock.mockResolvedValue(
+      edited((draft) => {
+        draft.items.excluded = draft.items.excluded.slice(1);
+      }),
+    );
+    renderModel();
+
+    fireEvent.click(await screen.findByText(/bknProject.model.tabs.excluded/));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /restore.action:.*"field":"contact_phone"/ }),
+    );
+    const confirm = confirmMock.mock.calls[0][0] as unknown as { content: string };
+    expect(confirm.content).toContain("bknProject.model.restore.confirmNoKeyword");
+    await act(async () => {
+      await confirmMock.mock.calls[0][0].onOk();
+    });
+
+    expect(messageMock.success).toHaveBeenCalledWith(
+      expect.stringContaining("bknProject.model.restore.savedNoName"),
+    );
+  });
 });

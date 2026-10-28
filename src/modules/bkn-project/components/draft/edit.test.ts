@@ -139,6 +139,9 @@ describe("draft edits", () => {
     expect(model.notice.askOwner).toBeTruthy();
     expect(model.identity.savedAdopt).toContain("{{name}}");
     expect(model.restore.confirm).toContain("{{keyword}}");
+    expect(model.restore.confirmNoKeyword).not.toContain("{{keyword}}");
+    expect(model.restore.savedNoName).not.toContain("{{property}}");
+    expect(model.excluded.reason.privacyNoKeyword).toBeTruthy();
     expect(model.propertyType.other).toBeTruthy();
     expect(model.notice.draftReadsMissing).toContain("{{names}}");
     expect(model.empty.noCatalogsAskOwner).toBeTruthy();

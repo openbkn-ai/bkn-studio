@@ -271,22 +271,26 @@ export function ProjectModel({
   const restore = (field: DraftExcludedField, objectName: string) => {
     void modal.confirm({
       cancelText: t("common.cancel"),
-      content: t("bknProject.model.restore.confirm", {
-        field: field.field,
-        keyword: field.keyword ?? "",
-        objectType: objectName,
-      }),
+      content: t(
+        field.keyword
+          ? "bknProject.model.restore.confirm"
+          : "bknProject.model.restore.confirmNoKeyword",
+        { field: field.field, keyword: field.keyword, objectType: objectName },
+      ),
       okText: t("bknProject.model.restore.label"),
       onOk: () =>
         send(
           (updateTime) => restoreField(project.id, updateTime, field.objectType, field.field),
           (_before, next) => {
+            // Name the property only as bkn-project replied it; it may carry a suffix.
             const property = restoredProperty(next, field.objectType, field.field);
             message.success(
-              t("bknProject.model.restore.saved", {
-                objectType: objectName,
-                property: property?.name ?? field.field,
-              }),
+              property
+                ? t("bknProject.model.restore.saved", {
+                    objectType: objectName,
+                    property: property.name,
+                  })
+                : t("bknProject.model.restore.savedNoName", { objectType: objectName }),
             );
           },
           // Restored by someone else meanwhile: say so plainly and show the draft as it is.

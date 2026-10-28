@@ -139,7 +139,9 @@ export function excludedReasonText(t: TFunction, reason: string | undefined, key
   if (!reason) {
     return t("bknProject.model.excluded.reason.none");
   }
-  return t(`bknProject.model.excluded.reason.${reason}`, {
+  // A privacy reason without its keyword reads without the keyword, not with empty brackets.
+  const key = reason === "privacy" && !keyword ? "privacyNoKeyword" : reason;
+  return t(`bknProject.model.excluded.reason.${key}`, {
     defaultValue: t("bknProject.model.excluded.reason.other", { value: reason }),
     keyword,
   });
