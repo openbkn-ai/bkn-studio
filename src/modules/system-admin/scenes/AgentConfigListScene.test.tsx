@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -145,6 +145,59 @@ describe("AgentConfigListScene", () => {
       expect(await screen.findByText(expected)).toBeTruthy();
     }
     expect(listShared).toHaveBeenCalledTimes(4);
+  });
+
+  it("localizes all shipped names and updates them when the language changes", async () => {
+    const names = [
+      ["studio_smart_qa", "Studio智能问答", "Studio Smart Q&A"],
+      ["cypher_generation", "Cypher生成", "Cypher Generation"],
+      [
+        "business_provenance_claim_attribution",
+        "业务溯源结论识别Agent",
+        "Business Provenance Claim Attribution Agent",
+      ],
+      ["business_provenance_optimizer", "知识网络优化Agent", "Knowledge Network Optimizer Agent"],
+      ["catalog-semantic-understanding", "数据目录语义理解", "Data Catalog Semantic Understanding"],
+      [
+        "resource-semantic-understanding",
+        "数据资源语义理解",
+        "Data Resource Semantic Understanding",
+      ],
+    ];
+    listShared.mockResolvedValue(names.map(([agent_id, name]) => agent({ agent_id, name })));
+    await i18n.changeLanguage("en-US");
+    renderList();
+    for (const [, , english] of names) expect(await screen.findByText(english)).toBeTruthy();
+
+    await act(() => i18n.changeLanguage("zh-CN"));
+    for (const [, chinese] of names) expect(screen.getByText(chinese)).toBeTruthy();
+    expect(listShared).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches localized, stored names and stable IDs while retaining custom names", async () => {
+    await i18n.changeLanguage("en-US");
+    listShared.mockResolvedValue([
+      agent({}),
+      agent({ agent_id: "catalog-semantic-understanding", name: "数据目录语义理解" }),
+      agent({ agent_id: "cypher_generation", name: "团队查询助手" }),
+      agent({ agent_id: "custom-agent", name: "自定义助手" }),
+    ]);
+    renderList();
+    const input = await screen.findByPlaceholderText(
+      i18n.t("systemAdmin.agentConfig.searchPlaceholder"),
+    );
+    await screen.findByText("Studio Smart Q&A");
+    for (const query of ["catalog", "CATALOG SEMANTIC", "目录", "catalog-semantic-understanding"]) {
+      fireEvent.change(input, { target: { value: query } });
+      expect(screen.getByText("Data Catalog Semantic Understanding")).toBeTruthy();
+      expect(screen.queryByText("Studio Smart Q&A")).toBeNull();
+    }
+    fireEvent.change(input, { target: { value: "团队查询助手" } });
+    expect(screen.getByText("团队查询助手")).toBeTruthy();
+    expect(screen.queryByText("Cypher Generation")).toBeNull();
+    fireEvent.change(input, { target: { value: "" } });
+    expect(screen.getByText("Studio Smart Q&A")).toBeTruthy();
+    expect(screen.getByText("自定义助手")).toBeTruthy();
   });
 
   it("filters by name or ID", async () => {

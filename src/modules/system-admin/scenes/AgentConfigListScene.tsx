@@ -32,6 +32,7 @@ import {
 
 import { agentConfigPath, useAgentAdminParams } from "./agent-config-admin";
 import styles from "./AgentConfigListScene.module.css";
+import { agentDisplayName } from "./agent-config-names";
 
 const P = "systemAdmin.agentConfig";
 const L = "knowledgeNetwork.agentChat.config";
@@ -65,7 +66,7 @@ function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }
           <RobotOutlined />
         </span>
         <div className={styles.titleContent}>
-          <div className={styles.titleText}>{agent.name}</div>
+          <div className={styles.titleText}>{agentDisplayName(agent, t)}</div>
           <div className={styles.agentId}>{agent.agent_id}</div>
           <div className={styles.facts}>
             <LightStatusTag tone="neutral">{t(`${P}.builtinTag`)}</LightStatusTag>
@@ -123,7 +124,9 @@ export function AgentConfigListScene() {
   const visible = query
     ? agents.filter(
         (agent) =>
-          agent.name.toLowerCase().includes(query) || agent.agent_id.toLowerCase().includes(query),
+          agent.name.toLowerCase().includes(query) ||
+          agentDisplayName(agent, t).toLowerCase().includes(query) ||
+          agent.agent_id.toLowerCase().includes(query),
       )
     : agents;
 

@@ -1279,6 +1279,14 @@ export const systemAdminEnUS = {
       updateTime: "Updated",
       promptVersion: "Prompt v{{version}}",
       configVersion: "Agent configuration v{{version}}",
+      builtinNames: {
+        studio_smart_qa: "Studio Smart Q&A",
+        cypher_generation: "Cypher Generation",
+        business_provenance_claim_attribution: "Business Provenance Claim Attribution Agent",
+        business_provenance_optimizer: "Knowledge Network Optimizer Agent",
+        "catalog-semantic-understanding": "Data Catalog Semantic Understanding",
+        "resource-semantic-understanding": "Data Resource Semantic Understanding",
+      },
       intro:
         "This configuration is shared by every knowledge network. Network settings and personal preferences can only add instructions or narrow tools and limits on top of it.",
       introPlain: "This Agent is configured here only; it has no network or personal settings.",
