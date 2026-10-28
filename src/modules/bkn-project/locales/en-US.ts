@@ -104,6 +104,11 @@ export const bknProjectEnUS = {
       comingSoonDescription: "A later version brings the full feature here.",
     },
     model: {
+      graph: {
+        title: "Concept model",
+        empty: "No object types adopted yet",
+        emptyDescription: "Once you adopt object types, they and their relations are drawn here.",
+      },
       status: {
         ready: "Draft",
         drafting: "Drafting",

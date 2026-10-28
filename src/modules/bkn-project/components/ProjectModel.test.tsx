@@ -281,6 +281,20 @@ describe("ProjectModel", () => {
     expect(screen.queryByText(/bknProject.model.notice.missingCatalogs/)).not.toBeInTheDocument();
   });
 
+  it("draws the concept model, and says how to fill it while nothing is adopted", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    const view = renderModel();
+    expect(await screen.findByTestId("draft-concept-graph")).toBeInTheDocument();
+    view.unmount();
+
+    getDraftMock.mockResolvedValue(
+      edited((draft) => draft.items.objectTypes.forEach((item) => (item.adopted = false))),
+    );
+    renderModel();
+    expect(await screen.findByText("bknProject.model.graph.empty")).toBeInTheDocument();
+    expect(screen.queryByTestId("draft-concept-graph")).not.toBeInTheDocument();
+  });
+
   it("opens an object type with its identity, properties and the fields left out", async () => {
     getDraftMock.mockResolvedValue(ready());
     renderModel();
