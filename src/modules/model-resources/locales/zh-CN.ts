@@ -161,7 +161,7 @@ export const modelResourcesZhCN = {
       monitor: {
         title: "模型监控",
         initialSpeed: "首 Token 耗时",
-        initialSpeedSub: "衡量从发送请求到生成第一个词或 token 花费的时间",
+        initialSpeedSub: "从发送请求到生成首个 Token 的耗时，单位：秒",
         outputSpeed: "输出速度",
         outputSpeedSub: "每秒输出 tokens 数量，越高越好",
         tokenThroughput: "token吞吐量",

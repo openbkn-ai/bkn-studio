@@ -423,16 +423,19 @@ export function LlmMonitorDrawer({
       key: "averageFirstTokenTime",
       title: t("modelResources.models.monitor.initialSpeed"),
       description: t("modelResources.models.monitor.initialSpeedSub"),
+      unit: "s",
     },
     {
       key: "outputTokenSpeed",
       title: t("modelResources.models.monitor.outputSpeed"),
       description: t("modelResources.models.monitor.outputSpeedSub"),
+      unit: "tokens/s",
     },
     {
       key: "totalTokenSpeed",
       title: t("modelResources.models.monitor.tokenThroughput"),
       description: t("modelResources.models.monitor.tokenThroughputSub"),
+      unit: "tokens/s",
     },
   ] as const;
 
@@ -461,7 +464,7 @@ export function LlmMonitorDrawer({
                 ) : (
                   points.map((point) => (
                     <div key={`${section.key}-${point.time}`}>
-                      {point.time}: {point.value}
+                      {point.time}: {point.value} {section.unit}
                     </div>
                   ))
                 )}
