@@ -144,3 +144,27 @@ export function excludedReasonText(t: TFunction, reason: string | undefined, key
     keyword,
   });
 }
+
+/** Property types in people's words: kinds of values, not storage type names. */
+const PROPERTY_TYPES: Record<string, string> = {
+  binary: "binary",
+  boolean: "boolean",
+  date: "date",
+  datetime: "datetime",
+  decimal: "number",
+  float: "number",
+  integer: "integer",
+  ip: "ip",
+  json: "structured",
+  point: "location",
+  shape: "location",
+  string: "text",
+  text: "text",
+  time: "time",
+  timestamp: "datetime",
+  "unsigned integer": "integer",
+  vector: "vector",
+};
+
+export const propertyTypeKey = (type: string) =>
+  `bknProject.model.propertyType.${PROPERTY_TYPES[type] ?? "other"}`;

@@ -146,6 +146,45 @@ export const bknProjectEnUS = {
         loadFailed: "The data catalogs could not be listed, so they cannot be changed for now.",
         saved: "Data catalogs changed. Drafting reads the new catalogs.",
       },
+      identity: {
+        title: "Choose the identity of {{name}}",
+        intro:
+          "The identity tells records apart; records with the same value become one instance. With a single property, its duplicates and empty values are counted over the whole table.",
+        none: "This object type has no property that can identify its records; an identity needs text or whole numbers.",
+        composite:
+          "Several properties: records are told apart by their combination, and duplicates and empty values are not counted.",
+        counting: "Counting over the whole table, which can take up to 30 seconds…",
+        choose: "Choose the identity of {{name}}",
+        change: "Change the identity of {{name}}",
+        chooseLabel: "Choose identity",
+        changeLabel: "Change",
+        saved: "The identity of {{name}} was updated.",
+        savedAdopt: "The identity of {{name}} is chosen; you can adopt it now.",
+      },
+      restore: {
+        label: "Restore",
+        action: "Restore field {{field}} of {{objectType}}",
+        title: "Restore this field?",
+        confirm:
+          "{{field}} may hold personal information (keyword: {{keyword}}), so it was left out of the ontology. Restored, it becomes a property of {{objectType}}, and everyone who can read this knowledge network can see its values.",
+        saved: "Restored as property {{property}} of {{objectType}}.",
+        already: "This field was restored already; the draft was reloaded.",
+      },
+      propertyType: {
+        text: "Text",
+        integer: "Whole number",
+        number: "Decimal number",
+        boolean: "Yes / no",
+        date: "Date",
+        time: "Time",
+        datetime: "Date and time",
+        structured: "Structured content",
+        binary: "File content",
+        ip: "IP address",
+        location: "Location",
+        vector: "Vector",
+        other: "Other type",
+      },
       actions: {
         adoptItem: "Adopt {{name}}",
         edit: "Edit {{name}}",
@@ -238,7 +277,8 @@ export const bknProjectEnUS = {
       },
       excluded: {
         fieldsTitle: "Fields left out",
-        fieldsTip: "These fields were left out of the ontology.",
+        fieldsTip:
+          "These fields were left out of the ontology. Fields left out because they may hold personal information can be restored.",
         unreadableTitle: "Tables that could not be read",
         reason: {
           privacy: "Personal information (keyword: {{keyword}})",

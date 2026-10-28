@@ -12,7 +12,16 @@ import { bknProjectEnUS } from "@/modules/bkn-project/locales/en-US";
 import { bknProjectZhCN } from "@/modules/bkn-project/locales/zh-CN";
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
 
-import { adoptBlocker, canAdopt, draftErrorCode, nameEdit, unadoptedWith } from "./edit";
+import {
+  adoptBlocker,
+  canAdopt,
+  draftErrorCode,
+  identityCandidates,
+  nameEdit,
+  restorable,
+  restoredProperty,
+  unadoptedWith,
+} from "./edit";
 
 const draft = () => mapDraft(mockDraft("p1"));
 
@@ -76,6 +85,45 @@ describe("draft edits", () => {
     expect(draftErrorCode(new Error("network"))).toBeUndefined();
   });
 
+  it("offers as identity only the properties bkn-project accepts", () => {
+    const [, salesOrders] = draft().items.objectTypes;
+    salesOrders.properties.push({
+      description: "",
+      displayName: "created",
+      mappedField: "created",
+      missingDescription: true,
+      name: "created",
+      sourceOfRecord: "table",
+      type: "datetime",
+    });
+    expect(identityCandidates(salesOrders).map(({ name }) => name)).toEqual([
+      "id",
+      "order_no",
+      "customer_id",
+    ]);
+  });
+
+  it("offers restoring only fields left out for privacy", () => {
+    expect(restorable({ field: "phone", objectType: "c", reason: "privacy" })).toBe(true);
+    expect(restorable({ field: "blob", objectType: "c", reason: "unsupported_type" })).toBe(false);
+    expect(restorable({ field: "x", objectType: "c", reason: "something_new" })).toBe(false);
+  });
+
+  it("finds the property a restored field became, whatever name it got", () => {
+    const after = draft();
+    after.items.objectTypes[0].properties.push({
+      description: "",
+      displayName: "contact_phone_2",
+      mappedField: "contact_phone",
+      missingDescription: true,
+      name: "contact_phone_2",
+      sourceOfRecord: "table",
+      type: "string",
+    });
+    expect(restoredProperty(after, "customers", "contact_phone")?.name).toBe("contact_phone_2");
+    expect(restoredProperty(after, "customers", "nothing")).toBeUndefined();
+  });
+
   // The page's tests mock t, so they cannot see a key placed in the wrong block.
   it.each([
     ["en-US", bknProjectEnUS],
@@ -89,6 +137,9 @@ describe("draft edits", () => {
     expect(model.regenerateConfirm.contentUncounted).toBeTruthy();
     expect(model.catalogs.removed).toContain("{{names}}");
     expect(model.notice.askOwner).toBeTruthy();
+    expect(model.identity.savedAdopt).toContain("{{name}}");
+    expect(model.restore.confirm).toContain("{{keyword}}");
+    expect(model.propertyType.other).toBeTruthy();
     expect(model.notice.draftReadsMissing).toContain("{{names}}");
     expect(model.empty.noCatalogsAskOwner).toBeTruthy();
     for (const blocker of ["archived", "endsNotAdopted", "needsIdentity"] as const) {

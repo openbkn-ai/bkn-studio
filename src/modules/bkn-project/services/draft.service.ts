@@ -475,6 +475,95 @@ function editMockDraft(
   return draft;
 }
 
+function readyMockDraft(projectId: string, updateTime: number): BackendDraft {
+  const draft = mockDrafts[projectId];
+  if (!draft || draft.update_time !== updateTime) {
+    throw mockConflict("Stale", "The draft changed since it was read; reload it.");
+  }
+  return draft;
+}
+
+function chooseMockIdentity(
+  projectId: string,
+  itemId: string,
+  updateTime: number,
+  properties: string[],
+): BackendDraft {
+  const draft = readyMockDraft(projectId, updateTime);
+  const item = draft.items.object_types?.find((candidate) => candidate.id === itemId);
+  if (!item) {
+    throw mockConflict("ItemNotFound", `No item ${itemId}.`);
+  }
+  const now = Date.now();
+  (draft.items.decisions ??= []).push({
+    action: "identity",
+    after: properties,
+    before: item.primary_keys ?? [],
+    by: mockDrafter,
+    item_id: itemId,
+    kind: "object_types",
+    time: now,
+  });
+  item.primary_keys = properties;
+  item.needs_identity = false;
+  // A single key is counted; the mock pretends every value is distinct.
+  item.key =
+    properties.length === 1
+      ? {
+          computed: true,
+          distinct: 120,
+          field: properties[0],
+          nulls: 0,
+          rows: 120,
+          source: "chosen",
+        }
+      : {
+          computed: false,
+          distinct: 0,
+          nulls: 0,
+          reason: "composite_key",
+          rows: 0,
+          source: "chosen",
+        };
+  draft.update_time = now;
+  return draft;
+}
+
+function restoreMockField(
+  projectId: string,
+  updateTime: number,
+  objectType: string,
+  field: string,
+): BackendDraft {
+  const draft = readyMockDraft(projectId, updateTime);
+  const excluded = draft.items.excluded ?? [];
+  const at = excluded.findIndex((item) => item.object_type === objectType && item.field === field);
+  const item = draft.items.object_types?.find((candidate) => candidate.id === objectType);
+  if (at < 0 || !item) {
+    throw new AxiosError("Not found", "ERR_BAD_REQUEST", undefined, undefined, {
+      data: {
+        description: "The field is not left out.",
+        error_code: "BknProject.Draft.ItemNotFound",
+      },
+      status: 404,
+    } as AxiosResponse);
+  }
+  const now = Date.now();
+  const [left] = excluded.splice(at, 1);
+  (item.properties ??= []).push(mockProperty(field, "string"));
+  (draft.items.decisions ??= []).push({
+    action: "restore",
+    after: field,
+    before: left,
+    by: mockDrafter,
+    item_id: objectType,
+    kind: "excluded",
+    time: now,
+  });
+  draft.update_time = now;
+  return draft;
+}
+
 /* ------------------------------- API ------------------------------- */
 
 const draftPath = (projectId: string) =>
@@ -542,6 +631,49 @@ export async function editDraftItem(
   const response = await http.patch<BackendDraft>(
     `${draftPath(projectId)}/items/${kind}/${encodeURIComponent(itemId)}`,
     { ...edit, update_time: updateTime },
+    { skipErrorToast: true },
+  );
+  return mapDraft(response.data);
+}
+
+/**
+ * bkn-project counts a chosen key for up to 30 seconds and keeps the identity even when the
+ * count does not finish, so the page waits longer: giving up first would report a saved choice
+ * as failed.
+ */
+export const IDENTITY_TIMEOUT_MS = 45_000;
+
+/** Chooses the properties that identify an object type's records; replies the draft. */
+export async function chooseIdentity(
+  projectId: string,
+  itemId: string,
+  updateTime: number,
+  properties: string[],
+): Promise<Draft> {
+  if (useMock) {
+    return wait(mapDraft(chooseMockIdentity(projectId, itemId, updateTime, properties)), 600);
+  }
+  const response = await http.put<BackendDraft>(
+    `${draftPath(projectId)}/object_types/${encodeURIComponent(itemId)}/identity`,
+    { properties, update_time: updateTime },
+    { skipErrorToast: true, timeout: IDENTITY_TIMEOUT_MS },
+  );
+  return mapDraft(response.data);
+}
+
+/** Maps a field the privacy rules left out back to a property of its object type. */
+export async function restoreField(
+  projectId: string,
+  updateTime: number,
+  objectType: string,
+  field: string,
+): Promise<Draft> {
+  if (useMock) {
+    return wait(mapDraft(restoreMockField(projectId, updateTime, objectType, field)));
+  }
+  const response = await http.post<BackendDraft>(
+    `${draftPath(projectId)}:restore`,
+    { field, object_type: objectType, update_time: updateTime },
     { skipErrorToast: true },
   );
   return mapDraft(response.data);

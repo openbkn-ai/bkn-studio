@@ -8,9 +8,11 @@
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import type {
   Draft,
+  DraftExcludedField,
   DraftItemEdit,
   DraftItemKind,
   DraftObjectType,
+  DraftProperty,
   DraftRelationType,
   DraftValueType,
 } from "@/modules/bkn-project/types/draft";
@@ -84,4 +86,24 @@ export function nameEdit(
     edit.description = description;
   }
   return Object.keys(edit).length ? edit : null;
+}
+
+/** The property types bkn-project accepts in an identity. */
+const IDENTITY_TYPES = new Set(["integer", "string", "text", "unsigned integer"]);
+
+export const identityCandidates = (objectType: DraftObjectType): DraftProperty[] =>
+  objectType.properties.filter((property) => IDENTITY_TYPES.has(property.type));
+
+/** Only fields left out for privacy can be restored; a type that cannot be mapped stays out. */
+export const restorable = (field: DraftExcludedField) => field.reason === "privacy";
+
+/** The property a restored field became: bkn-project may add a suffix to keep names unique. */
+export function restoredProperty(
+  draft: Draft,
+  objectTypeId: string,
+  field: string,
+): DraftProperty | undefined {
+  return draft.items.objectTypes
+    .find((objectType) => objectType.id === objectTypeId)
+    ?.properties.find((property) => property.mappedField === field);
 }

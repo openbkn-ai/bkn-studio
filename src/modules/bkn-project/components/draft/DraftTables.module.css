@@ -63,3 +63,13 @@
   align-items: center;
   gap: 6px;
 }
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inlineAction {
+  padding-inline: 0;
+}

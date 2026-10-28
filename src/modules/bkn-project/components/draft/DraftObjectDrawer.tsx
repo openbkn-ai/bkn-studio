@@ -13,7 +13,10 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { AdoptionTag, IdentityEvidence } from "@/modules/bkn-project/components/draft/DraftTables";
-import { excludedReasonText } from "@/modules/bkn-project/components/draft/evidence";
+import {
+  excludedReasonText,
+  propertyTypeKey,
+} from "@/modules/bkn-project/components/draft/evidence";
 import type {
   DraftExcludedField,
   DraftObjectType,
@@ -58,6 +61,7 @@ export function DraftObjectDrawer({
       dataIndex: "type",
       key: "type",
       width: 130,
+      render: (value: string) => t(propertyTypeKey(value)),
     },
     {
       title: t("bknProject.model.detail.mappedField"),

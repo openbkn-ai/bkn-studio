@@ -8,14 +8,15 @@
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockGet, mockPatch, mockPost } = vi.hoisted(() => ({
+const { mockGet, mockPatch, mockPost, mockPut } = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockPatch: vi.fn(),
   mockPost: vi.fn(),
+  mockPut: vi.fn(),
 }));
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: mockGet, patch: mockPatch, post: mockPost },
+  http: { get: mockGet, patch: mockPatch, post: mockPost, put: mockPut },
 }));
 
 // useMock is read when the module loads, so each case stubs the env and imports afresh.
@@ -131,5 +132,34 @@ describe("draft.service", () => {
       { skipErrorToast: true },
     );
     expect(draft.updateTime).toBe(42);
+  });
+
+  it("chooses an identity and waits longer than bkn-project counts", async () => {
+    const { chooseIdentity, IDENTITY_TIMEOUT_MS, mockDraft } = await importService();
+    mockPut.mockResolvedValue({ data: mockDraft("p1") });
+
+    await chooseIdentity("p1", "material bom", 7, ["material_code"]);
+
+    expect(mockPut).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p1/ontology/draft/object_types/material%20bom/identity",
+      { properties: ["material_code"], update_time: 7 },
+      { skipErrorToast: true, timeout: IDENTITY_TIMEOUT_MS },
+    );
+    // bkn-project counts for up to 30 seconds and keeps the identity either way; the page must
+    // not give up first and report a choice that was saved as failed.
+    expect(IDENTITY_TIMEOUT_MS).toBeGreaterThan(30_000);
+  });
+
+  it("restores an excluded field with the draft's update time", async () => {
+    const { mockDraft, restoreField } = await importService();
+    mockPost.mockResolvedValue({ data: mockDraft("p1") });
+
+    await restoreField("p1", 7, "customers", "contact_phone");
+
+    expect(mockPost).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p1/ontology/draft:restore",
+      { field: "contact_phone", object_type: "customers", update_time: 7 },
+      { skipErrorToast: true },
+    );
   });
 });

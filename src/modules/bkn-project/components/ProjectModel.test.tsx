@@ -15,6 +15,8 @@ const getDraftMock = vi.hoisted(() => vi.fn());
 const generateDraftMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
 const editDraftItemMock = vi.hoisted(() => vi.fn());
+const chooseIdentityMock = vi.hoisted(() => vi.fn());
+const restoreFieldMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -40,7 +42,9 @@ vi.mock("@/framework/context/use-app-services", () => ({
 
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
+  chooseIdentity: chooseIdentityMock,
   editDraftItem: editDraftItemMock,
+  restoreField: restoreFieldMock,
   generateDraft: generateDraftMock,
   getDraft: getDraftMock,
 }));
@@ -605,5 +609,126 @@ describe("ProjectModel", () => {
       await screen.findByRole("button", { name: "bknProject.model.catalogs.change" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "bknProject.model.generate" })).toBeEnabled();
+  });
+
+  it("chooses the identity of an object type waiting for it, then says it can be adopted", async () => {
+    const current = ready();
+    getDraftMock.mockResolvedValue(current);
+    chooseIdentityMock.mockResolvedValue(
+      edited((draft) => {
+        const bom = draft.items.objectTypes[2];
+        bom.needsIdentity = false;
+        bom.primaryKeys = ["material_code"];
+      }),
+    );
+    renderModel();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /identity.choose:.*"name":"material_bom"/ }),
+    );
+    const save = await screen.findByRole("button", { name: "common.save" });
+    expect(save).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: /^material_code/ }));
+    fireEvent.click(save);
+
+    await waitFor(() =>
+      expect(chooseIdentityMock).toHaveBeenCalledWith("p1", "material_bom", current.updateTime, [
+        "material_code",
+      ]),
+    );
+    expect(messageMock.success).toHaveBeenCalledWith(
+      expect.stringContaining("bknProject.model.identity.savedAdopt"),
+    );
+  });
+
+  it("says a key of several properties is not counted, and saves nothing unchanged", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderModel();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /identity.change:.*"name":"sales_orders"/ }),
+    );
+    // The current identity is chosen already, so there is nothing to save yet.
+    expect(await screen.findByRole("checkbox", { name: /^id/ })).toBeChecked();
+    expect(screen.getByRole("button", { name: "common.save" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /order_no/ }));
+    expect(screen.getByText("bknProject.model.identity.composite")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "common.save" })).toBeEnabled();
+  });
+
+  it("restores a field after saying what restoring it means", async () => {
+    const current = ready();
+    getDraftMock.mockResolvedValue(current);
+    restoreFieldMock.mockResolvedValue(
+      edited((draft) => {
+        draft.items.excluded = draft.items.excluded.slice(1);
+        draft.items.objectTypes[0].properties.push({
+          description: "",
+          displayName: "contact_phone",
+          mappedField: "contact_phone",
+          missingDescription: true,
+          name: "contact_phone",
+          sourceOfRecord: "table",
+          type: "string",
+        });
+      }),
+    );
+    renderModel();
+
+    fireEvent.click(await screen.findByText(/bknProject.model.tabs.excluded/));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /restore.action:.*"field":"contact_phone"/ }),
+    );
+
+    const confirm = confirmMock.mock.calls[0][0] as unknown as { content: string };
+    expect(confirm.content).toContain('"keyword":"phone"');
+    await act(async () => {
+      await confirmMock.mock.calls[0][0].onOk();
+    });
+    expect(restoreFieldMock).toHaveBeenCalledWith(
+      "p1",
+      current.updateTime,
+      "customers",
+      "contact_phone",
+    );
+    expect(messageMock.success).toHaveBeenCalledWith(
+      expect.stringContaining('"property":"contact_phone"'),
+    );
+  });
+
+  it("says a field restored meanwhile is restored already, and reloads", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    restoreFieldMock.mockRejectedValue(
+      new AxiosError("404", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { description: "Not found.", error_code: "BknProject.Draft.ItemNotFound" },
+        status: 404,
+      } as AxiosResponse),
+    );
+    renderModel();
+
+    fireEvent.click(await screen.findByText(/bknProject.model.tabs.excluded/));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /restore.action:.*"field":"contact_phone"/ }),
+    );
+    await act(async () => {
+      await confirmMock.mock.calls[0][0].onOk();
+    });
+
+    expect(messageMock.warning).toHaveBeenCalledWith("bknProject.model.restore.already");
+    await waitFor(() => expect(getDraftMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("offers neither choosing an identity nor restoring on an archived project", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderModel({ archived: true });
+
+    expect(
+      await screen.findByRole("button", { name: /identity.choose:.*"name":"material_bom"/ }),
+    ).toBeDisabled();
+    fireEvent.click(screen.getByText(/bknProject.model.tabs.excluded/));
+    expect(
+      await screen.findByRole("button", { name: /restore.action:.*"field":"contact_phone"/ }),
+    ).toBeDisabled();
   });
 });
