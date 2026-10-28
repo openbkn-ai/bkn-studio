@@ -1198,6 +1198,7 @@ export const systemAdminZhCN = {
       readOnly: "只读",
       updateTime: "更新时间",
       promptVersion: "提示词 v{{version}}",
+      configVersion: "Agent 配置 v{{version}}",
       intro:
         "这里是所有知识网络共用的配置。各网络的配置和用户个人偏好只能在此基础上追加提示词、收窄工具和限制。",
       introPlain: "这个 Agent 只在这里配置，没有网络和个人配置。",

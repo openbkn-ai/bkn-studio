@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -94,6 +94,57 @@ describe("AgentConfigListScene", () => {
 
     fireEvent.click(screen.getByText("知识网络优化Agent"));
     expect(await screen.findByText("detail page")).toBeTruthy();
+  });
+
+  it.each([
+    { language: "zh-CN", expected: "提示词 v3 · Agent 配置 v17" },
+    { language: "en-US", expected: "Prompt v3 · Agent configuration v17" },
+  ])("shows independent current versions in $language (SA-078)", async ({ language, expected }) => {
+    await i18n.changeLanguage(language);
+    listShared.mockResolvedValue([agent({ prompt_version: 3, version: 17 })]);
+    renderList();
+
+    expect(await screen.findByText(expected)).toBeTruthy();
+    expect(listShared).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { prompt_version: 3, version: undefined, expected: "提示词 v3" },
+    { prompt_version: null, version: 17, expected: "Agent 配置 v17" },
+    { prompt_version: undefined, version: null, expected: null },
+  ])(
+    "handles unavailable versions: $prompt_version / $version",
+    async ({ expected, ...versions }) => {
+      listShared.mockResolvedValue([agent(versions)]);
+      renderList();
+      await screen.findByText("Studio智能问答");
+
+      if (expected) expect(screen.getByText(expected)).toBeTruthy();
+      expect(screen.queryByText(/ · |undefined|null/)).toBeNull();
+      expect(screen.getByRole("img", { name: "clock-circle" })).toBeTruthy();
+    },
+  );
+
+  it("refreshes active versions independently, including a rollback below historical versions", async () => {
+    listShared
+      .mockResolvedValueOnce([agent({ prompt_version: 3, version: 17 })])
+      .mockResolvedValueOnce([agent({ prompt_version: 3, version: 28 })])
+      .mockResolvedValueOnce([agent({ prompt_version: 3, version: 17 })])
+      .mockResolvedValueOnce([agent({ prompt_version: 4, version: 29 })]);
+    renderList();
+    await screen.findByText("提示词 v3 · Agent 配置 v17");
+
+    for (const expected of [
+      "提示词 v3 · Agent 配置 v28",
+      "提示词 v3 · Agent 配置 v17",
+      "提示词 v4 · Agent 配置 v29",
+    ]) {
+      const refresh = screen.getByRole("button", { name: i18n.t("common.refresh") });
+      await waitFor(() => expect(refresh.hasAttribute("disabled")).toBe(false));
+      fireEvent.click(refresh);
+      expect(await screen.findByText(expected)).toBeTruthy();
+    }
+    expect(listShared).toHaveBeenCalledTimes(4);
   });
 
   it("filters by name or ID", async () => {

@@ -39,6 +39,14 @@ const L = "knowledgeNetwork.agentChat.config";
 function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }) {
   const { t } = useTranslation();
   const published = agent.status === "published";
+  const versions = [
+    agent.prompt_version != null
+      ? t(`${P}.promptVersion`, { version: agent.prompt_version })
+      : null,
+    agent.version != null ? t(`${P}.configVersion`, { version: agent.version }) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <article
       className={styles.card}
@@ -74,11 +82,7 @@ function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }
         </div>
       </div>
       <div className={styles.footer}>
-        <span className={styles.metaItem}>
-          {agent.prompt_version != null
-            ? t(`${P}.promptVersion`, { version: agent.prompt_version })
-            : null}
-        </span>
+        {versions ? <span className={styles.versionInfo}>{versions}</span> : null}
         <Tooltip title={t(`${P}.updateTime`)}>
           <span className={styles.metaItem}>
             <ClockCircleOutlined />

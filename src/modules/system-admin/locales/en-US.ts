@@ -1294,6 +1294,7 @@ export const systemAdminEnUS = {
       readOnly: "Read-only",
       updateTime: "Updated",
       promptVersion: "Prompt v{{version}}",
+      configVersion: "Agent configuration v{{version}}",
       intro:
         "This configuration is shared by every knowledge network. Network settings and personal preferences can only add instructions or narrow tools and limits on top of it.",
       introPlain: "This Agent is configured here only; it has no network or personal settings.",
