@@ -72,6 +72,7 @@ import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import { useAgentAdminParams } from "@/modules/system-admin/scenes/agent-config-admin";
 
 import styles from "./AgentConfigScene.module.css";
+import { agentDisplayName } from "./agent-config-names";
 
 const P = "systemAdmin.agentConfig";
 const L = "knowledgeNetwork.agentChat.config";
@@ -270,6 +271,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   const currentVersion = shared.version ?? null;
   const versionOf = (v: number) => versions.find((item) => item.version === v);
   const editable = shared.can_edit;
+  const displayName = agentDisplayName(shared, t);
   // Context budget limits only apply on the public execution surface.
   const limitKeys = shared.layered
     ? AGENT_LIMIT_KEYS
@@ -393,7 +395,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
       <Space align="center" size={12} style={{ marginBottom: 12 }} wrap>
         {back}
         <Typography.Title level={5} style={{ margin: 0 }}>
-          {shared.name}
+          {displayName}
         </Typography.Title>
         <Typography.Text type="secondary" code>
           {shared.agent_id}
@@ -422,7 +424,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                 disabled={saving}
                 onClick={() =>
                   confirmThen(
-                    t(`${P}.confirmPublishTitle`, { name: shared.name }),
+                    t(`${P}.confirmPublishTitle`, { name: displayName }),
                     t(`${P}.publishOnce`),
                     publish,
                   )
@@ -446,7 +448,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
               disabled={saving || !shared.modified}
               onClick={() =>
                 confirmThen(
-                  t(`${P}.confirmRestoreTitle`, { name: shared.name }),
+                  t(`${P}.confirmRestoreTitle`, { name: displayName }),
                   t(`${P}.confirmRestoreBody`),
                   restore,
                 )
@@ -518,7 +520,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                     disabled={changes.length === 0}
                     onClick={() =>
                       confirmThen(
-                        t(`${P}.confirmRuntimeTitle`, { name: shared.name }),
+                        t(`${P}.confirmRuntimeTitle`, { name: displayName }),
                         <ul className={styles.changeList}>
                           {changes.map((change) => (
                             <li key={change.label}>

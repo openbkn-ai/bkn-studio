@@ -173,6 +173,58 @@ const PROMPT = {
 // Each case renders the full configuration page; several also open a dialog, and shared CI
 // runners have taken over 20s on those.
 describe("AgentConfigScene", { timeout: 40_000 }, () => {
+  it.each([
+    ["studio_smart_qa", "Studio智能问答", "Studio Smart Q&A"],
+    ["cypher_generation", "Cypher生成", "Cypher Generation"],
+    [
+      "business_provenance_claim_attribution",
+      "业务溯源结论识别Agent",
+      "Business Provenance Claim Attribution Agent",
+    ],
+    ["business_provenance_optimizer", "知识网络优化Agent", "Knowledge Network Optimizer Agent"],
+    ["catalog-semantic-understanding", "数据目录语义理解", "Data Catalog Semantic Understanding"],
+    ["resource-semantic-understanding", "数据资源语义理解", "Data Resource Semantic Understanding"],
+  ])(
+    "localizes the detail title for %s and responds to language changes",
+    async (agent_id, name, english) => {
+      await i18n.changeLanguage("en-US");
+      getShared.mockResolvedValue(shared({ agent_id, name }));
+      getSharedPrompt.mockResolvedValue(PROMPT);
+      renderScene(agent_id);
+      expect(await screen.findByRole("heading", { name: english })).toBeTruthy();
+      await act(() => i18n.changeLanguage("zh-CN"));
+      expect(screen.getByRole("heading", { name })).toBeTruthy();
+      expect(getShared).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(["publish", "restore", "runtime"])(
+    "uses the localized name in the %s confirmation",
+    async (action) => {
+      await i18n.changeLanguage("en-US");
+      getShared.mockResolvedValue(
+        shared({ status: action === "publish" ? "draft" : "published", modified: true }),
+      );
+      getSharedPrompt.mockResolvedValue(PROMPT);
+      renderScene();
+      await screen.findByRole("heading", { name: "Studio Smart Q&A" });
+      const prefix = "systemAdmin.agentConfig";
+      if (action === "runtime") {
+        fireEvent.click(screen.getByText(i18n.t(`${prefix}.mcpCompact`)));
+        fireEvent.click(
+          screen.getByRole("button", { name: i18n.t("knowledgeNetwork.agentChat.config.save") }),
+        );
+      } else {
+        fireEvent.click(screen.getByRole("button", { name: i18n.t(`${prefix}.${action}`) }));
+      }
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog.textContent).toContain("Studio Smart Q&A");
+      expect(dialog.textContent).not.toContain("Studio智能问答");
+      expect(updateShared).not.toHaveBeenCalled();
+      expect(restoreShared).not.toHaveBeenCalled();
+    },
+  );
+
   it("publishes the server's next historical Prompt version", async () => {
     getShared.mockResolvedValue(shared());
     // A rollback can make the active version smaller than the next target.
