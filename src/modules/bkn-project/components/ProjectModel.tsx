@@ -6,7 +6,7 @@
  */
 
 import { Alert, Segmented, Space, Spin } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -14,6 +14,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { DraftChangesPanel } from "@/modules/bkn-project/components/draft/DraftChangesPanel";
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
 import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityDialog";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
@@ -51,6 +52,7 @@ import type {
   DraftObjectType,
 } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
+import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectModel.module.css";
@@ -58,7 +60,7 @@ import styles from "./ProjectModel.module.css";
 /** How often a draft that is drafting is read again. */
 export const DRAFT_POLL_MS = 5000;
 
-type Tab = "excluded" | "objects" | "relations" | "valueTypes";
+type Tab = "changes" | "excluded" | "objects" | "relations" | "valueTypes";
 
 /** How sending an edit ended: the dialog closes unless it failed for another reason. */
 type EditOutcome = "done" | "failed" | "stale";
@@ -90,7 +92,8 @@ export function ProjectModel({
   project: Project;
 }) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
+  const directory = useAccountDirectory();
   // undefined while loading, null before the first draft.
   const [draft, setDraft] = useState<Draft | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -479,7 +482,7 @@ export function ProjectModel({
   const pending =
     items.objectTypes.filter((item) => item.needsIdentity).length + unadoptedEnds.length;
   const leftOut = items.excluded.length + items.unreadable.length;
-  const tabs: { label: string; value: Tab }[] = [
+  const tabs: { label: ReactNode; value: Tab }[] = [
     {
       label: t("bknProject.model.tabs.objects", { count: items.objectTypes.length }),
       value: "objects",
@@ -504,6 +507,20 @@ export function ProjectModel({
           },
         ]
       : []),
+    {
+      // The tab lists what waits before the decisions, so it counts both, as the header does.
+      label: (
+        <span>
+          {t("bknProject.model.tabs.changes", { count: items.decisions.length })}
+          {pending ? (
+            <span className={styles.tabPending}>
+              {t("bknProject.model.pending", { count: pending })}
+            </span>
+          ) : null}
+        </span>
+      ),
+      value: "changes",
+    },
   ];
   const activeTab = tabs.some((item) => item.value === tab) ? tab : "objects";
 
@@ -521,9 +538,10 @@ export function ProjectModel({
               })
             : null}
           {draft.status === "ready" && pending ? (
-            <strong className={styles.pending}>
+            // Leads to the list of what waits, each with the action that settles it.
+            <AppButton className={styles.pending} onClick={() => setTab("changes")} type="link">
               {t("bknProject.model.pending", { count: pending })}
-            </strong>
+            </AppButton>
           ) : null}
         </span>
         <span className={styles.spacer} />
@@ -576,6 +594,14 @@ export function ProjectModel({
               actions={actions}
               catalogNames={catalogNames}
               items={items.valueTypes}
+            />
+          ) : activeTab === "changes" ? (
+            <DraftChangesPanel
+              actions={actions}
+              currentUserId={runtimeConfig.currentUser.id}
+              directory={directory}
+              draft={draft}
+              unadoptedEnds={unadoptedEnds}
             />
           ) : (
             <DraftExcludedPanel

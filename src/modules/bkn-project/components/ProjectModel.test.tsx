@@ -37,7 +37,16 @@ vi.mock("react-i18next", async (importOriginal) => ({
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: messageMock, modal: { confirm: confirmMock } }),
+  useAppServices: () => ({
+    message: messageMock,
+    modal: { confirm: confirmMock },
+    runtimeConfig: { currentUser: { id: "me" } },
+  }),
+}));
+
+// Names of other people need user administration; here nobody else can be named.
+vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
+  useAccountDirectory: () => new Map<string, string>(),
 }));
 
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
@@ -239,7 +248,9 @@ describe("ProjectModel", () => {
     // A data source's raw reply means nothing to people here; the page only says counting did not finish.
     expect(screen.queryByText(/Public.Forbidden/)).not.toBeInTheDocument();
     // material_bom waits for its identity, and its adopted relation waits to be unadopted.
-    expect(screen.getByText(/bknProject.model.pending/)).toHaveTextContent('{"count":2}');
+    expect(screen.getByRole("button", { name: /bknProject.model.pending/ })).toHaveTextContent(
+      '{"count":2}',
+    );
     expect(screen.getByText(/bknProject.model.notice.unadoptedEnds/)).toBeInTheDocument();
   });
 
@@ -756,6 +767,106 @@ describe("ProjectModel", () => {
 
     expect(messageMock.success).toHaveBeenCalledWith(
       expect.stringContaining("bknProject.model.restore.savedNoName"),
+    );
+  });
+
+  it("lists what waits for you first, each with the action that settles it", async () => {
+    const current = ready();
+    getDraftMock.mockResolvedValue(current);
+    editDraftItemMock.mockResolvedValue(
+      edited((draft) => {
+        draft.items.relationTypes[1].adopted = false;
+      }),
+    );
+    renderModel();
+
+    fireEvent.click(await screen.findByText(/bknProject.model.tabs.changes/));
+
+    expect(
+      await screen.findByRole("button", { name: /identity.choose:.*"name":"material_bom"/ }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /changes.unadoptItem:.*"name":"material_bom_to_sales_orders"/,
+      }),
+    );
+    await waitFor(() =>
+      expect(editDraftItemMock).toHaveBeenCalledWith(
+        "p1",
+        "relation_types",
+        "material_bom_to_sales_orders",
+        current.updateTime,
+        { adopted: false },
+      ),
+    );
+  });
+
+  it("lists the decisions newest first and says who made them", async () => {
+    const current = ready();
+    current.items.decisions = [
+      {
+        action: "rename",
+        after: "Client",
+        before: "customers",
+        by: { id: "me", type: "user" },
+        itemId: "customers",
+        kind: "object_types",
+        time: 1,
+      },
+      {
+        action: "adopt",
+        after: true,
+        before: false,
+        by: { id: "u2", type: "user" },
+        itemId: "sales_orders",
+        kind: "object_types",
+        time: 2,
+      },
+    ];
+    getDraftMock.mockResolvedValue(current);
+    renderModel();
+
+    fireEvent.click(await screen.findByText(/bknProject.model.tabs.changes/));
+
+    const entries = await screen.findAllByTestId("draft-change");
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toHaveTextContent("bknProject.model.changes.action.adopt");
+    expect(entries[0]).toHaveTextContent("bknProject.model.changes.someone");
+    expect(entries[1]).toHaveTextContent("bknProject.model.changes.action.rename");
+    expect(entries[1]).toHaveTextContent("bknProject.model.changes.you");
+  });
+
+  it("says nothing was changed yet when nothing waits and nobody decided", async () => {
+    getDraftMock.mockResolvedValue(
+      edited((draft) => {
+        draft.items.objectTypes[2].needsIdentity = false;
+        draft.items.relationTypes[1].adopted = false;
+      }),
+    );
+    renderModel();
+
+    fireEvent.click(await screen.findByText(/bknProject.model.tabs.changes/));
+
+    expect(await screen.findByText("bknProject.model.changes.none")).toBeInTheDocument();
+  });
+
+  it("takes people from the pending count to what waits for them", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: /bknProject.model.pending/ }));
+
+    expect(await screen.findByText("bknProject.model.changes.waitingTitle")).toBeInTheDocument();
+  });
+
+  it("shows on the changes tab how many items wait, not only the decisions", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderModel();
+
+    // No decisions yet, two items wait: the tab says both, as the header does.
+    const tab = await screen.findByText(/bknProject.model.tabs.changes/);
+    expect(tab.closest(".ant-segmented-item")).toHaveTextContent(
+      'bknProject.model.pending:{"count":2}',
     );
   });
 });

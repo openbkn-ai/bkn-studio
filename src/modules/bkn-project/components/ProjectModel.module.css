@@ -31,7 +31,9 @@
 }
 
 .pending {
+  height: auto;
   margin-left: 6px;
+  padding: 0;
   color: var(--color-warning-text);
   font-weight: 600;
 }
@@ -55,4 +57,10 @@
   margin: 0 0 12px;
   color: var(--color-text-secondary);
   font-size: 13px;
+}
+
+.tabPending {
+  margin-left: 6px;
+  color: var(--color-warning-text);
+  font-weight: 600;
 }
