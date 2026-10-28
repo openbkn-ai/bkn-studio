@@ -36,9 +36,7 @@ export function UnitManagementListPage() {
         ? "toolbox"
         : permissions.includes("execution-factory:mcp:create")
           ? "mcp"
-          : permissions.includes("execution-factory:skill:create")
-            ? "skill"
-            : "operator";
+          : "skill";
 
     return (
       <Empty description={t("executionFactory.createOnlyDescription")} style={{ marginTop: 96 }}>

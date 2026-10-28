@@ -7,20 +7,17 @@
 
 import { expect, test } from "@playwright/test";
 
-import { assertBackendReady } from "../../helpers/common";
+import { assertBackendReady, buildMinimalOpenApiSpec } from "../../helpers/common";
 import {
   BACKUP_FILE_TAB_LABEL,
   expectOpenApiOperationsIoPreview,
-  expectOperatorAdvancedBanner,
   fillOpenApiSpecPaste,
   openAddCapabilityWizard,
-  openAdvancedOperatorTab,
   openImportModal,
   openImportOpenApiPanel,
   gotoE2ePage,
   gotoUnitsTab,
 } from "../../helpers/execution-unit-ui";
-import { buildMinimalOpenApiSpec } from "../../helpers/operator";
 
 test.describe("Execution Factory — Capability UX v2", () => {
   let backendReady = false;
@@ -66,24 +63,6 @@ test.describe("Execution Factory — Capability UX v2", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("CAP-V2-04: operator tab reachable via deep link", async ({ page }) => {
-    await openAdvancedOperatorTab(page);
-    await expectOperatorAdvancedBanner(page);
-    await expect(page.getByRole("button", { name: /新建算子|New Operator/i })).toBeVisible();
-  });
-
-  test("CAP-V2-06: toolbox wizard exposes operator sync checkbox", async ({ page }) => {
-    const drawer = await openAddCapabilityWizard(page, "toolbox");
-    await expect(
-      drawer.getByText(/同步发布为算子|Sync publish as operator/i).first(),
-    ).toBeVisible();
-    await drawer
-      .getByRole("checkbox", { name: /同步发布为算子|Sync publish as operator/i })
-      .check();
-    await expect(drawer.getByText(/算子名称|Operator name/i).first()).toBeVisible();
-    await page.keyboard.press("Escape");
-  });
-
   test("CAP-V2-07: import modal exposes backup file tab on toolbox", async ({ page }) => {
     await gotoUnitsTab(page, "toolbox");
     const dialog = await openImportModal(page);
@@ -105,18 +84,6 @@ test.describe("Execution Factory — Capability UX v2", () => {
     const dialog = await openImportModal(page);
     const panel = await openImportOpenApiPanel(dialog);
     const spec = JSON.stringify(buildMinimalOpenApiSpec(`import_preview_${Date.now()}`), null, 2);
-    await fillOpenApiSpecPaste(page, spec, panel);
-    await expectOpenApiOperationsIoPreview(panel, { containsText: /input|Input/i });
-    await page.keyboard.press("Escape");
-  });
-
-  test("CAP-V2-09: operator import OpenAPI modal shows per-endpoint IO preview", async ({
-    page,
-  }) => {
-    await openAdvancedOperatorTab(page);
-    const dialog = await openImportModal(page);
-    const panel = await openImportOpenApiPanel(dialog);
-    const spec = JSON.stringify(buildMinimalOpenApiSpec(`operator_import_${Date.now()}`), null, 2);
     await fillOpenApiSpecPaste(page, spec, panel);
     await expectOpenApiOperationsIoPreview(panel, { containsText: /input|Input/i });
     await page.keyboard.press("Escape");

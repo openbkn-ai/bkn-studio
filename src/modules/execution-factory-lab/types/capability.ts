@@ -21,13 +21,6 @@ export type CapabilityEndpoint = {
   path?: string;
 };
 
-export type CapabilityOrchestration = {
-  enabled: boolean;
-  operatorId?: string;
-  operatorName?: string;
-  audit?: CapabilityAudit;
-};
-
 export type CapabilityAudit = {
   createUser?: string;
   createUserName?: string;
@@ -54,7 +47,6 @@ export type CapabilityRecord = {
   status: "draft" | "published" | "offline" | UnknownCapabilityStatus;
   group?: CapabilityGroup;
   endpoint?: CapabilityEndpoint;
-  orchestration?: CapabilityOrchestration;
   audit?: CapabilityAudit;
   updateTime?: number;
   toolId?: string;
@@ -90,14 +82,12 @@ export type CreateHttpCapabilityInput = {
   serviceUrl: string;
   name?: string;
   description?: string;
-  orchestrationEnabled?: boolean;
 };
 
 export type ImportOpenApiInput = {
   openapiSpec: string;
   serviceUrl: string;
   description?: string;
-  orchestrationEnabled?: boolean;
 };
 
 export type DebugCapabilityInput = {
@@ -115,27 +105,6 @@ export type DebugCapabilityResult = {
   error?: string;
   content?: string;
   isError?: boolean;
-};
-
-export type OrchestrationDetail = {
-  enabled: boolean;
-  operatorId?: string;
-  operatorName?: string;
-  toolId?: string;
-  boxId?: string;
-  audit?: CapabilityAudit;
-};
-
-export type OrchestrationRuntimeConfig = {
-  timeoutMs?: number;
-  retryPolicy: {
-    maxAttempts?: number;
-    initialDelayMs?: number;
-    maxDelayMs?: number;
-    backoffFactor?: number;
-    retryStatusCodes?: number[];
-    retryErrorCodes?: string[];
-  };
 };
 
 export type UpdateHttpCapabilityInput = {

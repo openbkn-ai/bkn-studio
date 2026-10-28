@@ -126,7 +126,7 @@ export function SkillListScene() {
       render: (_, record) => (
         <div className={styles.nameCell}>
           <div className={styles.nameTitle}>{record.name}</div>
-          <span className={styles.operatorIdText}>{record.skillId}</span>
+          <span className={styles.idText}>{record.skillId}</span>
         </div>
       ),
     },

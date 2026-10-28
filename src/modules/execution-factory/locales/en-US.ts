@@ -9,7 +9,7 @@ export const executionFactoryEnUS = {
   executionFactory: {
     unitManagementTitle: "Capability Management",
     unitManagementDescription:
-      "Register and manage MCP servers, toolboxes, operators, and SKILLs on this platform for agent execution.",
+      "Register and manage MCP servers, toolboxes, and SKILLs on this platform for agent execution.",
     catalogTitle: "Capability Market",
     catalogDescription:
       "Browse published capability packs: toolsets, MCP services, and SKILL packs. The layout matches Capability Management; introduce them to this platform or sync updates for copies you already have.",
@@ -37,13 +37,11 @@ export const executionFactoryEnUS = {
     executionUnitTabs: {
       mcp: "MCP",
       toolbox: "Tools",
-      operator: "Operators",
       skill: "SKILL",
     },
     executionUnitTabsV2: {
       mcp: "MCP Services",
       toolbox: "Toolsets",
-      operator: "Function Development",
       skill: "SKILL Packs",
     },
     capabilityManagementTitle: "Capability Management",
@@ -76,32 +74,15 @@ export const executionFactoryEnUS = {
         "Upload a SKILL package (ZIP or SKILL.md) to add its instructions and scripts to the current platform. After publishing, agents can load it and execute its capabilities as needed at runtime.",
       importOpenApiToolsTop:
         "Batch-import OpenAPI paths into this toolset. Each path becomes a tool you can enable, debug, and publish with the set.",
-      impexOpenApiOperator:
-        "Upload OpenAPI to register an operator. Use for migration or when you need full operator metadata from a spec file.",
-      impexOpenApiToolbox: "Upload OpenAPI to create a toolbox and import all tools in one step.",
-      impexAdpOperator:
-        "Upload a backup file you downloaded earlier via Export on the list. Restores the operator and its settings—for recovery or migration from another environment.",
       impexAdpToolbox:
         "Upload a backup file you downloaded earlier via Export on the list. Restores the toolset and all its tools. Choose import mode if the same name already exists on this platform.",
       impexAdpMcp:
         "Upload a backup file you downloaded earlier via Export on the list. Restores MCP service settings; you can debug and publish afterward.",
       addCapabilityWizard:
         "Pick how to add the API: use Add API for everyday HTTP; Import OpenAPI when you already have a full spec.",
-      operatorCreateTop:
-        "Register an operator for flow orchestration. OpenAPI operators wrap HTTP services; function operators run custom logic. Debug, publish, then use as a node in flows.",
       toolMetadataSection:
         "Set how the tool appears to agents. Use a clear name and a short description of when to call it.",
     },
-    operatorSyncPublishLabel: "Sync publish as operator",
-    operatorSyncPublishHint:
-      "Registers the same OpenAPI as an operator with category, timeout, and retry settings for orchestration.",
-    operatorSyncDirectPublish: "Publish operator immediately after registration",
-    quickApiCreateWithOperatorSuccess: "API added to toolset and operator registered",
-    importOpenApiCapabilityWithOperatorSuccess: "Imported {{count}} tools and registered operator",
-    importOpenApiCapabilityWithOperatorSuccess_one:
-      "Imported {{count}} tool and registered operator",
-    importOpenApiCapabilityWithOperatorSuccess_other:
-      "Imported {{count}} tools and registered operator",
     addCapabilityButton: "Add Capability",
     capabilityCreateMenu: {
       addHttpApi: "Add HTTP API",
@@ -163,17 +144,8 @@ export const executionFactoryEnUS = {
     addMcpWizardTitle: "Add MCP service",
     addSkillWizardTitle: "Import SKILL pack",
     addApiWizardTitle: "Add API",
-    addCapabilityAdvancedTitle: "Advanced / Operators",
-    addCapabilityAdvancedDesc: "Full OpenAPI operators and function operators",
-    addCapabilityAdvancedHint:
-      "Best for integration engineers. Business users should prefer Add API.",
-    addCapabilityAdvancedOpenApi: "Register OpenAPI operator",
-    addCapabilityAdvancedFunction: "Register function operator",
     addCapabilityFunctionNextHint:
       "Create a function toolset first, then add each function tool inside it.",
-    developerOperatorEntry: "Operator dev: OpenAPI / function registration",
-    advancedOperatorEntry: "Function Development",
-    advancedOperatorBanner: "Function list and debug. Register, debug, and publish functions here.",
     quickApiTabCurl: "Paste cURL",
     quickApiTabForm: "Simple form",
     quickApiCurlLabel: "cURL command",
@@ -225,19 +197,16 @@ export const executionFactoryEnUS = {
     emptyByTab: {
       mcp: 'No MCP services yet. Click "Add Capability" to register an MCP server.',
       toolbox: 'No toolsets yet. Use "Add Capability" to connect HTTP APIs or functions.',
-      operator: "No functions yet. Register an OpenAPI or function to publish and debug.",
       skill: 'No SKILL packages yet. Click "Add Capability" to upload a ZIP file or SKILL.md.',
     },
     catalogEmptyByTab: {
       mcp: "No MCP services are available to introduce from the market.",
       toolbox: "No toolsets are available to introduce from the market.",
-      operator: "No functions are available to introduce from the market.",
       skill: "No SKILL packs are available to introduce from the market.",
     },
     emptyCreateByTab: {
       mcp: "Create MCP",
       toolbox: "Create toolbox",
-      operator: "Create function",
       skill: "Import SKILL",
     },
     createWizardTitle: "Create execution unit",
@@ -245,15 +214,11 @@ export const executionFactoryEnUS = {
     createWizardStepDetails: "Enter details",
     createWizardTypeHint:
       "Choose the execution unit type to create. The current tab is pre-selected.",
-    createWizardContinueConfigure: "Continue setup",
     createWizardTypeDesc: {
       mcp: "Register an MCP server for agents to call via the MCP protocol.",
       toolbox: "Create a toolbox to manage HTTP or function tools.",
-      operator: "Register an OpenAPI or function for direct agent invocation.",
       skill: "Import a SKILL package with docs and executable capabilities.",
     },
-    operatorId: "Function ID",
-    operatorName: "Function Name",
     version: "Version",
     statusLabel: "Status",
     metadataType: "Metadata Type",
@@ -288,7 +253,7 @@ export const executionFactoryEnUS = {
       openapi: "OpenAPI",
       function: "Function",
     },
-    operatorCategories: {
+    categoryLabels: {
       other_category: "Other",
       system: "System Tools",
       data_process: "Data Processing",
@@ -395,10 +360,7 @@ export const executionFactoryEnUS = {
       zip: "Zip Package",
       content: "Text Content",
     },
-    detailTitle: "Function Detail",
-    marketDetailTitle: "Market Function Detail",
     debug: "Debug",
-    debugTitle: "Debug Function",
     runDebug: "Run Debug",
     debugRequestBody: "Request Body (JSON)",
     debugRequestHeaders: "Request Headers (JSON)",
@@ -412,26 +374,9 @@ export const executionFactoryEnUS = {
     debugSampleHint:
       "Sample parameters were generated by location from the API definition. Edit the values, then run debug.",
     debugResultTitle: "Debug Result",
-    createTitle: "Register Function",
-    editTitle: "Edit Function",
-    createDescription: "Register a new function via OpenAPI or function metadata.",
-    editDescription: "Update function metadata and description.",
-    createFlowHint: "OpenAPI registration requires a valid OpenAPI document payload.",
-    operatorCreateTypeLockedHint:
-      "The metadata type was chosen in the create wizard and cannot be changed here. Fill in the operator details and function/OpenAPI definition.",
-    createOperatorButton: "New Function",
     createToolboxButton: "New Toolbox",
     createMcpButton: "New MCP",
     importSkillButton: "Import SKILL",
-    createOperatorModalTitle: "New Function",
-    createOperatorModalHint: "Choose how to create the function",
-    createOperatorModalHintLocked: "This choice cannot be changed later",
-    createOperatorFunctionTitle: "Function Compute",
-    createOperatorFunctionDesc: "Write custom code online without managing servers",
-    createOperatorOpenApiDesc: "Register an HTTP operator from an OpenAPI specification",
-    createOperatorFlowTitle: "Operator Orchestration",
-    createOperatorFlowDesc: "Compose existing operators on a canvas for complex workflows",
-    flowEditorComingSoon: "The orchestration editor is not connected yet",
     createToolboxModalTitle: "New Toolbox",
     createToolboxTypeLabel: "Toolbox Technology",
     createToolboxTypeHint: "This choice cannot be changed later",
@@ -460,9 +405,7 @@ export const executionFactoryEnUS = {
     skillImportSuccess: "SKILL imported successfully",
     skillUploadDraggerHint: "Click or drag a file to this area to upload",
     skillUploadDraggerSubHint: "Supports .zip packages or SKILL.md files",
-    editFlowHint: "Editing updates operator metadata without replacing the registered spec.",
     openapiSpec: "OpenAPI Spec",
-    directPublish: "Publish immediately after registration",
     publish: "Publish",
     offline: "Unpublish",
     cardMenu: {
@@ -473,15 +416,9 @@ export const executionFactoryEnUS = {
       updatePackage: "Update package",
       more: "More actions",
     },
-    operatorStatusChangeConfirmTitle: "Update operator status",
-    operatorStatusChangeConfirmDescription: 'Change the status of "{{name}}" to "{{status}}"?',
-    operatorDeleteConfirmTitle: "Delete operator",
-    operatorDeleteConfirmDescription: 'Delete "{{name}}"? This action cannot be undone.',
     releaseUser: "Released By",
     releaseTime: "Released At",
-    operatorsTab: "Function Development",
     toolboxesTab: "Toolboxes",
-    operatorMarketTab: "Function Market",
     toolboxMarketTab: "Toolbox Market",
     toolboxName: "Toolbox Name",
     toolboxId: "Toolbox ID",
@@ -516,10 +453,8 @@ export const executionFactoryEnUS = {
       published: "Published",
       offline: "Unpublished",
     },
-    statusChangeConfirmTitle: "Update operator status",
     statusChangeConfirmDescription: 'Change "{{name}}" to "{{status}}"?',
     statusChangeConfirmOk: "Confirm",
-    deleteConfirmTitle: "Delete operator",
     deleteConfirmDescription: 'Delete "{{name}}"? This action cannot be undone.',
     toolboxStatusChangeConfirmTitle: "Update toolbox status",
     toolboxStatusChangeConfirmDescription: 'Change "{{name}}" to "{{status}}"?',
@@ -598,15 +533,12 @@ export const executionFactoryEnUS = {
         "This resource is already on this platform. Choose Sync, or open Capability Management to use it directly.",
       alreadyExists: {
         toolbox: "This toolbox is already on this platform and cannot be introduced again as new.",
-        operator:
-          "This operator is already on this platform and cannot be introduced again as new.",
         mcp: "This MCP is already on this platform and cannot be introduced again as new.",
       },
     },
     importButton: "Import",
     importConfirm: "Import",
     importSuccess: "Imported successfully",
-    importKindOpenApi: "OpenAPI",
     importKindAdp: "Backup file",
     importKindAdpHint:
       "Pairs with Export on the list—upload the file you downloaded (.adp / .json)",
@@ -624,32 +556,7 @@ export const executionFactoryEnUS = {
     downloadImportTemplate: "Download import template",
     importPartialFailureTitle: "Some tools failed to import",
     unknownTool: "Unknown tool",
-    operatorHistoryAction: "Version history",
-    operatorHistoryTitle: "Operator version history: {{name}}",
-    operatorHistoryHint: "Published and historical versions for tracing configuration changes.",
-    operatorHistoryEmpty: "No version history yet",
-    executeControlTitle: "Execution control",
-    executeControlTimeout: "Timeout (ms)",
-    executeControlTimeoutHint: "Maximum wait time for a single operator execution",
-    executeControlRetryPolicy: "Retry policy",
-    executeControlMaxAttempts: "Max attempts",
-    executeControlInitialDelay: "Initial delay (ms)",
-    executeControlMaxDelay: "Max delay (ms)",
-    executeControlBackoffFactor: "Backoff factor",
-    executeControlRetryStatusCodes: "Retry HTTP status codes",
-    executeControlRetryStatusCodesHint: "Retry when these HTTP status codes are returned",
-    executeControlRetryErrorCodes: "Retry business error codes",
-    executeControlRetryErrorCodesHint: "Retry when these business error codes are returned",
-    runLogTitle: "Runs & logs",
-    runLogVersionTab: "Version history",
-    runLogSessionTab: "This session",
     runLogSessionTitle: "Debug runs",
-    runLogSessionEmpty: "No debug runs yet. Results appear here after you run debug.",
-    runLogTime: "Time",
-    runLogStatusCode: "Status",
-    runLogDuration: "Duration",
-    runLogError: "Error",
-    runLogResponse: "Response",
     ioPanelEmpty: "No input/output definition available",
     ioPanelEmptyHint:
       "If the document has no parameter or response examples, you can still click Debug to send a trial request.",
@@ -692,16 +599,13 @@ export const executionFactoryEnUS = {
       "Run debug to see status, duration, response body, and error details here.",
     openToolIde: "Edit configuration",
     importResourceTitle: {
-      operator: "Import Operator",
       toolbox: "Import Toolbox",
       mcp: "Import MCP",
     },
     importOpenApiHint: {
-      operator: "Upload an OpenAPI spec file to register a new operator.",
       toolbox: "Upload an OpenAPI spec file to create a toolbox and import tools.",
     },
     importAdpHint: {
-      operator: "Upload a backup file from Export to restore operator configuration.",
       toolbox: "Upload a backup file from Export to restore a toolbox and its tools.",
       mcp: "Upload a backup file from Export to restore MCP server configuration.",
     },
@@ -732,11 +636,6 @@ export const executionFactoryEnUS = {
       "Delete {{count}} selected tool? This action cannot be undone.",
     toolBatchDeleteConfirmDescription_other:
       "Delete {{count}} selected tools? This action cannot be undone.",
-    convertToTool: "Convert to Tool",
-    convertToToolTitle: "Convert Operator to Tool",
-    targetToolbox: "Target Toolbox",
-    targetToolboxPlaceholder: "Select a toolbox",
-    convertTargetUnauthorized: "You cannot add this operator to the selected toolbox.",
     mcpListTitle: "MCP Management",
     mcpListDescription: "Manage MCP server configurations.",
     mcpCreateTitle: "Register MCP Server",
@@ -998,16 +897,8 @@ export const executionFactoryEnUS = {
       toolMissingHandler: '"{{name}}" has no handler entry point in its code',
       allToolsDisabled: "Every tool is disabled, so nothing is callable after publishing",
     },
-    formSectionBasic: "Basic Info",
-    formSectionPublish: "Publish Options",
-    quickPublishHint:
-      'You can first complete the minimum required fields and save a draft. Enable "Publish immediately after registration" to publish in one step after validation passes.',
-    directPublishHint:
-      "Best for POC environments. Production workflows should publish manually after review.",
     openapiImportHint:
-      "Paste JSON or YAML, upload a file, or fetch an OpenAPI document from a URL. For a single operator, keep only one endpoint.",
-    openapiOperatorHint:
-      "Use a single-endpoint OpenAPI document (one path and one method). A full service spec registers multiple operators.",
+      "Paste JSON or YAML, upload a file, or fetch an OpenAPI document from a URL.",
     openapiToolboxHint:
       "Paste JSON or YAML, upload a file, or fetch from a URL. After parsing, expand each endpoint to review inputs, request body, and response examples.",
     openapiInputPastePlaceholder: "Paste a standard OpenAPI JSON or YAML document",
@@ -1036,23 +927,13 @@ export const executionFactoryEnUS = {
     openapiPreviewMore: "{{count}} more endpoints not shown",
     openapiPreviewMore_one: "{{count}} more endpoint not shown",
     openapiPreviewMore_other: "{{count}} more endpoints not shown",
-    openapiMultiOperationWarning:
-      "This document contains {{count}} endpoints and will register {{count}} operators. Keep only the target endpoint for a single operator.",
-    openapiMultiOperationWarning_one:
-      "This document contains {{count}} endpoint and will register {{count}} operator. Keep only the target endpoint for a single operator.",
-    openapiMultiOperationWarning_other:
-      "This document contains {{count}} endpoints and will register {{count}} operators. Keep only the target endpoint for a single operator.",
     openapiVersion31Hint:
       "OpenAPI 3.1 detected. If save fails, try OpenAPI 3.0.x or keep a single endpoint only.",
     openapiTemplate: {
-      operatorDescription: "Describe the operator's functionality and purpose",
-      operatorSummary: "Execute operator",
-      operatorTitle: "Sample Operator API",
       successResponse: "Success",
       toolboxSummary: "Sample tool",
       toolboxTitle: "Sample Toolbox API",
     },
-    submitErrorTitle: "Save failed",
     quickApiUrlSubmitError:
       "Save failed: could not submit a valid service URL. Check the full URL in the cURL command, then click Detect API again before saving.{{detailSuffix}}",
     quickApiUrlSubmitErrorDetailSuffix: " Backend returned: {{detail}}",
@@ -1062,7 +943,6 @@ export const executionFactoryEnUS = {
       newToolboxNameRequired: "Enter a new toolset name.",
       openApiImportAllFailed: "No tools could be imported from the OpenAPI document.",
       openApiSpecRequired: "Upload an OpenAPI 3.0 spec file.",
-      operatorSyncNameRequired: "Enter an operator name before syncing publish.",
       targetToolboxMissing: "Could not determine the target toolset.",
       toolCreateFailed: "Tool creation failed",
     },
@@ -1110,7 +990,7 @@ export const executionFactoryEnUS = {
     sandboxRuntimeDescription:
       "Observe sandbox health, session pool pressure, dependency installation, and task sessions used by callable capabilities.",
     navExecutionUnitManagementTooltip:
-      "Manage operators, toolboxes, MCP servers, and SKILLs on this platform.",
+      "Manage toolboxes, MCP servers, and SKILLs on this platform.",
     navAllExecutionUnitsTooltip:
       "Browse the market catalog and introduce resources to this platform.",
   },

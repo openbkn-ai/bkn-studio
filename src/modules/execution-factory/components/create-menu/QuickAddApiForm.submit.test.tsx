@@ -52,10 +52,6 @@ vi.mock("@/modules/execution-factory/components/CapabilityCategoryFields", () =>
   CapabilityCategoryFields: () => null,
 }));
 
-vi.mock("@/modules/execution-factory/components/OperatorSyncPublishFields", () => ({
-  OperatorSyncPublishFields: () => null,
-}));
-
 type QuickAddApiFormSubmit = ComponentProps<typeof QuickAddApiForm>["onSubmit"];
 
 function renderForm(onSubmit: QuickAddApiFormSubmit) {

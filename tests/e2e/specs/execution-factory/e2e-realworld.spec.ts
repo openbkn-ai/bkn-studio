@@ -40,7 +40,6 @@ import {
 } from "../../helpers/skill";
 import { registerOpenApiBundleViaApi } from "../../helpers/capability-bundle";
 import { OSS_MOCK_DOCKER_URL } from "../../helpers/oss-mock";
-import { cleanupOperatorViaApi, type RegisteredOperator } from "../../helpers/operator";
 import {
   buildToolboxName,
   cleanupToolboxViaApi,
@@ -102,7 +101,6 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
   const createdBoxIds: string[] = [];
   const createdMcpIds: string[] = [];
   const createdSkillIds: string[] = [];
-  const createdOperators: RegisteredOperator[] = [];
 
   test.beforeAll(async ({ request }) => {
     try {
@@ -148,16 +146,6 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
       if (!skillId) continue;
       try {
         await cleanupSkillViaApi(request, skillId);
-      } catch (error) {
-        console.warn(String(error));
-      }
-    }
-
-    while (createdOperators.length > 0) {
-      const operator = createdOperators.pop();
-      if (!operator) continue;
-      try {
-        await cleanupOperatorViaApi(request, operator);
       } catch (error) {
         console.warn(String(error));
       }
@@ -372,9 +360,7 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
     expect(history.length).toBeGreaterThanOrEqual(0);
   });
 
-  test("RW-08: openapi bundle registers linked operator tools and debug works", async ({
-    request,
-  }) => {
+  test("RW-08: openapi bundle registers tools and debug works", async ({ request }) => {
     const toolName = "weather_bundle";
     const toolboxName = buildToolboxName("rw08_bundle");
     const spec = JSON.stringify(buildOfflineWeatherOpenApi(toolName));
@@ -387,27 +373,13 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
 
     const boxId = bundle.box_id;
     const toolId = bundle.tool_ids?.[0];
-    const operatorId = bundle.operator_ids?.[0];
     expect(boxId).toBeTruthy();
     expect(toolId).toBeTruthy();
-    expect(operatorId).toBeTruthy();
     expect((bundle.links ?? []).length).toBeGreaterThan(0);
-    if (!boxId || !toolId || !operatorId) {
+    if (!boxId || !toolId) {
       return;
     }
     createdBoxIds.push(boxId);
-
-    const operatorDetail = await request.get(apiUrl(`/operator/info/${operatorId}`));
-    expect(operatorDetail.ok()).toBeTruthy();
-    const operatorBody = (await operatorDetail.json()) as {
-      name?: string;
-      version?: string;
-    };
-    createdOperators.push({
-      operatorId,
-      version: operatorBody.version ?? "",
-      name: operatorBody.name ?? toolName,
-    });
 
     const debug = await debugToolViaApi(request, boxId, toolId);
     expect(debug.error).toBeFalsy();

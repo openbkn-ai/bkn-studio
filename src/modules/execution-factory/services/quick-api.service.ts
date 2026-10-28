@@ -6,7 +6,6 @@
  */
 
 import i18n from "@/app/locales/i18n";
-import { registerOpenApiBundle } from "@/modules/execution-factory/services/capability-bundle.service";
 
 import {
   createToolbox,
@@ -15,8 +14,6 @@ import {
 } from "@/modules/execution-factory/services/toolbox.service";
 
 import { createTool, listTools } from "@/modules/execution-factory/services/tool.service";
-
-import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
 
 import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 
@@ -33,8 +30,6 @@ export type RegisterQuickApiInput = {
   toolboxDescription?: string;
 
   category?: string;
-
-  operatorSync?: OperatorSyncPublishInput;
 
   toolName?: string;
   toolDescription?: string;
@@ -62,10 +57,6 @@ export type RegisterQuickApiResult = {
   boxId: string;
 
   toolIds: string[];
-
-  operatorId?: string;
-
-  operatorIds?: string[];
 };
 
 const CONFIRM_ATTEMPTS = 3;
@@ -131,40 +122,6 @@ export async function registerQuickApi(
   }
 
   const target = resolveToolboxTarget(input);
-
-  if (input.operatorSync?.enabled) {
-    const bundle = await registerOpenApiBundle({
-      openapiSpec: input.openapiSpec,
-
-      serviceUrl: input.serviceUrl,
-
-      boxId: target.boxId,
-
-      toolboxName: target.toolboxName,
-
-      toolboxDescription: input.toolboxDescription,
-
-      category: input.category,
-
-      operatorSync: input.operatorSync,
-    });
-
-    await confirmQuickApiPersistence({
-      boxId: bundle.boxId,
-      toolIds: bundle.toolIds,
-      toolboxName: target.toolboxName,
-    });
-
-    return {
-      boxId: bundle.boxId,
-
-      toolIds: bundle.toolIds,
-
-      operatorId: bundle.operatorIds[0],
-
-      operatorIds: bundle.operatorIds,
-    };
-  }
 
   let boxId = target.boxId;
 

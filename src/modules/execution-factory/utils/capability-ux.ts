@@ -9,18 +9,10 @@ import { getRuntimeConfig } from "@/framework/runtime/config";
 
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 
-/** Primary tabs in capability-first UX (operator via sync checkbox or deep link). */
+/** Management tabs, in display order. */
 export const CAPABILITY_UX_PRIMARY_TABS: ExecutionUnitTab[] = ["toolbox", "mcp", "skill"];
 
-export const CAPABILITY_UX_LEGACY_TABS: ExecutionUnitTab[] = [
-  "operator",
-  "toolbox",
-  "mcp",
-  "skill",
-];
-
-export type CapabilityUxMode =
-  "quick-api" | "import-openapi" | "function" | "mcp" | "skill" | "advanced-operator";
+export type CapabilityUxMode = "quick-api" | "import-openapi" | "function" | "mcp" | "skill";
 
 /** Modes relevant when creating from the toolsets tab. */
 export const TOOLBOX_CAPABILITY_MODES: CapabilityUxMode[] = [
@@ -38,7 +30,6 @@ const ALL_CAPABILITY_MODES: CapabilityUxMode[] = [
   "function",
   "mcp",
   "skill",
-  "advanced-operator",
 ];
 
 function readEnvCapabilityUxV2(): boolean | undefined {
@@ -69,24 +60,11 @@ export function isCapabilityUxV2(): boolean {
 }
 
 export function getManagementTabs(): ExecutionUnitTab[] {
-  return isCapabilityUxV2() ? CAPABILITY_UX_PRIMARY_TABS : CAPABILITY_UX_LEGACY_TABS;
+  return CAPABILITY_UX_PRIMARY_TABS;
 }
 
 export function getDefaultManagementTab(): ExecutionUnitTab {
-  return isCapabilityUxV2() ? "toolbox" : "operator";
-}
-
-export function resolveVisibleManagementTabs(activeTab: ExecutionUnitTab): ExecutionUnitTab[] {
-  const primary = getManagementTabs();
-  if (primary.includes(activeTab)) {
-    return primary;
-  }
-
-  if (activeTab === "operator" && isCapabilityUxV2()) {
-    return [...primary, "operator"];
-  }
-
-  return primary;
+  return "toolbox";
 }
 
 export function getExecutionUnitTabLabelKey(tab: ExecutionUnitTab): string {
@@ -109,8 +87,6 @@ export function getCapabilityModesForTab(tab?: ExecutionUnitTab): CapabilityUxMo
       return ["skill"];
     case "toolbox":
       return TOOLBOX_CAPABILITY_MODES;
-    case "operator":
-      return ["advanced-operator"];
     default:
       return ALL_CAPABILITY_MODES;
   }
@@ -122,8 +98,6 @@ export function getDefaultCapabilityModeForTab(tab?: ExecutionUnitTab): Capabili
       return "mcp";
     case "skill":
       return "skill";
-    case "operator":
-      return "advanced-operator";
     default:
       return "quick-api";
   }
@@ -138,11 +112,7 @@ export function shouldSkipCapabilityModeStep(
     return true;
   }
 
-  if (!tab || tab === "operator") {
-    return false;
-  }
-
-  return true;
+  return Boolean(tab);
 }
 
 export function canReturnToModeStep(allowedModes: CapabilityUxMode[]): boolean {

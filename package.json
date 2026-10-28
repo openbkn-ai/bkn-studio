@@ -21,7 +21,6 @@
     "theme:scan-surfaces": "node scripts/scan-theme-surface-coverage.mjs",
     "test:execution-factory": "vitest run src/modules/execution-factory",
     "test:execution-factory:e2e": "npm run test:full --prefix tests/e2e",
-    "test:execution-factory:e2e:operator": "npm run test:operator --prefix tests/e2e",
     "test:execution-factory:agent-at": "echo Run Agent AT from tests/execution-factory/agent-at — see LOCAL_SETUP.md",
     "check": "npm run license:check && npm run format:check && npm run lint:types && npm run test -- --run && npm run build",
     "license:check": "node scripts/check-license-headers.mjs",

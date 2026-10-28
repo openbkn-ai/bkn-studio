@@ -9,7 +9,7 @@ import { Form, Select } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { listCategories } from "@/modules/execution-factory/services/category.service";
 import { localizeCategoryOptions } from "@/modules/execution-factory/utils/detail-display";
 
 type CapabilityCategoryFieldsProps = {
@@ -29,7 +29,7 @@ export function CapabilityCategoryFields({
 
   useEffect(() => {
     void (async () => {
-      const items = await listOperatorCategories();
+      const items = await listCategories();
       const options = items.map((item) => ({
         value: item.categoryType,
         label: item.name,

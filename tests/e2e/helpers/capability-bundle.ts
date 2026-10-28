@@ -18,7 +18,6 @@ export type RegisterOpenApiBundleViaApiInput = {
   category?: string;
   useRule?: string;
   directPublish?: boolean;
-  operatorCategory?: string;
 };
 
 export async function registerOpenApiBundleViaApi(
@@ -39,12 +38,6 @@ export async function registerOpenApiBundleViaApi(
       use_rule: input.useRule,
       data: input.openapiSpec,
       direct_publish: input.directPublish ?? false,
-      operator_info: {
-        category: input.operatorCategory ?? input.category ?? "other_category",
-        execution_mode: "sync",
-        operator_type: "basic",
-        source: "custom",
-      },
     },
   });
 
@@ -52,8 +45,7 @@ export async function registerOpenApiBundleViaApi(
   return response.json() as Promise<{
     box_id?: string;
     tool_ids?: string[];
-    operator_ids?: string[];
-    links?: Array<{ operator_id?: string; tool_id?: string }>;
+    links?: Array<{ tool_id?: string }>;
     failure_count?: number;
     failures?: string[];
   }>;

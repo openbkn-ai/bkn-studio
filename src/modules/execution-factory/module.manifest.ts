@@ -9,12 +9,6 @@ export const executionFactoryModuleManifest = {
   id: "execution-factory",
   name: "Execution Factory",
   permissions: [
-    "execution-factory:operator:view",
-    "execution-factory:operator:create",
-    "execution-factory:operator:edit",
-    "execution-factory:operator:publish",
-    "execution-factory:operator:delete",
-    "execution-factory:operator:debug",
     "execution-factory:toolbox:view",
     "execution-factory:function:view",
     "execution-factory:function:create",
@@ -52,7 +46,6 @@ export const executionFactoryModuleManifest = {
   supportsEmbedded: false,
   supportsReadOnly: false,
   services: [
-    "agent-operator-integration/operator",
     "agent-operator-integration/tool-box",
     "agent-operator-integration/mcp",
     "agent-operator-integration/skill",
@@ -62,14 +55,8 @@ export const executionFactoryModuleManifest = {
     {
       id: "execution-factory.unit-management",
       exportName: "UnitManagementListScene",
-      description: "Manage registered execution operators and toolboxes.",
+      description: "Manage registered toolboxes, MCP servers, and skills.",
       inputs: ["defaultKeyword?", "onOpenDetail?"],
-    },
-    {
-      id: "execution-factory.unit-form",
-      exportName: "UnitFormScene",
-      description: "Create or edit execution operators.",
-      inputs: ["mode", "operatorId?", "onBack?", "onSubmitSuccess?"],
     },
     {
       id: "execution-factory.toolbox-form",
@@ -98,7 +85,7 @@ export const executionFactoryModuleManifest = {
     {
       id: "execution-factory.catalog",
       exportName: "CatalogListScene",
-      description: "Browse operator and toolbox market entries for installable execution units.",
+      description: "Browse toolbox, MCP, and skill market entries for installable execution units.",
       inputs: ["defaultKeyword?", "onOpenDetail?"],
     },
     {

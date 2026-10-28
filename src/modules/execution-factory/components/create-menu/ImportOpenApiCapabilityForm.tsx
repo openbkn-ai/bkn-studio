@@ -16,7 +16,6 @@ import {
 import { CapabilityCategoryFields } from "@/modules/execution-factory/components/CapabilityCategoryFields";
 import { OpenApiSpecInput } from "@/modules/execution-factory/components/OpenApiSpecInput";
 import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
-import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
 import {
   analyzeOpenApiDocumentText,
   extractOpenApiMetadataHints,
@@ -36,7 +35,6 @@ export type ImportOpenApiCapabilityFormValues = {
   serviceUrl?: string;
   useRule?: string;
   category?: string;
-  operatorSync?: OperatorSyncPublishInput;
 };
 
 type ImportOpenApiCapabilityFormProps = {

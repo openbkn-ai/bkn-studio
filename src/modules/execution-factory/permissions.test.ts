@@ -15,7 +15,7 @@ import {
 } from "@/modules/execution-factory/permissions";
 
 describe("filterAccessibleExecutionUnitTabs", () => {
-  const tabs = ["operator", "toolbox", "mcp", "skill"] as const;
+  const tabs = ["toolbox", "mcp", "skill"] as const;
 
   it.each([
     ["function", ["execution-factory:function:view"], ["toolbox"]],

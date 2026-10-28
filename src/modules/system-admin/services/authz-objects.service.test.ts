@@ -240,7 +240,7 @@ describe("authz object picker catalog service", () => {
     expect(getMock).not.toHaveBeenCalled();
   });
 
-  it("函数集授权按工具集 box_id 取名，不走算子接口", async () => {
+  it("函数集授权按工具集 box_id 取名", async () => {
     postMock.mockResolvedValue({ data: { entries: [{ id: "box-fn-1", name: "金额核对" }] } });
 
     const [resolved] = await resolveGrantNames([

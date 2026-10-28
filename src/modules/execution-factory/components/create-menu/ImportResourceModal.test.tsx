@@ -5,98 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ImportResourceModal } from "@/modules/execution-factory/components/create-menu/ImportResourceModal";
 
-const spacedTitleSpec = JSON.stringify({
-  openapi: "3.0.3",
-  info: { title: "示例工具箱 API", version: "1.0.0" },
-  servers: [{ url: "https://example.com" }],
-  paths: {
-    "/ping": {
-      get: {
-        summary: "ping",
-        responses: { "200": { description: "OK" } },
-      },
-    },
-  },
-});
-
-const absoluteServerSpec = JSON.stringify({
-  openapi: "3.0.3",
-  info: { title: "remote_ops", version: "1.0.0" },
-  servers: [{ url: "https://api.example.com" }],
-  paths: {
-    "/ping": {
-      get: {
-        summary: "ping",
-        responses: { "200": { description: "OK" } },
-      },
-    },
-  },
-});
-
-const missingServerSpec = JSON.stringify({
-  openapi: "3.0.3",
-  info: { title: "no_servers_ops", version: "1.0.0" },
-  paths: {
-    "/ping": {
-      get: {
-        summary: "ping",
-        responses: { "200": { description: "OK" } },
-      },
-    },
-  },
-});
-
-const relativeServerSpec = JSON.stringify({
-  openapi: "3.0.3",
-  info: { title: "relative_ops", version: "1.0.0" },
-  servers: [{ url: "/api" }],
-  paths: {
-    "/ping": {
-      get: {
-        summary: "ping",
-        responses: { "200": { description: "OK" } },
-      },
-    },
-  },
-});
-
-let nextOpenApiSpec = spacedTitleSpec;
-
-const translate = (key: string, options?: Record<string, string | number>) => {
+const translate = (key: string) => {
   const labels: Record<string, string> = {
-    "common.required": "Required",
-    "executionFactory.category": "Category",
-    "executionFactory.toolboxName": "Toolbox name",
-    "executionFactory.serviceUrl": "Service URL",
-    "executionFactory.importKindOpenApi": "OpenAPI",
     "executionFactory.importKindAdp": "ADP",
     "executionFactory.importConfirm": "Import",
     "executionFactory.importResourceTitle.toolbox": "Import toolbox",
-    "executionFactory.importResourceTitle.operator": "Import operator",
-    "executionFactory.importSuccess": "Imported",
-    "executionFactory.importOpenApiCapabilityPartial":
-      "Imported {{success}} tool(s), {{failed}} failed",
-    "executionFactory.importOpenApiFileRequired": "OpenAPI required",
-    "executionFactory.importOpenApiServiceUrlRequired": "Service URL required",
-    "executionFactory.importOpenApiMissingServerManual": "Missing servers",
-    "executionFactory.importOpenApiRelativeServerManual": "Relative server",
-    "executionFactory.businessIntro.impexOpenApiToolbox": "Intro",
-    "executionFactory.businessIntro.impexOpenApiOperator": "Intro",
+    "executionFactory.importResourceTitle.mcp": "Import MCP",
   };
 
-  let text = labels[key] ?? key;
-  if (options) {
-    for (const [name, value] of Object.entries(options)) {
-      text = text.replaceAll(`{{${name}}}`, String(value));
-    }
-  }
-  return text;
+  return labels[key] ?? key;
 };
 
 Object.defineProperty(window, "matchMedia", {
@@ -120,69 +43,31 @@ vi.mock("react-i18next", async (importOriginal) => ({
   }),
 }));
 
-const { messageError, messageSuccess, messageWarning } = vi.hoisted(() => ({
-  messageError: vi.fn(),
-  messageSuccess: vi.fn(),
-  messageWarning: vi.fn(),
+const { messageInfo } = vi.hoisted(() => ({
+  messageInfo: vi.fn(),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: {
-      error: messageError,
-      info: vi.fn(),
-      success: messageSuccess,
-      warning: messageWarning,
+      error: vi.fn(),
+      info: messageInfo,
+      success: vi.fn(),
+      warning: vi.fn(),
     },
   }),
 }));
 
-vi.mock("@/modules/execution-factory/services/category.service", () => ({
-  listOperatorCategories: vi.fn(() =>
-    Promise.resolve([{ categoryType: "other_category", name: "Other" }]),
-  ),
-}));
-
-const { registerOpenApiImport, registerOperator } = vi.hoisted(() => ({
-  registerOpenApiImport: vi.fn(() =>
-    Promise.resolve({
-      boxId: "box-1",
-      toolIds: ["tool-1"],
-      successCount: 1,
-      failureCount: 0,
-    }),
-  ),
-  registerOperator: vi.fn<(input: { openapiSpec?: string }) => Promise<{ operatorId: string }>>(
-    () => Promise.resolve({ operatorId: "op-1" }),
-  ),
-}));
-
-vi.mock("@/modules/execution-factory/services/import-openapi.service", () => ({
-  registerOpenApiImport,
-}));
-
-vi.mock("@/modules/execution-factory/services/operator.service", () => ({
-  registerOperator,
+const { importComponentFile } = vi.hoisted(() => ({
+  importComponentFile: vi.fn(),
 }));
 
 vi.mock("@/modules/execution-factory/services/impex.service", () => ({
-  importComponentFile: vi.fn(),
+  importComponentFile,
 }));
 
 vi.mock("@/modules/execution-factory/components/CapabilityBusinessIntro", () => ({
   CapabilityBusinessIntro: () => null,
-}));
-
-vi.mock("@/modules/execution-factory/components/OpenApiSpecInput", () => ({
-  OpenApiSpecInput: ({
-    onChange,
-  }: {
-    onChange?: (value: string, source?: { kind: "paste" }) => void;
-  }) => (
-    <button onClick={() => onChange?.(nextOpenApiSpec, { kind: "paste" })} type="button">
-      Load OpenAPI
-    </button>
-  ),
 }));
 
 vi.mock("antd", async () => {
@@ -218,86 +103,35 @@ vi.mock("antd", async () => {
 describe("ImportResourceModal", () => {
   afterEach(() => {
     cleanup();
-    nextOpenApiSpec = spacedTitleSpec;
     vi.clearAllMocks();
   });
 
-  // Toolbox OpenAPI import moved into the Add API wizard through ImportOpenApiCapabilityForm and
-  // registerOpenApiImport, so ImportResourceModal no longer owns it and the old toolbox case is removed.
-  // Keep operator OpenAPI and .adp backup-import cases below.
+  // OpenAPI import lives in the Add API wizard; this modal only restores .adp backups.
+  it.each([
+    ["toolbox", "Import toolbox"],
+    ["mcp", "Import MCP"],
+  ] as const)("offers only .adp import for %s", async (activeTab, title) => {
+    render(<ImportResourceModal activeTab={activeTab} onClose={vi.fn()} open />);
 
-  it("preserves absolute OpenAPI servers when importing an operator", async () => {
-    nextOpenApiSpec = absoluteServerSpec;
-
-    render(<ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
-    await screen.findByDisplayValue("https://api.example.com");
-    fireEvent.click(screen.getByRole("button", { name: "Import" }));
-
-    await waitFor(() => {
-      expect(registerOperator).toHaveBeenCalled();
-    });
-
-    const firstCall = registerOperator.mock.calls[0]?.[0];
-    expect(firstCall).toBeDefined();
-    expect(firstCall?.openapiSpec).toContain('"url": "https://api.example.com"');
-    expect(firstCall?.openapiSpec).not.toContain("127.0.0.1:9000");
+    expect(await screen.findByRole("heading", { name: title })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "ADP" })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: /OpenAPI/ })).toBeNull();
   });
 
-  it("does not inject localhost when operator OpenAPI has no servers", async () => {
-    nextOpenApiSpec = missingServerSpec;
+  it("asks for a file instead of importing when none is selected", async () => {
+    render(<ImportResourceModal activeTab="toolbox" onClose={vi.fn()} open />);
 
-    render(<ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />);
+    fireEvent.click(await screen.findByRole("button", { name: "Import" }));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Service URL")).toHaveProperty("value", "");
+    await vi.waitFor(() => {
+      expect(messageInfo).toHaveBeenCalledWith("executionFactory.importAdpFileRequired");
     });
-
-    fireEvent.click(screen.getByRole("button", { name: "Import" }));
-
-    await waitFor(() => {
-      expect(registerOperator).not.toHaveBeenCalled();
-    });
+    expect(importComponentFile).not.toHaveBeenCalled();
   });
 
-  it("does not inject localhost when operator OpenAPI has a relative server", async () => {
-    nextOpenApiSpec = relativeServerSpec;
+  it("renders nothing for resource types without .adp import", () => {
+    render(<ImportResourceModal activeTab="skill" onClose={vi.fn()} open />);
 
-    render(<ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Service URL")).toHaveProperty("value", "");
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Import" }));
-
-    await waitFor(() => {
-      expect(registerOperator).not.toHaveBeenCalled();
-    });
-  });
-
-  it("imports an operator with a manually provided Service URL when servers are missing", async () => {
-    nextOpenApiSpec = missingServerSpec;
-
-    render(<ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
-
-    const serviceUrlInput = await screen.findByLabelText("Service URL");
-    fireEvent.change(serviceUrlInput, { target: { value: "https://prod.example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: "Import" }));
-
-    await waitFor(() => {
-      expect(registerOperator).toHaveBeenCalled();
-    });
-
-    const firstCall = registerOperator.mock.calls[0]?.[0];
-    expect(firstCall?.openapiSpec).toContain('"url": "https://prod.example.com"');
-    expect(firstCall?.openapiSpec).not.toContain("127.0.0.1:9000");
+    expect(screen.queryByRole("heading")).toBeNull();
   });
 });

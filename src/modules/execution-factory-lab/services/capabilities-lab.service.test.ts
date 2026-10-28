@@ -19,7 +19,7 @@ vi.mock("@/framework/request/http", () => ({
 
 import {
   executePython,
-  getOrchestrationDetail,
+  getCapability,
 } from "@/modules/execution-factory-lab/services/capabilities-lab.service";
 
 describe("capabilities-lab.service", () => {
@@ -67,12 +67,12 @@ describe("capabilities-lab.service", () => {
     );
   });
 
-  it("maps orchestration operator and audit user names from the business API", async () => {
+  it("maps audit user names from the business API", async () => {
     getMock.mockResolvedValueOnce({
       data: {
-        enabled: true,
-        operator_id: "operator-a",
-        operator_name: "Inventory Operator",
+        id: "capability-a",
+        kind: "http",
+        name: "Inventory",
         audit: {
           create_user: "user-a",
           create_user_name: "Alice",
@@ -82,10 +82,7 @@ describe("capabilities-lab.service", () => {
       },
     });
 
-    await expect(getOrchestrationDetail("capability-a")).resolves.toMatchObject({
-      enabled: true,
-      operatorId: "operator-a",
-      operatorName: "Inventory Operator",
+    await expect(getCapability("capability-a")).resolves.toMatchObject({
       audit: {
         createUser: "user-a",
         createUserName: "Alice",
@@ -93,9 +90,6 @@ describe("capabilities-lab.service", () => {
         updateUserName: "Bob",
       },
     });
-    expect(getMock).toHaveBeenCalledWith(
-      "/capabilities-lab/v1/capabilities/capability-a/orchestration",
-      {},
-    );
+    expect(getMock).toHaveBeenCalledWith("/capabilities-lab/v1/capabilities/capability-a", {});
   });
 });

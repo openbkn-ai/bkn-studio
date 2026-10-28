@@ -13,15 +13,13 @@ import type { TFunction } from "i18next";
 
 import { formatCapabilityStatusLabel } from "@/modules/execution-factory-lab/utils/capability-status";
 
-export type LabDestructiveAction =
-  "delete" | "offline" | "republish" | "skillReplace" | "disableOrchestration";
+export type LabDestructiveAction = "delete" | "offline" | "republish" | "skillReplace";
 
 export type LabDestructiveConfirmContext = {
   name: string;
   kind: string;
   status: string;
   version?: string;
-  orchestrationEnabled?: boolean;
   targetVersion?: string;
 };
 
@@ -64,16 +62,8 @@ function buildImpactLines(
         lines.push(t("executionFactoryLab.destructiveSkillReplaceImpactPublished"));
       }
       break;
-    case "disableOrchestration":
-      lines.push(t("executionFactoryLab.destructiveDisableOrchestrationImpact"));
-      lines.push(t("executionFactoryLab.destructiveDisableOrchestrationRecoverable"));
-      break;
     default:
       break;
-  }
-
-  if (context.orchestrationEnabled) {
-    lines.push(t("executionFactoryLab.destructiveImpactOrchestration"));
   }
 
   return lines;

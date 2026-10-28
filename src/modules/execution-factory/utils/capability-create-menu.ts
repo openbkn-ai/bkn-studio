@@ -20,8 +20,6 @@ export function capabilityModePermission(mode: CapabilityUxMode, initialBoxId?: 
       return "execution-factory:mcp:create";
     case "skill":
       return "execution-factory:skill:create";
-    case "advanced-operator":
-      return "execution-factory:operator:create";
   }
 }
 
@@ -73,7 +71,7 @@ export function getCapabilityCreateMenuItems(): CapabilityCreateMenuItem[] {
 }
 
 export function resolveCapabilityAdpImportTab(activeTab: ExecutionUnitTab): ExecutionUnitTab {
-  if (activeTab === "operator" || activeTab === "toolbox" || activeTab === "mcp") {
+  if (activeTab === "toolbox" || activeTab === "mcp") {
     return activeTab;
   }
 

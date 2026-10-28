@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type ExecutionUnitTab = "mcp" | "toolbox" | "operator" | "skill";
+export type ExecutionUnitTab = "mcp" | "toolbox" | "skill";
 
 export type ExecutionUnitCardItem = {
   id: string;

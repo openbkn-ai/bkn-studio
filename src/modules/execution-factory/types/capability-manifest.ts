@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type CapabilitySourceType = "tool" | "mcp" | "skill" | "operator";
+export type CapabilitySourceType = "tool" | "mcp" | "skill";
 
 export type CapabilitySideEffect = "none" | "read" | "write" | "external_action" | "unknown";
 

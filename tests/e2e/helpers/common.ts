@@ -21,7 +21,7 @@ export function defaultApiHeaders() {
 }
 
 export async function assertBackendReady(request: APIRequestContext) {
-  const response = await request.get(`${API_PREFIX}/operator/info/list?page=1&page_size=1`, {
+  const response = await request.get(`${API_PREFIX}/tool-box/list?page=1&page_size=1`, {
     headers: defaultApiHeaders(),
   });
 
@@ -47,4 +47,54 @@ export async function expectOk(
   if (!response.ok()) {
     throw new Error(`${label} failed (${response.status()}): ${await response.text()}`);
   }
+}
+
+export function buildMinimalOpenApiSpec(specName: string) {
+  return {
+    openapi: "3.0.3",
+    info: {
+      title: specName,
+      description: "Execution factory E2E OpenAPI spec",
+      version: "1.0.0",
+    },
+    servers: [{ url: "http://127.0.0.1:9000", description: "local" }],
+    paths: {
+      "/execute": {
+        post: {
+          summary: specName,
+          description: "E2E execute endpoint",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["input"],
+                  properties: {
+                    input: { type: "string", description: "Input text" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: { type: "object" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+export function buildFunctionHandlerCode() {
+  return ["def handler(event):", "    x = event.get('x', 0)", "    return {'result': x + 1}"].join(
+    "\n",
+  );
 }

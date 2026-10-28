@@ -118,10 +118,6 @@ vi.mock("@/modules/execution-factory/components/CapabilityCategoryFields", () =>
   CapabilityCategoryFields: () => null,
 }));
 
-vi.mock("@/modules/execution-factory/components/OperatorSyncPublishFields", () => ({
-  OperatorSyncPublishFields: () => null,
-}));
-
 vi.mock("@/modules/execution-factory/components/OpenApiSpecInput", () => ({
   OpenApiSpecInput: ({
     onChange,

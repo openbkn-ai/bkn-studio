@@ -15,7 +15,6 @@ import {
   getDefaultCapabilityModeForTab,
   getDefaultManagementTab,
   getManagementTabs,
-  resolveVisibleManagementTabs,
   shouldSkipCapabilityModeStep,
 } from "@/modules/execution-factory/utils/capability-ux";
 
@@ -25,14 +24,6 @@ describe("capability-ux", () => {
     expect(getManagementTabs()).toEqual(CAPABILITY_UX_PRIMARY_TABS);
   });
 
-  it("temporarily exposes operator tab while advanced view is active", () => {
-    expect(resolveVisibleManagementTabs("toolbox")).toEqual(CAPABILITY_UX_PRIMARY_TABS);
-    expect(resolveVisibleManagementTabs("operator")).toEqual([
-      ...CAPABILITY_UX_PRIMARY_TABS,
-      "operator",
-    ]);
-  });
-
   it("scopes wizard modes by active tab", () => {
     expect(getCapabilityModesForTab("mcp")).toEqual(["mcp"]);
     expect(getCapabilityModesForTab("skill")).toEqual(["skill"]);
@@ -40,7 +31,7 @@ describe("capability-ux", () => {
     expect(getDefaultCapabilityModeForTab("mcp")).toBe("mcp");
     expect(shouldSkipCapabilityModeStep("mcp")).toBe(true);
     expect(shouldSkipCapabilityModeStep("toolbox")).toBe(true);
-    expect(shouldSkipCapabilityModeStep("operator")).toBe(false);
+    expect(shouldSkipCapabilityModeStep()).toBe(false);
     expect(canReturnToModeStep(["mcp"])).toBe(false);
     expect(canReturnToModeStep(TOOLBOX_CAPABILITY_MODES)).toBe(true);
   });

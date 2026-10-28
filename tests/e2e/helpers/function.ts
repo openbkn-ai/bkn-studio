@@ -7,8 +7,7 @@
 
 import type { APIRequestContext } from "@playwright/test";
 
-import { API_PREFIX, defaultApiHeaders, expectOk } from "./common";
-import { buildFunctionHandlerCode } from "./operator";
+import { API_PREFIX, buildFunctionHandlerCode, defaultApiHeaders, expectOk } from "./common";
 
 export async function executeFunctionViaApi(
   request: APIRequestContext,

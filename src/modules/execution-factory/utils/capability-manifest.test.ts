@@ -8,12 +8,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { McpProxyTool } from "@/modules/execution-factory/types/mcp";
-import type { OperatorDetail } from "@/modules/execution-factory/types/operator";
 import type { SkillRecord } from "@/modules/execution-factory/types/skill";
 import type { ToolDetail } from "@/modules/execution-factory/types/tool";
 import {
   buildMcpToolCapabilityManifest,
-  buildOperatorCapabilityManifest,
   buildSkillCapabilityManifest,
   buildToolCapabilityManifest,
   getCapabilityReadiness,
@@ -150,36 +148,6 @@ describe("capability-manifest", () => {
       agentVisibility: "discoverable",
       agentInvokePolicy: "approval_required",
     });
-  });
-
-  it("maps an Operator detail into a manifest shell with runtime constraints", () => {
-    const operator: OperatorDetail = {
-      operatorId: "op-sync",
-      name: "Sync orders",
-      version: "v3",
-      status: "published",
-      description: "Synchronize orders from ERP.",
-      metadataType: "function",
-      category: "data_process",
-      executeControl: {
-        timeout: 5000,
-        retryPolicy: { maxAttempts: 3 },
-      },
-    };
-
-    const manifest = buildOperatorCapabilityManifest(operator);
-
-    expect(manifest).toMatchObject({
-      id: "operator:op-sync:v3",
-      sourceType: "operator",
-      sourceId: "op-sync",
-      title: "Sync orders",
-      sideEffects: "write",
-      riskLevel: "high",
-      agentInvokePolicy: "approval_required",
-    });
-    expect(manifest.authRequirements).toContain("timeout: 5000ms");
-    expect(manifest.authRequirements).toContain("max retry attempts: 3");
   });
 
   it("reports no IO facts when the backend only returned an empty api_spec shell", () => {

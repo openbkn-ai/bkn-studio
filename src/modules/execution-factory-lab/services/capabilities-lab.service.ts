@@ -16,7 +16,6 @@ import type {
   DebugCapabilityInput,
   DebugCapabilityResult,
   ImportOpenApiInput,
-  OrchestrationDetail,
   RegisterMcpCapabilityInput,
   RegisterSkillCapabilityInput,
   CreateFunctionCapabilityInput,
@@ -32,7 +31,6 @@ import type {
   McpToolEntry,
   VersionEntry,
   FunctionParameterDef,
-  OrchestrationRuntimeConfig,
   CapabilityAudit,
 } from "@/modules/execution-factory-lab/types/capability";
 import type {
@@ -62,12 +60,6 @@ type BackendCapability = {
     status?: string;
   };
   endpoint?: { method?: string; path?: string };
-  orchestration?: {
-    enabled?: boolean;
-    operator_id?: string;
-    operator_name?: string;
-    audit?: BackendAudit;
-  };
   audit?: BackendAudit;
   update_time?: number;
   tool_id?: string;
@@ -128,14 +120,6 @@ function mapCapability(item: BackendCapability): CapabilityRecord {
         }
       : undefined,
     endpoint: item.endpoint,
-    orchestration: item.orchestration
-      ? {
-          enabled: Boolean(item.orchestration.enabled),
-          operatorId: item.orchestration.operator_id,
-          operatorName: item.orchestration.operator_name,
-          audit: mapAudit(item.orchestration.audit),
-        }
-      : undefined,
     audit: mapAudit(item.audit),
     updateTime: item.update_time,
     toolId: item.tool_id,
@@ -205,7 +189,6 @@ export async function createHttpCapability(
       service_url: input.serviceUrl,
       name: input.name,
       description: input.description,
-      orchestration_enabled: input.orchestrationEnabled ?? false,
       group: { mode: "auto" },
     },
     { skipErrorToast: true },
@@ -228,7 +211,6 @@ export async function importOpenApiCapabilities(input: ImportOpenApiInput) {
       openapi_spec: input.openapiSpec,
       service_url: input.serviceUrl,
       description: input.description,
-      orchestration_enabled: input.orchestrationEnabled ?? false,
       group: { mode: "auto" },
     },
     { skipErrorToast: true },
@@ -294,115 +276,6 @@ export async function publishCapability(capabilityId: string, status = "publishe
     { status },
     {},
   );
-}
-
-function serializeOrchestrationRuntimeConfig(config?: OrchestrationRuntimeConfig) {
-  if (!config) {
-    return {};
-  }
-
-  return {
-    operator_execute_control: {
-      timeout: config.timeoutMs,
-      retry_policy: {
-        max_attempts: config.retryPolicy.maxAttempts,
-        initial_delay: config.retryPolicy.initialDelayMs,
-        max_delay: config.retryPolicy.maxDelayMs,
-        backoff_factor: config.retryPolicy.backoffFactor,
-        retry_conditions: {
-          status_code: config.retryPolicy.retryStatusCodes,
-          error_codes: config.retryPolicy.retryErrorCodes,
-        },
-      },
-    },
-  };
-}
-
-export async function enableOrchestration(
-  capabilityId: string,
-  config?: OrchestrationRuntimeConfig,
-): Promise<OrchestrationDetail> {
-  const response = await http.post<{
-    operator_id?: string;
-    operator_name?: string;
-    audit?: BackendAudit;
-  }>(
-    `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration/enable`,
-    serializeOrchestrationRuntimeConfig(config),
-    { skipErrorToast: true },
-  );
-
-  return {
-    enabled: true,
-    operatorId: response.data.operator_id,
-    operatorName: response.data.operator_name,
-    audit: mapAudit(response.data.audit),
-  };
-}
-
-export async function updateOrchestrationConfig(
-  capabilityId: string,
-  config: OrchestrationRuntimeConfig,
-): Promise<OrchestrationDetail> {
-  const response = await http.post<{
-    enabled?: boolean;
-    operator_id?: string;
-    operator_name?: string;
-    tool_id?: string;
-    box_id?: string;
-    audit?: BackendAudit;
-  }>(
-    `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration/config`,
-    serializeOrchestrationRuntimeConfig(config),
-    { skipErrorToast: true },
-  );
-
-  return {
-    enabled: Boolean(response.data.enabled),
-    operatorId: response.data.operator_id,
-    operatorName: response.data.operator_name,
-    toolId: response.data.tool_id,
-    boxId: response.data.box_id,
-    audit: mapAudit(response.data.audit),
-  };
-}
-
-export async function disableOrchestration(capabilityId: string): Promise<OrchestrationDetail> {
-  const response = await http.post<{
-    enabled?: boolean;
-    operator_id?: string;
-    operator_name?: string;
-  }>(
-    `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration/disable`,
-    {},
-    { skipErrorToast: true },
-  );
-
-  return {
-    enabled: Boolean(response.data.enabled),
-    operatorId: response.data.operator_id,
-    operatorName: response.data.operator_name,
-  };
-}
-
-export async function getOrchestrationDetail(capabilityId: string): Promise<OrchestrationDetail> {
-  const response = await http.get<{
-    enabled?: boolean;
-    operator_id?: string;
-    operator_name?: string;
-    tool_id?: string;
-    box_id?: string;
-    audit?: BackendAudit;
-  }>(`${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration`, {});
-
-  return {
-    enabled: Boolean(response.data.enabled),
-    operatorId: response.data.operator_id,
-    operatorName: response.data.operator_name,
-    toolId: response.data.tool_id,
-    boxId: response.data.box_id,
-    audit: mapAudit(response.data.audit),
-  };
 }
 
 export async function listGroups(query?: { keyword?: string; page?: number; pageSize?: number }) {

@@ -15,10 +15,8 @@ tests/execution-factory/
 |-- PARITY_CHECKLIST.md     # UI parity matrix vs operator-web (issue-style)
 |-- SOURCES.md              # where each suite came from
 |-- agent-at/               # mirror of foundry Agent AT (may drift)
-|-- operator-web-ui/        # DIP operator-web Jest snapshots (reference)
 |-- http/                   # operator-integration REST .http files
 |-- fixtures/               # JSON/YAML payloads
-|-- tool/                   # Python operator_client.py CLI
 `-- (vitest in src/modules/execution-factory/services/*.test.ts)
 ```
 
@@ -45,18 +43,9 @@ HTTP files also live at `operator-integration/server/tests/http/` in foundry.
 
 1. Start `agent-operator-integration` (e.g. `http://127.0.0.1:9000`)
 2. Edit `http/env.http` with a Bearer token
-3. Run requests in `operator.http`, `toolbox.http`, `mcp.http`, `skill.http`, `function-ai.http`
+3. Run requests in `toolbox.http`, `mcp.http`, `skill.http`, `function-ai.http`
 
-## 4. Python operator CLI
-
-```bash
-cd tests/execution-factory/tool
-pip install requests pyyaml
-copy config.local.yaml.example config.local.yaml
-python operator_client.py --config=config.local.yaml list
-```
-
-## 5. Full Agent AT (OpenBKN platform)
+## 4. Full Agent AT (OpenBKN platform)
 
 Run from **foundry** canonical path:
 
@@ -64,19 +53,19 @@ Run from **foundry** canonical path:
 cd bkn-foundry/bkn-foundry/adp/execution-factory/tests
 pip install -r requirements/requirements.txt
 copy config\env.openbkn.example.ini config\env.ini
-py -m pytest testcases/data-operator-hub/api/operator/test_get_operator_category.py -q
+py -m pytest testcases/data-operator-hub/api/tool -q
 ```
 
 Requires Hydra auth + MySQL + `eisoo` package. See `agent-at/LOCAL_SETUP.md` in this mirror.
 
-## 6. DIP operator-web Jest (run in original repo)
+## 5. DIP operator-web Jest (run in original repo)
 
 ```bash
 cd e:/00_code_workspace/openbkn/web/apps/operator-web
 yarn test
 ```
 
-## 7. UI manual check
+## 6. UI manual check
 
 ```bash
 corepack pnpm dev
@@ -84,7 +73,7 @@ corepack pnpm dev
 
 Routes: `/execution-factory/units`, `/catalog`, `/mcp`, `/skills`, `/skills/:id/edit`.
 
-## 8. Operator UI E2E AT (Playwright)
+## 7. UI E2E AT (Playwright)
 
 Requires local stack: `ef-studio` (:5173) + `agent-operator-integration` (:9000), with `VITE_USE_MOCK=false`.
 
@@ -92,7 +81,7 @@ Requires local stack: `ef-studio` (:5173) + `agent-operator-integration` (:9000)
 cd tests/e2e
 npm install
 npm run install:browsers
-npm run test:operator
+npm run test:ui
 ```
 
 From repo root:

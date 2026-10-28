@@ -12,16 +12,14 @@ import { I18nextProvider } from "react-i18next";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { CapabilityCategoryFields } from "./CapabilityCategoryFields";
-import { OperatorSyncPublishFields } from "./OperatorSyncPublishFields";
 import { CreateMcpDrawer } from "./create-menu/CreateMcpDrawer";
-import { ImportResourceModal } from "./create-menu/ImportResourceModal";
 import { ExecutionUnitCard } from "./execution-unit/ExecutionUnitCard";
 import { executionFactoryEnUS } from "../locales/en-US";
 import { executionFactoryZhCN } from "../locales/zh-CN";
 import { resolveToolboxCategoryLabel } from "../utils/detail-display";
 
 vi.mock("@/modules/execution-factory/services/category.service", () => ({
-  listOperatorCategories: vi.fn().mockResolvedValue([
+  listCategories: vi.fn().mockResolvedValue([
     { categoryType: "data_process", name: "数据处理" },
     { categoryType: "data_split", name: "数据分割" },
     { categoryType: "custom_team", name: "团队自定义" },
@@ -125,44 +123,33 @@ describe("predefined capability category labels (#886)", () => {
     );
   });
 
-  it.each(["mcp", "import", "sync"])(
-    "localizes the %s form without resetting its category on locale changes",
-    async (kind) => {
-      const i18n = await createI18n("en-US");
-      const onClose = vi.fn();
-      render(
-        <I18nextProvider i18n={i18n}>
-          {kind === "mcp" ? (
-            <CreateMcpDrawer embedded open onClose={onClose} />
-          ) : kind === "import" ? (
-            <ImportResourceModal activeTab="operator" open onClose={onClose} />
-          ) : (
-            <Form initialValues={{ operatorSync: { enabled: true, category: "data_process" } }}>
-              <OperatorSyncPublishFields />
-            </Form>
-          )}
-        </I18nextProvider>,
-      );
-      const category = await screen.findByRole("combobox", {
-        name: i18n.t("executionFactory.category"),
-      });
-      const select = category.closest(".ant-select");
-      await waitFor(() =>
-        expect(select?.querySelector(".ant-select-selection-item")).toHaveTextContent(
-          "Data Processing",
-        ),
-      );
-      fireEvent.mouseDown(category);
-      fireEvent.click(await screen.findByText("Data Splitting"));
-      await act(() => i18n.changeLanguage("zh-CN"));
-      await waitFor(() =>
-        expect(select?.querySelector(".ant-select-selection-item")).toHaveTextContent("数据拆分"),
-      );
-      fireEvent.mouseDown(category);
-      expect(await screen.findByText("团队自定义")).toBeInTheDocument();
-      expect(screen.queryByText("数据分割")).toBeNull();
-    },
-  );
+  it("localizes the MCP form without resetting its category on locale changes", async () => {
+    const i18n = await createI18n("en-US");
+    const onClose = vi.fn();
+    render(
+      <I18nextProvider i18n={i18n}>
+        <CreateMcpDrawer embedded open onClose={onClose} />
+      </I18nextProvider>,
+    );
+    const category = await screen.findByRole("combobox", {
+      name: i18n.t("executionFactory.category"),
+    });
+    const select = category.closest(".ant-select");
+    await waitFor(() =>
+      expect(select?.querySelector(".ant-select-selection-item")).toHaveTextContent(
+        "Data Processing",
+      ),
+    );
+    fireEvent.mouseDown(category);
+    fireEvent.click(await screen.findByText("Data Splitting"));
+    await act(() => i18n.changeLanguage("zh-CN"));
+    await waitFor(() =>
+      expect(select?.querySelector(".ant-select-selection-item")).toHaveTextContent("数据拆分"),
+    );
+    fireEvent.mouseDown(category);
+    expect(await screen.findByText("团队自定义")).toBeInTheDocument();
+    expect(screen.queryByText("数据分割")).toBeNull();
+  });
 
   it("preserves toolbox-specific labels, custom names and missing-value fallbacks", async () => {
     const i18n = await createI18n("en-US");

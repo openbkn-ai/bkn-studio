@@ -30,7 +30,6 @@ import {
 } from "@/modules/execution-factory/components/CapabilityBusinessIntro";
 import { CapabilityCategoryFields } from "@/modules/execution-factory/components/CapabilityCategoryFields";
 import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
-import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
 
 import { QuickApiContractEditor } from "./QuickApiContractEditor";
 import styles from "./create-menu.module.css";
@@ -43,7 +42,6 @@ export type QuickAddApiFormValues = QuickApiContractFormValues & {
   toolboxName?: string;
   toolboxDescription?: string;
   category?: string;
-  operatorSync?: OperatorSyncPublishInput;
 };
 
 type QuickAddApiFormProps = {

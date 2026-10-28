@@ -67,7 +67,7 @@ vi.mock("@/modules/model-resources/services/llm.service", () => ({
   listLlmModels: access.listLlmModels,
 }));
 vi.mock("@/modules/execution-factory/services/category.service", () => ({
-  listOperatorCategories: vi.fn().mockResolvedValue([]),
+  listCategories: vi.fn().mockResolvedValue([]),
 }));
 vi.mock("@/modules/execution-factory/services/function.service", () => ({
   executeFunction: vi.fn(),

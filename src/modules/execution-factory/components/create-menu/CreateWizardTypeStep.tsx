@@ -5,12 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  ApiOutlined,
-  DeploymentUnitOutlined,
-  ThunderboltOutlined,
-  ToolOutlined,
-} from "@ant-design/icons";
+import { ApiOutlined, ThunderboltOutlined, ToolOutlined } from "@ant-design/icons";
 import { Radio } from "antd";
 import { useTranslation } from "react-i18next";
 
@@ -30,7 +25,6 @@ const TAB_OPTIONS: Array<{
 }> = [
   { key: "mcp", icon: ApiOutlined },
   { key: "toolbox", icon: ToolOutlined },
-  { key: "operator", icon: DeploymentUnitOutlined },
   { key: "skill", icon: ThunderboltOutlined },
 ];
 

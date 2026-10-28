@@ -241,7 +241,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         optional: true,
         path: "/execution-factory/units",
         permissionMode: "any",
-        permissions: ["execution-factory:operator:view", "execution-factory:toolbox:view"],
+        permissions: ["execution-factory:function:view", "execution-factory:toolbox:view"],
         summaryKey: "home.platform.stages.model.required.metricExecutionTool.summary",
         titleKey: "home.platform.stages.model.required.metricExecutionTool.title",
       },

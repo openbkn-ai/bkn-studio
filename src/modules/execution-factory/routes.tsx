@@ -28,11 +28,6 @@ const CatalogListPage = lazy(async () => {
   return { default: module.CatalogListPage };
 });
 
-const UnitFormPage = lazy(async () => {
-  const module = await import("@/modules/execution-factory/pages/UnitFormPage");
-  return { default: module.UnitFormPage };
-});
-
 const ToolboxFormPage = lazy(async () => {
   const module = await import("@/modules/execution-factory/pages/ToolboxFormPage");
   return { default: module.ToolboxFormPage };
@@ -91,30 +86,6 @@ export const executionFactoryRoutes: RouteObject[] = [
       },
     },
     element: withPublicRouteLoading(<UnitManagementListPage />),
-  },
-  {
-    path: "execution-factory/units/new",
-    handle: {
-      console: {
-        descriptionKey: "executionFactory.createDescription",
-        menuKey: "execution-unit-management",
-        titleKey: "executionFactory.createTitle",
-      },
-    },
-    element: withRouteLoading(<UnitFormPage mode="create" />, [
-      "execution-factory:operator:create",
-    ]),
-  },
-  {
-    path: "execution-factory/units/:operatorId/edit",
-    handle: {
-      console: {
-        descriptionKey: "executionFactory.editDescription",
-        menuKey: "execution-unit-management",
-        titleKey: "executionFactory.editTitle",
-      },
-    },
-    element: withRouteLoading(<UnitFormPage mode="edit" />, ["execution-factory:operator:edit"]),
   },
   {
     path: "execution-factory/toolboxes/new",

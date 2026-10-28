@@ -15,7 +15,7 @@ type OpenApiDefinitionFieldsProps = {
   specNamePath?: string | (string | number)[];
   nameNamePath?: (string | number)[];
   descriptionNamePath?: (string | number)[];
-  registrationTarget?: "operator" | "toolbox" | "default";
+  registrationTarget?: "toolbox" | "default";
   required?: boolean;
   rows?: number;
   showEndpointReview?: boolean;
@@ -24,7 +24,7 @@ type OpenApiDefinitionFieldsProps = {
 /**
  * Composable OpenAPI editing fields, mirroring FunctionDefinitionFields: no own
  * Form instance, wires into the host form via Form.useFormInstance() + namePath,
- * so operator / tool-create / tool-edit hosts render one identical fragment.
+ * so tool-create / tool-edit hosts render one identical fragment.
  */
 export function OpenApiDefinitionFields({
   specNamePath = "openapiSpec",

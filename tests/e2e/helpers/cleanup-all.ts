@@ -12,7 +12,6 @@ import { API_PREFIX, defaultApiHeaders } from "./common";
 const TEST_NAME_PATTERNS = [/^at_e2e_/i, /^e2e_/i, /^demo_/i, /^quick_api_/i];
 
 export type CleanupSummary = {
-  operators: number;
   toolboxes: number;
   mcps: number;
   skills: number;
@@ -60,7 +59,6 @@ export async function cleanupAllE2eAssets(
 ): Promise<CleanupSummary> {
   const dryRun = options?.dryRun ?? false;
   const summary: CleanupSummary = {
-    operators: 0,
     toolboxes: 0,
     mcps: 0,
     skills: 0,
@@ -109,23 +107,6 @@ export async function cleanupAllE2eAssets(
     });
   };
 
-  const operators = await listAllPages(
-    (page) => `${API_PREFIX}/operator/info/list?page=${page}&page_size=100`,
-    (body) =>
-      ((body.data as Array<{ operator_id: string; version: string; name?: string }>) ?? []).filter(
-        (item) => isTestAssetName(item.name),
-      ),
-  );
-  for (const operator of operators) {
-    summary.operators += 1;
-    await post(`${API_PREFIX}/operator/status`, [
-      { operator_id: operator.operator_id, version: operator.version, status: "offline" },
-    ]);
-    await del(`${API_PREFIX}/operator/delete`, [
-      { operator_id: operator.operator_id, version: operator.version },
-    ]);
-  }
-
   const toolboxes = await listAllPages(
     (page) => `${API_PREFIX}/tool-box/list?page=${page}&page_size=100`,
     (body) =>
@@ -170,7 +151,7 @@ export async function cleanupAllE2eAssets(
 }
 
 export async function assertBackendReadyForCleanup(request?: APIRequestContext) {
-  const url = `${API_PREFIX}/operator/info/list?page=1&page_size=1`;
+  const url = `${API_PREFIX}/tool-box/list?page=1&page_size=1`;
   if (request) {
     const response = await request.get(url, { headers: defaultApiHeaders() });
     if (!response.ok()) {

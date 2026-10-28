@@ -13,10 +13,7 @@ import { useTranslation } from "react-i18next";
 
 import { OpenApiOperationsIoPreview } from "@/modules/execution-factory/components/OpenApiOperationsIoPreview";
 import { OpenApiEndpointReview } from "@/modules/execution-factory/components/OpenApiEndpointReview";
-import {
-  buildOpenApiOperatorTemplate,
-  buildOpenApiToolboxTemplate,
-} from "@/modules/execution-factory/constants/import-templates";
+import { buildOpenApiToolboxTemplate } from "@/modules/execution-factory/constants/import-templates";
 import {
   analyzeOpenApiDocumentText,
   extractOpenApiMetadataHints,
@@ -31,7 +28,7 @@ import styles from "./OpenApiSpecInput.module.css";
 type OpenApiSpecInputProps = {
   onMetadataHints?: (hints: { title?: string; description?: string }) => void;
   onValidationChange?: (valid: boolean) => void;
-  registrationTarget?: "operator" | "toolbox" | "default";
+  registrationTarget?: "toolbox" | "default";
   rows?: number;
   showEndpointReview?: boolean;
   value?: string;
@@ -113,35 +110,17 @@ export function OpenApiSpecInput({
   };
 
   const handleDownloadTemplate = () => {
-    const template =
-      registrationTarget === "toolbox"
-        ? buildOpenApiToolboxTemplate(t)
-        : buildOpenApiOperatorTemplate(t);
-    const filename =
-      registrationTarget === "toolbox"
-        ? "toolbox-openapi-template.yaml"
-        : "operator-openapi-template.yaml";
-    const blob = new Blob([template], { type: "text/yaml" });
-    triggerBrowserDownload(blob, filename);
+    const blob = new Blob([buildOpenApiToolboxTemplate(t)], { type: "text/yaml" });
+    triggerBrowserDownload(blob, "toolbox-openapi-template.yaml");
   };
-
-  const showMultiOperationWarning =
-    registrationTarget === "operator" &&
-    analysis.ok &&
-    validation.ok &&
-    analysis.operationCount > 1;
 
   const showOpenApi31Hint = analysis.ok && analysis.openApiVersion.startsWith("3.1");
 
   return (
     <div className={styles.root}>
-      {registrationTarget === "operator" || registrationTarget === "toolbox" ? (
+      {registrationTarget === "toolbox" ? (
         <div className={styles.toolbar}>
-          <span className={styles.toolbarHint}>
-            {registrationTarget === "operator"
-              ? t("executionFactory.openapiOperatorHint")
-              : t("executionFactory.openapiToolboxHint")}
-          </span>
+          <span className={styles.toolbarHint}>{t("executionFactory.openapiToolboxHint")}</span>
           <button className={styles.templateButton} onClick={handleDownloadTemplate} type="button">
             {t("executionFactory.downloadImportTemplate")}
           </button>
@@ -235,16 +214,6 @@ export function OpenApiSpecInput({
             {showEndpointReview ? <OpenApiEndpointReview openapiSpec={value} /> : null}
           </div>
         </>
-      ) : null}
-      {showMultiOperationWarning ? (
-        <Alert
-          message={t("executionFactory.openapiMultiOperationWarning", {
-            count: analysis.operationCount,
-          })}
-          showIcon
-          style={{ marginTop: 8 }}
-          type="warning"
-        />
       ) : null}
       {showOpenApi31Hint ? (
         <Alert

@@ -102,8 +102,8 @@ describe("isStudioPermissionGranted", () => {
     expect(isStudioPermissionGranted("execution-factory-lab:capability:view", grants, false)).toBe(
       true,
     );
-    expect(isStudioPermissionGranted("execution-factory:operator:edit", grants, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory:operator:debug", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory:function:edit", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory:function:debug", grants, false)).toBe(true);
   });
 
   it("能力列表接受任一执行单元的查看权限", () => {
@@ -124,15 +124,8 @@ describe("isStudioPermissionGranted", () => {
     );
   });
 
-  it("函数集页面不再把独立的 operator 资源授权当作 function 授权", () => {
-    const legacyOperatorGrants = flattenSafeGrants([
-      { operations: ["view", "create", "execute"], resource: { id: "*", type: "operator" } },
-    ]);
-
-    expect(
-      isStudioPermissionGranted("execution-factory:operator:view", legacyOperatorGrants, false),
-    ).toBe(false);
-    expect(isStudioPermissionGranted("execution-factory:operator:view", grants, false)).toBe(true);
+  it("已下线的 operator 权限点不再映射到任何资源类型", () => {
+    expect(isStudioPermissionGranted("execution-factory:operator:view", grants, false)).toBe(false);
   });
 
   it("函数集授权不连带 API 工具集", () => {
@@ -231,7 +224,7 @@ describe("isStudioPermissionGranted", () => {
 
   it("无法解析的权限点 fail-closed", () => {
     expect(isStudioPermissionGranted("execution-factory:unknown:view", grants, false)).toBe(false);
-    expect(isStudioPermissionGranted("execution-factory:operator:teleport", grants, false)).toBe(
+    expect(isStudioPermissionGranted("execution-factory:function:teleport", grants, false)).toBe(
       false,
     );
     expect(isStudioPermissionGranted("garbage", grants, false)).toBe(false);
@@ -309,12 +302,12 @@ describe("折叠通配契约", () => {
     ]);
 
     expect(
-      isStudioPermissionGranted("execution-factory:operator:create", typeWildcard, false),
+      isStudioPermissionGranted("execution-factory:function:create", typeWildcard, false),
     ).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory:operator:edit", typeWildcard, false)).toBe(
+    expect(isStudioPermissionGranted("execution-factory:function:edit", typeWildcard, false)).toBe(
       true,
     );
-    expect(isStudioPermissionGranted("execution-factory:operator:debug", typeWildcard, false)).toBe(
+    expect(isStudioPermissionGranted("execution-factory:function:debug", typeWildcard, false)).toBe(
       true,
     );
     // Other resource types remain unaffected.
@@ -329,7 +322,7 @@ describe("折叠通配契约", () => {
     ]);
 
     expect(
-      isStudioPermissionGranted("execution-factory:operator:create", globalWildcard, false),
+      isStudioPermissionGranted("execution-factory:function:create", globalWildcard, false),
     ).toBe(true);
     expect(isStudioPermissionGranted("execution-factory:tool:edit", globalWildcard, false)).toBe(
       true,

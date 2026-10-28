@@ -18,12 +18,6 @@ function writeLog(payload) {
 
 const scenarios = [
   {
-    tabKey: "operator",
-    url: `${BASE}?activeTab=operator`,
-    buttonPattern: /新建算子|New Operator/i,
-    overlay: ".ant-modal",
-  },
-  {
     tabKey: "toolbox",
     url: `${BASE}?activeTab=toolbox`,
     buttonPattern: /新建工具箱|New Toolbox/i,

@@ -51,8 +51,6 @@ export const systemAdminEnUS = {
     },
     resourceCatalog: {
       descriptions: {
-        operator:
-          "Legacy operator grant. Operators are retired and not offered for new grants. Function set creation, AI generation, and temporary code execution are governed by Function set grants.",
         tool_box:
           "Controls API toolsets only. Create adds a set; Modify changes its APIs; Execute runs them.",
         function:
@@ -309,19 +307,6 @@ export const systemAdminEnUS = {
           public_access: "Configure public access to the MCP server.",
           execute: "Execute or invoke the MCP server.",
         },
-        operator: {
-          create: "Create an operator.",
-          modify: "Modify the operator configuration. Also requires the operator view permission.",
-          delete: "Delete the operator. Also requires the operator view permission.",
-          view: "View the operator.",
-          publish:
-            "Publish the operator so other users can use it. Also requires the operator view permission.",
-          unpublish: "Unpublish the operator. Also requires the operator view permission.",
-          authorize:
-            "Configure access permissions for the operator. Also requires the operator view permission.",
-          public_access: "Configure public access to the operator.",
-          execute: "Execute or invoke the operator.",
-        },
         skill: {
           create: "Create a skill.",
           modify: "Modify the skill configuration. Also requires the skill view permission.",
@@ -419,7 +404,6 @@ export const systemAdminEnUS = {
         mcp: "MCP service",
         metric: "Metric",
         object_type: "Object type",
-        operator: "Operator",
         relation_type: "Relation type",
         resource: "Data resource",
         risk_type: "Risk type",

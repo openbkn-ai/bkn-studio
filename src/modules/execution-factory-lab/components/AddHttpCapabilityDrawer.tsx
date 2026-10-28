@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Drawer, Form, Input, Switch } from "antd";
+import { Alert, Drawer, Form, Input } from "antd";
 
 import { useMemo, useState } from "react";
 
@@ -29,7 +29,6 @@ type FormValues = {
   curlText: string;
   summary: string;
   description?: string;
-  orchestrationEnabled?: boolean;
 };
 
 export function AddHttpCapabilityDrawer({
@@ -71,7 +70,6 @@ export function AddHttpCapabilityDrawer({
         serviceUrl: parseResult.value.serverUrl,
         name: values.summary || parseResult.value.summary,
         description: values.description,
-        orchestrationEnabled: values.orchestrationEnabled,
       });
 
       onCreated?.(capability);
@@ -127,17 +125,6 @@ export function AddHttpCapabilityDrawer({
         <Form.Item label={t("executionFactoryLab.descriptionLabel")} name="description">
           <Input.TextArea autoSize={{ minRows: 2, maxRows: 5 }} />
         </Form.Item>
-
-        <Form.Item
-          label={t("executionFactoryLab.orchestrationSwitch")}
-          name="orchestrationEnabled"
-          valuePropName="checked"
-        >
-          <Switch />
-        </Form.Item>
-        <p style={{ color: "var(--color-text-tertiary)", marginTop: -8 }}>
-          {t("executionFactoryLab.orchestrationHint")}
-        </p>
       </Form>
     </Drawer>
   );

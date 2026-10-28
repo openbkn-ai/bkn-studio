@@ -125,7 +125,7 @@ export function McpListScene() {
       render: (_, record) => (
         <div className={styles.nameCell}>
           <div className={styles.nameTitle}>{record.name}</div>
-          <span className={styles.operatorIdText}>{record.mcpId}</span>
+          <span className={styles.idText}>{record.mcpId}</span>
         </div>
       ),
     },

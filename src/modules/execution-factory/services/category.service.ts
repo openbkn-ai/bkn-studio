@@ -8,7 +8,7 @@
 import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
 
-export type OperatorCategoryOption = {
+export type CategoryOption = {
   categoryType: string;
   name: string;
 };
@@ -20,22 +20,22 @@ type BackendCategoryItem = {
 
 const API_PREFIX = "/agent-operator-integration/v1";
 
-function getFallbackCategories(): OperatorCategoryOption[] {
+function getFallbackCategories(): CategoryOption[] {
   return [
     {
       categoryType: "other_category",
-      name: i18n.t("executionFactory.operatorCategories.other_category"),
+      name: i18n.t("executionFactory.categoryLabels.other_category"),
     },
     {
       categoryType: "system",
-      name: i18n.t("executionFactory.operatorCategories.system"),
+      name: i18n.t("executionFactory.categoryLabels.system"),
     },
   ];
 }
 
-export async function listOperatorCategories(): Promise<OperatorCategoryOption[]> {
+export async function listCategories(): Promise<CategoryOption[]> {
   try {
-    const response = await http.get<BackendCategoryItem[]>(`${API_PREFIX}/operator/category`, {});
+    const response = await http.get<BackendCategoryItem[]>(`${API_PREFIX}/category`, {});
 
     const items = response.data ?? [];
 

@@ -23,7 +23,7 @@ export type StatusChangeOkTextKey =
 export type ToolStatusOkTextKey = "executionFactory.enable" | "executionFactory.disable";
 
 /**
- * Label for publishing or unpublishing an operator, toolbox, MCP, or SKILL. A target status that
+ * Label for publishing or unpublishing a toolbox, MCP, or SKILL. A target status that
  * maps to no single action falls back to a generic Confirm.
  */
 export function resolveStatusChangeOkTextKey(status: string): StatusChangeOkTextKey {

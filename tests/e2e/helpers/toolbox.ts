@@ -7,8 +7,13 @@
 
 import type { APIRequestContext } from "@playwright/test";
 
-import { API_PREFIX, buildUniqueName, defaultApiHeaders, expectOk } from "./common";
-import { buildMinimalOpenApiSpec } from "./operator";
+import {
+  API_PREFIX,
+  buildMinimalOpenApiSpec,
+  buildUniqueName,
+  defaultApiHeaders,
+  expectOk,
+} from "./common";
 
 export function buildMultiEndpointOpenApiSpec(baseName: string) {
   const single = buildMinimalOpenApiSpec(baseName);

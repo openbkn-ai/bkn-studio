@@ -48,8 +48,6 @@ export const systemAdminZhCN = {
     },
     resourceCatalog: {
       descriptions: {
-        operator:
-          "存量算子授权，算子已下线，不再用于新授权。函数集的创建、AI 生成和临时代码执行由函数集权限管控。",
         tool_box: "仅管控 API 工具集。新建用于创建集合，修改用于编辑 API，执行用于调用。",
         function:
           "仅管控函数集。新建用于创建集合和 AI 生成函数，修改用于编辑函数，执行用于调用及临时代码执行。",
@@ -281,17 +279,6 @@ export const systemAdminZhCN = {
           public_access: "配置MCP的公开访问。",
           execute: "执行或调用MCP。",
         },
-        operator: {
-          create: "新建算子。",
-          modify: "修改算子配置。需要同时具有算子的查看权限。",
-          delete: "删除算子。需要同时具有算子的查看权限。",
-          view: "查看算子。",
-          publish: "发布算子，使其可被其他用户使用。需要同时具有算子的查看权限。",
-          unpublish: "取消发布算子。需要同时具有算子的查看权限。",
-          authorize: "配置算子的访问权限。需要同时具有算子的查看权限。",
-          public_access: "配置算子的公开访问。",
-          execute: "执行或调用算子。",
-        },
         skill: {
           create: "新建Skill。",
           modify: "修改Skill配置。需要同时具有Skill的查看权限。",
@@ -384,7 +371,6 @@ export const systemAdminZhCN = {
         mcp: "MCP 服务",
         metric: "对象指标",
         object_type: "对象类",
-        operator: "算子",
         relation_type: "关系类",
         resource: "数据资源",
         risk_type: "风险类",

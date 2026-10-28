@@ -13,7 +13,6 @@ import {
   Drawer,
   Dropdown,
   Input,
-  InputNumber,
   Modal,
   Popconfirm,
   Select,
@@ -26,7 +25,6 @@ import {
   message,
 } from "antd";
 import type { MenuProps } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
 
 import { useEffect, useState } from "react";
 
@@ -46,18 +44,14 @@ import { LabPermissionHint } from "@/modules/execution-factory-lab/components/La
 import {
   debugCapability,
   deleteCapability,
-  disableOrchestration,
   downloadSkillPackage,
-  enableOrchestration,
   getCapability,
-  getOrchestrationDetail,
   listCapabilityVersions,
   listMcpTools,
   publishCapability,
   republishCapabilityVersion,
   exportCapabilityPackage,
   updateCapability,
-  updateOrchestrationConfig,
   updateSkillPackage,
 } from "@/modules/execution-factory-lab/services/capabilities-lab.service";
 import { SkillFileTreePanel } from "@/modules/execution-factory-lab/components/SkillFileTreePanel";
@@ -69,7 +63,6 @@ import type {
   CapabilityRecord,
   FunctionParameterDef,
   McpToolEntry,
-  OrchestrationRuntimeConfig,
   VersionEntry,
 } from "@/modules/execution-factory-lab/types/capability";
 import {
@@ -86,55 +79,6 @@ type CapabilityDetailDrawerProps = {
   onClose: () => void;
   onUpdated?: () => void;
 };
-
-const DEFAULT_ORCHESTRATION_RUNTIME_CONFIG: OrchestrationRuntimeConfig = {
-  timeoutMs: 3_000,
-  retryPolicy: {
-    maxAttempts: 3,
-    initialDelayMs: 1_000,
-    maxDelayMs: 6_000,
-    backoffFactor: 2,
-    retryStatusCodes: [500, 502, 503, 504],
-    retryErrorCodes: [],
-  },
-};
-
-const ORCHESTRATION_NOTICE_STYLE = {
-  background: "var(--color-info-bg)",
-  borderColor: "var(--color-info-border)",
-};
-
-const ORCHESTRATION_NOTICE_ICON_STYLE = {
-  color: "var(--color-info-text)",
-};
-
-function orchestrationRuntimeConfigKey(capabilityId: string) {
-  return `execution-factory-lab:orchestration-runtime:${capabilityId}`;
-}
-
-function readOrchestrationRuntimeConfig(capabilityId: string): OrchestrationRuntimeConfig {
-  try {
-    const raw = window.localStorage.getItem(orchestrationRuntimeConfigKey(capabilityId));
-    if (!raw) {
-      return DEFAULT_ORCHESTRATION_RUNTIME_CONFIG;
-    }
-    const parsed = JSON.parse(raw) as Partial<OrchestrationRuntimeConfig>;
-    return {
-      ...DEFAULT_ORCHESTRATION_RUNTIME_CONFIG,
-      ...parsed,
-      retryPolicy: {
-        ...DEFAULT_ORCHESTRATION_RUNTIME_CONFIG.retryPolicy,
-        ...parsed.retryPolicy,
-      },
-    };
-  } catch {
-    return DEFAULT_ORCHESTRATION_RUNTIME_CONFIG;
-  }
-}
-
-function saveOrchestrationRuntimeConfig(capabilityId: string, config: OrchestrationRuntimeConfig) {
-  window.localStorage.setItem(orchestrationRuntimeConfigKey(capabilityId), JSON.stringify(config));
-}
 
 function sampleValueForFunctionType(type?: string): unknown {
   switch ((type ?? "string").toLowerCase()) {
@@ -473,15 +417,6 @@ export function CapabilityDetailDrawer({
   };
   const [detail, setDetail] = useState<CapabilityRecord | undefined>(capability);
   const [versions, setVersions] = useState<VersionEntry[]>([]);
-  const [orchestration, setOrchestration] = useState<{
-    enabled: boolean;
-    operatorId?: string;
-    operatorName?: string;
-    audit?: CapabilityAudit;
-  }>({ enabled: false });
-  const [orchestrationRuntime, setOrchestrationRuntime] = useState<OrchestrationRuntimeConfig>(
-    DEFAULT_ORCHESTRATION_RUNTIME_CONFIG,
-  );
   const [debugBody, setDebugBody] = useState("{}");
   const [mcpToolName, setMcpToolName] = useState("");
   const [debugResult, setDebugResult] = useState<string | null>(null);
@@ -523,7 +458,6 @@ export function CapabilityDetailDrawer({
     setActiveTab(initialTab);
     setError(null);
     setDebugResult(null);
-    setOrchestrationRuntime(readOrchestrationRuntimeConfig(capability.id));
 
     void (async () => {
       try {
@@ -537,13 +471,6 @@ export function CapabilityDetailDrawer({
         setDebugBody(buildCapabilityDebugBody(fresh));
         const versionList = await listCapabilityVersions(capability.id);
         setVersions(versionList);
-        const orch = await getOrchestrationDetail(capability.id);
-        setOrchestration({
-          enabled: orch.enabled,
-          operatorId: orch.operatorId,
-          operatorName: orch.operatorName ?? fresh.orchestration?.operatorName,
-          audit: orch.audit ?? fresh.orchestration?.audit,
-        });
 
         if (fresh.kind === "mcp") {
           const tools = await listMcpTools(capability.id);
@@ -590,7 +517,6 @@ export function CapabilityDetailDrawer({
   const destructiveContext = (targetVersion?: string): LabDestructiveConfirmContext => ({
     kind: detail.kind,
     name: detail.name,
-    orchestrationEnabled: orchestration.enabled,
     status: detail.status,
     targetVersion,
     version: detail.version,
@@ -750,89 +676,6 @@ export function CapabilityDetailDrawer({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEnableOrchestration = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await enableOrchestration(detail.id, orchestrationRuntime);
-      saveOrchestrationRuntimeConfig(detail.id, orchestrationRuntime);
-      setOrchestration({
-        enabled: true,
-        operatorId: result.operatorId,
-        operatorName: result.operatorName ?? orchestration.operatorName,
-        audit: result.audit ?? orchestration.audit,
-      });
-      onUpdated?.();
-      message.success(t("executionFactoryLab.enableOrchestrationSuccess"));
-    } catch (orchError) {
-      setError(orchError instanceof Error ? orchError.message : String(orchError));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSaveOrchestrationRuntime = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await updateOrchestrationConfig(detail.id, orchestrationRuntime);
-      saveOrchestrationRuntimeConfig(detail.id, orchestrationRuntime);
-      setOrchestration({
-        enabled: result.enabled,
-        operatorId: result.operatorId,
-        operatorName: result.operatorName ?? orchestration.operatorName,
-        audit: result.audit ?? orchestration.audit,
-      });
-      onUpdated?.();
-      message.success(t("executionFactoryLab.orchestrationConfigSaved"));
-    } catch (orchError) {
-      setError(orchError instanceof Error ? orchError.message : String(orchError));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDisableOrchestration = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await disableOrchestration(detail.id);
-      setOrchestration({
-        enabled: result.enabled,
-        operatorId: result.operatorId,
-        operatorName: result.operatorName,
-      });
-      onUpdated?.();
-      message.success(t("executionFactoryLab.disableOrchestrationSuccess"));
-    } catch (orchError) {
-      setError(orchError instanceof Error ? orchError.message : String(orchError));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const confirmDisableOrchestration = () => {
-    showDestructiveConfirm({
-      action: "disableOrchestration",
-      okText: t("executionFactoryLab.disableOrchestrationAction"),
-      onOk: () => handleDisableOrchestration(),
-      title: t("executionFactoryLab.disableOrchestrationConfirm"),
-    });
-  };
-
-  const updateOrchestrationRuntime = (patch: Partial<OrchestrationRuntimeConfig>) => {
-    setOrchestrationRuntime((current) => ({ ...current, ...patch }));
-  };
-
-  const updateOrchestrationRetryPolicy = (
-    patch: Partial<OrchestrationRuntimeConfig["retryPolicy"]>,
-  ) => {
-    setOrchestrationRuntime((current) => ({
-      ...current,
-      retryPolicy: { ...current.retryPolicy, ...patch },
-    }));
   };
 
   const handleExport = async () => {
@@ -1302,14 +1145,9 @@ export function CapabilityDetailDrawer({
                     {
                       title: t("executionFactoryLab.versionAction"),
                       render: (_, row) =>
-                        detail.kind === "skill" ||
-                        (detail.kind === "http" && orchestration.enabled) ? (
+                        detail.kind === "skill" ? (
                           <LabPermissionHint
-                            permissions={
-                              detail.kind === "skill"
-                                ? executionFactoryLabPermissions.skillPublish
-                                : executionFactoryLabPermissions.capabilityPublish
-                            }
+                            permissions={executionFactoryLabPermissions.skillPublish}
                           >
                             <Button
                               onClick={() => confirmRepublish(row.version)}
@@ -1328,224 +1166,6 @@ export function CapabilityDetailDrawer({
                   pagination={false}
                   size="small"
                 />
-              ),
-            },
-            {
-              key: "orchestration",
-              label:
-                detail.kind !== "http" ? (
-                  <Tooltip title={t("executionFactoryLab.tabOrchestrationHint")}>
-                    <span>{t("executionFactoryLab.tabOrchestration")}</span>
-                  </Tooltip>
-                ) : (
-                  t("executionFactoryLab.tabOrchestration")
-                ),
-              disabled: detail.kind !== "http",
-              children: (
-                <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                  <Alert
-                    description={
-                      orchestration.enabled
-                        ? t("executionFactoryLab.orchestrationEnabledDescription")
-                        : t("executionFactoryLab.orchestrationDisabledDescription")
-                    }
-                    message={
-                      orchestration.enabled
-                        ? t("executionFactoryLab.orchestrationEnabledTitle")
-                        : t("executionFactoryLab.orchestrationDisabledTitle")
-                    }
-                    icon={<InfoCircleOutlined style={ORCHESTRATION_NOTICE_ICON_STYLE} />}
-                    showIcon
-                    style={ORCHESTRATION_NOTICE_STYLE}
-                    type={orchestration.enabled ? "success" : "info"}
-                  />
-                  <Alert
-                    description={
-                      <ul style={{ marginBottom: 0, paddingLeft: 18 }}>
-                        <li>{t("executionFactoryLab.operationDescEnableOrchestration")}</li>
-                        <li>{t("executionFactoryLab.operationDescSaveOrchestration")}</li>
-                        <li>{t("executionFactoryLab.operationDescDisableOrchestration")}</li>
-                      </ul>
-                    }
-                    icon={<InfoCircleOutlined style={ORCHESTRATION_NOTICE_ICON_STYLE} />}
-                    message={t("executionFactoryLab.operationDescTitle")}
-                    showIcon
-                    style={ORCHESTRATION_NOTICE_STYLE}
-                    type="info"
-                  />
-                  <Descriptions bordered column={1} size="small">
-                    {orchestration.enabled ? (
-                      <Descriptions.Item label={t("executionFactoryLab.orchestrationOperatorId")}>
-                        {orchestration.operatorName ?? orchestration.operatorId ?? "-"}
-                      </Descriptions.Item>
-                    ) : null}
-                    <Descriptions.Item label={t("executionFactoryLab.orchestrationTimeoutMs")}>
-                      <InputNumber
-                        min={0}
-                        onChange={(value) =>
-                          updateOrchestrationRuntime({
-                            timeoutMs: typeof value === "number" ? value : undefined,
-                          })
-                        }
-                        step={1_000}
-                        style={{ width: 180 }}
-                        value={orchestrationRuntime.timeoutMs}
-                      />
-                    </Descriptions.Item>
-                  </Descriptions>
-                  {orchestration.enabled ? (
-                    <div>
-                      <h4>{t("executionFactoryLab.operatorAuditInfoTitle")}</h4>
-                      <Descriptions
-                        bordered
-                        column={2}
-                        items={auditDescriptionItems(orchestration.audit, currentAuditUser).map(
-                          (item) => ({
-                            ...item,
-                            label: t(`executionFactoryLab.${item.key}`),
-                          }),
-                        )}
-                        size="small"
-                      />
-                    </div>
-                  ) : null}
-                  <Collapse
-                    ghost
-                    items={[
-                      {
-                        key: "retry",
-                        label: t("executionFactoryLab.orchestrationRetryPolicy"),
-                        children: (
-                          <Descriptions bordered column={1} size="small">
-                            <Descriptions.Item
-                              label={t("executionFactoryLab.orchestrationMaxAttempts")}
-                            >
-                              <InputNumber
-                                min={0}
-                                onChange={(value) =>
-                                  updateOrchestrationRetryPolicy({
-                                    maxAttempts: typeof value === "number" ? value : undefined,
-                                  })
-                                }
-                                style={{ width: 180 }}
-                                value={orchestrationRuntime.retryPolicy.maxAttempts}
-                              />
-                            </Descriptions.Item>
-                            <Descriptions.Item
-                              label={t("executionFactoryLab.orchestrationInitialDelayMs")}
-                            >
-                              <InputNumber
-                                min={0}
-                                onChange={(value) =>
-                                  updateOrchestrationRetryPolicy({
-                                    initialDelayMs: typeof value === "number" ? value : undefined,
-                                  })
-                                }
-                                step={100}
-                                style={{ width: 180 }}
-                                value={orchestrationRuntime.retryPolicy.initialDelayMs}
-                              />
-                            </Descriptions.Item>
-                            <Descriptions.Item
-                              label={t("executionFactoryLab.orchestrationMaxDelayMs")}
-                            >
-                              <InputNumber
-                                min={0}
-                                onChange={(value) =>
-                                  updateOrchestrationRetryPolicy({
-                                    maxDelayMs: typeof value === "number" ? value : undefined,
-                                  })
-                                }
-                                step={100}
-                                style={{ width: 180 }}
-                                value={orchestrationRuntime.retryPolicy.maxDelayMs}
-                              />
-                            </Descriptions.Item>
-                            <Descriptions.Item
-                              label={t("executionFactoryLab.orchestrationBackoffFactor")}
-                            >
-                              <InputNumber
-                                min={1}
-                                onChange={(value) =>
-                                  updateOrchestrationRetryPolicy({
-                                    backoffFactor: typeof value === "number" ? value : undefined,
-                                  })
-                                }
-                                style={{ width: 180 }}
-                                value={orchestrationRuntime.retryPolicy.backoffFactor}
-                              />
-                            </Descriptions.Item>
-                            <Descriptions.Item
-                              label={t("executionFactoryLab.orchestrationRetryStatusCodes")}
-                            >
-                              <Select
-                                mode="tags"
-                                onChange={(values) =>
-                                  updateOrchestrationRetryPolicy({
-                                    retryStatusCodes: values
-                                      .map((value) => Number(value))
-                                      .filter((value) => !Number.isNaN(value)),
-                                  })
-                                }
-                                placeholder="500, 502"
-                                style={{ width: "100%" }}
-                                tokenSeparators={[","]}
-                                value={orchestrationRuntime.retryPolicy.retryStatusCodes?.map(
-                                  String,
-                                )}
-                              />
-                            </Descriptions.Item>
-                            <Descriptions.Item
-                              label={t("executionFactoryLab.orchestrationRetryErrorCodes")}
-                            >
-                              <Select
-                                mode="tags"
-                                onChange={(values) =>
-                                  updateOrchestrationRetryPolicy({
-                                    retryErrorCodes: values.map(String),
-                                  })
-                                }
-                                placeholder="TIMEOUT"
-                                style={{ width: "100%" }}
-                                tokenSeparators={[","]}
-                                value={orchestrationRuntime.retryPolicy.retryErrorCodes}
-                              />
-                            </Descriptions.Item>
-                          </Descriptions>
-                        ),
-                      },
-                    ]}
-                  />
-                  <Space wrap>
-                    <LabPermissionHint permissions={editPermissionForKind(detail.kind)}>
-                      <Space wrap>
-                        <Button
-                          disabled={orchestration.enabled}
-                          loading={!orchestration.enabled && loading}
-                          onClick={() => void handleEnableOrchestration()}
-                          type="primary"
-                        >
-                          {t("executionFactoryLab.enableOrchestrationAction")}
-                        </Button>
-                        <Button
-                          disabled={!orchestration.enabled}
-                          loading={orchestration.enabled && loading}
-                          onClick={() => void handleSaveOrchestrationRuntime()}
-                          type="primary"
-                        >
-                          {t("executionFactoryLab.orchestrationSaveConfigAction")}
-                        </Button>
-                        <Button
-                          danger
-                          disabled={!orchestration.enabled || loading}
-                          onClick={confirmDisableOrchestration}
-                        >
-                          {t("executionFactoryLab.disableOrchestrationAction")}
-                        </Button>
-                      </Space>
-                    </LabPermissionHint>
-                  </Space>
-                </Space>
               ),
             },
           ]}

@@ -19,11 +19,6 @@ import {
   listMcps,
 } from "@/modules/execution-factory/services/mcp.service";
 import {
-  listOperators,
-  operatorDetailToFormValues,
-  resolveOperatorDescription,
-} from "@/modules/execution-factory/services/operator.service";
-import {
   getSkillReleaseHistory,
   listSkills,
   republishSkillHistory,
@@ -33,13 +28,6 @@ import {
 describe("execution-factory services (mock mode)", () => {
   beforeEach(() => {
     vi.stubEnv("VITE_USE_MOCK", "true");
-  });
-
-  it("lists operators from mock data", async () => {
-    const result = await listOperators({ page: 1, pageSize: 10 });
-
-    expect(result.total).toBeGreaterThan(0);
-    expect(result.items[0]?.operatorId).toBeTruthy();
   });
 
   it("lists skills and updates metadata in mock mode", async () => {
@@ -122,31 +110,5 @@ describe("buildQuery", () => {
 
   it("returns empty query as-is instead of decorating it", () => {
     expect(buildQuery({ query: "", type: "python_function_generator" })).toBe("");
-  });
-});
-
-describe("operator description mapping", () => {
-  it("reads metadata.description from API payload", () => {
-    expect(
-      resolveOperatorDescription({
-        metadata: { description: "test" },
-        operator_id: "e0b56d33-31e8-4646-a32d-8bac094073c5",
-        version: "44fe8ef6-6f60-43ef-a62a-44bc5fe08796",
-      }),
-    ).toBe("test");
-  });
-
-  it("builds form values without undefined description", () => {
-    const values = operatorDetailToFormValues({
-      description: "test",
-      metadataType: "openapi",
-      name: "加法",
-      operatorId: "e0b56d33-31e8-4646-a32d-8bac094073c5",
-      status: "unpublish",
-      version: "44fe8ef6-6f60-43ef-a62a-44bc5fe08796",
-    });
-
-    expect(values.description).toBe("test");
-    expect(values.metadataType).toBe("openapi");
   });
 });

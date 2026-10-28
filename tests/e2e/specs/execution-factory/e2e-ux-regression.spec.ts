@@ -9,18 +9,13 @@ import { expect, test } from "@playwright/test";
 
 import { assertBackendReady } from "../../helpers/common";
 import {
-  advanceCreateWizardToDetails,
   expectFunctionDefinitionSections,
   executionUnitCard,
   gotoE2ePage,
   gotoToolboxToolsPage,
   gotoUnitsTab,
   openAddCapabilityWizard,
-  openAdvancedOperatorTab,
-  openCreateWizard,
-  openOperatorCreateWizardStep2,
   openToolboxCardMenu,
-  selectOperatorCreateMode,
   triggerImpexExport,
   clickVisibleImpexExportButton,
 } from "../../helpers/execution-unit-ui";
@@ -63,18 +58,6 @@ test.describe("Execution Factory — UX regression", () => {
     test.skip(!backendReady, "execution-factory backend is not running on :9000");
   });
 
-  test("UX-003: card click opens operator detail drawer", async ({ page }) => {
-    await openAdvancedOperatorTab(page);
-
-    const firstCard = page.locator('[data-testid="execution-unit-card"]').first();
-    if ((await firstCard.count()) === 0) {
-      test.skip(true, "no operator cards available");
-    }
-
-    await firstCard.click();
-    await expect(page.locator(".ant-drawer").getByText(/算子详情|Operator Detail/i)).toBeVisible();
-  });
-
   test("UX-021: catalog skill tab shows introduce action", async ({ page }) => {
     await gotoE2ePage(page, "/execution-factory/catalog?activeTab=skill");
     await expect(page.getByRole("tab", { name: "Skill" })).toBeVisible();
@@ -98,30 +81,6 @@ test.describe("Execution Factory — UX regression", () => {
         )
         .first(),
     ).toBeVisible();
-  });
-
-  test("UX-017: operator wizard selecting function navigates to registration form", async ({
-    page,
-  }) => {
-    await openOperatorCreateWizardStep2(page);
-    await selectOperatorCreateMode(page, "function");
-
-    await expect(page).toHaveURL(/\/execution-factory\/units\/new\?metadataType=function/);
-    await expect(page.getByRole("heading", { name: /注册算子|Register Operator/i })).toBeVisible();
-    await expect(page.locator(".ant-drawer")).toHaveCount(0);
-  });
-
-  test("UX-018: function operator form shows inputs, logic, outputs in order", async ({ page }) => {
-    await gotoE2ePage(page, "/execution-factory/units/new?metadataType=function");
-    await expect(page.getByRole("heading", { name: /注册算子|Register Operator/i })).toBeVisible();
-    await expectFunctionDefinitionSections(page);
-  });
-
-  test("UX-019: operator wizard selecting OpenAPI navigates to registration form", async ({
-    page,
-  }) => {
-    await openOperatorCreateWizardStep2(page);
-    await selectOperatorCreateMode(page, "openapi");
   });
 
   test("UX-024: toolbox card edit opens inline drawer editor without leaving list", async ({
@@ -189,11 +148,6 @@ test.describe("Execution Factory — UX regression", () => {
   });
 
   test("UX-028: create wizard step 2 shows expected content per tab", async ({ page }) => {
-    const operatorDrawer = await openCreateWizard(page, "operator");
-    await advanceCreateWizardToDetails(page);
-    await expect(operatorDrawer.getByText(/函数计算|Function/i).first()).toBeVisible();
-    await page.keyboard.press("Escape");
-
     const toolboxDrawer = await openAddCapabilityWizard(page, "toolbox");
     await expect(toolboxDrawer.getByText(/粘贴 cURL|Paste cURL/i).first()).toBeVisible();
     await page.keyboard.press("Escape");

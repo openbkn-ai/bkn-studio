@@ -201,7 +201,7 @@ let roles: AdminRole[] = [
       ]),
       grant("small_model", "*", ["display", "create", "modify"]),
       grant("large_model", "*", ["display", "create", "modify"]),
-      grant("operator", "*", [
+      grant("function", "*", [
         "view",
         "create",
         "modify",
@@ -253,7 +253,7 @@ let roles: AdminRole[] = [
       grant("knowledge_network", "*", ["view_detail", "query_data"]),
       grant("small_model", "*", ["display"]),
       grant("large_model", "*", ["display"]),
-      grant("operator", "*", ["view", "execute"]),
+      grant("function", "*", ["view", "execute"]),
       grant("tool_box", "*", ["view", "execute"]),
       grant("skill", "*", ["view", "execute"]),
       grant("mcp", "*", ["view", "execute"]),

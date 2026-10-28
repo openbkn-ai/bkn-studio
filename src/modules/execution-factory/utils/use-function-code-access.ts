@@ -24,7 +24,6 @@ export type FunctionCodeAccess = {
  * AI generation authorizes type-level `function:create`. Ad-hoc runs and schema inference authorize
  * the reserved `function/adhoc` resource: Function-set grants are aggregated into `function:debug`
  * for navigation, so that point only decides whether the exact scoped check is worth asking for.
- * Operator grants cover neither endpoint, so legacy operator forms must use this too.
  */
 export function useFunctionCodeAccess(): FunctionCodeAccess {
   const { runtimeConfig } = useAppServices();

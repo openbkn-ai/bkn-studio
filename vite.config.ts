@@ -85,7 +85,6 @@ export default defineConfig(({ mode }) => {
         // vitest. They import @playwright/test, so collecting them here fails.
         "tests/e2e/**",
         "tests/execution-factory/agent-at/**",
-        "tests/execution-factory/operator-web-ui/**",
       ],
     },
     server: {
