@@ -31,7 +31,9 @@
 }
 
 .pending {
+  height: auto;
   margin-left: 6px;
+  padding: 0;
   color: var(--color-warning-text);
   font-weight: 600;
 }

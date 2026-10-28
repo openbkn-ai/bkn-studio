@@ -143,6 +143,8 @@ describe("draft edits", () => {
     expect(model.restore.savedNoName).not.toContain("{{property}}");
     expect(model.excluded.reason.privacyNoKeyword).toBeTruthy();
     expect(model.propertyType.other).toBeTruthy();
+    expect(model.changes.action.restore).toContain("{{property}}");
+    expect(model.tabs.changes_other).toContain("{{count}}");
     expect(model.notice.draftReadsMissing).toContain("{{names}}");
     expect(model.empty.noCatalogsAskOwner).toBeTruthy();
     for (const blocker of ["archived", "endsNotAdopted", "needsIdentity"] as const) {
