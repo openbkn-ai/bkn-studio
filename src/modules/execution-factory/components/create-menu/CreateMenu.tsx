@@ -49,8 +49,6 @@ type CreateMenuProps = {
 
 function getCreatePermission(activeTab: ExecutionUnitTab, toolboxView?: "openapi" | "function") {
   switch (activeTab) {
-    case "operator":
-      return "execution-factory:operator:create";
     case "toolbox":
       return toolboxView === "function"
         ? "execution-factory:function:create"
@@ -65,7 +63,7 @@ function getCreatePermission(activeTab: ExecutionUnitTab, toolboxView?: "openapi
 }
 
 function getImportPermission(activeTab: ExecutionUnitTab) {
-  if (activeTab === "operator" || activeTab === "toolbox" || activeTab === "mcp") {
+  if (activeTab === "toolbox" || activeTab === "mcp") {
     return "execution-factory:impex:import";
   }
 
@@ -74,8 +72,6 @@ function getImportPermission(activeTab: ExecutionUnitTab) {
 
 function getLegacyCreateLabel(activeTab: ExecutionUnitTab, t: (key: string) => string) {
   switch (activeTab) {
-    case "operator":
-      return t("executionFactory.createOperatorButton");
     case "toolbox":
       return t("executionFactory.createToolboxButton");
     case "mcp":
@@ -128,15 +124,11 @@ export function CreateMenu({
   >();
   const [importOpen, setImportOpen] = useState(false);
   const [importActiveTab, setImportActiveTab] = useState<ExecutionUnitTab>(activeTab);
-  const [importInitialKind, setImportInitialKind] = useState<"openapi" | "adp" | undefined>();
 
-  const useLegacyOperatorCreate = capabilityUxV2 && activeTab === "operator";
-  const showAddCapabilityWizard = capabilityUxV2 && !useLegacyOperatorCreate;
-  const showLegacyCreateWizard = !capabilityUxV2 || useLegacyOperatorCreate;
+  const showAddCapabilityWizard = capabilityUxV2;
+  const showLegacyCreateWizard = !capabilityUxV2;
   const permission = capabilityUxV2
-    ? useLegacyOperatorCreate
-      ? "execution-factory:operator:create"
-      : resolveCapabilityCreatePermission(activeTab, toolboxView)
+    ? resolveCapabilityCreatePermission(activeTab, toolboxView)
     : getCreatePermission(activeTab, toolboxView);
   const importPermission = dedicatedMode ? null : getImportPermission(activeTab);
   const canCreate = Boolean(
@@ -165,7 +157,7 @@ export function CreateMenu({
       return;
     }
 
-    if (capabilityUxV2 && !useLegacyOperatorCreate) {
+    if (capabilityUxV2) {
       if (activeTab === "mcp") {
         setCapabilityAllowedModes(undefined);
         setCapabilityInitialMode("mcp");
@@ -184,16 +176,7 @@ export function CreateMenu({
       setLegacyWizardOpen(true);
     }
     onAutoOpenHandled?.();
-  }, [
-    activeTab,
-    autoOpen,
-    capabilityUxV2,
-    canCreate,
-    onAutoOpenHandled,
-    permission,
-    useLegacyOperatorCreate,
-    toolboxView,
-  ]);
+  }, [activeTab, autoOpen, capabilityUxV2, canCreate, onAutoOpenHandled, permission, toolboxView]);
 
   if (!permission) {
     return null;
@@ -229,7 +212,6 @@ export function CreateMenu({
       )
         return;
       setImportActiveTab(resolveCapabilityAdpImportTab(activeTab));
-      setImportInitialKind("adp");
       setImportOpen(true);
       return;
     }
@@ -252,44 +234,27 @@ export function CreateMenu({
     ),
   }));
 
-  const createButton =
-    capabilityUxV2 && !useLegacyOperatorCreate ? (
-      <Dropdown
-        menu={{
-          items: capabilityMenuItems,
-          onClick: ({ key }) => handleCapabilityAction(key as CapabilityCreateMenuAction),
-        }}
-        /* Menu items have a title and one-line description. Left alignment gives all four descriptions
+  const createButton = capabilityUxV2 ? (
+    <Dropdown
+      menu={{
+        items: capabilityMenuItems,
+        onClick: ({ key }) => handleCapabilityAction(key as CapabilityCreateMenuAction),
+      }}
+      /* Menu items have a title and one-line description. Left alignment gives all four descriptions
          the same starting column; right alignment makes their left edges uneven across item widths. */
-        placement="bottomLeft"
-        trigger={["click"]}
-      >
-        <AppButton icon={<PlusOutlined />} type="primary">
-          {t("executionFactory.addCapabilityButton")}
-          <DownOutlined />
-        </AppButton>
-      </Dropdown>
-    ) : (
-      <AppButton
-        icon={<PlusOutlined />}
-        onClick={() => {
-          if (capabilityUxV2 && !useLegacyOperatorCreate) {
-            openCapabilityMode(
-              activeTab === "mcp" ? "mcp" : activeTab === "skill" ? "skill" : "quick-api",
-            );
-            return;
-          }
-          setLegacyWizardOpen(true);
-        }}
-        type="primary"
-      >
-        {useLegacyOperatorCreate
-          ? t("executionFactory.createOperatorButton")
-          : capabilityUxV2
-            ? t("executionFactory.addCapabilityButton")
-            : getLegacyCreateLabel(activeTab, t)}
+      placement="bottomLeft"
+      trigger={["click"]}
+    >
+      <AppButton icon={<PlusOutlined />} type="primary">
+        {t("executionFactory.addCapabilityButton")}
+        <DownOutlined />
       </AppButton>
-    );
+    </Dropdown>
+  ) : (
+    <AppButton icon={<PlusOutlined />} onClick={() => setLegacyWizardOpen(true)} type="primary">
+      {getLegacyCreateLabel(activeTab, t)}
+    </AppButton>
+  );
 
   return (
     <>
@@ -303,7 +268,6 @@ export function CreateMenu({
                   icon={<UploadOutlined />}
                   onClick={() => {
                     setImportActiveTab(activeTab);
-                    setImportInitialKind(undefined);
                     setImportOpen(true);
                   }}
                 >
@@ -323,7 +287,6 @@ export function CreateMenu({
                   icon={<UploadOutlined />}
                   onClick={() => {
                     setImportActiveTab(activeTab);
-                    setImportInitialKind(undefined);
                     setImportOpen(true);
                   }}
                 >
@@ -364,11 +327,7 @@ export function CreateMenu({
       {importPermission || capabilityUxV2 ? (
         <ImportResourceModal
           activeTab={importActiveTab}
-          initialKind={importInitialKind}
-          onClose={() => {
-            setImportOpen(false);
-            setImportInitialKind(undefined);
-          }}
+          onClose={() => setImportOpen(false)}
           onSuccess={() => {
             onRefresh?.();
           }}

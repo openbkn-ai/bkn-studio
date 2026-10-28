@@ -75,7 +75,7 @@ vi.mock("@/modules/model-resources/services/authorization.service", () => ({
 }));
 
 vi.mock("@/modules/execution-factory/services/category.service", () => ({
-  listOperatorCategories: vi.fn().mockResolvedValue([]),
+  listCategories: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("@/modules/execution-factory/services/function.service", () => ({

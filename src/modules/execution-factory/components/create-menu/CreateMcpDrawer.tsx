@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { listCategories } from "@/modules/execution-factory/services/category.service";
 import { localizeCategoryOptions } from "@/modules/execution-factory/utils/detail-display";
 import {
   getMcpDetail,
@@ -88,7 +88,7 @@ export function CreateMcpDrawer({
       setLoading(true);
 
       try {
-        const items = await listOperatorCategories();
+        const items = await listCategories();
         const options = items.map((item) => ({
           value: item.categoryType,
           label: item.name,

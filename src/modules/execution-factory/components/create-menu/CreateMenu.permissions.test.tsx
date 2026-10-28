@@ -56,8 +56,8 @@ vi.mock("./AddCapabilityModeStep", () => ({
   ),
 }));
 
-const knownPermissions = ["operator", "toolbox", "function", "mcp", "skill", "tool"].flatMap(
-  (type) => ["create", "edit", "execute", "view"].map((op) => `execution-factory:${type}:${op}`),
+const knownPermissions = ["toolbox", "function", "mcp", "skill", "tool"].flatMap((type) =>
+  ["create", "edit", "execute", "view"].map((op) => `execution-factory:${type}:${op}`),
 );
 function grant(type: string, operations: string[]) {
   state.runtimeConfig.currentUser.permissions = deriveStudioPermissions(
@@ -195,22 +195,14 @@ describe("creation permissions (#670 / #672)", () => {
     },
   );
 
-  it("ignores retired operator grants for creation", () => {
-    grant("operator", ["create", "execute"]);
-    render(<CreateMenu activeTab="operator" autoOpen />);
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.queryByText("executionFactory.executionUnitTabs.operator")).toBeNull();
-  });
-
   it("filters the retained legacy wizard and rejects unauthorized direct opening", () => {
-    // The retired operator tab is backed by Function set grants.
     grant("function", ["create"]);
     const { rerender } = render(
       <CreateExecutionUnitWizard open initialTab="skill" onClose={vi.fn()} />,
     );
     expect(screen.queryByRole("dialog")).toBeNull();
-    rerender(<CreateExecutionUnitWizard open initialTab="operator" onClose={vi.fn()} />);
-    expect(screen.getByText("executionFactory.executionUnitTabs.operator")).toBeTruthy();
+    rerender(<CreateExecutionUnitWizard open initialTab="toolbox" onClose={vi.fn()} />);
+    expect(screen.getByText("executionFactory.executionUnitTabs.toolbox")).toBeTruthy();
     expect(screen.queryByText("executionFactory.executionUnitTabs.mcp")).toBeNull();
   });
 

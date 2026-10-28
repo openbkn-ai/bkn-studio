@@ -9,7 +9,6 @@ import type { ExecutionUnitTab } from "@/modules/execution-factory/components/ex
 
 /** Read grants that allow a user to enter execution-unit management. */
 export const executionFactoryViewPermissions = [
-  "execution-factory:operator:view",
   "execution-factory:toolbox:view",
   "execution-factory:function:view",
   "execution-factory:mcp:view",
@@ -18,7 +17,6 @@ export const executionFactoryViewPermissions = [
 
 /** Creation alone is enough to open the management entry, even though it does not permit listing. */
 export const executionFactoryCreatePermissions = [
-  "execution-factory:operator:create",
   "execution-factory:toolbox:create",
   "execution-factory:function:create",
   "execution-factory:mcp:create",
@@ -26,7 +24,6 @@ export const executionFactoryCreatePermissions = [
 ] as const;
 
 export const executionFactoryViewPermissionByTab: Record<ExecutionUnitTab, string> = {
-  operator: "execution-factory:operator:view",
   toolbox: "execution-factory:toolbox:view",
   mcp: "execution-factory:mcp:view",
   skill: "execution-factory:skill:view",

@@ -16,10 +16,6 @@ import {
 } from "@/modules/execution-factory/services/toolbox.service";
 import { listTools } from "@/modules/execution-factory/services/tool.service";
 
-vi.mock("@/modules/execution-factory/services/capability-bundle.service", () => ({
-  registerOpenApiBundle: vi.fn(),
-}));
-
 vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
   createToolbox: vi.fn(),
   getToolbox: vi.fn(),

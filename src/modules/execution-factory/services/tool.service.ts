@@ -7,8 +7,6 @@
 
 import { http } from "@/framework/request/http";
 import type {
-  ConvertOperatorToToolInput,
-  ConvertOperatorToToolResult,
   ToolCreateInput,
   ToolCreateResult,
   ToolDebugInput,
@@ -651,41 +649,5 @@ export async function debugTool(
     body: response.data.body,
     error: response.data.error,
     durationMs: response.data.duration_ms,
-  };
-}
-
-export async function convertOperatorToTool(
-  input: ConvertOperatorToToolInput,
-): Promise<ConvertOperatorToToolResult> {
-  if (useMock) {
-    const toolId = `tool_from_${input.operatorId}`;
-    mockToolsByBox[input.boxId] = [
-      {
-        toolId,
-        name: `Converted ${input.operatorId}`,
-        description: `Converted from operator ${input.operatorId}`,
-        status: "disabled",
-        metadataType: "openapi",
-        updateTime: Date.now(),
-      },
-      ...getMockTools(input.boxId),
-    ];
-
-    return { boxId: input.boxId, toolId };
-  }
-
-  const response = await http.post<ConvertOperatorToToolResult>(
-    `${API_PREFIX}/operator/convert/tool`,
-    {
-      box_id: input.boxId,
-      operator_id: input.operatorId,
-      operator_version: input.operatorVersion,
-    },
-    {},
-  );
-
-  return {
-    boxId: response.data.boxId ?? input.boxId,
-    toolId: response.data.toolId,
   };
 }

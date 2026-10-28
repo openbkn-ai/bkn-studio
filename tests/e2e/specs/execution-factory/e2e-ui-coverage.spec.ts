@@ -9,38 +9,19 @@ import { expect, test } from "@playwright/test";
 
 import { assertBackendReady } from "../../helpers/common";
 import {
-  advanceCreateWizardToDetails,
   closeImportOrOverlay,
-  closeTopDrawer,
-  confirmAntModal,
   executionUnitCard,
-  expectOpenApiInputModes,
-  fillFunctionOperatorForm,
-  fillOpenApiSpecPaste,
   gotoE2ePage,
   gotoUnitsTab,
   openAddCapabilityWizard,
-  openAdvancedOperatorTab,
   openCardMenu,
-  openCreateWizard,
   UNITS_PAGE_TITLE,
-  openDetailDrawerByCardClick,
   openDetailPageByCardClick,
   openImportModal,
-  openOperatorCreateForm,
   openToolboxToolsPageFromCardMenu,
   gotoSkillDetailPage,
   selectSkillFileInDetailPage,
-  selectOperatorCreateMode,
 } from "../../helpers/execution-unit-ui";
-import {
-  buildFunctionHandlerCode,
-  buildMinimalOpenApiSpec,
-  buildOperatorName,
-  cleanupOperatorViaApi,
-  registerOperatorViaApi,
-  type RegisteredOperator,
-} from "../../helpers/operator";
 import { buildMcpName, cleanupMcpViaApi, createToolImportedMcpViaApi } from "../../helpers/mcp";
 import { buildSkillName, cleanupSkillViaApi, registerSkillZipViaApi } from "../../helpers/skill";
 import {
@@ -52,7 +33,6 @@ import {
 
 test.describe("Execution Factory — UI comprehensive coverage", () => {
   let backendReady = false;
-  const createdOperators: RegisteredOperator[] = [];
   const createdBoxIds: string[] = [];
   const createdMcpIds: string[] = [];
   const createdSkillIds: string[] = [];
@@ -83,16 +63,6 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       if (!mcpId) continue;
       try {
         await cleanupMcpViaApi(request, mcpId);
-      } catch (error) {
-        console.warn(String(error));
-      }
-    }
-
-    while (createdOperators.length > 0) {
-      const operator = createdOperators.pop();
-      if (!operator) continue;
-      try {
-        await cleanupOperatorViaApi(request, operator);
       } catch (error) {
         console.warn(String(error));
       }
@@ -173,23 +143,19 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
         await expect(page.getByText(/发布状态|Publish status/i).first()).toBeVisible();
         await expect(page.getByText(/全部状态|All statuses/i).first()).toBeVisible();
       }
-
-      await openAdvancedOperatorTab(page);
-      await expect(page.getByText(/发布状态|Publish status/i).first()).toBeVisible();
     });
 
     test("UI-COV-005: search input and result count when list has data", async ({
       page,
       request,
     }) => {
-      const operator = await registerOperatorViaApi(request, buildOperatorName("ui_cov_search"));
-      createdOperators.push(operator);
+      const toolbox = await createToolboxViaApi(request, buildToolboxName("ui_cov_search"));
+      createdBoxIds.push(toolbox.boxId);
 
-      await openAdvancedOperatorTab(page);
+      await gotoUnitsTab(page, "toolbox");
       await expect(page.getByPlaceholder(/搜索名称|Search name/i)).toBeVisible();
-      await page.getByPlaceholder(/搜索名称|Search name/i).fill(operator.name);
-      await expect(page.getByRole("heading", { level: 5, name: operator.name })).toBeVisible();
-      await expect(page.getByText(/算子|Operators/i).first()).toBeVisible();
+      await page.getByPlaceholder(/搜索名称|Search name/i).fill(toolbox.name);
+      await expect(page.getByRole("heading", { level: 5, name: toolbox.name })).toBeVisible();
     });
 
     test("UI-COV-006: audit users render as names instead of raw ids", async ({
@@ -222,60 +188,8 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await page.keyboard.press("Escape");
     });
 
-    test("UI-COV-011: operator step2 excludes flow orchestration option", async ({ page }) => {
-      const drawer = await openCreateWizard(page, "operator");
-      await advanceCreateWizardToDetails(page);
-      await expect(drawer.getByText(/^OpenAPI$/)).toBeVisible();
-      await expect(drawer.getByText(/函数计算|Function/i)).toBeVisible();
-      await expect(drawer.getByText(/算子编排|Flow/i)).toHaveCount(0);
-      await page.keyboard.press("Escape");
-    });
-
-    test("UI-COV-012: function operator full UI create via wizard", async ({ page, request }) => {
-      const operatorName = buildOperatorName(String(Date.now()));
-      const drawer = await openCreateWizard(page, "operator");
-      await advanceCreateWizardToDetails(page);
-      await selectOperatorCreateMode(page, "function", drawer);
-
-      await fillFunctionOperatorForm(page, operatorName, buildFunctionHandlerCode());
-      await page.getByRole("button", { name: /保\s*存|Save/i }).click();
-      await expect(page).toHaveURL(/activeTab=operator/);
-
-      const detailDrawer = page.locator(".ant-drawer").first();
-      await expect(detailDrawer.getByText(operatorName).first()).toBeVisible();
-      await closeTopDrawer(page);
-      await expect(executionUnitCard(page, operatorName)).toBeVisible();
-
-      const listResponse = await request.get(
-        "/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=20",
-      );
-      if (listResponse.ok()) {
-        const body = (await listResponse.json()) as {
-          data?: Array<{ operator_id: string; name?: string; version: string }>;
-        };
-        const matched = body.data?.find((item) => item.name === operatorName);
-        if (matched) {
-          createdOperators.push({
-            operatorId: matched.operator_id,
-            version: matched.version,
-            name: operatorName,
-          });
-        }
-      }
-    });
-
-    test("UI-COV-013: operator form shows anchor navigation and OpenAPI input modes", async ({
-      page,
-    }) => {
-      await gotoE2ePage(page, "/execution-factory/units/new?metadataType=openapi");
-      await expect(page.getByRole("link", { name: /基本信息|Basic/i })).toBeVisible();
-      await expect(page.getByRole("link", { name: /^OpenAPI$/ })).toBeVisible();
-      await expect(page.getByRole("link", { name: /执行控制|Execute/i })).toBeVisible();
-      await expectOpenApiInputModes(page);
-    });
-
-    test("UI-COV-014: import modal opens on operator, toolbox, and mcp tabs", async ({ page }) => {
-      for (const tab of ["operator", "toolbox", "mcp"] as const) {
+    test("UI-COV-014: import modal opens on toolbox and mcp tabs", async ({ page }) => {
+      for (const tab of ["toolbox", "mcp"] as const) {
         await gotoUnitsTab(page, tab);
         const dialog = await openImportModal(page);
         await expect(dialog.getByRole("tab", { name: /备份文件|Backup file/i })).toBeVisible();
@@ -300,49 +214,6 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       );
       // 抽屉里独有的基础信息现在挂在页面上。
       await expect(page.getByText(toolbox.boxId)).toBeVisible();
-    });
-
-    test("UI-COV-021: operator detail drawer shows edit and debug actions", async ({
-      page,
-      request,
-    }) => {
-      const operator = await registerOperatorViaApi(request, buildOperatorName("ui_cov_detail"));
-      createdOperators.push(operator);
-
-      await openAdvancedOperatorTab(page);
-      const drawer = await openDetailDrawerByCardClick(page, operator.name);
-      await expect(drawer.getByText(/算子详情|Operator Detail/i)).toBeVisible();
-      await expect(drawer.getByRole("button", { name: /编\s*辑|Edit/i })).toBeVisible();
-      await expect(drawer.getByRole("button", { name: /调\s*试|Debug/i })).toBeVisible();
-      await expect(drawer.getByRole("button", { name: /版本历史|Version History/i })).toBeVisible();
-    });
-
-    test("UI-COV-022: operator card menu edit navigates to edit form", async ({
-      page,
-      request,
-    }) => {
-      const operator = await registerOperatorViaApi(request, buildOperatorName("ui_cov_edit"));
-      createdOperators.push(operator);
-
-      await openAdvancedOperatorTab(page);
-      await openCardMenu(page, operator.name, /编辑|Edit/i);
-      await expect(page).toHaveURL(
-        new RegExp(`/execution-factory/units/${operator.operatorId}/edit`),
-      );
-      await expect(page.getByLabel(/算子名称|Operator Name/i)).toHaveValue(operator.name);
-    });
-
-    test("UI-COV-023: operator publish from card menu updates tag", async ({ page, request }) => {
-      const operator = await registerOperatorViaApi(request, buildOperatorName("ui_cov_pub"));
-      createdOperators.push(operator);
-
-      await openAdvancedOperatorTab(page);
-      await openCardMenu(page, operator.name, /^发布$|^Publish$/i);
-      await confirmAntModal(page);
-      await expect(page.getByText(/成功|success/i).first()).toBeVisible({ timeout: 30_000 });
-
-      const card = executionUnitCard(page, operator.name);
-      await expect(card.locator(".ant-tag").filter({ hasText: /已发布|Published/i })).toBeVisible();
     });
 
     test("UI-COV-024: mcp card click opens detail with view detail CTA", async ({
@@ -473,37 +344,6 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
   });
 
   test.describe("End-to-end create paths", () => {
-    test("UI-COV-040: openapi operator via wizard matches AT flow", async ({ page, request }) => {
-      const operatorName = buildOperatorName(String(Date.now()));
-      const openApiSpec = JSON.stringify(buildMinimalOpenApiSpec(operatorName), null, 2);
-
-      await openOperatorCreateForm(page, "openapi");
-      await page.getByLabel(/算子名称|Operator Name/i).fill(operatorName);
-      await fillOpenApiSpecPaste(page, openApiSpec);
-      await page.getByRole("button", { name: /保\s*存|Save/i }).click();
-
-      await expect(page).toHaveURL(/activeTab=operator/);
-      await closeTopDrawer(page);
-      await expect(executionUnitCard(page, operatorName)).toBeVisible();
-
-      const listResponse = await request.get(
-        "/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=20",
-      );
-      if (listResponse.ok()) {
-        const body = (await listResponse.json()) as {
-          data?: Array<{ operator_id: string; name?: string; version: string }>;
-        };
-        const matched = body.data?.find((item) => item.name === operatorName);
-        if (matched) {
-          createdOperators.push({
-            operatorId: matched.operator_id,
-            version: matched.version,
-            name: operatorName,
-          });
-        }
-      }
-    });
-
     test("UI-COV-041: toolbox detail view tools from card menu view path", async ({
       page,
       request,

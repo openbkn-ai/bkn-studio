@@ -73,7 +73,6 @@ vi.mock("@/modules/system-admin/components/ObjectAuthorizeDrawer", () => ({
 
 const api = vi.hoisted(() => ({
   deleteMcp: vi.fn(),
-  deleteOperator: vi.fn(),
   deleteSkill: vi.fn(),
   deleteToolbox: vi.fn(),
   downloadComponentExport: vi.fn(),
@@ -81,16 +80,13 @@ const api = vi.hoisted(() => ({
   getToolDetail: vi.fn(),
   listMcpMarket: vi.fn(),
   listMcps: vi.fn(),
-  listOperatorCategories: vi.fn(),
-  listOperatorMarket: vi.fn(),
-  listOperators: vi.fn(),
+  listCategories: vi.fn(),
   listSkillMarket: vi.fn(),
   listSkills: vi.fn(),
   listToolboxMarket: vi.fn(),
   listToolboxes: vi.fn(),
   listTools: vi.fn(),
   updateMcpStatus: vi.fn(),
-  updateOperatorStatus: vi.fn(),
   updateSkillStatus: vi.fn(),
   updateToolboxStatus: vi.fn(),
 }));
@@ -100,12 +96,6 @@ vi.mock("@/modules/execution-factory/services/mcp.service", () => ({
   listMcpMarket: api.listMcpMarket,
   listMcps: api.listMcps,
   updateMcpStatus: api.updateMcpStatus,
-}));
-vi.mock("@/modules/execution-factory/services/operator.service", () => ({
-  deleteOperator: api.deleteOperator,
-  listOperatorMarket: api.listOperatorMarket,
-  listOperators: api.listOperators,
-  updateOperatorStatus: api.updateOperatorStatus,
 }));
 vi.mock("@/modules/execution-factory/services/skill.service", () => ({
   deleteSkill: api.deleteSkill,
@@ -128,7 +118,7 @@ vi.mock("@/modules/execution-factory/services/impex.service", () => ({
   downloadComponentExport: api.downloadComponentExport,
 }));
 vi.mock("@/modules/execution-factory/services/category.service", () => ({
-  listOperatorCategories: api.listOperatorCategories,
+  listCategories: api.listCategories,
 }));
 
 const LOCALES = ["en-US", "zh-CN"] as const;
@@ -184,8 +174,7 @@ describe("ExecutionUnitListScene lifecycle confirmation labels (#491)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
-    api.listOperatorCategories.mockResolvedValue([]);
-    api.listOperators.mockResolvedValue({ items: [], total: 0 });
+    api.listCategories.mockResolvedValue([]);
     api.listSkills.mockResolvedValue({ items: [], total: 0 });
     api.listToolboxes.mockResolvedValue({ items: [], total: 0 });
     api.listMcps.mockResolvedValue({ items: [], total: 0 });
@@ -197,7 +186,7 @@ describe("ExecutionUnitListScene lifecycle confirmation labels (#491)", () => {
     });
 
     it("localizes category filters consistently with cards and preserves their values", async () => {
-      api.listOperatorCategories.mockResolvedValue([
+      api.listCategories.mockResolvedValue([
         { categoryType: "data_process", name: "数据处理" },
         { categoryType: "custom_team", name: "团队自定义" },
       ]);
@@ -330,7 +319,7 @@ describe("ExecutionUnitListScene toolbox view permissions (#686)", () => {
     window.localStorage.clear();
     api.listToolboxMarket.mockResolvedValue({ items: [], total: 0 });
     api.listToolboxes.mockResolvedValue({ items: [], total: 0 });
-    api.listOperatorCategories.mockResolvedValue([]);
+    api.listCategories.mockResolvedValue([]);
   });
 
   it("redirects a Function-only user away from the API view and hides the API tab", async () => {
@@ -412,7 +401,7 @@ describe("ExecutionUnitListScene creation navigation (#686)", () => {
     vi.clearAllMocks();
     createMenu.onResourceCreated = undefined;
     window.localStorage.clear();
-    api.listOperatorCategories.mockResolvedValue([]);
+    api.listCategories.mockResolvedValue([]);
     api.listSkills.mockResolvedValue({ items: [], total: 0 });
     api.listToolboxes.mockResolvedValue({ items: [], total: 0 });
     api.listMcps.mockResolvedValue({ items: [], total: 0 });

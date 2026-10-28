@@ -16,19 +16,6 @@ import {
   publishMcpViaApi,
 } from "../../helpers/mcp";
 import {
-  buildOperatorName,
-  cleanupOperatorViaApi,
-  getOperatorDetailViaApi,
-  listOperatorHistoryViaApi,
-  offlineOperatorViaApi,
-  publishOperatorViaApi,
-  refreshOperatorViaApi,
-  registerOperatorViaApi,
-  unpublishOperatorViaApi,
-  updateOperatorViaApi,
-  type RegisteredOperator,
-} from "../../helpers/operator";
-import {
   buildSkillName,
   cleanupSkillViaApi,
   getSkillHistoryViaApi,
@@ -47,7 +34,6 @@ import {
 
 test.describe("Execution Factory — Version & status E2E flows", () => {
   let backendReady = false;
-  const createdOperators: RegisteredOperator[] = [];
   const createdBoxIds: string[] = [];
   const createdMcpIds: string[] = [];
   const createdSkillIds: string[] = [];
@@ -83,16 +69,6 @@ test.describe("Execution Factory — Version & status E2E flows", () => {
       }
     }
 
-    while (createdOperators.length > 0) {
-      const operator = createdOperators.pop();
-      if (!operator) continue;
-      try {
-        await cleanupOperatorViaApi(request, operator);
-      } catch (error) {
-        console.warn(String(error));
-      }
-    }
-
     while (createdBoxIds.length > 0) {
       const boxId = createdBoxIds.pop();
       if (!boxId) continue;
@@ -106,68 +82,6 @@ test.describe("Execution Factory — Version & status E2E flows", () => {
 
   test.beforeEach(() => {
     test.skip(!backendReady, "execution-factory backend is not running on :9000");
-  });
-
-  test("VER-01: operator publish creates version history", async ({ request }) => {
-    const operator = await registerOperatorViaApi(request, buildOperatorName("hist"));
-    createdOperators.push(operator);
-
-    await publishOperatorViaApi(request, operator);
-    const refreshed = await refreshOperatorViaApi(request, operator);
-    createdOperators[createdOperators.length - 1] = refreshed;
-
-    const history = await listOperatorHistoryViaApi(request, operator.operatorId);
-    expect(history.length).toBeGreaterThan(0);
-    expect(
-      history.some((item: { version?: string }) => item.version === refreshed.version),
-    ).toBeTruthy();
-  });
-
-  test("VER-02: operator edit and republish adds history entries", async ({ request }) => {
-    const name = buildOperatorName("hist_edit");
-    let operator = await registerOperatorViaApi(request, name);
-    createdOperators.push(operator);
-
-    await publishOperatorViaApi(request, operator);
-    operator = await refreshOperatorViaApi(request, operator);
-    createdOperators[createdOperators.length - 1] = operator;
-
-    const updatedName = `${name}_v2`;
-    await updateOperatorViaApi(request, operator, updatedName);
-    operator = await refreshOperatorViaApi(request, operator);
-    createdOperators[createdOperators.length - 1] = operator;
-
-    await publishOperatorViaApi(request, operator);
-
-    const history = await listOperatorHistoryViaApi(request, operator.operatorId);
-    expect(history.length).toBeGreaterThanOrEqual(2);
-  });
-
-  test("VER-03: operator offline and unpublish status transitions", async ({ request }) => {
-    const operator = await registerOperatorViaApi(request, buildOperatorName("status"));
-    createdOperators.push(operator);
-
-    await publishOperatorViaApi(request, operator);
-    let current = await refreshOperatorViaApi(request, operator);
-    createdOperators[createdOperators.length - 1] = current;
-
-    await offlineOperatorViaApi(request, current);
-    current = await refreshOperatorViaApi(request, operator);
-    createdOperators[createdOperators.length - 1] = current;
-    let detail = await getOperatorDetailViaApi(request, operator.operatorId);
-    expect(detail.version).toBeTruthy();
-
-    await publishOperatorViaApi(request, current);
-    current = await refreshOperatorViaApi(request, operator);
-    createdOperators[createdOperators.length - 1] = current;
-
-    await offlineOperatorViaApi(request, current);
-    current = await refreshOperatorViaApi(request, operator);
-    createdOperators[createdOperators.length - 1] = current;
-
-    await unpublishOperatorViaApi(request, current);
-    detail = await getOperatorDetailViaApi(request, operator.operatorId);
-    expect(detail.version).toBeTruthy();
   });
 
   test("VER-04: toolbox and MCP publish then offline", async ({ request }) => {

@@ -67,7 +67,7 @@ function canRunMenuAction(item: ExecutionUnitCardItem, action: ExecutionUnitCard
 
 // Function toolboxes use the same object ID as their box, but bkn-safe keeps
 // a distinct resource type so Function grants remain isolated from OpenAPI
-// Tool Box grants. Operators are retired and have no object-grant type.
+// Tool Box grants.
 function permissionRequestResourceType(
   activeTab: ExecutionUnitTab,
   item: ExecutionUnitCardItem,
@@ -152,11 +152,6 @@ export function ExecutionUnitCardMenu({
 
   const menuItems: MenuProps["items"] = [];
 
-  if (activeTab === "operator") {
-    pushMenuAction(menuItems, "view", t("executionFactory.cardMenu.view"), onAction, "view", item);
-    pushMenuAction(menuItems, "edit", t("executionFactory.cardMenu.edit"), onAction, "edit", item);
-  }
-
   if (activeTab === "toolbox") {
     pushMenuAction(menuItems, "view", t("executionFactory.cardMenu.view"), onAction, "view", item);
     pushMenuAction(menuItems, "edit", t("executionFactory.cardMenu.edit"), onAction, "edit", item);
@@ -190,7 +185,7 @@ export function ExecutionUnitCardMenu({
     );
   }
 
-  if (activeTab === "operator" || activeTab === "toolbox" || activeTab === "mcp") {
+  if (activeTab === "toolbox" || activeTab === "mcp") {
     const exportDisabled = activeTab === "toolbox" && item.status !== "published";
     pushMenuAction(
       menuItems,
@@ -219,17 +214,14 @@ export function ExecutionUnitCardMenu({
     );
   }
 
-  // Retired operators have no object grant type; see resolveObjectAuthzType in ExecutionUnitListScene.
-  if (activeTab !== "operator") {
-    pushMenuAction(
-      menuItems,
-      "authorize",
-      t("systemAdmin.objectGrants.authorize"),
-      onAction,
-      "authorize",
-      item,
-    );
-  }
+  pushMenuAction(
+    menuItems,
+    "authorize",
+    t("systemAdmin.objectGrants.authorize"),
+    onAction,
+    "authorize",
+    item,
+  );
 
   const permissionType = permissionRequestResourceType(activeTab, item);
   if (

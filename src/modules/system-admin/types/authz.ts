@@ -7,7 +7,7 @@
 
 // Object-level authorization integrates with bkn-safe's `/api/safe/v1/admin/object-grants`.
 // It supplements RBAC (roles -> permissions) by directly granting selected operations on a
-// concrete object, such as a catalog, model, or operator, to one user.
+// concrete object, such as a catalog, model, or toolbox, to one user.
 //
 // The list endpoint returns two deliberately different layers:
 //   - grants: independently revocable source records, each identified by a stable grant_id;

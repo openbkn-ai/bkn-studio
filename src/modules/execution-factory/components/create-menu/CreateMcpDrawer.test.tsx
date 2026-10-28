@@ -83,9 +83,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/execution-factory/services/category.service", () => ({
-  listOperatorCategories: vi.fn(() =>
-    Promise.resolve([{ categoryType: "other_category", name: "Other" }]),
-  ),
+  listCategories: vi.fn(() => Promise.resolve([{ categoryType: "other_category", name: "Other" }])),
 }));
 
 const { getMcpDetail, parseMcpSse, registerMcp, updateMcp } = vi.hoisted(() => ({

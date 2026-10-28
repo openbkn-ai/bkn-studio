@@ -113,14 +113,7 @@ export function CapabilityCard({ capability, highlighted, onClick }: CapabilityC
 
         <div className={styles.footer}>
           <div className={styles.footerLeft}>
-            {capability.orchestration?.enabled ? (
-              <>
-                <span className={styles.orchestrationDot} />
-                <span>{t("executionFactoryLab.orchestrationEnabled")}</span>
-              </>
-            ) : (
-              <span />
-            )}
+            <span />
           </div>
           <span className={styles.footerRight}>{timeLabel}</span>
         </div>

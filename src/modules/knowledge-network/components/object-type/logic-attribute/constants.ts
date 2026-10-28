@@ -27,8 +27,6 @@ export const VALUE_FROM_OPTIONS: Array<{
   { labelKey: "objectTypeLogicValueFromConst", value: "const" },
 ];
 
-export const OPERATOR_TYPE_OPTIONS = [{ label: "==", value: "==" }];
-
 /**
  * Execution Factory functions expose one JSON request body.  Header, query and
  * path are OpenAPI transport concepts and must not be configurable for a

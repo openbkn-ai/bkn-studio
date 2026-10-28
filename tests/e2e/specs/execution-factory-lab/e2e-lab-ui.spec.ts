@@ -44,13 +44,11 @@ import {
   registerMcpViaUi,
   replaceSkillPackageInDetail,
   runDebugInDetail,
-  runOrchestrationLifecycleInDetail,
   runPythonSandboxInCreateDrawer,
   searchCapabilityByName,
 } from "../../helpers/capabilities-lab-ui";
-import { buildUniqueName } from "../../helpers/common";
+import { buildFunctionHandlerCode, buildUniqueName } from "../../helpers/common";
 import { OSS_MOCK_DOCKER_URL } from "../../helpers/oss-mock";
-import { buildFunctionHandlerCode } from "../../helpers/operator";
 import { buildSkillZipBuffer } from "../../helpers/skill";
 import {
   buildToolboxName,
@@ -316,28 +314,6 @@ test.describe("Execution Factory Lab — UI lifecycle", () => {
 
     await searchCapabilityByName(page, toolName);
     await expect(capabilityCard(page, toolName).getByText(/已发布|Published/i)).toBeVisible();
-  });
-
-  test("LAB-UI-19: HTTP orchestration enable save and disable lifecycle", async ({
-    page,
-    request,
-  }) => {
-    const toolName = buildUniqueName("lab_ui_orchestration");
-    const curl = buildHttpCurl(OSS_MOCK_DOCKER_URL, toolName.replace(/[^a-zA-Z0-9]/g, "_"));
-
-    await gotoCapabilitiesLab(page);
-    const capability = await createHttpCapabilityViaUi(page, { name: toolName, curl });
-    trackCapability(capability);
-
-    await openCapabilityDetail(page, toolName);
-    await publishCapabilityInDetail(page);
-    await runOrchestrationLifecycleInDetail(page);
-    await closeCapabilityDetail(page);
-
-    if (capability?.id) {
-      const fresh = await getCapabilityViaLabApi(request, capability.id);
-      expect(fresh.orchestration?.enabled).toBeFalsy();
-    }
   });
 
   test("LAB-UI-13: debug MCP capability and verify response", async ({ page }) => {

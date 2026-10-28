@@ -68,10 +68,6 @@ const BTN_CONFIRM = new RegExp(`${cjk("确定")}|OK|Yes|Confirm`, "i");
 const BTN_DELETE = new RegExp(`${cjk("删除")}|Delete`, "i");
 const BTN_INSTALL = new RegExp(`${cjk("安装")}|^Install$`, "i");
 
-const BTN_ENABLE_ORCHESTRATION = /启用\s*流程编排|Enable orchestration/i;
-const BTN_SAVE_OPERATOR_SETTINGS = /保存\s*算子设置|Save operator settings/i;
-const BTN_DISABLE_ORCHESTRATION = /取消\s*流程编排|Disable orchestration/i;
-
 async function maybeDismissInfoModal(page: Page, titlePattern: RegExp) {
   const modal = page.locator(".ant-modal").filter({ hasText: titlePattern });
   if (await modal.isVisible().catch(() => false)) {
@@ -778,84 +774,6 @@ export async function publishCapabilityInDetail(page: Page) {
   await expectLabActionFeedback(page, {
     toast: /已发布|Capability published|published/i,
   });
-}
-
-export async function runOrchestrationLifecycleInDetail(page: Page) {
-  await switchDetailTab(page, /编排|Orchestration/i);
-  const drawer = capabilityDetailDrawer(page);
-  const enableButton = drawer.getByRole("button", { name: BTN_ENABLE_ORCHESTRATION });
-  const saveButton = drawer.getByRole("button", { name: BTN_SAVE_OPERATOR_SETTINGS });
-  const disableButton = drawer.getByRole("button", { name: BTN_DISABLE_ORCHESTRATION });
-
-  await expect(enableButton).toBeEnabled();
-  await expect(saveButton).toBeDisabled();
-  await expect(disableButton).toBeDisabled();
-
-  const enableResponse = await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.url().includes("/orchestration/enable") && response.request().method() === "POST",
-      { timeout: 60_000 },
-    ),
-    enableButton.click(),
-  ]).then(([response]) => response);
-  expect(enableResponse.ok()).toBeTruthy();
-
-  await expect(enableButton).toBeDisabled();
-  await expect(saveButton).toBeEnabled();
-  await expect(disableButton).toBeEnabled();
-  const operatorAlert = drawer
-    .locator(".ant-alert")
-    .filter({
-      hasText: /流程算子|workflow operator/i,
-    })
-    .first();
-  await expect(operatorAlert).toBeVisible();
-  await expect(operatorAlert).toHaveClass(/ant-alert-success/);
-
-  const saveResponse = await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.url().includes("/orchestration/config") && response.request().method() === "POST",
-      { timeout: 60_000 },
-    ),
-    saveButton.click(),
-  ]).then(([response]) => response);
-  expect(saveResponse.ok()).toBeTruthy();
-
-  await disableButton.click();
-  const abortModal = destructiveConfirmDialog(
-    page,
-    /确定取消流程编排|Disable workflow orchestration/i,
-  );
-  await expect(abortModal).toBeVisible({ timeout: 15_000 });
-  await expectDestructiveImpactWarning(abortModal);
-  await abortModal.locator(".ant-modal-footer .ant-btn:not(.ant-btn-dangerous)").click();
-  await expect(abortModal).toBeHidden({ timeout: 10_000 });
-  await expect(enableButton).toBeDisabled();
-  await expect(saveButton).toBeEnabled();
-  await expect(disableButton).toBeEnabled();
-
-  await disableButton.click();
-  const confirmModal = destructiveConfirmDialog(
-    page,
-    /确定取消流程编排|Disable workflow orchestration/i,
-  );
-  await expect(confirmModal).toBeVisible({ timeout: 15_000 });
-  await expectDestructiveImpactWarning(confirmModal);
-  const disableResponse = await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.url().includes("/orchestration/disable") && response.request().method() === "POST",
-      { timeout: 60_000 },
-    ),
-    confirmModal.getByRole("button", { name: BTN_DISABLE_ORCHESTRATION }).click(),
-  ]).then(([response]) => response);
-  expect(disableResponse.ok()).toBeTruthy();
-
-  await expect(enableButton).toBeEnabled({ timeout: 15_000 });
-  await expect(saveButton).toBeDisabled();
-  await expect(disableButton).toBeDisabled();
 }
 
 export async function openDetailMoreMenu(page: Page) {

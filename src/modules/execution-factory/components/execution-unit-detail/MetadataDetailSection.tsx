@@ -10,14 +10,14 @@ import { useTranslation } from "react-i18next";
 
 import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
 import type { FunctionInputPayload } from "@/modules/execution-factory/types/function-input";
-import type { OperatorMetadataType } from "@/modules/execution-factory/types/operator";
+import type { ToolMetadataType } from "@/modules/execution-factory/types/tool";
 import { parseOpenApiEndpointDetail } from "@/modules/execution-factory/utils/openapi-detail";
 
 import styles from "../ToolboxDetailDrawer.module.css";
 
 type MetadataDetailSectionProps = {
   functionInput?: FunctionInputPayload;
-  metadataType?: OperatorMetadataType | (string & {});
+  metadataType?: ToolMetadataType | (string & {});
   openapiSpec?: string;
 };
 

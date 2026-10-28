@@ -44,7 +44,7 @@ function replacePathParameters(path: string | undefined, rawValues?: string) {
 
   try {
     const values = parseJsonObject(rawValues, "Path") ?? {};
-    // Keep the {name} placeholder when empty to avoid malformed preview URLs such as /operator/market/.
+    // Keep the {name} placeholder when empty to avoid malformed preview URLs such as /tool-box/market/.
     return Object.entries(values)
       .filter(([, value]) => value !== undefined && value !== null && value !== "")
       .reduce(

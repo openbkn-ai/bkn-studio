@@ -29,19 +29,8 @@ function isResourceConflict(error: unknown): boolean {
   return Boolean(
     detail.code?.includes("Conflict") ||
     detail.code?.includes("ResourceIDConflict") ||
-    detail.code?.includes("ToolExists") ||
-    detail.code?.includes("OperatorExists"),
+    detail.code?.includes("ToolExists"),
   );
-}
-
-function componentTypeKey(componentType: ImpexComponentType) {
-  if (componentType === "toolbox") {
-    return "toolbox";
-  }
-  if (componentType === "mcp") {
-    return "mcp";
-  }
-  return "operator";
 }
 
 export function resolveImpexUserErrorMessage(
@@ -54,7 +43,7 @@ export function resolveImpexUserErrorMessage(
 ): ImpexUserErrorMessage {
   const { mode, componentType, t } = options;
   const detail = extractRequestErrorDetail(error);
-  const typeKey = componentTypeKey(componentType);
+  const typeKey = componentType;
 
   if (isResourceConflict(error) && mode === "create") {
     return {

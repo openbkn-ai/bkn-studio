@@ -7,15 +7,13 @@
 
 import { expect, test } from "@playwright/test";
 
-import { buildUniqueName } from "../../helpers/common";
+import { buildFunctionHandlerCode, buildUniqueName } from "../../helpers/common";
 import {
   assertCapabilitiesLabReady,
   buildLabWeatherOpenApi,
   createHttpCapabilityViaLabApi,
   debugCapabilityViaLabApi,
-  enableOrchestrationViaLabApi,
   getCapabilityViaLabApi,
-  getOrchestrationViaLabApi,
   importOpenApiViaLabApi,
   listCapabilitiesViaLabApi,
   listVersionsViaLabApi,
@@ -45,7 +43,6 @@ import {
   labApiHeaders,
 } from "../../helpers/capabilities-lab";
 import { cloneToolboxImpexForCreate } from "../../helpers/impex";
-import { buildFunctionHandlerCode } from "../../helpers/operator";
 import { buildSkillZipBuffer } from "../../helpers/skill";
 import { OSS_MOCK_DOCKER_URL } from "../../helpers/oss-mock";
 import {
@@ -102,25 +99,6 @@ test.describe("Execution Factory Lab — API", () => {
     const listed = await listCapabilitiesViaLabApi(request, { keyword: toolName });
     const match = listed.data?.find((item) => item.name === toolName);
     expect(match).toBeTruthy();
-  });
-
-  test("LAB-API-03: create with orchestration sync", async ({ request }) => {
-    const toolName = buildUniqueName("lab_weather_orch");
-    const openapi = JSON.stringify(buildLabWeatherOpenApi(toolName));
-
-    const created = await createHttpCapabilityViaLabApi(request, {
-      openapiSpec: openapi,
-      serviceUrl: OSS_MOCK_DOCKER_URL,
-      name: toolName,
-      orchestrationEnabled: true,
-    });
-
-    expect(created.capability?.orchestration?.enabled).toBe(true);
-    expect(created.capability?.orchestration?.operator_id).toBeTruthy();
-
-    if (created.capability?.box_id) {
-      createdBoxIds.push(created.capability.box_id);
-    }
   });
 
   test("LAB-API-04: unified list with kind=all and pagination", async ({ request }) => {
@@ -184,33 +162,7 @@ test.describe("Execution Factory Lab — API", () => {
     expect(detail.status).toBe("published");
   });
 
-  test("LAB-API-07: enable orchestration post-create", async ({ request }) => {
-    const toolName = buildUniqueName("lab_orch_enable");
-    const openapi = JSON.stringify(buildLabWeatherOpenApi(toolName));
-
-    const created = await createHttpCapabilityViaLabApi(request, {
-      openapiSpec: openapi,
-      serviceUrl: OSS_MOCK_DOCKER_URL,
-      name: toolName,
-      orchestrationEnabled: false,
-    });
-
-    const capabilityId = created.capability?.id;
-    expect(capabilityId).toBeTruthy();
-
-    if (created.capability?.box_id) {
-      createdBoxIds.push(created.capability.box_id);
-    }
-
-    const enabled = await enableOrchestrationViaLabApi(request, capabilityId!);
-    expect(enabled.operator_id).toBeTruthy();
-
-    const orch = await getOrchestrationViaLabApi(request, capabilityId!);
-    expect(orch.enabled).toBe(true);
-    expect(orch.operator_id).toBeTruthy();
-  });
-
-  test("LAB-API-08: list orchestration versions after sync", async ({ request }) => {
+  test("LAB-API-08: list capability versions after create", async ({ request }) => {
     const toolName = buildUniqueName("lab_versions");
     const openapi = JSON.stringify(buildLabWeatherOpenApi(toolName));
 
@@ -218,7 +170,6 @@ test.describe("Execution Factory Lab — API", () => {
       openapiSpec: openapi,
       serviceUrl: OSS_MOCK_DOCKER_URL,
       name: toolName,
-      orchestrationEnabled: true,
     });
 
     const capabilityId = created.capability?.id;

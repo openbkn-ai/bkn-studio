@@ -5,21 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { expect, test } from "@playwright/test";
 
 import { assertBackendReady } from "../../helpers/common";
-import { cloneOperatorImpexForCreate, buildImpexImportName } from "../../helpers/impex";
 import {
-  exportFromCardMenu,
   gotoE2ePage,
   gotoUnitsTab,
-  importBackupFileViaUi,
   openCatalogInstallDialog,
-  openOperatorVersionHistoryDrawer,
   openSkillReleaseHistoryDrawer,
   retryListLoadIfNeeded,
   searchExecutionUnitByName,
@@ -27,16 +19,6 @@ import {
   waitForImpexImportResponse,
   expectAppToast,
 } from "../../helpers/execution-unit-ui";
-import {
-  buildOperatorName,
-  cleanupOperatorViaApi,
-  exportOperatorViaApi,
-  listOperatorHistoryViaApi,
-  publishOperatorViaApi,
-  registerOperatorViaApi,
-  updateOperatorViaApi,
-  type RegisteredOperator,
-} from "../../helpers/operator";
 import {
   buildSkillName,
   cleanupSkillViaApi,
@@ -54,7 +36,6 @@ test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
   test.describe.configure({ timeout: 180_000 });
 
   let backendReady = false;
-  const createdOperators: RegisteredOperator[] = [];
   const createdBoxIds: string[] = [];
   const createdSkillIds: string[] = [];
 
@@ -79,16 +60,6 @@ test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
       }
     }
 
-    while (createdOperators.length > 0) {
-      const operator = createdOperators.pop();
-      if (!operator) continue;
-      try {
-        await cleanupOperatorViaApi(request, operator);
-      } catch (error) {
-        console.warn(String(error));
-      }
-    }
-
     while (createdBoxIds.length > 0) {
       const boxId = createdBoxIds.pop();
       if (!boxId) continue;
@@ -104,19 +75,6 @@ test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
     test.skip(!backendReady, "execution-factory backend is not running on :9000");
   });
 
-  test("VER-UI-01: operator version history drawer lists published version", async ({
-    page,
-    request,
-  }) => {
-    const operator = await registerOperatorViaApi(request, buildOperatorName("ui_hist"));
-    createdOperators.push(operator);
-    await publishOperatorViaApi(request, operator);
-
-    await gotoUnitsTab(page, "operator");
-    const historyDrawer = await openOperatorVersionHistoryDrawer(page, operator.name);
-    await expect(historyDrawer.getByRole("cell").first()).toBeVisible();
-  });
-
   test("VER-UI-02: skill release history drawer opens", async ({ page, request }) => {
     const skill = await registerSkillViaApi(
       request,
@@ -128,63 +86,6 @@ test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
     await gotoUnitsTab(page, "skill");
     const historyDrawer = await openSkillReleaseHistoryDrawer(page, skill.name);
     await expect(historyDrawer.getByRole("cell").first()).toBeVisible();
-  });
-
-  test("VER-UI-03: republish operator adds a second history entry", async ({ page, request }) => {
-    const operator = await registerOperatorViaApi(request, buildOperatorName("ui_repub"));
-    createdOperators.push(operator);
-    await publishOperatorViaApi(request, operator);
-
-    await updateOperatorViaApi(request, operator, operator.name, `Updated at ${Date.now()}`);
-    await publishOperatorViaApi(request, operator);
-
-    const history = await listOperatorHistoryViaApi(request, operator.operatorId);
-    expect(history.length).toBeGreaterThanOrEqual(2);
-
-    await gotoUnitsTab(page, "operator");
-    const historyDrawer = await openOperatorVersionHistoryDrawer(page, operator.name);
-    await expect(historyDrawer.getByRole("cell").nth(1)).toBeVisible();
-  });
-
-  test("VER-UI-04: published operator backup export then UI import clone", async ({
-    page,
-    request,
-  }) => {
-    const operator = await registerOperatorViaApi(request, buildOperatorName("ui_ver_impex"));
-    createdOperators.push(operator);
-    await publishOperatorViaApi(request, operator);
-
-    await gotoUnitsTab(page, "operator");
-    await exportFromCardMenu(page, operator.name, "operator");
-
-    const exported = (await exportOperatorViaApi(request, operator.operatorId)) as Record<
-      string,
-      unknown
-    >;
-    const importName = buildImpexImportName("ui_ver_impex_copy");
-    const payload = cloneOperatorImpexForCreate(exported, importName);
-    const filePath = join(tmpdir(), `e2e-ver-impex-${Date.now()}.adp`);
-    writeFileSync(filePath, JSON.stringify(payload), "utf8");
-
-    await importBackupFileViaUi(page, "operator", filePath);
-
-    await expect(page.getByRole("heading", { level: 5, name: importName })).toBeVisible();
-    const listResponse = await request.get(
-      "/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=50",
-    );
-    if (listResponse.ok()) {
-      const body = (await listResponse.json()) as {
-        data?: Array<{ operator_id: string; name?: string; version: string }>;
-      };
-      const imported = body.data?.find((item) => item.name === importName);
-      if (imported) {
-        createdOperators.push({
-          operatorId: imported.operator_id,
-          version: imported.version,
-          name: importName,
-        });
-      }
-    }
   });
 
   test("CAT-UI-01: catalog install toolbox from market UI", async ({ page, request }) => {

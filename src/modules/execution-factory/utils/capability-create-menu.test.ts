@@ -35,7 +35,6 @@ describe("capability-create-menu", () => {
   it("routes ADP import to an import-capable tab", () => {
     expect(resolveCapabilityAdpImportTab("toolbox")).toBe("toolbox");
     expect(resolveCapabilityAdpImportTab("mcp")).toBe("mcp");
-    expect(resolveCapabilityAdpImportTab("operator")).toBe("operator");
     expect(resolveCapabilityAdpImportTab("skill")).toBe("toolbox");
   });
 });

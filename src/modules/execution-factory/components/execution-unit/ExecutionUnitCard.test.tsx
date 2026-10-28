@@ -50,7 +50,7 @@ describe("ExecutionUnitCard meta line", () => {
     );
 
     expect(screen.getByText("executionFactory.mcpModeShort.stream")).toBeTruthy();
-    expect(screen.queryByText("executionFactory.operatorCategories.other_category")).toBeNull();
+    expect(screen.queryByText("executionFactory.categoryLabels.other_category")).toBeNull();
   });
 
   it("drops the meta line for a SKILL with nothing meaningful to show", () => {

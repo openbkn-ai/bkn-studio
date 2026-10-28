@@ -57,13 +57,13 @@ describe("FunctionCodeField permissions", () => {
 
   afterEach(cleanup);
 
-  it("hides Function generation and runs in the legacy operator form for operator-only users", async () => {
+  it("hides Function generation and runs for users without Function grants", async () => {
     mocks.permissions.splice(
       0,
       mocks.permissions.length,
-      "execution-factory:operator:create",
-      "execution-factory:operator:edit",
-      "execution-factory:operator:debug",
+      "execution-factory:tool:create",
+      "execution-factory:tool:edit",
+      "execution-factory:tool:debug",
     );
 
     render(<FunctionCodeField onChange={vi.fn()} value={CODE} />);

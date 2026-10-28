@@ -28,9 +28,7 @@ export function ExecutionUnitCreatePage({ activeTab }: ExecutionUnitCreatePagePr
         ? `/execution-factory/mcp/${id}`
         : tab === "skill"
           ? `/execution-factory/skills/${id}`
-          : tab === "toolbox"
-            ? `/execution-factory/toolboxes/${id}/tools${toolId ? `?toolId=${toolId}` : "?create=1"}`
-            : `/execution-factory/units?activeTab=operator&detailId=${id}`;
+          : `/execution-factory/toolboxes/${id}/tools${toolId ? `?toolId=${toolId}` : "?create=1"}`;
 
     void (async () => {
       try {

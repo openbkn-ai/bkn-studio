@@ -65,20 +65,7 @@ function Get-AllPages {
 
 Write-Host "Cleaning E2E assets from $apiBase (DryRun=$DryRun)"
 
-$summary = @{ operators = 0; toolboxes = 0; mcps = 0; skills = 0 }
-
-foreach ($op in (Get-AllPages "$apiBase/agent-operator-integration/v1/operator/info/list?")) {
-    if (-not (Test-AssetName $op.name)) { continue }
-    $summary.operators++
-    if (-not $DryRun) {
-        Invoke-Api POST "$apiBase/agent-operator-integration/v1/operator/status" @(
-            @{ operator_id = $op.operator_id; version = $op.version; status = "offline" }
-        )
-        Invoke-Api DELETE "$apiBase/agent-operator-integration/v1/operator/delete" @(
-            @{ operator_id = $op.operator_id; version = $op.version }
-        )
-    }
-}
+$summary = @{ toolboxes = 0; mcps = 0; skills = 0 }
 
 foreach ($box in (Get-AllPages "$apiBase/agent-operator-integration/v1/tool-box/list?")) {
     $name = if ($box.box_name) { $box.box_name } else { $box.name }
@@ -108,5 +95,5 @@ foreach ($skill in (Get-AllPages "$apiBase/agent-operator-integration/v1/skills?
     }
 }
 
-Write-Host ("Summary: operators={0} toolboxes={1} mcps={2} skills={3}" -f `
-    $summary.operators, $summary.toolboxes, $summary.mcps, $summary.skills)
+Write-Host ("Summary: toolboxes={0} mcps={1} skills={2}" -f `
+    $summary.toolboxes, $summary.mcps, $summary.skills)

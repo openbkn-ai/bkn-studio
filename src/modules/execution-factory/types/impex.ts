@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type ImpexComponentType = "operator" | "toolbox" | "mcp";
+export type ImpexComponentType = "toolbox" | "mcp";
 
 export type ImpexImportMode = "create" | "upsert";
 

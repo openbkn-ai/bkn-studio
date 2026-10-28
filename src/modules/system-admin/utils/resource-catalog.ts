@@ -84,7 +84,6 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   mcp: "MCP service",
   metric: "Metric",
   object_type: "Object type",
-  operator: "Operator",
   resource: "Data resource",
   relation_type: "Relation type",
   risk_type: "Risk type",
@@ -171,7 +170,6 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
   resourceType("small_model", ["create", "display", "modify", "delete", "execute"]),
   resourceType("large_model", ["create", "display", "modify", "delete", "execute"]),
   resourceType("function", PUBLISHABLE),
-  resourceType("operator", PUBLISHABLE),
   resourceType("tool_box", PUBLISHABLE),
   resourceType("skill", PUBLISHABLE),
   resourceType("mcp", PUBLISHABLE),
@@ -224,8 +222,6 @@ const ROLE_GRANT_EXCLUDED_RESOURCE_TYPES = new Set([
   "risk_type",
   "safe_admin",
   "small_model",
-  // Legacy operators are retired; keep the type only so existing grants still render.
-  "operator",
 ]);
 
 export const ROLE_GRANT_RESOURCE_TYPES = RESOURCE_TYPES.filter(
@@ -325,11 +321,6 @@ const LOCAL_OPERATION_REQUIREMENTS: Record<string, string[]> = {
   "mcp:publish": ["view"],
   "mcp:unpublish": ["view"],
   "mcp:authorize": ["view"],
-  "operator:modify": ["view"],
-  "operator:delete": ["view"],
-  "operator:publish": ["view"],
-  "operator:unpublish": ["view"],
-  "operator:authorize": ["view"],
   "skill:modify": ["view"],
   "skill:delete": ["view"],
   "skill:publish": ["view"],
@@ -350,6 +341,6 @@ function resourceTypeFallbackLabel(type: string): string {
 }
 
 export function resourceTypeDescription(type: string): string {
-  if (type !== "operator" && type !== "tool_box" && type !== "function") return "";
+  if (type !== "tool_box" && type !== "function") return "";
   return i18n.t(`systemAdmin.resourceCatalog.descriptions.${type}`);
 }

@@ -27,15 +27,14 @@ describe("execution-factory audit user name mapping", () => {
   });
 
   it("preserves names returned in the existing user fields", async () => {
-    const { listOperators } = await import("@/modules/execution-factory/services/operator.service");
+    const { listToolboxes } = await import("@/modules/execution-factory/services/toolbox.service");
 
     getMock.mockResolvedValueOnce({
       data: {
         data: [
           {
-            operator_id: "operator-a",
-            name: "Operator A",
-            version: "1.0.0",
+            box_id: "box-a",
+            box_name: "Box A",
             create_user: "Alice Zhang",
             update_user: "Bob Li",
             release_user: "Carol Wang",
@@ -45,39 +44,20 @@ describe("execution-factory audit user name mapping", () => {
       },
     });
 
-    expect((await listOperators(query)).items[0]).toMatchObject({
+    expect((await listToolboxes(query)).items[0]).toMatchObject({
       createUser: "Alice Zhang",
       updateUser: "Bob Li",
       releaseUser: "Carol Wang",
     });
   });
 
-  it("maps user name snapshots for operators, toolboxes, MCPs, skills, and tools", async () => {
-    const { listOperators } = await import("@/modules/execution-factory/services/operator.service");
+  it("maps user name snapshots for toolboxes, MCPs, skills, and tools", async () => {
     const { listToolboxes } = await import("@/modules/execution-factory/services/toolbox.service");
     const { listMcps } = await import("@/modules/execution-factory/services/mcp.service");
     const { listSkills } = await import("@/modules/execution-factory/services/skill.service");
     const { listTools } = await import("@/modules/execution-factory/services/tool.service");
 
     getMock
-      .mockResolvedValueOnce({
-        data: {
-          data: [
-            {
-              operator_id: "operator-a",
-              name: "Operator A",
-              version: "1.0.0",
-              create_user: "user-a",
-              create_user_name: "Alice",
-              update_user: "user-b",
-              update_user_name: "Bob",
-              release_user: "user-c",
-              release_user_name: "Carol",
-            },
-          ],
-          total: 1,
-        },
-      })
       .mockResolvedValueOnce({
         data: {
           data: [
@@ -146,13 +126,12 @@ describe("execution-factory audit user name mapping", () => {
         },
       });
 
-    const operator = (await listOperators(query)).items[0];
     const toolbox = (await listToolboxes(query)).items[0];
     const mcp = (await listMcps(query)).items[0];
     const skill = (await listSkills(query)).items[0];
     const tool = (await listTools("box-a", query)).items[0];
 
-    for (const record of [operator, toolbox, mcp, skill]) {
+    for (const record of [toolbox, mcp, skill]) {
       expect(record).toMatchObject({
         createUserName: "Alice",
         updateUserName: "Bob",

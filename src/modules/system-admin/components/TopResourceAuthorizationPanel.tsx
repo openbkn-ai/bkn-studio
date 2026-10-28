@@ -49,7 +49,6 @@ const ICONS: Record<string, ReactNode> = {
   knowledge_base: <ReadOutlined />,
   knowledge_network: <DeploymentUnitOutlined />,
   mcp: <ApiOutlined />,
-  operator: <FunctionOutlined />,
   skill: <AppstoreOutlined />,
   tool_box: <ToolOutlined />,
   function: <FunctionOutlined />,

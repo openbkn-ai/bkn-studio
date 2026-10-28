@@ -16,7 +16,7 @@ test.describe("Execution Factory — P0 cleanup", () => {
     const summary = await cleanupAllE2eAssets(request);
     expect(summary.dryRun).toBe(false);
     console.info(
-      `P0-CLEAN removed operators=${summary.operators} toolboxes=${summary.toolboxes} mcps=${summary.mcps} skills=${summary.skills}`,
+      `P0-CLEAN removed toolboxes=${summary.toolboxes} mcps=${summary.mcps} skills=${summary.skills}`,
     );
   });
 });

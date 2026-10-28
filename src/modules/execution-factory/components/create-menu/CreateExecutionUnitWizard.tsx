@@ -8,7 +8,6 @@
 import { Drawer, Space, Steps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -16,7 +15,6 @@ import { hasPermissions } from "@/framework/permission/has-permissions";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 
 import { CreateMcpDrawer } from "./CreateMcpDrawer";
-import { CreateOperatorTypeStep, type CreateOperatorMode } from "./CreateOperatorTypeStep";
 import { CreateSkillForm } from "./CreateSkillForm";
 import { CreateToolboxForm } from "./CreateToolboxForm";
 import { CreateWizardTypeStep } from "./CreateWizardTypeStep";
@@ -56,7 +54,7 @@ export function CreateExecutionUnitWizard({
           : "execution-factory:toolbox:create",
     }),
   );
-  const allowedTabs = (["operator", "toolbox", "mcp", "skill"] as const).filter(
+  const allowedTabs = (["toolbox", "mcp", "skill"] as const).filter(
     (tab) =>
       (!allowedTabsOverride || allowedTabsOverride.includes(tab)) &&
       (tab === "toolbox"
@@ -66,10 +64,8 @@ export function CreateExecutionUnitWizard({
             requiredPermissions: `execution-factory:${tab}:create`,
           })),
   );
-  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [selectedTab, setSelectedTab] = useState<ExecutionUnitTab>(initialTab);
-  const [operatorMode, setOperatorMode] = useState<CreateOperatorMode | undefined>();
 
   useEffect(() => {
     if (!open) {
@@ -78,7 +74,6 @@ export function CreateExecutionUnitWizard({
 
     setStep(0);
     setSelectedTab(initialTab);
-    setOperatorMode(undefined);
   }, [initialTab, open]);
 
   const stepItems = useMemo(
@@ -91,22 +86,12 @@ export function CreateExecutionUnitWizard({
 
   const handleClose = () => {
     setStep(0);
-    setOperatorMode(undefined);
     onClose();
   };
 
   const handleCreated = (tab: ExecutionUnitTab, id: string) => {
     onRefresh?.();
     onResourceCreated?.({ tab, id });
-    handleClose();
-  };
-
-  const handleOperatorContinue = () => {
-    if (!operatorMode) {
-      return;
-    }
-
-    void navigate(`/execution-factory/units/new?metadataType=${operatorMode}`);
     handleClose();
   };
 
@@ -124,8 +109,6 @@ export function CreateExecutionUnitWizard({
     }
 
     switch (selectedTab) {
-      case "operator":
-        return <CreateOperatorTypeStep mode={operatorMode} onModeChange={setOperatorMode} />;
       case "toolbox":
         return (
           <CreateToolboxForm
@@ -162,17 +145,6 @@ export function CreateExecutionUnitWizard({
           <AppButton onClick={handleClose}>{t("common.cancel")}</AppButton>
           <AppButton onClick={() => setStep(1)} type="primary">
             {t("common.next")}
-          </AppButton>
-        </Space>
-      );
-    }
-
-    if (selectedTab === "operator") {
-      return (
-        <Space>
-          <AppButton onClick={() => setStep(0)}>{t("common.back")}</AppButton>
-          <AppButton disabled={!operatorMode} onClick={handleOperatorContinue} type="primary">
-            {t("executionFactory.createWizardContinueConfigure")}
           </AppButton>
         </Space>
       );

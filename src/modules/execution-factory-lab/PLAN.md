@@ -6,11 +6,12 @@
 
 ## 设计原则
 
-| 层级   | 用户可见概念                    | 技术映射（降级复用）      |
-| ------ | ------------------------------- | ------------------------- |
-| 能力层 | HTTP / MCP / Skill（主列表）    | tool / mcp / skill        |
-| 治理层 | 分组（侧栏筛选，默认自动）      | toolbox                   |
-| 编排层 | 「用于流程编排」开关 / 事后启用 | openapi-bundle → operator |
+> 流程编排（算子）已随 bkn-foundry#433 下线，Lab 不再提供编排同步。
+
+| 层级   | 用户可见概念                 | 技术映射（降级复用） |
+| ------ | ---------------------------- | -------------------- |
+| 能力层 | HTTP / MCP / Skill（主列表） | tool / mcp / skill   |
+| 治理层 | 分组（侧栏筛选，默认自动）   | toolbox              |
 
 ## 实现状态
 
@@ -20,24 +21,22 @@
   - `GET /capabilities` — HTTP 能力列表
   - `GET /capabilities/:id` — 能力详情
   - `GET /groups` — 分组列表
-  - `POST /capabilities/http` — 添加 HTTP 能力（自动分组 + 可选编排同步）
+  - `POST /capabilities/http` — 添加 HTTP 能力（自动分组）
 - [x] 前端：扁平能力卡片 + HTTP 创建向导（无工具集步骤）
 - [x] E2E：`LAB-API-01` ~ `LAB-API-03`，`LAB-UI-01`
 
 ### Phase 2 — 统一列表与详情 ✅
 
 - [x] MCP / Skill 纳入统一扁平列表（`kind=all|http|mcp|skill`）
-- [x] 能力详情 Tab：概览、调试、版本、编排血缘
+- [x] 能力详情 Tab：概览、调试、版本
 - [x] HTTP / MCP 调试代理
 - [x] Skill 版本列表与回滚发布
-- [x] HTTP 编排算子版本历史（已启用编排时）
 
 ### Phase 3 — 发布与导入 ✅
 
 - [x] 能力发布：`POST /capabilities/:id/publish`
 - [x] 分组发布：`POST /groups/:group_id/publish`
 - [x] OpenAPI 批量导入：`POST /capabilities/http/import`
-- [x] 创建后启用编排：`POST /capabilities/:id/orchestration/enable`
 - [x] 列表分页与类型筛选
 - [x] E2E：`LAB-API-04` ~ `LAB-API-09`
 
@@ -61,21 +60,19 @@
 
 ## API 一览
 
-| 方法 | 路径                                     | 说明                                       |
-| ---- | ---------------------------------------- | ------------------------------------------ |
-| GET  | `/health`                                | 健康检查                                   |
-| GET  | `/capabilities`                          | 统一能力列表（kind/keyword/group_id/page） |
-| GET  | `/capabilities/:id`                      | 能力详情                                   |
-| POST | `/capabilities/http`                     | 创建 HTTP 能力                             |
-| POST | `/capabilities/http/import`              | OpenAPI 批量导入                           |
-| POST | `/capabilities/:id/debug`                | 调试                                       |
-| GET  | `/capabilities/:id/versions`             | 版本历史                                   |
-| POST | `/capabilities/:id/versions/republish`   | Skill 版本回滚                             |
-| POST | `/capabilities/:id/publish`              | 发布能力                                   |
-| GET  | `/capabilities/:id/orchestration`        | 编排详情                                   |
-| POST | `/capabilities/:id/orchestration/enable` | 事后启用编排                               |
-| GET  | `/groups`                                | 分组列表                                   |
-| POST | `/groups/:group_id/publish`              | 发布分组                                   |
+| 方法 | 路径                                   | 说明                                       |
+| ---- | -------------------------------------- | ------------------------------------------ |
+| GET  | `/health`                              | 健康检查                                   |
+| GET  | `/capabilities`                        | 统一能力列表（kind/keyword/group_id/page） |
+| GET  | `/capabilities/:id`                    | 能力详情                                   |
+| POST | `/capabilities/http`                   | 创建 HTTP 能力                             |
+| POST | `/capabilities/http/import`            | OpenAPI 批量导入                           |
+| POST | `/capabilities/:id/debug`              | 调试                                       |
+| GET  | `/capabilities/:id/versions`           | 版本历史                                   |
+| POST | `/capabilities/:id/versions/republish` | Skill 版本回滚                             |
+| POST | `/capabilities/:id/publish`            | 发布能力                                   |
+| GET  | `/groups`                              | 分组列表                                   |
+| POST | `/groups/:group_id/publish`            | 发布分组                                   |
 
 ## E2E 测试矩阵
 
@@ -83,12 +80,10 @@
 | ---------- | ---- | -------------------- |
 | LAB-API-01 | API  | health               |
 | LAB-API-02 | API  | 自动分组创建 HTTP    |
-| LAB-API-03 | API  | 创建时同步编排       |
 | LAB-API-04 | API  | kind=all 分页        |
 | LAB-API-05 | API  | 详情 + HTTP 调试     |
 | LAB-API-06 | API  | 能力与分组发布       |
-| LAB-API-07 | API  | 事后启用编排         |
-| LAB-API-08 | API  | 编排版本列表         |
+| LAB-API-08 | API  | 版本列表             |
 | LAB-API-09 | API  | OpenAPI 批量导入     |
 | LAB-UI-01  | UI   | 菜单导航 + 创建 HTTP |
 

@@ -42,12 +42,6 @@ import {
   updateMcpStatus,
 } from "@/modules/execution-factory/services/mcp.service";
 import {
-  deleteOperator,
-  listOperatorMarket,
-  listOperators,
-  updateOperatorStatus,
-} from "@/modules/execution-factory/services/operator.service";
-import {
   deleteSkill,
   downloadSkillPackage,
   listSkillMarket,
@@ -65,13 +59,9 @@ import {
   collectToolboxPublishIssues,
   type ToolboxPublishIssue,
 } from "@/modules/execution-factory/utils/toolbox-publish-preflight";
-import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
+import { listCategories } from "@/modules/execution-factory/services/category.service";
 import { localizeCategoryOptions } from "@/modules/execution-factory/utils/detail-display";
 import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
-import type {
-  OperatorRecord,
-  PublicOperatorStatus,
-} from "@/modules/execution-factory/types/operator";
 import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
 import type { ToolboxRecord, ToolboxStatus } from "@/modules/execution-factory/types/toolbox";
 import {
@@ -85,8 +75,7 @@ import {
 } from "@/modules/execution-factory/utils/collect-local-resource-ids";
 import {
   getExecutionUnitTabLabelKey,
-  isCapabilityUxV2,
-  resolveVisibleManagementTabs,
+  getManagementTabs,
 } from "@/modules/execution-factory/utils/capability-ux";
 import { supportsCategoryFilter } from "@/modules/execution-factory/utils/capability-parity";
 import { hasExecutionUnitRecordOperation } from "@/modules/execution-factory/utils/record-operations";
@@ -95,12 +84,7 @@ import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectA
 
 import styles from "./execution-unit-list.module.css";
 
-/**
- * bkn-safe object type for a list row, or null when the row cannot be authorized as an object.
- *
- * Operators are retired: their rows carry operator ids, which are neither a grantable type any
- * more nor Function set (box id) resources, so the operator tab offers no object authorization.
- */
+/** bkn-safe object type for a list row, or null when the row cannot be authorized as an object. */
 function resolveObjectAuthzType(tab: ExecutionUnitTab, item: ExecutionUnitCardItem): string | null {
   switch (tab) {
     case "toolbox":
@@ -124,7 +108,7 @@ const PUBLISH_PREFLIGHT_DETAIL_LIMIT = 20;
 const TAB_STORAGE_KEY = "execution-factory.activeTab";
 /** API/function subview under toolboxes, restored from detail-page navigation just like activeTab. */
 const TOOLBOX_VIEW_STORAGE_KEY = "execution-factory.toolboxView";
-const DEFAULT_TABS: ExecutionUnitTab[] = ["operator", "toolbox", "mcp", "skill"];
+const DEFAULT_TABS: ExecutionUnitTab[] = ["toolbox", "mcp", "skill"];
 
 type ObjectAuthorizationTarget = {
   id: string;
@@ -230,25 +214,6 @@ function mapAuditUser(userId: string | undefined, userName?: string) {
   return formatAuditUserDisplay({ id: userId, name: userName });
 }
 
-function mapOperator(item: OperatorRecord): ExecutionUnitCardItem {
-  return {
-    operations: item.operations,
-    id: item.operatorId,
-    name: item.name,
-    description: item.description,
-    metadataType: item.metadataType,
-    category: item.category,
-    categoryName: item.categoryName,
-    isInternal: item.isInternal,
-    releaseUser: mapAuditUser(item.releaseUser, item.releaseUserName),
-    updateUser: formatUpdatedAuditUserDisplay(item),
-    releaseTime: item.releaseTime,
-    updateTime: item.updateTime,
-    status: item.status,
-    version: item.version,
-  };
-}
-
 function mapToolbox(item: ToolboxRecord): ExecutionUnitCardItem {
   return {
     operations: item.operations,
@@ -324,16 +289,6 @@ export function ExecutionUnitListScene({
 
     return filterAccessibleExecutionUnitTabs(tabs, runtimeConfig.currentUser.permissions ?? []);
   }, [marketMode, runtimeConfig.currentUser.permissions, tabs]);
-  const resolvableTabs = useMemo(() => {
-    if (!isCapabilityUxV2() || accessibleTabs.includes("operator")) {
-      return accessibleTabs;
-    }
-
-    const operatorViewPermission = "execution-factory:operator:view";
-    return runtimeConfig.currentUser.permissions?.includes(operatorViewPermission)
-      ? [...accessibleTabs, "operator" as const]
-      : accessibleTabs;
-  }, [accessibleTabs, runtimeConfig.currentUser.permissions]);
   const accessibleToolboxViews = useMemo(
     () =>
       marketMode
@@ -342,7 +297,7 @@ export function ExecutionUnitListScene({
     [marketMode, runtimeConfig.currentUser.permissions],
   );
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
-    resolveActiveTab(searchParams.get("activeTab"), defaultTab, resolvableTabs),
+    resolveActiveTab(searchParams.get("activeTab"), defaultTab, accessibleTabs),
   );
   const [category, setCategory] = useState("");
   const [categoryOptions, setCategoryOptions] = useState<CategoryChipOption[]>([]);
@@ -363,7 +318,6 @@ export function ExecutionUnitListScene({
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [installedResourceIdsError, setInstalledResourceIdsError] = useState<string | null>(null);
   const [, setPendingActionKey] = useState<string | null>(null);
-  const [detailOperatorId, setDetailOperatorId] = useState<string | null>(null);
   const [detailBoxId, setDetailBoxId] = useState<string | null>(null);
   const [detailMcpId, setDetailMcpId] = useState<string | null>(null);
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
@@ -425,7 +379,7 @@ export function ExecutionUnitListScene({
     }
 
     void (async () => {
-      const items = await listOperatorCategories();
+      const items = await listCategories();
       setCategoryOptions(
         items.map((item) => ({
           value: item.categoryType,
@@ -443,7 +397,7 @@ export function ExecutionUnitListScene({
 
   useEffect(() => {
     const param = searchParams.get("activeTab");
-    const resolved = resolveActiveTab(param, defaultTab, resolvableTabs);
+    const resolved = resolveActiveTab(param, defaultTab, accessibleTabs);
     const viewParam = searchParams.get("toolboxView");
     const resolvedView = resolveToolboxView(viewParam, accessibleToolboxViews);
 
@@ -454,7 +408,7 @@ export function ExecutionUnitListScene({
       window.localStorage.setItem(TOOLBOX_VIEW_STORAGE_KEY, resolvedView);
     }
 
-    const tabParamValid = Boolean(param) && resolvableTabs.includes(param as ExecutionUnitTab);
+    const tabParamValid = Boolean(param) && accessibleTabs.includes(param as ExecutionUnitTab);
     const viewParamValid = resolved !== "toolbox" || viewParam === resolvedView;
     if (tabParamValid && viewParamValid) {
       return;
@@ -468,7 +422,7 @@ export function ExecutionUnitListScene({
       nextParams.delete("toolboxView");
     }
     setSearchParams(nextParams, { replace: true });
-  }, [accessibleToolboxViews, defaultTab, resolvableTabs, searchParams, setSearchParams]);
+  }, [accessibleToolboxViews, defaultTab, accessibleTabs, searchParams, setSearchParams]);
 
   /**
    * Toolboxes, MCPs, and Skills have dedicated detail pages, so cards navigate directly instead of
@@ -477,11 +431,6 @@ export function ExecutionUnitListScene({
    */
   const openDetail = useCallback(
     (tab: ExecutionUnitTab, id: string) => {
-      if (tab === "operator") {
-        setDetailOperatorId(id);
-        return;
-      }
-
       if (marketMode) {
         if (tab === "toolbox") {
           setDetailBoxId(id);
@@ -614,11 +563,7 @@ export function ExecutionUnitListScene({
   }, [marketMode, reloadInstalledResourceIds]);
 
   const showOriginFilter =
-    !marketMode &&
-    (activeTab === "toolbox" ||
-      activeTab === "mcp" ||
-      activeTab === "operator" ||
-      activeTab === "skill");
+    !marketMode && (activeTab === "toolbox" || activeTab === "mcp" || activeTab === "skill");
 
   const originFilterOptions = useMemo(
     () => [
@@ -670,20 +615,9 @@ export function ExecutionUnitListScene({
 
   const fetchPage = useCallback(
     async (query: typeof listQuery) => {
-      if (activeTab === "operator") {
+      if (activeTab === "toolbox") {
         // status/category are cross-tab filter strings; assert to this tab's
         // query shape at the call boundary (the select only emits valid values).
-        const tabQuery = query as Parameters<typeof listOperators>[0];
-        const result = marketMode
-          ? await listOperatorMarket(tabQuery)
-          : await listOperators(tabQuery);
-        return {
-          items: result.items.map(mapOperator),
-          total: result.total,
-        };
-      }
-
-      if (activeTab === "toolbox") {
         const tabQuery = query as Parameters<typeof listToolboxes>[0];
         const result = marketMode
           ? await listToolboxMarket(tabQuery)
@@ -786,8 +720,8 @@ export function ExecutionUnitListScene({
 
   const tabItems = useMemo(
     () =>
-      resolveVisibleManagementTabs(activeTab)
-        .filter((tab) => resolvableTabs.includes(tab))
+      getManagementTabs()
+        .filter((tab) => accessibleTabs.includes(tab))
         .flatMap((tab) => {
           const count = tabCounts[tab];
           const entry = {
@@ -821,15 +755,7 @@ export function ExecutionUnitListScene({
             ),
           }));
         }),
-    [
-      accessibleToolboxViews,
-      activeTab,
-      functionTabKey,
-      openapiTabKey,
-      resolvableTabs,
-      t,
-      tabCounts,
-    ],
+    [accessibleToolboxViews, functionTabKey, openapiTabKey, accessibleTabs, t, tabCounts],
   );
 
   const statusOptions = useMemo(() => {
@@ -839,10 +765,6 @@ export function ExecutionUnitListScene({
       { value: "published", label: t("executionFactory.statuses.published") },
       { value: "unpublish", label: t("executionFactory.statuses.unpublish") },
     ];
-
-    if (activeTab === "operator") {
-      return [...base, { value: "editing", label: t("executionFactory.statuses.editing") }];
-    }
 
     if (activeTab === "toolbox" || activeTab === "mcp" || activeTab === "skill") {
       return base.filter((item) => item.value !== "editing");
@@ -865,10 +787,6 @@ export function ExecutionUnitListScene({
   const handleCreateMenuResourceCreated = useCallback(
     ({ tab, id, toolId }: { tab: ExecutionUnitTab; id: string; toolId?: string }) => {
       reloadList();
-      if (tab === "operator") {
-        setDetailOperatorId(id);
-        return;
-      }
       const destination =
         tab === "toolbox"
           ? `/execution-factory/toolboxes/${id}/tools${toolId ? `?toolId=${toolId}` : "?create=1"}`
@@ -928,7 +846,7 @@ export function ExecutionUnitListScene({
   );
 
   const impexTypeForTab = useCallback((tab: ExecutionUnitTab): ImpexComponentType | null => {
-    if (tab === "operator" || tab === "toolbox" || tab === "mcp") {
+    if (tab === "toolbox" || tab === "mcp") {
       return tab;
     }
 
@@ -938,7 +856,7 @@ export function ExecutionUnitListScene({
   const handleCardAction = useCallback(
     (action: ExecutionUnitCardAction, item: ExecutionUnitCardItem) => {
       const runStatusChange = (
-        nextStatus: PublicOperatorStatus | ToolboxStatus | McpStatus | SkillStatus,
+        nextStatus: ToolboxStatus | McpStatus | SkillStatus,
         titleKey: string,
         descriptionKey: string,
         onConfirm: () => Promise<void>,
@@ -1105,9 +1023,7 @@ export function ExecutionUnitListScene({
       }
 
       if (action === "edit") {
-        if (activeTab === "operator") {
-          void navigate(`/execution-factory/units/${item.id}/edit`);
-        } else if (activeTab === "toolbox") {
+        if (activeTab === "toolbox") {
           void navigate(`/execution-factory/toolboxes/${item.id}/edit`);
         } else if (activeTab === "mcp") {
           setEditMcpId(item.id);
@@ -1119,14 +1035,7 @@ export function ExecutionUnitListScene({
 
       if (action === "publish" || action === "offline") {
         const nextStatus = resolveLifecycleActionStatus(action);
-        if (activeTab === "operator" && item.version) {
-          runStatusChange(
-            nextStatus,
-            "executionFactory.operatorStatusChangeConfirmTitle",
-            "executionFactory.operatorStatusChangeConfirmDescription",
-            () => updateOperatorStatus(item.id, item.version!, nextStatus),
-          );
-        } else if (activeTab === "toolbox") {
+        if (activeTab === "toolbox") {
           // Run preflight before publication for missing summaries, broken $ref, and similar issues.
           // List findings in confirmation with Publish anyway. Offline does not require preflight and calls main directly.
           if (nextStatus === "published") {
@@ -1173,23 +1082,7 @@ export function ExecutionUnitListScene({
       }
 
       if (action === "delete") {
-        if (activeTab === "operator") {
-          runDelete(
-            "executionFactory.operatorDeleteConfirmTitle",
-            "executionFactory.operatorDeleteConfirmDescription",
-            async () => {
-              if (item.status === "published" && item.version) {
-                await updateOperatorStatus(item.id, item.version, "offline");
-              }
-
-              if (!item.version) {
-                throw new Error("Missing operator version");
-              }
-
-              await deleteOperator(item.id, item.version);
-            },
-          );
-        } else if (activeTab === "toolbox") {
+        if (activeTab === "toolbox") {
           runDelete(
             "executionFactory.toolboxDeleteConfirmTitle",
             "executionFactory.toolboxDeleteConfirmDescription",
@@ -1238,10 +1131,10 @@ export function ExecutionUnitListScene({
 
   const countedTabsKey = useMemo(
     () =>
-      resolveVisibleManagementTabs(activeTab)
-        .filter((tab) => resolvableTabs.includes(tab))
+      getManagementTabs()
+        .filter((tab) => accessibleTabs.includes(tab))
         .join(","),
-    [activeTab, resolvableTabs],
+    [accessibleTabs],
   );
 
   // Fetch total once per tab; page_size=1 obtains only the count, not list content. Depend on the
@@ -1260,16 +1153,12 @@ export function ExecutionUnitListScene({
                 ? (await listToolboxMarket(query)).total
                 : tab === "mcp"
                   ? (await listMcpMarket(query)).total
-                  : tab === "skill"
-                    ? (await listSkillMarket(query)).total
-                    : (await listOperatorMarket(query)).total
+                  : (await listSkillMarket(query)).total
               : tab === "toolbox"
                 ? (await listToolboxes(query)).total
                 : tab === "mcp"
                   ? (await listMcps(query)).total
-                  : tab === "skill"
-                    ? (await listSkills(query)).total
-                    : (await listOperators(query)).total;
+                  : (await listSkills(query)).total;
             return [tab, total] as const;
           } catch {
             return [tab, undefined] as const;
@@ -1319,7 +1208,6 @@ export function ExecutionUnitListScene({
   const overlayRequested = useMemo(
     () =>
       Boolean(
-        detailOperatorId ||
         detailBoxId ||
         detailMcpId ||
         detailSkillId ||
@@ -1332,7 +1220,6 @@ export function ExecutionUnitListScene({
     [
       detailBoxId,
       detailMcpId,
-      detailOperatorId,
       detailSkillId,
       editMcpId,
       installTarget,
@@ -1447,15 +1334,6 @@ export function ExecutionUnitListScene({
             setSearchParams(nextParams);
           }}
         />
-
-        {isCapabilityUxV2() && !marketMode && activeTab === "operator" ? (
-          <Alert
-            message={t("executionFactory.advancedOperatorBanner")}
-            showIcon
-            style={{ marginBottom: 16 }}
-            type="info"
-          />
-        ) : null}
 
         <div className={styles.filterBar}>
           <div className={styles.filterLeft}>
@@ -1607,7 +1485,6 @@ export function ExecutionUnitListScene({
             activeTab={activeTab}
             detailBoxId={detailBoxId}
             detailMcpId={detailMcpId}
-            detailOperatorId={detailOperatorId}
             detailSkillId={detailSkillId}
             editMcpId={editMcpId}
             installTarget={installTarget}
@@ -1615,7 +1492,6 @@ export function ExecutionUnitListScene({
             navigate={navigate}
             onCloseDetailBox={() => setDetailBoxId(null)}
             onCloseDetailMcp={() => setDetailMcpId(null)}
-            onCloseDetailOperator={() => setDetailOperatorId(null)}
             onCloseDetailSkill={() => setDetailSkillId(null)}
             onCloseEditMcp={() => setEditMcpId(null)}
             onCloseInstallTarget={() => setInstallTarget(null)}

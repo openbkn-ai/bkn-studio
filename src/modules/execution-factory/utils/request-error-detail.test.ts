@@ -14,7 +14,7 @@ describe("extractRequestErrorDetail", () => {
         isAxiosError: true,
         response: {
           data: {
-            error_code: "Operator.Invalid",
+            error_code: "Tool.Invalid",
             description: "Bad input",
             [field]: "Check the name",
           },
@@ -30,7 +30,7 @@ describe("extractRequestErrorDetail", () => {
           isAxiosError: true,
           response: {
             data: {
-              error_code: "Operator.Invalid",
+              error_code: "Tool.Invalid",
               error_details: detail,
               detail: "old",
               details: "older",

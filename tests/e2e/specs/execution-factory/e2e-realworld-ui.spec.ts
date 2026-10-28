@@ -37,7 +37,6 @@ import {
 } from "../../helpers/mcp-realworld";
 import { buildOfflineWeatherApiUrl } from "../../helpers/oss-mock";
 import { cleanupMcpViaApi } from "../../helpers/mcp";
-import { cleanupOperatorViaApi, type RegisteredOperator } from "../../helpers/operator";
 import {
   buildSkillName,
   buildSkillZipBuffer,
@@ -61,7 +60,6 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
   const createdBoxIds: string[] = [];
   const createdMcpIds: string[] = [];
   const createdSkillIds: string[] = [];
-  const createdOperators: RegisteredOperator[] = [];
 
   test.beforeAll(async ({ request }) => {
     try {
@@ -89,16 +87,6 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
       if (!skillId) continue;
       try {
         await cleanupSkillViaApi(request, skillId);
-      } catch (error) {
-        console.warn(String(error));
-      }
-    }
-
-    while (createdOperators.length > 0) {
-      const operator = createdOperators.pop();
-      if (!operator) continue;
-      try {
-        await cleanupOperatorViaApi(request, operator);
       } catch (error) {
         console.warn(String(error));
       }
@@ -206,46 +194,6 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
     };
     expect(debugBody.body?.city).toBeTruthy();
     expect(debugBody.body?.weather).toBeTruthy();
-  });
-
-  test("RW-UI-08: quick add with operator sync bundle and debug", async ({ page, request }) => {
-    const health = await request.get("http://127.0.0.1:8080/health").catch(() => null);
-    test.skip(!health?.ok(), "ef-oss-mock is not running on :8080");
-
-    const toolboxName = buildToolboxName("rw_ui08_bundle");
-    const toolName = `weather_bundle_${Date.now()}`;
-    const operatorName = `${toolName}_op`;
-    const curl = `curl '${buildOfflineWeatherApiUrl()}'`;
-
-    const drawer = await openAddCapabilityWizard(page, "toolbox");
-    const { boxId } = await fillAndSubmitQuickAddApi(page, {
-      curl,
-      summary: toolName,
-      toolboxName,
-      drawer,
-      operatorSync: { enabled: true, name: operatorName },
-    });
-    createdBoxIds.push(boxId);
-
-    const operators = await request.get(apiUrl("/operator/info/list?page=1&page_size=50"));
-    expect(operators.ok()).toBeTruthy();
-    const operatorBody = (await operators.json()) as {
-      data?: Array<{ operator_id: string; name?: string; version?: string }>;
-    };
-    const created = operatorBody.data?.find(
-      (item) => item.name === toolName || item.name === operatorName,
-    );
-    if (created?.operator_id && created.version) {
-      createdOperators.push({
-        operatorId: created.operator_id,
-        version: created.version,
-        name: created.name ?? operatorName,
-      });
-    }
-
-    await gotoToolboxToolsPage(page, boxId, toolboxName);
-    const debugResponse = await debugToolFromToolsPage(page, boxId, { toolName });
-    expect(debugResponse.ok()).toBeTruthy();
   });
 
   test("RW-UI-03-online: quick add uapis weather when network allowed", async ({ page }) => {

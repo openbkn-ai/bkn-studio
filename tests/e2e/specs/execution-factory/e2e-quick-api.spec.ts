@@ -27,7 +27,7 @@ import {
 } from "../../helpers/toolbox";
 
 const QUICK_API_CURL =
-  "curl 'http://127.0.0.1:9000/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=1'";
+  "curl 'http://127.0.0.1:9000/api/agent-operator-integration/v1/tool-box/list?page=1&page_size=1'";
 
 const UAPIS_WEATHER_CURL = "curl 'https://uapis.cn/api/v1/misc/weather?city=北京'";
 
@@ -67,7 +67,7 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
 
   test("QA-01: quick add API wizard creates toolset and tool", async ({ page }) => {
     const toolboxName = buildToolboxName("quick_api");
-    const toolName = `list_operators_${Date.now()}`;
+    const toolName = `list_toolboxes_${Date.now()}`;
 
     const drawer = await openAddCapabilityWizard(page, "toolbox");
 

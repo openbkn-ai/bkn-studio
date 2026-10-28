@@ -207,9 +207,6 @@ export function AddCapabilityWizard({
       case "function":
         return t("executionFactory.addCapabilityFunctionTitle");
 
-      case "advanced-operator":
-        return t("executionFactory.addCapabilityAdvancedTitle");
-
       default:
         return t("executionFactory.addCapabilityWizardTitle");
     }
@@ -287,8 +284,6 @@ export function AddCapabilityWizard({
       summary?: string;
 
       description?: string;
-
-      operatorSync?: import("@/modules/execution-factory/types/operator-sync").OperatorSyncPublishInput;
     };
   }) => {
     setSubmitting(true);
@@ -308,17 +303,11 @@ export function AddCapabilityWizard({
 
         category: payload.values.category,
 
-        operatorSync: payload.values.operatorSync,
-
         toolName: payload.values.summary,
         toolDescription: payload.values.description,
       });
 
-      void message.success(
-        result.operatorId
-          ? t("executionFactory.quickApiCreateWithOperatorSuccess")
-          : t("executionFactory.quickApiCreateSuccess"),
-      );
+      void message.success(t("executionFactory.quickApiCreateSuccess"));
 
       handleCreatedNextStep({
         boxId: result.boxId,
@@ -335,12 +324,6 @@ export function AddCapabilityWizard({
     }
   };
 
-  const handleAdvancedOperator = () => {
-    void navigate("/execution-factory/units/new?metadataType=openapi");
-
-    handleClose();
-  };
-
   const handleImportOpenApiSubmit = async (payload: {
     openapiSpec: string;
     values: {
@@ -351,7 +334,6 @@ export function AddCapabilityWizard({
       serviceUrl?: string;
       useRule?: string;
       category?: string;
-      operatorSync?: import("@/modules/execution-factory/types/operator-sync").OperatorSyncPublishInput;
     };
   }) => {
     setSubmitting(true);
@@ -366,7 +348,6 @@ export function AddCapabilityWizard({
         serviceUrl: payload.values.serviceUrl,
         useRule: payload.values.useRule,
         category: payload.values.category,
-        operatorSync: payload.values.operatorSync,
       });
 
       if (result.failureCount > 0) {
@@ -374,12 +355,6 @@ export function AddCapabilityWizard({
           t("executionFactory.importOpenApiCapabilityPartial", {
             success: result.successCount,
             failed: result.failureCount,
-          }),
-        );
-      } else if (result.operatorId) {
-        void message.success(
-          t("executionFactory.importOpenApiCapabilityWithOperatorSuccess", {
-            count: result.successCount,
           }),
         );
       } else {
@@ -491,31 +466,6 @@ export function AddCapabilityWizard({
           />
         );
 
-      case "advanced-operator":
-        return (
-          <div>
-            <p className={styles.modalHint}>{t("executionFactory.addCapabilityAdvancedHint")}</p>
-
-            <Space direction="vertical" style={{ width: "100%" }}>
-              <AppButton block onClick={handleAdvancedOperator} type="primary">
-                {t("executionFactory.addCapabilityAdvancedOpenApi")}
-              </AppButton>
-
-              <AppButton
-                block
-
-                onClick={() => {
-                  void navigate("/execution-factory/units/new?metadataType=function");
-
-                  handleClose();
-                }}
-              >
-                {t("executionFactory.addCapabilityAdvancedFunction")}
-              </AppButton>
-            </Space>
-          </div>
-        );
-
       default:
         return null;
     }
@@ -613,16 +563,6 @@ export function AddCapabilityWizard({
           <AppButton form="create-skill-form" htmlType="submit" type="primary">
             {t("common.confirm")}
           </AppButton>
-        </Space>
-      );
-    }
-
-    if (mode === "advanced-operator") {
-      return (
-        <Space>
-          <AppButton onClick={handleBackFromConfigure}>{t("common.back")}</AppButton>
-
-          <AppButton onClick={handleClose}>{t("common.cancel")}</AppButton>
         </Space>
       );
     }

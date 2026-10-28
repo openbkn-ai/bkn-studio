@@ -134,14 +134,3 @@ export type ToolDebugResult = {
   error?: string;
   durationMs?: number;
 };
-
-export type ConvertOperatorToToolInput = {
-  boxId: string;
-  operatorId: string;
-  operatorVersion: string;
-};
-
-export type ConvertOperatorToToolResult = {
-  boxId: string;
-  toolId: string;
-};

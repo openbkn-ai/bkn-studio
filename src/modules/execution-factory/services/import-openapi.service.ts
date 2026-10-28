@@ -6,13 +6,10 @@
  */
 
 import i18n from "@/app/locales/i18n";
-import { registerOpenApiBundle } from "@/modules/execution-factory/services/capability-bundle.service";
 
 import { createToolbox } from "@/modules/execution-factory/services/toolbox.service";
 
 import { importOpenApiTools } from "@/modules/execution-factory/services/tool.service";
-
-import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
 
 import {
   analyzeOpenApiDocumentText,
@@ -39,8 +36,6 @@ export type RegisterOpenApiImportInput = {
   useRule?: string;
 
   category?: string;
-
-  operatorSync?: OperatorSyncPublishInput;
 };
 
 function resolveToolboxTarget(input: RegisterOpenApiImportInput) {
@@ -69,10 +64,6 @@ export type RegisterOpenApiImportResult = {
   successCount: number;
 
   failureCount: number;
-
-  operatorId?: string;
-
-  operatorIds?: string[];
 };
 
 function resolveServiceUrl(openapiSpec: string, override?: string): string {
@@ -109,40 +100,6 @@ export async function registerOpenApiImport(
   );
   const toolboxDescription = normalizeGeneratedToolboxDescription(input.toolboxDescription);
   const target = resolveToolboxTarget(input);
-
-  if (input.operatorSync?.enabled) {
-    const bundle = await registerOpenApiBundle({
-      openapiSpec: normalizedOpenapiSpec,
-
-      serviceUrl,
-
-      boxId: target.boxId,
-
-      toolboxName: target.toolboxName,
-
-      toolboxDescription,
-
-      category: input.category,
-
-      useRule: input.useRule,
-
-      operatorSync: input.operatorSync,
-    });
-
-    return {
-      boxId: bundle.boxId,
-
-      toolIds: bundle.toolIds,
-
-      successCount: bundle.toolIds.length,
-
-      failureCount: bundle.failureCount,
-
-      operatorId: bundle.operatorIds[0],
-
-      operatorIds: bundle.operatorIds,
-    };
-  }
 
   let boxId = target.boxId;
 

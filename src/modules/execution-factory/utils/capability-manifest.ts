@@ -13,7 +13,6 @@ import type {
   CapabilityReadinessDimension,
 } from "@/modules/execution-factory/types/capability-manifest";
 import type { McpProxyTool } from "@/modules/execution-factory/types/mcp";
-import type { OperatorDetail } from "@/modules/execution-factory/types/operator";
 import type { SkillRecord } from "@/modules/execution-factory/types/skill";
 import type { ToolDetail, ToolIoParameter } from "@/modules/execution-factory/types/tool";
 
@@ -209,42 +208,6 @@ export function buildSkillCapabilityManifest(skill: SkillRecord): CapabilityMani
     agentVisibility: skill.status === "published" ? "discoverable" : "hidden",
     agentInvokePolicy: "approval_required",
     updatedAt: skill.updateTime,
-  };
-}
-
-function buildOperatorAuthRequirements(operator: OperatorDetail): string[] {
-  const requirements: string[] = [];
-
-  if (operator.executeControl?.timeout) {
-    requirements.push(`timeout: ${operator.executeControl.timeout}ms`);
-  }
-
-  if (operator.executeControl?.retryPolicy?.maxAttempts) {
-    requirements.push(`max retry attempts: ${operator.executeControl.retryPolicy.maxAttempts}`);
-  }
-
-  return requirements;
-}
-
-export function buildOperatorCapabilityManifest(operator: OperatorDetail): CapabilityManifest {
-  return {
-    id: `operator:${operator.operatorId}:${operator.version}`,
-    sourceType: "operator",
-    sourceId: operator.operatorId,
-    title: operator.name,
-    description: operator.description,
-    status: operator.status,
-    category: operator.category,
-    intent: operator.description,
-    inputSemantics: [],
-    outputSemantics: [],
-    sideEffects: operator.metadataType === "function" ? "write" : "unknown",
-    riskLevel: "high",
-    testStatus: "untested",
-    agentVisibility: operator.status === "published" ? "discoverable" : "hidden",
-    agentInvokePolicy: "approval_required",
-    authRequirements: buildOperatorAuthRequirements(operator),
-    updatedAt: operator.updateTime,
   };
 }
 

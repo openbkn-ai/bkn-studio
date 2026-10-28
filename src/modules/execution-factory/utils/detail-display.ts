@@ -5,37 +5,17 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type {
-  OperatorExecuteControl,
-  OperatorRecord,
-} from "@/modules/execution-factory/types/operator";
-
 import { formatExecutionUnitTime } from "./format-timestamp";
 
 export { formatExecutionUnitTime };
-
-export function resolveOperatorCategoryLabel(
-  record: Pick<OperatorRecord, "category" | "categoryName">,
-  t: (key: string) => string,
-) {
-  if (record.category) {
-    const key = `executionFactory.operatorCategories.${record.category}`;
-    const translated = t(key);
-    if (translated !== key) {
-      return translated;
-    }
-  }
-
-  return record.categoryName ?? record.category ?? "-";
-}
 
 export function resolveToolboxCategoryLabel(
   record: { categoryName?: string; categoryType?: string },
   t: (key: string) => string,
 ) {
   if (record.categoryType) {
-    // Toolsets use the same predefined categories as operators, alongside toolbox-only ones.
-    for (const dictionary of ["toolboxCategories", "operatorCategories"]) {
+    // Shared predefined categories, alongside toolbox-only ones.
+    for (const dictionary of ["toolboxCategories", "categoryLabels"]) {
       const key = `executionFactory.${dictionary}.${record.categoryType}`;
       const translated = t(key);
       if (translated !== key) {
@@ -77,10 +57,10 @@ export function resolveMcpCategoryLabel(category: string | undefined, t: (key: s
     return "-";
   }
 
-  const operatorKey = `executionFactory.operatorCategories.${category}`;
-  const operatorLabel = t(operatorKey);
-  if (operatorLabel !== operatorKey) {
-    return operatorLabel;
+  const key = `executionFactory.categoryLabels.${category}`;
+  const translated = t(key);
+  if (translated !== key) {
+    return translated;
   }
 
   return category;
@@ -97,35 +77,6 @@ export function resolveMcpCreationTypeLabel(
   const key = `executionFactory.mcpCreationTypes.${creationType}`;
   const translated = t(key);
   return translated !== key ? translated : creationType;
-}
-
-export function formatExecuteControlDisplay(
-  control: OperatorExecuteControl | undefined,
-  t: (key: string) => string,
-) {
-  if (!control) {
-    return "-";
-  }
-
-  const parts = [
-    control.timeout !== undefined
-      ? `${t("executionFactory.executeControlTimeout")}: ${control.timeout}ms`
-      : null,
-    control.retryPolicy?.maxAttempts !== undefined
-      ? `${t("executionFactory.executeControlMaxAttempts")}: ${control.retryPolicy.maxAttempts}`
-      : null,
-    control.retryPolicy?.initialDelay !== undefined
-      ? `${t("executionFactory.executeControlInitialDelay")}: ${control.retryPolicy.initialDelay}ms`
-      : null,
-    control.retryPolicy?.maxDelay !== undefined
-      ? `${t("executionFactory.executeControlMaxDelay")}: ${control.retryPolicy.maxDelay}ms`
-      : null,
-    control.retryPolicy?.backoffFactor !== undefined
-      ? `${t("executionFactory.executeControlBackoffFactor")}: ${control.retryPolicy.backoffFactor}`
-      : null,
-  ].filter(Boolean);
-
-  return parts.length ? parts.join(" · ") : "-";
 }
 
 export function formatOptionalTimestamp(value?: number) {

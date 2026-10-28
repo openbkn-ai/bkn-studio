@@ -145,11 +145,3 @@
   font-size: 12px;
   white-space: nowrap;
 }
-
-.orchestrationDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-primary-600);
-  flex-shrink: 0;
-}

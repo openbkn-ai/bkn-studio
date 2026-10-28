@@ -7,19 +7,12 @@
 
 export type UnitManagementListSceneProps = {
   defaultKeyword?: string;
-  onOpenDetail?: (operatorId: string) => void;
+  onOpenDetail?: (id: string) => void;
 };
 
 export type CatalogListSceneProps = {
   defaultKeyword?: string;
-  onOpenDetail?: (operatorId: string) => void;
-};
-
-export type UnitFormSceneProps = {
-  mode: "create" | "edit";
-  operatorId?: string;
-  onBack?: () => void;
-  onSubmitSuccess?: () => void;
+  onOpenDetail?: (id: string) => void;
 };
 
 export type ToolboxFormSceneProps = {

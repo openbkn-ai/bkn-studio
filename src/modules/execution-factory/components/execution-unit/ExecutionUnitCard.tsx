@@ -5,23 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  ApiOutlined,
-  CodeOutlined,
-  DeploymentUnitOutlined,
-  FileZipOutlined,
-  ToolOutlined,
-} from "@ant-design/icons";
+import { ApiOutlined, CodeOutlined, FileZipOutlined, ToolOutlined } from "@ant-design/icons";
 import { Card, Tag, Typography } from "antd";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  resolveOperatorCategoryLabel,
   resolveSkillCategoryLabel,
   resolveToolboxCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
-import type { OperatorCategory } from "@/modules/execution-factory/types/operator";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import type { ExecutionUnitCardItem, ExecutionUnitTab } from "./types";
@@ -45,8 +37,6 @@ function getTabIcon(activeTab: ExecutionUnitTab, metadataType?: string) {
   switch (activeTab) {
     case "mcp":
       return <ApiOutlined />;
-    case "operator":
-      return <DeploymentUnitOutlined />;
     case "skill":
       return <FileZipOutlined />;
     default:
@@ -87,13 +77,6 @@ function resolveCardCategoryLabel(
   item: ExecutionUnitCardItem,
   t: (key: string) => string,
 ) {
-  if (activeTab === "operator") {
-    return resolveOperatorCategoryLabel(
-      { category: item.category as OperatorCategory | undefined, categoryName: item.categoryName },
-      t,
-    );
-  }
-
   if (activeTab === "toolbox") {
     return resolveToolboxCategoryLabel(
       { categoryType: item.category, categoryName: item.categoryName },
@@ -109,7 +92,7 @@ function resolveCardCategoryLabel(
   }
 
   if (activeTab === "mcp" && item.category) {
-    const key = `executionFactory.operatorCategories.${item.category}`;
+    const key = `executionFactory.categoryLabels.${item.category}`;
     const translated = t(key);
     return translated !== key ? translated : (item.categoryName ?? item.category);
   }
@@ -119,7 +102,7 @@ function resolveCardCategoryLabel(
 
 /**
  * The leftmost subtitle badge shows each unit's most distinctive fact: implementation form for
- * toolboxes/operators and connection mode for MCP. Previously MCP showed only its category, whose
+ * toolboxes and connection mode for MCP. Previously MCP showed only its category, whose
  * common other_category default printed the same Other label on every card.
  *
  * SKILL has no useful badge: backend version is a UUID rather than a semantic version, and category
@@ -130,7 +113,7 @@ function resolveCardBadge(
   item: ExecutionUnitCardItem,
   t: (key: string) => string,
 ) {
-  if (activeTab === "toolbox" || activeTab === "operator") {
+  if (activeTab === "toolbox") {
     return item.metadataType
       ? t(`executionFactory.metadataTypes.${item.metadataType as "openapi" | "function"}`)
       : "";

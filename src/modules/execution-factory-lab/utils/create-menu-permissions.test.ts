@@ -16,7 +16,7 @@ describe("editPermissionForKind", () => {
     expect(editPermissionForKind("skill")).toBe(executionFactoryLabPermissions.skillEdit);
   });
 
-  it("keeps HTTP and function edits on the operator permission", () => {
+  it("keeps HTTP and function edits on the capability permission", () => {
     expect(editPermissionForKind("http")).toBe(executionFactoryLabPermissions.capabilityEdit);
     expect(editPermissionForKind("function")).toBe(executionFactoryLabPermissions.capabilityEdit);
   });

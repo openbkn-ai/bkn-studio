@@ -379,7 +379,7 @@ export function buildOpenApiDocumentFromMetadata(metadata: BackendMetadata): str
 
   const path = metadata.path ?? "/";
   const method = (metadata.method ?? "POST").toLowerCase();
-  const summary = metadata.summary ?? metadata.description ?? "Operator";
+  const summary = metadata.summary ?? metadata.description ?? "Tool";
   const description = metadata.description ?? summary;
   const serverUrl = metadata.server_url ?? "http://localhost:8080";
 
@@ -698,13 +698,12 @@ export function parseOpenApiDataPayload(
   const trimmed = openapiSpec.trim();
 
   if (mode === "register") {
-    // `/operator/register` binds `data` as string.
+    // Register APIs bind `data` as string.
     return trimmed;
   }
 
-  // `/operator/info` and similar edit APIs bind `data` as json.RawMessage.
-  // Sending a JSON string here makes the backend try to parse a quoted string
-  // instead of an OpenAPI object (see reference operator-web E2E helpers).
+  // Edit APIs bind `data` as json.RawMessage. Sending a JSON string here makes
+  // the backend try to parse a quoted string instead of an OpenAPI object.
   const parsed = parseOpenApiDocumentText(trimmed);
   if (!parsed.ok) {
     throw new Error(parsed.reason);

@@ -40,18 +40,17 @@ docker compose -f docker-compose.sandbox.yml up -d   # 函数沙箱 + docker.soc
 
 删除所有 E2E / demo / 手工残留资源：
 
-- 算子：`name` 匹配 `at_e2e_*`、`e2e_*`、`demo_*`、`quick_api_*`
-- 工具箱：同上
+- 工具箱：`name` 匹配 `at_e2e_*`、`e2e_*`、`demo_*`、`quick_api_*`
 - MCP：`tool_imported` + 测试前缀
 - Skill：`at_e2e_skill_*`
 
 ### 1.2 实现任务
 
-| 任务 | 产出                             | 说明                                              |
-| ---- | -------------------------------- | ------------------------------------------------- |
-| P0-1 | `scripts/cleanup-e2e-assets.ps1` | 调用 list API 分页删除 operator/toolbox/mcp/skill |
-| P0-2 | `helpers/cleanup-all.ts`         | Playwright `beforeAll` 可复用；支持 `--dry-run`   |
-| P0-3 | 重置 `demo_assets.json`          | 可选：仅保留 seed 脚本引用 ID，不保留脏数据       |
+| 任务 | 产出                             | 说明                                            |
+| ---- | -------------------------------- | ----------------------------------------------- |
+| P0-1 | `scripts/cleanup-e2e-assets.ps1` | 调用 list API 分页删除 toolbox/mcp/skill        |
+| P0-2 | `helpers/cleanup-all.ts`         | Playwright `beforeAll` 可复用；支持 `--dry-run` |
+| P0-3 | 重置 `demo_assets.json`          | 可选：仅保留 seed 脚本引用 ID，不保留脏数据     |
 
 ### 1.3 验收
 

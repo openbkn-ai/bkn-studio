@@ -12,14 +12,12 @@ const API_PREFIX = "/agent-operator-integration/v1";
 /** Backend validates page_size with max=100. */
 const ID_PAGE_SIZE = 100;
 const CACHE_TTL_MS = 2 * 60 * 1000;
-const OPERATOR_CACHE_TTL_MS = 10 * 60 * 1000;
 const inflightRequests = new Map<string, Promise<Set<string>>>();
 
 type PagedListResponse = {
   data?: Array<{
     box_id?: string;
     mcp_id?: string;
-    operator_id?: string;
     skill_id?: string;
   }>;
   has_next?: boolean;
@@ -47,8 +45,7 @@ function readCachedIds(activeTab: ExecutionUnitTab): Set<string> | null {
     }
 
     const parsed = JSON.parse(raw) as { at: number; ids: string[] };
-    const ttl = activeTab === "operator" ? OPERATOR_CACHE_TTL_MS : CACHE_TTL_MS;
-    if (Date.now() - parsed.at > ttl) {
+    if (Date.now() - parsed.at > CACHE_TTL_MS) {
       sessionStorage.removeItem(cacheKey(activeTab));
       return null;
     }
@@ -73,7 +70,7 @@ export function invalidateLocalResourceIdsCache(activeTab?: ExecutionUnitTab) {
     return;
   }
 
-  for (const tab of ["operator", "toolbox", "mcp", "skill"] as const) {
+  for (const tab of ["toolbox", "mcp", "skill"] as const) {
     sessionStorage.removeItem(cacheKey(tab));
   }
 }
@@ -158,13 +155,7 @@ export async function collectLocalResourceIds(
   const request = (async () => {
     let ids: Set<string>;
 
-    if (activeTab === "operator") {
-      ids = await collectPagedIds(
-        `${API_PREFIX}/operator/info/list`,
-        (item) => item.operator_id,
-        options,
-      );
-    } else if (activeTab === "toolbox") {
+    if (activeTab === "toolbox") {
       ids = await collectPagedIds(`${API_PREFIX}/tool-box/list`, (item) => item.box_id, options);
     } else if (activeTab === "mcp") {
       ids = await collectPagedIds(`${API_PREFIX}/mcp/list`, (item) => item.mcp_id, options);

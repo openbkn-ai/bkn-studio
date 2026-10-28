@@ -7,11 +7,11 @@
 
 ## Phase 0 — 测试数据清理（P0）
 
-| ID       | 状态 | 缺失能力                   | 功能需求（验收标准）                                                                                                                           |
-| -------- | ---- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| P0-1     | ✅   | PowerShell 批量清理脚本    | `scripts/cleanup-e2e-assets.ps1` 分页列出并删除匹配 `at_e2e_*` / `e2e_*` / `demo_*` / `quick_api_*` 的算子、工具箱、MCP、Skill；支持 `-DryRun` |
-| P0-2     | ✅   | Playwright/Node 可复用清理 | `helpers/cleanup-all.ts` 提供 `cleanupAllE2eAssets()`，E2E `beforeAll` 与 CLI `npm run cleanup:e2e` 共用；支持 `dryRun`                        |
-| P0-CLEAN | ✅   | 清理 E2E 用例              | `P0-CLEAN` spec 验证清理后列表无测试前缀资源（或仅剩内置资源）                                                                                 |
+| ID       | 状态 | 缺失能力                   | 功能需求（验收标准）                                                                                                                     |
+| -------- | ---- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| P0-1     | ✅   | PowerShell 批量清理脚本    | `scripts/cleanup-e2e-assets.ps1` 分页列出并删除匹配 `at_e2e_*` / `e2e_*` / `demo_*` / `quick_api_*` 的工具箱、MCP、Skill；支持 `-DryRun` |
+| P0-2     | ✅   | Playwright/Node 可复用清理 | `helpers/cleanup-all.ts` 提供 `cleanupAllE2eAssets()`，E2E `beforeAll` 与 CLI `npm run cleanup:e2e` 共用；支持 `dryRun`                  |
+| P0-CLEAN | ✅   | 清理 E2E 用例              | `P0-CLEAN` spec 验证清理后列表无测试前缀资源（或仅剩内置资源）                                                                           |
 
 ---
 
@@ -55,11 +55,10 @@
 
 ## OpenAPI 能力包（中期合并管理）
 
-| ID        | 状态 | 能力                                     | 功能需求（验收标准）                                              |
-| --------- | ---- | ---------------------------------------- | ----------------------------------------------------------------- |
-| BUNDLE-01 | ✅   | 后端 `POST /capabilities/openapi-bundle` | 算子注册 → 发布 → `convert` 工具；返回 `links[]` 血缘             |
-| BUNDLE-02 | ✅   | 前端同步发布走 bundle                    | `operatorSync.enabled` 时 Quick-add / OpenAPI 导入调用 bundle API |
-| BUNDLE-03 | ✅   | E2E RW-08 / RW-UI-08                     | API bundle 调试 + UI 勾选同步发布全链路                           |
+| ID        | 状态 | 能力                                     | 功能需求（验收标准）                       |
+| --------- | ---- | ---------------------------------------- | ------------------------------------------ |
+| BUNDLE-01 | ✅   | 后端 `POST /capabilities/openapi-bundle` | 直接创建工具；返回 `tool_ids` 与 `links[]` |
+| BUNDLE-03 | ✅   | E2E RW-08                                | API bundle 注册 + 调试                     |
 
 ---
 

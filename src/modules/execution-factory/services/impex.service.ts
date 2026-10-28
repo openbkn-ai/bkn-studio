@@ -42,14 +42,6 @@ export async function exportComponent(
   id: string,
 ): Promise<ImpexExportResult> {
   if (useMock) {
-    if (type === "operator") {
-      return {
-        operator: {
-          configs: [{ operator_id: id, version: "v1.0.0" }],
-        },
-      };
-    }
-
     if (type === "toolbox") {
       return {
         toolbox: {

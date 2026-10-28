@@ -12,7 +12,6 @@ import { UpdateSkillPackageModal } from "@/modules/execution-factory/components/
 import { InstallFromCatalogModal } from "@/modules/execution-factory/components/InstallFromCatalogModal";
 import { InstallSkillFromCatalogModal } from "@/modules/execution-factory/components/InstallSkillFromCatalogModal";
 import { McpDetailDrawer } from "@/modules/execution-factory/components/McpDetailDrawer";
-import { OperatorDetailDrawer } from "@/modules/execution-factory/components/OperatorDetailDrawer";
 import { PublishedPermModal } from "@/modules/execution-factory/components/PublishedPermModal";
 import { SkillDetailDrawer } from "@/modules/execution-factory/components/SkillDetailDrawer";
 import { ToolboxDetailDrawer } from "@/modules/execution-factory/components/ToolboxDetailDrawer";
@@ -24,7 +23,6 @@ export type ExecutionUnitListOverlaysProps = {
   activeTab: ExecutionUnitTab;
   detailBoxId: string | null;
   detailMcpId: string | null;
-  detailOperatorId: string | null;
   detailSkillId: string | null;
   editMcpId: string | null;
   installTarget: {
@@ -37,7 +35,6 @@ export type ExecutionUnitListOverlaysProps = {
   navigate: NavigateFunction;
   onCloseDetailBox: () => void;
   onCloseDetailMcp: () => void;
-  onCloseDetailOperator: () => void;
   onCloseDetailSkill: () => void;
   onCloseEditMcp: () => void;
   onCloseInstallTarget: () => void;
@@ -60,7 +57,6 @@ export function ExecutionUnitListOverlays({
   activeTab,
   detailBoxId,
   detailMcpId,
-  detailOperatorId,
   detailSkillId,
   editMcpId,
   installTarget,
@@ -68,7 +64,6 @@ export function ExecutionUnitListOverlays({
   navigate,
   onCloseDetailBox,
   onCloseDetailMcp,
-  onCloseDetailOperator,
   onCloseDetailSkill,
   onCloseEditMcp,
   onCloseInstallTarget,
@@ -84,16 +79,6 @@ export function ExecutionUnitListOverlays({
 }: ExecutionUnitListOverlaysProps) {
   return (
     <>
-      <OperatorDetailDrawer
-        marketMode={marketMode}
-        onClose={onCloseDetailOperator}
-        onEdit={(id) => {
-          onCloseDetailOperator();
-          void navigate(`/execution-factory/units/${id}/edit`);
-        }}
-        open={Boolean(detailOperatorId)}
-        operatorId={detailOperatorId}
-      />
       {/* 本域列表点卡片直接进详情页，这三个抽屉只留给市场态的引入前预览。 */}
       {marketMode ? (
         <>
@@ -129,7 +114,7 @@ export function ExecutionUnitListOverlays({
         alreadyInstalled={installTarget?.alreadyInstalled ?? false}
         componentId={installTarget?.id ?? ""}
         componentName={installTarget?.name ?? ""}
-        componentType={installTarget?.type ?? "operator"}
+        componentType={installTarget?.type ?? "toolbox"}
         onClose={onCloseInstallTarget}
         onSuccess={() => {
           invalidateLocalResourceIdsCache(activeTab);

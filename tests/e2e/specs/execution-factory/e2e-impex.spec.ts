@@ -11,7 +11,6 @@ import { assertBackendReady, apiUrl } from "../../helpers/common";
 import {
   buildImpexImportName,
   cloneMcpImpexForCreate,
-  cloneOperatorImpexForCreate,
   cloneToolboxImpexForCreate,
 } from "../../helpers/impex";
 import {
@@ -21,14 +20,6 @@ import {
   exportMcpViaApi,
   importMcpViaApi,
 } from "../../helpers/mcp";
-import {
-  buildOperatorName,
-  cleanupOperatorViaApi,
-  exportOperatorViaApi,
-  importOperatorViaApi,
-  registerOperatorViaApi,
-  type RegisteredOperator,
-} from "../../helpers/operator";
 import {
   buildToolboxName,
   cleanupToolboxViaApi,
@@ -40,7 +31,6 @@ import {
 
 test.describe("Execution Factory — Impex E2E flows", () => {
   let backendReady = false;
-  const createdOperators: RegisteredOperator[] = [];
   const createdBoxIds: string[] = [];
   const createdMcpIds: string[] = [];
 
@@ -65,16 +55,6 @@ test.describe("Execution Factory — Impex E2E flows", () => {
       }
     }
 
-    while (createdOperators.length > 0) {
-      const operator = createdOperators.pop();
-      if (!operator) continue;
-      try {
-        await cleanupOperatorViaApi(request, operator);
-      } catch (error) {
-        console.warn(`Cleanup operator ${operator.operatorId}: ${String(error)}`);
-      }
-    }
-
     while (createdBoxIds.length > 0) {
       const boxId = createdBoxIds.pop();
       if (!boxId) continue;
@@ -88,63 +68,6 @@ test.describe("Execution Factory — Impex E2E flows", () => {
 
   test.beforeEach(() => {
     test.skip(!backendReady, "execution-factory backend is not running on :9000");
-  });
-
-  test("IMPEX-01: operator import create mode with cloned ids", async ({ request }) => {
-    const source = await registerOperatorViaApi(request, buildOperatorName("impex_src"));
-    createdOperators.push(source);
-
-    const exported = (await exportOperatorViaApi(request, source.operatorId)) as Record<
-      string,
-      unknown
-    >;
-    const importName = buildImpexImportName("at_e2e_impex_op_create");
-    const payload = cloneOperatorImpexForCreate(exported, importName);
-
-    await importOperatorViaApi(request, payload, "create");
-
-    const list = await request.get(
-      apiUrl(`/operator/info/list?page=1&page_size=50&name=${encodeURIComponent(importName)}`),
-    );
-    expect(list.ok()).toBeTruthy();
-    const body = (await list.json()) as {
-      data?: Array<{ operator_id: string; name?: string; version: string }>;
-    };
-    const imported = body.data?.find((item) => item.name === importName);
-    expect(imported?.operator_id).toBeTruthy();
-    if (imported) {
-      createdOperators.push({
-        operatorId: imported.operator_id,
-        version: imported.version,
-        name: importName,
-      });
-    }
-  });
-
-  test("IMPEX-02: operator import upsert updates existing resource", async ({ request }) => {
-    const operator = await registerOperatorViaApi(request, buildOperatorName("impex_upsert"));
-    createdOperators.push(operator);
-
-    const exported = (await exportOperatorViaApi(request, operator.operatorId)) as Record<
-      string,
-      unknown
-    >;
-    const item = (exported.operator as { configs?: Array<Record<string, unknown>> })?.configs?.[0];
-    const metadata = item?.metadata as Record<string, unknown> | undefined;
-    if (metadata) {
-      metadata.description = "E2E upserted operator description";
-    }
-
-    await importOperatorViaApi(request, exported, "upsert");
-
-    const reExported = (await exportOperatorViaApi(request, operator.operatorId)) as Record<
-      string,
-      unknown
-    >;
-    const reItem = (reExported.operator as { configs?: Array<Record<string, unknown>> })
-      ?.configs?.[0];
-    const reMetadata = reItem?.metadata as Record<string, unknown> | undefined;
-    expect(String(reMetadata?.description ?? "")).toContain("upserted");
   });
 
   test("IMPEX-03: toolbox import create mode with cloned ids", async ({ request }) => {

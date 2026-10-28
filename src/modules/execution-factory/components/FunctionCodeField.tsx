@@ -33,8 +33,8 @@ export function FunctionCodeField({
 }: FunctionCodeFieldProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
-  // Hosts such as the legacy operator form gate the page by their own resource, but generation
-  // and ad-hoc runs are authorized on Function; hide what the backend would reject with 403.
+  // Hosts gate the page by their own resource, but generation and ad-hoc runs are authorized
+  // on Function; hide what the backend would reject with 403.
   const { canExecuteAdhoc, canGenerate } = useFunctionCodeAccess();
   const [executeOpen, setExecuteOpen] = useState(false);
   const [aiGenerateOpen, setAiGenerateOpen] = useState(false);

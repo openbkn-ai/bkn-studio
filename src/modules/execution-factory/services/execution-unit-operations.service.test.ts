@@ -28,19 +28,6 @@ describe("execution-unit list operation mapping", () => {
     getMock
       .mockResolvedValueOnce({
         data: {
-          data: [
-            {
-              name: "Operator",
-              operator_id: "operator-1",
-              operations: ["authorize"],
-              version: "1",
-            },
-          ],
-          total: 1,
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
           data: [{ box_id: "toolbox-1", box_name: "Toolbox", operations: ["authorize"] }],
           total: 1,
         },
@@ -55,21 +42,18 @@ describe("execution-unit list operation mapping", () => {
         },
       });
 
-    const [{ listOperators }, { listToolboxes }, { listMcps }, { listSkills }] = await Promise.all([
-      import("./operator.service"),
+    const [{ listToolboxes }, { listMcps }, { listSkills }] = await Promise.all([
       import("./toolbox.service"),
       import("./mcp.service"),
       import("./skill.service"),
     ]);
 
-    const [operators, toolboxes, mcps, skills] = await Promise.all([
-      listOperators({ page: 1, pageSize: 20 }),
+    const [toolboxes, mcps, skills] = await Promise.all([
       listToolboxes({ page: 1, pageSize: 20 }),
       listMcps({ page: 1, pageSize: 20 }),
       listSkills({ page: 1, pageSize: 20 }),
     ]);
 
-    expect(operators.items[0]?.operations).toEqual(["authorize"]);
     expect(toolboxes.items[0]?.operations).toEqual(["authorize"]);
     expect(mcps.items[0]?.operations).toEqual(["authorize"]);
     expect(skills.items[0]?.operations).toEqual(["authorize"]);

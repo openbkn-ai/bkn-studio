@@ -76,7 +76,6 @@ export async function createHttpCapabilityViaLabApi(
     serviceUrl: string;
     name?: string;
     description?: string;
-    orchestrationEnabled?: boolean;
   },
 ) {
   const response = await request.post(`${LAB_API_BASE_URL}/capabilities/http`, {
@@ -86,7 +85,6 @@ export async function createHttpCapabilityViaLabApi(
       service_url: input.serviceUrl,
       name: input.name,
       description: input.description,
-      orchestration_enabled: input.orchestrationEnabled ?? false,
       group: { mode: "auto" },
     },
   });
@@ -99,7 +97,6 @@ export async function createHttpCapabilityViaLabApi(
       box_id?: string;
       tool_id?: string;
       group?: { id?: string; name?: string };
-      orchestration?: { enabled?: boolean; operator_id?: string };
     };
   }>;
 }
@@ -142,7 +139,6 @@ export async function listCapabilitiesViaLabApi(
       kind?: string;
       box_id?: string;
       tool_id?: string;
-      orchestration?: { enabled?: boolean; operator_id?: string };
     }>;
     total?: number;
     page?: number;
@@ -162,7 +158,6 @@ export async function getCapabilityViaLabApi(request: APIRequestContext, capabil
     name?: string;
     kind?: string;
     status?: string;
-    orchestration?: { enabled?: boolean; operator_id?: string };
   }>;
 }
 
@@ -222,34 +217,6 @@ export async function publishGroupViaLabApi(
   return response.json() as Promise<{ ok?: boolean; status?: string }>;
 }
 
-export async function enableOrchestrationViaLabApi(
-  request: APIRequestContext,
-  capabilityId: string,
-) {
-  const response = await request.post(
-    `${LAB_API_BASE_URL}/capabilities/${encodeURIComponent(capabilityId)}/orchestration/enable`,
-    { headers: labApiHeaders(), data: {} },
-  );
-
-  await expectOk(response, "Enable orchestration via lab API");
-  return response.json() as Promise<{ operator_id?: string }>;
-}
-
-export async function getOrchestrationViaLabApi(request: APIRequestContext, capabilityId: string) {
-  const response = await request.get(
-    `${LAB_API_BASE_URL}/capabilities/${encodeURIComponent(capabilityId)}/orchestration`,
-    { headers: labApiHeaders() },
-  );
-
-  await expectOk(response, "Get orchestration via lab API");
-  return response.json() as Promise<{
-    enabled?: boolean;
-    operator_id?: string;
-    tool_id?: string;
-    box_id?: string;
-  }>;
-}
-
 export async function listVersionsViaLabApi(request: APIRequestContext, capabilityId: string) {
   const response = await request.get(
     `${LAB_API_BASE_URL}/capabilities/${encodeURIComponent(capabilityId)}/versions`,
@@ -269,7 +236,6 @@ export async function importOpenApiViaLabApi(
     openapiSpec: string;
     serviceUrl: string;
     description?: string;
-    orchestrationEnabled?: boolean;
   },
 ) {
   const response = await request.post(`${LAB_API_BASE_URL}/capabilities/http/import`, {
@@ -278,7 +244,6 @@ export async function importOpenApiViaLabApi(
       openapi_spec: input.openapiSpec,
       service_url: input.serviceUrl,
       description: input.description,
-      orchestration_enabled: input.orchestrationEnabled ?? false,
       group: { mode: "auto" },
     },
   });

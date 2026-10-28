@@ -94,7 +94,7 @@ export async function searchExecutionUnitByName(page: Page, name: string) {
       .waitForResponse(
         (response) =>
           response.request().method() === "GET" &&
-          /\/(operator\/info\/list|tool-box\/list|tool-box\/market|mcp\/list|mcp\/market\/list|skill\/list|skill\/market\/list)/.test(
+          /\/(tool-box\/list|tool-box\/market|mcp\/list|mcp\/market\/list|skill\/list|skill\/market\/list)/.test(
             response.url(),
           ),
         { timeout: 30_000 },
@@ -120,15 +120,12 @@ export const UNITS_PAGE_TITLE =
 
 export const CATALOG_PAGE_TITLE = /能力市场|全部执行单元|Capability Market|All Execution Units/i;
 
-export const OPERATOR_TAB_LABEL = /算子开发|Operator Dev/i;
-
 export const BACKUP_FILE_TAB_LABEL = /备份文件|Backup file/i;
 
-const TAB_LABELS_V2: Record<"operator" | "toolbox" | "mcp" | "skill", RegExp> = {
+const TAB_LABELS_V2: Record<"toolbox" | "mcp" | "skill", RegExp> = {
   toolbox: /工具集|Toolsets/i,
   mcp: /MCP 服务|MCP Services/i,
   skill: /Skill 包|Skill Packs/i,
-  operator: OPERATOR_TAB_LABEL,
 };
 
 export async function expectCapabilityManagementPage(page: Page) {
@@ -136,39 +133,13 @@ export async function expectCapabilityManagementPage(page: Page) {
   await retryListLoadIfNeeded(page);
 }
 
-export async function expectOperatorAdvancedBanner(page: Page) {
-  await expect(
-    page
-      .getByText(
-        /算子列表与调试入口|Operator list and debug|同步发布为算子|Sync publish as operator/i,
-      )
-      .first(),
-  ).toBeVisible();
-}
-
-export async function gotoUnitsTab(
-  page: Page,
-  tab: "operator" | "toolbox" | "mcp" | "skill",
-  options?: { legacy?: boolean },
-) {
-  if (tab === "operator" && !options?.legacy) {
-    await openAdvancedOperatorTab(page);
-    return;
-  }
-
+export async function gotoUnitsTab(page: Page, tab: "toolbox" | "mcp" | "skill") {
   await gotoE2ePage(page, `/execution-factory/units?activeTab=${tab}`);
   await expectCapabilityManagementPage(page);
   await expect(page.getByRole("tab", { name: TAB_LABELS_V2[tab] })).toHaveAttribute(
     "aria-selected",
     "true",
   );
-}
-
-export async function openAdvancedOperatorTab(page: Page) {
-  await gotoE2ePage(page, "/execution-factory/units?activeTab=operator");
-  await expectCapabilityManagementPage(page);
-  await expect(page.getByRole("tab", { name: TAB_LABELS_V2.operator })).toBeVisible();
-  await expectOperatorAdvancedBanner(page);
 }
 
 export async function gotoMcpDetailPage(
@@ -300,71 +271,6 @@ export async function openAddCapabilityWizard(
   return drawer;
 }
 
-export async function openCreateWizard(
-  page: Page,
-  tab: "operator" | "toolbox" | "mcp" | "skill",
-  options?: { legacy?: boolean },
-) {
-  if (!options?.legacy && tab !== "operator") {
-    return openAddCapabilityWizard(page, tab);
-  }
-
-  const createPatterns: Record<typeof tab, RegExp> = {
-    operator: /新建算子|New Operator/i,
-    toolbox: /新建工具箱|New Toolbox|添加能力|Add Capability/i,
-    mcp: /新建 MCP|New MCP|添加能力|Add Capability/i,
-    skill: /导入 Skill|Import Skill|添加能力|Add Capability/i,
-  };
-
-  if (tab === "operator") {
-    await openAdvancedOperatorTab(page);
-    await clickPrimaryToolbarButton(page, createPatterns.operator);
-  } else {
-    await gotoUnitsTab(page, tab);
-    await clickPrimaryToolbarButton(page, createPatterns[tab]);
-  }
-
-  const drawer = await expectVisibleDrawer(page);
-  return drawer;
-}
-
-export async function advanceCreateWizardToDetails(page: Page) {
-  const drawer = visibleDrawer(page);
-  await drawer.getByRole("button", { name: /下一步|Next/i }).click();
-}
-
-export async function openOperatorCreateWizardStep2(page: Page) {
-  const drawer = await openCreateWizard(page, "operator");
-  await advanceCreateWizardToDetails(page);
-  await expect(drawer.getByText(/函数计算|Function/i)).toBeVisible();
-  await expect(drawer.getByText(/^OpenAPI$/)).toBeVisible();
-  return drawer;
-}
-
-export async function selectOperatorCreateMode(
-  page: Page,
-  mode: "openapi" | "function",
-  drawer?: import("@playwright/test").Locator,
-) {
-  const scope = drawer ?? visibleDrawer(page);
-  if (mode === "openapi") {
-    await scope.getByText(/^OpenAPI$/).click();
-  } else {
-    await scope.getByText(/函数计算|Function/i).click();
-  }
-
-  await scope.getByRole("button", { name: /继续配置|Continue setup/i }).click();
-
-  await expect(page).toHaveURL(new RegExp(`metadataType=${mode}`));
-  await expect(page.getByLabel(/算子名称|Operator Name/i)).toBeVisible();
-}
-
-/** 新建算子 → 向导选类型 → 选择 OpenAPI/函数计算 → 进入配置表单 */
-export async function openOperatorCreateForm(page: Page, mode: "openapi" | "function" = "openapi") {
-  const drawer = await openOperatorCreateWizardStep2(page);
-  await selectOperatorCreateMode(page, mode, drawer);
-}
-
 export async function expectFunctionDefinitionSections(
   page: Page,
   root?: import("@playwright/test").Locator,
@@ -465,14 +371,6 @@ export async function openCardMenu(page: Page, name: string, menuItem: string | 
   await menu.getByRole("menuitem", { name: menuItem }).click();
 }
 
-/** 算子没有独立详情页，点卡片仍开抽屉。 */
-export async function openDetailDrawerByCardClick(page: Page, name: string) {
-  await executionUnitCard(page, name).click();
-  const drawer = page.locator('.ant-drawer, [role="dialog"]').first();
-  await expect(drawer).toBeVisible();
-  return drawer;
-}
-
 /** 工具箱/MCP/Skill 点卡片直接进详情页。 */
 export async function openDetailPageByCardClick(page: Page, name: string, urlPattern: RegExp) {
   await executionUnitCard(page, name).click();
@@ -507,7 +405,7 @@ export async function openImportBackupTab(importDialog: Locator) {
 export async function submitImportModal(
   page: Page,
   importDialog: Locator,
-  type: "operator" | "toolbox" | "mcp",
+  type: "toolbox" | "mcp",
 ) {
   const importResponsePromise = waitForImpexImportResponse(page, type);
   await Promise.all([
@@ -522,19 +420,6 @@ export async function submitImportModal(
   await expectAppToast(page, /导入成功|Imported successfully/i);
   await expect(importDialog).toBeHidden();
   return importResponse;
-}
-
-export async function selectWizardResourceType(
-  drawer: import("@playwright/test").Locator,
-  tab: "operator" | "toolbox" | "mcp" | "skill",
-) {
-  const labelPatterns: Record<typeof tab, RegExp> = {
-    operator: /高级.*算子|Advanced.*Operators|算子|Operators/i,
-    toolbox: /添加 API|Add API|导入 OpenAPI|Import OpenAPI|工具|Tools|工具集|Toolsets/i,
-    mcp: /MCP 服务|MCP service|连接外部服务|Connect external service|^MCP$/i,
-    skill: /Skill 包|Skill pack|导入技能包|Import skill pack|^Skill$/i,
-  };
-  await drawer.getByText(labelPatterns[tab]).first().click();
 }
 
 export async function openToolDebugModalFromToolsPage(page: Page) {
@@ -605,7 +490,7 @@ export async function waitForCategoryFieldReady(
 
   await categoryCombobox.scrollIntoViewIfNeeded();
   await page
-    .waitForResponse((response) => response.url().includes("/operator/category") && response.ok(), {
+    .waitForResponse((response) => /\/v1\/category(\?|$)/.test(response.url()) && response.ok(), {
       timeout: 15_000,
     })
     .catch(() => undefined);
@@ -618,7 +503,6 @@ export async function fillAndSubmitQuickAddApi(
     summary: string;
     toolboxName: string;
     drawer?: import("@playwright/test").Locator;
-    operatorSync?: { enabled?: boolean; name?: string };
   },
 ) {
   const drawer = options.drawer ?? visibleDrawer(page);
@@ -637,14 +521,6 @@ export async function fillAndSubmitQuickAddApi(
   await waitForCategoryFieldReady(page, drawer);
 
   await expectOpenApiOperationsIoPreview(drawer, { containsText: /POST|GET/i });
-
-  if (options.operatorSync?.enabled) {
-    await drawer
-      .getByRole("checkbox", { name: /同步发布为算子|Sync publish as operator/i })
-      .check();
-    const operatorName = options.operatorSync.name ?? options.summary;
-    await drawer.getByLabel(/算子名称|Operator name/i).fill(operatorName);
-  }
 
   await drawer.locator(".ant-drawer-body").evaluate((body) => {
     body.scrollTop = body.scrollHeight;
@@ -693,14 +569,6 @@ export async function expectOpenApiInputModes(page: Page) {
   await expect(tabs.getByRole("tab", { name: /^URL$/i })).toBeVisible();
 }
 
-export async function fillFunctionOperatorForm(page: Page, operatorName: string, code: string) {
-  await page.getByLabel(/算子名称|Operator Name/i).fill(operatorName);
-  await page.getByLabel(/描述|Description/i).fill("Playwright AT — function operator");
-  const codeArea = page.locator("#function-logic textarea");
-  await expect(codeArea).toBeVisible();
-  await codeArea.fill(code);
-}
-
 export async function closeTopDrawer(page: Page) {
   const drawer = page.locator('.ant-drawer, [role="dialog"]').first();
   if (await drawer.isVisible()) {
@@ -714,7 +582,7 @@ export async function expectAppToast(page: Page, pattern: RegExp | string) {
   await expect(toast.first()).toBeVisible({ timeout: 30_000 });
 }
 
-export async function waitForImpexExportResponse(page: Page, type: "operator" | "toolbox" | "mcp") {
+export async function waitForImpexExportResponse(page: Page, type: "toolbox" | "mcp") {
   return page.waitForResponse(
     (response) =>
       response.request().method() === "GET" && response.url().includes(`impex/export/${type}`),
@@ -722,7 +590,7 @@ export async function waitForImpexExportResponse(page: Page, type: "operator" | 
   );
 }
 
-export async function waitForImpexImportResponse(page: Page, type: "operator" | "toolbox" | "mcp") {
+export async function waitForImpexImportResponse(page: Page, type: "toolbox" | "mcp") {
   return page.waitForResponse(
     (response) =>
       response.request().method() === "POST" && response.url().includes(`impex/import/${type}`),
@@ -744,19 +612,6 @@ export async function uploadBackupFileInImportDialog(importDialog: Locator, file
 
 /** @deprecated use uploadBackupFileInImportDialog */
 export const uploadAdpPackageInImportDialog = uploadBackupFileInImportDialog;
-
-export async function openOperatorDetailDrawer(page: Page, name: string) {
-  const drawer = await openDetailDrawerByCardClick(page, name);
-  await expect(drawer.getByText(/算子详情|Operator Detail/i)).toBeVisible();
-  return drawer;
-}
-
-export async function openOperatorVersionHistoryDrawer(page: Page, name: string) {
-  const drawer = await openOperatorDetailDrawer(page, name);
-  await drawer.getByRole("button", { name: /版本历史|Version history/i }).click();
-  await expect(page.getByText(/算子版本历史|Operator version history/i)).toBeVisible();
-  return page.locator(".ant-drawer").last();
-}
 
 export async function openSkillReleaseHistoryDrawer(page: Page, name: string) {
   await openDetailPageByCardClick(page, name, /\/execution-factory\/skills\/[^/?]+/);
@@ -917,7 +772,7 @@ export async function registerLocalMcpViaUi(page: Page, options: { name: string;
 
 export async function importBackupFileViaUi(
   page: Page,
-  tab: "operator" | "toolbox" | "mcp",
+  tab: "toolbox" | "mcp",
   filePath: string,
   options?: { mode?: "create" | "upsert" },
 ) {
@@ -937,11 +792,7 @@ export async function importBackupFileViaUi(
 }
 
 /** 卡片菜单导出：以 API 响应 + toast 为准（blob 程序化下载不一定触发 download 事件） */
-export async function exportFromCardMenu(
-  page: Page,
-  name: string,
-  type: "operator" | "toolbox" | "mcp",
-) {
+export async function exportFromCardMenu(page: Page, name: string, type: "toolbox" | "mcp") {
   const card = await searchExecutionUnitByName(page, name);
   await card.getByRole("button", { name: /更多操作|More/i }).click();
   const menu = page.getByRole("menu").last();
@@ -955,7 +806,7 @@ export async function exportFromCardMenu(
 
 export async function triggerImpexExport(
   page: Page,
-  type: "operator" | "toolbox" | "mcp",
+  type: "toolbox" | "mcp",
   clickExport: () => Promise<void>,
 ) {
   const exportResponsePromise = waitForImpexExportResponse(page, type);

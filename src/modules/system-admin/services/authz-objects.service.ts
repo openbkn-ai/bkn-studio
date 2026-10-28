@@ -242,10 +242,8 @@ type NamesConfig =
 const NAMES_CONFIG: Record<string, NamesConfig> = {
   small_model: { kind: "post", path: "/mf-model-manager/v1/small-model/names" },
   large_model: { kind: "post", path: "/mf-model-manager/v1/llm/names" },
-  // Function set grants carry toolbox box ids, not operator ids.
+  // Function set grants carry toolbox box ids.
   function: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
-  // Existing grants can still carry the retired operator type.
-  operator: { kind: "post", path: "/agent-operator-integration/v1/operator/names" },
   tool_box: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
   skill: { kind: "post", path: "/agent-operator-integration/v1/skills/names" },
   knowledge_network: { kind: "post", path: "/bkn-backend/v1/knowledge-networks/names" },
