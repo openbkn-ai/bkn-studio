@@ -539,7 +539,6 @@ export const executionFactoryEnUS = {
     importButton: "Import",
     importConfirm: "Import",
     importSuccess: "Imported successfully",
-    importKindAdp: "Backup file",
     importKindAdpHint:
       "Pairs with Export on the list—upload the file you downloaded (.adp / .json)",
     importOpenApiFileRequired: "Please upload an OpenAPI spec file",

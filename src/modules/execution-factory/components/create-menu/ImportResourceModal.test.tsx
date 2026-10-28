@@ -13,7 +13,6 @@ import { ImportResourceModal } from "@/modules/execution-factory/components/crea
 
 const translate = (key: string) => {
   const labels: Record<string, string> = {
-    "executionFactory.importKindAdp": "ADP",
     "executionFactory.importConfirm": "Import",
     "executionFactory.importResourceTitle.toolbox": "Import toolbox",
     "executionFactory.importResourceTitle.mcp": "Import MCP",
@@ -114,8 +113,8 @@ describe("ImportResourceModal", () => {
     render(<ImportResourceModal activeTab={activeTab} onClose={vi.fn()} open />);
 
     expect(await screen.findByRole("heading", { name: title })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "ADP" })).toBeTruthy();
-    expect(screen.queryByRole("tab", { name: /OpenAPI/ })).toBeNull();
+    // A single import kind needs no tab bar.
+    expect(screen.queryByRole("tab")).toBeNull();
   });
 
   it("asks for a file instead of importing when none is selected", async () => {

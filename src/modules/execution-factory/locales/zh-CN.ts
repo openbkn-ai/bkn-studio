@@ -520,7 +520,6 @@ export const executionFactoryZhCN = {
     importButton: "导入",
     importConfirm: "开始导入",
     importSuccess: "导入成功",
-    importKindAdp: "备份文件",
     importKindAdpHint: "与列表中的「导出」配套：上传当时下载的文件（.adp / .json）",
     importOpenApiFileRequired: "请上传 OpenAPI 规范文件",
     importAdpFileRequired: "请上传备份文件（.adp 或 .json）",

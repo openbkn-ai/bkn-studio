@@ -7,7 +7,7 @@
 
 import { CloudUploadOutlined } from "@ant-design/icons";
 
-import { Alert, Form, Modal, Radio, Tabs, Upload } from "antd";
+import { Alert, Form, Modal, Radio, Upload } from "antd";
 
 import type { UploadFile } from "antd/es/upload/interface";
 
@@ -151,60 +151,49 @@ export function ImportResourceModal({
 
       width={760}
     >
-      <Tabs
-        activeKey="adp"
-        items={[
-          {
-            key: "adp",
-            label: t("executionFactory.importKindAdp"),
-            children: (
-              <Form form={adpForm} layout="vertical">
-                <CapabilityBusinessIntro
-                  messageKey={`executionFactory.businessIntro.impexAdp${activeTab === "mcp" ? "Mcp" : "Toolbox"}`}
-                />
+      <Form form={adpForm} layout="vertical">
+        <CapabilityBusinessIntro
+          messageKey={`executionFactory.businessIntro.impexAdp${activeTab === "mcp" ? "Mcp" : "Toolbox"}`}
+        />
 
-                <p className={styles.sectionIntro}>{t("executionFactory.importKindAdpHint")}</p>
+        <p className={styles.sectionIntro}>{t("executionFactory.importKindAdpHint")}</p>
 
-                <Form.Item label={t("executionFactory.importMode")} name="mode">
-                  <Radio.Group>
-                    <Radio value="create">{t("executionFactory.importModeCreate")}</Radio>
+        <Form.Item label={t("executionFactory.importMode")} name="mode">
+          <Radio.Group>
+            <Radio value="create">{t("executionFactory.importModeCreate")}</Radio>
 
-                    <Radio value="upsert">{t("executionFactory.importModeUpsert")}</Radio>
-                  </Radio.Group>
-                </Form.Item>
+            <Radio value="upsert">{t("executionFactory.importModeUpsert")}</Radio>
+          </Radio.Group>
+        </Form.Item>
 
-                <p className={styles.sectionIntro}>
-                  {t(
-                    adpImportMode === "upsert"
-                      ? "executionFactory.importModeUpsertHint"
-                      : "executionFactory.importModeCreateHint",
-                  )}
-                </p>
+        <p className={styles.sectionIntro}>
+          {t(
+            adpImportMode === "upsert"
+              ? "executionFactory.importModeUpsertHint"
+              : "executionFactory.importModeCreateHint",
+          )}
+        </p>
 
-                <Upload.Dragger
-                  accept=".adp,.json"
+        <Upload.Dragger
+          accept=".adp,.json"
 
-                  beforeUpload={() => false}
+          beforeUpload={() => false}
 
-                  className={styles.uploadDragger}
+          className={styles.uploadDragger}
 
-                  fileList={adpFileList}
+          fileList={adpFileList}
 
-                  maxCount={1}
+          maxCount={1}
 
-                  onChange={({ fileList }) => setAdpFileList(fileList)}
-                >
-                  <p className="ant-upload-drag-icon">
-                    <CloudUploadOutlined />
-                  </p>
+          onChange={({ fileList }) => setAdpFileList(fileList)}
+        >
+          <p className="ant-upload-drag-icon">
+            <CloudUploadOutlined />
+          </p>
 
-                  <p className="ant-upload-text">{t("executionFactory.importAdpDraggerHint")}</p>
-                </Upload.Dragger>
-              </Form>
-            ),
-          },
-        ]}
-      />
+          <p className="ant-upload-text">{t("executionFactory.importAdpDraggerHint")}</p>
+        </Upload.Dragger>
+      </Form>
 
       {errorDetail ? (
         <Alert
