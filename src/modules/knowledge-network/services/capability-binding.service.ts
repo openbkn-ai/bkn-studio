@@ -67,6 +67,10 @@ export async function attachKnowledgeNetworkCapabilities(
   networkId: string,
   inputs: AttachCapabilityInput[],
 ): Promise<CapabilityBindingRecord[]> {
+  if (useMock && inputs.every((input) => input.capabilityType === "knowledge_base")) {
+    // Knowledge bases have no toolset to read.
+    return wait(attachMockCapabilities(networkId, inputs));
+  }
   if (useMock) {
     // The backend tags each tool binding with its toolset's kind, and that tag is what splits the
     // function and API lists. Mock mode has to do the same or every mounted API lands in functions.

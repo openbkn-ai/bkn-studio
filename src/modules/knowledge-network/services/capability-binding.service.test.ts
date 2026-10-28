@@ -164,6 +164,56 @@ describe("capability-binding.service", () => {
     });
   });
 
+  it("reads a knowledge-base binding as one, not as a skill", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            id: "binding-kb",
+            capability_type: "knowledge_base",
+            capability_id: "7",
+            name: "合同库",
+          },
+          {
+            id: "binding-gone",
+            capability_type: "knowledge_base",
+            capability_id: "9",
+            status: "missing",
+          },
+        ],
+        total_count: 2,
+      },
+    });
+
+    const result = await listKnowledgeNetworkCapabilities("kn-1", { type: "knowledge_base" });
+
+    expect(result.entries.map((item) => item.capabilityType)).toEqual([
+      "knowledge_base",
+      "knowledge_base",
+    ]);
+    expect(result.entries[1].status).toBe("missing");
+    const [, config] = getMock.mock.calls[0] as [string, { params: Record<string, unknown> }];
+    expect(config.params.type).toBe("knowledge_base");
+  });
+
+  it("mounts a knowledge base by its id alone, with no box", async () => {
+    postMock.mockResolvedValue({ data: { entries: [{ id: "binding-kb" }] } });
+
+    await attachKnowledgeNetworkCapabilities("kn-1", [
+      { capabilityId: "7", capabilityType: "knowledge_base" },
+    ]);
+
+    const [, body] = postMock.mock.calls[0] as [
+      string,
+      { capabilities: Record<string, unknown>[] },
+    ];
+    expect(body.capabilities[0]).toMatchObject({
+      capability_id: "7",
+      capability_type: "knowledge_base",
+    });
+    expect(body.capabilities[0].box_id).toBeUndefined();
+  });
+
   it("releases bindings as one comma-separated batch", async () => {
     deleteMock.mockResolvedValue({ data: null });
 
