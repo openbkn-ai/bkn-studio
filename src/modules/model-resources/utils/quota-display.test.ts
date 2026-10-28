@@ -59,8 +59,15 @@ describe("quota amount units", () => {
   it("preserves zero and small remaining balances without rounding away tokens", () => {
     const t = i18n.getFixedT("en-US");
     expect(formatQuotaRemainingTokens(0, 1, "month", t)).toBe("0 K tokens/month");
-    expect(formatQuotaRemainingTokens(1, 3, "month", t)).toBe("0.00000001 100M tokens/month");
+    expect(formatQuotaRemainingTokens(1, 3, "month", t)).toBe("1 tokens/month");
     expect(formatQuotaRemainingTokens(992, 1, "month", t)).toBe("0.992 K tokens/month");
+    expect(formatQuotaRemainingTokens(1234, 3, "month", t)).toBe("1,234 tokens/month");
+    expect(formatQuotaRemainingTokens(1234, 6, "月", i18n.getFixedT("zh-CN"))).toBe(
+      "1,234 tokens/月",
+    );
+    expect(formatQuotaRemainingTokens(12340000, 3, "month", t)).toBe("12,340,000 tokens/month");
+    expect(formatQuotaRemainingTokens(12300000, 3, "month", t)).toBe("0.123 100M tokens/month");
+    expect(formatQuotaTokenAmount(0.00001234, 3, "month", t)).toBe("0.00001234 100M tokens/month");
   });
 
   it.each([0, undefined, 99])("falls back to raw tokens for an unknown unit %s", (type) => {

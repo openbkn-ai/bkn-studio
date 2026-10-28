@@ -64,9 +64,13 @@ export function formatQuotaRemainingTokens(
     return "--";
   }
 
-  const amount = new BigNumber(tokens).dividedBy(TOKEN_UNIT_VALUE[numType ?? 0] ?? 1).toFixed();
+  const amount = new BigNumber(tokens).dividedBy(TOKEN_UNIT_VALUE[numType ?? 0] ?? 1);
+  // Preserve exact balances without expanding tiny quantities into long decimals.
+  if ((amount.decimalPlaces() ?? 0) > 3) {
+    return `${new BigNumber(tokens).toFormat()} tokens/${monthLabel}`;
+  }
   const unit = formatTokenUnit(numType, t);
-  return `${amount} ${unit ? `${unit} ` : ""}tokens/${monthLabel}`;
+  return `${amount.toFixed()} ${unit ? `${unit} ` : ""}tokens/${monthLabel}`;
 }
 
 export function formatReferPrice(
