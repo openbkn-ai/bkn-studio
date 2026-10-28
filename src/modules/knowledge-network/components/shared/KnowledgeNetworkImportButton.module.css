@@ -39,3 +39,18 @@
   color: var(--color-text-secondary);
   line-height: 22px;
 }
+
+.skipList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skipItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
