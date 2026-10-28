@@ -18,6 +18,7 @@ import {
   MenuUnfoldOutlined,
   MessageOutlined,
   NodeIndexOutlined,
+  ReadOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Alert } from "antd";
@@ -26,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
@@ -85,6 +87,7 @@ export function KnowledgeNetworkWorkspaceScene({
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
+  const kbMode = useBknProjectKbMode();
   const workspaceData = useWorkspaceData(activeNetworkId, section);
   const {
     detail,
@@ -187,10 +190,22 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <SkillsSparkIcon />,
         count: detail?.statistics.skillsTotal ?? 0,
       },
+      // Professional edition. Not in the community image at all; without the license the section
+      // opens under the edition mask. No count: the network's statistics do not report one.
+      ...(kbMode === "hidden"
+        ? []
+        : [
+            {
+              key: "knowledge-bases" as const,
+              label: t("knowledgeNetwork.workspaceKnowledgeBases"),
+              icon: <ReadOutlined />,
+              paidEdition: "professional" as const,
+            },
+          ]),
     ];
 
     return items;
-  }, [activeNetworkId, detail, objectMetricsCapability, t]);
+  }, [activeNetworkId, detail, kbMode, objectMetricsCapability, t]);
 
   const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
   const experienceNavItems = navigationItems.filter(
@@ -211,7 +226,8 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "functions" ||
       item.key === "apis" ||
       item.key === "mcp" ||
-      item.key === "skills",
+      item.key === "skills" ||
+      item.key === "knowledge-bases",
   );
 
   const renderSideNavItem = (item: WorkspaceNavItem, options?: { showCount?: boolean }) => {

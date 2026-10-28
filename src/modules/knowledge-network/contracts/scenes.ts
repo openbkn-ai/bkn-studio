@@ -22,7 +22,8 @@ export type KnowledgeNetworkWorkspaceSection =
   | "functions"
   | "apis"
   | "mcp"
-  | "skills";
+  | "skills"
+  | "knowledge-bases";
 
 export type KnowledgeNetworkWorkspaceSceneProps = {
   networkId?: string;
