@@ -7,10 +7,14 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockGet, mockPost } = vi.hoisted(() => ({ mockGet: vi.fn(), mockPost: vi.fn() }));
+const { mockGet, mockPost, mockPut } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPost: vi.fn(),
+  mockPut: vi.fn(),
+}));
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: mockGet, post: mockPost },
+  http: { get: mockGet, post: mockPost, put: mockPut },
 }));
 
 // useMock is read when the module loads, so each case stubs the env and imports afresh.
@@ -118,6 +122,20 @@ describe("project.service", () => {
       name: "Orders",
       new_kn: { name: "Delivery" },
     });
+  });
+
+  it("replaces the project's catalogs and maps the project it replies", async () => {
+    mockPut.mockResolvedValue({ data: { ...backendProject, catalog_ids: ["c2"] } });
+    const { setProjectCatalogs } = await importService();
+
+    const project = await setProjectCatalogs("p 1", ["c2"]);
+
+    expect(mockPut).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%201/catalogs",
+      { catalog_ids: ["c2"] },
+      { skipErrorToast: true },
+    );
+    expect(project.catalogIds).toEqual(["c2"]);
   });
 
   it("archives and unarchives with the custom methods", async () => {

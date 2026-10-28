@@ -135,6 +135,17 @@ export const bknProjectEnUS = {
         endsNotAdopted: "Adopt the object types it connects before adopting it",
         archived: "The project is archived and cannot be changed",
       },
+      catalogs: {
+        change: "Change data catalogs",
+        choose: "Choose data catalogs",
+        title: "The project's data catalogs",
+        label: "Data catalogs",
+        hint: "AI drafts the ontology from the tables in these catalogs. Changing them keeps the current draft; the new catalogs are read when you draft again.",
+        removed:
+          "Data catalogs {{names}} no longer exist or you cannot see them; saving removes them from the project.",
+        loadFailed: "The data catalogs could not be listed, so they cannot be changed for now.",
+        saved: "Data catalogs changed. Drafting reads the new catalogs.",
+      },
       actions: {
         adoptItem: "Adopt {{name}}",
         edit: "Edit {{name}}",
@@ -156,6 +167,8 @@ export const bknProjectEnUS = {
           "AI drafts object types, relation types and value types from the structure of the tables; nothing is adopted until you confirm the draft.",
         noCatalogs:
           "The project has no data catalogs; select the catalogs that hold its structured data first.",
+        noCatalogsAskOwner:
+          "The project has no data catalogs yet. Ask the project owner to choose them.",
       },
       drafting: {
         title: "AI is drafting the ontology from the table structure",
@@ -169,6 +182,9 @@ export const bknProjectEnUS = {
         details: "Technical details (include them when reporting a problem)",
       },
       notice: {
+        draftReadsMissing:
+          "Some tables of the draft come from data catalogs {{names}}, which no longer exist or you cannot see. Drafting again reads the project's current catalogs.",
+        askOwner: "Ask the project owner to change the data catalogs.",
         missingCatalogs:
           "Data catalogs {{names}} no longer exist, or you cannot see them. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
         unadoptedEnds:

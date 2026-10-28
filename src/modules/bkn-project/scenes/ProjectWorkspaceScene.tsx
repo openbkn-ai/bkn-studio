@@ -159,7 +159,13 @@ export function ProjectWorkspaceScene({
               project={project}
             />
           ) : section === "model" ? (
-            <ProjectModel project={project} />
+            <ProjectModel
+              onProjectChange={(next) =>
+                setLoaded((current) => (current ? { ...current, project: next } : current))
+              }
+              ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+              project={project}
+            />
           ) : KNOWLEDGE_BASE_SECTIONS.includes(section) ? (
             <BknProjectKbSlot>
               <EmptyStatePanel title={t("bknProject.workspace.comingSoon")} />

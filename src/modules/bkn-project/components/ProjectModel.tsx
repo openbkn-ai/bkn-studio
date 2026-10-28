@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Segmented, Spin } from "antd";
+import { Alert, Segmented, Space, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,6 +16,7 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
+import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import {
   adoptBlocker,
   draftErrorCode,
@@ -68,7 +69,16 @@ function failureKey(error: string) {
  * The ontology modeling page: the project's draft, read-only. Every rule lives in
  * bkn-project; the page shows what it answers and the evidence behind each item.
  */
-export function ProjectModel({ project }: { project: Project }) {
+export function ProjectModel({
+  onProjectChange,
+  ownerIsCaller,
+  project,
+}: {
+  onProjectChange: (project: Project) => void;
+  /** Only the owner may replace the project's catalogs; others are asked to contact them. */
+  ownerIsCaller: boolean;
+  project: Project;
+}) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   // undefined while loading, null before the first draft.
@@ -81,6 +91,7 @@ export function ProjectModel({ project }: { project: Project }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ item: EditableItem; kind: DraftItemKind } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [changingCatalogs, setChangingCatalogs] = useState(false);
 
   // Counts every read, failed or not, so a drafting draft is read again after a failure too.
   const [reads, setReads] = useState(0);
@@ -100,20 +111,28 @@ export function ProjectModel({ project }: { project: Project }) {
     void loadDraft();
   }, [loadDraft]);
 
+  // Without the list, catalogs show by id, nothing is reported missing and they cannot be
+  // changed; the owner is told and may try again.
+  const [catalogsFailed, setCatalogsFailed] = useState(false);
+  const [catalogReads, setCatalogReads] = useState(0);
   useEffect(() => {
     let active = true;
     listCatalogs(catalogListAllQuery({ pageSize: 500 }), { skipErrorToast: true })
       .then((result) => {
         if (active) {
           setCatalogs(new Map(result.items.map(({ id, name }) => [id, name])));
+          setCatalogsFailed(false);
         }
       })
-      // Without the list, catalogs show by id and nothing is reported missing.
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) {
+          setCatalogsFailed(true);
+        }
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [catalogReads]);
 
   // A draft that is drafting is read again until it is done; leaving the page stops it.
   const drafting = draft?.status === "drafting";
@@ -217,6 +236,11 @@ export function ProjectModel({ project }: { project: Project }) {
       catalogs ? missingCatalogs(project.catalogIds, draft ?? null, new Set(catalogs.keys())) : [],
     [catalogs, draft, project.catalogIds],
   );
+  // The project's own catalogs that are gone are fixed by changing them; catalogs only the draft
+  // still reads are fixed by drafting again, so the two notices offer different actions.
+  const projectMissing = missing.filter((id) => project.catalogIds.includes(id));
+  const draftMissing = missing.filter((id) => !project.catalogIds.includes(id));
+  const catalogLabels = (ids: string[]) => ids.map((id) => catalogNames[id] ?? id).join(", ");
   const unadoptedEnds = useMemo(
     () => (draft?.status === "ready" ? relationsWithUnadoptedEnds(draft) : []),
     [draft],
@@ -246,6 +270,28 @@ export function ProjectModel({ project }: { project: Project }) {
   }
 
   const noCatalogs = project.catalogIds.length === 0;
+  // Offered once the visible catalogs are known: the dialog starts from them.
+  // No change on an archived project, as for every other change on this page.
+  const canChangeCatalogs = ownerIsCaller && catalogs !== null && !project.archived;
+  const changeCatalogsButton = (label: string, primary = false) =>
+    canChangeCatalogs ? (
+      <AppButton onClick={() => setChangingCatalogs(true)} type={primary ? "primary" : "default"}>
+        {t(label)}
+      </AppButton>
+    ) : null;
+  const catalogsDialog =
+    changingCatalogs && catalogs ? (
+      <ProjectCatalogsModal
+        catalogs={catalogs}
+        onCancel={() => setChangingCatalogs(false)}
+        onSaved={(next) => {
+          setChangingCatalogs(false);
+          onProjectChange(next);
+          message.success(t("bknProject.model.catalogs.saved"));
+        }}
+        project={project}
+      />
+    ) : null;
   const generateButton = (
     <AppButton
       disabled={drafting || noCatalogs || project.archived}
@@ -259,6 +305,18 @@ export function ProjectModel({ project }: { project: Project }) {
 
   const notices = (
     <>
+      {ownerIsCaller && catalogsFailed ? (
+        <Alert
+          action={
+            <AppButton onClick={() => setCatalogReads((count) => count + 1)} size="small">
+              {t("common.retry")}
+            </AppButton>
+          }
+          message={t("bknProject.model.catalogs.loadFailed")}
+          showIcon
+          type="warning"
+        />
+      ) : null}
       {loadError ? (
         <Alert
           description={loadError}
@@ -277,10 +335,21 @@ export function ProjectModel({ project }: { project: Project }) {
           type="error"
         />
       ) : null}
-      {missing.length ? (
+      {projectMissing.length ? (
         <Alert
+          action={changeCatalogsButton("bknProject.model.catalogs.change")}
+          description={ownerIsCaller ? undefined : t("bknProject.model.notice.askOwner")}
           message={t("bknProject.model.notice.missingCatalogs", {
-            names: missing.map((id) => catalogNames[id] ?? id).join(", "),
+            names: catalogLabels(projectMissing),
+          })}
+          showIcon
+          type="warning"
+        />
+      ) : null}
+      {draftMissing.length ? (
+        <Alert
+          message={t("bknProject.model.notice.draftReadsMissing", {
+            names: catalogLabels(draftMissing),
           })}
           showIcon
           type="warning"
@@ -301,12 +370,26 @@ export function ProjectModel({ project }: { project: Project }) {
       <div className={styles.page}>
         {notices}
         <EmptyStatePanel
-          action={generateButton}
+          action={
+            noCatalogs ? (
+              changeCatalogsButton("bknProject.model.catalogs.choose", true)
+            ) : (
+              <Space>
+                {generateButton}
+                {changeCatalogsButton("bknProject.model.catalogs.change")}
+              </Space>
+            )
+          }
           description={t(
-            noCatalogs ? "bknProject.model.empty.noCatalogs" : "bknProject.model.empty.description",
+            noCatalogs
+              ? ownerIsCaller
+                ? "bknProject.model.empty.noCatalogs"
+                : "bknProject.model.empty.noCatalogsAskOwner"
+              : "bknProject.model.empty.description",
           )}
           title={t("bknProject.model.empty.title")}
         />
+        {catalogsDialog}
       </div>
     );
   }
@@ -372,8 +455,10 @@ export function ProjectModel({ project }: { project: Project }) {
           ) : null}
         </span>
         <span className={styles.spacer} />
+        {projectMissing.length ? null : changeCatalogsButton("bknProject.model.catalogs.change")}
         {generateButton}
       </div>
+      {catalogsDialog}
       {notices}
       {draft.status === "drafting" ? (
         <EmptyStatePanel
