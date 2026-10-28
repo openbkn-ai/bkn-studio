@@ -31,12 +31,6 @@ const translate = vi.hoisted(
     options ? `${key}:${JSON.stringify(options)}` : key,
 );
 
-// The graph lays nodes out on every render, which is slow in jsdom and not what these tests read;
-// DraftConceptGraph.test.tsx covers how the page drives it.
-vi.mock("@/modules/knowledge-network/components/preview/OntologyGraphView", () => ({
-  OntologyGraphView: () => <svg />,
-}));
-
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({ t: translate }),
