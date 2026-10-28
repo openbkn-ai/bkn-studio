@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -107,6 +107,22 @@ function edited(change: (draft: ReturnType<typeof ready>) => void) {
   change(draft);
   draft.updateTime += 1;
   return draft;
+}
+
+/**
+ * The open dialog. Queries by role inside it skip the tables behind it: searching the whole page
+ * by role is slow enough to push these tests past the time limit in CI.
+ */
+async function openDialog() {
+  return within(
+    await waitFor(() => {
+      const element = document.querySelector<HTMLElement>(".ant-modal");
+      if (!element) {
+        throw new Error("no dialog is open");
+      }
+      return element;
+    }),
+  );
 }
 
 function renderModel(override: Partial<Project> = {}, ownerIsCaller = true) {
@@ -385,7 +401,7 @@ describe("ProjectModel", () => {
     renderModel();
 
     fireEvent.click(await screen.findByRole("button", { name: /edit:.*"name":"customers"/ }));
-    const save = await screen.findByRole("button", { name: "common.save" });
+    const save = (await openDialog()).getByRole("button", { name: "common.save" });
     expect(save).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("bknProject.model.edit.name"), {
@@ -524,10 +540,11 @@ describe("ProjectModel", () => {
     );
 
     // The catalogs that are gone are named, so people know what saving removes.
-    expect(await screen.findByText(/bknProject.model.catalogs.removed/)).toHaveTextContent(
+    const dialog = await openDialog();
+    expect(await dialog.findByText(/bknProject.model.catalogs.removed/)).toHaveTextContent(
       "old-catalog",
     );
-    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    fireEvent.click(dialog.getByRole("button", { name: "common.save" }));
 
     await waitFor(() => expect(setProjectCatalogsMock).toHaveBeenCalledWith("p1", ["cat-001"]));
     expect(onProjectChange).toHaveBeenCalledWith(
@@ -576,10 +593,11 @@ describe("ProjectModel", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "bknProject.model.catalogs.change" }),
     );
-    fireEvent.click(await screen.findByRole("button", { name: "common.save" }));
+    const dialog = await openDialog();
+    fireEvent.click(dialog.getByRole("button", { name: "common.save" }));
 
-    expect(await screen.findByText("Only the owner may.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "common.save" })).toBeInTheDocument();
+    expect(await dialog.findByText("Only the owner may.")).toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "common.save" })).toBeInTheDocument();
     expect(onProjectChange).not.toHaveBeenCalled();
   });
 
@@ -657,9 +675,10 @@ describe("ProjectModel", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: /identity.choose:.*"name":"material_bom"/ }),
     );
-    const save = await screen.findByRole("button", { name: "common.save" });
+    const dialog = await openDialog();
+    const save = dialog.getByRole("button", { name: "common.save" });
     expect(save).toBeDisabled();
-    fireEvent.click(screen.getByRole("checkbox", { name: /^material_code/ }));
+    fireEvent.click(dialog.getByRole("checkbox", { name: /^material_code/ }));
     fireEvent.click(save);
 
     await waitFor(() =>
@@ -680,12 +699,13 @@ describe("ProjectModel", () => {
       await screen.findByRole("button", { name: /identity.change:.*"name":"sales_orders"/ }),
     );
     // The current identity is chosen already, so there is nothing to save yet.
-    expect(await screen.findByRole("checkbox", { name: /^id/ })).toBeChecked();
-    expect(screen.getByRole("button", { name: "common.save" })).toBeDisabled();
+    const dialog = await openDialog();
+    expect(dialog.getByRole("checkbox", { name: /^id/ })).toBeChecked();
+    expect(dialog.getByRole("button", { name: "common.save" })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /order_no/ }));
-    expect(screen.getByText("bknProject.model.identity.composite")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "common.save" })).toBeEnabled();
+    fireEvent.click(dialog.getByRole("checkbox", { name: /order_no/ }));
+    expect(dialog.getByText("bknProject.model.identity.composite")).toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "common.save" })).toBeEnabled();
   });
 
   it("restores a field after saying what restoring it means", async () => {
