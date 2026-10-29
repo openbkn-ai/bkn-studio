@@ -46,7 +46,7 @@ export const graphOverviewPart = {
       more: "另有 {{count}} 种关系",
     },
     limit: {
-      option: "上限 {{count}} 点",
+      option: "上限 {{value}} 点",
       tip: "最多画多少个实例；换了会重新加载",
     },
     fit: "适配视图",

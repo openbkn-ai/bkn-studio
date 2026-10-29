@@ -59,6 +59,7 @@ import {
   type ObjectTypeMeta,
   type OverviewInstance,
 } from "./overview.service";
+import { compactCount, compactTotal } from "./compact-count";
 import { OverviewNodeDrawer } from "./OverviewNodeDrawer";
 
 // One engine per browser, so each is its own chunk: cosmos.gl and luma.gl alone are ~600 KB.
@@ -421,11 +422,9 @@ export function GraphOverviewScene() {
   );
   const totals = useMemo(() => {
     if (!data) return null;
-    const sum = (values: (number | null)[]) =>
-      values.reduce<number>((acc, value) => acc + (value ?? 0), 0);
     return {
-      nodes: sum(Object.values(data.typeTotals)),
-      edges: sum(Object.values(data.relationTotals)),
+      nodes: Object.values(data.typeTotals),
+      edges: Object.values(data.relationTotals),
     };
   }, [data]);
 
@@ -593,14 +592,14 @@ export function GraphOverviewScene() {
     if (!totals) return null;
     if (data?.complete)
       return t("knowledgeNetwork.graphOverview.summary.complete", {
-        nodes: shown.nodes.length,
-        edges: shown.edges.length,
+        nodes: compactCount(shown.nodes.length),
+        edges: compactCount(shown.edges.length),
       });
     return t("knowledgeNetwork.graphOverview.summary.sampled", {
-      nodes: shown.nodes.length,
-      totalNodes: totals.nodes,
-      edges: shown.edges.length,
-      totalEdges: totals.edges,
+      nodes: compactCount(shown.nodes.length),
+      totalNodes: compactTotal(totals.nodes, shown.nodes.length),
+      edges: compactCount(shown.edges.length),
+      totalEdges: compactTotal(totals.edges, shown.edges.length),
     });
   })();
   const failedNames = (data?.failures ?? []).map((failure) =>
@@ -646,10 +645,10 @@ export function GraphOverviewScene() {
             title={
               data.limitedBy === "edges"
                 ? t("knowledgeNetwork.graphOverview.summary.limitedByEdges", {
-                    limit: limits.edges,
+                    limit: compactCount(limits.edges),
                   })
                 : t("knowledgeNetwork.graphOverview.summary.limitedByNodes", {
-                    limit: limits.nodes,
+                    limit: compactCount(limits.nodes),
                   })
             }
           >
@@ -681,7 +680,9 @@ export function GraphOverviewScene() {
             }}
             options={limitChoices.map((value) => ({
               value,
-              label: t("knowledgeNetwork.graphOverview.limit.option", { count: value }),
+              label: t("knowledgeNetwork.graphOverview.limit.option", {
+                value: compactCount(value),
+              }),
             }))}
             data-testid="graph-overview-limit"
           />

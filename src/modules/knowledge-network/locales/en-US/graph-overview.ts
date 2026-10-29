@@ -48,7 +48,7 @@ export const graphOverviewPart = {
       more: "{{count}} more relation types",
     },
     limit: {
-      option: "Up to {{count}}",
+      option: "Up to {{value}}",
       tip: "How many instances to draw at most; changing it reloads",
     },
     fit: "Fit view",
