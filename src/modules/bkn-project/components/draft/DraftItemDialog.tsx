@@ -165,7 +165,8 @@ export function DraftItemDialog({
           >
             <Select
               allowClear
-              disabled={!updateFieldOptions.length}
+              // A field set before stays clearable even when no property qualifies any more.
+              disabled={!updateFieldOptions.length && !updateField}
               id="draft-item-update-field"
               onChange={(value?: string) => setUpdateField(value ?? "")}
               options={updateFieldOptions}

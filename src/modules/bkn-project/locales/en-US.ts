@@ -236,7 +236,7 @@ export const bknProjectEnUS = {
         updateFieldHelp:
           "A field whose value grows whenever a record changes, such as an update time. The table's local index is refreshed by it.",
         updateFieldUnavailable:
-          "This object type has no property that can be an update field (it must be a number, text, a date or a time).",
+          "This object type has no property that can be an update field: it must be a date, a time, an integer, or text of limited length.",
         updateFieldNone: "None",
         updateFieldRecommended: "Recommended",
         updateFieldNotGrowing:

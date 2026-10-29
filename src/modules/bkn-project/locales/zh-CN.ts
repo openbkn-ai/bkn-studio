@@ -222,7 +222,7 @@ export const bknProjectZhCN = {
         updateField: "更新字段",
         updateFieldHelp: "记录每次变化时值都会变大的字段，例如更新时间。表的本地索引按它刷新。",
         updateFieldUnavailable:
-          "这个对象类没有能作为更新字段的属性（需要是数字、文字、日期或时间）。",
+          "这个对象类没有能作为更新字段的属性：更新字段需要是日期、时间、整数，或长度有限的文本。",
         updateFieldNone: "不设置",
         updateFieldRecommended: "推荐",
         updateFieldNotGrowing: "更新字段应随记录更新而增大，例如更新时间。",

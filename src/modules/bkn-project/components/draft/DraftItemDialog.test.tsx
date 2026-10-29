@@ -140,10 +140,23 @@ describe("DraftItemDialog", () => {
       />,
     );
     expect(
-      screen.getByText("这个对象类没有能作为更新字段的属性（需要是数字、文字、日期或时间）。"),
+      screen.getByText(
+        "这个对象类没有能作为更新字段的属性：更新字段需要是日期、时间、整数，或长度有限的文本。",
+      ),
     ).toBeInTheDocument();
     expect(updateFieldSelect()).toBeDisabled();
     view.unmount();
+
+    // A field set before can still be cleared, though nothing else qualifies.
+    const kept = renderWithoutAntdStyles(
+      <DraftItemDialog
+        item={withProperties({ incrementalKey: "old_field", properties: [] })}
+        onCancel={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+    expect(updateFieldSelect()).toBeEnabled();
+    kept.unmount();
 
     renderWithoutAntdStyles(
       <DraftItemDialog item={draft.items.relationTypes[0]} onCancel={vi.fn()} onSave={onSave} />,
