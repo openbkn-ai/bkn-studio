@@ -181,6 +181,8 @@ export function ConfirmDraft({
     setAcceptUndecided(false);
     setAcceptPartial(false);
     setAcceptConflicts(false);
+    // A refusal counts for the confirmation it refused; a new one asks from the status first.
+    setRefusedConflicts(null);
     setUndecided(null);
     setOpen(true);
   };

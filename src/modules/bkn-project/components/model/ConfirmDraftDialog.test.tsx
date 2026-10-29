@@ -193,6 +193,23 @@ describe("ConfirmDraft", () => {
     expect(onConfirmed).toHaveBeenCalled();
   });
 
+  it("forgets a refusal's conflicts once the dialog opens again", async () => {
+    getProjectStatusMock.mockResolvedValue(status({}));
+    confirmDraftMock.mockRejectedValueOnce(refusal("Draft.ConflictsNotAccepted", ["k1", "k2"]));
+    renderConfirm();
+
+    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    fireEvent.click(okButton());
+    expect(await screen.findByText("还有 2 个需求冲突没有裁决，仍然确认")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /取\s*消/ }));
+
+    // Ruled on meanwhile: the status no longer asks, so neither does the dialog.
+    fireEvent.click(screen.getByRole("button", { name: "确认草稿" }));
+    await screen.findByRole("dialog");
+    await waitFor(() => expect(okButton()).toBeEnabled());
+    expect(screen.queryByText(/需求冲突没有裁决/)).toBeNull();
+  });
+
   it("says why the draft cannot be confirmed yet", async () => {
     getProjectStatusMock.mockResolvedValue(
       status(
