@@ -19,6 +19,7 @@ import { DraftChangesPanel } from "@/modules/bkn-project/components/draft/DraftC
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
 import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityDialog";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
+import { UnderstandingBar } from "@/modules/bkn-project/components/model/UnderstandingBar";
 import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import {
   adoptBlocker,
@@ -381,6 +382,18 @@ export function ProjectModel({
     </AppButton>
   );
 
+  // Semantic understanding names the catalogs' tables for drafting, so it shows before a draft too.
+  const understanding = noCatalogs ? null : (
+    <UnderstandingBar
+      archived={project.archived}
+      catalogNames={catalogNames}
+      hasDraft={draft !== null}
+      onRedraft={startGenerate}
+      ownerIsCaller={ownerIsCaller}
+      projectId={project.id}
+    />
+  );
+
   const notices = (
     <>
       {ownerIsCaller && catalogsFailed ? (
@@ -447,6 +460,7 @@ export function ProjectModel({
     return (
       <div className={styles.page}>
         {notices}
+        {understanding}
         <EmptyStatePanel
           action={
             noCatalogs ? (
@@ -555,6 +569,7 @@ export function ProjectModel({
       </div>
       {catalogsDialog}
       {notices}
+      {understanding}
       {draft.status === "drafting" ? (
         <EmptyStatePanel
           description={t("bknProject.model.drafting.description")}
