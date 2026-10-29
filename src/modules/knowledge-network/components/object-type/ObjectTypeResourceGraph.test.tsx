@@ -241,23 +241,31 @@ function renderGraph(
   };
 }
 
-function expectRelationLabelsDoNotOverlap(expectedCount: number) {
-  const relationLabels = [
-    ...document.querySelectorAll<SVGGElement>('g[class*="relationNode"]'),
-  ].map((node) => {
-    const match = node.getAttribute("transform")?.match(/translate\(([^ ]+) ([^)]+)\)/);
-    return {
-      width: Number(node.querySelector("rect")?.getAttribute("width")),
-      x: Number(match?.[1]),
-      y: Number(match?.[2]),
-    };
-  });
-  expect(relationLabels).toHaveLength(expectedCount);
-  relationLabels.forEach((label, index) => {
-    relationLabels.slice(index + 1).forEach((other) => {
-      const separatedHorizontally = Math.abs(label.x - other.x) >= (label.width + other.width) / 2;
-      const separatedVertically = Math.abs(label.y - other.y) >= 28;
-      expect(separatedHorizontally || separatedVertically).toBe(true);
+async function expectRelationLabelsDoNotOverlap(expectedCount: number) {
+  await waitFor(() => {
+    const graph = document.querySelector<SVGSVGElement>('svg[role="img"]');
+    const viewBox = graph?.getAttribute("viewBox")?.split(" ").map(Number);
+    expect(viewBox).toHaveLength(4);
+    const viewTop = viewBox?.[1] ?? 0;
+    const viewBottom = viewTop + (viewBox?.[3] ?? 0);
+    const relationLabels = [
+      ...document.querySelectorAll<SVGGElement>('g[class*="relationNode"]'),
+    ].map((node) => {
+      const match = node.getAttribute("transform")?.match(/translate\(([^ ]+) ([^)]+)\)/);
+      return {
+        height: Number(node.querySelector("rect")?.getAttribute("height")),
+        y: Number(match?.[2]),
+      };
+    });
+    expect(relationLabels).toHaveLength(expectedCount);
+    relationLabels.forEach((label, index) => {
+      expect(label.y - label.height / 2).toBeGreaterThanOrEqual(viewTop);
+      expect(label.y + label.height / 2).toBeLessThanOrEqual(viewBottom);
+      relationLabels.slice(index + 1).forEach((other) => {
+        expect(Math.abs(label.y - other.y)).toBeGreaterThanOrEqual(
+          (label.height + other.height) / 2,
+        );
+      });
     });
   });
 }
@@ -471,7 +479,7 @@ describe("ObjectTypeResourceGraph", () => {
     overviewRows.slice(1).forEach((row, index) => {
       expect(row - overviewRows[index]).toBeGreaterThanOrEqual(72);
     });
-    expectRelationLabelsDoNotOverlap(12);
+    await expectRelationLabelsDoNotOverlap(12);
     const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
     await waitFor(() =>
       expect(Number(graph.getAttribute("viewBox")?.split(" ")[3])).toBeGreaterThan(620),
@@ -516,10 +524,10 @@ describe("ObjectTypeResourceGraph", () => {
       renderGraph();
 
       await screen.findByRole("button", { name: "关系类 关系 01" });
-      expectRelationLabelsDoNotOverlap(relations.length);
+      await expectRelationLabelsDoNotOverlap(relations.length);
 
       fireEvent.click(screen.getByText(`关系类 ${relations.length}`));
-      expectRelationLabelsDoNotOverlap(relations.length);
+      await expectRelationLabelsDoNotOverlap(relations.length);
     },
   );
 
@@ -1427,6 +1435,9 @@ describe("ObjectTypeResourceGraph", () => {
       document.querySelector('[data-graph-edge="metric-more-spoke"][data-metric-type="composite"]'),
     ).not.toBeNull();
 
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    fireEvent.click(screen.getByRole("button", { name: "放大" }));
+    const zoomedViewBox = graph.getAttribute("viewBox")!.split(" ").map(Number);
     fireEvent.click(screen.getByRole("button", { name: "复合对象指标还有 39 个，点击展开" }));
     expect(
       screen.getByRole("button", { name: "复合对象指标还有 29 个，点击展开" }),
@@ -1441,12 +1452,12 @@ describe("ObjectTypeResourceGraph", () => {
     expandedCompositeRows.slice(1).forEach((row, index) => {
       expect(row - expandedCompositeRows[index]).toBeGreaterThanOrEqual(64);
     });
-    const expandedViewBox = screen
-      .getByRole("img", { name: "销售订单的对象类关联图谱" })
-      .getAttribute("viewBox")
-      ?.split(" ")
-      .map(Number);
+    const expandedViewBox = graph.getAttribute("viewBox")?.split(" ").map(Number);
     expect(expandedViewBox?.[3]).toBeGreaterThan(620);
+    expect(expandedViewBox?.[2]).toBe(zoomedViewBox[2]);
+    expect((expandedViewBox?.[1] ?? 0) + (expandedViewBox?.[3] ?? 0) / 2).toBeCloseTo(
+      zoomedViewBox[1] + zoomedViewBox[3] / 2,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "收起 对象指标 51" }));
     fireEvent.click(screen.getByRole("button", { name: "展开 对象指标 51" }));

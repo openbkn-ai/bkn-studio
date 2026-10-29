@@ -176,6 +176,18 @@ function clampNodePosition(position: Point, graphHeight = GRAPH_HEIGHT): Point {
   };
 }
 
+function resizeViewForGraphHeight(current: ViewBox, graphHeight: number): ViewBox {
+  if (current.x === 0 && current.y === 0 && current.width === GRAPH_WIDTH) {
+    return { height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 };
+  }
+  const height = (current.width / GRAPH_WIDTH) * graphHeight;
+  return {
+    ...current,
+    height,
+    y: current.y + (current.height - height) / 2,
+  };
+}
+
 function metricNodeKey(metric: ObjectMetricRecordV1): string {
   return `metric:${metric.definition.id}@${metric.definition.version}`;
 }
@@ -977,10 +989,21 @@ export function ObjectMetricGraphCanvas({
     };
   }, [metrics, metricsByType, nodePositions, ringVisibleCounts]);
   const graphHeight = expandedGroup ? metricLayoutHeight : GRAPH_HEIGHT;
+  const metricFocusKey =
+    expandedGroup?.kind === "relation"
+      ? `relation:${expandedGroup.relationId}`
+      : (expandedGroup?.kind ?? "");
+  const previousMetricFocusKeyRef = useRef(metricFocusKey);
   useEffect(() => {
-    if (!expandedGroup) return;
-    setView({ x: 0, y: 0, width: GRAPH_WIDTH, height: graphHeight });
-  }, [expandedGroup, graphHeight]);
+    const focusChanged = previousMetricFocusKeyRef.current !== metricFocusKey;
+    previousMetricFocusKeyRef.current = metricFocusKey;
+    if (!metricFocusKey) return;
+    setView((current) =>
+      focusChanged
+        ? { height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 }
+        : resizeViewForGraphHeight(current, graphHeight),
+    );
+  }, [graphHeight, metricFocusKey]);
   const selectedMetricKey = drawerMetric ? metricNodeKey(drawerMetric) : undefined;
   const selectedConnectedKeys = new Set<string>();
   if (selectedMetricKey) {

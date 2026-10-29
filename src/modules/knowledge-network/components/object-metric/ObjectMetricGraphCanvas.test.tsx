@@ -983,6 +983,37 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(0);
   });
 
+  it("preserves the zoomed viewport when progressive expansion increases the graph height", async () => {
+    const records = Array.from({ length: 21 }, (_, index) => metric(`metric-${index + 1}`));
+    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+    mocks.listMetrics.mockResolvedValue({ entries: records, total_count: records.length });
+    const { container } = renderGraph();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /展开销售订单的对象指标，共 21 个|Expand metrics owned by 销售订单 \(21 total\)/,
+      }),
+    );
+    const svg = container.querySelector<SVGSVGElement>('svg[class*="graph"]')!;
+    fireEvent.click(screen.getByRole("button", { name: /放大图谱|Zoom in/ }));
+    const zoomedViewBox = svg.getAttribute("viewBox")!.split(" ").map(Number);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /继续展开原子对象指标的剩余 11 个对象指标|Expand the remaining 11 Atomic metrics/,
+      }),
+    );
+
+    await waitFor(() => {
+      const expandedViewBox = svg.getAttribute("viewBox")!.split(" ").map(Number);
+      expect(expandedViewBox[2]).toBe(zoomedViewBox[2]);
+      expect(expandedViewBox[3]).toBeGreaterThan(zoomedViewBox[3]);
+      expect(expandedViewBox[1] + expandedViewBox[3] / 2).toBeCloseTo(
+        zoomedViewBox[1] + zoomedViewBox[3] / 2,
+      );
+    });
+  });
+
   it("restores the relation layout and zoom after leaving metric focus", async () => {
     mocks.listRelations.mockResolvedValue({ entries: [relation(1)], totalCount: 1 });
     mocks.listMetrics.mockResolvedValue({ entries: [metric("local")], total_count: 1 });

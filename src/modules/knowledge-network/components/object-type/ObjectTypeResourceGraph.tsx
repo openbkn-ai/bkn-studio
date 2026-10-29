@@ -200,6 +200,18 @@ function stackedLayoutHeight(count: number, rowGap: number) {
   return Math.max(GRAPH_HEIGHT, METRIC_LAYOUT_PADDING_Y * 2 + Math.max(0, count - 1) * rowGap);
 }
 
+function resizeViewForGraphHeight(current: ViewBox, graphHeight: number): ViewBox {
+  if (current.x === 0 && current.y === 0 && current.width === GRAPH_WIDTH) {
+    return { height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 };
+  }
+  const height = (current.width / GRAPH_WIDTH) * graphHeight;
+  return {
+    ...current,
+    height,
+    y: current.y + (current.height - height) / 2,
+  };
+}
+
 function overviewGroupPosition(
   group: ExpandableGroup,
   expandedGroup: ExpandableGroup | null,
@@ -597,13 +609,8 @@ export function ObjectTypeResourceGraph({
   const [view, setView] = useState<ViewBox>(INITIAL_VIEW);
   const [nodePositions, setNodePositions] = useState<Record<string, Point>>({});
   const loading = relationLoading || metricLoading || actionLoading;
-  const clearActionPresentationErrors = (actionIds?: Set<string>) => {
-    setErrors((current) =>
-      current.filter((entry) => {
-        if (!entry.key.startsWith("action:")) return true;
-        return actionIds ? !actionIds.has(entry.key.slice("action:".length)) : false;
-      }),
-    );
+  const clearActionPresentationErrors = () => {
+    setErrors((current) => current.filter((entry) => !entry.key.startsWith("action:")));
   };
 
   useEffect(() => {
@@ -1131,6 +1138,8 @@ export function ObjectTypeResourceGraph({
     metricLayoutMeasurement.height,
     actionLayoutMeasurement.height,
   );
+  const viewContextKey = `${section}:${relationPage}:${actionPage}`;
+  const previousViewContextKeyRef = useRef(viewContextKey);
   const metricGroupPosition = useMemo(
     () => overviewGroupPosition("metrics", expandedGroup, graphHeight),
     [expandedGroup, graphHeight],
@@ -1177,8 +1186,14 @@ export function ObjectTypeResourceGraph({
   }, [graphHeight, relationGroups, section]);
 
   useEffect(() => {
-    setView({ height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 });
-  }, [actionPage, graphHeight, relationPage, section]);
+    const contextChanged = previousViewContextKeyRef.current !== viewContextKey;
+    previousViewContextKeyRef.current = viewContextKey;
+    setView((current) =>
+      contextChanged
+        ? { height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 }
+        : resizeViewForGraphHeight(current, graphHeight),
+    );
+  }, [graphHeight, viewContextKey]);
 
   const basePositions = useMemo(() => {
     const result = new Map<string, Point>();
