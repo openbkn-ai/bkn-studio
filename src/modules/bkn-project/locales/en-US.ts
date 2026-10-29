@@ -298,7 +298,7 @@ export const bknProjectEnUS = {
         properties: "Properties",
         source: "Data source",
         relationType: "Relation type",
-        ends: "Source → target",
+        ends: "Source → Target",
         cardinality: "Correspondence",
         evidence: "Evidence",
         valueType: "Value type",

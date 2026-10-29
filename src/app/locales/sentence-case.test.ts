@@ -71,7 +71,7 @@ const PROPER_WORDS = new Set([
   "Sunday",
 ]);
 
-const SEGMENT_SEPARATOR = / \/ | · | - | — | – |: /;
+const SEGMENT_SEPARATOR = / \/ | · | - | — | – | → |: /;
 const CAPITALIZED_WORD = /^["'(“<]?([A-Z][a-z]+(?:['’][a-z]+)?(?:-[A-Za-z]+)*)[,;:)”>…]*$/;
 
 /** Returns the words that break sentence case in a short label, or [] when the label is fine. */
@@ -119,6 +119,7 @@ describe("English UI copy casing", () => {
     expect(titleCaseWords("Open Execution Factory")).toEqual([]);
     expect(titleCaseWords("Hong Kong Dollar · HKD")).toEqual(["Dollar"]);
     expect(titleCaseWords("Hong Kong dollar · HKD")).toEqual([]);
+    expect(titleCaseWords("From → To")).toEqual([]);
     expect(titleCaseWords("Issue API key")).toEqual([]);
     expect(titleCaseWords("{{name}} / Column masking rule")).toEqual([]);
     expect(titleCaseWords("Collapsed. Expand to edit")).toEqual([]);

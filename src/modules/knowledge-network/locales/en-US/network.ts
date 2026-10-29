@@ -220,7 +220,7 @@ export const networkPart = {
   previewColIndex: "Resource index",
   previewColConceptGroups: "Concept groups",
   previewColRelation: "Relation",
-  previewColPath: "From → to",
+  previewColPath: "From → To",
   previewColMapping: "Mapping",
   previewMappingResource: "Resource",
   previewMappingDirect: "Direct",
