@@ -52,6 +52,11 @@ export type DraftObjectType = {
   description: string;
   displayKey: string;
   id: string;
+  /**
+   * The update field: the property whose value grows whenever a record changes, which the table's
+   * local index refreshes by; empty when none is chosen.
+   */
+  incrementalKey: string;
   key: DraftKeyEvidence;
   name: string;
   needsIdentity: boolean;
@@ -151,5 +156,7 @@ export type DraftItemKind = "object_types" | "relation_types" | "value_types";
 export type DraftItemEdit = {
   adopted?: boolean;
   description?: string;
+  /** Object types only; empty clears it. */
+  incrementalKey?: string;
   name?: string;
 };

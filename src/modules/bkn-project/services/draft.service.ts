@@ -48,6 +48,7 @@ type BackendObjectType = {
   description: string;
   display_key: string;
   id: string;
+  incremental_key?: string;
   key: BackendKey;
   name: string;
   needs_identity: boolean;
@@ -151,6 +152,7 @@ const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
   description: item.description,
   displayKey: item.display_key,
   id: item.id,
+  incrementalKey: item.incremental_key ?? "",
   key: mapKey(item.key),
   name: item.name,
   needsIdentity: item.needs_identity,
@@ -471,6 +473,14 @@ function editMockDraft(
     decide("describe", item.description, edit.description);
     item.description = edit.description;
   }
+  // Only an object type has an update field, and choosing the one it has changes nothing.
+  if (edit.incrementalKey !== undefined && kind === "object_types") {
+    const objectType = item as MockItem & { incremental_key?: string };
+    if (edit.incrementalKey !== (objectType.incremental_key ?? "")) {
+      decide("incremental", objectType.incremental_key ?? "", edit.incrementalKey);
+      objectType.incremental_key = edit.incrementalKey;
+    }
+  }
   draft.update_time = now;
   return draft;
 }
@@ -633,7 +643,13 @@ export async function editDraftItem(
   }
   const response = await http.patch<BackendDraft>(
     `${draftPath(projectId)}/items/${kind}/${encodeURIComponent(itemId)}`,
-    { ...edit, update_time: updateTime },
+    {
+      adopted: edit.adopted,
+      description: edit.description,
+      incremental_key: edit.incrementalKey,
+      name: edit.name,
+      update_time: updateTime,
+    },
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
