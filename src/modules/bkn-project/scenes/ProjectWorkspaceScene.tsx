@@ -27,6 +27,7 @@ import {
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
 import {
   KNOWLEDGE_BASE_SECTIONS,
+  projectSectionPath,
   type ProjectSection,
 } from "@/modules/bkn-project/types/workspace";
 
@@ -162,6 +163,8 @@ export function ProjectWorkspaceScene({
           ) : section === "model" ? (
             <ProjectModel
               initialTab={searchParams.get("tab")}
+              // The check and the local indexes of a confirmation show on the release page.
+              onConfirmed={() => void navigate(projectSectionPath(project.id, "release"))}
               onProjectChange={(next) =>
                 setLoaded((current) => (current ? { ...current, project: next } : current))
               }

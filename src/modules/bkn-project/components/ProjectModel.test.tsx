@@ -58,10 +58,12 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
   getDraft: getDraftMock,
 }));
 
-// Semantic understanding has its own tests; here it has never run.
+// Semantic understanding and confirming have their own tests; here understanding never ran.
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
   getUnderstanding: () => Promise.resolve([]),
+  // Confirming has its own tests; here the project's status cannot be read, so no button shows.
+  getProjectStatus: () => Promise.reject(new Error("not read here")),
 }));
 
 vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal) => ({
@@ -130,6 +132,7 @@ function renderModel(
   return renderWithoutAntdStyles(
     <ProjectModel
       initialTab={initialTab}
+      onConfirmed={vi.fn()}
       onProjectChange={onProjectChange}
       ownerIsCaller={ownerIsCaller}
       project={{ ...project, ...override }}
