@@ -23,8 +23,11 @@ const LAYOUT_RUN_MS = 20_000;
 const SPACE_SIZE = 4096;
 /** Highlighted points beyond which their lines are drawn thin and light. */
 const MANY_LINES = 60;
-/** Highlighted points up to which each line is labelled with its relation's name. */
-const NAMED_LINES = 24;
+/**
+ * Lines of the selected point named at most. Each name makes room for the ones already drawn, so
+ * a hub's lines are named as far as there is space instead of not at all.
+ */
+const NAMED_LINES = 400;
 /** Highlighted points up to which every one of them is named; beyond, names make room. */
 const NAMED_POINTS = 12;
 /** Outside a selection only hubs are named: leaves often share one name (a tournament's). */
@@ -109,6 +112,10 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
     const layoutStartedRef = useRef(false);
     const boxEndedRef = useRef(false);
     const hoveredRef = useRef<{ index: number; position: [number, number] } | null>(null);
+    /** The line under the pointer, named beside it. */
+    const hoveredLinkRef = useRef<number | null>(null);
+    /** The pointer over the canvas, in its own pixels. */
+    const pointerRef = useRef<[number, number]>([0, 0]);
     const layoutRunningRef = useRef(false);
     const drawScheduledRef = useRef(false);
     const [box, setBox] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
@@ -122,6 +129,8 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
       degree: new Uint32Array(0),
       linkEnds: new Uint32Array(0),
       linkRel: [] as string[],
+      /** Whether each line is drawn: a hidden or unlit line answers no hover. */
+      linkVisible: new Uint8Array(0),
       neighbours: [] as number[][],
       incident: [] as number[][],
       /** Points named as highlighted, with their tracked positions read back each frame. */
@@ -175,7 +184,11 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
         return space ? graph.spaceToScreenPosition(space) : null;
       };
       if (tracked) {
-        // Relation names along the selected point's lines, when there are few enough to read.
+        for (const index of data.named) {
+          const at = screen(index);
+          if (at) label(index, at, data.named.length <= NAMED_POINTS);
+        }
+        // Relation names along the selected point's lines, each clear of the names already drawn.
         if (data.namedLines.length > 0) {
           context.font = "11px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
           for (const link of data.namedLines) {
@@ -183,10 +196,19 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
             const b = screen(data.linkEnds[link * 2 + 1]);
             if (!a || !b) continue;
             const text = propsRef.current.relationName(data.linkRel[link]);
-            context.save();
-            context.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
             let angle = Math.atan2(b[1] - a[1], b[0] - a[0]);
             if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI;
+            // The rotated name's upright bounds, around the point it is drawn at.
+            const w = context.measureText(text).width + 4;
+            const h = 14;
+            const cx = (a[0] + b[0]) / 2 + Math.sin(angle) * 6;
+            const cy = (a[1] + b[1]) / 2 - Math.cos(angle) * 6;
+            const hx = (Math.abs(Math.cos(angle)) * w + Math.abs(Math.sin(angle)) * h) / 2;
+            const hy = (Math.abs(Math.sin(angle)) * w + Math.abs(Math.cos(angle)) * h) / 2;
+            if (!fits(cx - hx, cy - hy, hx * 2, hy * 2)) continue;
+            taken.push([cx - hx, cy - hy, cx + hx, cy + hy]);
+            context.save();
+            context.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
             context.rotate(angle);
             context.textAlign = "center";
             context.lineWidth = 3;
@@ -198,10 +220,6 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
           }
           context.textAlign = "start";
           context.font = "12px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-        }
-        for (const index of data.named) {
-          const at = screen(index);
-          if (at) label(index, at, data.named.length <= NAMED_POINTS);
         }
       } else {
         // Outside a selection: a spread-out sample of what is on screen, hubs first.
@@ -230,6 +248,26 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
         context.fillStyle = theme.label;
         context.fillText(text, x + 14, y + 1);
       }
+
+      // The line under the pointer: what it joins and by which relation, beside the pointer.
+      const link = hoveredLinkRef.current;
+      if (link !== null && link < data.linkRel.length && !hovered) {
+        const source = data.labels[data.linkEnds[link * 2]] ?? "";
+        const target = data.labels[data.linkEnds[link * 2 + 1]] ?? "";
+        const text = `${source} —${propsRef.current.relationName(data.linkRel[link])}→ ${target}`;
+        const [x, y] = pointerRef.current;
+        const w = context.measureText(text).width;
+        // Kept inside the canvas near its right edge.
+        const left = Math.min(x + 12, width - w - 16);
+        context.fillStyle = theme.hoverBg;
+        context.strokeStyle = theme.hoverBorder;
+        context.beginPath();
+        context.roundRect(left, y + 10, w + 12, 22, 4);
+        context.fill();
+        context.stroke();
+        context.fillStyle = theme.label;
+        context.fillText(text, left + 6, y + 22);
+      }
     };
 
     const scheduleLabels = () => {
@@ -255,6 +293,9 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
         renderHoveredPointRing: true,
         hoveredPointRingColor: theme.ring,
         hoveredPointCursor: "pointer",
+        hoveredLinkCursor: "pointer",
+        // Wider under the pointer, in its own colour: an unlit line stays out of sight.
+        hoveredLinkWidthIncrease: 2,
         linkDefaultWidth: 0.5,
         linkDefaultColor: theme.edge,
         pointSamplingDistance: 90,
@@ -284,6 +325,15 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
           hoveredRef.current = null;
           scheduleLabels();
         },
+        onLinkMouseOver: (link) => {
+          if (!dataRef.current.linkVisible[link]) return;
+          hoveredLinkRef.current = link;
+          scheduleLabels();
+        },
+        onLinkMouseOut: () => {
+          hoveredLinkRef.current = null;
+          scheduleLabels();
+        },
         onDragEnd: (event) => {
           // Stays where it is dropped.
           // The drag event's types come from d3-drag, which this build does not carry.
@@ -300,7 +350,14 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
       graphRef.current = graph;
       const observer = new ResizeObserver(scheduleLabels);
       observer.observe(container);
+      const onPointerMove = (event: PointerEvent) => {
+        const rect = container.getBoundingClientRect();
+        pointerRef.current = [event.clientX - rect.left, event.clientY - rect.top];
+        if (hoveredLinkRef.current !== null) scheduleLabels();
+      };
+      container.addEventListener("pointermove", onPointerMove);
       return () => {
+        container.removeEventListener("pointermove", onPointerMove);
         observer.disconnect();
         window.clearTimeout(stopTimerRef.current);
         graph.destroy();
@@ -390,12 +447,14 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
         degree,
         linkEnds,
         linkRel: kept.map((edge) => edge.relTypeId),
+        linkVisible: new Uint8Array(kept.length).fill(1),
         neighbours,
         incident,
         named: [],
         namedLines: [],
       };
       isolatedRef.current = [];
+      hoveredLinkRef.current = null;
       placeIsolated(positions);
       graph.setPointPositions(positions);
       graph.setPinnedPoints(isolatedRef.current.length > 0 ? isolatedRef.current : null);
@@ -464,7 +523,10 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
         }
         linkColors.set(colour, l * 4);
         linkWidths[l] = width;
+        data.linkVisible[l] = colour[3] > 0 ? 1 : 0;
       }
+      if (hoveredLinkRef.current !== null && !data.linkVisible[hoveredLinkRef.current])
+        hoveredLinkRef.current = null;
       graph.setPointColors(pointColors);
       graph.setLinkColors(linkColors);
       graph.setLinkWidths(linkWidths);
@@ -477,7 +539,7 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
       const named = focusing ? [...focus] : [];
       dataRef.current.named = named;
       dataRef.current.namedLines =
-        selected !== undefined && focus.size <= NAMED_LINES ? (data.incident[selected] ?? []) : [];
+        selected !== undefined ? (data.incident[selected] ?? []).slice(0, NAMED_LINES) : [];
       graph.trackPointPositionsByIndices(named);
       graph.render();
       if (!layoutRunningRef.current) graph.pause();

@@ -94,7 +94,7 @@ const CORE_ZOOM = 0.6;
 /** Highlighted points beyond which their lines are drawn thin and light. */
 const MANY_LINES = 60;
 /** Highlighted points up to which each line is labelled with its relation's name. */
-const NAMED_LINES = 24;
+const NAMED_LINES = 80;
 
 /** A stable number in [0, 1) from a string, so a reload puts every point where it was. */
 function hash01(text: string): number {
@@ -150,6 +150,8 @@ export const OverviewCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasPro
       y1: number;
     } | null>(null);
     const layoutStartedRef = useRef(false);
+    /** The line under the pointer, named with what it joins. */
+    const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
     /** Set when a box selection ends: the click the browser sends after it is not a stage click. */
     const boxEndedRef = useRef(false);
 
@@ -171,6 +173,8 @@ export const OverviewCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasPro
         labelSize: 12,
         renderEdgeLabels: true,
         edgeLabelSize: 11,
+        // A line under the pointer is named, with what it joins.
+        enableEdgeEvents: true,
         zIndex: true,
         // Sigma's default floor (1.7 px) lets twenty thousand lines paint the whole background.
         minEdgeThickness: 0.4,
@@ -225,6 +229,14 @@ export const OverviewCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasPro
       });
       sigma.on("leaveNode", () => {
         container.style.cursor = "";
+      });
+      sigma.on("enterEdge", ({ edge }) => {
+        container.style.cursor = "pointer";
+        setHoveredEdge(edge);
+      });
+      sigma.on("leaveEdge", () => {
+        container.style.cursor = "";
+        setHoveredEdge(null);
       });
       return () => {
         window.clearTimeout(stopTimerRef.current);
@@ -353,6 +365,9 @@ export const OverviewCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasPro
         for (const id of picked) focus.add(id);
       }
       const focusing = focus.size > 0;
+      const hoverEnds = new Set<string>(
+        hoveredEdge && graph.hasEdge(hoveredEdge) ? graph.extremities(hoveredEdge) : [],
+      );
       // Named outright only while few points are highlighted; beyond that the grid picks.
       const nameAll = focusing && focus.size <= 60;
       // A hub's hundreds of lines: no names on them (the page lists them by relation instead),
@@ -386,6 +401,8 @@ export const OverviewCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasPro
         },
         nodeReducer: (node, data) => {
           if (hiddenTypes.has(data.otId)) return { ...data, hidden: true };
+          // The two ends of the line under the pointer are named.
+          if (hoverEnds.has(node)) return { ...data, zIndex: 2, forceLabel: true };
           if (!focusing) return data;
           // Small and close to the background, so the highlighted lines and their names read on top.
           if (!focus.has(node))
@@ -403,6 +420,22 @@ export const OverviewCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasPro
           const targetOt = graph.getNodeAttribute(target, "otId");
           if (hiddenTypes.has(sourceOt) || hiddenTypes.has(targetOt))
             return { ...data, hidden: true };
+          if (edge === hoveredEdge) {
+            const visible =
+              !focusing ||
+              (selectedId
+                ? source === selectedId || target === selectedId
+                : focus.has(source) && focus.has(target));
+            if (visible)
+              return {
+                ...data,
+                color: theme.edgeStrong,
+                size: 1.6,
+                zIndex: 2,
+                label: relationName(data.relTypeId),
+                forceLabel: true,
+              };
+          }
           if (!focusing) return { ...data, label: undefined };
           const strong = selectedId
             ? source === selectedId || target === selectedId
@@ -420,7 +453,7 @@ export const OverviewCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasPro
       for (const [key, value] of Object.entries(settings))
         sigma.setSetting(key as keyof Settings<NodeAttributes, EdgeAttributes>, value);
       sigma.refresh();
-    }, [dark, hiddenTypes, selectedId, picked, relationName, nodes, edges]);
+    }, [dark, hiddenTypes, selectedId, picked, relationName, nodes, edges, hoveredEdge]);
 
     /* ------------------------------ layout ------------------------------ */
 
