@@ -13,6 +13,13 @@
   height: 100%;
 }
 
+/* The graph over the whole window; Esc or the toolbar button brings it back. */
+.maximized {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
 :global(:root[data-theme="dark"]) .wrap {
   --ontology-grid-dot-opacity: 0.18;
 }
@@ -83,6 +90,10 @@
   display: block;
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  /* Its size comes from the layout alone: the drawing canvas inside, sized to it, must not hold it
+     open when the graph comes back from maximized. */
+  contain: strict;
   user-select: none;
   touch-action: none;
 }

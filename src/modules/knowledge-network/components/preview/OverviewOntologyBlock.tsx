@@ -41,10 +41,13 @@ type OverviewOntologyBlockProps = {
 };
 
 const DEFAULT_COLOR = "#2e68ff";
-const OVERVIEW_NODE_LIMIT = 60;
-const OVERVIEW_EDGE_LIMIT = 120;
-const MAX_MERGED_NODES = 200;
-const MAX_MERGED_EDGES = 500;
+// The backend's largest page: a network of up to 500 object types comes in one request, with
+// every relation among them. Larger networks page on with "load more".
+const OVERVIEW_NODE_LIMIT = 500;
+const OVERVIEW_EDGE_LIMIT = 1_000;
+// What the graph draws with a force layout; past it the arrangement becomes a grid.
+const MAX_MERGED_NODES = 1_000;
+const MAX_MERGED_EDGES = 2_000;
 const DETAIL_CONCURRENCY = 6;
 
 const EMPTY_GRAPH: KnowledgeNetworkPreviewGraph = { edges: [], nodes: [] };
