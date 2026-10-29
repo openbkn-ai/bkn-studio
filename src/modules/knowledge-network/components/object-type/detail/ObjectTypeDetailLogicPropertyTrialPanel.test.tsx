@@ -66,10 +66,10 @@ beforeEach(() => {
 });
 
 const metricProperty: ObjectTypeLogicProperty = {
-  dataSource: { id: "metric-1", name: "订单金额", type: "metric" },
+  dataSource: { boxId: "box-1", name: "订单金额", toolId: "tool-1", type: "tool" },
   displayName: "验收订单金额",
   name: "acceptance_order_amount",
-  type: "metric",
+  type: "tool",
 };
 
 const preview: ObjectTypeResourcePreview = {

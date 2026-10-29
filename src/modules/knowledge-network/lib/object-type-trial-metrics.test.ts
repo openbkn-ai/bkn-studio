@@ -15,7 +15,7 @@ import {
 import type { ObjectTypeLogicProperty } from "@/modules/knowledge-network/types/knowledge-network";
 
 describe("object-type trial helpers", () => {
-  it("includes metric bindings now that the object query evaluates them per instance", () => {
+  it("includes tool-backed logical properties only", () => {
     const logicProperties = [
       {
         dataSource: { id: "tool-1", name: "Discount", type: "tool" },
@@ -23,17 +23,10 @@ describe("object-type trial helpers", () => {
         name: "discount",
         type: "tool",
       },
-      {
-        dataSource: { id: "metric-1", name: "GMV", type: "metric" },
-        displayName: "GMV",
-        name: "gmv",
-        type: "metric",
-      },
     ] as ObjectTypeLogicProperty[];
 
     expect(filterInstanceTrialLogicProperties(logicProperties).map((item) => item.name)).toEqual([
       "discount",
-      "gmv",
     ]);
   });
 

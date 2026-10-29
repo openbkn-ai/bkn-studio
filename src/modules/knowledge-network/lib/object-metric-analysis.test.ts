@@ -9,6 +9,13 @@ import { describe, expect, it } from "vitest";
 
 import { recommendObjectMetricAnalysisView } from "./object-metric-analysis";
 
+function dimensionCells(values: Record<string, unknown>) {
+  return Object.entries(values).map(([property_name, value]) => ({
+    ref: { object_type_id: "order", property_name },
+    value,
+  }));
+}
+
 describe("recommendObjectMetricAnalysisView", () => {
   it("uses a metric card for a scalar result", () => {
     expect(recommendObjectMetricAnalysisView([{ status: "ok", value: 1284 }])).toBe("summary");
@@ -17,8 +24,8 @@ describe("recommendObjectMetricAnalysisView", () => {
   it("uses a bar chart for one-dimensional result rows", () => {
     expect(
       recommendObjectMetricAnalysisView([
-        { dimensions: { region: "华东" }, status: "ok", value: 12 },
-        { dimensions: { region: "华南" }, status: "ok", value: 8 },
+        { dimension_cells: dimensionCells({ region: "华东" }), status: "ok", value: 12 },
+        { dimension_cells: dimensionCells({ region: "华南" }), status: "ok", value: 8 },
       ]),
     ).toBe("bar");
   });
@@ -36,7 +43,7 @@ describe("recommendObjectMetricAnalysisView", () => {
     expect(
       recommendObjectMetricAnalysisView(
         Array.from({ length: 7 }, (_, index) => ({
-          dimensions: { region: `region-${index}` },
+          dimension_cells: dimensionCells({ region: `region-${index}` }),
           status: "ok" as const,
           time: 1_725_000_000_000,
           value: index + 1,
@@ -48,8 +55,16 @@ describe("recommendObjectMetricAnalysisView", () => {
   it("uses a heatmap for a two-dimensional non-time result", () => {
     expect(
       recommendObjectMetricAnalysisView([
-        { dimensions: { channel: "App", region: "华东" }, status: "ok", value: 12 },
-        { dimensions: { channel: "Web", region: "华南" }, status: "ok", value: 8 },
+        {
+          dimension_cells: dimensionCells({ channel: "App", region: "华东" }),
+          status: "ok",
+          value: 12,
+        },
+        {
+          dimension_cells: dimensionCells({ channel: "Web", region: "华南" }),
+          status: "ok",
+          value: 8,
+        },
       ]),
     ).toBe("heatmap");
   });
@@ -57,8 +72,16 @@ describe("recommendObjectMetricAnalysisView", () => {
   it("uses a table for a one-column matrix of order identities", () => {
     expect(
       recommendObjectMetricAnalysisView([
-        { dimensions: { status: "执行中", order_id: "U00-000170" }, status: "ok", value: 1 },
-        { dimensions: { status: "执行中", order_id: "590-000075" }, status: "ok", value: 2 },
+        {
+          dimension_cells: dimensionCells({ status: "执行中", order_id: "U00-000170" }),
+          status: "ok",
+          value: 1,
+        },
+        {
+          dimension_cells: dimensionCells({ status: "执行中", order_id: "590-000075" }),
+          status: "ok",
+          value: 2,
+        },
       ]),
     ).toBe("table");
   });

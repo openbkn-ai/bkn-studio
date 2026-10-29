@@ -56,7 +56,6 @@ type TrialFormValues = {
   havingValue?: string;
   orderKey?: string;
   orderDirection?: "asc" | "desc";
-  identity?: Record<string, string>;
   time?: [import("dayjs").Dayjs, import("dayjs").Dayjs];
 };
 
@@ -87,22 +86,6 @@ type ObjectMetricTrialDrawerProps = {
   open: boolean;
 };
 
-function parseIdentityValue(value: string, type?: string): unknown {
-  const normalized = type?.toLowerCase();
-  if (["integer", "int", "int32", "int64", "long"].includes(normalized ?? "")) {
-    return parseObjectMetricNumericInput(value) ?? value;
-  }
-  if (["decimal", "number"].includes(normalized ?? "")) {
-    return parseObjectMetricNumericInput(value) ?? value;
-  }
-  if (["double", "float"].includes(normalized ?? "")) {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : value;
-  }
-  if (["bool", "boolean"].includes(normalized ?? "")) return value === "true";
-  return value;
-}
-
 function displayMetricValue(value: unknown): string {
   if (value === undefined || value === null) return "—";
   if (typeof value === "string" || typeof value === "number") return String(value);
@@ -132,7 +115,7 @@ function displayMetricDimensions(
   entry: ObjectMetricDataV1["entries"][number],
   propertyLabels: Record<string, string>,
 ): string {
-  if (!entry.dimension_cells?.length) return displayMetricFields(entry.dimensions, propertyLabels);
+  if (!entry.dimension_cells?.length) return "—";
   return entry.dimension_cells
     .map(({ ref, value }) => {
       const name = propertyLabels[ref.property_name] || ref.property_name;
@@ -144,12 +127,10 @@ function displayMetricDimensions(
 function displayMetricBucket(
   entry: ObjectMetricDataV1["entries"][number],
   propertyLabels: Record<string, string>,
-  identityLabels: Record<string, string>,
 ): string {
   const dimensions = displayMetricDimensions(entry, propertyLabels);
   if (dimensions !== "—") return dimensions;
   if (entry.time_bucket) return formatMetricTimeLabel(entry.time_bucket.start);
-  if (entry.instance_identity) return displayMetricFields(entry.instance_identity, identityLabels);
   return objectMetricText("analysisAllData");
 }
 
@@ -157,7 +138,6 @@ function displayMetricDrillStep(
   entry: ObjectMetricDataV1["entries"][number],
   parent: ObjectMetricDataV1["entries"][number] | undefined,
   propertyLabels: Record<string, string>,
-  identityLabels: Record<string, string>,
 ): string {
   if (parent?.dimension_cells?.length && entry.dimension_cells?.length) {
     const addedCells = entry.dimension_cells.filter(
@@ -172,17 +152,13 @@ function displayMetricDrillStep(
       return displayMetricDimensions({ ...entry, dimension_cells: addedCells }, propertyLabels);
     }
   }
-  return displayMetricBucket(entry, propertyLabels, identityLabels);
+  return displayMetricBucket(entry, propertyLabels);
 }
 
 function bucketAddsNewConstraint(
   entry: ObjectMetricDataV1["entries"][number],
   previous: ObjectMetricDataV1["entries"],
 ): boolean {
-  for (const [name, value] of Object.entries(entry.instance_identity ?? {})) {
-    if (!previous.some((item) => sameMetricScalarValue(item.instance_identity?.[name], value)))
-      return true;
-  }
   if (entry.dimension_cells?.length) {
     for (const cell of entry.dimension_cells) {
       if (
@@ -194,11 +170,6 @@ function bucketAddsNewConstraint(
           ),
         )
       )
-        return true;
-    }
-  } else {
-    for (const [name, value] of Object.entries(entry.dimensions ?? {})) {
-      if (!previous.some((item) => sameMetricScalarValue(item.dimensions?.[name], value)))
         return true;
     }
   }
@@ -311,7 +282,6 @@ export function ObjectMetricTrialDrawer({
     () => result?.entries.map((item, index) => ({ ...item, key: index })) ?? [],
     [result?.entries],
   );
-  const hasInstanceColumn = result?.entries.some((entry) => entry.instance_identity) ?? false;
   const tableDimensionFields = useMemo(() => {
     const fields = new Map<
       string,
@@ -328,16 +298,6 @@ export function ObjectMetricTrialDrawer({
             title: ref.relation_path_alias ? `${name} (${ref.relation_path_alias})` : name,
             propertyName: ref.property_name,
             referenceKey,
-          });
-        }
-      } else {
-        for (const propertyName of Object.keys(entry.dimensions ?? {})) {
-          const key = `legacy:${propertyName}`;
-          if (fields.has(key)) continue;
-          fields.set(key, {
-            key,
-            title: propertyLabels[propertyName] || propertyName,
-            propertyName,
           });
         }
       }
@@ -360,10 +320,7 @@ export function ObjectMetricTrialDrawer({
         ? "analysisTimeAmbiguous"
         : "analysisTimeUnavailable";
   const hasSelectableBuckets = result?.entries.some((entry) => Boolean(entry.bucket_key)) ?? false;
-  const canOrderResults =
-    definition.calculation_scope === "object_set" ||
-    Boolean(definition.result_semantics.statistical_grain.time_granularity) ||
-    definition.result_semantics.statistical_grain.group_by_dimensions.length > 0;
+  const canOrderResults = true;
 
   useEffect(() => {
     if (result || error)
@@ -380,18 +337,10 @@ export function ObjectMetricTrialDrawer({
     setError(undefined);
     setResult(undefined);
     try {
-      const identity = Object.fromEntries(
-        objectType?.primaryKeys.map((name) => {
-          const property = objectType.dataProperties.find((item) => item.name === name);
-          return [name, parseIdentityValue(values.identity?.[name] ?? "", property?.type)];
-        }) ?? [],
-      );
       const query: ObjectMetricQueryRequestV1 = {
         group_by: definition.query_capabilities.analysis_dimensions.filter((item) =>
           values.analysisDimensions?.includes(dimensionReferenceKey(item)),
         ),
-        instance_identities:
-          definition.calculation_scope === "object_instance" ? [identity] : undefined,
         time:
           supportsRuntimeTimeRange && values.time
             ? { start: values.time[0].valueOf(), end: values.time[1].valueOf() }
@@ -515,12 +464,7 @@ export function ObjectMetricTrialDrawer({
         {
           query,
           result: nextResult,
-          label: displayMetricDrillStep(
-            selected,
-            items.at(-1)?.sourceBucket,
-            propertyLabels,
-            identityLabels,
-          ),
+          label: displayMetricDrillStep(selected, items.at(-1)?.sourceBucket, propertyLabels),
           sourceBucket: selected,
         },
       ]);
@@ -659,10 +603,6 @@ export function ObjectMetricTrialDrawer({
             <Button
               autoInsertSpace={false}
               className={styles.conditionsRunButton}
-              disabled={
-                definition.calculation_scope === "object_instance" &&
-                !objectType?.primaryKeys.length
-              }
               form={formId}
               htmlType="submit"
               loading={loading}
@@ -672,42 +612,12 @@ export function ObjectMetricTrialDrawer({
             </Button>
           </div>
           <Form
-            className={`${styles.form} ${
-              timeNoticeKey && definition.calculation_scope === "object_set"
-                ? styles.noTimeForm
-                : ""
-            }`}
+            className={`${styles.form} ${timeNoticeKey ? styles.noTimeForm : ""}`}
             form={form}
             id={formId}
             layout="vertical"
             onFinish={(values) => void run(values)}
           >
-            {definition.calculation_scope === "object_instance" ? (
-              objectType?.primaryKeys.length ? (
-                objectType.primaryKeys.map((name) => {
-                  const property = objectType.dataProperties.find((item) => item.name === name);
-                  return (
-                    <Form.Item
-                      key={name}
-                      label={property?.displayName || name}
-                      name={["identity", name]}
-                      rules={[{ required: true, message: objectMetricText("m803fff99642e") }]}
-                      tooltip={
-                        property?.displayName && property.displayName !== name ? name : undefined
-                      }
-                    >
-                      <Input
-                        placeholder={objectMetricText("m52a8e4de05d5", {
-                          p0: property?.displayName || name,
-                        })}
-                      />
-                    </Form.Item>
-                  );
-                })
-              ) : (
-                <Alert message={objectMetricText("md23ea9c2fae2")} type="error" showIcon />
-              )
-            ) : null}
             {!timeNoticeKey && (
               <Form.Item
                 label={objectMetricText("m76a5dbc71e2b")}
@@ -725,8 +635,7 @@ export function ObjectMetricTrialDrawer({
                 />
               </Form.Item>
             )}
-            {definition.calculation_scope === "object_set" &&
-            definition.query_capabilities.analysis_dimensions.length > 0 ? (
+            {definition.query_capabilities.analysis_dimensions.length > 0 ? (
               <Form.Item
                 label={objectMetricText("analysisGroupBy")}
                 name="analysisDimensions"
@@ -878,7 +787,6 @@ export function ObjectMetricTrialDrawer({
                     <Alert message={objectMetricText("analysisFilteredOut")} showIcon type="info" />
                   ) : null}
                   <ObjectMetricAnalysisPanel
-                    identityLabels={identityLabels}
                     pathControls={pathControls}
                     propertyLabels={propertyLabels}
                     result={result}
@@ -895,7 +803,7 @@ export function ObjectMetricTrialDrawer({
                         >
                           <strong>
                             {objectMetricText("analysisSelectedBucket")}:{" "}
-                            {displayMetricBucket(selected, propertyLabels, identityLabels)}
+                            {displayMetricBucket(selected, propertyLabels)}
                           </strong>
                           <Space wrap>
                             {canFilterSelected ? (
@@ -974,17 +882,6 @@ export function ObjectMetricTrialDrawer({
                         </div>
                         <Table
                           columns={[
-                            ...(hasInstanceColumn
-                              ? [
-                                  {
-                                    dataIndex: "instance_identity",
-                                    key: "instance_identity",
-                                    render: (value: Record<string, unknown> | undefined) =>
-                                      displayMetricFields(value, identityLabels),
-                                    title: objectMetricText("m99fc84c8b8ae"),
-                                  },
-                                ]
-                              : []),
                             ...tableDimensionFields.map((field) => ({
                               key: field.key,
                               render: (
@@ -992,12 +889,9 @@ export function ObjectMetricTrialDrawer({
                                 entry: ObjectMetricDataV1["entries"][number],
                               ) =>
                                 displayMetricValue(
-                                  field.referenceKey
-                                    ? entry.dimension_cells?.find(
-                                        ({ ref }) =>
-                                          dimensionReferenceKey(ref) === field.referenceKey,
-                                      )?.value
-                                    : entry.dimensions?.[field.propertyName],
+                                  entry.dimension_cells?.find(
+                                    ({ ref }) => dimensionReferenceKey(ref) === field.referenceKey,
+                                  )?.value,
                                 ),
                               title: field.title,
                             })),
@@ -1095,7 +989,7 @@ export function ObjectMetricTrialDrawer({
         onClose={() => setParticipantsOpen(false)}
         open={participantsOpen}
         title={`${objectMetricText("analysisParticipants")} · ${
-          selected ? displayMetricBucket(selected, propertyLabels, identityLabels) : ""
+          selected ? displayMetricBucket(selected, propertyLabels) : ""
         }`}
         width="min(620px, 100vw)"
       >
@@ -1182,14 +1076,6 @@ export function ObjectMetricTrialDrawer({
                   : "—",
             },
             {
-              key: "scope",
-              label: objectMetricText("analysisScope"),
-              children:
-                definition.calculation_scope === "object_instance"
-                  ? objectMetricText("mabe9d02781fc")
-                  : objectMetricText("m9c51e86f9307"),
-            },
-            {
               key: "dimensions",
               label: objectMetricText("analysisDimensions"),
               children:
@@ -1228,9 +1114,7 @@ export function ObjectMetricTrialDrawer({
             {
               key: "selectedBucket",
               label: objectMetricText("analysisSelectedBucket"),
-              children: selected
-                ? displayMetricBucket(selected, propertyLabels, identityLabels)
-                : "—",
+              children: selected ? displayMetricBucket(selected, propertyLabels) : "—",
             },
             {
               key: "selectedTime",

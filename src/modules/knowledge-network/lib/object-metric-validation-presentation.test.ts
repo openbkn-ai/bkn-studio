@@ -53,19 +53,6 @@ describe("object metric validation presentation", () => {
     });
   });
 
-  it("does not recommend fixed result grain for a single-instance derived metric", () => {
-    expect(
-      presentObjectMetricValidationIssue(
-        {
-          code: "business_qualifier_required",
-          field: "specification.business_qualifiers",
-          message: "derived metrics require at least one business qualifier",
-        },
-        { calculationScope: "object_instance" },
-      ).suggestion,
-    ).toBe("请至少增加当前实例条件、关联实例条件或时间范围中的 1 项。");
-  });
-
   it("explains an invalid calendar time window with an actionable correction", () => {
     expect(
       presentObjectMetricValidationIssue({

@@ -139,7 +139,6 @@ const relation = {
 
 const metric = {
   definition: {
-    calculation_scope: "object_instance",
     code: "order_amount",
     description: "订单金额汇总",
     id: "order-amount",
@@ -956,7 +955,7 @@ describe("ObjectTypeResourceGraph", () => {
     expect(screen.getByRole("row", { name: /对象指标编码 order_amount/ })).toBeInTheDocument();
     expect(screen.getByRole("row", { name: "对象指标类型 原子对象指标" })).toBeInTheDocument();
     expect(screen.getByRole("row", { name: "所属对象类 销售订单" })).toBeInTheDocument();
-    expect(screen.getByRole("row", { name: "计算范围 单个实例" })).toBeInTheDocument();
+    expect(screen.queryByText("计算范围")).not.toBeInTheDocument();
     expect(screen.getByText("业务定义")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "详情" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "试算" })).toBeInTheDocument();

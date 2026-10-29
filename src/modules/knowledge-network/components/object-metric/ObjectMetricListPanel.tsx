@@ -42,7 +42,6 @@ import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/s
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
-import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
 import {
   objectMetricListPath,
@@ -603,17 +602,11 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
                 <li
                   key={`${blocker.resource_type}:${blocker.resource_id}:${blocker.version ?? 0}:${blocker.field}`}
                 >
-                  {blocker.resource_type === "metric_version"
-                    ? objectMetricText("metricDeleteMetricBlocker", {
-                        p0: blocker.name || blocker.resource_id,
-                        p1: blocker.version,
-                        p2: blocker.field,
-                      })
-                    : objectMetricText("metricDeletePropertyBlocker", {
-                        p0: blocker.name || blocker.resource_id,
-                        p1: blocker.property_name,
-                        p2: blocker.field,
-                      })}
+                  {objectMetricText("metricDeleteMetricBlocker", {
+                    p0: blocker.name || blocker.resource_id,
+                    p1: blocker.version,
+                    p2: blocker.field,
+                  })}
                 </li>
               ))}
             </ul>
@@ -632,11 +625,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
   };
 
   const confirmDeleteVersion = async (record: ObjectMetricRecordV1) => {
-    if (
-      !objectMetricActions(record, canModify, canDelete, ownerObjectTypeFor(record))
-        .canDeleteVersion
-    )
-      return;
+    if (!objectMetricActions(record, canModify, canDelete).canDeleteVersion) return;
     const pendingKey = `${record.definition.id}@${record.definition.version}`;
     if (deletionPendingRef.current) return;
     deletionPendingRef.current = pendingKey;
@@ -697,7 +686,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
   };
 
   const confirmDeprecate = (record: ObjectMetricRecordV1) => {
-    const actions = objectMetricActions(record, canModify, canDelete, ownerObjectTypeFor(record));
+    const actions = objectMetricActions(record, canModify, canDelete);
     if (!actions.canDeprecate || actions.deprecateReason) return;
     Modal.confirm({
       content: objectMetricText("mcb05d2c2df12"),
@@ -760,12 +749,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
       title: t("common.actions"),
       width: 72,
       render: (_, record) => {
-        const actions = objectMetricActions(
-          record,
-          canModify,
-          canDelete,
-          ownerObjectTypeFor(record),
-        );
+        const actions = objectMetricActions(record, canModify, canDelete);
         const recordKey = `${record.definition.id}@${record.definition.version}`;
         const menuItems: MenuProps["items"] = [
           { key: "view", label: objectMetricText("m979a332955c8") },
@@ -862,7 +846,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
       render: (_, record) => {
         const ownerId = record.definition.owner_object_type_id;
         const owner = ownerObjectTypeFor(record);
-        if (owner === undefined) return <span>{objectMetricText("bindingLoading")}</span>;
+        if (owner === undefined) return <span>{objectMetricText("resourceLoading")}</span>;
         if (owner === null) {
           const label = record.owner_object_type_name || objectMetricText("restrictedOwnerName");
           return (
@@ -893,15 +877,6 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
       },
     },
     {
-      key: "scope",
-      title: objectMetricText("mec7844e49915"),
-      width: 112,
-      render: (_, record) =>
-        record.definition.calculation_scope === "object_instance"
-          ? objectMetricText("mabe9d02781fc")
-          : objectMetricText("m9c51e86f9307"),
-    },
-    {
       key: "status",
       title: objectMetricText("m6320b4a8722a"),
       width: 90,
@@ -910,27 +885,6 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
           {statusNames[record.definition.lifecycle.status]}
         </Tag>
       ),
-    },
-    {
-      key: "logicalProperty",
-      title: objectMetricText("bindingStatusLabel"),
-      width: 152,
-      render: (_, record) => {
-        if (record.definition.calculation_scope !== "object_instance")
-          return objectMetricText("bindingNotApplicable");
-        const detail = ownerObjectTypeFor(record);
-        if (detail === undefined) return objectMetricText("bindingLoading");
-        if (detail === null) return objectMetricText("bindingUnknown");
-        const property = findMetricLogicProperty(detail, record.definition.id);
-        const label = property
-          ? `${property.displayName || property.name} · v${property.metricBinding?.metric_ref.version}`
-          : objectMetricText("bindingUnbound");
-        return (
-          <span className={styles.bindingCell} title={label}>
-            {label}
-          </span>
-        );
-      },
     },
     {
       key: "description",
@@ -1206,7 +1160,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
                   }}
                   pagination={false}
                   rowKey={(record) => `${record.definition.id}-${record.definition.version}`}
-                  scroll={{ x: 1286 }}
+                  scroll={{ x: 1022 }}
                   tableLayout="fixed"
                 />
               </div>

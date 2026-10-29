@@ -47,7 +47,6 @@ import { useObjectTypePropertyTableState } from "@/modules/knowledge-network/com
 import { ObjectTypeDetailLogicPropertyTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailLogicPropertyTrialPanel";
 import { ObjectTypeMetricParticipantPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeMetricParticipantPanel";
 import { buildSampleRowKey } from "@/modules/knowledge-network/lib/object-type-instance-identity";
-import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import {
   clearKnowledgeNetworkGraphSelectionFromPath,
   knowledgeNetworkReturnPath,
@@ -88,12 +87,8 @@ function normalizedSearchText(value: unknown) {
   return "";
 }
 
-function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
-  if (type === "tool") {
-    return t("knowledgeNetwork.objectTypeLogicAttributeTypeTool");
-  }
-
-  return t("knowledgeNetwork.objectTypeLogicAttributeTypeMetric");
+function getLogicTypeLabel(_type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
+  return t("knowledgeNetwork.objectTypeLogicAttributeTypeTool");
 }
 
 type ObjectTypeDetailTabKey = "overview" | "properties" | "data" | "related";
@@ -934,11 +929,7 @@ export function ObjectTypeDetailScene() {
           return (
             <div className={styles.bindResourceCell}>
               <div className={styles.dataResource}>
-                {record.dataSource.type === "metric" ? (
-                  <span className={styles.resourceIconMetric}>M</span>
-                ) : (
-                  <span className={styles.resourceIconOperator}>T</span>
-                )}
+                <span className={styles.resourceIconOperator}>T</span>
                 <span className={styles.resourceName}>{record.dataSource.name || "--"}</span>
               </div>
             </div>
@@ -963,18 +954,17 @@ export function ObjectTypeDetailScene() {
       },
       {
         key: "actions",
-        render: (_value, record) =>
-          isMetricLogicProperty(record) ? null : (
-            <button
-              className={styles.tableLink}
-              onClick={() => {
-                openLogicPropertyTrial(record.name);
-              }}
-              type="button"
-            >
-              {t("knowledgeNetwork.objectTypeDetailTrialAction")}
-            </button>
-          ),
+        render: (_value, record) => (
+          <button
+            className={styles.tableLink}
+            onClick={() => {
+              openLogicPropertyTrial(record.name);
+            }}
+            type="button"
+          >
+            {t("knowledgeNetwork.objectTypeDetailTrialAction")}
+          </button>
+        ),
         title: t("common.actions"),
         width: 100,
       },

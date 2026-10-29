@@ -41,24 +41,7 @@ describe("rootRelationTypeIds", () => {
     ).toEqual(["order"]);
   });
 
-  it("deduplicates composite alignment paths and leaves unclassified metrics unassigned", () => {
-    const dependency = (id: string) => ({
-      object_alignment: {
-        mode: "related_object" as const,
-        deduplication: "none" as const,
-        relation_path: [
-          { direction: "outgoing" as const, relation_type_id: id, target_object_type_id: "target" },
-        ],
-      },
-    });
-    expect(
-      rootRelationTypeIds(
-        metric({
-          kind: "composite",
-          dependencies: [dependency("order"), dependency("order"), dependency("warehouse")],
-        } as ObjectMetricRecordV1["definition"]["specification"]),
-      ),
-    ).toEqual(["order", "warehouse"]);
+  it("leaves metrics without a derived qualifying path unassigned", () => {
     expect(
       rootRelationTypeIds(metric({ kind: "atomic", measure: { aggregation: "count_rows" } })),
     ).toEqual([]);

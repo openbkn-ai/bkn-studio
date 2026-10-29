@@ -11,7 +11,6 @@ import { useTranslation } from "react-i18next";
 
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { objectMetricActions } from "@/modules/knowledge-network/lib/object-metric-actions";
-import { findMetricLogicProperty } from "@/modules/knowledge-network/lib/object-metric-binding";
 import {
   objectMetricAggregationDisplayName,
   objectMetricPropertyDisplayName,
@@ -187,9 +186,6 @@ export function ObjectMetricGraphDetailDrawer({
         .map((id) => relationNames.get(id))
         .filter((name): name is string => Boolean(name))
     : [];
-  const boundProperty = metric
-    ? findMetricLogicProperty(ownerObjectType, metric.definition.id)
-    : undefined;
   const atomicSpecification =
     metric?.definition.specification?.kind === "atomic"
       ? metric.definition.specification
@@ -200,9 +196,7 @@ export function ObjectMetricGraphDetailDrawer({
       ? objectMetricPropertyDisplayName(atomicExpression.property_ref, ownerObjectType)
       : undefined;
   const value = metric?.definition.result_semantics?.value;
-  const actions = metric
-    ? objectMetricActions(metric, canModify, canDelete, ownerObjectType)
-    : undefined;
+  const actions = metric ? objectMetricActions(metric, canModify, canDelete) : undefined;
 
   return (
     <Drawer
@@ -276,29 +270,6 @@ export function ObjectMetricGraphDetailDrawer({
             <Descriptions.Item label={objectMetricText("m26c439016066")}>
               {ownerObjectTypeName}
             </Descriptions.Item>
-            <Descriptions.Item label={objectMetricText("mec7844e49915")}>
-              {objectMetricText(
-                metric.definition.calculation_scope === "object_instance"
-                  ? "mabe9d02781fc"
-                  : "m9c51e86f9307",
-              )}
-            </Descriptions.Item>
-            {metric.definition.calculation_scope === "object_instance" ? (
-              <Descriptions.Item label={objectMetricText("bindingStatusLabel")}>
-                {ownerObjectType === undefined
-                  ? objectMetricText("bindingLoading")
-                  : ownerObjectType === null
-                    ? objectMetricText("bindingUnknown")
-                    : boundProperty?.metricBinding
-                      ? boundProperty.metricBinding.metric_ref.version === metric.definition.version
-                        ? `${boundProperty.displayName || boundProperty.name} · v${metric.definition.version}`
-                        : objectMetricText("graphBindingOtherVersion", {
-                            p0: boundProperty.displayName || boundProperty.name,
-                            p1: boundProperty.metricBinding.metric_ref.version,
-                          })
-                      : objectMetricText("bindingUnbound")}
-              </Descriptions.Item>
-            ) : null}
             {atomicSpecification ? (
               <Descriptions.Item label={objectMetricText("graphCalculationSummary")}>
                 {objectMetricAggregationDisplayName(atomicSpecification.measure.aggregation)}

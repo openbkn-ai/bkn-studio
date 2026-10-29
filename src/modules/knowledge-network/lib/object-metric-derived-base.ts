@@ -14,7 +14,6 @@ type UnitQuantityKind = ObjectMetricUnitSpecV1["quantity_kind"];
 
 export type DerivedBaseMetricFormPatch = {
   analysisDimensions: string[];
-  calculationScope: ObjectMetricDefinitionV1["calculation_scope"];
   eventTime: undefined;
   fixedTimeRange: undefined;
   grainWeekStart: undefined;
@@ -55,12 +54,11 @@ export type DerivedBaseMetricFormPatch = {
  * base changes cannot leave stale dimensions, windows, or relation qualifiers.
  */
 export function derivedBaseMetricFormPatch(
-  definition: Pick<ObjectMetricDefinitionV1, "calculation_scope" | "result_semantics">,
+  definition: Pick<ObjectMetricDefinitionV1, "result_semantics">,
 ): DerivedBaseMetricFormPatch {
   const value = definition.result_semantics.value;
   return {
     analysisDimensions: [],
-    calculationScope: definition.calculation_scope,
     eventTime: undefined,
     fixedTimeRange: undefined,
     grainWeekStart: undefined,

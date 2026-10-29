@@ -5,8 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { MetricPropertyBindingV1 } from "@/modules/knowledge-network/types/object-metric";
-
 export type BackendAccountInfo = {
   id?: string | null;
   name?: string | null;
@@ -105,7 +103,6 @@ export type BackendLogicProperty = {
     type: string;
   } | null;
   display_name?: string;
-  metric_binding?: MetricPropertyBindingV1 | null;
   name: string;
   parameters?: BackendLogicParameter[] | null;
   type?: string;

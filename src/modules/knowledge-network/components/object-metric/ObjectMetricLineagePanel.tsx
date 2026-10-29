@@ -104,34 +104,28 @@ export function ObjectMetricLineagePanel({
   ownerObjectType,
 }: ObjectMetricLineagePanelProps) {
   useTranslation();
-  const { pendingDownstream, releasedDownstream, logicBindings, sourceProperties, upstream } =
-    useMemo(() => {
-      const recordsByKey = new Map(
-        [...metrics, metric].map((item) => [
-          objectMetricVersionKey(item.definition.id, item.definition.version),
-          item,
-        ]),
-      );
-      const downstream = collectObjectMetricDownstream(metric, metrics);
-      return {
-        pendingDownstream: downstream.filter(
-          (item) =>
-            item.record && ["draft", "validated"].includes(item.record.definition.lifecycle.status),
-        ),
-        releasedDownstream: downstream.filter(
-          (item) =>
-            item.record &&
-            ["published", "deprecated"].includes(item.record.definition.lifecycle.status),
-        ),
-        logicBindings: (ownerObjectType?.logicProperties ?? []).filter(
-          (property) =>
-            property.metricBinding?.metric_ref.metric_id === metric.definition.id &&
-            property.metricBinding.metric_ref.version === metric.definition.version,
-        ),
-        sourceProperties: atomicMeasureProperties(metric),
-        upstream: collectObjectMetricUpstream(metric, recordsByKey),
-      };
-    }, [metric, metrics, ownerObjectType]);
+  const { pendingDownstream, releasedDownstream, sourceProperties, upstream } = useMemo(() => {
+    const recordsByKey = new Map(
+      [...metrics, metric].map((item) => [
+        objectMetricVersionKey(item.definition.id, item.definition.version),
+        item,
+      ]),
+    );
+    const downstream = collectObjectMetricDownstream(metric, metrics);
+    return {
+      pendingDownstream: downstream.filter(
+        (item) =>
+          item.record && ["draft", "validated"].includes(item.record.definition.lifecycle.status),
+      ),
+      releasedDownstream: downstream.filter(
+        (item) =>
+          item.record &&
+          ["published", "deprecated"].includes(item.record.definition.lifecycle.status),
+      ),
+      sourceProperties: atomicMeasureProperties(metric),
+      upstream: collectObjectMetricUpstream(metric, recordsByKey),
+    };
+  }, [metric, metrics]);
 
   return (
     <section
@@ -188,18 +182,6 @@ export function ObjectMetricLineagePanel({
           <div className={styles.items}>
             {pendingDownstream.map((item) => (
               <MetricReference item={item} key={item.key} onOpenMetric={onOpenMetric} />
-            ))}
-          </div>
-        </div>
-      ) : null}
-      {logicBindings.length ? (
-        <div className={styles.row}>
-          <strong>{objectMetricText("lineageOwnerLogicProperties")}</strong>
-          <div className={styles.rowContent}>
-            {logicBindings.map((property) => (
-              <Tag key={property.name}>
-                {property.displayName || property.name} · {property.name}
-              </Tag>
             ))}
           </div>
         </div>

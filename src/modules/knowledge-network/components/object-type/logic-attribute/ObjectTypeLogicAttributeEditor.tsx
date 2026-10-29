@@ -7,17 +7,13 @@
 
 import { EllipsisOutlined, PlusOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Table, Tooltip, type TableProps } from "antd";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { CAPABILITIES } from "@/framework/entitlement/capabilities";
-import { useCapability } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DEFAULT_RESOURCE_COLOR } from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
-import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
-import { listObjectTypeLogicMetricModels } from "@/modules/knowledge-network/services/object-type-logic.service";
 import { deduplicateByName } from "./constants";
 import { ObjectTypeLogicAttributeEditDrawer } from "./ObjectTypeLogicAttributeEditDrawer";
 import type {
@@ -53,23 +49,19 @@ type ObjectTypeLogicAttributeEditorProps = {
   onChange: (logicProperties: ObjectTypeLogicProperty[]) => void;
 };
 
-function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
-  if (type === "tool") {
-    return t("knowledgeNetwork.objectTypeLogicAttributeTypeTool");
-  }
-  return t("knowledgeNetwork.objectTypeLogicAttributeTypeMetric");
+function getLogicTypeLabel(_type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
+  return t("knowledgeNetwork.objectTypeLogicAttributeTypeTool");
 }
 
 export const ObjectTypeLogicAttributeEditor = forwardRef<
   ObjectTypeLogicAttributeEditorHandle,
   ObjectTypeLogicAttributeEditorProps
 >(function ObjectTypeLogicAttributeEditor(
-  { basicValue, dataProperties, externalError, logicProperties, networkId, objectTypeId, onChange },
+  { basicValue, dataProperties, externalError, logicProperties, onChange },
   ref,
 ) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
-  const objectMetricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
   const [localLogicProperties, setLocalLogicProperties] =
     useState<ObjectTypeLogicProperty[]>(logicProperties);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -81,42 +73,12 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   const [searchInput, setSearchInput] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
-  const validateMetricReferences = useCallback(async () => {
-    const metricProperties = localLogicProperties.filter(
-      (item) => item.dataSource?.type === "metric" && item.dataSource.id,
-    );
-    if (!objectMetricsAvailable || !metricProperties.length || !networkId || !objectTypeId) {
-      return true;
-    }
-
-    const metricModels = await listObjectTypeLogicMetricModels(networkId, objectTypeId);
-    const metricIds = new Set(metricModels.map((item) => item.id));
-    const invalidProperty = metricProperties.find(
-      (item) => item.dataSource?.id && !metricIds.has(item.dataSource.id),
-    );
-    if (!invalidProperty) {
-      return true;
-    }
-
-    void message.error(
-      t("knowledgeNetwork.objectTypeLogicMetricReferenceMissing", {
-        name: invalidProperty.displayName || invalidProperty.name,
-      }),
-    );
-    return false;
-  }, [localLogicProperties, message, networkId, objectMetricsAvailable, objectTypeId, t]);
-
   useImperativeHandle(
     ref,
     () => ({
-      validateFields: async () => {
-        if (!(await validateMetricReferences())) {
-          throw new Error("invalid logic metric reference");
-        }
-        return { logicProperties: localLogicProperties };
-      },
+      validateFields: () => Promise.resolve({ logicProperties: localLogicProperties }),
     }),
-    [localLogicProperties, validateMetricReferences],
+    [localLogicProperties],
   );
 
   useEffect(() => {
@@ -161,10 +123,6 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
   };
 
   const handleEdit = (record: ObjectTypeLogicProperty) => {
-    if (isMetricLogicProperty(record)) {
-      void message.info(t("knowledgeNetwork.objectTypeLogicMetricUnavailable"));
-      return;
-    }
     setAttrInfo(record);
     setDrawerOpen(true);
   };
@@ -236,7 +194,6 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
           menu={{
             items: [
               {
-                disabled: isMetricLogicProperty(record),
                 key: "edit",
                 label: t("common.edit"),
               },
@@ -283,11 +240,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
         return (
           <div className={styles.bindResourceCell}>
             <div className={styles.dataResource}>
-              {record.dataSource.type === "metric" ? (
-                <span className={styles.resourceIconMetric}>M</span>
-              ) : (
-                <span className={styles.resourceIconOperator}>T</span>
-              )}
+              <span className={styles.resourceIconOperator}>T</span>
               <span className={styles.resourceName}>{record.dataSource.name || ""}</span>
             </div>
           </div>

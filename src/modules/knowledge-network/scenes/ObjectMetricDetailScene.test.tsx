@@ -28,7 +28,6 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   queryMetric: vi.fn(),
   trialMetric: vi.fn(),
-  upgradeMetric: vi.fn(),
 }));
 
 vi.mock("react-router-dom", async (importOriginal) => ({
@@ -74,14 +73,12 @@ vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAuthor
 }));
 
 vi.mock("@/modules/knowledge-network/services/object-metric.service", () => ({
-  bindObjectMetricLogicPropertyV1: vi.fn(),
   createNextObjectMetricDraftV1: mocks.createNextDraft,
   getObjectMetricV1: mocks.getObjectMetricV1,
   listObjectMetricsV1: mocks.listMetrics,
   listObjectMetricVersionsV1: mocks.listVersions,
   queryObjectMetricDataV1: mocks.queryMetric,
   trialObjectMetricDataV1: mocks.trialMetric,
-  upgradeObjectMetricLogicPropertyV1: mocks.upgradeMetric,
 }));
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
@@ -166,7 +163,6 @@ afterEach(() => {
   mocks.navigate.mockReset();
   mocks.queryMetric.mockReset();
   mocks.trialMetric.mockReset();
-  mocks.upgradeMetric.mockReset();
 });
 
 mocks.listVersions.mockResolvedValue([]);
@@ -175,20 +171,18 @@ mocks.getObjectTypeDetail.mockResolvedValue(null);
 
 function record(
   status: ObjectMetricRecordV1["definition"]["lifecycle"]["status"],
-  calculationScope: ObjectMetricRecordV1["definition"]["calculation_scope"],
 ): ObjectMetricRecordV1 {
   const definition = createObjectMetricDefinitionV1("atomic", "order");
   definition.id = "metric-1";
   definition.code = "coupon_used_count";
   definition.name = "已用券次数";
   definition.lifecycle.status = status;
-  definition.calculation_scope = calculationScope;
   return { definition } as ObjectMetricRecordV1;
 }
 
 describe("ObjectMetricDetailScene actions", () => {
   it("opens the current metric authorization from the detail header", async () => {
-    const published = record("published", "object_set");
+    const published = record("published");
     published.definition.version = 4;
     mocks.getObjectMetricV1.mockResolvedValue(published);
     mocks.listVersions.mockResolvedValue([published]);
@@ -202,7 +196,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("hides metric authorization without knowledge-network authorize permission", async () => {
-    const published = record("published", "object_set");
+    const published = record("published");
     mocks.canAuthorize.current = false;
     mocks.getObjectMetricV1.mockResolvedValue(published);
     mocks.listVersions.mockResolvedValue([published]);
@@ -214,7 +208,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("loads only referenced object and relation names instead of full catalogs", async () => {
-    const derived = record("published", "object_set");
+    const derived = record("published");
     derived.definition.metric_type = "derived";
     derived.definition.specification = {
       kind: "derived",
@@ -259,7 +253,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("keeps trial available but hides mutation actions without modify permission", async () => {
-    const published = record("published", "object_instance");
+    const published = record("published");
     mocks.canModify.current = false;
     mocks.getObjectMetricV1.mockResolvedValue(published);
     mocks.listVersions.mockResolvedValue([published]);
@@ -277,7 +271,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("does not offer editing a deprecated metric version", async () => {
-    const deprecated = record("deprecated", "object_set");
+    const deprecated = record("deprecated");
     mocks.getObjectMetricV1.mockResolvedValue(deprecated);
     mocks.listVersions.mockResolvedValue([deprecated]);
 
@@ -288,14 +282,14 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("keeps a derived metric's pinned version before its full business name", async () => {
-    const derived = record("published", "object_set");
+    const derived = record("published");
     derived.definition.metric_type = "derived";
     derived.definition.specification = {
       kind: "derived",
       base_metric: { metric_id: "base", version: 1 },
       business_qualifiers: {},
     };
-    const base = record("published", "object_set");
+    const base = record("published");
     base.definition.id = "base";
     base.definition.name = "GMV（成交总金额）（基础原子对象指标）";
     mocks.getObjectMetricV1.mockImplementation((_networkId, metricId) =>
@@ -324,8 +318,8 @@ describe("ObjectMetricDetailScene actions", () => {
     expect(loading).toBe(container.firstElementChild);
   });
 
-  it("labels ownership and scope clearly and gives the business definition its own full-width block", async () => {
-    const metric = record("published", "object_instance");
+  it("labels ownership clearly and gives the business definition its own full-width block", async () => {
+    const metric = record("published");
     metric.definition.description = "仅统计已支付订单的金额。\n退款订单不计入。";
     mocks.getObjectMetricV1.mockResolvedValue(metric);
     mocks.getObjectTypeDetail.mockResolvedValue({
@@ -338,13 +332,11 @@ describe("ObjectMetricDetailScene actions", () => {
     const { container } = render(<ObjectMetricDetailScene />);
 
     expect(await screen.findByText("所属对象类")).toBeInTheDocument();
-    expect(screen.getByText("计算范围")).toBeInTheDocument();
-    expect(screen.getByText(/单个实例/)).toBeInTheDocument();
+    expect(screen.queryByText("计算范围")).not.toBeInTheDocument();
     const definition = container.querySelector<HTMLElement>("[class*=businessDefinitionContent]");
     expect(definition).toHaveTextContent("仅统计已支付订单的金额。 退款订单不计入。");
     expect(definition?.closest(".ant-descriptions")).toBeNull();
     expect(definition?.parentElement).toHaveTextContent("业务定义");
-    expect(await screen.findByText(/逻辑属性：未绑定/)).toBeInTheDocument();
     expect(
       [...container.querySelectorAll(".ant-descriptions-item-label")].map(
         (item) => item.textContent,
@@ -353,7 +345,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("shows the projected owner name without exposing its id when object details are unavailable", async () => {
-    const metric = record("published", "object_set");
+    const metric = record("published");
     metric.definition.owner_object_type_id = "confidential-owner-id";
     metric.owner_object_type_name = "销售订单";
     mocks.getObjectMetricV1.mockResolvedValue(metric);
@@ -366,7 +358,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("uses neutral owner wording when object details fail without a projected name", async () => {
-    const metric = record("published", "object_set");
+    const metric = record("published");
     metric.definition.owner_object_type_id = "confidential-owner-id";
     mocks.getObjectMetricV1.mockResolvedValue(metric);
     mocks.getObjectTypeDetail.mockRejectedValue(new Error("server unavailable"));
@@ -378,7 +370,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("uses business labels for calculation and result metadata while retaining technical values in tooltips", async () => {
-    const metric = record("published", "object_instance");
+    const metric = record("published");
     if (metric.definition.specification.kind !== "atomic")
       throw new Error("expected atomic metric");
     metric.definition.specification.measure.expression = {
@@ -410,12 +402,12 @@ describe("ObjectMetricDetailScene actions", () => {
     expect(screen.getByText("小数 / 金额")).toBeInTheDocument();
     expect(screen.getByText("日 · Asia/Shanghai")).toBeInTheDocument();
     expect(screen.getByText("¥ (CNY)")).toBeInTheDocument();
-    expect(screen.getByText("无（按实例返回）")).toBeInTheDocument();
+    expect(screen.getByText("无（返回汇总值）")).toBeInTheDocument();
     expect(screen.queryByText("decimal / amount")).not.toBeInTheDocument();
   });
 
   it("identifies a transaction count unit instead of showing only its code", async () => {
-    const metric = record("published", "object_set");
+    const metric = record("published");
     metric.definition.result_semantics.value.unit = {
       code: "transaction",
       quantity_kind: "count",
@@ -437,7 +429,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("keeps composite dependencies compact and hides the technical expression until requested", async () => {
-    const composite = record("published", "object_set");
+    const composite = record("published");
     composite.definition.metric_type = "composite";
     composite.definition.specification = {
       alignment: {
@@ -460,7 +452,7 @@ describe("ObjectMetricDetailScene actions", () => {
       null_policy: "propagate",
       zero_division_policy: "unavailable",
     };
-    const base = record("published", "object_set");
+    const base = record("published");
     base.definition.id = "base";
     base.definition.name = "基础订单数";
     mocks.getObjectMetricV1.mockImplementation((_networkId, metricId) =>
@@ -479,7 +471,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("shows business property names in result and analysis while retaining unknown property names", async () => {
-    const metric = record("published", "object_set");
+    const metric = record("published");
     metric.definition.result_semantics.statistical_grain.group_by_dimensions = [
       { object_type_id: "order", property_name: "template_id" },
     ];
@@ -508,7 +500,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("shows three dimensions by default and expands the rest without changing the definition", async () => {
-    const metric = record("published", "object_set");
+    const metric = record("published");
     metric.definition.query_capabilities.analysis_dimensions = Array.from(
       { length: 5 },
       (_, index) => ({
@@ -556,7 +548,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("places available actions beside the metric identity without a large usage card", async () => {
-    mocks.getObjectMetricV1.mockResolvedValue(record("published", "object_instance"));
+    mocks.getObjectMetricV1.mockResolvedValue(record("published"));
     mocks.getObjectTypeDetail.mockResolvedValue({
       id: "order",
       name: "销售订单",
@@ -578,7 +570,6 @@ describe("ObjectMetricDetailScene actions", () => {
     const actions = container.querySelector<HTMLElement>("[class*=actions]");
     expect(actions).not.toBeNull();
     expect(within(actions!).getByRole("button", { name: "试算" })).toBeEnabled();
-    expect(await within(actions!).findByRole("button", { name: "绑定逻辑属性" })).toBeEnabled();
     expect(within(actions!).getByRole("button", { name: "创建新版本草稿" })).toBeInTheDocument();
 
     fireEvent.click(within(actions!).getByRole("button", { name: "试算" }));
@@ -586,17 +577,10 @@ describe("ObjectMetricDetailScene actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Run trial" }));
     expect(mocks.queryMetric).toHaveBeenCalledWith("network-1", "metric-1", 1, {});
     expect(mocks.trialMetric).not.toHaveBeenCalled();
-    fireEvent.click(within(actions!).getByRole("button", { name: "绑定逻辑属性" }));
-    const bindingDialog = await screen.findByRole("dialog", {
-      name: "绑定为销售订单对象类逻辑属性",
-    });
-    expect(bindingDialog).toBeInTheDocument();
-    expect(within(bindingDialog).queryByText("逻辑属性随实例按需计算")).not.toBeInTheDocument();
-    expect(within(bindingDialog).getByText("属性名称")).toBeInTheDocument();
   });
 
-  it("hides the logical-property action for an object-set metric", async () => {
-    mocks.getObjectMetricV1.mockResolvedValue(record("published", "object_set"));
+  it("does not expose the removed logical-property binding action", async () => {
+    mocks.getObjectMetricV1.mockResolvedValue(record("published"));
 
     render(<ObjectMetricDetailScene />);
 
@@ -606,48 +590,10 @@ describe("ObjectMetricDetailScene actions", () => {
     expect(screen.queryByText("仅适用于单个实例")).not.toBeInTheDocument();
   });
 
-  it("shows one bound property and its pinned version on a newer published release", async () => {
-    const metric = record("published", "object_instance");
-    metric.definition.version = 2;
-    mocks.getObjectMetricV1.mockResolvedValue(metric);
-    mocks.getObjectTypeDetail.mockResolvedValue({
-      id: "order",
-      name: "销售订单",
-      dataProperties: [],
-      logicProperties: [
-        {
-          name: "used_count",
-          displayName: "已用次数",
-          metricBinding: { metric_ref: { metric_id: "metric-1", version: 1 } },
-        },
-      ],
-    });
-    render(<ObjectMetricDetailScene />);
-    expect(await screen.findByText(/已用次数 · v1/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "绑定逻辑属性" })).not.toBeInTheDocument();
-    mocks.upgradeMetric.mockResolvedValue({});
-    fireEvent.click(screen.getByRole("button", { name: "升级绑定版本" }));
-    await screen.findByText("升级逻辑属性绑定");
-    const confirmation = await screen.findByRole("dialog");
-    expect(mocks.upgradeMetric).not.toHaveBeenCalled();
-    fireEvent.click(within(confirmation).getByRole("button", { name: "升级绑定版本" }));
-    await waitFor(() => {
-      expect(mocks.upgradeMetric).toHaveBeenCalledWith("network-1", "metric-1", "used_count", 2);
-    });
-  });
-
-  it("does not mistake a failed object-type lookup for an unbound metric", async () => {
-    mocks.getObjectMetricV1.mockResolvedValue(record("published", "object_instance"));
-    mocks.getObjectTypeDetail.mockRejectedValue(new Error("lookup unavailable"));
-    render(<ObjectMetricDetailScene />);
-    expect(await screen.findByText(/状态未知/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "绑定逻辑属性" })).not.toBeInTheDocument();
-  });
-
   it.each(["draft", "validated"] as const)(
-    "trials a %s definition without requiring publication or enabling binding",
+    "trials a %s definition without requiring publication",
     async (status) => {
-      const draftRecord = record(status, "object_instance");
+      const draftRecord = record(status);
       mocks.getObjectMetricV1.mockResolvedValue(draftRecord);
 
       render(<ObjectMetricDetailScene />);
@@ -667,11 +613,11 @@ describe("ObjectMetricDetailScene actions", () => {
   );
 
   it("defaults to the latest published release and continues an existing working draft", async () => {
-    const draft = record("draft", "object_instance");
+    const draft = record("draft");
     draft.definition.version = 3;
-    const published = record("published", "object_instance");
+    const published = record("published");
     published.definition.version = 2;
-    const older = record("published", "object_instance");
+    const older = record("published");
     mocks.getObjectMetricV1.mockResolvedValue(draft);
     mocks.listVersions.mockResolvedValue([older, draft, published]);
 
@@ -701,10 +647,10 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("creates a working draft only after an explicit action", async () => {
-    const published = record("published", "object_instance");
+    const published = record("published");
     mocks.getObjectMetricV1.mockResolvedValue(published);
     mocks.listVersions.mockResolvedValue([published]);
-    mocks.createNextDraft.mockResolvedValue(record("draft", "object_instance"));
+    mocks.createNextDraft.mockResolvedValue(record("draft"));
 
     render(<ObjectMetricDetailScene />);
 
@@ -731,7 +677,7 @@ describe("ObjectMetricDetailScene actions", () => {
     const returnTo =
       "/knowledge-network/workspace/network-1/metrics?objectTypeId=customer&view=list&metricPage=2";
     mocks.locationState.current = { knowledgeNetworkReturnTo: returnTo };
-    mocks.getObjectMetricV1.mockResolvedValue(record("published", "object_instance"));
+    mocks.getObjectMetricV1.mockResolvedValue(record("published"));
 
     render(<ObjectMetricDetailScene />);
 
@@ -740,9 +686,9 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("opens a referenced metric at its pinned version and restores a linked historic version", async () => {
-    const latest = record("published", "object_instance");
+    const latest = record("published");
     latest.definition.version = 2;
-    const historic = record("published", "object_instance");
+    const historic = record("published");
     historic.definition.version = 1;
     mocks.getObjectMetricV1.mockImplementation((_networkId, _metricId, version) =>
       Promise.resolve(version === 1 ? historic : latest),
@@ -773,7 +719,7 @@ describe("ObjectMetricDetailScene actions", () => {
   });
 
   it("does not silently replace an unavailable pinned version with the latest release", async () => {
-    const latest = record("published", "object_instance");
+    const latest = record("published");
     latest.definition.version = 2;
     mocks.getObjectMetricV1.mockResolvedValue(latest);
     mocks.locationSearch.current = "?version=1";

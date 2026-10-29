@@ -15,13 +15,11 @@ describe("parseObjectMetricAiIntent", () => {
       parseObjectMetricAiIntent(
         JSON.stringify({
           atomic: { aggregation: "sum", property_name: "payment_amount" },
-          calculation_scope: "object_set",
           name: "订单实付金额",
         }),
       ),
     ).toMatchObject({
       atomic: { aggregation: "sum", property_name: "payment_amount" },
-      calculation_scope: "object_set",
       name: "订单实付金额",
     });
   });

@@ -14,7 +14,6 @@ import { derivedBaseMetricFormPatch } from "./object-metric-derived-base";
 describe("derived base metric form patch", () => {
   it("inherits the new value contract and clears fields owned by the previous base", () => {
     const base = createObjectMetricDefinitionV1("atomic", "order");
-    base.calculation_scope = "object_set";
     base.result_semantics.no_data_policy = "zero";
     base.result_semantics.value = {
       maximum: 999,
@@ -34,7 +33,6 @@ describe("derived base metric form patch", () => {
 
     expect(derivedBaseMetricFormPatch(base)).toEqual({
       analysisDimensions: [],
-      calculationScope: "object_set",
       eventTime: undefined,
       fixedTimeRange: undefined,
       grainWeekStart: undefined,

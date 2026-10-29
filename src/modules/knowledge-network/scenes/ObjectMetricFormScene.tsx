@@ -26,12 +26,10 @@ import {
   Form,
   Input,
   InputNumber,
-  Radio,
   Result,
   Select,
   Space,
   Spin,
-  Switch,
   Tag,
   Tooltip,
 } from "antd";
@@ -120,7 +118,6 @@ import type {
   ObjectMetricDefinitionV1,
   ObjectMetricDependencyV1,
   ObjectMetricExpressionV1,
-  ObjectMetricObjectAlignmentV1,
   ObjectMetricOperandV1,
   ObjectMetricPreviewV1,
   ObjectMetricPropertyRefV1,
@@ -343,12 +340,10 @@ function expressionWithDeclaredPropertyTypes(
 }
 
 type FormValues = {
-  aggregation:
-    "identity" | "count_rows" | "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
+  aggregation: "count_rows" | "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
   analysisDimensions: string[];
   alignmentTimeKey?: string;
   baseMetric: string;
-  calculationScope: "object_instance" | "object_set";
   code: string;
   description: string;
   eventTime?: string;
@@ -358,10 +353,6 @@ type FormValues = {
   grainWeekStart?: "monday" | "sunday";
   maximum?: number;
   minimum?: number;
-  logicPropertyComment?: string;
-  logicPropertyDisplayName?: string;
-  logicPropertyEnabled?: boolean;
-  logicPropertyName?: string;
   name: string;
   noDataPolicy: "zero" | "null" | "unavailable";
   primaryDependencyAlias?: string;
@@ -471,15 +462,6 @@ const semanticTypeOptions: Array<{ label: string; value: FormValues["semanticTyp
   },
 ];
 
-const calculationScopeLabels: Record<FormValues["calculationScope"], string> = {
-  get object_instance() {
-    return objectMetricText("mabe9d02781fc");
-  },
-  get object_set() {
-    return objectMetricText("m9c51e86f9307");
-  },
-};
-
 const metricTypeLabels: Record<ObjectMetricTypeV1, string> = {
   get atomic() {
     return objectMetricText("me5675ba4c2fd");
@@ -521,9 +503,6 @@ const aggregationLabels: Record<FormValues["aggregation"], string> = {
   get count_rows() {
     return objectMetricText("m21179deb9a74");
   },
-  get identity() {
-    return objectMetricText("m9d001b97d59e");
-  },
   get max() {
     return objectMetricText("m1e7a22820768");
   },
@@ -547,9 +526,6 @@ const atomicAggregationGuidance: Record<FormValues["aggregation"], string> = {
   },
   get count_rows() {
     return objectMetricText("mc4c20772d4a3");
-  },
-  get identity() {
-    return objectMetricText("mca90417ebd86");
   },
   get max() {
     return objectMetricText("m84405156480f");
@@ -731,7 +707,7 @@ function conditionIsComplete(condition?: ObjectMetricConditionV1): boolean {
 function instanceValueSuggestion(
   expression: ObjectMetricExpressionV1,
   properties: ObjectMetricExpressionPropertyOption[],
-  aggregation: FormValues["aggregation"] = "identity",
+  aggregation: FormValues["aggregation"] = "count_rows",
 ): Partial<FormValues> | undefined {
   if (aggregation === "count_rows" || aggregation === "count" || aggregation === "count_distinct") {
     return {
@@ -824,12 +800,10 @@ function initialFormValues(metricType: ObjectMetricTypeV1): Partial<FormValues> 
   return {
     aggregation: "count_rows",
     analysisDimensions: [],
-    calculationScope: "object_set",
     code: "",
     description: "",
     grainPolicy: "same_grain",
     groupByDimensions: [],
-    logicPropertyEnabled: false,
     name: "",
     noDataPolicy: "zero",
     nullPolicy: "propagate",
@@ -1232,17 +1206,12 @@ function formValuesFromDefinition(definition: ObjectMetricDefinitionV1): Partial
     analysisDimensions: definition.query_capabilities.analysis_dimensions.map(
       (item) => item.property_name,
     ),
-    calculationScope: definition.calculation_scope,
     code: definition.code,
     description: definition.description,
     groupByDimensions: grain.group_by_dimensions.map((item) => item.property_name),
     grainWeekStart: grain.week_start,
     maximum: value.maximum,
     minimum: value.minimum,
-    logicPropertyComment: definition.logic_property?.comment,
-    logicPropertyDisplayName: definition.logic_property?.display_name,
-    logicPropertyEnabled: Boolean(definition.logic_property),
-    logicPropertyName: definition.logic_property?.property_name,
     name: definition.name,
     noDataPolicy: definition.result_semantics.no_data_policy,
     physicalType: value.physical_type,
@@ -1525,12 +1494,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     setAiUndo(undefined);
     setAiDiagnostic(undefined);
   }, [aiScopeKey]);
-  const calculationScope = Form.useWatch("calculationScope", form);
   const aggregation = Form.useWatch("aggregation", form);
   const baseMetricKey = Form.useWatch("baseMetric", form);
   const timeGranularity = Form.useWatch("timeGranularity", form);
   const groupByDimensions = Form.useWatch("groupByDimensions", form);
-  const logicPropertyEnabled = Form.useWatch("logicPropertyEnabled", form);
   const grainPolicy = Form.useWatch("grainPolicy", form);
   const relationCountComparison = Form.useWatch("relationCountComparison", form);
   const relationCountThreshold = Form.useWatch("relationCountThreshold", form);
@@ -1550,31 +1517,19 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const unitCode = Form.useWatch("unitCode", form);
   const unitScaleFactor = Form.useWatch("unitScaleFactor", form);
   const unitSystem = Form.useWatch("unitSystem", form);
-  const hasCrossObjectDependency = dependencies.some(
-    (dependency) => dependency.object_alignment.mode !== "same_object",
-  );
-  const clearUnsupportedCompositeTimeSeries = () => {
-    form.setFieldsValue({
-      alignmentTimeKey: undefined,
-      grainWeekStart: undefined,
-      timeGranularity: undefined,
-    });
-  };
   const outputShape =
     validation?.output_shape ??
-    (calculationScope === "object_instance"
-      ? "object_value"
-      : timeGranularity
-        ? "time_series"
-        : (groupByDimensions?.length ?? 0) > 0
-          ? "grouped"
-          : "summary");
+    (timeGranularity
+      ? "time_series"
+      : (groupByDimensions?.length ?? 0) > 0
+        ? "grouped"
+        : "summary");
   // Older services may return `issues: null` for a successful validation. Treat it
   // as the empty collection so a server-side contract variation cannot crash the
   // authoring screen while a compatibility deployment is rolling out.
   const validationIssues = validation?.issues ?? [];
   const presentedValidationIssues = validationIssues.map((issue) =>
-    presentObjectMetricValidationIssue(issue, { aggregation, calculationScope }),
+    presentObjectMetricValidationIssue(issue, { aggregation }),
   );
   const compatibleUnitOptions = objectMetricUnitOptions(
     semanticType,
@@ -1591,8 +1546,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     objectMetricUnitSelectionLocked(semanticType) &&
     compatibleUnitOptions.length === 1 &&
     compatibleUnitOptions[0]?.code === unitCode;
-  const requiresAtomicMeasureProperty =
-    metricType === "atomic" && !(calculationScope === "object_set" && aggregation === "count_rows");
+  const requiresAtomicMeasureProperty = metricType === "atomic" && aggregation !== "count_rows";
   const hasAtomicMeasureProperty = expressionReferencesProperty(measureExpression);
   const applyValueSuggestion = (
     suggestion: Partial<FormValues> | undefined,
@@ -1694,7 +1648,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       name: intent.name?.trim() || undefined,
       code: record ? undefined : intent.code?.trim() || undefined,
       description: intent.description?.trim() || undefined,
-      calculationScope: metricType === "derived" ? undefined : intent.calculation_scope,
     };
 
     if (metricType === "atomic" && intent.atomic) {
@@ -1761,9 +1714,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               ? item.definition.id === requested.metric_id
               : item.definition.name === requested.metric_name) &&
             (!requested.version || item.definition.version === requested.version) &&
-            item.definition.owner_object_type_id === ownerObjectTypeId &&
-            item.definition.calculation_scope ===
-              (intent.calculation_scope ?? getFieldValue("calculationScope")),
+            item.definition.owner_object_type_id === ownerObjectTypeId,
         );
         if (!selected || !/^[a-z][a-z0-9_]*$/i.test(requested.alias)) return [];
         return [
@@ -1824,16 +1775,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       commonValues.timeDimensions = validPropertyList(intent.query.time_dimensions);
       commonValues.timeGranularity = intent.query.time_granularity;
     }
-    if (
-      intent.logic_property &&
-      (intent.calculation_scope ?? getFieldValue("calculationScope")) === "object_instance"
-    ) {
-      commonValues.logicPropertyEnabled = intent.logic_property.enabled;
-      commonValues.logicPropertyName = intent.logic_property.property_name;
-      commonValues.logicPropertyDisplayName = intent.logic_property.display_name;
-      commonValues.logicPropertyComment = intent.logic_property.comment;
-    }
-
     form.setFieldsValue(
       Object.fromEntries(Object.entries(commonValues).filter(([, value]) => value !== undefined)),
     );
@@ -1947,9 +1888,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           (item) =>
             item.definition.id === requested.metric_id &&
             item.definition.version === requested.version &&
-            item.definition.owner_object_type_id === ownerObjectTypeId &&
-            item.definition.calculation_scope ===
-              (selectedIntent.calculation_scope ?? getFieldValue("calculationScope")),
+            item.definition.owner_object_type_id === ownerObjectTypeId,
         );
         const invalid =
           !selected || !/^[a-z][a-z0-9_]*$/i.test(requested.alias) || aliases.has(requested.alias);
@@ -2122,7 +2061,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               id: item.definition.id,
               name: item.definition.name,
               object_type_id: item.definition.owner_object_type_id,
-              scope: item.definition.calculation_scope,
               type: item.definition.metric_type,
               version: item.definition.version,
             })),
@@ -2253,14 +2191,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       ? selectedBaseDefinition.specification.measure.aggregation
       : undefined;
   const selectedBaseValue = selectedBaseDefinition?.result_semantics.value;
-  const effectiveCalculationScope =
-    metricType === "derived"
-      ? (selectedBaseDefinition?.calculation_scope ?? calculationScope)
-      : calculationScope;
-  const canConfigureFixedResultGrain =
-    metricType === "composite"
-      ? calculationScope !== "object_instance"
-      : metricType === "derived" && selectedBaseDefinition?.calculation_scope === "object_set";
+  const canConfigureFixedResultGrain = metricType !== "atomic";
   const relationPathLabel = relationSteps
     .map(
       (step) =>
@@ -2400,11 +2331,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const publishedOptions = publishedMetrics
     .filter(
       ({ definition: item }) =>
-        item.lifecycle.status === "published" &&
-        (!calculationScope ||
-          (item.owner_object_type_id === ownerObjectTypeId
-            ? item.calculation_scope === calculationScope
-            : item.calculation_scope === "object_instance")),
+        item.lifecycle.status === "published" && item.owner_object_type_id === ownerObjectTypeId,
     )
     .map((record) => ({
       label: dependencyMetricOptionLabel(record),
@@ -2448,15 +2375,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     const selected = selectedDependencyMetric(dependency);
     if (!selected) return [];
     const metricName = selected.definition.name;
-    const objectName =
-      objectTypes.find((item) => item.id === selected.definition.owner_object_type_id)?.name ??
-      objectMetricText("m1b6beda9eeba");
-    const objectAlignment =
-      dependency.object_alignment.mode === "same_object"
-        ? objectMetricText("mc403e419e200", { p0: metricName })
-        : dependency.object_alignment.mode === "related_object_set"
-          ? objectMetricText("mab25bebbaef4", { p0: metricName, p1: objectName })
-          : objectMetricText("m86aee4662324", { p0: metricName, p1: objectName });
+    const objectAlignment = objectMetricText("mc403e419e200", { p0: metricName });
     const windowAlignment =
       dependency.evaluation_context.window === "inherited"
         ? objectMetricText("m3872d2043ce5")
@@ -2465,25 +2384,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           : objectMetricText("m358d86334bfb");
     return [`${objectAlignment}；${windowAlignment}`];
   });
-  const dependencyAlignmentOptions = (
-    dependency: ObjectMetricDependencyV1,
-  ): Array<{ label: string; value: ObjectMetricObjectAlignmentV1["mode"] }> => {
-    const selected = publishedMetrics.find(
-      (item) =>
-        item.definition.id === dependency.metric_ref.metric_id &&
-        item.definition.version === dependency.metric_ref.version,
-    );
-    if (selected?.definition.owner_object_type_id === ownerObjectTypeId) {
-      return [{ label: objectMetricText("m5949366ca6b4"), value: "same_object" as const }];
-    }
-    return calculationScope === "object_set"
-      ? [
-          { label: objectMetricText("m48173d9369fe"), value: "related_object_set" as const },
-          { label: objectMetricText("m73cf37095088"), value: "related_object" as const },
-        ]
-      : [{ label: objectMetricText("m73cf37095088"), value: "related_object" as const }];
-  };
-
   useEffect(() => {
     if (!networkId) return;
     let active = true;
@@ -2750,7 +2650,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     }
     const value = selectedBaseDefinition.result_semantics.value;
     form.setFieldsValue({
-      calculationScope: selectedBaseDefinition.calculation_scope,
       maximum: value.maximum,
       minimum: value.minimum,
       physicalType: value.physical_type,
@@ -2779,27 +2678,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       form.setFieldValue("relationQuantifier", "exists");
     }
   }, [form, relationQuantifier, relationSteps.length]);
-
-  useEffect(() => {
-    if (metricType !== "derived" || calculationScope !== "object_instance") return;
-    if (!timeGranularity && !(groupByDimensions?.length ?? 0)) return;
-    form.setFieldsValue({
-      eventTime: timeWindowMode && timeWindowMode !== "unbounded" ? eventTime : undefined,
-      grainWeekStart: undefined,
-      groupByDimensions: [],
-      timeGranularity: undefined,
-    });
-    setValidation(undefined);
-    setPreview(undefined);
-  }, [
-    calculationScope,
-    eventTime,
-    form,
-    groupByDimensions,
-    metricType,
-    timeGranularity,
-    timeWindowMode,
-  ]);
 
   useEffect(() => {
     const relatedObjectTypeId = relationSteps.at(-1)?.target_object_type_id;
@@ -2833,15 +2711,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     const next = structuredClone(
       record?.definition ?? createObjectMetricDefinitionV1(metricType, ownerObjectTypeId),
     );
-    const inheritedDerivedScope =
-      metricType === "derived" ? selectedBaseDefinition?.calculation_scope : undefined;
-    const nextCalculationScope = inheritedDerivedScope ?? values.calculationScope;
-    const supportsFixedResultGrain =
-      metricType !== "atomic" && nextCalculationScope !== "object_instance";
+    const supportsFixedResultGrain = metricType !== "atomic";
     next.name = values.name.trim();
     next.code = values.code?.trim() ?? "";
     next.description = values.description.trim();
-    next.calculation_scope = nextCalculationScope;
     next.result_semantics = {
       no_data_policy: values.noDataPolicy,
       // 第一版不向业务用户开放不完整结果。任何数据源或分区执行失败时，
@@ -2908,22 +2781,13 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       values.analysisDimensions,
       values.timeDimensions,
     );
-    next.logic_property =
-      nextCalculationScope === "object_instance" && values.logicPropertyEnabled
-        ? {
-            comment: values.logicPropertyComment?.trim() || undefined,
-            display_name: values.logicPropertyDisplayName?.trim() ?? "",
-            property_name: values.logicPropertyName?.trim() ?? "",
-          }
-        : undefined;
     if (metricType === "atomic") {
       next.specification = {
         kind: "atomic",
         measure: {
-          aggregation:
-            values.calculationScope === "object_instance" ? "identity" : values.aggregation,
+          aggregation: values.aggregation,
           expression:
-            values.aggregation === "count_rows" && values.calculationScope === "object_set"
+            values.aggregation === "count_rows"
               ? undefined
               : expressionWithDeclaredPropertyTypes(measureExpression, properties),
         },
@@ -3287,7 +3151,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const ownerObjectName = ownerObjectType?.name ?? ownerObjectTypeId;
   const outputNames = {
     grouped: objectMetricText("m63a570e277c4"),
-    object_value: objectMetricText("m63b7464d2a3f"),
     summary: objectMetricText("m887c0bab2e93"),
     time_series: objectMetricText("m523d11919689"),
   };
@@ -3386,9 +3249,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   maxLength={128}
                   placeholder={
                     metricType === "atomic"
-                      ? calculationScope === "object_instance"
-                        ? objectMetricText("m999909534bc6")
-                        : objectMetricText("m10563427d63a")
+                      ? objectMetricText("m10563427d63a")
                       : objectMetricText("m826f8d73782b")
                   }
                 />
@@ -3413,9 +3274,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   disabled={Boolean(record)}
                   placeholder={
                     metricType === "atomic"
-                      ? calculationScope === "object_instance"
-                        ? objectMetricText("m46cb4578ccda")
-                        : objectMetricText("m9b146d55919f")
+                      ? objectMetricText("m9b146d55919f")
                       : objectMetricText("m4587b84e64ae")
                   }
                   spellCheck={false}
@@ -3471,9 +3330,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     showSearch
                   />
                 </Form.Item>
-                <Form.Item hidden name="calculationScope">
-                  <Input />
-                </Form.Item>
                 {!compatibleAtomicMetrics.length ? (
                   <Alert
                     description={objectMetricText("maaf65e7dd687")}
@@ -3498,12 +3354,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     </div>
                     <div className={styles.inheritedContractGrid}>
                       <div>
-                        <span>{objectMetricText("m9d1c9c0a1780")}</span>
-                        <strong>
-                          {calculationScopeLabels[selectedBaseDefinition.calculation_scope]}
-                        </strong>
-                      </div>
-                      <div>
                         <span>{objectMetricText("mf4b24b147909")}</span>
                         <strong>
                           {selectedBaseAggregation
@@ -3526,173 +3376,15 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         </strong>
                       </div>
                     </div>
-                    <p>
-                      {selectedBaseDefinition.calculation_scope === "object_instance"
-                        ? objectMetricText("mb11260bc678c")
-                        : objectMetricText("m50cbde258a05")}
-                    </p>
+                    <p>{objectMetricText("m50cbde258a05")}</p>
                   </div>
                 ) : null}
               </>
             ) : (
-              <>
-                <Form.Item
-                  className={styles.scopeField}
-                  label={objectMetricText("ma923e53ba2d5")}
-                  name="calculationScope"
-                  tooltip={
-                    metricType === "atomic"
-                      ? objectMetricText("m9fd8d792ab65")
-                      : objectMetricText("mb8d096f57bc7")
-                  }
-                >
-                  <Radio.Group
-                    className={styles.scopeGroup}
-                    onChange={(event) => {
-                      if (metricType === "composite") {
-                        setDependencies((current) => {
-                          const next: ObjectMetricDependencyV1[] = current.flatMap((dependency) => {
-                            const selected = publishedMetrics.find(
-                              (item) =>
-                                item.definition.id === dependency.metric_ref.metric_id &&
-                                item.definition.version === dependency.metric_ref.version,
-                            );
-                            if (!selected) return [];
-                            const sameObject =
-                              selected.definition.owner_object_type_id === ownerObjectTypeId;
-                            if (
-                              (sameObject &&
-                                selected.definition.calculation_scope !== event.target.value) ||
-                              (!sameObject &&
-                                selected.definition.calculation_scope !== "object_instance")
-                            ) {
-                              return [];
-                            }
-                            const mode: ObjectMetricObjectAlignmentV1["mode"] = sameObject
-                              ? "same_object"
-                              : event.target.value === "object_set"
-                                ? "related_object_set"
-                                : "related_object";
-                            return [
-                              {
-                                ...dependency,
-                                object_alignment: {
-                                  ...dependency.object_alignment,
-                                  deduplication: sameObject ? "none" : "by_object_identity",
-                                  mode,
-                                  relation_path: sameObject
-                                    ? undefined
-                                    : dependency.object_alignment.relation_path,
-                                  relationship_cardinality: sameObject
-                                    ? undefined
-                                    : mode === "related_object_set"
-                                      ? "one_to_many"
-                                      : "many_to_one",
-                                },
-                                rollup_aggregation:
-                                  mode === "related_object_set" || grainPolicy === "rollup"
-                                    ? (dependency.rollup_aggregation ?? "sum")
-                                    : undefined,
-                              },
-                            ];
-                          });
-                          if (next.length !== current.length) {
-                            setCompositeExpression(defaultCompositeExpression(next));
-                            form.setFieldValue("primaryDependencyAlias", undefined);
-                            void message.info(
-                              objectMetricText("m20c6463a2da7", {
-                                p0: current.length - next.length,
-                              }),
-                            );
-                          }
-                          return next;
-                        });
-                      }
-                      if (event.target.value === "object_instance") {
-                        form.setFieldsValue({
-                          alignmentTimeKey: undefined,
-                          grainPolicy: "same_grain",
-                          groupByDimensions: [],
-                          noDataPolicy: "null",
-                          timeAlignment: "same_time_window",
-                          timeGranularity: undefined,
-                        });
-                      }
-                      if (metricType === "atomic" && event.target.value === "object_instance") {
-                        form.setFieldsValue({
-                          aggregation: "identity",
-                          physicalType: undefined,
-                          precision: undefined,
-                          quantityKind: undefined,
-                          roundingMode: undefined,
-                          scale: undefined,
-                          semanticType: undefined,
-                          unitCode: undefined,
-                          unitScaleFactor: undefined,
-                          unitSystem: undefined,
-                        });
-                        if (measureExpression.node_type === "literal") {
-                          setMeasureExpression({
-                            node_type: "property",
-                            property_ref: propertyRef(ownerObjectTypeId, ""),
-                          });
-                        }
-                      } else if (
-                        metricType === "atomic" &&
-                        form.getFieldValue("aggregation") === "identity"
-                      ) {
-                        form.setFieldValue("aggregation", "count_rows");
-                        form.setFieldsValue({
-                          physicalType: "int64",
-                          quantityKind: "count",
-                          semanticType: "count",
-                          unitCode: "1",
-                          unitSystem: "UCUM",
-                        });
-                      }
-                    }}
-                  >
-                    <Radio className={styles.scopeOption} value="object_instance">
-                      <span className={styles.scopeOptionContent}>
-                        <strong className={styles.scopeOptionTitle}>
-                          {objectMetricText("mabe9d02781fc")}
-                        </strong>
-                        <span className={styles.scopeOptionDescription}>
-                          {objectMetricText("mb96813e37eb9")}
-                        </span>
-                        <span className={styles.scopeOptionExample}>
-                          {objectMetricText("m32d1a0eb2656")}
-                        </span>
-                      </span>
-                    </Radio>
-                    <Radio className={styles.scopeOption} value="object_set">
-                      <span className={styles.scopeOptionContent}>
-                        <strong className={styles.scopeOptionTitle}>
-                          {objectMetricText("m9c51e86f9307")}
-                        </strong>
-                        <span className={styles.scopeOptionDescription}>
-                          {metricType === "atomic"
-                            ? objectMetricText("mce629b202a48")
-                            : objectMetricText("ma093d92f2da5")}
-                        </span>
-                        <span className={styles.scopeOptionExample}>
-                          {metricType === "atomic"
-                            ? objectMetricText("me26cdf99b8a7")
-                            : objectMetricText("m0dc2d63d582b")}
-                        </span>
-                      </span>
-                    </Radio>
-                  </Radio.Group>
-                </Form.Item>
-                <div className={styles.outputSummary}>
-                  <span>
-                    {metricType === "atomic"
-                      ? objectMetricText("md16809473a31")
-                      : objectMetricText("mac3b1f1a1611")}
-                  </span>
-                  <strong>{outputNames[outputShape]}</strong>
-                </div>
-              </>
+              <div className={styles.outputSummary}>
+                <span>{objectMetricText("m9c51e86f9307")}</span>
+                <strong>{outputNames[outputShape]}</strong>
+              </div>
             )}
           </Section>
 
@@ -3704,9 +3396,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             }
             tooltip={
               metricType === "atomic"
-                ? calculationScope === "object_instance"
-                  ? objectMetricText("mf56efcaee393")
-                  : objectMetricText("md4a65d30b01e")
+                ? objectMetricText("md4a65d30b01e")
                 : metricType === "derived"
                   ? objectMetricText("md6af45998ee5")
                   : objectMetricText("m1c88a196f1e5")
@@ -3714,60 +3404,46 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           >
             {metricType === "atomic" ? (
               <div className={styles.grid2}>
-                {calculationScope !== "object_instance" ? (
-                  <Form.Item
-                    extra={aggregation ? atomicAggregationGuidance[aggregation] : undefined}
-                    label={objectMetricText("mb17e03bc6bad")}
-                    name="aggregation"
-                    rules={[{ required: true, message: objectMetricText("mc2dcda28ea66") }]}
-                    tooltip={objectMetricText("mfe11249e4b11")}
-                  >
-                    <Select
-                      onChange={(aggregation: FormValues["aggregation"]) => {
-                        const isCount =
-                          aggregation === "count_rows" ||
-                          aggregation === "count" ||
-                          aggregation === "count_distinct";
-                        applyValueSuggestion(
-                          instanceValueSuggestion(measureExpression, properties, aggregation),
-                          isCount,
-                        );
-                      }}
-                      options={[
-                        { label: objectMetricText("mc88821bc9355"), value: "count_rows" },
-                        { label: objectMetricText("m42f96dcbed92"), value: "count" },
-                        { label: objectMetricText("m92f727932d82"), value: "count_distinct" },
-                        { label: objectMetricText("m4d3f0a6e432f"), value: "sum" },
-                        { label: objectMetricText("m7b3b2b341884"), value: "avg" },
-                        { label: objectMetricText("m7a2c98005c37"), value: "min" },
-                        { label: objectMetricText("md856266eea4c"), value: "max" },
-                      ].filter(
-                        (item) =>
-                          !capabilities ||
-                          capabilities.aggregations.some((value) => value === item.value),
-                      )}
-                    />
-                  </Form.Item>
-                ) : null}
+                <Form.Item
+                  extra={aggregation ? atomicAggregationGuidance[aggregation] : undefined}
+                  label={objectMetricText("mb17e03bc6bad")}
+                  name="aggregation"
+                  rules={[{ required: true, message: objectMetricText("mc2dcda28ea66") }]}
+                  tooltip={objectMetricText("mfe11249e4b11")}
+                >
+                  <Select
+                    onChange={(aggregation: FormValues["aggregation"]) => {
+                      const isCount =
+                        aggregation === "count_rows" ||
+                        aggregation === "count" ||
+                        aggregation === "count_distinct";
+                      applyValueSuggestion(
+                        instanceValueSuggestion(measureExpression, properties, aggregation),
+                        isCount,
+                      );
+                    }}
+                    options={[
+                      { label: objectMetricText("mc88821bc9355"), value: "count_rows" },
+                      { label: objectMetricText("m42f96dcbed92"), value: "count" },
+                      { label: objectMetricText("m92f727932d82"), value: "count_distinct" },
+                      { label: objectMetricText("m4d3f0a6e432f"), value: "sum" },
+                      { label: objectMetricText("m7b3b2b341884"), value: "avg" },
+                      { label: objectMetricText("m7a2c98005c37"), value: "min" },
+                      { label: objectMetricText("md856266eea4c"), value: "max" },
+                    ].filter(
+                      (item) =>
+                        !capabilities ||
+                        capabilities.aggregations.some((value) => value === item.value),
+                    )}
+                  />
+                </Form.Item>
                 {aggregation !== "count_rows" ? (
                   <div className={styles.full}>
                     <div className={styles.sectionTitle}>
-                      <h3>
-                        {calculationScope === "object_instance"
-                          ? objectMetricText("mae25d81d750f")
-                          : objectMetricText("m9935c5534c0d")}
-                      </h3>
+                      <h3>{objectMetricText("m9935c5534c0d")}</h3>
                       <HelpTooltip
-                        label={
-                          calculationScope === "object_instance"
-                            ? objectMetricText("mae25d81d750f")
-                            : objectMetricText("m9935c5534c0d")
-                        }
-                        title={
-                          calculationScope === "object_instance"
-                            ? objectMetricText("me490400910d6")
-                            : objectMetricText("med64b62cd336")
-                        }
+                        label={objectMetricText("m9935c5534c0d")}
+                        title={objectMetricText("med64b62cd336")}
                       />
                     </div>
                     <div className={styles.editorBox}>
@@ -3804,11 +3480,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   {!hasDerivedQualifier ? (
                     <Alert
                       className={styles.qualifierStatus}
-                      description={
-                        selectedBaseDefinition?.calculation_scope === "object_instance"
-                          ? objectMetricText("m8fb551ae43b9")
-                          : objectMetricText("m759cd4799d14")
-                      }
+                      description={objectMetricText("m759cd4799d14")}
                       message={objectMetricText("m35375e17cc4f")}
                       showIcon
                       type="warning"
@@ -4155,9 +3827,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     </p>
                     <p className={styles.technicalPreview}>
                       {objectMetricText("m55dc21e73831")}
-                      {selectedBaseDefinition
-                        ? calculationScopeLabels[selectedBaseDefinition.calculation_scope]
-                        : "—"}
+                      {objectMetricText("m9c51e86f9307")}
                       {objectMetricText("me13e2a0e8378")}
                       {selectedBaseAggregation
                         ? aggregationLabels[selectedBaseAggregation]
@@ -4250,19 +3920,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             aria-label={objectMetricText("m40f7639b7cc9", { p0: index + 1 })}
                             onChange={(key) => {
                               const metricRef = parseDependencyKey(key);
-                              const selectedMetric = publishedMetrics.find(
-                                (item) =>
-                                  item.definition.id === metricRef.metric_id &&
-                                  item.definition.version === metricRef.version,
-                              );
-                              const sameObject =
-                                selectedMetric?.definition.owner_object_type_id ===
-                                ownerObjectTypeId;
-                              const relatedMode =
-                                calculationScope === "object_set"
-                                  ? "related_object_set"
-                                  : "related_object";
-                              if (!sameObject) clearUnsupportedCompositeTimeSeries();
                               setDependencies((current) =>
                                 current.map((item, itemIndex) =>
                                   itemIndex === index
@@ -4274,20 +3931,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                         },
                                         metric_ref: metricRef,
                                         object_alignment: {
-                                          deduplication: sameObject ? "none" : "by_object_identity",
-                                          mode: sameObject ? "same_object" : relatedMode,
-                                          relation_path: undefined,
-                                          relationship_cardinality: sameObject
-                                            ? undefined
-                                            : relatedMode === "related_object_set"
-                                              ? "one_to_many"
-                                              : "many_to_one",
+                                          deduplication: "none",
+                                          mode: "same_object",
                                         },
                                         rollup_aggregation:
-                                          (!sameObject && relatedMode === "related_object_set") ||
-                                          grainPolicy === "rollup"
-                                            ? "sum"
-                                            : undefined,
+                                          grainPolicy === "rollup" ? "sum" : undefined,
                                       }
                                     : item,
                                 ),
@@ -4361,16 +4009,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                             </strong>
                           </div>
                           <div>
-                            <span>{objectMetricText("m9d1c9c0a1780")}</span>
-                            <strong>
-                              {
-                                calculationScopeLabels[
-                                  selectedDependencyMetric(dependency)!.definition.calculation_scope
-                                ]
-                              }
-                            </strong>
-                          </div>
-                          <div>
                             <span>{objectMetricText("m6551b12a8b84")}</span>
                             <strong>
                               {semanticTypeOptions.find(
@@ -4394,212 +4032,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         <div className={styles.dependencyAlignmentSection}>
                           <div className={styles.dependencySubheading}>
                             <strong>{objectMetricText("m0fe7b9870d3e")}</strong>
-                            <span>
-                              {dependency.object_alignment.mode === "same_object"
-                                ? objectMetricText("mb867bbb4c8db")
-                                : objectMetricText("mb8778ccfb2a5")}
-                            </span>
+                            <span>{objectMetricText("mb867bbb4c8db")}</span>
                           </div>
-                          {dependency.object_alignment.mode === "same_object" ? (
-                            <Alert
-                              description={objectMetricText("md4f7dea4bd2d")}
-                              message={objectMetricText("m5b51529d42f5")}
-                              showIcon
-                              type="success"
-                            />
-                          ) : (
-                            <div className={styles.dependencyAlignmentChoice}>
-                              <label>
-                                <span>{objectMetricText("mc815120c6337")}</span>
-                                <Select
-                                  aria-label={objectMetricText("mdc57eff09546", {
-                                    p0: index + 1,
-                                  })}
-                                  onChange={(mode: ObjectMetricObjectAlignmentV1["mode"]) => {
-                                    if (mode !== "same_object")
-                                      clearUnsupportedCompositeTimeSeries();
-                                    setDependencies((current) =>
-                                      current.map((item, itemIndex) =>
-                                        itemIndex === index
-                                          ? {
-                                              ...item,
-                                              object_alignment: {
-                                                ...item.object_alignment,
-                                                deduplication:
-                                                  mode === "same_object"
-                                                    ? "none"
-                                                    : "by_object_identity",
-                                                mode,
-                                                relation_path:
-                                                  mode === "same_object"
-                                                    ? undefined
-                                                    : item.object_alignment.relation_path,
-                                                relationship_cardinality:
-                                                  mode === "same_object"
-                                                    ? undefined
-                                                    : mode === "related_object_set"
-                                                      ? "one_to_many"
-                                                      : "many_to_one",
-                                              },
-                                              rollup_aggregation:
-                                                mode === "related_object_set" ||
-                                                grainPolicy === "rollup"
-                                                  ? (item.rollup_aggregation ?? "sum")
-                                                  : undefined,
-                                            }
-                                          : item,
-                                      ),
-                                    );
-                                  }}
-                                  options={dependencyAlignmentOptions(dependency)}
-                                  value={dependency.object_alignment.mode}
-                                />
-                              </label>
-                              <Button
-                                disabled={Boolean(
-                                  dependency.object_alignment.relation_path?.length &&
-                                  !dependency.object_alignment.relation_path.at(-1)
-                                    ?.target_object_type_id,
-                                )}
-                                onClick={() =>
-                                  setDependencies((current) =>
-                                    current.map((item, itemIndex) =>
-                                      itemIndex === index
-                                        ? {
-                                            ...item,
-                                            object_alignment: {
-                                              ...item.object_alignment,
-                                              relation_path: [
-                                                ...(item.object_alignment.relation_path ?? []),
-                                                {
-                                                  direction: "outgoing",
-                                                  relation_type_id: "",
-                                                  target_object_type_id: "",
-                                                },
-                                              ],
-                                            },
-                                          }
-                                        : item,
-                                    ),
-                                  )
-                                }
-                              >
-                                {dependency.object_alignment.relation_path?.length
-                                  ? objectMetricText("m471205a52beb", {
-                                      p0: dependency.object_alignment.relation_path.length,
-                                    })
-                                  : objectMetricText("m342e100bad1e")}
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ) : null}
-                      {dependency.object_alignment.mode !== "same_object" ? (
-                        <div className={styles.dependencyPath}>
-                          {(dependency.object_alignment.relation_path ?? []).map(
-                            (step, stepIndex) => {
-                              const sourceObjectTypeId =
-                                stepIndex === 0
-                                  ? ownerObjectTypeId
-                                  : dependency.object_alignment.relation_path?.[stepIndex - 1]
-                                      ?.target_object_type_id;
-                              const available = relationTypes.filter(
-                                (item) =>
-                                  item.sourceObjectTypeId === sourceObjectTypeId ||
-                                  item.targetObjectTypeId === sourceObjectTypeId,
-                              );
-                              return (
-                                <Space key={`${stepIndex}-${step.relation_type_id}`} wrap>
-                                  <Tag>{stepIndex + 1}</Tag>
-                                  <Select
-                                    onChange={(relationTypeId) => {
-                                      const relation = relationTypes.find(
-                                        (item) => item.id === relationTypeId,
-                                      );
-                                      if (!relation || !sourceObjectTypeId) return;
-                                      const outgoing =
-                                        relation.sourceObjectTypeId === sourceObjectTypeId;
-                                      const nextStep: ObjectMetricRelationStepV1 = {
-                                        direction: outgoing ? "outgoing" : "incoming",
-                                        relation_type_id: relation.id,
-                                        target_object_type_id: outgoing
-                                          ? relation.targetObjectTypeId
-                                          : relation.sourceObjectTypeId,
-                                      };
-                                      setDependencies((current) =>
-                                        current.map((item, itemIndex) =>
-                                          itemIndex === index
-                                            ? {
-                                                ...item,
-                                                object_alignment: {
-                                                  ...item.object_alignment,
-                                                  relation_path: [
-                                                    ...(item.object_alignment.relation_path ?? [])
-                                                      .slice(0, stepIndex)
-                                                      .map((existing) => existing),
-                                                    nextStep,
-                                                  ],
-                                                },
-                                              }
-                                            : item,
-                                        ),
-                                      );
-                                    }}
-                                    options={available.map((item) => ({
-                                      label: item.name,
-                                      value: item.id,
-                                    }))}
-                                    placeholder={objectMetricText("m54a43c83f3d5")}
-                                    value={step.relation_type_id || undefined}
-                                    style={{ minWidth: 260 }}
-                                  />
-                                  <span>
-                                    →{" "}
-                                    {objectTypes.find(
-                                      (item) => item.id === step.target_object_type_id,
-                                    )?.name ?? step.target_object_type_id}
-                                  </span>
-                                  <Button
-                                    aria-label={objectMetricText("m1fb65fe93c19", {
-                                      p0: dependency.alias || index + 1,
-                                      p1: stepIndex + 1,
-                                    })}
-                                    danger
-                                    icon={<DeleteOutlined />}
-                                    onClick={() =>
-                                      setDependencies((current) =>
-                                        current.map((item, itemIndex) =>
-                                          itemIndex === index
-                                            ? {
-                                                ...item,
-                                                object_alignment: {
-                                                  ...item.object_alignment,
-                                                  relation_path:
-                                                    item.object_alignment.relation_path?.slice(
-                                                      0,
-                                                      stepIndex,
-                                                    ),
-                                                },
-                                              }
-                                            : item,
-                                        ),
-                                      )
-                                    }
-                                    type="text"
-                                  />
-                                </Space>
-                              );
-                            },
-                          )}
-                          <span className={styles.sectionHint}>
-                            {objectMetricText("mffa9c68eaa1d")}
-                            {objectTypes.find(
-                              (item) =>
-                                item.id ===
-                                selectedDependencyMetric(dependency)?.definition
-                                  .owner_object_type_id,
-                            )?.name ?? objectMetricText("ma18f086e3882")}
-                          </span>
+                          <Alert
+                            description={objectMetricText("md4f7dea4bd2d")}
+                            message={objectMetricText("m5b51529d42f5")}
+                            showIcon
+                            type="success"
+                          />
                         </div>
                       ) : null}
                       {selectedDependencyMetric(dependency) ? (
@@ -4660,89 +4100,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           <summary>{objectMetricText("mee9a5fef6416")}</summary>
                           <p>{objectMetricText("m2b04df4b8e31")}</p>
                           <div className={styles.dependencyContext}>
-                            {dependency.object_alignment.mode !== "same_object" ? (
-                              <>
-                                <span className={styles.sectionHint}>
-                                  {objectMetricText("m2b8a7ee8d986")}
-                                </span>
-                                <Select
-                                  onChange={(relationship_cardinality) =>
-                                    setDependencies((current) =>
-                                      current.map((item, itemIndex) =>
-                                        itemIndex === index
-                                          ? {
-                                              ...item,
-                                              object_alignment: {
-                                                ...item.object_alignment,
-                                                relationship_cardinality,
-                                              },
-                                            }
-                                          : item,
-                                      ),
-                                    )
-                                  }
-                                  options={
-                                    dependency.object_alignment.mode === "related_object"
-                                      ? [
-                                          {
-                                            label: objectMetricText("m0cc998eed7dd"),
-                                            value: "one_to_one",
-                                          },
-                                          {
-                                            label: objectMetricText("m90e4a2a6f194"),
-                                            value: "many_to_one",
-                                          },
-                                        ]
-                                      : [
-                                          {
-                                            label: objectMetricText("me019a8f8bfc7"),
-                                            value: "one_to_many",
-                                          },
-                                          {
-                                            label: objectMetricText("mb50a3fb1df3a"),
-                                            value: "many_to_many",
-                                          },
-                                        ]
-                                  }
-                                  value={dependency.object_alignment.relationship_cardinality}
-                                  style={{ width: 130 }}
-                                />
-                                <span className={styles.sectionHint}>
-                                  {objectMetricText("m0488af93b4dc")}
-                                </span>
-                                <Select
-                                  disabled={
-                                    dependency.object_alignment.mode === "related_object_set"
-                                  }
-                                  onChange={(deduplication) =>
-                                    setDependencies((current) =>
-                                      current.map((item, itemIndex) =>
-                                        itemIndex === index
-                                          ? {
-                                              ...item,
-                                              object_alignment: {
-                                                ...item.object_alignment,
-                                                deduplication,
-                                              },
-                                            }
-                                          : item,
-                                      ),
-                                    )
-                                  }
-                                  options={[
-                                    { label: objectMetricText("m670ec25af841"), value: "none" },
-                                    {
-                                      label: objectMetricText("m3ed9651ecb2d"),
-                                      value: "by_object_identity",
-                                    },
-                                  ]}
-                                  value={dependency.object_alignment.deduplication}
-                                  style={{ width: 170 }}
-                                />
-                              </>
-                            ) : null}
-                            {dependency.object_alignment.mode === "related_object_set" ||
-                            grainPolicy === "rollup" ? (
+                            {grainPolicy === "rollup" ? (
                               <>
                                 <span className={styles.sectionHint}>
                                   {objectMetricText("m03a815e81997")}
@@ -5109,29 +4467,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                               current.map((item) => ({
                                 ...item,
                                 rollup_aggregation:
-                                  value === "rollup" ||
-                                  item.object_alignment.mode === "related_object_set"
+                                  value === "rollup"
                                     ? (item.rollup_aggregation ?? "sum")
                                     : undefined,
                               })),
                             )
                           }
-                          options={
-                            calculationScope === "object_instance"
-                              ? [
-                                  {
-                                    label: objectMetricText("me06fb8926b0e"),
-                                    value: "same_grain",
-                                  },
-                                ]
-                              : [
-                                  {
-                                    label: objectMetricText("me06fb8926b0e"),
-                                    value: "same_grain",
-                                  },
-                                  { label: objectMetricText("m4d0093db94fa"), value: "rollup" },
-                                ]
-                          }
+                          options={[
+                            { label: objectMetricText("me06fb8926b0e"), value: "same_grain" },
+                            { label: objectMetricText("m4d0093db94fa"), value: "rollup" },
+                          ]}
                         />
                       </Form.Item>
                       <Form.Item label={objectMetricText("mfb94d5196639")} name="resultSetPolicy">
@@ -5173,25 +4518,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                               );
                             }
                           }}
-                          options={
-                            calculationScope === "object_instance"
-                              ? [
-                                  {
-                                    label: objectMetricText("m7cef526c5adc"),
-                                    value: "same_time_window",
-                                  },
-                                ]
-                              : [
-                                  {
-                                    label: objectMetricText("m7cef526c5adc"),
-                                    value: "same_time_window",
-                                  },
-                                  {
-                                    label: objectMetricText("m36d3ef52bba6"),
-                                    value: "explicit_rollup",
-                                  },
-                                ]
-                          }
+                          options={[
+                            {
+                              label: objectMetricText("m7cef526c5adc"),
+                              value: "same_time_window",
+                            },
+                            {
+                              label: objectMetricText("m36d3ef52bba6"),
+                              value: "explicit_rollup",
+                            },
+                          ]}
                         />
                       </Form.Item>
                       <Form.Item label={objectMetricText("mea304362e984")} name="nullPolicy">
@@ -5229,9 +4565,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         {objectMetricText("m12404a0b6381")}
                         {ownerObjectType?.name ?? objectMetricText("m19fb5855ae0c")}
                         {objectMetricText("m8af2350cfd65")}
-                        {calculationScope === "object_instance"
-                          ? objectMetricText("mb358f0089f6c")
-                          : objectMetricText("m9c51e86f9307")}
+                        {objectMetricText("m9c51e86f9307")}
                         {objectMetricText("m0837b6d747fe")}
                         {compositeBusinessFormula}
                         {objectMetricText("m4fc7df62507c")}
@@ -5251,35 +4585,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </Section>
 
           <Section
-            title={
-              effectiveCalculationScope === "object_instance"
-                ? objectMetricText("mb5acb826a85a")
-                : objectMetricText("m090a0f265f9d")
-            }
+            title={objectMetricText("m090a0f265f9d")}
             tooltip={
               metricType === "atomic"
-                ? effectiveCalculationScope === "object_instance"
-                  ? objectMetricText("md513f57f39b6")
-                  : objectMetricText("m0bce011fd587")
-                : effectiveCalculationScope === "object_instance"
-                  ? objectMetricText("m2c827391ea37")
-                  : metricType === "derived"
-                    ? objectMetricText("md4d8ef322109")
-                    : objectMetricText("m0bd634a1921c")
+                ? objectMetricText("m0bce011fd587")
+                : metricType === "derived"
+                  ? objectMetricText("md4d8ef322109")
+                  : objectMetricText("m0bd634a1921c")
             }
           >
             <div className={styles.grid2}>
-              {calculationScope === "object_instance" &&
-              hasAtomicMeasureProperty &&
-              (!physicalType || !semanticType) ? (
-                <Alert
-                  className={styles.full}
-                  message={objectMetricText("m6b30bf1852ca")}
-                  description={objectMetricText("mf15dd5b505db")}
-                  showIcon
-                  type="info"
-                />
-              ) : null}
               {canConfigureFixedResultGrain ? (
                 <Form.Item
                   label={objectMetricText("m88459b43afb6")}
@@ -5304,18 +4619,12 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               ) : null}
               {canConfigureFixedResultGrain ? (
                 <Form.Item
-                  extra={
-                    metricType === "composite" && hasCrossObjectDependency
-                      ? objectMetricText("m1179dd9bf21e")
-                      : undefined
-                  }
                   label={objectMetricText("m7c27a3d92ed9")}
                   name="timeGranularity"
                   tooltip={objectMetricText("m74a6bbce62d4")}
                 >
                   <Select
                     allowClear
-                    disabled={metricType === "composite" && hasCrossObjectDependency}
                     onChange={(value: FormValues["timeGranularity"]) => {
                       if (!value) {
                         form.setFieldsValue({
@@ -5792,9 +5101,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       title={
                         metricType === "atomic"
                           ? objectMetricText("m7f85f2218de2")
-                          : effectiveCalculationScope === "object_instance"
-                            ? objectMetricText("me9e05592e555")
-                            : objectMetricText("m9b89526e6f75")
+                          : objectMetricText("m9b89526e6f75")
                       }
                     />
                   </div>
@@ -5802,9 +5109,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     label={
                       metricType === "atomic"
                         ? objectMetricText("m983fa38f4f75")
-                        : effectiveCalculationScope === "object_instance"
-                          ? objectMetricText("m55ae2bf36da7")
-                          : objectMetricText("m9a004b7a1da9")
+                        : objectMetricText("m9a004b7a1da9")
                     }
                     name="analysisDimensions"
                     tooltip={
@@ -5824,13 +5129,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     />
                   </Form.Item>
                   <Form.Item
-                    label={
-                      metricType === "atomic"
-                        ? objectMetricText("m40e232fef99f")
-                        : effectiveCalculationScope === "object_instance"
-                          ? objectMetricText("md63d3a9bd7e3")
-                          : objectMetricText("m40e232fef99f")
-                    }
+                    label={objectMetricText("m40e232fef99f")}
                     name="timeDimensions"
                     extra={objectMetricText("analysisSingleTimeDimensionHint")}
                     tooltip={
@@ -5851,77 +5150,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       }
                     />
                   </Form.Item>
-                  {effectiveCalculationScope === "object_instance" ? (
-                    <div className={`${styles.full} ${styles.logicPropertyCard}`}>
-                      <div className={styles.logicPropertyHeader}>
-                        <div className={styles.logicPropertyTitle}>
-                          <strong>{objectMetricText("m315197671848")}</strong>
-                          <HelpTooltip
-                            label={objectMetricText("m315197671848")}
-                            title={`${objectMetricText("m356d91b99e17")}${ownerObjectType?.name ?? objectMetricText("md4abcfbf9164")}${objectMetricText("mdfbd0f596032")} ${objectMetricText(logicPropertyEnabled ? "mb85aba5c793c" : "m7ba5a8c5277e")}`}
-                          />
-                          {logicPropertyEnabled ? (
-                            <span className={styles.logicPropertyStatus}>
-                              {objectMetricText("logicPropertyPendingPublication")}
-                            </span>
-                          ) : null}
-                        </div>
-                        <Form.Item name="logicPropertyEnabled" noStyle valuePropName="checked">
-                          <Switch
-                            aria-label={objectMetricText("m315197671848")}
-                            onChange={(checked) => {
-                              if (!checked) return;
-                              form.setFieldsValue({
-                                logicPropertyDisplayName:
-                                  getFieldValue("logicPropertyDisplayName") ||
-                                  getFieldValue("name") ||
-                                  undefined,
-                                logicPropertyName:
-                                  getFieldValue("logicPropertyName") ||
-                                  getFieldValue("code") ||
-                                  undefined,
-                              });
-                            }}
-                          />
-                        </Form.Item>
-                      </div>
-                      {logicPropertyEnabled ? (
-                        <div className={styles.logicPropertyFields}>
-                          <Form.Item
-                            label={objectMetricText("maac14899bd42")}
-                            name="logicPropertyName"
-                            rules={[
-                              { required: true, message: objectMetricText("md93f0beda75d") },
-                              {
-                                pattern: /^[a-z][a-z0-9_]*$/,
-                                message: objectMetricText("mb9eeaa34688d"),
-                              },
-                            ]}
-                          >
-                            <Input placeholder={objectMetricText("mcd56973f4ad0")} />
-                          </Form.Item>
-                          <Form.Item
-                            label={objectMetricText("ma98585871c53")}
-                            name="logicPropertyDisplayName"
-                            rules={[{ required: true, message: objectMetricText("m90fc64da3e98") }]}
-                          >
-                            <Input placeholder={objectMetricText("m5dbc85bc1ad3")} />
-                          </Form.Item>
-                          <Form.Item
-                            className={styles.full}
-                            label={objectMetricText("m05e490686037")}
-                            name="logicPropertyComment"
-                          >
-                            <Input.TextArea
-                              maxLength={500}
-                              placeholder={objectMetricText("md65e0329b5e8")}
-                              rows={2}
-                            />
-                          </Form.Item>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
                 </>
               ) : null}
             </div>
@@ -5991,9 +5219,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 {objectMetricText("m5329e3f0ee46")}
               </Button>
               <Button loading={saving} onClick={() => void publish()} type="primary">
-                {logicPropertyEnabled && effectiveCalculationScope === "object_instance"
-                  ? objectMetricText("m029208c5ed8f")
-                  : objectMetricText("m5c5fd681a047")}
+                {objectMetricText("m5c5fd681a047")}
               </Button>
             </div>
           </Section>

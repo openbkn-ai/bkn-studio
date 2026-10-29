@@ -567,52 +567,6 @@
   font-size: 14px;
 }
 
-.logicPropertyCard {
-  display: grid;
-  gap: 12px;
-  margin-top: 4px;
-  padding: 14px 16px;
-  border: 1px solid var(--color-primary-border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--color-primary-bg) 24%, var(--color-bg-surface));
-}
-
-.logicPropertyHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.logicPropertyTitle {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.logicPropertyHeader strong {
-  color: var(--color-text-primary);
-  font-size: 14px;
-}
-
-.logicPropertyStatus {
-  margin-left: 8px;
-  padding: 2px 8px;
-  border: 1px solid var(--color-primary-border);
-  border-radius: 999px;
-  background: var(--color-primary-bg);
-  color: var(--color-primary-600);
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.logicPropertyFields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 18px;
-}
-
 .editorBox {
   padding: 14px;
   border: 1px solid var(--color-border);
@@ -1451,7 +1405,6 @@
   .grid3,
   .timeWindowGrid,
   .detailsGrid,
-  .logicPropertyFields,
   .scopeGroup {
     grid-template-columns: 1fr;
   }
@@ -1495,7 +1448,6 @@
   .grid3,
   .timeWindowGrid,
   .detailsGrid,
-  .logicPropertyFields,
   .scopeGroup {
     grid-template-columns: 1fr;
   }

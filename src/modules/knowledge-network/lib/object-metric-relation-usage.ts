@@ -18,14 +18,5 @@ export function rootRelationTypeIds(metric: ObjectMetricRecordV1): string[] {
     const id = specification.business_qualifiers.relation_path?.steps[0]?.relation_type_id;
     return id ? [id] : [];
   }
-  if (specification.kind === "composite") {
-    return Array.from(
-      new Set(
-        specification.dependencies
-          .map((dependency) => dependency.object_alignment.relation_path?.[0]?.relation_type_id)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    );
-  }
   return [];
 }

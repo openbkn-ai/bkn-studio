@@ -137,7 +137,6 @@ export function createObjectMetricDefinitionV1(
   ownerObjectTypeId: string,
 ): ObjectMetricDefinitionV1 {
   const common: Omit<ObjectMetricDefinitionV1, "specification"> = {
-    calculation_scope: "object_set",
     code: "",
     description: "",
     id: "",

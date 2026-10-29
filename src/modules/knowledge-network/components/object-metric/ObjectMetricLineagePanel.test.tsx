@@ -11,7 +11,6 @@ import { describe, expect, it, vi } from "vitest";
 import i18n from "@/app/locales/i18n";
 import { ObjectMetricLineagePanel } from "@/modules/knowledge-network/components/object-metric/ObjectMetricLineagePanel";
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
-import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 
 function metric(
   id: string,
@@ -23,7 +22,6 @@ function metric(
     create_time: 0,
     creator: { id: "test", type: "user" },
     definition: {
-      calculation_scope: "object_set",
       code: id,
       description: "",
       id,
@@ -100,27 +98,6 @@ describe("ObjectMetricLineagePanel", () => {
       business_qualifiers: {},
       kind: "derived",
     });
-    const logicProperties: ObjectTypeDetail["logicProperties"] = [
-      {
-        dataSource: {
-          id: `object_metric_v1:${current.definition.id}@${current.definition.version}`,
-          type: "metric",
-        },
-        displayName: "订单数",
-        metricBinding: {
-          object_type_id: "order",
-          property_name: "order_count",
-          display_name: "订单数",
-          metric_ref: { metric_id: current.definition.id, version: current.definition.version },
-          execution: { mode: "realtime" },
-          no_data_policy: "zero",
-          on_error: "unavailable",
-          status: "published",
-        },
-        name: "order_count",
-      },
-    ];
-
     render(
       <ObjectMetricLineagePanel
         metric={current}
@@ -128,16 +105,14 @@ describe("ObjectMetricLineagePanel", () => {
         ownerObjectType={{
           dataProperties: [],
           id: "order",
-          logicProperties,
+          logicProperties: [],
           name: "销售订单",
         }}
       />,
     );
 
     expect(screen.getByText("已发布引用")).toBeInTheDocument();
-    expect(screen.getByText("本对象类逻辑属性")).toBeInTheDocument();
     expect(screen.getByText("已完成订单数")).toBeInTheDocument();
-    expect(screen.getByText("订单数 · order_count")).toBeInTheDocument();
     expect(screen.queryByText(/历史版本及未加载的引用尚未核实/)).not.toBeInTheDocument();
     expect(screen.queryByText(/展示当前版本的取值来源/)).not.toBeInTheDocument();
     expect(screen.queryByText("影响分析")).not.toBeInTheDocument();

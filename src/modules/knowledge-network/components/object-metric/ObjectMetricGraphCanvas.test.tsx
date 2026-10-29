@@ -10,7 +10,6 @@ import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
-import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/relation-type";
 
 const mocks = vi.hoisted(() => ({
@@ -1162,7 +1161,7 @@ describe("ObjectMetricGraphCanvas", () => {
       actions!.compareDocumentPosition(descriptions!) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(drawer).toHaveTextContent("版本v2");
-    expect(drawer).toHaveTextContent("计算范围");
+    expect(drawer).not.toHaveTextContent("计算范围");
     expect(drawer).toHaveTextContent("计算口径计数");
     expect(drawer).toHaveTextContent("值类型整数 / 计数");
     expect(drawer).toHaveTextContent("单位次");
@@ -1260,76 +1259,6 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(screen.getByRole("button", { name: "试算" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
-  });
-
-  it("disables deprecation when the selected published version backs a logic property", async () => {
-    const published = metric("bound");
-    published.definition.calculation_scope = "object_instance";
-    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
-    mocks.listMetrics.mockResolvedValue({ entries: [published], total_count: 1 });
-    const onDeprecate = vi.fn();
-    renderGraph(vi.fn(), vi.fn(), {
-      canModify: true,
-      onDeprecate,
-      ownerObjectType: {
-        logicProperties: [
-          {
-            displayName: "支付金额",
-            name: "paid_amount",
-            metricBinding: { metric_ref: { metric_id: "bound", version: 1 } },
-          },
-        ],
-      } as ObjectTypeDetail,
-    });
-
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
-      }),
-    );
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /原子对象指标：对象指标 bound|Atomic metric: 对象指标 bound/,
-      }),
-    );
-    expect(screen.getByText("支付金额 · v1")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
-    expect(screen.getByText("废弃").closest("button")).toBeDisabled();
-    expect(onDeprecate).not.toHaveBeenCalled();
-  });
-
-  it("distinguishes a logical property bound to another metric version", async () => {
-    const draft = metric("bound");
-    draft.definition.version = 2;
-    draft.definition.calculation_scope = "object_instance";
-    draft.definition.lifecycle.status = "draft";
-    mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
-    mocks.listMetrics.mockResolvedValue({ entries: [draft], total_count: 1 });
-    renderGraph(vi.fn(), vi.fn(), {
-      ownerObjectType: {
-        logicProperties: [
-          {
-            displayName: "支付金额",
-            name: "paid_amount",
-            metricBinding: { metric_ref: { metric_id: "bound", version: 1 } },
-          },
-        ],
-      } as ObjectTypeDetail,
-    });
-
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: /展开销售订单的对象指标，共 1 个|Expand metrics owned by 销售订单 \(1 total\)/,
-      }),
-    );
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /原子对象指标：对象指标 bound|Atomic metric: 对象指标 bound/,
-      }),
-    );
-    expect(screen.getByRole("dialog", { name: "对象指标详情" })).toHaveTextContent(
-      "当前版本未绑定（支付金额 绑定 v1）",
-    );
   });
 
   it("keeps the focused metric open when graph data refreshes", async () => {

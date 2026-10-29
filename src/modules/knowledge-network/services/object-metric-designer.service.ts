@@ -28,7 +28,6 @@ export type ObjectMetricDesignCandidates = {
     version: number;
     name: string;
     type: "atomic" | "derived" | "composite";
-    scope: "object_instance" | "object_set";
     object_type_id: string;
   }>;
 };
@@ -95,7 +94,6 @@ export type RunObjectMetricDesignParams = {
 const editableFields = new Set([
   "name",
   "description",
-  "calculation_scope",
   "atomic.aggregation",
   "atomic.property_name",
   "atomic.expression",
