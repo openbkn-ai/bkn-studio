@@ -348,6 +348,7 @@ export const bknProjectZhCN = {
         origin: {
           foreign_key: "表中声明的关联",
           name_match: "按同名字段推荐",
+          stem_match: "按相近的字段名推荐",
           link_table: "经关联表连接",
         },
         verification: {

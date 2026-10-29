@@ -36,7 +36,7 @@ describe("draft evidence", () => {
     for (const source of ["primary_key", "unique_index", "inferred", "chosen", "none"]) {
       expect(keySourcePhrase(source)).toEqual({ key: `${P}.keySource.${source}` });
     }
-    for (const origin of ["foreign_key", "name_match", "link_table"]) {
+    for (const origin of ["foreign_key", "name_match", "stem_match", "link_table"]) {
       expect(originPhrase(origin)).toEqual({ key: `${P}.origin.${origin}` });
     }
     expect(verificationPhrase("confirmed")).toEqual({ key: `${P}.verification.confirmed` });
