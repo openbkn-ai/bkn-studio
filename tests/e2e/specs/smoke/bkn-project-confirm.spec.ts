@@ -27,6 +27,8 @@ test("bkn project: understand the data, confirm the draft, and see its check and
   await understand.getByRole("button", { name: /开\s*始/ }).click();
   await expect(understand).toBeHidden();
   await expect(page.getByText(/^语义理解：已完成 \d \/ 3 张表$/)).toBeVisible();
+  // The bar reads the progress again until every table is understood.
+  await expect(page.getByText("语义理解已完成", { exact: true })).toBeVisible();
 
   // An adopted relation waits for the object type at its end, so confirming waits too.
   const confirm = page.getByRole("button", { name: "确认草稿" });
@@ -55,7 +57,9 @@ test("bkn project: understand the data, confirm the draft, and see its check and
   await expect(check.getByText(/^已核对 \d+ \/ \d+ 项$/)).toBeVisible();
   const indexes = page.getByRole("region", { name: "本地索引" });
   await expect(indexes.getByText("缺少构建设置")).toBeVisible();
-  await expect(indexes.getByText("可用").first()).toBeVisible();
+  // The state tag itself, not the summary line, which says "可用" too.
+  await expect(indexes.getByText("可用", { exact: true }).first()).toBeVisible();
+  await expect(indexes.getByText("2 / 3 张表的索引可用")).toBeVisible();
   await expect(
     indexes.getByText("没有可用的更新字段，可以在本体建模中为对象类指定。"),
   ).toBeVisible();
