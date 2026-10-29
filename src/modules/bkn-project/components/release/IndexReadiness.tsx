@@ -7,7 +7,7 @@
 
 import { Alert, Spin } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -49,13 +49,23 @@ export function IndexReadiness({ canRun, projectId }: { canRun: boolean; project
   const [loadFailed, setLoadFailed] = useState(false);
   const [reads, setReads] = useState(0);
   const [building, setBuilding] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  // Reads and builds answer with the whole readiness; only the newest request's answer counts,
+  // so a poll that answers after a build cannot put back what the table looked like before it.
+  const latest = useRef(0);
 
   const load = useCallback(async () => {
+    const request = ++latest.current;
     try {
-      setIndex(await getOntologyIndex(projectId));
-      setLoadFailed(false);
+      const next = await getOntologyIndex(projectId);
+      if (request === latest.current) {
+        setIndex(next);
+        setLoadFailed(false);
+      }
     } catch {
-      setLoadFailed(true);
+      if (request === latest.current) {
+        setLoadFailed(true);
+      }
     } finally {
       setReads((count) => count + 1);
     }
@@ -63,6 +73,12 @@ export function IndexReadiness({ canRun, projectId }: { canRun: boolean; project
   useEffect(() => {
     void load();
   }, [load]);
+  // The warning stays up while reading again, so the retry button alone shows it is reading.
+  const retry = async () => {
+    setRetrying(true);
+    await load();
+    setRetrying(false);
+  };
 
   const items = index?.objectTypes ?? [];
   const inProgress = items.some((item) => item.state === "building" || item.task);
@@ -76,9 +92,12 @@ export function IndexReadiness({ canRun, projectId }: { canRun: boolean; project
 
   const build = async () => {
     setBuilding(true);
+    const request = ++latest.current;
     try {
       const next = await buildOntologyIndex(projectId);
-      setIndex(next);
+      if (request === latest.current) {
+        setIndex(next);
+      }
       // A 200 reply records each table's outcome; only a table not yet ready that started counts:
       // a ready table still carries the outcome of an earlier build.
       const started = next.objectTypes.some(
@@ -165,7 +184,7 @@ export function IndexReadiness({ canRun, projectId }: { canRun: boolean; project
       {loadFailed ? (
         <Alert
           action={
-            <AppButton onClick={() => void load()} size="small">
+            <AppButton loading={retrying} onClick={() => void retry()} size="small">
               {t("common.retry")}
             </AppButton>
           }

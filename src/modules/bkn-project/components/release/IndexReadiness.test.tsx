@@ -194,6 +194,41 @@ describe("IndexReadiness", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps what building again answered when an earlier read answers after it", async () => {
+    let answerRead: (value: ProjectIndex) => void = () => undefined;
+    const before = readiness([
+      item("customers", { state: "building", task: { id: "t1", status: "running" } }),
+      item("orders", { build: null, state: "not_built" }),
+    ]);
+    getOntologyIndexMock
+      .mockResolvedValueOnce(before)
+      .mockImplementationOnce(
+        () =>
+          new Promise<ProjectIndex>((resolve) => {
+            answerRead = resolve;
+          }),
+      )
+      .mockResolvedValue(before);
+    buildOntologyIndexMock.mockResolvedValue(
+      readiness([
+        item("customers", { state: "building", task: { id: "t1", status: "running" } }),
+        item("orders", { state: "building", task: { id: "t2", status: "running" } }),
+      ]),
+    );
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderIndex();
+
+    expect(await section().findByText("未构建")).toBeInTheDocument();
+    // A poll is sent, then the owner builds again before it answers.
+    await act(() => vi.advanceTimersByTimeAsync(INDEX_POLL_MS));
+    fireEvent.click(screen.getByRole("button", { name: "重新构建" }));
+    await waitFor(() => expect(messageMock.success).toHaveBeenCalled());
+    answerRead(before);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(section().queryByText("未构建")).toBeNull();
+    expect(section().getAllByText("构建中")).toHaveLength(2);
+  });
+
   it("explains a refused build, and offers nothing to others", async () => {
     getOntologyIndexMock.mockResolvedValue(
       readiness([item("customers", { build: null, state: "stale" })]),
@@ -218,13 +253,20 @@ describe("IndexReadiness", () => {
   });
 
   it("offers to read the indexes again when they cannot be read", async () => {
-    getOntologyIndexMock
-      .mockRejectedValueOnce(new Error("down"))
-      .mockResolvedValue(readiness([item("customers")]));
+    let answer: (value: ProjectIndex) => void = () => undefined;
+    getOntologyIndexMock.mockRejectedValueOnce(new Error("down")).mockImplementationOnce(
+      () =>
+        new Promise<ProjectIndex>((resolve) => {
+          answer = resolve;
+        }),
+    );
     renderIndex();
 
     expect(await screen.findByText("本地索引暂时读取不到")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /重\s*试/ }));
+    const retry = screen.getByRole("button", { name: /重\s*试/ });
+    fireEvent.click(retry);
+    await waitFor(() => expect(retry).toHaveClass("ant-btn-loading"));
+    answer(readiness([item("customers")]));
     expect(await screen.findByText("1 / 1 张表的索引可用")).toBeInTheDocument();
   });
 });
