@@ -158,7 +158,8 @@ function CheckSection({
     {
       render: (_value, item) => result(item, Boolean(item.duplicates || item.nulls)),
       title: t("bknProject.release.check.keys.result"),
-      className: styles.nowrap,
+      // The header stays on one line; a reason a count was not made is a sentence and wraps.
+      onHeaderCell: () => ({ className: styles.nowrap }),
     },
   ];
   const joinColumns: ColumnsType<JoinRow> = [
@@ -196,7 +197,7 @@ function CheckSection({
       // Records without a match are only reported, so a counted join has no issue.
       render: (_value, item) => result(item, false),
       title: t("bknProject.release.check.relations.result"),
-      className: styles.nowrap,
+      onHeaderCell: () => ({ className: styles.nowrap }),
     },
   ];
 

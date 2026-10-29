@@ -247,6 +247,10 @@ describe("ProjectReleasePage", () => {
       section.getByText(`对象类 ${customers.name} 的属性 phone 对应了因隐私规则排除的字段 phone`),
     ).toBeInTheDocument();
     expect(section.queryByText(/timeout|cross_catalog/)).toBeNull();
+    // Counts stay on one line; a reason is a sentence and wraps in its cell.
+    expect(section.getByText("读取数据超时").closest("td")?.className).not.toMatch(/nowrap/);
+    expect(section.getAllByText("结果")[0].closest("th")?.className).toMatch(/nowrap/);
+    expect(section.getAllByText("重复")[0].closest("th")?.className).toMatch(/nowrap/);
   });
 
   it("says when the draft changed after it was confirmed, and leads back to confirm", async () => {
