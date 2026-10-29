@@ -37,6 +37,14 @@ const BUILDABLE = new Set<IndexItem["state"]>(["not_built", "not_configured", "s
 const STARTED = new Set(["created", "existing"]);
 
 /**
+ * Whether building again may start the table. Settings the object type cannot give (such as an
+ * update field) change only with the draft, which has to be confirmed again; a missing permission
+ * may be granted meanwhile, so those tables stay worth retrying.
+ */
+const buildable = (item: IndexItem) =>
+  BUILDABLE.has(item.state) && item.build?.outcome !== "not_configurable";
+
+/**
  * The local index of each adopted object type's table, which full-text and vector search need.
  * Confirming starts the builds as the person who confirmed; the owner can start them again once
  * what stopped them is solved. A build in progress is read again until it ends.
@@ -168,7 +176,7 @@ export function IndexReadiness({ canRun, projectId }: { canRun: boolean; project
           ) : null}
           {canRun && index ? (
             <AppButton
-              disabled={!items.some((item) => BUILDABLE.has(item.state))}
+              disabled={!items.some(buildable)}
               loading={building}
               onClick={() => void build()}
               size="small"
