@@ -20,26 +20,43 @@ type Plugin = {
 };
 type Listener = (event: { target: { id: string } }) => void;
 
-// jsdom has no ResizeObserver.
-globalThis.ResizeObserver ??= class {
+// jsdom has no ResizeObserver; the stand-in lets a test report a new size.
+const resizeListeners: ((size: { width: number; height: number }) => void)[] = [];
+globalThis.ResizeObserver = class {
+  constructor(private readonly callback: ResizeObserverCallback) {
+    resizeListeners.push((size) =>
+      this.callback([{ contentRect: size } as unknown as ResizeObserverEntry], this),
+    );
+  }
   observe() {}
   disconnect() {}
   unobserve() {}
-} as unknown as typeof ResizeObserver;
+};
+const reportSize = (width: number, height: number) => resizeListeners.at(-1)?.({ width, height });
 
 // G6 cannot draw in jsdom; the stand-in keeps the options and lets a test fire its events.
 const created: {
   options: { behaviors: Behavior[]; plugins: Plugin[] };
   listeners: Map<string, Listener>;
   layerRender: ReturnType<typeof vi.fn>;
+  resize: ReturnType<typeof vi.fn>;
+  fitView: ReturnType<typeof vi.fn>;
 }[] = [];
 vi.mock("@antv/g6", () => {
   class Graph {
     destroyed = false;
     listeners = new Map<string, Listener>();
     layerRender = vi.fn();
+    resize = vi.fn();
+    fitView = vi.fn(() => Promise.resolve());
     constructor(options: { behaviors: Behavior[]; plugins: Plugin[] }) {
-      created.push({ options, listeners: this.listeners, layerRender: this.layerRender });
+      created.push({
+        options,
+        listeners: this.listeners,
+        layerRender: this.layerRender,
+        resize: this.resize,
+        fitView: this.fitView,
+      });
     }
     getCanvas() {
       return { getLayers: () => ({ main: { render: this.layerRender } }) };
@@ -55,7 +72,6 @@ vi.mock("@antv/g6", () => {
     render = () => Promise.resolve();
     draw = () => Promise.resolve();
     setElementState = () => Promise.resolve();
-    fitView = () => Promise.resolve();
     fitCenter = () => Promise.resolve();
     zoomBy = () => Promise.resolve();
     getZoom = () => 1;
@@ -71,19 +87,28 @@ vi.mock("@antv/g6", () => {
   };
 });
 
-function renderCanvas(onNodeClick = vi.fn()) {
-  render(
+const STRUCTURE = { nodes: [], edges: [], combos: [] };
+const DECORATIONS = { nodes: [], edges: [], states: {} };
+const TOKENS = readGraphTokens();
+
+function canvasElement(onNodeClick = vi.fn(), maximized = false) {
+  return (
     <OntologyG6Canvas
       ariaLabel="graph"
-      decorations={{ nodes: [], edges: [], states: {} }}
+      maximized={maximized}
+      decorations={DECORATIONS}
       onBlankClick={vi.fn()}
       onNodeClick={onNodeClick}
       onZoom={vi.fn()}
-      structure={{ nodes: [], edges: [], combos: [] }}
-      tokens={readGraphTokens()}
+      structure={STRUCTURE}
+      tokens={TOKENS}
       totalNodes={0}
-    />,
+    />
   );
+}
+
+function renderCanvas(onNodeClick = vi.fn()) {
+  render(canvasElement(onNodeClick));
   return created[created.length - 1];
 }
 
@@ -125,6 +150,23 @@ describe("OntologyG6Canvas", () => {
   it("draws a frame after names change, so they do not wait for the next pan", async () => {
     const graph = renderCanvas();
     await waitFor(() => expect(graph.layerRender).toHaveBeenCalled());
+  });
+
+  it("keeps the user's view when the space changes, and refits it when maximized", async () => {
+    const onNodeClick = vi.fn();
+    const { rerender } = render(canvasElement(onNodeClick));
+    const graph = created[created.length - 1];
+    await waitFor(() => expect(graph.fitView).toHaveBeenCalledTimes(1));
+    reportSize(800, 400);
+
+    // The window or the sidebar changes the size: the canvas follows, the view stays.
+    reportSize(700, 400);
+    await waitFor(() => expect(graph.resize).toHaveBeenCalledWith(700, 400));
+    expect(graph.fitView).toHaveBeenCalledTimes(1);
+
+    rerender(canvasElement(onNodeClick, true));
+    reportSize(1400, 900);
+    await waitFor(() => expect(graph.fitView).toHaveBeenCalledTimes(2));
   });
 
   it("names the hovered type in full, escaped, with its concept group", async () => {

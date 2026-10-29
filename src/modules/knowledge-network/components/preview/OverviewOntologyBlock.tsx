@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
+import { typeColors } from "@/modules/knowledge-network/components/preview/ontology-graph-data";
 import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import {
   getKnowledgeNetworkObjectTypeDetail,
@@ -161,10 +162,12 @@ export function OverviewOntologyBlock({
     };
   }, [networkId]);
 
+  // The same colour as the graph gives each type: its own, or a palette slot.
+  const colorOfType = useMemo(() => typeColors(graph.nodes), [graph.nodes]);
   const objectTypes = useMemo<KnowledgeNetworkObjectTypeRecord[]>(
     () =>
       graph.nodes.map((node) => ({
-        color: node.color || DEFAULT_COLOR,
+        color: colorOfType.get(node.id) ?? DEFAULT_COLOR,
         conceptGroupIds: node.conceptGroups?.map((group) => group.id) ?? [],
         conceptGroupNames: node.conceptGroups?.map((group) => group.name) ?? [],
         description: "",
@@ -177,7 +180,7 @@ export function OverviewOntologyBlock({
         updateTime: "",
         updaterName: "",
       })),
-    [graph.nodes],
+    [colorOfType, graph.nodes],
   );
   const relationTypes = useMemo<KnowledgeNetworkRelationTypeRecord[]>(() => {
     const names = new Map(graph.nodes.map((node) => [node.id, node.name]));

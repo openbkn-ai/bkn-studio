@@ -20,6 +20,7 @@ import {
   buildOntologyStructure,
   drawnRadius,
   labelScale,
+  relationNameAt,
   typeColors,
 } from "./ontology-graph-data";
 
@@ -241,5 +242,31 @@ describe("buildOntologyDecorations", () => {
     expect(names(0.2, "c")).toEqual(["", "", "Charlie"]);
     // Names switched off: only the selection and its neighbours are named.
     expect(names(1, "a", false)).toEqual(["Alpha", "Bravo", ""]);
+  });
+
+  it("places a relation's name where G6 draws it, above the dot for a type related to itself", () => {
+    // Between the dots' edges: a larger source pushes the name toward the target.
+    expect(
+      relationNameAt({ x: 0, y: 0 }, { x: 100, y: 0 }, false, { source: 20, target: 10 }),
+    ).toEqual({ x: 55, y: 0 });
+    expect(
+      relationNameAt({ x: 0, y: 0 }, { x: 0, y: 0 }, true, { source: 10, target: 10 }),
+    ).toEqual({ x: 0, y: -25 });
+    // The loop's name does not sit on the type's own name, so both are drawn.
+    const looped = buildOntologyDecorations({
+      graph: {
+        nodes: [{ color: "", id: "staff", name: "Staff" }],
+        edges: [{ id: "manages", name: "Manages", sourceId: "staff", targetId: "staff" }],
+      },
+      hubId: null,
+      positions: new Map([["staff", { id: "staff", x: 0, y: 0 }]]),
+      selectedId: null,
+      indexedIds: new Set(),
+      edgeLabelsVisible: true,
+      zoom: 1,
+      defaultEdgeName: "relation",
+    });
+    expect(looped.nodes[0].style?.labelText).toBe("Staff");
+    expect(looped.edges[0].style?.labelText).toBe("Manages");
   });
 });

@@ -13,7 +13,7 @@ import {
   type GraphData,
   type IElementEvent,
 } from "@antv/g6";
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef } from "react";
 
 import type { GraphTokens } from "@/modules/knowledge-network/lib/graph-style";
 import { ZOOM_MAX, ZOOM_MIN } from "@/modules/knowledge-network/utils/ontology-graph-layout";
@@ -39,6 +39,8 @@ export type OntologyG6CanvasProps = {
   onNodeClick: (id: string) => void;
   onBlankClick: () => void;
   onZoom: (zoom: number) => void;
+  /** Maximized over the window: entering or leaving it refits the graph to the new space. */
+  maximized?: boolean;
   /** For tests and diagnostics: object types in the graph. */
   totalNodes: number;
   ariaLabel: string;
@@ -102,6 +104,16 @@ export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6Canva
     const renderedRef = useRef(false);
     const decorationsRef = useRef(decorations);
     decorationsRef.current = decorations;
+    // Set when the graph is maximized or restored, so the resize that follows refits it. Other
+    // resizes (the window, the sidebar, the page around it) keep the user's pan and zoom.
+    const refitOnResizeRef = useRef(false);
+    const maximizedRef = useRef(props.maximized);
+    // Before the browser lays out the new size, so the resize it reports already carries the flag.
+    useLayoutEffect(() => {
+      if (maximizedRef.current === props.maximized) return;
+      maximizedRef.current = props.maximized;
+      refitOnResizeRef.current = true;
+    }, [props.maximized]);
 
     const enqueue = (task: (graph: Graph) => Promise<unknown>) => {
       queueRef.current = queueRef.current
@@ -186,7 +198,7 @@ export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6Canva
         if (zoomModifierHeld(event)) event.preventDefault();
       };
       container.addEventListener("wheel", onWheel, { passive: false });
-      // G6 only follows the window; the container also grows and shrinks on its own (maximized).
+      // The canvas follows its container, which also grows and shrinks without the window.
       let lastSize = "";
       const observer = new ResizeObserver(([entry]) => {
         const { width, height } = entry.contentRect;
@@ -195,9 +207,11 @@ export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6Canva
         const first = lastSize === "";
         lastSize = size;
         if (first) return;
+        const refit = refitOnResizeRef.current;
+        refitOnResizeRef.current = false;
         enqueue(async (current) => {
           current.resize(width, height);
-          await fit(current);
+          if (refit) await fit(current);
         });
       });
       observer.observe(container);

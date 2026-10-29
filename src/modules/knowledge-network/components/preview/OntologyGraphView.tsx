@@ -224,6 +224,7 @@ export function OntologyGraphView({
         <OntologyG6Canvas
           ariaLabel={t("knowledgeNetwork.previewCanvas")}
           decorations={decorations}
+          maximized={maximized}
           onBlankClick={() => onSelect(null)}
           onNodeClick={(id) => onSelect(id === selectedId ? null : id)}
           onZoom={setZoom}

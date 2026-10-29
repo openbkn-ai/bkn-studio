@@ -244,6 +244,26 @@ function textWidth(text: string, fontSize: number): number {
 }
 
 /** A taken area, and the object type whose dot it is, when it is one. */
+/**
+ * Where G6 draws a relation's name: halfway along the visible line, between the two dots' edges.
+ * A relation from a type to itself is drawn as a loop above the dot, as tall as the dot is wide,
+ * with the name at its top.
+ */
+export function relationNameAt(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  loop: boolean,
+  radius: { source: number; target: number },
+): { x: number; y: number } {
+  if (loop) return { x: a.x, y: a.y - radius.source * 2.5 };
+  const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  const shift = (radius.source - radius.target) / 2 / length;
+  return {
+    x: (a.x + b.x) / 2 + (b.x - a.x) * shift,
+    y: (a.y + b.y) / 2 + (b.y - a.y) * shift,
+  };
+}
+
 type Box = { x0: number; y0: number; x1: number; y1: number; dot?: string };
 
 /** Boxes already taken on the canvas, bucketed by area so a test looks only at its neighbours. */
@@ -374,11 +394,10 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
       // The drawn box: text, padding and outline, as measured on the canvas.
       const halfW = textWidth(text, font) / 2 + 8 * scale;
       const halfH = font * 1.15;
-      // G6 puts the name halfway along the visible line, between the two dots' edges.
-      const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
-      const shift = (radiusOf(edge.sourceId) - radiusOf(edge.targetId)) / 2 / length;
-      const mx = (a.x + b.x) / 2 + (b.x - a.x) * shift;
-      const my = (a.y + b.y) / 2 + (b.y - a.y) * shift;
+      const { x: mx, y: my } = relationNameAt(a, b, edge.sourceId === edge.targetId, {
+        source: radiusOf(edge.sourceId),
+        target: radiusOf(edge.targetId),
+      });
       const box = { x0: mx - halfW, y0: my - halfH, x1: mx + halfW, y1: my + halfH };
       // A name may lie over its own two dots: between close types there is no room otherwise.
       if (names.covers(box) || dots.covers(box, new Set([edge.sourceId, edge.targetId]))) return;
