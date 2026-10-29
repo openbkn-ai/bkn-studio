@@ -1282,6 +1282,7 @@ export const systemAdminEnUS = {
       originalBody: "Original",
       translationMissing: "No translation exists for this language. Showing the original.",
       addTranslation: "Add translation",
+      cancelAddTranslation: "Cancel translation",
       saveTranslation: "Save translation",
       translationSaved: "Translation saved without creating a version",
       confirmTranslationTitle: "Save this version’s translation?",

@@ -614,6 +614,66 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
   });
 
   describe("translation maintenance", () => {
+    it.each(["", "Unsaved English translation"])(
+      "cancels adding a translation (%s) and restores the original without blocking leave",
+      async (draft) => {
+        await i18n.changeLanguage("en-US");
+        getShared.mockResolvedValue(shared());
+        getSharedPrompt.mockResolvedValue(PROMPT);
+        const router = renderScene();
+        await screen.findByDisplayValue("Shared");
+        fireEvent.click(
+          screen.getByRole("button", { name: i18n.t("systemAdmin.agentConfig.addTranslation") }),
+        );
+        if (draft) fireEvent.change(screen.getByRole("textbox"), { target: { value: draft } });
+        fireEvent.click(
+          screen.getByRole("button", {
+            name: i18n.t("systemAdmin.agentConfig.cancelAddTranslation"),
+          }),
+        );
+        expect(await screen.findByDisplayValue("Shared")).toHaveAttribute("readonly");
+        expect(
+          screen.getByRole("button", { name: i18n.t("systemAdmin.agentConfig.addTranslation") }),
+        ).toBeTruthy();
+        expect(i18n.language).toBe("en-US");
+        expect(saveSharedPromptTranslation).not.toHaveBeenCalled();
+        expect(publishSharedPrompt).not.toHaveBeenCalled();
+        const event = new Event("beforeunload", { cancelable: true });
+        window.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+        await act(() => router.navigate("/system/agent-config"));
+        expect(await screen.findByText("Agent list destination")).toBeTruthy();
+      },
+    );
+
+    it("cancels only the added translation while preserving runtime and other-language drafts", async () => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockResolvedValue(PROMPT);
+      renderScene();
+      fireEvent.change(await screen.findByDisplayValue("Shared"), {
+        target: { value: "Chinese original draft" },
+      });
+      fireEvent.change(screen.getByDisplayValue("300"), { target: { value: "100" } });
+      await act(() => i18n.changeLanguage("en-US"));
+      await screen.findByDisplayValue("Shared");
+      fireEvent.click(
+        screen.getByRole("button", { name: i18n.t("systemAdmin.agentConfig.addTranslation") }),
+      );
+      fireEvent.change(screen.getByRole("textbox"), {
+        target: { value: "Discard this translation" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: i18n.t("systemAdmin.agentConfig.cancelAddTranslation"),
+        }),
+      );
+      expect(await screen.findByDisplayValue("Shared")).toHaveAttribute("readonly");
+      expect(screen.getByDisplayValue("100")).toBeTruthy();
+      await act(() => i18n.changeLanguage("zh-CN"));
+      expect(await screen.findByDisplayValue("Chinese original draft")).toBeTruthy();
+      expect(saveSharedPromptTranslation).not.toHaveBeenCalled();
+    });
+
     it.each([
       ["en-US", "zh-CN"],
       ["zh-CN", "en-US"],

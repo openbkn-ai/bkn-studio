@@ -128,6 +128,20 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
         ? { ...views, [locale]: { ...current, addingTranslation: true, content: "" } }
         : views;
     });
+  const cancelTranslation = () =>
+    setPromptViews((views) => {
+      const current = views[locale];
+      return current
+        ? {
+            ...views,
+            [locale]: {
+              ...current,
+              addingTranslation: false,
+              content: current.prompt.prompt.content,
+            },
+          }
+        : views;
+    });
   const discardPromptDraft = () => {
     setPromptViews((views) => {
       const next = { ...views };
@@ -769,6 +783,11 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                   onClick={addTranslation}
                 >
                   {t(`${P}.addTranslation`)}
+                </Button>
+              ) : null}
+              {editable && view?.addingTranslation ? (
+                <Button disabled={saving || promptLoading} onClick={cancelTranslation}>
+                  {t(`${P}.cancelAddTranslation`)}
                 </Button>
               ) : null}
             </Space>

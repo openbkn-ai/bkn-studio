@@ -1187,6 +1187,7 @@ export const systemAdminZhCN = {
       originalBody: "原文",
       translationMissing: "当前语言没有译文，正在显示原文。",
       addTranslation: "添加译文",
+      cancelAddTranslation: "取消添加",
       saveTranslation: "保存译文",
       translationSaved: "译文已保存，版本号未变",
       confirmTranslationTitle: "保存当前版本的译文？",
