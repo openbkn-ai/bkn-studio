@@ -13,12 +13,13 @@ export const graphOverviewPart = {
     summary: {
       complete: "{{nodes}} 实例 · {{edges}} 关系",
       sampled: "{{nodes}}/{{totalNodes}} 实例 · {{edges}}/{{totalEdges}} 关系",
-      sampledTag: "按关系取样",
       limitedByNodes: "实例超过 {{limit}} 个，按关系轮流取样，优先保证每种关系都有代表",
       limitedByEdges: "关系超过 {{limit}} 条，按关系轮流取样，优先保证每种关系都有代表",
       cached: "上次加载于 {{time}}",
     },
     types: {
+      toggle: "对象类 {{count}}",
+      toggleHidden: "对象类 {{count}} · 隐藏 {{hidden}}",
       hide: "隐藏该类",
       show: "显示该类",
       only: "只看该类",

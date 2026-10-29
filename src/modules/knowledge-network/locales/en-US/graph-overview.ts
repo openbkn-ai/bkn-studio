@@ -13,7 +13,6 @@ export const graphOverviewPart = {
     summary: {
       complete: "{{nodes}} instances · {{edges}} relations",
       sampled: "{{nodes}}/{{totalNodes}} instances · {{edges}}/{{totalEdges}} relations",
-      sampledTag: "Sampled by relation",
       limitedByNodes:
         "More than {{limit}} instances: relations are sampled in turn so every relation type is represented",
       limitedByEdges:
@@ -21,6 +20,8 @@ export const graphOverviewPart = {
       cached: "Loaded {{time}}",
     },
     types: {
+      toggle: "Object types {{count}}",
+      toggleHidden: "Object types {{count}} · {{hidden}} hidden",
       hide: "Hide this type",
       show: "Show this type",
       only: "Show only this type",

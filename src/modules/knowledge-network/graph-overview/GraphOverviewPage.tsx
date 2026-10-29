@@ -7,6 +7,7 @@
 
 import {
   AimOutlined,
+  AppstoreOutlined,
   ArrowLeftOutlined,
   ExpandOutlined,
   NodeIndexOutlined,
@@ -22,7 +23,6 @@ import {
   Segmented,
   Select,
   Spin,
-  Tag,
   Tooltip,
   type MenuProps,
 } from "antd";
@@ -107,6 +107,24 @@ const GPU_LIMIT_CHOICES = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000]
 const EDGES_PER_NODE = 3;
 const NODE_LIMIT_KEY = "bkn-studio.graph-overview.node-limit";
 const VIEW_KEY = "bkn-studio.graph-overview.view";
+const TYPES_OPEN_KEY = "bkn-studio.graph-overview.types-open";
+
+/** Whether the row of object types is shown: hidden until someone opens it, then remembered. */
+function readTypesOpen(): boolean {
+  try {
+    return window.localStorage.getItem(TYPES_OPEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveTypesOpen(open: boolean) {
+  try {
+    window.localStorage.setItem(TYPES_OPEN_KEY, open ? "1" : "0");
+  } catch {
+    // Not remembered; the choice lasts for this visit.
+  }
+}
 /** Points the 3D view draws at most: its layout runs on the CPU. The first ones loaded are kept. */
 const THREE_D_MAX = 20_000;
 
@@ -204,6 +222,7 @@ export function GraphOverviewScene() {
   const [gpu] = useState(supportsGpuOverview);
   const [webgl] = useState(() => gpu || supportsWebGL());
   const [view, setView] = useState<View>(readView);
+  const [typesOpen, setTypesOpen] = useState(readTypesOpen);
   const limitChoices = gpu ? GPU_LIMIT_CHOICES : CPU_LIMIT_CHOICES;
   const [nodeLimit, setNodeLimit] = useState(() => readNodeLimit(limitChoices));
   const limits = useMemo(
@@ -633,41 +652,71 @@ export function GraphOverviewScene() {
         </Button>
         <div className={styles.title}>
           <span>{t("knowledgeNetwork.graphOverview.title")}</span>
-          {detail?.name ? <span className={styles.networkName}>{detail.name}</span> : null}
+          {detail?.name ? (
+            <span className={styles.networkName} title={detail.name}>
+              {detail.name}
+            </span>
+          ) : null}
         </div>
         {summary ? (
-          <span className={styles.summary} title={summary} data-testid="graph-overview-summary">
-            {summary}
-          </span>
-        ) : null}
-        {data && !data.complete ? (
           <Tooltip
+            // Cut short: why, on the counts themselves.
             title={
-              data.limitedBy === "edges"
-                ? t("knowledgeNetwork.graphOverview.summary.limitedByEdges", {
-                    limit: compactCount(limits.edges),
-                  })
-                : t("knowledgeNetwork.graphOverview.summary.limitedByNodes", {
-                    limit: compactCount(limits.nodes),
-                  })
+              data && !data.complete
+                ? data.limitedBy === "edges"
+                  ? t("knowledgeNetwork.graphOverview.summary.limitedByEdges", {
+                      limit: compactCount(limits.edges),
+                    })
+                  : t("knowledgeNetwork.graphOverview.summary.limitedByNodes", {
+                      limit: compactCount(limits.nodes),
+                    })
+                : summary
             }
           >
-            <Tag color="gold">{t("knowledgeNetwork.graphOverview.summary.sampledTag")}</Tag>
+            <span className={styles.summary} data-testid="graph-overview-summary">
+              {summary}
+            </span>
           </Tooltip>
         ) : null}
         {fromCache && data
           ? (() => {
-              const cached = t("knowledgeNetwork.graphOverview.summary.cached", {
-                time: new Date(data.loadedAt).toLocaleString(),
+              const loadedAt = new Date(data.loadedAt);
+              // The time alone today, with the date on other days; the full moment on hover.
+              const today = loadedAt.toDateString() === new Date().toDateString();
+              const time = loadedAt.toLocaleString(undefined, {
+                ...(today ? {} : { month: "2-digit", day: "2-digit" }),
+                hour: "2-digit",
+                minute: "2-digit",
               });
               return (
-                <span className={styles.summary} title={cached}>
-                  {cached}
+                <span className={styles.summary} title={loadedAt.toLocaleString()}>
+                  {t("knowledgeNetwork.graphOverview.summary.cached", { time })}
                 </span>
               );
             })()
           : null}
         <div className={styles.spacer} />
+        {objectTypes.length > 0 ? (
+          <Button
+            size="small"
+            icon={<AppstoreOutlined />}
+            aria-pressed={typesOpen}
+            type={typesOpen ? "primary" : "default"}
+            ghost={typesOpen}
+            onClick={() => {
+              saveTypesOpen(!typesOpen);
+              setTypesOpen(!typesOpen);
+            }}
+            data-testid="graph-overview-types-toggle"
+          >
+            {hiddenTypes.size > 0
+              ? t("knowledgeNetwork.graphOverview.types.toggleHidden", {
+                  count: objectTypes.length,
+                  hidden: hiddenTypes.size,
+                })
+              : t("knowledgeNetwork.graphOverview.types.toggle", { count: objectTypes.length })}
+          </Button>
+        ) : null}
         <Tooltip title={t("knowledgeNetwork.graphOverview.limit.tip")}>
           <Select
             size="small"
@@ -783,7 +832,7 @@ export function GraphOverviewScene() {
         )}
       </div>
 
-      {objectTypes.length > 0 ? (
+      {typesOpen && objectTypes.length > 0 ? (
         <div className={styles.types}>
           {objectTypes.map((item) => {
             const total = data?.typeTotals[item.id];
@@ -799,8 +848,8 @@ export function GraphOverviewScene() {
                   <span>{metas[item.id]?.name ?? item.id}</span>
                   <span className={styles.typeCount}>
                     {total === undefined || total === null || total === count
-                      ? count
-                      : `${count} / ${total}`}
+                      ? compactCount(count)
+                      : `${compactCount(count)} / ${compactCount(total)}`}
                   </span>
                 </button>
               </Dropdown>

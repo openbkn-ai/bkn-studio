@@ -34,8 +34,8 @@
   flex: none;
 }
 
-.toolbar > .title,
-.toolbar > .summary {
+/* Only the title gives way when the row is short: the network's name is cut, the counts are not. */
+.toolbar > .title {
   flex: 0 1 auto;
 }
 
@@ -52,6 +52,7 @@
 
 .networkName {
   overflow: hidden;
+  min-width: 48px;
   max-width: 240px;
   font-weight: 400;
   font-size: 13px;
@@ -61,11 +62,8 @@
 }
 
 .summary {
-  overflow: hidden;
-  min-width: 0;
   font-size: 12px;
   white-space: nowrap;
-  text-overflow: ellipsis;
   color: var(--color-text-secondary, #8c8c8c);
   font-variant-numeric: tabular-nums;
 }
