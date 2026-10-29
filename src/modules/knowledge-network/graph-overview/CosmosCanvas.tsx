@@ -9,6 +9,7 @@ import { Graph, type GraphConfig } from "@cosmos.gl/graph";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 import styles from "./GraphOverviewPage.module.css";
+import { distanceToSegment } from "./link-hover";
 import { boundsOf, isolatedBand } from "./isolated-band";
 import type { OverviewCanvasHandle, OverviewCanvasProps } from "./OverviewCanvas";
 
@@ -36,6 +37,8 @@ const LABEL_MIN_DEGREE = 20;
 const MAX_LABELS = 160;
 /** Gap between neighbouring isolated points in their band, in space units. */
 const BAND_SPACING = 12;
+/** How far from a line, in pixels, the pointer still names it. */
+const LINK_HOVER_DISTANCE = 8;
 /** cosmos.gl space has y pointing up the screen. */
 const SPACE_Y_DOWN = false;
 
@@ -251,11 +254,21 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
 
       // The line under the pointer: what it joins and by which relation, beside the pointer.
       const link = hoveredLinkRef.current;
+      const [x, y] = pointerRef.current;
       if (link !== null && link < data.linkRel.length && !hovered) {
+        // Off the line, the name goes: the pointer's distance to the drawn segment.
+        const positions = graph.getPointPositions();
+        const end = (point: number) =>
+          graph.spaceToScreenPosition([positions[point * 2], positions[point * 2 + 1]]);
+        const a = end(data.linkEnds[link * 2]);
+        const b = end(data.linkEnds[link * 2 + 1]);
+        if (distanceToSegment([x, y], a, b) > LINK_HOVER_DISTANCE) {
+          hoveredLinkRef.current = null;
+          return;
+        }
         const source = data.labels[data.linkEnds[link * 2]] ?? "";
         const target = data.labels[data.linkEnds[link * 2 + 1]] ?? "";
         const text = `${source} —${propsRef.current.relationName(data.linkRel[link])}→ ${target}`;
-        const [x, y] = pointerRef.current;
         const w = context.measureText(text).width;
         // Kept inside the canvas near its right edge.
         const left = Math.min(x + 12, width - w - 16);
@@ -330,10 +343,8 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
           hoveredLinkRef.current = link;
           scheduleLabels();
         },
-        onLinkMouseOut: () => {
-          hoveredLinkRef.current = null;
-          scheduleLabels();
-        },
+        // No onLinkMouseOut: cosmos.gl reports one as soon as the pointer stops, while it is still
+        // on the line. Whether the pointer has left the line is measured when the names are drawn.
         onDragEnd: (event) => {
           // Stays where it is dropped.
           // The drag event's types come from d3-drag, which this build does not carry.
@@ -355,9 +366,16 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
         pointerRef.current = [event.clientX - rect.left, event.clientY - rect.top];
         if (hoveredLinkRef.current !== null) scheduleLabels();
       };
+      const onPointerLeave = () => {
+        if (hoveredLinkRef.current === null) return;
+        hoveredLinkRef.current = null;
+        scheduleLabels();
+      };
       container.addEventListener("pointermove", onPointerMove);
+      container.addEventListener("pointerleave", onPointerLeave);
       return () => {
         container.removeEventListener("pointermove", onPointerMove);
+        container.removeEventListener("pointerleave", onPointerLeave);
         observer.disconnect();
         window.clearTimeout(stopTimerRef.current);
         graph.destroy();
