@@ -97,6 +97,8 @@ function CheckSection({
   const [loadFailed, setLoadFailed] = useState(false);
   const [reads, setReads] = useState(0);
   const [running, setRunning] = useState(false);
+  // The warning stays up while reading again, so the retry button alone shows it is reading.
+  const [retrying, setRetrying] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -111,6 +113,11 @@ function CheckSection({
   useEffect(() => {
     void load();
   }, [load]);
+  const retry = async () => {
+    setRetrying(true);
+    await load();
+    setRetrying(false);
+  };
 
   const counting = check?.status === "running";
   useEffect(() => {
@@ -252,7 +259,7 @@ function CheckSection({
       {loadFailed ? (
         <Alert
           action={
-            <AppButton onClick={() => void load()} size="small">
+            <AppButton loading={retrying} onClick={() => void retry()} size="small">
               {t("common.retry")}
             </AppButton>
           }
