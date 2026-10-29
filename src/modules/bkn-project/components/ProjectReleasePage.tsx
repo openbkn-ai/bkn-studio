@@ -142,18 +142,23 @@ function CheckSection({
     {
       render: (_value, item) => counted(item, item.rows),
       title: t("bknProject.release.check.keys.rows"),
+      // Counts and short results read on one line; the names take the room left.
+      className: styles.nowrap,
     },
     {
       render: (_value, item) => counted(item, item.duplicates),
       title: t("bknProject.release.check.keys.duplicates"),
+      className: styles.nowrap,
     },
     {
       render: (_value, item) => counted(item, item.nulls),
       title: t("bknProject.release.check.keys.nulls"),
+      className: styles.nowrap,
     },
     {
       render: (_value, item) => result(item, Boolean(item.duplicates || item.nulls)),
       title: t("bknProject.release.check.keys.result"),
+      className: styles.nowrap,
     },
   ];
   const joinColumns: ColumnsType<JoinRow> = [
@@ -170,23 +175,28 @@ function CheckSection({
     {
       render: (_value, item) => counted(item, item.rows),
       title: t("bknProject.release.check.relations.rows"),
+      className: styles.nowrap,
     },
     {
       render: (_value, item) => counted(item, item.nulls),
       title: t("bknProject.release.check.relations.nulls"),
+      className: styles.nowrap,
     },
     {
       render: (_value, item) => counted(item, item.orphans),
       title: t("bknProject.release.check.relations.orphans"),
+      className: styles.nowrap,
     },
     {
       render: (_value, item) => counted(item, formatRate(item.hitRate)),
       title: t("bknProject.release.check.relations.hitRate"),
+      className: styles.nowrap,
     },
     {
       // Records without a match are only reported, so a counted join has no issue.
       render: (_value, item) => result(item, false),
       title: t("bknProject.release.check.relations.result"),
+      className: styles.nowrap,
     },
   ];
 

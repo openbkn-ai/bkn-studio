@@ -71,3 +71,7 @@
   color: var(--color-error-text);
   font-size: 13px;
 }
+
+.nowrap {
+  white-space: nowrap;
+}
