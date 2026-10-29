@@ -182,12 +182,13 @@ export const INDEX_STATE_TONE: Record<IndexState, LightStatusTone> = {
   unreadable: "error",
 };
 
-/** An index's state; a ready index being rebuilt says so. */
+/** An index's state; a ready index being rebuilt says so, and a state the page does not know too. */
 export function indexStateText(t: TFunction, item: IndexItem) {
+  if (item.state === "ready" && item.task) {
+    return t("bknProject.release.index.state.readyRebuilding");
+  }
   return t(
-    item.state === "ready" && item.task
-      ? "bknProject.release.index.state.readyRebuilding"
-      : `bknProject.release.index.state.${item.state}`,
+    `bknProject.release.index.state.${item.state in INDEX_STATE_TONE ? item.state : "other"}`,
   );
 }
 

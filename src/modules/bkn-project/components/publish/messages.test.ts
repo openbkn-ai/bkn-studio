@@ -141,6 +141,9 @@ describe("publish messages", () => {
     expect(indexStateText(en, indexItem({ state: "not_configured" }))).toBe(
       "Build settings missing",
     );
+    expect(indexStateText(zh, indexItem({ state: "queued" as IndexItem["state"] }))).toBe(
+      "状态未知",
+    );
     expect(missingFieldsText(zh, ["primary_key_fields", "incremental_fields"])).toBe(
       "缺少：唯一标识字段、更新字段",
     );
