@@ -83,7 +83,7 @@ export const subscriptionEnUS = {
       perm_object_level: {
         bullets: {
           b1: "Object types support row filtering",
-          b2: "Object types support column filtering (hide property columns, show property names only, or use Column Masking to redact content)",
+          b2: "Object types support column filtering (hide property columns, show property names only, or use column masking to redact content)",
           b3: "Audit of row and column permission changes",
         },
         description: "Enterprise object-rule compatibility and property-level controls",

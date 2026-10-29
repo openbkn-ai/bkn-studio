@@ -8,7 +8,7 @@
 export const authEnUS = {
   auth: {
     signInSubtitle: "Sign in to access the business knowledge network console",
-    signInButton: "Sign In",
+    signInButton: "Sign in",
     devTokenToggle: "Sign in with a token (dev mode)",
     signInOtherTabTitle: "Another tab is signing in",
     signInOtherTabHint:
@@ -17,16 +17,16 @@ export const authEnUS = {
     callbackErrorTitle: "Sign-in failed",
     backToSignIn: "Back to sign-in",
     logout: "Sign out",
-    devTokenAccessRequired: "Enter an Access Token",
-    devTokenTitle: "Development Token Configuration",
+    devTokenAccessRequired: "Enter an access token",
+    devTokenTitle: "Development token configuration",
     devTokenDescription:
       "Remote debugging mode is active and mocks are disabled. Paste the Bearer Token from the test environment to access the API after saving.",
     devTokenEnvPrefix: "You can also set",
     devTokenEnvMiddle: "in",
     devTokenEnvSuffix: "and restart the dev server to apply it automatically.",
     devTokenAccessPlaceholder: "Paste access_token without the Bearer prefix",
-    devTokenRefreshLabel: "Refresh Token (optional)",
+    devTokenRefreshLabel: "Refresh token (optional)",
     devTokenRefreshPlaceholder: "Optional token used to refresh expired access tokens",
-    devTokenSave: "Save and Continue",
+    devTokenSave: "Save and continue",
   },
 } as const;

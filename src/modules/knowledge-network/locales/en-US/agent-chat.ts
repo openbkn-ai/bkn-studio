@@ -29,7 +29,7 @@ export const agentChatPart = {
       "4. The 3 questions must cover different angles and must not be synonyms.\n" +
       'Only output a JSON array, for example ["question1","question2","question3"]. Do not output any other text or code fences.',
     profiles: {
-      soloEmptyTitle: "Start Validation",
+      soloEmptyTitle: "Start validation",
     },
     errors: {
       modelBusy: "The model service is busy. Try again later.",
@@ -67,9 +67,9 @@ export const agentChatPart = {
     },
     config: {
       title: "Q&A settings",
-      sharedTitle: "Global Agent",
+      sharedTitle: "Global agent",
       sharedDescription:
-        "Maintained by platform administrators in Built-in Agents and shared by every network. The current knowledge network and your preferences can only add to or narrow it.",
+        "Maintained by platform administrators in Built-in agents and shared by every network. The current knowledge network and your preferences can only add to or narrow it.",
       model: "Model",
       defaultModel: "Platform default model",
       status: "Status",
@@ -83,7 +83,7 @@ export const agentChatPart = {
         "Applies to the current knowledge network. You cannot modify this network, so it is read-only.",
       userTitle: "My preferences",
       userDescription:
-        "Applies only to you, after the global Agent and current knowledge network settings.",
+        "Applies only to you, after the global agent and current knowledge network settings.",
       instruction: "Additional instructions",
       instructionPlaceholder: "For example: lead with the conclusion, then list details in a table",
       tools: "Available tools",
@@ -98,15 +98,15 @@ export const agentChatPart = {
       serviceDefault: "Service default",
       capValue: "Cap {{value}}",
       customTools: "Custom",
-      sharedPrompt: "Shared Prompt",
+      sharedPrompt: "Shared prompt",
       promptCurrent: "In use: v{{version}}",
       inUse: "In use",
       useThisVersion: "Use this version",
       rolledBack: "Version switched",
       publishPrompt: "Publish as new version",
       promptPublished: "New version published",
-      sharedReadOnly: "Maintained by platform administrators in System Admin.",
-      openSystemConfig: "Edit in System Admin",
+      sharedReadOnly: "Maintained by platform administrators in system admin.",
+      openSystemConfig: "Edit in system admin",
       mcpProfile: "MCP service",
       mcpDefault: "Service default",
       mcpFull: "Full",
@@ -138,7 +138,7 @@ export const agentChatPart = {
       loadSummary: "Load knowledge network summary",
     },
     placeholders: {
-      askAgent: "Ask Agent, for example: {{suggestion}}",
+      askAgent: "Ask agent, for example: {{suggestion}}",
     },
     composer: {
       stop: "Stop",
@@ -181,13 +181,13 @@ export const agentChatPart = {
         someFailed_other: "{{count}} failed",
       },
       error: {
-        retry: "Retry Round",
+        retry: "Retry round",
         detail: "Details",
       },
       empty: {
-        start: "Start Validation",
+        start: "Start validation",
         knIntro:
-          "Ask the Agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",
+          "Ask the agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",
         networkName: " ({{networkName}})",
         summary:
           "The network summary has been loaded automatically ({{objectTypes}} object types / {{relations}} relation types), so you do not need to browse first.",

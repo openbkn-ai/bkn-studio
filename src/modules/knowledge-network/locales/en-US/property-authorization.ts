@@ -6,16 +6,16 @@
  */
 
 export const propertyAuthorizationPart = {
-  objectTypeMaskRuleTitle: "Column Masking Rule",
-  objectTypeMaskRuleDrawerTitle: "{{name}} / Column Masking Rule",
+  objectTypeMaskRuleTitle: "Column masking rule",
+  objectTypeMaskRuleDrawerTitle: "{{name}} / Column masking rule",
   objectTypeMaskRuleDescription:
-    "This defines a Column Masking rule only; it does not enable Column Masking by itself. The rule applies only when a user's or role's effective access to this property is Column Masking. Source data is not modified.",
+    "This defines a column masking rule only; it does not enable column masking by itself. The rule applies only when a user's or role's effective access to this property is column masking. Source data is not modified.",
   objectTypeMaskRuleType: "Rule type",
   objectTypeMaskRuleNone: "Not configured",
   objectTypeMaskRuleKind: {
     fixed: "Fixed replacement",
     partial: "Partial reveal",
-    email: "Email Column Masking",
+    email: "Email column masking",
     round: "Round by step",
     date_granularity: "Date granularity",
   },
@@ -30,21 +30,21 @@ export const propertyAuthorizationPart = {
   objectTypeMaskRuleStepInvalid: "Step must be a finite number greater than zero.",
   objectTypeMaskRuleGranularity: "Granularity",
   objectTypeMaskRuleGranularityValue: { year: "Year", month: "Month", day: "Day", hour: "Hour" },
-  objectTypeMaskRuleUnsupported: "This property type does not support Column Masking.",
+  objectTypeMaskRuleUnsupported: "This property type does not support column masking.",
   objectTypeMaskRuleTypeChanged:
-    "The current Column Masking rule is incompatible with the new property type. Change it or select Not configured.",
+    "The current column masking rule is incompatible with the new property type. Change it or select Not configured.",
   objectTypeMaskRulePreview: "Preview",
   objectTypeMaskRuleValid: "Valid rule",
   objectTypeMaskRuleIncomplete: "Incomplete",
   objectTypeMaskRuleExampleInput: "Example value",
-  objectTypeMaskRuleExampleOutput: "Column Masking result",
+  objectTypeMaskRuleExampleOutput: "Column masking result",
   objectTypeMaskRulePreviewSafety:
     "Do not enter real sensitive data. Previewing happens only on this page.",
 
   propertyAuthorizationAction: "Permissions",
   propertyAuthorizationTitle: "{{name}} / Permission settings",
   propertyAuthorizationDescription:
-    "Configure object access, property visibility, and Column Masking policies.",
+    "Configure object access, property visibility, and column masking policies.",
   propertyAuthorizationTabBase: "Base permissions",
   propertyAuthorizationTabProperty: "Property access control",
   propertyAuthorizationBaseDescription:
@@ -127,12 +127,12 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationColumnExplicit: "Explicit setting",
   propertyAuthorizationColumnEffective: "Effective access",
   propertyAuthorizationColumnSource: "Effective source",
-  propertyAuthorizationColumnMaskRule: "Column Masking Rule",
+  propertyAuthorizationColumnMaskRule: "Column masking rule",
   propertyAuthorizationLevel: {
     inherit: "Inherit",
     none: "Hidden",
     schema: "Schema only",
-    masked: "Column Masking",
+    masked: "Column masking",
     full: "Original",
   },
   propertyAuthorizationSource: {
@@ -151,9 +151,9 @@ export const propertyAuthorizationPart = {
   },
   propertyAuthorizationConfigureMask: "Configure rule",
   propertyAuthorizationMaskedMissing:
-    "Configure a valid Column Masking rule before selecting Column Masking.",
+    "Configure a valid column masking rule before selecting column masking.",
   propertyAuthorizationMaskedInvalid:
-    "The Column Masking rule is invalid. Runtime safely downgrades this property to Schema only.",
+    "The column masking rule is invalid. Runtime safely downgrades this property to Schema only.",
   propertyAuthorizationBatchLimit_one: "Save no more than {{count}} property at a time.",
   propertyAuthorizationBatchLimit_other: "Save no more than {{count}} properties at a time.",
   propertyAuthorizationNoProperty: "No properties match these filters.",

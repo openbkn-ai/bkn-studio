@@ -77,9 +77,9 @@ describe("toolDisplayOf", () => {
     const display = toolDisplayOf("run_sql", tool("run_sql"));
 
     expect(display).toMatchObject({
-      name: "SQL Data Query",
+      name: "SQL data query",
       groupKey: "data",
-      groupLabel: "Data Resources and SQL",
+      groupLabel: "Data resources and SQL",
       fromServer: false,
     });
   });
@@ -94,34 +94,34 @@ describe("toolDisplayOf", () => {
     // The fallback catalog is the full display source for old servers.
     expect(toolDisplayOf("bkn_get_operation")).toMatchObject({
       groupKey: "lifecycle",
-      name: "View Operation Status",
+      name: "View operation status",
     });
     expect(toolDisplayOf("bkn_get_receipt")).toMatchObject({
       groupKey: "lifecycle",
-      name: "View Call Receipt",
+      name: "View call receipt",
     });
     expect(toolDisplayOf("list_action_execution")).toMatchObject({
       groupKey: "logic",
-      name: "Action Execution History",
+      name: "Action execution history",
     });
     expect(toolDisplayOf("query_metric")).toMatchObject({
       groupKey: "logic",
-      name: "Metric Data Query",
+      name: "Metric data query",
     });
     expect(toolDisplayOf("read_skill_file")).toMatchObject({
       groupKey: "skill",
-      name: "Read Skill File",
+      name: "Read skill file",
     });
     expect(toolDisplayOf("execute_skill")).toMatchObject({
       groupKey: "skill",
-      name: "Execute Skill",
+      name: "Execute skill",
     });
   });
 
   it("keeps an unknown bkn_ tool in the lifecycle group instead of the knowledge-network group", () => {
     expect(toolDisplayOf("bkn_archive_interaction")).toMatchObject({
       groupKey: "lifecycle",
-      name: "Session Lifecycle Tool",
+      name: "Session lifecycle tool",
     });
     // Platform tools without interaction/conversation still rely on the bkn_ prefix.
     expect(toolDisplayOf("bkn_causality")).toMatchObject({ groupKey: "lifecycle" });
@@ -129,7 +129,7 @@ describe("toolDisplayOf", () => {
   });
 
   it("falls back to the tool name for a tool no side knows", () => {
-    expect(toolDisplayOf("brand_new_capability").name).toBe("MCP Capability");
+    expect(toolDisplayOf("brand_new_capability").name).toBe("MCP capability");
     expect(
       toolDisplayOf(
         "brand_new_capability",

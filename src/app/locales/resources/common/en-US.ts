@@ -45,8 +45,8 @@ export const commonEnUS = {
     actions: "Actions",
     updatedBy: "Updated by",
     updateTime: "Updated at",
-    basicInfo: "Basic Information",
-    advancedConfig: "Advanced Configuration",
+    basicInfo: "Basic information",
+    advancedConfig: "Advanced configuration",
     enabled: "Enabled",
     disabled: "Disabled",
     enable: "Enable",
@@ -65,14 +65,14 @@ export const commonEnUS = {
     description: "Description",
     category: "Category",
     mode: "Mode",
-    healthStatus: "Health Status",
+    healthStatus: "Health status",
     error: {
       code: "Error code: {{value}}",
       details: "Error details: {{value}}",
       solution: "Solution: {{value}}",
       link: "Error link: {{value}}",
     },
-    testConnection: "Test Connection",
+    testConnection: "Test connection",
     dangerDelete: {
       typeNameToConfirm: 'This is a high-risk action. Type "{{name}}" to confirm deletion.',
     },
@@ -100,8 +100,8 @@ export const commonEnUS = {
       editions: {
         community: "Community",
         professional: "Professional",
-        enterprise: "Enterprise Standard",
-        industry: "Industry Solution",
+        enterprise: "Enterprise standard",
+        industry: "Industry solution",
       },
       /** Sidebar badge: one short word. "Pro" is the accepted short form on the pricing page. */
       editionsShort: {

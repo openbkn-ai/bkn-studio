@@ -8,8 +8,8 @@
 export const capabilityPart = {
   capabilityFunctionsTitle: "Functions",
   capabilityFunctionsDescription:
-    "Mount execution factory tools so agents and SKILLs of this network can call them under governance. A binding points at a tool; the toolset only groups the picker.",
-  capabilitySkillsTitle: "SKILLs",
+    "Mount execution factory tools so agents and skills of this network can call them under governance. A binding points at a tool; the toolset only groups the picker.",
+  capabilitySkillsTitle: "Skills",
   capabilityMcpToolsTitle: "MCP",
   capabilityMcpToolsDescription:
     "Mount tools of an MCP Server. They are addressed by name and run over the MCP protocol, a different path from the functions and APIs of a toolset.",
@@ -17,21 +17,21 @@ export const capabilityPart = {
   capabilityApisDescription:
     "Mount APIs from an OpenAPI toolset in the execution factory. Same binding as a function; only the owning toolset differs — OpenAPI rather than code.",
   capabilitySkillsDescription:
-    "Mount published SKILL packages. Only mounted SKILLs are recalled for this network.",
+    "Mount published skill packages. Only mounted skills are recalled for this network.",
   capabilityManageInFactory: "Manage in execution factory",
   capabilityUsageTipLabel: "How this is used",
   capabilityUsageTipFunctions:
-    "Once mounted, agents and SKILLs of this network call these functions by capability name — no URL or token in the calling code. Creating, editing and publishing a function stays in the execution factory.",
+    "Once mounted, agents and skills of this network call these functions by capability name — no URL or token in the calling code. Creating, editing and publishing a function stays in the execution factory.",
   capabilityUsageTipMcpTools:
-    "Once mounted, agents and SKILLs of this network can call these MCP tools, dispatched through the MCP proxy. Registering and publishing the Server stays in the execution factory.",
+    "Once mounted, agents and skills of this network can call these MCP tools, dispatched through the MCP proxy. Registering and publishing the Server stays in the execution factory.",
   capabilityUsageTipApis:
-    "Once mounted, agents and SKILLs of this network call these APIs by capability name, with identity and trace attached automatically. Registering and publishing them stays in the execution factory.",
+    "Once mounted, agents and skills of this network call these APIs by capability name, with identity and trace attached automatically. Registering and publishing them stays in the execution factory.",
   capabilityUsageTipSkills:
-    "Only mounted SKILLs are recalled for this network; an unmounted one is neither discoverable nor callable. Importing, updating and publishing a SKILL stays in the execution factory.",
+    "Only mounted skills are recalled for this network; an unmounted one is neither discoverable nor callable. Importing, updating and publishing a skill stays in the execution factory.",
   capabilityMountFunctions: "Mount function",
   capabilityMountApis: "Mount API",
   capabilityMountMcpTools: "Mount MCP tool",
-  capabilityMountSkills: "Mount SKILL",
+  capabilityMountSkills: "Mount skill",
   capabilityDetach: "Release",
   capabilityDetachSelected: "Release selected",
   capabilityDetachConfirmTitle: "Release this capability?",
@@ -43,7 +43,7 @@ export const capabilityPart = {
   capabilityMountSuccess_other: "Mounted {{count}} capabilities",
   capabilityMountNothingNew: "Everything selected is already mounted",
   capabilityColumnName: "Name",
-  capabilityColumnBox: "Toolset / MCP Server",
+  capabilityColumnBox: "Toolset / MCP server",
   capabilityColumnStatus: "Status",
   capabilityColumnMountKind: "Mounted",
   capabilityColumnReferences: "Referenced by",
@@ -77,15 +77,15 @@ export const capabilityPart = {
   capabilityEmptyMcpTools:
     "No MCP tool mounted yet. Use Mount MCP tool to pick from an MCP Server.",
   capabilityEmptyApis: "No API mounted yet. Use Mount API to pick from an OpenAPI toolset.",
-  capabilityEmptySkills: "No SKILL mounted yet. Use Mount SKILL to pick from the platform.",
+  capabilityEmptySkills: "No skill mounted yet. Use Mount skill to pick from the platform.",
   capabilityNoVisibleFunctions: "No function is available to view.",
   capabilityNoVisibleMcpTools: "No MCP tool is available to view.",
   capabilityNoVisibleApis: "No API is available to view.",
-  capabilityNoVisibleSkills: "No SKILL is available to view.",
+  capabilityNoVisibleSkills: "No skill is available to view.",
   capabilitySearchNoResult: "No matching capabilities found.",
   capabilitySearchPlaceholder: "Search name or ID",
   capabilityRefresh: "Refresh",
-  capabilityPickerSkillTitle: "Mount SKILL",
+  capabilityPickerSkillTitle: "Mount skill",
   capabilityPickerFunctionTitle: "Mount function",
   capabilityPickerApiTitle: "Mount API",
   capabilityPickerMcpTitle: "Mount MCP tool",
@@ -112,7 +112,7 @@ export const capabilityPart = {
   capabilityPickerReasonLoadFailed: "Failed to load",
   capabilityPickerDeselected: "These picks cannot be mounted right now and were unticked",
   capabilityPickerDeselectedItem: "{{name}}: {{reason}}",
-  capabilityPickerEmptySkills: "No SKILL available to mount.",
+  capabilityPickerEmptySkills: "No skill available to mount.",
   capabilityPickerEmptyFunctions: "No code tool available to mount.",
   capabilityPickerEmptyMcpTools: "No MCP tool available to mount.",
   capabilityPickerEmptyApis: "No API available to mount.",

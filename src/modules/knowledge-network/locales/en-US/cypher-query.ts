@@ -71,7 +71,7 @@ export const cypherQueryPart = {
       fixMessage:
         "Running this query failed. Fix it according to the error and give the query again.\nQuery:\n{{query}}\nError: {{error}}",
       answer: "Agent answer",
-      noQuery: "The Agent's answer holds no query to run.",
+      noQuery: "The agent's answer holds no query to run.",
       resultDropped:
         "The result was too large to keep in this browser. Run the query again to see it.",
     },
@@ -200,10 +200,10 @@ export const cypherQueryPart = {
       reset: "Restore default style",
     },
     agent: {
-      notReadyShort: "The Cypher generation Agent is not published",
+      notReadyShort: "The Cypher generation agent is not published",
       notReady:
-        "The Cypher generation Agent is not published yet. Ask an administrator to configure its model and publish it; handwritten Cypher still works",
-      forbidden: "This account may not use the Cypher generation Agent or this knowledge network",
+        "The Cypher generation agent is not published yet. Ask an administrator to configure its model and publish it; handwritten Cypher still works",
+      forbidden: "This account may not use the Cypher generation agent or this knowledge network",
       busy: "The previous generation is still running; try again shortly",
       timeout: "Generating the query timed out; narrow the question and try again",
       failed: "Failed to generate the query",
