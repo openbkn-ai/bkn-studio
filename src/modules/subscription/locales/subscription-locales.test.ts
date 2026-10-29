@@ -25,7 +25,7 @@ describe("subscription permission terminology", () => {
       Object.values(subscriptionEnUS.subscription.capabilities.perm_object_level.bullets),
     ).toEqual([
       "Object types support row filtering",
-      "Object types support column filtering (hide property columns, show property names only, or use Column Masking to redact content)",
+      "Object types support column filtering (hide property columns, show property names only, or use column masking to redact content)",
       "Audit of row and column permission changes",
     ]);
   });
