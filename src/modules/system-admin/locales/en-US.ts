@@ -484,7 +484,7 @@ export const systemAdminEnUS = {
       topResourceTypeAll: "All resource types",
       topResourceToggle: "Expand or collapse {{name}}",
       topResourceLoadError: "Unable to load top-level resources. Please try again later.",
-      authorize: "Configure Permissions",
+      authorize: "Permissions",
       manage: "Manage",
       viewDetail: "View details",
       revoke: "Revoke Permissions",
