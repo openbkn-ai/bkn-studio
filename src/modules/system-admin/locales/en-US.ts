@@ -1275,7 +1275,24 @@ export const systemAdminEnUS = {
       publishedDone: "Published",
       back: "Back to list",
       promptLanguagePolicy:
-        "Official prompts follow the interface language. Publishing creates one version for all languages; it does not keep the previous translations.",
+        "Only the Initial configuration’s Prompt has translations by default. Add translations to other versions as needed; missing translations fall back to the original. Publishing the original creates a version; saving a translation does not.",
+      sourceLanguage: "Original language",
+      languageUnmarked: "Not specified",
+      languageUnmarkedHint:
+        "Confirm the original language before publishing or adding a translation.",
+      translationBody: "Translation in the interface language",
+      originalBody: "Original",
+      translationMissing: "No translation exists for this language. Showing the original.",
+      addTranslation: "Add translation",
+      saveTranslation: "Save translation",
+      editOriginal: "Edit in the original language",
+      translationSaved: "Translation saved without creating a version",
+      confirmTranslationTitle: "Save this version’s translation?",
+      confirmTranslationBody:
+        "This translation applies to users of this version and language. No Prompt or Agent configuration version is created.",
+      stalePromptDraft:
+        "The active version changed. Your draft is preserved. Copy any needed text, then discard this draft and reload.",
+      discardPromptDraft: "Discard this language’s draft and reload",
       otherLanguageDraft:
         "Another language has an unpublished draft. Switch back to continue editing it. Drafts are kept only while this page remains open.",
       unsavedTitle: "Discard unsaved changes?",

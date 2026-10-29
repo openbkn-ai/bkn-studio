@@ -26,6 +26,7 @@ const {
   getShared,
   getSharedPrompt,
   publishSharedPrompt,
+  saveSharedPromptTranslation,
   listVersions,
   restoreShared,
   updateShared,
@@ -36,6 +37,7 @@ const {
   getShared: vi.fn<SettingsModule["getShared"]>(),
   getSharedPrompt: vi.fn<SettingsModule["getSharedPrompt"]>(),
   publishSharedPrompt: vi.fn<SettingsModule["publishSharedPrompt"]>(),
+  saveSharedPromptTranslation: vi.fn<SettingsModule["saveSharedPromptTranslation"]>(),
   restoreShared: vi.fn<SettingsModule["restoreShared"]>(),
   updateShared: vi.fn<SettingsModule["updateShared"]>(),
 }));
@@ -50,6 +52,7 @@ vi.mock(
     getShared,
     getSharedPrompt,
     publishSharedPrompt,
+    saveSharedPromptTranslation,
     restoreShared,
     updateShared,
   }),
@@ -84,12 +87,13 @@ vi.mock("@/framework/context/use-runtime-config", () => ({
 }));
 
 const SAVE = /^保\s*存$/;
-const CONFIRM = i18n.t("systemAdmin.agentConfig.confirmChange");
 
 /** Confirms the change dialog the page opens before every write. */
 async function confirmChange() {
   await act(async () => {
-    fireEvent.click(await screen.findByRole("button", { name: CONFIRM }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: i18n.t("systemAdmin.agentConfig.confirmChange") }),
+    );
     await Promise.resolve();
   });
 }
@@ -173,6 +177,11 @@ function version(n: number, changes: Partial<AgentVersion> = {}): AgentVersion {
 }
 
 const PROMPT = {
+  source_language: "zh-CN" as const,
+  source_content: "Shared",
+  source_content_sha256: "0".repeat(64),
+  content_language: "zh-CN" as const,
+  translations: {},
   prompt: { prompt_id: "p", current_version: 3, content: "Shared" },
   next_version: 4,
 };
@@ -273,6 +282,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
   ])("confirms a committed publication after $name", async ({ failure, historyFails }) => {
     getShared.mockResolvedValue(shared());
     const committed = {
+      ...PROMPT,
       prompt: { ...PROMPT.prompt, current_version: 4, content: "My draft" },
       next_version: 5,
     };
@@ -318,6 +328,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
   ])("keeps a publication with $name as a conflict", async ({ current }) => {
     getShared.mockResolvedValue(shared());
     getSharedPrompt.mockResolvedValueOnce(PROMPT).mockResolvedValue({
+      ...PROMPT,
       prompt: current,
       next_version: current.current_version + 1,
     });
@@ -362,7 +373,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
 
   it("does not fall back to automatic version allocation on an older backend", async () => {
     getShared.mockResolvedValue(shared());
-    getSharedPrompt.mockResolvedValue({ prompt: PROMPT.prompt });
+    getSharedPrompt.mockResolvedValue({ ...PROMPT, next_version: undefined });
     renderScene();
     fireEvent.change(await screen.findByDisplayValue("Shared"), { target: { value: "Edited" } });
     fireEvent.click(
@@ -602,8 +613,121 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     expect(screen.getByDisplayValue("Draft prompt")).toBeTruthy();
   });
 
+  describe("translation maintenance", () => {
+    it("shows the original until a missing translation is explicitly added, without publishing a version", async () => {
+      await i18n.changeLanguage("en-US");
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockResolvedValue(PROMPT);
+      saveSharedPromptTranslation.mockResolvedValue({
+        ...PROMPT,
+        prompt: { ...PROMPT.prompt, content: "English translation" },
+        content_language: "en-US",
+        translations: { "en-US": "English translation" },
+      });
+      renderScene();
+      const original = await screen.findByDisplayValue("Shared");
+      expect(original.hasAttribute("readonly")).toBe(true);
+      expect(screen.getByText(i18n.t("systemAdmin.agentConfig.translationMissing"))).toBeTruthy();
+      fireEvent.click(
+        screen.getByRole("button", { name: i18n.t("systemAdmin.agentConfig.addTranslation") }),
+      );
+      const editor = screen.getByRole("textbox");
+      expect(editor.hasAttribute("readonly")).toBe(false);
+      expect((editor as HTMLTextAreaElement).value).toBe("");
+      fireEvent.change(editor, { target: { value: "English translation" } });
+      fireEvent.click(
+        screen.getByRole("button", { name: i18n.t("systemAdmin.agentConfig.saveTranslation") }),
+      );
+      await confirmChange();
+      await waitFor(() => expect(saveSharedPromptTranslation).toHaveBeenCalledTimes(1));
+      expect(saveSharedPromptTranslation.mock.calls[0][0]).toMatchObject({
+        version: 3,
+        language: "en-US",
+        content: "English translation",
+        source_language: "zh-CN",
+        source_content_sha256: PROMPT.source_content_sha256,
+      });
+      expect(publishSharedPrompt).not.toHaveBeenCalled();
+      expect(await screen.findByDisplayValue("English translation")).toBeTruthy();
+    });
+
+    it("edits an existing translation using the same version", async () => {
+      await i18n.changeLanguage("en-US");
+      getShared.mockResolvedValue(shared());
+      const translated = {
+        ...PROMPT,
+        prompt: { ...PROMPT.prompt, content: "Existing English" },
+        translations: { "en-US": "Existing English" },
+      };
+      getSharedPrompt.mockResolvedValue(translated);
+      saveSharedPromptTranslation.mockResolvedValue({
+        ...translated,
+        prompt: { ...translated.prompt, content: "Revised English" },
+      });
+      renderScene();
+      fireEvent.change(await screen.findByDisplayValue("Existing English"), {
+        target: { value: "Revised English" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: i18n.t("systemAdmin.agentConfig.saveTranslation") }),
+      );
+      await confirmChange();
+      await waitFor(() => expect(saveSharedPromptTranslation).toHaveBeenCalled());
+      expect(saveSharedPromptTranslation.mock.calls[0][0].version).toBe(3);
+      expect(publishSharedPrompt).not.toHaveBeenCalled();
+    });
+
+    it("keeps a failed translation draft available for retry", async () => {
+      await i18n.changeLanguage("en-US");
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockResolvedValue({
+        ...PROMPT,
+        prompt: { ...PROMPT.prompt, content: "Existing English" },
+        translations: { "en-US": "Existing English" },
+      });
+      saveSharedPromptTranslation.mockRejectedValue(
+        new BknAgentExecutionError("Translation changed", 409),
+      );
+      renderScene();
+      fireEvent.change(await screen.findByDisplayValue("Existing English"), {
+        target: { value: "Keep translation draft" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: i18n.t("systemAdmin.agentConfig.saveTranslation") }),
+      );
+      await confirmChange();
+      expect(await screen.findByText("Translation changed")).toBeTruthy();
+      expect(screen.getByDisplayValue("Keep translation draft")).toBeTruthy();
+      expect(publishSharedPrompt).not.toHaveBeenCalled();
+    });
+
+    it("requires an explicit language for an unmarked legacy original", async () => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockResolvedValue({
+        ...PROMPT,
+        source_language: null,
+        content_language: null,
+      });
+      renderScene();
+      fireEvent.change(await screen.findByDisplayValue("Shared"), {
+        target: { value: "Edited original" },
+      });
+      expect(
+        screen.getByRole("button", {
+          name: i18n.t("knowledgeNetwork.agentChat.config.publishPrompt"),
+        }),
+      ).toBeDisabled();
+      expect(screen.getByText(i18n.t("systemAdmin.agentConfig.languageUnmarkedHint"))).toBeTruthy();
+    });
+  });
+
   describe("localized prompts", () => {
-    const english = { ...PROMPT, prompt: { ...PROMPT.prompt, content: "English prompt" } };
+    const english = {
+      ...PROMPT,
+      content_language: "en-US" as const,
+      translations: { "en-US": "English prompt" },
+      prompt: { ...PROMPT.prompt, content: "English prompt" },
+    };
 
     it("keeps runtime usable when the first Prompt read fails and offers a local retry", async () => {
       getShared.mockResolvedValue(shared());

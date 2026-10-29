@@ -57,6 +57,7 @@ import {
   getSharedPrompt,
   listVersions,
   publishSharedPrompt,
+  saveSharedPromptTranslation,
   restoreShared,
   updateShared,
   type AgentLimits,
@@ -100,13 +101,42 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   const [shared, setShared] = useState<SharedAgent | null>(null);
   const localizedParams = useMemo(() => ({ ...params, locale }), [params, locale]);
   const [promptViews, setPromptViews] = useState<
-    Partial<Record<SupportedLocale, { prompt: SharedPrompt; content: string }>>
+    Partial<
+      Record<
+        SupportedLocale,
+        { prompt: SharedPrompt; content: string; addingTranslation?: boolean; stale?: boolean }
+      >
+    >
   >({});
   const view = promptViews[locale];
   const prompt = view?.prompt ?? null;
   const content = view?.content ?? "";
   const [promptLoading, setPromptLoading] = useState(true);
   const [promptError, setPromptError] = useState<string | null>(null);
+  const [draftSourceLanguage, setDraftSourceLanguage] = useState<SupportedLocale | null>(null);
+  const sourceLanguage = draftSourceLanguage ?? prompt?.source_language ?? null;
+  const hasTranslation = Boolean(prompt?.translations?.[locale]);
+  const isSource =
+    !view?.addingTranslation &&
+    (prompt?.source_language ? prompt.source_language === locale : !hasTranslation);
+  const isTranslation = !isSource && (hasTranslation || Boolean(view?.addingTranslation));
+  const isFallback = !isSource && !isTranslation;
+  const addTranslation = () =>
+    setPromptViews((views) => {
+      const current = views[locale];
+      return current
+        ? { ...views, [locale]: { ...current, addingTranslation: true, content: "" } }
+        : views;
+    });
+  const discardPromptDraft = () => {
+    setPromptViews((views) => {
+      const next = { ...views };
+      delete next[locale];
+      return next;
+    });
+    setDraftSourceLanguage(null);
+    setPromptRevision((revision) => revision + 1);
+  };
   const [promptRevision, setPromptRevision] = useState(0);
   const languageGeneration = useRef(0);
   const activeLocale = useRef(locale);
@@ -155,6 +185,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
         ...views,
         [locale]: { prompt: next, content: next.prompt.content },
       }));
+      setDraftSourceLanguage(null);
       setShared((cur) => cur && { ...cur, prompt_version: next.prompt.current_version });
     },
     [locale],
@@ -167,6 +198,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     setError(null);
     setBlocked(null);
     setPromptViews({});
+    setDraftSourceLanguage(null);
     void Promise.all([
       getShared(params),
       listLlmModels({ page: 1, size: 100 }).catch(() => ({ items: [] })),
@@ -204,10 +236,24 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
         if (!active) return;
         setPromptViews((views) => {
           const previous = views[locale];
-          const draft = previous && previous.content !== previous.prompt.prompt.content;
+          const draft =
+            previous &&
+            (previous.content !== previous.prompt.prompt.content || previous.addingTranslation);
+          if (
+            draft &&
+            (previous.prompt.prompt.current_version !== next.prompt.current_version ||
+              previous.prompt.source_content_sha256 !== next.source_content_sha256 ||
+              previous.prompt.source_language !== next.source_language)
+          ) {
+            return { ...views, [locale]: { ...previous, stale: true } };
+          }
           return {
             ...views,
-            [locale]: { prompt: next, content: draft ? previous.content : next.prompt.content },
+            [locale]: {
+              prompt: next,
+              content: draft ? previous.content : next.prompt.content,
+              addingTranslation: draft ? previous.addingTranslation : false,
+            },
           };
         });
         setVersions(history);
@@ -273,7 +319,10 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     : AGENT_LIMIT_KEYS.filter((key) => !CONTEXT_LIMIT_KEYS.includes(key));
   const dirty = Boolean(
     shared?.can_edit &&
-    (Object.values(promptViews).some((item) => item.content !== item.prompt.prompt.content) ||
+    (Boolean(draftSourceLanguage && draftSourceLanguage !== prompt?.source_language) ||
+      Object.values(promptViews).some(
+        (item) => item.content !== item.prompt.prompt.content || item.addingTranslation,
+      ) ||
       model !== (shared.model ?? "") ||
       (shared.uses_context_loader && profile !== (shared.mcp_profile ?? "default")) ||
       limitKeys.some((key) => (limits[key] ?? null) !== (shared.limits[key] ?? null))),
@@ -325,7 +374,16 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   if (!shared) return <Spin />;
 
   const publishPrompt = async () => {
-    if (publishing.current || promptLoading || promptError || !prompt) return;
+    if (
+      publishing.current ||
+      promptLoading ||
+      promptError ||
+      !prompt ||
+      !sourceLanguage ||
+      !isSource ||
+      view?.stale
+    )
+      return;
     const version = prompt.next_version;
     if (version == null || !Number.isSafeInteger(version) || version < 1) {
       message.error(t(`${P}.promptVersionUnavailable`));
@@ -335,7 +393,12 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     setSaving(true);
     try {
       // Capture one version per confirmation; transport retries reuse this body.
-      const next = await publishSharedPrompt({ ...localizedParams, content, version });
+      const next = await publishSharedPrompt({
+        ...localizedParams,
+        content,
+        version,
+        source_language: sourceLanguage,
+      });
       applyPrompt(next);
       message.success(t(`${L}.promptPublished`));
       await refreshVersions().catch(() => undefined);
@@ -350,6 +413,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
           if (
             next.prompt.prompt_id === prompt.prompt.prompt_id &&
             next.prompt.current_version === version &&
+            next.source_language === sourceLanguage &&
             next.prompt.content === content
           ) {
             // The requested content is active at the exact target version.
@@ -372,6 +436,39 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
       publishing.current = false;
       setSaving(false);
     }
+  };
+
+  const saveTranslation = async () => {
+    if (
+      !prompt ||
+      !sourceLanguage ||
+      !prompt.source_content_sha256 ||
+      !isTranslation ||
+      view?.stale ||
+      promptLoading
+    )
+      return;
+    await run(
+      () =>
+        saveSharedPromptTranslation({
+          ...localizedParams,
+          version: prompt.prompt.current_version,
+          language: locale,
+          content,
+          source_language: sourceLanguage,
+          source_content_sha256: prompt.source_content_sha256!,
+        }).catch((error: unknown) => {
+          if (error instanceof BknAgentExecutionError && error.status === 409) {
+            setPromptRevision((revision) => revision + 1);
+          }
+          throw error;
+        }),
+      `${P}.translationSaved`,
+      (next) => {
+        applyPrompt(next);
+        void refreshVersions();
+      },
+    );
   };
 
   const currentVersion = shared.version ?? null;
@@ -447,6 +544,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     run(action, done, (agent) => {
       applyRuntime(agent);
       setPromptViews({});
+      setDraftSourceLanguage(null);
       setPromptRevision((revision) => revision + 1);
     });
   const restore = () => switchTo(() => restoreShared(params), `${P}.restored`);
@@ -655,11 +753,60 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
               />
             ) : null}
             {promptLoading && !prompt ? <Spin /> : null}
+            <Space wrap style={{ marginBottom: 12 }}>
+              <Typography.Text>{t(`${P}.sourceLanguage`)}</Typography.Text>
+              <Select
+                aria-label={t(`${P}.sourceLanguage`)}
+                value={sourceLanguage}
+                placeholder={t(`${P}.languageUnmarked`)}
+                disabled={!editable || (!isSource && Boolean(prompt?.source_language)) || saving}
+                style={{ minWidth: 160 }}
+                options={[
+                  { value: "zh-CN", label: t("shell.language.zhCN") },
+                  { value: "en-US", label: t("shell.language.enUS") },
+                ]}
+                onChange={(next: SupportedLocale) => setDraftSourceLanguage(next)}
+              />
+              <Typography.Text type="secondary">
+                {t(`${P}.${isTranslation ? "translationBody" : "originalBody"}`)}
+              </Typography.Text>
+              {editable && sourceLanguage && sourceLanguage !== locale && !isTranslation ? (
+                <Button
+                  disabled={promptLoading || saving || Boolean(view?.stale)}
+                  onClick={addTranslation}
+                >
+                  {t(`${P}.addTranslation`)}
+                </Button>
+              ) : null}
+              {!isSource && sourceLanguage ? (
+                <Button onClick={() => void i18n.changeLanguage(sourceLanguage)}>
+                  {t(`${P}.editOriginal`)}
+                </Button>
+              ) : null}
+            </Space>
+            {!sourceLanguage ? (
+              <Alert type="info" showIcon message={t(`${P}.languageUnmarkedHint`)} />
+            ) : null}
+            {isFallback ? (
+              <Alert type="info" showIcon message={t(`${P}.translationMissing`)} />
+            ) : null}
+            {view?.stale ? (
+              <Alert
+                type="warning"
+                showIcon
+                message={t(`${P}.stalePromptDraft`)}
+                action={
+                  <Button onClick={discardPromptDraft}>{t(`${P}.discardPromptDraft`)}</Button>
+                }
+              />
+            ) : null}
             <Input.TextArea
               autoSize={{ minRows: 10, maxRows: 28 }}
-              readOnly={!editable || !prompt}
+              readOnly={!editable || !prompt || isFallback || Boolean(view?.stale)}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => {
+                if (!isFallback && !view?.stale) setContent(e.target.value);
+              }}
             />
             {editable ? (
               <Space style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
@@ -671,18 +818,26 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                     promptLoading ||
                     Boolean(promptError) ||
                     !prompt ||
+                    !sourceLanguage ||
+                    isFallback ||
+                    Boolean(view?.stale) ||
+                    (isTranslation &&
+                      (!prompt.source_content_sha256 || sourceLanguage === locale)) ||
                     !content.trim() ||
-                    content === prompt.prompt.content
+                    (content === prompt.prompt.content &&
+                      (!isSource || sourceLanguage === prompt.source_language))
                   }
                   onClick={() =>
                     confirmThen(
-                      t(`${P}.confirmPublishPromptTitle`),
-                      t(`${P}.confirmPromptBody`),
-                      publishPrompt,
+                      t(
+                        `${P}.${isTranslation ? "confirmTranslationTitle" : "confirmPublishPromptTitle"}`,
+                      ),
+                      t(`${P}.${isTranslation ? "confirmTranslationBody" : "confirmPromptBody"}`),
+                      isTranslation ? saveTranslation : publishPrompt,
                     )
                   }
                 >
-                  {t(`${L}.publishPrompt`)}
+                  {t(isTranslation ? `${P}.saveTranslation` : `${L}.publishPrompt`)}
                 </Button>
               </Space>
             ) : null}

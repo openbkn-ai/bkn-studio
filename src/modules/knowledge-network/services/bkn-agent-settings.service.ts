@@ -146,6 +146,11 @@ export type SharedPrompt = {
   prompt: { prompt_id: string; current_version: number; content: string };
   /** Maximum historical Prompt version + 1, including after a rollback. */
   next_version?: number;
+  source_language?: SupportedLocale | null;
+  source_content?: string;
+  source_content_sha256?: string;
+  content_language?: SupportedLocale | null;
+  translations?: Partial<Record<SupportedLocale, string>>;
 };
 
 /** What a version changed against the one before it. */
@@ -286,11 +291,15 @@ export function getSharedPrompt(params: AgentParams): Promise<SharedPrompt> {
 }
 
 export function publishSharedPrompt(
-  params: AgentParams & { content: string; version: number },
+  params: AgentParams & { content: string; version: number; source_language?: SupportedLocale },
 ): Promise<SharedPrompt> {
   return request(params, `/admin/agents/${agentPath(params.agentId)}/prompt/versions`, {
     method: "POST",
-    body: JSON.stringify({ content: params.content, version: params.version }),
+    body: JSON.stringify({
+      content: params.content,
+      version: params.version,
+      source_language: params.source_language,
+    }),
   });
 }
 
@@ -358,4 +367,28 @@ export function narrow(
         ? [...chosen]
         : upper.allowed_tools.filter((name) => chosen.includes(name));
   return { limits, allowed_tools: allowed };
+}
+
+/** Maintain a translation on one existing version; never publish a new Prompt. */
+export function saveSharedPromptTranslation(
+  params: AgentParams & {
+    version: number;
+    language: SupportedLocale;
+    content: string;
+    source_language: SupportedLocale;
+    source_content_sha256: string;
+  },
+): Promise<SharedPrompt> {
+  return request(
+    params,
+    `/admin/agents/${agentPath(params.agentId)}/prompt/versions/${params.version}/translations/${params.language}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        content: params.content,
+        source_language: params.source_language,
+        source_content_sha256: params.source_content_sha256,
+      }),
+    },
+  );
 }
