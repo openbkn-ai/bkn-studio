@@ -143,6 +143,56 @@ describe("ConfirmDraft", () => {
     expect(onConfirmed).toHaveBeenCalled();
   });
 
+  it("asks to accept the requirement conflicts the status says confirming leaves", async () => {
+    getProjectStatusMock.mockResolvedValue(
+      status({ accepts: ["unresolved_conflicts"] }, { unresolvedConflicts: 2 }),
+    );
+    confirmDraftMock.mockResolvedValue(draft);
+    renderConfirm();
+
+    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(okButton()).toBeDisabled();
+    fireEvent.click(dialog.getByText("还有 2 个需求冲突没有裁决，仍然确认"));
+    fireEvent.click(okButton());
+
+    await waitFor(() =>
+      expect(confirmDraftMock).toHaveBeenCalledWith("p1", {
+        acceptUnresolvedConflicts: true,
+        updateTime: draft.updateTime,
+      }),
+    );
+  });
+
+  it("asks for the conflicts a refusal names when the status did not say", async () => {
+    getProjectStatusMock.mockResolvedValue(status({}));
+    confirmDraftMock
+      .mockRejectedValueOnce(refusal("Draft.ConflictsNotAccepted", ["k1"]))
+      .mockResolvedValue(draft);
+    renderConfirm();
+
+    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(okButton());
+    // The dialog stays open with what to accept, rather than "try again later".
+    expect(await dialog.findByText("还有 1 个需求冲突没有裁决，仍然确认")).toBeInTheDocument();
+    expect(messageMock.warning).toHaveBeenCalledWith(
+      "还有需求冲突没有裁决，请在弹窗中确认是否仍然确认",
+    );
+    expect(messageMock.error).not.toHaveBeenCalled();
+    await waitFor(() => expect(okButton()).toBeDisabled());
+
+    fireEvent.click(dialog.getByText("还有 1 个需求冲突没有裁决，仍然确认"));
+    fireEvent.click(okButton());
+    await waitFor(() =>
+      expect(confirmDraftMock).toHaveBeenLastCalledWith("p1", {
+        acceptUnresolvedConflicts: true,
+        updateTime: draft.updateTime,
+      }),
+    );
+    expect(onConfirmed).toHaveBeenCalled();
+  });
+
   it("says why the draft cannot be confirmed yet", async () => {
     getProjectStatusMock.mockResolvedValue(
       status(

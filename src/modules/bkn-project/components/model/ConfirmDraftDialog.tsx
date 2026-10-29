@@ -22,6 +22,7 @@ import {
   getProjectPending,
   getProjectStatus,
   projectErrorCode,
+  projectErrorDetails,
 } from "@/modules/bkn-project/services/publish.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { PendingItem, ProjectStatus } from "@/modules/bkn-project/types/publish";
@@ -71,6 +72,12 @@ export function ConfirmDraft({
   const [pendingFailed, setPendingFailed] = useState(false);
   const [acceptUndecided, setAcceptUndecided] = useState(false);
   const [acceptPartial, setAcceptPartial] = useState(false);
+  const [acceptConflicts, setAcceptConflicts] = useState(false);
+  /**
+   * Requirement conflicts a refused confirmation named. The status may not say yet that confirming
+   * has to accept them, so a refusal is enough to ask; null until one is refused.
+   */
+  const [refusedConflicts, setRefusedConflicts] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
 
   // Read again whenever the draft changes, as each edit can change what confirming needs.
@@ -96,6 +103,10 @@ export function ConfirmDraft({
   const action = status?.nextActions.find((item) => item.action === "confirm_draft");
   const needsUndecided = Boolean(action?.accepts.includes("undecided_items"));
   const needsPartial = Boolean(action?.accepts.includes("partial_draft"));
+  const needsConflicts =
+    Boolean(action?.accepts.includes("unresolved_conflicts")) || refusedConflicts !== null;
+  // The status counts them beside the undecided items; a refusal names them.
+  const conflicts = refusedConflicts ?? status?.unresolvedConflicts ?? 0;
 
   const loadPending = useCallback(async () => {
     setPendingFailed(false);
@@ -169,6 +180,7 @@ export function ConfirmDraft({
   const start = () => {
     setAcceptUndecided(false);
     setAcceptPartial(false);
+    setAcceptConflicts(false);
     setUndecided(null);
     setOpen(true);
   };
@@ -179,6 +191,7 @@ export function ConfirmDraft({
       await confirmDraft(projectId, {
         ...(needsPartial ? { acceptPartial } : {}),
         ...(needsUndecided ? { acceptUndecided } : {}),
+        ...(needsConflicts ? { acceptUnresolvedConflicts: acceptConflicts } : {}),
         updateTime: draft.updateTime,
       });
       setOpen(false);
@@ -186,7 +199,13 @@ export function ConfirmDraft({
       onConfirmed();
     } catch (error) {
       const code = projectErrorCode(error);
-      if (code === "Draft.UndecidedNotAccepted" || code === "Draft.PartialNotAccepted") {
+      if (code === "Draft.ConflictsNotAccepted") {
+        // Conflicts between requirement documents wait for a ruling: ask the owner to accept them.
+        const details = projectErrorDetails(error);
+        setRefusedConflicts(Array.isArray(details) ? details.length : 0);
+        message.warning(t("bknProject.errors.Draft.ConflictsNotAccepted"));
+        await loadStatus();
+      } else if (code === "Draft.UndecidedNotAccepted" || code === "Draft.PartialNotAccepted") {
         // Something new waits since the status was read: show it, and ask again.
         message.warning(refusalText(t, error));
         await loadStatus();
@@ -209,7 +228,8 @@ export function ConfirmDraft({
   const counts = adoptedCounts(draft);
   const ready =
     (!needsUndecided || (acceptUndecided && undecided !== null)) &&
-    (!needsPartial || acceptPartial);
+    (!needsPartial || acceptPartial) &&
+    (!needsConflicts || acceptConflicts);
   const unreadable = draft.items.unreadable;
 
   return (
@@ -288,6 +308,16 @@ export function ConfirmDraft({
                 {t("bknProject.confirm.dialog.partialAccept")}
               </Checkbox>
             </div>
+          ) : null}
+          {needsConflicts ? (
+            <Checkbox
+              checked={acceptConflicts}
+              onChange={(event) => setAcceptConflicts(event.target.checked)}
+            >
+              {conflicts
+                ? t("bknProject.confirm.dialog.conflictsAccept", { count: conflicts })
+                : t("bknProject.confirm.dialog.conflictsAcceptUncounted")}
+            </Checkbox>
           ) : null}
           <span className={styles.summary}>{t("bknProject.confirm.dialog.after")}</span>
         </div>
