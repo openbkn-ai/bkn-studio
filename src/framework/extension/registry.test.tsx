@@ -15,6 +15,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
+  extensionInstanceHandOvers,
+  handOverLimit,
   extensionRoutes,
   extensionStandaloneRoutes,
   extensionWorkspaceActions,
@@ -178,6 +180,45 @@ describe("extension registry", () => {
       { key: "first:open", labelKey: "first.open" },
       { key: "second:open", labelKey: "second.open" },
     ]);
+  });
+
+  it("lists instance hand-overs under distinct keys, none in a community build", () => {
+    expect(extensionInstanceHandOvers()).toEqual([]);
+    registerExtension({
+      capability: "demo_capability",
+      id: "first",
+      instanceHandOvers: [
+        {
+          id: "open",
+          labelKey: "first.open",
+          maxInstances: 10,
+          path: (networkId) => `/demo/${networkId}`,
+          url: (pageUrl, ids) => `${pageUrl}#ids=${ids.join(",")}`,
+        },
+      ],
+    });
+
+    const [handOver] = extensionInstanceHandOvers();
+    expect(handOver.key).toBe("first:open");
+    expect(handOver.url("https://studio/demo/n1", ["a-1", "b-2"], [])).toBe(
+      "https://studio/demo/n1#ids=a-1,b-2",
+    );
+  });
+
+  it("reads a hand-over's limit when it is a function, each time it is asked", () => {
+    let limit = 500;
+    const handOver = {
+      id: "open",
+      labelKey: "first.open",
+      maxInstances: () => limit,
+      path: () => "/",
+      url: (pageUrl: string) => pageUrl,
+    };
+    expect(handOverLimit(handOver)).toBe(500);
+    // Raised on the page that takes the instances, in another tab.
+    limit = 1500;
+    expect(handOverLimit(handOver)).toBe(1500);
+    expect(handOverLimit({ ...handOver, maxInstances: 10 })).toBe(10);
   });
 
   it("adds copy without overriding what is already there", () => {

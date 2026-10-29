@@ -34,6 +34,12 @@ export const KnowledgeNetworkWorkspaceStandalonePage = lazy(async () => {
   return { default: module.KnowledgeNetworkWorkspaceStandalonePage };
 }) as LazyExoticComponent<ComponentType<{ section: KnowledgeNetworkWorkspaceSection }>>;
 
+// Lazy, so the graph engines load only on this page.
+export const GraphOverviewPage = lazyNamedExport(
+  () => import("@/modules/knowledge-network/pages/GraphOverviewPage"),
+  "GraphOverviewPage",
+);
+
 export const ConceptGroupCreatePage = lazyNamedExport(
   () => import("@/modules/knowledge-network/pages/ConceptGroupCreatePage"),
   "ConceptGroupCreatePage",

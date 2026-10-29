@@ -45,6 +45,11 @@ export type StudioExtension = {
    * each of its pages is offered.
    */
   workspaceNavItems?: WorkspaceNavEntry[];
+  /**
+   * Pages that take a set of instances from the graph overview, offered there as a button for
+   * the instances selected on screen.
+   */
+  instanceHandOvers?: InstanceHandOver[];
   /** Copy merged into the translation resources, by locale. */
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
 };
@@ -79,6 +84,44 @@ export type WorkspaceNavEntry = {
   /** Path inside the app, without the basename, for the given network. */
   path: (networkId: string) => string;
 };
+
+/**
+ * A button on the graph overview that opens one of the extension's pages, in a new tab, with the
+ * instances selected there. The overview has room for one: it shows the first one registered. Like a workspace action it is shown whatever the licence says: the
+ * page it opens carries the capability guard.
+ */
+export type InstanceHandOver = {
+  /** Unique within the extension. */
+  id: string;
+  icon?: ReactNode;
+  /** Translation key of the button label; it receives `count`, the instances handed over. */
+  labelKey: string;
+  /**
+   * Instances the page takes at most; a larger selection disables the button. A function is read
+   * whenever the selection changes, for a limit people set themselves on that page.
+   */
+  maxInstances: number | (() => number);
+  /**
+   * Translation key of a sentence added to the "too many" tip, saying how to take more (where the
+   * limit is set); it receives `limit`.
+   */
+  limitHintKey?: string;
+  /** Path inside the app, without the basename, for the given network. */
+  path: (networkId: string) => string;
+  /**
+   * The URL to open, from the page's absolute URL and the instance ids (`<object type>-<key>`,
+   * see lib/instance-label.ts). `objectTypeIds` lists the network's object types, for a page
+   * that packs ids by type.
+   */
+  url: (pageUrl: string, instanceIds: string[], objectTypeIds: string[]) => string;
+};
+
+/** The most instances a hand-over takes right now. */
+export function handOverLimit(handOver: InstanceHandOver): number {
+  return typeof handOver.maxInstances === "function"
+    ? handOver.maxInstances()
+    : handOver.maxInstances;
+}
 
 const installed: StudioExtension[] = [];
 let frozen = false;
@@ -139,6 +182,15 @@ export function extensionWorkspaceNavItems(): (WorkspaceNavEntry & { key: string
     (extension.workspaceNavItems ?? []).map((item) => ({
       ...item,
       key: `${extension.id}:${item.id}`,
+    })),
+  );
+}
+
+export function extensionInstanceHandOvers(): (InstanceHandOver & { key: string })[] {
+  return installed.flatMap((extension) =>
+    (extension.instanceHandOvers ?? []).map((handOver) => ({
+      ...handOver,
+      key: `${extension.id}:${handOver.id}`,
     })),
   );
 }
