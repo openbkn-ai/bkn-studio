@@ -289,7 +289,7 @@ function mapUnderstanding(understanding: BackendUnderstanding): UnderstandingCat
     counts: catalog.counts ?? {},
     tables: (catalog.tables ?? []).map((table) => ({
       applied: table.applied ?? false,
-      finishTime: table.finish_time ?? 0,
+      finishTime: table.finish_time || null,
       name: table.name,
       resourceId: table.resource_id,
       status: table.status,
@@ -323,7 +323,8 @@ const MOCK_CHECK_MS = 4000;
 const MOCK_BUILD_MS = 6000;
 const MOCK_UNDERSTAND_MS = 3000;
 
-type MockConfirmation = { time: number; updateTime: number };
+/** When the draft was confirmed, and when its check last started: checking again keeps the first. */
+type MockConfirmation = { checkStart: number; time: number; updateTime: number };
 const mockConfirmations: Record<string, MockConfirmation> = {};
 const mockUnderstanding: Record<string, { start: number }> = {};
 const mockRebuilds: Record<string, number> = {};
@@ -363,7 +364,7 @@ function mockPendingOf(draft: Draft) {
 }
 
 function mockCheckOf(draft: Draft, confirmation: MockConfirmation): OntologyCheck {
-  const finished = Date.now() - confirmation.time >= MOCK_CHECK_MS;
+  const finished = Date.now() - confirmation.checkStart >= MOCK_CHECK_MS;
   const keys = adoptedObjects(draft).map((item): CheckKeyResult => ({
     duplicates: item.key.computed
       ? Math.max(0, item.key.rows - item.key.distinct - item.key.nulls)
@@ -404,9 +405,9 @@ function mockCheckOf(draft: Draft, confirmation: MockConfirmation): OntologyChec
   return {
     attempt: 1,
     error: "",
-    finishTime: finished ? confirmation.time + MOCK_CHECK_MS : 0,
+    finishTime: finished ? confirmation.checkStart + MOCK_CHECK_MS : 0,
     results: finished ? results : null,
-    startTime: confirmation.time,
+    startTime: confirmation.checkStart,
     status: !finished ? "running" : issues ? "issues" : partial ? "partial" : "passed",
   };
 }
@@ -589,7 +590,8 @@ async function mockConfirm(projectId: string, input: ConfirmDraftInput): Promise
       undecided.map(({ item, kind }) => `${kind}/${item.id}`),
     );
   }
-  mockConfirmations[projectId] = { time: Date.now(), updateTime: draft.updateTime };
+  const now = Date.now();
+  mockConfirmations[projectId] = { checkStart: now, time: now, updateTime: draft.updateTime };
   delete mockRebuilds[projectId];
   return draft;
 }
@@ -597,31 +599,42 @@ async function mockConfirm(projectId: string, input: ConfirmDraftInput): Promise
 async function mockUnderstandingOf(projectId: string): Promise<UnderstandingCatalog[]> {
   const project = await getProject(projectId);
   const draft = await getDraft(projectId);
-  const names = draft?.items.objectTypes.map((item) => item.table.name) ?? [];
+  // Every table drafting read is understood, adopted or not, one after another.
+  const tables = draft?.items.objectTypes.map((item) => item.table) ?? [];
   const run = mockUnderstanding[projectId];
+  const done = run ? Math.floor((Date.now() - run.start) / MOCK_UNDERSTAND_MS) : -1;
+  const understood = tables.map((table, at) => {
+    const status: UnderstandingStatus = !run
+      ? "not_started"
+      : at < done
+        ? "completed"
+        : at === done
+          ? "running"
+          : "pending";
+    return {
+      applied: status === "completed",
+      catalogId: table.catalogId,
+      finishTime: run && status === "completed" ? run.start + (at + 1) * MOCK_UNDERSTAND_MS : null,
+      name: table.name,
+      resourceId: table.resourceId,
+      status,
+    };
+  });
   return project.catalogIds.map((catalogId) => {
-    const tables = names.map((name, at) => {
-      const done = run ? Math.floor((Date.now() - run.start) / MOCK_UNDERSTAND_MS) : -1;
-      const status: UnderstandingStatus = !run
-        ? "not_started"
-        : at < done
-          ? "completed"
-          : at === done
-            ? "running"
-            : "pending";
-      return {
-        applied: status === "completed",
-        finishTime: run && status === "completed" ? run.start + (at + 1) * MOCK_UNDERSTAND_MS : 0,
+    const own = understood
+      .filter((table) => table.catalogId === catalogId)
+      .map(({ applied, finishTime, name, resourceId, status }) => ({
+        applied,
+        finishTime,
         name,
-        resourceId: `res-${name}`,
+        resourceId,
         status,
-      };
-    });
+      }));
     const counts: UnderstandingCatalog["counts"] = {};
-    tables.forEach((table) => {
+    own.forEach((table) => {
       counts[table.status] = (counts[table.status] ?? 0) + 1;
     });
-    return { catalogId, counts, tables, visible: true };
+    return { catalogId, counts, tables: own, visible: true };
   });
 }
 
@@ -707,7 +720,7 @@ export async function runOntologyCheck(projectId: string): Promise<OntologyCheck
     if (!draft || !confirmation) {
       throw mockRefusal(409, "Check.NothingConfirmed");
     }
-    confirmation.time = Date.now();
+    confirmation.checkStart = Date.now();
     return wait(mockCheckOf(draft, confirmation));
   }
   const response = await http.post<BackendCheck>(

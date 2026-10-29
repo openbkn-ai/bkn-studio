@@ -175,7 +175,8 @@ export type UnderstandingStatus =
 export type UnderstandingTable = {
   /** Whether the result was written to the table. */
   applied: boolean;
-  finishTime: number;
+  /** Null until the table is understood. */
+  finishTime: number | null;
   name: string;
   resourceId: string;
   status: UnderstandingStatus;

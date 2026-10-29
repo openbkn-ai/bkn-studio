@@ -357,7 +357,13 @@ describe("publish.service", () => {
         catalogId: "c",
         counts: { completed: 1 },
         tables: [
-          { applied: false, finishTime: 0, name: "orders", resourceId: "r", status: "completed" },
+          {
+            applied: false,
+            finishTime: null,
+            name: "orders",
+            resourceId: "r",
+            status: "completed",
+          },
         ],
         visible: true,
       },
@@ -433,6 +439,45 @@ describe("publish.service", () => {
       const index = await settle(service.getOntologyIndex("p-001"));
       expect(index?.objectTypes.length).toBeGreaterThan(0);
       expect(index?.objectTypes.every((item) => item.build)).toBe(true);
+
+      // Checking again starts a new check only: the confirmation and its builds stay as they were.
+      await vi.advanceTimersByTimeAsync(10_000);
+      await settle(service.runOntologyCheck("p-001"));
+      const rechecked = await settle(service.getProjectStatus("p-001"));
+      expect(rechecked.confirmation?.time).toBe(after.confirmation?.time);
+      expect(rechecked.check?.status).toBe("running");
+      const rebuilt = await settle(service.getOntologyIndex("p-001"));
+      expect(rebuilt?.objectTypes.some((item) => item.state === "ready")).toBe(true);
+      expect(rebuilt?.objectTypes.some((item) => item.state === "building")).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("mocks understanding the draft's own tables, by their catalog", async () => {
+    const service = await importService("true");
+    const { getDraft } = await import("@/modules/bkn-project/services/draft.service");
+    vi.useFakeTimers();
+    try {
+      const settle = async <T>(promise: Promise<T>) => {
+        await vi.runAllTimersAsync();
+        return promise;
+      };
+      const draft = (await settle(getDraft("p-001")))!;
+      await settle(service.understandCatalogs("p-001"));
+      const [catalog] = await settle(service.getUnderstanding("p-001"));
+
+      expect(catalog.catalogId).toBe("cat-001");
+      expect(catalog.tables.map((table) => table.resourceId)).toEqual(
+        draft.items.objectTypes
+          .filter((item) => item.table.catalogId === "cat-001")
+          .map((item) => item.table.resourceId),
+      );
+      expect(
+        catalog.tables
+          .filter((table) => table.status !== "completed")
+          .every((table) => table.finishTime === null),
+      ).toBe(true);
     } finally {
       vi.useRealTimers();
     }
