@@ -778,11 +778,6 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                   {t(`${P}.addTranslation`)}
                 </Button>
               ) : null}
-              {!isSource && sourceLanguage ? (
-                <Button onClick={() => void i18n.changeLanguage(sourceLanguage)}>
-                  {t(`${P}.editOriginal`)}
-                </Button>
-              ) : null}
             </Space>
             {!sourceLanguage ? (
               <Alert type="info" showIcon message={t(`${P}.languageUnmarkedHint`)} />

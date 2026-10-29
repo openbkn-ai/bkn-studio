@@ -1285,7 +1285,6 @@ export const systemAdminEnUS = {
       translationMissing: "No translation exists for this language. Showing the original.",
       addTranslation: "Add translation",
       saveTranslation: "Save translation",
-      editOriginal: "Edit in the original language",
       translationSaved: "Translation saved without creating a version",
       confirmTranslationTitle: "Save this version’s translation?",
       confirmTranslationBody:

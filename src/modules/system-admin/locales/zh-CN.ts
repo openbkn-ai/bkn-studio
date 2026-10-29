@@ -1190,7 +1190,6 @@ export const systemAdminZhCN = {
       translationMissing: "当前语言没有译文，正在显示原文。",
       addTranslation: "添加译文",
       saveTranslation: "保存译文",
-      editOriginal: "切换到原文语言编辑",
       translationSaved: "译文已保存，版本号未变",
       confirmTranslationTitle: "保存当前版本的译文？",
       confirmTranslationBody: "译文将对使用此版本和语言的用户生效，不新增提示词或 Agent 配置版本。",

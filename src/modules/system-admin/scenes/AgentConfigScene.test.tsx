@@ -614,6 +614,49 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
   });
 
   describe("translation maintenance", () => {
+    it.each([
+      ["en-US", "zh-CN"],
+      ["zh-CN", "en-US"],
+    ] as const)(
+      "edits and saves the %s translation without switching to its %s original language",
+      async (interfaceLanguage, originalLanguage) => {
+        await i18n.changeLanguage(interfaceLanguage);
+        getShared.mockResolvedValue(shared());
+        const translated = {
+          ...PROMPT,
+          source_language: originalLanguage,
+          content_language: interfaceLanguage,
+          prompt: { ...PROMPT.prompt, content: "Existing translation" },
+          translations: { [interfaceLanguage]: "Existing translation" },
+        };
+        getSharedPrompt.mockResolvedValue(translated);
+        saveSharedPromptTranslation.mockResolvedValue({
+          ...translated,
+          prompt: { ...PROMPT.prompt, content: "Edited translation" },
+          translations: { [interfaceLanguage]: "Edited translation" },
+        });
+        renderScene();
+        const editor = await screen.findByDisplayValue("Existing translation");
+        expect(screen.queryByRole("button", { name: /Edit.*original|切换到原文/ })).toBeNull();
+        expect(editor).not.toHaveAttribute("readonly");
+        fireEvent.change(editor, { target: { value: "Edited translation" } });
+        fireEvent.click(
+          screen.getByRole("button", { name: i18n.t("systemAdmin.agentConfig.saveTranslation") }),
+        );
+        await confirmChange();
+        await waitFor(() => expect(saveSharedPromptTranslation).toHaveBeenCalledTimes(1));
+        expect(saveSharedPromptTranslation.mock.calls[0][0]).toMatchObject({
+          locale: interfaceLanguage,
+          language: interfaceLanguage,
+          source_language: originalLanguage,
+          content: "Edited translation",
+          version: PROMPT.prompt.current_version,
+        });
+        expect(i18n.language).toBe(interfaceLanguage);
+        expect(publishSharedPrompt).not.toHaveBeenCalled();
+      },
+    );
+
     it("shows the original until a missing translation is explicitly added, without publishing a version", async () => {
       await i18n.changeLanguage("en-US");
       getShared.mockResolvedValue(shared());
