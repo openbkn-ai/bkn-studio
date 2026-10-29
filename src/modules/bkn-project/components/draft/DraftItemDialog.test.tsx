@@ -78,6 +78,39 @@ describe("DraftItemDialog", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith({ incrementalKey: "updated_at" }));
   });
 
+  it("recommends fields that grow with time, and warns about one that may not grow", async () => {
+    renderWithoutAntdStyles(
+      <DraftItemDialog
+        item={withProperties({
+          properties: [
+            { ...salesOrders.properties[0], displayName: "版本", name: "version", type: "integer" },
+            {
+              ...salesOrders.properties[0],
+              displayName: "更新时间",
+              name: "updated_at",
+              type: "datetime",
+            },
+          ],
+        })}
+        onCancel={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.mouseDown(updateFieldSelect());
+    const options = await screen.findAllByRole("option");
+    // Time first and marked, though the draft lists the number first.
+    expect(options.map((option) => option.textContent)).toEqual(["updated_at", "version"]);
+    const listed = document.querySelectorAll(".ant-select-item-option-content");
+    expect(listed[0].textContent).toContain("推荐");
+    expect(listed[1].textContent).not.toContain("推荐");
+
+    fireEvent.click(within(listed[1] as HTMLElement).getByText("版本"));
+    expect(
+      await screen.findByText("更新字段应随记录更新而增大，例如更新时间。"),
+    ).toBeInTheDocument();
+  });
+
   it("clears an update field, and keeps names and the field in one edit", async () => {
     renderWithoutAntdStyles(
       <DraftItemDialog

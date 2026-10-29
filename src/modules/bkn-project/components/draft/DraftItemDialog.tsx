@@ -9,6 +9,7 @@ import { Form, Input, Modal, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import {
   DESCRIPTION_MAX,
   type EditableItem,
@@ -31,6 +32,13 @@ const UPDATE_FIELD_TYPES = new Set([
   "timestamp",
   "unsigned integer",
 ]);
+
+/**
+ * Types whose values grow with time, as an update time does: recommended. Numbers and text are
+ * accepted too, but an identifier or a code does not grow when a record changes, so a refresh
+ * by it would miss changes.
+ */
+const TIME_TYPES = new Set(["date", "datetime", "time", "timestamp"]);
 
 const isObjectType = (item: EditableItem): item is DraftObjectType => "incrementalKey" in item;
 
@@ -60,19 +68,36 @@ export function DraftItemDialog({
   const named = nameEdit(item, values);
   const edit = named || updateFieldEdit ? { ...named, ...updateFieldEdit } : null;
   const nameMissing = !values.name.trim();
-  const updateFieldOptions = (objectType?.properties ?? [])
-    .filter((property) => UPDATE_FIELD_TYPES.has(property.type))
-    .map((property) => ({
-      label:
-        property.displayName && property.displayName !== property.name ? (
-          <span>
+  const candidates = (objectType?.properties ?? []).filter((property) =>
+    UPDATE_FIELD_TYPES.has(property.type),
+  );
+  const updateFieldOptions = [
+    ...candidates.filter((property) => TIME_TYPES.has(property.type)),
+    ...candidates.filter((property) => !TIME_TYPES.has(property.type)),
+  ].map((property) => ({
+    label: (
+      <span>
+        {property.displayName && property.displayName !== property.name ? (
+          <>
             {property.displayName} <code>{property.name}</code>
-          </span>
+          </>
         ) : (
           property.name
-        ),
-      value: property.name,
-    }));
+        )}
+        {TIME_TYPES.has(property.type) ? (
+          <>
+            {" "}
+            <LightStatusTag tone="success">
+              {t("bknProject.model.edit.updateFieldRecommended")}
+            </LightStatusTag>
+          </>
+        ) : null}
+      </span>
+    ),
+    value: property.name,
+  }));
+  const chosen = candidates.find((property) => property.name === updateField);
+  const notGrowing = Boolean(chosen && !TIME_TYPES.has(chosen.type));
 
   const save = async () => {
     if (!edit || nameMissing) {
@@ -127,10 +152,13 @@ export function DraftItemDialog({
         {objectType ? (
           <Form.Item
             extra={t(
-              updateFieldOptions.length
-                ? "bknProject.model.edit.updateFieldHelp"
-                : "bknProject.model.edit.updateFieldUnavailable",
+              !updateFieldOptions.length
+                ? "bknProject.model.edit.updateFieldUnavailable"
+                : notGrowing
+                  ? "bknProject.model.edit.updateFieldNotGrowing"
+                  : "bknProject.model.edit.updateFieldHelp",
             )}
+            validateStatus={notGrowing ? "warning" : undefined}
             htmlFor="draft-item-update-field"
             label={t("bknProject.model.edit.updateField")}
           >

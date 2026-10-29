@@ -224,6 +224,8 @@ export const bknProjectZhCN = {
         updateFieldUnavailable:
           "这个对象类没有能作为更新字段的属性（需要是数字、文字、日期或时间）。",
         updateFieldNone: "不设置",
+        updateFieldRecommended: "推荐",
+        updateFieldNotGrowing: "更新字段应随记录更新而增大，例如更新时间。",
         stale: "草稿已被他人修改，已重新加载。如果仍需要，请重新操作。",
         cascade: "同时取消采纳了连接它的 {{count}} 个关系类",
         cascade_one: "同时取消采纳了连接它的 {{count}} 个关系类",

@@ -238,6 +238,9 @@ export const bknProjectEnUS = {
         updateFieldUnavailable:
           "This object type has no property that can be an update field (it must be a number, text, a date or a time).",
         updateFieldNone: "None",
+        updateFieldRecommended: "Recommended",
+        updateFieldNotGrowing:
+          "An update field should grow whenever a record changes, such as an update time.",
         stale:
           "Someone changed this draft, so it was reloaded. Make your change again if it is still needed.",
         cascade: "Also stopped adopting {{count}} relation types that connect it",
