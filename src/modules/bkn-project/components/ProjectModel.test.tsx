@@ -58,6 +58,12 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
   getDraft: getDraftMock,
 }));
 
+// Semantic understanding has its own tests; here it has never run.
+vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
+  getUnderstanding: () => Promise.resolve([]),
+}));
+
 vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/project.service")>()),
   setProjectCatalogs: setProjectCatalogsMock,
@@ -163,6 +169,10 @@ describe("ProjectModel", () => {
     expect(await screen.findByText("bknProject.model.empty.title")).toBeInTheDocument();
     expect(screen.getByText("bknProject.model.empty.description")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "bknProject.model.generate" })).toBeEnabled();
+    // Semantic understanding names the tables drafting reads, so it is offered first.
+    expect(
+      await screen.findByText("bknProject.understand.progress.notStarted"),
+    ).toBeInTheDocument();
     view.unmount();
 
     // Without catalogs there is nothing to draft from: the owner is offered to choose them.
@@ -171,6 +181,7 @@ describe("ProjectModel", () => {
     expect(
       screen.queryByRole("button", { name: "bknProject.model.generate" }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText("bknProject.understand.progress.notStarted")).toBeNull();
   });
 
   it("drafts and shows bkn-project's localized refusal when drafting cannot start", async () => {
