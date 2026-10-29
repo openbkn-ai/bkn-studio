@@ -10,8 +10,10 @@ import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project } from "@/modules/bkn-project/types/project";
+import type { ProjectStatus } from "@/modules/bkn-project/types/publish";
 
 const getDraftMock = vi.hoisted(() => vi.fn());
+const getProjectStatusMock = vi.hoisted(() => vi.fn());
 const generateDraftMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
 const editDraftItemMock = vi.hoisted(() => vi.fn());
@@ -58,10 +60,11 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
   getDraft: getDraftMock,
 }));
 
-// Semantic understanding has its own tests; here it has never run.
+// Semantic understanding and confirming have their own tests; here understanding never ran.
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
   getUnderstanding: () => Promise.resolve([]),
+  getProjectStatus: getProjectStatusMock,
 }));
 
 vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal) => ({
@@ -120,6 +123,19 @@ async function openDialog() {
   return within(await screen.findByRole("dialog"));
 }
 
+function projectStatus(nextActions: ProjectStatus["nextActions"]): ProjectStatus {
+  return {
+    blockers: [],
+    check: null,
+    confirmation: null,
+    draft: null,
+    nextActions,
+    stage: "ready_to_confirm",
+    stale: [],
+    undecided: 0,
+  };
+}
+
 function renderModel(
   override: Partial<Project> = {},
   ownerIsCaller = true,
@@ -130,6 +146,7 @@ function renderModel(
   return renderWithoutAntdStyles(
     <ProjectModel
       initialTab={initialTab}
+      onConfirmed={vi.fn()}
       onProjectChange={onProjectChange}
       ownerIsCaller={ownerIsCaller}
       project={{ ...project, ...override }}
@@ -155,6 +172,8 @@ describe("ProjectModel", () => {
       })),
     );
     listCatalogsMock.mockResolvedValue({ items: [{ id: "cat-001", name: "ERP" }], total: 1 });
+    // Confirming has its own tests; here it is offered only where a test says so.
+    getProjectStatusMock.mockResolvedValue(projectStatus([]));
   });
 
   afterEach(() => {
@@ -182,6 +201,22 @@ describe("ProjectModel", () => {
       screen.queryByRole("button", { name: "bknProject.model.generate" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("bknProject.understand.progress.notStarted")).toBeNull();
+  });
+
+  it("offers to confirm a ready draft, but not on an archived project", async () => {
+    getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1")));
+    getProjectStatusMock.mockResolvedValue(
+      projectStatus([
+        { accepts: [], action: "confirm_draft", allowed: true, discardsDecisions: 0 },
+      ]),
+    );
+    const view = renderModel();
+    expect(await screen.findByRole("button", { name: "bknProject.confirm.button" })).toBeEnabled();
+    view.unmount();
+
+    renderModel({ archived: true });
+    expect(await screen.findByText("bknProject.model.status.ready")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "bknProject.confirm.button" })).toBeNull();
   });
 
   it("drafts and shows bkn-project's localized refusal when drafting cannot start", async () => {

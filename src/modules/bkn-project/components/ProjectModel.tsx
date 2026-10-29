@@ -19,6 +19,7 @@ import { DraftChangesPanel } from "@/modules/bkn-project/components/draft/DraftC
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
 import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityDialog";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
+import { ConfirmDraft } from "@/modules/bkn-project/components/model/ConfirmDraftDialog";
 import { UnderstandingBar } from "@/modules/bkn-project/components/model/UnderstandingBar";
 import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import {
@@ -86,12 +87,15 @@ function failureKey(error: string) {
  */
 export function ProjectModel({
   initialTab,
+  onConfirmed,
   onProjectChange,
   ownerIsCaller,
   project,
 }: {
   /** The tab a link asked for, such as the overview's "View all" changes; others are ignored. */
   initialTab?: string | null;
+  /** Called once the draft is confirmed, to show what follows. */
+  onConfirmed: () => void;
   onProjectChange: (project: Project) => void;
   /** Only the owner may replace the project's catalogs; others are asked to contact them. */
   ownerIsCaller: boolean;
@@ -567,6 +571,15 @@ export function ProjectModel({
         <span className={styles.spacer} />
         {projectMissing.length ? null : changeCatalogsButton("bknProject.model.catalogs.change")}
         {generateButton}
+        {draft.status === "ready" && !project.archived ? (
+          <ConfirmDraft
+            draft={draft}
+            onConfirmed={onConfirmed}
+            onShowPending={() => setTab("changes")}
+            onStale={() => void loadDraft()}
+            projectId={project.id}
+          />
+        ) : null}
       </div>
       {catalogsDialog}
       {notices}
