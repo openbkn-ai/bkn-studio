@@ -593,6 +593,7 @@ export const bknProjectZhCN = {
         tasksInvisible: "你没有查看这个数据目录构建任务的权限，正在构建的索引可能显示为未构建。",
         build: "重新构建",
         started: "已重新发起构建",
+        noneStarted: "没有表开始构建，原因见各表的“上次构建”。",
         failed: "没能开始构建，请稍后重试",
         objectType: "对象类",
         table: "数据表",
@@ -601,6 +602,7 @@ export const bknProjectZhCN = {
         state: {
           ready: "可用",
           readyRebuilding: "可用，正在重建",
+          other: "状态未知",
           stale: "需要重建",
           building: "构建中",
           not_built: "未构建",
