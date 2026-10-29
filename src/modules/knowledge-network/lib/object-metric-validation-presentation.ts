@@ -16,7 +16,6 @@ export type ObjectMetricValidationIssuePresentation = {
 
 type PresentationContext = {
   aggregation?: string;
-  calculationScope?: "object_instance" | "object_set";
 };
 
 const fieldLabels = (): ReadonlyArray<readonly [string, string]> => [
@@ -39,7 +38,6 @@ const fieldLabels = (): ReadonlyArray<readonly [string, string]> => [
   ["result_semantics.statistical_grain", objectMetricText("m1fce8d321e5a")],
   ["query_capabilities.analysis_dimensions", objectMetricText("m9a004b7a1da9")],
   ["query_capabilities.time_dimensions", objectMetricText("m40e232fef99f")],
-  ["calculation_scope", objectMetricText("m9d1c9c0a1780")],
   ["description", objectMetricText("m419eb90613fd")],
   ["name", objectMetricText("m5fadf5e3e6a9")],
   ["code", objectMetricText("m13700a34d7b3")],
@@ -57,9 +55,6 @@ const aggregationLabels: Record<string, string> = {
   },
   get count_rows() {
     return objectMetricText("m21179deb9a74");
-  },
-  get identity() {
-    return objectMetricText("m9d001b97d59e");
   },
   get max() {
     return objectMetricText("m1e7a22820768");
@@ -190,10 +185,7 @@ export function presentObjectMetricValidationIssue(
       return {
         location,
         problem: objectMetricText("m92e1c846a523"),
-        suggestion:
-          context.calculationScope === "object_instance"
-            ? objectMetricText("m1dbeead380b2")
-            : objectMetricText("m1ac752b96fb4"),
+        suggestion: objectMetricText("m1ac752b96fb4"),
       };
     case "event_time_required":
       return {
@@ -271,12 +263,6 @@ export function presentObjectMetricValidationIssue(
         problem: objectMetricText("m996de259e56a"),
         suggestion: objectMetricText("md01e5b491031"),
       };
-    case "derived_scope_mismatch":
-      return {
-        location,
-        problem: objectMetricText("me1d3b5702320"),
-        suggestion: objectMetricText("m3ace3dd1d3e4"),
-      };
     case "composite_dependencies_required":
       return {
         location,
@@ -324,18 +310,6 @@ export function presentObjectMetricValidationIssue(
         location,
         problem: objectMetricText("m414e6058ac82"),
         suggestion: objectMetricText("me83ca518b692"),
-      };
-    case "instance_related_set_alignment_forbidden":
-      return {
-        location,
-        problem: objectMetricText("mc270993bd229"),
-        suggestion: objectMetricText("m1ae977588b47"),
-      };
-    case "related_dependency_time_series_unsupported":
-      return {
-        location,
-        problem: objectMetricText("mcd6e8b27adc6"),
-        suggestion: objectMetricText("mcb6ff846b92e"),
       };
     case "primary_dependency_required":
     case "primary_dependency_unknown":

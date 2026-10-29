@@ -14,6 +14,13 @@ import type { ObjectMetricDataV1 } from "@/modules/knowledge-network/types/objec
 
 import { ObjectMetricAnalysisPanel } from "./ObjectMetricAnalysisPanel";
 
+function dimensionCells(values: Record<string, unknown>) {
+  return Object.entries(values).map(([property_name, value]) => ({
+    ref: { object_type_id: "order", property_name },
+    value,
+  }));
+}
+
 const mocks = vi.hoisted(() => ({
   options: [] as EChartsOption[],
   onClick: undefined as
@@ -42,8 +49,12 @@ vi.mock("@/modules/model-resources/components/statistics/ChartLine", () => ({
 
 const result: ObjectMetricDataV1 = {
   entries: [
-    { dimensions: { region: "East", channel: "Web" }, status: "ok", value: 12 },
-    { dimensions: { region: "West", channel: "App" }, status: "ok", value: 8 },
+    {
+      dimension_cells: dimensionCells({ region: "East", channel: "Web" }),
+      status: "ok",
+      value: 12,
+    },
+    { dimension_cells: dimensionCells({ region: "West", channel: "App" }), status: "ok", value: 8 },
   ],
   model: {
     metric_id: "orders",
@@ -151,7 +162,13 @@ describe("ObjectMetricAnalysisPanel", () => {
       <ObjectMetricAnalysisPanel
         result={{
           ...result,
-          entries: [{ dimensions: { region: "East" }, status: "ok", value: "9007199254740993" }],
+          entries: [
+            {
+              dimension_cells: dimensionCells({ region: "East" }),
+              status: "ok",
+              value: "9007199254740993",
+            },
+          ],
         }}
       />,
     );
@@ -227,8 +244,8 @@ describe("ObjectMetricAnalysisPanel", () => {
         result={{
           ...result,
           entries: [
-            { dimensions: { order_id: "A" }, status: "ok", value: 1 },
-            { dimensions: { order_id: "B" }, status: "ok", value: 2 },
+            { dimension_cells: dimensionCells({ order_id: "A" }), status: "ok", value: 1 },
+            { dimension_cells: dimensionCells({ order_id: "B" }), status: "ok", value: 2 },
           ],
         }}
         resultTable={resultTable}
@@ -252,7 +269,7 @@ describe("ObjectMetricAnalysisPanel", () => {
         result={{
           ...result,
           entries: Array.from({ length: 21 }, (_, index) => ({
-            dimensions: { product_code: `product-${index}` },
+            dimension_cells: dimensionCells({ product_code: `product-${index}` }),
             status: "ok",
             value: index + 1,
           })),
@@ -269,7 +286,7 @@ describe("ObjectMetricAnalysisPanel", () => {
 
   it("defaults to a table for more than 20 categories and keeps every bucket in the optional chart", () => {
     const denseEntries = Array.from({ length: 21 }, (_, index) => ({
-      dimensions: { product_code: `product-${index}` },
+      dimension_cells: dimensionCells({ product_code: `product-${index}` }),
       status: "ok" as const,
       value: index + 1,
     }));
@@ -290,7 +307,7 @@ describe("ObjectMetricAnalysisPanel", () => {
     expect(screen.getByTestId("metric-chart")).toBeInTheDocument();
     expect(mocks.options.at(-1)?.xAxis).toMatchObject({
       axisLabel: { interval: "auto" },
-      data: denseEntries.map((entry) => entry.dimensions.product_code),
+      data: denseEntries.map((entry) => entry.dimension_cells[0]?.value),
     });
     expect(mocks.options.at(-1)?.dataZoom).toMatchObject([
       { endValue: 19, filterMode: "none", type: "inside" },
@@ -305,7 +322,7 @@ describe("ObjectMetricAnalysisPanel", () => {
 
   it("keeps many time series in a table by default and uses a time axis for manual charts", () => {
     const entries = Array.from({ length: 7 }, (_, index) => ({
-      dimensions: { region: `region-${index}` },
+      dimension_cells: dimensionCells({ region: `region-${index}` }),
       status: "ok" as const,
       time: Date.parse("2026-01-01T00:00:00Z"),
       value: index + 1,
@@ -331,7 +348,7 @@ describe("ObjectMetricAnalysisPanel", () => {
 
   it("keeps an explicitly chosen chart across result changes and falls back for nonnumeric data", () => {
     const denseEntries = Array.from({ length: 21 }, (_, index) => ({
-      dimensions: { product_code: `product-${index}` },
+      dimension_cells: dimensionCells({ product_code: `product-${index}` }),
       status: "ok" as const,
       value: index + 1,
     }));
@@ -358,7 +375,13 @@ describe("ObjectMetricAnalysisPanel", () => {
       <ObjectMetricAnalysisPanel
         result={{
           ...result,
-          entries: [{ dimensions: { product_code: "product-0" }, status: "ok", value: "unknown" }],
+          entries: [
+            {
+              dimension_cells: dimensionCells({ product_code: "product-0" }),
+              status: "ok",
+              value: "unknown",
+            },
+          ],
         }}
         resultTable={resultTable}
       />,
@@ -371,8 +394,16 @@ describe("ObjectMetricAnalysisPanel", () => {
         result={{
           ...result,
           entries: [
-            { dimensions: { product_code: "product-0" }, status: "ok", value: 40 },
-            { dimensions: { product_code: "product-1" }, status: "no_data", value: null },
+            {
+              dimension_cells: dimensionCells({ product_code: "product-0" }),
+              status: "ok",
+              value: 40,
+            },
+            {
+              dimension_cells: dimensionCells({ product_code: "product-1" }),
+              status: "no_data",
+              value: null,
+            },
           ],
         }}
         resultTable={resultTable}
@@ -406,8 +437,8 @@ describe("ObjectMetricAnalysisPanel", () => {
         result={{
           ...result,
           entries: [
-            { dimensions: { region: "East" }, status: "ok", value: "正常" },
-            { dimensions: { region: "West" }, status: "no_data", value: null },
+            { dimension_cells: dimensionCells({ region: "East" }), status: "ok", value: "正常" },
+            { dimension_cells: dimensionCells({ region: "West" }), status: "no_data", value: null },
           ],
         }}
         resultTable={<div data-testid="result-table">Exact result rows</div>}
@@ -492,7 +523,6 @@ describe("ObjectMetricAnalysisPanel", () => {
                   value: "West",
                 },
               ],
-              dimensions: { "person.region": "West" },
               status: "ok",
               value: 1,
             },
@@ -523,10 +553,26 @@ describe("ObjectMetricAnalysisPanel", () => {
     const groupedResult: ObjectMetricDataV1 = {
       ...result,
       entries: [
-        { dimensions: { region: "East", channel: "Web" }, status: "ok", value: 12 },
-        { dimensions: { region: "East", channel: "Web" }, status: "ok", value: 3 },
-        { dimensions: { region: "East", channel: "App" }, status: "ok", value: 5 },
-        { dimensions: { region: "West", channel: "Web" }, status: "ok", value: 8 },
+        {
+          dimension_cells: dimensionCells({ region: "East", channel: "Web" }),
+          status: "ok",
+          value: 12,
+        },
+        {
+          dimension_cells: dimensionCells({ region: "East", channel: "Web" }),
+          status: "ok",
+          value: 3,
+        },
+        {
+          dimension_cells: dimensionCells({ region: "East", channel: "App" }),
+          status: "ok",
+          value: 5,
+        },
+        {
+          dimension_cells: dimensionCells({ region: "West", channel: "Web" }),
+          status: "ok",
+          value: 8,
+        },
       ],
     };
     render(<ObjectMetricAnalysisPanel result={groupedResult} />);
@@ -536,34 +582,6 @@ describe("ObjectMetricAnalysisPanel", () => {
     expect(mocks.options.at(-1)?.series).toMatchObject([
       { data: [15, 8], name: "Web" },
       { data: [5, 0], name: "App" },
-    ]);
-  });
-
-  it("uses owner identity labels for category charts even when dimension labels omit the same key", () => {
-    const objectValueResult: ObjectMetricDataV1 = {
-      ...result,
-      entries: [
-        { instance_identity: { order_no: "A" }, status: "ok", value: 12 },
-        { instance_identity: { order_no: "B" }, status: "ok", value: 8 },
-      ],
-      model: { ...result.model, output_shape: "object_value" },
-    };
-    render(
-      <ObjectMetricAnalysisPanel
-        identityLabels={{ order_no: "订单号" }}
-        propertyLabels={{}}
-        result={objectValueResult}
-      />,
-    );
-
-    chooseChart("柱状");
-    expect(mocks.options.at(-1)?.xAxis).toMatchObject({
-      data: ["订单号: A", "订单号: B"],
-    });
-
-    chooseChart("饼图");
-    expect(mocks.options.at(-1)?.series).toMatchObject([
-      { data: [{ name: "订单号: A" }, { name: "订单号: B" }] },
     ]);
   });
 

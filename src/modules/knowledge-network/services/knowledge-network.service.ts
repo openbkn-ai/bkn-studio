@@ -9,7 +9,6 @@ export * from "@/modules/knowledge-network/services/network.service";
 export * from "@/modules/knowledge-network/services/concept-group.service";
 export * from "@/modules/knowledge-network/services/object-type.service";
 export * from "@/modules/knowledge-network/services/object-type-resource.service";
-export * from "@/modules/knowledge-network/services/object-type-logic.service";
 export * from "@/modules/knowledge-network/services/relation-type.service";
 export * from "@/modules/knowledge-network/services/action-type.service";
 export * from "@/modules/knowledge-network/services/object-type-logic-property-trial.service";

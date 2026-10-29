@@ -1090,7 +1090,6 @@ describe("ObjectMetricFormScene object properties", () => {
       definition.version = 1;
       definition.name = id;
       definition.lifecycle.status = "published";
-      definition.calculation_scope = "object_set";
       return { definition };
     });
     mocks.listObjectMetricsV1.mockResolvedValue({ entries: metrics, total_count: metrics.length });

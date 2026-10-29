@@ -6,8 +6,7 @@
  */
 
 export type ObjectMetricTypeV1 = "atomic" | "derived" | "composite";
-export type ObjectMetricCalculationScopeV1 = "object_instance" | "object_set";
-export type ObjectMetricOutputShapeV1 = "object_value" | "summary" | "grouped" | "time_series";
+export type ObjectMetricOutputShapeV1 = "summary" | "grouped" | "time_series";
 export type ObjectMetricTimeGranularityV1 =
   "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year";
 
@@ -166,8 +165,7 @@ export type ObjectMetricAtomicSpecV1 = {
   kind: "atomic";
   measure: {
     expression?: ObjectMetricExpressionV1;
-    aggregation:
-      "identity" | "count_rows" | "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
+    aggregation: "count_rows" | "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
   };
 };
 
@@ -183,10 +181,8 @@ export type ObjectMetricDerivedSpecV1 = {
 };
 
 export type ObjectMetricObjectAlignmentV1 = {
-  relation_path?: ObjectMetricRelationStepV1[];
-  mode: "same_object" | "related_object" | "related_object_set";
-  relationship_cardinality?: "one_to_one" | "many_to_one" | "one_to_many" | "many_to_many";
-  deduplication: "none" | "by_object_identity";
+  mode: "same_object";
+  deduplication: "none";
 };
 
 export type ObjectMetricEvaluationContextV1 = {
@@ -237,7 +233,6 @@ export type ObjectMetricDefinitionV1 = {
   description: string;
   owner_object_type_id: string;
   metric_type: ObjectMetricTypeV1;
-  calculation_scope: ObjectMetricCalculationScopeV1;
   result_semantics: {
     statistical_grain: {
       group_by_dimensions: ObjectMetricPropertyRefV1[];
@@ -254,11 +249,6 @@ export type ObjectMetricDefinitionV1 = {
     analysis_dimensions: ObjectMetricPropertyRefV1[];
     time_dimensions: ObjectMetricPropertyRefV1[];
   };
-  logic_property?: {
-    property_name: string;
-    display_name: string;
-    comment?: string;
-  };
   lifecycle: {
     status: "draft" | "validated" | "published" | "deprecated";
     ontology_version: string;
@@ -271,7 +261,6 @@ export type ObjectMetricDefinitionV1 = {
 };
 
 export type ObjectMetricQueryRequestV1 = {
-  instance_identities?: Record<string, unknown>[];
   filter?: ObjectMetricConditionV1;
   group_by?: ObjectMetricPropertyRefV1[];
   having?: {
@@ -294,8 +283,6 @@ export type ObjectMetricQueryRequestV1 = {
 };
 
 export type ObjectMetricDataEntryV1 = {
-  instance_identity?: Record<string, unknown>;
-  dimensions?: Record<string, unknown>;
   dimension_cells?: Array<{ ref: ObjectMetricPropertyRefV1; value: unknown }>;
   time?: number;
   time_bucket?: { start: number; end: number };
@@ -335,22 +322,6 @@ export type ObjectMetricDrillThroughV1 = {
   warnings?: string[];
 };
 
-export type MetricPropertyBindingV1 = {
-  object_type_id: string;
-  property_name: string;
-  display_name: string;
-  comment?: string;
-  metric_ref: ObjectMetricRefV1;
-  execution: {
-    mode: "realtime";
-    refresh_policy?: string;
-    freshness_slo?: string;
-  };
-  no_data_policy: "zero" | "null" | "unavailable";
-  on_error: "fail_closed" | "unavailable";
-  status: "draft" | "published" | "disabled";
-};
-
 export type ObjectMetricRecordV1 = {
   definition: ObjectMetricDefinitionV1;
   owner_object_type_name?: string;
@@ -368,12 +339,11 @@ export type ObjectMetricListV1 = {
 };
 
 export type ObjectMetricDeletionBlockerV1 = {
-  resource_type: "logic_property" | "metric_version";
+  resource_type: "metric_version";
   resource_id: string;
   version?: number;
   name?: string;
   field: string;
-  property_name?: string;
 };
 
 export type ObjectMetricVersionDeletionCheckV1 = {
@@ -412,7 +382,6 @@ export type ObjectMetricPreviewV1 = {
 
 export type ObjectMetricCapabilitiesV1 = {
   metric_types: ObjectMetricTypeV1[];
-  calculation_scopes: ObjectMetricCalculationScopeV1[];
   aggregations: ObjectMetricAtomicSpecV1["measure"]["aggregation"][];
   expression_operators: string[];
   functions: string[];
@@ -429,11 +398,8 @@ export type ObjectMetricCapabilitiesV1 = {
 
 /** Return shape is derived metadata and must never be authored as part of a metric definition. */
 export function inferObjectMetricOutputShapeV1(
-  definition: Pick<ObjectMetricDefinitionV1, "calculation_scope" | "result_semantics">,
+  definition: Pick<ObjectMetricDefinitionV1, "result_semantics">,
 ): ObjectMetricOutputShapeV1 {
-  if (definition.calculation_scope === "object_instance") {
-    return "object_value";
-  }
   if (definition.result_semantics.statistical_grain.time_granularity) {
     return "time_series";
   }

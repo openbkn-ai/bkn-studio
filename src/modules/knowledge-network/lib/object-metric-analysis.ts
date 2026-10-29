@@ -10,13 +10,10 @@ import type { ObjectMetricDataEntryV1 } from "@/modules/knowledge-network/types/
 export type ObjectMetricAutomaticAnalysisView = "summary" | "bar" | "line" | "heatmap" | "table";
 
 function dimensionEntries(entry: ObjectMetricDataEntryV1): Array<[string, unknown]> {
-  if (entry.dimension_cells?.length) {
-    return entry.dimension_cells.map(({ ref, value }) => [
-      JSON.stringify([ref.object_type_id, ref.relation_path_alias ?? "", ref.property_name]),
-      value,
-    ]);
-  }
-  return Object.entries(entry.dimensions ?? {});
+  return (entry.dimension_cells ?? []).map(({ ref, value }) => [
+    JSON.stringify([ref.object_type_id, ref.relation_path_alias ?? "", ref.property_name]),
+    value,
+  ]);
 }
 
 export function getObjectMetricDimensionCount(entries: ObjectMetricDataEntryV1[]): number {

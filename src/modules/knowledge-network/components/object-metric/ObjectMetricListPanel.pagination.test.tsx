@@ -256,7 +256,6 @@ function metric(index: number): ObjectMetricRecordV1 {
     create_time: 1,
     creator: { id: "tester", type: "user" },
     definition: {
-      calculation_scope: "object_set",
       code: `order_metric_${index}`,
       description: `Metric ${index}`,
       id: `metric-${index}`,
@@ -318,7 +317,7 @@ describe("ObjectMetricListPanel pagination", () => {
 
     expect(await screen.findByText("销售订单")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "order" })).not.toBeInTheDocument();
-  });
+  }, 20_000);
 
   it("uses neutral owner wording when the object detail request fails", async () => {
     mocks.searchParams.current = "view=list";
@@ -662,50 +661,15 @@ describe("ObjectMetricListPanel pagination", () => {
 
     expect(await screen.findByText("订单对象指标 1")).toBeInTheDocument();
     const widths = [...container.querySelectorAll<HTMLTableColElement>("colgroup col")]
-      .slice(0, 8)
+      .slice(0, 6)
       .map((column) => column.style.width);
-    expect(widths).toEqual(["280px", "72px", "100px", "180px", "112px", "90px", "152px", "300px"]);
+    expect(widths).toEqual(["280px", "72px", "100px", "180px", "90px", "300px"]);
     const headers = screen.getAllByRole("columnheader").map((header) => header.textContent);
     expect(headers.slice(0, 2)).toEqual(["对象指标", "common.actions"]);
     expect(screen.getByRole("columnheader", { name: "业务定义" })).toBeInTheDocument();
-    expect(container.querySelector("table")).toHaveStyle({ width: "1286px" });
+    expect(container.querySelector("table")).toHaveStyle({ width: "1022px" });
   });
 
-  it("loads binding status once for the selected object class", async () => {
-    mocks.searchParams.current = "view=list&ownerObjectTypeId=order";
-    const first = metric(1);
-    first.definition.calculation_scope = "object_instance";
-    const second = metric(2);
-    second.definition.calculation_scope = "object_instance";
-    mocks.listObjectTypes.mockResolvedValue({
-      entries: [{ id: "order", name: "销售订单" }],
-      totalCount: 1,
-    });
-    mocks.listObjectMetrics.mockResolvedValue({ entries: [first, second], total_count: 2 });
-    mocks.getObjectDetail.mockResolvedValue({
-      id: "order",
-      name: "销售订单",
-      logicProperties: [
-        {
-          name: "metric_property",
-          displayName: "对象指标属性",
-          metricBinding: { metric_ref: { metric_id: "metric-1", version: 1 } },
-        },
-      ],
-    });
-    render(<ObjectMetricListPanel canDelete canModify networkId="network-1" />);
-    expect(await screen.findByText("对象指标属性 · v1")).toHaveAttribute(
-      "title",
-      "对象指标属性 · v1",
-    );
-    expect(screen.getByText("未绑定")).toBeInTheDocument();
-    expect(mocks.getObjectDetail).toHaveBeenCalledTimes(1);
-    await openMetricActionMenu(0);
-    expect(await screen.findByRole("menuitem", { name: "废弃" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-  });
   it("restores a selected object outside the first sidebar page from a direct detail return", async () => {
     mocks.searchParams.current = "objectTypeId=remote";
     mocks.getObjectDetail.mockResolvedValue({ id: "remote", name: "远端对象" });

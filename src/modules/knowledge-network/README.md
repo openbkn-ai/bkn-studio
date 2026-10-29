@@ -119,7 +119,7 @@ services/
   network.service.ts             # 网络级 CRUD / 预览 / 导入导出
   object-type.service.ts         # 对象类 CRUD / 索引配置
   object-type-resource.service.ts  # 数据视图 / legacy mdl 接口
-  object-type-logic.service.ts   # 逻辑属性（算子 / 指标模型 / 小模型）
+  knowledge-network.service.ts  # 对象类、关系类及工具型逻辑属性
   shared/agent-operator-client.ts   # agent-operator 公共头与分页（复用 execution-factory headers）
   relation-type.service.ts       # 关系类 CRUD / 映射规则
   action-type.service.ts         # 行动类 CRUD / 执行日志

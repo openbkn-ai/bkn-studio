@@ -28,7 +28,6 @@ const aggregationTextKeys: Record<MetricAggregation, Parameters<typeof objectMet
   count: "m3a6663a758c9",
   count_distinct: "m1e96cd1f49bf",
   count_rows: "m21179deb9a74",
-  identity: "m7ea9fbba115d",
   max: "m1e7a22820768",
   min: "mb2dcdcfabb6a",
   sum: "m2819237ddb01",

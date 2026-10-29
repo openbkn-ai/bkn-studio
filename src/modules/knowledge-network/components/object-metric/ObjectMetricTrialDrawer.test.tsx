@@ -18,16 +18,21 @@ import type {
 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 
+function dimensionCells(values: Record<string, unknown>) {
+  return Object.entries(values).map(([property_name, value]) => ({
+    ref: { object_type_id: "order", property_name },
+    value,
+  }));
+}
+
 vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAnalysisPanel", () => ({
   ObjectMetricAnalysisPanel: ({
-    identityLabels,
     pathControls,
     propertyLabels,
     result,
     resultTable,
     selectionControls,
   }: {
-    identityLabels: Record<string, string>;
     pathControls?: ReactNode;
     propertyLabels: Record<string, string>;
     result: ObjectMetricDataV1;
@@ -35,11 +40,7 @@ vi.mock("@/modules/knowledge-network/components/object-metric/ObjectMetricAnalys
     selectionControls?: ReactNode;
   }) => (
     <section aria-label="图表与数据">
-      <div
-        data-testid="analysis-labels"
-        data-identity-labels={JSON.stringify(identityLabels)}
-        data-property-labels={JSON.stringify(propertyLabels)}
-      />
+      <div data-testid="analysis-labels" data-property-labels={JSON.stringify(propertyLabels)} />
       {pathControls}
       {selectionControls}
       {result.entries.length ? resultTable : null}
@@ -185,7 +186,6 @@ describe("ObjectMetricTrialDrawer", () => {
     },
   ])("shows a scoped error for $name", async ({ mode, error, expected }) => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     render(
       <ObjectMetricTrialDrawer
         definition={definition}
@@ -203,7 +203,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("sends final-value HAVING and ORDER BY through the shared trial query", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     definition.result_semantics.value.physical_type = "int64";
     const onRun = vi.fn().mockResolvedValue({
       entries: [],
@@ -276,7 +275,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("clears dimension sorting when the selected group is removed", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     definition.query_capabilities.analysis_dimensions = [
       { object_type_id: "order", property_name: "status" },
     ];
@@ -337,7 +335,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("keeps relation aliases distinct when selecting same-named dimensions", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     definition.query_capabilities.analysis_dimensions = [
       { object_type_id: "person", relation_path_alias: "buyer", property_name: "region" },
       { object_type_id: "person", relation_path_alias: "seller", property_name: "region" },
@@ -363,7 +360,6 @@ describe("ObjectMetricTrialDrawer", () => {
               value: "West",
             },
           ],
-          dimensions: { "person.region": "West" },
           status: "ok",
           value: 1,
         },
@@ -399,7 +395,6 @@ describe("ObjectMetricTrialDrawer", () => {
         group_by: [
           { object_type_id: "person", relation_path_alias: "buyer", property_name: "region" },
         ],
-        instance_identities: undefined,
         time: undefined,
       }),
     );
@@ -412,7 +407,6 @@ describe("ObjectMetricTrialDrawer", () => {
   it("uses the same trial workspace for published metrics", () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.name = "销售订单数";
-    definition.calculation_scope = "object_set";
     definition.lifecycle.status = "published";
 
     render(
@@ -439,7 +433,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("shows business labels instead of internal enum values in calculation context", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     if (definition.specification.kind !== "atomic") throw new Error("expected atomic metric");
     definition.specification.measure.aggregation = "count";
     const onRun = vi.fn().mockResolvedValue({
@@ -480,14 +473,13 @@ describe("ObjectMetricTrialDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "查看计算口径" }));
 
     expect(await screen.findByText("非空计数")).toBeInTheDocument();
-    expect(screen.getByText("实例集合")).toBeInTheDocument();
+    expect(screen.queryByText("计算范围")).not.toBeInTheDocument();
     expect(screen.queryByText("count")).not.toBeInTheDocument();
     expect(screen.queryByText("object_set")).not.toBeInTheDocument();
   });
 
   it("links participants by exact identity instead of a sample-row key", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     const onRun = vi.fn().mockResolvedValue({
       entries: [
         {
@@ -549,7 +541,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("shows newly loaded participant rows after loading another server page", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     const onRun = vi.fn().mockResolvedValue({
       entries: [
         {
@@ -611,7 +602,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("filters only the selected bucket and restores the prior result without a new request", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     const base: ObjectMetricDataV1 = {
       entries: [
         {
@@ -620,7 +610,6 @@ describe("ObjectMetricTrialDrawer", () => {
           dimension_cells: [
             { ref: { object_type_id: "order", property_name: "region" }, value: "east" },
           ],
-          dimensions: { "order.region": "east" },
           status: "ok",
           value: 10,
         },
@@ -641,7 +630,9 @@ describe("ObjectMetricTrialDrawer", () => {
       .mockResolvedValueOnce(base)
       .mockResolvedValueOnce({
         ...base,
-        entries: [{ status: "ok", value: 10, dimensions: { "order.region": "east" } }],
+        entries: [
+          { status: "ok", value: 10, dimension_cells: dimensionCells({ "order.region": "east" }) },
+        ],
       });
     render(
       <ObjectMetricTrialDrawer
@@ -665,7 +656,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("stops at a bucket that adds no new filter condition", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     const entry: ObjectMetricDataV1["entries"][number] = {
       available_actions: ["filter", "context"],
       bucket_key: "first-bucket",
@@ -720,7 +710,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("shows how to select a group before exposing drill actions and highlights the selected row", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     definition.result_semantics.statistical_grain.group_by_dimensions = [
       { object_type_id: "order", property_name: "status" },
     ];
@@ -804,10 +793,9 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("paginates large trial results while keeping later rows accessible", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     const onRun = vi.fn().mockResolvedValue({
       entries: Array.from({ length: 51 }, (_, index) => ({
-        dimensions: { row: `row-${index}` },
+        dimension_cells: dimensionCells({ row: `row-${index}` }),
         status: "ok" as const,
         value: index,
       })),
@@ -843,7 +831,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("shows only the newly selected dimension at each analysis path level", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     definition.query_capabilities.analysis_dimensions = [
       { object_type_id: "order", property_name: "product_code" },
     ];
@@ -933,11 +920,10 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("shows only populated result columns for grouped identity data", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     const onRun = vi.fn().mockResolvedValue({
       entries: [
         {
-          dimensions: { status: "执行中", order_id: "U00-000170" },
+          dimension_cells: dimensionCells({ status: "执行中", order_id: "U00-000170" }),
           status: "ok",
           value: 1,
         },
@@ -975,7 +961,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("shows each structured analysis dimension in its own result column", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     const onRun = vi.fn().mockResolvedValue({
       entries: [
         {
@@ -1017,15 +1002,13 @@ describe("ObjectMetricTrialDrawer", () => {
 
   it("keeps a related dimension's technical name when it matches an owner property", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.calculation_scope = "object_set";
     definition.query_capabilities.analysis_dimensions = [
       { object_type_id: "coupon", property_name: "status" },
     ];
     const onRun = vi.fn().mockResolvedValue({
       entries: [
         {
-          dimensions: { status: "可用" },
-          instance_identity: { status: "已支付" },
+          dimension_cells: dimensionCells({ status: "可用" }),
           status: "ok",
           value: 1,
         },
@@ -1063,27 +1046,19 @@ describe("ObjectMetricTrialDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "试算" }));
     expect(await screen.findByRole("columnheader", { name: "status" })).toBeInTheDocument();
     expect(screen.getByText("可用")).toBeInTheDocument();
-    expect(screen.getByText("订单状态: 已支付")).toBeInTheDocument();
-    expect(screen.queryByText("订单状态: 可用")).not.toBeInTheDocument();
-    expect(screen.getByTestId("analysis-labels")).toHaveAttribute(
-      "data-identity-labels",
-      '{"status":"订单状态"}',
-    );
     expect(screen.getByTestId("analysis-labels")).toHaveAttribute("data-property-labels", "{}");
   });
 
   it("uses business names in dimension choices and results but sends technical names to the API", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.name = "订单数";
-    definition.calculation_scope = "object_set";
     definition.query_capabilities.analysis_dimensions = [
       { object_type_id: "order", property_name: "status" },
     ];
     const onRun = vi.fn().mockResolvedValue({
       entries: [
         {
-          dimensions: { status: "已支付" },
-          instance_identity: { order_id: 1001 },
+          dimension_cells: dimensionCells({ status: "已支付" }),
           status: "ok",
           value: 1,
         },
@@ -1130,91 +1105,20 @@ describe("ObjectMetricTrialDrawer", () => {
     await waitFor(() =>
       expect(onRun).toHaveBeenCalledWith({
         group_by: [{ object_type_id: "order", property_name: "status" }],
-        instance_identities: undefined,
         time: undefined,
       }),
     );
     expect(await screen.findByRole("columnheader", { name: "订单状态" })).toBeInTheDocument();
     expect(screen.getByText("已支付")).toBeInTheDocument();
-    expect(screen.getByText("订单主键: 1001")).toBeInTheDocument();
     expect(screen.getByText("耗时 1 ms")).toBeInTheDocument();
     expect(document.querySelector(".ant-alert-success")).toBeNull();
     expect(screen.getByText("计算成功")).toBeInTheDocument();
-    expect(screen.queryByText(/status: 已支付|order_id: 1001/)).not.toBeInTheDocument();
-  });
-
-  it("runs an unpublished definition with the entered instance identity", async () => {
-    const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.name = "订单支付额";
-    definition.calculation_scope = "object_instance";
-    const result: ObjectMetricDataV1 = {
-      entries: [],
-      model: {
-        metric_id: "trial",
-        name: definition.name,
-        output_shape: "object_value",
-        owner_object_type_id: "order",
-        value: definition.result_semantics.value,
-        version: 0,
-      },
-      overall_ms: 3,
-      status: "no_data",
-    };
-    const onRun = vi.fn().mockResolvedValue(result);
-
-    render(
-      <ObjectMetricTrialDrawer
-        definition={definition}
-        mode="draft"
-        objectType={
-          {
-            dataProperties: [{ displayName: "订单主键", name: "order_id", type: "int64" }],
-            primaryKeys: ["order_id"],
-          } as ObjectTypeDetail
-        }
-        onClose={vi.fn()}
-        onRun={onRun}
-        open
-      />,
-    );
-
-    expect(
-      screen.queryByText("读取真实数据；试算不会保存或修改对象指标。"),
-    ).not.toBeInTheDocument();
-    expect(screen.getByText("试算 · 订单支付额")).toBeInTheDocument();
-    expect(screen.getByText("试算条件")).toBeInTheDocument();
-    expect(screen.getByText("设置试算条件并点击试算，即可查看对象指标结果。")).toBeInTheDocument();
-    const runButton = screen.getByRole("button", { name: "试算" });
-    expect(
-      screen.getByRole("heading", { name: "试算条件" }).parentElement?.parentElement,
-    ).toContainElement(runButton);
-    expect(screen.getByRole("dialog").closest(".ant-drawer")?.className).toContain(
-      "analysisDrawer",
-    );
-    expect(screen.queryByText("按分析维度拆解（可选）")).not.toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "结果筛选" })).toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "结果排序" })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("订单主键"), {
-      target: { value: "1001" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "试算" }));
-
-    await waitFor(() =>
-      expect(onRun).toHaveBeenCalledWith({
-        group_by: [],
-        instance_identities: [{ order_id: 1001 }],
-        time: undefined,
-      }),
-    );
-    expect(await screen.findByText("无数据")).toBeInTheDocument();
-    expect(screen.getByText("分析结果")).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "对象指标值" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/status: 已支付/)).not.toBeInTheDocument();
   });
 
   it("trials a draft derived metric and keeps its fixed time window immutable", () => {
     const definition = createObjectMetricDefinitionV1("derived", "order");
     definition.name = "本季度订单支付额";
-    definition.calculation_scope = "object_instance";
     if (definition.specification.kind !== "derived") throw new Error("expected derived metric");
     definition.specification.business_qualifiers.time_window = {
       end_at: 1_800_000_000_000,
@@ -1282,70 +1186,9 @@ describe("ObjectMetricTrialDrawer", () => {
     ).toBeInTheDocument();
   });
 
-  it("builds a complete composite identity and converts each primary-key type", async () => {
-    const definition = createObjectMetricDefinitionV1("atomic", "shipment");
-    definition.name = "包裹金额";
-    definition.calculation_scope = "object_instance";
-    const onRun = vi.fn().mockResolvedValue({
-      entries: [],
-      model: {
-        metric_id: "trial",
-        name: definition.name,
-        output_shape: "object_value",
-        owner_object_type_id: "shipment",
-        value: definition.result_semantics.value,
-        version: 0,
-      },
-      overall_ms: 1,
-      status: "no_data",
-    } satisfies ObjectMetricDataV1);
-
-    render(
-      <ObjectMetricTrialDrawer
-        definition={definition}
-        mode="draft"
-        objectType={
-          {
-            dataProperties: [
-              { displayName: "批次", name: "batch_id", type: "int64" },
-              { displayName: "是否拆分", name: "split", type: "boolean" },
-            ],
-            primaryKeys: ["batch_id", "split"],
-          } as ObjectTypeDetail
-        }
-        onClose={vi.fn()}
-        onRun={onRun}
-        open
-      />,
-    );
-
-    fireEvent.change(screen.getByLabelText("批次"), { target: { value: "42" } });
-    fireEvent.change(screen.getByLabelText("是否拆分"), {
-      target: { value: "false" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "试算" }));
-
-    await waitFor(() =>
-      expect(onRun).toHaveBeenCalledWith({
-        group_by: [],
-        instance_identities: [{ batch_id: 42, split: false }],
-        time: undefined,
-      }),
-    );
-    fireEvent.change(screen.getByLabelText("批次"), {
-      target: { value: "9007199254740993" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "试算" }));
-    await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
-    expect(serializeObjectMetricBody(onRun.mock.calls[1]?.[0])).toContain(
-      '"instance_identities":[{"batch_id":9007199254740993,"split":false}]',
-    );
-  });
-
   it("shows partial execution warnings without presenting them as a successful complete result", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.name = "订单总额";
-    definition.calculation_scope = "object_set";
     const onRun = vi.fn().mockResolvedValue({
       entries: [{ status: "ok", value: 660 }],
       model: {
@@ -1381,7 +1224,6 @@ describe("ObjectMetricTrialDrawer", () => {
   it("renders time-series entry timestamps in UTC", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     definition.name = "季度订单数";
-    definition.calculation_scope = "object_set";
     const onRun = vi.fn().mockResolvedValue({
       entries: [{ status: "ok", time: Date.parse("2021-01-01T00:00:00Z"), value: 124 }],
       model: {
@@ -1410,26 +1252,6 @@ describe("ObjectMetricTrialDrawer", () => {
 
     expect(await screen.findByText("2021-01-01 00:00:00")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "时间（UTC）" })).toBeInTheDocument();
-  });
-
-  it("blocks an instance trial when the object type has no primary key", () => {
-    const definition = createObjectMetricDefinitionV1("atomic", "order");
-    definition.name = "订单金额";
-    definition.calculation_scope = "object_instance";
-
-    render(
-      <ObjectMetricTrialDrawer
-        definition={definition}
-        mode="draft"
-        objectType={{ dataProperties: [], primaryKeys: [] } as unknown as ObjectTypeDetail}
-        onClose={vi.fn()}
-        onRun={vi.fn()}
-        open
-      />,
-    );
-
-    expect(screen.getByText("对象类尚未配置主键，无法定位单个实例")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "试算" })).toBeDisabled();
   });
 
   it("identifies the published version and keeps empty results distinct from zero", async () => {

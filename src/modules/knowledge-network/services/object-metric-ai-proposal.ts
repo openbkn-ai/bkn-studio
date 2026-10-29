@@ -26,7 +26,6 @@ export type ObjectMetricAiEditableSnapshot = {
 const commonDesignFields = new Set([
   "name",
   "description",
-  "calculationScope",
   "noDataPolicy",
   "physicalType",
   "semanticType",
@@ -77,7 +76,6 @@ const formFields: Record<string, string> = {
   name: "name",
   code: "code",
   description: "description",
-  calculation_scope: "calculationScope",
   "atomic.aggregation": "aggregation",
   "derived.base_metric_id": "baseMetric",
   "derived.base_metric_name": "baseMetric",
@@ -96,10 +94,6 @@ const formFields: Record<string, string> = {
   "query.group_by_dimensions": "groupByDimensions",
   "query.time_dimensions": "timeDimensions",
   "query.time_granularity": "timeGranularity",
-  "logic_property.enabled": "logicPropertyEnabled",
-  "logic_property.property_name": "logicPropertyName",
-  "logic_property.display_name": "logicPropertyDisplayName",
-  "logic_property.comment": "logicPropertyComment",
 };
 
 export function objectMetricAiPreviousValue(
@@ -122,14 +116,7 @@ export function objectMetricAiPreviousValue(
   return undefined;
 }
 
-const editableSections = new Set([
-  "atomic",
-  "composite",
-  "derived",
-  "logic_property",
-  "query",
-  "result",
-]);
+const editableSections = new Set(["atomic", "composite", "derived", "query", "result"]);
 
 export function objectMetricAiChanges(intent: ObjectMetricAiIntent): ObjectMetricAiChange[] {
   return Object.entries(intent).flatMap(([key, value]) => {

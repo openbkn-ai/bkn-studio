@@ -8,12 +8,8 @@
 import { describe, expect, it } from "vitest";
 
 import { createObjectMetricDefinitionV1 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
+import { mockKnowledgeNetworks } from "@/modules/knowledge-network/services/mock/state";
 import {
-  mockKnowledgeNetworks,
-  mockObjectTypeLogicProperties,
-} from "@/modules/knowledge-network/services/mock/state";
-import {
-  bindObjectMetricLogicPropertyV1,
   checkObjectMetricVersionDeletionV1,
   createNextObjectMetricDraftV1,
   createObjectMetricDraftV1,
@@ -27,40 +23,11 @@ import {
   publishObjectMetricV1,
   trialObjectMetricDataV1,
   updateObjectMetricDraftV1,
-  upgradeObjectMetricLogicPropertyV1,
   validateObjectMetricV1,
   validateObjectMetricVersionV1,
 } from "@/modules/knowledge-network/services/object-metric.service";
 
 describe("object metric lifecycle", () => {
-  it("keeps one mock logical property per metric and upgrades its pinned version", async () => {
-    const networkId = `kn-${crypto.randomUUID()}`;
-    const binding = {
-      object_type_id: "order",
-      property_name: "order_count",
-      display_name: "订单数",
-      metric_ref: { metric_id: "metric-1", version: 1 },
-      execution: { mode: "realtime" as const },
-      no_data_policy: "zero" as const,
-      on_error: "unavailable" as const,
-      status: "published" as const,
-    };
-    await bindObjectMetricLogicPropertyV1(networkId, "metric-1", 1, binding);
-    await expect(
-      bindObjectMetricLogicPropertyV1(networkId, "metric-1", 2, {
-        ...binding,
-        property_name: "another_property",
-        metric_ref: { metric_id: "metric-1", version: 2 },
-      }),
-    ).rejects.toThrow("already bound");
-    await upgradeObjectMetricLogicPropertyV1(networkId, "metric-1", "order_count", 2);
-    expect(mockObjectTypeLogicProperties[networkId].order).toHaveLength(1);
-    expect(mockObjectTypeLogicProperties[networkId].order[0]).toMatchObject({
-      name: "order_count",
-      metricBinding: { metric_ref: { metric_id: "metric-1", version: 2 } },
-      dataSource: { id: "object_metric_v1:metric-1@2" },
-    });
-  });
   it("advertises the area and volume unit families in mock capabilities", async () => {
     const capabilities = await getObjectMetricCapabilitiesV1();
     expect(capabilities.quantity_kinds).toEqual(expect.arrayContaining(["area", "volume"]));
@@ -95,31 +62,6 @@ describe("object metric lifecycle", () => {
     const draft = await createObjectMetricDraftV1(networkId, definition);
 
     expect(draft.definition.code).toMatch(/^m_[a-z0-9]+$/);
-  });
-
-  it("keeps a pre-publish logical-property configuration after a draft update and reload", async () => {
-    const networkId = `kn-${crypto.randomUUID()}`;
-    const definition = createObjectMetricDefinitionV1("derived", "order");
-    definition.name = "线下门店订单金额";
-    definition.description = "每个订单返回符合线下门店条件的支付金额";
-    definition.calculation_scope = "object_instance";
-    definition.logic_property = {
-      display_name: "线下门店订单金额",
-      property_name: "offline_order_amount",
-    };
-
-    const draft = await createObjectMetricDraftV1(networkId, definition);
-    const editedDefinition = structuredClone(draft.definition);
-    editedDefinition.logic_property = {
-      comment: "用于订单详情页展示",
-      display_name: "线下门店订单实付金额",
-      property_name: "offline_order_amount",
-    };
-    await updateObjectMetricDraftV1(networkId, draft.definition.id, editedDefinition);
-    const reloaded = await getObjectMetricV1(networkId, draft.definition.id);
-
-    expect(reloaded?.definition.logic_property).toEqual(editedDefinition.logic_property);
-    expect(reloaded?.definition.lifecycle.status).toBe("draft");
   });
 
   it("persists validation before allowing publication", async () => {
@@ -400,7 +342,6 @@ describe("object metric lifecycle", () => {
     ]);
 
     const grouped = createObjectMetricDefinitionV1("atomic", "order");
-    grouped.calculation_scope = "object_set";
     grouped.result_semantics.statistical_grain.group_by_dimensions = [
       { object_type_id: "order", property_name: "status" },
     ];

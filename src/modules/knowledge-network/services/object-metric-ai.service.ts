@@ -16,10 +16,8 @@ export type ObjectMetricAiIntent = {
   name?: string;
   code?: string;
   description?: string;
-  calculation_scope?: "object_instance" | "object_set";
   atomic?: {
-    aggregation?:
-      "identity" | "count_rows" | "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
+    aggregation?: "count_rows" | "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
     property_name?: string;
     expression?: ObjectMetricExpressionV1;
   };
@@ -82,12 +80,6 @@ export type ObjectMetricAiIntent = {
     group_by_dimensions?: string[];
     time_dimensions?: string[];
     time_granularity?: "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year";
-  };
-  logic_property?: {
-    enabled?: boolean;
-    property_name?: string;
-    display_name?: string;
-    comment?: string;
   };
   notes?: string[];
 };
@@ -383,24 +375,12 @@ export function parseObjectMetricAiIntent(
   if (name) intent.name = name;
   if (code) intent.code = code;
   if (description) intent.description = description;
-  if (["object_instance", "object_set"].includes(String(parsed.calculation_scope))) {
-    intent.calculation_scope =
-      parsed.calculation_scope as ObjectMetricAiIntent["calculation_scope"];
-  }
-
   if (isRecord(parsed.atomic)) {
     const aggregation = optionalString(parsed.atomic.aggregation);
     intent.atomic = {
-      aggregation: [
-        "identity",
-        "count_rows",
-        "count",
-        "count_distinct",
-        "sum",
-        "avg",
-        "min",
-        "max",
-      ].includes(aggregation ?? "")
+      aggregation: ["count_rows", "count", "count_distinct", "sum", "avg", "min", "max"].includes(
+        aggregation ?? "",
+      )
         ? (aggregation as NonNullable<ObjectMetricAiIntent["atomic"]>["aggregation"])
         : undefined,
       expression: parseAiExpression(parsed.atomic.expression, options, warnings),
@@ -525,17 +505,6 @@ export function parseObjectMetricAiIntent(
         "query.time_granularity",
         warnings,
       ),
-    };
-  }
-  if (isRecord(parsed.logic_property)) {
-    intent.logic_property = {
-      comment: optionalString(parsed.logic_property.comment),
-      display_name: optionalString(parsed.logic_property.display_name),
-      enabled:
-        typeof parsed.logic_property.enabled === "boolean"
-          ? parsed.logic_property.enabled
-          : undefined,
-      property_name: optionalString(parsed.logic_property.property_name),
     };
   }
   if (warnings.length) intent.notes = [...new Set(warnings)];

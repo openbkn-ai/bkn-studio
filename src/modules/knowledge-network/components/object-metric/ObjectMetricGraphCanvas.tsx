@@ -1191,7 +1191,7 @@ export function ObjectMetricGraphCanvas({
             <span>
               {metricCurrent
                 ? objectMetricText("restrictedGraphSummary", { p0: metricTotal })
-                : objectMetricText("bindingLoading")}
+                : objectMetricText("resourceLoading")}
             </span>
           </div>
         </div>

@@ -18,7 +18,7 @@ import {
 } from "./constants";
 
 describe("LOGIC_ATTRIBUTE_TYPE_OPTIONS", () => {
-  it("only exposes tool bindings while instance metrics are unavailable", () => {
+  it("only exposes independently supported logical-property sources", () => {
     expect(LOGIC_ATTRIBUTE_TYPE_OPTIONS).toEqual([
       { labelKey: "objectTypeLogicAttributeTypeTool", value: "tool" },
     ]);

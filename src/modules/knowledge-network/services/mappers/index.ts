@@ -214,7 +214,6 @@ export function mapLogicProperty(item: BackendLogicProperty): ObjectTypeLogicPro
         }
       : null,
     displayName: item.display_name ?? item.name,
-    metricBinding: item.metric_binding,
     name: item.name,
     parameters:
       item.parameters?.map((parameter) => ({
@@ -306,7 +305,6 @@ export function toBackendLogicProperty(property: ObjectTypeLogicProperty): Backe
         }
       : null,
     display_name: property.displayName,
-    metric_binding: property.metricBinding,
     name: property.name,
     parameters: property.parameters?.map(toBackendLogicParameter) ?? null,
     type: property.type,

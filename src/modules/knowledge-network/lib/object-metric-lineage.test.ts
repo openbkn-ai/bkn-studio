@@ -28,7 +28,6 @@ function metric(
     create_time: 0,
     creator: { id: "test", type: "user" },
     definition: {
-      calculation_scope: "object_set",
       code: id,
       description: "",
       id,

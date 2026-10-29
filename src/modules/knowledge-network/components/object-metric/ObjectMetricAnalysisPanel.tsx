@@ -128,23 +128,18 @@ function formatTime(value: number): string {
 }
 
 function dimensionEntries(entry: ObjectMetricDataEntryV1): Array<[string, unknown]> {
-  if (entry.dimension_cells?.length)
-    return entry.dimension_cells.map(({ ref, value }) => [
-      JSON.stringify([ref.object_type_id, ref.relation_path_alias ?? "", ref.property_name]),
-      value,
-    ]);
-  return Object.entries(entry.dimensions ?? {});
+  return (entry.dimension_cells ?? []).map(({ ref, value }) => [
+    JSON.stringify([ref.object_type_id, ref.relation_path_alias ?? "", ref.property_name]),
+    value,
+  ]);
 }
 
 function dimensionValue(entry: ObjectMetricDataEntryV1, key: string): unknown {
-  if (entry.dimension_cells?.length) {
-    return entry.dimension_cells.find(
-      ({ ref }) =>
-        JSON.stringify([ref.object_type_id, ref.relation_path_alias ?? "", ref.property_name]) ===
-        key,
-    )?.value;
-  }
-  return entry.dimensions?.[key];
+  return entry.dimension_cells?.find(
+    ({ ref }) =>
+      JSON.stringify([ref.object_type_id, ref.relation_path_alias ?? "", ref.property_name]) ===
+      key,
+  )?.value;
 }
 
 function dimensionDisplayName(key: string, propertyLabels: Record<string, string>): string {
@@ -169,17 +164,12 @@ function dimensionValueLabel(value: unknown): string {
 function categoryLabel(
   entry: ObjectMetricDataEntryV1,
   propertyLabels: Record<string, string>,
-  identityLabels: Record<string, string>,
 ): string {
   const dimensions = dimensionEntries(entry);
   if (dimensions.length === 1) return String(dimensions[0]?.[1]);
   if (dimensions.length)
     return dimensions
       .map(([key, value]) => `${dimensionDisplayName(key, propertyLabels)}: ${String(value)}`)
-      .join(" · ");
-  if (entry.instance_identity)
-    return Object.entries(entry.instance_identity)
-      .map(([key, value]) => `${identityLabels[key] || key}: ${String(value)}`)
       .join(" · ");
   return objectMetricText("mbd0a40247497");
 }
@@ -198,9 +188,8 @@ function hasTime(entries: NumericEntry[]) {
 function buildCategoryOption(
   entries: NumericEntry[],
   propertyLabels: Record<string, string>,
-  identityLabels: Record<string, string>,
 ): EChartsOption {
-  const categories = entries.map((entry) => categoryLabel(entry, propertyLabels, identityLabels));
+  const categories = entries.map((entry) => categoryLabel(entry, propertyLabels));
   const dense = categories.length > 20;
   return {
     color: palette,
@@ -317,7 +306,6 @@ function buildStackedBarOption(
 function buildPieOption(
   entries: NumericEntry[],
   propertyLabels: Record<string, string>,
-  identityLabels: Record<string, string>,
 ): EChartsOption {
   return {
     color: palette,
@@ -326,7 +314,7 @@ function buildPieOption(
     series: [
       {
         data: entries.map((entry) => ({
-          name: categoryLabel(entry, propertyLabels, identityLabels),
+          name: categoryLabel(entry, propertyLabels),
           value: entry.value,
         })),
         label: { formatter: "{b}\n{d}%" },
@@ -492,7 +480,6 @@ function buildComboOption(entries: NumericEntry[]): EChartsOption {
 }
 
 type ObjectMetricAnalysisPanelProps = {
-  identityLabels?: Record<string, string>;
   pathControls?: ReactNode;
   propertyLabels?: Record<string, string>;
   result: ObjectMetricDataV1;
@@ -504,7 +491,6 @@ type ObjectMetricAnalysisPanelProps = {
 const emptyPropertyLabels: Record<string, string> = {};
 
 export function ObjectMetricAnalysisPanel({
-  identityLabels = emptyPropertyLabels,
   pathControls,
   propertyLabels = emptyPropertyLabels,
   result,
@@ -565,11 +551,11 @@ export function ObjectMetricAnalysisPanel({
     ((surface === "chart" && !chartable) || (selectedView !== "auto" && activeView === "auto"));
   const chartOption = useMemo<EChartsOption | undefined>(() => {
     if (!entries.length || resolvedView === "summary" || resolvedView === "table") return undefined;
-    if (resolvedView === "bar") return buildCategoryOption(entries, propertyLabels, identityLabels);
+    if (resolvedView === "bar") return buildCategoryOption(entries, propertyLabels);
     if (resolvedView === "stacked_bar") return buildStackedBarOption(entries, propertyLabels);
     if (resolvedView === "pie")
       return entries.every((entry) => entry.value >= 0)
-        ? buildPieOption(entries, propertyLabels, identityLabels)
+        ? buildPieOption(entries, propertyLabels)
         : undefined;
     if (resolvedView === "line")
       return hasTime(entries) ? buildTimeSeriesOption(entries, false) : undefined;
@@ -579,7 +565,7 @@ export function ObjectMetricAnalysisPanel({
       return buildHeatmapOption(entries, resolvedTheme, propertyLabels);
     if (resolvedView === "combo") return hasTime(entries) ? buildComboOption(entries) : undefined;
     return undefined;
-  }, [entries, identityLabels, propertyLabels, resolvedTheme, resolvedView]);
+  }, [entries, propertyLabels, resolvedTheme, resolvedView]);
   const manualView = activeView !== "auto";
   const summaryValue = entries.length === 1 ? entries[0]?.value : undefined;
   const summaryEntry =
@@ -653,7 +639,7 @@ export function ObjectMetricAnalysisPanel({
           (resolvedView === "combo" || seriesLabel(entry) === event.seriesName)
         );
       return (
-        categoryLabel(entry, propertyLabels, identityLabels) === event.name &&
+        categoryLabel(entry, propertyLabels) === event.name &&
         seriesLabel(entry) === event.seriesName
       );
     });
@@ -683,7 +669,6 @@ export function ObjectMetricAnalysisPanel({
           {objectMetricText(
             (
               {
-                object_value: "mabe9d02781fc",
                 summary: "m887c0bab2e93",
                 grouped: "m63a570e277c4",
                 time_series: "m523d11919689",
