@@ -154,6 +154,39 @@ describe("draft.service", () => {
     expect(draft.items.objectTypes[0].incrementalKey).toBe("");
   });
 
+  it("records an update field in the mock only when it changes", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const { editDraftItem, getDraft } =
+      await import("@/modules/bkn-project/services/draft.service");
+    vi.useFakeTimers();
+    try {
+      const settle = async <T>(promise: Promise<T>) => {
+        await vi.runAllTimersAsync();
+        return promise;
+      };
+      const before = (await settle(getDraft("p-001")))!;
+      const set = await settle(
+        editDraftItem("p-001", "object_types", "sales_orders", before.updateTime, {
+          incrementalKey: "order_date",
+        }),
+      );
+      const again = await settle(
+        editDraftItem("p-001", "object_types", "sales_orders", set.updateTime, {
+          incrementalKey: "order_date",
+        }),
+      );
+
+      const recorded = again.items.decisions.filter((item) => item.action === "incremental");
+      expect(recorded).toHaveLength(1);
+      expect(
+        again.items.objectTypes.find((item) => item.id === "sales_orders")?.incrementalKey,
+      ).toBe("order_date");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("chooses an identity and waits longer than bkn-project counts", async () => {
     const { chooseIdentity, IDENTITY_TIMEOUT_MS, mockDraft } = await importService();
     mockPut.mockResolvedValue({ data: mockDraft("p1") });
