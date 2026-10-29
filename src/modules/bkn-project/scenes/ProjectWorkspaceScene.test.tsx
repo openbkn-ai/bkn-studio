@@ -53,6 +53,14 @@ vi.mock("@/modules/bkn-project/components/ProjectModel", () => ({
   ),
 }));
 
+vi.mock("@/modules/bkn-project/components/ProjectReleasePage", () => ({
+  ProjectReleasePage: ({ onGoToModel }: { onGoToModel: () => void }) => (
+    <button onClick={onGoToModel} type="button">
+      release page
+    </button>
+  ),
+}));
+
 vi.mock("@/modules/bkn-project/components/draft/DraftConceptGraph", () => ({
   DraftConceptGraph: () => <div>concept graph</div>,
 }));
@@ -95,7 +103,10 @@ const project: Project = {
   updateTime: 1,
 };
 
-function renderScene(section: "model" | "overview" | "requirements" = "overview", entry = "/") {
+function renderScene(
+  section: "model" | "overview" | "release" | "requirements" = "overview",
+  entry = "/",
+) {
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <ProjectWorkspaceScene projectId="p1" section={section} />
@@ -361,6 +372,13 @@ describe("ProjectWorkspaceScene", () => {
     renderScene("model", "/bkn-project/p1/model?tab=changes");
 
     expect(await screen.findByText("model of p1 on changes")).toBeInTheDocument();
+  });
+
+  it("shows the confirmation on the release page, which leads back to modeling", async () => {
+    renderScene("release");
+
+    fireEvent.click(await screen.findByRole("button", { name: "release page" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/model");
   });
 
   it("shows a page still under construction", async () => {

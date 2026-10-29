@@ -18,6 +18,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ProjectModel } from "@/modules/bkn-project/components/ProjectModel";
 import { ProjectOverview } from "@/modules/bkn-project/components/ProjectOverview";
+import { ProjectReleasePage } from "@/modules/bkn-project/components/ProjectReleasePage";
 import { ProjectWorkspaceNav } from "@/modules/bkn-project/components/ProjectWorkspaceNav";
 import {
   getLatestRelease,
@@ -168,6 +169,12 @@ export function ProjectWorkspaceScene({
               onProjectChange={(next) =>
                 setLoaded((current) => (current ? { ...current, project: next } : current))
               }
+              ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+              project={project}
+            />
+          ) : section === "release" ? (
+            <ProjectReleasePage
+              onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
               ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
               project={project}
             />
