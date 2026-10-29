@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Form, Input, Modal } from "antd";
+import { Form, Input, Modal, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,11 +15,29 @@ import {
   NAME_MAX,
   nameEdit,
 } from "@/modules/bkn-project/components/draft/edit";
-import type { DraftItemEdit } from "@/modules/bkn-project/types/draft";
+import type { DraftItemEdit, DraftObjectType } from "@/modules/bkn-project/types/draft";
 
 /**
- * Renames or describes one draft item. Saving is offered only when something changed; the
- * page sends the edit and closes the dialog once bkn-project accepts it.
+ * Property types a table's local index can be refreshed by, as bkn-project accepts them for an
+ * update field. bkn-project still reads the table's own field and may refuse it; the page then
+ * shows its reason.
+ */
+const UPDATE_FIELD_TYPES = new Set([
+  "date",
+  "datetime",
+  "integer",
+  "string",
+  "time",
+  "timestamp",
+  "unsigned integer",
+]);
+
+const isObjectType = (item: EditableItem): item is DraftObjectType => "incrementalKey" in item;
+
+/**
+ * Renames or describes one draft item, and chooses an object type's update field. Saving is
+ * offered only when something changed; the page sends the edit and closes the dialog once
+ * bkn-project accepts it.
  */
 export function DraftItemDialog({
   item,
@@ -32,9 +50,29 @@ export function DraftItemDialog({
 }) {
   const { t } = useTranslation();
   const [values, setValues] = useState({ description: item.description, name: item.name });
+  const objectType = isObjectType(item) ? item : null;
+  const [updateField, setUpdateField] = useState(objectType?.incrementalKey ?? "");
   const [saving, setSaving] = useState(false);
-  const edit = nameEdit(item, values);
+  const updateFieldEdit: DraftItemEdit | null =
+    objectType && updateField !== objectType.incrementalKey
+      ? { incrementalKey: updateField }
+      : null;
+  const named = nameEdit(item, values);
+  const edit = named || updateFieldEdit ? { ...named, ...updateFieldEdit } : null;
   const nameMissing = !values.name.trim();
+  const updateFieldOptions = (objectType?.properties ?? [])
+    .filter((property) => UPDATE_FIELD_TYPES.has(property.type))
+    .map((property) => ({
+      label:
+        property.displayName && property.displayName !== property.name ? (
+          <span>
+            {property.displayName} <code>{property.name}</code>
+          </span>
+        ) : (
+          property.name
+        ),
+      value: property.name,
+    }));
 
   const save = async () => {
     if (!edit || nameMissing) {
@@ -86,6 +124,27 @@ export function DraftItemDialog({
             value={values.description}
           />
         </Form.Item>
+        {objectType ? (
+          <Form.Item
+            extra={t(
+              updateFieldOptions.length
+                ? "bknProject.model.edit.updateFieldHelp"
+                : "bknProject.model.edit.updateFieldUnavailable",
+            )}
+            htmlFor="draft-item-update-field"
+            label={t("bknProject.model.edit.updateField")}
+          >
+            <Select
+              allowClear
+              disabled={!updateFieldOptions.length}
+              id="draft-item-update-field"
+              onChange={(value?: string) => setUpdateField(value ?? "")}
+              options={updateFieldOptions}
+              placeholder={t("bknProject.model.edit.updateFieldNone")}
+              value={updateField || undefined}
+            />
+          </Form.Item>
+        ) : null}
       </Form>
     </Modal>
   );
