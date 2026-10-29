@@ -157,7 +157,7 @@ describe("ConfirmDraft", () => {
     expect(await screen.findByText("2 个已采纳的对象类还需要选定唯一标识")).toBeInTheDocument();
   });
 
-  it("offers to confirm again after a change, and nothing once the draft is confirmed", async () => {
+  it("offers to confirm again after a change, and says when the draft is confirmed", async () => {
     getProjectStatusMock.mockResolvedValueOnce(
       status({}, { confirmation: { current: false, time: 1 }, stale: ["confirmation_outdated"] }),
     );
@@ -172,8 +172,11 @@ describe("ConfirmDraft", () => {
       status(null, { confirmation: { current: true, time: 1 }, stage: "confirmed" }),
     );
     renderConfirm();
-    await waitFor(() => expect(getProjectStatusMock).toHaveBeenCalledTimes(2));
-    expect(screen.queryByRole("button", { name: /确认/ })).toBeNull();
+    // A draft confirmed as it is says so, and leads to the confirmation's results.
+    const confirmed = await screen.findByRole("button", { name: /^已于 .+ 确认$/ });
+    expect(screen.queryByRole("button", { name: /确认草稿|重新确认/ })).toBeNull();
+    fireEvent.click(confirmed);
+    expect(onConfirmed).toHaveBeenCalled();
   });
 
   it("says when it cannot tell whether the draft may be confirmed, and reads again", async () => {

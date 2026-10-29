@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Checkbox, Modal, Space, Tooltip } from "antd";
+import { Alert, Checkbox, Modal, Tooltip } from "antd";
+import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -24,6 +25,8 @@ import {
 } from "@/modules/bkn-project/services/publish.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { PendingItem, ProjectStatus } from "@/modules/bkn-project/types/publish";
+
+const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
 
 import styles from "../ProjectModel.module.css";
 
@@ -138,7 +141,12 @@ export function ConfirmDraft({
     ) : null;
   }
   if (!action) {
-    return null;
+    // A draft confirmed as it is: say so, and lead to what the confirmation started.
+    return status.confirmation?.current ? (
+      <AppButton onClick={onConfirmed} type="link">
+        {t("bknProject.release.confirmed", { time: formatTime(status.confirmation.time) })}
+      </AppButton>
+    ) : null;
   }
 
   const label = t(
@@ -241,17 +249,19 @@ export function ConfirmDraft({
                 <div>
                   {t("bknProject.confirm.dialog.undecidedTitle", { count: undecided.length })}
                 </div>
-                {undecided.map((item) => (
-                  <div key={`${item.kind}/${item.itemId}`}>
-                    <Space wrap>
+                <ul className={styles.confirmList}>
+                  {undecided.map((item) => (
+                    <li className={styles.confirmItem} key={`${item.kind}/${item.itemId}`}>
                       <span>{item.name}</span>
-                      <span className={styles.summary}>
-                        {t(`bknProject.confirm.kind.${item.kind}`, { defaultValue: "" })}
+                      <span className={styles.confirmMeta}>
+                        <span>
+                          {t(`bknProject.confirm.kind.${item.kind}`, { defaultValue: "" })}
+                        </span>
+                        <span>{pendingBecauseText(t, item.because)}</span>
                       </span>
-                      <span className={styles.summary}>{pendingBecauseText(t, item.because)}</span>
-                    </Space>
-                  </div>
-                ))}
+                    </li>
+                  ))}
+                </ul>
                 <Checkbox
                   checked={acceptUndecided}
                   onChange={(event) => setAcceptUndecided(event.target.checked)}
@@ -264,9 +274,13 @@ export function ConfirmDraft({
           {needsPartial ? (
             <div>
               <div>{t("bknProject.confirm.dialog.partialTitle", { count: unreadable.length })}</div>
-              {unreadable.map((table) => (
-                <div key={table.resourceId}>{table.name}</div>
-              ))}
+              <ul className={styles.confirmList}>
+                {unreadable.map((table) => (
+                  <li className={styles.confirmItem} key={table.resourceId}>
+                    {table.name}
+                  </li>
+                ))}
+              </ul>
               <Checkbox
                 checked={acceptPartial}
                 onChange={(event) => setAcceptPartial(event.target.checked)}
