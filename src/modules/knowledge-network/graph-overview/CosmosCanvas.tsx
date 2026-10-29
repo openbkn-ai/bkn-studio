@@ -320,6 +320,11 @@ export const CosmosCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasProps
         simulationFriction: 0.85,
         simulationDecay: 8000,
         onPointClick: (index) => {
+          // The release that ends a box selection is not a click on the point under it.
+          if (boxEndedRef.current) {
+            boxEndedRef.current = false;
+            return;
+          }
           const id = dataRef.current.ids[index];
           if (id) propsRef.current.onNodeClick(id);
         },

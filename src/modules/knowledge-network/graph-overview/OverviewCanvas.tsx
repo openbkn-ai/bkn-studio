@@ -210,9 +210,13 @@ export const OverviewCanvas = forwardRef<OverviewCanvasHandle, OverviewCanvasPro
         dragged = null;
       });
       sigma.on("clickNode", ({ node }) => {
-        // The click that ends a drag is not a selection.
+        // The click that ends a drag, or a box selection, is not a selection.
         if (moved) {
           moved = false;
+          return;
+        }
+        if (boxEndedRef.current) {
+          boxEndedRef.current = false;
           return;
         }
         propsRef.current.onNodeClick(node);
