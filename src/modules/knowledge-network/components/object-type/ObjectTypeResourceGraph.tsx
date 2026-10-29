@@ -6,7 +6,17 @@
  */
 
 import { AimOutlined, ArrowLeftOutlined, ZoomInOutlined, ZoomOutOutlined } from "@ant-design/icons";
-import { Alert, Button, Descriptions, Drawer, Segmented, Spin, Tooltip, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  Descriptions,
+  Drawer,
+  Pagination,
+  Segmented,
+  Spin,
+  Tooltip,
+  Typography,
+} from "antd";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -63,6 +73,11 @@ type GraphNeighbor = {
   id: string;
   name: string;
   relations: KnowledgeNetworkRelationTypeRecord[];
+};
+type ResourceWindow<T> = {
+  entries: T[];
+  scope: string;
+  totalCount?: number;
 };
 type ActionSemanticPresentation = {
   action: KnowledgeNetworkActionTypeRecord;
@@ -134,16 +149,21 @@ const GRAPH_WIDTH = 1120;
 const GRAPH_HEIGHT = 620;
 const INITIAL_VIEW: ViewBox = { height: GRAPH_HEIGHT, width: GRAPH_WIDTH, x: 0, y: 0 };
 const CENTER: Point = { x: GRAPH_WIDTH / 2, y: GRAPH_HEIGHT / 2 };
-const PAGE_SIZE = 12;
-const METRIC_SCAN_PAGE_SIZE = 50;
+const GRAPH_PAGE_SIZE = 12;
+const RESOURCE_REQUEST_SIZE = 30;
+const METRIC_SCAN_PAGE_SIZE = RESOURCE_REQUEST_SIZE;
 const MAX_GRAPH_METRICS = 200;
-const METRIC_VISIBLE_BATCH_SIZE = 6;
+const METRIC_VISIBLE_BATCH_SIZE = 10;
+const METRIC_LAYOUT_PADDING_Y = 60;
+const METRIC_MIN_ROW_GAP = 64;
+const RELATION_MIN_ROW_GAP = 72;
+const RELATION_LABEL_ROW_GAP = 36;
 const INITIAL_METRIC_VISIBLE_COUNTS: Record<ObjectMetricTypeV1, number> = {
   atomic: METRIC_VISIBLE_BATCH_SIZE,
   composite: METRIC_VISIBLE_BATCH_SIZE,
   derived: METRIC_VISIBLE_BATCH_SIZE,
 };
-const OVERVIEW_LIMIT = 4;
+const OVERVIEW_LIMIT = GRAPH_PAGE_SIZE;
 const MIN_ZOOM = 0.65;
 const MAX_ZOOM = 2.5;
 const ACTION_FOCUS_TRIGGER_WIDTH = 140;
@@ -176,10 +196,35 @@ function polar(angle: number, radiusX: number, radiusY: number, center = CENTER)
   };
 }
 
-function overviewGroupPosition(group: ExpandableGroup, expandedGroup: ExpandableGroup | null) {
-  if (!expandedGroup) return group === "metrics" ? { x: 760, y: 210 } : { x: 760, y: 410 };
-  if (group === expandedGroup) return { x: 700, y: CENTER.y };
-  return group === "metrics" ? { x: 700, y: 72 } : { x: 700, y: GRAPH_HEIGHT - 72 };
+function stackedLayoutHeight(count: number, rowGap: number) {
+  return Math.max(GRAPH_HEIGHT, METRIC_LAYOUT_PADDING_Y * 2 + Math.max(0, count - 1) * rowGap);
+}
+
+function overviewGroupPosition(
+  group: ExpandableGroup,
+  expandedGroup: ExpandableGroup | null,
+  graphHeight: number,
+) {
+  if (!expandedGroup) {
+    return group === "metrics"
+      ? { x: 760, y: graphHeight * 0.34 }
+      : { x: 760, y: graphHeight * 0.66 };
+  }
+  if (group === expandedGroup) return { x: 700, y: graphHeight / 2 };
+  return group === "metrics" ? { x: 700, y: 72 } : { x: 700, y: graphHeight - 72 };
+}
+
+function layoutOverviewRelations(neighbors: GraphNeighbor[], graphHeight: number) {
+  const positions = new Map<string, Point>();
+  const rowSpan = Math.max(0, neighbors.length - 1) * RELATION_MIN_ROW_GAP;
+  const firstRowY = (graphHeight - rowSpan) / 2;
+  neighbors.forEach((neighbor, index) => {
+    positions.set(`neighbor:${neighbor.id}`, {
+      x: 120,
+      y: firstRowY + index * RELATION_MIN_ROW_GAP,
+    });
+  });
+  return positions;
 }
 
 function layoutActionItems(actions: KnowledgeNetworkActionTypeRecord[], sourcePosition: Point) {
@@ -187,14 +232,22 @@ function layoutActionItems(actions: KnowledgeNetworkActionTypeRecord[], sourcePo
   const orderedActions = [...actions].sort(
     (left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id),
   );
-  const rowGap = Math.min(84, (GRAPH_HEIGHT - 120) / Math.max(1, orderedActions.length - 1));
+  const rowGap = Math.max(
+    METRIC_MIN_ROW_GAP,
+    Math.min(84, (GRAPH_HEIGHT - 120) / Math.max(1, orderedActions.length - 1)),
+  );
+  const height = stackedLayoutHeight(orderedActions.length, rowGap);
+  const firstRowY =
+    height > GRAPH_HEIGHT
+      ? METRIC_LAYOUT_PADDING_Y
+      : sourcePosition.y - (Math.max(0, orderedActions.length - 1) * rowGap) / 2;
   orderedActions.forEach((action, index) => {
     positions.set(`action:${action.id}`, {
       x: Math.min(sourcePosition.x + 220, GRAPH_WIDTH - 100),
-      y: CENTER.y + (index - (orderedActions.length - 1) / 2) * rowGap,
+      y: firstRowY + index * rowGap,
     });
   });
-  return positions;
+  return { height, positions };
 }
 
 function trimmedLine(from: Point, to: Point, fromInset: number, toInset: number) {
@@ -214,6 +267,7 @@ function relationGeometry(
   neighbor: Point,
   outgoing: boolean,
   parallelOffset: number,
+  labelPosition?: Point,
 ) {
   const dx = neighbor.x - center.x;
   const dy = neighbor.y - center.y;
@@ -224,17 +278,24 @@ function relationGeometry(
   const nearNeighbor = { x: neighbor.x - unitX * 24, y: neighbor.y - unitY * 24 };
   const from = outgoing ? nearCenter : nearNeighbor;
   const to = outgoing ? nearNeighbor : nearCenter;
-  const control = {
-    x: (from.x + to.x) / 2 - unitY * parallelOffset,
-    y: (from.y + to.y) / 2 + unitX * parallelOffset,
-  };
+  const control = labelPosition
+    ? {
+        x: labelPosition.x * 2 - (from.x + to.x) / 2,
+        y: labelPosition.y * 2 - (from.y + to.y) / 2,
+      }
+    : {
+        x: (from.x + to.x) / 2 - unitY * parallelOffset,
+        y: (from.y + to.y) / 2 + unitX * parallelOffset,
+      };
   return {
     control,
     from,
-    label: {
-      x: (from.x + to.x + control.x * 2) / 4,
-      y: (from.y + to.y + control.y * 2) / 4,
-    },
+    label:
+      labelPosition ??
+      ({
+        x: (from.x + to.x + control.x * 2) / 4,
+        y: (from.y + to.y + control.y * 2) / 4,
+      } satisfies Point),
     to,
   };
 }
@@ -319,6 +380,8 @@ function layoutMetrics(
     220,
     (GRAPH_WIDTH - sourcePosition.x - 100) / Math.max(1, sortedDepths.length),
   );
+  const maxColumnItems = Math.max(0, ...[...columns.values()].map((items) => items.length));
+  const height = stackedLayoutHeight(maxColumnItems, METRIC_MIN_ROW_GAP);
   sortedDepths.forEach((depth, columnIndex) => {
     const parentY = (item: MetricLayoutItem) => {
       if (item.kind !== "metric") return undefined;
@@ -348,18 +411,24 @@ function layoutMetrics(
         (metricOrder.get(metricNodeKey(right.metric)) ?? 0)
       );
     });
-    const rowGap = Math.min(84, (GRAPH_HEIGHT - 120) / Math.max(1, items.length - 1));
+    const rowGap = Math.max(
+      METRIC_MIN_ROW_GAP,
+      Math.min(84, (GRAPH_HEIGHT - 120) / Math.max(1, items.length - 1)),
+    );
+    const rowSpan = Math.max(0, items.length - 1) * rowGap;
+    const firstRowY =
+      height > GRAPH_HEIGHT ? METRIC_LAYOUT_PADDING_Y : sourcePosition.y - rowSpan / 2;
     items.forEach((item, rowIndex) => {
       positions.set(
         item.kind === "metric" ? metricNodeKey(item.metric) : moreMetricNodeKey(item.type),
         {
           x: sourcePosition.x + columnGap * (columnIndex + 1),
-          y: GRAPH_HEIGHT / 2 + (rowIndex - (items.length - 1) / 2) * rowGap,
+          y: firstRowY + rowIndex * rowGap,
         },
       );
     });
   });
-  return positions;
+  return { height, positions };
 }
 
 function metricTypeLabel(
@@ -481,16 +550,28 @@ export function ObjectTypeResourceGraph({
   >(null);
   const suppressClickRef = useRef(false);
   const restoredSelectionKeyRef = useRef("");
+  const relationWindowRef = useRef<ResourceWindow<KnowledgeNetworkRelationTypeRecord>>({
+    entries: [],
+    scope: "",
+  });
+  const actionWindowRef = useRef<ResourceWindow<KnowledgeNetworkActionTypeRecord>>({
+    entries: [],
+    scope: "",
+  });
   const [section, setSection] = useState<GraphSection>(
     resourceScope === "all" ? "all" : resourceScope,
   );
   const [expandedGroup, setExpandedGroup] = useState<ExpandableGroup | null>(null);
+  const [relationPage, setRelationPage] = useState(1);
   const [relations, setRelations] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
+  const [relationLoading, setRelationLoading] = useState(true);
   const [metrics, setMetrics] = useState<ObjectMetricRecordV1[]>([]);
+  const [metricLoading, setMetricLoading] = useState(true);
   const [metricVisibleCounts, setMetricVisibleCounts] = useState(INITIAL_METRIC_VISIBLE_COUNTS);
+  const [actionPage, setActionPage] = useState(1);
   const [actions, setActions] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
+  const [actionLoading, setActionLoading] = useState(true);
   const [totals, setTotals] = useState({ actions: 0, metrics: 0, relations: 0 });
-  const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<GraphError[]>([]);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [selected, setSelected] = useState<ObjectTypeGraphSelectedResource>();
@@ -515,15 +596,24 @@ export function ObjectTypeResourceGraph({
   >();
   const [view, setView] = useState<ViewBox>(INITIAL_VIEW);
   const [nodePositions, setNodePositions] = useState<Record<string, Point>>({});
+  const loading = relationLoading || metricLoading || actionLoading;
+  const clearActionPresentationErrors = (actionIds?: Set<string>) => {
+    setErrors((current) =>
+      current.filter((entry) => {
+        if (!entry.key.startsWith("action:")) return true;
+        return actionIds ? !actionIds.has(entry.key.slice("action:".length)) : false;
+      }),
+    );
+  };
 
   useEffect(() => {
-    let active = true;
-    setLoading(true);
     setErrors([]);
     setRelations([]);
     setMetrics([]);
     setActions([]);
     setTotals({ actions: 0, metrics: 0, relations: 0 });
+    setRelationPage(1);
+    setActionPage(1);
     setSelected(undefined);
     setFocusedAction(undefined);
     setExpandedActions([]);
@@ -532,97 +622,193 @@ export function ObjectTypeResourceGraph({
     setView(INITIAL_VIEW);
     setExpandedGroup(null);
     setMetricVisibleCounts(INITIAL_METRIC_VISIBLE_COUNTS);
+  }, [networkId, objectType.id, refreshVersion, reloadVersion, resourceScope]);
 
-    const reportError = (key: GraphError["key"], error: unknown) => {
+  useEffect(() => {
+    if (resourceScope === "actions") {
+      setRelations([]);
+      setTotals((current) => ({ ...current, relations: 0 }));
+      setRelationLoading(false);
+      return undefined;
+    }
+    let active = true;
+    const requestScope = `${networkId}\0${objectType.id}\0${refreshVersion}\0${reloadVersion}`;
+    if (relationWindowRef.current.scope !== requestScope) {
+      relationWindowRef.current = { entries: [], scope: requestScope };
+    }
+    const window = relationWindowRef.current;
+    const pageStart = (relationPage - 1) * GRAPH_PAGE_SIZE;
+    const pageEnd = pageStart + GRAPH_PAGE_SIZE;
+    setRelationLoading(true);
+    setErrors((current) => current.filter((entry) => entry.key !== "relations"));
+    void (async () => {
+      while (
+        window.entries.length < pageEnd &&
+        (window.totalCount === undefined || window.entries.length < window.totalCount)
+      ) {
+        const result = await listKnowledgeNetworkRelationTypePage(networkId, {
+          boundObjectTypeId: objectType.id,
+          direction: "asc",
+          limit: RESOURCE_REQUEST_SIZE,
+          offset: window.entries.length,
+          sort: "name",
+        });
+        if (!active) return;
+        window.totalCount = result.totalCount;
+        window.entries.push(...result.entries);
+        if (result.entries.length === 0) break;
+      }
       if (!active) return;
-      setErrors((current) => [
-        ...current.filter((entry) => entry.key !== key),
-        { key, message: extractRequestErrorMessage(error) },
-      ]);
+      const totalCount = window.totalCount ?? 0;
+      const maxPage = Math.max(1, Math.ceil(totalCount / GRAPH_PAGE_SIZE));
+      setTotals((current) => ({ ...current, relations: totalCount }));
+      if (relationPage > maxPage) {
+        setRelationPage(maxPage);
+        return;
+      }
+      setRelations(window.entries.slice(pageStart, pageEnd));
+    })()
+      .catch((error: unknown) => {
+        if (!active) return;
+        setRelations([]);
+        if (window.totalCount === undefined) {
+          setTotals((current) => ({ ...current, relations: 0 }));
+        }
+        setErrors((current) => [
+          ...current.filter((entry) => entry.key !== "relations"),
+          { key: "relations", message: extractRequestErrorMessage(error) },
+        ]);
+      })
+      .finally(() => {
+        if (active) setRelationLoading(false);
+      });
+    return () => {
+      active = false;
     };
+  }, [networkId, objectType.id, refreshVersion, relationPage, reloadVersion, resourceScope]);
 
-    const relationRequest =
-      resourceScope === "actions"
-        ? Promise.resolve()
-        : listKnowledgeNetworkRelationTypePage(networkId, {
-            boundObjectTypeId: objectType.id,
-            direction: "asc",
-            limit: PAGE_SIZE,
-            offset: 0,
-            sort: "name",
-          })
-            .then((result) => {
-              if (!active) return;
-              setRelations(result.entries);
-              setTotals((current) => ({ ...current, relations: result.totalCount }));
-            })
-            .catch((error: unknown) => {
-              if (!active) return;
-              setRelations([]);
-              setTotals((current) => ({ ...current, relations: 0 }));
-              reportError("relations", error);
-            });
+  useEffect(() => {
+    if (resourceScope === "relations") {
+      setActions([]);
+      setTotals((current) => ({ ...current, actions: 0 }));
+      setActionLoading(false);
+      return undefined;
+    }
+    let active = true;
+    const requestScope = `${networkId}\0${objectType.id}\0${refreshVersion}\0${reloadVersion}`;
+    if (actionWindowRef.current.scope !== requestScope) {
+      actionWindowRef.current = { entries: [], scope: requestScope };
+    }
+    const window = actionWindowRef.current;
+    const pageStart = (actionPage - 1) * GRAPH_PAGE_SIZE;
+    const pageEnd = pageStart + GRAPH_PAGE_SIZE;
+    setActionLoading(true);
+    setErrors((current) =>
+      current.filter((entry) => entry.key !== "actions" && !entry.key.startsWith("action:")),
+    );
+    void (async () => {
+      while (
+        window.entries.length < pageEnd &&
+        (window.totalCount === undefined || window.entries.length < window.totalCount)
+      ) {
+        const result = await listKnowledgeNetworkActionTypePage(networkId, {
+          direction: "asc",
+          limit: RESOURCE_REQUEST_SIZE,
+          objectTypeId: objectType.id,
+          offset: window.entries.length,
+          sort: "name",
+        });
+        if (!active) return;
+        window.totalCount = result.totalCount;
+        window.entries.push(...result.entries);
+        if (result.entries.length === 0) break;
+      }
+      if (!active) return;
+      const totalCount = window.totalCount ?? 0;
+      const maxPage = Math.max(1, Math.ceil(totalCount / GRAPH_PAGE_SIZE));
+      setTotals((current) => ({ ...current, actions: totalCount }));
+      if (actionPage > maxPage) {
+        setActionPage(maxPage);
+        return;
+      }
+      setActions(window.entries.slice(pageStart, pageEnd));
+    })()
+      .catch((error: unknown) => {
+        if (!active) return;
+        setActions([]);
+        if (window.totalCount === undefined) {
+          setTotals((current) => ({ ...current, actions: 0 }));
+        }
+        setErrors((current) => [
+          ...current.filter((entry) => entry.key !== "actions"),
+          { key: "actions", message: extractRequestErrorMessage(error) },
+        ]);
+      })
+      .finally(() => {
+        if (active) setActionLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [actionPage, networkId, objectType.id, refreshVersion, reloadVersion, resourceScope]);
 
-    const actionRequest =
-      resourceScope === "relations"
-        ? Promise.resolve()
-        : listKnowledgeNetworkActionTypePage(networkId, {
-            direction: "asc",
-            limit: PAGE_SIZE,
-            objectTypeId: objectType.id,
-            offset: 0,
-            sort: "name",
-          })
-            .then((result) => {
-              if (!active) return;
-              setActions(result.entries);
-              setTotals((current) => ({ ...current, actions: result.totalCount }));
-            })
-            .catch((error: unknown) => {
-              if (!active) return;
-              setActions([]);
-              setTotals((current) => ({ ...current, actions: 0 }));
-              reportError("actions", error);
-            });
-
-    const metricRequest =
-      metricsAvailable && resourceScope === "all"
-        ? (async () => {
-            const loaded: ObjectMetricRecordV1[] = [];
-            let total = 0;
-            do {
-              const result = await listObjectMetricsV1(
-                networkId,
-                {
-                  limit: Math.min(METRIC_SCAN_PAGE_SIZE, MAX_GRAPH_METRICS - loaded.length),
-                  offset: loaded.length,
-                  ownerObjectTypeId: objectType.id,
-                },
-                { skipErrorToast: true },
-              );
-              if (!active) return;
-              total = result.total_count;
-              loaded.push(...result.entries);
-              if (result.entries.length === 0) break;
-            } while (loaded.length < total && loaded.length < MAX_GRAPH_METRICS);
-            setMetrics(loaded);
-            setTotals((current) => ({ ...current, metrics: total }));
-          })().catch((error: unknown) => {
-            if (!active) return;
-            setMetrics([]);
-            setTotals((current) => ({ ...current, metrics: 0 }));
-            reportError("metrics", error);
-          })
-        : Promise.resolve().then(() => {
-            if (!active) return;
-            setMetrics([]);
-            setTotals((current) => ({ ...current, metrics: 0 }));
-          });
-
-    void Promise.allSettled([relationRequest, metricRequest, actionRequest]).then(() => {
-      if (active) setLoading(false);
-    });
-
+  useEffect(() => {
+    if (!metricsAvailable || resourceScope !== "all") {
+      setMetrics([]);
+      setTotals((current) => ({ ...current, metrics: 0 }));
+      setErrors((current) => current.filter((entry) => entry.key !== "metrics"));
+      setSelected((current) => (current?.kind === "metric" ? undefined : current));
+      setExpandedGroup((current) => (current === "metrics" ? null : current));
+      setMetricVisibleCounts(INITIAL_METRIC_VISIBLE_COUNTS);
+      setNodePositions((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(
+            ([key]) =>
+              key !== "group:metrics" &&
+              !key.startsWith("metric:") &&
+              !key.startsWith("metric-more:"),
+          ),
+        ),
+      );
+      setMetricLoading(false);
+      return undefined;
+    }
+    let active = true;
+    setMetricLoading(true);
+    setErrors((current) => current.filter((entry) => entry.key !== "metrics"));
+    void (async () => {
+      const loaded: ObjectMetricRecordV1[] = [];
+      let total = 0;
+      do {
+        const result = await listObjectMetricsV1(
+          networkId,
+          {
+            limit: Math.min(METRIC_SCAN_PAGE_SIZE, MAX_GRAPH_METRICS - loaded.length),
+            offset: loaded.length,
+            ownerObjectTypeId: objectType.id,
+          },
+          { skipErrorToast: true },
+        );
+        if (!active) return;
+        total = result.total_count;
+        loaded.push(...result.entries);
+        if (result.entries.length === 0) break;
+      } while (loaded.length < total && loaded.length < MAX_GRAPH_METRICS);
+      setMetrics(loaded);
+      setTotals((current) => ({ ...current, metrics: total }));
+    })()
+      .catch((error: unknown) => {
+        if (!active) return;
+        setMetrics([]);
+        setTotals((current) => ({ ...current, metrics: 0 }));
+        setErrors((current) => [
+          ...current.filter((entry) => entry.key !== "metrics"),
+          { key: "metrics", message: extractRequestErrorMessage(error) },
+        ]);
+      })
+      .finally(() => {
+        if (active) setMetricLoading(false);
+      });
     return () => {
       active = false;
     };
@@ -922,71 +1108,142 @@ export function ObjectTypeResourceGraph({
           ? "knowledgeNetwork.objectTypeGraphActionsEmpty"
           : "knowledgeNetwork.objectTypeGraphEmpty";
 
+  const relationLayoutHeight =
+    section === "all"
+      ? stackedLayoutHeight(relationGroups.length, RELATION_MIN_ROW_GAP)
+      : GRAPH_HEIGHT;
+  const metricLayoutMeasurement = useMemo(
+    () =>
+      showMetricItems
+        ? layoutMetrics(metricItems, metricVisibility.hiddenCounts, { x: 700, y: CENTER.y })
+        : { height: GRAPH_HEIGHT, positions: new Map<string, Point>() },
+    [metricItems, metricVisibility.hiddenCounts, showMetricItems],
+  );
+  const actionLayoutMeasurement = useMemo(
+    () =>
+      showActionItems
+        ? layoutActionItems(actionItems, { x: 700, y: CENTER.y })
+        : { height: GRAPH_HEIGHT, positions: new Map<string, Point>() },
+    [actionItems, showActionItems],
+  );
+  const graphHeight = Math.max(
+    relationLayoutHeight,
+    metricLayoutMeasurement.height,
+    actionLayoutMeasurement.height,
+  );
   const metricGroupPosition = useMemo(
-    () => overviewGroupPosition("metrics", expandedGroup),
-    [expandedGroup],
+    () => overviewGroupPosition("metrics", expandedGroup, graphHeight),
+    [expandedGroup, graphHeight],
   );
   const actionGroupPosition = useMemo(
-    () => overviewGroupPosition("actions", expandedGroup),
-    [expandedGroup],
+    () => overviewGroupPosition("actions", expandedGroup, graphHeight),
+    [expandedGroup, graphHeight],
   );
   const metricGroupDisplayPosition = nodePositions["group:metrics"] ?? metricGroupPosition;
   const actionGroupDisplayPosition = nodePositions["group:actions"] ?? actionGroupPosition;
-
-  const basePositions = useMemo(() => {
-    const result = new Map<string, Point>();
-    const focusedSection = section === "metrics" || section === "actions";
-    result.set("owner", focusedSection ? { x: 110, y: CENTER.y } : CENTER);
-    result.set("group:metrics", metricGroupDisplayPosition);
-    result.set("group:actions", actionGroupDisplayPosition);
-
-    const relationAngles =
-      section === "relations"
-        ? spreadAngles(relationGroups.length, -Math.PI * 0.82, Math.PI * 0.82)
-        : spreadAngles(relationGroups.length, Math.PI * 0.7, Math.PI * 1.3);
-    relationGroups.forEach((neighbor, index) => {
-      const neighborPosition = polar(
-        relationAngles[index] ?? Math.PI,
-        section === "relations" ? 470 : 430,
-        section === "relations" ? 250 : 235,
-      );
-      result.set(`neighbor:${neighbor.id}`, neighborPosition);
-    });
-
-    if (section === "metrics") {
-      layoutMetrics(metricItems, metricVisibility.hiddenCounts, {
-        x: 110,
-        y: CENTER.y,
-      }).forEach((point, key) => result.set(key, point));
-    } else if (expandedGroup === "metrics") {
-      layoutMetrics(metricItems, metricVisibility.hiddenCounts, metricGroupDisplayPosition).forEach(
-        (point, key) => result.set(key, point),
-      );
+  const metricLayout = useMemo(() => {
+    if (section !== "metrics" && expandedGroup !== "metrics") {
+      return { height: GRAPH_HEIGHT, positions: new Map<string, Point>() };
     }
-
-    if (section === "actions") {
-      layoutActionItems(actionItems, { x: 110, y: CENTER.y }).forEach((point, key) =>
-        result.set(key, point),
-      );
-    } else if (expandedGroup === "actions") {
-      layoutActionItems(actionItems, actionGroupDisplayPosition).forEach((point, key) =>
-        result.set(key, point),
-      );
-    }
-    return result;
+    return layoutMetrics(
+      metricItems,
+      metricVisibility.hiddenCounts,
+      section === "metrics" ? { x: 110, y: CENTER.y } : metricGroupDisplayPosition,
+    );
   }, [
-    actionGroupDisplayPosition,
-    actionItems,
     expandedGroup,
     metricGroupDisplayPosition,
     metricItems,
     metricVisibility.hiddenCounts,
-    relationGroups,
+    section,
+  ]);
+  const actionLayout = useMemo(() => {
+    if (section !== "actions" && expandedGroup !== "actions") {
+      return { height: GRAPH_HEIGHT, positions: new Map<string, Point>() };
+    }
+    return layoutActionItems(
+      actionItems,
+      section === "actions" ? { x: 110, y: CENTER.y } : actionGroupDisplayPosition,
+    );
+  }, [actionGroupDisplayPosition, actionItems, expandedGroup, section]);
+  const relationPositions = useMemo(() => {
+    if (section === "all") return layoutOverviewRelations(relationGroups, graphHeight);
+    const positions = new Map<string, Point>();
+    const relationAngles = spreadAngles(relationGroups.length, -Math.PI * 0.82, Math.PI * 0.82);
+    relationGroups.forEach((neighbor, index) => {
+      positions.set(`neighbor:${neighbor.id}`, polar(relationAngles[index] ?? Math.PI, 470, 250));
+    });
+    return positions;
+  }, [graphHeight, relationGroups, section]);
+
+  useEffect(() => {
+    setView({ height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 });
+  }, [actionPage, graphHeight, relationPage, section]);
+
+  const basePositions = useMemo(() => {
+    const result = new Map<string, Point>();
+    const focusedSection = section === "metrics" || section === "actions";
+    result.set(
+      "owner",
+      focusedSection
+        ? { x: 110, y: CENTER.y }
+        : section === "all"
+          ? { x: CENTER.x, y: graphHeight / 2 }
+          : CENTER,
+    );
+    result.set("group:metrics", metricGroupDisplayPosition);
+    result.set("group:actions", actionGroupDisplayPosition);
+
+    relationPositions.forEach((point, key) => result.set(key, point));
+
+    metricLayout.positions.forEach((point, key) => result.set(key, point));
+
+    actionLayout.positions.forEach((point, key) => result.set(key, point));
+    return result;
+  }, [
+    actionGroupDisplayPosition,
+    actionLayout.positions,
+    graphHeight,
+    metricGroupDisplayPosition,
+    metricLayout.positions,
+    relationPositions,
     section,
   ]);
 
   const position = (key: string) => nodePositions[key] ?? basePositions.get(key) ?? CENTER;
   const ownerPosition = position("owner");
+  const orderedRelationGroups = [...relationGroups].sort((left, right) => {
+    const leftPosition = relationPositions.get(`neighbor:${left.id}`) ?? CENTER;
+    const rightPosition = relationPositions.get(`neighbor:${right.id}`) ?? CENTER;
+    return (
+      leftPosition.y - rightPosition.y ||
+      left.name.localeCompare(right.name) ||
+      left.id.localeCompare(right.id)
+    );
+  });
+  const orderedRelations = orderedRelationGroups.flatMap((neighbor) =>
+    neighbor.relations.map((relation) => ({ neighbor, relation })),
+  );
+  const relationLabelSpan = Math.max(0, orderedRelations.length - 1) * RELATION_LABEL_ROW_GAP;
+  const firstRelationLabelY = (graphHeight - relationLabelSpan) / 2;
+  const relationGeometries = new Map(
+    orderedRelations.map(({ neighbor, relation }, index) => {
+      const neighborPosition = position(`neighbor:${neighbor.id}`);
+      return [
+        relation.id,
+        relationGeometry(
+          ownerPosition,
+          neighborPosition,
+          relation.sourceObjectTypeId === objectType.id,
+          0,
+          {
+            x: (ownerPosition.x + neighborPosition.x) / 2,
+            y: firstRelationLabelY + index * RELATION_LABEL_ROW_GAP,
+          },
+        ),
+      ] as const;
+    }),
+  );
   const metricGroupEdge = trimmedLine(ownerPosition, metricGroupDisplayPosition, 32, 58);
   const actionGroupEdge = trimmedLine(ownerPosition, actionGroupDisplayPosition, 32, 58);
   const metricsByVersion = new Map(
@@ -1010,21 +1267,24 @@ export function ObjectTypeResourceGraph({
     metricDependencies.map(({ metric }) => metricNodeKey(metric)),
   );
 
-  const zoomBy = useCallback((factor: number) => {
-    setView((current) => {
-      const width = Math.min(
-        GRAPH_WIDTH / MIN_ZOOM,
-        Math.max(GRAPH_WIDTH / MAX_ZOOM, current.width / factor),
-      );
-      const height = (width / GRAPH_WIDTH) * GRAPH_HEIGHT;
-      return {
-        height,
-        width,
-        x: current.x + (current.width - width) / 2,
-        y: current.y + (current.height - height) / 2,
-      };
-    });
-  }, []);
+  const zoomBy = useCallback(
+    (factor: number) => {
+      setView((current) => {
+        const width = Math.min(
+          GRAPH_WIDTH / MIN_ZOOM,
+          Math.max(GRAPH_WIDTH / MAX_ZOOM, current.width / factor),
+        );
+        const height = (width / GRAPH_WIDTH) * graphHeight;
+        return {
+          height,
+          width,
+          x: current.x + (current.width - width) / 2,
+          y: current.y + (current.height - height) / 2,
+        };
+      });
+    },
+    [graphHeight],
+  );
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -1128,6 +1388,7 @@ export function ObjectTypeResourceGraph({
   };
 
   const selectCurrentObject = () => {
+    clearActionPresentationErrors();
     setFocusedAction(undefined);
     setExpandedActions([]);
     setActionPresentations({});
@@ -1141,6 +1402,7 @@ export function ObjectTypeResourceGraph({
   };
 
   const activateAction = (action: KnowledgeNetworkActionTypeRecord) => {
+    clearActionPresentationErrors();
     if (section !== "actions") {
       setSection("actions");
       setExpandedGroup(null);
@@ -1156,6 +1418,7 @@ export function ObjectTypeResourceGraph({
 
   const collapseFocusedAction = () => {
     if (!focusedAction) return;
+    clearActionPresentationErrors();
     const remainingActions = expandedActions.filter((action) => action.id !== focusedAction.id);
     setExpandedActions(remainingActions);
     setActionPresentations((current) => {
@@ -1167,6 +1430,7 @@ export function ObjectTypeResourceGraph({
   };
 
   const collapseAllActions = () => {
+    clearActionPresentationErrors();
     setExpandedActions([]);
     setActionPresentations({});
     setFocusedAction(undefined);
@@ -1465,7 +1729,10 @@ export function ObjectTypeResourceGraph({
           {resourceScope === "all" ? (
             <Segmented
               onChange={(value) => {
+                clearActionPresentationErrors();
                 setSection(value as GraphSection);
+                setRelationPage(1);
+                setActionPage(1);
                 setExpandedGroup(null);
                 setMetricVisibleCounts(INITIAL_METRIC_VISIBLE_COUNTS);
                 setFocusedAction(undefined);
@@ -1511,6 +1778,42 @@ export function ObjectTypeResourceGraph({
               )}
             </span>
           )}
+          {section === "relations" && totals.relations > GRAPH_PAGE_SIZE ? (
+            <Pagination
+              current={relationPage}
+              onChange={(page) => {
+                setRelationPage(page);
+                setSelected(undefined);
+                setNodePositions({});
+                setView(INITIAL_VIEW);
+              }}
+              pageSize={GRAPH_PAGE_SIZE}
+              showSizeChanger={false}
+              simple
+              size="small"
+              total={totals.relations}
+            />
+          ) : null}
+          {section === "actions" && totals.actions > GRAPH_PAGE_SIZE ? (
+            <Pagination
+              current={actionPage}
+              onChange={(page) => {
+                clearActionPresentationErrors();
+                setActionPage(page);
+                setSelected(undefined);
+                setFocusedAction(undefined);
+                setExpandedActions([]);
+                setActionPresentations({});
+                setNodePositions({});
+                setView(INITIAL_VIEW);
+              }}
+              pageSize={GRAPH_PAGE_SIZE}
+              showSizeChanger={false}
+              simple
+              size="small"
+              total={totals.actions}
+            />
+          ) : null}
           {section === "actions" && focusedAction ? (
             <div className={styles.actionFocusControls}>
               <strong title={focusedAction.name}>{focusedAction.name}</strong>
@@ -1556,7 +1859,7 @@ export function ObjectTypeResourceGraph({
         />
       ) : null}
 
-      {totals.metrics > metrics.length ? (
+      {showMetrics && totals.metrics > metrics.length ? (
         <Alert
           message={t("knowledgeNetwork.objectTypeDetailRelatedMetricsPartial", {
             loaded: metrics.length,
@@ -1579,6 +1882,15 @@ export function ObjectTypeResourceGraph({
             ref={svgRef}
             role="img"
             preserveAspectRatio="xMidYMid meet"
+            style={
+              graphHeight > GRAPH_HEIGHT
+                ? {
+                    aspectRatio: `${GRAPH_WIDTH} / ${graphHeight}`,
+                    flex: "0 0 auto",
+                    height: "auto",
+                  }
+                : undefined
+            }
             viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
           >
             <defs>
@@ -1618,10 +1930,10 @@ export function ObjectTypeResourceGraph({
             </defs>
             <rect
               fill={`url(#${graphId}-grid)`}
-              height={GRAPH_HEIGHT * 5}
+              height={graphHeight * 5}
               width={GRAPH_WIDTH * 5}
               x={-GRAPH_WIDTH * 2}
-              y={-GRAPH_HEIGHT * 2}
+              y={-graphHeight * 2}
             />
 
             {showRelations
@@ -1630,14 +1942,9 @@ export function ObjectTypeResourceGraph({
                   const neighborPosition = position(neighborKey);
                   return (
                     <g key={neighbor.id}>
-                      {neighbor.relations.map((relation, relationIndex) => {
-                        const outgoing = relation.sourceObjectTypeId === objectType.id;
-                        const geometry = relationGeometry(
-                          ownerPosition,
-                          neighborPosition,
-                          outgoing,
-                          70 * (relationIndex - (neighbor.relations.length - 1) / 2),
-                        );
+                      {neighbor.relations.map((relation) => {
+                        const geometry = relationGeometries.get(relation.id);
+                        if (!geometry) return null;
                         const relationName = truncate(relation.name, 14);
                         const labelWidth = Math.min(
                           220,
@@ -2322,7 +2629,7 @@ export function ObjectTypeResourceGraph({
               icon={<AimOutlined />}
               onClick={() => {
                 setNodePositions({});
-                setView(INITIAL_VIEW);
+                setView({ height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 });
               }}
             />
           </Tooltip>

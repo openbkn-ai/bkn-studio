@@ -714,7 +714,7 @@ describe("ObjectMetricGraphCanvas", () => {
     });
     expect(mocks.listMetrics).toHaveBeenCalledWith(
       "network-1",
-      { limit: 50, metricType: undefined, offset: 0, ownerObjectTypeId: "order" },
+      { limit: 30, metricType: undefined, offset: 0, ownerObjectTypeId: "order" },
       { skipErrorToast: true },
     );
     expect(container.querySelectorAll('g[class*="relatedNode"]')).toHaveLength(6);
@@ -921,16 +921,16 @@ describe("ObjectMetricGraphCanvas", () => {
   });
 
   it("progressively expands metric nodes from an in-graph aggregate", async () => {
-    const records = Array.from({ length: 7 }, (_, index) => metric(`metric-${index + 1}`));
+    const records = Array.from({ length: 11 }, (_, index) => metric(`metric-${index + 1}`));
     mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
     mocks.listMetrics.mockResolvedValue({ entries: records, total_count: records.length });
     const { container } = renderGraph();
 
     const count = await screen.findByRole("button", {
-      name: /展开销售订单的对象指标，共 7 个|Expand metrics owned by 销售订单 \(7 total\)/,
+      name: /展开销售订单的对象指标，共 11 个|Expand metrics owned by 销售订单 \(11 total\)/,
     });
     fireEvent.click(count);
-    expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(6);
+    expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(10);
     expect(container.querySelector('[class*="expansionToolbar"]')).toBeNull();
     const more = screen.getByRole("button", {
       name: /继续展开原子对象指标的剩余 1 个对象指标|Expand the remaining 1 Atomic metric/,
@@ -964,14 +964,21 @@ describe("ObjectMetricGraphCanvas", () => {
     expect(more.getAttribute("transform")).not.toBe(originalMorePosition);
     fireEvent.pointerUp(svg, { pointerId: 4 });
     fireEvent.click(more);
-    expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(6);
+    expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(10);
     fireEvent.click(more);
-    expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(7);
+    expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(11);
     expect(
       screen.queryByRole("button", {
         name: /继续展开原子对象指标的剩余|Expand the remaining.*Atomic metric/,
       }),
     ).toBeNull();
+    const metricRows = [...container.querySelectorAll<SVGGElement>('g[class*="metricNode"]')]
+      .map((node) => Number(node.getAttribute("transform")?.match(/translate\([^ ]+ ([^)]+)/)?.[1]))
+      .sort((left, right) => left - right);
+    metricRows.slice(1).forEach((row, index) => {
+      expect(row - metricRows[index]).toBeGreaterThanOrEqual(64);
+    });
+    expect(Number(svg.getAttribute("viewBox")?.split(" ")[3])).toBeGreaterThan(560);
     fireEvent.click(count);
     expect(container.querySelectorAll('g[class*="metricNode"][role="button"]')).toHaveLength(0);
   });
@@ -1401,7 +1408,7 @@ describe("ObjectMetricGraphCanvas", () => {
     await waitFor(() =>
       expect(mocks.listMetrics).toHaveBeenCalledWith(
         "network-1",
-        { limit: 50, metricType: undefined, offset: 150, ownerObjectTypeId: "order" },
+        { limit: 20, metricType: undefined, offset: 180, ownerObjectTypeId: "order" },
         { skipErrorToast: true },
       ),
     );
