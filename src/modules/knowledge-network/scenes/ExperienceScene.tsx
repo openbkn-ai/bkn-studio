@@ -772,8 +772,8 @@ export function ExperienceScene({
 
   const fillResource = useCallback(
     (resourceId: string) => {
-      // Backend SQL resource placeholders require a leading dot: {{.<data_source.id>}}.
-      const token = `{{.${resourceId}}}`;
+      // Match the canonical resource syntax used by generated test SQL: {{<data_source.id>}}.
+      const token = `{{${resourceId}}}`;
       try {
         const obj = JSON.parse(bodyText || "{}") as Record<string, unknown>;
         if (obj && typeof obj === "object" && typeof obj.sql === "string") {

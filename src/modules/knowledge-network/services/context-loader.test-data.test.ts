@@ -98,10 +98,10 @@ describe("buildTestData", () => {
     expect(JSON.parse(fill.body).search_scope.concept_groups).toEqual([]);
   });
 
-  it("run_sql references the resource via dotted template placeholder", () => {
+  it.each(["rest", "mcp"] as const)("run_sql uses a canonical placeholder in %s", (mode) => {
     const resOt = pickQueryableObjectType(d);
-    const fill = buildTestData(opById("run_sql"), "rest", "kn_demo", d, resOt, null);
-    expect(JSON.parse(fill.body).sql).toBe("SELECT * FROM {{.res_orders}} LIMIT 10");
+    const fill = buildTestData(opById("run_sql"), mode, "kn_demo", d, resOt, null);
+    expect(JSON.parse(fill.body).sql).toBe("SELECT * FROM {{res_orders}} LIMIT 10");
   });
 
   it("query_object_instance (REST) filters by a real field+value from the sample row", () => {

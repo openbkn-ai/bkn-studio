@@ -195,13 +195,13 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "run_sql",
     summary:
-      "Runs SQL against knowledge-network resources and returns result rows. Table names use {{.<resource_id>}} placeholders; cross-catalog joins are not supported.",
+      "Runs SQL against knowledge-network resources and returns result rows. Table names use {{<resource_id>}} placeholders; cross-catalog joins are not supported.",
     path: `${REST_PREFIX}/kn/run_sql`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     // Data tables must be referenced through resource placeholders, not raw table names.
     body: {
       kn_id: "your_kn_id",
-      sql: "SELECT * FROM {{.resource_id}} WHERE status = 'active' LIMIT 10",
+      sql: "SELECT * FROM {{resource_id}} WHERE status = 'active' LIMIT 10",
     },
   },
   {
@@ -482,7 +482,7 @@ function buildTestDataBody(
 
     case "run_sql": {
       const resId = ot?.data_source?.id ?? "";
-      const body = { kn_id: knId, sql: `SELECT * FROM {{.${resId}}} LIMIT 10` };
+      const body = { kn_id: knId, sql: `SELECT * FROM {{${resId}}} LIMIT 10` };
       return { body: JSON.stringify(body, null, 2), note: `Resource ${resId}` };
     }
 
