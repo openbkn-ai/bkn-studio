@@ -1220,12 +1220,50 @@ describe("ObjectTypeResourceGraph", () => {
     expect(x(atomicNode)).toBeLessThan(x(derivedNode));
     expect(document.querySelectorAll("[class*=metricDependencyEdge]")).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: /^对象指标 / })).toHaveLength(8);
+    expect(
+      document.querySelector('[data-graph-edge="metric-more-spoke"][data-metric-type="composite"]'),
+    ).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "复合对象指标还有 43 个，点击展开" }));
     expect(
       screen.getByRole("button", { name: "复合对象指标还有 37 个，点击展开" }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /^对象指标 / })).toHaveLength(14);
+
+    fireEvent.click(screen.getByRole("button", { name: "收起 对象指标 51" }));
+    fireEvent.click(screen.getByRole("button", { name: "展开 对象指标 51" }));
+    expect(
+      screen.getByRole("button", { name: "复合对象指标还有 37 个，点击展开" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^对象指标 / })).toHaveLength(14);
+  });
+
+  it("keeps a deep-linked hidden metric visible after its drawer closes", async () => {
+    const compositeMetrics = Array.from({ length: 7 }, (_, index) => ({
+      ...metric,
+      definition: {
+        ...metric.definition,
+        id: `composite-${index + 1}`,
+        metric_type: "composite",
+        name: `复合指标 ${String(index + 1).padStart(2, "0")}`,
+      },
+    })) as ObjectMetricRecordV1[];
+    mocks.listMetrics.mockResolvedValue({ entries: compositeMetrics, total_count: 7 });
+    renderGraph(true, {
+      initialSelectedResource: { id: "composite-7", kind: "metric", version: 1 },
+    });
+
+    const drawer = await screen.findByRole("dialog", { name: "对象指标详情" });
+    expect(screen.getByRole("button", { name: "对象指标 复合指标 07" })).toBeInTheDocument();
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "对象指标详情" })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "对象指标 复合指标 07" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "复合对象指标还有 1 个，点击展开" }),
+    ).not.toBeInTheDocument();
   });
 
   it("uses the metric dependency layout when expanding metrics in the overview", async () => {

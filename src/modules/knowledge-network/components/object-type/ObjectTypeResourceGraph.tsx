@@ -795,6 +795,24 @@ export function ObjectTypeResourceGraph({
     });
     return { hiddenCounts, metricsByType, visibleMetrics };
   }, [metricVisibleCounts, metrics, selectedMetric]);
+  useEffect(() => {
+    if (!selectedMetric) return;
+    const type = selectedMetric.definition.metric_type;
+    const orderedMetrics = [...metrics]
+      .filter((item) => item.definition.metric_type === type)
+      .sort(
+        (left, right) =>
+          left.definition.name.localeCompare(right.definition.name) ||
+          left.definition.id.localeCompare(right.definition.id),
+      );
+    const selectedIndex = orderedMetrics.findIndex(
+      (item) => metricNodeKey(item) === metricNodeKey(selectedMetric),
+    );
+    if (selectedIndex < 0) return;
+    setMetricVisibleCounts((current) =>
+      current[type] > selectedIndex ? current : { ...current, [type]: selectedIndex + 1 },
+    );
+  }, [metrics, selectedMetric]);
   const metricItems = useMemo(
     () =>
       section === "all"
@@ -1099,7 +1117,6 @@ export function ObjectTypeResourceGraph({
   };
 
   const toggleGroup = (group: ExpandableGroup) => {
-    if (group === "metrics") setMetricVisibleCounts(INITIAL_METRIC_VISIBLE_COUNTS);
     setExpandedGroup((current) => (current === group ? null : group));
     setNodePositions((current) =>
       Object.fromEntries(
@@ -1858,12 +1875,12 @@ export function ObjectTypeResourceGraph({
                     }));
                   return (
                     <g key={key}>
-                      {type === "atomic" ? (
-                        <path
-                          className={styles.metricEdge}
-                          d={`M ${ownerSpoke.from.x} ${ownerSpoke.from.y} L ${ownerSpoke.to.x} ${ownerSpoke.to.y}`}
-                        />
-                      ) : null}
+                      <path
+                        className={styles.metricEdge}
+                        data-graph-edge="metric-more-spoke"
+                        data-metric-type={type}
+                        d={`M ${ownerSpoke.from.x} ${ownerSpoke.from.y} L ${ownerSpoke.to.x} ${ownerSpoke.to.y}`}
+                      />
                       <g
                         aria-label={label}
                         className={`${styles.moreMetricsNode} ${
