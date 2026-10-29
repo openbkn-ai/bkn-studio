@@ -1180,6 +1180,9 @@ export const systemAdminZhCN = {
       publishOnce: "内置 Agent 发布后会一直保持发布，不能取消。",
       publishedDone: "已发布",
       back: "返回列表",
+      promptLanguagePolicy:
+        "官方提示词随界面语言切换。发布后的新版本对所有语言生效，不保留旧版本译文。",
+      otherLanguageDraft: "其他语言仍有未发布草稿，可切回继续编辑。草稿仅在当前页面打开期间保留。",
       unsavedTitle: "放弃未保存的修改？",
       unsavedBody: "运行配置或提示词存在未保存的修改。离开后这些修改将丢失。",
       discardAndLeave: "放弃并离开",

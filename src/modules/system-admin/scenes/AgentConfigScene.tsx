@@ -39,6 +39,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useTranslation } from "react-i18next";
 import { useBeforeUnload, useBlocker, useNavigate } from "react-router-dom";
 
+import { normalizeSupportedLocale } from "@/framework/i18n/locale";
+import type { SupportedLocale } from "@/framework/runtime/types";
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { MonacoDiffEditor } from "@/framework/monaco/MonacoDiffEditor";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
@@ -88,19 +90,39 @@ const MIN: Record<LimitKey, number> = {
 };
 
 export function AgentConfigScene({ agentId }: { agentId: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = normalizeSupportedLocale(i18n.resolvedLanguage ?? i18n.language) ?? "zh-CN";
   const { message, modal } = App.useApp();
   const navigate = useNavigate();
   const base = useAgentAdminParams();
   const params = useMemo(() => ({ ...base, agentId }), [base, agentId]);
 
   const [shared, setShared] = useState<SharedAgent | null>(null);
-  const [prompt, setPrompt] = useState<SharedPrompt | null>(null);
+  const localizedParams = useMemo(() => ({ ...params, locale }), [params, locale]);
+  const [promptViews, setPromptViews] = useState<
+    Partial<Record<SupportedLocale, { prompt: SharedPrompt; content: string }>>
+  >({});
+  const view = promptViews[locale];
+  const prompt = view?.prompt ?? null;
+  const content = view?.content ?? "";
+  const [promptLoading, setPromptLoading] = useState(true);
+  const [promptRevision, setPromptRevision] = useState(0);
+  const languageGeneration = useRef(0);
+  const activeLocale = useRef(locale);
+  const setContent = (next: string) =>
+    setPromptViews((views) => {
+      const current = views[locale];
+      return current ? { ...views, [locale]: { ...current, content: next } } : views;
+    });
+  const setPrompt = (next: SharedPrompt) =>
+    setPromptViews((views) => ({
+      ...views,
+      [locale]: { prompt: next, content: views[locale]?.content ?? next.prompt.content },
+    }));
   const [models, setModels] = useState<string[]>([]);
   const [model, setModel] = useState("");
   const [profile, setProfile] = useState<McpProfileChoice | "default">("default");
   const [limits, setLimits] = useState<AgentLimits>({});
-  const [content, setContent] = useState("");
   const [versions, setVersions] = useState<AgentVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -126,46 +148,88 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     setShared((cur) => cur && { ...cur, status: agent.status, update_time: agent.update_time });
   }, []);
 
-  const applyPrompt = useCallback((next: SharedPrompt) => {
-    setPrompt(next);
-    setContent(next.prompt.content);
-    setShared((cur) => cur && { ...cur, prompt_version: next.prompt.current_version });
-  }, []);
+  const applyPrompt = useCallback(
+    (next: SharedPrompt) => {
+      setPromptViews((views) => ({
+        ...views,
+        [locale]: { prompt: next, content: next.prompt.content },
+      }));
+      setShared((cur) => cur && { ...cur, prompt_version: next.prompt.current_version });
+    },
+    [locale],
+  );
 
-  const load = useCallback(async () => {
+  // Runtime data is language-independent: changing language must not reload its draft.
+  useEffect(() => {
+    let active = true;
     setLoading(true);
     setError(null);
-    try {
-      const [agent, sharedPrompt, history, llms] = await Promise.all([
-        getShared(params),
-        getSharedPrompt(params),
-        listVersions(params),
-        listLlmModels({ page: 1, size: 100 }).catch(() => ({ items: [] })),
-      ]);
-      applyRuntime(agent);
-      applyPrompt(sharedPrompt);
-      setVersions(history);
-      setModels(llms.items.map((m) => m.modelName));
-    } catch (e) {
-      if (e instanceof BknAgentExecutionError && e.status === 404) setBlocked("notFound");
-      else if (e instanceof BknAgentExecutionError && e.status === 403) setBlocked("forbidden");
-      else setError(executionRequestError(e).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [applyPrompt, applyRuntime, params]);
+    setBlocked(null);
+    setPromptViews({});
+    void Promise.all([
+      getShared(params),
+      listLlmModels({ page: 1, size: 100 }).catch(() => ({ items: [] })),
+    ])
+      .then(([agent, llms]) => {
+        if (!active) return;
+        applyRuntime(agent);
+        setModels(llms.items.map((m) => m.modelName));
+      })
+      .catch((e: unknown) => {
+        if (!active) return;
+        if (e instanceof BknAgentExecutionError && e.status === 404) setBlocked("notFound");
+        else if (e instanceof BknAgentExecutionError && e.status === 403) setBlocked("forbidden");
+        else setError(executionRequestError(e).message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyRuntime, params]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let active = true;
+    languageGeneration.current += 1;
+    activeLocale.current = locale;
+    setPromptLoading(true);
+    setComparing(null);
+    setError(null);
+    void Promise.all([getSharedPrompt(localizedParams), listVersions(localizedParams)])
+      .then(([next, history]) => {
+        if (!active) return;
+        setPromptViews((views) => {
+          const previous = views[locale];
+          const draft = previous && previous.content !== previous.prompt.prompt.content;
+          return {
+            ...views,
+            [locale]: { prompt: next, content: draft ? previous.content : next.prompt.content },
+          };
+        });
+        setVersions(history);
+      })
+      .catch((e: unknown) => {
+        if (active) setError(executionRequestError(e).message);
+      })
+      .finally(() => {
+        if (active) setPromptLoading(false);
+      });
+    return () => {
+      active = false;
+      languageGeneration.current += 1;
+    };
+  }, [locale, localizedParams, promptRevision]);
 
-  // A save writes a new version; refresh the list and version numbers without touching
-  // drafts (setShared alone leaves the form fields as they are).
+  // Refresh version numbers without overwriting any runtime or Prompt drafts.
   const refreshVersions = useCallback(async () => {
-    const [history, agent] = await Promise.all([listVersions(params), getShared(params)]);
+    if (activeLocale.current !== locale) return;
+    const generation = languageGeneration.current;
+    const [history, agent] = await Promise.all([listVersions(localizedParams), getShared(params)]);
+    if (generation !== languageGeneration.current) return;
     setVersions(history);
     setShared(agent);
-  }, [params]);
+  }, [locale, localizedParams, params]);
 
   /** Ask first; the confirmation names what changes, since it applies to every user at once. */
   const confirmThen = useCallback(
@@ -203,8 +267,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     : AGENT_LIMIT_KEYS.filter((key) => !CONTEXT_LIMIT_KEYS.includes(key));
   const dirty = Boolean(
     shared?.can_edit &&
-    prompt &&
-    (content !== prompt.prompt.content ||
+    (Object.values(promptViews).some((item) => item.content !== item.prompt.prompt.content) ||
       model !== (shared.model ?? "") ||
       (shared.uses_context_loader && profile !== (shared.mcp_profile ?? "default")) ||
       limitKeys.some((key) => (limits[key] ?? null) !== (shared.limits[key] ?? null))),
@@ -253,10 +316,10 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
         <Alert type="error" showIcon message={error} />
       </Space>
     );
-  if (!shared || !prompt) return null;
+  if (!shared || !prompt) return <Spin />;
 
   const publishPrompt = async () => {
-    if (publishing.current) return;
+    if (publishing.current || promptLoading) return;
     const version = prompt.next_version;
     if (version == null || !Number.isSafeInteger(version) || version < 1) {
       message.error(t(`${P}.promptVersionUnavailable`));
@@ -266,7 +329,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     setSaving(true);
     try {
       // Capture one version per confirmation; transport retries reuse this body.
-      const next = await publishSharedPrompt({ ...params, content, version });
+      const next = await publishSharedPrompt({ ...localizedParams, content, version });
       applyPrompt(next);
       message.success(t(`${L}.promptPublished`));
       await refreshVersions().catch(() => undefined);
@@ -277,7 +340,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
       if (conflict || uncertain) {
         // Refresh the server baseline, but keep the editor draft for comparison.
         try {
-          const next = await getSharedPrompt(params);
+          const next = await getSharedPrompt(localizedParams);
           if (
             next.prompt.prompt_id === prompt.prompt.prompt_id &&
             next.prompt.current_version === version &&
@@ -375,22 +438,11 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     );
   // Switching versions replaces both cards on purpose, drafts included.
   const switchTo = (action: () => Promise<SharedAgent>, done: string) =>
-    run(
-      async () => {
-        const agent = await action();
-        const [nextPrompt, history] = await Promise.all([
-          getSharedPrompt(params),
-          listVersions(params),
-        ]);
-        return { agent, nextPrompt, history };
-      },
-      done,
-      ({ agent, nextPrompt, history }) => {
-        applyRuntime(agent);
-        applyPrompt(nextPrompt);
-        setVersions(history);
-      },
-    );
+    run(action, done, (agent) => {
+      applyRuntime(agent);
+      setPromptViews({});
+      setPromptRevision((revision) => revision + 1);
+    });
   const restore = () => switchTo(() => restoreShared(params), `${P}.restored`);
   const changeLabel = (version: AgentVersion) =>
     version.changes.length
@@ -454,7 +506,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
             editable ? (
               <Button
                 type="primary"
-                disabled={saving}
+                disabled={saving || promptLoading}
                 onClick={() =>
                   confirmThen(
                     t(`${P}.confirmPublishTitle`, { name: displayName }),
@@ -478,7 +530,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
           {editable && shared.restorable ? (
             <Button
               danger
-              disabled={saving || !shared.modified}
+              disabled={saving || promptLoading || !shared.modified}
               onClick={() =>
                 confirmThen(
                   t(`${P}.confirmRestoreTitle`, { name: displayName }),
@@ -492,8 +544,15 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
           ) : null}
         </div>
         <Space direction="vertical" size={16} className={styles.dangerBody}>
+          <Alert type="info" showIcon message={t(`${P}.promptLanguagePolicy`)} />
+          {Object.entries(promptViews).some(
+            ([language, item]) =>
+              language !== locale && item.content !== item.prompt.prompt.content,
+          ) ? (
+            <Alert type="warning" showIcon message={t(`${P}.otherLanguageDraft`)} />
+          ) : null}
           <Card title={t(`${P}.runtimeTitle`)}>
-            <Form layout="vertical" disabled={!editable}>
+            <Form layout="vertical" disabled={!editable || saving}>
               <Row gutter={16}>
                 <Col xs={24} md={12}>
                   <Form.Item label={t(`${L}.model`)}>
@@ -586,7 +645,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                   type="primary"
                   danger
                   loading={saving}
-                  disabled={!content.trim() || content === prompt.prompt.content}
+                  disabled={promptLoading || !content.trim() || content === prompt.prompt.content}
                   onClick={() =>
                     confirmThen(
                       t(`${P}.confirmPublishPromptTitle`),
@@ -632,7 +691,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                         <Button
                           size="small"
                           danger
-                          disabled={saving}
+                          disabled={saving || promptLoading}
                           aria-label={t(`${P}.activateVersion`, { version: v.version })}
                           onClick={() =>
                             confirmThen(
@@ -654,7 +713,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                           size="small"
                           danger
                           type="text"
-                          disabled={saving}
+                          disabled={saving || promptLoading}
                           aria-label={t(`${P}.deleteVersionNamed`, { version: v.version })}
                           onClick={() =>
                             confirmThen(

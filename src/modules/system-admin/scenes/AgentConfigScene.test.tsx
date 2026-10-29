@@ -73,14 +73,14 @@ vi.mock("@/framework/monaco/MonacoDiffEditor", () => ({
 vi.mock("@/modules/model-resources/services/llm.service", () => ({
   listLlmModels: () => Promise.resolve({ items: [{ modelName: "DeepSeek V4-flash" }] }),
 }));
-// The real runtime config is a stable object; a fresh one per render would re-run loading.
+// Locale changes can replace the runtime object while the token manager remains stable.
 const runtimeConfig = {
   auth: {
     tokenManager: { getAccessToken: () => "t", refreshAccessToken: () => Promise.resolve("t") },
   },
 };
 vi.mock("@/framework/context/use-runtime-config", () => ({
-  useRuntimeConfig: () => runtimeConfig,
+  useRuntimeConfig: () => ({ ...runtimeConfig, locale: i18n.language }),
 }));
 
 const SAVE = /^保\s*存$/;
@@ -599,6 +599,142 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     // The saved runtime comes from the response; nothing is reloaded over the draft.
     expect(getSharedPrompt).toHaveBeenCalledTimes(1);
     expect(screen.getByDisplayValue("Draft prompt")).toBeTruthy();
+  });
+
+  describe("localized prompts", () => {
+    const english = { ...PROMPT, prompt: { ...PROMPT.prompt, content: "English prompt" } };
+
+    it("retains per-language Prompt drafts and the runtime draft across language switches", async () => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockImplementation(({ locale }) =>
+        Promise.resolve(locale === "en-US" ? english : PROMPT),
+      );
+      renderScene();
+      fireEvent.change(await screen.findByDisplayValue("Shared"), {
+        target: { value: "Chinese draft" },
+      });
+      fireEvent.change(screen.getByDisplayValue("300"), { target: { value: "100" } });
+      await act(() => i18n.changeLanguage("en-US"));
+      fireEvent.change(await screen.findByDisplayValue("English prompt"), {
+        target: { value: "English draft" },
+      });
+      expect(screen.getByDisplayValue("100")).toBeTruthy();
+      expect(screen.getByText(i18n.t("systemAdmin.agentConfig.otherLanguageDraft"))).toBeTruthy();
+      await act(() => i18n.changeLanguage("zh-CN"));
+      expect(await screen.findByDisplayValue("Chinese draft")).toBeTruthy();
+      await act(() => i18n.changeLanguage("en-US"));
+      expect(await screen.findByDisplayValue("English draft")).toBeTruthy();
+      expect(screen.getByDisplayValue("100")).toBeTruthy();
+      expect(getShared).toHaveBeenCalledTimes(1);
+      expect(publishSharedPrompt).not.toHaveBeenCalled();
+    });
+
+    it("protects an inactive language draft while the active language is unchanged", async () => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockImplementation(({ locale }) =>
+        Promise.resolve(locale === "en-US" ? english : PROMPT),
+      );
+      renderScene();
+      fireEvent.change(await screen.findByDisplayValue("Shared"), {
+        target: { value: "Keep Chinese" },
+      });
+      await act(() => i18n.changeLanguage("en-US"));
+      await screen.findByDisplayValue("English prompt");
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      await act(() => i18n.changeLanguage("zh-CN"));
+      expect(await screen.findByDisplayValue("Keep Chinese")).toBeTruthy();
+    });
+
+    it("ignores an old-language response arriving after the new language", async () => {
+      let complete!: (value: Awaited<ReturnType<SettingsModule["getSharedPrompt"]>>) => void;
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockImplementation(({ locale }) =>
+        locale === "en-US"
+          ? Promise.resolve(english)
+          : new Promise((resolve) => {
+              complete = resolve;
+            }),
+      );
+      renderScene();
+      await waitFor(() => expect(getSharedPrompt).toHaveBeenCalled());
+      await act(() => i18n.changeLanguage("en-US"));
+      expect(await screen.findByDisplayValue("English prompt")).toBeTruthy();
+      await act(async () => {
+        complete(PROMPT);
+        await Promise.resolve();
+      });
+      expect(screen.getByDisplayValue("English prompt")).toBeTruthy();
+      expect(screen.queryByDisplayValue("Shared")).toBeNull();
+    });
+
+    it("refreshes localized version comparisons without reloading runtime settings", async () => {
+      getShared.mockResolvedValue(shared({ version: 3 }));
+      getSharedPrompt.mockImplementation(({ locale }) =>
+        Promise.resolve(locale === "en-US" ? english : PROMPT),
+      );
+      listVersions.mockImplementation(({ locale }) =>
+        Promise.resolve([
+          version(3, { current: true, prompt_content: locale === "en-US" ? "English 3" : "中文3" }),
+          version(2, { prompt_content: locale === "en-US" ? "English 2" : "中文2" }),
+        ]),
+      );
+      renderScene();
+      await screen.findByDisplayValue("Shared");
+      await act(() => i18n.changeLanguage("en-US"));
+      await screen.findByDisplayValue("English prompt");
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: i18n.t("systemAdmin.agentConfig.compareVersion", { version: 2 }),
+        }),
+      );
+      expect((await screen.findByTestId("diff")).textContent).toBe("English 2 => English 3");
+      expect(getShared).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not let a publication response overwrite another language's draft", async () => {
+      let complete!: (value: Awaited<ReturnType<SettingsModule["getSharedPrompt"]>>) => void;
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockImplementation(({ locale }) =>
+        Promise.resolve(locale === "en-US" ? english : PROMPT),
+      );
+      publishSharedPrompt.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            complete = resolve;
+          }),
+      );
+      renderScene();
+      fireEvent.change(await screen.findByDisplayValue("Shared"), {
+        target: { value: "Publishing Chinese" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: i18n.t("knowledgeNetwork.agentChat.config.publishPrompt"),
+        }),
+      );
+      await confirmChange();
+      await waitFor(() => expect(publishSharedPrompt).toHaveBeenCalled());
+      await act(() => i18n.changeLanguage("en-US"));
+      fireEvent.change(await screen.findByDisplayValue("English prompt"), {
+        target: { value: "Keep English draft" },
+      });
+      await act(async () => {
+        complete({
+          ...PROMPT,
+          prompt: { ...PROMPT.prompt, content: "Publishing Chinese", current_version: 4 },
+          next_version: 5,
+        });
+        await Promise.resolve();
+      });
+      expect(screen.getByDisplayValue("Keep English draft")).toBeTruthy();
+      expect(publishSharedPrompt.mock.calls[0][0]).toMatchObject({
+        locale: "zh-CN",
+        content: "Publishing Chinese",
+        version: 4,
+      });
+    });
   });
 
   describe("unsaved changes", () => {

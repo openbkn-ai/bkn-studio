@@ -1274,6 +1274,10 @@ export const systemAdminEnUS = {
       publishOnce: "Once published, a built-in Agent stays published; it cannot be unpublished.",
       publishedDone: "Published",
       back: "Back to list",
+      promptLanguagePolicy:
+        "Official prompts follow the interface language. Publishing creates one version for all languages; it does not keep the previous translations.",
+      otherLanguageDraft:
+        "Another language has an unpublished draft. Switch back to continue editing it. Drafts are kept only while this page remains open.",
       unsavedTitle: "Discard unsaved changes?",
       unsavedBody:
         "The runtime configuration or prompt has unsaved changes. Leaving will discard them.",

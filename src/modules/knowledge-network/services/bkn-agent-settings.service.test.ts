@@ -8,6 +8,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  getSharedPrompt,
   getShared,
   listShared,
   narrow,
@@ -30,6 +31,19 @@ afterEach(() => {
 });
 
 describe("bkn-agent settings", () => {
+  it("sends the captured language on localized admin reads", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ prompt: { content: "English" } })));
+    vi.stubGlobal("fetch", fetchMock);
+    await getSharedPrompt({
+      base: "https://h",
+      tokenProvider,
+      agentId: "studio_smart_qa",
+      locale: "en-US",
+    });
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("Accept-Language")).toBe("en-US");
+  });
   it("reuses the requested Prompt version after a committed response is lost", async () => {
     vi.useFakeTimers();
     const fetchMock = vi

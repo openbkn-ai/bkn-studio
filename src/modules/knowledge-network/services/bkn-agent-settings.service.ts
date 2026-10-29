@@ -11,6 +11,8 @@
  * the server clamps anything beyond the layer above.
  */
 
+import type { SupportedLocale } from "@/framework/runtime/types";
+
 import {
   makeAuthedFetch,
   type AgentTokenProvider,
@@ -164,14 +166,14 @@ export type AgentVersion = {
   create_time: number;
 };
 
-type Params = { base: string; tokenProvider: AgentTokenProvider };
+type Params = { base: string; tokenProvider: AgentTokenProvider; locale?: SupportedLocale };
 
 async function request<T>(
-  { base, tokenProvider }: Params,
+  { base, tokenProvider, locale }: Params,
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const response = await makeAuthedFetch(tokenProvider)(`${base}${API}${path}`, {
+  const response = await makeAuthedFetch(tokenProvider, locale)(`${base}${API}${path}`, {
     ...init,
     headers: { Accept: "application/json", "Content-Type": "application/json", ...init.headers },
   });

@@ -54,6 +54,22 @@ describe("makeAuthedFetch 退避重试", () => {
     expect(new Headers(request.headers).get("Accept-Language")).toBe("en-US");
   });
 
+  it("keeps an explicitly selected locale through an authentication retry", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(401, {}))
+      .mockResolvedValueOnce(jsonResponse(200, {}));
+    vi.stubGlobal("fetch", fetchMock);
+    const refresh = () => {
+      setRuntimeConfig(createRuntimeConfig({ locale: "zh-CN" }));
+      return Promise.resolve("fresh");
+    };
+    await makeAuthedFetch({ getToken: () => "t", refresh }, "en-US")("https://example.test/prompt");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const [, init] of fetchMock.mock.calls)
+      expect(new Headers(init?.headers).get("Accept-Language")).toBe("en-US");
+  });
+
   it("200 裹着可重试业务码时重试，拿到成功响应就停", async () => {
     const busy = { code: "X", description: '{"code":50508,"message":"System is too busy now."}' };
     const fetchMock = vi
