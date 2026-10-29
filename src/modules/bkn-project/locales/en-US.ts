@@ -629,6 +629,7 @@ export const bknProjectEnUS = {
           "You cannot see this data catalog's build tasks, so an index being built may show as not built.",
         build: "Build again",
         started: "Building again",
+        noneStarted: "No table started building. See each table's last build for why.",
         failed: "The build could not start. Try again later.",
         objectType: "Object type",
         table: "Table",
@@ -637,6 +638,7 @@ export const bknProjectEnUS = {
         state: {
           ready: "Ready",
           readyRebuilding: "Ready, rebuilding",
+          other: "Unknown",
           stale: "Needs rebuilding",
           building: "Building",
           not_built: "Not built",
