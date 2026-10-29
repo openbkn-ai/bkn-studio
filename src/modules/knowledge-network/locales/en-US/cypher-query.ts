@@ -200,7 +200,7 @@ export const cypherQueryPart = {
       reset: "Restore default style",
     },
     agent: {
-      notReadyShort: "The Cypher generation Agent is not published",
+      notReadyShort: "The Cypher generation agent is not published",
       notReady:
         "The Cypher generation Agent is not published yet. Ask an administrator to configure its model and publish it; handwritten Cypher still works",
       forbidden: "This account may not use the Cypher generation Agent or this knowledge network",

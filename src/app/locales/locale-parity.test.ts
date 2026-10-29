@@ -24,7 +24,7 @@ describe("app locale parity", () => {
 
   it("names the system management entry as audit logs", () => {
     expect(zhCN.shell.items.logManagement).toBe("审计日志");
-    expect(enUS.shell.items.logManagement).toBe("Audit Logs");
+    expect(enUS.shell.items.logManagement).toBe("Audit logs");
   });
 });
 

@@ -39,7 +39,7 @@ export const packageImportPart = {
       function: "Function",
       knowledge_base: "Knowledge base",
       mcp_tool: "MCP tool",
-      skill: "SKILL",
+      skill: "Skill",
       other: "Capability",
     },
   },

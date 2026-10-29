@@ -7,16 +7,16 @@
 
 export const integrationPart = {
   integration: {
-    title: "Integrate OpenBKN Capabilities",
+    title: "Integrate OpenBKN capabilities",
     description:
       "Provide a unified integration entry for agent platforms and business systems. MCP is for agent tool calls, CLI is for terminals and agents, and SDK is for Node.js services.",
     descriptionHelpLabel: "View integration method help",
-    modeLabel: "Integration Method",
+    modeLabel: "Integration method",
     tabsAriaLabel: "Knowledge network integration methods",
     tabs: {
-      mcp: "MCP Integration",
-      cli: "CLI Integration",
-      sdk: "SDK Integration",
+      mcp: "MCP integration",
+      cli: "CLI integration",
+      sdk: "SDK integration",
     },
     mcpWorkspace: {
       tabsAriaLabel: "MCP integration workspace",
@@ -57,12 +57,12 @@ export const integrationPart = {
         skill:
           "After installing the OpenBKN Skill for an agent, use natural language to choose the corresponding command.",
       },
-      title: "CLI Examples",
+      title: "CLI examples",
       ariaLabel: "CLI examples",
       successMessage: "CLI example copied",
       examples: {
         setup: {
-          label: "Install and Authenticate",
+          label: "Install and authenticate",
           title: "Install OpenBKN CLI and sign in with an account",
           code: `npm install -g @openbkn/bkn-sdk
 
@@ -78,7 +78,7 @@ openbkn auth status
 openbkn bkn list --limit 10`,
         },
         context: {
-          label: "Knowledge Network Query",
+          label: "Knowledge network query",
           title: "Common scenarios: search models, query instances, and discover tools",
           code: `# Scenario 1: Search knowledge models
 openbkn context search-schema <kn-id> "Find order-related objects and relations"
@@ -93,8 +93,8 @@ openbkn context query-object-instance <kn-id> --args '{
 openbkn context tools <kn-id>`,
         },
         "agent-skill": {
-          label: "Agent Skill",
-          title: "Install OpenBKN Skill for agents with terminal access",
+          label: "Agent skill",
+          title: "Install OpenBKN skill for agents with terminal access",
           code: `npm install -g @openbkn/bkn-sdk
 npx skills add openbkn-ai/bkn-sdk@openbkn -g -y
 
@@ -119,12 +119,12 @@ openbkn help all`,
       },
       installSuccessMessage: "SDK install command copied",
       installTitle: "Install SDK",
-      title: "SDK Examples",
+      title: "SDK examples",
       ariaLabel: "SDK examples",
       successMessage: "SDK example copied",
       examples: {
         "quick-start": {
-          label: "Quick Start",
+          label: "Quick start",
           title:
             "Create an authenticated client with account credentials and search knowledge models",
           code: `import { createAuthenticatedClient } from "@openbkn/bkn-sdk";
@@ -147,7 +147,7 @@ const result = await bkn.context.searchSchema(
 );`,
         },
         "instance-query": {
-          label: "Query Instances",
+          label: "Query instances",
           title: "Query object instances by object type and conditions",
           code: `const result = await bkn.context.queryObjectInstance(knId, {
   ot_id: "order",
@@ -161,7 +161,7 @@ const result = await bkn.context.searchSchema(
 });`,
         },
         "dynamic-tool": {
-          label: "Dynamic Tools",
+          label: "Dynamic tools",
           title: "Discover and call MCP tools exposed by the current knowledge network",
           code: `// Step 1: Discover tools exposed by the knowledge network
 const tools = await bkn.context.tools(knId);

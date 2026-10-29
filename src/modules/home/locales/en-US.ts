@@ -15,8 +15,8 @@ export const homeEnUS = {
         copyFailed: "Copy failed. Please copy the command manually.",
         description:
           "Install the Skills needed for your project. Restart the Agent session after installation.",
-        title: "Get OpenBKN Skills",
-        trigger: "Get Skills",
+        title: "Get OpenBKN skills",
+        trigger: "Get skills",
       },
       labels: {
         output: "Primary output",
@@ -29,20 +29,20 @@ export const homeEnUS = {
             "A runnable knowledge network, data bindings and validation results, and a delivery report.",
           scenario:
             "Requirements or the modeling scheme are ready and you need to create, update, bind data, validate, test, publish, or improve from feedback.",
-          title: "Business knowledge network construction and validation Skill",
+          title: "Business knowledge network construction and validation skill",
         },
         ontologyBuilder: {
           output:
             "A business-reviewable ontology design that defines objects, relations, metrics, and actions.",
           scenario:
             "You have a PRD, process description, or business materials and need to agree how the knowledge network represents business semantics before creation.",
-          title: "Business knowledge network design Skill",
+          title: "Business knowledge network design skill",
         },
         requirement: {
           output: "A scenario-centered PRD, acceptance cases, and a BKN Creator handoff summary.",
           scenario:
             "Interview notes, a PRD, process documents, or early ideas need to be organized into business goals, scope, rules, and acceptance criteria.",
-          title: "Requirement clarification Skill",
+          title: "Requirement clarification skill",
         },
       },
     },
@@ -67,8 +67,8 @@ export const homeEnUS = {
       engineering: {
         description:
           "Start from business materials and use AI Skills for requirement clarification, design, construction, and validation to build an iteratively improvable business knowledge network.",
-        heading: "Build a business knowledge network with AI Skills",
-        title: "AI Skills build",
+        heading: "Build a business knowledge network with AI skills",
+        title: "AI skills build",
       },
       platform: {
         description:
@@ -97,7 +97,7 @@ export const homeEnUS = {
         "Uninstall permanently removes this sample's data, knowledge network, metrics, functions and Skills, including user changes. Installation history is retained. Only resources owned by this sample are removed. You can install a new version after cleanup completes.",
       uninstallStages: {
         knowledge: "Delete knowledge network and metrics",
-        capabilities: "Delete functions and Skills",
+        capabilities: "Delete functions and skills",
         discover: "Delete data source",
         database: "Delete sample database and storage",
         verify: "Verify cleanup",
@@ -387,7 +387,7 @@ export const homeEnUS = {
             },
             metricExecutionTool: {
               description:
-                "Create or connect callable tools in Execution Units and define their inputs and outputs. Then bind them to tool-based logical attributes and action types, and configure parameter mappings.",
+                "Create or connect callable tools in Execution units and define their inputs and outputs. Then bind them to tool-based logical attributes and action types, and configure parameter mappings.",
               impact:
                 "Tool-based logical attributes cannot calculate or retrieve results, and action types cannot execute the underlying operation. Data attributes and metrics are unaffected.",
               outcome:
@@ -444,7 +444,7 @@ export const homeEnUS = {
             },
             integration: {
               description:
-                "Connect agents such as WorkBuddy, Claude Code or Cursor to the platform's MCP service: put only its URL in the config, sign in once in the browser on first connect, and the agent renews its access on its own. Scripts and services can use an API Key, the CLI or the SDK instead.",
+                "Connect agents such as WorkBuddy, Claude Code or Cursor to the platform's MCP service: put only its URL in the config, sign in once in the browser on first connect, and the agent renews its access on its own. Scripts and services can use an API key, the CLI or the SDK instead.",
               impact:
                 "External agent platforms cannot connect to OpenBKN, leaving the built knowledge and action capabilities unavailable in the target agent.",
               outcome:

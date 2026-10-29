@@ -59,59 +59,59 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
 
 /** Local fallback groups; array order is display order. */
 const LOCAL_GROUPS: Array<{ key: string; label: string }> = [
-  { key: "lifecycle", label: "Session and Interaction Lifecycle" },
-  { key: "network", label: "Knowledge Network Info" },
-  { key: "model", label: "Knowledge Model Discovery" },
-  { key: "query", label: "Object and Subgraph Queries" },
-  { key: "data", label: "Data Resources and SQL" },
-  { key: "logic", label: "Logic and Actions" },
-  { key: "skill", label: "Skills and Dynamic Tools" },
-  { key: "execution", label: "Code Execution" },
-  { key: "other", label: "Other Capabilities" },
+  { key: "lifecycle", label: "Session and interaction lifecycle" },
+  { key: "network", label: "Knowledge network info" },
+  { key: "model", label: "Knowledge model discovery" },
+  { key: "query", label: "Object and subgraph queries" },
+  { key: "data", label: "Data resources and SQL" },
+  { key: "logic", label: "Logic and actions" },
+  { key: "skill", label: "Skills and dynamic tools" },
+  { key: "execution", label: "Code execution" },
+  { key: "other", label: "Other capabilities" },
 ];
 
 /** Local fallback tools; array order is in-group display order. */
 const LOCAL_TOOLS: Array<{ id: string; groupKey: string; name: string }> = [
-  { id: "bkn_create_conversation", groupKey: "lifecycle", name: "Create Conversation" },
-  { id: "bkn_resume_conversation", groupKey: "lifecycle", name: "Resume Conversation" },
-  { id: "bkn_close_conversation", groupKey: "lifecycle", name: "Close Conversation" },
-  { id: "bkn_start_interaction", groupKey: "lifecycle", name: "Start Interaction" },
-  { id: "bkn_finish_interaction", groupKey: "lifecycle", name: "Finish Interaction" },
-  { id: "bkn_complete_interaction", groupKey: "lifecycle", name: "Complete Interaction" },
-  { id: "bkn_cancel_interaction", groupKey: "lifecycle", name: "Cancel Interaction" },
-  { id: "bkn_fail_interaction", groupKey: "lifecycle", name: "Mark Interaction Failed" },
-  { id: "bkn_handoff_interaction", groupKey: "lifecycle", name: "Handoff Interaction" },
-  { id: "bkn_context", groupKey: "lifecycle", name: "Write Managed Context" },
-  { id: "bkn_get_operation", groupKey: "lifecycle", name: "View Operation Status" },
-  { id: "bkn_retry_operation", groupKey: "lifecycle", name: "Retry Operation" },
-  { id: "bkn_get_receipt", groupKey: "lifecycle", name: "View Call Receipt" },
-  { id: "list_knowledge_networks", groupKey: "network", name: "Knowledge Network List" },
-  { id: "get_kn_detail", groupKey: "network", name: "Knowledge Network Details" },
-  { id: "search_schema", groupKey: "model", name: "Semantic Search" },
-  { id: "get_object_types", groupKey: "model", name: "Object Type Definitions" },
-  { id: "get_relation_types", groupKey: "model", name: "Relation Type Definitions" },
-  { id: "get_action_types", groupKey: "model", name: "Action Type Definitions" },
-  { id: "get_metric_types", groupKey: "model", name: "Metric Definitions" },
-  { id: "query_object_instance", groupKey: "query", name: "Object Instance Query" },
-  { id: "query_instance_subgraph", groupKey: "query", name: "Relation Subgraph Query" },
-  { id: "list_resources", groupKey: "data", name: "Data Resource List" },
-  { id: "describe_resource", groupKey: "data", name: "Resource Field Schema" },
-  { id: "run_sql", groupKey: "data", name: "SQL Data Query" },
-  { id: "get_logic_properties_values", groupKey: "logic", name: "Logical Property Calculation" },
-  { id: "get_action_info", groupKey: "logic", name: "Action Tool Recall" },
-  { id: "execute_action", groupKey: "logic", name: "Execute Action" },
-  { id: "get_action_execution", groupKey: "logic", name: "Action Execution Result" },
-  { id: "list_action_execution", groupKey: "logic", name: "Action Execution History" },
-  { id: "list_action_executions", groupKey: "logic", name: "Action Execution History" },
-  { id: "query_metric", groupKey: "logic", name: "Metric Data Query" },
-  { id: "search_capabilities", groupKey: "logic", name: "Capability Search" },
-  { id: "execute_tool", groupKey: "logic", name: "Execute Tool" },
-  { id: "list_skills", groupKey: "skill", name: "Skill List" },
-  { id: "get_skill_content", groupKey: "skill", name: "View Skill Content" },
-  { id: "read_skill_file", groupKey: "skill", name: "Read Skill File" },
-  { id: "execute_skill", groupKey: "skill", name: "Execute Skill" },
-  { id: "run_code", groupKey: "execution", name: "Run Code" },
-  { id: "run_shell", groupKey: "execution", name: "Run Command" },
+  { id: "bkn_create_conversation", groupKey: "lifecycle", name: "Create conversation" },
+  { id: "bkn_resume_conversation", groupKey: "lifecycle", name: "Resume conversation" },
+  { id: "bkn_close_conversation", groupKey: "lifecycle", name: "Close conversation" },
+  { id: "bkn_start_interaction", groupKey: "lifecycle", name: "Start interaction" },
+  { id: "bkn_finish_interaction", groupKey: "lifecycle", name: "Finish interaction" },
+  { id: "bkn_complete_interaction", groupKey: "lifecycle", name: "Complete interaction" },
+  { id: "bkn_cancel_interaction", groupKey: "lifecycle", name: "Cancel interaction" },
+  { id: "bkn_fail_interaction", groupKey: "lifecycle", name: "Mark interaction failed" },
+  { id: "bkn_handoff_interaction", groupKey: "lifecycle", name: "Handoff interaction" },
+  { id: "bkn_context", groupKey: "lifecycle", name: "Write managed context" },
+  { id: "bkn_get_operation", groupKey: "lifecycle", name: "View operation status" },
+  { id: "bkn_retry_operation", groupKey: "lifecycle", name: "Retry operation" },
+  { id: "bkn_get_receipt", groupKey: "lifecycle", name: "View call receipt" },
+  { id: "list_knowledge_networks", groupKey: "network", name: "Knowledge network list" },
+  { id: "get_kn_detail", groupKey: "network", name: "Knowledge network details" },
+  { id: "search_schema", groupKey: "model", name: "Semantic search" },
+  { id: "get_object_types", groupKey: "model", name: "Object type definitions" },
+  { id: "get_relation_types", groupKey: "model", name: "Relation type definitions" },
+  { id: "get_action_types", groupKey: "model", name: "Action type definitions" },
+  { id: "get_metric_types", groupKey: "model", name: "Metric definitions" },
+  { id: "query_object_instance", groupKey: "query", name: "Object instance query" },
+  { id: "query_instance_subgraph", groupKey: "query", name: "Relation subgraph query" },
+  { id: "list_resources", groupKey: "data", name: "Data resource list" },
+  { id: "describe_resource", groupKey: "data", name: "Resource field schema" },
+  { id: "run_sql", groupKey: "data", name: "SQL data query" },
+  { id: "get_logic_properties_values", groupKey: "logic", name: "Logical property calculation" },
+  { id: "get_action_info", groupKey: "logic", name: "Action tool recall" },
+  { id: "execute_action", groupKey: "logic", name: "Execute action" },
+  { id: "get_action_execution", groupKey: "logic", name: "Action execution result" },
+  { id: "list_action_execution", groupKey: "logic", name: "Action execution history" },
+  { id: "list_action_executions", groupKey: "logic", name: "Action execution history" },
+  { id: "query_metric", groupKey: "logic", name: "Metric data query" },
+  { id: "search_capabilities", groupKey: "logic", name: "Capability search" },
+  { id: "execute_tool", groupKey: "logic", name: "Execute tool" },
+  { id: "list_skills", groupKey: "skill", name: "Skill list" },
+  { id: "get_skill_content", groupKey: "skill", name: "View skill content" },
+  { id: "read_skill_file", groupKey: "skill", name: "Read skill file" },
+  { id: "execute_skill", groupKey: "skill", name: "Execute skill" },
+  { id: "run_code", groupKey: "execution", name: "Run code" },
+  { id: "run_shell", groupKey: "execution", name: "Run command" },
 ];
 
 /** Fallback order base; local fallback entries sort after server-declared entries. */
@@ -146,27 +146,27 @@ function guessLocal(toolId: string): { groupKey: string; name: string } {
   const id = toolId.toLowerCase();
   // Platform tools use the bkn_ prefix. Check it before keyword matching because
   // bkn_* contains "kn" and interaction contains "action".
-  if (id.startsWith("bkn_")) return { groupKey: "lifecycle", name: "Session Lifecycle Tool" };
+  if (id.startsWith("bkn_")) return { groupKey: "lifecycle", name: "Session lifecycle tool" };
   if (id.includes("interaction") || id.includes("conversation"))
-    return { groupKey: "lifecycle", name: "Session Lifecycle Tool" };
+    return { groupKey: "lifecycle", name: "Session lifecycle tool" };
   if (
     id.includes("object") ||
     id.includes("relation") ||
     id.includes("schema") ||
     id.includes("metric_type")
   ) {
-    return { groupKey: "model", name: "Knowledge Model Tool" };
+    return { groupKey: "model", name: "Knowledge model tool" };
   }
   if (id.includes("resource") || id.includes("sql") || id.includes("catalog"))
-    return { groupKey: "data", name: "Data Resource Tool" };
-  if (id.includes("skill")) return { groupKey: "skill", name: "Skills and Dynamic Tools" };
+    return { groupKey: "data", name: "Data resource tool" };
+  if (id.includes("skill")) return { groupKey: "skill", name: "Skills and dynamic tools" };
   if (id.includes("action") || id.includes("logic") || id.includes("metric"))
-    return { groupKey: "logic", name: "Logic and Action Tool" };
+    return { groupKey: "logic", name: "Logic and action tool" };
   if (id.includes("instance") || id.includes("subgraph") || id.includes("query"))
-    return { groupKey: "query", name: "Object Query Tool" };
+    return { groupKey: "query", name: "Object query tool" };
   if (id.includes("kn") || id.includes("network"))
-    return { groupKey: "network", name: "Knowledge Network Tool" };
-  return { groupKey: "other", name: "MCP Capability" };
+    return { groupKey: "network", name: "Knowledge network tool" };
+  return { groupKey: "other", name: "MCP capability" };
 }
 
 function localDisplayOf(toolId: string): {

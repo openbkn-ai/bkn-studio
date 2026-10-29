@@ -11,15 +11,15 @@ import { propertyAuthorizationPart as enUS } from "./en-US/property-authorizatio
 import { propertyAuthorizationPart as zhCN } from "./zh-CN/property-authorization";
 
 describe("property authorization terminology", () => {
-  it("uses Column Masking consistently in the permission selector and rule editor", () => {
+  it("uses column masking consistently in the permission selector and rule editor", () => {
     expect(zhCN.propertyAuthorizationLevel.masked).toBe("列掩码");
     expect(zhCN.objectTypeMaskRuleTitle).toBe("列掩码规则");
     expect(zhCN.propertyAuthorizationMaskedMissing).toContain("列掩码");
     expect(JSON.stringify(zhCN)).not.toContain("脱敏");
 
-    expect(enUS.propertyAuthorizationLevel.masked).toBe("Column Masking");
-    expect(enUS.objectTypeMaskRuleTitle).toBe("Column Masking Rule");
-    expect(enUS.propertyAuthorizationMaskedMissing).toContain("Column Masking");
+    expect(enUS.propertyAuthorizationLevel.masked).toBe("Column masking");
+    expect(enUS.objectTypeMaskRuleTitle).toBe("Column masking rule");
+    expect(enUS.propertyAuthorizationMaskedMissing).toContain("column masking");
   });
 
   it("uses the same subject boundary on property access and row filtering", () => {

@@ -13,7 +13,7 @@ export const apiKeysEnUS = {
     issue: "Issue key",
     refresh: "Refresh",
     calloutInfo:
-      "An API Key is your personal Bearer token. Under Domain Knowledge Network → Knowledge Network Integration → MCP Integration, select Configure API Key and paste the key. You can also provide it to the CLI / SDK through BKN_TOKEN or configure it in an MCP client. Calls use your account identity and permissions; the full secret is shown only once when issued, so save it immediately.",
+      "An API key is your personal Bearer token. Under Domain Knowledge Network → Knowledge network integration → MCP integration, select Configure API key and paste the key. You can also provide it to the CLI / SDK through BKN_TOKEN or configure it in an MCP client. Calls use your account identity and permissions; the full secret is shown only once when issued, so save it immediately.",
     columns: {
       name: "Name",
       key: "Key",
@@ -101,7 +101,7 @@ export const apiKeysEnUS = {
       loadFailed: "Failed to load connected clients",
       emptyTitle: "No connected clients yet",
       emptyDescription:
-        "Put only the MCP URL into an agent and click Connect; after you sign in it appears here. See Domain Knowledge Network → Knowledge Network Integration → MCP Integration for the setup.",
+        "Put only the MCP URL into an agent and click Connect; after you sign in it appears here. See Domain Knowledge Network → Knowledge network integration → MCP integration for the setup.",
     },
   },
 } as const;
