@@ -232,6 +232,15 @@ export const bknProjectEnUS = {
         name: "Name",
         nameRequired: "Enter a name",
         description: "Description",
+        updateField: "Update field",
+        updateFieldHelp:
+          "A field whose value grows whenever a record changes, such as an update time. The table's local index is refreshed by it.",
+        updateFieldUnavailable:
+          "This object type has no property that can be an update field: it must be a date, a time, an integer, or text of limited length.",
+        updateFieldNone: "None",
+        updateFieldRecommended: "Recommended",
+        updateFieldNotGrowing:
+          "An update field should grow whenever a record changes, such as an update time.",
         stale:
           "Someone changed this draft, so it was reloaded. Make your change again if it is still needed.",
         cascade: "Also stopped adopting {{count}} relation types that connect it",

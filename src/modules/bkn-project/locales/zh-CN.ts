@@ -219,6 +219,13 @@ export const bknProjectZhCN = {
         name: "名称",
         nameRequired: "请输入名称",
         description: "描述",
+        updateField: "更新字段",
+        updateFieldHelp: "记录每次变化时值都会变大的字段，例如更新时间。表的本地索引按它刷新。",
+        updateFieldUnavailable:
+          "这个对象类没有能作为更新字段的属性：更新字段需要是日期、时间、整数，或长度有限的文本。",
+        updateFieldNone: "不设置",
+        updateFieldRecommended: "推荐",
+        updateFieldNotGrowing: "更新字段应随记录更新而增大，例如更新时间。",
         stale: "草稿已被他人修改，已重新加载。如果仍需要，请重新操作。",
         cascade: "同时取消采纳了连接它的 {{count}} 个关系类",
         cascade_one: "同时取消采纳了连接它的 {{count}} 个关系类",
