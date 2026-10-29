@@ -1238,6 +1238,35 @@ describe("ObjectTypeResourceGraph", () => {
     expect(screen.getAllByRole("button", { name: /^对象指标 / })).toHaveLength(14);
   });
 
+  it("warns when the metric graph reaches its scan limit", async () => {
+    const page = (offset: number) =>
+      Array.from({ length: 50 }, (_, index) => ({
+        ...metric,
+        definition: {
+          ...metric.definition,
+          id: `metric-${offset + index + 1}`,
+          name: `指标 ${offset + index + 1}`,
+        },
+      })) as ObjectMetricRecordV1[];
+    mocks.listMetrics.mockImplementation((_networkId: string, query: { offset: number }) =>
+      Promise.resolve({ entries: page(query.offset), total_count: 420 }),
+    );
+
+    renderGraph();
+
+    expect(
+      await screen.findByText(
+        "当前仅加载前 200 个关联对象指标，共 420 个。请前往对象指标管理查看完整列表。",
+      ),
+    ).toBeInTheDocument();
+    expect(mocks.listMetrics).toHaveBeenCalledTimes(4);
+    expect(mocks.listMetrics).toHaveBeenLastCalledWith(
+      "network-1",
+      { limit: 50, offset: 150, ownerObjectTypeId: "order" },
+      { skipErrorToast: true },
+    );
+  });
+
   it("keeps a deep-linked hidden metric visible after its drawer closes", async () => {
     const compositeMetrics = Array.from({ length: 7 }, (_, index) => ({
       ...metric,

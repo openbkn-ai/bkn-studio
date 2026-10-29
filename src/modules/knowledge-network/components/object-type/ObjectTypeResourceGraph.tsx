@@ -1556,6 +1556,17 @@ export function ObjectTypeResourceGraph({
         />
       ) : null}
 
+      {totals.metrics > metrics.length ? (
+        <Alert
+          message={t("knowledgeNetwork.objectTypeDetailRelatedMetricsPartial", {
+            loaded: metrics.length,
+            total: totals.metrics,
+          })}
+          showIcon
+          type="warning"
+        />
+      ) : null}
+
       <div className={styles.canvas}>
         <Spin spinning={loading}>
           <svg
