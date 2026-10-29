@@ -1180,8 +1180,6 @@ export const systemAdminZhCN = {
       publishOnce: "内置 Agent 发布后会一直保持发布，不能取消。",
       publishedDone: "已发布",
       back: "返回列表",
-      promptLanguagePolicy:
-        "默认只为 Initial 对应的提示词预置译文。其他版本可手工添加译文；缺少译文时显示原文。发布原文创建新版本，保存译文不创建版本。",
       sourceLanguage: "原文语言",
       languageUnmarked: "未标注",
       languageUnmarkedHint: "请先确认原文语言，再发布原文或添加其他语言的译文。",
@@ -1195,7 +1193,6 @@ export const systemAdminZhCN = {
       confirmTranslationBody: "译文将对使用此版本和语言的用户生效，不新增提示词或 Agent 配置版本。",
       stalePromptDraft: "生效版本已变化，草稿仍保留。请复制需要的内容，再放弃此草稿并重新加载。",
       discardPromptDraft: "放弃当前语言草稿并重新加载",
-      otherLanguageDraft: "其他语言仍有未发布草稿，可切回继续编辑。草稿仅在当前页面打开期间保留。",
       unsavedTitle: "放弃未保存的修改？",
       unsavedBody: "运行配置或提示词存在未保存的修改。离开后这些修改将丢失。",
       discardAndLeave: "放弃并离开",

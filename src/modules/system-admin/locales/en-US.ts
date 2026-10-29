@@ -1274,8 +1274,6 @@ export const systemAdminEnUS = {
       publishOnce: "Once published, a built-in Agent stays published; it cannot be unpublished.",
       publishedDone: "Published",
       back: "Back to list",
-      promptLanguagePolicy:
-        "Only the Initial configuration’s Prompt has translations by default. Add translations to other versions as needed; missing translations fall back to the original. Publishing the original creates a version; saving a translation does not.",
       sourceLanguage: "Original language",
       languageUnmarked: "Not specified",
       languageUnmarkedHint:
@@ -1292,8 +1290,6 @@ export const systemAdminEnUS = {
       stalePromptDraft:
         "The active version changed. Your draft is preserved. Copy any needed text, then discard this draft and reload.",
       discardPromptDraft: "Discard this language’s draft and reload",
-      otherLanguageDraft:
-        "Another language has an unpublished draft. Switch back to continue editing it. Drafts are kept only while this page remains open.",
       unsavedTitle: "Discard unsaved changes?",
       unsavedBody:
         "The runtime configuration or prompt has unsaved changes. Leaving will discard them.",

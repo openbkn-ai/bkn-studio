@@ -648,13 +648,6 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
           ) : null}
         </div>
         <Space direction="vertical" size={16} className={styles.dangerBody}>
-          <Alert type="info" showIcon message={t(`${P}.promptLanguagePolicy`)} />
-          {Object.entries(promptViews).some(
-            ([language, item]) =>
-              language !== locale && item.content !== item.prompt.prompt.content,
-          ) ? (
-            <Alert type="warning" showIcon message={t(`${P}.otherLanguageDraft`)} />
-          ) : null}
           <Card title={t(`${P}.runtimeTitle`)}>
             <Form layout="vertical" disabled={!editable || saving}>
               <Row gutter={16}>

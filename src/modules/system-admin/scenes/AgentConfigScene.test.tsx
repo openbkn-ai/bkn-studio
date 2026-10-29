@@ -932,7 +932,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
         target: { value: "English draft" },
       });
       expect(screen.getByDisplayValue("100")).toBeTruthy();
-      expect(screen.getByText(i18n.t("systemAdmin.agentConfig.otherLanguageDraft"))).toBeTruthy();
+      expect(screen.queryAllByRole("alert")).toHaveLength(0);
       await act(() => i18n.changeLanguage("zh-CN"));
       expect(await screen.findByDisplayValue("Chinese draft")).toBeTruthy();
       await act(() => i18n.changeLanguage("en-US"));
@@ -953,6 +953,8 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
       });
       await act(() => i18n.changeLanguage("en-US"));
       await screen.findByDisplayValue("English prompt");
+      // Draft protection works without permanent policy or inactive-language banners.
+      expect(screen.queryAllByRole("alert")).toHaveLength(0);
       const event = new Event("beforeunload", { cancelable: true });
       window.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(true);
