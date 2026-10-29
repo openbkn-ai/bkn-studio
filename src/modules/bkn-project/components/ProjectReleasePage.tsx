@@ -19,6 +19,7 @@ import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { formatRate } from "@/modules/bkn-project/components/draft/evidence";
 import {
   CHECK_STATUS_TONE,
+  CHECK_STATUSES,
   checkReasonText,
   refusalText,
 } from "@/modules/bkn-project/components/publish/messages";
@@ -222,8 +223,9 @@ function CheckSection({
     <Section
       actions={
         <>
-          {check ? (
-            <LightStatusTag tone={CHECK_STATUS_TONE[check.status] ?? "neutral"}>
+          {/* A status this page does not know gets no tag rather than a raw value. */}
+          {check && CHECK_STATUSES.includes(check.status) ? (
+            <LightStatusTag tone={CHECK_STATUS_TONE[check.status]}>
               {t(`bknProject.release.check.status.${check.status}`)}
             </LightStatusTag>
           ) : null}

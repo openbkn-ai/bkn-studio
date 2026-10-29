@@ -265,6 +265,18 @@ describe("ProjectReleasePage", () => {
     expect(onGoToModel).toHaveBeenCalled();
   });
 
+  it("shows no tag for a check status it does not know", async () => {
+    getOntologyCheckMock.mockResolvedValue({
+      ...check(),
+      status: "queued" as OntologyCheck["status"],
+    });
+    renderRelease();
+
+    const section = within(await screen.findByRole("region", { name: "数据校验" }));
+    expect(await section.findByText("已核对 2 / 3 项")).toBeInTheDocument();
+    expect(section.queryByText(/bknProject\./)).toBeNull();
+  });
+
   it("says when the check has not started, or was interrupted", async () => {
     getOntologyCheckMock.mockResolvedValueOnce(null);
     const view = renderRelease();
