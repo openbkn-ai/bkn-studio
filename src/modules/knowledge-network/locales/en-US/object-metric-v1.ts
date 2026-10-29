@@ -721,7 +721,7 @@ export const objectMetricV1Part = {
   m9579f7bb0b6d: "There are no properties convertible to numeric values",
   m9590c71c5808:
     "The current account does not have permission to view the definition of this metric. Please contact the knowledge network administrator for authorization.",
-  m95d8a4e9ae1f: "Hong Kong Dollar · HKD",
+  m95d8a4e9ae1f: "Hong Kong dollar · HKD",
   m95ebb042c769: "Technical expression:",
   m9659733917ec: "milliseconds",
   m9678e3a7cb3c: "not equal to",

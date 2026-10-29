@@ -14,7 +14,7 @@ export const homeEnUS = {
         copyCommand: "Copy command",
         copyFailed: "Copy failed. Please copy the command manually.",
         description:
-          "Install the Skills needed for your project. Restart the Agent session after installation.",
+          "Install the skills needed for your project. Restart the agent session after installation.",
         title: "Get OpenBKN skills",
         trigger: "Get skills",
       },
@@ -66,7 +66,7 @@ export const homeEnUS = {
     paths: {
       engineering: {
         description:
-          "Start from business materials and use AI Skills for requirement clarification, design, construction, and validation to build an iteratively improvable business knowledge network.",
+          "Start from business materials and use AI skills for requirement clarification, design, construction, and validation to build an iteratively improvable business knowledge network.",
         heading: "Build a business knowledge network with AI skills",
         title: "AI skills build",
       },
@@ -94,7 +94,7 @@ export const homeEnUS = {
         "This deletes sample resources and data created by the failed installation, including user changes. Only resources confirmed to belong to this sample are removed; cleanup stops if ownership is unclear or conflicting. The original failure remains in history. After cleanup succeeds, you can install an imported offline package. If cleanup is incomplete, you can continue it.",
       uninstallTitle: "Uninstall {{name}} {{version}}",
       uninstallWarning:
-        "Uninstall permanently removes this sample's data, knowledge network, metrics, functions and Skills, including user changes. Installation history is retained. Only resources owned by this sample are removed. You can install a new version after cleanup completes.",
+        "Uninstall permanently removes this sample's data, knowledge network, metrics, functions and skills, including user changes. Installation history is retained. Only resources owned by this sample are removed. You can install a new version after cleanup completes.",
       uninstallStages: {
         knowledge: "Delete knowledge network and metrics",
         capabilities: "Delete functions and skills",

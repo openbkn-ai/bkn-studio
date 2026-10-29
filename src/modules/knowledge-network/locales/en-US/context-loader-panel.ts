@@ -187,7 +187,7 @@ export const contextLoaderPanelPart = {
       modalTitle: "Configure API key",
       apply: "Apply",
       description:
-        "Paste a long-lived API key that starts with bak_. This page will update the Bearer Key in the MCP config below.",
+        "Paste a long-lived API key that starts with bak_. This page will update the Bearer key in the MCP config below.",
       inputPlaceholder: "Paste API key",
       hint: "Only used to generate the current page config. It will not be saved.",
     },
@@ -253,7 +253,7 @@ export const contextLoaderPanelPart = {
       description:
         "This page generates MCP integration config. After copying it into an agent platform, the agent can access OpenBKN retrieval, query, and action capabilities through MCP tools.",
       stepIssueKey:
-        "Issue an API key in Account Center and put the long-lived bak_ key into the Bearer Key on the right.",
+        "Issue an API key in Account Center and put the long-lived bak_ key into the Bearer key on the right.",
       stepCopyConfig:
         "Choose the agent platform type, then copy the full config into the matching MCP service configuration.",
       stepUseAgent:

@@ -78,7 +78,8 @@ const CAPITALIZED_WORD = /^["'(“<]?([A-Z][a-z]+(?:['’][a-z]+)?(?:-[A-Za-z]+)
 function titleCaseWords(value: string): string[] {
   if (/[.?!。]$/.test(value.trim()) || value.split(/\s+/).length > 10) return [];
   let text = value;
-  for (const phrase of PROPER_PHRASES) text = text.split(phrase).join("");
+  // A proper phrase still counts as a word, so the word after it is not treated as first.
+  for (const phrase of PROPER_PHRASES) text = text.split(phrase).join("x");
   const offenders: string[] = [];
   for (const segment of text.split(SEGMENT_SEPARATOR)) {
     let first = true;
@@ -116,6 +117,8 @@ describe("English UI copy casing", () => {
     expect(titleCaseWords("Basic Information")).toEqual(["Information"]);
     expect(titleCaseWords("Basic information")).toEqual([]);
     expect(titleCaseWords("Open Execution Factory")).toEqual([]);
+    expect(titleCaseWords("Hong Kong Dollar · HKD")).toEqual(["Dollar"]);
+    expect(titleCaseWords("Hong Kong dollar · HKD")).toEqual([]);
     expect(titleCaseWords("Issue API key")).toEqual([]);
     expect(titleCaseWords("{{name}} / Column masking rule")).toEqual([]);
     expect(titleCaseWords("Collapsed. Expand to edit")).toEqual([]);

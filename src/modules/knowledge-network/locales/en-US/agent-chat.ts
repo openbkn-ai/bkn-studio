@@ -83,7 +83,7 @@ export const agentChatPart = {
         "Applies to the current knowledge network. You cannot modify this network, so it is read-only.",
       userTitle: "My preferences",
       userDescription:
-        "Applies only to you, after the global Agent and current knowledge network settings.",
+        "Applies only to you, after the global agent and current knowledge network settings.",
       instruction: "Additional instructions",
       instructionPlaceholder: "For example: lead with the conclusion, then list details in a table",
       tools: "Available tools",
@@ -105,7 +105,7 @@ export const agentChatPart = {
       rolledBack: "Version switched",
       publishPrompt: "Publish as new version",
       promptPublished: "New version published",
-      sharedReadOnly: "Maintained by platform administrators in System Admin.",
+      sharedReadOnly: "Maintained by platform administrators in system admin.",
       openSystemConfig: "Edit in system admin",
       mcpProfile: "MCP service",
       mcpDefault: "Service default",
@@ -187,7 +187,7 @@ export const agentChatPart = {
       empty: {
         start: "Start validation",
         knIntro:
-          "Ask the Agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",
+          "Ask the agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",
         networkName: " ({{networkName}})",
         summary:
           "The network summary has been loaded automatically ({{objectTypes}} object types / {{relations}} relation types), so you do not need to browse first.",
