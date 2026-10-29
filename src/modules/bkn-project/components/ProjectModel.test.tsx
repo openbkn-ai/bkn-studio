@@ -63,6 +63,11 @@ vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal)
   setProjectCatalogs: setProjectCatalogsMock,
 }));
 
+// G6 cannot draw in jsdom; the concept model's graph keeps its toolbar and draws nothing.
+vi.mock("@/modules/knowledge-network/components/preview/OntologyG6Canvas", () => ({
+  OntologyG6Canvas: () => <div data-testid="ontology-graph-canvas" />,
+}));
+
 vi.mock("@/shared/catalog", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/catalog")>()),
   listCatalogs: listCatalogsMock,

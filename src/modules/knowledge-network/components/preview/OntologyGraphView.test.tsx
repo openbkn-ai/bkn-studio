@@ -8,11 +8,36 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import type { OntologyG6CanvasProps } from "./OntologyG6Canvas";
 import { OntologyGraphView } from "./OntologyGraphView";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
+
+// G6 cannot draw in jsdom; the stand-in records what the view hands it.
+const canvas: { props: OntologyG6CanvasProps | null } = { props: null };
+vi.mock("./OntologyG6Canvas", async () => {
+  const { forwardRef } = await import("react");
+  return {
+    OntologyG6Canvas: forwardRef<unknown, OntologyG6CanvasProps>(function Stub(props) {
+      canvas.props = props;
+      return (
+        <div data-testid="ontology-graph-canvas">
+          {props.structure.combos?.map((combo) => (
+            <span key={combo.id}>{String(combo.style?.labelText ?? "")}</span>
+          ))}
+          <button onClick={() => props.onNodeClick("customer")} type="button">
+            customer
+          </button>
+          <button onClick={() => props.onBlankClick()} type="button">
+            blank
+          </button>
+        </div>
+      );
+    }),
+  };
+});
 
 const graph = {
   nodes: [
@@ -23,90 +48,73 @@ const graph = {
 };
 
 describe("OntologyGraphView", () => {
-  it("renders grid dots and edge markers through theme-aware CSS classes", () => {
-    const { container } = render(
+  it("selects a clicked type, clears it on a second click or a blank click", async () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
       <OntologyGraphView
         graph={graph}
         indexedIds={new Set()}
+        onSelect={onSelect}
         selectedId={null}
-        onSelect={vi.fn()}
       />,
     );
 
-    const gridDot = container.querySelector("pattern circle");
-    const edgeArrows = container.querySelectorAll("marker path");
+    fireEvent.click(await screen.findByText("customer"));
+    expect(onSelect).toHaveBeenLastCalledWith("customer");
 
-    expect(gridDot?.getAttribute("class")).toContain("gridDot");
-    expect(gridDot?.hasAttribute("fill")).toBe(false);
-    expect(edgeArrows[0]?.getAttribute("class")).toContain("edgeArrow");
-    expect(edgeArrows[0]?.hasAttribute("fill")).toBe(false);
-    expect(edgeArrows[1]?.getAttribute("class")).toContain("edgeArrowActive");
-    expect(screen.getByText("Places").getAttribute("class")).toContain("edgeLabel");
-
-    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewHideEdgeLabels"));
-    const relationLine = container.querySelector("g[class*='edge'] > line");
-    expect(relationLine?.getAttribute("marker-end")).toBe("url(#kn-onto-arrow)");
+    rerender(
+      <OntologyGraphView
+        graph={graph}
+        indexedIds={new Set()}
+        onSelect={onSelect}
+        selectedId="customer"
+      />,
+    );
+    fireEvent.click(screen.getByText("customer"));
+    expect(onSelect).toHaveBeenLastCalledWith(null);
+    fireEvent.click(screen.getByText("blank"));
+    expect(onSelect).toHaveBeenLastCalledWith(null);
   });
 
-  it("uses a scalable canvas and limits low-detail DOM nodes for large graphs", () => {
-    const nodes = Array.from({ length: 1_300 }, (_, index) => ({
-      color: "#2563eb",
-      id: `node-${index}`,
-      name: `Node ${index}`,
-    }));
-    const edges = Array.from({ length: 1_298 }, (_, index) => ({
+  it("shows relation names from the toolbar, on a crowded graph too", async () => {
+    const { rerender } = render(
+      <OntologyGraphView
+        graph={graph}
+        indexedIds={new Set()}
+        onSelect={vi.fn()}
+        selectedId={null}
+      />,
+    );
+    await screen.findByTestId("ontology-graph-canvas");
+    // Off at first: on a graph of dozens of types the names would cover it.
+    expect(canvas.props?.decorations.edges[0].style?.labelText).toBe("");
+
+    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewShowEdgeLabels"));
+    await waitFor(() => expect(canvas.props?.decorations.edges[0].style?.labelText).toBe("Places"));
+
+    const edges = Array.from({ length: 121 }, (_, index) => ({
       id: `edge-${index}`,
       name: "connects",
-      sourceId: `node-${index}`,
-      targetId: `node-${index + 2}`,
+      sourceId: "customer",
+      targetId: "order",
     }));
-    const { container } = render(
+    rerender(
       <OntologyGraphView
-        graph={{ edges, nodes }}
+        graph={{ ...graph, edges }}
         indexedIds={new Set()}
+        onSelect={vi.fn()}
         selectedId={null}
-        onSelect={vi.fn()}
       />,
     );
-
-    const svg = screen.getByLabelText("knowledgeNetwork.previewCanvas");
-    const [, , width] = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
-    expect(width).toBeGreaterThan(1_000);
-    expect(Number(svg.getAttribute("data-rendered-nodes"))).toBeLessThanOrEqual(1_200);
-    expect(svg.getAttribute("data-total-nodes")).toBe("1300");
-    const relationLines = container.querySelectorAll("g[class*='edge'] > line");
-    expect(relationLines.length).toBeGreaterThan(0);
-    relationLines.forEach((line) =>
-      expect(line.getAttribute("marker-end")).toBe("url(#kn-onto-arrow)"),
-    );
-    expect(screen.getByTitle("knowledgeNetwork.previewRearrange").textContent).toContain(
-      "knowledgeNetwork.previewLayoutForce",
-    );
-  });
-
-  it("dims unrelated relations instead of removing them when a node is selected", () => {
-    const { container } = render(
-      <OntologyGraphView
-        graph={{
-          nodes: [...graph.nodes, { color: "#f59e0b", id: "product", name: "Product" }],
-          edges: [
-            ...graph.edges,
-            { id: "contains", name: "Contains", sourceId: "order", targetId: "product" },
-          ],
-        }}
-        indexedIds={new Set()}
-        selectedId="customer"
-        onSelect={vi.fn()}
-      />,
-    );
-
-    const relationLines = container.querySelectorAll("g[class*='edge'] > line");
-    expect(relationLines).toHaveLength(2);
+    // Names that would cover one another are left out, so the switch stays on for a big graph.
     expect(
-      [...relationLines].some((line) =>
-        line.parentElement?.getAttribute("class")?.includes("edgeDim"),
-      ),
-    ).toBe(true);
+      screen.getByTitle("knowledgeNetwork.previewHideEdgeLabels").hasAttribute("disabled"),
+    ).toBe(false);
+    await waitFor(() =>
+      expect(
+        canvas.props?.decorations.edges.filter((edge) => edge.style?.labelText).length,
+      ).toBeGreaterThan(0),
+    );
   });
 
   it("offers logical grouping only when group memberships are available", async () => {
@@ -114,8 +122,8 @@ describe("OntologyGraphView", () => {
       <OntologyGraphView
         graph={graph}
         indexedIds={new Set()}
-        selectedId={null}
         onSelect={vi.fn()}
+        selectedId={null}
       />,
     );
 
@@ -128,64 +136,51 @@ describe("OntologyGraphView", () => {
         groupNames={new Map([["sales", "Sales"]])}
         groupOf={new Map(graph.nodes.map((node) => [node.id, "sales"]))}
         indexedIds={new Set()}
-        selectedId={null}
         onSelect={vi.fn()}
+        selectedId={null}
       />,
     );
-    const groupOption = await screen.findByText("knowledgeNetwork.previewLayoutGroup");
-    fireEvent.click(groupOption);
+    fireEvent.click(await screen.findByText("knowledgeNetwork.previewLayoutGroup"));
 
     await waitFor(() => expect(screen.queryByText("Sales")).not.toBeNull());
   });
 
-  it("keeps concept-group boundaries separate and identifies ungrouped nodes", async () => {
-    const nodes = Array.from({ length: 20 }, (_, index) => ({
-      color: "#2563eb",
-      id: `node-${index}`,
-      name: `Node ${index}`,
-    }));
-    const groupOf = new Map<string, string>([
-      ["node-16", "group-a"],
-      ["node-17", "group-a"],
-      ["node-18", "group-b"],
-      ["node-19", "group-b"],
-    ]);
+  it("maximizes over the window and comes back with the button or Esc", async () => {
     const { container } = render(
       <OntologyGraphView
-        graph={{ edges: [], nodes }}
-        groupNames={
-          new Map([
-            ["group-a", "Group A"],
-            ["group-b", "Group B"],
-          ])
-        }
-        groupOf={groupOf}
+        graph={graph}
         indexedIds={new Set()}
-        selectedId={null}
         onSelect={vi.fn()}
+        selectedId={null}
       />,
     );
+    await screen.findByTestId("ontology-graph-canvas");
+    const wrap = container.firstElementChild as HTMLElement;
 
-    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewRearrange"));
-    fireEvent.click(await screen.findByText("knowledgeNetwork.previewLayoutGroup"));
+    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewMaximize"));
+    expect(wrap.dataset.maximized).toBe("true");
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(wrap.dataset.maximized).toBeUndefined());
 
-    await screen.findByText("knowledgeNetwork.previewUngrouped");
-    const hulls = [...container.querySelectorAll("rect[class*='groupHull']")].map((element) => ({
-      height: Number(element.getAttribute("height")),
-      width: Number(element.getAttribute("width")),
-      x: Number(element.getAttribute("x")),
-      y: Number(element.getAttribute("y")),
-    }));
-    expect(hulls).toHaveLength(3);
-    hulls.forEach((left, leftIndex) => {
-      hulls.slice(leftIndex + 1).forEach((right) => {
-        const separated =
-          left.x + left.width <= right.x ||
-          right.x + right.width <= left.x ||
-          left.y + left.height <= right.y ||
-          right.y + right.height <= left.y;
-        expect(separated).toBe(true);
-      });
-    });
+    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewMaximize"));
+    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewRestoreView"));
+    expect(wrap.dataset.maximized).toBeUndefined();
+  });
+
+  it("hides object type names from the toolbar, beside the relation names switch", async () => {
+    render(
+      <OntologyGraphView
+        graph={graph}
+        indexedIds={new Set()}
+        onSelect={vi.fn()}
+        selectedId={null}
+      />,
+    );
+    await screen.findByTestId("ontology-graph-canvas");
+    expect(canvas.props?.decorations.nodes[0].style?.labelText).toBe("Customer");
+
+    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewHideNodeLabels"));
+    await waitFor(() => expect(canvas.props?.decorations.nodes[0].style?.labelText).toBe(""));
+    expect(screen.getByTitle("knowledgeNetwork.previewShowNodeLabels")).toBeTruthy();
   });
 });

@@ -138,12 +138,17 @@ describe("OverviewOntologyBlock resource authorization regression", () => {
     await screen.findByTestId("ontology-graph-card");
     fireEvent.click(screen.getByTestId("ontology-graph-card"));
 
+    // The whole ontology of a network up to the backend's page size comes in the first request.
+    expect(getKnowledgeNetworkOverviewGraph).toHaveBeenNthCalledWith(1, "network-1", {
+      edgeLimit: 1_000,
+      nodeLimit: 500,
+    });
     await waitFor(() =>
       expect(getKnowledgeNetworkOverviewGraph).toHaveBeenNthCalledWith(2, "network-1", {
-        edgeLimit: 120,
+        edgeLimit: 1_000,
         expandDepth: 1,
         focusObjectTypeId: "object-denied-resource",
-        nodeLimit: 60,
+        nodeLimit: 500,
       }),
     );
     expect(getKnowledgeNetworkObjectTypeDetail).not.toHaveBeenCalled();

@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 
 import { OntologyGraphView } from "@/modules/knowledge-network/components/preview/OntologyGraphView";
 import { OntologyInspectorPanel } from "@/modules/knowledge-network/components/preview/OntologyInspectorPanel";
+import { typeColors } from "@/modules/knowledge-network/components/preview/ontology-graph-data";
 import {
   getKnowledgeNetworkConceptGroup,
   listKnowledgeNetworkConceptGroups,
@@ -115,7 +116,12 @@ export function OntologyGraphCard({
     };
   }, [controlled, networkId, selectionControlled]);
 
-  const objectTypes = controlled ? objectTypesProp : fetchedObjectTypes;
+  const rawObjectTypes = controlled ? objectTypesProp : fetchedObjectTypes;
+  // One colour per type for the graph and the panel beside it: its own, or a palette slot.
+  const objectTypes = useMemo(() => {
+    const colors = typeColors(rawObjectTypes);
+    return rawObjectTypes.map((item) => ({ ...item, color: colors.get(item.id) ?? item.color }));
+  }, [rawObjectTypes]);
   const relationTypes = controlled ? relationTypesProp : fetchedRelationTypes;
 
   const graph = useMemo(

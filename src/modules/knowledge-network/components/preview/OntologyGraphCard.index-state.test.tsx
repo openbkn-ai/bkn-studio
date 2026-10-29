@@ -43,15 +43,18 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
 
 vi.mock("./OntologyGraphView", () => ({
   OntologyGraphView: ({
+    graph,
     groupNames,
     groupOf,
     indexedIds,
   }: {
+    graph: { nodes: { color: string }[] };
     groupNames: Map<string, string>;
     groupOf: Map<string, string>;
     indexedIds: Set<string>;
   }) => (
     <div
+      data-colors={graph.nodes.map((node) => node.color).join(",")}
       data-group-names={[...groupNames].flat().join(",")}
       data-groups={[...groupOf].flat().join(",")}
       data-testid="indexed-object-types"
@@ -62,8 +65,12 @@ vi.mock("./OntologyGraphView", () => ({
 }));
 
 vi.mock("./OntologyInspectorPanel", () => ({
-  OntologyInspectorPanel: () => null,
+  OntologyInspectorPanel: ({ objectTypes }: { objectTypes: { color?: string }[] }) => (
+    <div data-testid="inspector-colors">{objectTypes.map((item) => item.color).join(",")}</div>
+  ),
 }));
+
+import { GRAPH_PALETTE } from "@/modules/knowledge-network/lib/graph-style";
 
 import { OntologyGraphCard } from "./OntologyGraphCard";
 
@@ -129,6 +136,11 @@ describe("OntologyGraphCard resource authorization regression", () => {
       "object-denied-resource",
     );
     expect(getCatalogResources).not.toHaveBeenCalled();
+    // A type left at the mapping's default blue takes a palette colour, in the graph and in the
+    // panel beside it alike; a type with its own colour keeps it.
+    const colors = `${GRAPH_PALETTE[0]},#52c41a`;
+    expect(screen.getByTestId("indexed-object-types").dataset.colors).toBe(colors);
+    expect(screen.getByTestId("inspector-colors")).toHaveTextContent(colors);
   });
 
   it("uses memberships already returned with overview nodes for logical grouping", async () => {

@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
+import { typeColors } from "@/modules/knowledge-network/components/preview/ontology-graph-data";
 import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import {
   getKnowledgeNetworkObjectTypeDetail,
@@ -41,10 +42,13 @@ type OverviewOntologyBlockProps = {
 };
 
 const DEFAULT_COLOR = "#2e68ff";
-const OVERVIEW_NODE_LIMIT = 60;
-const OVERVIEW_EDGE_LIMIT = 120;
-const MAX_MERGED_NODES = 200;
-const MAX_MERGED_EDGES = 500;
+// The backend's largest page: a network of up to 500 object types comes in one request, with
+// every relation among them. Larger networks page on with "load more".
+const OVERVIEW_NODE_LIMIT = 500;
+const OVERVIEW_EDGE_LIMIT = 1_000;
+// What the graph draws with a force layout; past it the arrangement becomes a grid.
+const MAX_MERGED_NODES = 1_000;
+const MAX_MERGED_EDGES = 2_000;
 const DETAIL_CONCURRENCY = 6;
 
 const EMPTY_GRAPH: KnowledgeNetworkPreviewGraph = { edges: [], nodes: [] };
@@ -158,10 +162,12 @@ export function OverviewOntologyBlock({
     };
   }, [networkId]);
 
+  // The same colour as the graph gives each type: its own, or a palette slot.
+  const colorOfType = useMemo(() => typeColors(graph.nodes), [graph.nodes]);
   const objectTypes = useMemo<KnowledgeNetworkObjectTypeRecord[]>(
     () =>
       graph.nodes.map((node) => ({
-        color: node.color || DEFAULT_COLOR,
+        color: colorOfType.get(node.id) ?? DEFAULT_COLOR,
         conceptGroupIds: node.conceptGroups?.map((group) => group.id) ?? [],
         conceptGroupNames: node.conceptGroups?.map((group) => group.name) ?? [],
         description: "",
@@ -174,7 +180,7 @@ export function OverviewOntologyBlock({
         updateTime: "",
         updaterName: "",
       })),
-    [graph.nodes],
+    [colorOfType, graph.nodes],
   );
   const relationTypes = useMemo<KnowledgeNetworkRelationTypeRecord[]>(() => {
     const names = new Map(graph.nodes.map((node) => [node.id, node.name]));
