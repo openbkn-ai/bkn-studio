@@ -229,6 +229,28 @@ describe("IndexReadiness", () => {
     expect(section().getAllByText("构建中")).toHaveLength(2);
   });
 
+  it("offers no build again when only settings the draft must give are missing", async () => {
+    const unconfigurable = item("lots", {
+      build: { outcome: "not_configurable", reason: "incremental_fields", time: 1 },
+      missing: ["incremental_fields"],
+      state: "not_configured",
+    });
+    getOntologyIndexMock.mockResolvedValueOnce(readiness([item("customers"), unconfigurable]));
+    const view = renderIndex();
+    expect(await screen.findByRole("button", { name: "重新构建" })).toBeDisabled();
+    view.unmount();
+
+    // A table the person who confirmed may not build in can be retried once access is granted.
+    getOntologyIndexMock.mockResolvedValueOnce(
+      readiness([
+        unconfigurable,
+        item("bom", { build: { outcome: "no_permission", time: 1 }, state: "not_built" }),
+      ]),
+    );
+    renderIndex();
+    expect(await screen.findByRole("button", { name: "重新构建" })).toBeEnabled();
+  });
+
   it("explains a refused build, and offers nothing to others", async () => {
     getOntologyIndexMock.mockResolvedValue(
       readiness([item("customers", { build: null, state: "stale" })]),
