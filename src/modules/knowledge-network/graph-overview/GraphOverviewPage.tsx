@@ -351,9 +351,11 @@ export function GraphOverviewScene() {
     setSelectedId(null);
     setPicked(EMPTY_SET);
     setPartial({ nodes: [], edges: [] });
+    // A load replaced by a newer one writes nothing more: the page belongs to the newer one.
+    const current = () => abortRef.current === controller;
     let latest: { nodes: OverviewNode[]; edges: OverviewEdge[] } | null = null;
     const flush = () => {
-      if (latest) setPartial(latest);
+      if (latest && current()) setPartial(latest);
       latest = null;
     };
     const timer = window.setInterval(flush, PARTIAL_DRAW_MS);
@@ -365,7 +367,9 @@ export function GraphOverviewScene() {
         limits,
         runCypher: (query, signal) => client.runCypher(query.query, signal, query.parameters),
         signal: controller.signal,
-        onProgress: setProgress,
+        onProgress: (progress) => {
+          if (current()) setProgress(progress);
+        },
         onPartial: (nodes, edges) => {
           latest = { nodes, edges };
         },
@@ -376,6 +380,7 @@ export function GraphOverviewScene() {
       setPhase("ready");
       void writeOverviewCache(networkId, { signature, data: result });
     } catch (cause) {
+      if (!current()) return;
       if (controller.signal.aborted) {
         // Stopped by the user: what arrived stays on the canvas.
         flush();
@@ -386,8 +391,10 @@ export function GraphOverviewScene() {
       setPhase("error");
     } finally {
       window.clearInterval(timer);
-      setProgress(null);
-      if (abortRef.current === controller) abortRef.current = null;
+      if (current()) {
+        setProgress(null);
+        abortRef.current = null;
+      }
     }
   }, [client, labels, limits, metas, networkId, relations, signature]);
 
@@ -467,13 +474,19 @@ export function GraphOverviewScene() {
     if (id) setPicked(EMPTY_SET);
   }, []);
 
-  // The drawer reads the instance in full: the overview itself only holds keys and names.
+  // The drawer reads the instance in full: the overview itself only holds keys and names. It
+  // follows the selection, not the map of points, which a load in progress replaces every
+  // PARTIAL_DRAW_MS; read through a ref, the map would otherwise reset the drawer and fetch the
+  // instance again each time.
+  const nodeByIdRef = useRef(nodeById);
+  nodeByIdRef.current = nodeById;
+  const selectedOnCanvas = selectedId !== null && nodeById.has(selectedId);
   useEffect(() => {
     if (!selectedId) {
       setDrawerNode(null);
       return;
     }
-    const node = nodeById.get(selectedId);
+    const node = nodeByIdRef.current.get(selectedId);
     const meta = node ? metas[node.otId] : undefined;
     if (!node || !meta) return;
     setDrawerNode({
@@ -494,7 +507,7 @@ export function GraphOverviewScene() {
     return () => {
       cancelled = true;
     };
-  }, [client, labels, metas, nodeById, selectedId]);
+  }, [client, labels, metas, selectedId, selectedOnCanvas]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -532,11 +545,20 @@ export function GraphOverviewScene() {
     return [];
   }, [neighbourhood, picked, selectedId]);
 
-  // Read again as the selection changes: the page that takes the instances may let people set it.
-  const handOverMax = useMemo(
-    () => (handOverTarget && handOverIds.length > 0 ? handOverLimit(handOverTarget) : 0),
-    [handOverIds, handOverTarget],
-  );
+  // Read again as the selection changes and when the page is back in front: the limit may have
+  // been raised on the target page in another tab meanwhile.
+  const [handOverMax, setHandOverMax] = useState(0);
+  useEffect(() => {
+    if (!handOverTarget) return undefined;
+    const read = () => setHandOverMax(handOverLimit(handOverTarget));
+    read();
+    window.addEventListener("focus", read);
+    document.addEventListener("visibilitychange", read);
+    return () => {
+      window.removeEventListener("focus", read);
+      document.removeEventListener("visibilitychange", read);
+    };
+  }, [handOverIds, handOverTarget]);
   const tooManyText = useMemo(() => {
     if (!handOverTarget) return "";
     const tooMany = t("knowledgeNetwork.graphOverview.handOver.tooMany", { limit: handOverMax });
@@ -547,7 +569,10 @@ export function GraphOverviewScene() {
 
   const handOver = useCallback(() => {
     if (!handOverTarget || handOverIds.length === 0) return;
-    if (handOverIds.length > handOverMax) {
+    // Once more at the click, so a limit changed a moment ago applies.
+    const max = handOverLimit(handOverTarget);
+    if (max !== handOverMax) setHandOverMax(max);
+    if (handOverIds.length > max) {
       message.warning(tooManyText);
       return;
     }

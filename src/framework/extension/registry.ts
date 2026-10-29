@@ -87,7 +87,7 @@ export type WorkspaceNavEntry = {
 
 /**
  * A button on the graph overview that opens one of the extension's pages, in a new tab, with the
- * instances selected there. Like a workspace action it is shown whatever the licence says: the
+ * instances selected there. The overview has room for one: it shows the first one registered. Like a workspace action it is shown whatever the licence says: the
  * page it opens carries the capability guard.
  */
 export type InstanceHandOver = {

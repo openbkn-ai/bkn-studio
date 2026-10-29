@@ -48,6 +48,8 @@ export const graphOverviewPart = {
     },
     neighbours: {
       title: "{{name}} · {{count}} 个邻居",
+      title_one: "{{name}} · {{count}} 个邻居",
+      title_other: "{{name}} · {{count}} 个邻居",
       more: "另有 {{count}} 种关系",
       more_one: "另有 {{count}} 种关系",
       more_other: "另有 {{count}} 种关系",

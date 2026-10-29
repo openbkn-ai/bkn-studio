@@ -50,6 +50,8 @@ export const graphOverviewPart = {
     },
     neighbours: {
       title: "{{name}} · {{count}} neighbours",
+      title_one: "{{name}} · {{count}} neighbour",
+      title_other: "{{name}} · {{count}} neighbours",
       more: "{{count}} more relation types",
       more_one: "{{count}} more relation type",
       more_other: "{{count}} more relation types",
