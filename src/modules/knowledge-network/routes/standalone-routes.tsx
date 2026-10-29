@@ -18,6 +18,7 @@ import {
   ConceptGroupCreatePage,
   ConceptGroupDetailPage,
   ConceptGroupEditPage,
+  GraphOverviewPage,
   MetricCreatePage,
   MetricDetailPage,
   MetricEditPage,
@@ -108,6 +109,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       titleKey: "knowledgeNetwork.cypherQuery.title",
     },
     workspaceSectionPage("experience-cypher"),
+  ),
+  createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/graph-overview",
+    {
+      descriptionKey: "knowledgeNetwork.graphOverview.description",
+      titleKey: "knowledgeNetwork.graphOverview.title",
+    },
+    <GraphOverviewPage />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/concept-groups",

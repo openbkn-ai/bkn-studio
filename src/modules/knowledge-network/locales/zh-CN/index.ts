@@ -19,6 +19,7 @@ import { propertyAuthorizationPart } from "./property-authorization";
 import { agentChatPart } from "./agent-chat";
 import { contextLoaderPanelPart } from "./context-loader-panel";
 import { cypherQueryPart } from "./cypher-query";
+import { graphOverviewPart } from "./graph-overview";
 import { sampleExperiencePart } from "./sample-experience";
 
 export const knowledgeNetworkZhCN = {
@@ -37,6 +38,7 @@ export const knowledgeNetworkZhCN = {
     ...agentChatPart,
     ...contextLoaderPanelPart,
     ...cypherQueryPart,
+    ...graphOverviewPart,
     ...sampleExperiencePart,
   },
 } as const;

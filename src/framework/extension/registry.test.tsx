@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
+  extensionInstanceHandOvers,
   extensionRoutes,
   extensionStandaloneRoutes,
   extensionWorkspaceActions,
@@ -178,6 +179,29 @@ describe("extension registry", () => {
       { key: "first:open", labelKey: "first.open" },
       { key: "second:open", labelKey: "second.open" },
     ]);
+  });
+
+  it("lists instance hand-overs under distinct keys, none in a community build", () => {
+    expect(extensionInstanceHandOvers()).toEqual([]);
+    registerExtension({
+      capability: "demo_capability",
+      id: "first",
+      instanceHandOvers: [
+        {
+          id: "open",
+          labelKey: "first.open",
+          maxInstances: 10,
+          path: (networkId) => `/demo/${networkId}`,
+          url: (pageUrl, ids) => `${pageUrl}#ids=${ids.join(",")}`,
+        },
+      ],
+    });
+
+    const [handOver] = extensionInstanceHandOvers();
+    expect(handOver.key).toBe("first:open");
+    expect(handOver.url("https://studio/demo/n1", ["a-1", "b-2"], [])).toBe(
+      "https://studio/demo/n1#ids=a-1,b-2",
+    );
   });
 
   it("adds copy without overriding what is already there", () => {

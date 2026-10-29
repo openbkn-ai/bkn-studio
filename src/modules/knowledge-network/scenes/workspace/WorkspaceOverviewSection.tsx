@@ -33,6 +33,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/preview/OverviewOntologyBlock";
+import { WorkspaceGraphOverviewAction } from "@/modules/knowledge-network/scenes/workspace/WorkspaceGraphOverviewAction";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import type {
@@ -189,6 +190,7 @@ export function WorkspaceOverviewSection({
               {extensionWorkspaceActions().map((action) => (
                 <ExtensionActionButton action={action} key={action.key} networkId={networkId} />
               ))}
+              <WorkspaceGraphOverviewAction networkId={networkId} />
               {detail && canAuthorize ? (
                 <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
                   {t("knowledgeNetwork.authorizeAction")}
