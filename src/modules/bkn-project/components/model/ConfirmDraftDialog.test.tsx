@@ -177,7 +177,7 @@ describe("ConfirmDraft", () => {
     // The dialog stays open with what to accept, rather than "try again later".
     expect(await dialog.findByText("还有 1 个需求冲突没有裁决，仍然确认")).toBeInTheDocument();
     expect(messageMock.warning).toHaveBeenCalledWith(
-      "还有需求冲突没有裁决，请在弹窗中确认是否仍然确认",
+      "还有需求冲突没有裁决。勾选下方的「仍然确认」后再确认草稿。",
     );
     expect(messageMock.error).not.toHaveBeenCalled();
     await waitFor(() => expect(okButton()).toBeDisabled());

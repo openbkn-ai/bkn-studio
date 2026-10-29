@@ -645,7 +645,7 @@ export const bknProjectZhCN = {
       Draft: {
         UndecidedNotAccepted: "有新的未决项，请查看后再确认",
         PartialNotAccepted: "有起草时读取不到的表，请查看后再确认",
-        ConflictsNotAccepted: "还有需求冲突没有裁决，请在弹窗中确认是否仍然确认",
+        ConflictsNotAccepted: "还有需求冲突没有裁决。勾选下方的「仍然确认」后再确认草稿。",
         HasPending: "还有需要先处理的项，请在“变更”中处理后再确认",
         Stale: "草稿刚被修改过，已重新加载，请查看后再确认",
         NotReady: "草稿还没有准备好，请稍后再试",
