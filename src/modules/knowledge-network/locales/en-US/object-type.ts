@@ -168,6 +168,7 @@ export const objecttypePart = {
   objectTypeGraphMetricAtomic: "Atomic metric",
   objectTypeGraphMetricDerived: "Derived metric",
   objectTypeGraphMetricComposite: "Composite metric",
+  objectTypeGraphExpandMoreMetrics: "{{hidden}} more {{type}} nodes; click to expand",
   objectTypeGraphZoomIn: "Zoom in",
   objectTypeGraphZoomOut: "Zoom out",
   objectTypeGraphFit: "Fit graph",

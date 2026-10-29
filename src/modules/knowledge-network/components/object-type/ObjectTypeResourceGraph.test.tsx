@@ -380,7 +380,7 @@ describe("ObjectTypeResourceGraph", () => {
     });
     expect(mocks.listMetrics).toHaveBeenCalledWith(
       "network-1",
-      { limit: 12, offset: 0, ownerObjectTypeId: "order" },
+      { limit: 50, offset: 0, ownerObjectTypeId: "order" },
       { skipErrorToast: true },
     );
     expect(mocks.listActions).toHaveBeenCalledWith("network-1", {
@@ -1164,6 +1164,68 @@ describe("ObjectTypeResourceGraph", () => {
       expect(within(legend).getByText(label)).toBeInTheDocument(),
     );
     expect(document.querySelector("[class*=metricDependencyEdge]")).toHaveAttribute("marker-end");
+  });
+
+  it("loads all metric pages and progressively reveals the dependency layout", async () => {
+    const derivedMetric = {
+      ...metric,
+      definition: {
+        ...metric.definition,
+        id: "average-order-amount",
+        metric_type: "derived",
+        name: "平均订单金额",
+        specification: {
+          base_metric: { metric_id: "order-amount", version: 1 },
+          kind: "derived",
+        },
+        version: 2,
+      },
+    } as ObjectMetricRecordV1;
+    const compositeMetrics = Array.from({ length: 49 }, (_, index) => ({
+      ...metric,
+      definition: {
+        ...metric.definition,
+        id: `composite-${index + 1}`,
+        metric_type: "composite",
+        name: `复合指标 ${String(index + 1).padStart(2, "0")}`,
+      },
+    })) as ObjectMetricRecordV1[];
+    mocks.listMetrics.mockImplementation((_networkId: string, query: { offset: number }) =>
+      Promise.resolve(
+        query.offset === 0
+          ? { entries: [derivedMetric, ...compositeMetrics], total_count: 51 }
+          : { entries: [metric], total_count: 51 },
+      ),
+    );
+    renderGraph();
+
+    fireEvent.click(await screen.findByRole("button", { name: "展开 对象指标 51" }));
+
+    expect(mocks.listMetrics).toHaveBeenNthCalledWith(
+      1,
+      "network-1",
+      { limit: 50, offset: 0, ownerObjectTypeId: "order" },
+      { skipErrorToast: true },
+    );
+    expect(mocks.listMetrics).toHaveBeenNthCalledWith(
+      2,
+      "network-1",
+      { limit: 50, offset: 50, ownerObjectTypeId: "order" },
+      { skipErrorToast: true },
+    );
+    const atomicNode = screen.getByRole("button", { name: "对象指标 订单金额" });
+    const derivedNode = screen.getByRole("button", { name: "对象指标 平均订单金额" });
+    const x = (node: HTMLElement) =>
+      Number(node.getAttribute("transform")?.match(/\(([-\d.]+)/)?.[1]);
+    expect(x(atomicNode)).toBeLessThan(x(derivedNode));
+    expect(document.querySelectorAll("[class*=metricDependencyEdge]")).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^对象指标 / })).toHaveLength(8);
+
+    fireEvent.click(screen.getByRole("button", { name: "复合对象指标还有 43 个，点击展开" }));
+    expect(
+      screen.getByRole("button", { name: "复合对象指标还有 37 个，点击展开" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^对象指标 / })).toHaveLength(14);
   });
 
   it("uses the metric dependency layout when expanding metrics in the overview", async () => {
