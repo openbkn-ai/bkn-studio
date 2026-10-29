@@ -96,6 +96,9 @@ export function refusalText(
   return t(`bknProject.errors.${code}`);
 }
 
+/** Reasons said with the count of what waits; without a count they fall back to the general text. */
+const COUNTED_REASONS = new Set(["needs_identity", "unadopted_ends"]);
+
 const BLOCKED_REASONS = new Set([
   "archived",
   "branch_not_v3",
@@ -115,6 +118,9 @@ export function blockedText(t: TFunction, reason: string | undefined, blockers: 
     return t("bknProject.confirm.blocked.other");
   }
   const count = blockers.find((blocker) => blocker.code === reason)?.count ?? 0;
+  if (COUNTED_REASONS.has(reason) && !count) {
+    return t("bknProject.confirm.blocked.other");
+  }
   return t(`bknProject.confirm.blocked.${reason}`, { count });
 }
 
@@ -192,6 +198,9 @@ export function missingFieldsText(t: TFunction, missing: string[]) {
   const fields = missing
     .filter((field) => INDEX_FIELDS.has(field))
     .map((field) => t(`bknProject.release.index.field.${field}`));
+  if (!fields.length) {
+    return t("bknProject.release.index.outcome.notConfigurable.other");
+  }
   return t("bknProject.release.index.missing", { fields: listText(t, fields) });
 }
 

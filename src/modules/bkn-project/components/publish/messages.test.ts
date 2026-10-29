@@ -48,6 +48,8 @@ const indexItem = (overrides: Partial<IndexItem>): IndexItem => ({
 
 // A key i18next could not find comes back as itself; a translated text never starts with the module.
 const translated = (text: string) => !text.startsWith("bknProject.") && text.trim() !== "";
+// A key missing in zh-CN falls back to en-US, so a Chinese text must hold Chinese.
+const chinese = (text: string) => /[\u4e00-\u9fff]/.test(text);
 
 describe("publish messages", () => {
   it("explains every known refusal in both languages, never with bkn-project's own text", () => {
@@ -57,6 +59,8 @@ describe("publish messages", () => {
         expect.soft(translated(text), `${code}: ${text}`).toBe(true);
         expect.soft(text).not.toContain("raw");
       }
+      const zhText = refusalText(zh, refusal(`BknProject.${code}`), "bknProject.confirm.failed");
+      expect.soft(chinese(zhText), `${code} in zh-CN: ${zhText}`).toBe(true);
     }
   });
 
@@ -89,6 +93,8 @@ describe("publish messages", () => {
     expect(blockedText(en, "needs_identity", [{ ...blockers[0], count: 1 }])).toBe(
       "1 adopted object type still needs an identity",
     );
+    // Without a count, the reason is not said as "0 object types".
+    expect(blockedText(zh, "unadopted_ends", [])).toBe("现在还不能确认");
     for (const reason of [
       "not_owner",
       "running",
@@ -138,6 +144,7 @@ describe("publish messages", () => {
     expect(missingFieldsText(zh, ["primary_key_fields", "incremental_fields"])).toBe(
       "缺少：唯一标识字段、更新字段",
     );
+    expect(missingFieldsText(zh, ["something_new"])).toBe("这张表缺少构建所需的设置。");
   });
 
   it("explains each build outcome without the raw reason", () => {
