@@ -40,7 +40,10 @@ import type {
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRelationTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
+import type {
+  ObjectMetricRecordV1,
+  ObjectMetricTypeV1,
+} from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import { getReadableActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
@@ -73,6 +76,8 @@ type ActionSemanticPresentation = {
 type ActionSemanticLoadResult =
   | { presentation: ActionSemanticPresentation }
   | { action: KnowledgeNetworkActionTypeRecord; error: unknown };
+type MetricLayoutItem =
+  { kind: "metric"; metric: ObjectMetricRecordV1 } | { kind: "more"; type: ObjectMetricTypeV1 };
 export type ObjectTypeGraphSelectedResource =
   | { kind: "relation"; value: KnowledgeNetworkRelationTypeRecord }
   | { kind: "metric"; value: ObjectMetricRecordV1 }
@@ -130,6 +135,14 @@ const GRAPH_HEIGHT = 620;
 const INITIAL_VIEW: ViewBox = { height: GRAPH_HEIGHT, width: GRAPH_WIDTH, x: 0, y: 0 };
 const CENTER: Point = { x: GRAPH_WIDTH / 2, y: GRAPH_HEIGHT / 2 };
 const PAGE_SIZE = 12;
+const METRIC_SCAN_PAGE_SIZE = 50;
+const MAX_GRAPH_METRICS = 200;
+const METRIC_VISIBLE_BATCH_SIZE = 6;
+const INITIAL_METRIC_VISIBLE_COUNTS: Record<ObjectMetricTypeV1, number> = {
+  atomic: METRIC_VISIBLE_BATCH_SIZE,
+  composite: METRIC_VISIBLE_BATCH_SIZE,
+  derived: METRIC_VISIBLE_BATCH_SIZE,
+};
 const OVERVIEW_LIMIT = 4;
 const MIN_ZOOM = 0.65;
 const MAX_ZOOM = 2.5;
@@ -230,6 +243,10 @@ function metricNodeKey(metric: ObjectMetricRecordV1) {
   return `metric:${metric.definition.id}:${metric.definition.version}`;
 }
 
+function moreMetricNodeKey(type: ObjectMetricTypeV1) {
+  return `metric-more:${type}`;
+}
+
 function directLoadedMetricReferences(metric: ObjectMetricRecordV1) {
   return metric.definition.specification ? directObjectMetricReferences(metric) : [];
 }
@@ -240,7 +257,11 @@ const metricTypeOrder: Record<ObjectMetricRecordV1["definition"]["metric_type"],
   composite: 2,
 };
 
-function layoutMetrics(metrics: ObjectMetricRecordV1[], sourcePosition: Point) {
+function layoutMetrics(
+  metrics: ObjectMetricRecordV1[],
+  hiddenCounts: Record<ObjectMetricTypeV1, number>,
+  sourcePosition: Point,
+) {
   const positions = new Map<string, Point>();
   const metricsByVersion = new Map(
     metrics.map((metric) => [
@@ -270,7 +291,7 @@ function layoutMetrics(metrics: ObjectMetricRecordV1[], sourcePosition: Point) {
     return depth;
   };
 
-  const columns = new Map<number, ObjectMetricRecordV1[]>();
+  const columns = new Map<number, MetricLayoutItem[]>();
   const orderedMetrics = [...metrics].sort(
     (left, right) =>
       metricTypeOrder[left.definition.metric_type] -
@@ -283,7 +304,15 @@ function layoutMetrics(metrics: ObjectMetricRecordV1[], sourcePosition: Point) {
   );
   orderedMetrics.forEach((metric) => {
     const depth = depthFor(metric);
-    columns.set(depth, [...(columns.get(depth) ?? []), metric]);
+    columns.set(depth, [...(columns.get(depth) ?? []), { kind: "metric", metric }]);
+  });
+  (["atomic", "derived", "composite"] as const).forEach((type) => {
+    if (!hiddenCounts[type]) return;
+    const typeDepths = orderedMetrics
+      .filter((metric) => metric.definition.metric_type === type)
+      .map((metric) => depths.get(metricNodeKey(metric)) ?? 1);
+    const depth = typeDepths.length ? Math.max(...typeDepths) : metricTypeOrder[type] + 1;
+    columns.set(depth, [...(columns.get(depth) ?? []), { kind: "more", type }]);
   });
   const sortedDepths = [...columns.keys()].sort((left, right) => left - right);
   const columnGap = Math.min(
@@ -291,8 +320,9 @@ function layoutMetrics(metrics: ObjectMetricRecordV1[], sourcePosition: Point) {
     (GRAPH_WIDTH - sourcePosition.x - 100) / Math.max(1, sortedDepths.length),
   );
   sortedDepths.forEach((depth, columnIndex) => {
-    const parentY = (metric: ObjectMetricRecordV1) => {
-      const parentPositions = directLoadedMetricReferences(metric)
+    const parentY = (item: MetricLayoutItem) => {
+      if (item.kind !== "metric") return undefined;
+      const parentPositions = directLoadedMetricReferences(item.metric)
         .map(
           (reference) =>
             metricsByVersion.get(objectMetricVersionKey(reference.metric_id, reference.version)) ??
@@ -312,16 +342,21 @@ function layoutMetrics(metrics: ObjectMetricRecordV1[], sourcePosition: Point) {
         return leftParentY - rightParentY;
       if (leftParentY !== undefined && rightParentY === undefined) return -1;
       if (rightParentY !== undefined && leftParentY === undefined) return 1;
+      if (left.kind === "more" || right.kind === "more") return left.kind === "more" ? 1 : -1;
       return (
-        (metricOrder.get(metricNodeKey(left)) ?? 0) - (metricOrder.get(metricNodeKey(right)) ?? 0)
+        (metricOrder.get(metricNodeKey(left.metric)) ?? 0) -
+        (metricOrder.get(metricNodeKey(right.metric)) ?? 0)
       );
     });
     const rowGap = Math.min(84, (GRAPH_HEIGHT - 120) / Math.max(1, items.length - 1));
-    items.forEach((metric, rowIndex) => {
-      positions.set(metricNodeKey(metric), {
-        x: sourcePosition.x + columnGap * (columnIndex + 1),
-        y: GRAPH_HEIGHT / 2 + (rowIndex - (items.length - 1) / 2) * rowGap,
-      });
+    items.forEach((item, rowIndex) => {
+      positions.set(
+        item.kind === "metric" ? metricNodeKey(item.metric) : moreMetricNodeKey(item.type),
+        {
+          x: sourcePosition.x + columnGap * (columnIndex + 1),
+          y: GRAPH_HEIGHT / 2 + (rowIndex - (items.length - 1) / 2) * rowGap,
+        },
+      );
     });
   });
   return positions;
@@ -452,6 +487,7 @@ export function ObjectTypeResourceGraph({
   const [expandedGroup, setExpandedGroup] = useState<ExpandableGroup | null>(null);
   const [relations, setRelations] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
   const [metrics, setMetrics] = useState<ObjectMetricRecordV1[]>([]);
+  const [metricVisibleCounts, setMetricVisibleCounts] = useState(INITIAL_METRIC_VISIBLE_COUNTS);
   const [actions, setActions] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
   const [totals, setTotals] = useState({ actions: 0, metrics: 0, relations: 0 });
   const [loading, setLoading] = useState(true);
@@ -495,6 +531,7 @@ export function ObjectTypeResourceGraph({
     setNodePositions({});
     setView(INITIAL_VIEW);
     setExpandedGroup(null);
+    setMetricVisibleCounts(INITIAL_METRIC_VISIBLE_COUNTS);
 
     const reportError = (key: GraphError["key"], error: unknown) => {
       if (!active) return;
@@ -550,22 +587,32 @@ export function ObjectTypeResourceGraph({
 
     const metricRequest =
       metricsAvailable && resourceScope === "all"
-        ? listObjectMetricsV1(
-            networkId,
-            { limit: PAGE_SIZE, offset: 0, ownerObjectTypeId: objectType.id },
-            { skipErrorToast: true },
-          )
-            .then((result) => {
+        ? (async () => {
+            const loaded: ObjectMetricRecordV1[] = [];
+            let total = 0;
+            do {
+              const result = await listObjectMetricsV1(
+                networkId,
+                {
+                  limit: Math.min(METRIC_SCAN_PAGE_SIZE, MAX_GRAPH_METRICS - loaded.length),
+                  offset: loaded.length,
+                  ownerObjectTypeId: objectType.id,
+                },
+                { skipErrorToast: true },
+              );
               if (!active) return;
-              setMetrics(result.entries);
-              setTotals((current) => ({ ...current, metrics: result.total_count }));
-            })
-            .catch((error: unknown) => {
-              if (!active) return;
-              setMetrics([]);
-              setTotals((current) => ({ ...current, metrics: 0 }));
-              reportError("metrics", error);
-            })
+              total = result.total_count;
+              loaded.push(...result.entries);
+              if (result.entries.length === 0) break;
+            } while (loaded.length < total && loaded.length < MAX_GRAPH_METRICS);
+            setMetrics(loaded);
+            setTotals((current) => ({ ...current, metrics: total }));
+          })().catch((error: unknown) => {
+            if (!active) return;
+            setMetrics([]);
+            setTotals((current) => ({ ...current, metrics: 0 }));
+            reportError("metrics", error);
+          })
         : Promise.resolve().then(() => {
             if (!active) return;
             setMetrics([]);
@@ -698,9 +745,82 @@ export function ObjectTypeResourceGraph({
     () => (section === "all" ? relations.slice(0, OVERVIEW_LIMIT) : relations),
     [relations, section],
   );
+  const metricVisibility = useMemo(() => {
+    const orderedMetrics = [...metrics].sort(
+      (left, right) =>
+        metricTypeOrder[left.definition.metric_type] -
+          metricTypeOrder[right.definition.metric_type] ||
+        left.definition.name.localeCompare(right.definition.name) ||
+        left.definition.id.localeCompare(right.definition.id),
+    );
+    const metricsByType: Record<ObjectMetricTypeV1, ObjectMetricRecordV1[]> = {
+      atomic: [],
+      composite: [],
+      derived: [],
+    };
+    const metricsByVersion = new Map(
+      metrics.map((item) => [
+        objectMetricVersionKey(item.definition.id, item.definition.version),
+        item,
+      ]),
+    );
+    const metricsById = new Map(metrics.map((item) => [item.definition.id, item]));
+    orderedMetrics.forEach((item) => metricsByType[item.definition.metric_type].push(item));
+    const visibleKeys = new Set<string>();
+    const revealWithDependencies = (item: ObjectMetricRecordV1): void => {
+      const key = metricNodeKey(item);
+      if (visibleKeys.has(key)) return;
+      visibleKeys.add(key);
+      directLoadedMetricReferences(item).forEach((reference) => {
+        const dependency =
+          metricsByVersion.get(objectMetricVersionKey(reference.metric_id, reference.version)) ??
+          metricsById.get(reference.metric_id);
+        if (dependency) revealWithDependencies(dependency);
+      });
+    };
+    (["atomic", "derived", "composite"] as const).forEach((type) => {
+      metricsByType[type].slice(0, metricVisibleCounts[type]).forEach(revealWithDependencies);
+    });
+    if (selectedMetric) revealWithDependencies(selectedMetric);
+    const visibleMetrics = orderedMetrics.filter((item) => visibleKeys.has(metricNodeKey(item)));
+    const hiddenCounts = {
+      atomic: 0,
+      composite: 0,
+      derived: 0,
+    } satisfies Record<ObjectMetricTypeV1, number>;
+    (["atomic", "derived", "composite"] as const).forEach((type) => {
+      hiddenCounts[type] = metricsByType[type].filter(
+        (item) => !visibleKeys.has(metricNodeKey(item)),
+      ).length;
+    });
+    return { hiddenCounts, metricsByType, visibleMetrics };
+  }, [metricVisibleCounts, metrics, selectedMetric]);
+  useEffect(() => {
+    if (!selectedMetric) return;
+    const type = selectedMetric.definition.metric_type;
+    const orderedMetrics = [...metrics]
+      .filter((item) => item.definition.metric_type === type)
+      .sort(
+        (left, right) =>
+          left.definition.name.localeCompare(right.definition.name) ||
+          left.definition.id.localeCompare(right.definition.id),
+      );
+    const selectedIndex = orderedMetrics.findIndex(
+      (item) => metricNodeKey(item) === metricNodeKey(selectedMetric),
+    );
+    if (selectedIndex < 0) return;
+    setMetricVisibleCounts((current) =>
+      current[type] > selectedIndex ? current : { ...current, [type]: selectedIndex + 1 },
+    );
+  }, [metrics, selectedMetric]);
   const metricItems = useMemo(
-    () => (section === "all" ? (expandedGroup === "metrics" ? metrics : []) : metrics),
-    [expandedGroup, metrics, section],
+    () =>
+      section === "all"
+        ? expandedGroup === "metrics"
+          ? metricVisibility.visibleMetrics
+          : []
+        : metricVisibility.visibleMetrics,
+    [expandedGroup, metricVisibility.visibleMetrics, section],
   );
   const actionItems = useMemo(
     () => (section === "all" ? (expandedGroup === "actions" ? actions : []) : actions),
@@ -834,12 +954,13 @@ export function ObjectTypeResourceGraph({
     });
 
     if (section === "metrics") {
-      layoutMetrics(metricItems, { x: 110, y: CENTER.y }).forEach((point, key) =>
-        result.set(key, point),
-      );
+      layoutMetrics(metricItems, metricVisibility.hiddenCounts, {
+        x: 110,
+        y: CENTER.y,
+      }).forEach((point, key) => result.set(key, point));
     } else if (expandedGroup === "metrics") {
-      layoutMetrics(metricItems, metricGroupDisplayPosition).forEach((point, key) =>
-        result.set(key, point),
+      layoutMetrics(metricItems, metricVisibility.hiddenCounts, metricGroupDisplayPosition).forEach(
+        (point, key) => result.set(key, point),
       );
     }
 
@@ -859,6 +980,7 @@ export function ObjectTypeResourceGraph({
     expandedGroup,
     metricGroupDisplayPosition,
     metricItems,
+    metricVisibility.hiddenCounts,
     relationGroups,
     section,
   ]);
@@ -1345,6 +1467,7 @@ export function ObjectTypeResourceGraph({
               onChange={(value) => {
                 setSection(value as GraphSection);
                 setExpandedGroup(null);
+                setMetricVisibleCounts(INITIAL_METRIC_VISIBLE_COUNTS);
                 setFocusedAction(undefined);
                 setExpandedActions([]);
                 setActionPresentations({});
@@ -1430,6 +1553,17 @@ export function ObjectTypeResourceGraph({
           )}
           showIcon
           type={allPrimaryRequestsFailed ? "error" : "warning"}
+        />
+      ) : null}
+
+      {totals.metrics > metrics.length ? (
+        <Alert
+          message={t("knowledgeNetwork.objectTypeDetailRelatedMetricsPartial", {
+            loaded: metrics.length,
+            total: totals.metrics,
+          })}
+          showIcon
+          type="warning"
         />
       ) : null}
 
@@ -1718,6 +1852,70 @@ export function ObjectTypeResourceGraph({
                           {truncate(metric.definition.name)}
                         </text>
                         <title>{`${metricTypeLabel(metric.definition.metric_type, t)} · ${metric.definition.name}`}</title>
+                      </g>
+                    </g>
+                  );
+                })
+              : null}
+
+            {showMetricItems
+              ? (["atomic", "derived", "composite"] as const).map((type) => {
+                  const hidden = metricVisibility.hiddenCounts[type];
+                  if (!hidden) return null;
+                  const key = moreMetricNodeKey(type);
+                  const morePosition = position(key);
+                  const metricSource =
+                    section === "all" ? metricGroupDisplayPosition : ownerPosition;
+                  const ownerSpoke = trimmedLine(
+                    metricSource,
+                    morePosition,
+                    section === "all" ? 58 : 32,
+                    21,
+                  );
+                  const label = t("knowledgeNetwork.objectTypeGraphExpandMoreMetrics", {
+                    hidden,
+                    type: metricTypeLabel(type, t),
+                  });
+                  const expandMore = () =>
+                    setMetricVisibleCounts((current) => ({
+                      ...current,
+                      [type]: Math.min(
+                        metricVisibility.metricsByType[type].length,
+                        current[type] + METRIC_VISIBLE_BATCH_SIZE,
+                      ),
+                    }));
+                  return (
+                    <g key={key}>
+                      <path
+                        className={styles.metricEdge}
+                        data-graph-edge="metric-more-spoke"
+                        data-metric-type={type}
+                        d={`M ${ownerSpoke.from.x} ${ownerSpoke.from.y} L ${ownerSpoke.to.x} ${ownerSpoke.to.y}`}
+                      />
+                      <g
+                        aria-label={label}
+                        className={`${styles.moreMetricsNode} ${
+                          type === "atomic"
+                            ? styles.moreAtomicMetrics
+                            : type === "derived"
+                              ? styles.moreDerivedMetrics
+                              : styles.moreCompositeMetrics
+                        }`}
+                        data-graph-node="true"
+                        onClick={() => activate(expandMore)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") expandMore();
+                        }}
+                        onPointerDown={(event) => startNodeDrag(event, key)}
+                        role="button"
+                        tabIndex={0}
+                        transform={`translate(${morePosition.x} ${morePosition.y})`}
+                      >
+                        <circle r="18" />
+                        <text dy="5" textAnchor="middle">
+                          +{hidden}
+                        </text>
+                        <title>{label}</title>
                       </g>
                     </g>
                   );
