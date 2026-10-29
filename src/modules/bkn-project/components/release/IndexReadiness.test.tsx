@@ -167,6 +167,33 @@ describe("IndexReadiness", () => {
     expect(screen.getByRole("button", { name: "重新构建" })).toBeDisabled();
   });
 
+  it("says when building again started no table, the rows saying why", async () => {
+    getOntologyIndexMock.mockResolvedValue(
+      readiness([
+        item("lots", { build: null, missing: ["primary_key_fields"], state: "not_configured" }),
+      ]),
+    );
+    buildOntologyIndexMock.mockResolvedValue(
+      readiness([
+        item("lots", {
+          build: { outcome: "not_configurable", reason: "primary_key_fields", time: 2 },
+          missing: ["primary_key_fields"],
+          state: "not_configured",
+        }),
+      ]),
+    );
+    renderIndex();
+
+    fireEvent.click(await screen.findByRole("button", { name: "重新构建" }));
+    await waitFor(() =>
+      expect(messageMock.warning).toHaveBeenCalledWith("没有表开始构建，原因见各表的“上次构建”。"),
+    );
+    expect(messageMock.success).not.toHaveBeenCalled();
+    expect(
+      section().getByText("唯一标识字段的类型不能用来建索引（需要是数字或文字）。"),
+    ).toBeInTheDocument();
+  });
+
   it("explains a refused build, and offers nothing to others", async () => {
     getOntologyIndexMock.mockResolvedValue(
       readiness([item("customers", { build: null, state: "stale" })]),

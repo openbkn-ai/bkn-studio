@@ -33,6 +33,8 @@ import styles from "../ProjectReleasePage.module.css";
 
 /** States a build again starts from; a missing build setting is added first, as on confirming. */
 const BUILDABLE = new Set<IndexItem["state"]>(["not_built", "not_configured", "stale"]);
+/** Build outcomes under which a table is building. */
+const STARTED = new Set(["created", "existing"]);
 
 /**
  * The local index of each adopted object type's table, which full-text and vector search need.
@@ -75,8 +77,18 @@ export function IndexReadiness({ canRun, projectId }: { canRun: boolean; project
   const build = async () => {
     setBuilding(true);
     try {
-      setIndex(await buildOntologyIndex(projectId));
-      message.success(t("bknProject.release.index.started"));
+      const next = await buildOntologyIndex(projectId);
+      setIndex(next);
+      // A 200 reply records each table's outcome; only a table not yet ready that started counts:
+      // a ready table still carries the outcome of an earlier build.
+      const started = next.objectTypes.some(
+        (item) => item.state !== "ready" && item.build !== null && STARTED.has(item.build.outcome),
+      );
+      if (started) {
+        message.success(t("bknProject.release.index.started"));
+      } else {
+        message.warning(t("bknProject.release.index.noneStarted"));
+      }
     } catch (error) {
       message.error(refusalText(t, error, "bknProject.release.index.failed"));
     } finally {
