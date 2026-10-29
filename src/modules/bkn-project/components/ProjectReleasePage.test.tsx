@@ -337,6 +337,25 @@ describe("ProjectReleasePage", () => {
     expect(screen.queryByRole("button", { name: "重新校验" })).toBeNull();
   });
 
+  it("shows the check is being read again while retrying", async () => {
+    let answer: (value: OntologyCheck) => void = () => undefined;
+    getOntologyCheckMock.mockRejectedValueOnce(new Error("down")).mockImplementationOnce(
+      () =>
+        new Promise<OntologyCheck>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    renderRelease();
+
+    expect(await screen.findByText("校验结果暂时读取不到")).toBeInTheDocument();
+    const retry = screen.getByRole("button", { name: /重\s*试/ });
+    fireEvent.click(retry);
+    await waitFor(() => expect(retry).toHaveClass("ant-btn-loading"));
+    answer(check());
+    expect(await screen.findByText("通过")).toBeInTheDocument();
+    expect(screen.queryByText("校验结果暂时读取不到")).toBeNull();
+  });
+
   it("offers to read the confirmation again when it cannot be read", async () => {
     getProjectStatusMock.mockRejectedValueOnce(new Error("down")).mockResolvedValue(status());
     renderRelease();
