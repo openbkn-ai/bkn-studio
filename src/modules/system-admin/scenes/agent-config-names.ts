@@ -10,6 +10,7 @@ import type { TFunction } from "i18next";
 const BUILTIN_AGENT_IDS: readonly string[] = [
   "studio_smart_qa",
   "cypher_generation",
+  "graph_explorer",
   "business_provenance_claim_attribution",
   "business_provenance_optimizer",
   "catalog-semantic-understanding",

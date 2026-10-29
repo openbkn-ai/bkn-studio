@@ -15,6 +15,7 @@ describe.each(["zh-CN", "en-US"])("Agent name fallback in %s", (language) => {
   it.each([
     { agent_id: "studio_smart_qa", name: "团队助手" },
     { agent_id: "cypher_generation", name: "Custom SQL Helper" },
+    { agent_id: "graph_explorer", name: "团队图助手" },
     { agent_id: "custom-agent", name: "Studio智能问答" },
     { agent_id: "cypher_generation", name: "Studio智能问答" },
   ])("preserves the stored name for $agent_id / $name", (agent) => {
@@ -29,4 +30,13 @@ it("recognizes a shipped English name without treating it as a custom rename", (
       i18n.getFixedT("zh-CN"),
     ),
   ).toBe("Studio智能问答");
+});
+
+it.each([
+  ["zh-CN", "Graph Explorer", "图探索"],
+  ["en-US", "图探索", "Graph Explorer"],
+])("localizes the shipped graph explorer name in %s", (language, name, expected) => {
+  expect(agentDisplayName({ agent_id: "graph_explorer", name }, i18n.getFixedT(language))).toBe(
+    expected,
+  );
 });

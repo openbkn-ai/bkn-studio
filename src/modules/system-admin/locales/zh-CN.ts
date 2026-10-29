@@ -1193,6 +1193,7 @@ export const systemAdminZhCN = {
       promptVersion: "提示词 v{{version}}",
       configVersion: "Agent 配置 v{{version}}",
       builtinNames: {
+        graph_explorer: "图探索",
         studio_smart_qa: "Studio智能问答",
         cypher_generation: "Cypher生成",
         business_provenance_claim_attribution: "业务溯源结论识别Agent",

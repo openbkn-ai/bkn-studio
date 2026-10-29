@@ -151,6 +151,7 @@ describe("AgentConfigListScene", () => {
     const names = [
       ["studio_smart_qa", "Studio智能问答", "Studio Smart Q&A"],
       ["cypher_generation", "Cypher生成", "Cypher Generation"],
+      ["graph_explorer", "图探索", "Graph Explorer"],
       [
         "business_provenance_claim_attribution",
         "业务溯源结论识别Agent",

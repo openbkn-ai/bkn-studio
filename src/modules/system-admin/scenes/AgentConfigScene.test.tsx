@@ -183,6 +183,7 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
   it.each([
     ["studio_smart_qa", "Studio智能问答", "Studio Smart Q&A"],
     ["cypher_generation", "Cypher生成", "Cypher Generation"],
+    ["graph_explorer", "图探索", "Graph Explorer"],
     [
       "business_provenance_claim_attribution",
       "业务溯源结论识别Agent",
@@ -603,6 +604,151 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
 
   describe("localized prompts", () => {
     const english = { ...PROMPT, prompt: { ...PROMPT.prompt, content: "English prompt" } };
+
+    it("keeps runtime usable when the first Prompt read fails and offers a local retry", async () => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt
+        .mockRejectedValueOnce(new TypeError("Prompt temporarily unavailable"))
+        .mockResolvedValue(PROMPT);
+      renderScene();
+      expect(await screen.findByDisplayValue("300")).toBeTruthy();
+      await screen.findByText(i18n.t("knowledgeNetwork.agentChat.execution.errors.network"));
+      fireEvent.change(screen.getByDisplayValue("300"), { target: { value: "100" } });
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: (label) => label.replace(/\s/g, "") === i18n.t("common.retry"),
+        }),
+      );
+      expect(await screen.findByDisplayValue("Shared")).toBeTruthy();
+      expect(screen.getByDisplayValue("100")).toBeTruthy();
+      expect(getShared).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the runtime card available when a version switch cannot reload its Prompt", async () => {
+      getShared.mockResolvedValue(shared({ version: 3 }));
+      getSharedPrompt
+        .mockResolvedValueOnce(PROMPT)
+        .mockRejectedValueOnce(new BknAgentExecutionError("Version Prompt unavailable", 500))
+        .mockResolvedValue(PROMPT);
+      listVersions.mockResolvedValue([
+        version(3, { current: true }),
+        version(1, { initial: true }),
+      ]);
+      activateVersion.mockResolvedValue(shared({ version: 1, limits: { timeout_s: 200 } }));
+      renderScene();
+      await screen.findByDisplayValue("Shared");
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: i18n.t("systemAdmin.agentConfig.activateVersion", { version: 1 }),
+        }),
+      );
+      await confirmChange();
+      await screen.findByText("Version Prompt unavailable");
+      expect(screen.getByDisplayValue("200")).toBeTruthy();
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: (label) => label.replace(/\s/g, "") === i18n.t("common.retry"),
+        }),
+      );
+      expect(await screen.findByDisplayValue("Shared")).toBeTruthy();
+      expect(screen.getByDisplayValue("200")).toBeTruthy();
+    });
+
+    it("retains runtime and other-language drafts after a localized Prompt read fails", async () => {
+      let failEnglish = true;
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockImplementation(({ locale }) =>
+        locale === "en-US"
+          ? failEnglish
+            ? Promise.reject(new TypeError("English unavailable"))
+            : Promise.resolve(english)
+          : Promise.resolve(PROMPT),
+      );
+      renderScene();
+      fireEvent.change(await screen.findByDisplayValue("Shared"), {
+        target: { value: "Keep Chinese draft" },
+      });
+      fireEvent.change(screen.getByDisplayValue("300"), { target: { value: "100" } });
+      await act(() => i18n.changeLanguage("en-US"));
+      await screen.findByText(i18n.t("knowledgeNetwork.agentChat.execution.errors.network"));
+      expect(screen.getByDisplayValue("100")).toBeTruthy();
+      failEnglish = false;
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: (label) => label.replace(/\s/g, "") === i18n.t("common.retry"),
+        }),
+      );
+      await screen.findByDisplayValue("English prompt");
+      expect(screen.getByDisplayValue("100")).toBeTruthy();
+      await act(() => i18n.changeLanguage("zh-CN"));
+      expect(await screen.findByDisplayValue("Keep Chinese draft")).toBeTruthy();
+      expect(getShared).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      [403, "forbidden"],
+      [404, "notFound"],
+    ] as const)("maps a Prompt-only %s response to the existing notice", async (status, notice) => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockRejectedValue(new BknAgentExecutionError("raw server error", status));
+      renderScene();
+      expect(await screen.findByText(i18n.t(`systemAdmin.agentConfig.${notice}`))).toBeTruthy();
+      expect(screen.queryByText("raw server error")).toBeNull();
+    });
+
+    it("reloads the active language after an older-language deletion response", async () => {
+      let complete!: (value: Awaited<ReturnType<SettingsModule["deleteVersion"]>>) => void;
+      let removed = false;
+      getShared.mockResolvedValue(shared({ version: 3, initial_version: 1 }));
+      getSharedPrompt.mockImplementation(({ locale }) =>
+        Promise.resolve(locale === "en-US" ? english : PROMPT),
+      );
+      listVersions.mockImplementation(({ locale }) =>
+        Promise.resolve([
+          version(3, { current: true, prompt_content: locale === "en-US" ? "English 3" : "中文3" }),
+          ...(removed ? [] : [version(2)]),
+          version(1, { initial: true, prompt_content: locale === "en-US" ? "English 1" : "中文1" }),
+        ]),
+      );
+      deleteVersion.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            complete = resolve;
+          }),
+      );
+      renderScene();
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: i18n.t("systemAdmin.agentConfig.deleteVersionNamed", { version: 2 }),
+        }),
+      );
+      await confirmChange();
+      await act(() => i18n.changeLanguage("en-US"));
+      await screen.findByDisplayValue("English prompt");
+      await act(async () => {
+        removed = true;
+        complete([
+          version(3, { current: true, prompt_content: "中文3" }),
+          version(1, { initial: true, prompt_content: "中文1" }),
+        ]);
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(listVersions).toHaveBeenCalledTimes(3));
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", {
+            name: i18n.t("systemAdmin.agentConfig.deleteVersionNamed", { version: 2 }),
+          }),
+        ).toBeNull(),
+      );
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: i18n.t("systemAdmin.agentConfig.compareVersion", { version: 1 }),
+        }),
+      );
+      expect((await screen.findByTestId("diff")).textContent).toBe("English 1 => English 3");
+      expect(deleteVersion.mock.calls[0][0]).toMatchObject({ locale: "zh-CN" });
+    });
 
     it("retains per-language Prompt drafts and the runtime draft across language switches", async () => {
       getShared.mockResolvedValue(shared());

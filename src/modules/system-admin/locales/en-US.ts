@@ -1289,6 +1289,7 @@ export const systemAdminEnUS = {
       promptVersion: "Prompt v{{version}}",
       configVersion: "Agent configuration v{{version}}",
       builtinNames: {
+        graph_explorer: "Graph Explorer",
         studio_smart_qa: "Studio Smart Q&A",
         cypher_generation: "Cypher Generation",
         business_provenance_claim_attribution: "Business Provenance Claim Attribution Agent",

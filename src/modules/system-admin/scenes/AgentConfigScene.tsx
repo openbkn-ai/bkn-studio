@@ -106,6 +106,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   const prompt = view?.prompt ?? null;
   const content = view?.content ?? "";
   const [promptLoading, setPromptLoading] = useState(true);
+  const [promptError, setPromptError] = useState<string | null>(null);
   const [promptRevision, setPromptRevision] = useState(0);
   const languageGeneration = useRef(0);
   const activeLocale = useRef(locale);
@@ -195,7 +196,9 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     activeLocale.current = locale;
     setPromptLoading(true);
     setComparing(null);
-    setError(null);
+    setVersions([]);
+    setPromptError(null);
+    setBlocked(null);
     void Promise.all([getSharedPrompt(localizedParams), listVersions(localizedParams)])
       .then(([next, history]) => {
         if (!active) return;
@@ -210,7 +213,10 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
         setVersions(history);
       })
       .catch((e: unknown) => {
-        if (active) setError(executionRequestError(e).message);
+        if (!active) return;
+        if (e instanceof BknAgentExecutionError && e.status === 404) setBlocked("notFound");
+        else if (e instanceof BknAgentExecutionError && e.status === 403) setBlocked("forbidden");
+        else setPromptError(executionRequestError(e).message);
       })
       .finally(() => {
         if (active) setPromptLoading(false);
@@ -316,10 +322,10 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
         <Alert type="error" showIcon message={error} />
       </Space>
     );
-  if (!shared || !prompt) return <Spin />;
+  if (!shared) return <Spin />;
 
   const publishPrompt = async () => {
-    if (publishing.current || promptLoading) return;
+    if (publishing.current || promptLoading || promptError || !prompt) return;
     const version = prompt.next_version;
     if (version == null || !Number.isSafeInteger(version) || version < 1) {
       message.error(t(`${P}.promptVersionUnavailable`));
@@ -633,9 +639,25 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
           </Card>
 
           <Card title={t(`${L}.sharedPrompt`)}>
+            {promptError ? (
+              <Alert
+                type="error"
+                showIcon
+                message={promptError}
+                action={
+                  <Button
+                    disabled={promptLoading}
+                    onClick={() => setPromptRevision((revision) => revision + 1)}
+                  >
+                    {t("common.retry")}
+                  </Button>
+                }
+              />
+            ) : null}
+            {promptLoading && !prompt ? <Spin /> : null}
             <Input.TextArea
               autoSize={{ minRows: 10, maxRows: 28 }}
-              readOnly={!editable}
+              readOnly={!editable || !prompt}
               value={content}
               onChange={(e) => setContent(e.target.value)}
             />
@@ -645,7 +667,13 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                   type="primary"
                   danger
                   loading={saving}
-                  disabled={promptLoading || !content.trim() || content === prompt.prompt.content}
+                  disabled={
+                    promptLoading ||
+                    Boolean(promptError) ||
+                    !prompt ||
+                    !content.trim() ||
+                    content === prompt.prompt.content
+                  }
                   onClick={() =>
                     confirmThen(
                       t(`${P}.confirmPublishPromptTitle`),
@@ -721,9 +749,11 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                               t(`${P}.confirmDeleteVersionBody`),
                               () =>
                                 run(
-                                  () => deleteVersion({ ...params, version: v.version }),
+                                  () => deleteVersion({ ...localizedParams, version: v.version }),
                                   `${P}.versionDeleted`,
-                                  setVersions,
+                                  // Deletion is global; reload in the active language rather than
+                                  // applying the response captured in a possibly older locale.
+                                  () => setPromptRevision((revision) => revision + 1),
                                 ),
                             )
                           }
