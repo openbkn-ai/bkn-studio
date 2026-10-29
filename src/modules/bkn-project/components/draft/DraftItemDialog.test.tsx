@@ -103,6 +103,9 @@ describe("DraftItemDialog", () => {
     expect(options.map((option) => option.textContent)).toEqual(["updated_at", "version"]);
     const listed = document.querySelectorAll(".ant-select-item-option-content");
     expect(listed[0].textContent).toContain("推荐");
+    // Each option says its type, so a time and a sequence number read apart.
+    expect(listed[0].textContent).toContain("日期时间");
+    expect(listed[1].textContent).toContain("整数");
     expect(listed[1].textContent).not.toContain("推荐");
 
     fireEvent.click(within(listed[1] as HTMLElement).getByText("版本"));

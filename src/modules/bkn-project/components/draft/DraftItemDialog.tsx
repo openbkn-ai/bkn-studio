@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { propertyTypeKey } from "@/modules/bkn-project/components/draft/evidence";
 import {
   DESCRIPTION_MAX,
   type EditableItem,
@@ -17,6 +18,8 @@ import {
   nameEdit,
 } from "@/modules/bkn-project/components/draft/edit";
 import type { DraftItemEdit, DraftObjectType } from "@/modules/bkn-project/types/draft";
+
+import styles from "./DraftTables.module.css";
 
 /**
  * Property types a table's local index can be refreshed by, as bkn-project accepts them for an
@@ -77,13 +80,11 @@ export function DraftItemDialog({
   ].map((property) => ({
     label: (
       <span>
-        {property.displayName && property.displayName !== property.name ? (
-          <>
-            {property.displayName} <code>{property.name}</code>
-          </>
-        ) : (
-          property.name
-        )}
+        {property.displayName && property.displayName !== property.name
+          ? `${property.displayName} `
+          : ""}
+        <code className={styles.mono}>{property.name}</code>{" "}
+        <span className={styles.muted}>{t(propertyTypeKey(property.type))}</span>
         {TIME_TYPES.has(property.type) ? (
           <>
             {" "}
