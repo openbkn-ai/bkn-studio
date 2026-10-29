@@ -19,7 +19,11 @@ export const graphOverviewPart = {
     },
     types: {
       toggle: "对象类 {{count}}",
+      toggle_one: "对象类 {{count}}",
+      toggle_other: "对象类 {{count}}",
       toggleHidden: "对象类 {{count}} · 隐藏 {{hidden}}",
+      toggleHidden_one: "对象类 {{count}} · 隐藏 {{hidden}}",
+      toggleHidden_other: "对象类 {{count}} · 隐藏 {{hidden}}",
       hide: "隐藏该类",
       show: "显示该类",
       only: "只看该类",
@@ -45,6 +49,8 @@ export const graphOverviewPart = {
     neighbours: {
       title: "{{name}} · {{count}} 个邻居",
       more: "另有 {{count}} 种关系",
+      more_one: "另有 {{count}} 种关系",
+      more_other: "另有 {{count}} 种关系",
     },
     limit: {
       option: "上限 {{value}} 点",

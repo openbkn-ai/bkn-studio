@@ -20,8 +20,12 @@ export const graphOverviewPart = {
       cached: "Loaded {{time}}",
     },
     types: {
-      toggle: "Object types {{count}}",
-      toggleHidden: "Object types {{count}} · {{hidden}} hidden",
+      toggle: "{{count}} object types",
+      toggle_one: "{{count}} object type",
+      toggle_other: "{{count}} object types",
+      toggleHidden: "{{count}} object types · {{hidden}} hidden",
+      toggleHidden_one: "{{count}} object type · {{hidden}} hidden",
+      toggleHidden_other: "{{count}} object types · {{hidden}} hidden",
       hide: "Hide this type",
       show: "Show this type",
       only: "Show only this type",
@@ -47,6 +51,8 @@ export const graphOverviewPart = {
     neighbours: {
       title: "{{name}} · {{count}} neighbours",
       more: "{{count}} more relation types",
+      more_one: "{{count}} more relation type",
+      more_other: "{{count}} more relation types",
     },
     limit: {
       option: "Up to {{value}}",
