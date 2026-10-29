@@ -134,6 +134,26 @@ describe("draft.service", () => {
     expect(draft.updateTime).toBe(42);
   });
 
+  it("sends an update field as bkn-project names it, and reads it back", async () => {
+    const { editDraftItem, mockDraft } = await importService();
+    const backend = mockDraft("p1");
+    backend.items.object_types![1].incremental_key = "updated_at";
+    mockPatch.mockResolvedValue({ data: backend });
+
+    const draft = await editDraftItem("p1", "object_types", "sales_orders", 7, {
+      incrementalKey: "updated_at",
+    });
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p1/ontology/draft/items/object_types/sales_orders",
+      { incremental_key: "updated_at", update_time: 7 },
+      { skipErrorToast: true },
+    );
+    expect(draft.items.objectTypes[1].incrementalKey).toBe("updated_at");
+    // An object type without one reads as empty.
+    expect(draft.items.objectTypes[0].incrementalKey).toBe("");
+  });
+
   it("chooses an identity and waits longer than bkn-project counts", async () => {
     const { chooseIdentity, IDENTITY_TIMEOUT_MS, mockDraft } = await importService();
     mockPut.mockResolvedValue({ data: mockDraft("p1") });
