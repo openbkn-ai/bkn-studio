@@ -65,12 +65,12 @@ type BackendStatus = {
         discards_decisions?: number;
         reason?: string;
         retry_after_s?: number;
-        unresolved_conflicts?: number;
       }[]
     | null;
   stage: ProjectStatus["stage"];
   stale: string[] | null;
   undecided: number;
+  unresolved_conflicts?: number;
 };
 
 type BackendPending = {
@@ -201,11 +201,11 @@ function mapStatus(status: BackendStatus): ProjectStatus {
       discardsDecisions: action.discards_decisions ?? 0,
       ...(action.reason ? { reason: action.reason } : {}),
       ...(action.retry_after_s ? { retryAfterS: action.retry_after_s } : {}),
-      ...(action.unresolved_conflicts ? { unresolvedConflicts: action.unresolved_conflicts } : {}),
     })),
     stage: status.stage,
     stale: status.stale ?? [],
     undecided: status.undecided,
+    unresolvedConflicts: status.unresolved_conflicts ?? 0,
   };
 }
 
@@ -470,6 +470,7 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
     stage: "no_draft",
     stale: [],
     undecided: 0,
+    unresolvedConflicts: 0,
   };
   if (!draft || draft.status !== "ready") {
     return {

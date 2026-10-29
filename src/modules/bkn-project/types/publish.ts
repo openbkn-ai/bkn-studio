@@ -37,8 +37,6 @@ export type ProjectNextAction = {
   /** Why it is not allowed: `not_owner`, `running`, or a blocker's code. */
   reason?: string;
   retryAfterS?: number;
-  /** For `confirm_draft`: how many requirement conflicts confirming would leave unresolved. */
-  unresolvedConflicts?: number;
 };
 
 export type ProjectStatus = {
@@ -53,6 +51,8 @@ export type ProjectStatus = {
   /** `confirmation_outdated`, `check_outdated`. */
   stale: string[];
   undecided: number;
+  /** Conflicts between requirement documents no one ruled on, which confirming has to accept. */
+  unresolvedConflicts: number;
 };
 
 /** An item to decide before confirming, or one left out that nobody decided on. */

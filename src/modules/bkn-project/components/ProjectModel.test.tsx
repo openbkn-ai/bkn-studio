@@ -133,6 +133,7 @@ function projectStatus(nextActions: ProjectStatus["nextActions"]): ProjectStatus
     stage: "ready_to_confirm",
     stale: [],
     undecided: 0,
+    unresolvedConflicts: 0,
   };
 }
 

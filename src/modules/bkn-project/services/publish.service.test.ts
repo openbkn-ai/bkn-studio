@@ -83,6 +83,7 @@ describe("publish.service", () => {
       stage: "ready_to_confirm",
       stale: ["confirmation_outdated"],
       undecided: 3,
+      unresolvedConflicts: 0,
     });
   });
 
@@ -139,21 +140,20 @@ describe("publish.service", () => {
             accepts: ["unresolved_conflicts"],
             action: "confirm_draft",
             allowed: true,
-            unresolved_conflicts: 2,
           },
         ],
         stage: "ready_to_confirm",
         stale: [],
         undecided: 0,
+        // Counted beside undecided; confirming says in accepts that it has to accept them.
+        unresolved_conflicts: 2,
       },
     });
     mockPost.mockResolvedValue({ data: mockDraft("p/1") });
 
     const status = await getProjectStatus("p/1");
-    expect(status.nextActions[0]).toMatchObject({
-      accepts: ["unresolved_conflicts"],
-      unresolvedConflicts: 2,
-    });
+    expect(status.unresolvedConflicts).toBe(2);
+    expect(status.nextActions[0].accepts).toEqual(["unresolved_conflicts"]);
     await confirmDraft("p/1", { acceptUnresolvedConflicts: true, updateTime: 30 });
     expect(mockPost).toHaveBeenCalledWith(
       `${prefix}/ontology/draft:confirm`,

@@ -52,6 +52,7 @@ function status(action: Partial<ProjectNextAction> | null, extra: Partial<Projec
     stage: "ready_to_confirm",
     stale: [],
     undecided: 0,
+    unresolvedConflicts: 0,
     ...extra,
   } satisfies ProjectStatus;
 }
