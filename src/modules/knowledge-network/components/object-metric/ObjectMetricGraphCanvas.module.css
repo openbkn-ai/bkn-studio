@@ -116,7 +116,7 @@
   flex: 1 1 auto;
   align-items: stretch;
   justify-content: center;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .canvasContent > :global(.ant-empty) {

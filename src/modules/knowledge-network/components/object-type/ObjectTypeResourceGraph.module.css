@@ -122,6 +122,10 @@
   flex: 1 1 auto;
 }
 
+.canvas > :global(.ant-spin-nested-loading) {
+  overflow: auto;
+}
+
 .svg {
   cursor: grab;
   display: block;

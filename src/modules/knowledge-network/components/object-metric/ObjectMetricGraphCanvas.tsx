@@ -72,10 +72,10 @@ type NeighborMetricCounts = {
 const RELATION_PAGE_SIZE = 6;
 const RESTRICTED_METRIC_PAGE_SIZE = 6;
 const NEIGHBOR_COUNT_CONCURRENCY = 3;
-const METRIC_SCAN_PAGE_SIZE = 50;
+const METRIC_SCAN_PAGE_SIZE = 30;
 const MAX_GRAPH_METRICS = 200;
 const MAX_CLUSTERED_METRICS_PER_COLUMN = 36;
-const EXPANDED_METRIC_BATCH_SIZE = 6;
+const EXPANDED_METRIC_BATCH_SIZE = 10;
 const INITIAL_RING_VISIBLE_COUNTS: Record<ObjectMetricTypeV1, number> = {
   atomic: EXPANDED_METRIC_BATCH_SIZE,
   derived: EXPANDED_METRIC_BATCH_SIZE,
@@ -83,6 +83,8 @@ const INITIAL_RING_VISIBLE_COUNTS: Record<ObjectMetricTypeV1, number> = {
 };
 const GRAPH_WIDTH = 1000;
 const GRAPH_HEIGHT = 560;
+const METRIC_LAYOUT_PADDING_Y = 60;
+const METRIC_MIN_ROW_GAP = 64;
 const CENTER = { x: GRAPH_WIDTH / 2, y: GRAPH_HEIGHT / 2 };
 const FOCUS_OWNER_POSITION = { x: 110, y: GRAPH_HEIGHT / 2 };
 const FOCUS_OWNER_NODE_KEY = "metric-focus:owner";
@@ -167,10 +169,22 @@ function pointerToGraph(
   return { x: view.x + (clientX - left) / scale, y: view.y + (clientY - top) / scale };
 }
 
-function clampNodePosition(position: Point): Point {
+function clampNodePosition(position: Point, graphHeight = GRAPH_HEIGHT): Point {
   return {
     x: Math.max(40, Math.min(GRAPH_WIDTH - 40, position.x)),
-    y: Math.max(40, Math.min(GRAPH_HEIGHT - 60, position.y)),
+    y: Math.max(40, Math.min(graphHeight - 60, position.y)),
+  };
+}
+
+function resizeViewForGraphHeight(current: ViewBox, graphHeight: number): ViewBox {
+  if (current.x === 0 && current.y === 0 && current.width === GRAPH_WIDTH) {
+    return { height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 };
+  }
+  const height = (current.width / GRAPH_WIDTH) * graphHeight;
+  return {
+    ...current,
+    height,
+    y: current.y + (current.height - height) / 2,
   };
 }
 
@@ -343,6 +357,11 @@ function layoutMetricFocus(
     220,
     (GRAPH_WIDTH - FOCUS_OWNER_POSITION.x - 100) / sortedDepths.length,
   );
+  const maxColumnItems = Math.max(0, ...[...columns.values()].map((items) => items.length));
+  const height = Math.max(
+    GRAPH_HEIGHT,
+    METRIC_LAYOUT_PADDING_Y * 2 + Math.max(0, maxColumnItems - 1) * METRIC_MIN_ROW_GAP,
+  );
   sortedDepths.forEach((depth, columnIndex) => {
     const items = columns.get(depth)!;
     const parentY = (item: FocusLayoutItem) => {
@@ -367,18 +386,24 @@ function layoutMetricFocus(
         (metricOrder.get(metricNodeKey(right.metric)) ?? 0)
       );
     });
-    const rowGap = Math.min(84, (GRAPH_HEIGHT - 120) / Math.max(1, items.length - 1));
+    const rowGap = Math.max(
+      METRIC_MIN_ROW_GAP,
+      Math.min(84, (GRAPH_HEIGHT - 120) / Math.max(1, items.length - 1)),
+    );
+    const rowSpan = Math.max(0, items.length - 1) * rowGap;
+    const firstRowY =
+      height > GRAPH_HEIGHT ? METRIC_LAYOUT_PADDING_Y : GRAPH_HEIGHT / 2 - rowSpan / 2;
     items.forEach((item, rowIndex) => {
       const position = {
         x: FOCUS_OWNER_POSITION.x + columnGap * (columnIndex + 1),
-        y: GRAPH_HEIGHT / 2 + (rowIndex - (items.length - 1) / 2) * rowGap,
+        y: firstRowY + rowIndex * rowGap,
       };
       if (item.kind === "metric")
         automaticMetricPositions.set(metricNodeKey(item.metric), position);
       else moreMetricPositions[item.type] = position;
     });
   });
-  return { automaticMetricPositions, moreMetricPositions, visibleMetrics };
+  return { automaticMetricPositions, height, moreMetricPositions, visibleMetrics };
 }
 
 function onButtonKeyDown(event: KeyboardEvent<SVGGElement>, action: () => void) {
@@ -867,6 +892,7 @@ export function ObjectMetricGraphCanvas({
   }, [expandedMetrics]);
   const {
     hiddenMetricCounts,
+    metricLayoutHeight,
     moreMetricPositions,
     visibleDependencyEdges,
     visibleMetricPositions,
@@ -915,11 +941,12 @@ export function ObjectMetricGraphCanvas({
         (metric) => !visibleMetricKeys.has(metricNodeKey(metric)),
       ).length;
     });
-    const { automaticMetricPositions, moreMetricPositions, visibleMetrics } = layoutMetricFocus(
-      visibleMetricsByType,
-      hiddenMetricCounts,
-      resolveLoadedMetric,
-    );
+    const {
+      automaticMetricPositions,
+      height: metricLayoutHeight,
+      moreMetricPositions,
+      visibleMetrics,
+    } = layoutMetricFocus(visibleMetricsByType, hiddenMetricCounts, resolveLoadedMetric);
     (["atomic", "derived", "composite"] as const).forEach((type) => {
       if (moreMetricPositions[type]) {
         moreMetricPositions[type] =
@@ -954,12 +981,29 @@ export function ObjectMetricGraphCanvas({
     );
     return {
       hiddenMetricCounts,
+      metricLayoutHeight,
       moreMetricPositions,
       visibleDependencyEdges,
       visibleMetricPositions,
       visibleMetrics,
     };
   }, [metrics, metricsByType, nodePositions, ringVisibleCounts]);
+  const graphHeight = expandedGroup ? metricLayoutHeight : GRAPH_HEIGHT;
+  const metricFocusKey =
+    expandedGroup?.kind === "relation"
+      ? `relation:${expandedGroup.relationId}`
+      : (expandedGroup?.kind ?? "");
+  const previousMetricFocusKeyRef = useRef(metricFocusKey);
+  useEffect(() => {
+    const focusChanged = previousMetricFocusKeyRef.current !== metricFocusKey;
+    previousMetricFocusKeyRef.current = metricFocusKey;
+    if (!metricFocusKey) return;
+    setView((current) =>
+      focusChanged
+        ? { height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 }
+        : resizeViewForGraphHeight(current, graphHeight),
+    );
+  }, [graphHeight, metricFocusKey]);
   const selectedMetricKey = drawerMetric ? metricNodeKey(drawerMetric) : undefined;
   const selectedConnectedKeys = new Set<string>();
   if (selectedMetricKey) {
@@ -1024,7 +1068,7 @@ export function ObjectMetricGraphCanvas({
         GRAPH_WIDTH / MAX_ZOOM,
         Math.min(GRAPH_WIDTH / MIN_ZOOM, current.width / factor),
       );
-      const nextHeight = (nextWidth / GRAPH_WIDTH) * GRAPH_HEIGHT;
+      const nextHeight = (nextWidth / GRAPH_WIDTH) * graphHeight;
       return {
         x: current.x + (current.width - nextWidth) / 2,
         y: current.y + (current.height - nextHeight) / 2,
@@ -1035,7 +1079,7 @@ export function ObjectMetricGraphCanvas({
   };
 
   const resetLayout = () => {
-    setView(INITIAL_VIEW);
+    setView({ x: 0, y: 0, width: GRAPH_WIDTH, height: graphHeight });
     if (expandedGroup) {
       setNodePositions((current) =>
         Object.fromEntries(Object.entries(current).filter(([key]) => !isMetricFocusNodeKey(key))),
@@ -1071,7 +1115,7 @@ export function ObjectMetricGraphCanvas({
         };
         setNodePositions((current) => ({
           ...current,
-          [drag.id]: clampNodePosition(nextPosition),
+          [drag.id]: clampNodePosition(nextPosition, graphHeight),
         }));
       }
       return;
@@ -1426,6 +1470,15 @@ export function ObjectMetricGraphCanvas({
               }}
               preserveAspectRatio="xMidYMid meet"
               role="img"
+              style={
+                graphHeight > GRAPH_HEIGHT
+                  ? {
+                      aspectRatio: `${GRAPH_WIDTH} / ${graphHeight}`,
+                      flex: "0 0 auto",
+                      height: "auto",
+                    }
+                  : undefined
+              }
               viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
             >
               <defs>
@@ -1470,7 +1523,7 @@ export function ObjectMetricGraphCanvas({
               </defs>
               <rect
                 fill={`url(#${arrowId}-grid)`}
-                height={GRAPH_HEIGHT}
+                height={graphHeight}
                 width={GRAPH_WIDTH}
                 x={0}
                 y={0}
