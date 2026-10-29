@@ -473,10 +473,13 @@ function editMockDraft(
     decide("describe", item.description, edit.description);
     item.description = edit.description;
   }
-  const objectType = draft.items.object_types?.find((candidate) => candidate.id === itemId);
-  if (edit.incrementalKey !== undefined && objectType) {
-    decide("incremental", objectType.incremental_key ?? "", edit.incrementalKey);
-    objectType.incremental_key = edit.incrementalKey;
+  // Only an object type has an update field, and choosing the one it has changes nothing.
+  if (edit.incrementalKey !== undefined && kind === "object_types") {
+    const objectType = item as MockItem & { incremental_key?: string };
+    if (edit.incrementalKey !== (objectType.incremental_key ?? "")) {
+      decide("incremental", objectType.incremental_key ?? "", edit.incrementalKey);
+      objectType.incremental_key = edit.incrementalKey;
+    }
   }
   draft.update_time = now;
   return draft;
