@@ -30,6 +30,8 @@ vi.mock("@/framework/context/use-app-services", () => ({
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
   getOntologyCheck: getOntologyCheckMock,
+  // The local indexes have their own tests.
+  getOntologyIndex: () => Promise.resolve(null),
   getProjectStatus: getProjectStatusMock,
   runOntologyCheck: runOntologyCheckMock,
 }));

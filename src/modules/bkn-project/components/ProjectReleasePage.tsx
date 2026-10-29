@@ -8,7 +8,7 @@
 import { Alert, Spin } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -17,6 +17,8 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { formatRate } from "@/modules/bkn-project/components/draft/evidence";
+import { IndexReadiness } from "@/modules/bkn-project/components/release/IndexReadiness";
+import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
 import {
   CHECK_STATUS_TONE,
   CHECK_STATUSES,
@@ -44,34 +46,6 @@ import styles from "./ProjectReleasePage.module.css";
 const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
 
 type JoinRow = CheckJoinResult & { key: string; relationType: string };
-
-/** A section of the page, named by its heading for assistive technology. */
-function Section({
-  actions,
-  children,
-  description,
-  title,
-}: {
-  actions?: ReactNode;
-  children: ReactNode;
-  description: string;
-  title: string;
-}) {
-  const id = useId();
-  return (
-    <section aria-labelledby={id} className={styles.card}>
-      <div className={styles.cardHead}>
-        <h3 className={styles.cardTitle} id={id}>
-          {title}
-        </h3>
-        <span className={styles.spacer} />
-        {actions}
-      </div>
-      <p className={styles.muted}>{description}</p>
-      {children}
-    </section>
-  );
-}
 
 /**
  * The data check of the last confirmation: identities that repeat or are empty, and relations
@@ -334,7 +308,8 @@ function CheckSection({
 
 /**
  * Confirm and release: what the last confirmation of the draft wrote is checked against the
- * tables' data in the background; the page shows when it was confirmed and what the check found.
+ * tables' data and indexed in the background; the page shows when it was confirmed, what the
+ * check found and whether each table's local index is ready.
  */
 export function ProjectReleasePage({
   onGoToModel,
@@ -448,6 +423,7 @@ export function ProjectReleasePage({
         outdated={status.stale.includes("check_outdated")}
         projectId={project.id}
       />
+      <IndexReadiness canRun={canRun} projectId={project.id} />
     </div>
   );
 }
