@@ -659,14 +659,11 @@ export function GraphOverviewScene() {
         >
           {t("knowledgeNetwork.graphOverview.back")}
         </Button>
-        <div className={styles.title}>
-          <span>{t("knowledgeNetwork.graphOverview.title")}</span>
-          {detail?.name ? (
-            <span className={styles.networkName} title={detail.name}>
-              {detail.name}
-            </span>
-          ) : null}
-        </div>
+        {detail?.name ? (
+          <span className={styles.networkName} title={detail.name}>
+            {detail.name}
+          </span>
+        ) : null}
         {summary ? (
           <Tooltip
             // Cut short: why, on the counts themselves.

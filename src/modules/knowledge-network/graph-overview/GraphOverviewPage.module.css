@@ -34,31 +34,24 @@
   flex: none;
 }
 
-/* Only the title gives way when the row is short: the network's name is cut, the counts are not. */
-.toolbar > .title {
+/*
+ * Only the network's name gives way when the row is short: it is cut, down to nothing, and the
+ * counts keep their width.
+ */
+.toolbar > .networkName {
   flex: 0 1 auto;
 }
 
-.title {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  white-space: nowrap;
-  font-weight: 600;
-  font-size: 15px;
-  color: var(--color-text-primary, #1f2430);
-}
-
+/* The network's name is the page's title. */
 .networkName {
   overflow: hidden;
-  min-width: 48px;
-  max-width: 240px;
-  font-weight: 400;
-  font-size: 13px;
+  min-width: 0;
+  max-width: 320px;
+  font-weight: 600;
+  font-size: 15px;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--color-text-secondary, #8c8c8c);
+  color: var(--color-text-primary, #1f2430);
 }
 
 .summary {
