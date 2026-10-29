@@ -185,6 +185,17 @@ describe("UnderstandingBar", () => {
     expect(await screen.findByRole("button", { name: /重新起草/ })).toBeDisabled();
   });
 
+  it("counts tables never understood, such as a catalog's added since, as not finished", async () => {
+    getUnderstandingMock.mockResolvedValue([
+      catalog(["completed", "completed"]),
+      catalog(["not_started", "not_started", "not_started"], "cat-2"),
+    ]);
+    renderBar();
+
+    expect(await screen.findByText("3 张表没有完成理解")).toBeInTheDocument();
+    expect(screen.queryByText("语义理解已完成")).toBeNull();
+  });
+
   it("lists each table's status and the catalogs whose progress cannot be seen", async () => {
     getUnderstandingMock.mockResolvedValue([
       catalog(["completed", "failed"]),

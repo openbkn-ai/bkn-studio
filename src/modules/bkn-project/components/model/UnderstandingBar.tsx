@@ -35,11 +35,16 @@ function tally(catalogs: UnderstandingCatalog[]) {
   const tables = catalogs.filter((catalog) => catalog.visible).flatMap((catalog) => catalog.tables);
   const count = (...statuses: string[]) =>
     tables.filter((table) => statuses.includes(table.status)).length;
+  const done = count("completed");
+  const remaining = count("pending", "running");
   return {
-    done: count("completed"),
-    remaining: count("pending", "running"),
+    done,
+    /** No table was ever understood, nor tried. */
+    neverRun: count("not_started") === tables.length,
+    remaining,
     total: tables.length,
-    unfinished: count("failed", "cancelled"),
+    // Failed, cancelled, and never understood, such as the tables of a catalog added since.
+    unfinished: tables.length - done - remaining,
   };
 }
 
@@ -166,11 +171,11 @@ export function UnderstandingBar({
   const minutes = understandingMinutesLeft(counts.remaining);
   const summary = running
     ? t("bknProject.understand.progress.summary", { done: counts.done, total: counts.total })
-    : counts.unfinished
-      ? t("bknProject.understand.progress.unfinished", { count: counts.unfinished })
-      : counts.done
-        ? t("bknProject.understand.progress.done")
-        : t("bknProject.understand.progress.notStarted");
+    : counts.neverRun
+      ? t("bknProject.understand.progress.notStarted")
+      : counts.unfinished
+        ? t("bknProject.understand.progress.unfinished", { count: counts.unfinished })
+        : t("bknProject.understand.progress.done");
   const invisible = catalogs.filter((catalog) => !catalog.visible);
   const canRun = ownerIsCaller && !archived;
 
