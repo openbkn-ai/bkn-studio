@@ -65,6 +65,7 @@ type BackendStatus = {
         discards_decisions?: number;
         reason?: string;
         retry_after_s?: number;
+        unresolved_conflicts?: number;
       }[]
     | null;
   stage: ProjectStatus["stage"];
@@ -200,6 +201,7 @@ function mapStatus(status: BackendStatus): ProjectStatus {
       discardsDecisions: action.discards_decisions ?? 0,
       ...(action.reason ? { reason: action.reason } : {}),
       ...(action.retry_after_s ? { retryAfterS: action.retry_after_s } : {}),
+      ...(action.unresolved_conflicts ? { unresolvedConflicts: action.unresolved_conflicts } : {}),
     })),
     stage: status.stage,
     stale: status.stale ?? [],
@@ -685,6 +687,7 @@ export async function confirmDraft(projectId: string, input: ConfirmDraftInput):
     {
       accept_partial: input.acceptPartial ?? false,
       accept_undecided: input.acceptUndecided ?? false,
+      accept_unresolved_conflicts: input.acceptUnresolvedConflicts ?? false,
       update_time: input.updateTime,
     },
     { skipErrorToast: true },

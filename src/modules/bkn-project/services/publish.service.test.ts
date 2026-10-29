@@ -126,6 +126,42 @@ describe("publish.service", () => {
     expect(await getProjectPending("p/1")).toEqual({ draftUpdateTime: 0, items: [] });
   });
 
+  it("reads how many requirement conflicts confirming leaves, and accepts them", async () => {
+    const { confirmDraft, getProjectStatus, mockDraft } = {
+      ...(await importService()),
+      ...(await import("@/modules/bkn-project/services/draft.service")),
+    };
+    mockGet.mockResolvedValue({
+      data: {
+        blockers: [],
+        next_actions: [
+          {
+            accepts: ["unresolved_conflicts"],
+            action: "confirm_draft",
+            allowed: true,
+            unresolved_conflicts: 2,
+          },
+        ],
+        stage: "ready_to_confirm",
+        stale: [],
+        undecided: 0,
+      },
+    });
+    mockPost.mockResolvedValue({ data: mockDraft("p/1") });
+
+    const status = await getProjectStatus("p/1");
+    expect(status.nextActions[0]).toMatchObject({
+      accepts: ["unresolved_conflicts"],
+      unresolvedConflicts: 2,
+    });
+    await confirmDraft("p/1", { acceptUnresolvedConflicts: true, updateTime: 30 });
+    expect(mockPost).toHaveBeenCalledWith(
+      `${prefix}/ontology/draft:confirm`,
+      expect.objectContaining({ accept_unresolved_conflicts: true }),
+      { skipErrorToast: true },
+    );
+  });
+
   it("confirms with only what the owner accepted", async () => {
     const { confirmDraft } = await importService();
     const { mockDraft } = await import("@/modules/bkn-project/services/draft.service");
@@ -135,7 +171,12 @@ describe("publish.service", () => {
 
     expect(mockPost).toHaveBeenCalledWith(
       `${prefix}/ontology/draft:confirm`,
-      { accept_partial: false, accept_undecided: true, update_time: 30 },
+      {
+        accept_partial: false,
+        accept_undecided: true,
+        accept_unresolved_conflicts: false,
+        update_time: 30,
+      },
       { skipErrorToast: true },
     );
     expect(draft.status).toBe("ready");

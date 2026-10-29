@@ -37,6 +37,8 @@ export type ProjectNextAction = {
   /** Why it is not allowed: `not_owner`, `running`, or a blocker's code. */
   reason?: string;
   retryAfterS?: number;
+  /** For `confirm_draft`: how many requirement conflicts confirming would leave unresolved. */
+  unresolvedConflicts?: number;
 };
 
 export type ProjectStatus = {
@@ -73,6 +75,8 @@ export type ProjectPending = {
 export type ConfirmDraftInput = {
   acceptPartial?: boolean;
   acceptUndecided?: boolean;
+  /** Confirms although conflicts between the requirement documents are not resolved. */
+  acceptUnresolvedConflicts?: boolean;
   updateTime: number;
 };
 
