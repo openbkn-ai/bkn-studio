@@ -51,6 +51,8 @@ export type ProjectStatus = {
   /** `confirmation_outdated`, `check_outdated`. */
   stale: string[];
   undecided: number;
+  /** Conflicts between requirement documents no one ruled on, which confirming has to accept. */
+  unresolvedConflicts: number;
 };
 
 /** An item to decide before confirming, or one left out that nobody decided on. */
@@ -73,6 +75,8 @@ export type ProjectPending = {
 export type ConfirmDraftInput = {
   acceptPartial?: boolean;
   acceptUndecided?: boolean;
+  /** Confirms although conflicts between the requirement documents are not resolved. */
+  acceptUnresolvedConflicts?: boolean;
   updateTime: number;
 };
 

@@ -70,6 +70,7 @@ type BackendStatus = {
   stage: ProjectStatus["stage"];
   stale: string[] | null;
   undecided: number;
+  unresolved_conflicts?: number;
 };
 
 type BackendPending = {
@@ -204,6 +205,7 @@ function mapStatus(status: BackendStatus): ProjectStatus {
     stage: status.stage,
     stale: status.stale ?? [],
     undecided: status.undecided,
+    unresolvedConflicts: status.unresolved_conflicts ?? 0,
   };
 }
 
@@ -468,6 +470,7 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
     stage: "no_draft",
     stale: [],
     undecided: 0,
+    unresolvedConflicts: 0,
   };
   if (!draft || draft.status !== "ready") {
     return {
@@ -685,6 +688,7 @@ export async function confirmDraft(projectId: string, input: ConfirmDraftInput):
     {
       accept_partial: input.acceptPartial ?? false,
       accept_undecided: input.acceptUndecided ?? false,
+      accept_unresolved_conflicts: input.acceptUnresolvedConflicts ?? false,
       update_time: input.updateTime,
     },
     { skipErrorToast: true },

@@ -78,6 +78,7 @@ function status(extra: Partial<ProjectStatus> = {}): ProjectStatus {
     stage: "confirmed",
     stale: [],
     undecided: 0,
+    unresolvedConflicts: 0,
     ...extra,
   };
 }
