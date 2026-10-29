@@ -303,6 +303,57 @@
   fill: var(--graph-metric-composite);
 }
 
+.moreMetricsNode {
+  cursor: pointer;
+  outline: none;
+}
+
+.moreMetricsNode circle {
+  fill: var(--color-bg-raised);
+  stroke-dasharray: 3 3;
+  stroke-width: 1.5;
+}
+
+.moreMetricsNode text {
+  fill: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.moreMetricsNode:hover circle,
+.moreMetricsNode:focus-visible circle {
+  fill-opacity: 0.28;
+  stroke-width: 2.5;
+}
+
+.moreAtomicMetrics circle {
+  stroke: var(--graph-metric-atomic);
+}
+
+.moreAtomicMetrics:hover circle,
+.moreAtomicMetrics:focus-visible circle {
+  fill: var(--graph-metric-atomic);
+}
+
+.moreDerivedMetrics circle {
+  stroke: var(--graph-metric-derived);
+}
+
+.moreDerivedMetrics:hover circle,
+.moreDerivedMetrics:focus-visible circle {
+  fill: var(--graph-metric-derived);
+}
+
+.moreCompositeMetrics circle {
+  stroke: var(--graph-metric-composite);
+}
+
+.moreCompositeMetrics:hover circle,
+.moreCompositeMetrics:focus-visible circle {
+  fill: var(--graph-metric-composite);
+}
+
 .actionNode > circle {
   fill: #d89614;
   stroke: var(--color-text-inverse);

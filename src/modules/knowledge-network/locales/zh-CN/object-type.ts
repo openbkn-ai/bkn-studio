@@ -158,6 +158,7 @@ export const objecttypePart = {
   objectTypeGraphMetricAtomic: "原子对象指标",
   objectTypeGraphMetricDerived: "衍生对象指标",
   objectTypeGraphMetricComposite: "复合对象指标",
+  objectTypeGraphExpandMoreMetrics: "{{type}}还有 {{hidden}} 个，点击展开",
   objectTypeGraphZoomIn: "放大",
   objectTypeGraphZoomOut: "缩小",
   objectTypeGraphFit: "适应画布",
