@@ -391,6 +391,7 @@ export function ProjectModel({
       onRedraft={startGenerate}
       ownerIsCaller={ownerIsCaller}
       projectId={project.id}
+      redraftDisabled={drafting || generating}
     />
   );
 

@@ -55,6 +55,7 @@ export function UnderstandingBar({
   onRedraft,
   ownerIsCaller,
   projectId,
+  redraftDisabled,
 }: {
   archived: boolean;
   catalogNames: Record<string, string>;
@@ -63,6 +64,8 @@ export function UnderstandingBar({
   onRedraft: () => void;
   ownerIsCaller: boolean;
   projectId: string;
+  /** True while drafting runs or starts, as for the page's own drafting button. */
+  redraftDisabled: boolean;
 }) {
   const { t } = useTranslation();
   const { message } = useAppServices();
@@ -222,7 +225,7 @@ export function UnderstandingBar({
         <Alert
           action={
             canRun ? (
-              <AppButton onClick={onRedraft} size="small">
+              <AppButton disabled={redraftDisabled} onClick={onRedraft} size="small">
                 {t("bknProject.model.regenerate")}
               </AppButton>
             ) : null

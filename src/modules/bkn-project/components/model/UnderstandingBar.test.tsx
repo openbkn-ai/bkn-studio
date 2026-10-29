@@ -69,6 +69,7 @@ function renderBar(props: Partial<Parameters<typeof UnderstandingBar>[0]> = {}) 
       onRedraft={onRedraft}
       ownerIsCaller
       projectId="p1"
+      redraftDisabled={false}
       {...props}
     />,
   );
@@ -170,6 +171,18 @@ describe("UnderstandingBar", () => {
 
     await act(() => vi.advanceTimersByTimeAsync(UNDERSTANDING_POLL_MS * 3));
     expect(getUnderstandingMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not offer drafting again while a draft is being drafted", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getUnderstandingMock
+      .mockResolvedValueOnce([catalog(["completed", "running"])])
+      .mockResolvedValue([catalog(["completed", "completed"])]);
+    renderBar({ redraftDisabled: true });
+
+    expect(await screen.findByText("语义理解：已完成 1 / 2 张表")).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(UNDERSTANDING_POLL_MS));
+    expect(await screen.findByRole("button", { name: /重新起草/ })).toBeDisabled();
   });
 
   it("lists each table's status and the catalogs whose progress cannot be seen", async () => {
