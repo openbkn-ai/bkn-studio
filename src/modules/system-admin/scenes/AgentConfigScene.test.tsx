@@ -6,7 +6,7 @@
  */
 
 import { App } from "antd";
-import { MemoryRouter } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -116,13 +116,20 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 function renderScene(agentId = "studio_smart_qa") {
-  render(
-    <MemoryRouter>
-      <App>
-        <AgentConfigScene agentId={agentId} />
-      </App>
-    </MemoryRouter>,
+  const router = createMemoryRouter(
+    [
+      { path: "/edit", element: <AgentConfigScene agentId={agentId} /> },
+      { path: "/system/agent-config", element: <div>Agent list destination</div> },
+      { path: "/other", element: <div>Other destination</div> },
+    ],
+    { initialEntries: ["/other", "/edit"], initialIndex: 1 },
   );
+  render(
+    <App>
+      <RouterProvider router={router} />
+    </App>,
+  );
+  return router;
 }
 
 function shared(changes: Partial<SharedAgent> = {}): SharedAgent {
@@ -592,6 +599,148 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     // The saved runtime comes from the response; nothing is reloaded over the draft.
     expect(getSharedPrompt).toHaveBeenCalledTimes(1);
     expect(screen.getByDisplayValue("Draft prompt")).toBeTruthy();
+  });
+
+  describe("unsaved changes", () => {
+    const prefix = "systemAdmin.agentConfig";
+    const beforeUnload = () => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const goBack = () =>
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(i18n.t(`${prefix}.back`)) }));
+
+    it.each(["prompt", "limits", "profile"])(
+      "keeps a %s draft on cancel and leaves only after confirmation",
+      async (field) => {
+        getShared.mockResolvedValue(shared());
+        getSharedPrompt.mockResolvedValue(PROMPT);
+        renderScene();
+        const editor = await screen.findByDisplayValue("Shared");
+        expect(beforeUnload()).toBe(false);
+        if (field === "prompt") fireEvent.change(editor, { target: { value: "Draft" } });
+        else if (field === "limits")
+          fireEvent.change(screen.getByDisplayValue("300"), { target: { value: "100" } });
+        else fireEvent.click(screen.getByText(i18n.t(`${prefix}.mcpCompact`)));
+        expect(beforeUnload()).toBe(true);
+        goBack();
+        const dialog = await screen.findByRole("dialog");
+        expect(dialog.textContent).toContain(i18n.t(`${prefix}.unsavedTitle`));
+        expect(screen.queryByText("Agent list destination")).toBeNull();
+        fireEvent.click(
+          within(dialog).getByRole("button", { name: i18n.t(`${prefix}.keepEditing`) }),
+        );
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+        expect(beforeUnload()).toBe(true);
+        if (field === "prompt") expect(screen.getByDisplayValue("Draft")).toBeTruthy();
+        else if (field === "limits") expect(screen.getByDisplayValue("100")).toBeTruthy();
+        else
+          expect(screen.getByRole("radio", { name: i18n.t(`${prefix}.mcpCompact`) })).toBeChecked();
+        goBack();
+        fireEvent.click(
+          within(await screen.findByRole("dialog")).getByRole("button", {
+            name: i18n.t(`${prefix}.discardAndLeave`),
+          }),
+        );
+        expect(await screen.findByText("Agent list destination")).toBeTruthy();
+        expect(beforeUnload()).toBe(false);
+        expect(updateShared).not.toHaveBeenCalled();
+        expect(publishSharedPrompt).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["link", "history"])(
+      "blocks %s navigation and preserves the intended destination",
+      async (kind) => {
+        getShared.mockResolvedValue(shared());
+        getSharedPrompt.mockResolvedValue(PROMPT);
+        const router = renderScene();
+        fireEvent.change(await screen.findByDisplayValue("Shared"), { target: { value: "Draft" } });
+        await act(async () => {
+          if (kind === "history") await router.navigate(-1);
+          else await router.navigate("/other");
+        });
+        fireEvent.click(
+          within(await screen.findByRole("dialog")).getByRole("button", {
+            name: i18n.t(`${prefix}.discardAndLeave`),
+          }),
+        );
+        expect(await screen.findByText("Other destination")).toBeTruthy();
+      },
+    );
+
+    it("does not block unchanged or reverted content", async () => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockResolvedValue(PROMPT);
+      renderScene();
+      const editor = await screen.findByDisplayValue("Shared");
+      fireEvent.change(editor, { target: { value: "Draft" } });
+      fireEvent.change(editor, { target: { value: "Shared" } });
+      fireEvent.change(screen.getByDisplayValue("300"), { target: { value: "100" } });
+      fireEvent.change(screen.getByDisplayValue("100"), { target: { value: "300" } });
+      expect(beforeUnload()).toBe(false);
+      goBack();
+      expect(await screen.findByText("Agent list destination")).toBeTruthy();
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it.each([false, true])(
+      "runtime save clears only its own draft (prompt draft: %s)",
+      async (withPrompt) => {
+        const saved = shared({ limits: { max_turns: 40, timeout_s: 100 } });
+        getShared.mockResolvedValueOnce(shared()).mockResolvedValue(saved);
+        getSharedPrompt.mockResolvedValue(PROMPT);
+        updateShared.mockResolvedValue(saved);
+        renderScene();
+        const editor = await screen.findByDisplayValue("Shared");
+        if (withPrompt) fireEvent.change(editor, { target: { value: "Draft" } });
+        fireEvent.change(screen.getByDisplayValue("300"), { target: { value: "100" } });
+        fireEvent.click(screen.getByRole("button", { name: SAVE }));
+        await confirmChange();
+        await waitFor(() => expect(screen.getByRole("button", { name: SAVE })).toBeDisabled());
+        expect(beforeUnload()).toBe(withPrompt);
+        expect(screen.getByDisplayValue(withPrompt ? "Draft" : "Shared")).toBeTruthy();
+      },
+    );
+
+    it.each([false, true])(
+      "prompt publication clears only its own draft (runtime draft: %s)",
+      async (withRuntime) => {
+        getShared.mockResolvedValue(shared());
+        getSharedPrompt.mockResolvedValue(PROMPT);
+        publishSharedPrompt.mockResolvedValue({
+          prompt: { ...PROMPT.prompt, content: "Published", current_version: 4 },
+          next_version: 5,
+        });
+        renderScene();
+        fireEvent.change(await screen.findByDisplayValue("Shared"), {
+          target: { value: "Published" },
+        });
+        if (withRuntime)
+          fireEvent.change(screen.getByDisplayValue("300"), { target: { value: "100" } });
+        const name = i18n.t("knowledgeNetwork.agentChat.config.publishPrompt");
+        fireEvent.click(screen.getByRole("button", { name }));
+        await confirmChange();
+        await waitFor(() => expect(screen.getByRole("button", { name })).toBeDisabled());
+        expect(beforeUnload()).toBe(withRuntime);
+        expect(screen.getByDisplayValue(withRuntime ? "100" : "300")).toBeTruthy();
+      },
+    );
+
+    it("keeps failed saves protected", async () => {
+      getShared.mockResolvedValue(shared());
+      getSharedPrompt.mockResolvedValue(PROMPT);
+      updateShared.mockRejectedValue(new Error("Save failed"));
+      renderScene();
+      await screen.findByDisplayValue("Shared");
+      fireEvent.change(screen.getByDisplayValue("300"), { target: { value: "100" } });
+      fireEvent.click(screen.getByRole("button", { name: SAVE }));
+      await confirmChange();
+      await waitFor(() => expect(updateShared).toHaveBeenCalled());
+      expect(beforeUnload()).toBe(true);
+      expect(screen.getByDisplayValue("100")).toBeTruthy();
+    });
   });
 
   describe("versions", () => {

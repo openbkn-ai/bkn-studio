@@ -1274,6 +1274,11 @@ export const systemAdminEnUS = {
       publishOnce: "Once published, a built-in Agent stays published; it cannot be unpublished.",
       publishedDone: "Published",
       back: "Back to list",
+      unsavedTitle: "Discard unsaved changes?",
+      unsavedBody:
+        "The runtime configuration or prompt has unsaved changes. Leaving will discard them.",
+      discardAndLeave: "Discard and leave",
+      keepEditing: "Keep editing",
       layered: "Network and personal settings",
       readOnly: "Read-only",
       updateTime: "Updated",
