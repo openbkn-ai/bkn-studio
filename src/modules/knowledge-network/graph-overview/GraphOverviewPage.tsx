@@ -34,7 +34,7 @@ import { useHref, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useResolvedTheme } from "@/app/theme/theme-context";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import { extensionInstanceHandOvers } from "@/framework/extension/registry";
+import { extensionInstanceHandOvers, handOverLimit } from "@/framework/extension/registry";
 import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import {
   fetchKnDetailRest,
@@ -532,19 +532,28 @@ export function GraphOverviewScene() {
     return [];
   }, [neighbourhood, picked, selectedId]);
 
+  // Read again as the selection changes: the page that takes the instances may let people set it.
+  const handOverMax = useMemo(
+    () => (handOverTarget && handOverIds.length > 0 ? handOverLimit(handOverTarget) : 0),
+    [handOverIds, handOverTarget],
+  );
+  const tooManyText = useMemo(() => {
+    if (!handOverTarget) return "";
+    const tooMany = t("knowledgeNetwork.graphOverview.handOver.tooMany", { limit: handOverMax });
+    return handOverTarget.limitHintKey
+      ? `${tooMany}${t(handOverTarget.limitHintKey, { limit: handOverMax })}`
+      : tooMany;
+  }, [handOverMax, handOverTarget, t]);
+
   const handOver = useCallback(() => {
     if (!handOverTarget || handOverIds.length === 0) return;
-    if (handOverIds.length > handOverTarget.maxInstances) {
-      message.warning(
-        t("knowledgeNetwork.graphOverview.handOver.tooMany", {
-          limit: handOverTarget.maxInstances,
-        }),
-      );
+    if (handOverIds.length > handOverMax) {
+      message.warning(tooManyText);
       return;
     }
     const url = handOverTarget.url(`${base}${handOverHref}`, handOverIds, Object.keys(metas));
     window.open(url, "_blank", "noopener,noreferrer");
-  }, [base, handOverHref, handOverIds, handOverTarget, message, metas, t]);
+  }, [base, handOverHref, handOverIds, handOverMax, handOverTarget, message, metas, tooManyText]);
 
   /* ------------------------------ type chips ------------------------------ */
 
@@ -625,12 +634,11 @@ export function GraphOverviewScene() {
   const failedNames = (data?.failures ?? []).map((failure) =>
     failure.kind === "relation" ? relationName(failure.id) : typeName(failure.id),
   );
-  const handOverLimit = handOverTarget?.maxInstances ?? 0;
   const handOverTitle =
     handOverIds.length === 0
       ? t("knowledgeNetwork.graphOverview.handOver.empty")
-      : handOverIds.length > handOverLimit
-        ? t("knowledgeNetwork.graphOverview.handOver.tooMany", { limit: handOverLimit })
+      : handOverIds.length > handOverMax
+        ? tooManyText
         : t("knowledgeNetwork.graphOverview.handOver.tip");
 
   return (
@@ -765,7 +773,7 @@ export function GraphOverviewScene() {
               size="small"
               type="primary"
               icon={handOverTarget.icon ?? <NodeIndexOutlined />}
-              disabled={handOverIds.length === 0 || handOverIds.length > handOverLimit}
+              disabled={handOverIds.length === 0 || handOverIds.length > handOverMax}
               onClick={handOver}
               data-testid="graph-overview-hand-over"
             >

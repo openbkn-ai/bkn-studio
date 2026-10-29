@@ -96,8 +96,16 @@ export type InstanceHandOver = {
   icon?: ReactNode;
   /** Translation key of the button label; it receives `count`, the instances handed over. */
   labelKey: string;
-  /** Instances the page takes at most; a larger selection disables the button. */
-  maxInstances: number;
+  /**
+   * Instances the page takes at most; a larger selection disables the button. A function is read
+   * whenever the selection changes, for a limit people set themselves on that page.
+   */
+  maxInstances: number | (() => number);
+  /**
+   * Translation key of a sentence added to the "too many" tip, saying how to take more (where the
+   * limit is set); it receives `limit`.
+   */
+  limitHintKey?: string;
   /** Path inside the app, without the basename, for the given network. */
   path: (networkId: string) => string;
   /**
@@ -107,6 +115,13 @@ export type InstanceHandOver = {
    */
   url: (pageUrl: string, instanceIds: string[], objectTypeIds: string[]) => string;
 };
+
+/** The most instances a hand-over takes right now. */
+export function handOverLimit(handOver: InstanceHandOver): number {
+  return typeof handOver.maxInstances === "function"
+    ? handOver.maxInstances()
+    : handOver.maxInstances;
+}
 
 const installed: StudioExtension[] = [];
 let frozen = false;
