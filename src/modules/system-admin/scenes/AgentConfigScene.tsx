@@ -37,7 +37,7 @@ import {
 } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useBeforeUnload, useBlocker, useNavigate } from "react-router-dom";
 
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { MonacoDiffEditor } from "@/framework/monaco/MonacoDiffEditor";
@@ -196,6 +196,43 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
     [message, t],
   );
 
+  // Context budgets only apply to public execution. Compare editable fields using
+  // the same defaults as the save summary.
+  const limitKeys = shared?.layered
+    ? AGENT_LIMIT_KEYS
+    : AGENT_LIMIT_KEYS.filter((key) => !CONTEXT_LIMIT_KEYS.includes(key));
+  const dirty = Boolean(
+    shared?.can_edit &&
+    prompt &&
+    (content !== prompt.prompt.content ||
+      model !== (shared.model ?? "") ||
+      (shared.uses_context_loader && profile !== (shared.mcp_profile ?? "default")) ||
+      limitKeys.some((key) => (limits[key] ?? null) !== (shared.limits[key] ?? null))),
+  );
+  const blocker = useBlocker(dirty);
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    const dialog = modal.confirm({
+      title: t(`${P}.unsavedTitle`),
+      content: t(`${P}.unsavedBody`),
+      okText: t(`${P}.discardAndLeave`),
+      cancelText: t(`${P}.keepEditing`),
+      onOk: () => blocker.proceed(),
+      onCancel: () => blocker.reset(),
+    });
+    return () => dialog.destroy();
+  }, [blocker, modal, t]);
+  useBeforeUnload(
+    useCallback(
+      (event) => {
+        if (!dirty) return;
+        event.preventDefault();
+        event.returnValue = "";
+      },
+      [dirty],
+    ),
+  );
+
   const back = (
     <SceneBackButton onClick={() => void navigate("/system/agent-config")}>
       {t(`${P}.back`)}
@@ -272,10 +309,6 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
   const versionOf = (v: number) => versions.find((item) => item.version === v);
   const editable = shared.can_edit;
   const displayName = agentDisplayName(shared, t);
-  // Context budget limits only apply on the public execution surface.
-  const limitKeys = shared.layered
-    ? AGENT_LIMIT_KEYS
-    : AGENT_LIMIT_KEYS.filter((key) => !CONTEXT_LIMIT_KEYS.includes(key));
   const unset = (key: LimitKey) =>
     t(unsetLimitMeansNoCap(key) ? `${L}.noCap` : `${L}.serviceDefault`);
   const profileLabel = (value: McpProfileChoice | "default") =>
