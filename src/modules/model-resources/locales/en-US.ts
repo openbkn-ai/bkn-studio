@@ -188,7 +188,7 @@ export const modelResourcesEnUS = {
       emptyTitle: "No quota records",
       emptyDescription:
         "Enable model quotas in Model configuration first, then return here to set limits and allocate user quotas.",
-      goToModelConfig: "Go to Model Configuration",
+      goToModelConfig: "Go to Model configuration",
       sortByName: "Sort by name",
       sortByCount: "Sort by estimated total amount",
       sortAriaLabel: "Sort quotas",
