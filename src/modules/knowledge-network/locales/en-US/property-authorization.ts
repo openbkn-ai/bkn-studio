@@ -41,7 +41,7 @@ export const propertyAuthorizationPart = {
   objectTypeMaskRulePreviewSafety:
     "Do not enter real sensitive data. Previewing happens only on this page.",
 
-  propertyAuthorizationAction: "Permission settings",
+  propertyAuthorizationAction: "Permissions",
   propertyAuthorizationTitle: "{{name}} / Permission settings",
   propertyAuthorizationDescription:
     "Configure object access, property visibility, and Column Masking policies.",

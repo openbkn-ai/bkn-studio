@@ -36,7 +36,7 @@ export const networkPart = {
   emptyMetrics: "No metrics yet.",
   emptyTitle: "No knowledge networks yet",
   enterWorkspace: "Open workspace",
-  authorizeAction: "Configure permissions",
+  authorizeAction: "Permissions",
   requestPermission: "Request permissions",
   permissionRequestTitle: "Request knowledge network permissions",
   permissionRequestResourceTitle: "Request resource permissions",

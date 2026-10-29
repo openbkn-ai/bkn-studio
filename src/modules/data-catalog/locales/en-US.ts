@@ -472,7 +472,7 @@ export const dataCatalogEnUS = {
       collapse: "Collapse",
     },
     catalog: {
-      authorize: "Authorize",
+      authorize: "Permissions",
       notFound: "No resources found for this connection; it may have been deleted",
       selectPhysicalDescription: "Select a data connection from the physical data source tree.",
       resourceSection: "Resources",
