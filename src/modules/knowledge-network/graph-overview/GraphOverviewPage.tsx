@@ -7,13 +7,14 @@
 
 import {
   AimOutlined,
-  AppstoreOutlined,
   ArrowLeftOutlined,
+  DownOutlined,
   ExpandOutlined,
   NodeIndexOutlined,
   PauseOutlined,
   ReloadOutlined,
   StopOutlined,
+  UpOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -109,12 +110,12 @@ const NODE_LIMIT_KEY = "bkn-studio.graph-overview.node-limit";
 const VIEW_KEY = "bkn-studio.graph-overview.view";
 const TYPES_OPEN_KEY = "bkn-studio.graph-overview.types-open";
 
-/** Whether the row of object types is shown: hidden until someone opens it, then remembered. */
+/** Whether the row of object types is shown: shown until someone closes it, then remembered. */
 function readTypesOpen(): boolean {
   try {
-    return window.localStorage.getItem(TYPES_OPEN_KEY) === "1";
+    return window.localStorage.getItem(TYPES_OPEN_KEY) !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -699,10 +700,10 @@ export function GraphOverviewScene() {
         {objectTypes.length > 0 ? (
           <Button
             size="small"
-            icon={<AppstoreOutlined />}
-            aria-pressed={typesOpen}
-            type={typesOpen ? "primary" : "default"}
-            ghost={typesOpen}
+            // The arrow says where the row goes: down to open it, up to put it away.
+            icon={typesOpen ? <UpOutlined /> : <DownOutlined />}
+            iconPosition="end"
+            aria-expanded={typesOpen}
             onClick={() => {
               saveTypesOpen(!typesOpen);
               setTypesOpen(!typesOpen);
