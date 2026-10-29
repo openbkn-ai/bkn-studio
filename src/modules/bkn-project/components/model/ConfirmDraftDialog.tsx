@@ -6,7 +6,7 @@
  */
 
 import { Alert, Checkbox, Modal, Space, Tooltip } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -60,6 +60,9 @@ export function ConfirmDraft({
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [status, setStatus] = useState<ProjectStatus | null>(null);
+  const [statusFailed, setStatusFailed] = useState(false);
+  // Only the newest read counts: edits in a row send reads that may answer out of order.
+  const latestRead = useRef(0);
   const [open, setOpen] = useState(false);
   const [undecided, setUndecided] = useState<PendingItem[] | null>(null);
   const [pendingFailed, setPendingFailed] = useState(false);
@@ -68,14 +71,19 @@ export function ConfirmDraft({
   const [sending, setSending] = useState(false);
 
   // Read again whenever the draft changes, as each edit can change what confirming needs.
+  // A failed read keeps what was read before, so an open dialog stays as it was.
   const loadStatus = useCallback(async () => {
+    const read = ++latestRead.current;
     try {
       const next = await getProjectStatus(projectId);
-      setStatus(next);
-      return next;
+      if (read === latestRead.current) {
+        setStatus(next);
+        setStatusFailed(false);
+      }
     } catch {
-      setStatus(null);
-      return null;
+      if (read === latestRead.current) {
+        setStatusFailed(true);
+      }
     }
   }, [projectId]);
   useEffect(() => {
@@ -112,7 +120,24 @@ export function ConfirmDraft({
     [draft],
   );
 
-  if (!status || !action) {
+  if (!status) {
+    // Without the status the page cannot tell whether the draft may be confirmed: it says so.
+    return statusFailed ? (
+      <>
+        <Tooltip title={t("bknProject.release.loadFailed")}>
+          <span>
+            <AppButton disabled type="primary">
+              {t("bknProject.confirm.button")}
+            </AppButton>
+          </span>
+        </Tooltip>
+        <AppButton onClick={() => void loadStatus()} type="link">
+          {t("common.retry")}
+        </AppButton>
+      </>
+    ) : null;
+  }
+  if (!action) {
     return null;
   }
 

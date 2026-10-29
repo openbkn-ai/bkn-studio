@@ -176,6 +176,46 @@ describe("ConfirmDraft", () => {
     expect(screen.queryByRole("button", { name: /确认/ })).toBeNull();
   });
 
+  it("says when it cannot tell whether the draft may be confirmed, and reads again", async () => {
+    getProjectStatusMock.mockRejectedValueOnce(new Error("down")).mockResolvedValue(status({}));
+    renderConfirm();
+
+    const retry = await screen.findByRole("button", { name: /重\s*试/ });
+    expect(screen.getByRole("button", { name: "确认草稿" })).toBeDisabled();
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "确认草稿" }).parentElement!);
+    expect(await screen.findByText("确认情况暂时读取不到")).toBeInTheDocument();
+    fireEvent.click(retry);
+    await waitFor(() => expect(screen.getByRole("button", { name: "确认草稿" })).toBeEnabled());
+  });
+
+  it("keeps only the newest status when reads answer out of order", async () => {
+    let answerFirst: (value: ProjectStatus) => void = () => undefined;
+    getProjectStatusMock
+      .mockImplementationOnce(
+        () =>
+          new Promise<ProjectStatus>((resolve) => {
+            answerFirst = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(status({}));
+    const view = renderConfirm();
+    view.rerender(
+      <ConfirmDraft
+        draft={{ ...draft, updateTime: draft.updateTime + 1 }}
+        onConfirmed={onConfirmed}
+        onShowPending={onShowPending}
+        onStale={onStale}
+        projectId="p1"
+      />,
+    );
+    expect(await screen.findByRole("button", { name: "确认草稿" })).toBeEnabled();
+
+    // The read for the older draft answers last: it no longer counts.
+    answerFirst(status({ allowed: false, reason: "not_owner" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.getByRole("button", { name: "确认草稿" })).toBeEnabled();
+  });
+
   it("leads to the items to settle, or reloads a changed draft", async () => {
     getProjectStatusMock.mockResolvedValue(status({}));
     confirmDraftMock.mockRejectedValueOnce(refusal("Draft.HasPending", { needs_identity: ["a"] }));
