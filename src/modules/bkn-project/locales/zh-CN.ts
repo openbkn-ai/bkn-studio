@@ -715,6 +715,7 @@ export const bknProjectZhCN = {
         value_not_in_text: "问法里没有写出资料给的值",
         value_outside_slot: "问法里出现了没有依据的数字、日期或编码",
         check_timeout: "核对超时",
+        table_missing: "要读的数据表已被删除，没能核对",
         other: "没有通过核对",
       },
       editing: {

@@ -135,6 +135,7 @@ const checkReasonWord = word("testCheckReason", [
   "value_not_in_text",
   "value_outside_slot",
   "check_timeout",
+  "table_missing",
 ]);
 
 /**
