@@ -74,43 +74,46 @@ function renderList() {
 describe("AgentConfigListScene", () => {
   it("lists the built-in Agents as cards and opens one", async () => {
     listShared.mockResolvedValue([
-      agent({}),
+      agent({ model: "Private model" }),
       agent({
         agent_id: "business_provenance_optimizer",
         name: "知识网络优化Agent",
         layered: false,
         can_edit: false,
+        status: "draft",
       }),
     ]);
     renderList();
 
     expect(await screen.findByText("Studio智能问答")).toBeTruthy();
-    expect(screen.getByText("知识网络优化Agent")).toBeTruthy();
-    // Only the read-only Agent is flagged, only smart Q&A has the layered tag.
-    expect(screen.getAllByText(i18n.t("systemAdmin.agentConfig.readOnly"))).toHaveLength(1);
-    expect(screen.getAllByText(i18n.t("systemAdmin.agentConfig.layered"))).toHaveLength(1);
+    expect(screen.getByText("知识网络优化")).toBeTruthy();
+    expect(screen.getAllByText(i18n.t("systemAdmin.agentConfig.builtinTag"))).toHaveLength(2);
+    expect(screen.queryByText("Private model")).toBeNull();
+    expect(screen.queryByText(i18n.t("systemAdmin.agentConfig.readOnly"))).toBeNull();
+    expect(screen.queryByText(i18n.t("systemAdmin.agentConfig.layered"))).toBeNull();
+    expect(screen.queryByText(i18n.t("knowledgeNetwork.agentChat.config.draft"))).toBeNull();
     // Built-in Agents are not created from the console.
     expect(screen.queryByText(i18n.t("common.create"))).toBeNull();
 
-    fireEvent.click(screen.getByText("知识网络优化Agent"));
+    fireEvent.click(screen.getByText("知识网络优化"));
     expect(await screen.findByText("detail page")).toBeTruthy();
   });
 
   it.each([
-    { language: "zh-CN", expected: "提示词 v3 · Agent 配置 v17" },
-    { language: "en-US", expected: "Prompt v3 · Agent configuration v17" },
+    { language: "zh-CN", expected: "Prompt v3 | Agent v17" },
+    { language: "en-US", expected: "Prompt v3 | Agent v17" },
   ])("shows independent current versions in $language (SA-078)", async ({ language, expected }) => {
     await i18n.changeLanguage(language);
     listShared.mockResolvedValue([agent({ prompt_version: 3, version: 17 })]);
     renderList();
 
-    expect(await screen.findByText(expected)).toBeTruthy();
+    expect((await screen.findByText(expected)).parentElement?.getAttribute("title")).toBe(expected);
     expect(listShared).toHaveBeenCalledTimes(1);
   });
 
   it.each([
-    { prompt_version: 3, version: undefined, expected: "提示词 v3" },
-    { prompt_version: null, version: 17, expected: "Agent 配置 v17" },
+    { prompt_version: 3, version: undefined, expected: "Prompt v3" },
+    { prompt_version: null, version: 17, expected: "Agent v17" },
     { prompt_version: undefined, version: null, expected: null },
   ])(
     "handles unavailable versions: $prompt_version / $version",
@@ -120,7 +123,7 @@ describe("AgentConfigListScene", () => {
       await screen.findByText("Studio智能问答");
 
       if (expected) expect(screen.getByText(expected)).toBeTruthy();
-      expect(screen.queryByText(/ · |undefined|null/)).toBeNull();
+      expect(screen.queryByText(/\||undefined|null/)).toBeNull();
       expect(screen.getByRole("img", { name: "clock-circle" })).toBeTruthy();
     },
   );
@@ -132,12 +135,12 @@ describe("AgentConfigListScene", () => {
       .mockResolvedValueOnce([agent({ prompt_version: 3, version: 17 })])
       .mockResolvedValueOnce([agent({ prompt_version: 4, version: 29 })]);
     renderList();
-    await screen.findByText("提示词 v3 · Agent 配置 v17");
+    await screen.findByText("Prompt v3 | Agent v17");
 
     for (const expected of [
-      "提示词 v3 · Agent 配置 v28",
-      "提示词 v3 · Agent 配置 v17",
-      "提示词 v4 · Agent 配置 v29",
+      "Prompt v3 | Agent v28",
+      "Prompt v3 | Agent v17",
+      "Prompt v4 | Agent v29",
     ]) {
       const refresh = screen.getByRole("button", { name: i18n.t("common.refresh") });
       await waitFor(() => expect(refresh.hasAttribute("disabled")).toBe(false));
@@ -151,12 +154,13 @@ describe("AgentConfigListScene", () => {
     const names = [
       ["studio_smart_qa", "Studio智能问答", "Studio Smart Q&A"],
       ["cypher_generation", "Cypher生成", "Cypher Generation"],
+      ["graph_explorer", "图探索", "Graph Explorer"],
       [
         "business_provenance_claim_attribution",
-        "业务溯源结论识别Agent",
-        "Business Provenance Claim Attribution Agent",
+        "业务溯源结论识别",
+        "Business Provenance Claim Attribution",
       ],
-      ["business_provenance_optimizer", "知识网络优化Agent", "Knowledge Network Optimizer Agent"],
+      ["business_provenance_optimizer", "知识网络优化", "Knowledge Network Optimizer"],
       ["catalog-semantic-understanding", "数据目录语义理解", "Data Catalog Semantic Understanding"],
       [
         "resource-semantic-understanding",

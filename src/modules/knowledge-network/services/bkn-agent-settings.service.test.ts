@@ -8,12 +8,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  getSharedPrompt,
   getShared,
   listShared,
   narrow,
   activateVersion,
   selectableTools,
   publishSharedPrompt,
+  saveSharedPromptTranslation,
 } from "@/modules/knowledge-network/services/bkn-agent-settings.service";
 import { BknAgentExecutionError } from "./bkn-agent-execution.service";
 
@@ -30,6 +32,61 @@ afterEach(() => {
 });
 
 describe("bkn-agent settings", () => {
+  it("maintains one version translation separately from original publication", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify({ prompt: { current_version: 7 } }))),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    await saveSharedPromptTranslation({
+      base: "https://h",
+      tokenProvider,
+      agentId: "studio_smart_qa",
+      locale: "en-US",
+      version: 7,
+      language: "en-US",
+      source_language: "zh-CN",
+      source_content_sha256: "a".repeat(64),
+      content: "English translation",
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://h/api/bkn-agent/v1/admin/agents/studio_smart_qa/prompt/versions/7/translations/en-US",
+    );
+    expect(fetchMock.mock.calls[0][1]?.method).toBe("PUT");
+    expect(requestBody(fetchMock.mock.calls[0][1])).toEqual({
+      content: "English translation",
+      source_language: "zh-CN",
+      source_content_sha256: "a".repeat(64),
+    });
+    await publishSharedPrompt({
+      base: "https://h",
+      tokenProvider,
+      agentId: "studio_smart_qa",
+      version: 8,
+      content: "English original",
+      source_language: "en-US",
+    });
+    expect(requestBody(fetchMock.mock.calls[1][1])).toEqual({
+      content: "English original",
+      version: 8,
+      source_language: "en-US",
+    });
+  });
+
+  it("sends the captured language on localized admin reads", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ prompt: { content: "English" } })));
+    vi.stubGlobal("fetch", fetchMock);
+    await getSharedPrompt({
+      base: "https://h",
+      tokenProvider,
+      agentId: "studio_smart_qa",
+      locale: "en-US",
+    });
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("Accept-Language")).toBe("en-US");
+  });
   it("reuses the requested Prompt version after a committed response is lost", async () => {
     vi.useFakeTimers();
     const fetchMock = vi
