@@ -368,6 +368,7 @@ export const bknProjectEnUS = {
         origin: {
           foreign_key: "A link declared in the tables",
           name_match: "Recommended from matching field names",
+          stem_match: "Recommended from a similar field name",
           link_table: "Connected through a linking table",
         },
         verification: {

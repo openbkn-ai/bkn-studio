@@ -91,7 +91,7 @@ export type DraftRelationType = {
   linkTable?: DraftTable;
   mapping: DraftFieldMapping[];
   name: string;
-  /** foreign_key, name_match or link_table; open like the key source. */
+  /** foreign_key, name_match, stem_match or link_table; open like the key source. */
   origin: string;
   source: string;
   target: string;
