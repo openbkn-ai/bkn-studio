@@ -378,6 +378,8 @@ describe("ProjectReleasePage", () => {
     renderRelease();
 
     expect(await screen.findByText("数据校验通过后才能发布。")).toBeInTheDocument();
+    // The running check has to be on the page before its next read is due.
+    expect(await screen.findByText("校验中")).toBeInTheDocument();
     expect(getProjectStatusMock).toHaveBeenCalledTimes(1);
 
     await act(() => vi.advanceTimersByTimeAsync(CHECK_POLL_MS));
