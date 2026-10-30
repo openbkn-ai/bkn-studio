@@ -711,6 +711,21 @@ export const bknProjectEnUS = {
       failed: "The draft could not be confirmed. Try again later.",
     },
     requirements: {
+      export: {
+        button: "Export",
+        workshop: {
+          label: "Export for Workshop",
+          hint: "Capability questions and business rules, for building metrics, functions and skills",
+        },
+        eval: {
+          label: "Export for evaluation",
+          hint: "Knowledge questions, their inputs and test questions, for evaluation",
+        },
+        noValues:
+          "Exports contain no data values: questions are written as templates, with each record value replaced by a placeholder.",
+        notReady: "The requirements can be exported once they are drafted.",
+        failed: "Could not export. Try again later.",
+      },
       loadFailed: "The requirements cannot be read right now",
       version: "Requirements version {{version}} · {{status}}",
       status: {

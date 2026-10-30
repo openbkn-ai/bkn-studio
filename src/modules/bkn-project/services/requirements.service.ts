@@ -7,6 +7,11 @@
 
 import { AxiosError, type AxiosResponse } from "axios";
 
+import {
+  parseContentDispositionFilename,
+  sanitizeDownloadFilename,
+  triggerBrowserDownload,
+} from "@/framework/download/file-download";
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
@@ -1243,4 +1248,39 @@ function mockDevNow(questionId: string): QuestionDev | null {
     testsNote: "",
     updateTime: start + Object.keys(mockDevEdits).length,
   };
+}
+
+/** Who an exported specification is for: `workshop` (capability questions and rules) or `eval`. */
+export type ExportTarget = "eval" | "workshop";
+
+/**
+ * Downloads the ready specification as YAML for a tool that has no import yet, named as
+ * bkn-project names the file. No value of a record is exported.
+ */
+export async function exportRequirements(projectId: string, target: ExportTarget): Promise<void> {
+  const fallback = sanitizeDownloadFilename(
+    `${projectId}-requirements-${target}.yaml`,
+    `requirements-${target}.yaml`,
+  );
+  if (useMock) {
+    await wait(null);
+    triggerBrowserDownload(
+      new Blob([`format: bkn-project-${target}/v1\nproject_id: ${projectId}\n`], {
+        type: "application/yaml",
+      }),
+      fallback,
+    );
+    return;
+  }
+  const response = await http.get<Blob>(`${requirementsPath(projectId)}/export`, {
+    params: { target },
+    responseType: "blob",
+    skipErrorToast: true,
+  });
+  triggerBrowserDownload(
+    response.data,
+    parseContentDispositionFilename(
+      response.headers["content-disposition"] as string | undefined,
+    ) ?? fallback,
+  );
 }

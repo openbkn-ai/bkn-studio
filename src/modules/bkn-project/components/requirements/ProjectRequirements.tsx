@@ -38,6 +38,7 @@ import {
   RulesView,
   ScenariosView,
 } from "@/modules/bkn-project/components/requirements/RequirementSpecViews";
+import { RequirementsExport } from "@/modules/bkn-project/components/requirements/RequirementsExport";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
 import {
   projectErrorCode,
@@ -316,6 +317,7 @@ export function ProjectRequirements({
               </LightStatusTag>
             ) : null}
             <span className={styles.spacer} />
+            {requirements ? <RequirementsExport projectId={project.id} ready={ready} /> : null}
             {canEdit ? (
               <AppButton
                 disabled={isDrafting || !documents.length}
