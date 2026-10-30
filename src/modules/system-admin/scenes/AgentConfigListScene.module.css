@@ -160,11 +160,14 @@
   white-space: nowrap;
 }
 
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
+.builtinTag {
+  align-self: flex-start;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 18px;
 }
 
 .footer {
@@ -183,6 +186,13 @@
 }
 
 .versionInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.versionText {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -201,6 +211,7 @@
   white-space: nowrap;
 }
 
+.versionInfo :global(.anticon),
 .metaItem :global(.anticon) {
   flex-shrink: 0;
   color: var(--color-text-tertiary);

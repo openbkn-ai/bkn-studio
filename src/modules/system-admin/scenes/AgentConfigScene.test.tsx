@@ -196,21 +196,27 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     [
       "business_provenance_claim_attribution",
       "业务溯源结论识别Agent",
-      "Business Provenance Claim Attribution Agent",
+      "Business Provenance Claim Attribution",
+      "业务溯源结论识别",
     ],
-    ["business_provenance_optimizer", "知识网络优化Agent", "Knowledge Network Optimizer Agent"],
+    [
+      "business_provenance_optimizer",
+      "知识网络优化Agent",
+      "Knowledge Network Optimizer",
+      "知识网络优化",
+    ],
     ["catalog-semantic-understanding", "数据目录语义理解", "Data Catalog Semantic Understanding"],
     ["resource-semantic-understanding", "数据资源语义理解", "Data Resource Semantic Understanding"],
   ])(
     "localizes the detail title for %s and responds to language changes",
-    async (agent_id, name, english) => {
+    async (agent_id, name, english, displayName = name) => {
       await i18n.changeLanguage("en-US");
       getShared.mockResolvedValue(shared({ agent_id, name }));
       getSharedPrompt.mockResolvedValue(PROMPT);
       renderScene(agent_id);
       expect(await screen.findByRole("heading", { name: english })).toBeTruthy();
       await act(() => i18n.changeLanguage("zh-CN"));
-      expect(screen.getByRole("heading", { name })).toBeTruthy();
+      expect(screen.getByRole("heading", { name: displayName })).toBeTruthy();
       expect(getShared).toHaveBeenCalledTimes(1);
     },
   );

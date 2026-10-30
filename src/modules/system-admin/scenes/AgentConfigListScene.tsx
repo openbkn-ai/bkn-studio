@@ -11,6 +11,7 @@
  */
 
 import {
+  BranchesOutlined,
   ClockCircleOutlined,
   ReloadOutlined,
   RobotOutlined,
@@ -23,7 +24,6 @@ import { useNavigate } from "react-router-dom";
 
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { executionRequestError } from "@/modules/knowledge-network/services/bkn-agent-execution.service";
 import {
   listShared,
@@ -35,11 +35,9 @@ import styles from "./AgentConfigListScene.module.css";
 import { agentDisplayName } from "./agent-config-names";
 
 const P = "systemAdmin.agentConfig";
-const L = "knowledgeNetwork.agentChat.config";
 
 function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }) {
   const { t } = useTranslation();
-  const published = agent.status === "published";
   const versions = [
     agent.prompt_version != null
       ? t(`${P}.promptVersion`, { version: agent.prompt_version })
@@ -47,7 +45,7 @@ function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }
     agent.version != null ? t(`${P}.configVersion`, { version: agent.version }) : null,
   ]
     .filter(Boolean)
-    .join("，");
+    .join(" | ");
   return (
     <article
       className={styles.card}
@@ -68,24 +66,14 @@ function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }
         <div className={styles.titleContent}>
           <div className={styles.titleText}>{agentDisplayName(agent, t)}</div>
           <div className={styles.agentId}>{agent.agent_id}</div>
-          <div className={styles.facts}>
-            <LightStatusTag tone="neutral">{t(`${P}.builtinTag`)}</LightStatusTag>
-            {/* Built-in Agents stay published; only a legacy draft is worth flagging. */}
-            {published ? null : <LightStatusTag tone="warning">{t(`${L}.draft`)}</LightStatusTag>}
-            <LightStatusTag tone="info">{agent.model || t(`${L}.defaultModel`)}</LightStatusTag>
-            {agent.layered ? (
-              <LightStatusTag tone="info">{t(`${P}.layered`)}</LightStatusTag>
-            ) : null}
-            {agent.can_edit ? null : (
-              <LightStatusTag tone="warning">{t(`${P}.readOnly`)}</LightStatusTag>
-            )}
-          </div>
+          <span className={styles.builtinTag}>{t(`${P}.builtinTag`)}</span>
         </div>
       </div>
       <div className={styles.footer}>
         {versions ? (
           <span className={styles.versionInfo} title={versions}>
-            {versions}
+            <BranchesOutlined aria-hidden />
+            <span className={styles.versionText}>{versions}</span>
           </span>
         ) : null}
         <Tooltip title={t(`${P}.updateTime`)}>
