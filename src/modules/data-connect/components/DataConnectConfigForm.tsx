@@ -37,6 +37,9 @@ import type {
   DataConnectHealthCheckScheduleMode,
 } from "@/modules/data-connect/types/data-connect";
 import { isHourlyCron } from "@/modules/data-connect/utils/health-check-cron";
+import { validateConnectorOptions } from "@/modules/data-connect/lib/connector-options";
+
+import { ConnectorOptionsEditor } from "./ConnectorOptionsEditor";
 
 import styles from "./DataConnectConfigForm.module.css";
 
@@ -306,12 +309,29 @@ function ConnectorFieldGroup({
                   ? t("dataConnect.encryptedFieldEditHint")
                   : fieldHint
               }
+              help={control.kind === "options" ? false : undefined}
               key={fieldName}
               label={label}
               name={["connectorConfig", fieldName]}
               required={required}
               rules={[
                 { message: t("common.required"), required },
+                ...(control.kind === "options"
+                  ? [
+                      {
+                        validator: (_: unknown, value: unknown) => {
+                          const invalid = validateConnectorOptions(connectorType, value);
+                          return invalid
+                            ? Promise.reject(
+                                new Error(
+                                  `${invalid.key ? `${invalid.key}: ` : ""}${t(`dataConnect.optionEditor.errors.${invalid.error}`)}`,
+                                ),
+                              )
+                            : Promise.resolve();
+                        },
+                      },
+                    ]
+                  : []),
                 ...(control.kind === "json"
                   ? [
                       {
@@ -323,7 +343,11 @@ function ConnectorFieldGroup({
                     ]
                   : []),
               ]}
-              span={control.kind === "json" || control.kind === "tags" ? "full" : "half"}
+              span={
+                control.kind === "json" || control.kind === "options" || control.kind === "tags"
+                  ? "full"
+                  : "half"
+              }
               valuePropName={control.kind === "switch" ? "checked" : "value"}
             >
               {renderField({
@@ -353,6 +377,7 @@ type InlineFieldProps = {
   align?: "center" | "start";
   children: ReactNode;
   extra?: string;
+  help?: ReactNode;
   label: string;
   name: SafeNamePath;
   required?: boolean;
@@ -365,6 +390,7 @@ function InlineField({
   align = "center",
   children,
   extra,
+  help,
   label,
   name,
   required = false,
@@ -390,6 +416,7 @@ function InlineField({
         <Form.Item
           className={styles.fieldItem}
           extra={extra}
+          help={help}
           name={name}
           rules={rules}
           valuePropName={valuePropName}
@@ -443,6 +470,8 @@ function renderField(options: {
       return <Select mode="tags" open={false} placeholder={placeholder} />;
     case "json":
       return <Input.TextArea placeholder={placeholder} rows={3} />;
+    case "options":
+      return <ConnectorOptionsEditor connectorType={connectorType} />;
     default:
       return <Input placeholder={placeholder} />;
   }

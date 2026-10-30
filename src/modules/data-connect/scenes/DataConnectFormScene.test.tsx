@@ -599,36 +599,76 @@ describe("DataConnectFormScene · connection preflight", () => {
     });
   });
 
-  it("rejects invalid JSON options before testing the connection", async () => {
+  it.each([
+    ["mysql", "time_zone", undefined],
+    ["mysql", "time_zone", ""],
+    ["mysql", "time_zone", "-08:00"],
+    ["postgresql", "timezone", undefined],
+    ["postgresql", "timezone", ""],
+    ["postgresql", "timezone", "+08:00"],
+  ] as const)(
+    "preserves %s %s=%j in connection tests and saved payloads",
+    async (type, key, zone) => {
+      permissionState.values.add("catalog:create");
+      const options = zone === undefined ? {} : { [key]: zone };
+      mockSQLServerEditCatalog(options, {}, type);
+      getDataConnectConnectorTypeMock.mockResolvedValue({
+        available: true,
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: { options: connectorField("Options", "object", false) },
+        mode: "local",
+        name: type,
+        type,
+      });
+      render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+      await screen.findByDisplayValue("sqlserver-orders");
+      fireEvent.click(screen.getByRole("button", { name: "common.testConnection" }));
+      await waitFor(() => expect(testDataConnectConfigMock).toHaveBeenCalled());
+      const tested = testDataConnectConfigMock.mock.lastCall?.[0] as {
+        connectorType: string;
+        connectorConfig: Record<string, unknown>;
+      };
+      expect(tested.connectorType).toBe(type);
+      expect(tested.connectorConfig.options).toEqual(options);
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() =>
+        expect(updateDataConnectRecordMock).toHaveBeenCalledWith(
+          "catalog-sqlserver",
+          expect.objectContaining({ connectorType: type }),
+          { skipErrorToast: true },
+        ),
+      );
+      const saved = updateDataConnectRecordMock.mock.lastCall?.[1] as {
+        connectorConfig: Record<string, unknown>;
+      };
+      expect(saved.connectorConfig.options).toEqual(options);
+    },
+  );
+
+  it("rejects invalid structured option values before testing the connection", async () => {
     permissionState.values.add("catalog:create");
-    mockSQLServerEditCatalog({ encrypt: true });
+    mockSQLServerEditCatalog({ encrypt: "true" });
 
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
 
     await screen.findByDisplayValue("sqlserver-orders");
-    fireEvent.change(
-      screen.getByPlaceholderText('例如 {"encrypt":true,"trustservercertificate":false}'),
-      { target: { value: "{invalid" } },
-    );
     fireEvent.click(screen.getByRole("button", { name: "common.testConnection" }));
 
-    expect(
-      await screen.findByText("dataConnect.jsonObjectInvalid", {}, { timeout: 5_000 }),
-    ).toBeTruthy();
+    await waitFor(() => expect(document.querySelector(".ant-form-item-has-error")).not.toBeNull());
+    expect(screen.getAllByText("dataConnect.optionEditor.errors.boolean")).toHaveLength(1);
     expect(testDataConnectConfigMock).not.toHaveBeenCalled();
   });
 
-  it("omits object fields cleared to an empty string", async () => {
+  it("omits options when the last structured parameter is removed", async () => {
     permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog({ encrypt: true });
 
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
 
     await screen.findByDisplayValue("sqlserver-orders");
-    fireEvent.change(
-      screen.getByPlaceholderText('例如 {"encrypt":true,"trustservercertificate":false}'),
-      { target: { value: "   " } },
-    );
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.optionEditor.remove" }));
     fireEvent.click(screen.getByRole("button", { name: "common.testConnection" }));
 
     await waitFor(() => {
@@ -1170,9 +1210,21 @@ describe("DataConnectFormScene · connection preflight", () => {
       fireEvent.click(getFormAction("common.next"));
       const host = await screen.findByPlaceholderText("例如 db.example.internal");
       fireEvent.change(host, { target: { value: "hana.example.com" } });
-      fireEvent.change(screen.getByPlaceholderText('例如 {"timeout":30}'), {
-        target: { value: '{"tls":true}' },
-      });
+      fireEvent.click(screen.getByText("dataConnect.optionEditor.title"));
+      fireEvent.mouseDown(screen.getByRole("combobox", { name: "dataConnect.optionEditor.add" }));
+      fireEvent.click(
+        await screen.findByText("dataConnect.optionEditor.labels.tls (tls)", {
+          selector: ".ant-select-item-option-content",
+        }),
+      );
+      fireEvent.mouseDown(
+        screen.getByRole("combobox", { name: "dataConnect.optionEditor.labels.tls (tls)" }),
+      );
+      fireEvent.click(
+        await screen.findByText("dataConnect.switchOn", {
+          selector: ".ant-select-item-option-content",
+        }),
+      );
       fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
         target: { value: "Shared name" },
       });
@@ -1198,7 +1250,11 @@ describe("DataConnectFormScene · connection preflight", () => {
       expect(modalConfirmMock).toHaveBeenCalledTimes(1);
       fireEvent.click(getFormAction("common.next"));
       expect(await screen.findByDisplayValue("hana.example.com")).toBeTruthy();
-      expect(screen.getByDisplayValue('{"tls":true}')).toBeTruthy();
+      expect(
+        screen
+          .getByRole("combobox", { name: "dataConnect.optionEditor.labels.tls (tls)" })
+          .closest(".ant-select"),
+      ).toHaveTextContent("dataConnect.switchOn");
       fireEvent.click(getFormAction("common.previous"));
       fireEvent.click(await findConnectorCard("PostgreSQL"));
       const confirmSwitch = modalConfirmMock.mock.calls[1]?.[0]?.onOk;
@@ -1208,7 +1264,9 @@ describe("DataConnectFormScene · connection preflight", () => {
       await screen.findByPlaceholderText("dataConnect.namePlaceholder");
       expect(screen.getByDisplayValue("Shared name")).toBeTruthy();
       expect(screen.queryByDisplayValue("hana.example.com")).toBeNull();
-      expect(screen.queryByDisplayValue('{"tls":true}')).toBeNull();
+      expect(
+        screen.queryByRole("combobox", { name: "dataConnect.optionEditor.labels.tls (tls)" }),
+      ).toBeNull();
       fireEvent.click(getFormAction("common.testConnection"));
       await waitFor(() =>
         expect(testDataConnectConfigMock).toHaveBeenCalledWith({
@@ -1261,6 +1319,7 @@ function sqlServerConnectorType(enabled: boolean, available: boolean): DataConne
 function mockSQLServerEditCatalog(
   options: unknown,
   connectorConfigOverrides: Record<string, unknown> = {},
+  connectorType = "sqlserver",
 ) {
   listDataConnectConnectorTypesMock.mockResolvedValue([
     {
@@ -1282,7 +1341,7 @@ function mockSQLServerEditCatalog(
       },
       mode: "local",
       name: "SQL Server",
-      type: "sqlserver",
+      type: connectorType,
     },
   ]);
   getDataConnectRecordMock.mockResolvedValue({
@@ -1297,7 +1356,7 @@ function mockSQLServerEditCatalog(
       username: "readonly_user",
       ...connectorConfigOverrides,
     },
-    connectorType: "sqlserver",
+    connectorType,
     createTime: "-",
     creatorName: "-",
     description: "",

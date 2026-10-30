@@ -302,6 +302,79 @@ export const dataConnectEnUS = {
     connectorTypeResultCount: "{{count}} connector type",
     connectorTypeResultCount_one: "{{count}} connector type",
     connectorTypeResultCount_other: "{{count}} connector types",
+    optionEditor: {
+      title: "Advanced connection parameters ({{count}})",
+      add: "Add parameter",
+      remove: "Remove {{key}}",
+      chooseValue: "Choose a value",
+      emptyValue: "Empty value (use driver default)",
+      defaultHint:
+        "Only added parameters are submitted. Remove a parameter to restore the backend default.",
+      unknown:
+        "This parameter is not described by this Studio version. Its value is preserved; remove it explicitly if needed. The backend validates support.",
+      repairJSON: "Repair connection options JSON",
+      labels: {
+        timeZone: "Session time zone",
+        charset: "Character set",
+        collation: "Collation",
+        connectTimeout: "Connect timeout",
+        readTimeout: "Read timeout",
+        writeTimeout: "Write timeout",
+        tls: "TLS",
+        sslMode: "SSL mode",
+        applicationName: "Application name",
+        fallbackApplicationName: "Fallback application name",
+        statementTimeout: "Statement timeout",
+        lockTimeout: "Lock timeout",
+        idleTransactionTimeout: "Idle transaction timeout",
+        encrypt: "Encrypt connection",
+        trustCertificate: "Trust server certificate",
+        certificateName: "Certificate server name",
+        tlsMinimum: "Minimum TLS version",
+        verifyCertificate: "Verify certificate",
+        timeout: "Timeout",
+        connectionTimeout: "Connection timeout",
+        socketTimeout: "Socket timeout",
+        server: "Server",
+      },
+      hints: {
+        timeZone:
+          "Omitted: use the Vega service time zone. Empty: inherit the database session default. Other values use the database's native interpretation, including offset signs; the connection test validates them.",
+        emptyString:
+          "An empty value is submitted as an empty string. Remove this parameter to leave it unconfigured.",
+        seconds:
+          "Integer seconds, from 0 to 9223372036. Zero retains the driver's timeout semantics.",
+        duration: "Non-negative duration, such as 500ms or 30s; 0 means no driver timeout.",
+        sessionTimeout:
+          "Milliseconds or a PostgreSQL duration, such as 1000, 1s or 2min. Zero disables the timeout. Millisecond values must not exceed 2147483647.",
+        mysqlCharset:
+          "Defaults to utf8mb4 when omitted. Enter a character set supported by the database.",
+        mysqlTLS:
+          "true enables TLS; false disables it; preferred allows fallback; skip-verify skips certificate verification.",
+        sslMode: "Omitted or empty: disable. SSL certificate file configuration is not supported.",
+        trustCertificate: "Enabling this skips server certificate verification.",
+        oracleCharset:
+          "Defaults to UTF8 when omitted. Enter a character set supported by the driver.",
+        hanaCertificate:
+          "Requires tls=true. Defaults to the connection host when TLS is enabled and this parameter is omitted.",
+        positiveDuration:
+          "Positive duration such as 30s. Omitted parameters use the driver default.",
+      },
+      errors: {
+        json: "Enter a valid JSON object.",
+        duplicate: "This parameter duplicates another key after connector normalization.",
+        boolean: "Choose enabled or disabled.",
+        enum: "Choose a supported value.",
+        seconds: "Enter integer seconds from 0 to 9223372036.",
+        duration: "Enter a non-negative duration within the driver range, such as 500ms or 30s.",
+        positiveDuration: "Enter a positive duration within the driver range, such as 30s.",
+        sessionTimeout:
+          "Enter a non-negative timeout in milliseconds (at most 2147483647) or with a PostgreSQL unit: us, ms, s, min, h or d.",
+        text: "Enter a string value.",
+        nonEmptyText: "Enter a non-empty string.",
+        requiresTLS: "Enable tls before configuring the certificate server name.",
+      },
+    },
     connectorTemplates: {
       families: {
         structured: {
