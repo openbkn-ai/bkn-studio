@@ -20,7 +20,7 @@ import { Section } from "@/modules/bkn-project/components/release/ReleaseSection
 import { ReleaseReviewDialog } from "@/modules/bkn-project/components/release/ReleaseReviewDialog";
 import { RollbackDialog } from "@/modules/bkn-project/components/release/RollbackDialog";
 import { SwitchConsumersDialog } from "@/modules/bkn-project/components/release/SwitchConsumersDialog";
-import { getRegression } from "@/modules/bkn-project/services/release.service";
+import { getRegression, REGRESSION_POLL_MS } from "@/modules/bkn-project/services/release.service";
 import type { ProjectStatus } from "@/modules/bkn-project/types/publish";
 import type { Regression } from "@/modules/bkn-project/types/release";
 
@@ -81,6 +81,24 @@ export function ReleasePublish({
       active = false;
     };
   }, [projectId, releasedAs]);
+  // A regression starts right after publishing: read it again until it ends, so its tag does not
+  // stay "running".
+  const regressionRunning = regression?.status === "running";
+  useEffect(() => {
+    if (!regressionRunning || !releasedAs) {
+      return undefined;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      getRegression(projectId, releasedAs)
+        .then((next) => active && setRegression(next))
+        .catch(() => undefined);
+    }, REGRESSION_POLL_MS);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [projectId, regression, regressionRunning, releasedAs]);
 
   return (
     <Section

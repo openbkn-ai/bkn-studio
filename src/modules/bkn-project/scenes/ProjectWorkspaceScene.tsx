@@ -184,6 +184,7 @@ export function ProjectWorkspaceScene({
           ) : section === "release" ? (
             <ProjectReleasePage
               onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
+              onReleaseChanged={() => void load()}
               ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
               project={project}
             />
