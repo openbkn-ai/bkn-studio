@@ -15,9 +15,9 @@ const en = i18n.getFixedT("en-US");
 
 describe("testCheckReasonText", () => {
   it("tells a deleted table from a failed query, never by its code", () => {
-    expect(testCheckReasonText(zh, "table_missing")).toBe("要读的数据表已被删除，没能核对");
+    expect(testCheckReasonText(zh, "table_missing")).toBe("测试所问的数据表已被删除");
     expect(testCheckReasonText(en, "table_missing")).toBe(
-      "A table it reads has been deleted, so it was not checked",
+      "The table this test asks about was deleted",
     );
     expect(testCheckReasonText(zh, "query_failed: vega-backend 500")).toBe("查询数据没有成功");
     expect(testCheckReasonText(zh, "something_new")).toBe("没有通过核对");
