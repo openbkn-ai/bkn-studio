@@ -502,6 +502,10 @@ export const bknProjectZhCN = {
         partialTitle_one: "以下 {{count}} 张表起草时读取不到，没有参与起草",
         partialTitle_other: "以下 {{count}} 张表起草时读取不到，没有参与起草",
         partialAccept: "知道这些表没有参与起草，仍然确认",
+        conflictsAccept: "还有 {{count}} 个需求冲突没有裁决，仍然确认",
+        conflictsAccept_one: "还有 {{count}} 个需求冲突没有裁决，仍然确认",
+        conflictsAccept_other: "还有 {{count}} 个需求冲突没有裁决，仍然确认",
+        conflictsAcceptUncounted: "还有需求冲突没有裁决，仍然确认",
         loadFailed: "待决定的内容暂时读取不到",
         ok: "确认",
       },
@@ -642,6 +646,7 @@ export const bknProjectZhCN = {
       Draft: {
         UndecidedNotAccepted: "有新的未决项，请查看后再确认",
         PartialNotAccepted: "有起草时读取不到的表，请查看后再确认",
+        ConflictsNotAccepted: "还有需求冲突没有裁决。勾选下方的「仍然确认」后再确认草稿。",
         HasPending: "还有需要先处理的项，请在“变更”中处理后再确认",
         Stale: "草稿刚被修改过，已重新加载，请查看后再确认",
         NotReady: "草稿还没有准备好，请稍后再试",

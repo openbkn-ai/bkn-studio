@@ -539,6 +539,10 @@ export const bknProjectEnUS = {
         partialTitle_one: "{{count}} table could not be read, so drafting left it out",
         partialTitle_other: "{{count}} tables could not be read, so drafting left them out",
         partialAccept: "Confirm without these tables",
+        conflictsAccept: "{{count}} requirement conflicts are not resolved. Confirm anyway",
+        conflictsAccept_one: "{{count}} requirement conflict is not resolved. Confirm anyway",
+        conflictsAccept_other: "{{count}} requirement conflicts are not resolved. Confirm anyway",
+        conflictsAcceptUncounted: "Some requirement conflicts are not resolved. Confirm anyway",
         loadFailed: "The items to decide could not be loaded",
         ok: "Confirm",
       },
@@ -684,6 +688,8 @@ export const bknProjectEnUS = {
       Draft: {
         UndecidedNotAccepted: "New items are undecided. Review them, then confirm.",
         PartialNotAccepted: "Some tables could not be read in drafting. Review them, then confirm.",
+        ConflictsNotAccepted:
+          "Some requirement conflicts are not resolved. Select “Confirm anyway” below, then confirm the draft again.",
         HasPending: "Some items need attention first. Settle them in Changes, then confirm.",
         Stale: "The draft just changed and was reloaded. Review it, then confirm.",
         NotReady: "The draft is not ready yet. Try again shortly.",
