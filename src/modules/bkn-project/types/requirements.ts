@@ -146,3 +146,36 @@ export type Requirements = {
   updateTime: number;
   version: number;
 };
+
+/** A test question asked in its scenario question's place, checked against the data. */
+export type QuestionTest = {
+  check: { outcome: string; reason: string };
+  edited: boolean;
+  /** `exists`, `not_exists` or `same_record`. */
+  expect: string;
+  id: string;
+  /** `paraphrase`, `boundary`, `not_exist`, `variant`, or empty. */
+  kind: string;
+  text: string;
+};
+
+/** A scenario question's test questions and development guidance. */
+export type QuestionDev = {
+  /** False once the requirements were drafted again or the question reworded since. */
+  current: boolean;
+  deletedTests: number;
+  error: string;
+  /** Markdown. */
+  guidance: string;
+  leftOutTests: number;
+  /** Why no test was written, as the Agent says it. */
+  noTestsReason: string;
+  /** Whether what the question needs changed in the draft since; null when unknown. */
+  ontologyChanged: boolean | null;
+  /** Further questions that need more than this one. */
+  outOfScope: string[];
+  /** `generating`, `ready` or `failed`. */
+  status: string;
+  tests: QuestionTest[];
+  updateTime: number;
+};

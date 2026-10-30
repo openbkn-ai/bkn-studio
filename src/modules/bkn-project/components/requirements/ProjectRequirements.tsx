@@ -372,7 +372,7 @@ export function ProjectRequirements({
           ) : spec ? (
             <>
               {activeTab === "questions" ? (
-                <QuestionsView itemName={itemName} spec={spec} />
+                <QuestionsView itemName={itemName} projectId={project.id} spec={spec} />
               ) : activeTab === "scenarios" ? (
                 <ScenariosView spec={spec} />
               ) : activeTab === "concepts" ? (

@@ -338,4 +338,92 @@ describe("requirements.service", () => {
       { skipErrorToast: true },
     );
   });
+
+  it("reads a question's tests and guidance, none before the first generation, and edits them", async () => {
+    const { deleteTest, editTest, generateQuestionDev, getQuestionDev } = await importService();
+    const reply = {
+      current: false,
+      deleted_tests: 1,
+      guidance: "Find the customer first.",
+      left_out_tests: 2,
+      no_tests_reason: "",
+      ontology_changed: null,
+      out_of_scope: null,
+      question_id: "q1",
+      status: "ready",
+      tests: [
+        {
+          check: { outcome: "passed" },
+          edited: false,
+          expect: "exists",
+          id: "t1",
+          kind: "paraphrase",
+          text: "A?",
+        },
+        { check: null, expect: "same_record", id: "t2", text: "B?" },
+      ],
+      update_time: 5,
+    };
+    mockGet.mockResolvedValueOnce({ data: reply });
+
+    expect(await getQuestionDev("p/1", "q1")).toEqual({
+      current: false,
+      deletedTests: 1,
+      error: "",
+      guidance: "Find the customer first.",
+      leftOutTests: 2,
+      noTestsReason: "",
+      ontologyChanged: null,
+      outOfScope: [],
+      status: "ready",
+      tests: [
+        {
+          check: { outcome: "passed", reason: "" },
+          edited: false,
+          expect: "exists",
+          id: "t1",
+          kind: "paraphrase",
+          text: "A?",
+        },
+        {
+          check: { outcome: "not_checked", reason: "" },
+          edited: false,
+          expect: "same_record",
+          id: "t2",
+          kind: "",
+          text: "B?",
+        },
+      ],
+      updateTime: 5,
+    });
+    expect(mockGet).toHaveBeenCalledWith(`${prefix}/questions/q1/dev`, { skipErrorToast: true });
+
+    mockGet.mockRejectedValueOnce(
+      new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { error_code: "BknProject.Requirement.TestNotFound" },
+        status: 404,
+      } as AxiosResponse),
+    );
+    expect(await getQuestionDev("p/1", "q6")).toBeNull();
+
+    mockPost.mockResolvedValue({ data: { ...reply, status: "generating", tests: [] } });
+    expect((await generateQuestionDev("p/1", "q1")).status).toBe("generating");
+    expect(mockPost).toHaveBeenCalledWith(`${prefix}/questions/q1/dev:generate`, undefined, {
+      skipErrorToast: true,
+    });
+
+    mockPut.mockResolvedValue({ data: reply });
+    await editTest("p/1", "q1", "t1", { expect: "not_exists" }, 5);
+    expect(mockPut).toHaveBeenCalledWith(
+      `${prefix}/questions/q1/tests/t1`,
+      { expect: "not_exists", update_time: 5 },
+      { skipErrorToast: true },
+    );
+    mockDelete.mockResolvedValue({ data: reply });
+    await deleteTest("p/1", "q1", "t2", 5);
+    expect(mockDelete).toHaveBeenCalledWith(`${prefix}/questions/q1/tests/t2`, {
+      params: { update_time: 5 },
+      skipErrorToast: true,
+    });
+  });
 });

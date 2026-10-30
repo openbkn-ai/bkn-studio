@@ -107,3 +107,39 @@ export function requirementErrorText(t: TFunction, code: string | undefined) {
     "DocumentTooLarge",
   ])(t, name);
 }
+
+export const testKindText = word("testKind", ["paraphrase", "boundary", "not_exist", "variant"]);
+
+export const testExpectText = word("testExpect", ["exists", "not_exists", "same_record"]);
+
+export const testOutcomeText = word("testOutcome", ["passed", "failed", "not_checked"]);
+
+const checkReasonWord = word("testCheckReason", [
+  "pending",
+  "record_not_found",
+  "record_exists",
+  "different_records",
+  "no_values",
+  "unknown_concept",
+  "concept_not_mapped",
+  "item_not_drafted",
+  "unknown_property",
+  "property_not_mapped",
+  "same_record_needs_two_values",
+  "same_record_needs_one_object_type",
+  "composite_identity",
+  "query_failed",
+  "excluded_field",
+  "no_value_in_data",
+  "no_absent_value",
+  "value_not_in_text",
+  "value_outside_slot",
+  "check_timeout",
+]);
+
+/**
+ * Why a test question did not pass its check against the data, or was not checked. A failed
+ * query carries the data source's reply after the code; the page says only the code's words.
+ */
+export const testCheckReasonText = (t: TFunction, reason: string) =>
+  checkReasonWord(t, reason.split(":", 1)[0].trim());
