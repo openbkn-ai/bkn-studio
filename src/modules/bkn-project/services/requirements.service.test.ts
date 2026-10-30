@@ -385,6 +385,7 @@ describe("requirements.service", () => {
       status: "ready",
       tests: [
         {
+          byServer: false,
           check: { outcome: "passed", reason: "" },
           edited: false,
           expect: "exists",
@@ -393,6 +394,7 @@ describe("requirements.service", () => {
           text: "A?",
         },
         {
+          byServer: false,
           check: { outcome: "not_checked", reason: "" },
           edited: false,
           expect: "same_record",
@@ -401,6 +403,7 @@ describe("requirements.service", () => {
           text: "B?",
         },
       ],
+      testsNote: "",
       updateTime: 5,
     });
     expect(mockGet).toHaveBeenCalledWith(`${prefix}/questions/q1/dev`, { skipErrorToast: true });
@@ -452,5 +455,108 @@ describe("requirements.service", () => {
     mockGet.mockResolvedValueOnce({ data: blob, headers: {} });
     await exportRequirements("p/1", "workshop");
     expect(downloadMock).toHaveBeenLastCalledWith(blob, "p_1-requirements-workshop.yaml");
+  });
+
+  it("reads what a question is asked about, telling unknown from none", async () => {
+    const { getRequirements } = await importService();
+    const question = (extra: Record<string, unknown>) => ({
+      answer_shape: "",
+      id: "q",
+      layer: "knowledge",
+      needs_source: "concepts",
+      template: "",
+      text: "",
+      type: "",
+      ...extra,
+    });
+    mockGet.mockResolvedValueOnce({
+      data: {
+        spec: {
+          questions: [
+            question({
+              id: "q1",
+              inputs: [
+                {
+                  concept_id: "c1",
+                  name: "customer",
+                  property: "code",
+                  property_from_key: true,
+                  role: "record",
+                },
+              ],
+              notes: ["capability_without_basis"],
+              relative_window: true,
+            }),
+            question({ id: "q2", inputs: [] }),
+            question({ id: "q3" }),
+          ],
+        },
+        status: "ready",
+        update_time: 1,
+        version: 1,
+      },
+    });
+
+    const [withInputs, none, unknown] = (await getRequirements("p/1"))!.spec.questions;
+    expect(withInputs).toMatchObject({
+      inputs: [
+        {
+          conceptId: "c1",
+          name: "customer",
+          property: "code",
+          propertyFromKey: true,
+          role: "record",
+        },
+      ],
+      notes: ["capability_without_basis"],
+      relativeWindow: true,
+    });
+    expect(none.inputs).toEqual([]);
+    expect(withInputs.inputs?.[0]).not.toHaveProperty("property_from_key");
+    // Drafted before inputs: nothing is said, not "none".
+    expect(unknown).toMatchObject({ inputs: null, notes: [], relativeWindow: false });
+  });
+
+  it("sends a question's inputs and window, and reads who wrote each test", async () => {
+    const { editItem, getQuestionDev } = await importService();
+    mockPatch.mockResolvedValue({
+      data: { spec: {}, status: "ready", update_time: 2, version: 1 },
+    });
+    await editItem(
+      "p/1",
+      "questions",
+      "q1",
+      {
+        inputs: [{ conceptId: "c1", name: "as_of", property: "signed_at", role: "reference_time" }],
+        relativeWindow: true,
+      },
+      1,
+    );
+    expect(mockPatch).toHaveBeenCalledWith(
+      `${prefix}/items/questions/q1`,
+      {
+        inputs: [
+          { concept_id: "c1", name: "as_of", property: "signed_at", role: "reference_time" },
+        ],
+        relative_window: true,
+        update_time: 1,
+      },
+      { skipErrorToast: true },
+    );
+
+    mockGet.mockResolvedValueOnce({
+      data: {
+        status: "ready",
+        tests: [
+          { by_server: true, expect: "exists", id: "t1", kind: "template", text: "A?" },
+          { expect: "exists", id: "t3", kind: "paraphrase", text: "B?" },
+        ],
+        tests_note: "inputs_untested",
+        update_time: 3,
+      },
+    });
+    const dev = (await getQuestionDev("p/1", "q1"))!;
+    expect(dev.tests.map((test) => test.byServer)).toEqual([true, false]);
+    expect(dev.testsNote).toBe("inputs_untested");
   });
 });

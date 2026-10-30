@@ -140,3 +140,12 @@
   max-width: 320px;
   white-space: normal;
 }
+
+.inputName {
+  width: 140px;
+}
+
+.inputSelect {
+  min-width: 160px;
+  max-width: 220px;
+}
