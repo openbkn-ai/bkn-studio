@@ -28,6 +28,7 @@ import {
 import { RequirementDocuments } from "@/modules/bkn-project/components/requirements/RequirementDocuments";
 import {
   draftErrorText,
+  refusedInputs,
   requirementErrorText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
 import {
@@ -38,7 +39,10 @@ import {
   ScenariosView,
 } from "@/modules/bkn-project/components/requirements/RequirementSpecViews";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
-import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
+import {
+  projectErrorCode,
+  projectErrorDetails,
+} from "@/modules/bkn-project/services/publish.service";
 import {
   addItem,
   decideChoice,
@@ -99,6 +103,8 @@ export function ProjectRequirements({
   const [drafted, setDrafted] = useState<DraftedItem[]>([]);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [saving, setSaving] = useState(false);
+  // The server's reasons for a question's refused inputs, shown on their rows.
+  const [inputErrors, setInputErrors] = useState<Record<string, string>>({});
   const [viewing, setViewing] = useState<{
     documentId: string;
     range?: { end: number; start: number };
@@ -140,11 +146,21 @@ export function ProjectRequirements({
       .then((draft) => {
         if (active && draft) {
           setDrafted([
-            ...draft.items.objectTypes.map(({ id, name }) => ({ id, kind: "object_type", name })),
+            ...draft.items.objectTypes.map(({ id, name, properties }) => ({
+              id,
+              kind: "object_type",
+              name,
+              properties: properties.map(({ displayName, name: field, type }) => ({
+                displayName,
+                name: field,
+                type,
+              })),
+            })),
             ...draft.items.relationTypes.map(({ id, name }) => ({
               id,
               kind: "relation_type",
               name,
+              properties: [],
             })),
           ]);
         }
@@ -213,13 +229,20 @@ export function ProjectRequirements({
       latest.current += 1;
       setRequirements(await send(requirements.updateTime));
       setDialog(null);
+      setInputErrors({});
       return true;
     } catch (error) {
       const code = projectErrorCode(error);
+      const refused =
+        code === "Requirement.InvalidItem" ? refusedInputs(projectErrorDetails(error)) : {};
       if (code === "Requirement.Stale") {
         message.warning(t(`${PREFIX}.editing.stale`));
         setDialog(null);
         void load();
+      } else if (Object.keys(refused).length) {
+        // The dialog stays open with each refused input saying why.
+        setInputErrors(refused);
+        message.error(t(`${PREFIX}.editing.inputs.refused`));
       } else {
         message.error(requirementErrorText(t, code));
       }
@@ -372,7 +395,12 @@ export function ProjectRequirements({
           ) : spec ? (
             <>
               {activeTab === "questions" ? (
-                <QuestionsView itemName={itemName} projectId={project.id} spec={spec} />
+                <QuestionsView
+                  drafted={drafted}
+                  itemName={itemName}
+                  projectId={project.id}
+                  spec={spec}
+                />
               ) : activeTab === "scenarios" ? (
                 <ScenariosView spec={spec} />
               ) : activeTab === "concepts" ? (
@@ -394,9 +422,13 @@ export function ProjectRequirements({
           {spec && dialog?.type === "item" ? (
             <ItemDialog
               drafted={drafted}
+              inputErrors={inputErrors}
               itemId={dialog.itemId}
               kind={dialog.kind}
-              onCancel={() => setDialog(null)}
+              onCancel={() => {
+                setDialog(null);
+                setInputErrors({});
+              }}
               onSave={(fields) =>
                 void apply((time) =>
                   dialog.itemId

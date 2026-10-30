@@ -12,6 +12,7 @@ import { http } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import type {
   QuestionDev,
+  QuestionInput,
   RequirementCitation,
   RequirementItemKind,
   RequirementItemRef,
@@ -105,9 +106,14 @@ type BackendSpec = {
     | (BackendCited & {
         answer_shape: string;
         id: string;
+        inputs?:
+          | { concept_id: string; name: string; property?: string; role: string }[]
+          | null;
         layer: string;
         needs?: { id: string; kind: string }[] | null;
         needs_source: string;
+        notes?: string[] | null;
+        relative_window?: boolean;
         scenario_ids?: string[] | null;
         template: string;
         text: string;
@@ -217,9 +223,20 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
       ...cited(question),
       answerShape: question.answer_shape,
       id: question.id,
+      // Absent means nothing is said about inputs; an empty list means none.
+      inputs: question.inputs
+        ? question.inputs.map((input) => ({
+            conceptId: input.concept_id,
+            name: input.name,
+            property: input.property ?? "",
+            role: input.role,
+          }))
+        : null,
       layer: question.layer,
       needs: (question.needs ?? []).map(({ id, kind }) => ({ id, kind })),
       needsSource: question.needs_source,
+      notes: question.notes ?? [],
+      relativeWindow: question.relative_window ?? false,
       scenarioIds: question.scenario_ids ?? [],
       template: question.template,
       text: question.text,
@@ -419,8 +436,10 @@ type BackendDev = {
   ontology_changed?: boolean | null;
   out_of_scope?: string[] | null;
   status: string;
+  tests_note?: string;
   tests?:
     | {
+        by_server?: boolean;
         check?: { outcome: string; reason?: string } | null;
         edited?: boolean;
         expect: string;
@@ -443,6 +462,7 @@ export const mapDev = (dev: BackendDev): QuestionDev => ({
   outOfScope: dev.out_of_scope ?? [],
   status: dev.status,
   tests: (dev.tests ?? []).map((test) => ({
+    byServer: test.by_server ?? false,
     check: { outcome: test.check?.outcome ?? "not_checked", reason: test.check?.reason ?? "" },
     edited: test.edited ?? false,
     expect: test.expect,
@@ -450,6 +470,7 @@ export const mapDev = (dev: BackendDev): QuestionDev => ({
     kind: test.kind ?? "",
     text: test.text,
   })),
+  testsNote: dev.tests_note ?? "",
   updateTime: dev.update_time,
 });
 
@@ -545,10 +566,13 @@ export type RequirementItemFields = {
   definition?: string;
   /** Gives a question's needs back to its concepts. */
   followConcepts?: boolean;
+  /** A question's inputs; an empty list says it is asked about no given value. */
+  inputs?: QuestionInput[];
   knowledge?: string[];
   layer?: string;
   name?: string;
   needs?: RequirementItemRef[];
+  relativeWindow?: boolean;
   scenarioIds?: string[];
   statement?: string;
   template?: string;
@@ -564,10 +588,21 @@ const itemBody = (fields: RequirementItemFields) => ({
   ...(fields.decision === undefined ? {} : { decision: fields.decision }),
   ...(fields.definition === undefined ? {} : { definition: fields.definition }),
   ...(fields.followConcepts ? { follow_concepts: true } : {}),
+  ...(fields.inputs === undefined
+    ? {}
+    : {
+        inputs: fields.inputs.map((input) => ({
+          concept_id: input.conceptId,
+          name: input.name,
+          property: input.property,
+          role: input.role,
+        })),
+      }),
   ...(fields.knowledge === undefined ? {} : { knowledge: fields.knowledge }),
   ...(fields.layer === undefined ? {} : { layer: fields.layer }),
   ...(fields.name === undefined ? {} : { name: fields.name }),
   ...(fields.needs === undefined ? {} : { needs: fields.needs }),
+  ...(fields.relativeWindow === undefined ? {} : { relative_window: fields.relativeWindow }),
   ...(fields.scenarioIds === undefined ? {} : { scenario_ids: fields.scenarioIds }),
   ...(fields.statement === undefined ? {} : { statement: fields.statement }),
   ...(fields.template === undefined ? {} : { template: fields.template }),
@@ -844,6 +879,17 @@ const mockSpec = (): RequirementSpec => ({
       supplementReason: "Needed to rank late orders.",
       term: "Delay",
     },
+    {
+      category: "object",
+      citations: [],
+      definition: "A company that buys from us.",
+      edited: false,
+      id: "c3",
+      mapsTo: { id: "customers", kind: "object_type" },
+      notOntologyReason: "",
+      supplementReason: "",
+      term: "Customer",
+    },
   ],
   conflicts: [
     {
@@ -870,11 +916,70 @@ const mockSpec = (): RequirementSpec => ({
         { id: "sales_orders", kind: "object_type" },
         { id: "customers", kind: "object_type" },
       ],
+      inputs: [{ conceptId: "c3", name: "customer", property: "customer_id", role: "record" }],
       needsSource: "concepts",
+      notes: [],
+      relativeWindow: false,
       scenarioIds: ["s1"],
       supplementReason: "",
       template: "Which orders of customer {customer} are late?",
       text: "Which orders of a customer are late?",
+      type: "filter",
+    },
+    {
+      answerShape: "A count of orders",
+      citations: [],
+      edited: false,
+      id: "q2",
+      inputs: [
+        { conceptId: "c3", name: "customer", property: "customer_id", role: "record" },
+        { conceptId: "c1", name: "as_of", property: "signed_at", role: "reference_time" },
+      ],
+      layer: "knowledge",
+      needs: [{ id: "sales_orders", kind: "object_type" }],
+      needsSource: "concepts",
+      notes: [],
+      relativeWindow: true,
+      scenarioIds: ["s1"],
+      supplementReason: "Asked by the sales team in the kick-off meeting.",
+      template: "How many orders did customer {customer} sign in the 30 days up to {as_of}?",
+      text:
+        "How many orders did a customer sign in the last thirty days before a given date, counting only orders that were not cancelled and whose delivery was promised within the same quarter?",
+      type: "count",
+    },
+    {
+      answerShape: "The late-order rate",
+      citations: [],
+      edited: false,
+      id: "q3",
+      inputs: [],
+      layer: "capability",
+      needs: [],
+      needsSource: "concepts",
+      notes: ["capability_without_basis"],
+      relativeWindow: false,
+      scenarioIds: [],
+      supplementReason: "",
+      template: "What share of orders is late?",
+      text: "What share of orders is late?",
+      type: "metric",
+    },
+    {
+      answerShape: "Orders",
+      citations: [],
+      edited: false,
+      id: "q4",
+      // Drafted before questions had inputs: nothing is said about them.
+      inputs: null,
+      layer: "knowledge",
+      needs: [{ id: "sales_orders", kind: "object_type" }],
+      needsSource: "person",
+      notes: [],
+      relativeWindow: false,
+      scenarioIds: [],
+      supplementReason: "",
+      template: "",
+      text: "Which orders shipped late last week?",
       type: "filter",
     },
   ],
@@ -983,9 +1088,12 @@ function mockAdd(spec: RequirementSpec, kind: RequirementItemKind, fields: Requi
       ...base,
       answerShape: fields.answerShape ?? "",
       id: nextId("q", spec.questions),
+      inputs: fields.inputs ?? null,
       layer: fields.layer ?? "knowledge",
       needs: fields.needs ?? [],
       needsSource: fields.needs ? "person" : "concepts",
+      notes: [],
+      relativeWindow: fields.relativeWindow ?? false,
       scenarioIds: fields.scenarioIds ?? [],
       template: fields.template ?? "",
       text: fields.text ?? "",
@@ -1070,20 +1178,31 @@ function mockDevNow(questionId: string): QuestionDev | null {
   const generating = Date.now() - start < MOCK_GENERATE_MS;
   const tests = [
     {
+      byServer: true,
       check: { outcome: "passed", reason: "" },
       edited: false,
       expect: "exists",
       id: "t1",
-      kind: "paraphrase",
+      kind: "template",
       text: "Which orders of customer C-001 are late?",
     },
     {
-      check: { outcome: "failed", reason: "record_exists" },
+      byServer: true,
+      check: { outcome: "passed", reason: "" },
       edited: false,
       expect: "not_exists",
       id: "t2",
       kind: "not_exist",
-      text: "Which orders of customer C-002 are late?",
+      text: "Which orders of customer C-999 are late?",
+    },
+    {
+      byServer: false,
+      check: { outcome: "failed", reason: "different_records" },
+      edited: false,
+      expect: "same_record",
+      id: "t3",
+      kind: "variant",
+      text: "Which orders of the customer named Northwind are late?",
     },
   ]
     .filter((test) => !mockDevEdits[`${questionId}/${test.id}`]?.deleted)
@@ -1115,6 +1234,7 @@ function mockDevNow(questionId: string): QuestionDev | null {
     outOfScope: generating ? [] : ["How late are the orders on average? It needs a metric."],
     status: generating ? "generating" : "ready",
     tests: generating ? [] : tests,
+    testsNote: "",
     updateTime: start + Object.keys(mockDevEdits).length,
   };
 }

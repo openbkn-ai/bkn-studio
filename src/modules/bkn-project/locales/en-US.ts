@@ -636,6 +636,9 @@ export const bknProjectEnUS = {
       rejected_one: "Drafting left out {{count}} item",
       rejected_other: "Drafting left out {{count}} items",
       dev: {
+        byServer: "System generated",
+        byAgent: "Agent rewritten",
+        expectByKind: "The kind sets the expected result: {{expect}}",
         open: "Test questions and guidance",
         title: "Test questions",
         counts: "{{count}}, of which {{asked}} passed the data check and are asked after a release",
@@ -671,7 +674,24 @@ export const bknProjectEnUS = {
         text: "Test question",
         expect: "Expected result",
       },
+      inputReason: {
+        input_unknown_concept: "The requirements have no such concept",
+        input_concept_not_mapped: "The concept does not map to the ontology yet",
+        input_unknown_property: "The concept's object type has no such property",
+        input_not_in_template: "The question template does not use this input",
+        input_not_time: "A reference time takes a date or time property",
+        input_unknown_role: "The role is a given record or a reference time",
+        input_duplicate_name: "Another input has the same name",
+        other: "This input cannot be used",
+      },
+      testsNote: {
+        inputs_untested:
+          "The test questions do not cover every input of this question; generate them again.",
+        none_checkable: "No test question can be checked against the data.",
+        other: "",
+      },
       testKind: {
+        template: "Original question",
         paraphrase: "Paraphrase",
         boundary: "Boundary",
         not_exist: "Does not exist",
@@ -715,6 +735,20 @@ export const bknProjectEnUS = {
         other: "It did not pass the check",
       },
       editing: {
+        inputs: {
+          hint: "Each input is a value the question is asked about, written {name} in its template.",
+          name: "Name",
+          concept: "Concept",
+          property: "Property",
+          role: "Role",
+          noConcepts: "No concept maps to the ontology yet",
+          add: "Add input",
+          remove: "Remove",
+          removeOne: "Remove input {{name}}",
+          none: "No inputs: the question is asked about no given record, so it gets no test questions.",
+          relativeWindow: "Counts the latest period up to the reference time",
+          refused: "Some inputs cannot be used; each says why below it.",
+        },
         stale:
           "Someone changed the requirements just now; they were read again, so make the change once more.",
         required: "Required",
@@ -748,6 +782,7 @@ export const bknProjectEnUS = {
           rules: "Edit the business rule",
         },
         fields: {
+          inputs: "Asked about",
           name: "Scenario name",
           actor: "Who",
           trigger: "When",
@@ -882,6 +917,18 @@ export const bknProjectEnUS = {
         other: "Not uploaded",
       },
       questions: {
+        inputs: "Asked about",
+        input: "{{name}}: {{property}} of {{concept}}",
+        role: {
+          record: "A given record",
+          reference_time: "Reference time",
+        },
+        noInputs: "Asked about no given record",
+        propertyGone: "The ontology has no such property",
+        relativeWindow:
+          "Counts the latest period up to the reference time; the question says how long",
+        capabilityWithoutBasis:
+          "This capability question does not say which metric, function or skill it uses.",
         none: "No scenario questions yet.",
         type: "Question type",
         scenarios: "Scenarios",
@@ -980,6 +1027,7 @@ export const bknProjectEnUS = {
         holds: "In effect",
       },
       rejectedKind: {
+        input: "Question input",
         scenario: "Scenario",
         concept: "Concept",
         question: "Question",
@@ -989,6 +1037,7 @@ export const bknProjectEnUS = {
         other: "Item",
       },
       rejectedReason: {
+        window_without_reference_time: "It counts a period but gives no reference time",
         quote_not_found: "Its quote is not in the documents",
         unknown_document: "It quotes a document that does not exist",
         number_not_in_quote: "A number in it is not in the quote",

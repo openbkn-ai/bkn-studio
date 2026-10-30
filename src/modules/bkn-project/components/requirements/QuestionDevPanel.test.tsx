@@ -51,6 +51,7 @@ function dev(extra: Partial<QuestionDev> = {}): QuestionDev {
     status: "ready",
     tests: [
       {
+        byServer: false,
         check: { outcome: "passed", reason: "" },
         edited: false,
         expect: "exists",
@@ -59,6 +60,7 @@ function dev(extra: Partial<QuestionDev> = {}): QuestionDev {
         text: "客户编码为 CUST-10001 的客户最近 30 天签订了哪些销售订单？",
       },
       {
+        byServer: false,
         check: { outcome: "not_checked", reason: "same_record_needs_two_values" },
         edited: false,
         expect: "same_record",
@@ -67,6 +69,7 @@ function dev(extra: Partial<QuestionDev> = {}): QuestionDev {
         text: "客户ID为 10001 的客户最近 30 天下了哪些销售订单？",
       },
       {
+        byServer: false,
         check: { outcome: "failed", reason: "query_failed: vega-backend 500" },
         edited: true,
         expect: "not_exists",
@@ -75,6 +78,7 @@ function dev(extra: Partial<QuestionDev> = {}): QuestionDev {
         text: "客户编码为 CUST-99999 的客户最近 30 天下了哪些销售订单？",
       },
     ],
+    testsNote: "",
     updateTime: 5,
     ...extra,
   };
@@ -180,10 +184,14 @@ describe("QuestionDevPanel", () => {
   });
 
   it("edits a test's expectation, and removes one after asking", async () => {
+    // A test of no known kind keeps its expectation editable.
+    const untyped = dev();
+    untyped.tests[0] = { ...untyped.tests[0], kind: "" };
+    getQuestionDevMock.mockResolvedValue(untyped);
     editTestMock.mockResolvedValue(dev({ updateTime: 6 }));
     deleteTestMock.mockResolvedValue(dev({ deletedTests: 1, updateTime: 7 }));
     renderPanel();
-    await screen.findByText("同义改写");
+    await screen.findByText("变体");
 
     fireEvent.click(screen.getAllByRole("button", { name: /编\s*辑/ })[0]);
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "期望结果" }));
@@ -235,5 +243,46 @@ describe("QuestionDevPanel", () => {
     await screen.findAllByText("同义改写");
     expect(screen.queryByRole("button", { name: /编\s*辑/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "重新生成" })).toBeNull();
+  });
+
+  it("tells the server's tests from the Agent's, and fixes what a known kind expects", async () => {
+    getQuestionDevMock.mockResolvedValue(
+      dev({
+        tests: [
+          {
+            byServer: true,
+            check: { outcome: "passed", reason: "" },
+            edited: false,
+            expect: "exists",
+            id: "t1",
+            kind: "template",
+            text: "客户编码为 CUST-10001 的客户最近 30 天签订了哪些销售订单？",
+          },
+          {
+            byServer: false,
+            check: { outcome: "passed", reason: "" },
+            edited: false,
+            expect: "exists",
+            id: "t3",
+            kind: "paraphrase",
+            text: "CUST-10001 这家客户最近一个月签了哪些单？",
+          },
+        ],
+        testsNote: "inputs_untested",
+      }),
+    );
+    renderPanel();
+
+    expect(await screen.findByText("原题")).toBeInTheDocument();
+    expect(screen.getByText("系统生成")).toBeInTheDocument();
+    expect(screen.getByText("智能体改写")).toBeInTheDocument();
+    expect(
+      screen.getByText("测试问法没有覆盖这个问题的每个输入，建议重新生成。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/inputs_untested|template/)).toBeNull();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /编\s*辑/ })[0]);
+    expect(screen.getByText("期望结果由类型决定：应查到记录")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "期望结果" })).toBeNull();
   });
 });

@@ -16,11 +16,13 @@ import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import { Editing } from "@/modules/bkn-project/components/requirements/citing";
 import {
   draftErrorText,
+  KINDS_WITH_SET_EXPECT,
   requirementErrorText,
   testCheckReasonText,
   testExpectText,
   testKindText,
   testOutcomeText,
+  testsNoteText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
 import {
@@ -176,6 +178,9 @@ export function QuestionDevPanel({
       ) : dev.status === "ready" && dev.ontologyChanged ? (
         <Alert message={t(`${PREFIX}.ontologyChanged`)} showIcon type="warning" />
       ) : null}
+      {dev.status === "ready" && dev.testsNote ? (
+        <Alert message={testsNoteText(t, dev.testsNote)} showIcon type="info" />
+      ) : null}
       {dev.status === "ready" && !dev.tests.length && dev.noTestsReason ? (
         <p className={styles.muted}>{t(`${PREFIX}.noTests`, { reason: dev.noTestsReason })}</p>
       ) : null}
@@ -276,13 +281,20 @@ function TestRow({
           value={text}
         />
         <div className={styles.row}>
-          <Select
-            aria-label={t(`${PREFIX}.expect`)}
-            onChange={setExpect}
-            options={EXPECTS.map((value) => ({ label: testExpectText(t, value), value }))}
-            size="small"
-            value={expect}
-          />
+          {/* The server sets what a test of a known kind expects; only its text is edited. */}
+          {KINDS_WITH_SET_EXPECT.includes(test.kind) ? (
+            <span className={styles.muted}>
+              {t(`${PREFIX}.expectByKind`, { expect: testExpectText(t, test.expect) })}
+            </span>
+          ) : (
+            <Select
+              aria-label={t(`${PREFIX}.expect`)}
+              onChange={setExpect}
+              options={EXPECTS.map((value) => ({ label: testExpectText(t, value), value }))}
+              size="small"
+              value={expect}
+            />
+          )}
           <span className={styles.spacer} />
           <AppButton onClick={onCancel} size="small">
             {t("common.cancel")}
@@ -308,6 +320,9 @@ function TestRow({
   return (
     <li className={styles.side}>
       <span className={styles.row}>
+        <LightStatusTag tone={test.byServer ? "info" : "neutral"}>
+          {t(`${PREFIX}.${test.byServer ? "byServer" : "byAgent"}`)}
+        </LightStatusTag>
         {test.kind ? (
           <LightStatusTag tone="neutral">{testKindText(t, test.kind)}</LightStatusTag>
         ) : null}
