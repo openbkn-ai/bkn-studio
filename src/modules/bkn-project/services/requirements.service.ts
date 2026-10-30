@@ -12,6 +12,8 @@ import { http } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import type {
   RequirementCitation,
+  RequirementItemKind,
+  RequirementItemRef,
   RequirementDocument,
   RequirementDocumentContent,
   Requirements,
@@ -401,6 +403,207 @@ export async function draftRequirements(
   return mapRequirements(response.data);
 }
 
+/** What a person sets on an item: only the fields of its kind. */
+export type RequirementItemFields = {
+  actor?: string;
+  answerShape?: string;
+  category?: string;
+  decision?: string;
+  definition?: string;
+  /** Gives a question's needs back to its concepts. */
+  followConcepts?: boolean;
+  knowledge?: string[];
+  layer?: string;
+  name?: string;
+  needs?: RequirementItemRef[];
+  scenarioIds?: string[];
+  statement?: string;
+  template?: string;
+  term?: string;
+  text?: string;
+  trigger?: string;
+};
+
+const itemBody = (fields: RequirementItemFields) => ({
+  ...(fields.actor === undefined ? {} : { actor: fields.actor }),
+  ...(fields.answerShape === undefined ? {} : { answer_shape: fields.answerShape }),
+  ...(fields.category === undefined ? {} : { category: fields.category }),
+  ...(fields.decision === undefined ? {} : { decision: fields.decision }),
+  ...(fields.definition === undefined ? {} : { definition: fields.definition }),
+  ...(fields.followConcepts ? { follow_concepts: true } : {}),
+  ...(fields.knowledge === undefined ? {} : { knowledge: fields.knowledge }),
+  ...(fields.layer === undefined ? {} : { layer: fields.layer }),
+  ...(fields.name === undefined ? {} : { name: fields.name }),
+  ...(fields.needs === undefined ? {} : { needs: fields.needs }),
+  ...(fields.scenarioIds === undefined ? {} : { scenario_ids: fields.scenarioIds }),
+  ...(fields.statement === undefined ? {} : { statement: fields.statement }),
+  ...(fields.template === undefined ? {} : { template: fields.template }),
+  ...(fields.term === undefined ? {} : { term: fields.term }),
+  ...(fields.text === undefined ? {} : { text: fields.text }),
+  ...(fields.trigger === undefined ? {} : { trigger: fields.trigger }),
+});
+
+const sendEdit = async (
+  method: "delete" | "patch" | "post" | "put",
+  path: string,
+  body: Record<string, unknown> | undefined,
+  params?: Record<string, number>,
+) => {
+  const response =
+    method === "delete"
+      ? await http.delete<BackendRequirements>(path, { params, skipErrorToast: true })
+      : await http[method]<BackendRequirements>(path, body, { skipErrorToast: true });
+  return mapRequirements(response.data);
+};
+
+/** Adds an item a person writes. Every edit sends the update time read and replies the spec. */
+export async function addItem(
+  projectId: string,
+  kind: RequirementItemKind,
+  fields: RequirementItemFields,
+  updateTime: number,
+): Promise<Requirements> {
+  if (useMock) {
+    return wait(mockEdit(updateTime, (spec) => mockAdd(spec, kind, fields)));
+  }
+  return sendEdit("post", `${requirementsPath(projectId)}/items/${kind}`, {
+    ...itemBody(fields),
+    update_time: updateTime,
+  });
+}
+
+export async function editItem(
+  projectId: string,
+  kind: RequirementItemKind,
+  itemId: string,
+  fields: RequirementItemFields,
+  updateTime: number,
+): Promise<Requirements> {
+  if (useMock) {
+    return wait(mockEdit(updateTime, (spec) => mockChange(spec, kind, itemId, fields)));
+  }
+  return sendEdit(
+    "patch",
+    `${requirementsPath(projectId)}/items/${kind}/${encodeURIComponent(itemId)}`,
+    { ...itemBody(fields), update_time: updateTime },
+  );
+}
+
+export async function removeItem(
+  projectId: string,
+  kind: RequirementItemKind,
+  itemId: string,
+  updateTime: number,
+): Promise<Requirements> {
+  if (useMock) {
+    return wait(
+      mockEdit(updateTime, (spec) => {
+        const list = spec[kind] as { id: string }[];
+        list.splice(
+          list.findIndex((item) => item.id === itemId),
+          1,
+        );
+      }),
+    );
+  }
+  return sendEdit(
+    "delete",
+    `${requirementsPath(projectId)}/items/${kind}/${encodeURIComponent(itemId)}`,
+    undefined,
+    { update_time: updateTime },
+  );
+}
+
+/** Sets the drafted item a concept is, or clears it with null. */
+export async function setConceptMapping(
+  projectId: string,
+  conceptId: string,
+  mapsTo: RequirementItemRef | null,
+  updateTime: number,
+): Promise<Requirements> {
+  if (useMock) {
+    return wait(
+      mockEdit(updateTime, (spec) => {
+        const concept = spec.concepts.find((item) => item.id === conceptId);
+        if (concept) {
+          concept.mapsTo = mapsTo;
+        }
+      }),
+    );
+  }
+  return sendEdit(
+    "put",
+    `${requirementsPath(projectId)}/concepts/${encodeURIComponent(conceptId)}/maps-to`,
+    { maps_to: mapsTo, update_time: updateTime },
+  );
+}
+
+/**
+ * Rules on a conflict: by one side (`documentId`) or a conclusion of its own (`text`), with a
+ * reason; or hands it to the business (`deferred`), which keeps it unresolved.
+ */
+export async function resolveConflict(
+  projectId: string,
+  conflictId: string,
+  ruling: { deferred: boolean; documentId: string; reason: string; text: string },
+  updateTime: number,
+): Promise<Requirements> {
+  if (useMock) {
+    return wait(
+      mockEdit(updateTime, (spec) => {
+        const conflict = spec.conflicts.find((item) => item.id === conflictId);
+        if (conflict) {
+          conflict.deferred = ruling.deferred;
+          conflict.resolution = ruling.deferred
+            ? null
+            : {
+                byId: mockUploader,
+                documentId: ruling.documentId,
+                reason: ruling.reason,
+                text: ruling.text,
+                time: Date.now(),
+              };
+        }
+      }),
+    );
+  }
+  return sendEdit(
+    "put",
+    `${requirementsPath(projectId)}/conflicts/${encodeURIComponent(conflictId)}`,
+    {
+      deferred: ruling.deferred,
+      document_id: ruling.documentId,
+      reason: ruling.reason,
+      text: ruling.text,
+      update_time: updateTime,
+    },
+  );
+}
+
+/** Decides a modelling choice by one of its options. */
+export async function decideChoice(
+  projectId: string,
+  choiceId: string,
+  decision: { basis: string; optionId: string },
+  updateTime: number,
+): Promise<Requirements> {
+  if (useMock) {
+    return wait(
+      mockEdit(updateTime, (spec) => {
+        const choice = spec.choices.find((item) => item.id === choiceId);
+        if (choice) {
+          choice.decision = { ...decision, byId: mockUploader, time: Date.now() };
+        }
+      }),
+    );
+  }
+  return sendEdit("put", `${requirementsPath(projectId)}/choices/${encodeURIComponent(choiceId)}`, {
+    basis: decision.basis,
+    option_id: decision.optionId,
+    update_time: updateTime,
+  });
+}
+
 /* ----------------------------- Mock (local development) ----------------------------- */
 
 const wait = async <T>(value: T, delay = 180) =>
@@ -569,18 +772,118 @@ const mockSpec = (): RequirementSpec => ({
   tablesOmitted: 0,
 });
 
+/** The mock's specification as people edited it since it was drafted. */
+let mockCurrent: { draftStart: number; spec: RequirementSpec; updateTime: number } | null = null;
+
 function mockRequirementsNow(): Requirements | null {
   const drafting = Date.now() - mockDraftStart < MOCK_DRAFT_MS;
+  if (drafting) {
+    return {
+      error: "",
+      spec: mapSpec({}),
+      stale: false,
+      status: "drafting",
+      undecidedChoices: 0,
+      unresolvedConflicts: 0,
+      updateTime: mockDraftStart,
+      version: mockVersion,
+    };
+  }
+  if (mockCurrent?.draftStart !== mockDraftStart) {
+    mockCurrent = { draftStart: mockDraftStart, spec: mockSpec(), updateTime: mockDraftStart };
+  }
+  const { spec, updateTime } = mockCurrent;
   return {
     error: "",
-    spec: drafting ? mapSpec({}) : mockSpec(),
+    spec: structuredClone(spec),
     stale: false,
-    status: drafting ? "drafting" : "ready",
-    undecidedChoices: drafting ? 0 : 1,
-    unresolvedConflicts: drafting ? 0 : 1,
-    updateTime: mockDraftStart,
+    status: "ready",
+    undecidedChoices: spec.choices.filter((choice) => !choice.decision).length,
+    unresolvedConflicts: spec.conflicts.filter((conflict) => !conflict.resolution).length,
+    updateTime,
     version: mockVersion,
   };
+}
+
+/** Applies an edit to the mock's specification read at `updateTime`, as bkn-project would. */
+function mockEdit(updateTime: number, apply: (spec: RequirementSpec) => void): Requirements {
+  const now = mockRequirementsNow();
+  if (!now || now.status !== "ready" || !mockCurrent) {
+    throw refused(409, "Requirement.Drafting");
+  }
+  if (updateTime !== mockCurrent.updateTime) {
+    throw refused(409, "Requirement.Stale");
+  }
+  apply(mockCurrent.spec);
+  mockCurrent.updateTime = Date.now();
+  return mockRequirementsNow()!;
+}
+
+const nextId = (prefix: string, items: { id: string }[]) =>
+  `${prefix}${Math.max(0, ...items.map((item) => Number(item.id.slice(1)) || 0)) + 1}`;
+
+function mockAdd(spec: RequirementSpec, kind: RequirementItemKind, fields: RequirementItemFields) {
+  const base = { citations: [], edited: true, supplementReason: "" };
+  if (kind === "scenarios") {
+    spec.scenarios.push({
+      ...base,
+      actor: fields.actor ?? "",
+      capabilities: [],
+      decision: fields.decision ?? "",
+      id: nextId("s", spec.scenarios),
+      knowledge: fields.knowledge ?? [],
+      name: fields.name ?? "",
+      trigger: fields.trigger ?? "",
+    });
+  } else if (kind === "concepts") {
+    spec.concepts.push({
+      ...base,
+      category: fields.category ?? "object",
+      definition: fields.definition ?? "",
+      id: nextId("c", spec.concepts),
+      mapsTo: null,
+      notOntologyReason: "",
+      term: fields.term ?? "",
+    });
+  } else if (kind === "questions") {
+    spec.questions.push({
+      ...base,
+      answerShape: fields.answerShape ?? "",
+      id: nextId("q", spec.questions),
+      layer: fields.layer ?? "knowledge",
+      needs: fields.needs ?? [],
+      needsSource: fields.needs ? "person" : "concepts",
+      scenarioIds: fields.scenarioIds ?? [],
+      template: fields.template ?? "",
+      text: fields.text ?? "",
+      type: "",
+    });
+  } else {
+    spec.rules.push({
+      citations: [],
+      compilesTo: "other",
+      edited: true,
+      id: nextId("r", spec.rules),
+      statement: fields.statement ?? "",
+    });
+  }
+}
+
+function mockChange(
+  spec: RequirementSpec,
+  kind: RequirementItemKind,
+  itemId: string,
+  fields: RequirementItemFields,
+) {
+  const item = (spec[kind] as { id: string }[]).find((entry) => entry.id === itemId);
+  if (!item) {
+    throw refused(404, "Requirement.ItemNotFound");
+  }
+  const { followConcepts, ...rest } = fields;
+  Object.assign(item, rest, { edited: true });
+  if (kind === "questions" && (fields.needs || followConcepts)) {
+    Object.assign(item, { needsSource: followConcepts ? "concepts" : "person" });
+  }
 }
 
 async function mockUpload(files: File[]): Promise<UploadResult[]> {

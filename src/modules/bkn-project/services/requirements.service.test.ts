@@ -8,15 +8,16 @@
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockDelete, mockGet, mockPatch, mockPost } = vi.hoisted(() => ({
+const { mockDelete, mockGet, mockPatch, mockPost, mockPut } = vi.hoisted(() => ({
   mockDelete: vi.fn(),
   mockGet: vi.fn(),
   mockPatch: vi.fn(),
   mockPost: vi.fn(),
+  mockPut: vi.fn(),
 }));
 
 vi.mock("@/framework/request/http", () => ({
-  http: { delete: mockDelete, get: mockGet, patch: mockPatch, post: mockPost },
+  http: { delete: mockDelete, get: mockGet, patch: mockPatch, post: mockPost, put: mockPut },
 }));
 
 // useMock is read when the module loads, so each case stubs the env and imports afresh.
@@ -263,6 +264,77 @@ describe("requirements.service", () => {
     expect(mockPost).toHaveBeenLastCalledWith(
       `${prefix}:draft`,
       { discard_decisions: true },
+      { skipErrorToast: true },
+    );
+  });
+
+  it("sends each edit with the update time read, and only the fields set", async () => {
+    const { addItem, decideChoice, editItem, removeItem, resolveConflict, setConceptMapping } =
+      await importService();
+    const reply = { data: { spec: {}, status: "ready", update_time: 9, version: 2 } };
+    mockPost.mockResolvedValue(reply);
+    mockPatch.mockResolvedValue(reply);
+    mockPut.mockResolvedValue(reply);
+    mockDelete.mockResolvedValue(reply);
+
+    expect((await addItem("p/1", "rules", { statement: "Late is late" }, 7)).updateTime).toBe(9);
+    expect(mockPost).toHaveBeenCalledWith(
+      `${prefix}/items/rules`,
+      { statement: "Late is late", update_time: 7 },
+      { skipErrorToast: true },
+    );
+
+    await editItem(
+      "p/1",
+      "questions",
+      "q1",
+      { needs: [{ id: "orders", kind: "object_type" }], scenarioIds: ["s1"], text: "Q" },
+      7,
+    );
+    expect(mockPatch).toHaveBeenCalledWith(
+      `${prefix}/items/questions/q1`,
+      {
+        needs: [{ id: "orders", kind: "object_type" }],
+        scenario_ids: ["s1"],
+        text: "Q",
+        update_time: 7,
+      },
+      { skipErrorToast: true },
+    );
+    await editItem("p/1", "questions", "q1", { followConcepts: true }, 7);
+    expect(mockPatch).toHaveBeenLastCalledWith(
+      `${prefix}/items/questions/q1`,
+      { follow_concepts: true, update_time: 7 },
+      { skipErrorToast: true },
+    );
+
+    await removeItem("p/1", "scenarios", "s1", 7);
+    expect(mockDelete).toHaveBeenCalledWith(`${prefix}/items/scenarios/s1`, {
+      params: { update_time: 7 },
+      skipErrorToast: true,
+    });
+
+    await setConceptMapping("p/1", "c1", null, 7);
+    expect(mockPut).toHaveBeenCalledWith(
+      `${prefix}/concepts/c1/maps-to`,
+      { maps_to: null, update_time: 7 },
+      { skipErrorToast: true },
+    );
+    await resolveConflict(
+      "p/1",
+      "k1",
+      { deferred: false, documentId: "", reason: "Both", text: "Late by date" },
+      7,
+    );
+    expect(mockPut).toHaveBeenCalledWith(
+      `${prefix}/conflicts/k1`,
+      { deferred: false, document_id: "", reason: "Both", text: "Late by date", update_time: 7 },
+      { skipErrorToast: true },
+    );
+    await decideChoice("p/1", "f1", { basis: "", optionId: "o2" }, 7);
+    expect(mockPut).toHaveBeenLastCalledWith(
+      `${prefix}/choices/f1`,
+      { basis: "", option_id: "o2", update_time: 7 },
       { skipErrorToast: true },
     );
   });

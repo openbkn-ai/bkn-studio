@@ -39,6 +39,9 @@ export type RequirementCitation = {
   start: number;
 };
 
+/** The kinds of item a person adds, edits and removes, as the routes name them. */
+export type RequirementItemKind = "concepts" | "questions" | "rules" | "scenarios";
+
 /** A drafted object type or relation type, by its draft item id. */
 export type RequirementItemRef = { id: string; kind: string };
 

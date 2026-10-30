@@ -10,9 +10,10 @@ import dayjs from "dayjs";
 import { type ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
 
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { Citations } from "@/modules/bkn-project/components/requirements/Citations";
-import { Citing } from "@/modules/bkn-project/components/requirements/citing";
+import { Citing, Editing } from "@/modules/bkn-project/components/requirements/citing";
 import {
   capabilityKindText,
   categoryText,
@@ -26,6 +27,7 @@ import {
 import type {
   RequirementChoice,
   RequirementConflict,
+  RequirementItemKind,
   RequirementItemRef,
   RequirementSpec,
 } from "@/modules/bkn-project/types/requirements";
@@ -53,6 +55,57 @@ function Empty({ text }: { text: string }) {
   return <p className={styles.muted}>{text}</p>;
 }
 
+/** The owner's edit and remove, at the end of an item's heading. */
+function ItemActions({
+  itemId,
+  kind,
+  label,
+}: {
+  itemId: string;
+  kind: RequirementItemKind;
+  label: string;
+}) {
+  const { t } = useTranslation();
+  const editing = useContext(Editing);
+  if (!editing) {
+    return null;
+  }
+  return (
+    <>
+      <span className={styles.spacer} />
+      <AppButton
+        aria-label={t(`${PREFIX}.editing.editItem`, { name: label })}
+        onClick={() => editing.edit(kind, itemId)}
+        size="small"
+        type="link"
+      >
+        {t(`${PREFIX}.editing.edit`)}
+      </AppButton>
+      <AppButton
+        aria-label={t(`${PREFIX}.editing.removeItem`, { name: label })}
+        danger
+        onClick={() => editing.remove(kind, itemId, label)}
+        size="small"
+        type="link"
+      >
+        {t(`${PREFIX}.editing.remove`)}
+      </AppButton>
+    </>
+  );
+}
+
+/** The owner's "add" above a list of items. */
+function AddItem({ kind }: { kind: RequirementItemKind }) {
+  const { t } = useTranslation();
+  const editing = useContext(Editing);
+  return editing ? (
+    <div className={styles.row}>
+      <span className={styles.spacer} />
+      <AppButton onClick={() => editing.add(kind)}>{t(`${PREFIX}.editing.add.${kind}`)}</AppButton>
+    </div>
+  ) : null;
+}
+
 function EditedTag({ edited }: { edited: boolean }) {
   const { t } = useTranslation();
   return edited ? <LightStatusTag tone="info">{t(`${PREFIX}.edited`)}</LightStatusTag> : null;
@@ -60,12 +113,11 @@ function EditedTag({ edited }: { edited: boolean }) {
 
 export function QuestionsView({ itemName, spec }: { itemName: ItemName; spec: RequirementSpec }) {
   const { t } = useTranslation();
-  if (!spec.questions.length) {
-    return <Empty text={t(`${PREFIX}.questions.none`)} />;
-  }
   const scenarioName = (id: string) => spec.scenarios.find((item) => item.id === id)?.name ?? id;
   return (
     <div className={styles.stack}>
+      <AddItem kind="questions" />
+      {spec.questions.length ? null : <Empty text={t(`${PREFIX}.questions.none`)} />}
       {spec.questions.map((question) => (
         <section className={styles.card} key={question.id}>
           <div className={styles.row}>
@@ -74,6 +126,7 @@ export function QuestionsView({ itemName, spec }: { itemName: ItemName; spec: Re
               {layerText(t, question.layer)}
             </LightStatusTag>
             <EditedTag edited={question.edited} />
+            <ItemActions itemId={question.id} kind="questions" label={question.text} />
           </div>
           <div className={styles.field}>
             <Field label={t(`${PREFIX}.questions.type`)}>
@@ -104,16 +157,16 @@ export function QuestionsView({ itemName, spec }: { itemName: ItemName; spec: Re
 
 export function ScenariosView({ spec }: { spec: RequirementSpec }) {
   const { t } = useTranslation();
-  if (!spec.scenarios.length) {
-    return <Empty text={t(`${PREFIX}.scenarios.none`)} />;
-  }
   return (
     <div className={styles.stack}>
+      <AddItem kind="scenarios" />
+      {spec.scenarios.length ? null : <Empty text={t(`${PREFIX}.scenarios.none`)} />}
       {spec.scenarios.map((scenario) => (
         <section className={styles.card} key={scenario.id}>
           <div className={styles.row}>
             <h4 className={styles.cardTitle}>{scenario.name}</h4>
             <EditedTag edited={scenario.edited} />
+            <ItemActions itemId={scenario.id} kind="scenarios" label={scenario.name} />
           </div>
           <div className={styles.field}>
             <Field label={t(`${PREFIX}.scenarios.actor`)}>{scenario.actor}</Field>
@@ -142,11 +195,11 @@ export function ScenariosView({ spec }: { spec: RequirementSpec }) {
 
 export function ConceptsView({ itemName, spec }: { itemName: ItemName; spec: RequirementSpec }) {
   const { t } = useTranslation();
-  if (!spec.concepts.length) {
-    return <Empty text={t(`${PREFIX}.concepts.none`)} />;
-  }
+  const editing = useContext(Editing);
   return (
     <div className={styles.stack}>
+      <AddItem kind="concepts" />
+      {spec.concepts.length ? null : <Empty text={t(`${PREFIX}.concepts.none`)} />}
       {spec.concepts.map((concept) => (
         <section className={styles.card} key={concept.id}>
           <div className={styles.row}>
@@ -155,6 +208,7 @@ export function ConceptsView({ itemName, spec }: { itemName: ItemName; spec: Req
               {categoryText(t, concept.category)}
             </LightStatusTag>
             <EditedTag edited={concept.edited} />
+            <ItemActions itemId={concept.id} kind="concepts" label={concept.term} />
           </div>
           <div className={styles.field}>
             <Field label={t(`${PREFIX}.concepts.definition`)}>{concept.definition}</Field>
@@ -164,6 +218,11 @@ export function ConceptsView({ itemName, spec }: { itemName: ItemName; spec: Req
                 : concept.mapsTo
                   ? itemName(concept.mapsTo)
                   : t(`${PREFIX}.concepts.notMapped`)}
+              {editing && concept.category !== "not_ontology" ? (
+                <AppButton onClick={() => editing.map(concept)} size="small" type="link">
+                  {t(`${PREFIX}.editing.mapping.change`)}
+                </AppButton>
+              ) : null}
             </Field>
           </div>
           <Citations citations={concept.citations} supplementReason={concept.supplementReason} />
@@ -184,6 +243,7 @@ export function RulesView({ spec }: { spec: RequirementSpec }) {
       {spec.choices.map((choice) => (
         <ChoiceCard choice={choice} key={choice.id} />
       ))}
+      <AddItem kind="rules" />
       {spec.rules.length ? (
         spec.rules.map((rule) => (
           <section className={styles.card} key={rule.id}>
@@ -191,6 +251,7 @@ export function RulesView({ spec }: { spec: RequirementSpec }) {
               <span>{rule.statement}</span>
               <LightStatusTag tone="neutral">{compilesToText(t, rule.compilesTo)}</LightStatusTag>
               <EditedTag edited={rule.edited} />
+              <ItemActions itemId={rule.id} kind="rules" label={rule.statement} />
             </div>
             <Citations citations={rule.citations} />
           </section>
@@ -205,6 +266,7 @@ export function RulesView({ spec }: { spec: RequirementSpec }) {
 function ConflictCard({ conflict }: { conflict: RequirementConflict }) {
   const { t } = useTranslation();
   const { documentName } = useContext(Citing);
+  const editing = useContext(Editing);
   const resolution = conflict.resolution;
   const state = resolution ? "resolved" : conflict.deferred ? "deferred" : "open";
   return (
@@ -217,6 +279,18 @@ function ConflictCard({ conflict }: { conflict: RequirementConflict }) {
           {t(`${PREFIX}.conflicts.state.${state}`)}
         </LightStatusTag>
         <span className={styles.muted}>{conflictKindText(t, conflict.kind)}</span>
+        {editing ? (
+          <>
+            <span className={styles.spacer} />
+            <AppButton
+              onClick={() => editing.resolve(conflict)}
+              size="small"
+              type={state === "open" ? "primary" : "default"}
+            >
+              {t(`${PREFIX}.editing.conflict.${state === "open" ? "open" : "change"}`)}
+            </AppButton>
+          </>
+        ) : null}
       </div>
       <div className={styles.sides}>
         {conflict.sides.map((side, index) => (
@@ -250,6 +324,7 @@ function ConflictCard({ conflict }: { conflict: RequirementConflict }) {
 
 function ChoiceCard({ choice }: { choice: RequirementChoice }) {
   const { t } = useTranslation();
+  const editing = useContext(Editing);
   const chosen = choice.decision?.optionId ?? choice.recommendedOptionId;
   return (
     <section className={styles.card}>
@@ -260,6 +335,14 @@ function ChoiceCard({ choice }: { choice: RequirementChoice }) {
         <LightStatusTag tone={choice.decision ? "success" : "neutral"}>
           {t(`${PREFIX}.choices.state.${choice.decision ? "decided" : "recommended"}`)}
         </LightStatusTag>
+        {editing ? (
+          <>
+            <span className={styles.spacer} />
+            <AppButton onClick={() => editing.decide(choice)} size="small">
+              {t(`${PREFIX}.editing.choice.open`)}
+            </AppButton>
+          </>
+        ) : null}
       </div>
       <ul className={styles.list}>
         {choice.options.map((option) => (
