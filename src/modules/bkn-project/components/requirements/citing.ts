@@ -7,6 +7,13 @@
 
 import { createContext } from "react";
 
+import type {
+  RequirementChoice,
+  RequirementConcept,
+  RequirementConflict,
+  RequirementItemKind,
+} from "@/modules/bkn-project/types/requirements";
+
 /** What a quote needs from the page: document names, and a way to open one at a passage. */
 export type CitationContext = {
   documentName: (documentId: string) => string;
@@ -17,3 +24,18 @@ export const Citing = createContext<CitationContext>({
   documentName: (documentId) => documentId,
   openDocument: () => undefined,
 });
+
+/**
+ * What the owner may do to the specification from where an item shows. Absent for others and on
+ * an archived project: the views then only read.
+ */
+export type SpecEditing = {
+  add: (kind: RequirementItemKind) => void;
+  decide: (choice: RequirementChoice) => void;
+  edit: (kind: RequirementItemKind, itemId: string) => void;
+  map: (concept: RequirementConcept) => void;
+  remove: (kind: RequirementItemKind, itemId: string, label: string) => void;
+  resolve: (conflict: RequirementConflict) => void;
+};
+
+export const Editing = createContext<SpecEditing | null>(null);

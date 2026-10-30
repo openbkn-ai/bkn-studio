@@ -22,7 +22,13 @@ const uploadDocumentsMock = vi.hoisted(() => vi.fn());
 const setDocumentTypeMock = vi.hoisted(() => vi.fn());
 const getDraftMock = vi.hoisted(() => vi.fn());
 const confirmMock = vi.hoisted(() => vi.fn());
-const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn(), warning: vi.fn() }));
+const addItemMock = vi.hoisted(() => vi.fn());
+const editItemMock = vi.hoisted(() => vi.fn());
+const removeItemMock = vi.hoisted(() => vi.fn());
+const resolveConflictMock = vi.hoisted(() => vi.fn());
+const decideChoiceMock = vi.hoisted(() => vi.fn());
+const setConceptMappingMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: messageMock, modal: { confirm: confirmMock } }),
@@ -35,7 +41,13 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
 
 vi.mock("@/modules/bkn-project/services/requirements.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/requirements.service")>()),
+  addItem: addItemMock,
+  decideChoice: decideChoiceMock,
   draftRequirements: draftRequirementsMock,
+  editItem: editItemMock,
+  removeItem: removeItemMock,
+  resolveConflict: resolveConflictMock,
+  setConceptMapping: setConceptMappingMock,
   getDocument: getDocumentMock,
   getRequirements: getRequirementsMock,
   listDocuments: listDocumentsMock,
@@ -203,7 +215,13 @@ describe("ProjectRequirements", () => {
     listDocumentsMock.mockResolvedValue(documents);
     getRequirementsMock.mockResolvedValue(requirements());
     getDraftMock.mockResolvedValue({
-      items: { objectTypes: [{ id: "sales_order", name: "销售订单" }], relationTypes: [] },
+      items: {
+        objectTypes: [
+          { id: "sales_order", name: "销售订单" },
+          { id: "customer", name: "客户" },
+        ],
+        relationTypes: [{ id: "order_customer", name: "订单的客户" }],
+      },
     });
   });
 
@@ -371,5 +389,180 @@ describe("ProjectRequirements", () => {
     expect(screen.getByText("产品需求")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "上传文档" })).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  describe("editing", () => {
+    const edited = requirements({ updateTime: 2 });
+
+    it("adds a question, naming what it needs, on the version read", async () => {
+      addItemMock.mockResolvedValue(edited);
+      renderPage();
+
+      fireEvent.click(await screen.findByRole("button", { name: "新增问题" }));
+      const dialog = within(await screen.findByRole("dialog"));
+      fireEvent.change(dialog.getByLabelText("问题"), {
+        target: { value: " 哪些客户最近没下单？ " },
+      });
+      fireEvent.mouseDown(dialog.getByLabelText("需要的本体"));
+      fireEvent.click(await screen.findByTitle("客户"));
+      fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
+
+      await waitFor(() =>
+        expect(addItemMock).toHaveBeenCalledWith(
+          "p1",
+          "questions",
+          expect.objectContaining({
+            layer: "knowledge",
+            needs: [{ id: "customer", kind: "object_type" }],
+            text: "哪些客户最近没下单？",
+          }),
+          1,
+        ),
+      );
+    });
+
+    it("rules on a conflict with a conclusion of one's own and a reason", async () => {
+      resolveConflictMock.mockResolvedValue(edited);
+      renderPage();
+      await screen.findByText("某个客户哪些订单晚了？");
+      fireEvent.click(screen.getByText(/^业务规则/));
+
+      fireEvent.click(screen.getByRole("button", { name: /^裁\s*决$/ }));
+      const dialog = within(await screen.findByRole("dialog"));
+      // The side the document types favour is offered first.
+      expect(dialog.getByRole("radio", { name: /以「purchase-policy.md」为准/ })).toBeChecked();
+      expect(dialog.getByRole("button", { name: "保存裁决" })).toBeDisabled();
+      fireEvent.click(dialog.getByText("写下自己的结论"));
+      fireEvent.change(dialog.getByLabelText("结论"), {
+        target: { value: "按承诺日期，按月汇总" },
+      });
+      fireEvent.change(dialog.getByLabelText("理由（必填）"), { target: { value: "两边都需要" } });
+      fireEvent.click(dialog.getByRole("button", { name: "保存裁决" }));
+
+      await waitFor(() =>
+        expect(resolveConflictMock).toHaveBeenCalledWith(
+          "p1",
+          "k1",
+          { deferred: false, documentId: "", reason: "两边都需要", text: "按承诺日期，按月汇总" },
+          1,
+        ),
+      );
+    });
+
+    it("decides a modelling choice, and points a concept at a drafted item", async () => {
+      decideChoiceMock.mockResolvedValue(edited);
+      setConceptMappingMock.mockResolvedValue(edited);
+      renderPage();
+      await screen.findByText("某个客户哪些订单晚了？");
+
+      fireEvent.click(screen.getByText(/^业务规则/));
+      fireEvent.click(screen.getByRole("button", { name: /^选\s*择$/ }));
+      let dialog = within(await screen.findByRole("dialog"));
+      fireEvent.click(dialog.getByText("分开"));
+      fireEvent.change(dialog.getByLabelText("依据（可选）"), {
+        target: { value: "大客户另行管理" },
+      });
+      fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
+      await waitFor(() =>
+        expect(decideChoiceMock).toHaveBeenCalledWith(
+          "p1",
+          "f1",
+          { basis: "大客户另行管理", optionId: "o2" },
+          1,
+        ),
+      );
+
+      fireEvent.click(screen.getByText(/^候选概念/));
+      fireEvent.click(screen.getByRole("button", { name: "改对应" }));
+      dialog = within(await screen.findByRole("dialog"));
+      fireEvent.mouseDown(dialog.getByRole("combobox", { name: "对应本体" }));
+      fireEvent.click(await screen.findByTitle("关系类：订单的客户"));
+      fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
+      await waitFor(() =>
+        expect(setConceptMappingMock).toHaveBeenCalledWith(
+          "p1",
+          "c1",
+          { id: "order_customer", kind: "relation_type" },
+          // The choice's edit moved the spec on: the next edit sends the version it replied.
+          2,
+        ),
+      );
+    });
+
+    it("asks before removing, and reads again when someone changed the spec since", async () => {
+      removeItemMock.mockRejectedValue(
+        new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {
+          data: { error_code: "BknProject.Requirement.Stale" },
+          status: 409,
+        } as AxiosResponse),
+      );
+      renderPage();
+      await screen.findByText("某个客户哪些订单晚了？");
+      fireEvent.click(screen.getByText(/^业务规则/));
+
+      fireEvent.click(screen.getByRole("button", { name: "删除「晚于承诺日期发货即为延误。」" }));
+      const [{ onOk, title }] = confirmMock.mock.calls[0] as [
+        { onOk: () => Promise<unknown>; title: string },
+      ];
+      expect(title).toBe("删除「晚于承诺日期发货即为延误。」？");
+      await onOk();
+
+      expect(removeItemMock).toHaveBeenCalledWith("p1", "rules", "r1", 1);
+      expect(messageMock.warning).toHaveBeenCalledWith(
+        "需求规格刚被别人修改过，已重新读取，请再改一次。",
+      );
+      await waitFor(() => expect(getRequirementsMock).toHaveBeenCalledTimes(2));
+    });
+
+    it("tells two sides quoting one document apart, and says when nothing is drafted to map", async () => {
+      getDraftMock.mockResolvedValue(null);
+      const twoSides = requirements();
+      twoSides.spec.conflicts[0].sides[1] = {
+        ...twoSides.spec.conflicts[0].sides[0],
+        position: "按月汇总",
+      };
+      twoSides.spec.conflicts[0].suggestedDocumentId = "";
+      getRequirementsMock.mockResolvedValue(twoSides);
+      resolveConflictMock.mockResolvedValue(twoSides);
+      renderPage();
+      await screen.findByText("某个客户哪些订单晚了？");
+
+      fireEvent.click(screen.getByText(/^业务规则/));
+      fireEvent.click(screen.getByRole("button", { name: /^裁\s*决$/ }));
+      let dialog = within(await screen.findByRole("dialog"));
+      fireEvent.click(dialog.getAllByRole("radio")[1]);
+      // Only the side picked is chosen, though both quote one document.
+      const chosen = document.querySelectorAll(".ant-radio-wrapper-checked");
+      expect(chosen).toHaveLength(1);
+      expect(chosen[0]).toHaveTextContent("按月汇总");
+      fireEvent.change(dialog.getByLabelText("理由（必填）"), { target: { value: "按月" } });
+      fireEvent.click(dialog.getByRole("button", { name: "保存裁决" }));
+      await waitFor(() =>
+        expect(resolveConflictMock).toHaveBeenCalledWith(
+          "p1",
+          "k1",
+          expect.objectContaining({ documentId: "d1" }),
+          1,
+        ),
+      );
+
+      fireEvent.click(screen.getByText(/^候选概念/));
+      fireEvent.click(screen.getByRole("button", { name: "改对应" }));
+      dialog = within(await screen.findByRole("dialog"));
+      expect(
+        dialog.getByText("本体草稿里还没有对象类或关系类可选，先在本体建模中起草。"),
+      ).toBeInTheDocument();
+      expect(dialog.getByRole("combobox", { name: "对应本体" })).toBeDisabled();
+    });
+
+    it("offers no edits to others", async () => {
+      renderPage(false);
+      await screen.findByText("某个客户哪些订单晚了？");
+      expect(screen.queryByRole("button", { name: "新增问题" })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^编辑/ })).toBeNull();
+      fireEvent.click(screen.getByText(/^业务规则/));
+      expect(screen.queryByRole("button", { name: /^裁\s*决$/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^选\s*择$/ })).toBeNull();
+    });
   });
 });
