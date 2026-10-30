@@ -240,7 +240,20 @@ export const contextLoaderPanelPart = {
       oauthHttpDescription:
         "当前地址是 HTTP，多数客户端只在 HTTPS 下支持登录授权。建议为平台启用 HTTPS，或改用 API Key 接入。",
       oauthInsecureDescription:
-        "仅用于可信的自签名证书。需让客户端关闭证书校验后启动，例如 WorkBuddy：先完全退出，再用 open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0 启动。",
+        "仅用于可信的自签名证书。需先完全退出客户端，再关闭证书校验重新启动。",
+      launchTipsTrigger: "查看各系统启动方式",
+      launchTipsIntro:
+        "以 WorkBuddy 为例。先完全退出客户端（含托盘/菜单栏），再运行下面的命令启动：",
+      launchTipsMac: "macOS（终端）",
+      launchTipsWindows: "Windows（PowerShell）",
+      launchTipsLinux: "Linux（终端）",
+      launchCommandMac: "open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchCommandWindows:
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<WorkBuddy.exe 完整路径>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+      launchCommandLinux:
+        'WORKBUDDY="<WorkBuddy 启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$WORKBUDDY" >/dev/null 2>&1 &',
+      launchTipsNote:
+        "把 <> 部分换成 WorkBuddy 实际的路径或启动命令，Windows 需写含盘符的完整路径，如 C:\\Program Files\\WorkBuddy\\WorkBuddy.exe。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
       selfSignedApiKeyDescription:
         "保持证书校验会让客户端连接失败。可勾选右侧选项跳过校验（仅限可信环境），或为平台配置正式证书。",
       selfSignedTitle: "该地址可能使用自签名证书",

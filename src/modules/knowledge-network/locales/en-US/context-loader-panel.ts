@@ -284,7 +284,20 @@ export const contextLoaderPanelPart = {
       oauthHttpDescription:
         "This address uses HTTP, and most clients only support sign-in over HTTPS. Enable HTTPS for the platform, or use the API key option.",
       oauthInsecureDescription:
-        "Only for a trusted self-signed certificate. Start the client with certificate checks off, e.g. quit WorkBuddy fully, then run open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0.",
+        "Only for a trusted self-signed certificate. Quit the client fully, then restart it with certificate checks off.",
+      launchTipsTrigger: "How to start it on each system",
+      launchTipsIntro:
+        "Using WorkBuddy as an example. Quit the client fully (including the tray or menu bar), then start it with:",
+      launchTipsMac: "macOS (terminal)",
+      launchTipsWindows: "Windows (PowerShell)",
+      launchTipsLinux: "Linux (terminal)",
+      launchCommandMac: "open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchCommandWindows:
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<full path to WorkBuddy.exe>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+      launchCommandLinux:
+        'WORKBUDDY="<WorkBuddy command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$WORKBUDDY" >/dev/null 2>&1 &',
+      launchTipsNote:
+        "Replace the <> part with the actual WorkBuddy path or command. On Windows, use the full path with the drive letter, e.g. C:\\Program Files\\WorkBuddy\\WorkBuddy.exe. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
       selfSignedApiKeyDescription:
         "With certificate checks on, clients will fail to connect. Tick the option on the right to skip the check (trusted environments only), or give the platform a proper certificate.",
       selfSignedTitle: "This address may use a self-signed certificate",
