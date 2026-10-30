@@ -216,6 +216,70 @@ describe("draft.service", () => {
     );
   });
 
+  it("reads the source changes, null lists as empty, and drafts them with the signature", async () => {
+    const { draftSourceChanges, getSourceChanges } = await importService();
+    mockGet.mockResolvedValueOnce({
+      data: {
+        missing_tables: null,
+        object_types: [
+          {
+            changes: [{ change: "added", excluded: "privacy", field: "phone" }],
+            id: "customer",
+            in_draft: true,
+            name: "Customer",
+            published: false,
+            table: "customer_entity",
+          },
+        ],
+        relation_types: [{ id: "r1", name: "Places", removed: null, table: "links" }],
+        signature: "sig",
+        state: "changed",
+      },
+    });
+    expect(await getSourceChanges("p/1")).toEqual({
+      missingTables: [],
+      objectTypes: [
+        {
+          changes: [
+            {
+              change: "added",
+              excluded: "privacy",
+              field: "phone",
+              fieldName: "",
+              fromType: "",
+              key: false,
+              property: "",
+              propertyName: "",
+              relations: [],
+              toType: "",
+              unsupported: false,
+            },
+          ],
+          id: "customer",
+          inDraft: true,
+          name: "Customer",
+          published: false,
+          table: "customer_entity",
+        },
+      ],
+      relationTypes: [{ id: "r1", name: "Places", removed: [], table: "links" }],
+      signature: "sig",
+      state: "changed",
+    });
+    expect(mockGet).toHaveBeenCalledWith("/bkn-project/v1/projects/p%2F1/source-changes", {
+      skipErrorToast: true,
+    });
+
+    const { mockDraft } = await import("@/modules/bkn-project/services/draft.service");
+    mockPost.mockResolvedValueOnce({ data: mockDraft("p/1") });
+    await draftSourceChanges("p/1", "sig");
+    expect(mockPost).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%2F1/source-changes:draft",
+      { signature: "sig" },
+      { skipErrorToast: true },
+    );
+  });
+
   it("asks AI about an object type, and reads a missing suggestion as none", async () => {
     const { askAboutObjectType, ASK_TIMEOUT_MS } = await importService();
     mockPost.mockResolvedValueOnce({

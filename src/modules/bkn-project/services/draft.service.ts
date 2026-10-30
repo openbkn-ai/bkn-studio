@@ -20,6 +20,7 @@ import type {
   DraftRelationType,
   DraftTable,
   DraftValueType,
+  SourceChanges,
 } from "@/modules/bkn-project/types/draft";
 
 const API_PREFIX = "/bkn-project/v1/projects";
@@ -696,6 +697,114 @@ export async function restoreField(
   const response = await http.post<BackendDraft>(
     `${draftPath(projectId)}:restore`,
     { field, object_type: objectType, update_time: updateTime },
+    { skipErrorToast: true },
+  );
+  return mapDraft(response.data);
+}
+
+type BackendItemRef = { id: string; kind?: string; name: string; table?: string };
+
+/**
+ * How the tables the project binds differ now from what its draft and release map, as the data
+ * source last recorded them. Reading changes nothing.
+ */
+export async function getSourceChanges(projectId: string): Promise<SourceChanges> {
+  if (useMock) {
+    return wait({
+      missingTables: [],
+      objectTypes: [],
+      relationTypes: [],
+      signature: "mock",
+      state: "in_step",
+    });
+  }
+  const response = await http.get<{
+    missing_tables: BackendItemRef[] | null;
+    object_types:
+      | {
+          changes:
+            | {
+                change: string;
+                excluded?: string;
+                field: string;
+                field_name?: string;
+                from_type?: string;
+                key?: boolean;
+                property?: string;
+                property_name?: string;
+                relations?: BackendItemRef[] | null;
+                to_type?: string;
+                unsupported?: boolean;
+              }[]
+            | null;
+          id: string;
+          in_draft: boolean;
+          name: string;
+          published: boolean;
+          table: string;
+        }[]
+      | null;
+    relation_types: { id: string; name: string; removed: string[] | null; table: string }[] | null;
+    signature: string;
+    state: string;
+  }>(`${API_PREFIX}/${encodeURIComponent(projectId)}/source-changes`, { skipErrorToast: true });
+  const data = response.data;
+  return {
+    missingTables: (data.missing_tables ?? []).map((item) => ({
+      id: item.id,
+      kind: item.kind ?? "",
+      name: item.name,
+      table: item.table ?? "",
+    })),
+    objectTypes: (data.object_types ?? []).map((objectType) => ({
+      changes: (objectType.changes ?? []).map((change) => ({
+        change: change.change,
+        excluded: change.excluded ?? "",
+        field: change.field,
+        fieldName: change.field_name ?? "",
+        fromType: change.from_type ?? "",
+        key: change.key ?? false,
+        property: change.property ?? "",
+        propertyName: change.property_name ?? "",
+        relations: (change.relations ?? []).map(({ id, name }) => ({ id, name })),
+        toType: change.to_type ?? "",
+        unsupported: change.unsupported ?? false,
+      })),
+      id: objectType.id,
+      inDraft: objectType.in_draft,
+      name: objectType.name,
+      published: objectType.published,
+      table: objectType.table,
+    })),
+    relationTypes: (data.relation_types ?? []).map((relation) => ({
+      id: relation.id,
+      name: relation.name,
+      removed: relation.removed ?? [],
+      table: relation.table,
+    })),
+    signature: data.signature,
+    state: data.state,
+  };
+}
+
+/**
+ * Applies the source changes read to the draft by drafting's own rules, keeping every decision;
+ * replies the draft. The draft then needs confirming and publishing again.
+ */
+export async function draftSourceChanges(projectId: string, signature: string): Promise<Draft> {
+  if (useMock) {
+    const draft = await getDraft(projectId);
+    if (!draft) {
+      throw new AxiosError("Draft.NotReady", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { error_code: "BknProject.Draft.NotReady" },
+        status: 409,
+      } as AxiosResponse);
+    }
+    return wait(draft);
+  }
+  const response = await http.post<BackendDraft>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/source-changes:draft`,
+    { signature },
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
