@@ -6,6 +6,7 @@
  */
 
 import { Alert, Modal, Select, Upload } from "antd";
+import type { RcFile } from "antd/es/upload";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useContext, useState } from "react";
@@ -189,7 +190,8 @@ function UploadDialog({
 }) {
   const { t } = useTranslation();
   const { message } = useAppServices();
-  const [files, setFiles] = useState<File[]>([]);
+  // Each pick keeps the uid antd gives it: two files of one name stay two.
+  const [files, setFiles] = useState<RcFile[]>([]);
   const [sending, setSending] = useState(false);
   const [results, setResults] = useState<UploadResult[] | null>(null);
 
@@ -220,8 +222,8 @@ function UploadDialog({
     >
       {results ? (
         <ul className={styles.list}>
-          {results.map((result) => (
-            <li className={styles.row} key={result.name}>
+          {results.map((result, index) => (
+            <li className={styles.row} key={`${index}-${result.name}`}>
               <span>{result.name}</span>
               <span className={result.outcome === "rejected" ? styles.warning : styles.muted}>
                 {result.outcome === "rejected"
@@ -241,10 +243,10 @@ function UploadDialog({
               setFiles((current) => [...current, file]);
               return false;
             }}
-            fileList={files.map((file) => ({ name: file.name, uid: `${file.name}-${file.size}` }))}
+            fileList={files.map((file) => ({ name: file.name, uid: file.uid }))}
             multiple
             onRemove={(removed) =>
-              setFiles((current) => current.filter((file) => file.name !== removed.name))
+              setFiles((current) => current.filter((file) => file.uid !== removed.uid))
             }
           >
             <p>{t(`${PREFIX}.drop`)}</p>

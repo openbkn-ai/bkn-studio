@@ -334,8 +334,16 @@ describe("ProjectRequirements", () => {
       .getByText("拖入文件，或点击选择")
       .closest(".ant-upload")!
       .querySelector("input")!;
-    fireEvent.change(input, { target: { files: [new File(["# x"], "new.md")] } });
+    // Two files of one name stay two, and one of them can be taken out on its own.
+    fireEvent.change(input, {
+      target: { files: [new File(["# x"], "new.md"), new File(["# y"], "new.md")] },
+    });
+    const listed = () => document.querySelectorAll(".ant-upload-list-item");
+    await waitFor(() => expect(listed()).toHaveLength(2));
+    fireEvent.click(listed()[1].querySelector(".ant-upload-list-item-actions button")!);
+    await waitFor(() => expect(listed()).toHaveLength(1));
     fireEvent.click(await dialog.findByRole("button", { name: "上传所选" }));
+    expect(uploadDocumentsMock.mock.calls[0][1]).toHaveLength(1);
 
     expect(await dialog.findByText("已上传")).toBeInTheDocument();
     expect(dialog.getByText("只支持 Markdown 和纯文本文件")).toBeInTheDocument();
