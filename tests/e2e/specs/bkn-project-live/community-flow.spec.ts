@@ -164,17 +164,28 @@ test("community image: from tables and requirements to a published, switched rel
       test.info().annotations.push({ type: "data", description: "every object type has a key" });
       return;
     }
-    const label = (await choose.first().getAttribute("aria-label")) ?? "";
-    decided = label.replace(/^为/, "").replace(/选择唯一标识$/, "");
-    await choose.first().click();
+    // Take the identity drafting counted as unique over the whole table. A guessed key with
+    // duplicates fails the data check and blocks publishing, so without a suggestion the object
+    // type stays undecided and is left out at confirmation.
     const dialog = page.getByRole("dialog");
-    const save = dialog.getByRole("button", { name: /保\s*存/ });
-    if (await save.isDisabled()) {
-      // Nothing was suggested: pick the first property, as an engineer who knows the data would.
-      await dialog.locator(".ant-checkbox-wrapper").first().click();
+    for (const label of await choose.evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute("aria-label") ?? ""),
+    )) {
+      await page.getByRole("button", { name: label, exact: true }).click();
+      await expect(dialog).toBeVisible();
+      if (await dialog.getByText(/已为你选上/).isVisible()) {
+        decided = label.replace(/^为/, "").replace(/选择唯一标识$/, "");
+        await dialog.getByRole("button", { name: /保\s*存/ }).click();
+        await expect(dialog).toBeHidden();
+        break;
+      }
+      await dialog.getByRole("button", { name: /取\s*消/ }).click();
+      await expect(dialog).toBeHidden();
     }
-    await save.click();
-    await expect(dialog).toBeHidden();
+    if (!decided) {
+      test.info().annotations.push({ type: "data", description: "no suggested identity" });
+      return;
+    }
     const adopt = page.getByRole("switch", { name: `采纳${decided}` });
     await expect(adopt).toBeEnabled();
     if (!(await adopt.isChecked())) {
