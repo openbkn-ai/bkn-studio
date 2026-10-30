@@ -77,6 +77,15 @@ function dev(extra: Partial<QuestionDev> = {}): QuestionDev {
         kind: "not_exist",
         text: "客户编码为 CUST-99999 的客户最近 30 天下了哪些销售订单？",
       },
+      {
+        byServer: false,
+        check: { outcome: "failed", reason: "query_forbidden: vega-backend 403" },
+        edited: false,
+        expect: "exists",
+        id: "t5",
+        kind: "boundary",
+        text: "客户编码为 CUST-10001 的客户今天签订了哪些销售订单？",
+      },
     ],
     testsNote: "",
     updateTime: 5,
@@ -130,21 +139,24 @@ describe("QuestionDevPanel", () => {
     renderPanel();
 
     expect(
-      await screen.findByText("3 条，其中 1 条通过数据核对，发布后回归会问"),
+      await screen.findByText("4 条，其中 1 条通过数据核对，发布后回归会问"),
     ).toBeInTheDocument();
     expect(screen.getByText("同义改写")).toBeInTheDocument();
-    expect(screen.getByText("应查到记录")).toBeInTheDocument();
+    expect(screen.getAllByText("应查到记录")).toHaveLength(2);
     expect(screen.getByText("通过")).toBeInTheDocument();
     expect(screen.getByText("未核对")).toBeInTheDocument();
     expect(screen.getByText("要核对是否为同一条记录，需要两个值")).toBeInTheDocument();
-    expect(screen.getByText("不通过")).toBeInTheDocument();
+    expect(screen.getAllByText("不通过")).toHaveLength(2);
     expect(screen.getByText("查询数据没有成功")).toBeInTheDocument();
+    expect(
+      screen.getByText("数据源拒绝了查询，请检查数据目录是否存在及访问权限"),
+    ).toBeInTheDocument();
     expect(screen.getByText("你改过")).toBeInTheDocument();
     expect(
       screen.getByText("哪些销售订单需要升级处理？需要升级规则，文档未规定。"),
     ).toBeInTheDocument();
     expect(screen.getByText("客户编码")).toBeInTheDocument();
-    expect(screen.queryByText(/same_record|query_failed|vega|paraphrase/)).toBeNull();
+    expect(screen.queryByText(/same_record|query_f|vega|403|paraphrase/)).toBeNull();
   });
 
   it("says when the tests are no longer asked, or what they rest on changed", async () => {

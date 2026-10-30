@@ -175,6 +175,7 @@ const checkReasonWord = word("testCheckReason", [
   "same_record_needs_one_object_type",
   "composite_identity",
   "query_failed",
+  "query_forbidden",
   "excluded_field",
   "no_value_in_data",
   "no_absent_value",

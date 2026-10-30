@@ -726,6 +726,7 @@ export const bknProjectEnUS = {
           "Checking for one record needs both values of one object type",
         composite_identity: "An identity of several fields cannot be checked for one record",
         query_failed: "Querying the data did not succeed",
+        query_forbidden: "The data source refused the query; check that the catalog exists and is accessible",
         excluded_field: "The privacy rules keep this field from being read",
         no_value_in_data: "The data has no usable value",
         no_absent_value: "No value absent from the data could be found",

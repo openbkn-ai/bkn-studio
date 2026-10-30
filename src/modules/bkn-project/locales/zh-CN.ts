@@ -675,6 +675,7 @@ export const bknProjectZhCN = {
         same_record_needs_one_object_type: "要核对是否为同一条记录，两个值需要属于同一个对象类",
         composite_identity: "多个字段组成的标识，无法核对是否为同一条记录",
         query_failed: "查询数据没有成功",
+        query_forbidden: "数据源拒绝了查询，请检查数据目录是否存在及访问权限",
         excluded_field: "这个字段按隐私规则不读取",
         no_value_in_data: "数据中没有可用的值",
         no_absent_value: "找不到一个数据中确实没有的值",
