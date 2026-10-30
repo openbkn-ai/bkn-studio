@@ -49,6 +49,7 @@ function status(action: Partial<ProjectNextAction> | null, extra: Partial<Projec
     nextActions: action
       ? [{ accepts: [], action: "confirm_draft", allowed: true, discardsDecisions: 0, ...action }]
       : [],
+    release: null,
     stage: "ready_to_confirm",
     stale: [],
     undecided: 0,

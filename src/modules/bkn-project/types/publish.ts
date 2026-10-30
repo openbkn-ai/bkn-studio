@@ -18,6 +18,7 @@ export type ProjectStage =
   | "draft_failed"
   | "drafting"
   | "no_draft"
+  | "published"
   | "ready_to_confirm";
 
 /** Something that holds the project back, and who has to act on it. */
@@ -37,6 +38,8 @@ export type ProjectNextAction = {
   /** Why it is not allowed: `not_owner`, `running`, or a blocker's code. */
   reason?: string;
   retryAfterS?: number;
+  /** For reviewing a release: the patch after the lineage's newest release, which may be changed. */
+  suggestedVersion?: string;
 };
 
 export type ProjectStatus = {
@@ -47,6 +50,8 @@ export type ProjectStatus = {
   confirmation: { current: boolean; time: number } | null;
   draft: { decisions: number; placeholders: number; status: string; updateTime: number } | null;
   nextActions: ProjectNextAction[];
+  /** The project's release, once the newest release is its own and came after its confirmation. */
+  release: { inUse: boolean; networkId: string; version: string } | null;
   stage: ProjectStage;
   /** `confirmation_outdated`, `check_outdated`. */
   stale: string[];

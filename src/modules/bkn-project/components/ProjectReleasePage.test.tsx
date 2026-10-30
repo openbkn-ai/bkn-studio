@@ -24,7 +24,17 @@ const messageMock = vi.hoisted(() => ({
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: messageMock }),
+  useAppServices: () => ({ message: messageMock, runtimeConfig: { currentUser: { id: "me" } } }),
+}));
+
+vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
+  useAccountDirectory: () => new Map(),
+}));
+
+const listReleasesMock = vi.hoisted(() => vi.fn());
+vi.mock("@/modules/bkn-project/services/release.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/release.service")>()),
+  listReleases: listReleasesMock,
 }));
 
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
@@ -75,6 +85,7 @@ function status(extra: Partial<ProjectStatus> = {}): ProjectStatus {
     confirmation: { current: true, time: confirmedAt },
     draft: { decisions: 0, placeholders: 0, status: "ready", updateTime: 1 },
     nextActions: [],
+    release: null,
     stage: "confirmed",
     stale: [],
     undecided: 0,
@@ -159,6 +170,7 @@ describe("ProjectReleasePage", () => {
     getDraftMock.mockResolvedValue(draft);
     getProjectStatusMock.mockResolvedValue(status());
     getOntologyCheckMock.mockResolvedValue(check());
+    listReleasesMock.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -190,6 +202,31 @@ describe("ProjectReleasePage", () => {
     expect(section.getByText(relation.name)).toBeInTheDocument();
     expect(section.getByText("99.5%")).toBeInTheDocument();
     expect(section.getByText("找不到对应记录只作提示，不影响校验结果。")).toBeInTheDocument();
+  });
+
+  it("publishes and lists the network's versions beside the check, reading them again after", async () => {
+    getProjectStatusMock.mockResolvedValue(
+      status({
+        nextActions: [
+          {
+            accepts: [],
+            action: "review_release",
+            allowed: true,
+            discardsDecisions: 0,
+            suggestedVersion: "1.0.0",
+          },
+        ],
+      }),
+    );
+    listReleasesMock.mockRejectedValueOnce(new Error("down")).mockResolvedValue([]);
+    renderRelease();
+
+    expect(await screen.findByRole("button", { name: "发布审核 v1.0.0" })).toBeInTheDocument();
+    const versions = within(screen.getByRole("region", { name: "版本" }));
+    expect(await versions.findByText("版本列表暂时读取不到")).toBeInTheDocument();
+    expect(listReleasesMock).toHaveBeenCalledWith("n");
+    fireEvent.click(versions.getByRole("button", { name: /重\s*试/ }));
+    expect(await versions.findByText("还没有发布过版本。")).toBeInTheDocument();
   });
 
   it("explains issues and counts that were not made, without raw reasons", async () => {
