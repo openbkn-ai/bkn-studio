@@ -18,16 +18,16 @@ export function objectTypeOf(spec: RequirementSpec, drafted: DraftedItem[], conc
 
 /**
  * An input as people read it: the concept's term and the property's name in the draft. A
- * property the draft no longer has keeps its own name and says so.
+ * property its object type no longer has keeps its own name and says so; without the object
+ * type (the draft not read, or the concept not mapped) nothing is said about the property.
  */
 export function describeInput(spec: RequirementSpec, drafted: DraftedItem[], input: QuestionInput) {
   const concept = spec.concepts.find((item) => item.id === input.conceptId);
-  const property = objectTypeOf(spec, drafted, input.conceptId)?.properties.find(
-    (entry) => entry.name === input.property,
-  );
+  const objectType = objectTypeOf(spec, drafted, input.conceptId);
+  const property = objectType?.properties.find((entry) => entry.name === input.property);
   return {
     concept: concept?.term ?? input.conceptId,
-    known: Boolean(property) || !input.property,
+    known: !objectType || !input.property || Boolean(property),
     property: property ? property.displayName || property.name : input.property,
   };
 }

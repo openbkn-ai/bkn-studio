@@ -108,8 +108,11 @@ export function InputsEditor({
                 {t(`${PREFIX}.remove`)}
               </AppButton>
             </div>
-            {input.name && errors[input.name] ? (
-              <span className={styles.warning}>{inputReasonText(t, errors[input.name])}</span>
+            {/* The server names an input as it was sent: trimmed. */}
+            {input.name.trim() && errors[input.name.trim()] ? (
+              <span className={styles.warning}>
+                {inputReasonText(t, errors[input.name.trim()])}
+              </span>
             ) : null}
           </div>
         );

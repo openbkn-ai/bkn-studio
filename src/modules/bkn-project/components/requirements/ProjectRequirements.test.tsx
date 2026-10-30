@@ -653,7 +653,10 @@ describe("ProjectRequirements", () => {
     });
 
     it("sends changed inputs, and shows the server's refusal on the input it names", async () => {
-      getRequirementsMock.mockResolvedValue(withInputs());
+      const spec = withInputs();
+      // Sent trimmed, and so named by the server: the reason still finds its row.
+      spec.spec.questions[0].inputs![1] = { ...spec.spec.questions[0].inputs![1], name: "as_of " };
+      getRequirementsMock.mockResolvedValue(spec);
       editItemMock.mockRejectedValueOnce(
         new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {
           data: {
@@ -689,6 +692,15 @@ describe("ProjectRequirements", () => {
       expect(await dialog.findByText("参照时间要选日期或时间类型的属性")).toBeInTheDocument();
       expect(messageMock.error).toHaveBeenCalledWith("有输入不能用，原因已标在对应的输入下。");
       expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("says nothing about properties while the draft cannot be read", async () => {
+      getDraftMock.mockRejectedValue(new Error("draft unavailable"));
+      getRequirementsMock.mockResolvedValue(withInputs());
+      renderPage();
+
+      expect(await screen.findByText(/^as_of：/)).toBeInTheDocument();
+      expect(screen.queryByText("本体中没有这个属性")).toBeNull();
     });
 
     it("lists a dropped input and a window without a reference time in business words", async () => {
