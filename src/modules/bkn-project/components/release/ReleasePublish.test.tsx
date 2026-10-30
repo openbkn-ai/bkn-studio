@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -43,6 +43,7 @@ vi.mock("@/modules/bkn-project/services/release.service", async (importOriginal)
   syncBranch: syncBranchMock,
 }));
 
+import { REGRESSION_POLL_MS } from "@/modules/bkn-project/services/release.service";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { ReleasePublish } from "./ReleasePublish";
@@ -433,6 +434,49 @@ describe("ReleasePublish", () => {
     await waitFor(() => expect(switchConsumersMock).toHaveBeenCalledWith("p1", "n_v1_0_2"));
     expect(messageMock.success).toHaveBeenCalledWith("使用方已切换到 v1.0.2。");
     expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("follows a running regression until it ends, so its tag does not stay running", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const regression = {
+      attempt: 1,
+      error: "",
+      finishTime: 0,
+      networkId: "n_v1_0_2",
+      questions: [],
+      results: [],
+      runnerId: "me",
+      startTime: 1,
+      status: "running",
+      version: "1.0.2",
+    };
+    // A failed read in between does not stop following it.
+    getRegressionMock
+      .mockResolvedValueOnce(regression)
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValue({
+        ...regression,
+        finishTime: 2,
+        results: [{ outcome: "passed", questionId: "q1" }],
+        status: "passed",
+      });
+    renderPublish(
+      status({
+        release: { inUse: true, networkId: "n_v1_0_2", version: "1.0.2" },
+        stage: "published",
+      }),
+    );
+
+    expect(await screen.findByText("运行中")).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(REGRESSION_POLL_MS));
+    expect(screen.getByText("运行中")).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(REGRESSION_POLL_MS));
+    expect(await screen.findByText("1 / 1 次提问通过")).toBeInTheDocument();
+    expect(screen.queryByText("运行中")).toBeNull();
+    const reads = getRegressionMock.mock.calls.length;
+    await act(() => vi.advanceTimersByTimeAsync(REGRESSION_POLL_MS * 2));
+    expect(getRegressionMock.mock.calls.length).toBe(reads);
+    vi.useRealTimers();
   });
 
   it("says the original network only when consumers are on it, never for an unread version", async () => {

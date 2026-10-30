@@ -341,10 +341,13 @@ function CheckSection({
  */
 export function ProjectReleasePage({
   onGoToModel,
+  onReleaseChanged,
   ownerIsCaller,
   project,
 }: {
   onGoToModel: () => void;
+  /** Something was published, switched or rolled back: the workspace header reads it again. */
+  onReleaseChanged?: () => void;
   ownerIsCaller: boolean;
   project: Project;
 }) {
@@ -471,6 +474,7 @@ export function ProjectReleasePage({
         onChanged={() => {
           void load();
           void loadReleases();
+          onReleaseChanged?.();
         }}
         onOpenRegression={() =>
           status.release &&
