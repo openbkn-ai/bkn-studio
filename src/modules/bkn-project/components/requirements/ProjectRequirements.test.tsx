@@ -217,8 +217,16 @@ describe("ProjectRequirements", () => {
     getDraftMock.mockResolvedValue({
       items: {
         objectTypes: [
-          { id: "sales_order", name: "销售订单" },
-          { id: "customer", name: "客户" },
+          {
+            id: "sales_order",
+            name: "销售订单",
+            properties: [{ displayName: "签订日期", name: "signed_at", type: "datetime" }],
+          },
+          {
+            id: "customer",
+            name: "客户",
+            properties: [{ displayName: "客户编码", name: "customer_code", type: "string" }],
+          },
         ],
         relationTypes: [{ id: "order_customer", name: "订单的客户" }],
       },
@@ -563,6 +571,150 @@ describe("ProjectRequirements", () => {
       fireEvent.click(screen.getByText(/^业务规则/));
       expect(screen.queryByRole("button", { name: /^裁\s*决$/ })).toBeNull();
       expect(screen.queryByRole("button", { name: /^选\s*择$/ })).toBeNull();
+    });
+  });
+
+  describe("question inputs", () => {
+    /** The spec with a customer concept, and q1 asked about a customer up to a date. */
+    function withInputs() {
+      const spec = requirements();
+      spec.spec.concepts.push({
+        ...spec.spec.concepts[0],
+        citations: [],
+        id: "c3",
+        mapsTo: { id: "customer", kind: "object_type" },
+        term: "客户",
+      });
+      spec.spec.questions[0] = {
+        ...spec.spec.questions[0],
+        inputs: [
+          {
+            conceptId: "c3",
+            name: "customer",
+            property: "customer_code",
+            propertyFromKey: true,
+            role: "record",
+          },
+          { conceptId: "c1", name: "as_of", property: "gone_field", role: "reference_time" },
+        ],
+        relativeWindow: true,
+      };
+      spec.spec.questions.push(
+        {
+          ...spec.spec.questions[0],
+          id: "q2",
+          inputs: [],
+          relativeWindow: false,
+          text: "延误率是多少？",
+          notes: ["capability_without_basis"],
+        },
+        {
+          ...spec.spec.questions[0],
+          id: "q3",
+          inputs: null,
+          notes: ["reference_time_unbound"],
+          relativeWindow: false,
+          text: "上周哪些订单晚了？",
+        },
+      );
+      return spec;
+    }
+
+    it("says what each question is asked about, in business words", async () => {
+      getRequirementsMock.mockResolvedValue(withInputs());
+      renderPage();
+
+      expect(await screen.findByText("customer：「客户」的「客户编码」")).toBeInTheDocument();
+      expect(screen.getByText("某条记录")).toBeInTheDocument();
+      expect(screen.getByText("参照时间")).toBeInTheDocument();
+      // A property the draft no longer has keeps its own name and says so.
+      expect(screen.getByText("as_of：「销售订单」的「gone_field」")).toBeInTheDocument();
+      expect(screen.getByText("本体中没有这个属性")).toBeInTheDocument();
+      expect(
+        screen.getByText("统计截至参照时间的最近一段时间，时长以问题为准"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("不针对某条具体记录提问")).toBeInTheDocument();
+      expect(
+        screen.getByText("这个能力层问题没有写明要用哪个指标、函数或技能。"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("起草时没有给出可用的属性，暂按唯一标识识别，请核对"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "这个问题按参照时间往前统计，但没有输入给出参照时间，系统不会按模板为它生成测试问法。请在输入中加上参照时间。",
+        ),
+      ).toBeInTheDocument();
+      // A question drafted before inputs says nothing about them.
+      expect(screen.getAllByText("问的是")).toHaveLength(2);
+      expect(
+        screen.queryByText(/reference_time|record|capability_without_basis|from_key/),
+      ).toBeNull();
+    });
+
+    it("sends changed inputs, and shows the server's refusal on the input it names", async () => {
+      const spec = withInputs();
+      // Sent trimmed, and so named by the server: the reason still finds its row.
+      spec.spec.questions[0].inputs![1] = { ...spec.spec.questions[0].inputs![1], name: "as_of " };
+      getRequirementsMock.mockResolvedValue(spec);
+      editItemMock.mockRejectedValueOnce(
+        new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {
+          data: {
+            error_code: "BknProject.Requirement.InvalidItem",
+            error_details: "input as_of: input_not_time",
+          },
+          status: 400,
+        } as AxiosResponse),
+      );
+      renderPage();
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "编辑「某个客户哪些订单晚了？」" }),
+      );
+      const dialog = within(await screen.findByRole("dialog"));
+      fireEvent.click(dialog.getByRole("button", { name: "移除输入「customer」" }));
+      fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
+
+      await waitFor(() =>
+        expect(editItemMock).toHaveBeenCalledWith(
+          "p1",
+          "questions",
+          "q1",
+          expect.objectContaining({
+            inputs: [
+              { conceptId: "c1", name: "as_of", property: "gone_field", role: "reference_time" },
+            ],
+          }),
+          1,
+        ),
+      );
+      // The dialog stays open, the refused input saying why in business words.
+      expect(await dialog.findByText("参照时间要选日期或时间类型的属性")).toBeInTheDocument();
+      expect(messageMock.error).toHaveBeenCalledWith("有输入不能用，原因已标在对应的输入下。");
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("says nothing about properties while the draft cannot be read", async () => {
+      getDraftMock.mockRejectedValue(new Error("draft unavailable"));
+      getRequirementsMock.mockResolvedValue(withInputs());
+      renderPage();
+
+      expect(await screen.findByText(/^as_of：/)).toBeInTheDocument();
+      expect(screen.queryByText("本体中没有这个属性")).toBeNull();
+    });
+
+    it("lists a dropped input and a window without a reference time in business words", async () => {
+      const spec = requirements();
+      spec.spec.rejected = [
+        { kind: "input", reason: "input_not_in_template", text: "order (哪些订单晚了？)" },
+        { kind: "question", reason: "window_without_reference_time", text: "最近 30 天的订单？" },
+      ];
+      getRequirementsMock.mockResolvedValue(spec);
+      renderPage();
+      fireEvent.click(await screen.findByText("起草时去掉了 2 条内容"));
+      expect(await screen.findByText("问题的输入")).toBeInTheDocument();
+      expect(screen.getByText("问题模板里没有用到这个输入")).toBeInTheDocument();
+      expect(screen.getByText("按时间统计，但没有给出参照时间")).toBeInTheDocument();
     });
   });
 });
