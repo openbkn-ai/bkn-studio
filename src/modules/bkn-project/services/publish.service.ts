@@ -26,6 +26,7 @@ import type {
   IndexItem,
   OntologyCheck,
   PendingItem,
+  PendingQuestion,
   ProjectBlocker,
   ProjectIndex,
   ProjectNextAction,
@@ -82,6 +83,7 @@ type BackendPending = {
         item_id: string;
         kind: string;
         name: string;
+        needed_by?: { id: string; text: string }[];
         reason: string;
       }[]
     | null;
@@ -218,6 +220,7 @@ function mapPending(pending: BackendPending): ProjectPending {
       itemId: item.item_id,
       kind: item.kind,
       name: item.name,
+      neededBy: (item.needed_by ?? []).map(({ id, text }) => ({ id, text })),
       reason: item.reason,
     })),
   };
@@ -523,6 +526,11 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
   };
 }
 
+/** The mock's scenario questions that need a drafted item. */
+const MOCK_NEEDED_BY: Record<string, PendingQuestion[]> = {
+  material_bom: [{ id: "q3", text: "Which products use part P-100?" }],
+};
+
 async function mockPending(projectId: string): Promise<ProjectPending> {
   const draft = await getDraft(projectId);
   if (!draft || draft.status !== "ready") {
@@ -537,6 +545,7 @@ async function mockPending(projectId: string): Promise<ProjectPending> {
         itemId: item.id,
         kind: "object_types",
         name: item.name,
+        neededBy: MOCK_NEEDED_BY[item.id] ?? [],
         reason: "needs_identity",
       })),
       ...unadoptedEnds.map((item) => ({
@@ -544,6 +553,7 @@ async function mockPending(projectId: string): Promise<ProjectPending> {
         itemId: item.id,
         kind: "relation_types",
         name: item.name,
+        neededBy: MOCK_NEEDED_BY[item.id] ?? [],
         reason: "unadopted_ends",
       })),
       ...undecided.map(({ item, kind }) => ({
@@ -552,6 +562,7 @@ async function mockPending(projectId: string): Promise<ProjectPending> {
         itemId: item.id,
         kind,
         name: item.name,
+        neededBy: MOCK_NEEDED_BY[item.id] ?? [],
         reason: "undecided",
       })),
     ],

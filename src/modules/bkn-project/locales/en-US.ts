@@ -158,6 +158,10 @@ export const bknProjectEnUS = {
         none: "This object type has no property that can identify its records; an identity needs text or whole numbers.",
         composite:
           "Several properties: records are told apart by their combination, and duplicates and empty values are not counted.",
+        suggested:
+          "Drafting counted {{properties}} together: no duplicates and no empty values across the table, so they are selected for you.",
+        noSuggestion:
+          "Drafting found no property or combination unique across the table; choose by what you know of the business.",
         counting: "Counting over the whole table, which can take up to 30 seconds…",
         choose: "Choose the identity of {{name}}",
         change: "Change the identity of {{name}}",
@@ -199,6 +203,7 @@ export const bknProjectEnUS = {
         needsIdentity: "{{name}} has no identity yet; choose one before adopting it.",
         unadoptedEnd:
           "Relation type {{name}} connects an object type that is not adopted; unadopt it.",
+        neededBy: "Questions that need it to be answered:",
         unadopt: "Unadopt",
         unadoptItem: "Unadopt {{name}}",
         noneTitle: "No changes yet",
@@ -535,6 +540,7 @@ export const bknProjectEnUS = {
         undecidedTitle_other:
           "{{count}} items were not adopted in drafting and nobody decided on them",
         undecidedAccept: "Leave these items out for now",
+        neededBy: "Left out, these questions cannot be answered:",
         partialTitle: "{{count}} tables could not be read, so drafting left them out",
         partialTitle_one: "{{count}} table could not be read, so drafting left it out",
         partialTitle_other: "{{count}} tables could not be read, so drafting left them out",

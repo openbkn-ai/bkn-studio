@@ -34,6 +34,7 @@ type BackendTable = {
 };
 
 type BackendKey = {
+  candidate?: string[];
   computed: boolean;
   distinct: number;
   field?: string;
@@ -138,6 +139,7 @@ const mapTable = (table: BackendTable): DraftTable => ({
 });
 
 const mapKey = (key: BackendKey): DraftKeyEvidence => ({
+  ...(key.candidate?.length ? { candidate: key.candidate } : {}),
   computed: key.computed,
   distinct: key.distinct,
   field: key.field,

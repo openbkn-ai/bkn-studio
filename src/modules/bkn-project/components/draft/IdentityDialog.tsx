@@ -9,7 +9,7 @@ import { Alert, Checkbox, Modal } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { identityCandidates } from "@/modules/bkn-project/components/draft/edit";
+import { identityCandidates, suggestedIdentity } from "@/modules/bkn-project/components/draft/edit";
 import { propertyTypeKey } from "@/modules/bkn-project/components/draft/evidence";
 import type { DraftObjectType } from "@/modules/bkn-project/types/draft";
 
@@ -17,7 +17,8 @@ import styles from "./DraftTables.module.css";
 
 /**
  * Chooses the properties that identify an object type's records. A single property is counted
- * over the whole table, which can take a while; several properties are not counted.
+ * over the whole table, which can take a while; several properties are not counted. What
+ * drafting counted unique for an object type waiting for its identity comes first.
  */
 export function IdentityDialog({
   objectType,
@@ -30,9 +31,15 @@ export function IdentityDialog({
 }) {
   const { t } = useTranslation();
   const candidates = identityCandidates(objectType);
-  const [selected, setSelected] = useState<string[]>(() =>
-    objectType.primaryKeys.filter((name) => candidates.some((property) => property.name === name)),
-  );
+  const suggested = objectType.needsIdentity ? suggestedIdentity(objectType) : null;
+  const [selected, setSelected] = useState<string[]>(() => {
+    const kept = objectType.primaryKeys.filter((name) =>
+      candidates.some((property) => property.name === name),
+    );
+    return kept.length ? kept : (suggested ?? []);
+  });
+  const label = (name: string) =>
+    candidates.find((property) => property.name === name)?.displayName || name;
   const [saving, setSaving] = useState(false);
   const unchanged =
     selected.length === objectType.primaryKeys.length &&
@@ -63,6 +70,17 @@ export function IdentityDialog({
     >
       <div className={styles.stack}>
         <p className={styles.muted}>{t("bknProject.model.identity.intro")}</p>
+        {suggested ? (
+          <Alert
+            message={t("bknProject.model.identity.suggested", {
+              properties: suggested.map(label).join(t("bknProject.listSeparator")),
+            })}
+            showIcon
+            type="success"
+          />
+        ) : objectType.needsIdentity && candidates.length ? (
+          <span className={styles.muted}>{t("bknProject.model.identity.noSuggestion")}</span>
+        ) : null}
         {candidates.length ? (
           <Checkbox.Group
             className={styles.choices}
@@ -70,6 +88,7 @@ export function IdentityDialog({
             options={candidates.map((property) => ({
               label: (
                 <span>
+                  {property.displayName || property.name}{" "}
                   <code className={styles.mono}>{property.name}</code>{" "}
                   <span className={styles.muted}>{t(propertyTypeKey(property.type))}</span>
                 </span>
