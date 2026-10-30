@@ -145,6 +145,7 @@ function projectStatus(nextActions: ProjectStatus["nextActions"]): ProjectStatus
     confirmation: null,
     draft: null,
     nextActions,
+    release: null,
     stage: "ready_to_confirm",
     stale: [],
     undecided: 0,
