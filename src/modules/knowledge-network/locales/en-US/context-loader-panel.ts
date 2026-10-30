@@ -293,11 +293,11 @@ export const contextLoaderPanelPart = {
       launchTipsLinux: "Linux (terminal)",
       launchCommandMac: "open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0",
       launchCommandWindows:
-        '$WorkBuddy = "$env:ProgramFiles\\WorkBuddy\\WorkBuddy.exe"\n$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath $WorkBuddy\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<full path to WorkBuddy.exe>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
       launchCommandLinux:
         'WORKBUDDY="<WorkBuddy command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 "$WORKBUDDY" &',
       launchTipsNote:
-        "If WorkBuddy is installed elsewhere, change only the path variable on the first line. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
+        "Replace the <> part with the actual WorkBuddy path or command. On Windows, use the full path with the drive letter, e.g. C:\\Program Files\\WorkBuddy\\WorkBuddy.exe. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
       selfSignedApiKeyDescription:
         "With certificate checks on, clients will fail to connect. Tick the option on the right to skip the check (trusted environments only), or give the platform a proper certificate.",
       selfSignedTitle: "This address may use a self-signed certificate",
