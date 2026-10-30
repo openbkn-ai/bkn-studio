@@ -251,7 +251,7 @@ export const contextLoaderPanelPart = {
       launchCommandWindows:
         '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<WorkBuddy.exe 完整路径>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
       launchCommandLinux:
-        'WORKBUDDY="<WorkBuddy 启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 "$WORKBUDDY" &',
+        'WORKBUDDY="<WorkBuddy 启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$WORKBUDDY" >/dev/null 2>&1 &',
       launchTipsNote:
         "把 <> 部分换成 WorkBuddy 实际的路径或启动命令，Windows 需写含盘符的完整路径，如 C:\\Program Files\\WorkBuddy\\WorkBuddy.exe。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
       selfSignedApiKeyDescription:

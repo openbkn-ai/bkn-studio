@@ -295,7 +295,7 @@ export const contextLoaderPanelPart = {
       launchCommandWindows:
         '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<full path to WorkBuddy.exe>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
       launchCommandLinux:
-        'WORKBUDDY="<WorkBuddy command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 "$WORKBUDDY" &',
+        'WORKBUDDY="<WorkBuddy command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$WORKBUDDY" >/dev/null 2>&1 &',
       launchTipsNote:
         "Replace the <> part with the actual WorkBuddy path or command. On Windows, use the full path with the drive letter, e.g. C:\\Program Files\\WorkBuddy\\WorkBuddy.exe. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
       selfSignedApiKeyDescription:
