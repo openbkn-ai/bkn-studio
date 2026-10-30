@@ -664,6 +664,20 @@ export const bknProjectZhCN = {
       failed: "没能确认，请稍后重试",
     },
     requirements: {
+      export: {
+        button: "导出",
+        workshop: {
+          label: "导出给 Workshop",
+          hint: "能力层问题和业务规则，供搭建指标、函数和技能",
+        },
+        eval: {
+          label: "导出给评测",
+          hint: "知识层问题、问题的输入和测试问法，供评测使用",
+        },
+        noValues: "导出内容不含任何数据取值：问题按模板写，记录的具体值都换成占位写法。",
+        notReady: "需求规格起草完成后才能导出。",
+        failed: "没能导出，请稍后重试。",
+      },
       loadFailed: "需求规格暂时读取不到",
       version: "需求规格第 {{version}} 版 · {{status}}",
       status: {

@@ -16,6 +16,13 @@ const { mockDelete, mockGet, mockPatch, mockPost, mockPut } = vi.hoisted(() => (
   mockPut: vi.fn(),
 }));
 
+const downloadMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/framework/download/file-download", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/framework/download/file-download")>()),
+  triggerBrowserDownload: downloadMock,
+}));
+
 vi.mock("@/framework/request/http", () => ({
   http: { delete: mockDelete, get: mockGet, patch: mockPatch, post: mockPost, put: mockPut },
 }));
@@ -428,6 +435,26 @@ describe("requirements.service", () => {
       params: { update_time: 5 },
       skipErrorToast: true,
     });
+  });
+
+  it("downloads the export under the file name bkn-project gives", async () => {
+    const { exportRequirements } = await importService();
+    const blob = new Blob(["format: x"]);
+    mockGet.mockResolvedValueOnce({
+      data: blob,
+      headers: { "content-disposition": 'attachment; filename="supply-rq-3-eval.yaml"' },
+    });
+    await exportRequirements("p/1", "eval");
+    expect(mockGet).toHaveBeenCalledWith(`${prefix}/export`, {
+      params: { target: "eval" },
+      responseType: "blob",
+      skipErrorToast: true,
+    });
+    expect(downloadMock).toHaveBeenCalledWith(blob, "supply-rq-3-eval.yaml");
+
+    mockGet.mockResolvedValueOnce({ data: blob, headers: {} });
+    await exportRequirements("p/1", "workshop");
+    expect(downloadMock).toHaveBeenLastCalledWith(blob, "p_1-requirements-workshop.yaml");
   });
 
   it("reads what a question is asked about, telling unknown from none", async () => {
