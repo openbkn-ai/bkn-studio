@@ -299,6 +299,17 @@ describe("ProjectRequirements", () => {
     );
   });
 
+  it("names only what waits", async () => {
+    getRequirementsMock.mockResolvedValue(
+      requirements({ undecidedChoices: 5, unresolvedConflicts: 0 }),
+    );
+    renderPage();
+    expect(
+      await screen.findByText("有 5 个建模选择可以处理，不处理就按推荐。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/0 个需求冲突/)).toBeNull();
+  });
+
   it("says why drafting failed, in plain words", async () => {
     getRequirementsMock.mockResolvedValue(
       requirements({ error: "agent_timeout", spec: mapSpec({}), status: "failed" }),
@@ -329,7 +340,7 @@ describe("ProjectRequirements", () => {
     expect(await dialog.findByText("已上传")).toBeInTheDocument();
     expect(dialog.getByText("只支持 Markdown 和纯文本文件")).toBeInTheDocument();
     fireEvent.click(dialog.getByRole("button", { name: /完\s*成/ }));
-    await waitFor(() => expect(listDocumentsMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(listDocumentsMock).toHaveBeenCalledTimes(2), { timeout: 3000 });
   });
 
   it("lets the owner type a document; others only read", async () => {

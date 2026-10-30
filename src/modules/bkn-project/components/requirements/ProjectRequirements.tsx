@@ -240,10 +240,17 @@ export function ProjectRequirements({
                 {t(`${PREFIX}.goDecide`)}
               </AppButton>
             }
-            message={t(`${PREFIX}.waiting`, {
-              choices: requirements.undecidedChoices,
-              conflicts: requirements.unresolvedConflicts,
-            })}
+            message={
+              // Only what waits is named.
+              requirements.unresolvedConflicts && requirements.undecidedChoices
+                ? t(`${PREFIX}.waiting.both`, {
+                    choices: requirements.undecidedChoices,
+                    conflicts: requirements.unresolvedConflicts,
+                  })
+                : requirements.unresolvedConflicts
+                  ? t(`${PREFIX}.waiting.conflicts`, { count: requirements.unresolvedConflicts })
+                  : t(`${PREFIX}.waiting.choices`, { count: requirements.undecidedChoices })
+            }
             showIcon
             type="warning"
           />
