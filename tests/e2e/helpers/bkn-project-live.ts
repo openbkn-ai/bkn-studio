@@ -5,7 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { expect, type BrowserContext, type Page } from "@playwright/test";
+import { execSync } from "node:child_process";
+
+import {
+  expect,
+  type APIResponse,
+  type BrowserContext,
+  type Page,
+  type Route,
+} from "@playwright/test";
 
 /**
  * The live BKN project E2E runs against a deployed Studio and its real backend (for example
@@ -14,12 +22,15 @@ import { expect, type BrowserContext, type Page } from "@playwright/test";
  *
  *   E2E_LIVE=1                 run the live specs
  *   E2E_BASE_URL               the deployment, e.g. http://localhost:8081
- *   E2E_TOKEN                  an access token for it, read by the shell, never logged
+ *   E2E_TOKEN_COMMAND          a command printing a current access token, run again when the
+ *                              backend answers 401 (a run outlasts a token); never logged
+ *   E2E_TOKEN                  a fixed access token instead, for a run shorter than its lifetime
  *   E2E_CATALOG                the data catalog to draft from (name, exact)
  *   E2E_PROJECT_ID             lk pass only: the project the ce flow published
  */
 export const LIVE = process.env.E2E_LIVE === "1";
-export const LIVE_SKIP_REASON = "live E2E: set E2E_LIVE=1, E2E_BASE_URL, E2E_TOKEN and E2E_CATALOG";
+export const LIVE_SKIP_REASON =
+  "live E2E: set E2E_LIVE=1, E2E_BASE_URL, E2E_TOKEN_COMMAND (or E2E_TOKEN) and E2E_CATALOG";
 
 export function liveEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -29,18 +40,55 @@ export function liveEnv(name: string): string {
   return value;
 }
 
+let token = "";
+
+/** The current access token, read again from E2E_TOKEN_COMMAND when asked to. */
+export function accessToken(renew = false): string {
+  if (token && !renew) {
+    return token;
+  }
+  const command = process.env.E2E_TOKEN_COMMAND?.trim();
+  token = command
+    ? execSync(command, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim()
+    : liveEnv("E2E_TOKEN");
+  if (!token) {
+    throw new Error("E2E_TOKEN_COMMAND printed no token");
+  }
+  return token;
+}
+
+/**
+ * Sends a request to the real backend with the current token. A 401 means the token expired
+ * during the run: take a fresh one and send it again, before Studio sees it and signs out.
+ */
+export async function fetchSignedIn(route: Route): Promise<APIResponse> {
+  const send = () =>
+    route.fetch({
+      headers: { ...route.request().headers(), authorization: `Bearer ${accessToken()}` },
+    });
+  const response = await send();
+  if (response.status() !== 401 || !process.env.E2E_TOKEN_COMMAND) {
+    return response;
+  }
+  accessToken(true);
+  return send();
+}
+
 /** Signs the browser in with the token, the same cookie Studio writes after OAuth. */
 export async function signIn(context: BrowserContext, baseURL: string) {
   const url = new URL(baseURL);
   await context.addCookies([
     {
       name: "bkn_access_token",
-      value: encodeURIComponent(liveEnv("E2E_TOKEN")),
+      value: encodeURIComponent(accessToken()),
       domain: url.hostname,
       path: "/",
       sameSite: "Lax",
     },
   ]);
+  await context.route("**/api/**", async (route) =>
+    route.fulfill({ response: await fetchSignedIn(route) }),
+  );
 }
 
 /**
@@ -58,7 +106,7 @@ const KNOWLEDGE_BASE = "knowledge_base";
 
 export async function useEdition(page: Page, edition: Edition) {
   await page.route("**/api/safe/v1/capabilities", async (route) => {
-    const response = await route.fetch();
+    const response = await fetchSignedIn(route);
     const body = (await response.json()) as { capabilities?: string[]; extensions?: string[] };
     const without = (list?: string[]) => (list ?? []).filter((item) => item !== KNOWLEDGE_BASE);
     await route.fulfill({

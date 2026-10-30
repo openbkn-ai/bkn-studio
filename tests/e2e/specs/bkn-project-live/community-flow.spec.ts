@@ -12,6 +12,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   BACKGROUND,
   LIVE,
+  accessToken,
   LIVE_SKIP_REASON,
   collectPageErrors,
   liveEnv,
@@ -28,7 +29,7 @@ import { expectNoForbiddenWords, forbiddenHits, visibleTexts } from "../../helpe
 // behind it. Writes: a project e2e-<stamp> on a new network e2e_<stamp>, published as v1.0.0 and
 // switched to. The project is archived at the end; the network stays (it has no delete).
 //
-//   E2E_LIVE=1 E2E_BASE_URL=http://localhost:8081 E2E_TOKEN=... \
+//   E2E_LIVE=1 E2E_BASE_URL=http://localhost:8081 E2E_TOKEN_COMMAND="openbkn auth token" \
 //   E2E_CATALOG=bkn-sample-supply-chain npm run test:bkn-project:live
 
 test.skip(!LIVE, LIVE_SKIP_REASON);
@@ -45,6 +46,12 @@ test.beforeEach(async ({ context, page, baseURL }) => {
   await page.addInitScript(() => localStorage.setItem("bkn-studio:locale", "zh-CN"));
 });
 
+// Requests still in flight when a test ends need no answer.
+test.afterEach(async ({ context, page }) => {
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await context.unrouteAll({ behavior: "ignoreErrors" });
+});
+
 test.afterAll(async ({ browser, baseURL }) => {
   if (!projectUrl) {
     return;
@@ -54,7 +61,7 @@ test.afterAll(async ({ browser, baseURL }) => {
   const id = projectUrl.match(/\/bkn-project\/([^/]+)/)?.[1] ?? "";
   const response = await context.request.post(
     `${baseURL}/api/bkn-project/v1/projects/${encodeURIComponent(id)}:archive`,
-    { headers: { Authorization: `Bearer ${liveEnv("E2E_TOKEN")}` } },
+    { headers: { Authorization: `Bearer ${accessToken(true)}` } },
   );
   expect(response.ok(), `archive ${names.project}`).toBe(true);
   await context.close();
