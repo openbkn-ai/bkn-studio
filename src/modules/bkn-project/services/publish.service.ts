@@ -22,10 +22,13 @@ import {
 } from "@/modules/bkn-project/services/release.service";
 import type { Draft, DraftTable } from "@/modules/bkn-project/types/draft";
 import type {
+  AffectedItem,
   CheckJoinResult,
   CheckKeyResult,
   CheckResults,
   ConfirmDraftInput,
+  DataSourceCount,
+  DataSourceState,
   IndexBuild,
   IndexItem,
   OntologyCheck,
@@ -57,10 +60,23 @@ export const UNDERSTAND_SECONDS_PER_TABLE = 30;
 
 type BackendTable = { catalog_id: string; name: string; reason?: string; resource_id: string };
 
+type BackendDataSourceCount = { missing: number; state: DataSourceState; total: number };
+
+const dataSourceCount = (item: BackendDataSourceCount): DataSourceCount => ({
+  missing: item.missing,
+  state: item.state,
+  total: item.total,
+});
+
 type BackendStatus = {
   blockers: { code: string; count?: number; waiting_for: ProjectBlocker["waitingFor"] }[] | null;
   check?: { commit: string; current: boolean; status: string };
   confirmation?: { commit: string; current: boolean; time: number };
+  data_sources?: {
+    catalogs: BackendDataSourceCount;
+    network: BackendDataSourceCount;
+    tables: BackendDataSourceCount & { affected?: AffectedItem[] | null };
+  };
   draft?: { decisions: number; placeholders: number; status: string; update_time: number };
   next_actions:
     | {
@@ -193,6 +209,21 @@ function mapStatus(status: BackendStatus): ProjectStatus {
     check: status.check ? { current: status.check.current, status: status.check.status } : null,
     confirmation: status.confirmation
       ? { current: status.confirmation.current, time: status.confirmation.time }
+      : null,
+    dataSources: status.data_sources
+      ? {
+          catalogs: dataSourceCount(status.data_sources.catalogs),
+          network: dataSourceCount(status.data_sources.network),
+          tables: {
+            ...dataSourceCount(status.data_sources.tables),
+            affected: (status.data_sources.tables.affected ?? []).map((item) => ({
+              id: item.id,
+              kind: item.kind,
+              name: item.name,
+              table: item.table,
+            })),
+          },
+        }
       : null,
     draft: status.draft
       ? {
@@ -475,6 +506,7 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
     blockers: [],
     check: null,
     confirmation: null,
+    dataSources: null,
     draft: draft
       ? {
           decisions: draft.items.decisions.length,
@@ -490,6 +522,23 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
     undecided: 0,
     unresolvedConflicts: 0,
   };
+  // The mock's sources all exist: what is read is checked once there is a draft to read for.
+  const adopted = draft && draft.status === "ready" ? adoptedObjects(draft).length : 0;
+  const catalogs = (await getProject(projectId).catch(() => null))?.catalogIds.length ?? 0;
+  const sources: ProjectStatus["dataSources"] =
+    draft && draft.status !== "drafting"
+      ? {
+          catalogs: { missing: 0, state: catalogs ? "ok" : "not_bound", total: catalogs },
+          network: { missing: 0, state: "ok", total: 1 },
+          tables: {
+            affected: [],
+            missing: 0,
+            state: adopted ? "ok" : "not_bound",
+            total: adopted,
+          },
+        }
+      : null;
+  base.dataSources = sources;
   if (!draft || draft.status !== "ready") {
     return {
       ...base,

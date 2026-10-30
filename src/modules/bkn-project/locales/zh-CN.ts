@@ -392,6 +392,56 @@ export const bknProjectZhCN = {
       },
     },
     overview: {
+      dataSources: {
+        title: "数据来源",
+        loadFailed: "暂时无法读取数据来源的情况",
+        network: {
+          label: "知识网络",
+          noun: "知识网络",
+          ok: "可用",
+          missing: "已被删除",
+          unreachable: "暂时无法确认",
+          not_bound: "还没有知识网络",
+        },
+        catalogs: {
+          label: "数据目录",
+          noun: "数据目录",
+          ok: "{{total}} 个，都在",
+          missing: "{{missing}} / {{total}} 个已被删除",
+          unreachable: "暂时无法确认",
+          not_bound: "还没有选择数据目录",
+        },
+        tables: {
+          label: "数据表",
+          noun: "数据表",
+          ok: "{{total}} 张，都能查到数据",
+          missing: "{{missing}} / {{total}} 张查不到数据",
+          unreachable: "暂时无法确认",
+          not_bound: "还没有采用的条目",
+        },
+        networkMissing: "项目的知识网络已被删除，无法再确认或发布。可以归档此项目。",
+        catalogsMissing:
+          "项目选用的 {{count}} 个数据目录已被删除。请重新选择数据目录，再重新起草。",
+        catalogsMissing_one:
+          "项目选用的 {{count}} 个数据目录已被删除。请重新选择数据目录，再重新起草。",
+        catalogsMissing_other:
+          "项目选用的 {{count}} 个数据目录已被删除。请重新选择数据目录，再重新起草。",
+        tablesMissing:
+          "{{count}} 个条目所用的数据表已被删除或重建，现在查不到数据。重新起草可按现有的表重新绑定（会放弃已做的决定）。",
+        tablesMissing_one:
+          "{{count}} 个条目所用的数据表已被删除或重建，现在查不到数据。重新起草可按现有的表重新绑定（会放弃已做的决定）。",
+        tablesMissing_other:
+          "{{count}} 个条目所用的数据表已被删除或重建，现在查不到数据。重新起草可按现有的表重新绑定（会放弃已做的决定）。",
+        affected: {
+          object: "对象类「{{name}}」（数据表 {{table}}）已查不到数据",
+          relation: "关系类「{{name}}」（连接表 {{table}}）已查不到数据",
+        },
+        unreachable: "暂时无法确认{{what}}是否还在，稍后会自动重试",
+        archived: "项目已归档，恢复后才能重新选择数据目录或重新起草。",
+        archive: "归档项目",
+        chooseCatalogs: "重新选择数据目录",
+        redraft: "去重新起草",
+      },
       fields: {
         network: "目标网络",
         owner: "负责人",
@@ -493,6 +543,9 @@ export const bknProjectZhCN = {
       button: "确认草稿",
       buttonAgain: "重新确认",
       blocked: {
+        network_missing: "知识网络已被删除",
+        catalog_missing: "有数据目录已被删除",
+        table_missing: "有条目的数据表已不存在",
         not_owner: "只有项目负责人可以确认",
         running: "正在处理，请稍后再试",
         archived: "项目已归档，不能确认",

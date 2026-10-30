@@ -416,6 +416,57 @@ export const bknProjectEnUS = {
       },
     },
     overview: {
+      dataSources: {
+        title: "Data sources",
+        loadFailed: "Can't read the state of the data sources right now",
+        network: {
+          label: "Knowledge network",
+          noun: "knowledge network",
+          ok: "Available",
+          missing: "Deleted",
+          unreachable: "Can't confirm right now",
+          not_bound: "No knowledge network yet",
+        },
+        catalogs: {
+          label: "Data catalogs",
+          noun: "data catalogs",
+          ok: "{{total}}, all present",
+          missing: "{{missing}} of {{total}} deleted",
+          unreachable: "Can't confirm right now",
+          not_bound: "No data catalogs chosen yet",
+        },
+        tables: {
+          label: "Tables",
+          noun: "tables",
+          ok: "{{total}}, all return data",
+          missing: "{{missing}} of {{total}} return no data",
+          unreachable: "Can't confirm right now",
+          not_bound: "Nothing adopted yet",
+        },
+        networkMissing:
+          "This project's knowledge network has been deleted; it can no longer be confirmed or published. You can archive the project.",
+        catalogsMissing:
+          "{{count}} of the project's data catalogs have been deleted. Choose the catalogs again, then draft again.",
+        catalogsMissing_one:
+          "{{count}} of the project's data catalogs has been deleted. Choose the catalogs again, then draft again.",
+        catalogsMissing_other:
+          "{{count}} of the project's data catalogs have been deleted. Choose the catalogs again, then draft again.",
+        tablesMissing:
+          "The tables behind {{count}} items were deleted or recreated, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
+        tablesMissing_one:
+          "The table behind {{count}} item was deleted or recreated, so it returns no data. Draft again to bind it to the current tables (your decisions will be discarded).",
+        tablesMissing_other:
+          "The tables behind {{count}} items were deleted or recreated, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
+        affected: {
+          object: 'Object type "{{name}}" (table {{table}}) returns no data',
+          relation: 'Relation type "{{name}}" (link table {{table}}) returns no data',
+        },
+        unreachable: "Can't check the {{what}} right now; will check again",
+        archived: "The project is archived. Unarchive it to choose catalogs or draft again.",
+        archive: "Archive project",
+        chooseCatalogs: "Choose catalogs again",
+        redraft: "Draft again",
+      },
       fields: {
         network: "Target network",
         owner: "Owner",
@@ -525,6 +576,9 @@ export const bknProjectEnUS = {
       button: "Confirm draft",
       buttonAgain: "Confirm again",
       blocked: {
+        network_missing: "The knowledge network has been deleted",
+        catalog_missing: "A data catalog has been deleted",
+        table_missing: "Some items' tables no longer exist",
         not_owner: "Only the project owner can confirm",
         running: "Still in progress. Try again shortly.",
         archived: "The project is archived and cannot be confirmed",

@@ -102,13 +102,16 @@ const COUNTED_REASONS = new Set(["needs_identity", "unadopted_ends"]);
 const BLOCKED_REASONS = new Set([
   "archived",
   "branch_not_v3",
+  "catalog_missing",
   "definitions_exist",
   "lineage_not_v3",
   "needs_identity",
+  "network_missing",
   "no_catalogs",
   "not_owner",
   "nothing_adopted",
   "running",
+  "table_missing",
   "unadopted_ends",
 ]);
 

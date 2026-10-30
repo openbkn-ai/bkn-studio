@@ -50,6 +50,7 @@ function status(extra: Partial<ProjectStatus> = {}): ProjectStatus {
     blockers: [],
     check: { current: true, status: "passed" },
     confirmation: { current: true, time: 1 },
+    dataSources: null,
     draft: { decisions: 0, placeholders: 0, status: "ready", updateTime: 1 },
     nextActions: [
       {
