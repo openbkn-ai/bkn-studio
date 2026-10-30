@@ -51,6 +51,12 @@ describe("English count pluralization", () => {
 
   it.each([
     {
+      key: "dataConnect.optionEditor.title",
+      one: "Added option (1)",
+      other: "Added options (2)",
+      zero: "Added options (0)",
+    },
+    {
       key: "dataCatalog.format.rows",
       one: "1 row",
       other: "2 rows",

@@ -574,6 +574,9 @@ export function humanizeConnectorFieldLabel(name: string, connectorType?: string
 
 export function connectorFieldOrderRank(key: string) {
   const normalized = key.trim().toLowerCase();
+  if (normalized === "options") {
+    return Number.MAX_SAFE_INTEGER;
+  }
   const rankMap: Record<string, number> = {
     host: 1,
     hostname: 1,

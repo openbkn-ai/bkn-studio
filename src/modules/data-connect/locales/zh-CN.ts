@@ -285,7 +285,9 @@ export const dataConnectZhCN = {
     connectorTypeResultCount_one: "共 {{count}} 个",
     connectorTypeResultCount_other: "共 {{count}} 个",
     optionEditor: {
-      title: "高级连接参数（{{count}}）",
+      title: "已添加（{{count}}）",
+      title_one: "已添加（{{count}}）",
+      title_other: "已添加（{{count}}）",
       add: "添加参数",
       remove: "移除 {{key}}",
       chooseValue: "请选择参数值",

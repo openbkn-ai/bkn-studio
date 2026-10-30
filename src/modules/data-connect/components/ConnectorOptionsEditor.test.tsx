@@ -11,9 +11,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import { DataConnectConfigForm } from "./DataConnectConfigForm";
+import { ConnectorOptionsEditor } from "./ConnectorOptionsEditor";
+import { getConnectorOptionDefinitions, validateConnectorOptions } from "../lib/connector-options";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
-function renderForm(type: string, options?: unknown) {
+function renderForm(type: string, options?: unknown, { fullConfigForm = false } = {}) {
   const onFinish = vi.fn<(values: { connectorConfig: Record<string, unknown> }) => void>();
   const connector: DataConnectConnectorType = {
     available: true,
@@ -35,7 +37,24 @@ function renderForm(type: string, options?: unknown) {
       }}
       onFinish={onFinish}
     >
-      <DataConnectConfigForm selectedConnectorType={connector} />
+      {fullConfigForm || !getConnectorOptionDefinitions(type) ? (
+        <DataConnectConfigForm selectedConnectorType={connector} />
+      ) : (
+        <Form.Item
+          name={["connectorConfig", "options"]}
+          help={false}
+          rules={[
+            {
+              validator: (_: unknown, value: unknown) => {
+                const invalid = validateConnectorOptions(type, value);
+                return invalid ? Promise.reject(new Error(invalid.error)) : Promise.resolve();
+              },
+            },
+          ]}
+        >
+          <ConnectorOptionsEditor connectorType={type} />
+        </Form.Item>
+      )}
       <button type="submit">Submit</button>
     </Form>,
   );
@@ -43,13 +62,13 @@ function renderForm(type: string, options?: unknown) {
 }
 
 async function selectOption(label: string, choice: string) {
-  fireEvent.mouseDown(screen.getByRole("combobox", { name: label }));
+  fireEvent.mouseDown(screen.getByLabelText(label, { selector: "input" }));
   fireEvent.click(await screen.findByText(choice, { selector: ".ant-select-item-option-content" }));
 }
 
 async function submit(onFinish: ReturnType<typeof renderForm>, options: unknown, omitted = false) {
   onFinish.mockClear();
-  fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+  fireEvent.click(screen.getByText("Submit", { selector: "button" }));
   await waitFor(() => expect(onFinish).toHaveBeenCalled());
   expect(onFinish.mock.lastCall?.[0]).toMatchObject({
     connectorConfig: omitted ? {} : { options },
@@ -165,8 +184,8 @@ describe("structured connector options in the configuration form", () => {
   });
 
   it("shows a validation error only in its parameter card and expands it on invalid submission", async () => {
-    const onFinish = renderForm("mysql", { time_zone: "", charset: "" });
-    fireEvent.click(screen.getByText("Advanced connection parameters (2)"));
+    const onFinish = renderForm("mysql", { time_zone: "", charset: "" }, { fullConfigForm: true });
+    fireEvent.click(screen.getByText("Added options (2)"));
     expect(document.querySelector("details")).not.toHaveAttribute("open");
     fireEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => expect(document.querySelector(".ant-form-item-has-error")).not.toBeNull());
@@ -208,7 +227,7 @@ describe("structured connector options in the configuration form", () => {
     const onFinish = renderForm("sqlserver");
     expect(document.querySelector("details")).not.toHaveAttribute("open");
     await submit(onFinish, undefined, true);
-    fireEvent.click(screen.getByText("Advanced connection parameters (0)"));
+    fireEvent.click(screen.getByText("Added options (0)"));
     await selectOption("Add parameter", "Encrypt connection (encrypt)");
     onFinish.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Submit" }));
@@ -231,7 +250,7 @@ describe("structured connector options in the configuration form", () => {
     async (type) => {
       const key = type === "mysql" ? "time_zone" : "timezone";
       const onFinish = renderForm(type);
-      fireEvent.click(screen.getByText("Advanced connection parameters (0)"));
+      fireEvent.click(screen.getByText("Added options (0)"));
       await selectOption("Add parameter", `Session time zone (${key})`);
       await submit(onFinish, { [key]: "" });
       fireEvent.change(screen.getByRole("textbox", { name: `Session time zone (${key})` }), {
@@ -304,7 +323,7 @@ describe("structured connector options in the configuration form", () => {
       await i18n.changeLanguage("zh-CN");
     });
     expect(screen.getByRole("textbox", { name: "建连超时 (timeout)" })).toHaveValue("250ms");
-    expect(screen.getByText("高级连接参数（1）")).toBeInTheDocument();
+    expect(screen.getByText("已添加（1）")).toBeInTheDocument();
   });
 
   it("keeps raw JSON editing and syntax validation for untemplated connectors", async () => {

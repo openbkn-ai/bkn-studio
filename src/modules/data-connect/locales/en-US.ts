@@ -303,7 +303,9 @@ export const dataConnectEnUS = {
     connectorTypeResultCount_one: "{{count}} connector type",
     connectorTypeResultCount_other: "{{count}} connector types",
     optionEditor: {
-      title: "Advanced connection parameters ({{count}})",
+      title: "Added options ({{count}})",
+      title_one: "Added option ({{count}})",
+      title_other: "Added options ({{count}})",
       add: "Add parameter",
       remove: "Remove {{key}}",
       chooseValue: "Choose a value",
