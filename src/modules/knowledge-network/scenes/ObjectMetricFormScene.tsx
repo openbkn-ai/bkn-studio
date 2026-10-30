@@ -1982,10 +1982,18 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       ]),
     );
     form.setFieldsValue({ ...clearedFields, ...aiUndo.before.form });
-    aiSkipCompositeInferenceRef.current = true;
+    const restoredCompositeExpression = aiUndo.before
+      .compositeExpression as ObjectMetricExpressionV1;
+    const restoredDependencies = aiUndo.before.dependencies as ObjectMetricDependencyV1[];
+    if (
+      restoredCompositeExpression !== compositeExpression ||
+      restoredDependencies !== dependencies
+    ) {
+      aiSkipCompositeInferenceRef.current = true;
+    }
     setBusinessCondition(aiUndo.before.businessCondition as ObjectMetricConditionV1 | undefined);
-    setCompositeExpression(aiUndo.before.compositeExpression as ObjectMetricExpressionV1);
-    setDependencies(aiUndo.before.dependencies as ObjectMetricDependencyV1[]);
+    setCompositeExpression(restoredCompositeExpression);
+    setDependencies(restoredDependencies);
     setMeasureExpression(aiUndo.before.measureExpression as ObjectMetricExpressionV1);
     setRelatedCondition(aiUndo.before.relatedCondition as ObjectMetricConditionV1 | undefined);
     setRelationSteps(aiUndo.before.relationSteps as ObjectMetricRelationStepV1[]);

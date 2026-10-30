@@ -170,11 +170,16 @@ export function validObjectMetricAiDecimalFormat(
   ) {
     return true;
   }
-  const physicalType = result.physical_type ?? currentForm.physicalType;
+  const physicalType =
+    result.physical_type === undefined ? currentForm.physicalType : result.physical_type;
   if (physicalType !== "decimal") return false;
-  const precision = result.precision ?? currentForm.precision ?? 18;
-  const scale = result.scale ?? currentForm.scale ?? 2;
-  const roundingMode = result.rounding_mode ?? currentForm.roundingMode ?? "half_up";
+  const precision =
+    result.precision === undefined ? (currentForm.precision ?? 18) : result.precision;
+  const scale = result.scale === undefined ? (currentForm.scale ?? 2) : result.scale;
+  const roundingMode =
+    result.rounding_mode === undefined
+      ? (currentForm.roundingMode ?? "half_up")
+      : result.rounding_mode;
   return (
     typeof precision === "number" &&
     Number.isInteger(precision) &&

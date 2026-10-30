@@ -1271,6 +1271,14 @@ describe("ObjectMetricFormScene edit loading", () => {
       semantic_type: "amount",
       unit: { code: "CNY", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
     };
+    const usdAmount = createObjectMetricDefinitionV1("atomic", "order");
+    usdAmount.id = "usd-amount";
+    usdAmount.name = "美元实付金额";
+    usdAmount.lifecycle.status = "published";
+    usdAmount.result_semantics.value = {
+      ...amount.result_semantics.value,
+      unit: { code: "USD", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
+    };
     const count = createObjectMetricDefinitionV1("atomic", "order");
     count.id = "count";
     count.name = "订单数";
@@ -1310,32 +1318,43 @@ describe("ObjectMetricFormScene edit loading", () => {
     const originalExpression = draft.specification.expression;
     mocks.getObjectMetricV1.mockResolvedValue(recordFor(draft));
     mocks.listObjectMetricsV1.mockResolvedValue({
-      entries: [recordFor(amount), recordFor(count)],
-      total_count: 2,
+      entries: [recordFor(amount), recordFor(count), recordFor(usdAmount)],
+      total_count: 3,
     });
     mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
-    mocks.runObjectMetricDesigner.mockImplementation((params) =>
-      Promise.resolve({
-        answer: "建议调整公式",
+    mocks.runObjectMetricDesigner.mockImplementation((params) => {
+      const nameOnly = params.message === "临时改名";
+      return Promise.resolve({
+        answer: nameOnly ? "建议临时改名" : "建议调整公式",
         proposal: {
           base_form_revision: params.baseFormRevision,
-          changes: [
-            {
-              after: { ...originalExpression },
-              before: originalExpression,
-              field: "composite.expression",
-              operation: "replace",
-              reason: "仅更新公式",
-            },
-          ],
+          changes: nameOnly
+            ? [
+                {
+                  after: "临时名称",
+                  before: "平均实付金额",
+                  field: "name",
+                  operation: "replace" as const,
+                  reason: "仅更新名称",
+                },
+              ]
+            : [
+                {
+                  after: { ...originalExpression },
+                  before: originalExpression,
+                  field: "composite.expression",
+                  operation: "replace" as const,
+                  reason: "仅更新公式",
+                },
+              ],
           kind: "metric_design_proposal",
           questions: [],
-          summary: "仅更新公式",
+          summary: nameOnly ? "仅更新名称" : "仅更新公式",
         },
         runId: "run-composite",
         threadId: "thread-composite",
-      }),
-    );
+      });
+    });
 
     mocks.routeParams.current = { metricId: "average-draft", networkId: "network-1" };
     render(<ObjectMetricFormScene mode="edit" />);
@@ -1357,7 +1376,23 @@ describe("ObjectMetricFormScene edit loading", () => {
       semantic_type: "amount",
       unit: { code: "CNY", quantity_kind: "currency", system: "ISO_4217" },
     });
-  }, 30_000);
+
+    fireEvent.click(await findButtonByText("撤销本次应用"));
+    fireEvent.change(prompt, { target: { value: "临时改名" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    expect(screen.getByLabelText("对象指标名称")).toHaveValue("临时名称");
+    fireEvent.click(await findButtonByText("撤销本次应用"));
+    expect(screen.getByLabelText("对象指标名称")).toHaveValue("平均实付金额");
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "第 1 个依赖对象指标" }));
+    fireEvent.click(await screen.findByText(/美元实付金额 · v1/));
+    mocks.runObjectMetricDesigner.mockClear();
+    fireEvent.change(prompt, { target: { value: "读取当前表单" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalled());
+    expect(mocks.runObjectMetricDesigner.mock.lastCall?.[0].formSnapshot.unitCode).toBeUndefined();
+  }, 60_000);
 
   it("resets inherited fields when AI changes a derived metric's base metric", async () => {
     const ref = (propertyName: string) => ({

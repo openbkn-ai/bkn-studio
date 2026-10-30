@@ -199,6 +199,9 @@ describe("runObjectMetricDesigner", () => {
     ["result.scale", 19],
     ["result.scale", 2.5],
     ["result.rounding_mode", "unknown"],
+    ["result.precision", null],
+    ["result.scale", null],
+    ["result.rounding_mode", null],
   ])("rejects an invalid decimal format change in %s", async (field, after) => {
     fetchMock.mockResolvedValueOnce(
       streamResponse([

@@ -121,6 +121,18 @@ describe("object metric AI proposal", () => {
     expect(
       validObjectMetricAiDecimalFormat({ rounding_mode: "unknown" as "half_up" }, currentForm),
     ).toBe(false);
+    expect(
+      validObjectMetricAiDecimalFormat({ precision: null as unknown as number }, currentForm),
+    ).toBe(false);
+    expect(
+      validObjectMetricAiDecimalFormat({ scale: null as unknown as number }, currentForm),
+    ).toBe(false);
+    expect(
+      validObjectMetricAiDecimalFormat(
+        { rounding_mode: null as unknown as "half_up" },
+        currentForm,
+      ),
+    ).toBe(false);
     expect(validObjectMetricAiDecimalFormat({ scale: 2 }, { physicalType: "int64" })).toBe(false);
   });
 });
