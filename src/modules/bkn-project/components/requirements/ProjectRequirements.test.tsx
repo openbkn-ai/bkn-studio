@@ -352,13 +352,23 @@ describe("ProjectRequirements", () => {
       .getByText("拖入文件，或点击选择")
       .closest(".ant-upload")!
       .querySelector("input")!;
-    fireEvent.change(input, { target: { files: [new File(["# x"], "new.md")] } });
+    // Two files of one name stay two, and one of them can be taken out on its own.
+    fireEvent.change(input, {
+      target: { files: [new File(["# x"], "new.md"), new File(["# y"], "new.md")] },
+    });
+    const listed = () => document.querySelectorAll(".ant-upload-list-item");
+    await waitFor(() => expect(listed()).toHaveLength(2));
+    fireEvent.click(listed()[1].querySelector(".ant-upload-list-item-actions button")!);
+    await waitFor(() => expect(listed()).toHaveLength(1));
     fireEvent.click(await dialog.findByRole("button", { name: "上传所选" }));
+    expect(uploadDocumentsMock.mock.calls[0][1]).toHaveLength(1);
 
     expect(await dialog.findByText("已上传")).toBeInTheDocument();
     expect(dialog.getByText("只支持 Markdown 和纯文本文件")).toBeInTheDocument();
     fireEvent.click(dialog.getByRole("button", { name: /完\s*成/ }));
-    await waitFor(() => expect(listDocumentsMock).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    // Closing reads the documents again; CI runners can be slow to get there.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 5000 });
+    await waitFor(() => expect(listDocumentsMock).toHaveBeenCalledTimes(2), { timeout: 5000 });
   });
 
   it("lets the owner type a document; others only read", async () => {
@@ -501,6 +511,47 @@ describe("ProjectRequirements", () => {
         "需求规格刚被别人修改过，已重新读取，请再改一次。",
       );
       await waitFor(() => expect(getRequirementsMock).toHaveBeenCalledTimes(2));
+    });
+
+    it("tells two sides quoting one document apart, and says when nothing is drafted to map", async () => {
+      getDraftMock.mockResolvedValue(null);
+      const twoSides = requirements();
+      twoSides.spec.conflicts[0].sides[1] = {
+        ...twoSides.spec.conflicts[0].sides[0],
+        position: "按月汇总",
+      };
+      twoSides.spec.conflicts[0].suggestedDocumentId = "";
+      getRequirementsMock.mockResolvedValue(twoSides);
+      resolveConflictMock.mockResolvedValue(twoSides);
+      renderPage();
+      await screen.findByText("某个客户哪些订单晚了？");
+
+      fireEvent.click(screen.getByText(/^业务规则/));
+      fireEvent.click(screen.getByRole("button", { name: /^裁\s*决$/ }));
+      let dialog = within(await screen.findByRole("dialog"));
+      fireEvent.click(dialog.getAllByRole("radio")[1]);
+      // Only the side picked is chosen, though both quote one document.
+      const chosen = document.querySelectorAll(".ant-radio-wrapper-checked");
+      expect(chosen).toHaveLength(1);
+      expect(chosen[0]).toHaveTextContent("按月汇总");
+      fireEvent.change(dialog.getByLabelText("理由（必填）"), { target: { value: "按月" } });
+      fireEvent.click(dialog.getByRole("button", { name: "保存裁决" }));
+      await waitFor(() =>
+        expect(resolveConflictMock).toHaveBeenCalledWith(
+          "p1",
+          "k1",
+          expect.objectContaining({ documentId: "d1" }),
+          1,
+        ),
+      );
+
+      fireEvent.click(screen.getByText(/^候选概念/));
+      fireEvent.click(screen.getByRole("button", { name: "改对应" }));
+      dialog = within(await screen.findByRole("dialog"));
+      expect(
+        dialog.getByText("本体草稿里还没有对象类或关系类可选，先在本体建模中起草。"),
+      ).toBeInTheDocument();
+      expect(dialog.getByRole("combobox", { name: "对应本体" })).toBeDisabled();
     });
 
     it("offers no edits to others", async () => {

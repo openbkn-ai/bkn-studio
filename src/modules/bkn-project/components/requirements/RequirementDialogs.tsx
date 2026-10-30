@@ -207,12 +207,12 @@ export function ItemDialog({
               <Input maxLength={2000} />
             </Form.Item>
             <Form.Item
-              extra={t(`${PREFIX}.fields.needsHint`)}
+              extra={t(`${PREFIX}.fields.${drafted.length ? "needsHint" : "nothingDrafted"}`)}
               label={t(`${PREFIX}.fields.needs`)}
               name="needs"
             >
               <Select
-                disabled={followConcepts}
+                disabled={followConcepts || !drafted.length}
                 mode="multiple"
                 optionFilterProp="label"
                 options={drafted.map((item) => ({ label: item.name, value: refKey(item) }))}
@@ -246,12 +246,21 @@ export function ConflictDialog({
   const { t } = useTranslation();
   const { documentName } = useContext(Citing);
   const resolution = conflict.resolution;
+  // Sides are told apart by position: two sides may quote one document.
+  const sideOf = (documentId: string) => {
+    const index = conflict.sides.findIndex((side) => side.documentId === documentId);
+    return index < 0 ? "" : `side:${index}`;
+  };
   const [choice, setChoice] = useState<string>(
     conflict.deferred
       ? "defer"
       : resolution
-        ? resolution.documentId || "own"
-        : conflict.suggestedDocumentId || "",
+        ? resolution.documentId
+          ? sideOf(resolution.documentId)
+          : "own"
+        : conflict.suggestedDocumentId
+          ? sideOf(conflict.suggestedDocumentId)
+          : "",
   );
   const [text, setText] = useState(resolution?.text ?? "");
   const [reason, setReason] = useState(resolution?.reason ?? "");
@@ -269,7 +278,9 @@ export function ConflictDialog({
       onOk={() =>
         onSave({
           deferred: choice === "defer",
-          documentId: choice === "own" || choice === "defer" ? "" : choice,
+          documentId: choice.startsWith("side:")
+            ? (conflict.sides[Number(choice.slice("side:".length))]?.documentId ?? "")
+            : "",
           reason: reason.trim(),
           text: choice === "own" ? text.trim() : "",
         })
@@ -280,8 +291,8 @@ export function ConflictDialog({
       <div className={styles.stack}>
         <Radio.Group onChange={(event) => setChoice(String(event.target.value))} value={choice}>
           <div className={styles.stack}>
-            {conflict.sides.map((side) => (
-              <Radio key={side.documentId} value={side.documentId}>
+            {conflict.sides.map((side, index) => (
+              <Radio key={index} value={`side:${index}`}>
                 {t(`${PREFIX}.conflict.side`, {
                   name: documentName(side.documentId),
                   position: side.position,
@@ -399,9 +410,12 @@ export function MappingDialog({
       title={t(`${PREFIX}.mapping.title`, { term: concept.term })}
     >
       <div className={styles.stack}>
-        <p className={styles.muted}>{t(`${PREFIX}.mapping.hint`)}</p>
+        <p className={styles.muted}>
+          {t(`${PREFIX}.${drafted.length ? "mapping.hint" : "fields.nothingDrafted"}`)}
+        </p>
         <Select
           allowClear
+          disabled={!drafted.length}
           aria-label={t(`${PREFIX}.mapping.label`)}
           onChange={(next?: string) => setValue(next)}
           optionFilterProp="label"

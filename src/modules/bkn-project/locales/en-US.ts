@@ -761,6 +761,8 @@ export const bknProjectEnUS = {
           needsHint:
             "Once changed, you set what this question needs; it no longer follows its concepts.",
           followConcepts: "Follow the concepts again",
+          nothingDrafted:
+            "The ontology draft has no object type or relation type to choose yet; draft it in ontology modeling first.",
         },
         conflict: {
           open: "Rule on it",

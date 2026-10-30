@@ -710,6 +710,7 @@ export const bknProjectZhCN = {
           needs: "需要的本体",
           needsHint: "改动后，这个问题需要的本体由你指定，不再跟随候选概念。",
           followConcepts: "改回跟随候选概念",
+          nothingDrafted: "本体草稿里还没有对象类或关系类可选，先在本体建模中起草。",
         },
         conflict: {
           open: "裁决",
