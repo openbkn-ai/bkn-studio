@@ -34,6 +34,8 @@ const release = (version: string, extra: Partial<LineageRelease> = {}): LineageR
   ...extra,
 });
 
+const onOpenRegression = vi.fn();
+
 const section = () => within(screen.getByRole("region", { name: "版本" }));
 
 describe("ReleaseVersions", () => {
@@ -66,6 +68,7 @@ describe("ReleaseVersions", () => {
     renderWithoutAntdStyles(
       <ReleaseVersions
         inUseNetworkId="n_1.0.2"
+        onOpenRegression={onOpenRegression}
         onRetry={vi.fn()}
         projectId="p1"
         releases={[
@@ -87,19 +90,35 @@ describe("ReleaseVersions", () => {
     expect(within(other).getByText("其他项目")).toBeInTheDocument();
     expect(within(other).getByText("张三")).toBeInTheDocument();
     expect(within(oldest).getByText("其他成员")).toBeInTheDocument();
+    // Only the project's own releases ask its scenario questions.
+    expect(within(other).queryByRole("button", { name: "回归结果" })).toBeNull();
+    fireEvent.click(within(newest).getByRole("button", { name: "回归结果" }));
+    expect(onOpenRegression).toHaveBeenCalledWith(expect.objectContaining({ version: "1.0.2" }));
     expect(section().queryByText(/Accepted|index_not_ready/)).toBeNull();
   });
 
   it("says when there is none yet, and offers to read them again when they cannot be read", () => {
     const onRetry = vi.fn();
     const view = renderWithoutAntdStyles(
-      <ReleaseVersions inUseNetworkId={null} onRetry={onRetry} projectId="p1" releases={[]} />,
+      <ReleaseVersions
+        inUseNetworkId={null}
+        onOpenRegression={onOpenRegression}
+        onRetry={onRetry}
+        projectId="p1"
+        releases={[]}
+      />,
     );
     expect(screen.getByText("还没有发布过版本。")).toBeInTheDocument();
     view.unmount();
 
     renderWithoutAntdStyles(
-      <ReleaseVersions inUseNetworkId={null} onRetry={onRetry} projectId="p1" releases="failed" />,
+      <ReleaseVersions
+        inUseNetworkId={null}
+        onOpenRegression={onOpenRegression}
+        onRetry={onRetry}
+        projectId="p1"
+        releases="failed"
+      />,
     );
     expect(screen.getByText("版本列表暂时读取不到")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /重\s*试/ }));

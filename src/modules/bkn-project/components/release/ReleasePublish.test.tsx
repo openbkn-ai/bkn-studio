@@ -18,6 +18,7 @@ const publishReleaseMock = vi.hoisted(() => vi.fn());
 const syncBranchMock = vi.hoisted(() => vi.fn());
 const getSwitchPlanMock = vi.hoisted(() => vi.fn());
 const switchConsumersMock = vi.hoisted(() => vi.fn());
+const getRegressionMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 vi.mock("@/modules/bkn-project/services/release.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/release.service")>()),
   commitDrift: vi.fn(),
+  getRegression: getRegressionMock,
   getReleaseReview: getReleaseReviewMock,
   getSwitchPlan: getSwitchPlanMock,
   publishRelease: publishReleaseMock,
@@ -119,12 +121,14 @@ function refusal(code: string) {
 }
 
 const onChanged = vi.fn();
+const onOpenRegression = vi.fn();
 
 function renderPublish(projectStatus = status(), canPublish = true) {
   return renderWithoutAntdStyles(
     <ReleasePublish
       canPublish={canPublish}
       onChanged={onChanged}
+      onOpenRegression={onOpenRegression}
       projectId="p1"
       status={projectStatus}
       versionOf={(networkId) => ({ n_v1_0_1: "1.0.1" })[networkId]}
@@ -161,6 +165,7 @@ describe("ReleasePublish", () => {
     vi.clearAllMocks();
     await i18n.changeLanguage("zh-CN");
     getReleaseReviewMock.mockResolvedValue(review());
+    getRegressionMock.mockResolvedValue(null);
   });
 
   it("reviews the release in plain words, and publishes once the owner accepts what did not pass", async () => {
@@ -290,6 +295,21 @@ describe("ReleasePublish", () => {
       toNetworkId: "n_v1_0_2",
     });
     switchConsumersMock.mockResolvedValue(undefined);
+    getRegressionMock.mockResolvedValue({
+      attempt: 1,
+      error: "",
+      finishTime: 2,
+      networkId: "n_v1_0_2",
+      questions: [],
+      results: [
+        { outcome: "passed", questionId: "q1" },
+        { outcome: "not_answered", questionId: "q7" },
+      ],
+      runnerId: "me",
+      startTime: 1,
+      status: "not_passed",
+      version: "1.0.2",
+    });
     renderPublish(
       status({
         nextActions: [
@@ -301,6 +321,11 @@ describe("ReleasePublish", () => {
     );
 
     expect(screen.getByText("已发布 v1.0.2")).toBeInTheDocument();
+    // How the release's scenario questions did, said beside it.
+    expect(await screen.findByText("1 / 2 次提问通过")).toBeInTheDocument();
+    expect(getRegressionMock).toHaveBeenCalledWith("p1", "n_v1_0_2");
+    fireEvent.click(screen.getByRole("button", { name: "查看回归结果" }));
+    expect(onOpenRegression).toHaveBeenCalled();
     expect(screen.getByText("v1.0.2 已发布，但使用方还在用之前的版本。")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "切换使用方" }));
     const view = await dialog();

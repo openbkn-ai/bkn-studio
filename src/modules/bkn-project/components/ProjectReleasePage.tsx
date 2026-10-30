@@ -18,6 +18,7 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { formatRate } from "@/modules/bkn-project/components/draft/evidence";
 import { IndexReadiness } from "@/modules/bkn-project/components/release/IndexReadiness";
+import { RegressionDrawer } from "@/modules/bkn-project/components/release/RegressionDrawer";
 import { ReleasePublish } from "@/modules/bkn-project/components/release/ReleasePublish";
 import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
 import { ReleaseVersions } from "@/modules/bkn-project/components/release/ReleaseVersions";
@@ -359,6 +360,11 @@ export function ProjectReleasePage({
     void load();
   }, [load]);
 
+  // The release whose regression is open.
+  const [regressionOf, setRegressionOf] = useState<{ networkId: string; version: string } | null>(
+    null,
+  );
+
   // The releases of the project's network; read again after publishing or switching.
   const [releases, setReleases] = useState<LineageRelease[] | "failed" | null>(null);
   const loadReleases = useCallback(async () => {
@@ -459,6 +465,10 @@ export function ProjectReleasePage({
           void load();
           void loadReleases();
         }}
+        onOpenRegression={() =>
+          status.release &&
+          setRegressionOf({ networkId: status.release.networkId, version: status.release.version })
+        }
         projectId={project.id}
         status={status}
         versionOf={(networkId) =>
@@ -476,10 +486,20 @@ export function ProjectReleasePage({
       <IndexReadiness canRun={canRun} projectId={project.id} />
       <ReleaseVersions
         inUseNetworkId={status.release?.inUse ? status.release.networkId : null}
+        onOpenRegression={({ networkId, version }) => setRegressionOf({ networkId, version })}
         onRetry={() => void loadReleases()}
         projectId={project.id}
         releases={releases}
       />
+      {regressionOf ? (
+        <RegressionDrawer
+          canRun={canRun}
+          networkId={regressionOf.networkId}
+          onClose={() => setRegressionOf(null)}
+          projectId={project.id}
+          version={regressionOf.version}
+        />
+      ) : null}
     </div>
   );
 }

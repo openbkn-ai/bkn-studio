@@ -6,15 +6,22 @@
  */
 
 import { Alert } from "antd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import {
+  passedCount,
+  regressionStatusText,
+  regressionTone,
+} from "@/modules/bkn-project/components/release/releaseMessages";
 import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
 import { ReleaseReviewDialog } from "@/modules/bkn-project/components/release/ReleaseReviewDialog";
 import { SwitchConsumersDialog } from "@/modules/bkn-project/components/release/SwitchConsumersDialog";
+import { getRegression } from "@/modules/bkn-project/services/release.service";
 import type { ProjectStatus } from "@/modules/bkn-project/types/publish";
+import type { Regression } from "@/modules/bkn-project/types/release";
 
 import styles from "./Release.module.css";
 
@@ -30,6 +37,7 @@ const WAITING = new Set(["checking", "check_not_started", "check_needs_attention
 export function ReleasePublish({
   canPublish,
   onChanged,
+  onOpenRegression,
   projectId,
   status,
   versionOf,
@@ -38,6 +46,8 @@ export function ReleasePublish({
   canPublish: boolean;
   /** Something was published or switched: the page reads the status and versions again. */
   onChanged: () => void;
+  /** Opens how the scenario questions did on the project's release. */
+  onOpenRegression: () => void;
   projectId: string;
   status: ProjectStatus;
   versionOf: (networkId: string) => string | undefined;
@@ -48,6 +58,23 @@ export function ReleasePublish({
   const review = status.nextActions.find((action) => action.action === "review_release");
   const switchAction = status.nextActions.find((action) => action.action === "switch_consumers");
   const release = status.release;
+
+  // How the release's regression went, said beside it; a failed read only leaves it unsaid.
+  const [regression, setRegression] = useState<Regression | null>(null);
+  const releasedAs = release?.networkId;
+  useEffect(() => {
+    setRegression(null);
+    if (!releasedAs) {
+      return undefined;
+    }
+    let active = true;
+    getRegression(projectId, releasedAs)
+      .then((next) => active && setRegression(next))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [projectId, releasedAs]);
 
   return (
     <Section
@@ -73,6 +100,22 @@ export function ReleasePublish({
               {t(`${PREFIX}.inUse`, { version: release.version })}
             </span>
           ) : null}
+          {regression ? (
+            <>
+              <span className={styles.label}>{t(`${PREFIX}.regressionLabel`)}</span>
+              <LightStatusTag tone={regressionTone(regression.status)}>
+                {regressionStatusText(t, regression.status)}
+              </LightStatusTag>
+              {regression.results.length ? (
+                <span className={styles.muted}>
+                  {t("bknProject.release.regression.summary", passedCount(regression))}
+                </span>
+              ) : null}
+            </>
+          ) : null}
+          <AppButton onClick={onOpenRegression} size="small" type="link">
+            {t(`${PREFIX}.viewRegression`)}
+          </AppButton>
         </div>
       ) : null}
       {release && !release.inUse && switchAction ? (

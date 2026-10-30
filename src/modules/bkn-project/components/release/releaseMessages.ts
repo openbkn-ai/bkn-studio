@@ -7,7 +7,8 @@
 
 import type { TFunction } from "i18next";
 
-import type { ReleaseCheck, ReleaseItem } from "@/modules/bkn-project/types/release";
+import type { LightStatusTone } from "@/framework/ui/common/LightStatusTag";
+import type { Regression, ReleaseCheck, ReleaseItem } from "@/modules/bkn-project/types/release";
 
 /**
  * Release codes are for machines; the page words them. Every set is open: a code the page does
@@ -142,3 +143,81 @@ export function releaseNotes(t: TFunction, notes: string): { accepted: string; t
       .trim(),
   };
 }
+
+const REGRESSION = "bknProject.release.regression";
+
+const REGRESSION_STATUSES = new Set([
+  "running",
+  "passed",
+  "not_passed",
+  "needs_values",
+  "failed",
+  "no_questions",
+]);
+const REGRESSION_ERRORS = new Set(["interrupted", "definitions_unreadable"]);
+const OUTCOMES = new Set([
+  "passed",
+  "missing",
+  "no_answer",
+  "needs_values",
+  "not_answered",
+  "error",
+]);
+const EXPECTS = new Set(["exists", "not_exists", "same_record"]);
+/** Why a question could not be asked or judged; the codes of the services behind are never shown. */
+const ANSWER_ERRORS = new Map([
+  ["BknAgent.Execution.Forbidden", "forbidden"],
+  ["BknAgent.NotFound", "assistantMissing"],
+  ["answer_interrupted", "interrupted"],
+  ["cancelled", "cancelled"],
+  ["judge_invalid", "judgeInvalid"],
+  ["judge_unavailable", "judgeUnavailable"],
+  ["tools_unavailable", "toolsUnavailable"],
+  ["unreachable", "unreachable"],
+]);
+
+export const regressionStatusText = (t: TFunction, status: string) =>
+  t(`${REGRESSION}.status.${REGRESSION_STATUSES.has(status) ? status : "other"}`);
+
+export const regressionErrorText = (t: TFunction, error: string) =>
+  t(`${REGRESSION}.runError.${REGRESSION_ERRORS.has(error) ? error : "other"}`);
+
+export const outcomeText = (t: TFunction, outcome: string) =>
+  t(`${REGRESSION}.outcome.${OUTCOMES.has(outcome) ? outcome : "other"}`);
+
+export const expectText = (t: TFunction, expect: string) =>
+  t(`${REGRESSION}.expect.${EXPECTS.has(expect) ? expect : "other"}`);
+
+export const answerErrorText = (t: TFunction, code: string) =>
+  t(`${REGRESSION}.answerError.${ANSWER_ERRORS.get(code) ?? "other"}`);
+
+const REGRESSION_TONE: Record<string, LightStatusTone> = {
+  failed: "error",
+  needs_values: "warning",
+  no_questions: "neutral",
+  not_passed: "error",
+  passed: "success",
+  running: "info",
+};
+
+const OUTCOME_TONE: Record<string, LightStatusTone> = {
+  error: "warning",
+  missing: "error",
+  needs_values: "warning",
+  no_answer: "error",
+  not_answered: "error",
+  passed: "success",
+};
+
+const toneOf = (tones: Record<string, LightStatusTone>, value: string): LightStatusTone =>
+  Object.hasOwn(tones, value) ? tones[value] : "neutral";
+
+export const regressionTone = (status: string) => toneOf(REGRESSION_TONE, status);
+
+export const outcomeTone = (outcome: string) => toneOf(OUTCOME_TONE, outcome);
+
+/** How many asked questions and tests passed, of those that have a result. */
+export const passedCount = (regression: Regression) => ({
+  passed: regression.results.filter((result) => result.outcome === "passed").length,
+  total: regression.results.length,
+});

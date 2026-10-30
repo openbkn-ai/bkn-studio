@@ -95,3 +95,42 @@ export type SwitchPlan = {
   schedules: { id: string; name: string }[];
   toNetworkId: string;
 };
+
+/** A test question asked in its scenario question's place, and what it expects of the data. */
+export type RegressionTest = { expect: string; id: string; text: string };
+
+/** A scenario question as the regression asked it: by its tests when it has them. */
+export type RegressionQuestion = { id: string; tests: RegressionTest[]; text: string };
+
+/**
+ * How one question or test did. `outcome`: `passed`, `missing` (the release lacks what it
+ * needs), `no_answer`, `needs_values`, `not_answered` or `error`. `reason` is the judge's, in the
+ * project's naming language.
+ */
+export type RegressionResult = {
+  answer: string;
+  errorCode: string;
+  missing: ReleaseItem[];
+  outcome: string;
+  questionId: string;
+  reason: string;
+  testId: string;
+  /** How each tool call the answer made finished; the page counts them, never names them. */
+  toolStatuses: string[];
+};
+
+/** How the project's scenario questions did on the network a release created. */
+export type Regression = {
+  attempt: number;
+  /** Why a run failed as a whole: `interrupted`, `definitions_unreadable`. */
+  error: string;
+  finishTime: number;
+  networkId: string;
+  questions: RegressionQuestion[];
+  results: RegressionResult[];
+  runnerId: string;
+  startTime: number;
+  /** `running`, `passed`, `not_passed`, `needs_values`, `failed` or `no_questions`. */
+  status: string;
+  version: string;
+};

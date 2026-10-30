@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockGet, mockPost } = vi.hoisted(() => ({ mockGet: vi.fn(), mockPost: vi.fn() }));
@@ -223,5 +224,100 @@ describe("release.service", () => {
       { to_network_id: "n_v1_0_2" },
       { skipErrorToast: true },
     );
+  });
+
+  it("reads a release's regression, null lists as empty, and none before the first run", async () => {
+    const { getRegression, runRegression } = await importService();
+    mockGet.mockResolvedValueOnce({
+      data: {
+        attempt: 1,
+        error: "",
+        finish_time: 9,
+        network_id: "n_v1_0_2",
+        project_id: "p/1",
+        questions: [
+          {
+            id: "q1",
+            needs: [],
+            tests: [{ expect: "exists", id: "t1", text: "C-1?" }],
+            text: "Q1",
+          },
+          { id: "q7", needs: [], text: "Q7" },
+        ],
+        results: [
+          {
+            answer: "A",
+            outcome: "passed",
+            question_id: "q1",
+            reason: "R",
+            test_id: "t1",
+            tool_uses: [{ input: {}, name: "query", status: "succeeded" }],
+            used_needs: [],
+            verdict: "answered",
+          },
+          { error_code: "unreachable", outcome: "error", question_id: "q7", tool_uses: null },
+        ],
+        runner: { id: "u1", type: "user" },
+        start_time: 1,
+        status: "not_passed",
+        version: "1.0.2",
+      },
+    });
+
+    expect(await getRegression("p/1", "n_v1_0_2")).toEqual({
+      attempt: 1,
+      error: "",
+      finishTime: 9,
+      networkId: "n_v1_0_2",
+      questions: [
+        { id: "q1", tests: [{ expect: "exists", id: "t1", text: "C-1?" }], text: "Q1" },
+        { id: "q7", tests: [], text: "Q7" },
+      ],
+      results: [
+        {
+          answer: "A",
+          errorCode: "",
+          missing: [],
+          outcome: "passed",
+          questionId: "q1",
+          reason: "R",
+          testId: "t1",
+          toolStatuses: ["succeeded"],
+        },
+        {
+          answer: "",
+          errorCode: "unreachable",
+          missing: [],
+          outcome: "error",
+          questionId: "q7",
+          reason: "",
+          testId: "",
+          toolStatuses: [],
+        },
+      ],
+      runnerId: "u1",
+      startTime: 1,
+      status: "not_passed",
+      version: "1.0.2",
+    });
+    expect(mockGet).toHaveBeenCalledWith(`${prefix}/releases/n_v1_0_2/regression`, {
+      skipErrorToast: true,
+    });
+
+    mockGet.mockRejectedValueOnce(
+      new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { error_code: "BknProject.Release.RegressionNotFound" },
+        status: 404,
+      } as AxiosResponse),
+    );
+    expect(await getRegression("p/1", "n_v1_0_2")).toBeNull();
+
+    mockPost.mockResolvedValue({
+      data: { network_id: "n_v1_0_2", questions: [], results: null, status: "running" },
+    });
+    expect((await runRegression("p/1", "n_v1_0_2")).status).toBe("running");
+    expect(mockPost).toHaveBeenCalledWith(`${prefix}/releases/n_v1_0_2/regression:run`, undefined, {
+      skipErrorToast: true,
+    });
   });
 });

@@ -26,12 +26,15 @@ const PREFIX = "bknProject.release.versions";
 /** Every release of the project's network, by this project or another, newest first. */
 export function ReleaseVersions({
   inUseNetworkId,
+  onOpenRegression,
   onRetry,
   projectId,
   releases,
 }: {
   /** The network consumers use, when the page knows it. */
   inUseNetworkId: string | null;
+  /** Opens how the scenario questions did on one of the project's releases. */
+  onOpenRegression: (release: LineageRelease) => void;
   onRetry: () => void;
   projectId: string;
   /** Null while loading; "failed" when they could not be read. */
@@ -97,6 +100,17 @@ export function ReleaseVersions({
         );
       },
       title: t(`${PREFIX}.columns.notes`),
+    },
+    {
+      key: "regression",
+      // Only the project's own releases have its scenario questions asked of them.
+      render: (_, release) =>
+        release.projectId === projectId ? (
+          <AppButton onClick={() => onOpenRegression(release)} size="small" type="link">
+            {t(`${PREFIX}.regression`)}
+          </AppButton>
+        ) : null,
+      title: t(`${PREFIX}.columns.regression`),
     },
   ];
 
