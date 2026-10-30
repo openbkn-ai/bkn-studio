@@ -119,7 +119,14 @@ export function SourceChangesNotice({
       />
       {open ? (
         <SourceChangesDialog
-          canDraft={!archived && action?.allowed !== false}
+          blocked={
+            // Why writing is off, as the person can act on it: unarchive, ask the owner, or wait.
+            archived
+              ? t(`${PREFIX}.error.ProjectArchived`)
+              : action?.allowed === false
+                ? t(`${PREFIX}.${action.reason === "not_owner" ? "ownerOnly" : "blocked"}`)
+                : null
+          }
           onClose={() => setOpen(false)}
           onDrafted={(draft) => {
             setOpen(false);
@@ -135,12 +142,13 @@ export function SourceChangesNotice({
 }
 
 function SourceChangesDialog({
-  canDraft,
+  blocked,
   onClose,
   onDrafted,
   projectId,
 }: {
-  canDraft: boolean;
+  /** Why writing into the draft is off, or null when it is on. */
+  blocked: string | null;
   onClose: () => void;
   onDrafted: (draft: Draft) => void;
   projectId: string;
@@ -193,7 +201,7 @@ function SourceChangesDialog({
       confirmLoading={drafting}
       destroyOnHidden
       // Whether anything is left to write is the server's to say (NoSourceChanges).
-      okButtonProps={{ disabled: !canDraft || changes?.state !== "changed" }}
+      okButtonProps={{ disabled: Boolean(blocked) || changes?.state !== "changed" }}
       okText={t(`${PREFIX}.draft`)}
       onCancel={onClose}
       onOk={() => void draft()}
@@ -259,7 +267,7 @@ function SourceChangesDialog({
               })}
             </p>
           ) : null}
-          {canDraft ? null : <p className={styles.muted}>{t(`${PREFIX}.ownerOnly`)}</p>}
+          {blocked ? <p className={styles.muted}>{blocked}</p> : null}
         </div>
       )}
     </Modal>

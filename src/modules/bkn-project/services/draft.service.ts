@@ -11,6 +11,7 @@ import { http } from "@/framework/request/http";
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import type {
+  AskAnswer,
   Draft,
   DraftItemEdit,
   DraftItemKind,
@@ -807,4 +808,57 @@ export async function draftSourceChanges(projectId: string, signature: string): 
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
+}
+
+/** Ask AI answers within 45 seconds; the page waits a little longer than that. */
+export const ASK_TIMEOUT_MS = 60_000;
+
+/**
+ * Asks AI about one object type of a ready draft. The draft is not changed and nothing of the
+ * question is kept: a suggestion is adopted through the edit it names.
+ */
+export async function askAboutObjectType(
+  projectId: string,
+  itemId: string,
+  question: string,
+): Promise<AskAnswer> {
+  if (useMock) {
+    return wait(
+      {
+        answer: `"${itemId}" is identified by its key and read from one table.`,
+        suggestion: {
+          field: "description",
+          properties: [],
+          reason: "The description is empty.",
+          value: "One record per row of its table.",
+        },
+      },
+      600,
+    );
+  }
+  const response = await http.post<{
+    answer: string;
+    suggestion: {
+      field: string;
+      properties?: string[] | null;
+      reason?: string;
+      value?: string;
+    } | null;
+  }>(
+    `${draftPath(projectId)}/object_types/${encodeURIComponent(itemId)}/ask`,
+    { question },
+    { skipErrorToast: true, timeout: ASK_TIMEOUT_MS },
+  );
+  const suggestion = response.data.suggestion;
+  return {
+    answer: response.data.answer,
+    suggestion: suggestion
+      ? {
+          field: suggestion.field,
+          properties: suggestion.properties ?? [],
+          reason: suggestion.reason ?? "",
+          value: suggestion.value ?? "",
+        }
+      : null,
+  };
 }

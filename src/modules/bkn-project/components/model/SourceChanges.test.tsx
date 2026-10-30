@@ -37,14 +37,22 @@ import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { SourceChangesNotice } from "./SourceChanges";
 
-function status(changed: boolean, allowed = true): ProjectStatus {
+function status(changed: boolean, allowed = true, reason = "not_owner"): ProjectStatus {
   return {
     blockers: [],
     check: null,
     confirmation: null,
     draft: null,
     nextActions: changed
-      ? [{ accepts: [], action: "draft_source_changes", allowed, discardsDecisions: 0 }]
+      ? [
+          {
+            accepts: [],
+            action: "draft_source_changes",
+            allowed,
+            discardsDecisions: 0,
+            ...(allowed ? {} : { reason }),
+          },
+        ]
       : [],
     release: null,
     stage: "confirmed",
@@ -230,6 +238,22 @@ describe("SourceChangesNotice", () => {
     renderNotice();
     fireEvent.click(await screen.findByRole("button", { name: "查看变化" }));
     expect(await screen.findByText("暂时读不到数据表的结构，请稍后再试。")).toBeInTheDocument();
+    expect(draftButton()).toBeDisabled();
+  });
+
+  it("says why writing is off, as the owner can act on it", async () => {
+    getProjectStatusMock.mockResolvedValue(status(true));
+    getSourceChangesMock.mockResolvedValue(changes());
+    const archived = renderNotice(true);
+    fireEvent.click(await screen.findByRole("button", { name: "查看变化" }));
+    expect(await screen.findByText("项目已归档，不能修改草稿。")).toBeInTheDocument();
+    expect(screen.queryByText("只有项目负责人可以把变化写入草稿。")).toBeNull();
+    archived.view.unmount();
+
+    getProjectStatusMock.mockResolvedValue(status(true, false, "running"));
+    renderNotice();
+    fireEvent.click(await screen.findByRole("button", { name: "查看变化" }));
+    expect(await screen.findByText("现在还不能把变化写入草稿，请稍后再试。")).toBeInTheDocument();
     expect(draftButton()).toBeDisabled();
   });
 
