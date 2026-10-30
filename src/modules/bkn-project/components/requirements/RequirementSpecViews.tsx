@@ -13,7 +13,9 @@ import { useTranslation } from "react-i18next";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { Citations } from "@/modules/bkn-project/components/requirements/Citations";
+import { describeInput } from "@/modules/bkn-project/components/requirements/inputs";
 import { QuestionDevPanel } from "@/modules/bkn-project/components/requirements/QuestionDevPanel";
+import type { DraftedItem } from "@/modules/bkn-project/components/requirements/RequirementDialogs";
 import { Citing, Editing } from "@/modules/bkn-project/components/requirements/citing";
 import {
   capabilityKindText,
@@ -113,10 +115,12 @@ function EditedTag({ edited }: { edited: boolean }) {
 }
 
 export function QuestionsView({
+  drafted,
   itemName,
   projectId,
   spec,
 }: {
+  drafted: DraftedItem[];
   itemName: ItemName;
   projectId: string;
   spec: RequirementSpec;
@@ -145,6 +149,11 @@ export function QuestionsView({
               {question.scenarioIds.map(scenarioName).join(t("bknProject.listSeparator"))}
             </Field>
             <Field label={t(`${PREFIX}.questions.template`)}>{question.template}</Field>
+            {question.inputs ? (
+              <Field label={t(`${PREFIX}.questions.inputs`)}>
+                <QuestionInputs drafted={drafted} question={question} spec={spec} />
+              </Field>
+            ) : null}
             <Field label={t(`${PREFIX}.questions.answerShape`)}>{question.answerShape}</Field>
             <Field label={t(`${PREFIX}.questions.needs`)}>
               {question.needs.length
@@ -157,6 +166,14 @@ export function QuestionsView({
                 : ""}
             </Field>
           </div>
+          {question.notes.includes("capability_without_basis") ? (
+            <span className={styles.warning}>
+              {t(`${PREFIX}.questions.capabilityWithoutBasis`)}
+            </span>
+          ) : null}
+          {question.notes.includes("reference_time_unbound") ? (
+            <span className={styles.warning}>{t(`${PREFIX}.questions.referenceTimeUnbound`)}</span>
+          ) : null}
           <Citations citations={question.citations} supplementReason={question.supplementReason} />
           <Collapse
             destroyOnHidden
@@ -415,5 +432,54 @@ export function RejectedNote({ spec }: { spec: RequirementSpec }) {
       ]}
       size="small"
     />
+  );
+}
+
+/** What a question is asked about, as people read it. */
+function QuestionInputs({
+  drafted,
+  question,
+  spec,
+}: {
+  drafted: DraftedItem[];
+  question: RequirementSpec["questions"][number];
+  spec: RequirementSpec;
+}) {
+  const { t } = useTranslation();
+  const inputs = question.inputs ?? [];
+  if (!inputs.length) {
+    return <span className={styles.muted}>{t(`${PREFIX}.questions.noInputs`)}</span>;
+  }
+  return (
+    <span className={styles.stack}>
+      {inputs.map((input) => {
+        const described = describeInput(spec, drafted, input);
+        return (
+          <span className={styles.row} key={input.name}>
+            <span>
+              {t(`${PREFIX}.questions.input`, {
+                concept: described.concept,
+                name: input.name,
+                property: described.property,
+              })}
+            </span>
+            <LightStatusTag tone="neutral">
+              {t(
+                `${PREFIX}.questions.role.${input.role === "reference_time" ? "reference_time" : "record"}`,
+              )}
+            </LightStatusTag>
+            {described.known ? null : (
+              <span className={styles.warning}>{t(`${PREFIX}.questions.propertyGone`)}</span>
+            )}
+            {described.known && input.propertyFromKey ? (
+              <span className={styles.muted}>{t(`${PREFIX}.questions.propertyFromKey`)}</span>
+            ) : null}
+          </span>
+        );
+      })}
+      {question.relativeWindow ? (
+        <span className={styles.muted}>{t(`${PREFIX}.questions.relativeWindow`)}</span>
+      ) : null}
+    </span>
   );
 }

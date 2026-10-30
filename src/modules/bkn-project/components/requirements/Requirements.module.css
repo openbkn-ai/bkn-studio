@@ -126,3 +126,12 @@
   padding: 0;
   list-style: none;
 }
+
+.inputName {
+  width: 140px;
+}
+
+.inputSelect {
+  min-width: 160px;
+  max-width: 220px;
+}
