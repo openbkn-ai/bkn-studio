@@ -585,8 +585,9 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
       ...base,
       check: check ? { current, status: check.status } : null,
       confirmation: { current, time: confirmation.time },
+      // Once consumers use the release, it may be rolled back; the rollback says who may.
       nextActions: published.inUse
-        ? []
+        ? [{ accepts: [], action: "review_rollback", allowed: true, discardsDecisions: 0 }]
         : [
             {
               accepts: [],

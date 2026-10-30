@@ -18,6 +18,7 @@ import {
 } from "@/modules/bkn-project/components/release/releaseMessages";
 import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
 import { ReleaseReviewDialog } from "@/modules/bkn-project/components/release/ReleaseReviewDialog";
+import { RollbackDialog } from "@/modules/bkn-project/components/release/RollbackDialog";
 import { SwitchConsumersDialog } from "@/modules/bkn-project/components/release/SwitchConsumersDialog";
 import { getRegression } from "@/modules/bkn-project/services/release.service";
 import type { ProjectStatus } from "@/modules/bkn-project/types/publish";
@@ -58,8 +59,10 @@ export function ReleasePublish({
   const { t } = useTranslation();
   const [reviewing, setReviewing] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [rollingBack, setRollingBack] = useState(false);
   const review = status.nextActions.find((action) => action.action === "review_release");
   const switchAction = status.nextActions.find((action) => action.action === "switch_consumers");
+  const rollbackAction = status.nextActions.find((action) => action.action === "review_rollback");
   const release = status.release;
 
   // How the release's regression went, said beside it; a failed read only leaves it unsaid.
@@ -119,6 +122,11 @@ export function ReleasePublish({
           <AppButton onClick={onOpenRegression} size="small" type="link">
             {t(`${PREFIX}.viewRegression`)}
           </AppButton>
+          {rollbackAction ? (
+            <AppButton onClick={() => setRollingBack(true)} size="small" type="link">
+              {t("bknProject.release.rollback.open")}
+            </AppButton>
+          ) : null}
         </div>
       ) : null}
       {release && !release.inUse && switchAction ? (
@@ -155,6 +163,17 @@ export function ReleasePublish({
           }}
           projectId={projectId}
           suggestedVersion={review.suggestedVersion ?? ""}
+        />
+      ) : null}
+      {rollingBack ? (
+        <RollbackDialog
+          canRollBack={canPublish}
+          onCancel={() => setRollingBack(false)}
+          onRolledBack={() => {
+            setRollingBack(false);
+            onChanged();
+          }}
+          projectId={projectId}
         />
       ) : null}
       {switching && release ? (

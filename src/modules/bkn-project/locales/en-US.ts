@@ -361,6 +361,32 @@ export const bknProjectEnUS = {
           none: "No reason given",
         },
       },
+      ask: {
+        title: "Ask AI",
+        question: "Your question",
+        placeholder:
+          "For example: is this object type's identity right? How should its description read?",
+        submit: "Ask",
+        asking: "Answering; this takes up to a minute",
+        notKept:
+          "AI reads only this object type as the draft defines it, never its data. Questions and answers are not kept.",
+        suggest: {
+          name: 'Suggests renaming it to "{{value}}"',
+          description: "Suggests the description: {{value}}",
+          identity: "Suggests the identity {{properties}}",
+        },
+        adopt: "Adopt",
+        adopted: "Adopted",
+        error: {
+          InvalidQuestion: "Enter a question of at most 500 characters.",
+          NotReady: "The draft is not ready yet, so questions cannot be asked.",
+          ItemNotFound: "This object type is no longer in the draft. Refresh the page.",
+          AskUnavailable: "AI cannot answer right now. Try again later.",
+          AskTimeout:
+            "AI took too long to answer. Try again later, or ask something more specific.",
+          other: "The question could not be asked. Try again later.",
+        },
+      },
       detail: {
         apiName: "ID",
         name: "Name",
@@ -1215,6 +1241,54 @@ export const bknProjectEnUS = {
           MergeConflict:
             "Live edits conflict with the project's edits; resolve them before publishing.",
           other: "Could not publish; try again later.",
+        },
+      },
+      rollback: {
+        open: "Roll back",
+        title: "Switch consumers back to the previous version",
+        fromTo: "Consumers will switch back from {{from}} to {{to}}.",
+        fromToBase:
+          "Consumers will switch back from {{from}} to the knowledge network before the first release.",
+        onlySwitches:
+          "Rolling back only switches consumers: scheduled tasks run on the earlier version again. No data or ontology definitions are changed.",
+        schedules: "These {{count}} scheduled tasks stop on {{from}} and run on {{to}}:",
+        schedules_one: "This scheduled task stops on {{from}} and runs on {{to}}:",
+        schedules_other: "These {{count}} scheduled tasks stop on {{from}} and run on {{to}}:",
+        schedulesBase:
+          "These {{count}} scheduled tasks stop on {{from}} and run on the knowledge network before the first release:",
+        schedulesBase_one:
+          "This scheduled task stops on {{from}} and runs on the knowledge network before the first release:",
+        schedulesBase_other:
+          "These {{count}} scheduled tasks stop on {{from}} and run on the knowledge network before the first release:",
+        noSchedules: "No scheduled tasks to move.",
+        consumers: "Their owners switch back: {{kinds}}.",
+        consumer: {
+          agents: "agents",
+          mcp: "MCP services",
+          workshop: "Workshop apps",
+          eval: "evaluations",
+        },
+        unanswerable: "No longer answerable after rolling back",
+        affected: "Answers may change after rolling back",
+        answerableNew: "Answerable only after rolling back",
+        refusal: {
+          NoPrevious:
+            "Consumers already use the earliest version; there is none to switch back to.",
+          NotProjectRelease:
+            "The version in use was published by another project; only that project can roll it back.",
+          other: "Rolling back is not possible now.",
+        },
+        ownerOnly: "Only the project owner can roll back.",
+        confirm: "Switch consumers back",
+        loadFailed: "Can't read what rolling back would do right now",
+        outdated:
+          "Consumers or scheduled tasks changed since this was read. It has been read again; please confirm once more.",
+        done: "Consumers switched back to {{to}}.",
+        doneBase: "Consumers switched back to the knowledge network before the first release.",
+        error: {
+          NotOwner: "Only the project owner can roll back.",
+          ProjectArchived: "The project is archived and cannot be rolled back.",
+          other: "Could not roll back. Try again later.",
         },
       },
       switch: {
