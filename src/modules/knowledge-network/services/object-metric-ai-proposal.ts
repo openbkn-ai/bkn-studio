@@ -28,6 +28,9 @@ const commonDesignFields = new Set([
   "description",
   "noDataPolicy",
   "physicalType",
+  "precision",
+  "scale",
+  "roundingMode",
   "semanticType",
   "unitCode",
   "unitSystem",
@@ -86,6 +89,9 @@ const formFields: Record<string, string> = {
   "derived.time_window_unit": "timeWindowUnit",
   "result.no_data_policy": "noDataPolicy",
   "result.physical_type": "physicalType",
+  "result.precision": "precision",
+  "result.scale": "scale",
+  "result.rounding_mode": "roundingMode",
   "result.semantic_type": "semanticType",
   "result.unit_code": "unitCode",
   "result.unit_system": "unitSystem",
@@ -149,4 +155,36 @@ export function selectedObjectMetricAiIntent(
     }
   }
   return result;
+}
+
+const decimalRoundingModes = new Set(["half_up", "half_even", "floor", "ceiling", "truncate"]);
+
+export function validObjectMetricAiDecimalFormat(
+  result: ObjectMetricAiIntent["result"] | undefined,
+  currentForm: Record<string, unknown>,
+): boolean {
+  if (
+    result?.precision === undefined &&
+    result?.scale === undefined &&
+    result?.rounding_mode === undefined
+  ) {
+    return true;
+  }
+  const physicalType = result.physical_type ?? currentForm.physicalType;
+  if (physicalType !== "decimal") return false;
+  const precision = result.precision ?? currentForm.precision ?? 18;
+  const scale = result.scale ?? currentForm.scale ?? 2;
+  const roundingMode = result.rounding_mode ?? currentForm.roundingMode ?? "half_up";
+  return (
+    typeof precision === "number" &&
+    Number.isInteger(precision) &&
+    precision >= 1 &&
+    precision <= 38 &&
+    typeof scale === "number" &&
+    Number.isInteger(scale) &&
+    scale >= 0 &&
+    scale <= precision &&
+    typeof roundingMode === "string" &&
+    decimalRoundingModes.has(roundingMode)
+  );
 }

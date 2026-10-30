@@ -95,6 +95,7 @@ import {
   objectMetricDesignFormSnapshot,
   objectMetricAiPreviousValue,
   selectedObjectMetricAiIntent,
+  validObjectMetricAiDecimalFormat,
   type ObjectMetricAiEditableSnapshot,
 } from "@/modules/knowledge-network/services/object-metric-ai-proposal";
 import {
@@ -1444,6 +1445,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const aiTrialSnapshotRef = useRef<{ snapshot: string; formRevision: string } | null>(null);
   const aiSkipCompositeDefaultRef = useRef(false);
   const aiSkipCompositeInferenceRef = useRef(false);
+  const compositeInferenceInputsRef = useRef<{
+    expression: ObjectMetricExpressionV1;
+    dependencies: ObjectMetricDependencyV1[];
+  } | null>(null);
   const aiSkipDerivedSyncRef = useRef(false);
   const [aiProposal, setAiProposal] = useState<{
     intent: ObjectMetricAiIntent;
@@ -1762,6 +1767,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         commonValues.scale = getFieldValue("scale") ?? 2;
         commonValues.roundingMode = getFieldValue("roundingMode") ?? "half_up";
       }
+      if (result.precision !== undefined) commonValues.precision = result.precision;
+      if (result.scale !== undefined) commonValues.scale = result.scale;
+      if (result.rounding_mode !== undefined) commonValues.roundingMode = result.rounding_mode;
       commonValues.unitCode = result.unit_code;
       commonValues.unitSystem = result.unit_system;
       commonValues.quantityKind = result.quantity_kind;
@@ -1870,6 +1878,15 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       aiProposal.intent,
       aiProposal.selectedPaths,
     );
+    if (
+      !validObjectMetricAiDecimalFormat(
+        selectedIntent.result,
+        form.getFieldsValue(true) as Record<string, unknown>,
+      )
+    ) {
+      void message.error(objectMetricText("aiProposalCannotApply"));
+      return;
+    }
     const allowedProperties = new Set(properties.map((item) => item.propertyName));
     const requestedBaseId = selectedIntent.derived?.base_metric_id;
     const requestedBaseVersion = selectedIntent.derived?.base_metric_version;
@@ -1965,6 +1982,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       ]),
     );
     form.setFieldsValue({ ...clearedFields, ...aiUndo.before.form });
+    aiSkipCompositeInferenceRef.current = true;
     setBusinessCondition(aiUndo.before.businessCondition as ObjectMetricConditionV1 | undefined);
     setCompositeExpression(aiUndo.before.compositeExpression as ObjectMetricExpressionV1);
     setDependencies(aiUndo.before.dependencies as ObjectMetricDependencyV1[]);
@@ -2466,6 +2484,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               nextRecord.definition.specification.business_qualifiers.relation_path?.steps ?? [],
             );
           } else {
+            aiSkipCompositeInferenceRef.current = true;
             setDependencies(nextRecord.definition.specification.dependencies);
             setCompositeExpression(nextRecord.definition.specification.expression);
           }
@@ -2581,6 +2600,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
 
   useEffect(() => {
     if (metricType !== "composite") return;
+    const previousInputs = compositeInferenceInputsRef.current;
+    if (
+      previousInputs?.expression === compositeExpression &&
+      previousInputs.dependencies === dependencies
+    ) {
+      return;
+    }
+    compositeInferenceInputsRef.current = { expression: compositeExpression, dependencies };
     if (aiSkipCompositeInferenceRef.current) {
       aiSkipCompositeInferenceRef.current = false;
       return;
@@ -2599,6 +2626,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     );
     const inferred = inferCompositeExpressionValueV1(compositeExpression, dependencyValues);
     if (!inferred.physicalType) return;
+    const physicalTypeChanged = form.getFieldValue("physicalType") !== inferred.physicalType;
 
     const currentSemanticType = form.getFieldValue("semanticType") as
       FormValues["semanticType"] | undefined;
@@ -2629,12 +2657,30 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             }
           : undefined))
       : undefined;
+    const currentPrecision = form.getFieldValue("precision") as FormValues["precision"];
+    const currentRoundingMode = form.getFieldValue("roundingMode") as FormValues["roundingMode"];
+    const currentScale = form.getFieldValue("scale") as FormValues["scale"];
     form.setFieldsValue({
       physicalType: inferred.physicalType,
-      precision: inferred.physicalType === "decimal" ? 18 : undefined,
+      precision:
+        inferred.physicalType === "decimal"
+          ? physicalTypeChanged
+            ? 18
+            : (currentPrecision ?? 18)
+          : undefined,
       quantityKind: unit?.quantity_kind,
-      roundingMode: inferred.physicalType === "decimal" ? "half_up" : undefined,
-      scale: inferred.physicalType === "decimal" ? 2 : undefined,
+      roundingMode:
+        inferred.physicalType === "decimal"
+          ? physicalTypeChanged
+            ? "half_up"
+            : (currentRoundingMode ?? "half_up")
+          : undefined,
+      scale:
+        inferred.physicalType === "decimal"
+          ? physicalTypeChanged
+            ? 2
+            : (currentScale ?? 2)
+          : undefined,
       semanticType: compatibleSemanticType,
       unitCode: unit?.code,
       unitScaleFactor: unit?.scale_factor ?? 1,
