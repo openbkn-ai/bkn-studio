@@ -398,18 +398,18 @@ test("community licence: knowledge-base entries are badged and masked, the core 
   errors.expectNone();
 });
 
-// Steps of the prototype this E2E does not run yet. They stay listed, not faked.
+// Steps of the prototype this E2E does not run. They stay listed, not faked.
 test.fixme("ask AI about a page, a decision or an object type (ask-send / dq-ask / obj-ask)", () => {
-  // Asking AI about an object type is built (AskAiPanel) but not in this E2E yet; asking about
-  // a page or a decision is not built.
+  // Asking AI about an object type is built (AskAiPanel) and stays outside this E2E; asking
+  // about a page or a decision is not built.
 });
 test.fixme("revise a draft item, rewrite or export the change note, fix quality (cand-fb / cand-apply / cand-drop / note-fb / note-export / qual-fix)", () => {
   // bkn-project has no draft revision, change-note or quality-fix endpoint in M1.
 });
 test.fixme("sync from the source tables, roll back a release (sync-run / rollback-plan / rollback-run)", () => {
-  // Rolling back is built (rollback plan and rollback) but not in this E2E yet; sync runs from
-  // the source tables are not built.
+  // Both are built (sync: changes to the bound tables written into the draft; rollback: plan
+  // and rollback) and stay outside this E2E.
 });
 test.fixme("export the requirements to Workshop and bkn-eval (rq-workshop / rq-eval)", () => {
-  // The export files (decision D1) are not built in M1.
+  // The exports (decision D1) are built and stay outside this E2E.
 });
