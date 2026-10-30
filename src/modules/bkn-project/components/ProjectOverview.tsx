@@ -25,8 +25,10 @@ import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftC
 import { draftGraph } from "@/modules/bkn-project/components/draft/graph";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
 import { DRAFT_POLL_MS, getDraft } from "@/modules/bkn-project/services/draft.service";
+import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
+import type { Requirements } from "@/modules/bkn-project/types/requirements";
 import { projectSectionPath, type ProjectSection } from "@/modules/bkn-project/types/workspace";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 
@@ -111,6 +113,18 @@ export function ProjectOverview({
     return () => window.clearTimeout(timer);
   }, [drafting, loadDraft, reads]);
 
+  // The drafted requirements, for the questions tile; undefined while reading or when unread.
+  const [requirements, setRequirements] = useState<Requirements | null | undefined>(undefined);
+  useEffect(() => {
+    let active = true;
+    getRequirements(project.id)
+      .then((next) => active && setRequirements(next))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [project.id]);
+
   const ready = draft?.status === "ready" ? draft : null;
   const graph = useMemo(() => (ready ? draftGraph(ready) : null), [ready]);
   const pending = ready
@@ -131,8 +145,21 @@ export function ProjectOverview({
       key: "questions",
       label: t("bknProject.overview.tiles.questions"),
       section: "requirements",
-      sub: t("bknProject.overview.tiles.questionsSub"),
-      value: PLACEHOLDER,
+      // The scenario questions of the drafted requirements; their state while there are none.
+      sub:
+        requirements?.status === "ready"
+          ? t("bknProject.overview.tiles.questionsReadySub", { version: requirements.version })
+          : t("bknProject.overview.tiles.questionsSub"),
+      value:
+        requirements?.status === "ready"
+          ? t("bknProject.overview.tiles.questionsValue", {
+              count: requirements.spec?.questions.length ?? 0,
+            })
+          : requirements
+            ? t(
+                `bknProject.overview.tiles.questionsStatus.${requirements.status === "drafting" ? "drafting" : "failed"}`,
+              )
+            : PLACEHOLDER,
     },
     {
       key: "ontology",
@@ -167,8 +194,9 @@ export function ProjectOverview({
     {
       key: "instances",
       label: t("bknProject.overview.tiles.instances"),
+      // A project does not count records: the tile says so instead of showing a bare dash.
       sub: t("bknProject.overview.tiles.instancesSub"),
-      value: PLACEHOLDER,
+      value: t("bknProject.overview.tiles.instancesValue"),
     },
   ];
 

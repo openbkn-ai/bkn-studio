@@ -33,7 +33,6 @@ const PROPER_PHRASES = [
   "Global Business Knowledge Network",
   "Domain Knowledge Network",
   "Execution Factory",
-  "BKN Project",
   "BKN Trace",
   "Context Loader",
   "Studio Console",

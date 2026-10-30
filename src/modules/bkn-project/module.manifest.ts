@@ -9,7 +9,7 @@
 // caller's token, so the module declares no permission points of its own.
 export const bknProjectModuleManifest = {
   id: "bkn-project",
-  name: "BKN Project",
+  name: "Project management",
   permissions: [],
   requiresShell: true,
   services: [

@@ -69,6 +69,8 @@ export function ReleaseReviewDialog({
   const [accepted, setAccepted] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  // Why the last publishing failed, kept in the dialog so the owner can read it and try again.
+  const [publishError, setPublishError] = useState<string | null>(null);
   // Only the newest read is shown: reading again for another version or after a move wins.
   const latest = useRef(0);
 
@@ -116,6 +118,7 @@ export function ReleaseReviewDialog({
       return;
     }
     setBusy(true);
+    setPublishError(null);
     try {
       await publishRelease(projectId, {
         accepts: accepted,
@@ -132,7 +135,8 @@ export function ReleaseReviewDialog({
         message.warning(publishErrorText(t, code));
         void load(review.version);
       } else {
-        message.error(publishErrorText(t, code));
+        // A server error included: the dialog stays, says why and keeps the button to try again.
+        setPublishError(publishErrorText(t, code));
       }
     } finally {
       setBusy(false);
@@ -221,6 +225,15 @@ export function ReleaseReviewDialog({
             review={review}
           />
         )}
+        {publishError ? (
+          <Alert
+            closable
+            message={publishError}
+            onClose={() => setPublishError(null)}
+            showIcon
+            type="error"
+          />
+        ) : null}
       </div>
     </Modal>
   );
