@@ -161,10 +161,15 @@ export function RegressionDrawer({
             ) : null}
           </div>
           <p className={styles.muted}>
-            {t(`${PREFIX}.runBy`, {
-              time: dayjs(regression.startTime).format("YYYY/MM/DD HH:mm"),
-              who: who(regression.runnerId),
-            })}
+            {/* A run started on its own has no runner: only its start is said. */}
+            {regression.runnerId
+              ? t(`${PREFIX}.runBy`, {
+                  time: dayjs(regression.startTime).format("YYYY/MM/DD HH:mm"),
+                  who: who(regression.runnerId),
+                })
+              : t(`${PREFIX}.startedAt`, {
+                  time: dayjs(regression.startTime).format("YYYY/MM/DD HH:mm"),
+                })}
           </p>
           {regression.status === "failed" && regression.error ? (
             <Alert message={regressionErrorText(t, regression.error)} showIcon type="error" />

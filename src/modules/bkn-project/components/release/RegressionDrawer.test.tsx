@@ -210,4 +210,11 @@ describe("RegressionDrawer", () => {
     expect(await screen.findByText("回归被中断了，可以重新运行。")).toBeInTheDocument();
     expect(screen.getByText("没能跑完")).toBeInTheDocument();
   });
+
+  it("says only when a run started on its own began, naming no one", async () => {
+    getRegressionMock.mockResolvedValue(regression({ runnerId: "" }));
+    renderDrawer();
+    expect(await screen.findByText("2026/10/29 17:00 开始")).toBeInTheDocument();
+    expect(screen.queryByText(/其他成员/)).toBeNull();
+  });
 });

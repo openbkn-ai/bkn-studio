@@ -772,6 +772,7 @@ export const bknProjectEnUS = {
         startFailed: "Could not start the regression; try again later",
         summary: "{{passed}} of {{total}} asked passed",
         runBy: "Started {{time}} by {{who}}",
+        startedAt: "Started {{time}}",
         you: "you",
         someone: "another member",
         asking: "Asking",

@@ -723,6 +723,7 @@ export const bknProjectZhCN = {
         startFailed: "没能开始回归，请稍后重试",
         summary: "{{passed}} / {{total}} 次提问通过",
         runBy: "{{time}} 开始，由{{who}}运行",
+        startedAt: "{{time}} 开始",
         you: "你",
         someone: "其他成员",
         asking: "提问中",
