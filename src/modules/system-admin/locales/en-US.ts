@@ -1274,6 +1274,23 @@ export const systemAdminEnUS = {
       publishOnce: "Once published, a built-in Agent stays published; it cannot be unpublished.",
       publishedDone: "Published",
       back: "Back to list",
+      sourceLanguage: "Original language",
+      languageUnmarked: "Not specified",
+      languageUnmarkedHint:
+        "Confirm the original language before publishing or adding a translation.",
+      translationBody: "Translation in the interface language",
+      originalBody: "Original",
+      translationMissing: "No translation exists for this language. Showing the original.",
+      addTranslation: "Add translation",
+      cancelAddTranslation: "Cancel translation",
+      saveTranslation: "Save translation",
+      translationSaved: "Translation saved without creating a version",
+      confirmTranslationTitle: "Save this version’s translation?",
+      confirmTranslationBody:
+        "This translation applies to users of this version and language. No Prompt or Agent configuration version is created.",
+      stalePromptDraft:
+        "The active version changed. Your draft is preserved. Copy any needed text, then discard this draft and reload.",
+      discardPromptDraft: "Discard this language’s draft and reload",
       unsavedTitle: "Discard unsaved changes?",
       unsavedBody:
         "The runtime configuration or prompt has unsaved changes. Leaving will discard them.",
@@ -1283,12 +1300,17 @@ export const systemAdminEnUS = {
       readOnly: "Read-only",
       updateTime: "Updated",
       promptVersion: "Prompt v{{version}}",
-      configVersion: "Agent configuration v{{version}}",
-      builtinNames: {
-        studio_smart_qa: "Studio Smart Q&A",
-        cypher_generation: "Cypher Generation",
+      configVersion: "Agent v{{version}}",
+      legacyBuiltinNames: {
         business_provenance_claim_attribution: "Business Provenance Claim Attribution Agent",
         business_provenance_optimizer: "Knowledge Network Optimizer Agent",
+      },
+      builtinNames: {
+        graph_explorer: "Graph Explorer",
+        studio_smart_qa: "Studio Smart Q&A",
+        cypher_generation: "Cypher Generation",
+        business_provenance_claim_attribution: "Business Provenance Claim Attribution",
+        business_provenance_optimizer: "Knowledge Network Optimizer",
         "catalog-semantic-understanding": "Data Catalog Semantic Understanding",
         "resource-semantic-understanding": "Data Resource Semantic Understanding",
       },

@@ -449,6 +449,83 @@
   font-size: 12px;
 }
 
+.mcpLaunchTipsTrigger {
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-link);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mcpLaunchTipsTrigger:hover {
+  color: var(--color-text-link-hover);
+  text-decoration: underline;
+}
+
+.mcpLaunchTips {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(540px, calc(100vw - 48px));
+  font-size: 12px;
+}
+
+.mcpLaunchTips p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.mcpLaunchTipsItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mcpLaunchTipsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mcpLaunchTipsCopy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.mcpLaunchTipsCopy:hover {
+  border-color: var(--color-primary-border);
+  color: var(--color-text-link);
+}
+
+.mcpLaunchTipsItem code {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-fill-secondary);
+  color: var(--color-text-primary);
+  font-family: var(--mono, ui-monospace, Menlo, Consolas, monospace);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.mcpLaunchTips .mcpLaunchTipsNote {
+  color: var(--color-text-tertiary);
+}
+
 .mcpConfigTabs {
   display: inline-flex;
   align-items: center;

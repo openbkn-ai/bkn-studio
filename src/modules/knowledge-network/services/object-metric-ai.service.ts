@@ -49,6 +49,9 @@ export type ObjectMetricAiIntent = {
   result?: {
     no_data_policy?: "zero" | "null" | "unavailable";
     physical_type?: "int64" | "decimal" | "boolean" | "string" | "date" | "datetime" | "duration";
+    precision?: number;
+    scale?: number;
+    rounding_mode?: "half_up" | "half_even" | "floor" | "ceiling" | "truncate";
     semantic_type?:
       | "measure"
       | "count"

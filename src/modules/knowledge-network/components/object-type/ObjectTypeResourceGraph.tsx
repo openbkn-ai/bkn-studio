@@ -64,6 +64,7 @@ type GraphSection = "all" | "relations" | "metrics" | "actions";
 type ResourceScope = "all" | "relations" | "actions";
 type ExpandableGroup = "metrics" | "actions";
 type Point = { x: number; y: number };
+type GraphSize = { height: number; width: number };
 type ViewBox = { height: number; width: number; x: number; y: number };
 type GraphError = {
   key: Exclude<GraphSection, "all"> | `action:${string}`;
@@ -149,21 +150,21 @@ const GRAPH_WIDTH = 1120;
 const GRAPH_HEIGHT = 620;
 const INITIAL_VIEW: ViewBox = { height: GRAPH_HEIGHT, width: GRAPH_WIDTH, x: 0, y: 0 };
 const CENTER: Point = { x: GRAPH_WIDTH / 2, y: GRAPH_HEIGHT / 2 };
-const GRAPH_PAGE_SIZE = 12;
+const GRAPH_PAGE_SIZE = 30;
 const RESOURCE_REQUEST_SIZE = 30;
 const METRIC_SCAN_PAGE_SIZE = RESOURCE_REQUEST_SIZE;
 const MAX_GRAPH_METRICS = 200;
 const METRIC_VISIBLE_BATCH_SIZE = 10;
 const METRIC_LAYOUT_PADDING_Y = 60;
+const METRIC_COLUMN_GAP = 280;
+const METRIC_LAYOUT_PADDING_X = 140;
 const METRIC_MIN_ROW_GAP = 64;
-const RELATION_MIN_ROW_GAP = 72;
-const RELATION_LABEL_ROW_GAP = 36;
 const INITIAL_METRIC_VISIBLE_COUNTS: Record<ObjectMetricTypeV1, number> = {
   atomic: METRIC_VISIBLE_BATCH_SIZE,
   composite: METRIC_VISIBLE_BATCH_SIZE,
   derived: METRIC_VISIBLE_BATCH_SIZE,
 };
-const OVERVIEW_LIMIT = GRAPH_PAGE_SIZE;
+const OVERVIEW_LIMIT = 12;
 const MIN_ZOOM = 0.65;
 const MAX_ZOOM = 2.5;
 const ACTION_FOCUS_TRIGGER_WIDTH = 140;
@@ -184,6 +185,19 @@ function truncate(value: string, max = 14) {
   return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : value;
 }
 
+function relationLabelWidth(name: string) {
+  return Math.min(
+    220,
+    Math.max(
+      92,
+      Array.from(truncate(name, 14)).reduce(
+        (width, character) => width + (character.codePointAt(0)! > 127 ? 12 : 7),
+        24,
+      ),
+    ),
+  );
+}
+
 function spreadAngles(count: number, start: number, end: number) {
   if (count <= 1) return [(start + end) / 2];
   return Array.from({ length: count }, (_, index) => start + ((end - start) * index) / (count - 1));
@@ -200,15 +214,25 @@ function stackedLayoutHeight(count: number, rowGap: number) {
   return Math.max(GRAPH_HEIGHT, METRIC_LAYOUT_PADDING_Y * 2 + Math.max(0, count - 1) * rowGap);
 }
 
-function resizeViewForGraphHeight(current: ViewBox, graphHeight: number): ViewBox {
-  if (current.x === 0 && current.y === 0 && current.width === GRAPH_WIDTH) {
-    return { height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 };
+function resizeViewForGraphSize(current: ViewBox, previous: GraphSize, next: GraphSize): ViewBox {
+  if (
+    current.x === 0 &&
+    current.y === 0 &&
+    current.width === previous.width &&
+    current.height === previous.height
+  ) {
+    return { ...next, x: 0, y: 0 };
   }
-  const height = (current.width / GRAPH_WIDTH) * graphHeight;
+  const zoom = current.width / previous.width;
+  const width = zoom * next.width;
+  const height = zoom * next.height;
+  const centerX = ((current.x + current.width / 2) / previous.width) * next.width;
+  const centerY = current.y + current.height / 2;
   return {
-    ...current,
     height,
-    y: current.y + (current.height - height) / 2,
+    width,
+    x: centerX - width / 2,
+    y: centerY - height / 2,
   };
 }
 
@@ -226,14 +250,49 @@ function overviewGroupPosition(
   return group === "metrics" ? { x: 700, y: 72 } : { x: 700, y: graphHeight - 72 };
 }
 
-function layoutOverviewRelations(neighbors: GraphNeighbor[], graphHeight: number) {
+type RelationRing = {
+  capacity: number;
+  radiusX: number;
+  radiusY: number;
+};
+
+const RELATION_RINGS: RelationRing[] = [
+  { capacity: 12, radiusX: 470, radiusY: 250 },
+  { capacity: 10, radiusX: 350, radiusY: 185 },
+  { capacity: 8, radiusX: 235, radiusY: 120 },
+];
+
+function activeRelationRings(count: number) {
+  if (count <= RELATION_RINGS[0].capacity) return RELATION_RINGS.slice(0, 1);
+  if (count <= RELATION_RINGS[0].capacity + RELATION_RINGS[1].capacity) {
+    return RELATION_RINGS.slice(0, 2);
+  }
+  return RELATION_RINGS;
+}
+
+function layoutRelations(neighbors: GraphNeighbor[], overview: boolean, center = CENTER) {
   const positions = new Map<string, Point>();
-  const rowSpan = Math.max(0, neighbors.length - 1) * RELATION_MIN_ROW_GAP;
-  const firstRowY = (graphHeight - rowSpan) / 2;
-  neighbors.forEach((neighbor, index) => {
-    positions.set(`neighbor:${neighbor.id}`, {
-      x: 120,
-      y: firstRowY + index * RELATION_MIN_ROW_GAP,
+  let neighborIndex = 0;
+  activeRelationRings(neighbors.length).forEach((ring, ringIndex) => {
+    const ringNeighbors = neighbors.slice(neighborIndex, neighborIndex + ring.capacity);
+    neighborIndex += ringNeighbors.length;
+    if (ringNeighbors.length === 0) return;
+    const angles = overview
+      ? spreadAngles(ringNeighbors.length, Math.PI * 0.7, Math.PI * 1.3)
+      : ringNeighbors.length === 1
+        ? [ringIndex === 0 ? 0 : Math.PI]
+        : Array.from(
+            { length: ringNeighbors.length },
+            (_, index) =>
+              -Math.PI / 2 +
+              (ringIndex * Math.PI) / Math.max(1, ringNeighbors.length) +
+              (index * Math.PI * 2) / ringNeighbors.length,
+          );
+    ringNeighbors.forEach((neighbor, index) => {
+      positions.set(
+        `neighbor:${neighbor.id}`,
+        polar(angles[index] ?? Math.PI, ring.radiusX, ring.radiusY, center),
+      );
     });
   });
   return positions;
@@ -279,7 +338,6 @@ function relationGeometry(
   neighbor: Point,
   outgoing: boolean,
   parallelOffset: number,
-  labelPosition?: Point,
 ) {
   const dx = neighbor.x - center.x;
   const dy = neighbor.y - center.y;
@@ -290,24 +348,17 @@ function relationGeometry(
   const nearNeighbor = { x: neighbor.x - unitX * 24, y: neighbor.y - unitY * 24 };
   const from = outgoing ? nearCenter : nearNeighbor;
   const to = outgoing ? nearNeighbor : nearCenter;
-  const control = labelPosition
-    ? {
-        x: labelPosition.x * 2 - (from.x + to.x) / 2,
-        y: labelPosition.y * 2 - (from.y + to.y) / 2,
-      }
-    : {
-        x: (from.x + to.x) / 2 - unitY * parallelOffset,
-        y: (from.y + to.y) / 2 + unitX * parallelOffset,
-      };
+  const control = {
+    x: (from.x + to.x) / 2 - unitY * parallelOffset,
+    y: (from.y + to.y) / 2 + unitX * parallelOffset,
+  };
   return {
     control,
     from,
-    label:
-      labelPosition ??
-      ({
-        x: (from.x + to.x + control.x * 2) / 4,
-        y: (from.y + to.y + control.y * 2) / 4,
-      } satisfies Point),
+    label: {
+      x: (from.x + to.x + control.x * 2) / 4,
+      y: (from.y + to.y + control.y * 2) / 4,
+    } satisfies Point,
     to,
   };
 }
@@ -388,9 +439,9 @@ function layoutMetrics(
     columns.set(depth, [...(columns.get(depth) ?? []), { kind: "more", type }]);
   });
   const sortedDepths = [...columns.keys()].sort((left, right) => left - right);
-  const columnGap = Math.min(
-    220,
-    (GRAPH_WIDTH - sourcePosition.x - 100) / Math.max(1, sortedDepths.length),
+  const width = Math.max(
+    GRAPH_WIDTH,
+    sourcePosition.x + METRIC_COLUMN_GAP * sortedDepths.length + METRIC_LAYOUT_PADDING_X,
   );
   const maxColumnItems = Math.max(0, ...[...columns.values()].map((items) => items.length));
   const height = stackedLayoutHeight(maxColumnItems, METRIC_MIN_ROW_GAP);
@@ -434,13 +485,13 @@ function layoutMetrics(
       positions.set(
         item.kind === "metric" ? metricNodeKey(item.metric) : moreMetricNodeKey(item.type),
         {
-          x: sourcePosition.x + columnGap * (columnIndex + 1),
+          x: sourcePosition.x + METRIC_COLUMN_GAP * (columnIndex + 1),
           y: firstRowY + rowIndex * rowGap,
         },
       );
     });
   });
-  return { height, positions };
+  return { height, positions, width };
 }
 
 function metricTypeLabel(
@@ -1115,16 +1166,16 @@ export function ObjectTypeResourceGraph({
           ? "knowledgeNetwork.objectTypeGraphActionsEmpty"
           : "knowledgeNetwork.objectTypeGraphEmpty";
 
-  const relationLayoutHeight =
-    section === "all"
-      ? stackedLayoutHeight(relationGroups.length, RELATION_MIN_ROW_GAP)
-      : GRAPH_HEIGHT;
   const metricLayoutMeasurement = useMemo(
     () =>
       showMetricItems
-        ? layoutMetrics(metricItems, metricVisibility.hiddenCounts, { x: 700, y: CENTER.y })
-        : { height: GRAPH_HEIGHT, positions: new Map<string, Point>() },
-    [metricItems, metricVisibility.hiddenCounts, showMetricItems],
+        ? layoutMetrics(
+            metricItems,
+            metricVisibility.hiddenCounts,
+            section === "metrics" ? { x: 110, y: CENTER.y } : { x: 700, y: CENTER.y },
+          )
+        : { height: GRAPH_HEIGHT, positions: new Map<string, Point>(), width: GRAPH_WIDTH },
+    [metricItems, metricVisibility.hiddenCounts, section, showMetricItems],
   );
   const actionLayoutMeasurement = useMemo(
     () =>
@@ -1134,12 +1185,14 @@ export function ObjectTypeResourceGraph({
     [actionItems, showActionItems],
   );
   const graphHeight = Math.max(
-    relationLayoutHeight,
+    GRAPH_HEIGHT,
     metricLayoutMeasurement.height,
     actionLayoutMeasurement.height,
   );
+  const graphWidth = Math.max(GRAPH_WIDTH, metricLayoutMeasurement.width);
   const viewContextKey = `${section}:${relationPage}:${actionPage}`;
   const previousViewContextKeyRef = useRef(viewContextKey);
+  const previousGraphSizeRef = useRef<GraphSize>({ height: GRAPH_HEIGHT, width: GRAPH_WIDTH });
   const metricGroupPosition = useMemo(
     () => overviewGroupPosition("metrics", expandedGroup, graphHeight),
     [expandedGroup, graphHeight],
@@ -1152,7 +1205,7 @@ export function ObjectTypeResourceGraph({
   const actionGroupDisplayPosition = nodePositions["group:actions"] ?? actionGroupPosition;
   const metricLayout = useMemo(() => {
     if (section !== "metrics" && expandedGroup !== "metrics") {
-      return { height: GRAPH_HEIGHT, positions: new Map<string, Point>() };
+      return { height: GRAPH_HEIGHT, positions: new Map<string, Point>(), width: GRAPH_WIDTH };
     }
     return layoutMetrics(
       metricItems,
@@ -1176,24 +1229,25 @@ export function ObjectTypeResourceGraph({
     );
   }, [actionGroupDisplayPosition, actionItems, expandedGroup, section]);
   const relationPositions = useMemo(() => {
-    if (section === "all") return layoutOverviewRelations(relationGroups, graphHeight);
-    const positions = new Map<string, Point>();
-    const relationAngles = spreadAngles(relationGroups.length, -Math.PI * 0.82, Math.PI * 0.82);
-    relationGroups.forEach((neighbor, index) => {
-      positions.set(`neighbor:${neighbor.id}`, polar(relationAngles[index] ?? Math.PI, 470, 250));
-    });
-    return positions;
+    return layoutRelations(
+      relationGroups,
+      section === "all",
+      section === "all" ? { x: CENTER.x, y: graphHeight / 2 } : CENTER,
+    );
   }, [graphHeight, relationGroups, section]);
 
   useEffect(() => {
     const contextChanged = previousViewContextKeyRef.current !== viewContextKey;
     previousViewContextKeyRef.current = viewContextKey;
+    const previousGraphSize = previousGraphSizeRef.current;
+    const nextGraphSize = { height: graphHeight, width: graphWidth };
+    previousGraphSizeRef.current = nextGraphSize;
     setView((current) =>
       contextChanged
-        ? { height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 }
-        : resizeViewForGraphHeight(current, graphHeight),
+        ? { ...nextGraphSize, x: 0, y: 0 }
+        : resizeViewForGraphSize(current, previousGraphSize, nextGraphSize),
     );
-  }, [graphHeight, viewContextKey]);
+  }, [graphHeight, graphWidth, viewContextKey]);
 
   const basePositions = useMemo(() => {
     const result = new Map<string, Point>();
@@ -1227,36 +1281,70 @@ export function ObjectTypeResourceGraph({
 
   const position = (key: string) => nodePositions[key] ?? basePositions.get(key) ?? CENTER;
   const ownerPosition = position("owner");
-  const orderedRelationGroups = [...relationGroups].sort((left, right) => {
-    const leftPosition = relationPositions.get(`neighbor:${left.id}`) ?? CENTER;
-    const rightPosition = relationPositions.get(`neighbor:${right.id}`) ?? CENTER;
-    return (
-      leftPosition.y - rightPosition.y ||
-      left.name.localeCompare(right.name) ||
-      left.id.localeCompare(right.id)
-    );
-  });
-  const orderedRelations = orderedRelationGroups.flatMap((neighbor) =>
-    neighbor.relations.map((relation) => ({ neighbor, relation })),
-  );
-  const relationLabelSpan = Math.max(0, orderedRelations.length - 1) * RELATION_LABEL_ROW_GAP;
-  const firstRelationLabelY = (graphHeight - relationLabelSpan) / 2;
-  const relationGeometries = new Map(
-    orderedRelations.map(({ neighbor, relation }, index) => {
+  const occupiedRelationNodes: Array<{ height: number; width: number; x: number; y: number }> = [
+    { height: 80, width: 112, x: ownerPosition.x, y: ownerPosition.y + 12 },
+    ...relationGroups.map((neighbor) => {
       const neighborPosition = position(`neighbor:${neighbor.id}`);
-      return [
-        relation.id,
-        relationGeometry(
+      return { height: 64, width: 100, x: neighborPosition.x, y: neighborPosition.y + 12 };
+    }),
+  ];
+  const occupiedRelationLabels: Array<{ height: number; width: number; x: number; y: number }> = [];
+  const relationGeometries = new Map(
+    relationGroups.flatMap((neighbor) => {
+      const neighborPosition = position(`neighbor:${neighbor.id}`);
+      const middleRelationIndex = (neighbor.relations.length - 1) / 2;
+      const dx = neighborPosition.x - ownerPosition.x;
+      const dy = neighborPosition.y - ownerPosition.y;
+      const distance = Math.hypot(dx, dy) || 1;
+      const unitX = dx / distance;
+      const unitY = dy / distance;
+      return neighbor.relations.map((relation, relationIndex) => {
+        const parallelOffset = 70 * (relationIndex - middleRelationIndex);
+        const baseGeometry = relationGeometry(
           ownerPosition,
           neighborPosition,
           relation.sourceObjectTypeId === objectType.id,
-          0,
-          {
-            x: (ownerPosition.x + neighborPosition.x) / 2,
-            y: firstRelationLabelY + index * RELATION_LABEL_ROW_GAP,
-          },
-        ),
-      ] as const;
+          parallelOffset,
+        );
+        const width = relationLabelWidth(relation.name);
+        const candidates = [
+          baseGeometry.label,
+          ...[0, -35, 35, -70, 70, -105, 105, -140, 140, -175, 175, -210, 210].flatMap((along) =>
+            [0, 36, -36, 72, -72, 108, -108, 144, -144].map((perpendicular) => ({
+              x: baseGeometry.label.x + unitX * along - unitY * perpendicular,
+              y: baseGeometry.label.y + unitY * along + unitX * perpendicular,
+            })),
+          ),
+        ];
+        const isInsideGraph = (candidate: Point) =>
+          candidate.x - width / 2 >= 0 &&
+          candidate.x + width / 2 <= graphWidth &&
+          candidate.y - 14 >= 0 &&
+          candidate.y + 14 <= graphHeight;
+        const doesNotOverlap = (
+          candidate: Point,
+          occupiedItems: Array<{ height: number; width: number; x: number; y: number }>,
+        ) =>
+          occupiedItems.every(
+            (occupied) =>
+              Math.abs(candidate.x - occupied.x) >= (width + occupied.width) / 2 ||
+              Math.abs(candidate.y - occupied.y) >= (28 + occupied.height) / 2,
+          );
+        const label =
+          candidates.find(
+            (candidate) =>
+              isInsideGraph(candidate) &&
+              doesNotOverlap(candidate, occupiedRelationLabels) &&
+              doesNotOverlap(candidate, occupiedRelationNodes),
+          ) ??
+          candidates.find(
+            (candidate) =>
+              isInsideGraph(candidate) && doesNotOverlap(candidate, occupiedRelationLabels),
+          ) ??
+          baseGeometry.label;
+        occupiedRelationLabels.push({ height: 28, width, ...label });
+        return [relation.id, { ...baseGeometry, label }] as const;
+      });
     }),
   );
   const metricGroupEdge = trimmedLine(ownerPosition, metricGroupDisplayPosition, 32, 58);
@@ -1286,10 +1374,10 @@ export function ObjectTypeResourceGraph({
     (factor: number) => {
       setView((current) => {
         const width = Math.min(
-          GRAPH_WIDTH / MIN_ZOOM,
-          Math.max(GRAPH_WIDTH / MAX_ZOOM, current.width / factor),
+          graphWidth / MIN_ZOOM,
+          Math.max(graphWidth / MAX_ZOOM, current.width / factor),
         );
-        const height = (width / GRAPH_WIDTH) * graphHeight;
+        const height = (width / graphWidth) * graphHeight;
         return {
           height,
           width,
@@ -1298,7 +1386,7 @@ export function ObjectTypeResourceGraph({
         };
       });
     },
-    [graphHeight],
+    [graphHeight, graphWidth],
   );
 
   useEffect(() => {
@@ -1898,11 +1986,12 @@ export function ObjectTypeResourceGraph({
             role="img"
             preserveAspectRatio="xMidYMid meet"
             style={
-              graphHeight > GRAPH_HEIGHT
+              graphWidth > GRAPH_WIDTH || graphHeight > GRAPH_HEIGHT
                 ? {
-                    aspectRatio: `${GRAPH_WIDTH} / ${graphHeight}`,
+                    aspectRatio: `${graphWidth} / ${graphHeight}`,
                     flex: "0 0 auto",
                     height: "auto",
+                    minWidth: graphWidth > GRAPH_WIDTH ? `${graphWidth}px` : undefined,
                   }
                 : undefined
             }
@@ -1946,8 +2035,8 @@ export function ObjectTypeResourceGraph({
             <rect
               fill={`url(#${graphId}-grid)`}
               height={graphHeight * 5}
-              width={GRAPH_WIDTH * 5}
-              x={-GRAPH_WIDTH * 2}
+              width={graphWidth * 5}
+              x={-graphWidth * 2}
               y={-graphHeight * 2}
             />
 
@@ -1961,17 +2050,7 @@ export function ObjectTypeResourceGraph({
                         const geometry = relationGeometries.get(relation.id);
                         if (!geometry) return null;
                         const relationName = truncate(relation.name, 14);
-                        const labelWidth = Math.min(
-                          220,
-                          Math.max(
-                            92,
-                            Array.from(relationName).reduce(
-                              (width, character) =>
-                                width + (character.codePointAt(0)! > 127 ? 12 : 7),
-                              24,
-                            ),
-                          ),
-                        );
+                        const labelWidth = relationLabelWidth(relation.name);
                         return (
                           <g key={relation.id}>
                             <path
@@ -2644,7 +2723,7 @@ export function ObjectTypeResourceGraph({
               icon={<AimOutlined />}
               onClick={() => {
                 setNodePositions({});
-                setView({ height: graphHeight, width: GRAPH_WIDTH, x: 0, y: 0 });
+                setView({ height: graphHeight, width: graphWidth, x: 0, y: 0 });
               }}
             />
           </Tooltip>

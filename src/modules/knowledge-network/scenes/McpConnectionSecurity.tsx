@@ -5,14 +5,95 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { SafetyCertificateOutlined, WarningOutlined } from "@ant-design/icons";
-import { Checkbox } from "antd";
+import {
+  CheckOutlined,
+  CopyOutlined,
+  SafetyCertificateOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
+import { Checkbox, Popover } from "antd";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 
 import type { McpAuthMode } from "@/modules/knowledge-network/hooks/useMcpAuthMode";
 import type { McpConnectionProtocol } from "@/modules/knowledge-network/services/mcp-client-config";
 
 import styles from "./ExperienceScene.module.css";
+
+const SECURITY_KEY = "knowledgeNetwork.contextLoaderPanel.mcpSecurity";
+
+const LAUNCH_PLATFORMS = [
+  { label: "launchTipsMac", command: "launchCommandMac" },
+  { label: "launchTipsWindows", command: "launchCommandWindows" },
+  { label: "launchTipsLinux", command: "launchCommandLinux" },
+] as const;
+
+const COPY_FEEDBACK_MS = 1500;
+
+/** Copy button that reports the result on itself: a toast would sit behind the popover. */
+function CopyCommandButton({ text }: { text: string }) {
+  const { t } = useTranslation();
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const copy = () => {
+    void writeTextToClipboard(text)
+      .then(() => setState("copied"))
+      .catch(() => setState("failed"))
+      .finally(() => {
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => setState("idle"), COPY_FEEDBACK_MS);
+      });
+  };
+
+  const label =
+    state === "copied"
+      ? t("knowledgeNetwork.contextLoaderPanel.experience.copied")
+      : state === "failed"
+        ? t("knowledgeNetwork.contextLoaderPanel.experience.copyFailed")
+        : t("knowledgeNetwork.contextLoaderPanel.common.copy");
+
+  return (
+    <button type="button" className={styles.mcpLaunchTipsCopy} onClick={copy}>
+      {state === "copied" ? <CheckOutlined /> : <CopyOutlined />} {label}
+    </button>
+  );
+}
+
+/** Per-OS commands for restarting a sign-in client with certificate checks off. */
+function ClientLaunchTips() {
+  const { t } = useTranslation();
+  const content = (
+    <div className={styles.mcpLaunchTips}>
+      <p>{t(`${SECURITY_KEY}.launchTipsIntro`)}</p>
+      {LAUNCH_PLATFORMS.map(({ label, command }) => {
+        const commandText = t(`${SECURITY_KEY}.${command}`);
+        return (
+          <div key={label} className={styles.mcpLaunchTipsItem}>
+            <div className={styles.mcpLaunchTipsHead}>
+              <strong>{t(`${SECURITY_KEY}.${label}`)}</strong>
+              <CopyCommandButton text={commandText} />
+            </div>
+            <code>{commandText}</code>
+          </div>
+        );
+      })}
+      <p className={styles.mcpLaunchTipsNote}>{t(`${SECURITY_KEY}.launchTipsNote`)}</p>
+    </div>
+  );
+
+  return (
+    <Popover content={content} trigger="click" placement="bottomLeft">
+      <button type="button" className={styles.mcpLaunchTipsTrigger}>
+        {t(`${SECURITY_KEY}.launchTipsTrigger`)}
+      </button>
+    </Popover>
+  );
+}
 
 function securityCopyKeys(
   protocol: McpConnectionProtocol,
@@ -78,8 +159,11 @@ export function McpConnectionSecurity({
         </span>
         <span className={styles.mcpSecurityProtocol}>{protocol.toUpperCase()}</span>
         <div className={styles.mcpSecurityCopy}>
-          <strong>{t(`knowledgeNetwork.contextLoaderPanel.mcpSecurity.${titleKey}`)}</strong>
-          <span>{t(`knowledgeNetwork.contextLoaderPanel.mcpSecurity.${descriptionKey}`)}</span>
+          <strong>{t(`${SECURITY_KEY}.${titleKey}`)}</strong>
+          <span>
+            {t(`${SECURITY_KEY}.${descriptionKey}`)}
+            {descriptionKey === "oauthInsecureDescription" ? <ClientLaunchTips /> : null}
+          </span>
         </div>
       </div>
       {protocol === "https" ? (
@@ -88,7 +172,7 @@ export function McpConnectionSecurity({
           checked={allowInsecureTls}
           onChange={(event) => onAllowInsecureTlsChange(event.target.checked)}
         >
-          {t("knowledgeNetwork.contextLoaderPanel.mcpSecurity.allowSelfSigned")}
+          {t(`${SECURITY_KEY}.allowSelfSigned`)}
         </Checkbox>
       ) : null}
     </div>

@@ -201,6 +201,75 @@
   width: 100%;
 }
 
+.optionsEditor {
+  width: 100%;
+  min-width: 0;
+}
+
+.optionsEditor summary {
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 32px;
+}
+
+.optionRow {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-raised);
+}
+
+.optionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-secondary);
+  overflow-wrap: anywhere;
+}
+
+.optionHeading > span {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.optionHeading code {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.optionHeading :global(.ant-btn) {
+  flex-shrink: 0;
+}
+
+.optionHint {
+  margin: 4px 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.optionUnknown {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.optionError {
+  color: var(--color-error-text);
+  font-size: 12px;
+}
+
 .wrapper :global(.ant-input),
 .wrapper :global(.ant-input-affix-wrapper),
 .wrapper :global(.ant-input-number),

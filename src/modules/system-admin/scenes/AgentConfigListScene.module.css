@@ -13,6 +13,10 @@
   gap: 14px;
 }
 
+:global(.workspace-shell):has(.page) {
+  background: var(--color-bg-surface);
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -156,16 +160,19 @@
   white-space: nowrap;
 }
 
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
+.builtinTag {
+  align-self: flex-start;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 18px;
 }
 
 .footer {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
@@ -179,8 +186,17 @@
 }
 
 .versionInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
-  overflow-wrap: anywhere;
+}
+
+.versionText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metaItem {
@@ -195,6 +211,7 @@
   white-space: nowrap;
 }
 
+.versionInfo :global(.anticon),
 .metaItem :global(.anticon) {
   flex-shrink: 0;
   color: var(--color-text-tertiary);

@@ -14,6 +14,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { stepCountIs, streamText, type ModelMessage, type ToolSet } from "ai";
 
+import type { SupportedLocale } from "@/framework/runtime/types";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   isRetryableStatus,
@@ -166,7 +167,10 @@ function isRetryableFetchError(error: unknown): boolean {
  * - retries busy responses and connection failures with backoff;
  * - normalizes assistant `content: null` and strips replayed reasoning_content.
  */
-export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
+export function makeAuthedFetch(
+  provider: AgentTokenProvider,
+  locale?: SupportedLocale,
+): typeof fetch {
   const run = (
     input: RequestInfo | URL,
     init: RequestInit | undefined,
@@ -188,7 +192,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
       }
     }
     const headers = new Headers(init?.headers);
-    headers.set("Accept-Language", getRuntimeConfig().locale);
+    headers.set("Accept-Language", locale ?? getRuntimeConfig().locale);
     if (token) headers.set("Authorization", `Bearer ${token}`);
     return fetch(input, { ...init, headers, body });
   };

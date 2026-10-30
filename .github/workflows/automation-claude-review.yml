@@ -711,9 +711,12 @@ jobs:
           #
           # 轮次上限 200 是余量而非目标，跑不满不计费；本仓 PR 通常个位数文件，实际
           # 远用不到。留这么高是因为撞上限=整轮零产出，是最贵的失败模式。
+          # effort 用 high、verify 保持 xhigh。Anthropic 公布的 Opus 5.5 数据里，xhigh 比 high
+          # 只高约 1.4 分，成本约 2.5 倍；bkn-foundry 由 max 降到 xhigh 后单次评审从 $1.95 降到
+          # $0.77，省下的主要是轮次。verify 只在有阻塞项时运行、负责驳回误报，那里不省。
           claude_args: |
-            --model claude-opus-5
-            --effort xhigh
+            --model claude-opus-5-5
+            --effort high
             --max-turns 200
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,LS,Write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*)"
 
@@ -1019,7 +1022,7 @@ jobs:
             `reason` **一律用中文**。它会原样进 verdict 正文，与骨架和评审给的文字
             并排显示，语言不一致会读成两份东西。
           claude_args: |
-            --model claude-opus-5
+            --model claude-opus-5-5
             --effort xhigh
             --max-turns 40
             --allowedTools "Read,Grep,Glob,LS,Write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git grep:*)"

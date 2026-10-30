@@ -10,6 +10,7 @@ import type {
   DataConnectConnectorType,
 } from "@/modules/data-connect/types/data-connect";
 import i18n from "@/app/locales/i18n";
+import { getConnectorOptionDefinitions } from "./connector-options";
 
 export type DataSourceFamilyKey = "structured" | "unstructured";
 export type ConnectorFieldGroupKey = "connection" | "auth" | "advanced";
@@ -214,6 +215,7 @@ export type ConnectorFieldControlOption = {
 
 export type ConnectorFieldControl =
   | { kind: "json" }
+  | { kind: "options" }
   | { kind: "number" }
   | { kind: "password" }
   | { kind: "select"; options: ConnectorFieldControlOption[] }
@@ -572,6 +574,9 @@ export function humanizeConnectorFieldLabel(name: string, connectorType?: string
 
 export function connectorFieldOrderRank(key: string) {
   const normalized = key.trim().toLowerCase();
+  if (normalized === "options") {
+    return Number.MAX_SAFE_INTEGER;
+  }
   const rankMap: Record<string, number> = {
     host: 1,
     hostname: 1,
@@ -748,6 +753,13 @@ export function resolveConnectorFieldControl(
   connectorType?: string,
 ): ConnectorFieldControl {
   const normalized = fieldName.trim().toLowerCase();
+  if (
+    normalized === "options" &&
+    fieldType === "object" &&
+    getConnectorOptionDefinitions(connectorType)
+  ) {
+    return { kind: "options" };
+  }
   const templateControl = getConnectorFieldTemplate(connectorType, normalized)?.control;
 
   if (templateControl) {

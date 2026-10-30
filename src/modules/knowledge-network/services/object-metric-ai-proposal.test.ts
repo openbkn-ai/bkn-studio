@@ -12,6 +12,7 @@ import {
   objectMetricDesignFormSnapshot,
   objectMetricAiPreviousValue,
   selectedObjectMetricAiIntent,
+  validObjectMetricAiDecimalFormat,
 } from "./object-metric-ai-proposal";
 
 describe("object metric AI proposal", () => {
@@ -33,7 +34,13 @@ describe("object metric AI proposal", () => {
 
   it("reads the previous value from the matching form or expression state", () => {
     const snapshot = {
-      form: { name: "人工名称", timeDimensions: ["created_at"] },
+      form: {
+        name: "人工名称",
+        timeDimensions: ["created_at"],
+        precision: 18,
+        scale: 6,
+        roundingMode: "half_even",
+      },
       measureExpression: {
         node_type: "property",
         property_ref: { property_name: "amount" },
@@ -44,6 +51,9 @@ describe("object metric AI proposal", () => {
     };
     expect(objectMetricAiPreviousValue("name", snapshot)).toBe("人工名称");
     expect(objectMetricAiPreviousValue("query.time_dimensions", snapshot)).toEqual(["created_at"]);
+    expect(objectMetricAiPreviousValue("result.precision", snapshot)).toBe(18);
+    expect(objectMetricAiPreviousValue("result.scale", snapshot)).toBe(6);
+    expect(objectMetricAiPreviousValue("result.rounding_mode", snapshot)).toBe("half_even");
     expect(objectMetricAiPreviousValue("atomic.property_name", snapshot)).toBe("amount");
   });
 
@@ -56,6 +66,9 @@ describe("object metric AI proposal", () => {
         baseMetric: "amount@2",
         timeWindowMode: "unbounded",
         groupByDimensions: ["status"],
+        precision: 18,
+        scale: 6,
+        roundingMode: "half_even",
         grainPolicy: "same_grain",
       },
       businessCondition: { node_type: "group", children: [] },
@@ -70,19 +83,56 @@ describe("object metric AI proposal", () => {
       baseMetric: "amount@2",
       timeWindowMode: "unbounded",
       groupByDimensions: ["status"],
+      precision: 18,
+      scale: 6,
+      roundingMode: "half_even",
       "derived.filters": snapshot.businessCondition,
     });
     expect(objectMetricDesignFormSnapshot(snapshot, "atomic")).toEqual({
       name: "",
       aggregation: "count_rows",
       groupByDimensions: ["status"],
+      precision: 18,
+      scale: 6,
+      roundingMode: "half_even",
       "atomic.expression": snapshot.measureExpression,
     });
     expect(objectMetricDesignFormSnapshot(snapshot, "composite")).toEqual({
       name: "",
       groupByDimensions: ["status"],
+      precision: 18,
+      scale: 6,
+      roundingMode: "half_even",
       "composite.dependencies": [],
       "composite.expression": snapshot.compositeExpression,
     });
+  });
+
+  it("validates complete and partially selected decimal format changes", () => {
+    const currentForm = {
+      physicalType: "decimal",
+      precision: 18,
+      scale: 6,
+      roundingMode: "half_even",
+    };
+    expect(validObjectMetricAiDecimalFormat({ scale: 8 }, currentForm)).toBe(true);
+    expect(validObjectMetricAiDecimalFormat({ precision: 5 }, currentForm)).toBe(false);
+    expect(validObjectMetricAiDecimalFormat({ scale: 19 }, currentForm)).toBe(false);
+    expect(
+      validObjectMetricAiDecimalFormat({ rounding_mode: "unknown" as "half_up" }, currentForm),
+    ).toBe(false);
+    expect(
+      validObjectMetricAiDecimalFormat({ precision: null as unknown as number }, currentForm),
+    ).toBe(false);
+    expect(
+      validObjectMetricAiDecimalFormat({ scale: null as unknown as number }, currentForm),
+    ).toBe(false);
+    expect(
+      validObjectMetricAiDecimalFormat(
+        { rounding_mode: null as unknown as "half_up" },
+        currentForm,
+      ),
+    ).toBe(false);
+    expect(validObjectMetricAiDecimalFormat({ scale: 2 }, { physicalType: "int64" })).toBe(false);
   });
 });

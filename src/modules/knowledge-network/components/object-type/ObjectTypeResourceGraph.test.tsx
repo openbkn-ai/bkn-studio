@@ -246,7 +246,9 @@ async function expectRelationLabelsDoNotOverlap(expectedCount: number) {
     const graph = document.querySelector<SVGSVGElement>('svg[role="img"]');
     const viewBox = graph?.getAttribute("viewBox")?.split(" ").map(Number);
     expect(viewBox).toHaveLength(4);
+    const viewLeft = viewBox?.[0] ?? 0;
     const viewTop = viewBox?.[1] ?? 0;
+    const viewRight = viewLeft + (viewBox?.[2] ?? 0);
     const viewBottom = viewTop + (viewBox?.[3] ?? 0);
     const relationLabels = [
       ...document.querySelectorAll<SVGGElement>('g[class*="relationNode"]'),
@@ -254,17 +256,26 @@ async function expectRelationLabelsDoNotOverlap(expectedCount: number) {
       const match = node.getAttribute("transform")?.match(/translate\(([^ ]+) ([^)]+)\)/);
       return {
         height: Number(node.querySelector("rect")?.getAttribute("height")),
+        width: Number(node.querySelector("rect")?.getAttribute("width")),
+        x: Number(match?.[1]),
         y: Number(match?.[2]),
       };
     });
     expect(relationLabels).toHaveLength(expectedCount);
     relationLabels.forEach((label, index) => {
+      expect(label.x - label.width / 2).toBeGreaterThanOrEqual(viewLeft);
+      expect(label.x + label.width / 2).toBeLessThanOrEqual(viewRight);
       expect(label.y - label.height / 2).toBeGreaterThanOrEqual(viewTop);
       expect(label.y + label.height / 2).toBeLessThanOrEqual(viewBottom);
-      relationLabels.slice(index + 1).forEach((other) => {
-        expect(Math.abs(label.y - other.y)).toBeGreaterThanOrEqual(
-          (label.height + other.height) / 2,
-        );
+      relationLabels.slice(index + 1).forEach((other, otherIndex) => {
+        const horizontallySeparated =
+          Math.abs(label.x - other.x) >= (label.width + other.width) / 2;
+        const verticallySeparated =
+          Math.abs(label.y - other.y) >= (label.height + other.height) / 2;
+        expect(
+          horizontallySeparated || verticallySeparated,
+          `relation labels ${index} and ${index + otherIndex + 1} overlap: ${JSON.stringify({ label, other })}`,
+        ).toBe(true);
       });
     });
   });
@@ -471,31 +482,52 @@ describe("ObjectTypeResourceGraph", () => {
     renderGraph();
 
     await screen.findByRole("button", { name: "关系类 关系 4" });
-    const overviewRows = screen
+    const overviewPositions = screen
       .getAllByRole("button", { name: /^对象类 对象/ })
-      .map((node) => Number(node.getAttribute("transform")?.match(/translate\([^ ]+ ([^)]+)/)?.[1]))
-      .sort((left, right) => left - right);
-    expect(overviewRows).toHaveLength(12);
-    overviewRows.slice(1).forEach((row, index) => {
-      expect(row - overviewRows[index]).toBeGreaterThanOrEqual(72);
+      .map((node) => {
+        const match = node.getAttribute("transform")?.match(/translate\(([^ ]+) ([^)]+)\)/);
+        return { x: Number(match?.[1]), y: Number(match?.[2]) };
+      });
+    expect(overviewPositions).toHaveLength(12);
+    expect(new Set(overviewPositions.map(({ x }) => Math.round(x))).size).toBeGreaterThan(1);
+    overviewPositions.forEach(({ x, y }) => {
+      expect(x).toBeGreaterThanOrEqual(70);
+      expect(x).toBeLessThanOrEqual(1050);
+      expect(y).toBeGreaterThanOrEqual(40);
+      expect(y).toBeLessThanOrEqual(560);
     });
     await expectRelationLabelsDoNotOverlap(12);
     const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
-    await waitFor(() =>
-      expect(Number(graph.getAttribute("viewBox")?.split(" ")[3])).toBeGreaterThan(620),
-    );
+    expect(graph).toHaveAttribute("viewBox", "0 0 1120 620");
     expect(screen.queryByRole("button", { name: "对象类 对象 13" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("关系类 40"));
-    expect(screen.getByRole("button", { name: "对象类 对象 12" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "对象类 对象 30" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "当前对象类 销售订单" })).toHaveAttribute(
+      "transform",
+      "translate(560 310)",
+    );
+    const relationPositions = screen
+      .getAllByRole("button", { name: /^对象类 对象/ })
+      .map((node) => {
+        const match = node.getAttribute("transform")?.match(/translate\(([^ ]+) ([^)]+)\)/);
+        return { x: Number(match?.[1]), y: Number(match?.[2]) };
+      });
+    expect(relationPositions).toHaveLength(30);
+    [
+      { end: 12, radiusX: 470, radiusY: 250, start: 0 },
+      { end: 22, radiusX: 350, radiusY: 185, start: 12 },
+      { end: 30, radiusX: 235, radiusY: 120, start: 22 },
+    ].forEach(({ end, radiusX, radiusY, start }) => {
+      relationPositions.slice(start, end).forEach(({ x, y }) => {
+        expect(((x - 560) / radiusX) ** 2 + ((y - 310) / radiusY) ** 2).toBeCloseTo(1);
+      });
+    });
+    await expectRelationLabelsDoNotOverlap(30);
     const metricRequestCount = mocks.listMetrics.mock.calls.length;
     fireEvent.click(document.querySelector(".ant-pagination-next button")!);
 
-    expect(await screen.findByRole("button", { name: "对象类 对象 13" })).toBeInTheDocument();
-    expect(mocks.listRelations).toHaveBeenCalledTimes(1);
-    fireEvent.click(document.querySelector(".ant-pagination-next button")!);
-
-    expect(await screen.findByRole("button", { name: "对象类 对象 25" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "对象类 对象 31" })).toBeInTheDocument();
     expect(mocks.listRelations).toHaveBeenLastCalledWith("network-1", {
       boundObjectTypeId: "order",
       direction: "asc",
@@ -532,7 +564,7 @@ describe("ObjectTypeResourceGraph", () => {
   );
 
   it("uses a collision-safe action layout and pages without rescanning metrics", async () => {
-    const actions = Array.from({ length: 30 }, (_, index) => ({
+    const actions = Array.from({ length: 40 }, (_, index) => ({
       ...action,
       id: `action-${index + 1}`,
       name: `行动 ${String(index + 1).padStart(2, "0")}`,
@@ -546,12 +578,12 @@ describe("ObjectTypeResourceGraph", () => {
     );
     renderGraph();
 
-    fireEvent.click(await screen.findByText("行动类 30"));
+    fireEvent.click(await screen.findByText("行动类 40"));
     const actionRows = screen
       .getAllByRole("button", { name: /^行动类 行动/ })
       .map((node) => Number(node.getAttribute("transform")?.match(/translate\([^ ]+ ([^)]+)/)?.[1]))
       .sort((left, right) => left - right);
-    expect(actionRows).toHaveLength(12);
+    expect(actionRows).toHaveLength(30);
     actionRows.slice(1).forEach((row, index) => {
       expect(row - actionRows[index]).toBeGreaterThanOrEqual(64);
     });
@@ -560,14 +592,14 @@ describe("ObjectTypeResourceGraph", () => {
 
     const metricRequestCount = mocks.listMetrics.mock.calls.length;
     fireEvent.click(document.querySelector(".ant-pagination-next button")!);
-    expect(await screen.findByRole("button", { name: "行动类 行动 13" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "行动类 行动 31" })).toBeInTheDocument();
     expect(Number(graph.getAttribute("viewBox")?.split(" ")[3])).toBeGreaterThan(620);
-    expect(mocks.listActions).toHaveBeenCalledTimes(1);
+    expect(mocks.listActions).toHaveBeenCalledTimes(2);
     expect(mocks.listMetrics).toHaveBeenCalledTimes(metricRequestCount);
   });
 
   it("clears an action presentation error when paging away from the failed action", async () => {
-    const actions = Array.from({ length: 14 }, (_, index) => ({
+    const actions = Array.from({ length: 32 }, (_, index) => ({
       ...action,
       id: `action-${index + 1}`,
       name: `行动 ${String(index + 1).padStart(2, "0")}`,
@@ -582,12 +614,12 @@ describe("ObjectTypeResourceGraph", () => {
     mocks.getActionDetail.mockRejectedValue(new Error("行动详情不可用"));
     renderGraph(false);
 
-    fireEvent.click(await screen.findByText("行动类 14"));
+    fireEvent.click(await screen.findByText("行动类 32"));
     fireEvent.click(screen.getByRole("button", { name: "行动类 行动 01" }));
     expect(await screen.findByText(/行动类“行动 01”详情加载失败/)).toBeInTheDocument();
 
     fireEvent.click(document.querySelector(".ant-pagination-next button")!);
-    expect(await screen.findByRole("button", { name: "行动类 行动 13" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "行动类 行动 31" })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText(/行动类“行动 01”详情加载失败/)).not.toBeInTheDocument();
     });
@@ -1575,6 +1607,17 @@ describe("ObjectTypeResourceGraph", () => {
     expect(x(metricGroup)).toBeLessThan(x(atomicNode));
     expect(x(atomicNode)).toBeLessThan(x(derivedNode));
     expect(x(derivedNode)).toBeLessThan(x(compositeNode));
+    expect(x(atomicNode) - x(metricGroup)).toBeGreaterThanOrEqual(280);
+    expect(x(derivedNode) - x(atomicNode)).toBeGreaterThanOrEqual(280);
+    expect(x(compositeNode) - x(derivedNode)).toBeGreaterThanOrEqual(280);
+    expect(
+      Number(
+        screen
+          .getByRole("img", { name: "销售订单的对象类关联图谱" })
+          .getAttribute("viewBox")
+          ?.split(" ")[2],
+      ),
+    ).toBeGreaterThan(1120);
     expect(document.querySelectorAll("[class*=metricDependencyEdge]")).toHaveLength(2);
     const metricSpokes = document.querySelectorAll('[data-graph-edge="metric-spoke"]');
     expect(metricSpokes).toHaveLength(1);

@@ -16,13 +16,15 @@ export function agentConfigPath(agentId: string) {
 
 /** Shared by the list and the detail page so both build the same request. */
 export function useAgentAdminParams() {
-  const runtimeConfig = useRuntimeConfig();
+  const {
+    auth: { tokenManager },
+  } = useRuntimeConfig();
   const tokenProvider = useMemo<AgentTokenProvider>(
     () => ({
-      getToken: () => runtimeConfig.auth.tokenManager.getAccessToken() ?? "",
-      refresh: () => runtimeConfig.auth.tokenManager.refreshAccessToken(),
+      getToken: () => tokenManager.getAccessToken() ?? "",
+      refresh: () => tokenManager.refreshAccessToken(),
     }),
-    [runtimeConfig],
+    [tokenManager],
   );
   return useMemo(() => ({ base: window.location.origin, tokenProvider }), [tokenProvider]);
 }

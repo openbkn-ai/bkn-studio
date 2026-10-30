@@ -118,7 +118,41 @@ describe("connector-template · SQL Server", () => {
     const advancedFields = groupConnectorFields(sqlServerConnector).find(
       (group) => group.key === "advanced",
     );
-    expect(advancedFields?.fields.map(([name]) => name)).toEqual(["options", "schemas"]);
+    expect(advancedFields?.fields.map(([name]) => name)).toEqual(["schemas", "options"]);
+  });
+
+  it.each([
+    "mysql",
+    "mariadb",
+    "postgresql",
+    "sqlserver",
+    "oracle",
+    "hana",
+    "doris",
+    "opensearch",
+    "anyshare",
+    "custom",
+  ])("keeps %s options after all other connector fields in both locales", async (type) => {
+    for (const locale of ["zh-CN", "en-US"]) {
+      await i18n.changeLanguage(locale);
+      const groups = groupConnectorFields({
+        type,
+        fieldConfig: {
+          options: field("Connection options", "object", false),
+          schemas: field("Schema list", "array", false),
+          databases: field("Database list", "array", false),
+          z_extra: field("Extra settings", "object", false),
+          host: field("Host", "string", true),
+          password: field("Password", "string", true, true),
+        },
+      });
+      const names = groups.flatMap((group) => group.fields.map(([name]) => name));
+
+      expect(names.at(-1)).toBe("options");
+      expect(names.indexOf("schemas")).toBeLessThan(names.indexOf("options"));
+      expect(names.indexOf("databases")).toBeLessThan(names.indexOf("options"));
+      expect(names.indexOf("z_extra")).toBeLessThan(names.indexOf("options"));
+    }
   });
 
   it.each(["mariadb", "mysql"])("groups %s database lists with advanced settings", (type) => {
@@ -360,7 +394,7 @@ describe("connector-template · SQL Server", () => {
     ).toEqual([
       ["connection", ["host", "port", "service_name"]],
       ["auth", ["username", "password"]],
-      ["advanced", ["options", "schemas"]],
+      ["advanced", ["schemas", "options"]],
     ]);
 
     await i18n.changeLanguage("en-US");
@@ -391,7 +425,7 @@ describe("connector-template · SQL Server", () => {
     ).toEqual([
       ["connection", ["host", "port", "database"]],
       ["auth", ["username", "password"]],
-      ["advanced", ["options", "schemas"]],
+      ["advanced", ["schemas", "options"]],
     ]);
 
     await i18n.changeLanguage("en-US");
