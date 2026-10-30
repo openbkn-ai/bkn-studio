@@ -101,6 +101,8 @@ export function QuestionDevPanel({
       const code = projectErrorCode(error);
       if (code === "Requirement.Stale") {
         message.warning(t(`${PREFIX}.stale`));
+        // The edit row closes: the change is made again on what was read, never sent over it.
+        setEditingTest(null);
         void load();
       } else {
         message.error(

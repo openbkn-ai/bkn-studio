@@ -219,6 +219,8 @@ describe("QuestionDevPanel", () => {
       ),
     );
     await waitFor(() => expect(getQuestionDevMock).toHaveBeenCalledTimes(2));
+    // The stale edit is not kept to be sent again.
+    expect(screen.queryByLabelText("问法")).toBeNull();
     view.unmount();
 
     renderPanel(false);
