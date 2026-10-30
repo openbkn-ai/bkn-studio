@@ -452,7 +452,8 @@ function ItemNames({ items, label }: { items: ReleaseItem[]; label: string }) {
   );
 }
 
-function Questions({ list, title }: { list: ReleaseQuestion[]; title: string }) {
+/** Scenario questions under one heading, each with what it lacks; nothing for none. */
+export function Questions({ list, title }: { list: ReleaseQuestion[]; title: string }) {
   const { t } = useTranslation();
   if (!list.length) {
     return null;

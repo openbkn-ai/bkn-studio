@@ -12,12 +12,14 @@ import { useTranslation } from "react-i18next";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { AskAiPanel } from "@/modules/bkn-project/components/draft/AskAiPanel";
 import { AdoptionTag, IdentityEvidence } from "@/modules/bkn-project/components/draft/DraftTables";
 import {
   excludedReasonText,
   propertyTypeKey,
 } from "@/modules/bkn-project/components/draft/evidence";
 import type {
+  AskSuggestion,
   DraftExcludedField,
   DraftObjectType,
   DraftProperty,
@@ -27,11 +29,18 @@ import styles from "./DraftTables.module.css";
 
 /** An object type of the draft: its table, identity, properties and the fields left out. */
 export function DraftObjectDrawer({
+  ask,
   catalogNames,
   excluded,
   objectType,
   onClose,
 }: {
+  /** Ask AI, on a ready draft; adopting a suggestion is the edit it names. */
+  ask?: {
+    canAdopt: boolean;
+    onAdopt: (objectType: DraftObjectType, suggestion: AskSuggestion) => Promise<boolean>;
+    projectId: string;
+  };
   catalogNames: Record<string, string>;
   excluded: DraftExcludedField[];
   objectType: DraftObjectType | null;
@@ -119,6 +128,16 @@ export function DraftObjectDrawer({
               size="small"
             />
           </section>
+          {ask ? (
+            <AskAiPanel
+              canAdopt={ask.canAdopt}
+              // Each object type is asked afresh: nothing carries over from another.
+              key={objectType.id}
+              objectType={objectType}
+              onAdopt={(suggestion) => ask.onAdopt(objectType, suggestion)}
+              projectId={ask.projectId}
+            />
+          ) : null}
           {left.length ? (
             <section>
               <h3 className={styles.sectionTitle}>{t("bknProject.model.detail.excludedTitle")}</h3>

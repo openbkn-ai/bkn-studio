@@ -165,3 +165,17 @@ export type DraftItemEdit = {
   incrementalKey?: string;
   name?: string;
 };
+
+/**
+ * A change Ask AI suggests for an object type: its `name` or `description` (`value`), or its
+ * `identity` (`properties`), adopted through the edit that changes that field.
+ */
+export type AskSuggestion = {
+  field: string;
+  properties: string[];
+  reason: string;
+  value: string;
+};
+
+/** Ask AI's answer about one object type of the draft; nothing is kept between questions. */
+export type AskAnswer = { answer: string; suggestion: AskSuggestion | null };

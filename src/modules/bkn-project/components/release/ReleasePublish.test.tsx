@@ -19,6 +19,7 @@ const syncBranchMock = vi.hoisted(() => vi.fn());
 const getSwitchPlanMock = vi.hoisted(() => vi.fn());
 const switchConsumersMock = vi.hoisted(() => vi.fn());
 const getRegressionMock = vi.hoisted(() => vi.fn());
+const getRollbackPlanMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock("@/modules/bkn-project/services/release.service", async (importOriginal)
   commitDrift: vi.fn(),
   getRegression: getRegressionMock,
   getReleaseReview: getReleaseReviewMock,
+  getRollbackPlan: getRollbackPlanMock,
   getSwitchPlan: getSwitchPlanMock,
   publishRelease: publishReleaseMock,
   switchConsumers: switchConsumersMock,
@@ -303,6 +305,35 @@ describe("ReleasePublish", () => {
     fireEvent.click(view.getByRole("button", { name: "同步线上版本" }));
     await waitFor(() => expect(syncBranchMock).toHaveBeenCalledWith("p1"));
     await waitFor(() => expect(getReleaseReviewMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("offers to roll back once consumers use the release, and opens what it would do", async () => {
+    getRegressionMock.mockResolvedValue(null);
+    getRollbackPlanMock.mockResolvedValue({
+      consumers: [],
+      from: { base: false, networkId: "n_v1_0_1", version: "1.0.1" },
+      questions: { affected: [], answerableNew: [], total: 0, unanswerable: [], unjudged: 0 },
+      refusals: [],
+      schedules: [],
+      signature: "s",
+      to: { base: false, networkId: "n_v1_0_0", version: "1.0.0" },
+    });
+    const view = renderPublish(status({ nextActions: [] }));
+    expect(screen.queryByRole("button", { name: /^回\s*退$/ })).toBeNull();
+    view.unmount();
+
+    renderPublish(
+      status({
+        nextActions: [
+          { accepts: [], action: "review_rollback", allowed: true, discardsDecisions: 0 },
+        ],
+        release: { inUse: true, networkId: "n_v1_0_1", version: "1.0.1" },
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^回\s*退$/ }));
+    expect(
+      await (await dialog()).findByText("使用方将从 v1.0.1 切回 v1.0.0。"),
+    ).toBeInTheDocument();
   });
 
   it("lets others read the review, never publish", async () => {

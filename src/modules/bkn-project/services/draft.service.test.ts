@@ -215,4 +215,26 @@ describe("draft.service", () => {
       { skipErrorToast: true },
     );
   });
+
+  it("asks AI about an object type, and reads a missing suggestion as none", async () => {
+    const { askAboutObjectType, ASK_TIMEOUT_MS } = await importService();
+    mockPost.mockResolvedValueOnce({
+      data: {
+        answer: "A",
+        suggestion: { field: "identity", properties: ["id", "entry_id"], reason: "R" },
+      },
+    });
+    expect(await askAboutObjectType("p/1", "po 1", "Q?")).toEqual({
+      answer: "A",
+      suggestion: { field: "identity", properties: ["id", "entry_id"], reason: "R", value: "" },
+    });
+    expect(mockPost).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%2F1/ontology/draft/object_types/po%201/ask",
+      { question: "Q?" },
+      { skipErrorToast: true, timeout: ASK_TIMEOUT_MS },
+    );
+
+    mockPost.mockResolvedValueOnce({ data: { answer: "B", suggestion: null } });
+    expect(await askAboutObjectType("p/1", "po", "Q?")).toEqual({ answer: "B", suggestion: null });
+  });
 });
