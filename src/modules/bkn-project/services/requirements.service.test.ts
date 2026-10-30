@@ -448,7 +448,15 @@ describe("requirements.service", () => {
           questions: [
             question({
               id: "q1",
-              inputs: [{ concept_id: "c1", name: "customer", property: "code", role: "record" }],
+              inputs: [
+                {
+                  concept_id: "c1",
+                  name: "customer",
+                  property: "code",
+                  property_from_key: true,
+                  role: "record",
+                },
+              ],
               notes: ["capability_without_basis"],
               relative_window: true,
             }),
@@ -464,11 +472,20 @@ describe("requirements.service", () => {
 
     const [withInputs, none, unknown] = (await getRequirements("p/1"))!.spec.questions;
     expect(withInputs).toMatchObject({
-      inputs: [{ conceptId: "c1", name: "customer", property: "code", role: "record" }],
+      inputs: [
+        {
+          conceptId: "c1",
+          name: "customer",
+          property: "code",
+          propertyFromKey: true,
+          role: "record",
+        },
+      ],
       notes: ["capability_without_basis"],
       relativeWindow: true,
     });
     expect(none.inputs).toEqual([]);
+    expect(withInputs.inputs?.[0]).not.toHaveProperty("property_from_key");
     // Drafted before inputs: nothing is said, not "none".
     expect(unknown).toMatchObject({ inputs: null, notes: [], relativeWindow: false });
   });

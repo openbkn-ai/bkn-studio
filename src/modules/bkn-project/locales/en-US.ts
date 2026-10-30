@@ -726,7 +726,8 @@ export const bknProjectEnUS = {
           "Checking for one record needs both values of one object type",
         composite_identity: "An identity of several fields cannot be checked for one record",
         query_failed: "Querying the data did not succeed",
-        query_forbidden: "The data source refused the query; check that the catalog exists and is accessible",
+        query_forbidden:
+          "The data source refused the query; check that the catalog exists and is accessible",
         excluded_field: "The privacy rules keep this field from being read",
         no_value_in_data: "The data has no usable value",
         no_absent_value: "No value absent from the data could be found",
@@ -930,6 +931,10 @@ export const bknProjectEnUS = {
           "Counts the latest period up to the reference time; the question says how long",
         capabilityWithoutBasis:
           "This capability question does not say which metric, function or skill it uses.",
+        propertyFromKey:
+          "Drafting gave no usable property, so the identity is used for now; check it",
+        referenceTimeUnbound:
+          "This question counts back from a reference time, but no input gives one, so no test questions are written from its template. Add a reference time to its inputs.",
         none: "No scenario questions yet.",
         type: "Question type",
         scenarios: "Scenarios",

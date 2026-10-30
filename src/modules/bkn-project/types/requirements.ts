@@ -76,7 +76,14 @@ export type RequirementConcept = Cited & {
  * What a question is asked about: `{name}` in its template stands for a value of the concept's
  * property. `role` is `record` (a given record) or `reference_time` (the moment a window ends).
  */
-export type QuestionInput = { conceptId: string; name: string; property: string; role: string };
+export type QuestionInput = {
+  conceptId: string;
+  name: string;
+  property: string;
+  /** Drafting named no property of the object type, so the server took its one-field key. */
+  propertyFromKey?: boolean;
+  role: string;
+};
 
 export type RequirementQuestion = Cited & {
   answerShape: string;

@@ -873,6 +873,9 @@ export const bknProjectZhCN = {
         propertyGone: "本体中没有这个属性",
         relativeWindow: "统计截至参照时间的最近一段时间，时长以问题为准",
         capabilityWithoutBasis: "这个能力层问题没有写明要用哪个指标、函数或技能。",
+        propertyFromKey: "起草时没有给出可用的属性，暂按唯一标识识别，请核对",
+        referenceTimeUnbound:
+          "这个问题按参照时间往前统计，但没有输入给出参照时间，系统不会按模板为它生成测试问法。请在输入中加上参照时间。",
         none: "还没有场景问题。",
         type: "问题类型",
         scenarios: "所属场景",

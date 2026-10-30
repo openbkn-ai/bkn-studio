@@ -171,6 +171,9 @@ export function QuestionsView({
               {t(`${PREFIX}.questions.capabilityWithoutBasis`)}
             </span>
           ) : null}
+          {question.notes.includes("reference_time_unbound") ? (
+            <span className={styles.warning}>{t(`${PREFIX}.questions.referenceTimeUnbound`)}</span>
+          ) : null}
           <Citations citations={question.citations} supplementReason={question.supplementReason} />
           <Collapse
             destroyOnHidden
@@ -468,6 +471,9 @@ function QuestionInputs({
             {described.known ? null : (
               <span className={styles.warning}>{t(`${PREFIX}.questions.propertyGone`)}</span>
             )}
+            {described.known && input.propertyFromKey ? (
+              <span className={styles.muted}>{t(`${PREFIX}.questions.propertyFromKey`)}</span>
+            ) : null}
           </span>
         );
       })}

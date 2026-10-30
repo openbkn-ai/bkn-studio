@@ -107,7 +107,13 @@ type BackendSpec = {
         answer_shape: string;
         id: string;
         inputs?:
-          | { concept_id: string; name: string; property?: string; role: string }[]
+          | {
+              concept_id: string;
+              name: string;
+              property?: string;
+              property_from_key?: boolean;
+              role: string;
+            }[]
           | null;
         layer: string;
         needs?: { id: string; kind: string }[] | null;
@@ -229,6 +235,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
             conceptId: input.concept_id,
             name: input.name,
             property: input.property ?? "",
+            ...(input.property_from_key ? { propertyFromKey: true } : {}),
             role: input.role,
           }))
         : null,
@@ -943,8 +950,7 @@ const mockSpec = (): RequirementSpec => ({
       scenarioIds: ["s1"],
       supplementReason: "Asked by the sales team in the kick-off meeting.",
       template: "How many orders did customer {customer} sign in the 30 days up to {as_of}?",
-      text:
-        "How many orders did a customer sign in the last thirty days before a given date, counting only orders that were not cancelled and whose delivery was promised within the same quarter?",
+      text: "How many orders did a customer sign in the last thirty days before a given date, counting only orders that were not cancelled and whose delivery was promised within the same quarter?",
       type: "count",
     },
     {

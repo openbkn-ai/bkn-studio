@@ -588,7 +588,13 @@ describe("ProjectRequirements", () => {
       spec.spec.questions[0] = {
         ...spec.spec.questions[0],
         inputs: [
-          { conceptId: "c3", name: "customer", property: "customer_code", role: "record" },
+          {
+            conceptId: "c3",
+            name: "customer",
+            property: "customer_code",
+            propertyFromKey: true,
+            role: "record",
+          },
           { conceptId: "c1", name: "as_of", property: "gone_field", role: "reference_time" },
         ],
         relativeWindow: true,
@@ -606,6 +612,7 @@ describe("ProjectRequirements", () => {
           ...spec.spec.questions[0],
           id: "q3",
           inputs: null,
+          notes: ["reference_time_unbound"],
           relativeWindow: false,
           text: "上周哪些订单晚了？",
         },
@@ -630,9 +637,19 @@ describe("ProjectRequirements", () => {
       expect(
         screen.getByText("这个能力层问题没有写明要用哪个指标、函数或技能。"),
       ).toBeInTheDocument();
+      expect(
+        screen.getByText("起草时没有给出可用的属性，暂按唯一标识识别，请核对"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "这个问题按参照时间往前统计，但没有输入给出参照时间，系统不会按模板为它生成测试问法。请在输入中加上参照时间。",
+        ),
+      ).toBeInTheDocument();
       // A question drafted before inputs says nothing about them.
       expect(screen.getAllByText("问的是")).toHaveLength(2);
-      expect(screen.queryByText(/reference_time|record|capability_without_basis/)).toBeNull();
+      expect(
+        screen.queryByText(/reference_time|record|capability_without_basis|from_key/),
+      ).toBeNull();
     });
 
     it("sends changed inputs, and shows the server's refusal on the input it names", async () => {
