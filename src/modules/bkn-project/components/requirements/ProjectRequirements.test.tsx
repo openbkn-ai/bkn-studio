@@ -317,6 +317,17 @@ describe("ProjectRequirements", () => {
     );
   });
 
+  it("names only what waits", async () => {
+    getRequirementsMock.mockResolvedValue(
+      requirements({ undecidedChoices: 5, unresolvedConflicts: 0 }),
+    );
+    renderPage();
+    expect(
+      await screen.findByText("有 5 个建模选择可以处理，不处理就按推荐。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/0 个需求冲突/)).toBeNull();
+  });
+
   it("says why drafting failed, in plain words", async () => {
     getRequirementsMock.mockResolvedValue(
       requirements({ error: "agent_timeout", spec: mapSpec({}), status: "failed" }),

@@ -598,8 +598,16 @@ export const bknProjectEnUS = {
       drafting: "Drafting the requirements from the documents; this usually takes a minute or two.",
       stale:
         "The documents, their types, the data catalogs or the naming language changed after drafting; draft again.",
-      waiting:
-        "{{conflicts}} requirement conflicts and {{choices}} modelling choices wait for you.",
+      waiting: {
+        both: "{{conflicts}} requirement conflicts and {{choices}} modelling choices wait for you.",
+        conflicts: "{{count}} requirement conflicts wait for your ruling.",
+        conflicts_one: "{{count}} requirement conflict waits for your ruling.",
+        conflicts_other: "{{count}} requirement conflicts wait for your ruling.",
+        choices: "{{count}} modelling choices are open; undecided, the recommended options hold.",
+        choices_one: "{{count}} modelling choice is open; undecided, the recommended option holds.",
+        choices_other:
+          "{{count}} modelling choices are open; undecided, the recommended options hold.",
+      },
       goDecide: "Handle them",
       tablesOmitted:
         "The data catalogs have too many tables; drafting read only part of them, leaving {{count}} tables out.",
