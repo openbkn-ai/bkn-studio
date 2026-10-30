@@ -65,6 +65,8 @@ export async function fetchSignedIn(route: Route): Promise<APIResponse> {
   const send = () =>
     route.fetch({
       headers: { ...route.request().headers(), authorization: `Bearer ${accessToken()}` },
+      // The body goes on as the bytes the page sent: as text, an uploaded file is re-encoded.
+      postData: route.request().postDataBuffer() ?? undefined,
     });
   const response = await send();
   if (response.status() !== 401 || !process.env.E2E_TOKEN_COMMAND) {
