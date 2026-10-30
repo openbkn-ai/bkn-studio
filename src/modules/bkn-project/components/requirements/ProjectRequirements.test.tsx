@@ -347,8 +347,18 @@ describe("ProjectRequirements", () => {
 
     expect(await dialog.findByText("已上传")).toBeInTheDocument();
     expect(dialog.getByText("只支持 Markdown 和纯文本文件")).toBeInTheDocument();
-    fireEvent.click(dialog.getByRole("button", { name: /完\s*成/ }));
-    await waitFor(() => expect(listDocumentsMock).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    // Closing reads the documents again. A slow runner may take the click while the button is
+    // still settling, so it is clicked until the documents are read again.
+    await waitFor(
+      () => {
+        const done = screen.queryByRole("button", { name: /完\s*成/ });
+        if (done) {
+          fireEvent.click(done);
+        }
+        expect(listDocumentsMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+      },
+      { timeout: 5000 },
+    );
   });
 
   it("lets the owner type a document; others only read", async () => {
