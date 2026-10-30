@@ -52,6 +52,7 @@ function status(extra: Partial<ProjectStatus> = {}): ProjectStatus {
     blockers: [],
     check: { current: true, status: "passed" },
     confirmation: { current: true, time: 1 },
+    dataSources: null,
     draft: { decisions: 0, placeholders: 0, status: "ready", updateTime: 1 },
     nextActions: [
       {
@@ -305,6 +306,42 @@ describe("ReleasePublish", () => {
     fireEvent.click(view.getByRole("button", { name: "同步线上版本" }));
     await waitFor(() => expect(syncBranchMock).toHaveBeenCalledWith("p1"));
     await waitFor(() => expect(getReleaseReviewMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("names the items whose tables are gone, which no one can accept", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        blocked: true,
+        checks: [
+          { code: "mapped", passed: true },
+          {
+            code: "data_source",
+            details: [
+              { id: "ot_customer", kind: "object_type", name: "客户" },
+              { id: "rt_order", kind: "relation_type", name: "下单" },
+            ],
+            passed: false,
+            reason: "table_missing",
+          },
+        ],
+      }),
+    );
+    renderPublish();
+
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(await view.findByText("数据来源")).toBeInTheDocument();
+    expect(
+      view.getByText(
+        "2 个条目的数据表已不存在，发布后查不到它们的数据。请重新起草并确认后再发布。",
+      ),
+    ).toBeInTheDocument();
+    expect(view.getByText("「客户」的数据表已不存在")).toBeInTheDocument();
+    expect(view.getByText("「下单」的数据表已不存在")).toBeInTheDocument();
+    expect(view.queryByText(/ot_customer|table_missing/)).toBeNull();
+    expect(view.queryByRole("checkbox")).toBeNull();
+    expect(publishButton()).toBeDisabled();
   });
 
   it("offers to roll back once consumers use the release, and opens what it would do", async () => {

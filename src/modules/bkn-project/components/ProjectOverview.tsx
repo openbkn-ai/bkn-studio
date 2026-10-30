@@ -20,6 +20,7 @@ import {
   itemNames,
   whoDecided,
 } from "@/modules/bkn-project/components/draft/changes";
+import { DataSourceHealth } from "@/modules/bkn-project/components/DataSourceHealth";
 import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftConceptGraph";
 import { draftGraph } from "@/modules/bkn-project/components/draft/graph";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
@@ -58,12 +59,14 @@ type StatTile = {
 export function ProjectOverview({
   latestRelease,
   networkName,
+  onProjectChange,
   ownerIsCaller,
   project,
 }: {
   /** undefined while unknown, null before the first release. */
   latestRelease: ProjectRelease | null | undefined;
   networkName: string;
+  onProjectChange: (project: Project) => void;
   ownerIsCaller: boolean;
   project: Project;
 }) {
@@ -196,6 +199,12 @@ export function ProjectOverview({
           {field(t("bknProject.overview.fields.id"), <code>{project.id}</code>)}
         </div>
       </section>
+
+      <DataSourceHealth
+        onGoToModel={() => go("model")}
+        onProjectChange={onProjectChange}
+        project={project}
+      />
 
       <div className={styles.tiles} data-region="stats">
         {tiles.map((tile) => {

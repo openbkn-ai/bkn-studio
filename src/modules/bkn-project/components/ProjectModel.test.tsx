@@ -143,6 +143,7 @@ function projectStatus(nextActions: ProjectStatus["nextActions"]): ProjectStatus
     blockers: [],
     check: null,
     confirmation: null,
+    dataSources: null,
     draft: null,
     nextActions,
     release: null,

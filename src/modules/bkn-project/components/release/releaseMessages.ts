@@ -16,11 +16,22 @@ import type { Regression, ReleaseCheck, ReleaseItem } from "@/modules/bkn-projec
  */
 const PREFIX = "bknProject.release.publish";
 
-const CHECKS = new Set(["confirmed", "mapped", "names", "drift", "check", "index", "baseline"]);
+const CHECKS = new Set([
+  "confirmed",
+  "mapped",
+  "data_source",
+  "names",
+  "drift",
+  "check",
+  "index",
+  "baseline",
+]);
 const REASONS = new Set([
   "not_confirmed",
   "confirmation_outdated",
   "mapping_missing",
+  "table_missing",
+  "data_source_unreadable",
   "duplicate_names",
   "similar_names",
   "drift",
@@ -73,6 +84,9 @@ export function checkReasonText(t: TFunction, check: ReleaseCheck): string {
     const names = (details as ReleaseItem[]).map((item) => item.name || item.id);
     return t(`${PREFIX}.reason.mapping_missing`, { names: listOf(t, names) });
   }
+  if (reason === "table_missing" && Array.isArray(details)) {
+    return t(`${PREFIX}.reason.table_missing`, { count: details.length });
+  }
   if ((reason === "duplicate_names" || reason === "similar_names") && details) {
     const pairs = (details as { same?: NamePair[] | null; similar?: NamePair[] | null })[
       reason === "duplicate_names" ? "same" : "similar"
@@ -94,6 +108,16 @@ export function checkReasonText(t: TFunction, check: ReleaseCheck): string {
     }
   }
   return t(`${PREFIX}.reason.${reason}`);
+}
+
+/** The items a check names one per line: those whose tables are gone. */
+export function checkDetailRows(t: TFunction, check: ReleaseCheck): string[] {
+  if (check.passed || check.reason !== "table_missing" || !Array.isArray(check.details)) {
+    return [];
+  }
+  return (check.details as ReleaseItem[]).map((item) =>
+    t(`${PREFIX}.reason.tableMissingItem`, { name: item.name || item.id }),
+  );
 }
 
 type NamePair = { added: ReleaseItem; other: ReleaseItem };
@@ -154,6 +178,7 @@ const REGRESSION_STATUSES = new Set([
   "needs_values",
   "failed",
   "no_questions",
+  "data_source_missing",
 ]);
 const REGRESSION_ERRORS = new Set(["interrupted", "definitions_unreadable"]);
 const OUTCOMES = new Set([
@@ -163,6 +188,7 @@ const OUTCOMES = new Set([
   "needs_values",
   "not_answered",
   "error",
+  "data_source_missing",
 ]);
 const EXPECTS = new Set(["exists", "not_exists", "same_record"]);
 /** Why a question could not be asked or judged; the codes of the services behind are never shown. */
@@ -193,6 +219,7 @@ export const answerErrorText = (t: TFunction, code: string) =>
   t(`${REGRESSION}.answerError.${ANSWER_ERRORS.get(code) ?? "other"}`);
 
 const REGRESSION_TONE: Record<string, LightStatusTone> = {
+  data_source_missing: "error",
   failed: "error",
   needs_values: "warning",
   no_questions: "neutral",
@@ -202,6 +229,7 @@ const REGRESSION_TONE: Record<string, LightStatusTone> = {
 };
 
 const OUTCOME_TONE: Record<string, LightStatusTone> = {
+  data_source_missing: "error",
   error: "warning",
   missing: "error",
   needs_values: "warning",
@@ -217,8 +245,11 @@ export const regressionTone = (status: string) => toneOf(REGRESSION_TONE, status
 
 export const outcomeTone = (outcome: string) => toneOf(OUTCOME_TONE, outcome);
 
-/** How many asked questions and tests passed, of those that have a result. */
-export const passedCount = (regression: Regression) => ({
-  passed: regression.results.filter((result) => result.outcome === "passed").length,
-  total: regression.results.length,
-});
+/** How many asked questions and tests passed; those not asked for want of their tables do not count. */
+export const passedCount = (regression: Regression) => {
+  const asked = regression.results.filter((result) => result.outcome !== "data_source_missing");
+  return {
+    passed: asked.filter((result) => result.outcome === "passed").length,
+    total: asked.length,
+  };
+};

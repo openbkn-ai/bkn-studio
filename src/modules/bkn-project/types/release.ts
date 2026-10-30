@@ -111,6 +111,8 @@ export type RegressionResult = {
   answer: string;
   errorCode: string;
   missing: ReleaseItem[];
+  /** For `data_source_missing`: the items whose tables are gone, so the question was not asked. */
+  missingTables: ReleaseItem[];
   outcome: string;
   questionId: string;
   reason: string;

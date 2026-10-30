@@ -67,6 +67,11 @@ vi.mock("@/modules/bkn-project/components/requirements/ProjectRequirements", () 
   ),
 }));
 
+// The data sources read the project's status, tested on their own.
+vi.mock("@/modules/bkn-project/components/DataSourceHealth", () => ({
+  DataSourceHealth: () => null,
+}));
+
 vi.mock("@/modules/bkn-project/components/draft/DraftConceptGraph", () => ({
   DraftConceptGraph: () => <div>concept graph</div>,
 }));

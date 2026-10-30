@@ -154,7 +154,7 @@ export function RegressionDrawer({
             <LightStatusTag tone={regressionTone(regression.status)}>
               {regressionStatusText(t, regression.status)}
             </LightStatusTag>
-            {regression.results.length ? (
+            {passedCount(regression).total ? (
               <span className={styles.muted}>
                 {t(`${PREFIX}.summary`, passedCount(regression))}
               </span>
@@ -171,6 +171,9 @@ export function RegressionDrawer({
                   time: dayjs(regression.startTime).format("YYYY/MM/DD HH:mm"),
                 })}
           </p>
+          {regression.status === "data_source_missing" ? (
+            <Alert message={t(`${PREFIX}.dataSourceMissing`)} showIcon type="error" />
+          ) : null}
           {regression.status === "failed" && regression.error ? (
             <Alert message={regressionErrorText(t, regression.error)} showIcon type="error" />
           ) : null}
@@ -245,6 +248,15 @@ function ResultDetail({ result }: { result: RegressionResult }) {
         <span className={styles.detail}>
           {t(`${PREFIX}.missing`, {
             names: result.missing
+              .map((item) => item.name || item.id)
+              .join(t("bknProject.listSeparator")),
+          })}
+        </span>
+      ) : null}
+      {result.missingTables.length ? (
+        <span className={styles.detail}>
+          {t(`${PREFIX}.missingTables`, {
+            names: result.missingTables
               .map((item) => item.name || item.id)
               .join(t("bknProject.listSeparator")),
           })}

@@ -442,6 +442,57 @@ export const bknProjectEnUS = {
       },
     },
     overview: {
+      dataSources: {
+        title: "Data sources",
+        loadFailed: "Can't read the state of the data sources right now",
+        network: {
+          label: "Knowledge network",
+          noun: "knowledge network",
+          ok: "Available",
+          missing: "Deleted",
+          unreachable: "Can't confirm right now",
+          not_bound: "No knowledge network yet",
+        },
+        catalogs: {
+          label: "Data catalogs",
+          noun: "data catalogs",
+          ok: "{{total}}, all present",
+          missing: "{{missing}} of {{total}} deleted",
+          unreachable: "Can't confirm right now",
+          not_bound: "No data catalogs chosen yet",
+        },
+        tables: {
+          label: "Tables",
+          noun: "tables",
+          ok: "{{total}}, all return data",
+          missing: "{{missing}} of {{total}} return no data",
+          unreachable: "Can't confirm right now",
+          not_bound: "Nothing adopted yet",
+        },
+        networkMissing:
+          "This project's knowledge network has been deleted; it can no longer be confirmed or published. You can archive the project.",
+        catalogsMissing:
+          "{{count}} of the project's data catalogs have been deleted. Choose the catalogs again, then draft again.",
+        catalogsMissing_one:
+          "{{count}} of the project's data catalogs has been deleted. Choose the catalogs again, then draft again.",
+        catalogsMissing_other:
+          "{{count}} of the project's data catalogs have been deleted. Choose the catalogs again, then draft again.",
+        tablesMissing:
+          "The tables behind {{count}} items were deleted or recreated, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
+        tablesMissing_one:
+          "The table behind {{count}} item was deleted or recreated, so it returns no data. Draft again to bind it to the current tables (your decisions will be discarded).",
+        tablesMissing_other:
+          "The tables behind {{count}} items were deleted or recreated, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
+        affected: {
+          object: 'Object type "{{name}}" (table {{table}}) returns no data',
+          relation: 'Relation type "{{name}}" (link table {{table}}) returns no data',
+        },
+        unreachable: "Can't check the {{what}} right now; will check again",
+        archived: "The project is archived. Unarchive it to choose catalogs or draft again.",
+        archive: "Archive project",
+        chooseCatalogs: "Choose catalogs again",
+        redraft: "Draft again",
+      },
       fields: {
         network: "Target network",
         owner: "Owner",
@@ -551,6 +602,9 @@ export const bknProjectEnUS = {
       button: "Confirm draft",
       buttonAgain: "Confirm again",
       blocked: {
+        network_missing: "The knowledge network has been deleted",
+        catalog_missing: "A data catalog has been deleted",
+        table_missing: "Some items' tables no longer exist",
         not_owner: "Only the project owner can confirm",
         running: "Still in progress. Try again shortly.",
         archived: "The project is archived and cannot be confirmed",
@@ -760,6 +814,7 @@ export const bknProjectEnUS = {
         value_not_in_text: "The test question does not say a value the documents gave",
         value_outside_slot: "The test question says a number, date or code with no basis",
         check_timeout: "The check took too long",
+        table_missing: "The table this test asks about was deleted",
         other: "It did not pass the check",
       },
       editing: {
@@ -1120,6 +1175,7 @@ export const bknProjectEnUS = {
         check: {
           confirmed: "Draft confirmation",
           mapped: "Table mapping",
+          data_source: "Data source",
           names: "Repeated names",
           drift: "Live edits outside the project",
           check: "Data check",
@@ -1131,6 +1187,14 @@ export const bknProjectEnUS = {
           not_confirmed: "The draft is not confirmed yet.",
           confirmation_outdated: "The draft changed after it was confirmed; confirm it again.",
           mapping_missing: "These object types do not fully map to a table yet: {{names}}",
+          table_missing:
+            "The tables of {{count}} items no longer exist; the release would return no data for them. Draft and confirm again before publishing.",
+          table_missing_one:
+            "The table of {{count}} item no longer exists; the release would return no data for it. Draft and confirm again before publishing.",
+          table_missing_other:
+            "The tables of {{count}} items no longer exist; the release would return no data for them. Draft and confirm again before publishing.",
+          tableMissingItem: 'The table of "{{name}}" no longer exists',
+          data_source_unreadable: "Could not confirm the tables still exist. Review again shortly.",
           duplicate_names: "Same name as existing content: {{pairs}}",
           similar_names: "Name close to existing content: {{pairs}}",
           namePair: "{{added}} and {{other}}",
@@ -1340,6 +1404,9 @@ export const bknProjectEnUS = {
         noResult: "No result",
         asItself: "Asked as written",
         missing: "Missing from the ontology: {{names}}",
+        missingTables: 'Not asked: the tables of "{{names}}" no longer exist',
+        dataSourceMissing:
+          "Data source unavailable: tables behind some items were deleted, so the questions that need them were not asked.",
         answer: "Show the answer",
         calls: "The answer queried {{count}} times",
         calls_one: "The answer queried once",
@@ -1354,6 +1421,7 @@ export const bknProjectEnUS = {
           needs_values: "Questions lack specific values",
           failed: "Did not finish",
           no_questions: "No scenario questions",
+          data_source_missing: "Data source unavailable",
           other: "Unknown",
         },
         runError: {
@@ -1369,6 +1437,7 @@ export const bknProjectEnUS = {
           needs_values: "Lacks a specific value",
           not_answered: "Not answerable",
           error: "Not asked",
+          data_source_missing: "Table no longer exists",
           other: "Unknown",
         },
         expect: {

@@ -159,6 +159,9 @@ export function ProjectWorkspaceScene({
             <ProjectOverview
               latestRelease={latestRelease}
               networkName={networkName}
+              onProjectChange={(next) =>
+                setLoaded((current) => (current ? { ...current, project: next } : current))
+              }
               ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
               project={project}
             />

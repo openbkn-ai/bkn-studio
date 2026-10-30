@@ -95,6 +95,9 @@ describe("publish messages", () => {
     );
     // Without a count, the reason is not said as "0 object types".
     expect(blockedText(zh, "unadopted_ends", [])).toBe("现在还不能确认");
+    expect(blockedText(zh, "catalog_missing", [])).toBe("有数据目录已被删除");
+    expect(blockedText(en, "table_missing", [])).toBe("Some items' tables no longer exist");
+    expect(blockedText(en, "network_missing", [])).toBe("The knowledge network has been deleted");
     for (const reason of [
       "not_owner",
       "running",

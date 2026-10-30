@@ -415,6 +415,56 @@ export const bknProjectZhCN = {
       },
     },
     overview: {
+      dataSources: {
+        title: "数据来源",
+        loadFailed: "暂时无法读取数据来源的情况",
+        network: {
+          label: "知识网络",
+          noun: "知识网络",
+          ok: "可用",
+          missing: "已被删除",
+          unreachable: "暂时无法确认",
+          not_bound: "还没有知识网络",
+        },
+        catalogs: {
+          label: "数据目录",
+          noun: "数据目录",
+          ok: "{{total}} 个，都在",
+          missing: "{{missing}} / {{total}} 个已被删除",
+          unreachable: "暂时无法确认",
+          not_bound: "还没有选择数据目录",
+        },
+        tables: {
+          label: "数据表",
+          noun: "数据表",
+          ok: "{{total}} 张，都能查到数据",
+          missing: "{{missing}} / {{total}} 张查不到数据",
+          unreachable: "暂时无法确认",
+          not_bound: "还没有采用的条目",
+        },
+        networkMissing: "项目的知识网络已被删除，无法再确认或发布。可以归档此项目。",
+        catalogsMissing:
+          "项目选用的 {{count}} 个数据目录已被删除。请重新选择数据目录，再重新起草。",
+        catalogsMissing_one:
+          "项目选用的 {{count}} 个数据目录已被删除。请重新选择数据目录，再重新起草。",
+        catalogsMissing_other:
+          "项目选用的 {{count}} 个数据目录已被删除。请重新选择数据目录，再重新起草。",
+        tablesMissing:
+          "{{count}} 个条目所用的数据表已被删除或重建，现在查不到数据。重新起草可按现有的表重新绑定（会放弃已做的决定）。",
+        tablesMissing_one:
+          "{{count}} 个条目所用的数据表已被删除或重建，现在查不到数据。重新起草可按现有的表重新绑定（会放弃已做的决定）。",
+        tablesMissing_other:
+          "{{count}} 个条目所用的数据表已被删除或重建，现在查不到数据。重新起草可按现有的表重新绑定（会放弃已做的决定）。",
+        affected: {
+          object: "对象类「{{name}}」（数据表 {{table}}）已查不到数据",
+          relation: "关系类「{{name}}」（连接表 {{table}}）已查不到数据",
+        },
+        unreachable: "暂时无法确认{{what}}是否还在，稍后会自动重试",
+        archived: "项目已归档，恢复后才能重新选择数据目录或重新起草。",
+        archive: "归档项目",
+        chooseCatalogs: "重新选择数据目录",
+        redraft: "去重新起草",
+      },
       fields: {
         network: "目标网络",
         owner: "负责人",
@@ -516,6 +566,9 @@ export const bknProjectZhCN = {
       button: "确认草稿",
       buttonAgain: "重新确认",
       blocked: {
+        network_missing: "知识网络已被删除",
+        catalog_missing: "有数据目录已被删除",
+        table_missing: "有条目的数据表已不存在",
         not_owner: "只有项目负责人可以确认",
         running: "正在处理，请稍后再试",
         archived: "项目已归档，不能确认",
@@ -705,6 +758,7 @@ export const bknProjectZhCN = {
         value_not_in_text: "问法里没有写出资料给的值",
         value_outside_slot: "问法里出现了没有依据的数字、日期或编码",
         check_timeout: "核对超时",
+        table_missing: "测试所问的数据表已被删除",
         other: "没有通过核对",
       },
       editing: {
@@ -1055,6 +1109,7 @@ export const bknProjectZhCN = {
         check: {
           confirmed: "草稿确认",
           mapped: "数据表对应",
+          data_source: "数据来源",
           names: "名称重复",
           drift: "项目之外的线上改动",
           check: "数据校验",
@@ -1066,6 +1121,14 @@ export const bknProjectZhCN = {
           not_confirmed: "草稿还没有确认。",
           confirmation_outdated: "确认之后草稿又有修改，需要重新确认。",
           mapping_missing: "这些对象类还没有完整对应到数据表：{{names}}",
+          table_missing:
+            "{{count}} 个条目的数据表已不存在，发布后查不到它们的数据。请重新起草并确认后再发布。",
+          table_missing_one:
+            "{{count}} 个条目的数据表已不存在，发布后查不到它们的数据。请重新起草并确认后再发布。",
+          table_missing_other:
+            "{{count}} 个条目的数据表已不存在，发布后查不到它们的数据。请重新起草并确认后再发布。",
+          tableMissingItem: "「{{name}}」的数据表已不存在",
+          data_source_unreadable: "暂时无法确认数据表是否还在，请稍后重新审核。",
           duplicate_names: "与已有内容同名：{{pairs}}",
           similar_names: "与已有内容名称相近：{{pairs}}",
           namePair: "「{{added}}」与「{{other}}」",
@@ -1262,6 +1325,8 @@ export const bknProjectZhCN = {
         noResult: "没有结果",
         asItself: "按原问题提问",
         missing: "本体中缺少：{{names}}",
+        missingTables: "未作答：「{{names}}」的数据表已不存在",
+        dataSourceMissing: "数据来源不可用：部分条目的数据表已被删除，用到它们的问题未作答。",
         answer: "查看回答",
         calls: "回答时查询了 {{count}} 次",
         calls_one: "回答时查询了 {{count}} 次",
@@ -1276,6 +1341,7 @@ export const bknProjectZhCN = {
           needs_values: "问题缺少具体值",
           failed: "没能跑完",
           no_questions: "没有场景问题",
+          data_source_missing: "数据来源不可用",
           other: "状态未知",
         },
         runError: {
@@ -1290,6 +1356,7 @@ export const bknProjectZhCN = {
           needs_values: "问题缺少具体值",
           not_answered: "回答不了",
           error: "没能提问",
+          data_source_missing: "数据表已不存在",
           other: "结果未知",
         },
         expect: {

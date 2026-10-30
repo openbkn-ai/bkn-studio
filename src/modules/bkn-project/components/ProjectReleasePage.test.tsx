@@ -83,6 +83,7 @@ function status(extra: Partial<ProjectStatus> = {}): ProjectStatus {
     blockers: [],
     check: { current: true, status: "passed" },
     confirmation: { current: true, time: confirmedAt },
+    dataSources: null,
     draft: { decisions: 0, placeholders: 0, status: "ready", updateTime: 1 },
     nextActions: [],
     release: null,
@@ -304,7 +305,8 @@ describe("ProjectReleasePage", () => {
     expect(
       await screen.findByText("确认之后草稿又有修改，这些修改还没有确认。"),
     ).toBeInTheDocument();
-    expect(screen.getByText("这是上次确认时的校验结果。")).toBeInTheDocument();
+    // The check is read on its own, after the status.
+    expect(await screen.findByText("这是上次确认时的校验结果。")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "去确认" }));
     expect(onGoToModel).toHaveBeenCalled();
   });

@@ -45,6 +45,7 @@ function status(action: Partial<ProjectNextAction> | null, extra: Partial<Projec
     blockers: [],
     check: null,
     confirmation: null,
+    dataSources: null,
     draft: { decisions: 0, placeholders: 0, status: "ready", updateTime: draft.updateTime },
     nextActions: action
       ? [{ accepts: [], action: "confirm_draft", allowed: true, discardsDecisions: 0, ...action }]
