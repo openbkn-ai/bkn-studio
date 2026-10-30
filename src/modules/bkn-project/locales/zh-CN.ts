@@ -101,8 +101,7 @@ export const bknProjectZhCN = {
     model: {
       graph: {
         title: "本体概念模型",
-        empty: "还没有采纳的对象类",
-        emptyDescription: "采纳对象类后，这里会画出它们以及它们之间的关系。",
+        emptyDescription: "草稿里还没有对象类。",
         legend: "节点 = 对象类，连线 = 关系类，淡色和虚线 = 还没有采纳",
       },
       status: {
