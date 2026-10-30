@@ -212,8 +212,10 @@ export const bknProjectZhCN = {
           accept_undecided_one: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
           accept_undecided_other: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
           accept_unresolved_conflicts: "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
-          accept_unresolved_conflicts_one: "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
-          accept_unresolved_conflicts_other: "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          accept_unresolved_conflicts_one:
+            "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          accept_unresolved_conflicts_other:
+            "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
           other: "确认草稿时做了一项决定",
         },
         empty: "无",
