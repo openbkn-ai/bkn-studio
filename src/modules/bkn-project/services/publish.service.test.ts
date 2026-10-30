@@ -80,10 +80,41 @@ describe("publish.service", () => {
           reason: "not_owner",
         },
       ],
+      release: null,
       stage: "ready_to_confirm",
       stale: ["confirmation_outdated"],
       undecided: 3,
       unresolvedConflicts: 0,
+    });
+  });
+
+  it("reads the release a published project has, and the version a review suggests", async () => {
+    const { getProjectStatus } = await importService();
+    mockGet.mockResolvedValue({
+      data: {
+        blockers: [],
+        next_actions: [
+          {
+            action: "review_release",
+            allowed: true,
+            method: "GET",
+            path: "/projects/p/release-review?version=1.0.3",
+            requires: ["version"],
+            suggested_version: "1.0.3",
+          },
+        ],
+        release: { in_use: false, network_id: "n_v1_0_2", version: "1.0.2" },
+        stage: "published",
+        stale: [],
+        undecided: 0,
+      },
+    });
+
+    const status = await getProjectStatus("p/1");
+    expect(status.release).toEqual({ inUse: false, networkId: "n_v1_0_2", version: "1.0.2" });
+    expect(status.nextActions[0]).toMatchObject({
+      action: "review_release",
+      suggestedVersion: "1.0.3",
     });
   });
 
@@ -99,8 +130,18 @@ describe("publish.service", () => {
             item_id: "r1",
             kind: "relation_types",
             name: "Orders to customers",
+            needed_by: [{ id: "q2", text: "Who ordered most?" }],
             options: [],
             reason: "undecided",
+            recommendation: null,
+          },
+          {
+            blocking: true,
+            item_id: "o1",
+            kind: "object_types",
+            name: "Orders",
+            options: [],
+            reason: "needs_identity",
             recommendation: null,
           },
         ],
@@ -117,7 +158,17 @@ describe("publish.service", () => {
           itemId: "r1",
           kind: "relation_types",
           name: "Orders to customers",
+          neededBy: [{ id: "q2", text: "Who ordered most?" }],
           reason: "undecided",
+        },
+        // No question needs it: none listed.
+        {
+          blocking: true,
+          itemId: "o1",
+          kind: "object_types",
+          name: "Orders",
+          neededBy: [],
+          reason: "needs_identity",
         },
       ],
     });

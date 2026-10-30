@@ -27,6 +27,11 @@ export type DraftTable = {
  * table found. `source` and `reason` are open: unknown values are shown generically.
  */
 export type DraftKeyEvidence = {
+  /**
+   * Two properties drafting counted unique and non-null together, when the counted field had
+   * duplicates: the identity it suggests.
+   */
+  candidate?: string[];
   computed: boolean;
   distinct: number;
   field?: string;

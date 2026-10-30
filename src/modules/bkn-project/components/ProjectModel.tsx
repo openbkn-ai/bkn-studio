@@ -55,7 +55,9 @@ import type {
   DraftItemKind,
   DraftObjectType,
 } from "@/modules/bkn-project/types/draft";
+import { getProjectPending } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
+import type { PendingQuestion } from "@/modules/bkn-project/types/publish";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
@@ -116,6 +118,7 @@ export function ProjectModel({
   const [saving, setSaving] = useState(false);
   const [choosingIdentity, setChoosingIdentity] = useState<DraftObjectType | null>(null);
   const [changingCatalogs, setChangingCatalogs] = useState(false);
+  const [neededBy, setNeededBy] = useState<ReadonlyMap<string, PendingQuestion[]>>(new Map());
 
   // Counts every read, failed or not, so a drafting draft is read again after a failure too.
   const [reads, setReads] = useState(0);
@@ -157,6 +160,29 @@ export function ProjectModel({
       active = false;
     };
   }, [catalogReads]);
+
+  // Which scenario questions need what waits: read with each version of a ready draft. It only
+  // adds to what the draft shows, so a failed read shows nothing more.
+  const readyAt = draft?.status === "ready" ? draft.updateTime : null;
+  useEffect(() => {
+    if (readyAt === null) {
+      setNeededBy(new Map());
+      return undefined;
+    }
+    let active = true;
+    getProjectPending(project.id)
+      .then((pending) => {
+        if (active) {
+          setNeededBy(
+            new Map(pending.items.map((item) => [`${item.kind}/${item.itemId}`, item.neededBy])),
+          );
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [project.id, readyAt]);
 
   // A draft that is drafting is read again until it is done; leaving the page stops it.
   const drafting = draft?.status === "drafting";
@@ -640,6 +666,7 @@ export function ProjectModel({
               currentUserId={runtimeConfig.currentUser.id}
               directory={directory}
               draft={draft}
+              neededBy={neededBy}
               unadoptedEnds={unadoptedEnds}
             />
           ) : (

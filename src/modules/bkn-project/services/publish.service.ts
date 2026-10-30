@@ -16,6 +16,10 @@ import {
   mapDraft,
 } from "@/modules/bkn-project/services/draft.service";
 import { getProject } from "@/modules/bkn-project/services/project.service";
+import {
+  mockNextVersion,
+  mockProjectRelease,
+} from "@/modules/bkn-project/services/release.service";
 import type { Draft, DraftTable } from "@/modules/bkn-project/types/draft";
 import type {
   CheckJoinResult,
@@ -26,6 +30,7 @@ import type {
   IndexItem,
   OntologyCheck,
   PendingItem,
+  PendingQuestion,
   ProjectBlocker,
   ProjectIndex,
   ProjectNextAction,
@@ -65,8 +70,10 @@ type BackendStatus = {
         discards_decisions?: number;
         reason?: string;
         retry_after_s?: number;
+        suggested_version?: string;
       }[]
     | null;
+  release?: { in_use: boolean; network_id: string; version: string };
   stage: ProjectStatus["stage"];
   stale: string[] | null;
   undecided: number;
@@ -82,6 +89,7 @@ type BackendPending = {
         item_id: string;
         kind: string;
         name: string;
+        needed_by?: { id: string; text: string }[];
         reason: string;
       }[]
     | null;
@@ -201,7 +209,15 @@ function mapStatus(status: BackendStatus): ProjectStatus {
       discardsDecisions: action.discards_decisions ?? 0,
       ...(action.reason ? { reason: action.reason } : {}),
       ...(action.retry_after_s ? { retryAfterS: action.retry_after_s } : {}),
+      ...(action.suggested_version ? { suggestedVersion: action.suggested_version } : {}),
     })),
+    release: status.release
+      ? {
+          inUse: status.release.in_use,
+          networkId: status.release.network_id,
+          version: status.release.version,
+        }
+      : null,
     stage: status.stage,
     stale: status.stale ?? [],
     undecided: status.undecided,
@@ -218,6 +234,7 @@ function mapPending(pending: BackendPending): ProjectPending {
       itemId: item.item_id,
       kind: item.kind,
       name: item.name,
+      neededBy: (item.needed_by ?? []).map(({ id, text }) => ({ id, text })),
       reason: item.reason,
     })),
   };
@@ -467,6 +484,7 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
         }
       : null,
     nextActions: [],
+    release: null,
     stage: "no_draft",
     stale: [],
     undecided: 0,
@@ -511,17 +529,55 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
         : check.status === "passed"
           ? "confirmed"
           : "check_needs_attention";
+  // Once checked, the confirmation is reviewed and published; once published, consumers switch.
+  const published = mockProjectRelease(projectId);
+  if (current && published && confirmation && published.createTime >= confirmation.time) {
+    return {
+      ...base,
+      check: check ? { current, status: check.status } : null,
+      confirmation: { current, time: confirmation.time },
+      nextActions: published.inUse
+        ? []
+        : [
+            {
+              accepts: [],
+              action: "switch_consumers",
+              allowed: owns,
+              discardsDecisions: 0,
+              ...(owns ? {} : { reason: "not_owner" }),
+            },
+          ],
+      release: {
+        inUse: published.inUse,
+        networkId: published.latest.networkId,
+        version: published.latest.version,
+      },
+      stage: "published",
+    };
+  }
+  const review: ProjectNextAction = {
+    accepts: [],
+    action: "review_release",
+    allowed: true,
+    discardsDecisions: 0,
+    suggestedVersion: mockNextVersion(),
+  };
   return {
     ...base,
     blockers,
     check: check ? { current, status: check.status } : null,
     confirmation: confirmation ? { current, time: confirmation.time } : null,
-    nextActions: current ? [] : [confirm],
+    nextActions: !current ? [confirm] : stage === "confirmed" ? [review] : [],
     stage,
     stale: confirmation && !current ? ["confirmation_outdated", "check_outdated"] : [],
     undecided: undecided.length,
   };
 }
+
+/** The mock's scenario questions that need a drafted item. */
+const MOCK_NEEDED_BY: Record<string, PendingQuestion[]> = {
+  material_bom: [{ id: "q3", text: "Which products use part P-100?" }],
+};
 
 async function mockPending(projectId: string): Promise<ProjectPending> {
   const draft = await getDraft(projectId);
@@ -537,6 +593,7 @@ async function mockPending(projectId: string): Promise<ProjectPending> {
         itemId: item.id,
         kind: "object_types",
         name: item.name,
+        neededBy: MOCK_NEEDED_BY[item.id] ?? [],
         reason: "needs_identity",
       })),
       ...unadoptedEnds.map((item) => ({
@@ -544,6 +601,7 @@ async function mockPending(projectId: string): Promise<ProjectPending> {
         itemId: item.id,
         kind: "relation_types",
         name: item.name,
+        neededBy: MOCK_NEEDED_BY[item.id] ?? [],
         reason: "unadopted_ends",
       })),
       ...undecided.map(({ item, kind }) => ({
@@ -552,6 +610,7 @@ async function mockPending(projectId: string): Promise<ProjectPending> {
         itemId: item.id,
         kind,
         name: item.name,
+        neededBy: MOCK_NEEDED_BY[item.id] ?? [],
         reason: "undecided",
       })),
     ],
