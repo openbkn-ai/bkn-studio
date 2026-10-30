@@ -10,12 +10,14 @@ import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Citing } from "@/modules/bkn-project/components/requirements/citing";
+import { InputsEditor } from "@/modules/bkn-project/components/requirements/InputsEditor";
 import {
   categoryText,
   layerText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
 import type { RequirementItemFields } from "@/modules/bkn-project/services/requirements.service";
 import type {
+  QuestionInput,
   RequirementChoice,
   RequirementConcept,
   RequirementConflict,
@@ -29,7 +31,11 @@ import styles from "./Requirements.module.css";
 const PREFIX = "bknProject.requirements.editing";
 
 /** A drafted object type or relation type a concept or question may point at. */
-export type DraftedItem = RequirementItemRef & { name: string };
+export type DraftedItem = RequirementItemRef & {
+  name: string;
+  /** An object type's properties; none for a relation type. */
+  properties: { displayName: string; name: string; type: string }[];
+};
 
 const CATEGORIES = ["object", "event", "property", "relation", "evidence", "not_ontology"];
 const LAYERS = ["knowledge", "capability"];
@@ -47,6 +53,7 @@ type Saving = { onCancel: () => void; saving: boolean };
  */
 export function ItemDialog({
   drafted,
+  inputErrors = {},
   itemId,
   kind,
   onCancel,
@@ -55,6 +62,8 @@ export function ItemDialog({
   spec,
 }: Saving & {
   drafted: DraftedItem[];
+  /** The server's reasons for the inputs a save was refused for, by input name. */
+  inputErrors?: Record<string, string>;
   itemId: string | null;
   kind: RequirementItemKind;
   onSave: (fields: RequirementItemFields) => void;
@@ -67,6 +76,11 @@ export function ItemDialog({
     : undefined;
   const question = kind === "questions" ? (current as RequirementSpec["questions"][number]) : null;
   const [followConcepts, setFollowConcepts] = useState(false);
+  // Inputs are sent only when the person changed them, as needs are.
+  const [inputs, setInputs] = useState<QuestionInput[]>(() => question?.inputs ?? []);
+  const [relativeWindow, setRelativeWindow] = useState(question?.relativeWindow ?? false);
+  const inputsChanged = JSON.stringify(inputs) !== JSON.stringify(question?.inputs ?? []);
+  const inputsComplete = inputs.every((input) => input.name.trim() && input.conceptId);
 
   const initial = (() => {
     if (!current) {
@@ -113,6 +127,12 @@ export function ItemDialog({
                 scenarioIds: (values.scenarioIds as string[] | undefined) ?? [],
                 template: text("template"),
                 text: text("text"),
+                ...(inputsChanged
+                  ? { inputs: inputs.map((input) => ({ ...input, name: input.name.trim() })) }
+                  : {}),
+                ...(relativeWindow === (question?.relativeWindow ?? false)
+                  ? {}
+                  : { relativeWindow }),
                 ...(followConcepts
                   ? { followConcepts: true }
                   : neededChanged(values.needs as string[] | undefined)
@@ -135,12 +155,14 @@ export function ItemDialog({
       cancelText={t("common.cancel")}
       confirmLoading={saving}
       destroyOnHidden
+      okButtonProps={{ disabled: kind === "questions" && !inputsComplete }}
       okText={t("common.save")}
       onCancel={onCancel}
       onOk={() => form.submit()}
       open
       title={t(`${PREFIX}.${itemId ? "editTitle" : "addTitle"}.${kind}`)}
-      width={640}
+      // A question's inputs take a row each: its dialog is wider.
+      width={kind === "questions" ? 820 : 640}
     >
       <Form form={form} initialValues={initial} layout="vertical" onFinish={save}>
         {kind === "scenarios" ? (
@@ -216,6 +238,17 @@ export function ItemDialog({
                 mode="multiple"
                 optionFilterProp="label"
                 options={drafted.map((item) => ({ label: item.name, value: refKey(item) }))}
+              />
+            </Form.Item>
+            <Form.Item label={t(`${PREFIX}.fields.inputs`)}>
+              <InputsEditor
+                drafted={drafted}
+                errors={inputErrors}
+                inputs={inputs}
+                onChange={setInputs}
+                onWindowChange={setRelativeWindow}
+                relativeWindow={relativeWindow}
+                spec={spec}
               />
             </Form.Item>
             {question?.needsSource === "person" ? (

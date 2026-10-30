@@ -51,6 +51,7 @@ function dev(extra: Partial<QuestionDev> = {}): QuestionDev {
     status: "ready",
     tests: [
       {
+        byServer: false,
         check: { outcome: "passed", reason: "" },
         edited: false,
         expect: "exists",
@@ -59,6 +60,7 @@ function dev(extra: Partial<QuestionDev> = {}): QuestionDev {
         text: "客户编码为 CUST-10001 的客户最近 30 天签订了哪些销售订单？",
       },
       {
+        byServer: false,
         check: { outcome: "not_checked", reason: "same_record_needs_two_values" },
         edited: false,
         expect: "same_record",
@@ -67,6 +69,7 @@ function dev(extra: Partial<QuestionDev> = {}): QuestionDev {
         text: "客户ID为 10001 的客户最近 30 天下了哪些销售订单？",
       },
       {
+        byServer: false,
         check: { outcome: "failed", reason: "query_failed: vega-backend 500" },
         edited: true,
         expect: "not_exists",
@@ -74,7 +77,17 @@ function dev(extra: Partial<QuestionDev> = {}): QuestionDev {
         kind: "not_exist",
         text: "客户编码为 CUST-99999 的客户最近 30 天下了哪些销售订单？",
       },
+      {
+        byServer: false,
+        check: { outcome: "failed", reason: "query_forbidden: vega-backend 403" },
+        edited: false,
+        expect: "exists",
+        id: "t5",
+        kind: "boundary",
+        text: "客户编码为 CUST-10001 的客户今天签订了哪些销售订单？",
+      },
     ],
+    testsNote: "",
     updateTime: 5,
     ...extra,
   };
@@ -126,21 +139,24 @@ describe("QuestionDevPanel", () => {
     renderPanel();
 
     expect(
-      await screen.findByText("3 条，其中 1 条通过数据核对，发布后回归会问"),
+      await screen.findByText("4 条，其中 1 条通过数据核对，发布后回归会问"),
     ).toBeInTheDocument();
     expect(screen.getByText("同义改写")).toBeInTheDocument();
-    expect(screen.getByText("应查到记录")).toBeInTheDocument();
+    expect(screen.getAllByText("应查到记录")).toHaveLength(2);
     expect(screen.getByText("通过")).toBeInTheDocument();
     expect(screen.getByText("未核对")).toBeInTheDocument();
     expect(screen.getByText("要核对是否为同一条记录，需要两个值")).toBeInTheDocument();
-    expect(screen.getByText("不通过")).toBeInTheDocument();
+    expect(screen.getAllByText("不通过")).toHaveLength(2);
     expect(screen.getByText("查询数据没有成功")).toBeInTheDocument();
+    expect(
+      screen.getByText("数据源拒绝了查询，请检查数据目录是否存在及访问权限"),
+    ).toBeInTheDocument();
     expect(screen.getByText("你改过")).toBeInTheDocument();
     expect(
       screen.getByText("哪些销售订单需要升级处理？需要升级规则，文档未规定。"),
     ).toBeInTheDocument();
     expect(screen.getByText("客户编码")).toBeInTheDocument();
-    expect(screen.queryByText(/same_record|query_failed|vega|paraphrase/)).toBeNull();
+    expect(screen.queryByText(/same_record|query_f|vega|403|paraphrase/)).toBeNull();
   });
 
   it("says when the tests are no longer asked, or what they rest on changed", async () => {
@@ -180,10 +196,14 @@ describe("QuestionDevPanel", () => {
   });
 
   it("edits a test's expectation, and removes one after asking", async () => {
+    // A test of no known kind keeps its expectation editable.
+    const untyped = dev();
+    untyped.tests[0] = { ...untyped.tests[0], kind: "" };
+    getQuestionDevMock.mockResolvedValue(untyped);
     editTestMock.mockResolvedValue(dev({ updateTime: 6 }));
     deleteTestMock.mockResolvedValue(dev({ deletedTests: 1, updateTime: 7 }));
     renderPanel();
-    await screen.findByText("同义改写");
+    await screen.findByText("变体");
 
     fireEvent.click(screen.getAllByRole("button", { name: /编\s*辑/ })[0]);
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "期望结果" }));
@@ -235,5 +255,46 @@ describe("QuestionDevPanel", () => {
     await screen.findAllByText("同义改写");
     expect(screen.queryByRole("button", { name: /编\s*辑/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "重新生成" })).toBeNull();
+  });
+
+  it("tells the server's tests from the Agent's, and fixes what a known kind expects", async () => {
+    getQuestionDevMock.mockResolvedValue(
+      dev({
+        tests: [
+          {
+            byServer: true,
+            check: { outcome: "passed", reason: "" },
+            edited: false,
+            expect: "exists",
+            id: "t1",
+            kind: "template",
+            text: "客户编码为 CUST-10001 的客户最近 30 天签订了哪些销售订单？",
+          },
+          {
+            byServer: false,
+            check: { outcome: "passed", reason: "" },
+            edited: false,
+            expect: "exists",
+            id: "t3",
+            kind: "paraphrase",
+            text: "CUST-10001 这家客户最近一个月签了哪些单？",
+          },
+        ],
+        testsNote: "inputs_untested",
+      }),
+    );
+    renderPanel();
+
+    expect(await screen.findByText("原题")).toBeInTheDocument();
+    expect(screen.getByText("系统生成")).toBeInTheDocument();
+    expect(screen.getByText("智能体改写")).toBeInTheDocument();
+    expect(
+      screen.getByText("测试问法没有覆盖这个问题的每个输入，建议重新生成。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/inputs_untested|template/)).toBeNull();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /编\s*辑/ })[0]);
+    expect(screen.getByText("期望结果由类型决定：应查到记录")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "期望结果" })).toBeNull();
   });
 });

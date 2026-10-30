@@ -361,6 +361,74 @@ export const bknProjectEnUS = {
           none: "No reason given",
         },
       },
+      sourceChanges: {
+        notice: "The structure of the tables changed; the draft still maps the old structure.",
+        view: "View changes",
+        title: "Changes to the tables' structure",
+        explain:
+          "Writing the changes into the draft makes added columns properties (unless the privacy or type rules leave them out), removes deleted columns with their properties, and retypes properties whose column changed type. Your decisions are kept; an object type that loses its identity needs one chosen again, and a relation type joining by a deleted column needs deciding again. Confirm and publish again afterwards.",
+        objectType: "{{name}} (table {{table}})",
+        onlyPublished:
+          "This object type exists only in the published version; writing into the draft leaves it as it is.",
+        added: 'New column "{{field}}"',
+        removed: 'The column of property "{{property}}" was deleted',
+        retyped: 'Property "{{property}}" changed type from {{from}} to {{to}}',
+        otherChange: 'Column "{{field}}" changed',
+        join: "; ",
+        excluded: {
+          privacy: "the privacy rules leave it out",
+          type: "its type is not supported, so it is left out",
+        },
+        unsupported: "the new type is not supported, so the property will be removed",
+        key: "it identifies or displays the records",
+        relations: "relation types joining by it: {{names}}",
+        relationLost:
+          'The link table of relation type "{{name}}" lost columns it joins by: {{fields}}',
+        missingTables: "These items' tables no longer exist and are not compared here: {{names}}",
+        unreachable: "Can't read the tables' structure right now. Try again later.",
+        inStep: "The tables match the draft; there are no changes to write.",
+        ownerOnly: "Only the project owner can write the changes into the draft.",
+        blocked: "The changes cannot be written into the draft right now. Try again later.",
+        draft: "Write changes into the draft",
+        done: "The changes are in the draft. Confirm and publish again.",
+        outdated:
+          "The draft or the tables changed since this was read. It has been read again; please confirm once more.",
+        loadFailed: "Can't read the changes to the tables right now",
+        error: {
+          NotOwner: "Only the project owner can write the changes into the draft.",
+          NoSourceChanges: "There are no changes to write.",
+          NotReady: "The draft is not ready yet, so changes cannot be written.",
+          ProjectArchived: "The project is archived and its draft cannot be changed.",
+          SourceUnreachable: "Can't read the tables' structure right now. Try again later.",
+          other: "Could not write the changes into the draft. Try again later.",
+        },
+      },
+      ask: {
+        title: "Ask AI",
+        question: "Your question",
+        placeholder:
+          "For example: is this object type's identity right? How should its description read?",
+        submit: "Ask",
+        asking: "Answering; this takes up to a minute",
+        notKept:
+          "AI reads only this object type as the draft defines it, never its data. Questions and answers are not kept.",
+        suggest: {
+          name: 'Suggests renaming it to "{{value}}"',
+          description: "Suggests the description: {{value}}",
+          identity: "Suggests the identity {{properties}}",
+        },
+        adopt: "Adopt",
+        adopted: "Adopted",
+        error: {
+          InvalidQuestion: "Enter a question of at most 500 characters.",
+          NotReady: "The draft is not ready yet, so questions cannot be asked.",
+          ItemNotFound: "This object type is no longer in the draft. Refresh the page.",
+          AskUnavailable: "AI cannot answer right now. Try again later.",
+          AskTimeout:
+            "AI took too long to answer. Try again later, or ask something more specific.",
+          other: "The question could not be asked. Try again later.",
+        },
+      },
       detail: {
         apiName: "ID",
         name: "Name",
@@ -416,6 +484,57 @@ export const bknProjectEnUS = {
       },
     },
     overview: {
+      dataSources: {
+        title: "Data sources",
+        loadFailed: "Can't read the state of the data sources right now",
+        network: {
+          label: "Knowledge network",
+          noun: "knowledge network",
+          ok: "Available",
+          missing: "Deleted",
+          unreachable: "Can't confirm right now",
+          not_bound: "No knowledge network yet",
+        },
+        catalogs: {
+          label: "Data catalogs",
+          noun: "data catalogs",
+          ok: "{{total}}, all present",
+          missing: "{{missing}} of {{total}} deleted",
+          unreachable: "Can't confirm right now",
+          not_bound: "No data catalogs chosen yet",
+        },
+        tables: {
+          label: "Tables",
+          noun: "tables",
+          ok: "{{total}}, all return data",
+          missing: "{{missing}} of {{total}} return no data",
+          unreachable: "Can't confirm right now",
+          not_bound: "Nothing adopted yet",
+        },
+        networkMissing:
+          "This project's knowledge network has been deleted; it can no longer be confirmed or published. You can archive the project.",
+        catalogsMissing:
+          "{{count}} of the project's data catalogs have been deleted. Choose the catalogs again, then draft again.",
+        catalogsMissing_one:
+          "{{count}} of the project's data catalogs has been deleted. Choose the catalogs again, then draft again.",
+        catalogsMissing_other:
+          "{{count}} of the project's data catalogs have been deleted. Choose the catalogs again, then draft again.",
+        tablesMissing:
+          "The tables behind {{count}} items were deleted or recreated, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
+        tablesMissing_one:
+          "The table behind {{count}} item was deleted or recreated, so it returns no data. Draft again to bind it to the current tables (your decisions will be discarded).",
+        tablesMissing_other:
+          "The tables behind {{count}} items were deleted or recreated, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
+        affected: {
+          object: 'Object type "{{name}}" (table {{table}}) returns no data',
+          relation: 'Relation type "{{name}}" (link table {{table}}) returns no data',
+        },
+        unreachable: "Can't check the {{what}} right now; will check again",
+        archived: "The project is archived. Unarchive it to choose catalogs or draft again.",
+        archive: "Archive project",
+        chooseCatalogs: "Choose catalogs again",
+        redraft: "Draft again",
+      },
       fields: {
         network: "Target network",
         owner: "Owner",
@@ -525,6 +644,9 @@ export const bknProjectEnUS = {
       button: "Confirm draft",
       buttonAgain: "Confirm again",
       blocked: {
+        network_missing: "The knowledge network has been deleted",
+        catalog_missing: "A data catalog has been deleted",
+        table_missing: "Some items' tables no longer exist",
         not_owner: "Only the project owner can confirm",
         running: "Still in progress. Try again shortly.",
         archived: "The project is archived and cannot be confirmed",
@@ -589,6 +711,21 @@ export const bknProjectEnUS = {
       failed: "The draft could not be confirmed. Try again later.",
     },
     requirements: {
+      export: {
+        button: "Export",
+        workshop: {
+          label: "Export for Workshop",
+          hint: "Capability questions and business rules, for building metrics, functions and skills",
+        },
+        eval: {
+          label: "Export for evaluation",
+          hint: "Knowledge questions, their inputs and test questions, for evaluation",
+        },
+        noValues:
+          "Exports contain no data values: questions are written as templates, with each record value replaced by a placeholder.",
+        notReady: "The requirements can be exported once they are drafted.",
+        failed: "Could not export. Try again later.",
+      },
       loadFailed: "The requirements cannot be read right now",
       version: "Requirements version {{version}} · {{status}}",
       status: {
@@ -636,6 +773,9 @@ export const bknProjectEnUS = {
       rejected_one: "Drafting left out {{count}} item",
       rejected_other: "Drafting left out {{count}} items",
       dev: {
+        byServer: "System generated",
+        byAgent: "Agent rewritten",
+        expectByKind: "The kind sets the expected result: {{expect}}",
         open: "Test questions and guidance",
         title: "Test questions",
         counts: "{{count}}, of which {{asked}} passed the data check and are asked after a release",
@@ -671,7 +811,24 @@ export const bknProjectEnUS = {
         text: "Test question",
         expect: "Expected result",
       },
+      inputReason: {
+        input_unknown_concept: "The requirements have no such concept",
+        input_concept_not_mapped: "The concept does not map to the ontology yet",
+        input_unknown_property: "The concept's object type has no such property",
+        input_not_in_template: "The question template does not use this input",
+        input_not_time: "A reference time takes a date or time property",
+        input_unknown_role: "The role is a given record or a reference time",
+        input_duplicate_name: "Another input has the same name",
+        other: "This input cannot be used",
+      },
+      testsNote: {
+        inputs_untested:
+          "The test questions do not cover every input of this question; generate them again.",
+        none_checkable: "No test question can be checked against the data.",
+        other: "",
+      },
       testKind: {
+        template: "Original question",
         paraphrase: "Paraphrase",
         boundary: "Boundary",
         not_exist: "Does not exist",
@@ -706,15 +863,32 @@ export const bknProjectEnUS = {
           "Checking for one record needs both values of one object type",
         composite_identity: "An identity of several fields cannot be checked for one record",
         query_failed: "Querying the data did not succeed",
+        query_forbidden:
+          "The data source refused the query; check that the catalog exists and is accessible",
         excluded_field: "The privacy rules keep this field from being read",
         no_value_in_data: "The data has no usable value",
         no_absent_value: "No value absent from the data could be found",
         value_not_in_text: "The test question does not say a value the documents gave",
         value_outside_slot: "The test question says a number, date or code with no basis",
         check_timeout: "The check took too long",
+        table_missing: "The table this test asks about was deleted",
         other: "It did not pass the check",
       },
       editing: {
+        inputs: {
+          hint: "Each input is a value the question is asked about, written {name} in its template.",
+          name: "Name",
+          concept: "Concept",
+          property: "Property",
+          role: "Role",
+          noConcepts: "No concept maps to the ontology yet",
+          add: "Add input",
+          remove: "Remove",
+          removeOne: "Remove input {{name}}",
+          none: "No inputs: the question is asked about no given record, so it gets no test questions.",
+          relativeWindow: "Counts the latest period up to the reference time",
+          refused: "Some inputs cannot be used; each says why below it.",
+        },
         stale:
           "Someone changed the requirements just now; they were read again, so make the change once more.",
         required: "Required",
@@ -748,6 +922,7 @@ export const bknProjectEnUS = {
           rules: "Edit the business rule",
         },
         fields: {
+          inputs: "Asked about",
           name: "Scenario name",
           actor: "Who",
           trigger: "When",
@@ -882,6 +1057,22 @@ export const bknProjectEnUS = {
         other: "Not uploaded",
       },
       questions: {
+        inputs: "Asked about",
+        input: "{{name}}: {{property}} of {{concept}}",
+        role: {
+          record: "A given record",
+          reference_time: "Reference time",
+        },
+        noInputs: "Asked about no given record",
+        propertyGone: "The ontology has no such property",
+        relativeWindow:
+          "Counts the latest period up to the reference time; the question says how long",
+        capabilityWithoutBasis:
+          "This capability question does not say which metric, function or skill it uses.",
+        propertyFromKey:
+          "Drafting gave no usable property, so the identity is used for now; check it",
+        referenceTimeUnbound:
+          "This question counts back from a reference time, but no input gives one, so no test questions are written from its template. Add a reference time to its inputs.",
         none: "No scenario questions yet.",
         type: "Question type",
         scenarios: "Scenarios",
@@ -980,6 +1171,7 @@ export const bknProjectEnUS = {
         holds: "In effect",
       },
       rejectedKind: {
+        input: "Question input",
         scenario: "Scenario",
         concept: "Concept",
         question: "Question",
@@ -989,6 +1181,7 @@ export const bknProjectEnUS = {
         other: "Item",
       },
       rejectedReason: {
+        window_without_reference_time: "It counts a period but gives no reference time",
         quote_not_found: "Its quote is not in the documents",
         unknown_document: "It quotes a document that does not exist",
         number_not_in_quote: "A number in it is not in the quote",
@@ -1039,6 +1232,7 @@ export const bknProjectEnUS = {
         check: {
           confirmed: "Draft confirmation",
           mapped: "Table mapping",
+          data_source: "Data source",
           names: "Repeated names",
           drift: "Live edits outside the project",
           check: "Data check",
@@ -1050,6 +1244,14 @@ export const bknProjectEnUS = {
           not_confirmed: "The draft is not confirmed yet.",
           confirmation_outdated: "The draft changed after it was confirmed; confirm it again.",
           mapping_missing: "These object types do not fully map to a table yet: {{names}}",
+          table_missing:
+            "The tables of {{count}} items no longer exist; the release would return no data for them. Draft and confirm again before publishing.",
+          table_missing_one:
+            "The table of {{count}} item no longer exists; the release would return no data for it. Draft and confirm again before publishing.",
+          table_missing_other:
+            "The tables of {{count}} items no longer exist; the release would return no data for them. Draft and confirm again before publishing.",
+          tableMissingItem: 'The table of "{{name}}" no longer exists',
+          data_source_unreadable: "Could not confirm the tables still exist. Review again shortly.",
           duplicate_names: "Same name as existing content: {{pairs}}",
           similar_names: "Name close to existing content: {{pairs}}",
           namePair: "{{added}} and {{other}}",
@@ -1153,6 +1355,54 @@ export const bknProjectEnUS = {
           other: "Could not publish; try again later.",
         },
       },
+      rollback: {
+        open: "Roll back",
+        title: "Switch consumers back to the previous version",
+        fromTo: "Consumers will switch back from {{from}} to {{to}}.",
+        fromToBase:
+          "Consumers will switch back from {{from}} to the knowledge network before the first release.",
+        onlySwitches:
+          "Rolling back only switches consumers: scheduled tasks run on the earlier version again. No data or ontology definitions are changed.",
+        schedules: "These {{count}} scheduled tasks stop on {{from}} and run on {{to}}:",
+        schedules_one: "This scheduled task stops on {{from}} and runs on {{to}}:",
+        schedules_other: "These {{count}} scheduled tasks stop on {{from}} and run on {{to}}:",
+        schedulesBase:
+          "These {{count}} scheduled tasks stop on {{from}} and run on the knowledge network before the first release:",
+        schedulesBase_one:
+          "This scheduled task stops on {{from}} and runs on the knowledge network before the first release:",
+        schedulesBase_other:
+          "These {{count}} scheduled tasks stop on {{from}} and run on the knowledge network before the first release:",
+        noSchedules: "No scheduled tasks to move.",
+        consumers: "Their owners switch back: {{kinds}}.",
+        consumer: {
+          agents: "agents",
+          mcp: "MCP services",
+          workshop: "Workshop apps",
+          eval: "evaluations",
+        },
+        unanswerable: "No longer answerable after rolling back",
+        affected: "Answers may change after rolling back",
+        answerableNew: "Answerable only after rolling back",
+        refusal: {
+          NoPrevious:
+            "Consumers already use the earliest version; there is none to switch back to.",
+          NotProjectRelease:
+            "The version in use was published by another project; only that project can roll it back.",
+          other: "Rolling back is not possible now.",
+        },
+        ownerOnly: "Only the project owner can roll back.",
+        confirm: "Switch consumers back",
+        loadFailed: "Can't read what rolling back would do right now",
+        outdated:
+          "Consumers or scheduled tasks changed since this was read. It has been read again; please confirm once more.",
+        done: "Consumers switched back to {{to}}.",
+        doneBase: "Consumers switched back to the knowledge network before the first release.",
+        error: {
+          NotOwner: "Only the project owner can roll back.",
+          ProjectArchived: "The project is archived and cannot be rolled back.",
+          other: "Could not roll back. Try again later.",
+        },
+      },
       switch: {
         title: "Switch consumers to v{{version}}",
         fromTo: "Consumers switch from v{{from}} to v{{to}}.",
@@ -1211,6 +1461,9 @@ export const bknProjectEnUS = {
         noResult: "No result",
         asItself: "Asked as written",
         missing: "Missing from the ontology: {{names}}",
+        missingTables: 'Not asked: the tables of "{{names}}" no longer exist',
+        dataSourceMissing:
+          "Data source unavailable: tables behind some items were deleted, so the questions that need them were not asked.",
         answer: "Show the answer",
         calls: "The answer queried {{count}} times",
         calls_one: "The answer queried once",
@@ -1225,6 +1478,7 @@ export const bknProjectEnUS = {
           needs_values: "Questions lack specific values",
           failed: "Did not finish",
           no_questions: "No scenario questions",
+          data_source_missing: "Data source unavailable",
           other: "Unknown",
         },
         runError: {
@@ -1240,6 +1494,7 @@ export const bknProjectEnUS = {
           needs_values: "Lacks a specific value",
           not_answered: "Not answerable",
           error: "Not asked",
+          data_source_missing: "Table no longer exists",
           other: "Unknown",
         },
         expect: {

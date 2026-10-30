@@ -111,6 +111,8 @@ export type RegressionResult = {
   answer: string;
   errorCode: string;
   missing: ReleaseItem[];
+  /** For `data_source_missing`: the items whose tables are gone, so the question was not asked. */
+  missingTables: ReleaseItem[];
   outcome: string;
   questionId: string;
   reason: string;
@@ -133,4 +135,25 @@ export type Regression = {
   /** `running`, `passed`, `not_passed`, `needs_values`, `failed` or `no_questions`. */
   status: string;
   version: string;
+};
+
+/** A network of the lineage: a release's, by its version, or the network it started from. */
+export type RollbackNetwork = { base: boolean; networkId: string; version: string };
+
+/**
+ * What rolling consumers back would do: the network in use and the one before it, the schedules
+ * that move back, the consumers whose owners switch them, and the scenario questions it changes.
+ */
+export type RollbackPlan = {
+  /** Kinds of consumer their owners switch back themselves: `agents`, `mcp`, `workshop`, `eval`. */
+  consumers: string[];
+  from: RollbackNetwork;
+  questions: ReleaseReview["questions"];
+  /** Why rolling back cannot go, such as `Rollback.NoPrevious`. */
+  refusals: string[];
+  schedules: { id: string; name: string }[];
+  /** Stands for the plan; rolling back refuses a plan that no longer stands. */
+  signature: string;
+  /** null when there is no network before the one in use. */
+  to: RollbackNetwork | null;
 };

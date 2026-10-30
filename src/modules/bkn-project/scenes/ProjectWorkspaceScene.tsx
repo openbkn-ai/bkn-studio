@@ -159,6 +159,9 @@ export function ProjectWorkspaceScene({
             <ProjectOverview
               latestRelease={latestRelease}
               networkName={networkName}
+              onProjectChange={(next) =>
+                setLoaded((current) => (current ? { ...current, project: next } : current))
+              }
               ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
               project={project}
             />
@@ -181,6 +184,7 @@ export function ProjectWorkspaceScene({
           ) : section === "release" ? (
             <ProjectReleasePage
               onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
+              onReleaseChanged={() => void load()}
               ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
               project={project}
             />

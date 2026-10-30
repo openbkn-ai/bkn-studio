@@ -21,6 +21,7 @@ import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityD
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
 import { ConfirmDraft } from "@/modules/bkn-project/components/model/ConfirmDraftDialog";
 import { UnderstandingBar } from "@/modules/bkn-project/components/model/UnderstandingBar";
+import { SourceChangesNotice } from "@/modules/bkn-project/components/model/SourceChanges";
 import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import {
   adoptBlocker,
@@ -477,6 +478,17 @@ export function ProjectModel({
           type="warning"
         />
       ) : null}
+      {draft?.status === "ready" ? (
+        <SourceChangesNotice
+          archived={project.archived}
+          draftUpdateTime={draft.updateTime}
+          onDrafted={(next) => {
+            setDraft(next);
+            setTab("changes");
+          }}
+          projectId={project.id}
+        />
+      ) : null}
       {unadoptedEnds.length ? (
         <Alert
           message={t("bknProject.model.notice.unadoptedEnds", { count: unadoptedEnds.length })}
@@ -679,6 +691,20 @@ export function ProjectModel({
             />
           )}
           <DraftObjectDrawer
+            ask={
+              draft.status === "ready"
+                ? {
+                    canAdopt: !project.archived,
+                    onAdopt: async (objectType, suggestion) =>
+                      (suggestion.field === "identity"
+                        ? await sendIdentity(objectType, suggestion.properties)
+                        : await sendEdit("object_types", objectType.id, {
+                            [suggestion.field]: suggestion.value,
+                          })) === "done",
+                    projectId: project.id,
+                  }
+                : undefined
+            }
             catalogNames={catalogNames}
             excluded={items.excluded}
             objectType={items.objectTypes.find((item) => item.id === openId) ?? null}

@@ -280,6 +280,11 @@ describe("release.service", () => {
             verdict: "answered",
           },
           { error_code: "unreachable", outcome: "error", question_id: "q7", tool_uses: null },
+          {
+            missing_tables: [{ id: "ot_po", kind: "object_type", name: "PO" }],
+            outcome: "data_source_missing",
+            question_id: "q7",
+          },
         ],
         runner: { id: "u1", type: "user" },
         start_time: 1,
@@ -302,6 +307,7 @@ describe("release.service", () => {
           answer: "A",
           errorCode: "",
           missing: [],
+          missingTables: [],
           outcome: "passed",
           questionId: "q1",
           reason: "R",
@@ -312,7 +318,19 @@ describe("release.service", () => {
           answer: "",
           errorCode: "unreachable",
           missing: [],
+          missingTables: [],
           outcome: "error",
+          questionId: "q7",
+          reason: "",
+          testId: "",
+          toolStatuses: [],
+        },
+        {
+          answer: "",
+          errorCode: "",
+          missing: [],
+          missingTables: [{ id: "ot_po", kind: "object_type", name: "PO" }],
+          outcome: "data_source_missing",
           questionId: "q7",
           reason: "",
           testId: "",
@@ -343,5 +361,72 @@ describe("release.service", () => {
     expect(mockPost).toHaveBeenCalledWith(`${prefix}/releases/n_v1_0_2/regression:run`, undefined, {
       skipErrorToast: true,
     });
+  });
+
+  it("reads the rollback plan, null lists as empty, and rolls back with its signature", async () => {
+    const { getRollbackPlan, rollBack } = await importService();
+    mockGet.mockResolvedValueOnce({
+      data: {
+        consumers: ["agents"],
+        from: { base: false, network_id: "n_v1_0_1", version: "1.0.1" },
+        questions: {
+          affected: null,
+          answerable_new: null,
+          total: 1,
+          unanswerable: [
+            { id: "q1", missing: [{ id: "bom", kind: "object_type", name: "BOM" }], text: "Q1" },
+          ],
+          unjudged: 0,
+        },
+        refusals: null,
+        schedules: [{ name: "Nightly" }],
+        signature: "sig",
+        to: { base: true, network_id: "n" },
+      },
+    });
+    expect(await getRollbackPlan("p/1")).toEqual({
+      consumers: ["agents"],
+      from: { base: false, networkId: "n_v1_0_1", version: "1.0.1" },
+      questions: {
+        affected: [],
+        answerableNew: [],
+        total: 1,
+        unanswerable: [
+          {
+            id: "q1",
+            missing: [{ id: "bom", kind: "object_type", name: "BOM" }],
+            text: "Q1",
+            unconnected: [],
+          },
+        ],
+        unjudged: 0,
+      },
+      refusals: [],
+      schedules: [{ id: "0", name: "Nightly" }],
+      signature: "sig",
+      to: { base: true, networkId: "n", version: "" },
+    });
+    expect(mockGet).toHaveBeenCalledWith(`${prefix}/rollback-plan`, { skipErrorToast: true });
+
+    mockGet.mockResolvedValueOnce({
+      data: {
+        consumers: null,
+        from: { base: true, network_id: "n" },
+        refusals: [{ code: "Rollback.NoPrevious" }],
+        schedules: null,
+        signature: "s2",
+      },
+    });
+    const none = await getRollbackPlan("p/1");
+    expect(none.to).toBeNull();
+    expect(none.refusals).toEqual(["Rollback.NoPrevious"]);
+
+    mockPost.mockResolvedValueOnce({ data: {} });
+    await rollBack("p/1", "sig");
+    expect(mockPost).toHaveBeenCalledWith(
+      `${prefix}/rollbacks`,
+      { signature: "sig" },
+      { skipErrorToast: true },
+    );
   });
 });

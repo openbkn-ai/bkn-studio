@@ -5,12 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* The platform's white page surface under the header, the navigation and every section. */
 .workspace {
+  composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+  /* The header and the navigation run to the edges, as before. */
+  padding: 0;
 }
 
 .head {
@@ -84,7 +88,9 @@
   font-weight: 700;
 }
 
+/* Loading and not-found sit on the same surface as the workspace. */
 .center {
+  composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   display: flex;
   flex: 1;
   align-items: center;

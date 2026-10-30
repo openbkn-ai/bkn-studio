@@ -72,14 +72,36 @@ export type RequirementConcept = Cited & {
   term: string;
 };
 
+/**
+ * What a question is asked about: `{name}` in its template stands for a value of the concept's
+ * property. `role` is `record` (a given record) or `reference_time` (the moment a window ends).
+ */
+export type QuestionInput = {
+  conceptId: string;
+  name: string;
+  property: string;
+  /** Drafting named no property of the object type, so the server took its one-field key. */
+  propertyFromKey?: boolean;
+  role: string;
+};
+
 export type RequirementQuestion = Cited & {
   answerShape: string;
   id: string;
+  /**
+   * Null when drafted before questions had inputs, or when every input given was dropped: then
+   * nothing is said. An empty list: the question is asked about no given value.
+   */
+  inputs: QuestionInput[] | null;
   /** `knowledge` (the ontology answers it) or `capability` (another team builds what it needs). */
   layer: string;
   needs: RequirementItemRef[];
   /** `concepts` when the needs follow its concepts, `person` when someone set them. */
   needsSource: string;
+  /** Computed on read: `capability_without_basis`. */
+  notes: string[];
+  /** The question counts the latest period up to its reference time. */
+  relativeWindow: boolean;
   scenarioIds: string[];
   template: string;
   text: string;
@@ -149,12 +171,14 @@ export type Requirements = {
 
 /** A test question asked in its scenario question's place, checked against the data. */
 export type QuestionTest = {
+  /** Written by the server from the question's template, not by the Agent. */
+  byServer: boolean;
   check: { outcome: string; reason: string };
   edited: boolean;
   /** `exists`, `not_exists` or `same_record`. */
   expect: string;
   id: string;
-  /** `paraphrase`, `boundary`, `not_exist`, `variant`, or empty. */
+  /** `template`, `paraphrase`, `boundary`, `not_exist`, `variant`, or empty. */
   kind: string;
   text: string;
 };
@@ -177,5 +201,7 @@ export type QuestionDev = {
   /** `generating`, `ready` or `failed`. */
   status: string;
   tests: QuestionTest[];
+  /** A note on the tests as a whole: `inputs_untested`, `none_checkable`; empty when none. */
+  testsNote: string;
   updateTime: number;
 };

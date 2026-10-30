@@ -42,12 +42,34 @@ export type ProjectNextAction = {
   suggestedVersion?: string;
 };
 
+/** Whether what a project reads still exists: its network, its catalogs or the tables it adopted. */
+export type DataSourceState = "missing" | "not_bound" | "ok" | "unreachable";
+
+export type DataSourceCount = { missing: number; state: DataSourceState; total: number };
+
+/** An adopted item whose table no longer returns data; a relation type's is its link table. */
+export type AffectedItem = {
+  id: string;
+  kind: "object_types" | "relation_types";
+  name: string;
+  /** The source table's name. */
+  table: string;
+};
+
+export type DataSources = {
+  catalogs: DataSourceCount;
+  network: DataSourceCount;
+  tables: DataSourceCount & { affected: AffectedItem[] };
+};
+
 export type ProjectStatus = {
   blockers: ProjectBlocker[];
   /** The check of the last confirmation; `current` when it checked the draft as it is. */
   check: { current: boolean; status: string } | null;
   /** The last confirmation; `current` when the draft has not changed since. */
   confirmation: { current: boolean; time: number } | null;
+  /** null while drafting: what is read is checked from the first draft on. */
+  dataSources: DataSources | null;
   draft: { decisions: number; placeholders: number; status: string; updateTime: number } | null;
   nextActions: ProjectNextAction[];
   /** The project's release, once the newest release is its own and came after its confirmation. */

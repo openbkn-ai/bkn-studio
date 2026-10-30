@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +19,7 @@ const syncBranchMock = vi.hoisted(() => vi.fn());
 const getSwitchPlanMock = vi.hoisted(() => vi.fn());
 const switchConsumersMock = vi.hoisted(() => vi.fn());
 const getRegressionMock = vi.hoisted(() => vi.fn());
+const getRollbackPlanMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -35,12 +36,14 @@ vi.mock("@/modules/bkn-project/services/release.service", async (importOriginal)
   commitDrift: vi.fn(),
   getRegression: getRegressionMock,
   getReleaseReview: getReleaseReviewMock,
+  getRollbackPlan: getRollbackPlanMock,
   getSwitchPlan: getSwitchPlanMock,
   publishRelease: publishReleaseMock,
   switchConsumers: switchConsumersMock,
   syncBranch: syncBranchMock,
 }));
 
+import { REGRESSION_POLL_MS } from "@/modules/bkn-project/services/release.service";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { ReleasePublish } from "./ReleasePublish";
@@ -50,6 +53,7 @@ function status(extra: Partial<ProjectStatus> = {}): ProjectStatus {
     blockers: [],
     check: { current: true, status: "passed" },
     confirmation: { current: true, time: 1 },
+    dataSources: null,
     draft: { decisions: 0, placeholders: 0, status: "ready", updateTime: 1 },
     nextActions: [
       {
@@ -305,6 +309,71 @@ describe("ReleasePublish", () => {
     await waitFor(() => expect(getReleaseReviewMock).toHaveBeenCalledTimes(2));
   });
 
+  it("names the items whose tables are gone, which no one can accept", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        blocked: true,
+        checks: [
+          { code: "mapped", passed: true },
+          {
+            code: "data_source",
+            details: [
+              { id: "ot_customer", kind: "object_type", name: "客户" },
+              { id: "rt_order", kind: "relation_type", name: "下单" },
+            ],
+            passed: false,
+            reason: "table_missing",
+          },
+        ],
+      }),
+    );
+    renderPublish();
+
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(await view.findByText("数据来源")).toBeInTheDocument();
+    expect(
+      view.getByText(
+        "2 个条目的数据表已不存在，发布后查不到它们的数据。请重新起草并确认后再发布。",
+      ),
+    ).toBeInTheDocument();
+    expect(view.getByText("「客户」的数据表已不存在")).toBeInTheDocument();
+    expect(view.getByText("「下单」的数据表已不存在")).toBeInTheDocument();
+    expect(view.queryByText(/ot_customer|table_missing/)).toBeNull();
+    expect(view.queryByRole("checkbox")).toBeNull();
+    expect(publishButton()).toBeDisabled();
+  });
+
+  it("offers to roll back once consumers use the release, and opens what it would do", async () => {
+    getRegressionMock.mockResolvedValue(null);
+    getRollbackPlanMock.mockResolvedValue({
+      consumers: [],
+      from: { base: false, networkId: "n_v1_0_1", version: "1.0.1" },
+      questions: { affected: [], answerableNew: [], total: 0, unanswerable: [], unjudged: 0 },
+      refusals: [],
+      schedules: [],
+      signature: "s",
+      to: { base: false, networkId: "n_v1_0_0", version: "1.0.0" },
+    });
+    const view = renderPublish(status({ nextActions: [] }));
+    expect(screen.queryByRole("button", { name: /^回\s*退$/ })).toBeNull();
+    view.unmount();
+
+    renderPublish(
+      status({
+        nextActions: [
+          { accepts: [], action: "review_rollback", allowed: true, discardsDecisions: 0 },
+        ],
+        release: { inUse: true, networkId: "n_v1_0_1", version: "1.0.1" },
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^回\s*退$/ }));
+    expect(
+      await (await dialog()).findByText("使用方将从 v1.0.1 切回 v1.0.0。"),
+    ).toBeInTheDocument();
+  });
+
   it("lets others read the review, never publish", async () => {
     renderPublish(status(), false);
 
@@ -365,6 +434,49 @@ describe("ReleasePublish", () => {
     await waitFor(() => expect(switchConsumersMock).toHaveBeenCalledWith("p1", "n_v1_0_2"));
     expect(messageMock.success).toHaveBeenCalledWith("使用方已切换到 v1.0.2。");
     expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("follows a running regression until it ends, so its tag does not stay running", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const regression = {
+      attempt: 1,
+      error: "",
+      finishTime: 0,
+      networkId: "n_v1_0_2",
+      questions: [],
+      results: [],
+      runnerId: "me",
+      startTime: 1,
+      status: "running",
+      version: "1.0.2",
+    };
+    // A failed read in between does not stop following it.
+    getRegressionMock
+      .mockResolvedValueOnce(regression)
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValue({
+        ...regression,
+        finishTime: 2,
+        results: [{ outcome: "passed", questionId: "q1" }],
+        status: "passed",
+      });
+    renderPublish(
+      status({
+        release: { inUse: true, networkId: "n_v1_0_2", version: "1.0.2" },
+        stage: "published",
+      }),
+    );
+
+    expect(await screen.findByText("运行中")).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(REGRESSION_POLL_MS));
+    expect(screen.getByText("运行中")).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(REGRESSION_POLL_MS));
+    expect(await screen.findByText("1 / 1 次提问通过")).toBeInTheDocument();
+    expect(screen.queryByText("运行中")).toBeNull();
+    const reads = getRegressionMock.mock.calls.length;
+    await act(() => vi.advanceTimersByTimeAsync(REGRESSION_POLL_MS * 2));
+    expect(getRegressionMock.mock.calls.length).toBe(reads);
+    vi.useRealTimers();
   });
 
   it("says the original network only when consumers are on it, never for an unread version", async () => {

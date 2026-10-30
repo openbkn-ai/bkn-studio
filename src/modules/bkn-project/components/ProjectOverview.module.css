@@ -150,3 +150,22 @@
   gap: 2px;
   font-size: 13px;
 }
+
+.notices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.notices:empty {
+  display: none;
+}
+
+.affected {
+  max-height: 240px;
+  margin: 4px 0 0;
+  padding-left: 18px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}

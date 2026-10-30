@@ -54,10 +54,21 @@ vi.mock("@/modules/bkn-project/components/ProjectModel", () => ({
 }));
 
 vi.mock("@/modules/bkn-project/components/ProjectReleasePage", () => ({
-  ProjectReleasePage: ({ onGoToModel }: { onGoToModel: () => void }) => (
-    <button onClick={onGoToModel} type="button">
-      release page
-    </button>
+  ProjectReleasePage: ({
+    onGoToModel,
+    onReleaseChanged,
+  }: {
+    onGoToModel: () => void;
+    onReleaseChanged?: () => void;
+  }) => (
+    <>
+      <button onClick={onGoToModel} type="button">
+        release page
+      </button>
+      <button onClick={onReleaseChanged} type="button">
+        publish
+      </button>
+    </>
   ),
 }));
 
@@ -65,6 +76,11 @@ vi.mock("@/modules/bkn-project/components/requirements/ProjectRequirements", () 
   ProjectRequirements: ({ ownerIsCaller }: { ownerIsCaller: boolean }) => (
     <div>requirements page {ownerIsCaller ? "owner" : "reader"}</div>
   ),
+}));
+
+// The data sources read the project's status, tested on their own.
+vi.mock("@/modules/bkn-project/components/DataSourceHealth", () => ({
+  DataSourceHealth: () => null,
 }));
 
 vi.mock("@/modules/bkn-project/components/draft/DraftConceptGraph", () => ({
@@ -385,6 +401,22 @@ describe("ProjectWorkspaceScene", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "release page" }));
     expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/model");
+  });
+
+  it("reads the live version again once something is published", async () => {
+    getLatestReleaseMock.mockResolvedValueOnce(null).mockResolvedValue({
+      createTime: 2,
+      networkId: "orders_v1_0_0",
+      version: "1.0.0",
+    });
+    renderScene("release");
+
+    expect(await screen.findByText("bknProject.workspace.unpublished")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "publish" }));
+    expect(
+      await screen.findByText('bknProject.workspace.live:{"version":"1.0.0"}'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("bknProject.workspace.unpublished")).toBeNull();
   });
 
   it("shows the requirements of the project", async () => {

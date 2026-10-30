@@ -19,6 +19,8 @@ import type {
   ReleaseItem,
   ReleaseQuestion,
   ReleaseReview,
+  RollbackNetwork,
+  RollbackPlan,
   SwitchPlan,
 } from "@/modules/bkn-project/types/release";
 
@@ -100,6 +102,7 @@ type BackendRegression = {
         answer?: string;
         error_code?: string;
         missing?: BackendItem[] | null;
+        missing_tables?: BackendItem[] | null;
         outcome: string;
         question_id: string;
         reason?: string;
@@ -126,8 +129,15 @@ const mapQuestion = (question: BackendQuestion): ReleaseQuestion => ({
   })),
 });
 
+const mapQuestions = (questions: BackendReview["questions"]): ReleaseReview["questions"] => ({
+  affected: (questions?.affected ?? []).map(mapQuestion),
+  answerableNew: (questions?.answerable_new ?? []).map(mapQuestion),
+  total: questions?.total ?? 0,
+  unanswerable: (questions?.unanswerable ?? []).map(mapQuestion),
+  unjudged: questions?.unjudged ?? 0,
+});
+
 export function mapReview(review: BackendReview): ReleaseReview {
-  const questions = review.questions;
   return {
     accepts: review.accepts ?? [],
     blocked: review.blocked,
@@ -151,13 +161,7 @@ export function mapReview(review: BackendReview): ReleaseReview {
       ...(check.accept ? { accept: check.accept } : {}),
       ...(check.details === undefined ? {} : { details: check.details }),
     })),
-    questions: {
-      affected: (questions?.affected ?? []).map(mapQuestion),
-      answerableNew: (questions?.answerable_new ?? []).map(mapQuestion),
-      total: questions?.total ?? 0,
-      unanswerable: (questions?.unanswerable ?? []).map(mapQuestion),
-      unjudged: questions?.unjudged ?? 0,
-    },
+    questions: mapQuestions(review.questions),
     refusals: (review.refusals ?? []).map(({ code }) => code),
     release: {
       baseVersion: review.release.base_version,
@@ -192,6 +196,7 @@ export const mapRegression = (regression: BackendRegression): Regression => ({
     answer: result.answer ?? "",
     errorCode: result.error_code ?? "",
     missing: items(result.missing),
+    missingTables: items(result.missing_tables),
     outcome: result.outcome,
     questionId: result.question_id,
     reason: result.reason ?? "",
@@ -338,6 +343,73 @@ export async function switchConsumers(projectId: string, toNetworkId: string): P
     { to_network_id: toNetworkId },
     { skipErrorToast: true },
   );
+}
+
+type BackendRollbackNetwork = { base: boolean; network_id: string; version?: string };
+
+const rollbackNetwork = (network: BackendRollbackNetwork): RollbackNetwork => ({
+  base: network.base,
+  networkId: network.network_id,
+  version: network.version ?? "",
+});
+
+/** What rolling consumers back to the network before the one in use would do; changes nothing. */
+export async function getRollbackPlan(projectId: string): Promise<RollbackPlan> {
+  if (useMock) {
+    const at = mockReleases.findIndex((release) => release.networkId === mockInUse);
+    const previous = at > 0 ? mockReleases[at - 1] : null;
+    return wait({
+      consumers: ["agents", "mcp", "workshop", "eval"],
+      from: { base: at < 0, networkId: mockInUse, version: at < 0 ? "" : mockReleases[at].version },
+      questions: { affected: [], answerableNew: [], total: 0, unanswerable: [], unjudged: 0 },
+      refusals: at < 0 ? ["Rollback.NoPrevious"] : [],
+      schedules: [{ id: "s1", name: "Nightly delay warning" }],
+      signature: `mock-${mockInUse}`,
+      to: previous
+        ? { base: false, networkId: previous.networkId, version: previous.version }
+        : at === 0
+          ? { base: true, networkId: "supply_chain", version: "" }
+          : null,
+    });
+  }
+  const response = await http.get<{
+    consumers: string[] | null;
+    from: BackendRollbackNetwork;
+    questions?: BackendReview["questions"];
+    refusals: { code: string }[] | null;
+    schedules: { id?: string; name: string }[] | null;
+    signature: string;
+    to?: BackendRollbackNetwork | null;
+  }>(`${projectPath(projectId)}/rollback-plan`, { skipErrorToast: true });
+  const plan = response.data;
+  return {
+    consumers: plan.consumers ?? [],
+    from: rollbackNetwork(plan.from),
+    questions: mapQuestions(plan.questions),
+    refusals: (plan.refusals ?? []).map(({ code }) => code),
+    schedules: (plan.schedules ?? []).map((schedule, index) => ({
+      id: schedule.id ?? String(index),
+      name: schedule.name,
+    })),
+    signature: plan.signature,
+    to: plan.to ? rollbackNetwork(plan.to) : null,
+  };
+}
+
+/**
+ * Switches consumers back as the plan read said, while it still stands. Only schedules move and
+ * the switch is recorded: no data or definitions are rewritten.
+ */
+export async function rollBack(projectId: string, signature: string): Promise<void> {
+  if (useMock) {
+    const plan = await getRollbackPlan(projectId);
+    if (plan.signature !== signature) {
+      throw refused(409, "Rollback.PlanOutdated");
+    }
+    mockInUse = plan.to?.networkId ?? mockInUse;
+    return;
+  }
+  await http.post(`${projectPath(projectId)}/rollbacks`, { signature }, { skipErrorToast: true });
 }
 
 /** The regression of a release of the project, or null before one exists. */
@@ -543,6 +615,7 @@ function mockRegression(networkId: string): Regression | null {
             answer: "Orders **SO-1** and **SO-7** are late.",
             errorCode: "",
             missing: [],
+            missingTables: [],
             outcome: "passed",
             questionId: "q1",
             reason: "The answer lists the late orders from the network.",
@@ -553,6 +626,7 @@ function mockRegression(networkId: string): Regression | null {
             answer: "There is no customer C-999.",
             errorCode: "",
             missing: [],
+            missingTables: [],
             outcome: "passed",
             questionId: "q1",
             reason: "The customer does not exist, as expected.",
@@ -563,6 +637,7 @@ function mockRegression(networkId: string): Regression | null {
             answer: "",
             errorCode: "",
             missing: [{ id: "material_bom", kind: "object_type", name: "material_bom" }],
+            missingTables: [],
             outcome: "missing",
             questionId: "q3",
             reason: "",

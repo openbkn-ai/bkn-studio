@@ -22,6 +22,7 @@ import {
   refusalText,
 } from "@/modules/bkn-project/components/publish/messages";
 import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
+import { useOnSettled } from "@/modules/bkn-project/components/release/useOnSettled";
 import {
   buildOntologyIndex,
   getOntologyIndex,
@@ -49,7 +50,16 @@ const buildable = (item: IndexItem) =>
  * Confirming starts the builds as the person who confirmed; the owner can start them again once
  * what stopped them is solved. A build in progress is read again until it ends.
  */
-export function IndexReadiness({ canRun, projectId }: { canRun: boolean; projectId: string }) {
+export function IndexReadiness({
+  canRun,
+  onSettled,
+  projectId,
+}: {
+  canRun: boolean;
+  /** The builds ended: what may be done next has changed. */
+  onSettled?: () => void;
+  projectId: string;
+}) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   // undefined while loading, null before the first draft.
@@ -97,6 +107,7 @@ export function IndexReadiness({ canRun, projectId }: { canRun: boolean; project
     const timer = window.setTimeout(() => void load(), INDEX_POLL_MS);
     return () => window.clearTimeout(timer);
   }, [inProgress, load, reads]);
+  useOnSettled(inProgress, onSettled);
 
   const build = async () => {
     setBuilding(true);

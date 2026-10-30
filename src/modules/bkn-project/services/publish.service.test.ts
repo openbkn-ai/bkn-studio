@@ -70,6 +70,7 @@ describe("publish.service", () => {
       blockers: [],
       check: null,
       confirmation: { current: false, time: 20 },
+      dataSources: null,
       draft: { decisions: 2, placeholders: 0, status: "ready", updateTime: 30 },
       nextActions: [
         {
@@ -86,6 +87,64 @@ describe("publish.service", () => {
       undecided: 3,
       unresolvedConflicts: 0,
     });
+  });
+
+  it("reads what of the data sources is gone, and the items it leaves without data", async () => {
+    const { getProjectStatus } = await importService();
+    mockGet.mockResolvedValue({
+      data: {
+        blockers: [
+          { code: "catalog_missing", count: 1, waiting_for: "owner" },
+          { code: "table_missing", count: 2, waiting_for: "owner" },
+        ],
+        data_sources: {
+          catalogs: { missing: 1, state: "missing", total: 1 },
+          network: { missing: 0, state: "ok", total: 1 },
+          tables: {
+            affected: [
+              { id: "ot1", kind: "object_types", name: "客户", table: "customers" },
+              { id: "rt1", kind: "relation_types", name: "下单", table: "order_links" },
+            ],
+            missing: 2,
+            state: "missing",
+            total: 10,
+          },
+        },
+        next_actions: [
+          { action: "set_catalogs", allowed: true, method: "PUT", path: "x" },
+          { action: "archive", allowed: true, method: "POST", path: "y" },
+          { action: "confirm_draft", allowed: false, reason: "catalog_missing" },
+        ],
+        stage: "archived",
+        stale: null,
+        undecided: 0,
+      },
+    });
+
+    const status = await getProjectStatus("p/1");
+
+    expect(status.dataSources).toEqual({
+      catalogs: { missing: 1, state: "missing", total: 1 },
+      network: { missing: 0, state: "ok", total: 1 },
+      tables: {
+        affected: [
+          { id: "ot1", kind: "object_types", name: "客户", table: "customers" },
+          { id: "rt1", kind: "relation_types", name: "下单", table: "order_links" },
+        ],
+        missing: 2,
+        state: "missing",
+        total: 10,
+      },
+    });
+    expect(status.blockers.map((blocker) => blocker.code)).toEqual([
+      "catalog_missing",
+      "table_missing",
+    ]);
+    expect(status.nextActions.map((action) => action.action)).toEqual([
+      "set_catalogs",
+      "archive",
+      "confirm_draft",
+    ]);
   });
 
   it("reads the release a published project has, and the version a review suggests", async () => {
