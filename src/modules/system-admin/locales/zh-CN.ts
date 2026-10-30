@@ -1203,6 +1203,10 @@ export const systemAdminZhCN = {
       updateTime: "更新时间",
       promptVersion: "Prompt v{{version}}",
       configVersion: "Agent v{{version}}",
+      legacyBuiltinNames: {
+        business_provenance_claim_attribution: "业务溯源结论识别Agent",
+        business_provenance_optimizer: "知识网络优化Agent",
+      },
       builtinNames: {
         graph_explorer: "图探索",
         studio_smart_qa: "Studio智能问答",

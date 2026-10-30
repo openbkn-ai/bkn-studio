@@ -18,13 +18,10 @@ const BUILTIN_AGENT_IDS: readonly string[] = [
 ];
 
 // Recognize names stored before the display-only Agent suffix was removed.
-const LEGACY_BUILTIN_NAMES: Record<string, readonly string[]> = {
-  business_provenance_claim_attribution: [
-    "业务溯源结论识别Agent",
-    "Business Provenance Claim Attribution Agent",
-  ],
-  business_provenance_optimizer: ["知识网络优化Agent", "Knowledge Network Optimizer Agent"],
-};
+const LEGACY_BUILTIN_IDS: readonly string[] = [
+  "business_provenance_claim_attribution",
+  "business_provenance_optimizer",
+];
 
 /** Only translate shipped names; a renamed built-in or an unknown Agent keeps its stored name. */
 export function agentDisplayName(agent: { agent_id: string; name: string }, t: TFunction): string {
@@ -33,7 +30,11 @@ export function agentDisplayName(agent: { agent_id: string; name: string }, t: T
   const shippedNames = [
     t(key, { lng: "zh-CN" }),
     t(key, { lng: "en-US" }),
-    ...(LEGACY_BUILTIN_NAMES[agent.agent_id] ?? []),
+    ...(LEGACY_BUILTIN_IDS.includes(agent.agent_id)
+      ? ["zh-CN", "en-US"].map((lng) =>
+          t(`systemAdmin.agentConfig.legacyBuiltinNames.${agent.agent_id}`, { lng }),
+        )
+      : []),
   ];
   return shippedNames.includes(agent.name) ? t(key) : agent.name;
 }

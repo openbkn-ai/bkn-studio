@@ -1301,6 +1301,10 @@ export const systemAdminEnUS = {
       updateTime: "Updated",
       promptVersion: "Prompt v{{version}}",
       configVersion: "Agent v{{version}}",
+      legacyBuiltinNames: {
+        business_provenance_claim_attribution: "Business Provenance Claim Attribution Agent",
+        business_provenance_optimizer: "Knowledge Network Optimizer Agent",
+      },
       builtinNames: {
         graph_explorer: "Graph Explorer",
         studio_smart_qa: "Studio Smart Q&A",
