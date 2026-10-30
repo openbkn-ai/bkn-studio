@@ -58,6 +58,7 @@ function regression(extra: Partial<Regression> = {}): Regression {
         answer: "共 **6** 条订单。",
         errorCode: "",
         missing: [],
+        missingTables: [],
         outcome: "passed",
         questionId: "q1",
         reason: "回答列出了该客户在时间窗内的订单。",
@@ -68,6 +69,7 @@ function regression(extra: Partial<Regression> = {}): Regression {
         answer: "没有这个客户。",
         errorCode: "",
         missing: [],
+        missingTables: [],
         outcome: "passed",
         questionId: "q1",
         reason: "确认不存在该客户。",
@@ -78,6 +80,7 @@ function regression(extra: Partial<Regression> = {}): Regression {
         answer: "知识网络里没有审批规则。",
         errorCode: "",
         missing: [],
+        missingTables: [],
         outcome: "not_answered",
         questionId: "q7",
         reason: "网络缺少审批规则和采购经理角色，无法判定哪些订单需要审批。",
@@ -88,6 +91,7 @@ function regression(extra: Partial<Regression> = {}): Regression {
         answer: "",
         errorCode: "BknAgent.NotFound",
         missing: [{ id: "bom", kind: "object_type", name: "物料BOM" }],
+        missingTables: [],
         outcome: "missing",
         questionId: "q8",
         reason: "",
@@ -209,6 +213,37 @@ describe("RegressionDrawer", () => {
     renderDrawer();
     expect(await screen.findByText("回归被中断了，可以重新运行。")).toBeInTheDocument();
     expect(screen.getByText("没能跑完")).toBeInTheDocument();
+  });
+
+  it("says which questions were not asked because their tables are gone", async () => {
+    const base = regression();
+    getRegressionMock.mockResolvedValue(
+      regression({
+        results: [
+          base.results[0],
+          {
+            ...base.results[2],
+            answer: "",
+            missingTables: [
+              { id: "ot_po", kind: "object_type", name: "采购订单" },
+              { id: "ot_approval", kind: "object_type", name: "审批记录" },
+            ],
+            outcome: "data_source_missing",
+            reason: "",
+          },
+        ],
+        status: "data_source_missing",
+      }),
+    );
+    renderDrawer();
+    expect(await screen.findByText("数据来源不可用")).toBeInTheDocument();
+    expect(
+      screen.getByText("数据来源不可用：部分条目的数据表已被删除，用到它们的问题未作答。"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("未作答：「采购订单、审批记录」的数据表已不存在")).toBeInTheDocument();
+    // A question not asked is not counted as asked.
+    expect(screen.getByText(/1 \/ 1/)).toBeInTheDocument();
+    expect(screen.queryByText(/ot_po|data_source_missing/)).toBeNull();
   });
 
   it("says only when a run started on its own began, naming no one", async () => {

@@ -100,6 +100,7 @@ type BackendRegression = {
         answer?: string;
         error_code?: string;
         missing?: BackendItem[] | null;
+        missing_tables?: BackendItem[] | null;
         outcome: string;
         question_id: string;
         reason?: string;
@@ -192,6 +193,7 @@ export const mapRegression = (regression: BackendRegression): Regression => ({
     answer: result.answer ?? "",
     errorCode: result.error_code ?? "",
     missing: items(result.missing),
+    missingTables: items(result.missing_tables),
     outcome: result.outcome,
     questionId: result.question_id,
     reason: result.reason ?? "",
@@ -543,6 +545,7 @@ function mockRegression(networkId: string): Regression | null {
             answer: "Orders **SO-1** and **SO-7** are late.",
             errorCode: "",
             missing: [],
+            missingTables: [],
             outcome: "passed",
             questionId: "q1",
             reason: "The answer lists the late orders from the network.",
@@ -553,6 +556,7 @@ function mockRegression(networkId: string): Regression | null {
             answer: "There is no customer C-999.",
             errorCode: "",
             missing: [],
+            missingTables: [],
             outcome: "passed",
             questionId: "q1",
             reason: "The customer does not exist, as expected.",
@@ -563,6 +567,7 @@ function mockRegression(networkId: string): Regression | null {
             answer: "",
             errorCode: "",
             missing: [{ id: "material_bom", kind: "object_type", name: "material_bom" }],
+            missingTables: [],
             outcome: "missing",
             questionId: "q3",
             reason: "",

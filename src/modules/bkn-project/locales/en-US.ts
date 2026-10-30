@@ -1093,6 +1093,7 @@ export const bknProjectEnUS = {
         check: {
           confirmed: "Draft confirmation",
           mapped: "Table mapping",
+          data_source: "Data source",
           names: "Repeated names",
           drift: "Live edits outside the project",
           check: "Data check",
@@ -1104,6 +1105,14 @@ export const bknProjectEnUS = {
           not_confirmed: "The draft is not confirmed yet.",
           confirmation_outdated: "The draft changed after it was confirmed; confirm it again.",
           mapping_missing: "These object types do not fully map to a table yet: {{names}}",
+          table_missing:
+            "The tables of {{count}} items no longer exist; the release would return no data for them. Draft and confirm again before publishing.",
+          table_missing_one:
+            "The table of {{count}} item no longer exists; the release would return no data for it. Draft and confirm again before publishing.",
+          table_missing_other:
+            "The tables of {{count}} items no longer exist; the release would return no data for them. Draft and confirm again before publishing.",
+          tableMissingItem: 'The table of "{{name}}" no longer exists',
+          data_source_unreadable: "Could not confirm the tables still exist. Review again shortly.",
           duplicate_names: "Same name as existing content: {{pairs}}",
           similar_names: "Name close to existing content: {{pairs}}",
           namePair: "{{added}} and {{other}}",
@@ -1265,6 +1274,9 @@ export const bknProjectEnUS = {
         noResult: "No result",
         asItself: "Asked as written",
         missing: "Missing from the ontology: {{names}}",
+        missingTables: 'Not asked: the tables of "{{names}}" no longer exist',
+        dataSourceMissing:
+          "Data source unavailable: tables behind some items were deleted, so the questions that need them were not asked.",
         answer: "Show the answer",
         calls: "The answer queried {{count}} times",
         calls_one: "The answer queried once",
@@ -1279,6 +1291,7 @@ export const bknProjectEnUS = {
           needs_values: "Questions lack specific values",
           failed: "Did not finish",
           no_questions: "No scenario questions",
+          data_source_missing: "Data source unavailable",
           other: "Unknown",
         },
         runError: {
@@ -1294,6 +1307,7 @@ export const bknProjectEnUS = {
           needs_values: "Lacks a specific value",
           not_answered: "Not answerable",
           error: "Not asked",
+          data_source_missing: "Table no longer exists",
           other: "Unknown",
         },
         expect: {

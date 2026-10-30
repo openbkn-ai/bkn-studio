@@ -80,6 +80,16 @@
   font-size: 12px;
 }
 
+.detailRows {
+  max-height: 200px;
+  margin: 2px 0 0 22px;
+  padding-left: 16px;
+  overflow-y: auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 .indent {
   margin-left: 22px;
 }

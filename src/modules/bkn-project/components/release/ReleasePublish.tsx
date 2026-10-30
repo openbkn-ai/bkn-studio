@@ -109,7 +109,7 @@ export function ReleasePublish({
               <LightStatusTag tone={regressionTone(regression.status)}>
                 {regressionStatusText(t, regression.status)}
               </LightStatusTag>
-              {regression.results.length ? (
+              {passedCount(regression).total ? (
                 <span className={styles.muted}>
                   {t("bknProject.release.regression.summary", passedCount(regression))}
                 </span>

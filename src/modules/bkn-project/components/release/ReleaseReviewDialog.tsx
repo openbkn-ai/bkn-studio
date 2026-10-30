@@ -16,6 +16,7 @@ import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import {
   acceptText,
   capabilityReasonText,
+  checkDetailRows,
   checkReasonText,
   checkTitle,
   publishErrorText,
@@ -400,6 +401,13 @@ function CheckRow({
         {checkTitle(t, check.code)}
       </span>
       {check.passed ? null : <p className={styles.detail}>{checkReasonText(t, check)}</p>}
+      {checkDetailRows(t, check).length ? (
+        <ul className={styles.detailRows}>
+          {checkDetailRows(t, check).map((row, index) => (
+            <li key={index}>{row}</li>
+          ))}
+        </ul>
+      ) : null}
       {check.accept ? (
         <Checkbox
           checked={accepted}
