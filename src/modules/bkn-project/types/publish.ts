@@ -68,9 +68,13 @@ export type PendingItem = {
   itemId: string;
   kind: string;
   name: string;
+  /** The scenario questions of the ready requirements that need the item to be answered. */
+  neededBy: PendingQuestion[];
   /** `needs_identity`, `unadopted_ends` or `undecided`. */
   reason: string;
 };
+
+export type PendingQuestion = { id: string; text: string };
 
 export type ProjectPending = {
   draftUpdateTime: number;

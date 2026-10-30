@@ -146,6 +146,9 @@ export const bknProjectZhCN = {
           "唯一标识用来区分每一条记录，值相同的记录会合并成一个实例。只选一个属性时，会统计它在整张表里的重复值和空值。",
         none: "这个对象类没有可作唯一标识的属性，唯一标识需要文本或整数。",
         composite: "选了多个属性：会按它们的组合区分记录，不统计重复值和空值。",
+        suggested:
+          "起草时统计过：按「{{properties}}」的组合区分记录，整张表没有重复也没有空值，已为你选上。",
+        noSuggestion: "起草时没有统计出在整张表里唯一的属性或组合，可以按你对业务的了解选择。",
         counting: "正在统计整张表，最长约 30 秒……",
         choose: "为{{name}}选择唯一标识",
         change: "更换{{name}}的唯一标识",
@@ -186,6 +189,7 @@ export const bknProjectZhCN = {
         doneTitle: "已做的修改",
         needsIdentity: "「{{name}}」还没有唯一标识，选好后才能采纳。",
         unadoptedEnd: "关系类「{{name}}」连接的对象类没有采纳，请取消采纳它。",
+        neededBy: "需要它才能回答的问题：",
         unadopt: "取消采纳",
         unadoptItem: "取消采纳{{name}}",
         noneTitle: "还没有修改",
@@ -203,6 +207,20 @@ export const bknProjectZhCN = {
           identity: "为「{{name}}」选择了唯一标识 {{properties}}",
           restore: "把字段 {{field}} 恢复为「{{name}}」的属性 {{property}}",
           other: "修改了{{kind}}「{{name}}」",
+        },
+        confirmation: {
+          accept_partial: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",
+          accept_partial_one: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",
+          accept_partial_other: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",
+          accept_undecided: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
+          accept_undecided_one: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
+          accept_undecided_other: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
+          accept_unresolved_conflicts: "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          accept_unresolved_conflicts_one:
+            "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          accept_unresolved_conflicts_other:
+            "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          other: "确认草稿时做了一项决定",
         },
         empty: "无",
         beforeAfter: "改前：{{before}}　改后：{{after}}",
@@ -365,6 +383,8 @@ export const bknProjectZhCN = {
         },
         keyCount: "{{rows}} 行，{{distinct}} 个不同值，{{nulls}} 个空值",
         joinCount: "全表 {{rows}} 行，{{hits}} 行找得到对应记录（{{rate}}），{{orphans}} 行找不到",
+        joinCountWithNulls:
+          "全表 {{rows}} 行，{{nulls}} 行为空；其余 {{hits}} 行找得到对应记录（{{rate}}），{{orphans}} 行找不到",
         warning: {
           notUnique: "不唯一：{{rows}} 行只有 {{distinct}} 个不同值，同一值的记录会合并为一个实例",
           nulls: "{{nulls}} 行为空，这些记录不会生成实例",
@@ -498,6 +518,7 @@ export const bknProjectZhCN = {
         undecidedTitle_one: "以下 {{count}} 项起草时没有采纳，也还没有人决定",
         undecidedTitle_other: "以下 {{count}} 项起草时没有采纳，也还没有人决定",
         undecidedAccept: "暂不纳入这些项",
+        neededBy: "不纳入的话，这些问题答不上来：",
         partialTitle: "以下 {{count}} 张表起草时读取不到，没有参与起草",
         partialTitle_one: "以下 {{count}} 张表起草时读取不到，没有参与起草",
         partialTitle_other: "以下 {{count}} 张表起草时读取不到，没有参与起草",

@@ -104,6 +104,7 @@ describe("ConfirmDraft", () => {
           itemId: "r9",
           kind: "relation_types",
           name: "订单到仓库",
+          neededBy: [{ id: "q4", text: "这批订单从哪个仓库发货？" }],
           reason: "undecided",
         },
         // Blocking items stop the button, not the dialog: they are not listed to accept.
@@ -112,6 +113,7 @@ describe("ConfirmDraft", () => {
           itemId: "x",
           kind: "object_types",
           name: "阻断项",
+          neededBy: [],
           reason: "needs_identity",
         },
       ],
@@ -123,6 +125,9 @@ describe("ConfirmDraft", () => {
     const dialog = within(await screen.findByRole("dialog"));
     expect(await dialog.findByText("订单到仓库")).toBeInTheDocument();
     expect(dialog.getByText("字段取值太少，关联可能是巧合")).toBeInTheDocument();
+    // Leaving it out leaves the question it is needed by unanswered.
+    expect(dialog.getByText("不纳入的话，这些问题答不上来：")).toBeInTheDocument();
+    expect(dialog.getByText("这批订单从哪个仓库发货？")).toBeInTheDocument();
     expect(dialog.queryByText("阻断项")).toBeNull();
     expect(dialog.getByText(draft.items.unreadable[0].name)).toBeInTheDocument();
     expect(dialog.getByText(/确认后会自动校验数据/)).toBeInTheDocument();

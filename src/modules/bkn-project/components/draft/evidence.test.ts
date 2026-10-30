@@ -97,6 +97,21 @@ describe("draft evidence", () => {
       key: `${P}.joinCount`,
       params: { hits: 796, orphans: 4, rate: "99.5%", rows: 800 },
     });
+    // Empty rows name no record: the rate leaves them out, so the count says them.
+    expect(
+      joinCountPhrase({
+        computed: true,
+        hitRate: 1,
+        hits: 31393,
+        nulls: 30,
+        orphans: 0,
+        rows: 31423,
+        sourceDistinct: 337,
+      }),
+    ).toEqual({
+      key: `${P}.joinCountWithNulls`,
+      params: { hits: 31393, nulls: 30, orphans: 0, rate: "100%", rows: 31423 },
+    });
     expect(
       joinCountPhrase({
         computed: false,

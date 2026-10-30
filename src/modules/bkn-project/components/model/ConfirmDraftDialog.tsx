@@ -281,6 +281,14 @@ export function ConfirmDraft({
                         </span>
                         <span>{pendingBecauseText(t, item.because)}</span>
                       </span>
+                      {item.neededBy.length ? (
+                        <span className={styles.confirmNeeded}>
+                          {t("bknProject.confirm.dialog.neededBy")}
+                          {item.neededBy.map((question) => (
+                            <span key={question.id}>{question.text}</span>
+                          ))}
+                        </span>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

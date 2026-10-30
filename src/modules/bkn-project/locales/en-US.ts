@@ -158,6 +158,10 @@ export const bknProjectEnUS = {
         none: "This object type has no property that can identify its records; an identity needs text or whole numbers.",
         composite:
           "Several properties: records are told apart by their combination, and duplicates and empty values are not counted.",
+        suggested:
+          "Drafting counted {{properties}} together: no duplicates and no empty values across the table, so they are selected for you.",
+        noSuggestion:
+          "Drafting found no property or combination unique across the table; choose by what you know of the business.",
         counting: "Counting over the whole table, which can take up to 30 seconds…",
         choose: "Choose the identity of {{name}}",
         change: "Change the identity of {{name}}",
@@ -199,6 +203,7 @@ export const bknProjectEnUS = {
         needsIdentity: "{{name}} has no identity yet; choose one before adopting it.",
         unadoptedEnd:
           "Relation type {{name}} connects an object type that is not adopted; unadopt it.",
+        neededBy: "Questions that need it to be answered:",
         unadopt: "Unadopt",
         unadoptItem: "Unadopt {{name}}",
         noneTitle: "No changes yet",
@@ -216,6 +221,22 @@ export const bknProjectEnUS = {
           identity: "Chose {{properties}} as the identity of {{name}}",
           restore: "Restored field {{field}} as property {{property}} of {{name}}",
           other: "Changed {{kind}} {{name}}",
+        },
+        confirmation: {
+          accept_partial: "Confirmed the draft without {{count}} tables that could not be read",
+          accept_partial_one: "Confirmed the draft without {{count}} table that could not be read",
+          accept_partial_other:
+            "Confirmed the draft without {{count}} tables that could not be read",
+          accept_undecided: "Confirmed the draft leaving out {{count}} undecided items",
+          accept_undecided_one: "Confirmed the draft leaving out {{count}} undecided item",
+          accept_undecided_other: "Confirmed the draft leaving out {{count}} undecided items",
+          accept_unresolved_conflicts:
+            "Confirmed the draft with {{count}} requirement conflicts not resolved",
+          accept_unresolved_conflicts_one:
+            "Confirmed the draft with {{count}} requirement conflict not resolved",
+          accept_unresolved_conflicts_other:
+            "Confirmed the draft with {{count}} requirement conflicts not resolved",
+          other: "Made a decision when confirming the draft",
         },
         empty: "none",
         beforeAfter: "Before: {{before}}  After: {{after}}",
@@ -385,6 +406,8 @@ export const bknProjectEnUS = {
         },
         keyCount: "{{rows}} rows, {{distinct}} distinct, {{nulls}} empty",
         joinCount: "{{rows}} rows: {{hits}} have a matching record ({{rate}}), {{orphans}} do not",
+        joinCountWithNulls:
+          "{{rows}} rows: {{nulls}} are empty; of the rest, {{hits}} have a matching record ({{rate}}), {{orphans}} do not",
         warning: {
           notUnique:
             "Not unique: {{rows}} rows have only {{distinct}} distinct values; records sharing a value merge into one instance",
@@ -535,6 +558,7 @@ export const bknProjectEnUS = {
         undecidedTitle_other:
           "{{count}} items were not adopted in drafting and nobody decided on them",
         undecidedAccept: "Leave these items out for now",
+        neededBy: "Left out, these questions cannot be answered:",
         partialTitle: "{{count}} tables could not be read, so drafting left them out",
         partialTitle_one: "{{count}} table could not be read, so drafting left it out",
         partialTitle_other: "{{count}} tables could not be read, so drafting left them out",
