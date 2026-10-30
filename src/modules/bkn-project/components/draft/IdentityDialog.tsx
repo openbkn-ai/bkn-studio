@@ -40,6 +40,10 @@ export function IdentityDialog({
   });
   const label = (name: string) =>
     candidates.find((property) => property.name === name)?.displayName || name;
+  const isSuggested =
+    suggested !== null &&
+    selected.length === suggested.length &&
+    suggested.every((name) => selected.includes(name));
   const [saving, setSaving] = useState(false);
   const unchanged =
     selected.length === objectType.primaryKeys.length &&
@@ -88,7 +92,10 @@ export function IdentityDialog({
             options={candidates.map((property) => ({
               label: (
                 <span>
-                  {property.displayName || property.name}{" "}
+                  {/* The field beside the name people read, once: without a name it is the name. */}
+                  {property.displayName && property.displayName !== property.name ? (
+                    <>{property.displayName} </>
+                  ) : null}
                   <code className={styles.mono}>{property.name}</code>{" "}
                   <span className={styles.muted}>{t(propertyTypeKey(property.type))}</span>
                 </span>
@@ -100,7 +107,8 @@ export function IdentityDialog({
         ) : (
           <Alert message={t("bknProject.model.identity.none")} showIcon type="info" />
         )}
-        {selected.length > 1 ? (
+        {/* The suggestion was counted; only another combination goes uncounted. */}
+        {selected.length > 1 && !isSuggested ? (
           <span className={styles.warning}>{t("bknProject.model.identity.composite")}</span>
         ) : null}
         {saving && selected.length === 1 ? (

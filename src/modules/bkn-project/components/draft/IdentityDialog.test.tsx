@@ -57,8 +57,16 @@ describe("IdentityDialog", () => {
     ).toBeInTheDocument();
     expect(dialog.getByRole("checkbox", { name: /单号 id/ })).toBeChecked();
     expect(dialog.getByRole("checkbox", { name: /分录号 entry_id/ })).toBeChecked();
-    // A property without a name people read shows its own.
+    // A property without a name people read shows its own, once.
     expect(dialog.getByRole("checkbox", { name: /remark/ })).not.toBeChecked();
+    expect(dialog.getAllByText("remark")).toHaveLength(1);
+    // The suggested pair was counted: nothing says it is not.
+    expect(dialog.queryByText(/不统计重复值和空值/)).toBeNull();
+
+    // Another combination is not counted, and says so.
+    fireEvent.click(dialog.getByRole("checkbox", { name: /remark/ }));
+    expect(dialog.getByText(/不统计重复值和空值/)).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("checkbox", { name: /remark/ }));
 
     fireEvent.click(save());
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(["id", "entry_id"]));
