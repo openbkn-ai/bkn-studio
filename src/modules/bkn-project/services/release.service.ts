@@ -7,6 +7,7 @@
 
 import { AxiosError, type AxiosResponse } from "axios";
 
+import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
@@ -14,6 +15,7 @@ import { getProject } from "@/modules/bkn-project/services/project.service";
 import type {
   LineageRelease,
   PublishInput,
+  Regression,
   ReleaseItem,
   ReleaseQuestion,
   ReleaseReview,
@@ -25,6 +27,9 @@ const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 const projectPath = (projectId: string) =>
   `${API_PREFIX}/projects/${encodeURIComponent(projectId)}`;
+
+/** How often a running regression is read again. */
+export const REGRESSION_POLL_MS = 10000;
 
 /* ------------------------------- Backend shapes ------------------------------- */
 
@@ -75,6 +80,36 @@ type BackendRelease = {
   project_id: string;
   publisher: { id: string } | null;
   state: string;
+  version: string;
+};
+
+type BackendRegression = {
+  attempt: number;
+  error: string;
+  finish_time: number;
+  network_id: string;
+  questions:
+    | {
+        id: string;
+        tests?: { expect: string; id: string; text: string }[] | null;
+        text: string;
+      }[]
+    | null;
+  results:
+    | {
+        answer?: string;
+        error_code?: string;
+        missing?: BackendItem[] | null;
+        outcome: string;
+        question_id: string;
+        reason?: string;
+        test_id?: string;
+        tool_uses?: { status?: string }[] | null;
+      }[]
+    | null;
+  runner: { id: string } | null;
+  start_time: number;
+  status: string;
   version: string;
 };
 
@@ -142,6 +177,32 @@ export function mapReview(review: BackendReview): ReleaseReview {
     version: review.version,
   };
 }
+
+export const mapRegression = (regression: BackendRegression): Regression => ({
+  attempt: regression.attempt,
+  error: regression.error,
+  finishTime: regression.finish_time,
+  networkId: regression.network_id,
+  questions: (regression.questions ?? []).map((question) => ({
+    id: question.id,
+    tests: (question.tests ?? []).map(({ expect, id, text }) => ({ expect, id, text })),
+    text: question.text,
+  })),
+  results: (regression.results ?? []).map((result) => ({
+    answer: result.answer ?? "",
+    errorCode: result.error_code ?? "",
+    missing: items(result.missing),
+    outcome: result.outcome,
+    questionId: result.question_id,
+    reason: result.reason ?? "",
+    testId: result.test_id ?? "",
+    toolStatuses: (result.tool_uses ?? []).map((use) => use.status ?? ""),
+  })),
+  runnerId: regression.runner?.id ?? "",
+  startTime: regression.start_time,
+  status: regression.status,
+  version: regression.version,
+});
 
 const mapRelease = (release: BackendRelease): LineageRelease => ({
   createTime: release.create_time,
@@ -215,6 +276,7 @@ export async function listReleases(lineageId: string): Promise<LineageRelease[]>
     return wait([...mockReleases].reverse());
   }
   const releases: LineageRelease[] = [];
+  const seen = new Set<string>();
   let cursor: string | null = null;
   do {
     const response: AxiosResponse<{
@@ -226,6 +288,13 @@ export async function listReleases(lineageId: string): Promise<LineageRelease[]>
     });
     releases.push(...(response.data.entries ?? []).map(mapRelease));
     cursor = response.data.next_cursor;
+    // A cursor that does not move on would page forever: stop at one seen before.
+    if (cursor && seen.has(cursor)) {
+      break;
+    }
+    if (cursor) {
+      seen.add(cursor);
+    }
   } while (cursor);
   return releases;
 }
@@ -269,6 +338,43 @@ export async function switchConsumers(projectId: string, toNetworkId: string): P
     { to_network_id: toNetworkId },
     { skipErrorToast: true },
   );
+}
+
+/** The regression of a release of the project, or null before one exists. */
+export async function getRegression(
+  projectId: string,
+  networkId: string,
+): Promise<Regression | null> {
+  if (useMock) {
+    return wait(mockRegression(networkId));
+  }
+  try {
+    const response = await http.get<BackendRegression>(
+      `${projectPath(projectId)}/releases/${encodeURIComponent(networkId)}/regression`,
+      { skipErrorToast: true },
+    );
+    return mapRegression(response.data);
+  } catch (error) {
+    // Release.RegressionNotFound before the first run.
+    if (isRequestNotFound(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/** Runs the regression of a release again, with the questions the requirements have now. */
+export async function runRegression(projectId: string, networkId: string): Promise<Regression> {
+  if (useMock) {
+    mockRegressionStarts[networkId] = Date.now();
+    return wait(mockRegression(networkId)!);
+  }
+  const response = await http.post<BackendRegression>(
+    `${projectPath(projectId)}/releases/${encodeURIComponent(networkId)}/regression:run`,
+    undefined,
+    { skipErrorToast: true },
+  );
+  return mapRegression(response.data);
 }
 
 /* ----------------------------- Mock (local development) ----------------------------- */
@@ -401,4 +507,72 @@ async function mockPublish(projectId: string, input: PublishInput) {
     version: input.version,
   });
   return { networkId: review.release.networkId };
+}
+
+/** When the mock's regressions started; each runs for a few seconds. */
+const mockRegressionStarts: Record<string, number> = {};
+const MOCK_REGRESSION_MS = 4000;
+
+function mockRegression(networkId: string): Regression | null {
+  const release = mockReleases.find((entry) => entry.networkId === networkId);
+  if (!release || release.projectId === "p-002") {
+    return null;
+  }
+  const start = (mockRegressionStarts[networkId] ??= release.createTime);
+  const running = Date.now() - start < MOCK_REGRESSION_MS;
+  return {
+    attempt: 1,
+    error: "",
+    finishTime: running ? 0 : start + MOCK_REGRESSION_MS,
+    networkId,
+    questions: [
+      {
+        id: "q1",
+        tests: [
+          { expect: "exists", id: "t1", text: "Which orders of customer C-001 are late?" },
+          { expect: "not_exists", id: "t2", text: "Which orders of customer C-999 are late?" },
+        ],
+        text: "Which orders of a customer are late?",
+      },
+      { id: "q3", tests: [], text: "Which products use part P-100?" },
+    ],
+    results: running
+      ? []
+      : [
+          {
+            answer: "Orders **SO-1** and **SO-7** are late.",
+            errorCode: "",
+            missing: [],
+            outcome: "passed",
+            questionId: "q1",
+            reason: "The answer lists the late orders from the network.",
+            testId: "t1",
+            toolStatuses: ["succeeded", "succeeded"],
+          },
+          {
+            answer: "There is no customer C-999.",
+            errorCode: "",
+            missing: [],
+            outcome: "passed",
+            questionId: "q1",
+            reason: "The customer does not exist, as expected.",
+            testId: "t2",
+            toolStatuses: ["succeeded"],
+          },
+          {
+            answer: "",
+            errorCode: "",
+            missing: [{ id: "material_bom", kind: "object_type", name: "material_bom" }],
+            outcome: "missing",
+            questionId: "q3",
+            reason: "",
+            testId: "",
+            toolStatuses: [],
+          },
+        ],
+    runnerId: release.publisherId,
+    startTime: start,
+    status: running ? "running" : "not_passed",
+    version: release.version,
+  };
 }

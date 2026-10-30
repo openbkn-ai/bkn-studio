@@ -74,6 +74,7 @@
 }
 
 .detail {
+  display: block;
   margin: 0 0 0 22px;
   color: var(--color-text-secondary);
   font-size: 12px;
@@ -87,6 +88,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
+}
+
+/* A name of any length wraps inside its tag instead of widening the dialog. */
+.name {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .muted {
@@ -109,4 +118,13 @@
 
 .notes {
   white-space: pre-wrap;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
 }
