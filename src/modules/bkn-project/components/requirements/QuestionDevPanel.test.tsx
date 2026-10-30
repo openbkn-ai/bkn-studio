@@ -208,6 +208,11 @@ describe("QuestionDevPanel", () => {
         status: 409,
       } as AxiosResponse),
     );
+    const changed = dev();
+    changed.tests[0] = { ...changed.tests[0], text: "别人改的问法" };
+    getQuestionDevMock
+      .mockResolvedValueOnce(dev())
+      .mockResolvedValueOnce({ ...changed, updateTime: 6 });
     const view = renderPanel();
     await screen.findByText("同义改写");
     fireEvent.click(screen.getAllByRole("button", { name: /编\s*辑/ })[0]);
@@ -221,6 +226,9 @@ describe("QuestionDevPanel", () => {
     await waitFor(() => expect(getQuestionDevMock).toHaveBeenCalledTimes(2));
     // The stale edit is not kept to be sent again.
     expect(screen.queryByLabelText("问法")).toBeNull();
+    // Editing again starts from what the other person wrote, not from the stale draft.
+    fireEvent.click((await screen.findAllByRole("button", { name: /编\s*辑/ }))[0]);
+    expect(screen.getByLabelText("问法")).toHaveValue("别人改的问法");
     view.unmount();
 
     renderPanel(false);

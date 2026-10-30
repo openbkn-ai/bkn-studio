@@ -186,7 +186,9 @@ export function QuestionDevPanel({
               busy={busy}
               canEdit={canEdit}
               editing={editingTest === test.id}
-              key={test.id}
+              // A row is rebuilt with each version read, so an edit always starts from the
+              // text as it now is, never from a draft made on an older one.
+              key={`${test.id}@${dev.updateTime}`}
               onCancel={() => setEditingTest(null)}
               onDelete={() =>
                 void modal.confirm({
