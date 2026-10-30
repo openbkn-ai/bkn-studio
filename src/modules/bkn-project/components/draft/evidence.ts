@@ -88,18 +88,23 @@ export function keyWarnings(key: DraftKeyEvidence): Phrase[] {
   return warnings;
 }
 
+/**
+ * The rate counts only the rows that name a record, so empty rows are said apart: without
+ * them, matched and unmatched rows would not add up to the table.
+ */
 export function joinCountPhrase(evidence: DraftJoinEvidence): Phrase {
-  return evidence.computed
-    ? {
-        key: `${PREFIX}.joinCount`,
-        params: {
-          hits: evidence.hits,
-          orphans: evidence.orphans,
-          rate: formatRate(evidence.hitRate),
-          rows: evidence.rows,
-        },
-      }
-    : countReasonPhrase(evidence.reason);
+  if (!evidence.computed) {
+    return countReasonPhrase(evidence.reason);
+  }
+  const params = {
+    hits: evidence.hits,
+    orphans: evidence.orphans,
+    rate: formatRate(evidence.hitRate),
+    rows: evidence.rows,
+  };
+  return evidence.nulls > 0
+    ? { key: `${PREFIX}.joinCountWithNulls`, params: { ...params, nulls: evidence.nulls } }
+    : { key: `${PREFIX}.joinCount`, params };
 }
 
 /**

@@ -365,6 +365,8 @@ export const bknProjectZhCN = {
         },
         keyCount: "{{rows}} 行，{{distinct}} 个不同值，{{nulls}} 个空值",
         joinCount: "全表 {{rows}} 行，{{hits}} 行找得到对应记录（{{rate}}），{{orphans}} 行找不到",
+        joinCountWithNulls:
+          "全表 {{rows}} 行，{{nulls}} 行为空；其余 {{hits}} 行找得到对应记录（{{rate}}），{{orphans}} 行找不到",
         warning: {
           notUnique: "不唯一：{{rows}} 行只有 {{distinct}} 个不同值，同一值的记录会合并为一个实例",
           nulls: "{{nulls}} 行为空，这些记录不会生成实例",
