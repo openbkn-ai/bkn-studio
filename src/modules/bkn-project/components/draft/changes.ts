@@ -14,6 +14,8 @@ const PREFIX = "bknProject.model.changes";
 
 const ACTIONS = ["adopt", "unadopt", "rename", "describe", "identity", "restore"];
 const KINDS = ["object_types", "relation_types", "value_types"];
+/** What a confirmation accepted, recorded on the draft as a whole and listing what it took in. */
+const ACCEPTANCES = ["accept_partial", "accept_undecided", "accept_unresolved_conflicts"];
 
 /** Current item names by kind and id: a decision names the item as it is now called. */
 export type ItemNames = Record<string, Record<string, string>>;
@@ -43,6 +45,12 @@ export function describeDecision(
   decision: DraftDecision,
   names: ItemNames,
 ): DescribedDecision {
+  if (decision.kind === "draft") {
+    const accepted = ACCEPTANCES.includes(decision.action) ? decision.action : "other";
+    return {
+      text: t(`${PREFIX}.confirmation.${accepted}`, { count: asList(decision.after).length }),
+    };
+  }
   const name = names[decision.kind]?.[decision.itemId] ?? decision.itemId;
   const kind = t(
     `${PREFIX}.kind.${KINDS.includes(decision.kind) ? decision.kind : "object_types"}`,

@@ -204,6 +204,20 @@ export const bknProjectZhCN = {
           restore: "把字段 {{field}} 恢复为「{{name}}」的属性 {{property}}",
           other: "修改了{{kind}}「{{name}}」",
         },
+        confirmation: {
+          accept_partial: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",
+          accept_partial_one: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",
+          accept_partial_other: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",
+          accept_undecided: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
+          accept_undecided_one: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
+          accept_undecided_other: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
+          accept_unresolved_conflicts: "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          accept_unresolved_conflicts_one:
+            "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          accept_unresolved_conflicts_other:
+            "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          other: "确认草稿时做了一项决定",
+        },
         empty: "无",
         beforeAfter: "改前：{{before}}　改后：{{after}}",
         byAt: "{{who}} · {{time}}",
@@ -365,6 +379,8 @@ export const bknProjectZhCN = {
         },
         keyCount: "{{rows}} 行，{{distinct}} 个不同值，{{nulls}} 个空值",
         joinCount: "全表 {{rows}} 行，{{hits}} 行找得到对应记录（{{rate}}），{{orphans}} 行找不到",
+        joinCountWithNulls:
+          "全表 {{rows}} 行，{{nulls}} 行为空；其余 {{hits}} 行找得到对应记录（{{rate}}），{{orphans}} 行找不到",
         warning: {
           notUnique: "不唯一：{{rows}} 行只有 {{distinct}} 个不同值，同一值的记录会合并为一个实例",
           nulls: "{{nulls}} 行为空，这些记录不会生成实例",
