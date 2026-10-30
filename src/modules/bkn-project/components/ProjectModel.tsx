@@ -648,6 +648,7 @@ export function ProjectModel({
         <>
           <DraftConceptGraph
             draft={draft}
+            networkId={project.knId}
             onOpen={setOpenId}
             title={t("bknProject.model.graph.title")}
           />

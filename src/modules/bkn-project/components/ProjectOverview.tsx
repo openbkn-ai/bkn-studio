@@ -233,41 +233,57 @@ export function ProjectOverview({
         })}
       </div>
 
-      <section className={styles.card} data-region="model">
-        <div className={styles.cardHead}>
-          <span className={styles.cardTitle}>{t("bknProject.overview.model.title")}</span>
-          <button className={styles.link} onClick={() => go("model")} type="button">
-            {t("bknProject.overview.model.open")}
-          </button>
-        </div>
-        {reading && draft === undefined ? (
-          <Spin />
-        ) : draftError ? (
-          <Alert
+      {ready ? (
+        // The graph comes in the knowledge network's card, with the link in its header.
+        <div data-region="model">
+          <DraftConceptGraph
             action={
-              <AppButton onClick={() => void loadDraft()} size="small">
-                {t("common.retry")}
-              </AppButton>
+              <button className={styles.link} onClick={() => go("model")} type="button">
+                {t("bknProject.overview.model.open")}
+              </button>
             }
-            description={draftError}
-            message={t("bknProject.overview.model.loadFailed")}
-            showIcon
-            type="warning"
+            draft={ready}
+            networkId={project.knId}
+            // A type's details are on the modeling page.
+            onOpen={() => go("model")}
+            title={t("bknProject.overview.model.title")}
           />
-        ) : ready ? (
-          <DraftConceptGraph draft={ready} />
-        ) : draft ? (
-          <EmptyStatePanel
-            description={t(`bknProject.overview.model.${draft.status}Description`)}
-            title={t(`bknProject.model.status.${draft.status}`)}
-          />
-        ) : draft === null ? (
-          <EmptyStatePanel
-            description={t("bknProject.overview.model.emptyDescription")}
-            title={t("bknProject.overview.model.empty")}
-          />
-        ) : null}
-      </section>
+        </div>
+      ) : (
+        <section className={styles.card} data-region="model">
+          <div className={styles.cardHead}>
+            <span className={styles.cardTitle}>{t("bknProject.overview.model.title")}</span>
+            <button className={styles.link} onClick={() => go("model")} type="button">
+              {t("bknProject.overview.model.open")}
+            </button>
+          </div>
+          {reading && draft === undefined ? (
+            <Spin />
+          ) : draftError ? (
+            <Alert
+              action={
+                <AppButton onClick={() => void loadDraft()} size="small">
+                  {t("common.retry")}
+                </AppButton>
+              }
+              description={draftError}
+              message={t("bknProject.overview.model.loadFailed")}
+              showIcon
+              type="warning"
+            />
+          ) : draft ? (
+            <EmptyStatePanel
+              description={t(`bknProject.overview.model.${draft.status}Description`)}
+              title={t(`bknProject.model.status.${draft.status}`)}
+            />
+          ) : draft === null ? (
+            <EmptyStatePanel
+              description={t("bknProject.overview.model.emptyDescription")}
+              title={t("bknProject.overview.model.empty")}
+            />
+          ) : null}
+        </section>
+      )}
 
       <div className={styles.columns} data-region="columns">
         <section className={styles.card}>

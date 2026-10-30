@@ -14,7 +14,7 @@
 
 import { DeploymentUnitOutlined } from "@ant-design/icons";
 import { Empty, Spin } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { OntologyGraphView } from "@/modules/knowledge-network/components/preview/OntologyGraphView";
@@ -40,7 +40,11 @@ const EMPTY_GROUP_MAP = new Map<string, string>();
 
 type OntologyGraphCardProps = {
   emptyDescription?: string;
+  /** Types and relations drawn faint and dashed: shown for context, not part of the model. */
+  fadedIds?: ReadonlySet<string>;
   fillAvailableHeight?: boolean;
+  /** Replaces the header's key to the drawing, for a graph whose marks mean something else. */
+  legend?: ReactNode;
   loadConceptGroups?: boolean;
   logicalGrouping?: boolean;
   networkId: string;
@@ -55,7 +59,9 @@ type OntologyGraphCardProps = {
 
 export function OntologyGraphCard({
   emptyDescription,
+  fadedIds,
   fillAvailableHeight = false,
+  legend,
   loadConceptGroups = true,
   logicalGrouping = true,
   networkId,
@@ -124,10 +130,16 @@ export function OntologyGraphCard({
   }, [rawObjectTypes]);
   const relationTypes = controlled ? relationTypesProp : fetchedRelationTypes;
 
-  const graph = useMemo(
-    () => buildModelingPreviewGraph(objectTypes, relationTypes),
-    [objectTypes, relationTypes],
-  );
+  const graph = useMemo(() => {
+    const built = buildModelingPreviewGraph(objectTypes, relationTypes);
+    if (!fadedIds?.size) {
+      return built;
+    }
+    return {
+      edges: built.edges.map((edge) => (fadedIds.has(edge.id) ? { ...edge, faded: true } : edge)),
+      nodes: built.nodes.map((node) => (fadedIds.has(node.id) ? { ...node, faded: true } : node)),
+    };
+  }, [fadedIds, objectTypes, relationTypes]);
 
   const indexedIds = useMemo(
     () => new Set(objectTypes.filter((item) => item.hasIndex).map((item) => item.id)),
@@ -222,7 +234,7 @@ export function OntologyGraphCard({
         <h3 className={styles.graphTitle}>{title ?? t("knowledgeNetwork.previewCanvas")}</h3>
         <span className={styles.graphLegend}>
           <DeploymentUnitOutlined />
-          {t("knowledgeNetwork.previewGraphLegend")}
+          {legend ?? t("knowledgeNetwork.previewGraphLegend")}
         </span>
       </div>
 

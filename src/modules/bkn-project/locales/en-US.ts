@@ -108,6 +108,7 @@ export const bknProjectEnUS = {
         title: "Concept model",
         empty: "No object types adopted yet",
         emptyDescription: "Once you adopt object types, they and their relations are drawn here.",
+        legend: "Node = object type, edge = relation type, faint and dashed = not adopted yet",
       },
       status: {
         ready: "Draft",

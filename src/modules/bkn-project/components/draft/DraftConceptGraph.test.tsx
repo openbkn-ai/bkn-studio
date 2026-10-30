@@ -9,6 +9,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
+import type { KnowledgeNetworkPreviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { DraftConceptGraph } from "./DraftConceptGraph";
 
@@ -17,36 +18,66 @@ vi.mock("react-i18next", async (importOriginal) => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-// Stands in for the graph with its click rule: clicking the selected node unselects it.
+// Stands in for the drawing: lists what it is given, and clicks the first type.
 vi.mock("@/modules/knowledge-network/components/preview/OntologyGraphView", () => ({
   OntologyGraphView: ({
+    graph,
     onSelect,
-    selectedId,
   }: {
+    graph: KnowledgeNetworkPreviewGraph;
     onSelect: (id: string | null) => void;
-    selectedId: string | null;
   }) => (
-    <button onClick={() => onSelect(selectedId === "customers" ? null : "customers")} type="button">
-      {selectedId ?? "none"}
-    </button>
+    <div>
+      <button onClick={() => onSelect("customers")} type="button">
+        click
+      </button>
+      {graph.nodes.map((node) => (
+        <span data-color={node.color} data-faded={String(Boolean(node.faded))} key={node.id}>
+          {node.id}
+        </span>
+      ))}
+      {graph.edges.map((edge) => (
+        <span data-faded={String(Boolean(edge.faded))} key={edge.id}>
+          {edge.id}
+        </span>
+      ))}
+    </div>
   ),
 }));
 
-describe("DraftConceptGraph", () => {
-  it("opens the same object type on every click, not every other one", () => {
-    const onOpen = vi.fn();
-    render(<DraftConceptGraph draft={mapDraft(mockDraft("p1"))} onOpen={onOpen} />);
+function renderGraph(onOpen?: (id: string) => void) {
+  render(
+    <DraftConceptGraph
+      draft={mapDraft(mockDraft("p1"))}
+      networkId="n1"
+      onOpen={onOpen}
+      title="Concept model"
+    />,
+  );
+}
 
-    fireEvent.click(screen.getByRole("button"));
-    fireEvent.click(screen.getByRole("button"));
-    expect(onOpen).toHaveBeenCalledTimes(2);
-    expect(onOpen).toHaveBeenLastCalledWith("customers");
+describe("DraftConceptGraph", () => {
+  it("draws every type in a drawable colour, the unpublished ones faded", () => {
+    renderGraph();
+    expect(screen.getByText("Concept model")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.model.graph.legend")).toBeInTheDocument();
+    // The types are listed beside the graph too, as on the knowledge network.
+    expect(screen.getAllByText("customers").length).toBeGreaterThan(0);
+
+    const node = (id: string) =>
+      screen.getAllByText(id).find((element) => element.dataset.faded !== undefined)!;
+    expect(node("customers").dataset.faded).toBe("false");
+    expect(node("material_bom").dataset.faded).toBe("true");
+    expect(node("material_bom_to_sales_orders").dataset.faded).toBe("true");
+    expect(node("customers").dataset.color).toMatch(/^#/);
   });
 
-  it("highlights the clicked object type where clicking opens nothing", () => {
-    render(<DraftConceptGraph draft={mapDraft(mockDraft("p1"))} />);
-
-    fireEvent.click(screen.getByRole("button"));
-    expect(screen.getByRole("button")).toHaveTextContent("customers");
+  it("opens the same object type on every click", () => {
+    const onOpen = vi.fn();
+    renderGraph(onOpen);
+    fireEvent.click(screen.getByRole("button", { name: "click" }));
+    fireEvent.click(screen.getByRole("button", { name: "click" }));
+    expect(onOpen).toHaveBeenCalledTimes(2);
+    expect(onOpen).toHaveBeenLastCalledWith("customers");
   });
 });

@@ -79,6 +79,8 @@ export type KnowledgeNetworkRecentObject = {
 export type KnowledgeNetworkPreviewNode = {
   color: string;
   conceptGroups?: Array<{ id: string; name: string }>;
+  /** Drawn faint: a type shown for context that is not part of the model, such as a draft's. */
+  faded?: boolean;
   icon?: string;
   id: string;
   indexStatus?: ObjectTypeIndexStatus;
@@ -86,6 +88,8 @@ export type KnowledgeNetworkPreviewNode = {
 };
 
 export type KnowledgeNetworkPreviewEdge = {
+  /** Drawn dashed and faint, as a faded node is. */
+  faded?: boolean;
   id: string;
   mappingMode?: "direct" | "resource";
   name: string;

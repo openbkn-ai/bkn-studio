@@ -59,6 +59,8 @@ export function drawnRadius(degree: number, hub: boolean): number {
   const radius = MIN_DRAWN_RADIUS + 2.8 * Math.sqrt(Math.max(0, degree));
   return Math.min(hub ? MAX_DRAWN_HUB_RADIUS : MAX_DRAWN_RADIUS, radius);
 }
+/** How faint a faded type or relation is drawn. */
+const FADED_OPACITY = 0.35;
 /** Characters of a name drawn under its disc. */
 const NAME_CHARS = 10;
 const INDEX_BADGE_COLOR = "#34d399";
@@ -129,7 +131,7 @@ export function buildOntologyStructure(input: OntologyStructureInput): Required<
         size: drawnRadius(degree.get(node.id) ?? 0, hub) * 2,
         fill: color,
         // Stated so G6 has a value to return to when the dimmed state is cleared.
-        opacity: 1,
+        opacity: node.faded ? FADED_OPACITY : 1,
         stroke: tokens.inverse,
         lineWidth: 1.5,
         haloStroke: color,
@@ -151,10 +153,11 @@ export function buildOntologyStructure(input: OntologyStructureInput): Required<
     data: { name: edge.name },
     style: {
       // Stated so G6 has a value to return to when the dimmed state is cleared.
-      opacity: 1,
+      opacity: edge.faded ? FADED_OPACITY : 1,
       // Relations stay one quiet grey: the types carry the colour.
       stroke: tokens.faint,
       lineWidth: 1,
+      ...(edge.faded ? { lineDash: [4, 4] } : {}),
       endArrow: true,
       endArrowSize: 6,
       labelFill: tokens.text,
