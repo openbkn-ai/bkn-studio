@@ -401,6 +401,8 @@ export const bknProjectEnUS = {
         },
         keyCount: "{{rows}} rows, {{distinct}} distinct, {{nulls}} empty",
         joinCount: "{{rows}} rows: {{hits}} have a matching record ({{rate}}), {{orphans}} do not",
+        joinCountWithNulls:
+          "{{rows}} rows: {{nulls}} are empty; of the rest, {{hits}} have a matching record ({{rate}}), {{orphans}} do not",
         warning: {
           notUnique:
             "Not unique: {{rows}} rows have only {{distinct}} distinct values; records sharing a value merge into one instance",
