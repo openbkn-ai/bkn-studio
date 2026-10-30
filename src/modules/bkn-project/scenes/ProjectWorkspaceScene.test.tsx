@@ -61,6 +61,12 @@ vi.mock("@/modules/bkn-project/components/ProjectReleasePage", () => ({
   ),
 }));
 
+vi.mock("@/modules/bkn-project/components/requirements/ProjectRequirements", () => ({
+  ProjectRequirements: ({ ownerIsCaller }: { ownerIsCaller: boolean }) => (
+    <div>requirements page {ownerIsCaller ? "owner" : "reader"}</div>
+  ),
+}));
+
 vi.mock("@/modules/bkn-project/components/draft/DraftConceptGraph", () => ({
   DraftConceptGraph: () => <div>concept graph</div>,
 }));
@@ -381,9 +387,9 @@ describe("ProjectWorkspaceScene", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/model");
   });
 
-  it("shows a page still under construction", async () => {
+  it("shows the requirements of the project", async () => {
     renderScene("requirements");
 
-    expect(await screen.findByText("bknProject.workspace.comingSoon")).toBeInTheDocument();
+    expect(await screen.findByText(/requirements page/)).toBeInTheDocument();
   });
 });
