@@ -146,36 +146,6 @@ test("community image: from tables and requirements to a published, switched rel
     ).toBeVisible();
   });
 
-  await test.step("5. draft the requirements from the document", async () => {
-    await page.getByRole("button", { name: "从资料起草" }).click();
-    await expect(page.getByText("需求规格第 1 版 · 已起草")).toBeVisible(BACKGROUND);
-    const questions = page.getByText(/^场景问题 (\d+)$/);
-    await expect(questions).not.toHaveText("场景问题 0");
-    await questions.click();
-    // Every drafted item quotes the document it came from.
-    await expect(page.getByText("出自「bkn-project-requirements.md」").first()).toBeVisible();
-    await expectNoForbiddenWords(page, "requirements");
-  });
-
-  await test.step("7. settle open requirement conflicts", async () => {
-    const banner = page.getByText(/个需求冲突/);
-    if (!(await banner.isVisible())) {
-      test.info().annotations.push({ type: "data", description: "no requirement conflict" });
-      return;
-    }
-    await page.getByRole("button", { name: "去处理" }).click();
-    const open = page.getByRole("button", { name: /^裁\s*决$/ });
-    while ((await open.count()) > 0) {
-      await open.first().click();
-      const dialog = page.getByRole("dialog");
-      // The side the document types suggest is preselected; a reason is required.
-      await dialog.getByLabel("理由（必填）").fill("E2E：按文档类型的建议");
-      await dialog.getByRole("button", { name: "保存裁决" }).click();
-      await expect(dialog).toBeHidden();
-    }
-    await expect(page.getByText(/个需求冲突/)).toBeHidden();
-  });
-
   let decided = "";
   await test.step("8. draft the ontology from the catalog's tables", async () => {
     await openSection(page, "本体建模");
@@ -232,7 +202,40 @@ test("community image: from tables and requirements to a published, switched rel
     );
   });
 
-  // Run after the ontology draft: test questions are checked against the drafted object types.
+  // Requirements are drafted after the ontology: drafting maps their concepts to the drafted
+  // object types, which the questions' needs and the test-question checks rely on.
+  await test.step("5. draft the requirements from the document", async () => {
+    await openSection(page, "需求场景");
+    await page.getByRole("button", { name: "从资料起草" }).click();
+    await expect(page.getByText("需求规格第 1 版 · 已起草")).toBeVisible(BACKGROUND);
+    const questions = page.getByText(/^场景问题 (\d+)$/);
+    await expect(questions).not.toHaveText("场景问题 0");
+    await questions.click();
+    // Every drafted item quotes the document it came from.
+    await expect(page.getByText("出自「bkn-project-requirements.md」").first()).toBeVisible();
+    await expectNoForbiddenWords(page, "requirements");
+  });
+
+  await test.step("7. settle open requirement conflicts", async () => {
+    const banner = page.getByText(/个需求冲突/);
+    if (!(await banner.isVisible())) {
+      test.info().annotations.push({ type: "data", description: "no requirement conflict" });
+      return;
+    }
+    await page.getByRole("button", { name: "去处理" }).click();
+    const open = page.getByRole("button", { name: /^裁\s*决$/ });
+    while ((await open.count()) > 0) {
+      await open.first().click();
+      const dialog = page.getByRole("dialog");
+      // The side the document types suggest is preselected; a reason is required.
+      await dialog.getByLabel("理由（必填）").fill("E2E：按文档类型的建议");
+      await dialog.getByRole("button", { name: "保存裁决" }).click();
+      await expect(dialog).toBeHidden();
+    }
+    await expect(page.getByText(/个需求冲突/)).toBeHidden();
+  });
+
+  // Test questions are checked against the object types the questions need.
   await test.step("6. generate test questions for a question, edit one, delete one", async () => {
     await openSection(page, "需求场景");
     await page.getByText(/^场景问题 \d+$/).click();
