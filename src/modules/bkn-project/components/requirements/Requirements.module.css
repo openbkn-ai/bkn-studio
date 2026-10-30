@@ -126,3 +126,17 @@
   padding: 0;
   list-style: none;
 }
+
+.exportItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 320px;
+  white-space: normal;
+}
+
+.exportNote {
+  display: block;
+  max-width: 320px;
+  white-space: normal;
+}
