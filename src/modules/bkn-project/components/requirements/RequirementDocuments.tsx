@@ -196,6 +196,10 @@ function UploadDialog({
   const [results, setResults] = useState<UploadResult[] | null>(null);
 
   const send = async () => {
+    // One upload at a time, however the button is pressed.
+    if (sending) {
+      return;
+    }
     setSending(true);
     try {
       setResults(await uploadDocuments(projectId, files));
@@ -209,14 +213,24 @@ function UploadDialog({
   const created = results?.some((result) => result.outcome === "created") ?? false;
   return (
     <Modal
-      cancelButtonProps={{ hidden: results !== null }}
       cancelText={t("common.cancel")}
       confirmLoading={sending}
       destroyOnHidden
-      okButtonProps={{ disabled: results === null && !files.length }}
-      okText={results ? t(`${PREFIX}.done`) : t(`${PREFIX}.uploadSelected`)}
+      // Once uploaded, "done" is a button of its own: the upload button settles out of its
+      // loading state a render late and would drop a click made in between.
+      footer={
+        results
+          ? [
+              <AppButton key="done" onClick={() => onClose(created)} type="primary">
+                {t(`${PREFIX}.done`)}
+              </AppButton>,
+            ]
+          : undefined
+      }
+      okButtonProps={{ disabled: !files.length }}
+      okText={t(`${PREFIX}.uploadSelected`)}
       onCancel={() => onClose(created)}
-      onOk={() => (results ? onClose(created) : void send())}
+      onOk={() => void send()}
       open
       title={t(`${PREFIX}.uploadTitle`)}
     >
