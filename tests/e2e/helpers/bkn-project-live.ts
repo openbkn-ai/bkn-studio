@@ -100,28 +100,30 @@ export async function signIn(context: BrowserContext, baseURL: string) {
 
 /**
  * The editions under test. A deployment is one of them at a time (8081 is professional and
- * licensed), so the spec shapes only the capability snapshot the backend returns:
+ * licensed), so the spec shapes only the capability snapshot the backend returns, as each
+ * edition's own backend would answer:
  *
- *   community   no knowledge-base extension installed  (dropped from extensions and capabilities)
- *   licensed    installed, community licence            (dropped from capabilities only)
+ *   community   community image: no licence, nothing installed
+ *   licensed    professional image, community licence: no licence, the extensions installed
  *
  * Every other response, the whole flow's data included, comes from the real backend.
  */
 export type Edition = "community" | "licensed";
 
-const KNOWLEDGE_BASE = "knowledge_base";
-
 export async function useEdition(page: Page, edition: Edition) {
   await page.route("**/api/safe/v1/capabilities", async (route) => {
     const response = await fetchSignedIn(route);
-    const body = (await response.json()) as { capabilities?: string[]; extensions?: string[] };
-    const without = (list?: string[]) => (list ?? []).filter((item) => item !== KNOWLEDGE_BASE);
+    const body = (await response.json()) as { extensions?: string[] };
     await route.fulfill({
       response,
       json: {
         ...body,
-        capabilities: without(body.capabilities),
-        extensions: edition === "community" ? without(body.extensions) : body.extensions,
+        capabilities: [],
+        edition: "community",
+        extensions: edition === "community" ? [] : body.extensions,
+        features: [],
+        licensed: false,
+        state: "fallback_community",
       },
     });
   });
