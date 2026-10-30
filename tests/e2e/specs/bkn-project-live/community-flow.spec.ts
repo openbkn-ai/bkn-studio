@@ -136,7 +136,10 @@ test("community image: from tables and requirements to a published, switched rel
     await dialog.getByRole("button", { name: /完\s*成/ }).click();
     await expect(page.getByText("bkn-project-requirements.md").first()).toBeVisible();
     // The document type decides which side wins a conflict.
-    await page.getByRole("combobox", { name: "「bkn-project-requirements.md」的文档类型" }).click();
+    // Click the select itself, as a person does: its shown value covers the inner combobox.
+    await page
+      .locator('.ant-select[aria-label="「bkn-project-requirements.md」的文档类型"]')
+      .click();
     await page.locator('.ant-select-item-option[title="产品需求"]').click();
     await expect(
       page.locator(".ant-select-selection-item", { hasText: "产品需求" }).first(),
