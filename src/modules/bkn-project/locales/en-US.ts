@@ -217,6 +217,22 @@ export const bknProjectEnUS = {
           restore: "Restored field {{field}} as property {{property}} of {{name}}",
           other: "Changed {{kind}} {{name}}",
         },
+        confirmation: {
+          accept_partial: "Confirmed the draft without {{count}} tables that could not be read",
+          accept_partial_one: "Confirmed the draft without {{count}} table that could not be read",
+          accept_partial_other:
+            "Confirmed the draft without {{count}} tables that could not be read",
+          accept_undecided: "Confirmed the draft leaving out {{count}} undecided items",
+          accept_undecided_one: "Confirmed the draft leaving out {{count}} undecided item",
+          accept_undecided_other: "Confirmed the draft leaving out {{count}} undecided items",
+          accept_unresolved_conflicts:
+            "Confirmed the draft with {{count}} requirement conflicts not resolved",
+          accept_unresolved_conflicts_one:
+            "Confirmed the draft with {{count}} requirement conflict not resolved",
+          accept_unresolved_conflicts_other:
+            "Confirmed the draft with {{count}} requirement conflicts not resolved",
+          other: "Made a decision when confirming the draft",
+        },
         empty: "none",
         beforeAfter: "Before: {{before}}  After: {{after}}",
         byAt: "{{who}} · {{time}}",

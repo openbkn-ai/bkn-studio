@@ -47,6 +47,43 @@ describe("change log", () => {
     ).toContain('"name":"sales_orders_to_customers"');
   });
 
+  it("says what confirming the draft accepted, never as an unnamed item", () => {
+    const accepted = describeDecision(
+      t,
+      decision({
+        action: "accept_undecided",
+        after: ["object_types/bom", "relation_types/bom_to_parts"],
+        before: null,
+        itemId: "",
+        kind: "draft",
+      }),
+      names,
+    );
+    expect(accepted.text).toBe(
+      'bknProject.model.changes.confirmation.accept_undecided:{"count":2}',
+    );
+    expect(
+      describeDecision(
+        t,
+        decision({
+          action: "accept_unresolved_conflicts",
+          after: ["k1"],
+          itemId: "",
+          kind: "draft",
+        }),
+        names,
+      ).text,
+    ).toBe('bknProject.model.changes.confirmation.accept_unresolved_conflicts:{"count":1}');
+    // A decision on the draft added later still reads as one, not as an object type.
+    expect(
+      describeDecision(
+        t,
+        decision({ action: "accept_more", after: null, itemId: "", kind: "draft" }),
+        names,
+      ).text,
+    ).toBe('bknProject.model.changes.confirmation.other:{"count":0}');
+  });
+
   it("shows what a rename and a description replaced", () => {
     const rename = describeDecision(
       t,
