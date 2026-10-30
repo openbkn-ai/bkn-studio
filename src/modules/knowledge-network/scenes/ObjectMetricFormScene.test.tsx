@@ -408,6 +408,9 @@ describe("ObjectMetricFormScene object properties", () => {
               [
                 ["result.physical_type", "decimal"],
                 ["result.semantic_type", "amount"],
+                ["result.precision", 18],
+                ["result.scale", 6],
+                ["result.rounding_mode", "half_even"],
                 ["result.quantity_kind", "currency"],
                 ["result.unit_system", "ISO_4217"],
                 ["result.unit_code", "CNY"],
@@ -441,6 +444,9 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(definition.specification.measure.aggregation).toBe("sum");
     expect(definition.specification.measure.expression?.node_type).toBe("binary");
     expect(definition.result_semantics.value.semantic_type).toBe("amount");
+    expect(definition.result_semantics.value.precision).toBe(18);
+    expect(definition.result_semantics.value.scale).toBe(6);
+    expect(definition.result_semantics.value.rounding_mode).toBe("half_even");
     expect(definition.result_semantics.value.unit).toMatchObject({
       code: "CNY",
       quantity_kind: "currency",
@@ -1243,6 +1249,151 @@ describe("ObjectMetricFormScene object properties", () => {
 });
 
 describe("ObjectMetricFormScene edit loading", () => {
+  it("preserves an existing composite result contract when AI edits only its expression", async () => {
+    const recordFor = (definition: ReturnType<typeof createObjectMetricDefinitionV1>) => ({
+      branch: "main",
+      create_time: 0,
+      creator: { id: "owner", type: "user" },
+      definition,
+      kn_id: "network-1",
+      update_time: 0,
+      updater: { id: "owner", type: "user" },
+    });
+    const amount = createObjectMetricDefinitionV1("atomic", "order");
+    amount.id = "amount";
+    amount.name = "实付金额";
+    amount.lifecycle.status = "published";
+    amount.result_semantics.value = {
+      physical_type: "decimal",
+      precision: 18,
+      rounding_mode: "half_up",
+      scale: 6,
+      semantic_type: "amount",
+      unit: { code: "CNY", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
+    };
+    const usdAmount = createObjectMetricDefinitionV1("atomic", "order");
+    usdAmount.id = "usd-amount";
+    usdAmount.name = "美元实付金额";
+    usdAmount.lifecycle.status = "published";
+    usdAmount.result_semantics.value = {
+      ...amount.result_semantics.value,
+      unit: { code: "USD", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
+    };
+    const count = createObjectMetricDefinitionV1("atomic", "order");
+    count.id = "count";
+    count.name = "订单数";
+    count.lifecycle.status = "published";
+    count.result_semantics.value = {
+      physical_type: "int64",
+      semantic_type: "count",
+      unit: { code: "1", quantity_kind: "count", scale_factor: 1, system: "UCUM" },
+    };
+    const draft = createObjectMetricDefinitionV1("composite", "order");
+    draft.id = "average-draft";
+    draft.code = "average_draft";
+    draft.name = "平均实付金额";
+    draft.description = "每单平均实付金额";
+    draft.result_semantics.value = amount.result_semantics.value;
+    if (draft.specification.kind !== "composite") throw new Error("expected composite metric");
+    draft.specification.dependencies = [
+      {
+        alias: "total",
+        metric_ref: { metric_id: "amount", version: 1 },
+        object_alignment: { mode: "same_object", deduplication: "none" },
+        evaluation_context: { filter_context: { mode: "inherit" }, window: "inherited" },
+      },
+      {
+        alias: "orders",
+        metric_ref: { metric_id: "count", version: 1 },
+        object_alignment: { mode: "same_object", deduplication: "none" },
+        evaluation_context: { filter_context: { mode: "inherit" }, window: "inherited" },
+      },
+    ];
+    draft.specification.expression = {
+      node_type: "binary",
+      operator: "divide",
+      left: { node_type: "dependency", dependency_alias: "total" },
+      right: { node_type: "dependency", dependency_alias: "orders" },
+    };
+    const originalExpression = draft.specification.expression;
+    mocks.getObjectMetricV1.mockResolvedValue(recordFor(draft));
+    mocks.listObjectMetricsV1.mockResolvedValue({
+      entries: [recordFor(amount), recordFor(count), recordFor(usdAmount)],
+      total_count: 3,
+    });
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    mocks.runObjectMetricDesigner.mockImplementation((params) => {
+      const nameOnly = params.message === "临时改名";
+      return Promise.resolve({
+        answer: nameOnly ? "建议临时改名" : "建议调整公式",
+        proposal: {
+          base_form_revision: params.baseFormRevision,
+          changes: nameOnly
+            ? [
+                {
+                  after: "临时名称",
+                  before: "平均实付金额",
+                  field: "name",
+                  operation: "replace" as const,
+                  reason: "仅更新名称",
+                },
+              ]
+            : [
+                {
+                  after: { ...originalExpression },
+                  before: originalExpression,
+                  field: "composite.expression",
+                  operation: "replace" as const,
+                  reason: "仅更新公式",
+                },
+              ],
+          kind: "metric_design_proposal",
+          questions: [],
+          summary: nameOnly ? "仅更新名称" : "仅更新公式",
+        },
+        runId: "run-composite",
+        threadId: "thread-composite",
+      });
+    });
+
+    mocks.routeParams.current = { metricId: "average-draft", networkId: "network-1" };
+    render(<ObjectMetricFormScene mode="edit" />);
+    expect(await screen.findByLabelText("对象指标名称")).toHaveValue("平均实付金额");
+    fireEvent.click(getButtonByText("AI 生成"));
+    const prompt = screen.getByLabelText("描述要创建的对象指标");
+    fireEvent.change(prompt, { target: { value: "只调整计算公式" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    fireEvent.change(prompt, { target: { value: "验证当前表单" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalled());
+    const next = mocks.validateObjectMetricV1.mock.lastCall?.[1];
+    expect(next?.result_semantics.value).toMatchObject({
+      physical_type: "decimal",
+      precision: 18,
+      rounding_mode: "half_up",
+      scale: 6,
+      semantic_type: "amount",
+      unit: { code: "CNY", quantity_kind: "currency", system: "ISO_4217" },
+    });
+
+    fireEvent.click(await findButtonByText("撤销本次应用"));
+    fireEvent.change(prompt, { target: { value: "临时改名" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    expect(screen.getByLabelText("对象指标名称")).toHaveValue("临时名称");
+    fireEvent.click(await findButtonByText("撤销本次应用"));
+    expect(screen.getByLabelText("对象指标名称")).toHaveValue("平均实付金额");
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "第 1 个依赖对象指标" }));
+    fireEvent.click(await screen.findByText(/美元实付金额 · v1/));
+    mocks.runObjectMetricDesigner.mockClear();
+    fireEvent.change(prompt, { target: { value: "读取当前表单" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalled());
+    expect(mocks.runObjectMetricDesigner.mock.lastCall?.[0].formSnapshot.unitCode).toBeUndefined();
+  }, 60_000);
+
   it("resets inherited fields when AI changes a derived metric's base metric", async () => {
     const ref = (propertyName: string) => ({
       object_type_id: "order",

@@ -159,6 +159,75 @@ describe("runObjectMetricDesigner", () => {
     }
   });
 
+  it("accepts a valid decimal result contract proposal", async () => {
+    const decimalProposal = {
+      ...proposal,
+      changes: [
+        { ...proposal.changes[0], field: "result.precision", after: 20 },
+        { ...proposal.changes[0], field: "result.scale", after: 8 },
+        { ...proposal.changes[0], field: "result.rounding_mode", after: "floor" },
+      ],
+    };
+    fetchMock.mockResolvedValueOnce(
+      streamResponse([
+        sse("meta", { run_id: "run-1", thread_id: "thread-1" }) +
+          sse("proposal", { content: decimalProposal }) +
+          sse("terminal", { status: "succeeded" }),
+      ]),
+    );
+
+    const result = await runObjectMetricDesigner({
+      ...baseParams,
+      formSnapshot: {
+        physicalType: "decimal",
+        precision: 18,
+        scale: 6,
+        roundingMode: "half_even",
+      },
+    });
+
+    expect(proposalToObjectMetricAiIntent(result.proposal).result).toEqual({
+      precision: 20,
+      scale: 8,
+      rounding_mode: "floor",
+    });
+  });
+
+  it.each([
+    ["result.precision", 0],
+    ["result.precision", 5],
+    ["result.scale", 19],
+    ["result.scale", 2.5],
+    ["result.rounding_mode", "unknown"],
+    ["result.precision", null],
+    ["result.scale", null],
+    ["result.rounding_mode", null],
+  ])("rejects an invalid decimal format change in %s", async (field, after) => {
+    fetchMock.mockResolvedValueOnce(
+      streamResponse([
+        sse("meta", { run_id: "run-1", thread_id: "thread-1" }) +
+          sse("proposal", {
+            content: {
+              ...proposal,
+              changes: [{ ...proposal.changes[0], field, after }],
+            },
+          }) +
+          sse("terminal", { status: "succeeded" }),
+      ]),
+    );
+    await expect(
+      runObjectMetricDesigner({
+        ...baseParams,
+        formSnapshot: {
+          physicalType: "decimal",
+          precision: 18,
+          scale: 6,
+          roundingMode: "half_even",
+        },
+      }),
+    ).rejects.toThrow("无效的修改建议");
+  });
+
   it("shows the validation field, reason, and run ID for a failed proposal", async () => {
     const error = {
       code: "BknAgent.MetricDesign.ProposalInvalid",

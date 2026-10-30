@@ -9,6 +9,7 @@ import { makeAuthedFetch, type AgentTokenProvider } from "./agent-chat.service";
 import { getExecution, newClientRequestId } from "./bkn-agent-execution.service";
 import { objectMetricText } from "../lib/object-metric-text";
 import type { ObjectMetricAiIntent } from "./object-metric-ai.service";
+import { validObjectMetricAiDecimalFormat } from "./object-metric-ai-proposal";
 
 export const OBJECT_METRIC_DESIGN_PATH = "/api/bkn-agent/v1/metric-design/executions";
 
@@ -108,6 +109,9 @@ const editableFields = new Set([
   "composite.expression",
   "result.no_data_policy",
   "result.physical_type",
+  "result.precision",
+  "result.scale",
+  "result.rounding_mode",
   "result.semantic_type",
   "result.unit_code",
   "result.unit_system",
@@ -128,6 +132,7 @@ function parseProposal(
   value: unknown,
   revision: string,
   metricType: ObjectMetricDesignScope["metric_type"],
+  formSnapshot: Record<string, unknown>,
 ): ObjectMetricDesignProposal {
   const proposal = asRecord(value);
   if (
@@ -158,6 +163,14 @@ function parseProposal(
       throw new Error(objectMetricText("aiDesignerInvalidProposal"));
     }
     seen.add(field);
+  }
+  if (
+    !validObjectMetricAiDecimalFormat(
+      proposalToObjectMetricAiIntent(proposal as ObjectMetricDesignProposal).result,
+      formSnapshot,
+    )
+  ) {
+    throw new Error(objectMetricText("aiDesignerInvalidProposal"));
   }
   return proposal as ObjectMetricDesignProposal;
 }
@@ -259,7 +272,12 @@ export async function runObjectMetricDesigner(
       } else if (name === "token" && typeof data.content === "string") {
         params.onText?.(data.content);
       } else if (name === "proposal") {
-        proposal = parseProposal(data.content, params.baseFormRevision, params.scope.metric_type);
+        proposal = parseProposal(
+          data.content,
+          params.baseFormRevision,
+          params.scope.metric_type,
+          params.formSnapshot,
+        );
       } else if (name === "result") {
         const content = asRecord(data.content);
         if (typeof content?.answer === "string") answer = content.answer;
@@ -268,6 +286,7 @@ export async function runObjectMetricDesigner(
             content.proposal,
             params.baseFormRevision,
             params.scope.metric_type,
+            params.formSnapshot,
           );
         }
       } else if (name === "terminal") {
@@ -289,7 +308,12 @@ export async function runObjectMetricDesigner(
     const result = asRecord(record.result);
     if (typeof result?.answer === "string") answer = result.answer;
     if (result?.proposal) {
-      proposal = parseProposal(result.proposal, params.baseFormRevision, params.scope.metric_type);
+      proposal = parseProposal(
+        result.proposal,
+        params.baseFormRevision,
+        params.scope.metric_type,
+        params.formSnapshot,
+      );
     }
     failure = designFailure(record.error, runId);
   }
