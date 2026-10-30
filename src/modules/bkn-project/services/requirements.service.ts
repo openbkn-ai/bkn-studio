@@ -11,6 +11,7 @@ import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import type {
+  QuestionDev,
   RequirementCitation,
   RequirementItemKind,
   RequirementItemRef,
@@ -401,6 +402,138 @@ export async function draftRequirements(
     { skipErrorToast: true },
   );
   return mapRequirements(response.data);
+}
+
+/* --------------------------- Test questions and guidance --------------------------- */
+
+/** How often guidance being generated is read again. */
+export const GUIDANCE_POLL_MS = 5000;
+
+type BackendDev = {
+  current?: boolean;
+  deleted_tests?: number;
+  error?: string;
+  guidance?: string;
+  left_out_tests?: number;
+  no_tests_reason?: string;
+  ontology_changed?: boolean | null;
+  out_of_scope?: string[] | null;
+  status: string;
+  tests?:
+    | {
+        check?: { outcome: string; reason?: string } | null;
+        edited?: boolean;
+        expect: string;
+        id: string;
+        kind?: string;
+        text: string;
+      }[]
+    | null;
+  update_time: number;
+};
+
+export const mapDev = (dev: BackendDev): QuestionDev => ({
+  current: dev.current ?? true,
+  deletedTests: dev.deleted_tests ?? 0,
+  error: dev.error ?? "",
+  guidance: dev.guidance ?? "",
+  leftOutTests: dev.left_out_tests ?? 0,
+  noTestsReason: dev.no_tests_reason ?? "",
+  ontologyChanged: dev.ontology_changed ?? null,
+  outOfScope: dev.out_of_scope ?? [],
+  status: dev.status,
+  tests: (dev.tests ?? []).map((test) => ({
+    check: { outcome: test.check?.outcome ?? "not_checked", reason: test.check?.reason ?? "" },
+    edited: test.edited ?? false,
+    expect: test.expect,
+    id: test.id,
+    kind: test.kind ?? "",
+    text: test.text,
+  })),
+  updateTime: dev.update_time,
+});
+
+const devPath = (projectId: string, questionId: string) =>
+  `${requirementsPath(projectId)}/questions/${encodeURIComponent(questionId)}`;
+
+/** A question's test questions and guidance, or null before they were first generated. */
+export async function getQuestionDev(
+  projectId: string,
+  questionId: string,
+): Promise<QuestionDev | null> {
+  if (useMock) {
+    return wait(mockDevNow(questionId));
+  }
+  try {
+    const response = await http.get<BackendDev>(`${devPath(projectId, questionId)}/dev`, {
+      skipErrorToast: true,
+    });
+    return mapDev(response.data);
+  } catch (error) {
+    // Requirement.TestNotFound before the first generation.
+    if (isRequestNotFound(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/** Generates the question's test questions and guidance again, in the background. */
+export async function generateQuestionDev(
+  projectId: string,
+  questionId: string,
+): Promise<QuestionDev> {
+  if (useMock) {
+    mockDevStarts[questionId] = Date.now();
+    return wait(mockDevNow(questionId)!);
+  }
+  const response = await http.post<BackendDev>(
+    `${devPath(projectId, questionId)}/dev:generate`,
+    undefined,
+    { skipErrorToast: true },
+  );
+  return mapDev(response.data);
+}
+
+/** Changes a test question's text or what it expects; it is checked against the data again. */
+export async function editTest(
+  projectId: string,
+  questionId: string,
+  testId: string,
+  change: { expect?: string; text?: string },
+  updateTime: number,
+): Promise<QuestionDev> {
+  if (useMock) {
+    const dev = mockDevNow(questionId);
+    const test = dev?.tests.find((entry) => entry.id === testId);
+    if (test) {
+      mockDevEdits[`${questionId}/${testId}`] = { ...change, edited: true };
+    }
+    return wait(mockDevNow(questionId)!);
+  }
+  const response = await http.put<BackendDev>(
+    `${devPath(projectId, questionId)}/tests/${encodeURIComponent(testId)}`,
+    { ...change, update_time: updateTime },
+    { skipErrorToast: true },
+  );
+  return mapDev(response.data);
+}
+
+export async function deleteTest(
+  projectId: string,
+  questionId: string,
+  testId: string,
+  updateTime: number,
+): Promise<QuestionDev> {
+  if (useMock) {
+    mockDevEdits[`${questionId}/${testId}`] = { deleted: true };
+    return wait(mockDevNow(questionId)!);
+  }
+  const response = await http.delete<BackendDev>(
+    `${devPath(projectId, questionId)}/tests/${encodeURIComponent(testId)}`,
+    { params: { update_time: updateTime }, skipErrorToast: true },
+  );
+  return mapDev(response.data);
 }
 
 /** What a person sets on an item: only the fields of its kind. */
@@ -919,4 +1052,69 @@ async function mockUpload(files: File[]): Promise<UploadResult[]> {
     results.push({ code: "", documentId: id, name: file.name, outcome: "created" });
   }
   return results;
+}
+
+/** When the mock's guidance was generated, by question; none for a question never generated. */
+const mockDevStarts: Record<string, number> = { q1: Date.parse("2026-10-25T09:10:00Z") };
+const mockDevEdits: Record<
+  string,
+  { deleted?: boolean; edited?: boolean; expect?: string; text?: string }
+> = {};
+const MOCK_GENERATE_MS = 3000;
+
+function mockDevNow(questionId: string): QuestionDev | null {
+  const start = mockDevStarts[questionId];
+  if (start === undefined) {
+    return null;
+  }
+  const generating = Date.now() - start < MOCK_GENERATE_MS;
+  const tests = [
+    {
+      check: { outcome: "passed", reason: "" },
+      edited: false,
+      expect: "exists",
+      id: "t1",
+      kind: "paraphrase",
+      text: "Which orders of customer C-001 are late?",
+    },
+    {
+      check: { outcome: "failed", reason: "record_exists" },
+      edited: false,
+      expect: "not_exists",
+      id: "t2",
+      kind: "not_exist",
+      text: "Which orders of customer C-002 are late?",
+    },
+  ]
+    .filter((test) => !mockDevEdits[`${questionId}/${test.id}`]?.deleted)
+    .map((test) => {
+      const found = mockDevEdits[`${questionId}/${test.id}`];
+      const edit = found
+        ? {
+            ...(found.edited ? { edited: true } : {}),
+            ...(found.expect ? { expect: found.expect } : {}),
+            ...(found.text ? { text: found.text } : {}),
+          }
+        : {};
+      return {
+        ...test,
+        ...edit,
+        ...(edit.edited ? { check: { outcome: "passed", reason: "" } } : {}),
+      };
+    });
+  return {
+    current: true,
+    deletedTests: Object.keys(mockDevEdits).filter(
+      (key) => key.startsWith(`${questionId}/`) && mockDevEdits[key].deleted,
+    ).length,
+    error: "",
+    guidance: generating ? "" : "Find the customer by **customer code**, then its sales orders.",
+    leftOutTests: 1,
+    noTestsReason: "",
+    ontologyChanged: false,
+    outOfScope: generating ? [] : ["How late are the orders on average? It needs a metric."],
+    status: generating ? "generating" : "ready",
+    tests: generating ? [] : tests,
+    updateTime: start + Object.keys(mockDevEdits).length,
+  };
 }

@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { Citations } from "@/modules/bkn-project/components/requirements/Citations";
+import { QuestionDevPanel } from "@/modules/bkn-project/components/requirements/QuestionDevPanel";
 import { Citing, Editing } from "@/modules/bkn-project/components/requirements/citing";
 import {
   capabilityKindText,
@@ -111,7 +112,15 @@ function EditedTag({ edited }: { edited: boolean }) {
   return edited ? <LightStatusTag tone="info">{t(`${PREFIX}.edited`)}</LightStatusTag> : null;
 }
 
-export function QuestionsView({ itemName, spec }: { itemName: ItemName; spec: RequirementSpec }) {
+export function QuestionsView({
+  itemName,
+  projectId,
+  spec,
+}: {
+  itemName: ItemName;
+  projectId: string;
+  spec: RequirementSpec;
+}) {
   const { t } = useTranslation();
   const scenarioName = (id: string) => spec.scenarios.find((item) => item.id === id)?.name ?? id;
   return (
@@ -149,6 +158,19 @@ export function QuestionsView({ itemName, spec }: { itemName: ItemName; spec: Re
             </Field>
           </div>
           <Citations citations={question.citations} supplementReason={question.supplementReason} />
+          <Collapse
+            destroyOnHidden
+            ghost
+            items={[
+              {
+                // Read only when opened: each question's tests are a request of their own.
+                children: <QuestionDevPanel projectId={projectId} questionId={question.id} />,
+                key: "dev",
+                label: t(`${PREFIX}.dev.open`),
+              },
+            ]}
+            size="small"
+          />
         </section>
       ))}
     </div>
