@@ -5,7 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* The platform's white page surface, so the list sits on it as other modules do. */
 .page {
+  composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  /* Fills the content area, so no shell grey shows below a short list. */
+  flex: 1;
   padding: 24px 28px;
 }
 
