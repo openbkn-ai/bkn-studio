@@ -65,6 +65,21 @@ vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal)
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
   getUnderstanding: () => Promise.resolve([]),
   getProjectStatus: getProjectStatusMock,
+  // What waits, with the question that needs it; the draft itself is read on its own.
+  getProjectPending: () =>
+    Promise.resolve({
+      draftUpdateTime: 0,
+      items: [
+        {
+          blocking: true,
+          itemId: "material_bom",
+          kind: "object_types",
+          name: "material_bom",
+          neededBy: [{ id: "q3", text: "Which products use part P-100?" }],
+          reason: "needs_identity",
+        },
+      ],
+    }),
 }));
 
 vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal) => ({
@@ -364,6 +379,9 @@ describe("ProjectModel", () => {
     getDraftMock.mockResolvedValue(ready());
     const view = renderModel({}, true, "changes");
     expect(await screen.findByText("bknProject.model.changes.waitingTitle")).toBeInTheDocument();
+    // What waits says which scenario questions need it.
+    expect(await screen.findByText("Which products use part P-100?")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.model.changes.neededBy")).toBeInTheDocument();
     view.unmount();
 
     renderModel({}, true, "nonsense");

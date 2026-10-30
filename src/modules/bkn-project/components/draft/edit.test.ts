@@ -17,6 +17,7 @@ import {
   canAdopt,
   draftErrorCode,
   identityCandidates,
+  suggestedIdentity,
   nameEdit,
   restorable,
   restoredProperty,
@@ -101,6 +102,18 @@ describe("draft edits", () => {
       "order_no",
       "customer_id",
     ]);
+  });
+
+  it("suggests the identity drafting counted unique, while it can still identify records", () => {
+    const [, salesOrders] = draft().items.objectTypes;
+    expect(suggestedIdentity(salesOrders)).toBeNull();
+
+    const counted = { ...salesOrders.key, candidate: ["id", "order_no"] };
+    expect(suggestedIdentity({ ...salesOrders, key: counted })).toEqual(["id", "order_no"]);
+    // A property that is gone, or of a type an identity cannot take, drops the suggestion.
+    expect(
+      suggestedIdentity({ ...salesOrders, key: { ...counted, candidate: ["id", "gone"] } }),
+    ).toBeNull();
   });
 
   it("offers restoring only fields left out for privacy", () => {
