@@ -65,8 +65,6 @@ export async function fetchSignedIn(route: Route): Promise<APIResponse> {
   const send = () =>
     route.fetch({
       headers: { ...route.request().headers(), authorization: `Bearer ${accessToken()}` },
-      // The body goes on as the bytes the page sent: as text, an uploaded file is re-encoded.
-      postData: route.request().postDataBuffer() ?? undefined,
     });
   const response = await send();
   if (response.status() !== 401 || !process.env.E2E_TOKEN_COMMAND) {
@@ -88,9 +86,16 @@ export async function signIn(context: BrowserContext, baseURL: string) {
       sameSite: "Lax",
     },
   ]);
-  await context.route("**/api/**", async (route) =>
-    route.fulfill({ response: await fetchSignedIn(route) }),
-  );
+  await context.route("**/api/**", async (route) => {
+    const request = route.request();
+    // An upload is left alone: intercepting it re-encodes the file. Uploads happen early in a
+    // run, while the token Studio holds is still fresh.
+    if ((request.headers()["content-type"] ?? "").startsWith("multipart/form-data")) {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({ response: await fetchSignedIn(route) });
+  });
 }
 
 /**
