@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createProjectMock = vi.hoisted(() => vi.fn());
@@ -20,12 +20,15 @@ vi.mock("@/modules/bkn-project/services/project.service", () => ({
   createProject: createProjectMock,
 }));
 
+import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
+
 import { NewProjectModal } from "./NewProjectModal";
 
 const networks = [{ id: "orders", name: "Orders network" }];
 
 function renderModal(onCreated = vi.fn(), catalogsError: string | null = null) {
-  render(
+  // Ant Design's injected styles make each jsdom query slow enough to time out under load.
+  renderWithoutAntdStyles(
     <NewProjectModal
       catalogs={[{ id: "c1", name: "ERP" }]}
       catalogsError={catalogsError}
