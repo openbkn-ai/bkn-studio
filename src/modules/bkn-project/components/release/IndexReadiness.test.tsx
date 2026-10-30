@@ -167,6 +167,24 @@ describe("IndexReadiness", () => {
     expect(screen.getByRole("button", { name: "重新构建" })).toBeDisabled();
   });
 
+  it("tells the page once when the builds it follows end", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getOntologyIndexMock
+      .mockResolvedValueOnce(
+        readiness([item("customers", { state: "building", task: { id: "t", status: "running" } })]),
+      )
+      .mockResolvedValue(readiness([item("customers")]));
+    const onSettled = vi.fn();
+    renderWithoutAntdStyles(<IndexReadiness canRun onSettled={onSettled} projectId="p1" />);
+
+    expect(await section().findByText("构建中")).toBeInTheDocument();
+    expect(onSettled).not.toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(INDEX_POLL_MS));
+    expect(await section().findByText("可用")).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(INDEX_POLL_MS * 2));
+    expect(onSettled).toHaveBeenCalledTimes(1);
+  });
+
   it("says when building again started no table, the rows saying why", async () => {
     getOntologyIndexMock.mockResolvedValue(
       readiness([
