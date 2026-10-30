@@ -28,12 +28,15 @@ const WAITING = new Set(["checking", "check_not_started", "check_needs_attention
  * comes from the status: a review once the check passed, a switch once published.
  */
 export function ReleasePublish({
+  baseNetworkId,
   canPublish,
   onChanged,
   projectId,
   status,
   versionOf,
 }: {
+  /** The network the lineage started from, before any release. */
+  baseNetworkId: string;
   /** The owner of an unarchived project. */
   canPublish: boolean;
   /** Something was published or switched: the page reads the status and versions again. */
@@ -113,6 +116,7 @@ export function ReleasePublish({
       ) : null}
       {switching && release ? (
         <SwitchConsumersDialog
+          baseNetworkId={baseNetworkId}
           onCancel={() => setSwitching(false)}
           onSwitched={() => {
             setSwitching(false);

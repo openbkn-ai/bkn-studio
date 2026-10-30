@@ -720,6 +720,7 @@ export const bknProjectEnUS = {
         title: "Switch consumers to v{{version}}",
         fromTo: "Consumers switch from v{{from}} to v{{to}}.",
         fromFirst: "Consumers switch from the original business knowledge network to v{{to}}.",
+        fromInUse: "Consumers switch from the version they use now to v{{to}}.",
         schedules: "These {{count}} schedules move to v{{version}} and run as you:",
         schedules_one: "This schedule moves to v{{version}} and runs as you:",
         schedules_other: "These {{count}} schedules move to v{{version}} and run as you:",
