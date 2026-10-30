@@ -82,7 +82,8 @@ export function ReleasePublish({
     };
   }, [projectId, releasedAs]);
   // A regression starts right after publishing: read it again until it ends, so its tag does not
-  // stay "running".
+  // stay "running". Counts every read, so a running regression is read again after a failed read.
+  const [regressionReads, setRegressionReads] = useState(0);
   const regressionRunning = regression?.status === "running";
   useEffect(() => {
     if (!regressionRunning || !releasedAs) {
@@ -92,13 +93,14 @@ export function ReleasePublish({
     const timer = window.setTimeout(() => {
       getRegression(projectId, releasedAs)
         .then((next) => active && setRegression(next))
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .finally(() => active && setRegressionReads((count) => count + 1));
     }, REGRESSION_POLL_MS);
     return () => {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [projectId, regression, regressionRunning, releasedAs]);
+  }, [projectId, regressionReads, regressionRunning, releasedAs]);
 
   return (
     <Section

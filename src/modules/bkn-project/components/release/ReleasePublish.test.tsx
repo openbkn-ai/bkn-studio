@@ -450,12 +450,16 @@ describe("ReleasePublish", () => {
       status: "running",
       version: "1.0.2",
     };
-    getRegressionMock.mockResolvedValueOnce(regression).mockResolvedValue({
-      ...regression,
-      finishTime: 2,
-      results: [{ outcome: "passed", questionId: "q1" }],
-      status: "passed",
-    });
+    // A failed read in between does not stop following it.
+    getRegressionMock
+      .mockResolvedValueOnce(regression)
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValue({
+        ...regression,
+        finishTime: 2,
+        results: [{ outcome: "passed", questionId: "q1" }],
+        status: "passed",
+      });
     renderPublish(
       status({
         release: { inUse: true, networkId: "n_v1_0_2", version: "1.0.2" },
@@ -464,6 +468,8 @@ describe("ReleasePublish", () => {
     );
 
     expect(await screen.findByText("运行中")).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(REGRESSION_POLL_MS));
+    expect(screen.getByText("运行中")).toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(REGRESSION_POLL_MS));
     expect(await screen.findByText("1 / 1 次提问通过")).toBeInTheDocument();
     expect(screen.queryByText("运行中")).toBeNull();
