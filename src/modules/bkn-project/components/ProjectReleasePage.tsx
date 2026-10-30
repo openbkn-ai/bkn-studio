@@ -21,6 +21,7 @@ import { IndexReadiness } from "@/modules/bkn-project/components/release/IndexRe
 import { RegressionDrawer } from "@/modules/bkn-project/components/release/RegressionDrawer";
 import { ReleasePublish } from "@/modules/bkn-project/components/release/ReleasePublish";
 import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
+import { useOnSettled } from "@/modules/bkn-project/components/release/useOnSettled";
 import { ReleaseVersions } from "@/modules/bkn-project/components/release/ReleaseVersions";
 import {
   CHECK_STATUS_TONE,
@@ -60,11 +61,14 @@ type JoinRow = CheckJoinResult & { key: string; relationType: string };
 function CheckSection({
   canRun,
   names,
+  onSettled,
   outdated,
   projectId,
 }: {
   canRun: boolean;
   names: Record<string, string>;
+  /** The check ended: what may be done next has changed. */
+  onSettled?: () => void;
   /** The draft changed after the confirmation this check counted. */
   outdated: boolean;
   projectId: string;
@@ -106,6 +110,7 @@ function CheckSection({
     const timer = window.setTimeout(() => void load(), CHECK_POLL_MS);
     return () => window.clearTimeout(timer);
   }, [counting, load, reads]);
+  useOnSettled(counting, onSettled);
 
   const run = async () => {
     setRunning(true);
@@ -482,10 +487,11 @@ export function ProjectReleasePage({
       <CheckSection
         canRun={canRun}
         names={names}
+        onSettled={() => void load()}
         outdated={status.stale.includes("check_outdated")}
         projectId={project.id}
       />
-      <IndexReadiness canRun={canRun} projectId={project.id} />
+      <IndexReadiness canRun={canRun} onSettled={() => void load()} projectId={project.id} />
       <ReleaseVersions
         inUseNetworkId={status.release?.inUse ? status.release.networkId : null}
         onOpenRegression={({ networkId, version }) => setRegressionOf({ networkId, version })}
