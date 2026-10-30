@@ -72,7 +72,10 @@ describe("ReleaseVersions", () => {
         onRetry={vi.fn()}
         projectId="p1"
         releases={[
-          release("1.0.2", { notes: "新增订单\n\nAccepted: index_not_ready", state: "live" }),
+          release("1.0.2", {
+            notes: "新增订单\nAccepted: 业务方已同意\n\nAccepted: index_not_ready",
+            state: "live",
+          }),
           release("1.0.1", { projectId: "p2", publisherId: "u2" }),
           release("1.0.0", { publisherId: "gone" }),
         ]}
@@ -85,7 +88,8 @@ describe("ReleaseVersions", () => {
     expect(within(newest).getByText("使用中")).toBeInTheDocument();
     expect(within(newest).getByText("本项目")).toBeInTheDocument();
     expect(within(newest).getByText("你")).toBeInTheDocument();
-    expect(within(newest).getByText("新增订单")).toBeInTheDocument();
+    // A line a person wrote like the one bkn-project appends stays theirs.
+    expect(within(newest).getByText(/新增订单\s+Accepted: 业务方已同意/)).toBeInTheDocument();
     expect(within(newest).getByText("发布时接受：部分本地索引没有就绪")).toBeInTheDocument();
     expect(within(other).getByText("其他项目")).toBeInTheDocument();
     expect(within(other).getByText("张三")).toBeInTheDocument();
@@ -94,7 +98,7 @@ describe("ReleaseVersions", () => {
     expect(within(other).queryByRole("button", { name: "回归结果" })).toBeNull();
     fireEvent.click(within(newest).getByRole("button", { name: "回归结果" }));
     expect(onOpenRegression).toHaveBeenCalledWith(expect.objectContaining({ version: "1.0.2" }));
-    expect(section().queryByText(/Accepted|index_not_ready/)).toBeNull();
+    expect(section().queryByText(/index_not_ready/)).toBeNull();
   });
 
   it("says when there is none yet, and offers to read them again when they cannot be read", () => {

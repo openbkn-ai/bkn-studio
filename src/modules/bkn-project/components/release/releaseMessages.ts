@@ -127,7 +127,8 @@ export const capabilityReasonText = (t: TFunction, reason: string) =>
 export function releaseNotes(t: TFunction, notes: string): { accepted: string; text: string } {
   const lines = notes.split("\n");
   const marker = "Accepted: ";
-  const acceptedLine = lines.find((line) => line.startsWith(marker));
+  // bkn-project appends it last; a line a person wrote the same way stays theirs.
+  const acceptedLine = [...lines].reverse().find((line) => line.startsWith(marker));
   const accepted = acceptedLine
     ? acceptedLine
         .slice(marker.length)
