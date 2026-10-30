@@ -288,7 +288,7 @@ export const contextLoaderPanelPart = {
       launchTipsTrigger: "How to start it on each system",
       launchTipsIntro:
         "Using WorkBuddy as an example. Quit the client fully (including the tray or menu bar), then start it with:",
-      launchTipsMac: "macOS (Terminal)",
+      launchTipsMac: "macOS (terminal)",
       launchTipsWindows: "Windows (PowerShell)",
       launchTipsLinux: "Linux (terminal)",
       launchCommandMac: "open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0",
