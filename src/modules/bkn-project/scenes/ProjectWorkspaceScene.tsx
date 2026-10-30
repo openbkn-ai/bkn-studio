@@ -18,6 +18,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ProjectModel } from "@/modules/bkn-project/components/ProjectModel";
 import { ProjectOverview } from "@/modules/bkn-project/components/ProjectOverview";
+import { ProjectRequirements } from "@/modules/bkn-project/components/requirements/ProjectRequirements";
 import { ProjectReleasePage } from "@/modules/bkn-project/components/ProjectReleasePage";
 import { ProjectWorkspaceNav } from "@/modules/bkn-project/components/ProjectWorkspaceNav";
 import {
@@ -169,6 +170,11 @@ export function ProjectWorkspaceScene({
               onProjectChange={(next) =>
                 setLoaded((current) => (current ? { ...current, project: next } : current))
               }
+              ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+              project={project}
+            />
+          ) : section === "requirements" ? (
+            <ProjectRequirements
               ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
               project={project}
             />
