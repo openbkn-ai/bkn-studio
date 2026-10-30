@@ -120,6 +120,13 @@
   border-bottom: none;
 }
 
+.confirmNeeded {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-warning-text);
+  font-size: 12px;
+}
+
 .confirmMeta {
   display: flex;
   flex-wrap: wrap;

@@ -96,3 +96,16 @@
   border: 1px solid var(--color-border-secondary);
   border-radius: 8px;
 }
+
+.changeText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.neededBy {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-warning-text);
+  font-size: 12px;
+}

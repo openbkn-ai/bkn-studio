@@ -18,6 +18,7 @@ import {
 } from "@/modules/bkn-project/components/draft/changes";
 import type { DraftItemActions } from "@/modules/bkn-project/components/draft/DraftTables";
 import type { Draft, DraftRelationType } from "@/modules/bkn-project/types/draft";
+import type { PendingQuestion } from "@/modules/bkn-project/types/publish";
 
 import styles from "./DraftTables.module.css";
 
@@ -31,6 +32,7 @@ export function DraftChangesPanel({
   currentUserId,
   directory,
   draft,
+  neededBy,
   unadoptedEnds,
 }: {
   actions: DraftItemActions;
@@ -38,6 +40,8 @@ export function DraftChangesPanel({
   /** Names of people, when the caller may read them. */
   directory: ReadonlyMap<string, string>;
   draft: Draft;
+  /** The scenario questions that need a waiting item, by `kind/item_id`. */
+  neededBy: ReadonlyMap<string, PendingQuestion[]>;
   unadoptedEnds: DraftRelationType[];
 }) {
   const { t } = useTranslation();
@@ -63,8 +67,9 @@ export function DraftChangesPanel({
           <ul className={styles.changes}>
             {waiting.map((objectType) => (
               <li className={styles.change} key={`identity-${objectType.id}`}>
-                <span>
+                <span className={styles.changeText}>
                   {t("bknProject.model.changes.needsIdentity", { name: objectType.name })}
+                  <NeededBy questions={neededBy.get(`object_types/${objectType.id}`)} />
                 </span>
                 <AppButton
                   aria-label={t("bknProject.model.identity.choose", { name: objectType.name })}
@@ -79,7 +84,10 @@ export function DraftChangesPanel({
             ))}
             {unadoptedEnds.map((relation) => (
               <li className={styles.change} key={`ends-${relation.id}`}>
-                <span>{t("bknProject.model.changes.unadoptedEnd", { name: relation.name })}</span>
+                <span className={styles.changeText}>
+                  {t("bknProject.model.changes.unadoptedEnd", { name: relation.name })}
+                  <NeededBy questions={neededBy.get(`relation_types/${relation.id}`)} />
+                </span>
                 <AppButton
                   aria-label={t("bknProject.model.changes.unadoptItem", { name: relation.name })}
                   disabled={disabled}
@@ -129,5 +137,21 @@ export function DraftChangesPanel({
         </section>
       ) : null}
     </div>
+  );
+}
+
+/** The scenario questions an item is needed by, one per line; nothing when none. */
+function NeededBy({ questions }: { questions: PendingQuestion[] | undefined }) {
+  const { t } = useTranslation();
+  if (!questions?.length) {
+    return null;
+  }
+  return (
+    <span className={styles.neededBy}>
+      {t("bknProject.model.changes.neededBy")}
+      {questions.map((question) => (
+        <span key={question.id}>{question.text}</span>
+      ))}
+    </span>
   );
 }

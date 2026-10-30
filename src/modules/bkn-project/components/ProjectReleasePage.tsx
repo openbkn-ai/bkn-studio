@@ -18,7 +18,10 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { formatRate } from "@/modules/bkn-project/components/draft/evidence";
 import { IndexReadiness } from "@/modules/bkn-project/components/release/IndexReadiness";
+import { RegressionDrawer } from "@/modules/bkn-project/components/release/RegressionDrawer";
+import { ReleasePublish } from "@/modules/bkn-project/components/release/ReleasePublish";
 import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
+import { ReleaseVersions } from "@/modules/bkn-project/components/release/ReleaseVersions";
 import {
   CHECK_STATUS_TONE,
   CHECK_STATUSES,
@@ -26,6 +29,7 @@ import {
   refusalText,
 } from "@/modules/bkn-project/components/publish/messages";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
+import { listReleases } from "@/modules/bkn-project/services/release.service";
 import {
   CHECK_POLL_MS,
   getOntologyCheck,
@@ -33,6 +37,7 @@ import {
   runOntologyCheck,
 } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
+import type { LineageRelease } from "@/modules/bkn-project/types/release";
 import type {
   CheckCountState,
   CheckJoinResult,
@@ -355,6 +360,25 @@ export function ProjectReleasePage({
     void load();
   }, [load]);
 
+  // The release whose regression is open.
+  const [regressionOf, setRegressionOf] = useState<{ networkId: string; version: string } | null>(
+    null,
+  );
+
+  // The releases of the project's network; read again after publishing or switching.
+  const [releases, setReleases] = useState<LineageRelease[] | "failed" | null>(null);
+  const loadReleases = useCallback(async () => {
+    setReleases(null);
+    try {
+      setReleases(await listReleases(project.knId));
+    } catch {
+      setReleases("failed");
+    }
+  }, [project.knId]);
+  useEffect(() => {
+    void loadReleases();
+  }, [loadReleases]);
+
   // The check names items by id; the draft gives the names people know. Ids are shown without it.
   useEffect(() => {
     let active = true;
@@ -435,6 +459,26 @@ export function ProjectReleasePage({
           type="warning"
         />
       ) : null}
+      <ReleasePublish
+        // The lineage is named after the network it started from.
+        baseNetworkId={project.knId}
+        canPublish={canRun}
+        onChanged={() => {
+          void load();
+          void loadReleases();
+        }}
+        onOpenRegression={() =>
+          status.release &&
+          setRegressionOf({ networkId: status.release.networkId, version: status.release.version })
+        }
+        projectId={project.id}
+        status={status}
+        versionOf={(networkId) =>
+          Array.isArray(releases)
+            ? releases.find((release) => release.networkId === networkId)?.version
+            : undefined
+        }
+      />
       <CheckSection
         canRun={canRun}
         names={names}
@@ -442,6 +486,22 @@ export function ProjectReleasePage({
         projectId={project.id}
       />
       <IndexReadiness canRun={canRun} projectId={project.id} />
+      <ReleaseVersions
+        inUseNetworkId={status.release?.inUse ? status.release.networkId : null}
+        onOpenRegression={({ networkId, version }) => setRegressionOf({ networkId, version })}
+        onRetry={() => void loadReleases()}
+        projectId={project.id}
+        releases={releases}
+      />
+      {regressionOf ? (
+        <RegressionDrawer
+          canRun={canRun}
+          networkId={regressionOf.networkId}
+          onClose={() => setRegressionOf(null)}
+          projectId={project.id}
+          version={regressionOf.version}
+        />
+      ) : null}
     </div>
   );
 }

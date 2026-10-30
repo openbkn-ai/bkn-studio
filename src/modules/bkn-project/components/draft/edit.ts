@@ -94,6 +94,20 @@ const IDENTITY_TYPES = new Set(["integer", "string", "text", "unsigned integer"]
 export const identityCandidates = (objectType: DraftObjectType): DraftProperty[] =>
   objectType.properties.filter((property) => IDENTITY_TYPES.has(property.type));
 
+/**
+ * The identity drafting counted unique and non-null for an object type waiting for one: a pair
+ * of properties, offered first. Null when it counted none, or a property of it can no longer
+ * identify records.
+ */
+export function suggestedIdentity(objectType: DraftObjectType): string[] | null {
+  const suggested = objectType.key.candidate;
+  if (!suggested?.length) {
+    return null;
+  }
+  const usable = new Set(identityCandidates(objectType).map((property) => property.name));
+  return suggested.every((name) => usable.has(name)) ? suggested : null;
+}
+
 /** Only fields left out for privacy can be restored; a type that cannot be mapped stays out. */
 export const restorable = (field: DraftExcludedField) => field.reason === "privacy";
 
