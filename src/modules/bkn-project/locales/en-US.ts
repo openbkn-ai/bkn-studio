@@ -361,6 +361,47 @@ export const bknProjectEnUS = {
           none: "No reason given",
         },
       },
+      sourceChanges: {
+        notice: "The structure of the tables changed; the draft still maps the old structure.",
+        view: "View changes",
+        title: "Changes to the tables' structure",
+        explain:
+          "Writing the changes into the draft makes added columns properties (unless the privacy or type rules leave them out), removes deleted columns with their properties, and retypes properties whose column changed type. Your decisions are kept; an object type that loses its identity needs one chosen again, and a relation type joining by a deleted column needs deciding again. Confirm and publish again afterwards.",
+        objectType: "{{name}} (table {{table}})",
+        onlyPublished:
+          "This object type exists only in the published version; writing into the draft leaves it as it is.",
+        added: 'New column "{{field}}"',
+        removed: 'The column of property "{{property}}" was deleted',
+        retyped: 'Property "{{property}}" changed type from {{from}} to {{to}}',
+        otherChange: 'Column "{{field}}" changed',
+        join: "; ",
+        excluded: {
+          privacy: "the privacy rules leave it out",
+          type: "its type is not supported, so it is left out",
+        },
+        unsupported: "the new type is not supported, so the property will be removed",
+        key: "it identifies or displays the records",
+        relations: "relation types joining by it: {{names}}",
+        relationLost:
+          'The link table of relation type "{{name}}" lost columns it joins by: {{fields}}',
+        missingTables: "These items' tables no longer exist and are not compared here: {{names}}",
+        unreachable: "Can't read the tables' structure right now. Try again later.",
+        inStep: "The tables match the draft; there are no changes to write.",
+        ownerOnly: "Only the project owner can write the changes into the draft.",
+        draft: "Write changes into the draft",
+        done: "The changes are in the draft. Confirm and publish again.",
+        outdated:
+          "The draft or the tables changed since this was read. It has been read again; please confirm once more.",
+        loadFailed: "Can't read the changes to the tables right now",
+        error: {
+          NotOwner: "Only the project owner can write the changes into the draft.",
+          NoSourceChanges: "There are no changes to write.",
+          NotReady: "The draft is not ready yet, so changes cannot be written.",
+          ProjectArchived: "The project is archived and its draft cannot be changed.",
+          SourceUnreachable: "Can't read the tables' structure right now. Try again later.",
+          other: "Could not write the changes into the draft. Try again later.",
+        },
+      },
       detail: {
         apiName: "ID",
         name: "Name",

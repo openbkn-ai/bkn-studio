@@ -21,6 +21,7 @@ import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityD
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
 import { ConfirmDraft } from "@/modules/bkn-project/components/model/ConfirmDraftDialog";
 import { UnderstandingBar } from "@/modules/bkn-project/components/model/UnderstandingBar";
+import { SourceChangesNotice } from "@/modules/bkn-project/components/model/SourceChanges";
 import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import {
   adoptBlocker,
@@ -475,6 +476,17 @@ export function ProjectModel({
           })}
           showIcon
           type="warning"
+        />
+      ) : null}
+      {draft?.status === "ready" ? (
+        <SourceChangesNotice
+          archived={project.archived}
+          draftUpdateTime={draft.updateTime}
+          onDrafted={(next) => {
+            setDraft(next);
+            setTab("changes");
+          }}
+          projectId={project.id}
         />
       ) : null}
       {unadoptedEnds.length ? (

@@ -165,3 +165,45 @@ export type DraftItemEdit = {
   incrementalKey?: string;
   name?: string;
 };
+
+/**
+ * How one column of a bound table differs from what it maps: `added` (no property maps it),
+ * `removed` (its property's column is gone) or `retyped` (now another type).
+ */
+export type SourceColumnChange = {
+  change: string;
+  /** For an added column: `privacy` or `unsupported_type` when drafting would leave it out. */
+  excluded: string;
+  field: string;
+  fieldName: string;
+  fromType: string;
+  /** The object type is identified or displayed by it. */
+  key: boolean;
+  property: string;
+  propertyName: string;
+  /** Relation types that join by it. */
+  relations: { id: string; name: string }[];
+  toType: string;
+  /** BKN cannot map the new type. */
+  unsupported: boolean;
+};
+
+/** What the tables a project binds look like now, against what the draft and the release map. */
+export type SourceChanges = {
+  missingTables: { id: string; kind: string; name: string; table: string }[];
+  objectTypes: {
+    changes: SourceColumnChange[];
+    id: string;
+    /** Drafting the changes applies them; an object type only published is left as it is. */
+    inDraft: boolean;
+    name: string;
+    published: boolean;
+    table: string;
+  }[];
+  /** Adopted relation types whose link table lost fields they join by. */
+  relationTypes: { id: string; name: string; removed: string[]; table: string }[];
+  /** Stands for the draft and its tables as read; drafting refuses another. */
+  signature: string;
+  /** `in_step`, `changed` or `unreachable`. */
+  state: string;
+};
