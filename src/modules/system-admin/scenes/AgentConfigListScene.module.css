@@ -13,6 +13,10 @@
   gap: 14px;
 }
 
+:global(.workspace-shell):has(.page) {
+  background: var(--color-bg-surface);
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -165,7 +169,7 @@
 
 .footer {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
@@ -180,7 +184,9 @@
 
 .versionInfo {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metaItem {

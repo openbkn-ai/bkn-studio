@@ -97,20 +97,20 @@ describe("AgentConfigListScene", () => {
   });
 
   it.each([
-    { language: "zh-CN", expected: "提示词 v3 · Agent 配置 v17" },
-    { language: "en-US", expected: "Prompt v3 · Agent configuration v17" },
+    { language: "zh-CN", expected: "Prompt V3，Agent V17" },
+    { language: "en-US", expected: "Prompt V3，Agent V17" },
   ])("shows independent current versions in $language (SA-078)", async ({ language, expected }) => {
     await i18n.changeLanguage(language);
     listShared.mockResolvedValue([agent({ prompt_version: 3, version: 17 })]);
     renderList();
 
-    expect(await screen.findByText(expected)).toBeTruthy();
+    expect((await screen.findByText(expected)).getAttribute("title")).toBe(expected);
     expect(listShared).toHaveBeenCalledTimes(1);
   });
 
   it.each([
-    { prompt_version: 3, version: undefined, expected: "提示词 v3" },
-    { prompt_version: null, version: 17, expected: "Agent 配置 v17" },
+    { prompt_version: 3, version: undefined, expected: "Prompt V3" },
+    { prompt_version: null, version: 17, expected: "Agent V17" },
     { prompt_version: undefined, version: null, expected: null },
   ])(
     "handles unavailable versions: $prompt_version / $version",
@@ -120,7 +120,7 @@ describe("AgentConfigListScene", () => {
       await screen.findByText("Studio智能问答");
 
       if (expected) expect(screen.getByText(expected)).toBeTruthy();
-      expect(screen.queryByText(/ · |undefined|null/)).toBeNull();
+      expect(screen.queryByText(/，|undefined|null/)).toBeNull();
       expect(screen.getByRole("img", { name: "clock-circle" })).toBeTruthy();
     },
   );
@@ -132,12 +132,12 @@ describe("AgentConfigListScene", () => {
       .mockResolvedValueOnce([agent({ prompt_version: 3, version: 17 })])
       .mockResolvedValueOnce([agent({ prompt_version: 4, version: 29 })]);
     renderList();
-    await screen.findByText("提示词 v3 · Agent 配置 v17");
+    await screen.findByText("Prompt V3，Agent V17");
 
     for (const expected of [
-      "提示词 v3 · Agent 配置 v28",
-      "提示词 v3 · Agent 配置 v17",
-      "提示词 v4 · Agent 配置 v29",
+      "Prompt V3，Agent V28",
+      "Prompt V3，Agent V17",
+      "Prompt V4，Agent V29",
     ]) {
       const refresh = screen.getByRole("button", { name: i18n.t("common.refresh") });
       await waitFor(() => expect(refresh.hasAttribute("disabled")).toBe(false));

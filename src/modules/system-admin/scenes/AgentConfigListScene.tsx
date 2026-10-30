@@ -47,7 +47,7 @@ function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }
     agent.version != null ? t(`${P}.configVersion`, { version: agent.version }) : null,
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join("，");
   return (
     <article
       className={styles.card}
@@ -83,7 +83,11 @@ function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }
         </div>
       </div>
       <div className={styles.footer}>
-        {versions ? <span className={styles.versionInfo}>{versions}</span> : null}
+        {versions ? (
+          <span className={styles.versionInfo} title={versions}>
+            {versions}
+          </span>
+        ) : null}
         <Tooltip title={t(`${P}.updateTime`)}>
           <span className={styles.metaItem}>
             <ClockCircleOutlined />

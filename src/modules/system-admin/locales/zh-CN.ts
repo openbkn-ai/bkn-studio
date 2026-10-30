@@ -1201,8 +1201,8 @@ export const systemAdminZhCN = {
       layered: "支持网络和个人配置",
       readOnly: "只读",
       updateTime: "更新时间",
-      promptVersion: "提示词 v{{version}}",
-      configVersion: "Agent 配置 v{{version}}",
+      promptVersion: "Prompt V{{version}}",
+      configVersion: "Agent V{{version}}",
       builtinNames: {
         graph_explorer: "图探索",
         studio_smart_qa: "Studio智能问答",

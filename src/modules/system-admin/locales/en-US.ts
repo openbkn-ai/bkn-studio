@@ -1299,8 +1299,8 @@ export const systemAdminEnUS = {
       layered: "Network and personal settings",
       readOnly: "Read-only",
       updateTime: "Updated",
-      promptVersion: "Prompt v{{version}}",
-      configVersion: "Agent configuration v{{version}}",
+      promptVersion: "Prompt V{{version}}",
+      configVersion: "Agent V{{version}}",
       builtinNames: {
         graph_explorer: "Graph Explorer",
         studio_smart_qa: "Studio Smart Q&A",
