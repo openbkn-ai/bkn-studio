@@ -281,8 +281,17 @@ test("community image: from tables and requirements to a published, switched rel
     await expect(
       dialog.getByText(/^将把已采纳的 \d+ 个对象类和 \d+ 个关系类写入项目。$/),
     ).toBeVisible();
+    // The undecided items load after the dialog opens: wait for their accept, or for nothing
+    // left to accept (the button is enabled at once).
+    const ok = dialog.getByRole("button", { name: /^确\s*认$/ });
+    await expect(
+      dialog
+        .getByRole("checkbox")
+        .first()
+        .or(ok.and(page.locator(":enabled"))),
+    ).toBeVisible();
     await acceptAll(page);
-    await dialog.getByRole("button", { name: /^确\s*认$/ }).click();
+    await ok.click();
     await expect(page).toHaveURL(/\/release$/);
     await expect(page.getByText(/^已于 .+ 确认$/)).toBeVisible();
   });
