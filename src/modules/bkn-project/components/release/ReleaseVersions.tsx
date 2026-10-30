@@ -119,7 +119,8 @@ export function ReleaseVersions({
         <AppTable<LineageRelease>
           columns={columns}
           dataSource={releases}
-          pagination={false}
+          // A long-lived network has many releases: page them rather than list them all.
+          pagination={releases.length > 20 ? { pageSize: 20, showSizeChanger: false } : false}
           rowKey="networkId"
           size="small"
         />

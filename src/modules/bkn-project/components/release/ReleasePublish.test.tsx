@@ -205,6 +205,33 @@ describe("ReleasePublish", () => {
     expect(onChanged).toHaveBeenCalled();
   });
 
+  it("keeps hundreds of changes and long names readable", async () => {
+    const long = "供应商年度准时交付率按季度滚动计算的考核结果".repeat(4);
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        changes: {
+          added: Array.from({ length: 300 }, (_, index) => ({
+            id: `ot_${index}`,
+            kind: "object_type",
+            name: index === 0 ? long : `Object ${index}`,
+          })),
+          changed: [],
+          other: 0,
+          removed: [],
+        },
+      }),
+    );
+    renderPublish();
+
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(await view.findByText("新增 300")).toBeInTheDocument();
+    expect(view.getByText(long)).toBeInTheDocument();
+    expect(view.queryByText("Object 30")).toBeNull();
+    fireEvent.click(view.getByRole("button", { name: "显示全部 300 项" }));
+    expect(view.getByText("Object 299")).toBeInTheDocument();
+  });
+
   it("reads the review again when the draft or the live version moved since", async () => {
     publishReleaseMock.mockRejectedValue(refusal("Release.ReviewOutdated"));
     renderPublish();

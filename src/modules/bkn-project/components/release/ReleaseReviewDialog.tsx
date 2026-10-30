@@ -421,22 +421,32 @@ function CheckRow({
   );
 }
 
+/** How many names a list shows before the rest wait behind "show all". */
+const SHOWN_NAMES = 30;
+
 function ItemNames({ items, label }: { items: ReleaseItem[]; label: string }) {
   const { t } = useTranslation();
+  const [all, setAll] = useState(false);
   if (!items.length) {
     return null;
   }
+  const shown = all ? items : items.slice(0, SHOWN_NAMES);
   return (
     <div className={styles.row}>
       <span className={styles.label}>
         {t(`${PREFIX}.countedLabel`, { label, count: items.length })}
       </span>
       <span className={styles.names}>
-        {items.map((item) => (
-          <LightStatusTag key={`${item.kind}/${item.id}`} tone="neutral">
+        {shown.map((item) => (
+          <LightStatusTag className={styles.name} key={`${item.kind}/${item.id}`} tone="neutral">
             {item.name || item.id}
           </LightStatusTag>
         ))}
+        {items.length > shown.length ? (
+          <AppButton onClick={() => setAll(true)} size="small" type="link">
+            {t(`${PREFIX}.showAll`, { count: items.length })}
+          </AppButton>
+        ) : null}
       </span>
     </div>
   );

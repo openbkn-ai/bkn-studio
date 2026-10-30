@@ -196,6 +196,30 @@ describe("release.service", () => {
     });
   });
 
+  it("stops paging when the cursor does not move on", async () => {
+    const { listReleases } = await importService();
+    const page = (version: string) => ({
+      data: {
+        entries: [
+          {
+            create_time: 1,
+            network_id: `n_${version}`,
+            notes: "",
+            project_id: "p",
+            publisher: null,
+            state: "live",
+            version,
+          },
+        ],
+        next_cursor: "same",
+      },
+    });
+    mockGet.mockResolvedValueOnce(page("1.0.1")).mockResolvedValueOnce(page("1.0.0"));
+
+    expect((await listReleases("lin")).map((entry) => entry.version)).toEqual(["1.0.1", "1.0.0"]);
+    expect(mockGet).toHaveBeenCalledTimes(2);
+  });
+
   it("reads what switching would move, then switches", async () => {
     const { getSwitchPlan, switchConsumers } = await importService();
     mockGet.mockResolvedValue({
