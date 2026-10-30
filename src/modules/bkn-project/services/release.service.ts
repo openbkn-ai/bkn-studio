@@ -276,6 +276,7 @@ export async function listReleases(lineageId: string): Promise<LineageRelease[]>
     return wait([...mockReleases].reverse());
   }
   const releases: LineageRelease[] = [];
+  const seen = new Set<string>();
   let cursor: string | null = null;
   do {
     const response: AxiosResponse<{
@@ -287,6 +288,13 @@ export async function listReleases(lineageId: string): Promise<LineageRelease[]>
     });
     releases.push(...(response.data.entries ?? []).map(mapRelease));
     cursor = response.data.next_cursor;
+    // A cursor that does not move on would page forever: stop at one seen before.
+    if (cursor && seen.has(cursor)) {
+      break;
+    }
+    if (cursor) {
+      seen.add(cursor);
+    }
   } while (cursor);
   return releases;
 }

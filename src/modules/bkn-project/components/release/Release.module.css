@@ -88,6 +88,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
+}
+
+/* A name of any length wraps inside its tag instead of widening the dialog. */
+.name {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .muted {

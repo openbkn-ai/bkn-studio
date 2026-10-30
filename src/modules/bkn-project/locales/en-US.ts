@@ -667,6 +667,9 @@ export const bknProjectEnUS = {
         changed: "Changed",
         removed: "Removed",
         countedLabel: "{{label}} {{count}}",
+        showAll: "Show all {{count}}",
+        showAll_one: "Show all {{count}}",
+        showAll_other: "Show all {{count}}",
         otherChanges: "{{count}} other definitions change",
         otherChanges_one: "{{count}} other definition changes",
         otherChanges_other: "{{count}} other definitions change",
@@ -689,7 +692,7 @@ export const bknProjectEnUS = {
         affected: "Answerable, but what they use changes",
         unanswerable: "Still not answerable",
         missing: "Missing: {{names}}",
-        unconnected: "Nothing connects {{from}} and {{to}}",
+        unconnected: "No usable relation joins {{from}} and {{to}}",
         unjudged: "{{count}} more questions do not say what they need, so they cannot be judged.",
         unjudged_one: "{{count}} more question does not say what it needs, so it cannot be judged.",
         unjudged_other:
