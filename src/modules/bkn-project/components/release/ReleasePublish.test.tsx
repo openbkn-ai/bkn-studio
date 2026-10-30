@@ -126,6 +126,7 @@ const onOpenRegression = vi.fn();
 function renderPublish(projectStatus = status(), canPublish = true) {
   return renderWithoutAntdStyles(
     <ReleasePublish
+      baseNetworkId="n"
       canPublish={canPublish}
       onChanged={onChanged}
       onOpenRegression={onOpenRegression}
@@ -337,6 +338,39 @@ describe("ReleasePublish", () => {
     await waitFor(() => expect(switchConsumersMock).toHaveBeenCalledWith("p1", "n_v1_0_2"));
     expect(messageMock.success).toHaveBeenCalledWith("使用方已切换到 v1.0.2。");
     expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("says the original network only when consumers are on it, never for an unread version", async () => {
+    const published = status({
+      nextActions: [
+        { accepts: [], action: "switch_consumers", allowed: true, discardsDecisions: 0 },
+      ],
+      release: { inUse: false, networkId: "n_v1_0_2", version: "1.0.2" },
+      stage: "published",
+    });
+    getSwitchPlanMock.mockResolvedValueOnce({
+      fromNetworkId: "n",
+      schedules: [],
+      toNetworkId: "n_v1_0_2",
+    });
+    const view = renderPublish(published);
+    fireEvent.click(screen.getByRole("button", { name: "切换使用方" }));
+    expect(
+      await screen.findByText("使用方将从最初的业务知识网络切换到 v1.0.2。"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("当前没有要转移的定时任务。")).toBeInTheDocument();
+    view.unmount();
+
+    // A release the versions list has not read yet is the one in use, not the original.
+    getSwitchPlanMock.mockResolvedValueOnce({
+      fromNetworkId: "n_v1_0_0",
+      schedules: [],
+      toNetworkId: "n_v1_0_2",
+    });
+    renderPublish(published);
+    fireEvent.click(screen.getByRole("button", { name: "切换使用方" }));
+    expect(await screen.findByText("使用方将从当前在用的版本切换到 v1.0.2。")).toBeInTheDocument();
+    expect(screen.queryByText(/最初的业务知识网络/)).toBeNull();
   });
 
   it("tells others the owner switches consumers, and says when publishing waits", () => {

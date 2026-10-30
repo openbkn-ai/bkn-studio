@@ -674,6 +674,7 @@ export const bknProjectZhCN = {
         title: "把使用方切换到 v{{version}}",
         fromTo: "使用方将从 v{{from}} 切换到 v{{to}}。",
         fromFirst: "使用方将从最初的业务知识网络切换到 v{{to}}。",
+        fromInUse: "使用方将从当前在用的版本切换到 v{{to}}。",
         schedules: "这 {{count}} 个定时任务会改在 v{{version}} 上运行，并以你的身份运行：",
         schedules_one: "这 {{count}} 个定时任务会改在 v{{version}} 上运行，并以你的身份运行：",
         schedules_other: "这 {{count}} 个定时任务会改在 v{{version}} 上运行，并以你的身份运行：",

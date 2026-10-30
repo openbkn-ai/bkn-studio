@@ -24,6 +24,7 @@ const PREFIX = "bknProject.release.switch";
  * the schedules running on the version in use move to the release and run as the owner.
  */
 export function SwitchConsumersDialog({
+  baseNetworkId,
   onCancel,
   onSwitched,
   projectId,
@@ -31,6 +32,8 @@ export function SwitchConsumersDialog({
   toVersion,
   versionOf,
 }: {
+  /** The network the lineage started from, before any release. */
+  baseNetworkId: string;
   onCancel: () => void;
   onSwitched: () => void;
   projectId: string;
@@ -89,6 +92,12 @@ export function SwitchConsumersDialog({
   };
 
   const fromVersion = plan ? versionOf(plan.fromNetworkId) : undefined;
+  // Only the lineage's own network is "the original"; a release not read yet is said as in use.
+  const from = fromVersion
+    ? t(`${PREFIX}.fromTo`, { from: fromVersion, to: toVersion })
+    : plan?.fromNetworkId === baseNetworkId
+      ? t(`${PREFIX}.fromFirst`, { to: toVersion })
+      : t(`${PREFIX}.fromInUse`, { to: toVersion });
   return (
     <Modal
       cancelText={t("common.cancel")}
@@ -116,11 +125,7 @@ export function SwitchConsumersDialog({
         <Spin />
       ) : (
         <div className={styles.stack}>
-          <p>
-            {fromVersion
-              ? t(`${PREFIX}.fromTo`, { from: fromVersion, to: toVersion })
-              : t(`${PREFIX}.fromFirst`, { to: toVersion })}
-          </p>
+          <p>{from}</p>
           {plan.schedules.length ? (
             <div className={styles.stack}>
               <span className={styles.label}>

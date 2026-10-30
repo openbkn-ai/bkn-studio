@@ -460,6 +460,8 @@ export function ProjectReleasePage({
         />
       ) : null}
       <ReleasePublish
+        // The lineage is named after the network it started from.
+        baseNetworkId={project.knId}
         canPublish={canRun}
         onChanged={() => {
           void load();
