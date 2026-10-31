@@ -318,6 +318,7 @@ export const objecttypePart = {
   objectTypePropertyList: "属性列表",
   objectTypePropertyName: "属性名",
   objectTypePropertyNameRequired: "请输入属性名。",
+  objectTypePropertyDisplayNameMaxLength: "长度不能超过 {{max}} 个字符。",
   objectTypePropertyDisplayNameRequired: "请输入属性显示名。",
   objectTypePropertySearchEmpty: "未找到匹配的属性。",
   objectTypePropertyType: "属性类型",

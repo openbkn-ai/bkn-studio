@@ -8,6 +8,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isPropertyDisplayNameWithinLimit,
+  PROPERTY_DISPLAY_NAME_COUNT,
+  PROPERTY_DISPLAY_NAME_MAX_LENGTH,
   RESOURCE_IDENTIFIER_PATTERN,
   RESOURCE_ID_MAX_LENGTH,
   RESOURCE_NAME_COUNT,
@@ -39,5 +42,24 @@ describe("knowledge-network resource constraints", () => {
         max: RESOURCE_NAME_MAX_LENGTH,
       }),
     ).toBe(validName);
+  });
+
+  it.each([
+    ["ASCII 40", "a".repeat(40), true],
+    ["ASCII 41", "a".repeat(41), true],
+    ["Chinese 127", "名".repeat(127), true],
+    ["mixed 128", `${"a名".repeat(63)}😀b`, true],
+    ["emoji 129", "😀".repeat(129), false],
+  ])(
+    "validates property display name boundary by Unicode code point: %s",
+    (_name, value, valid) => {
+      expect(PROPERTY_DISPLAY_NAME_COUNT.strategy(value)).toBe(Array.from(value).length);
+      expect(isPropertyDisplayNameWithinLimit(value)).toBe(valid);
+    },
+  );
+
+  it("exposes the property display name contract without silently truncating", () => {
+    expect(PROPERTY_DISPLAY_NAME_MAX_LENGTH).toBe(128);
+    expect(PROPERTY_DISPLAY_NAME_COUNT).not.toHaveProperty("exceedFormatter");
   });
 });

@@ -346,6 +346,7 @@ export const objecttypePart = {
   objectTypePropertyList: "Properties",
   objectTypePropertyName: "Property name",
   objectTypePropertyNameRequired: "Please enter a property name.",
+  objectTypePropertyDisplayNameMaxLength: "Must be {{max}} characters or fewer.",
   objectTypePropertyDisplayNameRequired: "Please enter a property display name.",
   objectTypePropertySearchEmpty: "No matching properties found.",
   objectTypePropertyType: "Property type",

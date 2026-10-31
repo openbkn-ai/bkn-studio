@@ -13,6 +13,11 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeToolSelectModal } from "@/modules/knowledge-network/components/action-type/ActionTypeToolSelectModal";
 import {
+  isPropertyDisplayNameWithinLimit,
+  PROPERTY_DISPLAY_NAME_COUNT,
+  PROPERTY_DISPLAY_NAME_MAX_LENGTH,
+} from "@/modules/knowledge-network/lib/resource-constraints";
+import {
   resolveActionTypeToolInputSchema,
   type ActionTypeCatalogSelection,
 } from "@/modules/knowledge-network/services/action-type-tool.service";
@@ -467,14 +472,30 @@ export function ObjectTypeLogicAttributeEditDrawer({
             <Form.Item
               label={t("knowledgeNetwork.objectTypePropertyDisplayName")}
               name="displayName"
-              rules={[{ message: t("knowledgeNetwork.pleaseInput"), required: true }]}
+              rules={[
+                { message: t("knowledgeNetwork.pleaseInput"), required: true },
+                {
+                  validator: (_rule, value?: string) =>
+                    isPropertyDisplayNameWithinLimit(value ?? "")
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(
+                            t("knowledgeNetwork.objectTypePropertyDisplayNameMaxLength", {
+                              max: PROPERTY_DISPLAY_NAME_MAX_LENGTH,
+                            }),
+                          ),
+                        ),
+                },
+              ]}
             >
               <Input
+                count={PROPERTY_DISPLAY_NAME_COUNT}
                 disabled={!isAddMode}
                 onChange={() => {
                   isDisplayNameManuallyEdited.current = true;
                 }}
                 placeholder={t("knowledgeNetwork.pleaseInput")}
+                showCount
               />
             </Form.Item>
           </Col>
