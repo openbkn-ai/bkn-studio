@@ -144,6 +144,7 @@ function projectStatus(nextActions: ProjectStatus["nextActions"]): ProjectStatus
     check: null,
     confirmation: null,
     dataSources: null,
+    hints: [],
     draft: null,
     nextActions,
     release: null,

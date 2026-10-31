@@ -206,6 +206,13 @@ export const bknProjectEnUS = {
         neededBy: "Questions that need it to be answered:",
         unadopt: "Unadopt",
         unadoptItem: "Unadopt {{name}}",
+        updateField: {
+          title: "Choose an update field",
+          description:
+            '"{{name}}" has no update field yet. With one set, its local index refreshes only the records that changed.',
+          set: "Use as update field",
+          none: "No time field available",
+        },
         noneTitle: "No changes yet",
         none: "Nothing changed yet. Adopting, renaming, choosing identities and restoring fields on the draft are all listed here.",
         kind: {
@@ -598,6 +605,16 @@ export const bknProjectEnUS = {
     listSeparator: ", ",
     sentenceSeparator: " ",
     understand: {
+      hint: {
+        unnamed:
+          "Most tables in the catalogs have no business names yet ({{count}} of {{total}} have no description), so drafting would name items after table and field names. Run semantic understanding first, then draft.",
+        unnamed_one:
+          "Most tables in the catalogs have no business names yet ({{count}} of {{total}} has no description), so drafting would name items after table and field names. Run semantic understanding first, then draft.",
+        unnamed_other:
+          "Most tables in the catalogs have no business names yet ({{count}} of {{total}} have no description), so drafting would name items after table and field names. Run semantic understanding first, then draft.",
+        run: "Run semantic understanding",
+        ownerOnly: "Only the project owner can run semantic understanding",
+      },
       button: "Semantic understanding",
       ownerOnly: "Only the project owner can run semantic understanding",
       dialog: {

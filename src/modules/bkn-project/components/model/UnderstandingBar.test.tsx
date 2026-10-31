@@ -17,6 +17,7 @@ import type {
 
 const getUnderstandingMock = vi.hoisted(() => vi.fn());
 const understandCatalogsMock = vi.hoisted(() => vi.fn());
+const getProjectStatusMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
+  getProjectStatus: getProjectStatusMock,
   getUnderstanding: getUnderstandingMock,
   understandCatalogs: understandCatalogsMock,
 }));
@@ -79,6 +81,40 @@ describe("UnderstandingBar", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     await i18n.changeLanguage("zh-CN");
+    getProjectStatusMock.mockResolvedValue({ hints: [], nextActions: [] });
+  });
+
+  it("advises understanding the catalogs first when most tables have no business name", async () => {
+    getUnderstandingMock.mockResolvedValue([catalog(["not_started", "not_started"])]);
+    getProjectStatusMock.mockResolvedValue({
+      hints: [{ code: "catalogs_unnamed", count: 18, total: 20 }],
+      nextActions: [
+        { accepts: [], action: "understand_catalogs", allowed: true, discardsDecisions: 0 },
+      ],
+    });
+    const view = renderBar();
+    expect(
+      await screen.findByText(/目录里大多数表还没有业务名称（18\/20 张没有描述）/),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "开始语义理解" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    view.unmount();
+
+    getProjectStatusMock.mockResolvedValue({
+      hints: [{ code: "catalogs_unnamed", count: 18, total: 20 }],
+      nextActions: [
+        {
+          accepts: [],
+          action: "understand_catalogs",
+          allowed: false,
+          discardsDecisions: 0,
+          reason: "not_owner",
+        },
+      ],
+    });
+    renderBar({ ownerIsCaller: false });
+    expect(await screen.findByText("只有项目负责人可以发起语义理解")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "开始语义理解" })).toBeNull();
   });
 
   afterEach(() => {

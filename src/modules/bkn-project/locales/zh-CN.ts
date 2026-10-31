@@ -192,6 +192,13 @@ export const bknProjectZhCN = {
         neededBy: "需要它才能回答的问题：",
         unadopt: "取消采纳",
         unadoptItem: "取消采纳{{name}}",
+        updateField: {
+          title: "选择更新字段",
+          description:
+            "「{{name}}」还没有更新字段。设好后，本地索引会按它增量刷新，只更新变化的记录。",
+          set: "设为更新字段",
+          none: "没有可用的时间字段",
+        },
         noneTitle: "还没有修改",
         none: "还没有做过修改。在草稿上采纳、改名、选唯一标识和恢复字段，都会记在这里。",
         kind: {
@@ -564,6 +571,16 @@ export const bknProjectZhCN = {
     listSeparator: "、",
     sentenceSeparator: "",
     understand: {
+      hint: {
+        unnamed:
+          "目录里大多数表还没有业务名称（{{count}}/{{total}} 张没有描述），起草出的名称会直接用表名和字段名。建议先做语义理解，再起草。",
+        unnamed_one:
+          "目录里大多数表还没有业务名称（{{count}}/{{total}} 张没有描述），起草出的名称会直接用表名和字段名。建议先做语义理解，再起草。",
+        unnamed_other:
+          "目录里大多数表还没有业务名称（{{count}}/{{total}} 张没有描述），起草出的名称会直接用表名和字段名。建议先做语义理解，再起草。",
+        run: "开始语义理解",
+        ownerOnly: "只有项目负责人可以发起语义理解",
+      },
       button: "语义理解",
       ownerOnly: "只有项目负责人可以运行语义理解",
       dialog: {

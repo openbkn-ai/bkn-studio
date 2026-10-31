@@ -58,7 +58,7 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 import { getProjectPending } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
-import type { PendingQuestion } from "@/modules/bkn-project/types/publish";
+import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
@@ -120,6 +120,8 @@ export function ProjectModel({
   const [choosingIdentity, setChoosingIdentity] = useState<DraftObjectType | null>(null);
   const [changingCatalogs, setChangingCatalogs] = useState(false);
   const [neededBy, setNeededBy] = useState<ReadonlyMap<string, PendingQuestion[]>>(new Map());
+  // Adopted object types that could refresh their local index by an update field, and have none.
+  const [updateFields, setUpdateFields] = useState<PendingItem[]>([]);
 
   // Counts every read, failed or not, so a drafting draft is read again after a failure too.
   const [reads, setReads] = useState(0);
@@ -168,6 +170,7 @@ export function ProjectModel({
   useEffect(() => {
     if (readyAt === null) {
       setNeededBy(new Map());
+      setUpdateFields([]);
       return undefined;
     }
     let active = true;
@@ -177,6 +180,7 @@ export function ProjectModel({
           setNeededBy(
             new Map(pending.items.map((item) => [`${item.kind}/${item.itemId}`, item.neededBy])),
           );
+          setUpdateFields(pending.items.filter((item) => item.reason === "needs_update_field"));
         }
       })
       .catch(() => undefined);
@@ -680,7 +684,12 @@ export function ProjectModel({
               directory={directory}
               draft={draft}
               neededBy={neededBy}
+              onSetUpdateField={async (objectTypeId, property) =>
+                (await sendEdit("object_types", objectTypeId, { incrementalKey: property })) !==
+                "failed"
+              }
               unadoptedEnds={unadoptedEnds}
+              updateFields={updateFields}
             />
           ) : (
             <DraftExcludedPanel

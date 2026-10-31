@@ -112,7 +112,10 @@ export function ConfirmDraft({
     setPendingFailed(false);
     try {
       const pending = await getProjectPending(projectId);
-      setUndecided(pending.items.filter((item) => !item.blocking));
+      // An object type without an update field is suggested, not undecided: confirming skips it.
+      setUndecided(
+        pending.items.filter((item) => !item.blocking && item.reason !== "needs_update_field"),
+      );
     } catch {
       setUndecided(null);
       setPendingFailed(true);
