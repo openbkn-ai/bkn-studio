@@ -43,6 +43,8 @@ export function DraftConceptGraph({
     <OntologyGraphCard
       emptyDescription={t("bknProject.model.graph.emptyDescription")}
       fadedIds={records.faded}
+      // A click may open an editing panel over the page, which a maximized graph would cover.
+      leaveMaximizedOnSelect
       legend={
         <>
           {/* Every drafted type and relation the graph draws, adopted or not. */}

@@ -161,7 +161,8 @@ function projectStatus(nextActions: ProjectStatus["nextActions"]): ProjectStatus
 }
 
 function Location() {
-  return <div data-testid="location">{useLocation().pathname}</div>;
+  const location = useLocation();
+  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
 }
 
 function renderModel(
@@ -421,7 +422,7 @@ describe("ProjectModel", () => {
     // In a panel over the page: the page stays where it was, under it.
     const panel = await screen.findByRole("region", { name: "bknProject.objectEditor.title" });
     expect(within(panel).getByDisplayValue("customers")).toBeInTheDocument();
-    expect(screen.getByTestId("location")).toHaveTextContent(`/`);
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/$/);
     expect(screen.getAllByRole("button", { name: /^customers/ }).length).toBeGreaterThan(0);
 
     fireEvent.click(within(panel).getByRole("button", { name: "bknProject.objectEditor.close" }));
@@ -443,10 +444,10 @@ describe("ProjectModel", () => {
     expect(within(opened).getByDisplayValue(relation.name)).toBeInTheDocument();
   });
 
-  it("opens the object type a link asked for in the panel", async () => {
+  it("opens the object type a link asked for in the panel, and drops the link on closing", async () => {
     getDraftMock.mockResolvedValue(ready());
     renderWithoutAntdStyles(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/bkn-project/p1/model?object=customers"]}>
         <ProjectModel
           initialObject="customers"
           onConfirmed={vi.fn()}
@@ -454,11 +455,12 @@ describe("ProjectModel", () => {
           ownerIsCaller
           project={project}
         />
+        <Location />
       </MemoryRouter>,
     );
-    expect(
-      await screen.findByRole("region", { name: "bknProject.objectEditor.title" }),
-    ).toBeInTheDocument();
+    const panel = await screen.findByRole("region", { name: "bknProject.objectEditor.title" });
+    fireEvent.click(within(panel).getByRole("button", { name: "bknProject.objectEditor.close" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/bkn-project\/p1\/model$/);
   });
 
   it("opens an object type with its identity, properties and the fields left out", async () => {

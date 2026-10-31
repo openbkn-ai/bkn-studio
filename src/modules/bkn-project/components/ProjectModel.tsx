@@ -9,6 +9,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import { Alert, Segmented, Space, Spin } from "antd";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -128,6 +129,16 @@ export function ProjectModel({
   const [panelId, setPanelId] = useState<string | null>(initialObject ?? null);
   // The relation type open in its panel: null makes a new one.
   const [relationPanel, setRelationPanel] = useState<{ id: string | null } | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // A link's object type is open until the panel closes: the link then no longer opens it again.
+  const closePanel = () => {
+    setPanelId(null);
+    if (searchParams.has("object")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("object");
+      setSearchParams(next, { replace: true });
+    }
+  };
   const [editing, setEditing] = useState<{ item: EditableItem; kind: DraftItemKind } | null>(null);
   const [saving, setSaving] = useState(false);
   const [choosingIdentity, setChoosingIdentity] = useState<DraftObjectType | null>(null);
@@ -599,7 +610,7 @@ export function ProjectModel({
     setPanelId(id);
   };
   const openRelation = (id: string | null) => {
-    setPanelId(null);
+    closePanel();
     setRelationPanel({ id });
   };
   // The panel's own read of the draft after it moved: the page shows it too.
@@ -829,7 +840,7 @@ export function ProjectModel({
               key={panelId}
               objectTypeId={panelId}
               onAsk={() => setOpenId(panelId)}
-              onClose={() => setPanelId(null)}
+              onClose={closePanel}
               onReload={readDraftAgain}
               onSaved={setDraft}
               project={project}
