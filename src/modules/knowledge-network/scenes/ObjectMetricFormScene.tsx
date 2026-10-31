@@ -1522,13 +1522,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const unitCode = Form.useWatch("unitCode", form);
   const unitScaleFactor = Form.useWatch("unitScaleFactor", form);
   const unitSystem = Form.useWatch("unitSystem", form);
-  const outputShape =
-    validation?.output_shape ??
-    (timeGranularity
-      ? "time_series"
-      : (groupByDimensions?.length ?? 0) > 0
-        ? "grouped"
-        : "summary");
   // Older services may return `issues: null` for a successful validation. Treat it
   // as the empty collection so a server-side contract variation cannot crash the
   // authoring screen while a compatibility deployment is rolling out.
@@ -3203,11 +3196,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     derived: objectMetricText("me88b222ae28a"),
   };
   const ownerObjectName = ownerObjectType?.name ?? ownerObjectTypeId;
-  const outputNames = {
-    grouped: objectMetricText("m63a570e277c4"),
-    summary: objectMetricText("m887c0bab2e93"),
-    time_series: objectMetricText("m523d11919689"),
-  };
   const aiExamples =
     metricType === "atomic"
       ? [
@@ -3353,15 +3341,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             </div>
           </Section>
 
-          <Section
-            title={
-              metricType === "derived"
-                ? objectMetricText("me9820e0a2bfa")
-                : objectMetricText("ma7d66d99c5ec")
-            }
-            tooltip={metricType === "derived" ? objectMetricText("m46b0eb4ce947") : undefined}
-          >
-            {metricType === "derived" ? (
+          {metricType === "derived" ? (
+            <Section
+              title={objectMetricText("me9820e0a2bfa")}
+              tooltip={objectMetricText("m46b0eb4ce947")}
+            >
               <>
                 <Form.Item
                   label={objectMetricText("m4919ba2e9c0b")}
@@ -3434,13 +3418,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                   </div>
                 ) : null}
               </>
-            ) : (
-              <div className={styles.outputSummary}>
-                <span>{objectMetricText("m9c51e86f9307")}</span>
-                <strong>{outputNames[outputShape]}</strong>
-              </div>
-            )}
-          </Section>
+            </Section>
+          ) : null}
 
           <Section
             title={
@@ -4639,7 +4618,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </Section>
 
           <Section
-            title={objectMetricText("m090a0f265f9d")}
+            title={
+              metricType === "derived"
+                ? objectMetricText("m090a0f265f9d")
+                : objectMetricText("atomicCompositeResultAnalysisSectionTitle")
+            }
             tooltip={
               metricType === "atomic"
                 ? objectMetricText("m0bce011fd587")
@@ -5210,7 +5193,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           </Section>
 
           <Section
-            title={objectMetricText("mc989f4dba768")}
+            title={
+              metricType === "derived"
+                ? objectMetricText("mc989f4dba768")
+                : objectMetricText("atomicCompositeValidationPublishSectionTitle")
+            }
             tooltip={
               metricType === "atomic"
                 ? objectMetricText("mc54cb2885fba")
