@@ -202,7 +202,8 @@ describe("ProjectReleasePage", () => {
 
     expect(await screen.findByText(/^已于 2026\/10\/29 08:30 确认$/)).toBeInTheDocument();
     const section = within(screen.getByRole("region", { name: "数据校验" }));
-    expect(section.getByText("通过")).toBeInTheDocument();
+    // The check is read after the status: wait for it rather than for the confirmation line.
+    expect(await section.findByText("通过")).toBeInTheDocument();
     expect(section.getByText("已核对 2 / 3 项")).toBeInTheDocument();
     expect(section.getAllByText(customers.name).length).toBeGreaterThan(0);
     expect(section.getByText(relation.name)).toBeInTheDocument();
