@@ -56,13 +56,11 @@ test("bkn project: understand the data, confirm the draft, and see its check and
   const check = page.getByRole("region", { name: "数据校验" });
   await expect(check.getByText(/^已核对 \d+ \/ \d+ 项$/)).toBeVisible();
   const indexes = page.getByRole("region", { name: "本地索引" });
-  await expect(indexes.getByText("缺少构建设置")).toBeVisible();
   // The state tag itself, not the summary line, which says "可用" too.
   await expect(indexes.getByText("可用", { exact: true }).first()).toBeVisible();
-  await expect(indexes.getByText("2 / 3 张表的索引可用")).toBeVisible();
-  await expect(
-    indexes.getByText("没有可用的更新字段，可以在本体建模中为对象类指定。"),
-  ).toBeVisible();
+  await expect(indexes.getByText("3 / 3 张表的索引可用")).toBeVisible();
+  // No type has an update field yet: each still builds, in full, and says so.
+  await expect(indexes.getByText("没有更新字段，只能全量重建").first()).toBeVisible();
 
   expect(pageErrors).toEqual([]);
 });
