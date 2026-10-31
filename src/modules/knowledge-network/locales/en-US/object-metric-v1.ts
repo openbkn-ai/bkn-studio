@@ -7,6 +7,8 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  atomicCompositeResultAnalysisSectionTitle: "3. Results and analysis",
+  atomicCompositeValidationPublishSectionTitle: "4. Verification and release",
   analysisGroupBy: "Group by dimensions",
   analysisHavingOperator: "Result filter",
   analysisHavingValue: "Comparison value",
@@ -803,7 +805,6 @@ export const objectMetricV1Part = {
     "Please select a numeric value or duration attribute; if the source field is stored in text, please configure type conversion first.",
   ma75762e1e47e: "The selected queryable time dimension is not exposed by the base metric.",
   ma757a2b18321: "Calculation time range",
-  ma7d66d99c5ec: "2. Result form",
   ma80a5b61e0bd: "Parameter {{p0}}",
   ma8601f5e09f8:
     "Please delete this dimension, or open this analysis dimension in the basic atomic metric first.",
@@ -834,7 +835,7 @@ export const objectMetricV1Part = {
     "The statistical time zone in the old configuration cannot be recognized by the server.",
   mae87f64d5821:
     "The current form has been filled out. You can continue to propose adjustments, or close the window to examine the configuration.",
-  maeb999515d25: "3. Calculation logic",
+  maeb999515d25: "2. Calculation logic",
   maedd6814ff8c: "list",
   maf1405fb0f94: "mg·mg",
   mb0592ef95e17:
