@@ -7,6 +7,7 @@
 
 import {
   CanvasEvent,
+  EdgeEvent,
   GraphEvent,
   Graph,
   NodeEvent,
@@ -37,6 +38,8 @@ export type OntologyG6CanvasProps = {
   decorations: OntologyDecorations;
   tokens: GraphTokens;
   onNodeClick: (id: string) => void;
+  /** A relation clicked; relations take no clicks without it. */
+  onEdgeClick?: (id: string) => void;
   onBlankClick: () => void;
   onZoom: (zoom: number) => void;
   /** Maximized over the window: entering or leaving it refits the graph to the new space. */
@@ -199,6 +202,9 @@ export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6Canva
       graphRef.current = graph;
       graph.on(NodeEvent.CLICK, (event: IElementEvent) =>
         propsRef.current.onNodeClick(String(event.target.id)),
+      );
+      graph.on(EdgeEvent.CLICK, (event: IElementEvent) =>
+        propsRef.current.onEdgeClick?.(String(event.target.id)),
       );
       graph.on(CanvasEvent.CLICK, () => propsRef.current.onBlankClick());
       // G6 transforms the view while it sets itself up, before its viewport exists; the zoom is

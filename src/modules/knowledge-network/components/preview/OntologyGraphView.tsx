@@ -49,6 +49,8 @@ type OntologyGraphViewProps = {
   groupNames?: Map<string, string>;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** A relation clicked; relations take no clicks without it. */
+  onSelectEdge?: (id: string) => void;
   /**
    * A click opens something over the page, such as an editing panel: the graph leaves the
    * maximized view first, or it would cover what opened.
@@ -72,6 +74,7 @@ export function OntologyGraphView({
   groupNames,
   selectedId,
   onSelect,
+  onSelectEdge,
   leaveMaximizedOnSelect = false,
 }: OntologyGraphViewProps) {
   const { t } = useTranslation();
@@ -236,6 +239,14 @@ export function OntologyGraphView({
             if (leaveMaximizedOnSelect) setMaximized(false);
             onSelect(id === selectedId ? null : id);
           }}
+          onEdgeClick={
+            onSelectEdge
+              ? (id) => {
+                  if (leaveMaximizedOnSelect) setMaximized(false);
+                  onSelectEdge(id);
+                }
+              : undefined
+          }
           onZoom={setZoom}
           ref={canvasRef}
           structure={structure}

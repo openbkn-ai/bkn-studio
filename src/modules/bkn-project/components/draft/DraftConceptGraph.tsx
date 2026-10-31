@@ -23,6 +23,7 @@ export function DraftConceptGraph({
   draft,
   networkId,
   onOpen,
+  onOpenRelation,
   title,
 }: {
   /** Shown after the key in the header, such as a link to the modeling page. */
@@ -31,6 +32,8 @@ export function DraftConceptGraph({
   /** The project's network: the graph is drawn as its ontology. */
   networkId: string;
   onOpen?: (objectTypeId: string) => void;
+  /** Opens a relation type where the page can; relations take no clicks without it. */
+  onOpenRelation?: (relationTypeId: string) => void;
   title: string;
 }) {
   const { t } = useTranslation();
@@ -66,6 +69,7 @@ export function DraftConceptGraph({
           onOpen?.(id);
         }
       }}
+      onSelectEdge={onOpenRelation}
       parallelEdges
       relationTypes={records.relationTypes}
       selectedId={null}

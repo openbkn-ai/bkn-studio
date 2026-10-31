@@ -96,8 +96,11 @@ export type DraftRelationType = {
   linkTable?: DraftTable;
   mapping: DraftFieldMapping[];
   name: string;
-  /** foreign_key, name_match, stem_match or link_table; open like the key source. */
+  /** foreign_key, name_match, stem_match, link_table or manual; open like the key source. */
   origin: string;
+  /** Through a link table: the source's properties to its fields, then its fields to the target's. */
+  sourceMapping: DraftFieldMapping[];
+  targetMapping: DraftFieldMapping[];
   source: string;
   target: string;
   /** confirmed for a declared foreign key, unconfirmed for an inferred one. */
@@ -191,6 +194,26 @@ export type DraftObjectTypeSave = {
     name: string;
     type: string;
   }[];
+};
+
+/**
+ * A relation type as a person saves it from the editor, whole, as bkn-backend's relation type is:
+ * its ends, and how they join, directly by properties of each, or through a link table whose
+ * fields each end's properties map.
+ */
+export type DraftRelationTypeSave = {
+  description: string;
+  /** Through a link table: the table's data resource, and each end's properties to its fields. */
+  link?: {
+    resourceId: string;
+    sourceMapping: DraftFieldMapping[];
+    targetMapping: DraftFieldMapping[];
+  };
+  /** Directly: the source's properties to the target's. */
+  mapping: DraftFieldMapping[];
+  name: string;
+  source: string;
+  target: string;
 };
 
 /**

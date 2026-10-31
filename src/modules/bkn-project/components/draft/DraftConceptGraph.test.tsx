@@ -25,14 +25,21 @@ vi.mock("@/modules/knowledge-network/components/preview/OntologyGraphView", () =
   OntologyGraphView: ({
     graph,
     onSelect,
+    onSelectEdge,
   }: {
     graph: KnowledgeNetworkPreviewGraph;
     onSelect: (id: string | null) => void;
+    onSelectEdge?: (id: string) => void;
   }) => (
     <div>
       <button onClick={() => onSelect("customers")} type="button">
         click
       </button>
+      {onSelectEdge ? (
+        <button onClick={() => onSelectEdge(graph.edges[0].id)} type="button">
+          click a relation
+        </button>
+      ) : null}
       {graph.nodes.map((node) => (
         <span data-color={node.color} data-faded={String(Boolean(node.faded))} key={node.id}>
           {node.id}
@@ -100,5 +107,24 @@ describe("DraftConceptGraph", () => {
     fireEvent.click(screen.getByRole("button", { name: "click" }));
     expect(onOpen).toHaveBeenCalledTimes(2);
     expect(onOpen).toHaveBeenLastCalledWith("customers");
+  });
+
+  it("opens a relation from its line where the page can, and offers no clicks otherwise", () => {
+    const onOpenRelation = vi.fn();
+    const draft = mapDraft(mockDraft("p1"));
+    const { unmount } = render(
+      <DraftConceptGraph
+        draft={draft}
+        networkId="n1"
+        onOpenRelation={onOpenRelation}
+        title="Concept model"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "click a relation" }));
+    expect(onOpenRelation).toHaveBeenCalledWith(draft.items.relationTypes[0].id);
+    unmount();
+
+    renderGraph();
+    expect(screen.queryByRole("button", { name: "click a relation" })).toBeNull();
   });
 });

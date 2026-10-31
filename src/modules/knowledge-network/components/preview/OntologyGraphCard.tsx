@@ -56,6 +56,8 @@ type OntologyGraphCardProps = {
   objectTypes?: KnowledgeNetworkObjectTypeRecord[];
   onExpandNode?: (id: string) => void;
   onSelectedIdChange?: (id: string | null) => void;
+  /** A relation clicked in the graph; relations take no clicks without it. */
+  onSelectEdge?: (id: string) => void;
   /** Draws relations between the same two types apart, rather than as one line over another. */
   parallelEdges?: boolean;
   relationTypes?: KnowledgeNetworkRelationTypeRecord[];
@@ -76,6 +78,7 @@ export function OntologyGraphCard({
   objectTypes: objectTypesProp,
   onExpandNode,
   onSelectedIdChange,
+  onSelectEdge,
   parallelEdges = false,
   relationTypes: relationTypesProp,
   selectedId: selectedIdProp,
@@ -268,6 +271,7 @@ export function OntologyGraphCard({
               groupNames={groupNames}
               selectedId={selectedId}
               onSelect={handleSelect}
+              onSelectEdge={onSelectEdge}
               leaveMaximizedOnSelect={leaveMaximizedOnSelect}
             />
           </div>

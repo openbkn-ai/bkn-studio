@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { PlusOutlined } from "@ant-design/icons";
 import { Alert, Segmented, Space, Spin } from "antd";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +22,7 @@ import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftIte
 import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityDialog";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
 import { ObjectTypePanel } from "@/modules/bkn-project/components/object-type/ObjectTypePanel";
+import { RelationTypePanel } from "@/modules/bkn-project/components/relation-type/RelationTypePanel";
 import { ConfirmDraft } from "@/modules/bkn-project/components/model/ConfirmDraftDialog";
 import { UnderstandingBar } from "@/modules/bkn-project/components/model/UnderstandingBar";
 import { SourceChangesNotice } from "@/modules/bkn-project/components/model/SourceChanges";
@@ -125,6 +127,8 @@ export function ProjectModel({
   const [openId, setOpenId] = useState<string | null>(null);
   // The object type open in the editing panel over the page.
   const [panelId, setPanelId] = useState<string | null>(initialObject ?? null);
+  // The relation type open in its panel: null makes a new one.
+  const [relationPanel, setRelationPanel] = useState<{ id: string | null } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   // A link's object type is open until the panel closes: the link then no longer opens it again.
   const closePanel = () => {
@@ -602,7 +606,12 @@ export function ProjectModel({
   const editable = draft.status === "ready" && !project.archived;
   const openEditor = (id: string) => {
     setOpenId(null);
+    setRelationPanel(null);
     setPanelId(id);
+  };
+  const openRelation = (id: string | null) => {
+    closePanel();
+    setRelationPanel({ id });
   };
   // The panel's own read of the draft after it moved: the page shows it too.
   const readDraftAgain = async () => {
@@ -735,6 +744,7 @@ export function ProjectModel({
             draft={draft}
             networkId={project.knId}
             onOpen={editable ? openEditor : setOpenId}
+            onOpenRelation={editable ? openRelation : undefined}
             title={t("bknProject.model.graph.title")}
           />
           <Segmented<Tab> onChange={setTab} options={tabs} value={activeTab} />
@@ -746,12 +756,22 @@ export function ProjectModel({
               onOpen={editable ? openEditor : setOpenId}
             />
           ) : activeTab === "relations" ? (
-            <DraftRelationsTable
-              actions={actions}
-              items={items.relationTypes}
-              objectNames={objectNames}
-              unadoptedEnds={new Set(unadoptedEnds.map((item) => item.id))}
-            />
+            <>
+              {editable ? (
+                <div className={styles.tabActions}>
+                  <AppButton icon={<PlusOutlined />} onClick={() => openRelation(null)}>
+                    {t("bknProject.relationEditor.add")}
+                  </AppButton>
+                </div>
+              ) : null}
+              <DraftRelationsTable
+                actions={actions}
+                items={items.relationTypes}
+                objectNames={objectNames}
+                onOpen={editable ? openRelation : undefined}
+                unadoptedEnds={new Set(unadoptedEnds.map((item) => item.id))}
+              />
+            </>
           ) : activeTab === "valueTypes" ? (
             <DraftValueTypesTable
               actions={actions}
@@ -803,6 +823,17 @@ export function ProjectModel({
             onClose={() => setOpenId(null)}
             onEdit={editable ? openEditor : undefined}
           />
+          {relationPanel && editable ? (
+            <RelationTypePanel
+              draft={draft}
+              key={relationPanel.id ?? "new"}
+              onClose={() => setRelationPanel(null)}
+              onReload={readDraftAgain}
+              onSaved={setDraft}
+              project={project}
+              relationTypeId={relationPanel.id}
+            />
+          ) : null}
           {panelId && editable ? (
             <ObjectTypePanel
               draft={draft}

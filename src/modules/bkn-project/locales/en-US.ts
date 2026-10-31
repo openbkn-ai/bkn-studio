@@ -497,6 +497,7 @@ export const bknProjectEnUS = {
           name_match: "Recommended from matching field names",
           stem_match: "Recommended from a similar field name",
           link_table: "Connected through a linking table",
+          manual: "Made by a person",
         },
         verification: {
           confirmed: "Confirmed",
@@ -508,6 +509,7 @@ export const bknProjectEnUS = {
           query_failed: "Counting did not finish",
           cross_catalog: "The two tables are in different data catalogs, so they are not counted",
           link_table: "Connected through a linking table, so not counted",
+          not_identity: "Not joined by the other end\u2019s identifier; not counted",
           other: "Not counted",
         },
         keyCount: "{{rows}} rows, {{distinct}} distinct, {{nulls}} empty",
@@ -650,6 +652,34 @@ export const bknProjectEnUS = {
         inUseUnknown: "Cannot tell right now",
         noDraft: "No draft yet",
         draftUpdated: "Updated {{time}}",
+      },
+    },
+    relationEditor: {
+      title: "Edit relation",
+      newTitle: "New relation",
+      nameRequired: "Enter a name for the relation",
+      saved: "Saved \u201c{{name}}\u201d",
+      createdNotAdopted:
+        "Made \u201c{{name}}\u201d. Its object types are not both adopted, so it is not adopted yet.",
+      notFound: "The draft has no such relation, or it is still being drafted.",
+      delete: "Delete",
+      deleteTitle: "Delete relation \u201c{{name}}\u201d?",
+      deleteDescription: "The relation is removed from the draft.",
+      deleted: "Deleted \u201c{{name}}\u201d",
+      add: "New relation",
+      invalid: {
+        unknown_end:
+          "Object type \u201c{{objectType}}\u201d is not in the draft; choose the ends again.",
+        unknown_property:
+          "Object type \u201c{{objectType}}\u201d has no property \u201c{{property}}\u201d.",
+        type_mismatch:
+          "Properties \u201c{{source}}\u201d and \u201c{{target}}\u201d have types that cannot be joined.",
+        unknown_field: "The link table has no field \u201c{{field}}\u201d.",
+        no_mapping: "Map at least one pair.",
+        duplicate: "Relation \u201c{{relation}}\u201d already joins the same ends the same way.",
+        not_manual: "A relation drafting found cannot be deleted; leave it out instead.",
+        link_unreadable: "The link table cannot be read right now; try again later.",
+        other: "The relation is not accepted; check its ends and mapping, then save again.",
       },
     },
     objectEditor: {
