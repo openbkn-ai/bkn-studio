@@ -130,7 +130,7 @@
   color: var(--color-text-primary);
 }
 
-/* The data sources: three cells side by side, a gone one in the warning colours. */
+/* The data sources: three cells side by side, a gone one in the error colours: it blocks. */
 .sources {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -154,8 +154,8 @@
 }
 
 .sourceMissing {
-  border-color: var(--color-warning-border);
-  background: var(--color-warning-bg);
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
 }
 
 .sourceHead {

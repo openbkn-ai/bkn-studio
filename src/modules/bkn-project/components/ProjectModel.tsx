@@ -473,7 +473,7 @@ export function ProjectModel({
             names: catalogLabels(projectMissing),
           })}
           showIcon
-          type="warning"
+          type="error"
         />
       ) : null}
       {draftMissing.length ? (
@@ -500,7 +500,7 @@ export function ProjectModel({
         <Alert
           message={t("bknProject.model.notice.unadoptedEnds", { count: unadoptedEnds.length })}
           showIcon
-          type="warning"
+          type="error"
         />
       ) : null}
     </>

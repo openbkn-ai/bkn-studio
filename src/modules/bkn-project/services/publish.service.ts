@@ -20,7 +20,7 @@ import {
   mockNextVersion,
   mockProjectRelease,
 } from "@/modules/bkn-project/services/release.service";
-import type { Draft, DraftTable } from "@/modules/bkn-project/types/draft";
+import type { Draft, DraftObjectType, DraftTable } from "@/modules/bkn-project/types/draft";
 import type {
   AffectedItem,
   CheckJoinResult,
@@ -496,18 +496,22 @@ function mockCheckOf(draft: Draft, confirmation: MockConfirmation): OntologyChec
   };
 }
 
+/** The properties of an object type that hold a date or a time: what an update field can be. */
+const mockTimeProperties = (item: DraftObjectType) =>
+  item.properties
+    .filter((property) => /^(date|time|datetime|timestamp)$/.test(property.type))
+    .map((property) => property.name);
+
 function mockIndexOf(projectId: string, draft: Draft): ProjectIndex {
   const confirmation = mockConfirmations[projectId];
   const builtAt = mockRebuilds[projectId] ?? confirmation?.time;
   const objects = adoptedObjects(draft);
-  const items = objects.map((item, at): IndexItem => {
-    // The last table has no update field: its identity stands in, so it rebuilds in full only,
-    // and the modeling page asks for one of its time properties.
-    const noUpdateField = objects.length > 1 && at === objects.length - 1;
+  const items = objects.map((item): IndexItem => {
+    // Without an update field the identity stands in, so the index rebuilds in full only, and the
+    // modeling page asks for one of the type's time properties, as /pending lists it.
+    const noUpdateField = !item.incrementalKey;
     const built = builtAt !== undefined && Date.now() - builtAt >= MOCK_BUILD_MS;
-    const times = item.properties
-      .filter((property) => /^(date|time|datetime|timestamp)$/.test(property.type))
-      .map((property) => property.name);
+    const times = mockTimeProperties(item);
     const base = {
       fullRebuildOnly: noUpdateField,
       id: item.id,
@@ -702,6 +706,18 @@ async function mockPending(projectId: string): Promise<ProjectPending> {
         neededBy: MOCK_NEEDED_BY[item.id] ?? [],
         reason: "undecided",
       })),
+      // Last, as the server lists them: adopted types with a time property and no update field.
+      ...adoptedObjects(draft)
+        .filter((item) => !item.incrementalKey && mockTimeProperties(item).length)
+        .map((item) => ({
+          blocking: false,
+          itemId: item.id,
+          kind: "object_types",
+          name: item.name,
+          neededBy: [],
+          reason: "needs_update_field",
+          updateField: { allowed: true, values: mockTimeProperties(item) },
+        })),
     ],
   };
 }

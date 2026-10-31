@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
+import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
 import { setProjectArchived } from "@/modules/bkn-project/services/project.service";
 import { getProjectStatus } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -80,6 +81,8 @@ export function DataSourceHealth({
   }, [load]);
 
   const sources = status?.dataSources ?? null;
+  // The items whose tables are gone: a few at first, all on asking.
+  const affected = useCollapsedList(sources?.tables.affected ?? []);
   const unreachable = sources
     ? SOURCES.filter((source) => sources[source].state === "unreachable")
     : [];
@@ -146,6 +149,7 @@ export function DataSourceHealth({
       total: count.total,
     });
 
+  // A source that is gone blocks confirming and publishing: its notice is an error, as its tag.
   return (
     <section className={styles.panel} data-region="data-sources">
       <div className={styles.cardHead}>
@@ -199,7 +203,7 @@ export function DataSourceHealth({
             description={hint}
             message={t(`${PREFIX}.catalogsMissing`, { count: catalogs.missing })}
             showIcon
-            type="warning"
+            type="error"
           />
         ) : null}
         {tables.state === "missing" ? (
@@ -215,7 +219,7 @@ export function DataSourceHealth({
               <>
                 {tables.affected.length ? (
                   <ul className={styles.affected}>
-                    {tables.affected.map((item) => (
+                    {affected.visible.map((item) => (
                       <li key={`${item.kind}:${item.id}`}>
                         {t(
                           `${PREFIX}.affected.${item.kind === "relation_types" ? "relation" : "object"}`,
@@ -225,12 +229,13 @@ export function DataSourceHealth({
                     ))}
                   </ul>
                 ) : null}
+                {affected.toggle}
                 {catalogs.state === "missing" ? null : hint}
               </>
             }
             message={t(`${PREFIX}.tablesMissing`, { count: tables.missing })}
             showIcon
-            type="warning"
+            type="error"
           />
         ) : null}
         {unreachable.length ? (

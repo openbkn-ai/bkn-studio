@@ -283,7 +283,7 @@ function CheckSection({
                   : "bknProject.release.check.failedHint",
               )}
               showIcon
-              type="warning"
+              type="error"
             />
           ) : null}
           {results ? (
@@ -465,7 +465,7 @@ export function ProjectReleasePage({
           }
           message={t("bknProject.release.outdated")}
           showIcon
-          type="warning"
+          type="error"
         />
       ) : null}
       <ReleasePublish

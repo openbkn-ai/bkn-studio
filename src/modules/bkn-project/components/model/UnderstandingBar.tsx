@@ -233,7 +233,7 @@ export function UnderstandingBar({
               : t("bknProject.understand.hint.unnamedUncounted")
           }
           showIcon
-          type="warning"
+          type="info"
         />
       ) : null}
       <div className={styles.understandingHead}>

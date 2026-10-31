@@ -175,6 +175,26 @@ describe("DataSourceHealth", () => {
     expect(onGoToModel).toHaveBeenCalledTimes(2);
   });
 
+  it("lists the first few gone items, all of them on asking, and folds them back", async () => {
+    const affected = Array.from({ length: 5 }, (_, index) => ({
+      id: `ot${index}`,
+      kind: "object_types" as const,
+      name: `条目${index}`,
+      table: `t${index}`,
+    }));
+    getProjectStatusMock.mockResolvedValue(
+      status({ ...ok, tables: { affected, missing: 5, state: "missing", total: 5 } }),
+    );
+    renderHealth();
+    expect(await screen.findByText(/「条目2」/)).toBeInTheDocument();
+    expect(screen.queryByText(/「条目3」/)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "展开全部（共 5 条）" }));
+    expect(screen.getByText(/「条目4」/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /收\s*起/ }));
+    expect(screen.queryByText(/「条目4」/)).toBeNull();
+  });
+
   it("offers to archive a project whose network is gone, after asking", async () => {
     getProjectStatusMock.mockResolvedValue(
       status(
