@@ -187,6 +187,161 @@ describe("draft.service", () => {
     }
   });
 
+  it("saves an object type whole as bkn-project names it", async () => {
+    const { mockDraft, saveDraftObjectType } = await importService();
+    const backend = mockDraft("p1");
+    mockPut.mockResolvedValue({ data: backend });
+
+    const draft = await saveDraftObjectType("p/1", "customers", 7, {
+      description: "Who buys",
+      displayKey: "name",
+      incrementalKey: "",
+      name: "Customer",
+      primaryKeys: ["customer_id"],
+      properties: [
+        {
+          description: "",
+          displayName: "Customer",
+          mappedField: "customer_id",
+          name: "customer_id",
+          type: "string",
+        },
+        {
+          description: "Shown",
+          displayName: "Name",
+          mappedField: "name",
+          name: "name",
+          type: "string",
+        },
+      ],
+    });
+
+    expect(mockPut).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%2F1/ontology/draft/object_types/customers",
+      {
+        comment: "Who buys",
+        data_properties: [
+          {
+            comment: "",
+            display_name: "Customer",
+            mapped_field: { name: "customer_id" },
+            name: "customer_id",
+            type: "string",
+          },
+          {
+            comment: "Shown",
+            display_name: "Name",
+            mapped_field: { name: "name" },
+            name: "name",
+            type: "string",
+          },
+        ],
+        display_key: "name",
+        incremental_key: "",
+        name: "Customer",
+        primary_keys: ["customer_id"],
+        update_time: 7,
+      },
+      { skipErrorToast: true },
+    );
+    expect(draft.items.objectTypes[0].name).toBe("customers");
+  });
+
+  it("refuses in the mock as bkn-project does: a joined property, a column mapped twice", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const { getDraft, listDraftTableFields, saveDraftObjectType } =
+      await import("@/modules/bkn-project/services/draft.service");
+    vi.useFakeTimers();
+    try {
+      const settle = async <T>(promise: Promise<T>) => {
+        await vi.runAllTimersAsync();
+        return promise;
+      };
+      // Caught before the timers run, as the mock refuses at once.
+      const refusal = async (promise: Promise<unknown>) => {
+        const caught = promise.catch((error: AxiosError) => error);
+        await vi.runAllTimersAsync();
+        return (await caught) as AxiosError<{ error_code: string; error_details?: unknown }>;
+      };
+      const before = (await settle(getDraft("p-001")))!;
+      const customers = before.items.objectTypes.find((item) => item.id === "customers")!;
+      const save = (properties: { mappedField?: string; name: string }[], updateTime: number) =>
+        saveDraftObjectType("p-001", "customers", updateTime, {
+          description: "",
+          displayKey: "name",
+          incrementalKey: "",
+          name: "customers",
+          primaryKeys: ["customer_id"],
+          properties: properties.map((property) => ({
+            description: "",
+            displayName: property.name,
+            type: "string",
+            ...property,
+          })),
+        });
+
+      // The columns read off the draft: the mapped ones and those left out.
+      const fields = await settle(
+        listDraftTableFields({ id: "p-001", knId: "n" }, "customers", "res-customers"),
+      );
+      expect(fields.map((field) => field.name)).toEqual([
+        "customer_id",
+        "name",
+        "contact_phone",
+        "contact_email",
+      ]);
+
+      // A relation joins by customer_id.
+      const inUse = await refusal(save([{ mappedField: "name", name: "name" }], before.updateTime));
+      expect(inUse.response?.data).toMatchObject({
+        error_code: "BknProject.Draft.PropertyInUse",
+        error_details: [
+          {
+            property: "customer_id",
+            relation: { id: "sales_orders_to_customers", name: "sales_orders_to_customers" },
+            source: { id: "sales_orders", name: "sales_orders" },
+            target: { id: "customers", name: "customers" },
+          },
+        ],
+      });
+      const twice = await refusal(
+        save(
+          [
+            { mappedField: "customer_id", name: "customer_id" },
+            { mappedField: "customer_id", name: "name" },
+          ],
+          before.updateTime,
+        ),
+      );
+      expect(twice.response?.data).toMatchObject({
+        error_code: "BknProject.Draft.InvalidProperty",
+        error_details: { field: "customer_id", reason: "field_mapped_twice" },
+      });
+      const stale = await refusal(save([], before.updateTime - 1));
+      expect(stale.response?.data.error_code).toBe("BknProject.Draft.Stale");
+
+      // Mapping a column left out restores it.
+      const saved = await settle(
+        save(
+          [
+            { mappedField: "customer_id", name: "customer_id" },
+            { mappedField: "name", name: "name" },
+            { mappedField: "contact_phone", name: "phone" },
+          ],
+          before.updateTime,
+        ),
+      );
+      expect(
+        saved.items.objectTypes.find((item) => item.id === "customers")?.properties,
+      ).toHaveLength(customers.properties.length + 1);
+      expect(saved.items.excluded.map((field) => field.field)).not.toContain("contact_phone");
+      expect(saved.items.decisions.at(-1)).toMatchObject({ action: "save", itemId: "customers" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("adds catalogs with the custom method and reads which are being added", async () => {
     const { addDraftCatalogs, mockDraft } = await importService();
     const backend = mockDraft("p1");

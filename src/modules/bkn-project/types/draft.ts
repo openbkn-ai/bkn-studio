@@ -172,6 +172,28 @@ export type DraftItemEdit = {
 };
 
 /**
+ * An object type as a person saves it from the editor, whole: what it is called and describes,
+ * its properties and the columns they map, and which identify, name and update its records. A
+ * column newly mapped adds a property, an excluded one mapped again restores it, and a property
+ * left out is removed.
+ */
+export type DraftObjectTypeSave = {
+  description: string;
+  displayKey: string;
+  incrementalKey: string;
+  name: string;
+  primaryKeys: string[];
+  properties: {
+    description: string;
+    displayName: string;
+    /** The column it maps; absent for a property that maps none. */
+    mappedField?: string;
+    name: string;
+    type: string;
+  }[];
+};
+
+/**
  * How one column of a bound table differs from what it maps: `added` (no property maps it),
  * `removed` (its property's column is gone) or `retyped` (now another type).
  */

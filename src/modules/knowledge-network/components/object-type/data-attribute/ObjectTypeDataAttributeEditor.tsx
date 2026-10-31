@@ -91,6 +91,13 @@ type ObjectTypeDataAttributeEditorProps = {
   dataSource?: ObjectTypeDataSource;
   logicPropertyNames?: string[];
   networkId: string;
+  /**
+   * Reads a data resource's fields, for a caller whose resources are not the network's own, such
+   * as a project's draft; absent, the network's resources are read.
+   */
+  readResourceFields?: (resourceId: string) => Promise<ObjectTypeResourceField[]>;
+  /** The data resource is given and stays: it cannot be replaced or cleared here. */
+  resourceFixed?: boolean;
   onChange: (value: {
     dataProperties: ObjectTypeDataProperty[];
     dataSource?: ObjectTypeDataSource;
@@ -316,7 +323,16 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   ObjectTypeDataAttributeEditorHandle,
   ObjectTypeDataAttributeEditorProps
 >(function ObjectTypeDataAttributeEditor(
-  { basicValue, dataProperties, dataSource, logicPropertyNames = [], networkId, onChange },
+  {
+    basicValue,
+    dataProperties,
+    dataSource,
+    logicPropertyNames = [],
+    networkId,
+    onChange,
+    readResourceFields,
+    resourceFixed = false,
+  },
   ref,
 ) {
   const { t } = useTranslation();
@@ -492,7 +508,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         return [];
       }
 
-      const fields = await listObjectTypeResourceFields(networkId, viewId);
+      const fields = await (readResourceFields
+        ? readResourceFields(viewId)
+        : listObjectTypeResourceFields(networkId, viewId));
       const filteredFields = fields
         .filter((item) => isSupportedResourceFieldName(item.name))
         .map((item) => ({
@@ -502,7 +520,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       setViewFields(filteredFields);
       return filteredFields;
     },
-    [networkId],
+    [networkId, readResourceFields],
   );
 
   useEffect(() => {
@@ -1316,11 +1334,13 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           }}
                         />
                       </Tooltip>
-                      <Dropdown menu={viewPanelMenuConfig} trigger={["click"]}>
-                        <EllipsisOutlined className={styles.panelActionIcon} />
-                      </Dropdown>
+                      {resourceFixed ? null : (
+                        <Dropdown menu={viewPanelMenuConfig} trigger={["click"]}>
+                          <EllipsisOutlined className={styles.panelActionIcon} />
+                        </Dropdown>
+                      )}
                     </>
-                  ) : (
+                  ) : resourceFixed ? null : (
                     <PlusOutlined
                       className={styles.panelActionIcon}
                       onClick={() => setResourceModalOpen(true)}

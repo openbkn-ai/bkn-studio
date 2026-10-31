@@ -10,6 +10,8 @@ import { AxiosError, type AxiosResponse } from "axios";
 import { http } from "@/framework/request/http";
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
+import { listObjectTypeResourceFields as listResourceFields } from "@/modules/knowledge-network/services/object-type-resource.service";
+import type { ObjectTypeResourceField } from "@/modules/knowledge-network/types/object-type";
 import { mockAddProjectCatalogs } from "@/modules/bkn-project/services/project.service";
 import type {
   AskAnswer,
@@ -18,6 +20,7 @@ import type {
   DraftItemKind,
   DraftKeyEvidence,
   DraftObjectType,
+  DraftObjectTypeSave,
   DraftRelationType,
   DraftTable,
   DraftValueType,
@@ -587,6 +590,101 @@ function restoreMockField(
   return draft;
 }
 
+/** The 400 bkn-project answers for a property the save cannot take, and why. */
+function mockInvalidProperty(details: Record<string, string>, description: string) {
+  return new AxiosError(description, "ERR_BAD_REQUEST", undefined, undefined, {
+    data: {
+      description,
+      error_code: "BknProject.Draft.InvalidProperty",
+      error_details: details,
+    },
+    status: 400,
+  } as AxiosResponse);
+}
+
+function saveMockObjectType(
+  projectId: string,
+  itemId: string,
+  updateTime: number,
+  value: DraftObjectTypeSave,
+): BackendDraft {
+  const draft = readyMockDraft(projectId, updateTime);
+  const item = draft.items.object_types?.find((candidate) => candidate.id === itemId);
+  if (!item) {
+    throw mockConflict("ItemNotFound", `No item ${itemId}.`);
+  }
+  const kept = new Set(value.properties.map((property) => property.name));
+  const objectName = (id: string) =>
+    draft.items.object_types?.find((candidate) => candidate.id === id)?.name ?? id;
+  // A property a relation joins by stays while the relation does.
+  const uses = (draft.items.relation_types ?? []).flatMap((relation) =>
+    (relation.mapping ?? [])
+      .flatMap((pair) => [
+        ...(relation.source === itemId ? [pair.source_property] : []),
+        ...(relation.target === itemId ? [pair.target_property] : []),
+      ])
+      .filter((property) => !kept.has(property))
+      .map((property) => ({
+        property,
+        relation: { id: relation.id, kind: "relation_types", name: relation.name },
+        source: { id: relation.source, kind: "object_types", name: objectName(relation.source) },
+        target: { id: relation.target, kind: "object_types", name: objectName(relation.target) },
+      })),
+  );
+  if (uses.length) {
+    const error = mockConflict("PropertyInUse", "A relation joins by the property.");
+    (error.response!.data as { error_details?: unknown }).error_details = uses;
+    throw error;
+  }
+  const columns = new Map<string, string>();
+  for (const property of value.properties) {
+    if (!property.mappedField) {
+      throw mockInvalidProperty(
+        { property: property.name, reason: "no_mapped_field" },
+        "Every property maps a field.",
+      );
+    }
+    if (columns.has(property.mappedField)) {
+      throw mockInvalidProperty(
+        { field: property.mappedField, reason: "field_mapped_twice" },
+        "The field is mapped already.",
+      );
+    }
+    columns.set(property.mappedField, property.name);
+  }
+  const now = Date.now();
+  (draft.items.decisions ??= []).push({
+    action: "save",
+    after: value.name,
+    before: item.name,
+    by: mockDrafter,
+    item_id: itemId,
+    kind: "object_types",
+    time: now,
+  });
+  const before = new Map((item.properties ?? []).map((property) => [property.name, property]));
+  item.name = value.name;
+  item.description = value.description;
+  item.properties = value.properties.map((property) => ({
+    ...(before.get(property.name) ?? mockProperty(property.name, property.type)),
+    description: property.description,
+    display_name: property.displayName,
+    mapped_field: property.mappedField ?? "",
+    missing_description: !property.description,
+    type: property.type,
+  }));
+  // A column mapped again is no longer left out.
+  draft.items.excluded = (draft.items.excluded ?? []).filter(
+    (field) => field.object_type !== itemId || !columns.has(field.field),
+  );
+  item.primary_keys = value.primaryKeys;
+  item.needs_identity = value.primaryKeys.length === 0;
+  item.display_key = value.displayKey;
+  item.incremental_key = value.incrementalKey;
+  draft.update_time = now;
+  return draft;
+}
+
 /** How long the mock takes to draft the tables of added catalogs. */
 const MOCK_ADDING_MS = 6000;
 
@@ -751,6 +849,68 @@ export async function chooseIdentity(
     { skipErrorToast: true, timeout: IDENTITY_TIMEOUT_MS },
   );
   return mapDraft(response.data);
+}
+
+/**
+ * Saves an object type whole, as the editor leaves it, over the draft made at `updateTime`;
+ * replies the draft. bkn-project checks it as it checks each edit and records the decisions.
+ */
+export async function saveDraftObjectType(
+  projectId: string,
+  itemId: string,
+  updateTime: number,
+  value: DraftObjectTypeSave,
+): Promise<Draft> {
+  if (useMock) {
+    return wait(mapDraft(saveMockObjectType(projectId, itemId, updateTime, value)));
+  }
+  const response = await http.put<BackendDraft>(
+    `${draftPath(projectId)}/object_types/${encodeURIComponent(itemId)}`,
+    {
+      comment: value.description,
+      data_properties: value.properties.map((property) => ({
+        comment: property.description,
+        display_name: property.displayName,
+        ...(property.mappedField ? { mapped_field: { name: property.mappedField } } : {}),
+        name: property.name,
+        type: property.type,
+      })),
+      display_key: value.displayKey,
+      incremental_key: value.incrementalKey,
+      name: value.name,
+      primary_keys: value.primaryKeys,
+      update_time: updateTime,
+    },
+    { skipErrorToast: true },
+  );
+  return mapDraft(response.data);
+}
+
+/**
+ * The columns of an object type's table, for the editor to map. The mock has no tables: it reads
+ * them off the draft, the mapped columns and the ones left out.
+ */
+export async function listDraftTableFields(
+  project: { id: string; knId: string },
+  objectTypeId: string,
+  resourceId: string,
+): Promise<ObjectTypeResourceField[]> {
+  if (useMock) {
+    const draft = mockDrafts[project.id];
+    const item = draft?.items.object_types?.find((candidate) => candidate.id === objectTypeId);
+    const mapped = (item?.properties ?? []).map((property) => ({
+      comment: property.description,
+      displayName: property.mapped_field,
+      name: property.mapped_field,
+      type: property.type,
+    }));
+    const left = (draft?.items.excluded ?? [])
+      .filter((field) => field.object_type === objectTypeId)
+      .map((field) => ({ displayName: field.field, name: field.field, type: "string" }));
+    return wait([...mapped, ...left]);
+  }
+  // A table's columns are its data resource's, whoever's network reads them.
+  return listResourceFields(project.knId, resourceId);
 }
 
 /** Maps a field the privacy rules left out back to a property of its object type. */

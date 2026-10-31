@@ -7,6 +7,7 @@
 
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -159,6 +160,10 @@ function projectStatus(nextActions: ProjectStatus["nextActions"]): ProjectStatus
   };
 }
 
+function Location() {
+  return <div data-testid="location">{useLocation().pathname}</div>;
+}
+
 function renderModel(
   override: Partial<Project> = {},
   ownerIsCaller = true,
@@ -167,13 +172,16 @@ function renderModel(
   // Without Ant Design's injected styles, as a query by role matches each element against them
   // and would take seconds per query on this page.
   return renderWithoutAntdStyles(
-    <ProjectModel
-      initialTab={initialTab}
-      onConfirmed={vi.fn()}
-      onProjectChange={onProjectChange}
-      ownerIsCaller={ownerIsCaller}
-      project={{ ...project, ...override }}
-    />,
+    <MemoryRouter>
+      <ProjectModel
+        initialTab={initialTab}
+        onConfirmed={vi.fn()}
+        onProjectChange={onProjectChange}
+        ownerIsCaller={ownerIsCaller}
+        project={{ ...project, ...override }}
+      />
+      <Location />
+    </MemoryRouter>,
   );
 }
 
@@ -404,9 +412,21 @@ describe("ProjectModel", () => {
     expect(await screen.findByRole("switch", { name: /"name":"customers"/ })).toBeInTheDocument();
   });
 
-  it("opens an object type with its identity, properties and the fields left out", async () => {
+  it("opens an object type of a ready draft in the editor", async () => {
     getDraftMock.mockResolvedValue(ready());
     renderModel();
+
+    // The graph lists the types beside it too; the table's row is the last.
+    fireEvent.click((await screen.findAllByRole("button", { name: /^customers/ })).at(-1)!);
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      `/bkn-project/${project.id}/model/object-types/customers`,
+    );
+  });
+
+  it("opens an object type with its identity, properties and the fields left out", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    // An archived project is read only: its object types open in the details.
+    renderModel({ archived: true });
 
     // The graph lists the types beside it too; the table's row is the last.
     fireEvent.click((await screen.findAllByRole("button", { name: /^customers/ })).at(-1)!);

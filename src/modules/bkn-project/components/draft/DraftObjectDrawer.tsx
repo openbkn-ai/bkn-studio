@@ -34,6 +34,7 @@ export function DraftObjectDrawer({
   excluded,
   objectType,
   onClose,
+  onEdit,
 }: {
   /** Ask AI, on a ready draft; adopting a suggestion is the edit it names. */
   ask?: {
@@ -45,6 +46,8 @@ export function DraftObjectDrawer({
   excluded: DraftExcludedField[];
   objectType: DraftObjectType | null;
   onClose: () => void;
+  /** Opens the object type in the editor, where the draft can be edited. */
+  onEdit?: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const columns: ColumnsType<DraftProperty> = [
@@ -84,6 +87,13 @@ export function DraftObjectDrawer({
   return (
     <Drawer
       destroyOnHidden
+      extra={
+        objectType && onEdit ? (
+          <AppButton onClick={() => onEdit(objectType.id)} type="primary">
+            {t("bknProject.model.detail.edit")}
+          </AppButton>
+        ) : null
+      }
       footer={<AppButton onClick={onClose}>{t("bknProject.model.detail.close")}</AppButton>}
       onClose={onClose}
       open={objectType !== null}
