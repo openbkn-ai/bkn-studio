@@ -122,16 +122,17 @@ test("community image: from tables and requirements to a published, switched rel
     const nav = page.getByRole("navigation", { name: "项目导航" });
     await expect(nav.getByRole("button")).toHaveText([
       "项目概览",
-      "需求场景",
+      "需求与资源",
       "本体建模",
+      "业务场景",
       "确认与发布",
     ]);
     await expectNoForbiddenWords(page, "overview");
   });
 
   await test.step("4. upload a Markdown requirements document", async () => {
-    await openSection(page, "需求场景");
-    await page.getByText(/^输入资料 \d+$/).click();
+    // The documents are on the requirements and resources page.
+    await openSection(page, "需求与资源");
     await page.getByRole("button", { name: "上传文档" }).click();
     const dialog = page.getByRole("dialog");
     // Markdown and plain text only: PDF / DOCX belong to the extension and are not offered.
@@ -223,7 +224,7 @@ test("community image: from tables and requirements to a published, switched rel
   // Requirements are drafted after the ontology: drafting maps their concepts to the drafted
   // object types, which the questions' needs and the test-question checks rely on.
   await test.step("5. draft the requirements from the document", async () => {
-    await openSection(page, "需求场景");
+    await openSection(page, "业务场景");
     await page.getByRole("button", { name: "从资料起草" }).click();
     await expect(page.getByText("需求规格第 1 版 · 已起草")).toBeVisible(BACKGROUND);
     const questions = page.getByText(/^场景问题 (\d+)$/);
@@ -255,7 +256,7 @@ test("community image: from tables and requirements to a published, switched rel
 
   // Test questions are checked against the object types the questions need.
   await test.step("6. generate test questions for a question, edit one, delete one", async () => {
-    await openSection(page, "需求场景");
+    await openSection(page, "业务场景");
     await page.getByText(/^场景问题 \d+$/).click();
     await page.getByText("测试问法与开发指导").first().click();
     await page.getByRole("button", { name: "生成测试问法与开发指导" }).click();
@@ -387,7 +388,7 @@ test("community licence: knowledge-base entries are badged and masked, the core 
   await expect(page.getByText("这一页还在建设中")).toHaveCount(0);
 
   // The core sections carry no mask and keep working.
-  for (const section of ["项目概览", "需求场景", "本体建模", "确认与发布"]) {
+  for (const section of ["项目概览", "需求与资源", "本体建模", "业务场景", "确认与发布"]) {
     await openSection(page, section);
     await expect(page.getByRole("heading", { name: section, exact: true })).toBeVisible();
     await expect(page.locator(".console-upgrade-mask")).toHaveCount(0);
