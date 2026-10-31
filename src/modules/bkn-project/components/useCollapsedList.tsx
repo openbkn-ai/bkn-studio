@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -17,9 +17,19 @@ export const COLLAPSED_ITEMS = 3;
  * A notice that lists items one per line shows the first few, then offers all of them, and folds
  * them back once open. The list keeps its own markup; this gives what to show and the toggle.
  */
-export function useCollapsedList<T>(items: readonly T[], limit = COLLAPSED_ITEMS) {
+export function useCollapsedList<T>(
+  items: readonly T[],
+  limit = COLLAPSED_ITEMS,
+  /** Opens the list, as when a link leads to an item past the first few. */
+  openForced = false,
+) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openForced);
+  useEffect(() => {
+    if (openForced) {
+      setOpen(true);
+    }
+  }, [openForced]);
   const folds = items.length > limit;
   return {
     toggle: folds ? (
