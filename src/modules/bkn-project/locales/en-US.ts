@@ -149,7 +149,7 @@ export const bknProjectEnUS = {
           "Finding candidates in the {{count}} added data catalogs; the draft can be edited meanwhile.",
         addRefused: {
           Drafting: "Data catalogs are being added; add more once that is done.",
-          Stale: "The draft just changed; close this and open it again to add.",
+          Stale: "The draft just changed and has been read again; save once more.",
         },
         add: "Add data catalogs",
         addTitle: "Add data catalogs",

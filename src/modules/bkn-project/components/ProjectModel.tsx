@@ -415,6 +415,7 @@ export function ProjectModel({
         catalogs={catalogs}
         mode="add"
         onCancel={() => setAddingCatalogs(false)}
+        onStale={() => void loadDraft()}
         onSaved={(next, adding) => {
           setAddingCatalogs(false);
           onProjectChange(next);

@@ -136,7 +136,7 @@ export const bknProjectZhCN = {
         adding_other: "正在从新增的 {{count}} 个数据目录发现候选，期间可以照常编辑草稿。",
         addRefused: {
           Drafting: "正在增加数据目录，请等这次完成后再增加。",
-          Stale: "草稿刚被修改过，请关闭后重新打开再增加。",
+          Stale: "草稿刚被修改过，已重新读取，请再保存一次。",
         },
         add: "增加数据目录",
         addTitle: "增加数据目录",

@@ -28,6 +28,7 @@ export function ProjectCatalogsModal({
   mode = "replace",
   onCancel,
   onSaved,
+  onStale,
   project,
 }: {
   /** Catalogs the caller can see, by id. */
@@ -36,6 +37,8 @@ export function ProjectCatalogsModal({
   onCancel: () => void;
   /** With the draft adding replied, when catalogs were added. */
   onSaved: (project: Project, draft?: Draft) => void;
+  /** Adding was refused on a draft changed since it was read: read it again. */
+  onStale?: () => void;
   project: Project;
 }) {
   const { t } = useTranslation();
@@ -67,6 +70,9 @@ export function ProjectCatalogsModal({
     } catch (cause) {
       // Adding is refused while catalogs are being added, or on a draft changed since it was read.
       const code = adding ? draftErrorCode(cause) : undefined;
+      if (code === "Stale") {
+        onStale?.();
+      }
       setError(
         code === "Drafting" || code === "Stale"
           ? t(`bknProject.model.catalogs.addRefused.${code}`)

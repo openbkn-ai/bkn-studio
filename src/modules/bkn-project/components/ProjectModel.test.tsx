@@ -682,6 +682,31 @@ describe("ProjectModel", () => {
     expect(screen.getAllByRole("switch").length).toBeGreaterThan(0);
   });
 
+  it("reads the draft again when adding found it changed, and asks to save once more", async () => {
+    listCatalogsMock.mockResolvedValue({
+      items: [
+        { id: "cat-001", name: "ERP" },
+        { id: "cat-002", name: "CRM" },
+      ],
+      total: 2,
+    });
+    getDraftMock.mockResolvedValue(ready());
+    addDraftCatalogsMock.mockRejectedValue(conflict("Stale"));
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.catalogs.add" }));
+    const dialog = await openDialog();
+    fireEvent.mouseDown(dialog.getByRole("combobox"));
+    fireEvent.click(await screen.findByTitle("CRM"));
+    const reads = getDraftMock.mock.calls.length;
+    fireEvent.click(dialog.getByRole("button", { name: "common.save" }));
+
+    expect(
+      await dialog.findByText("bknProject.model.catalogs.addRefused.Stale"),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(getDraftMock.mock.calls.length).toBeGreaterThan(reads));
+  });
+
   it("says when catalogs are being added already, in the dialog", async () => {
     listCatalogsMock.mockResolvedValue({
       items: [
