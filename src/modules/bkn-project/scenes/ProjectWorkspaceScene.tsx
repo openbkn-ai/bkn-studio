@@ -19,6 +19,7 @@ import { ProjectModel } from "@/modules/bkn-project/components/ProjectModel";
 import { ProjectOverview } from "@/modules/bkn-project/components/ProjectOverview";
 import { ProjectRequirements } from "@/modules/bkn-project/components/requirements/ProjectRequirements";
 import { ProjectReleasePage } from "@/modules/bkn-project/components/ProjectReleasePage";
+import { ProjectResources } from "@/modules/bkn-project/components/resources/ProjectResources";
 import { ProjectWorkspaceNav } from "@/modules/bkn-project/components/ProjectWorkspaceNav";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
@@ -86,8 +87,8 @@ export function ProjectWorkspaceScene({
     void load();
   }, [load]);
 
-  // What the navigation counts: scenario questions and object types, read again on each page so
-  // a change made on one shows when moving on. A failed read leaves the count off.
+  // What the navigation counts: catalogs, object types and scenario questions, read again on each
+  // page so a change made on one shows when moving on. A failed read leaves the count off.
   const [counts, setCounts] = useState<Partial<Record<ProjectSection, number>>>({});
   // Read once the project is, after the page's own reads: the counts only add to it.
   const loadedId = loaded?.project.id;
@@ -103,7 +104,7 @@ export function ProjectWorkspaceScene({
       if (active) {
         setCounts({
           ...(requirements?.status === "ready" && requirements.spec
-            ? { requirements: requirements.spec.questions.length }
+            ? { scenarios: requirements.spec.questions.length }
             : {}),
           ...(draft?.status === "ready" ? { model: draft.items.objectTypes.length } : {}),
         });
@@ -155,13 +156,20 @@ export function ProjectWorkspaceScene({
   }
 
   const { latestRelease, networkName, project } = loaded;
+  const setProject = (next: Project) =>
+    setLoaded((current) => (current ? { ...current, project: next } : current));
+  const go = (to: ProjectSection) => void navigate(projectSectionPath(project.id, to));
 
   // No heading of its own: the navigation names the page, as in a network's workspace. The
   // overview lays panels on the page's grey; every other page is one white sheet.
   return (
     <section className={kn.workspace}>
       <div className={kn.workspaceLayout}>
-        <ProjectWorkspaceNav active={section} counts={counts} projectId={project.id} />
+        <ProjectWorkspaceNav
+          active={section}
+          counts={{ ...counts, resources: project.catalogIds.length }}
+          projectId={project.id}
+        />
         <main
           className={
             section === "overview"
@@ -174,9 +182,7 @@ export function ProjectWorkspaceScene({
               <ProjectOverview
                 latestRelease={latestRelease}
                 networkName={networkName}
-                onProjectChange={(next) =>
-                  setLoaded((current) => (current ? { ...current, project: next } : current))
-                }
+                onProjectChange={setProject}
                 ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
                 project={project}
               />
@@ -186,15 +192,21 @@ export function ProjectWorkspaceScene({
                 initialObject={searchParams.get("object")}
                 initialTab={searchParams.get("tab")}
                 // The check and the local indexes of a confirmation show on the release page.
-                onConfirmed={() => void navigate(projectSectionPath(project.id, "release"))}
-                onProjectChange={(next) =>
-                  setLoaded((current) => (current ? { ...current, project: next } : current))
-                }
+                onConfirmed={() => go("release")}
+                onGoToResources={() => go("resources")}
                 ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
                 project={project}
               />
-            ) : section === "requirements" ? (
+            ) : section === "resources" ? (
+              <ProjectResources
+                onGoToModel={() => go("model")}
+                onProjectChange={setProject}
+                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                project={project}
+              />
+            ) : section === "scenarios" ? (
               <ProjectRequirements
+                onGoToResources={() => go("resources")}
                 ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
                 project={project}
               />

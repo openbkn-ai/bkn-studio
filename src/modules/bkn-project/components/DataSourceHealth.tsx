@@ -53,10 +53,13 @@ const SOURCES = ["network", "catalogs", "tables"] as const;
  */
 export function DataSourceHealth({
   onGoToModel,
+  onGoToResources,
   onProjectChange,
   project,
 }: {
   onGoToModel: () => void;
+  /** Opens the requirements and resources page, where the catalogs are chosen. */
+  onGoToResources: () => void;
   onProjectChange: (project: Project) => void;
   project: Project;
 }) {
@@ -195,7 +198,7 @@ export function DataSourceHealth({
           <Alert
             action={
               setCatalogs?.allowed && !project.archived ? (
-                <AppButton onClick={onGoToModel} size="small">
+                <AppButton onClick={onGoToResources} size="small">
                   {t(`${PREFIX}.chooseCatalogs`)}
                 </AppButton>
               ) : null

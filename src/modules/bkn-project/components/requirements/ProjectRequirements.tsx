@@ -25,7 +25,6 @@ import {
   ItemDialog,
   MappingDialog,
 } from "@/modules/bkn-project/components/requirements/RequirementDialogs";
-import { RequirementDocuments } from "@/modules/bkn-project/components/requirements/RequirementDocuments";
 import {
   draftErrorText,
   refusedInputs,
@@ -78,18 +77,22 @@ import styles from "./Requirements.module.css";
 
 const PREFIX = "bknProject.requirements";
 
-const TABS = ["questions", "inputs", "scenarios", "concepts", "rules"] as const;
+const TABS = ["questions", "scenarios", "concepts", "rules"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
- * What the knowledge network is for: the requirement documents, and the specification drafted
- * from them — scenarios, the questions that accept the network, candidate concepts and rules,
- * with the conflicts and choices the owner settles.
+ * What the knowledge network is for: the specification drafted from the requirement documents —
+ * scenarios, the questions that accept the network, candidate concepts and rules, with the
+ * conflicts and choices the owner settles. The documents themselves are managed with the
+ * project's other inputs, on the requirements and resources page.
  */
 export function ProjectRequirements({
+  onGoToResources,
   ownerIsCaller,
   project,
 }: {
+  /** Opens the requirements and resources page, where the documents are uploaded. */
+  onGoToResources: () => void;
   ownerIsCaller: boolean;
   project: Project;
 }) {
@@ -297,8 +300,7 @@ export function ProjectRequirements({
 
   const spec = requirements?.spec;
   const ready = requirements?.status === "ready";
-  // Before a specification is drafted, only the documents can be worked on.
-  const activeTab: Tab = ready ? (tab ?? "questions") : "inputs";
+  const activeTab: Tab = tab ?? "questions";
   return (
     <Citing.Provider value={citing}>
       <Editing.Provider value={editing}>
@@ -330,7 +332,16 @@ export function ProjectRequirements({
             ) : null}
           </div>
           {!requirements ? (
-            <Alert message={t(`${PREFIX}.notDrafted`)} showIcon type="info" />
+            <Alert
+              action={
+                <AppButton onClick={onGoToResources} size="small">
+                  {t(`${PREFIX}.goToDocuments`)}
+                </AppButton>
+              }
+              message={t(documents.length ? `${PREFIX}.notDrafted` : `${PREFIX}.noDocuments`)}
+              showIcon
+              type="info"
+            />
           ) : isDrafting ? (
             <Alert message={t(`${PREFIX}.drafting`)} showIcon type="info" />
           ) : requirements.status === "failed" ? (
@@ -368,34 +379,23 @@ export function ProjectRequirements({
                 : t(`${PREFIX}.tablesOmitted`, { count: spec.tablesOmitted })}
             </p>
           ) : null}
-          <Segmented<Tab>
-            onChange={setTab}
-            options={TABS.map((value) => ({
-              disabled: !ready && value !== "inputs",
-              label: t(`${PREFIX}.tabs.${value}`, {
-                count: spec
-                  ? {
+          {spec ? (
+            <>
+              <Segmented<Tab>
+                onChange={setTab}
+                options={TABS.map((value) => ({
+                  label: t(`${PREFIX}.tabs.${value}`, {
+                    count: {
                       concepts: spec.concepts.length,
-                      inputs: documents.length,
                       questions: spec.questions.length,
                       rules: spec.rules.length + spec.conflicts.length + spec.choices.length,
                       scenarios: spec.scenarios.length,
-                    }[value]
-                  : documents.length,
-              }),
-              value,
-            }))}
-            value={activeTab}
-          />
-          {activeTab === "inputs" ? (
-            <RequirementDocuments
-              canEdit={canEdit}
-              documents={documents}
-              onChanged={() => void load()}
-              projectId={project.id}
-            />
-          ) : spec ? (
-            <>
+                    }[value],
+                  }),
+                  value,
+                }))}
+                value={activeTab}
+              />
               {activeTab === "questions" ? (
                 <QuestionsView
                   drafted={drafted}

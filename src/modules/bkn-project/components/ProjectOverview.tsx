@@ -186,31 +186,25 @@ export function ProjectOverview({
   );
   const names = useMemo(() => (ready ? itemNames(ready) : {}), [ready]);
 
+  // In the order a project is built: its inputs, the ontology, the scenarios that test it, then
+  // the knowledge base.
   const tiles: StatTile[] = [
     {
+      // A project starts from its catalogs: without one, the tile leads to choosing them.
       action: {
-        label: t("bknProject.overview.tiles.questionsAction"),
-        onClick: () => go("requirements"),
+        label: t(
+          project.catalogIds.length
+            ? "bknProject.overview.tiles.sourcesAction"
+            : "bknProject.overview.tiles.sourcesChoose",
+        ),
+        onClick: () => go("resources"),
       },
-      color: "var(--color-primary-600)",
-      icon: <FileSearchOutlined />,
-      key: "questions",
-      label: t("bknProject.overview.tiles.questions"),
-      // The scenario questions of the drafted requirements; their state while there are none.
-      sub:
-        requirements?.status === "ready"
-          ? t("bknProject.overview.tiles.questionsReadySub", { version: requirements.version })
-          : t("bknProject.overview.tiles.questionsSub"),
-      value:
-        requirements?.status === "ready"
-          ? t("bknProject.overview.tiles.questionsValue", {
-              count: requirements.spec?.questions.length ?? 0,
-            })
-          : requirements
-            ? t(
-                `bknProject.overview.tiles.questionsStatus.${requirements.status === "drafting" ? "drafting" : "failed"}`,
-              )
-            : PLACEHOLDER,
+      color: "var(--color-info-text)",
+      icon: <DatabaseOutlined />,
+      key: "sources",
+      label: t("bknProject.overview.tiles.sources"),
+      sub: t("bknProject.overview.tiles.sourcesSub"),
+      value: t("bknProject.overview.tiles.sourcesValue", { count: project.catalogIds.length }),
     },
     {
       // What waits is listed first on the changes tab, each with the action that settles it.
@@ -240,13 +234,29 @@ export function ProjectOverview({
           : PLACEHOLDER,
     },
     {
-      action: { label: t("bknProject.overview.tiles.sourcesAction"), onClick: () => go("model") },
-      color: "var(--color-info-text)",
-      icon: <DatabaseOutlined />,
-      key: "sources",
-      label: t("bknProject.overview.tiles.sources"),
-      sub: t("bknProject.overview.tiles.sourcesSub"),
-      value: t("bknProject.overview.tiles.sourcesValue", { count: project.catalogIds.length }),
+      action: {
+        label: t("bknProject.overview.tiles.questionsAction"),
+        onClick: () => go("scenarios"),
+      },
+      color: "var(--color-primary-600)",
+      icon: <FileSearchOutlined />,
+      key: "questions",
+      label: t("bknProject.overview.tiles.questions"),
+      // The scenario questions of the drafted requirements; their state while there are none.
+      sub:
+        requirements?.status === "ready"
+          ? t("bknProject.overview.tiles.questionsReadySub", { version: requirements.version })
+          : t("bknProject.overview.tiles.questionsSub"),
+      value:
+        requirements?.status === "ready"
+          ? t("bknProject.overview.tiles.questionsValue", {
+              count: requirements.spec?.questions.length ?? 0,
+            })
+          : requirements
+            ? t(
+                `bknProject.overview.tiles.questionsStatus.${requirements.status === "drafting" ? "drafting" : "failed"}`,
+              )
+            : PLACEHOLDER,
     },
     {
       color: "var(--color-warning-text)",
@@ -352,6 +362,7 @@ export function ProjectOverview({
 
       <DataSourceHealth
         onGoToModel={() => go("model")}
+        onGoToResources={() => go("resources")}
         onProjectChange={onProjectChange}
         project={project}
       />

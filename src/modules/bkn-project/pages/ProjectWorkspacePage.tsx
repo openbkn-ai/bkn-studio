@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 
 import { RouteLoading } from "@/app/router/RouteLoading";
 import { TopBar } from "@/app/shell/TopBar";
@@ -15,6 +15,7 @@ import { ProjectWorkspaceScene } from "@/modules/bkn-project/scenes/ProjectWorks
 import {
   isProjectSection,
   KNOWLEDGE_BASE_SECTIONS,
+  MOVED_SECTIONS,
   projectSectionPath,
 } from "@/modules/bkn-project/types/workspace";
 
@@ -26,7 +27,12 @@ export function ProjectWorkspacePage() {
   const { projectId = "", section } = useParams<{ projectId: string; section?: string }>();
   const kbMode = useBknProjectKbMode();
   const { loading: entitlementLoading } = useEntitlementContext();
+  const { search } = useLocation();
 
+  const moved = section ? MOVED_SECTIONS[section] : undefined;
+  if (moved) {
+    return <Navigate replace to={`${projectSectionPath(projectId, moved)}${search}`} />;
+  }
   if (!isProjectSection(section)) {
     return <Navigate replace to={projectSectionPath(projectId, "overview")} />;
   }

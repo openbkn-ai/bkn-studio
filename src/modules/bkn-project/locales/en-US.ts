@@ -88,8 +88,9 @@ export const bknProjectEnUS = {
       groupRelease: "Release and run",
       sections: {
         overview: "Overview",
-        requirements: "Requirements",
+        resources: "Requirements and resources",
         model: "Ontology modeling",
+        scenarios: "Business scenarios",
         instances: "Knowledge base build",
         release: "Confirm and release",
         builds: "Build tasks",
@@ -159,6 +160,7 @@ export const bknProjectEnUS = {
           "AI drafts object and relation types from the tables of the added catalogs; the draft so far and the decisions made stay as they are.",
         added: "Data catalogs added; finding candidates in their tables.",
         change: "Change data catalogs",
+        manage: "Manage data catalogs",
         choose: "Choose data catalogs",
         title: "The project's data catalogs",
         label: "Data catalogs",
@@ -724,7 +726,7 @@ export const bknProjectEnUS = {
       tiles: {
         questions: "Scenario questions",
         questionsSub: "Shown once the requirements are drafted",
-        questionsAction: "View requirements",
+        questionsAction: "View business scenarios",
         questionsReadySub: "Requirements version {{version}}",
         questionsValue: "{{count}}",
         questionsValue_one: "{{count}}",
@@ -751,7 +753,8 @@ export const bknProjectEnUS = {
         sourcesValue_one: "{{count}} catalog",
         sourcesValue_other: "{{count}} catalogs",
         sourcesSub: "Referenced, never copied",
-        sourcesAction: "Manage catalogs",
+        sourcesAction: "Manage catalogs and documents",
+        sourcesChoose: "Choose data catalogs",
         instances: "Instances",
         instancesValue: "Not counted here",
         instancesSub: "See the records in the published knowledge network",
@@ -1003,6 +1006,38 @@ export const bknProjectEnUS = {
       done: "Draft confirmed",
       failed: "The draft could not be confirmed. Try again later.",
     },
+    resources: {
+      required: "Required",
+      optional: "Optional",
+      catalogs: {
+        title: "Data catalogs",
+        description:
+          "The ontology finds its object and relation types in these catalogs' tables, and released instances are read from them.",
+        empty: "No data catalogs chosen yet",
+        gone: "{{name}} (no longer exists)",
+        goToModel: "Go to ontology modeling",
+      },
+      tables: {
+        name: "Table",
+        catalog: "Data catalog",
+        understanding: "Semantic understanding",
+        usedBy: "Used by",
+        unused: "No object type uses it yet",
+        separator: ", ",
+        loadFailed: "The tables' semantic understanding cannot be read right now.",
+      },
+      knowledgeBases: {
+        title: "Knowledge-base catalogs",
+        description:
+          "Concept models drawn from documents add object types, properties and relations; instances are extracted afterwards.",
+        preview:
+          "With knowledge-base catalogs chosen, ontology modeling also draws on the business concepts in their documents.",
+        comingSoon: "Choosing knowledge-base catalogs is coming soon.",
+      },
+      documents: {
+        loadFailed: "The requirement documents cannot be read right now.",
+      },
+    },
     requirements: {
       export: {
         button: "Export",
@@ -1031,6 +1066,9 @@ export const bknProjectEnUS = {
       redraftTitle: "Draft the requirements again?",
       redraftDiscards: "Drafting again discards the conflict rulings and modelling choices made.",
       notDrafted: "No requirements yet. Upload requirement documents, then draft from them.",
+      noDocuments:
+        "No requirement documents yet. Upload them under Requirements and resources, then draft the business scenarios.",
+      goToDocuments: "Upload documents",
       drafting: "Drafting the requirements from the documents; this usually takes a minute or two.",
       stale:
         "The documents, their types, the data catalogs or the naming language changed after drafting; draft again.",
@@ -1271,9 +1309,6 @@ export const bknProjectEnUS = {
         questions: "Scenario questions {{count}}",
         questions_one: "Scenario questions {{count}}",
         questions_other: "Scenario questions {{count}}",
-        inputs: "Documents {{count}}",
-        inputs_one: "Documents {{count}}",
-        inputs_other: "Documents {{count}}",
         scenarios: "Business scenarios {{count}}",
         scenarios_one: "Business scenarios {{count}}",
         scenarios_other: "Business scenarios {{count}}",

@@ -28,7 +28,6 @@ import { RelationTypePanel } from "@/modules/bkn-project/components/relation-typ
 import { ConfirmDraft } from "@/modules/bkn-project/components/model/ConfirmDraftDialog";
 import { UnderstandingBar } from "@/modules/bkn-project/components/model/UnderstandingBar";
 import { SourceChangesNotice } from "@/modules/bkn-project/components/model/SourceChanges";
-import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import {
   adoptBlocker,
   draftErrorCode,
@@ -103,7 +102,7 @@ export function ProjectModel({
   initialObject,
   initialTab,
   onConfirmed,
-  onProjectChange,
+  onGoToResources,
   ownerIsCaller,
   project,
 }: {
@@ -115,7 +114,8 @@ export function ProjectModel({
   initialTab?: string | null;
   /** Called once the draft is confirmed, to show what follows. */
   onConfirmed: () => void;
-  onProjectChange: (project: Project) => void;
+  /** Opens the requirements and resources page, where the project's catalogs are chosen. */
+  onGoToResources: () => void;
   /** Only the owner may replace the project's catalogs; others are asked to contact them. */
   ownerIsCaller: boolean;
   project: Project;
@@ -157,8 +157,6 @@ export function ProjectModel({
   const [editing, setEditing] = useState<{ item: EditableItem; kind: DraftItemKind } | null>(null);
   const [saving, setSaving] = useState(false);
   const [choosingIdentity, setChoosingIdentity] = useState<DraftObjectType | null>(null);
-  const [changingCatalogs, setChangingCatalogs] = useState(false);
-  const [addingCatalogs, setAddingCatalogs] = useState(false);
   const [neededBy, setNeededBy] = useState<ReadonlyMap<string, PendingQuestion[]>>(new Map());
   // Adopted object types that could refresh their local index by an update field, and have none.
   const [updateFields, setUpdateFields] = useState<PendingItem[]>([]);
@@ -459,56 +457,13 @@ export function ProjectModel({
   }
 
   const noCatalogs = project.catalogIds.length === 0;
-  // Offered once the visible catalogs are known: the dialog starts from them.
-  // No change on an archived project, as for every other change on this page.
-  const canChangeCatalogs = ownerIsCaller && catalogs !== null && !project.archived;
-  const changeCatalogsButton = (label: string, primary = false) =>
-    canChangeCatalogs ? (
-      <AppButton onClick={() => setChangingCatalogs(true)} type={primary ? "primary" : "default"}>
+  // The catalogs are chosen, added and changed on the requirements and resources page: the owner
+  // is led there, as nobody else may change them. No change on an archived project.
+  const catalogsLink = (label: string, primary = false) =>
+    ownerIsCaller && !project.archived ? (
+      <AppButton onClick={onGoToResources} type={primary ? "primary" : "default"}>
         {t(label)}
       </AppButton>
-    ) : null;
-  // Adding drafts the new catalogs' tables into a ready draft; offered while there is one to add.
-  const addCatalogsButton =
-    canChangeCatalogs &&
-    draft?.status === "ready" &&
-    !draft.items.adding &&
-    [...catalogs.keys()].some((id) => !project.catalogIds.includes(id)) ? (
-      <AppButton onClick={() => setAddingCatalogs(true)}>
-        {t("bknProject.model.catalogs.add")}
-      </AppButton>
-    ) : null;
-  const addCatalogsDialog =
-    addingCatalogs && catalogs ? (
-      <ProjectCatalogsModal
-        catalogs={catalogs}
-        mode="add"
-        onCancel={() => setAddingCatalogs(false)}
-        onStale={() => void loadDraft()}
-        onSaved={(next, adding) => {
-          setAddingCatalogs(false);
-          onProjectChange(next);
-          message.success(t("bknProject.model.catalogs.added"));
-          // The draft names the catalogs being added; it is read again until they are done.
-          if (adding) {
-            setDraft(adding);
-          }
-        }}
-        project={project}
-      />
-    ) : null;
-  const catalogsDialog =
-    changingCatalogs && catalogs ? (
-      <ProjectCatalogsModal
-        catalogs={catalogs}
-        onCancel={() => setChangingCatalogs(false)}
-        onSaved={(next) => {
-          setChangingCatalogs(false);
-          onProjectChange(next);
-          message.success(t("bknProject.model.catalogs.saved"));
-        }}
-        project={project}
-      />
     ) : null;
   const generateButton = (
     <AppButton
@@ -568,7 +523,7 @@ export function ProjectModel({
       ) : null}
       {projectMissing.length ? (
         <Alert
-          action={changeCatalogsButton("bknProject.model.catalogs.change")}
+          action={catalogsLink("bknProject.model.catalogs.change")}
           description={ownerIsCaller ? undefined : t("bknProject.model.notice.askOwner")}
           message={t("bknProject.model.notice.missingCatalogs", {
             names: catalogLabels(projectMissing),
@@ -615,11 +570,11 @@ export function ProjectModel({
         <EmptyStatePanel
           action={
             noCatalogs ? (
-              changeCatalogsButton("bknProject.model.catalogs.choose", true)
+              catalogsLink("bknProject.model.catalogs.choose", true)
             ) : (
               <Space>
                 {generateButton}
-                {changeCatalogsButton("bknProject.model.catalogs.change")}
+                {catalogsLink("bknProject.model.catalogs.manage")}
               </Space>
             )
           }
@@ -632,8 +587,6 @@ export function ProjectModel({
           )}
           title={t("bknProject.model.empty.title")}
         />
-        {catalogsDialog}
-        {addCatalogsDialog}
       </div>
     );
   }
@@ -839,8 +792,7 @@ export function ProjectModel({
           ) : null}
         </span>
         <span className={styles.spacer} />
-        {projectMissing.length ? null : addCatalogsButton}
-        {projectMissing.length ? null : changeCatalogsButton("bknProject.model.catalogs.change")}
+        {projectMissing.length ? null : catalogsLink("bknProject.model.catalogs.manage")}
         {generateButton}
         {draft.status === "ready" && !project.archived ? (
           <ConfirmDraft
@@ -852,8 +804,6 @@ export function ProjectModel({
           />
         ) : null}
       </div>
-      {catalogsDialog}
-      {addCatalogsDialog}
       {notices}
       {draft.items.adding ? (
         <Alert

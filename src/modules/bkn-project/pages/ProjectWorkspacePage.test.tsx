@@ -65,6 +65,12 @@ describe("ProjectWorkspacePage", () => {
     expect(screen.getByText("scene p1 overview")).toBeInTheDocument();
   });
 
+  it("opens a page that moved where its content is now", () => {
+    // The requirements page became the business scenarios; its documents moved to the resources.
+    renderAt("/bkn-project/p1/requirements");
+    expect(screen.getByText("scene p1 scenarios")).toBeInTheDocument();
+  });
+
   it("opens the overview for an unknown page", () => {
     renderAt("/bkn-project/p1/terms");
     expect(screen.getByText("scene p1 overview")).toBeInTheDocument();

@@ -79,11 +79,17 @@ const action = (name: string, allowed = true, reason?: string) => ({
 
 function renderHealth(of: Project = project) {
   const onGoToModel = vi.fn();
+  const onGoToResources = vi.fn();
   const onProjectChange = vi.fn();
   const view = renderWithoutAntdStyles(
-    <DataSourceHealth onGoToModel={onGoToModel} onProjectChange={onProjectChange} project={of} />,
+    <DataSourceHealth
+      onGoToModel={onGoToModel}
+      onGoToResources={onGoToResources}
+      onProjectChange={onProjectChange}
+      project={of}
+    />,
   );
-  return { onGoToModel, onProjectChange, view };
+  return { onGoToModel, onGoToResources, onProjectChange, view };
 }
 
 describe("DataSourceHealth", () => {
@@ -153,7 +159,7 @@ describe("DataSourceHealth", () => {
         [action("set_catalogs"), action("archive")],
       ),
     );
-    const { onGoToModel } = renderHealth();
+    const { onGoToModel, onGoToResources } = renderHealth();
 
     expect(await screen.findByText("1 / 1 个已被删除")).toBeInTheDocument();
     // Each source states itself with the platform's tag: the network is fine, the others gone.
@@ -171,9 +177,11 @@ describe("DataSourceHealth", () => {
     // The network is there, so archiving is not what the page suggests.
     expect(screen.queryByRole("button", { name: "归档项目" })).toBeNull();
 
+    // Catalogs are chosen with the project's other inputs; drafting again is on the modeling page.
     fireEvent.click(screen.getByRole("button", { name: "重新选择数据目录" }));
+    expect(onGoToResources).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "去重新起草" }));
-    expect(onGoToModel).toHaveBeenCalledTimes(2);
+    expect(onGoToModel).toHaveBeenCalledTimes(1);
   });
 
   it("lists the first few gone items, all of them on asking, and folds them back", async () => {
