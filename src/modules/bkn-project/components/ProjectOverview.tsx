@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -237,11 +238,11 @@ export function ProjectOverview({
   const owner = ownerIsCaller
     ? t("bknProject.list.ownerYou")
     : (directory.get(project.owner.id) ?? project.owner.id);
+  // Through the shared adapter, which falls back where the Clipboard API is missing (plain HTTP).
   const copyId = () => {
-    void navigator.clipboard
-      ?.writeText(project.id)
+    void writeTextToClipboard(project.id)
       .then(() => message.success(t("bknProject.overview.idCopied")))
-      .catch(() => undefined);
+      .catch(() => message.error(t("common.copyFailed")));
   };
 
   return (
