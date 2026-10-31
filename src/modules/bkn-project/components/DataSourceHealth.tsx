@@ -5,13 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert } from "antd";
+import { DeploymentUnitOutlined, FolderOpenOutlined, TableOutlined } from "@ant-design/icons";
+import { Alert, Tag } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { setProjectArchived } from "@/modules/bkn-project/services/project.service";
 import { getProjectStatus } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -28,11 +28,18 @@ const PREFIX = "bknProject.overview.dataSources";
 /** How soon a source that could not be checked is asked about again. */
 export const DATA_SOURCES_RETRY_MS = 30_000;
 
-const TONE: Record<DataSourceState, LightStatusTone> = {
+/** The platform Tag's colours by state, as the knowledge network's pages use them. */
+const TAG_COLOR: Record<DataSourceState, string> = {
   missing: "error",
-  not_bound: "neutral",
+  not_bound: "default",
   ok: "success",
   unreachable: "warning",
+};
+
+const ICONS = {
+  catalogs: <FolderOpenOutlined />,
+  network: <DeploymentUnitOutlined />,
+  tables: <TableOutlined />,
 };
 
 const SOURCES = ["network", "catalogs", "tables"] as const;
@@ -85,7 +92,7 @@ export function DataSourceHealth({
 
   if (failed && !status) {
     return (
-      <section className={styles.card} data-region="data-sources">
+      <section className={styles.panel} data-region="data-sources">
         <Alert
           action={
             <AppButton onClick={() => void load()} size="small">
@@ -139,19 +146,28 @@ export function DataSourceHealth({
     });
 
   return (
-    <section className={styles.card} data-region="data-sources">
+    <section className={styles.panel} data-region="data-sources">
       <div className={styles.cardHead}>
         <span className={styles.cardTitle}>{t(`${PREFIX}.title`)}</span>
       </div>
-      <div className={styles.rows}>
-        {SOURCES.map((source) => (
-          <div className={styles.row} key={source}>
-            <span>{t(`${PREFIX}.${source}.label`)}</span>
-            <LightStatusTag tone={TONE[sources[source].state] ?? "neutral"}>
-              {value(source, sources[source])}
-            </LightStatusTag>
-          </div>
-        ))}
+      {/* Three sources side by side: icon, name and state, then what it means in a line. */}
+      <div className={styles.sources}>
+        {SOURCES.map((source) => {
+          const state = sources[source].state;
+          return (
+            <div
+              className={state === "missing" ? styles.sourceMissing : styles.source}
+              key={source}
+            >
+              <div className={styles.sourceHead}>
+                <span className={styles.sourceIcon}>{ICONS[source]}</span>
+                <span className={styles.sourceName}>{t(`${PREFIX}.${source}.label`)}</span>
+                <Tag color={TAG_COLOR[state] ?? "default"}>{t(`${PREFIX}.state.${state}`)}</Tag>
+              </div>
+              <span className={styles.sourceNote}>{value(source, sources[source])}</span>
+            </div>
+          );
+        })}
       </div>
       <div className={styles.notices}>
         {network.state === "missing" ? (

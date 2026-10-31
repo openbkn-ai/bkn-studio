@@ -491,9 +491,17 @@ export const bknProjectEnUS = {
       },
     },
     overview: {
+      copyId: "Copy project ID",
+      idCopied: "Project ID copied",
       dataSources: {
         title: "Data sources",
         loadFailed: "Can't read the state of the data sources right now",
+        state: {
+          ok: "OK",
+          missing: "Gone",
+          unreachable: "Unconfirmed",
+          not_bound: "Not started",
+        },
         network: {
           label: "Knowledge network",
           noun: "knowledge network",
@@ -551,6 +559,7 @@ export const bknProjectEnUS = {
       tiles: {
         questions: "Scenario questions",
         questionsSub: "Shown once the requirements are drafted",
+        questionsAction: "View requirements",
         questionsReadySub: "Requirements version {{version}}",
         questionsValue: "{{count}}",
         questionsValue_one: "{{count}}",
@@ -561,6 +570,7 @@ export const bknProjectEnUS = {
         },
         ontology: "Ontology",
         ontologySub: "Shown once drafted from tables",
+        ontologyAction: "Go to modeling",
         ontologyValue: "{{objects}} object types · {{relations}} relations",
         ontologyAdoptedSub: "Adopted object and relation types",
         ontologyPendingSub: "Adopted so far · {{count}} items wait for you",
@@ -571,6 +581,7 @@ export const bknProjectEnUS = {
         sourcesValue_one: "{{count}} catalog",
         sourcesValue_other: "{{count}} catalogs",
         sourcesSub: "Referenced, never copied",
+        sourcesAction: "Manage catalogs",
         instances: "Instances",
         instancesValue: "Not counted here",
         instancesSub: "See the records in the published knowledge network",

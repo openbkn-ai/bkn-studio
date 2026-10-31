@@ -205,8 +205,8 @@ describe("ProjectWorkspaceScene", () => {
     );
     expect(regions).toEqual(["info", "stats", "model", "columns"]);
     expect(container.querySelectorAll('[data-region="stats"] > *')).toHaveLength(4);
-    // The instance tile has no page in the community image, so only three tiles open one.
-    expect(container.querySelectorAll('[data-region="stats"] > button')).toHaveLength(3);
+    // The instance tile has no page in the community image, so only three tiles link to one.
+    expect(container.querySelectorAll('[data-region="stats"] button')).toHaveLength(3);
     expect(container.querySelector(".ant-alert")).toBeNull();
     expect(
       screen.getByText('bknProject.overview.tiles.sourcesValue:{"count":2}'),
@@ -225,8 +225,9 @@ describe("ProjectWorkspaceScene", () => {
     expect(
       await screen.findByText('bknProject.overview.tiles.questionsValue:{"count":3}'),
     ).toBeInTheDocument();
+    // What a figure stands for is its card's tooltip.
     expect(
-      screen.getByText('bknProject.overview.tiles.questionsReadySub:{"version":4}'),
+      screen.getByTitle('bknProject.overview.tiles.questionsReadySub:{"version":4}'),
     ).toBeInTheDocument();
     expect(screen.getByText("bknProject.overview.tiles.instancesValue")).toBeInTheDocument();
     expect(screen.getByText("bknProject.overview.tiles.instancesSub")).toBeInTheDocument();
@@ -235,7 +236,7 @@ describe("ProjectWorkspaceScene", () => {
   it("says the questions come once the requirements are drafted", async () => {
     getRequirementsMock.mockResolvedValue(null);
     renderScene();
-    expect(await screen.findByText("bknProject.overview.tiles.questionsSub")).toBeInTheDocument();
+    expect(await screen.findByTitle("bknProject.overview.tiles.questionsSub")).toBeInTheDocument();
   });
 
   it("fills the ontology tile, the model and the recent changes from the draft", async () => {
@@ -285,7 +286,7 @@ describe("ProjectWorkspaceScene", () => {
     settled.items.relationTypes.forEach((item) => (item.adopted = false));
     getDraftMock.mockResolvedValue(settled);
     renderScene();
-    fireEvent.click(await screen.findByText("bknProject.overview.tiles.ontologyAdoptedSub"));
+    fireEvent.click(await screen.findByText("bknProject.overview.tiles.ontologyAction"));
     expect(screen.getByTestId("location")).toHaveTextContent(/\/bkn-project\/p1\/model$/);
   });
 

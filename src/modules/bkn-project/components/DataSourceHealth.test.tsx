@@ -155,6 +155,9 @@ describe("DataSourceHealth", () => {
     const { onGoToModel } = renderHealth();
 
     expect(await screen.findByText("1 / 1 个已被删除")).toBeInTheDocument();
+    // Each source states itself with the platform's tag: the network is fine, the others gone.
+    expect(screen.getByText("正常")).toBeInTheDocument();
+    expect(screen.getAllByText("已失效")).toHaveLength(2);
     expect(screen.getByText("2 / 10 张查不到数据")).toBeInTheDocument();
     expect(
       screen.getByText("项目选用的 1 个数据目录已被删除。请重新选择数据目录，再重新起草。"),

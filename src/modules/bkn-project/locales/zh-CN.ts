@@ -461,9 +461,17 @@ export const bknProjectZhCN = {
       },
     },
     overview: {
+      copyId: "复制项目 ID",
+      idCopied: "已复制项目 ID",
       dataSources: {
         title: "数据来源",
         loadFailed: "暂时无法读取数据来源的情况",
+        state: {
+          ok: "正常",
+          missing: "已失效",
+          unreachable: "无法确认",
+          not_bound: "未开始",
+        },
         network: {
           label: "知识网络",
           noun: "知识网络",
@@ -520,6 +528,7 @@ export const bknProjectZhCN = {
       tiles: {
         questions: "场景问题",
         questionsSub: "起草需求规格后显示",
+        questionsAction: "查看需求",
         questionsReadySub: "需求规格第 {{version}} 版",
         questionsValue: "{{count}} 个",
         questionsValue_one: "{{count}} 个",
@@ -530,6 +539,7 @@ export const bknProjectZhCN = {
         },
         ontology: "本体",
         ontologySub: "按表结构起草后显示",
+        ontologyAction: "去建模",
         ontologyValue: "{{objects}} 个对象类 · {{relations}} 个关系",
         ontologyAdoptedSub: "已采纳的对象类和关系",
         ontologyPendingSub: "已采纳的部分 · {{count}} 项待你决定",
@@ -540,6 +550,7 @@ export const bknProjectZhCN = {
         sourcesValue_one: "{{count}} 个目录",
         sourcesValue_other: "{{count}} 个目录",
         sourcesSub: "项目只引用，不复制",
+        sourcesAction: "管理数据目录",
         instances: "实例",
         instancesValue: "项目内不统计",
         instancesSub: "实例数据在发布后的业务知识网络中查看",

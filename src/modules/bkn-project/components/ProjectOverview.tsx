@@ -5,12 +5,24 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Spin } from "antd";
+import {
+  ApartmentOutlined,
+  ClockCircleOutlined,
+  ClusterOutlined,
+  CopyOutlined,
+  DatabaseOutlined,
+  DeploymentUnitOutlined,
+  FileSearchOutlined,
+  ProjectOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import { Alert, Spin, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -31,6 +43,8 @@ import type { Project, ProjectRelease } from "@/modules/bkn-project/types/projec
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
 import { projectSectionPath, type ProjectSection } from "@/modules/bkn-project/types/workspace";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
+// The knowledge network's overview: the project's header card and stat cards are the same.
+import kn from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene.module.css";
 
 import styles from "./ProjectOverview.module.css";
 
@@ -42,12 +56,14 @@ const PLACEHOLDER = "—";
 const RECENT_CHANGES = 5;
 
 type StatTile = {
+  /** The link under the figure, to the page that holds it; none where no page does. */
+  action?: { label: string; onClick: () => void };
+  /** The icon block's colour: a theme token. */
+  color: string;
+  icon: ReactNode;
   key: string;
   label: string;
-  /** The page the tile opens; a tile without one is not clickable. */
-  section?: ProjectSection;
-  /** The modeling tab the tile opens, when it opens the modeling page. */
-  tab?: string;
+  /** What the figure stands for, as a tooltip. */
   sub: string;
   value: string;
 };
@@ -74,7 +90,7 @@ export function ProjectOverview({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { runtimeConfig } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const directory = useAccountDirectory();
   const go = (section: ProjectSection, tab?: string) =>
     void navigate(
@@ -142,9 +158,14 @@ export function ProjectOverview({
 
   const tiles: StatTile[] = [
     {
+      action: {
+        label: t("bknProject.overview.tiles.questionsAction"),
+        onClick: () => go("requirements"),
+      },
+      color: "var(--color-primary-600)",
+      icon: <FileSearchOutlined />,
       key: "questions",
       label: t("bknProject.overview.tiles.questions"),
-      section: "requirements",
       // The scenario questions of the drafted requirements; their state while there are none.
       sub:
         requirements?.status === "ready"
@@ -162,19 +183,23 @@ export function ProjectOverview({
             : PLACEHOLDER,
     },
     {
+      // What waits is listed first on the changes tab, each with the action that settles it.
+      action: pending
+        ? {
+            label: t("bknProject.overview.tiles.ontologyPendingSub", { count: pending }),
+            onClick: () => go("model", "changes"),
+          }
+        : { label: t("bknProject.overview.tiles.ontologyAction"), onClick: () => go("model") },
+      color: "var(--color-success-text)",
+      icon: <ApartmentOutlined />,
       key: "ontology",
       label: t("bknProject.overview.tiles.ontology"),
-      section: "model",
       // The value counts adopted items only, unlike the modeling page's header, so the line says so.
-      sub: pending
-        ? t("bknProject.overview.tiles.ontologyPendingSub", { count: pending })
-        : t(
-            graph
-              ? "bknProject.overview.tiles.ontologyAdoptedSub"
-              : "bknProject.overview.tiles.ontologySub",
-          ),
-      // What waits is listed first on the changes tab, each with the action that settles it.
-      tab: pending ? "changes" : undefined,
+      sub: t(
+        graph
+          ? "bknProject.overview.tiles.ontologyAdoptedSub"
+          : "bknProject.overview.tiles.ontologySub",
+      ),
       value: graph
         ? t("bknProject.overview.tiles.ontologyValue", {
             objects: graph.nodes.length,
@@ -185,13 +210,17 @@ export function ProjectOverview({
           : PLACEHOLDER,
     },
     {
+      action: { label: t("bknProject.overview.tiles.sourcesAction"), onClick: () => go("model") },
+      color: "var(--color-info-text)",
+      icon: <DatabaseOutlined />,
       key: "sources",
       label: t("bknProject.overview.tiles.sources"),
-      section: "requirements",
       sub: t("bknProject.overview.tiles.sourcesSub"),
       value: t("bknProject.overview.tiles.sourcesValue", { count: project.catalogIds.length }),
     },
     {
+      color: "var(--color-warning-text)",
+      icon: <ClusterOutlined />,
       key: "instances",
       label: t("bknProject.overview.tiles.instances"),
       // A project does not count records: the tile says so instead of showing a bare dash.
@@ -206,25 +235,60 @@ export function ProjectOverview({
       : latestRelease
         ? `v${latestRelease.version}`
         : t("bknProject.overview.versions.unpublished");
-
-  const field = (label: string, value: ReactNode) => (
-    <div className={styles.field}>
-      <span className={styles.fieldLabel}>{label}</span>
-      <span className={styles.fieldValue}>{value}</span>
-    </div>
-  );
+  const owner = ownerIsCaller
+    ? t("bknProject.list.ownerYou")
+    : (directory.get(project.owner.id) ?? project.owner.id);
+  // Through the shared adapter, which falls back where the Clipboard API is missing (plain HTTP).
+  const copyId = () => {
+    void writeTextToClipboard(project.id)
+      .then(() => message.success(t("bknProject.overview.idCopied")))
+      .catch(() => message.error(t("common.copyFailed")));
+  };
 
   return (
     <div className={styles.overview}>
-      <section className={styles.card} data-region="info">
-        <div className={styles.fields}>
-          {field(t("bknProject.overview.fields.network"), networkName)}
-          {field(
-            t("bknProject.overview.fields.owner"),
-            ownerIsCaller ? t("bknProject.list.ownerYou") : project.owner.id,
-          )}
-          {field(t("bknProject.overview.fields.updated"), formatTime(project.updateTime))}
-          {field(t("bknProject.overview.fields.id"), <code>{project.id}</code>)}
+      {/* The project's card, as a network's on its overview: name, who and when, and its id. */}
+      <section className={kn.overviewHeaderCard} data-region="info">
+        <div className={kn.overviewHeaderTitle}>
+          <div className={kn.overviewHeaderTitleLeft}>
+            <span className={kn.overviewHeaderIcon} style={{ color: "var(--color-primary-600)" }}>
+              <ProjectOutlined />
+            </span>
+            <div className={kn.overviewHeaderName}>{project.name}</div>
+          </div>
+        </div>
+        <div className={kn.overviewHeaderFooter}>
+          <DeploymentUnitOutlined />
+          <span className={kn.overviewHeaderFooterLabel}>
+            {t("bknProject.overview.fields.network")}:
+          </span>
+          <span className={kn.overviewHeaderFooterValue}>{networkName}</span>
+          <UserOutlined />
+          <span className={kn.overviewHeaderFooterLabel}>
+            {t("bknProject.overview.fields.owner")}:
+          </span>
+          <span className={kn.overviewHeaderFooterValue}>{owner}</span>
+          <ClockCircleOutlined />
+          <span className={kn.overviewHeaderFooterLabel}>
+            {t("bknProject.overview.fields.updated")}:
+          </span>
+          <span>{formatTime(project.updateTime)}</span>
+          <span className={kn.overviewHeaderFooterId}>
+            <span className={kn.overviewHeaderFooterLabel}>
+              {t("bknProject.overview.fields.id")}:
+            </span>
+            <code>{project.id}</code>
+            <Tooltip title={t("bknProject.overview.copyId")}>
+              <button
+                aria-label={t("bknProject.overview.copyId")}
+                className={kn.overviewHeaderFooterCopy}
+                onClick={copyId}
+                type="button"
+              >
+                <CopyOutlined />
+              </button>
+            </Tooltip>
+          </span>
         </div>
       </section>
 
@@ -234,36 +298,37 @@ export function ProjectOverview({
         project={project}
       />
 
-      <div className={styles.tiles} data-region="stats">
-        {tiles.map((tile) => {
-          const body = (
-            <>
-              <span className={styles.tileLabel}>{tile.label}</span>
-              <span className={styles.tileValue}>{tile.value}</span>
-              <span className={styles.tileSub}>{tile.sub}</span>
-            </>
-          );
-          const { section, tab } = tile;
-          return section ? (
-            <button
-              className={styles.tileLink}
-              key={tile.key}
-              onClick={() => go(section, tab)}
-              type="button"
-            >
-              {body}
-            </button>
-          ) : (
-            <div className={styles.tile} key={tile.key}>
-              {body}
-            </div>
-          );
-        })}
+      {/* The network's stat cards: an icon block, the name and figure, a link under them. */}
+      <div className={kn.overviewStatRow} data-region="stats">
+        {tiles.map((tile) => (
+          <div className={kn.overviewStatCard} key={tile.key} title={tile.sub}>
+            <dl className={kn.overviewStatDefinition}>
+              <dt className={kn.overviewStatIcon} style={{ backgroundColor: tile.color }}>
+                {tile.icon}
+              </dt>
+              <dd>
+                <p>{tile.label}</p>
+                <p>{tile.value}</p>
+              </dd>
+            </dl>
+            {tile.action ? (
+              <AppButton
+                className={kn.overviewStatAction}
+                onClick={tile.action.onClick}
+                type="link"
+              >
+                {tile.action.label}
+              </AppButton>
+            ) : (
+              <p className={styles.statNote}>{tile.sub}</p>
+            )}
+          </div>
+        ))}
       </div>
 
       {ready ? (
         // The graph comes in the knowledge network's card, with the link in its header.
-        <div data-region="model">
+        <div className={styles.block} data-region="model">
           <DraftConceptGraph
             action={
               <button className={styles.link} onClick={() => go("model")} type="button">
@@ -278,7 +343,7 @@ export function ProjectOverview({
           />
         </div>
       ) : (
-        <section className={styles.card} data-region="model">
+        <section className={styles.panel} data-region="model">
           <div className={styles.cardHead}>
             <span className={styles.cardTitle}>{t("bknProject.overview.model.title")}</span>
             <button className={styles.link} onClick={() => go("model")} type="button">
@@ -314,7 +379,7 @@ export function ProjectOverview({
       )}
 
       <div className={styles.columns} data-region="columns">
-        <section className={styles.card}>
+        <section className={styles.panel}>
           <div className={styles.cardHead}>
             <span className={styles.cardTitle}>{t("bknProject.overview.changes.title")}</span>
             {recent.length ? (
@@ -345,38 +410,33 @@ export function ProjectOverview({
             <p className={styles.muted}>{t("bknProject.overview.changes.empty")}</p>
           )}
         </section>
-        <section className={styles.card}>
+        <section className={styles.panel}>
           <div className={styles.cardHead}>
             <span className={styles.cardTitle}>{t("bknProject.overview.versions.title")}</span>
           </div>
-          <div className={styles.rows}>
-            <div className={styles.row}>
-              <span>{t("bknProject.overview.versions.live")}</span>
-              <span>{releaseVersion}</span>
-            </div>
-            <div className={styles.row}>
-              <span>{t("bknProject.overview.versions.draft")}</span>
-              <span>
-                {draft
-                  ? draft.status === "ready"
-                    ? t("bknProject.overview.versions.draftUpdated", {
-                        time: formatTime(draft.updateTime),
-                      })
-                    : t(`bknProject.model.status.${draft.status}`)
-                  : draft === null
-                    ? t("bknProject.overview.versions.noDraft")
-                    : PLACEHOLDER}
-              </span>
-            </div>
-            <div className={styles.row}>
-              <span>{t("bknProject.overview.versions.latestRelease")}</span>
-              <span>
-                {latestRelease
-                  ? `v${latestRelease.version} · ${formatTime(latestRelease.createTime)}`
+          {/* Labels and values in a compact two-column grid, not a row stretched end to end. */}
+          <dl className={styles.keyValues}>
+            <dt>{t("bknProject.overview.versions.live")}</dt>
+            <dd>{releaseVersion}</dd>
+            <dt>{t("bknProject.overview.versions.draft")}</dt>
+            <dd>
+              {draft
+                ? draft.status === "ready"
+                  ? t("bknProject.overview.versions.draftUpdated", {
+                      time: formatTime(draft.updateTime),
+                    })
+                  : t(`bknProject.model.status.${draft.status}`)
+                : draft === null
+                  ? t("bknProject.overview.versions.noDraft")
                   : PLACEHOLDER}
-              </span>
-            </div>
-          </div>
+            </dd>
+            <dt>{t("bknProject.overview.versions.latestRelease")}</dt>
+            <dd>
+              {latestRelease
+                ? `v${latestRelease.version} · ${formatTime(latestRelease.createTime)}`
+                : PLACEHOLDER}
+            </dd>
+          </dl>
         </section>
       </div>
     </div>
