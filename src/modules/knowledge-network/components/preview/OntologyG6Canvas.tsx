@@ -153,7 +153,9 @@ export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6Canva
         zoomRange: [ZOOM_MIN, ZOOM_MAX],
         data: { nodes: [], edges: [], combos: [] },
         node: { type: "circle", state: states.node },
-        edge: { type: "line", state: states.edge },
+        // No type of its own: a straight line by default, and a relation drawn apart from
+        // another between the same types brings its own curve (an option's type would win).
+        edge: { state: states.edge },
         combo: { type: "rect" },
         // The full name on hover: names on the canvas are cut short, or left out when zoomed out.
         plugins: [
@@ -238,7 +240,7 @@ export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6Canva
       enqueue(async (graph) => {
         const states = stateStyles(tokens);
         graph.setNode({ type: "circle", state: states.node });
-        graph.setEdge({ type: "line", state: states.edge });
+        graph.setEdge({ state: states.edge });
         graph.setData(structure);
         await graph.render();
         renderedRef.current = true;

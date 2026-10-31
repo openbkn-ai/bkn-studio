@@ -71,6 +71,44 @@ const RELATION_FONT = 9;
 /** Gap between a disc and the name under it. */
 const NAME_OFFSET = 3;
 
+/**
+ * How far apart the bows of relations between the same two types are, in canvas units: their
+ * middles end up half as far apart, a little more than a relation name is tall.
+ */
+const PARALLEL_GAP = 56;
+
+/**
+ * Relations between the same two types, in either direction, bowed apart so each shows as its
+ * own line: one of them stays straight when they are odd in number. A relation to itself stays
+ * as it is.
+ */
+export function spreadParallelEdges(
+  graph: KnowledgeNetworkPreviewGraph,
+  gap = PARALLEL_GAP,
+): KnowledgeNetworkPreviewGraph {
+  const pairs = new Map<string, string[]>();
+  graph.edges.forEach((edge) => {
+    if (edge.sourceId === edge.targetId) return;
+    const key = [edge.sourceId, edge.targetId].sort().join("\u0000");
+    pairs.set(key, [...(pairs.get(key) ?? []), edge.id]);
+  });
+  const offsets = new Map<string, number>();
+  pairs.forEach((ids) => {
+    if (ids.length < 2) return;
+    ids.forEach((id, at) => offsets.set(id, (at - (ids.length - 1) / 2) * gap));
+  });
+  if (!offsets.size) return graph;
+  return {
+    ...graph,
+    edges: graph.edges.map((edge) => {
+      const offset = offsets.get(edge.id);
+      if (!offset) return edge;
+      // A line's side turns with its direction: one drawn the other way bows the opposite way.
+      return { ...edge, curveOffset: edge.sourceId < edge.targetId ? offset : -offset };
+    }),
+  };
+}
+
 function truncate(value: string, max = 6) {
   return value.length <= max ? value : `${value.slice(0, max)}…`;
 }
@@ -151,7 +189,9 @@ export function buildOntologyStructure(input: OntologyStructureInput): Required<
     source: edge.sourceId,
     target: edge.targetId,
     data: { name: edge.name },
+    ...(edge.curveOffset ? { type: "quadratic" } : {}),
     style: {
+      ...(edge.curveOffset ? { curveOffset: edge.curveOffset } : {}),
       // Stated so G6 has a value to return to when the dimmed state is cleared.
       opacity: edge.faded ? FADED_OPACITY : 1,
       // Relations stay one quiet grey: the types carry the colour.
@@ -246,20 +286,23 @@ function textWidth(text: string, fontSize: number): number {
 /**
  * Where G6 draws a relation's name: halfway along the visible line, between the two dots' edges.
  * A relation from a type to itself is drawn as a loop above the dot, as tall as the dot is wide,
- * with the name at its top.
+ * with the name at its top. A bowed line is halfway out to its control point at its middle.
  */
 export function relationNameAt(
   a: { x: number; y: number },
   b: { x: number; y: number },
   loop: boolean,
   radius: { source: number; target: number },
+  curveOffset = 0,
 ): { x: number; y: number } {
   if (loop) return { x: a.x, y: a.y - radius.source * 2.5 };
   const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
   const shift = (radius.source - radius.target) / 2 / length;
+  // G6 puts the control point off the line along (dy, -dx).
+  const bow = curveOffset / 2 / length;
   return {
-    x: (a.x + b.x) / 2 + (b.x - a.x) * shift,
-    y: (a.y + b.y) / 2 + (b.y - a.y) * shift,
+    x: (a.x + b.x) / 2 + (b.x - a.x) * shift + (b.y - a.y) * bow,
+    y: (a.y + b.y) / 2 + (b.y - a.y) * shift - (b.x - a.x) * bow,
   };
 }
 
@@ -393,10 +436,13 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
       // The drawn box: text, padding and outline, as measured on the canvas.
       const halfW = textWidth(text, font) / 2 + 8 * scale;
       const halfH = font * 1.15;
-      const { x: mx, y: my } = relationNameAt(a, b, edge.sourceId === edge.targetId, {
-        source: radiusOf(edge.sourceId),
-        target: radiusOf(edge.targetId),
-      });
+      const { x: mx, y: my } = relationNameAt(
+        a,
+        b,
+        edge.sourceId === edge.targetId,
+        { source: radiusOf(edge.sourceId), target: radiusOf(edge.targetId) },
+        edge.curveOffset,
+      );
       const box = { x0: mx - halfW, y0: my - halfH, x1: mx + halfW, y1: my + halfH };
       // A name may lie over its own two dots: between close types there is no room otherwise.
       if (names.covers(box) || dots.covers(box, new Set([edge.sourceId, edge.targetId]))) return;

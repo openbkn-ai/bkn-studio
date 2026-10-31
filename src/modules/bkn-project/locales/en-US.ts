@@ -36,6 +36,7 @@ export const bknProjectEnUS = {
         updated: "Updated",
         actions: "Actions",
       },
+      networkInUseFailed: "Cannot read the network consumers use right now; try again later.",
       sameNetwork: "Same network · {{count}} other projects",
       sameNetwork_one: "Same network · {{count}} other project",
       sameNetwork_other: "Same network · {{count}} other projects",
@@ -107,6 +108,7 @@ export const bknProjectEnUS = {
       graph: {
         title: "Concept model",
         emptyDescription: "The draft has no object types yet.",
+        counts: "Object types: {{objects}} · Relations: {{relations}}",
         legend: "Node = object type, edge = relation type, faint and dashed = not adopted yet",
       },
       status: {
@@ -552,7 +554,9 @@ export const bknProjectEnUS = {
         redraft: "Draft again",
       },
       fields: {
-        network: "Target network",
+        baseNetwork: "Base network",
+        inUse: "In use",
+        latestRelease: "Latest release",
         owner: "Owner",
         updated: "Updated",
         id: "ID",
@@ -615,6 +619,7 @@ export const bknProjectEnUS = {
         draft: "Draft",
         latestRelease: "Latest release",
         unpublished: "Not published yet",
+        inUseUnknown: "Cannot tell right now",
         noDraft: "No draft yet",
         draftUpdated: "Updated {{time}}",
       },
