@@ -43,8 +43,17 @@ vi.mock("./ObjectTypeResourceDescriptionFillModal", () => ({
   ObjectTypeResourceDescriptionFillModal: () => null,
 }));
 
+// Stands in for choosing another resource: a button that picks "res-other".
 vi.mock("./ObjectTypeResourceSelectModal", () => ({
-  ObjectTypeResourceSelectModal: () => null,
+  ObjectTypeResourceSelectModal: ({
+    onOk,
+  }: {
+    onOk: (view: { id: string; name: string }) => void;
+  }) => (
+    <button onClick={() => onOk({ id: "res-other", name: "Other table" })} type="button">
+      pick another resource
+    </button>
+  ),
 }));
 
 import { ObjectTypeDataAttributeEditor } from "./ObjectTypeDataAttributeEditor";
@@ -236,5 +245,39 @@ describe("ObjectTypeDataAttributeEditor when the fields cannot be read", () => {
       expect(screen.queryByText("knowledgeNetwork.objectTypeResourceFieldsFailed")).toBeNull(),
     );
     expect(screen.getByText("knowledgeNetwork.objectTypeMappingSummary")).toBeInTheDocument();
+  });
+});
+
+describe("ObjectTypeDataAttributeEditor when another resource's fields cannot be read", () => {
+  it("keeps the resource, its fields and mappings, and says it was not changed", async () => {
+    const readResourceFields = vi.fn((id: string) =>
+      id === "res-customers"
+        ? Promise.resolve([{ displayName: "Customer", name: "customer_id", type: "string" }])
+        : Promise.reject(new Error("401")),
+    );
+    const onChange = vi.fn();
+    renderWithoutAntdStyles(
+      <ObjectTypeDataAttributeEditor
+        basicValue={{ color: "#1677ff", name: "Customers" }}
+        dataProperties={[]}
+        dataSource={{ id: "res-customers", name: "customers" }}
+        networkId="network-1"
+        onChange={onChange}
+        readResourceFields={readResourceFields}
+      />,
+    );
+    expect(await screen.findByText("Customer")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "pick another resource" }));
+    expect(
+      await screen.findByText("knowledgeNetwork.objectTypeReplaceResourceFieldsFailed"),
+    ).toBeInTheDocument();
+    expect(readResourceFields).toHaveBeenCalledWith("res-other");
+    // The bound table's fields stay, nothing is rebound, and there is no retry for the old table.
+    expect(screen.getByText("Customer")).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({ dataSource: expect.objectContaining({ id: "res-other" }) }),
+    );
+    expect(screen.queryByText("knowledgeNetwork.objectTypeResourceFieldsFailed")).toBeNull();
   });
 });

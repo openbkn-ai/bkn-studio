@@ -504,35 +504,39 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     );
   }, [t]);
 
-  const loadViewFields = useCallback(
+  // A resource's fields as the canvas lists them; a read that fails throws.
+  const readViewFields = useCallback(
     async (viewId: string) => {
-      if (!viewId) {
-        setViewFields([]);
-        return [];
-      }
-
-      let fields: ObjectTypeResourceField[];
-      try {
-        fields = await (readResourceFields
-          ? readResourceFields(viewId)
-          : listObjectTypeResourceFields(networkId, viewId));
-      } catch {
-        // Not an empty table: nothing is mapped against fields that are not known.
-        setViewFields([]);
-        setFieldsFailedId(viewId);
-        return null;
-      }
-      setFieldsFailedId(null);
-      const filteredFields = fields
+      const fields = await (readResourceFields
+        ? readResourceFields(viewId)
+        : listObjectTypeResourceFields(networkId, viewId));
+      return fields
         .filter((item) => isSupportedResourceFieldName(item.name))
         .map((item) => ({
           ...item,
           name: item.name.replace(/\./g, "_"),
         }));
-      setViewFields(filteredFields);
-      return filteredFields;
     },
     [networkId, readResourceFields],
+  );
+
+  // The fields of the resource the object type is bound to. When they cannot be read the page says
+  // so: not an empty table, and nothing is mapped against fields that are not known.
+  const loadViewFields = useCallback(
+    async (viewId: string) => {
+      if (!viewId) {
+        setViewFields([]);
+        return;
+      }
+      try {
+        setViewFields(await readViewFields(viewId));
+        setFieldsFailedId(null);
+      } catch {
+        setViewFields([]);
+        setFieldsFailedId(viewId);
+      }
+    },
+    [readViewFields],
   );
 
   useEffect(() => {
@@ -698,14 +702,20 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   );
 
   const handleSelectResource = async (view: ObjectTypeDataSource) => {
-    setSelectedViewId(view.id);
     setPendingViewField(null);
     setResourceModalOpen(false);
 
-    const filteredFields = await loadViewFields(view.id);
-    if (!filteredFields) {
+    let filteredFields: ObjectTypeResourceField[];
+    try {
+      filteredFields = await readViewFields(view.id);
+    } catch {
+      // The resource stays the one it was, with its fields and mappings: nothing was changed.
+      setAlertMessage(t("knowledgeNetwork.objectTypeReplaceResourceFieldsFailed"));
       return;
     }
+    setSelectedViewId(view.id);
+    setViewFields(filteredFields);
+    setFieldsFailedId(null);
     const mappedProperties = buildMappedPropertiesFromViewFields(filteredFields, dataProperties);
 
     updateProperties(mappedProperties, view);

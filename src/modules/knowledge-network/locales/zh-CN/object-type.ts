@@ -25,6 +25,7 @@ export const objecttypePart = {
   objectTypeClearResource: "清空资源",
   objectTypeClearResourceDescription: "确认清空当前绑定资源及其映射关系吗？",
   objectTypeClearResourceTitle: "清空资源",
+  objectTypeReplaceResourceFieldsFailed: "读不到所选数据表的字段，数据表没有更换。",
   objectTypeResourceFieldsFailed: "读不到数据表的字段，暂时无法显示和调整映射。",
   objectTypeClickToConnect: "请点击右侧对象类属性完成映射连接。",
   objectTypeClearMapping: "取消映射",

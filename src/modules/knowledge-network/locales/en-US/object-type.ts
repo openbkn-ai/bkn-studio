@@ -28,6 +28,8 @@ export const objecttypePart = {
   objectTypeClearResource: "Clear resource",
   objectTypeClearResourceDescription: "Clear the current bound resource and its mappings?",
   objectTypeClearResourceTitle: "Clear resource",
+  objectTypeReplaceResourceFieldsFailed:
+    "The chosen table\u2019s fields cannot be read; the table was not changed.",
   objectTypeResourceFieldsFailed:
     "The table\u2019s fields cannot be read; the mapping cannot be shown or changed for now.",
   objectTypeClickToConnect: "Click an object type property on the right to complete the mapping.",
