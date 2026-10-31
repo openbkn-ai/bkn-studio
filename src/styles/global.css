@@ -14,10 +14,6 @@
   --color-primary-300: #93b4ff;
   --color-primary-100: #eaf1ff;
   --color-primary-50: #f5f8ff;
-  /* The solid primary button, apart from the accent colors above: theme.ts sets AntD's to match. */
-  --color-button-primary: #1e3a8a;
-  --color-button-primary-hover: #17306f;
-  --color-button-primary-active: #0f2a4a;
   --color-primary-bg: var(--color-primary-100);
   --color-primary-border: #bfd2ff;
 
@@ -100,9 +96,6 @@
   --color-primary-300: #4a6fa8;
   --color-primary-100: #1f2d45;
   --color-primary-50: #1d2534;
-  --color-button-primary: #2563eb;
-  --color-button-primary-hover: #2f6fdc;
-  --color-button-primary-active: #1d4ed8;
   --color-primary-bg: var(--color-primary-100);
   --color-primary-border: #365379;
 

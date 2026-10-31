@@ -30,6 +30,7 @@ export function AntdProviders({ children, runtimeConfig }: AntdProvidersProps) {
 
   return (
     <ConfigProvider
+      button={{ autoInsertSpace: false }}
       locale={antdLocaleMap[runtimeConfig.locale]}
       theme={createThemeConfig(runtimeConfig, resolvedTheme)}
     >

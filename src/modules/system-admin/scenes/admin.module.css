@@ -81,24 +81,6 @@
   padding-top: 22px;
 }
 
-.contentSurface :global(.ant-btn) {
-  border-radius: 0;
-  font-weight: var(--admin-font-weight-medium);
-}
-
-.contentSurface :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)) {
-  border-color: var(--admin-color-primary);
-  background: var(--admin-color-primary);
-}
-
-.contentSurface :global(.ant-btn-primary:disabled),
-.contentSurface :global(.ant-btn-primary.ant-btn-disabled) {
-  border-color: var(--admin-color-border) !important;
-  background: var(--admin-color-surface-muted) !important;
-  color: var(--admin-color-muted) !important;
-  opacity: 1;
-}
-
 .contentSurface :global(.ant-input),
 .contentSurface :global(.ant-input-affix-wrapper),
 .contentSurface :global(.ant-input-group-addon),
@@ -148,31 +130,6 @@
 .adminOverlay :global(.ant-modal-footer),
 .adminOverlay :global(.ant-drawer-footer) {
   border-top: 1px solid var(--admin-color-border);
-}
-
-.adminOverlay :global(.ant-btn) {
-  border-radius: 0;
-  font-weight: var(--admin-font-weight-medium);
-}
-
-.adminOverlay :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)) {
-  border-color: var(--admin-color-primary);
-  background: var(--admin-color-primary);
-  color: var(--color-text-inverse);
-}
-
-.adminOverlay :global(.ant-btn-primary:not(:disabled):hover) {
-  border-color: var(--admin-color-link-hover);
-  background: var(--admin-color-link-hover);
-  color: var(--color-text-inverse);
-}
-
-.adminOverlay :global(.ant-btn-primary:disabled),
-.adminOverlay :global(.ant-btn-primary.ant-btn-disabled) {
-  border-color: var(--admin-color-border) !important;
-  background: var(--admin-color-surface-muted) !important;
-  color: var(--admin-color-muted) !important;
-  opacity: 1;
 }
 
 .adminOverlay :global(.ant-input),

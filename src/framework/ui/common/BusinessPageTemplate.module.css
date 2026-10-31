@@ -80,48 +80,6 @@
   padding-top: 22px;
 }
 
-.surface :global(.ant-btn),
-.overlay :global(.ant-btn) {
-  border-radius: 0;
-  font-weight: var(--business-font-weight-medium);
-}
-
-/* The solid primary button takes the button tokens, not the accent: in dark mode they differ. */
-.surface :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)),
-.overlay :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)) {
-  border-color: var(--color-button-primary);
-  background: var(--color-button-primary);
-}
-
-.surface :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled):hover),
-.overlay :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled):hover) {
-  border-color: var(--color-button-primary-hover);
-  background: var(--color-button-primary-hover);
-}
-
-.surface :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled):active),
-.overlay :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled):active) {
-  border-color: var(--color-button-primary-active);
-  background: var(--color-button-primary-active);
-}
-
-.surface :global(.ant-btn-primary:disabled),
-.surface :global(.ant-btn-primary.ant-btn-disabled),
-.overlay :global(.ant-btn-primary:disabled),
-.overlay :global(.ant-btn-primary.ant-btn-disabled) {
-  border-color: var(--business-color-border) !important;
-  background: var(--business-color-surface-muted) !important;
-  color: var(--business-color-muted) !important;
-  opacity: 1;
-}
-
-.surface :global(.ant-btn-primary:disabled .anticon),
-.surface :global(.ant-btn-primary.ant-btn-disabled .anticon),
-.overlay :global(.ant-btn-primary:disabled .anticon),
-.overlay :global(.ant-btn-primary.ant-btn-disabled .anticon) {
-  color: var(--business-color-muted) !important;
-}
-
 .surface :global(.ant-input),
 .surface :global(.ant-input-affix-wrapper),
 .surface :global(.ant-input-group-addon),
