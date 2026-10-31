@@ -87,12 +87,27 @@ export interface ChainClaim {
   role?: "result" | "scope" | "primary" | "supporting";
   requirementIds?: string[];
   derivation?: {
-    method: "sum" | "distinct_count" | "direct_return";
+    method: "sum" | "divide" | "distinct_count" | "direct_return" | "";
     processName: string;
     formula?: string;
-    verification?: "same_return" | "independent_cross_check";
+    verification?:
+      | "same_return"
+      | "independent_cross_check"
+      | "verified"
+      | "arithmetic_verified"
+      | "mismatch"
+      | "unverified";
+    reasonCode?: string;
+    decimalPlaces?: number;
+    resultUnit?: string;
     boundary: string;
-    inputs: Array<{ label: string; value: string }>;
+    inputs: Array<{
+      label: string;
+      value: string;
+      factId?: string;
+      evidenceId?: string;
+      pointer?: string;
+    }>;
     components: Array<{ label: string; value: string }>;
   };
 }

@@ -255,6 +255,11 @@ export const bknTraceZhCN = {
       rawEvidenceAllScope: "以下包含本轮其他已记录事实，其中的字段并不都被答案采用。",
       allFactsGraph: "本轮完整记录事实",
       derivation: {
+        verified: "复算一致",
+        arithmetic_verified: "算术一致，口径待核",
+        mismatch: "复算结果不一致",
+        unverified: "计算尚未验证",
+        noVerifiedFormula: "尚无已验证的计算式",
         independentVerification: "独立核验",
         returnedComponents: "返回组成",
         recordedResult: "记录结果",

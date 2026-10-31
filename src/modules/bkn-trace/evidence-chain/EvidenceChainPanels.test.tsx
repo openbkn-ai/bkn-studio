@@ -451,6 +451,53 @@ describe("EvidenceChainPanels", () => {
     fireEvent.click(within(graph).getByRole("button", { name: "重置视图" }));
     expect(within(graph).getByText("100%")).toBeVisible();
   });
+  it.each([
+    ["verified", "复算一致", "supported"],
+    ["arithmetic_verified", "算术一致，口径待核", "partial"],
+    ["mismatch", "复算结果不一致", "contradicted"],
+    ["unverified", "计算尚未验证", "partial"],
+  ] as const)(
+    "presents calculation verification %s without overstating trust",
+    (verification, caption, supportStatus) => {
+      const formula = verification === "unverified" ? undefined : "20000 / 61 ≈ 327.9";
+      render(
+        <EvidenceChainPanels
+          view={{
+            ...view,
+            claims: [
+              {
+                id: "ratio",
+                label: "库存倍率",
+                value: "327.9",
+                status: "located",
+                supportStatus,
+                nodeIds: [],
+                detail: "单位与返回范围需要分别核实。",
+                derivation: {
+                  method: "divide",
+                  processName: "基于已记录输入复算",
+                  verification,
+                  formula,
+                  boundary: "单位与返回范围需要分别核实。",
+                  inputs: [],
+                  components: [],
+                },
+              },
+            ],
+          }}
+        />,
+      );
+      const path = screen.getByRole("region", { name: "库存倍率的解释路径" });
+      expect(within(path).getByText(caption)).toBeVisible();
+      expect(within(path).queryByText("独立核验")).not.toBeInTheDocument();
+      expect(within(path).getByText("单位与返回范围需要分别核实。")).toBeVisible();
+      if (formula) expect(within(path).getByText(formula)).toBeVisible();
+      else {
+        expect(within(path).getByText("尚无已验证的计算式")).toBeVisible();
+        expect(within(path).queryByText("库存倍率 = 327.9")).not.toBeInTheDocument();
+      }
+    },
+  );
   it("switches the focused business explanation while keeping component details optional", () => {
     const explained: EvidenceChainView = {
       ...view,

@@ -272,6 +272,11 @@ export const bknTraceEnUS = {
         "Other recorded facts from this interaction are shown here. Not every field was adopted by the answer.",
       allFactsGraph: "All recorded facts from this interaction",
       derivation: {
+        verified: "Recalculation matches",
+        arithmetic_verified: "Arithmetic matches; scope unverified",
+        mismatch: "Recalculation does not match",
+        unverified: "Calculation unverified",
+        noVerifiedFormula: "No verified calculation formula",
         independentVerification: "Independent verification",
         returnedComponents: "Returned components",
         recordedResult: "Recorded result",

@@ -829,6 +829,19 @@ function EvidencePaths({
   const [allFactsOpen, setAllFactsOpen] = useState(false);
   if (!selectedClaim) return null;
   const derivation = selectedClaim.derivation;
+  const calculationState = derivation?.verification;
+  const isCalculation =
+    calculationState === "verified" ||
+    calculationState === "arithmetic_verified" ||
+    calculationState === "mismatch" ||
+    calculationState === "unverified";
+  const derivationCaption = isCalculation
+    ? calculationState
+    : derivation?.method === "sum"
+      ? "independentVerification"
+      : derivation?.method === "distinct_count"
+        ? "returnedComponents"
+        : "recordedResult";
   const recorded = derivation ? null : (
     <RecordedEvidencePath claim={selectedClaim} graph={allGraph} />
   );
@@ -865,7 +878,7 @@ function EvidencePaths({
                   <h5>{selectedClaim.objectLabel ?? t("bknTrace.evidenceChain.recordedObject")}</h5>
                   {derivation.inputs.map((item) => (
                     <BusinessValue
-                      key={`${item.label}:${item.value}`}
+                      key={item.factId ?? `${item.label}:${item.value}`}
                       node={{ id: item.label, label: item.label, value: item.value, kind: "field" }}
                     />
                   ))}
@@ -879,13 +892,12 @@ function EvidencePaths({
                 </section>
                 <b>→</b>
                 <section className={styles.derivationResult}>
-                  <small>
-                    {t(
-                      `bknTrace.evidenceChain.derivation.${derivation.method === "sum" ? "independentVerification" : derivation.method === "distinct_count" ? "returnedComponents" : "recordedResult"}`,
-                    )}
-                  </small>
+                  <small>{t(`bknTrace.evidenceChain.derivation.${derivationCaption}`)}</small>
                   <h5>
-                    {derivation.formula || `${selectedClaim.label} = ${selectedClaim.value ?? ""}`}
+                    {derivation.formula ||
+                      (isCalculation
+                        ? t("bknTrace.evidenceChain.derivation.noVerifiedFormula")
+                        : `${selectedClaim.label} = ${selectedClaim.value ?? ""}`)}
                   </h5>
                 </section>
                 <b>→</b>
