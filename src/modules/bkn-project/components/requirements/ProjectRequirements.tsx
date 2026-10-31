@@ -113,6 +113,7 @@ export function ProjectRequirements({
   const [drafted, setDrafted] = useState<DraftedItem[]>([]);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [saving, setSaving] = useState(false);
+  const sending = useRef(false);
   // The server's reasons for a question's refused inputs, shown on their rows.
   const [inputErrors, setInputErrors] = useState<Record<string, string>>({});
   const [viewing, setViewing] = useState<{
@@ -240,9 +241,11 @@ export function ProjectRequirements({
    * reads it again and says so; nothing is overwritten.
    */
   const apply = async (send: (updateTime: number) => Promise<Requirements>) => {
-    if (!requirements) {
+    // One edit at a time, set at once: two clicks in a row would both send the version read.
+    if (!requirements || sending.current) {
       return false;
     }
+    sending.current = true;
     setSaving(true);
     try {
       latest.current += 1;
@@ -267,6 +270,7 @@ export function ProjectRequirements({
       }
       return false;
     } finally {
+      sending.current = false;
       setSaving(false);
     }
   };
@@ -289,17 +293,12 @@ export function ProjectRequirements({
             }),
           resolve: (conflict) => setDialog({ conflict, type: "conflict" }),
           saving,
-          review: (kind, itemId, accept) => {
-            // One at a time: the next one goes on the version this one replies.
-            if (saving) {
-              return;
-            }
+          review: (kind, itemId, accept) =>
             void apply((time) =>
               accept
                 ? reviewRequirements(project.id, time, [{ id: itemId, kind }])
                 : reviewRequirements(project.id, time, [], [{ id: itemId, kind }]),
-            );
-          },
+            ),
         }
       : null;
 

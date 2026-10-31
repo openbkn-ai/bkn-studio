@@ -322,7 +322,7 @@ describe("ProjectRequirements", () => {
     fireEvent.click(screen.getByRole("button", { name: "生成业务场景" }));
     await waitFor(() => expect(draftRequirementsMock).toHaveBeenCalledWith("p1", false));
     expect(
-      await screen.findByText("正在从资料起草需求规格，通常需要一两分钟。"),
+      await screen.findByText("正在基于已采纳的本体生成业务场景和问题，通常需要一两分钟。"),
     ).toBeInTheDocument();
   });
 
@@ -381,9 +381,10 @@ describe("ProjectRequirements", () => {
       () => new Promise((resolve) => (answer = resolve)),
     );
     const accept = screen.getByRole("button", { name: "采纳「某个客户哪些订单晚了？」" });
+    // Twice at once, before the page could disable the button.
+    fireEvent.click(accept);
     fireEvent.click(accept);
     await waitFor(() => expect(accept).toBeDisabled());
-    fireEvent.click(accept);
     expect(reviewRequirementsMock).toHaveBeenCalledTimes(1);
     expect(reviewRequirementsMock).toHaveBeenCalledWith("p1", 1, [{ id: "q1", kind: "questions" }]);
     answer(accepted);

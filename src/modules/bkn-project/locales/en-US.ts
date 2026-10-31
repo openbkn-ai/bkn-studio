@@ -1102,7 +1102,8 @@ export const bknProjectEnUS = {
         uncovered_one: "{{count}} object type has no scenario yet: {{names}}",
         uncovered_other: "{{count}} object types have no scenario yet: {{names}}",
       },
-      drafting: "Drafting the requirements from the documents; this usually takes a minute or two.",
+      drafting:
+        "Generating the business scenarios and questions from the adopted ontology; this usually takes a minute or two.",
       stale:
         "The documents, their types, the data catalogs or the naming language changed after drafting; draft again.",
       waiting: {

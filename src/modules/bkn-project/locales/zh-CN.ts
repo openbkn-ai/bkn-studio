@@ -1020,7 +1020,7 @@ export const bknProjectZhCN = {
         uncovered_one: "还有 {{count}} 个对象类没有场景覆盖：{{names}}",
         uncovered_other: "还有 {{count}} 个对象类没有场景覆盖：{{names}}",
       },
-      drafting: "正在从资料起草需求规格，通常需要一两分钟。",
+      drafting: "正在基于已采纳的本体生成业务场景和问题，通常需要一两分钟。",
       stale: "资料、文档类型、数据目录或命名语言在起草之后有变化，建议重新起草。",
       waiting: {
         both: "还有 {{conflicts}} 个需求冲突、{{choices}} 个建模选择等你处理。",
