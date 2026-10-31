@@ -27,7 +27,6 @@
 .surface :global(.ant-table-thead > tr > th),
 .surface :global(.ant-table-cell),
 .surface :global(.ant-checkbox-inner),
-.surface :global(.ant-btn),
 .surface :global(.ant-tag) {
   border-radius: 0 !important;
 }

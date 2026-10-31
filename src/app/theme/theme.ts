@@ -47,8 +47,7 @@ const DEFAULT_PRIMARY = "#1e3a8a";
 const DEFAULT_DARK_PRIMARY = { base: "#3b82f6", hover: "#5b95f7", active: "#2f6fdc" };
 /**
  * The solid primary button on dark surfaces, kept apart from the dark accent above: white text
- * on it reads at about 5.2:1 (4.7:1 on hover), where the brighter accent falls short. Mirrored by
- * --color-button-primary* in global.css for the controls styled outside AntD's tokens.
+ * on it reads at about 5.2:1 (4.7:1 on hover), where the brighter accent falls short.
  */
 const DEFAULT_DARK_BUTTON = { base: "#2563eb", hover: "#2f6fdc", active: "#1d4ed8" };
 
