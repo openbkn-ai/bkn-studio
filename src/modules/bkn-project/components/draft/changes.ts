@@ -40,11 +40,28 @@ const asText = (value: unknown) => (typeof value === "string" ? value : "");
 const asList = (value: unknown) =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 
+/** What adding catalogs drafted, as its decision records it; or that drafting their tables failed. */
+function addedCatalogsText(t: TFunction, after: unknown) {
+  const added = (after ?? {}) as Record<string, unknown>;
+  const count = (key: string) => asList(added[key]).length;
+  if (asText(added.error)) {
+    return t(`${PREFIX}.addCatalogs.failed`, { count: count("catalog_ids") });
+  }
+  return t(`${PREFIX}.addCatalogs.done`, {
+    count: count("catalog_ids"),
+    objects: count("object_types"),
+    relations: count("relation_types"),
+  });
+}
+
 export function describeDecision(
   t: TFunction,
   decision: DraftDecision,
   names: ItemNames,
 ): DescribedDecision {
+  if (decision.kind === "draft" && decision.action === "add_catalogs") {
+    return { text: addedCatalogsText(t, decision.after) };
+  }
   if (decision.kind === "draft") {
     const accepted = ACCEPTANCES.includes(decision.action) ? decision.action : "other";
     return {

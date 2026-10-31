@@ -122,6 +122,7 @@ export function ProjectModel({
   const [saving, setSaving] = useState(false);
   const [choosingIdentity, setChoosingIdentity] = useState<DraftObjectType | null>(null);
   const [changingCatalogs, setChangingCatalogs] = useState(false);
+  const [addingCatalogs, setAddingCatalogs] = useState(false);
   const [neededBy, setNeededBy] = useState<ReadonlyMap<string, PendingQuestion[]>>(new Map());
   // Adopted object types that could refresh their local index by an update field, and have none.
   const [updateFields, setUpdateFields] = useState<PendingItem[]>([]);
@@ -194,13 +195,15 @@ export function ProjectModel({
 
   // A draft that is drafting is read again until it is done; leaving the page stops it.
   const drafting = draft?.status === "drafting";
+  // Catalogs being added are drafted in the background too, while the draft stays editable.
+  const followed = drafting || Boolean(draft?.items.adding);
   useEffect(() => {
-    if (!drafting) {
+    if (!followed) {
       return undefined;
     }
     const timer = window.setTimeout(() => void loadDraft(), DRAFT_POLL_MS);
     return () => window.clearTimeout(timer);
-  }, [drafting, loadDraft, reads]);
+  }, [followed, loadDraft, reads]);
 
   const generate = async (discardDecisions: boolean) => {
     setGenerating(true);
@@ -396,6 +399,35 @@ export function ProjectModel({
         {t(label)}
       </AppButton>
     ) : null;
+  // Adding drafts the new catalogs' tables into a ready draft; offered while there is one to add.
+  const addCatalogsButton =
+    canChangeCatalogs &&
+    draft?.status === "ready" &&
+    !draft.items.adding &&
+    [...catalogs.keys()].some((id) => !project.catalogIds.includes(id)) ? (
+      <AppButton onClick={() => setAddingCatalogs(true)}>
+        {t("bknProject.model.catalogs.add")}
+      </AppButton>
+    ) : null;
+  const addCatalogsDialog =
+    addingCatalogs && catalogs ? (
+      <ProjectCatalogsModal
+        catalogs={catalogs}
+        mode="add"
+        onCancel={() => setAddingCatalogs(false)}
+        onStale={() => void loadDraft()}
+        onSaved={(next, adding) => {
+          setAddingCatalogs(false);
+          onProjectChange(next);
+          message.success(t("bknProject.model.catalogs.added"));
+          // The draft names the catalogs being added; it is read again until they are done.
+          if (adding) {
+            setDraft(adding);
+          }
+        }}
+        project={project}
+      />
+    ) : null;
   const catalogsDialog =
     changingCatalogs && catalogs ? (
       <ProjectCatalogsModal
@@ -532,6 +564,7 @@ export function ProjectModel({
           title={t("bknProject.model.empty.title")}
         />
         {catalogsDialog}
+        {addCatalogsDialog}
       </div>
     );
   }
@@ -614,6 +647,7 @@ export function ProjectModel({
           ) : null}
         </span>
         <span className={styles.spacer} />
+        {projectMissing.length ? null : addCatalogsButton}
         {projectMissing.length ? null : changeCatalogsButton("bknProject.model.catalogs.change")}
         {generateButton}
         {draft.status === "ready" && !project.archived ? (
@@ -627,7 +661,17 @@ export function ProjectModel({
         ) : null}
       </div>
       {catalogsDialog}
+      {addCatalogsDialog}
       {notices}
+      {draft.items.adding ? (
+        <Alert
+          message={t("bknProject.model.catalogs.adding", {
+            count: draft.items.adding.catalogIds.length,
+          })}
+          showIcon
+          type="info"
+        />
+      ) : null}
       {understanding}
       {draft.status === "drafting" ? (
         <EmptyStatePanel

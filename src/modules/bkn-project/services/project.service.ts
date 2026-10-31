@@ -226,6 +226,15 @@ export async function setProjectCatalogs(id: string, catalogIds: string[]): Prom
   return mapProject(response.data);
 }
 
+/** Adds catalogs to a mock project, as adding them to its draft does; for the draft's mock. */
+export function mockAddProjectCatalogs(id: string, catalogIds: string[]) {
+  const project = mockProjects.find((item) => item.id === id);
+  if (project) {
+    project.catalog_ids = [...new Set([...(project.catalog_ids ?? []), ...catalogIds])];
+    project.update_time = Date.now();
+  }
+}
+
 /**
  * Lists every knowledge network the caller can see, in one request: bkn-backend filters by
  * permission, the same way bkn-project decides which projects are visible.
