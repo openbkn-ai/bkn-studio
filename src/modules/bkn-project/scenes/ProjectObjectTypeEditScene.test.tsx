@@ -204,16 +204,27 @@ describe("ProjectObjectTypeEditScene", () => {
           source: end("Order"),
           target: end("Customer"),
         },
+        {
+          property: "customer_id",
+          relation: { id: "r2", kind: "relation_types", name: "Invoices of customer" },
+          source: end("Invoice"),
+          target: end("Customer"),
+        },
       ]),
     );
     renderScene();
     await toProperties();
     save();
+    const relation = (name: string, source: string) =>
+      `bknProject.objectEditor.relationUse:${JSON.stringify({
+        relation: name,
+        source,
+        target: "Customer",
+      })}`;
+    // Grouped by property: both relations that join by customer_id under it.
     const use = `bknProject.objectEditor.propertyUse:${JSON.stringify({
       property: "customer_id",
-      relation: "Orders of customer",
-      source: "Order",
-      target: "Customer",
+      relations: `${relation("Orders of customer", "Order")}bknProject.objectEditor.listSeparator${relation("Invoices of customer", "Invoice")}`,
     })}`;
     expect(
       await screen.findByText(

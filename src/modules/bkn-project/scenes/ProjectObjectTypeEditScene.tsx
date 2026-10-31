@@ -184,23 +184,31 @@ export function ProjectObjectTypeEditScene({
           },
         ]);
         return null;
-      case "PropertyInUse":
-        // Each property a relation joins by, with the relation and its two ends.
+      case "PropertyInUse": {
+        // By property, the relations that join by it, each with its two ends.
+        const byProperty = new Map<string, string[]>();
+        for (const use of Array.isArray(details) ? (details as PropertyUse[]) : []) {
+          const relation = t(`${PREFIX}.relationUse`, {
+            relation: use.relation?.name ?? "",
+            source: use.source?.name ?? "",
+            target: use.target?.name ?? "",
+          });
+          byProperty.set(use.property, [...(byProperty.get(use.property) ?? []), relation]);
+        }
         return {
           kind: "properties",
           text: t(`${PREFIX}.errors.PropertyInUse`, {
-            uses: (Array.isArray(details) ? (details as PropertyUse[]) : [])
-              .map((use) =>
+            uses: [...byProperty]
+              .map(([property, relations]) =>
                 t(`${PREFIX}.propertyUse`, {
-                  property: shown(use.property),
-                  relation: use.relation?.name ?? "",
-                  source: use.source?.name ?? "",
-                  target: use.target?.name ?? "",
+                  property: shown(property),
+                  relations: relations.join(separator),
                 }),
               )
-              .join(separator),
+              .join(t(`${PREFIX}.groupSeparator`)),
           }),
         };
+      }
       case "InvalidProperty":
         return { kind: "properties", text: invalidPropertyText(details) };
       case "InvalidIdentity":

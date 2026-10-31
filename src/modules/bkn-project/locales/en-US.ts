@@ -636,8 +636,9 @@ export const bknProjectEnUS = {
       listSeparator: ", ",
       unmapped:
         "These properties map no column of the table yet: {{names}}. Connect them to a column, or remove them.",
-      propertyUse:
-        "property \u201c{{property}}\u201d is used by relation \u201c{{relation}}\u201d ({{source}} \u2192 {{target}})",
+      propertyUse: "property \u201c{{property}}\u201d by {{relations}}",
+      relationUse: "relation \u201c{{relation}}\u201d ({{source}} \u2192 {{target}})",
+      groupSeparator: "; ",
       invalidProperty: {
         no_mapped_field: "Property \u201c{{name}}\u201d maps no column of the table.",
         field_mapped_twice:
@@ -656,7 +657,7 @@ export const bknProjectEnUS = {
         InvalidName: "This name cannot be used; choose another",
         InvalidDescription: "The description is not accepted; change it",
         PropertyInUse:
-          "Relations still use properties you removed: {{uses}}. Change the relations first, or keep the properties.",
+          "Properties you removed are still used: {{uses}}. Change the relations first, or keep the properties.",
         InvalidPropertyUnnamed:
           "A property's column does not exist, is mapped by another property, or has another type.",
         InvalidIdentity: "The identifier needs properties that tell every record apart.",

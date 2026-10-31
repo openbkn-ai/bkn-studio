@@ -601,7 +601,9 @@ export const bknProjectZhCN = {
       leave: "离开",
       listSeparator: "、",
       unmapped: "这些属性还没有对应数据表里的字段：{{names}}。请为它们连上字段，或者删除。",
-      propertyUse: "属性「{{property}}」被关系「{{relation}}」（{{source}} → {{target}}）使用",
+      propertyUse: "属性「{{property}}」：{{relations}}",
+      relationUse: "关系「{{relation}}」（{{source}} → {{target}}）",
+      groupSeparator: "；",
       invalidProperty: {
         no_mapped_field: "属性「{{name}}」没有对应数据表里的字段。",
         field_mapped_twice: "字段「{{name}}」对应了多个属性，一个字段只能对应一个属性。",
