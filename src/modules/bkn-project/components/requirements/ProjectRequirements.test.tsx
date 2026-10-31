@@ -375,11 +375,20 @@ describe("ProjectRequirements", () => {
         "还有 2 条由 AI 生成，等你审核：看过没问题就采纳；需要调整的可以编辑，编辑后自动算采纳。",
       ),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "采纳「某个客户哪些订单晚了？」" }));
+    // A second click while the first is sent sends nothing: it would go on the old version.
+    let answer: (value: unknown) => void = () => undefined;
+    reviewRequirementsMock.mockImplementationOnce(
+      () => new Promise((resolve) => (answer = resolve)),
+    );
+    const accept = screen.getByRole("button", { name: "采纳「某个客户哪些订单晚了？」" });
+    fireEvent.click(accept);
+    await waitFor(() => expect(accept).toBeDisabled());
+    fireEvent.click(accept);
+    expect(reviewRequirementsMock).toHaveBeenCalledTimes(1);
+    expect(reviewRequirementsMock).toHaveBeenCalledWith("p1", 1, [{ id: "q1", kind: "questions" }]);
+    answer(accepted);
     await waitFor(() =>
-      expect(reviewRequirementsMock).toHaveBeenCalledWith("p1", 1, [
-        { id: "q1", kind: "questions" },
-      ]),
+      expect(screen.getByRole("button", { name: "采纳「某个客户哪些订单晚了？」" })).toBeEnabled(),
     );
 
     first.unmount();

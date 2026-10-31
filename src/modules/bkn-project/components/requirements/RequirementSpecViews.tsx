@@ -145,6 +145,7 @@ function ReviewAction({
   return accepted ? (
     <AppButton
       aria-label={t(`${PREFIX}.review.unacceptItem`, { name: label })}
+      disabled={editing.saving}
       onClick={() => editing.review(kind, itemId, false)}
       size="small"
       type="link"
@@ -154,6 +155,7 @@ function ReviewAction({
   ) : (
     <AppButton
       aria-label={t(`${PREFIX}.review.acceptItem`, { name: label })}
+      disabled={editing.saving}
       onClick={() => editing.review(kind, itemId, true)}
       size="small"
       type="primary"

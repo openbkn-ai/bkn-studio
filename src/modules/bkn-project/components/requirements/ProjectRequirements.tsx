@@ -288,12 +288,18 @@ export function ProjectRequirements({
               title: t(`${PREFIX}.editing.removeTitle`, { name: label }),
             }),
           resolve: (conflict) => setDialog({ conflict, type: "conflict" }),
-          review: (kind, itemId, accept) =>
+          saving,
+          review: (kind, itemId, accept) => {
+            // One at a time: the next one goes on the version this one replies.
+            if (saving) {
+              return;
+            }
             void apply((time) =>
               accept
                 ? reviewRequirements(project.id, time, [{ id: itemId, kind }])
                 : reviewRequirements(project.id, time, [], [{ id: itemId, kind }]),
-            ),
+            );
+          },
         }
       : null;
 

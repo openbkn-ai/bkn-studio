@@ -39,6 +39,8 @@ export type SpecEditing = {
   resolve: (conflict: RequirementConflict) => void;
   /** Accepts what AI generated, or takes it back. */
   review: (kind: ReviewedKind, itemId: string, accept: boolean) => void;
+  /** An edit is being sent: another one would go on the version it replaces. */
+  saving: boolean;
 };
 
 export const Editing = createContext<SpecEditing | null>(null);
