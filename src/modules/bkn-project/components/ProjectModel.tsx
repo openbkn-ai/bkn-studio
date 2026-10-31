@@ -8,7 +8,7 @@
 import { Alert, Segmented, Space, Spin } from "antd";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -20,6 +20,7 @@ import { DraftChangesPanel } from "@/modules/bkn-project/components/draft/DraftC
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
 import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityDialog";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
+import { ObjectTypePanel } from "@/modules/bkn-project/components/object-type/ObjectTypePanel";
 import { ConfirmDraft } from "@/modules/bkn-project/components/model/ConfirmDraftDialog";
 import { UnderstandingBar } from "@/modules/bkn-project/components/model/UnderstandingBar";
 import { SourceChangesNotice } from "@/modules/bkn-project/components/model/SourceChanges";
@@ -59,7 +60,6 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 import { getProjectPending } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
-import { projectObjectTypePath } from "@/modules/bkn-project/types/workspace";
 import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
@@ -92,6 +92,7 @@ function failureKey(error: string) {
  */
 export function ProjectModel({
   focus,
+  initialObject,
   initialTab,
   onConfirmed,
   onProjectChange,
@@ -100,6 +101,8 @@ export function ProjectModel({
 }: {
   /** What a link asked to show on its tab, such as the update field an object type waits for. */
   focus?: string | null;
+  /** The object type a link asked to edit, opened in the panel on a ready draft. */
+  initialObject?: string | null;
   /** The tab a link asked for, such as the overview's "View all" changes; others are ignored. */
   initialTab?: string | null;
   /** Called once the draft is confirmed, to show what follows. */
@@ -110,7 +113,6 @@ export function ProjectModel({
   project: Project;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { message, modal, runtimeConfig } = useAppServices();
   const directory = useAccountDirectory();
   // undefined while loading, null before the first draft.
@@ -121,6 +123,18 @@ export function ProjectModel({
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "objects");
   const [openId, setOpenId] = useState<string | null>(null);
+  // The object type open in the editing panel over the page.
+  const [panelId, setPanelId] = useState<string | null>(initialObject ?? null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // A link's object type is open until the panel closes: the link then no longer opens it again.
+  const closePanel = () => {
+    setPanelId(null);
+    if (searchParams.has("object")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("object");
+      setSearchParams(next, { replace: true });
+    }
+  };
   const [editing, setEditing] = useState<{ item: EditableItem; kind: DraftItemKind } | null>(null);
   const [saving, setSaving] = useState(false);
   const [choosingIdentity, setChoosingIdentity] = useState<DraftObjectType | null>(null);
@@ -586,7 +600,21 @@ export function ProjectModel({
   };
   // A ready draft of a project in use opens an object type in the editor; otherwise its details.
   const editable = draft.status === "ready" && !project.archived;
-  const openEditor = (id: string) => void navigate(projectObjectTypePath(project.id, id));
+  const openEditor = (id: string) => {
+    setOpenId(null);
+    setPanelId(id);
+  };
+  // The panel's own read of the draft after it moved: the page shows it too.
+  const readDraftAgain = async () => {
+    try {
+      const next = await getDraft(project.id);
+      setDraft(next);
+      return next;
+    } catch (error) {
+      message.error(extractRequestErrorMessage(error));
+      return null;
+    }
+  };
   const pending =
     items.objectTypes.filter((item) => item.needsIdentity).length + unadoptedEnds.length;
   const leftOut = items.excluded.length + items.unreadable.length;
@@ -706,7 +734,7 @@ export function ProjectModel({
           <DraftConceptGraph
             draft={draft}
             networkId={project.knId}
-            onOpen={setOpenId}
+            onOpen={editable ? openEditor : setOpenId}
             title={t("bknProject.model.graph.title")}
           />
           <Segmented<Tab> onChange={setTab} options={tabs} value={activeTab} />
@@ -775,6 +803,18 @@ export function ProjectModel({
             onClose={() => setOpenId(null)}
             onEdit={editable ? openEditor : undefined}
           />
+          {panelId && editable ? (
+            <ObjectTypePanel
+              draft={draft}
+              key={panelId}
+              objectTypeId={panelId}
+              onAsk={() => setOpenId(panelId)}
+              onClose={closePanel}
+              onReload={readDraftAgain}
+              onSaved={setDraft}
+              project={project}
+            />
+          ) : null}
           {choosingIdentity ? (
             <IdentityDialog
               objectType={choosingIdentity}

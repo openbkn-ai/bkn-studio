@@ -8,7 +8,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { forwardRef, useEffect, useImperativeHandle } from "react";
-import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
@@ -18,8 +17,7 @@ import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 const mocks = vi.hoisted(() => ({
   editorProps: vi.fn(),
-  getDraft: vi.fn(),
-  getProject: vi.fn(),
+  confirm: vi.fn(),
   listFields: vi.fn(),
   message: { error: vi.fn(), success: vi.fn() },
   removed: new Set<string>(),
@@ -34,18 +32,13 @@ vi.mock("react-i18next", async (importOriginal) => ({
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: mocks.message, modal: { confirm: vi.fn() } }),
+  useAppServices: () => ({ message: mocks.message, modal: { confirm: mocks.confirm } }),
 }));
 
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
-  getDraft: mocks.getDraft,
   listDraftTableFields: mocks.listFields,
   saveDraftObjectType: mocks.save,
-}));
-
-vi.mock("@/modules/bkn-project/services/project.service", () => ({
-  getProject: mocks.getProject,
 }));
 
 // Stands in for the canvas: hands back the properties it was given, as checked.
@@ -79,7 +72,9 @@ vi.mock(
   }),
 );
 
-import { ProjectObjectTypeEditScene } from "./ProjectObjectTypeEditScene";
+import type { Draft } from "@/modules/bkn-project/types/draft";
+
+import { ObjectTypePanel } from "./ObjectTypePanel";
 
 const project: Project = {
   archived: false,
@@ -95,18 +90,17 @@ const project: Project = {
   updateTime: 1,
 };
 
-function Location() {
-  const location = useLocation();
-  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
-}
-
-function renderScene() {
-  return renderWithoutAntdStyles(
-    <MemoryRouter initialEntries={["/bkn-project/p1/model/object-types/customers"]}>
-      <ProjectObjectTypeEditScene itemId="customers" projectId="p1" />
-      <Location />
-    </MemoryRouter>,
+function renderPanel(draft: Draft = mapDraft(mockDraft("p1")), objectTypeId = "customers") {
+  const handlers = {
+    onAsk: vi.fn(),
+    onClose: vi.fn(),
+    onReload: vi.fn().mockResolvedValue(null),
+    onSaved: vi.fn(),
+  };
+  renderWithoutAntdStyles(
+    <ObjectTypePanel draft={draft} objectTypeId={objectTypeId} project={project} {...handlers} />,
   );
+  return handlers;
 }
 
 function refusal(status: number, code: string, details?: unknown) {
@@ -116,14 +110,9 @@ function refusal(status: number, code: string, details?: unknown) {
   } as AxiosResponse);
 }
 
-async function toProperties() {
-  expect(await screen.findByDisplayValue("customers")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "common.next" }));
-  expect(await screen.findByText("property editor")).toBeInTheDocument();
-}
-
 const save = () =>
   fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.save" }));
+const nameBox = () => screen.getByRole("textbox", { name: "bknProject.objectEditor.name" });
 
 const originalMatchMedia = window.matchMedia;
 
@@ -144,27 +133,17 @@ afterAll(() => {
   window.matchMedia = originalMatchMedia;
 });
 
-describe("ProjectObjectTypeEditScene", () => {
+describe("ObjectTypePanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.removed.clear();
-    mocks.getProject.mockResolvedValue(project);
-    mocks.getDraft.mockResolvedValue(mapDraft(mockDraft("p1")));
     mocks.listFields.mockResolvedValue([]);
   });
 
-  it("asks for a name before the properties, which read the draft's table and keep it", async () => {
-    renderScene();
-    fireEvent.change(await screen.findByDisplayValue("customers"), { target: { value: " " } });
-    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
-    expect(await screen.findByText("bknProject.objectEditor.nameRequired")).toBeInTheDocument();
-
-    fireEvent.change(screen.getByRole("textbox", { name: "bknProject.objectEditor.name" }), {
-      target: { value: "Customer" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
-    expect(await screen.findByText("property editor")).toBeInTheDocument();
-
+  it("shows the name, description and properties on one page, the table kept as it is", async () => {
+    renderPanel();
+    expect(nameBox()).toHaveValue("customers");
+    expect(screen.getByText("property editor")).toBeInTheDocument();
     const props = mocks.editorProps.mock.lastCall![0] as {
       readResourceFields: (id: string) => Promise<unknown>;
       resourceFixed: boolean;
@@ -172,14 +151,24 @@ describe("ProjectObjectTypeEditScene", () => {
     expect(props.resourceFixed).toBe(true);
     await props.readResourceFields("res-customers");
     expect(mocks.listFields).toHaveBeenCalledWith(project, "customers", "res-customers");
+
+    // A name is needed before anything is sent.
+    fireEvent.change(nameBox(), { target: { value: " " } });
+    save();
+    expect(await screen.findByText("bknProject.objectEditor.nameRequired")).toBeInTheDocument();
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 
-  it("saves the object type whole with the draft's time, then returns to the model", async () => {
+  it("saves whole with the draft's time and stays open on the draft saved", async () => {
     const draft = mapDraft(mockDraft("p1"));
-    mocks.getDraft.mockResolvedValue(draft);
-    mocks.save.mockResolvedValue(draft);
-    renderScene();
-    await toProperties();
+    const saved = mapDraft(mockDraft("p1"));
+    saved.updateTime = draft.updateTime + 1;
+    saved.items.objectTypes.find((item) => item.id === "customers")!.name = "Customer";
+    mocks.save.mockResolvedValue(saved);
+    const { onClose, onSaved } = renderPanel(draft);
+
+    fireEvent.change(nameBox(), { target: { value: "Customer" } });
+    expect(screen.getByText("bknProject.objectEditor.unsaved")).toBeInTheDocument();
     save();
 
     await waitFor(() =>
@@ -187,23 +176,52 @@ describe("ProjectObjectTypeEditScene", () => {
         "p1",
         "customers",
         draft.updateTime,
-        expect.objectContaining({ name: "customers", primaryKeys: ["customer_id"] }),
+        expect.objectContaining({ name: "Customer", primaryKeys: ["customer_id"] }),
       ),
     );
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(saved));
     expect(mocks.message.success).toHaveBeenCalled();
-    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/model?tab=objects");
+    expect(onClose).not.toHaveBeenCalled();
+    // What was saved is the new start: nothing is left unsaved, and saving again sends its time.
+    await waitFor(() => expect(screen.queryByText("bknProject.objectEditor.unsaved")).toBeNull());
+    save();
+    await waitFor(() =>
+      expect(mocks.save).toHaveBeenLastCalledWith(
+        "p1",
+        "customers",
+        saved.updateTime,
+        expect.anything(),
+      ),
+    );
+  });
+
+  it("closes at once without changes, and asks first with changes not saved", () => {
+    const { onClose } = renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.close" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mocks.confirm).not.toHaveBeenCalled();
+
+    fireEvent.change(nameBox(), { target: { value: "Customer" } });
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.close" }));
+    expect(mocks.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "bknProject.objectEditor.leaveTitle" }),
+    );
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("offers to read the draft again when it changed, starting over from what it is now", async () => {
+    const now = mapDraft(mockDraft("p1"));
+    now.items.objectTypes.find((item) => item.id === "customers")!.name = "Client";
     mocks.save.mockRejectedValue(refusal(409, "Stale"));
-    renderScene();
-    await toProperties();
+    const { onReload } = renderPanel();
+    onReload.mockResolvedValue(now);
     save();
 
     expect(await screen.findByText("bknProject.objectEditor.errors.Stale")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.reload" }));
-    await waitFor(() => expect(mocks.getDraft).toHaveBeenCalledTimes(2));
-    expect(await screen.findByDisplayValue("customers")).toBeVisible();
+    await waitFor(() => expect(onReload).toHaveBeenCalled());
+    await waitFor(() => expect(nameBox()).toHaveValue("Client"));
+    expect(screen.queryByText("bknProject.objectEditor.errors.Stale")).toBeNull();
   });
 
   it("names the relations that use a removed property, and a refused name on its field", async () => {
@@ -211,7 +229,6 @@ describe("ProjectObjectTypeEditScene", () => {
     const draft = mapDraft(mockDraft("p1"));
     draft.items.objectTypes.find((item) => item.id === "customers")!.properties[0].displayName =
       "Customer number";
-    mocks.getDraft.mockResolvedValue(draft);
     mocks.removed.add("customer_id");
     const end = (name: string) => ({ id: name, kind: "object_types", name });
     mocks.save.mockRejectedValueOnce(
@@ -230,8 +247,7 @@ describe("ProjectObjectTypeEditScene", () => {
         },
       ]),
     );
-    renderScene();
-    await toProperties();
+    renderPanel(draft);
     save();
     const relation = (name: string, source: string) =>
       `bknProject.objectEditor.relationUse:${JSON.stringify({
@@ -265,24 +281,26 @@ describe("ProjectObjectTypeEditScene", () => {
     expect(
       await screen.findByText("bknProject.objectEditor.errors.InvalidName"),
     ).toBeInTheDocument();
-    expect(screen.getByDisplayValue("customers")).toBeVisible();
   });
 
   it("names the properties that map no column, without sending", async () => {
     const draft = mapDraft(mockDraft("p1"));
     draft.items.objectTypes.find((item) => item.id === "customers")!.properties[1].mappedField = "";
-    mocks.getDraft.mockResolvedValue(draft);
-    renderScene();
-    await toProperties();
+    renderPanel(draft);
     save();
 
     expect(await screen.findByText(/^bknProject\.objectEditor\.unmapped:/)).toBeInTheDocument();
     expect(mocks.save).not.toHaveBeenCalled();
   });
 
-  it("says when the draft has no such object type", async () => {
-    mocks.getDraft.mockResolvedValue(null);
-    renderScene();
-    expect(await screen.findByText("bknProject.objectEditor.notFound")).toBeInTheDocument();
+  it("opens the details to ask AI about the object type", () => {
+    const { onAsk } = renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
+    expect(onAsk).toHaveBeenCalled();
+  });
+
+  it("says when the draft has no such object type", () => {
+    renderPanel(undefined, "missing");
+    expect(screen.getByText("bknProject.objectEditor.notFound")).toBeInTheDocument();
   });
 });

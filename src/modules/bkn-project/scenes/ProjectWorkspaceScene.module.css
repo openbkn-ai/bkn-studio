@@ -13,3 +13,8 @@
   justify-content: center;
   padding: 40px;
 }
+
+/* Panels over the content area, such as the object type editor, cover it and leave the navigation. */
+.content {
+  position: relative;
+}

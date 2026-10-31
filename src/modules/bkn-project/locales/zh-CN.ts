@@ -613,6 +613,9 @@ export const bknProjectZhCN = {
       },
     },
     objectEditor: {
+      ask: "问 AI",
+      close: "关闭",
+      unsaved: "有未保存的修改",
       title: "编辑对象类",
       name: "名称",
       nameRequired: "请填写对象类的名称",

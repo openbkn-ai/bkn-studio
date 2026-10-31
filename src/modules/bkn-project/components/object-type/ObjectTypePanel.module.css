@@ -1,0 +1,84 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/*
+ * Over the workspace's content area, beside its navigation: the page under it keeps its place and
+ * scroll. A dialog would be too narrow for the mapping canvas.
+ */
+.panel {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  height: 56px;
+  padding: 0 16px 0 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unsaved {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Room is left on the right for the AI panel of a later phase. */
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px 24px 0;
+}
+
+.basic {
+  flex-shrink: 0;
+  max-width: 880px;
+}
+
+.basic :global(.ant-form-item) {
+  margin-bottom: 8px;
+}
+
+.canvas {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.missing {
+  margin: 24px;
+}

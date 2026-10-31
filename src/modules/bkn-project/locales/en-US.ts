@@ -653,6 +653,9 @@ export const bknProjectEnUS = {
       },
     },
     objectEditor: {
+      ask: "Ask AI",
+      close: "Close",
+      unsaved: "Changes not saved",
       title: "Edit object type",
       name: "Name",
       nameRequired: "Enter a name for the object type",
