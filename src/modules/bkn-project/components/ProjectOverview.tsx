@@ -58,6 +58,8 @@ const RECENT_CHANGES = 5;
 type StatTile = {
   /** The link under the figure, to the page that holds it; none where no page does. */
   action?: { label: string; onClick: () => void };
+  /** A short figure beside the link, under the main one: the card keeps its figure on one line. */
+  note?: string;
   /** The icon block's colour: a theme token. */
   color: string;
   icon: ReactNode;
@@ -200,11 +202,11 @@ export function ProjectOverview({
           ? "bknProject.overview.tiles.ontologyAdoptedSub"
           : "bknProject.overview.tiles.ontologySub",
       ),
+      ...(graph
+        ? { note: t("bknProject.overview.tiles.ontologyRelations", { count: graph.edges.length }) }
+        : {}),
       value: graph
-        ? t("bknProject.overview.tiles.ontologyValue", {
-            objects: graph.nodes.length,
-            relations: graph.edges.length,
-          })
+        ? t("bknProject.overview.tiles.ontologyValue", { count: graph.nodes.length })
         : draft && draft.status !== "ready"
           ? t(`bknProject.model.status.${draft.status}`)
           : PLACEHOLDER,
@@ -311,7 +313,14 @@ export function ProjectOverview({
                 <p>{tile.value}</p>
               </dd>
             </dl>
-            {tile.action ? (
+            {tile.action && tile.note ? (
+              <div className={styles.statFooter}>
+                <span className={styles.statFooterNote}>{tile.note}</span>
+                <AppButton onClick={tile.action.onClick} size="small" type="link">
+                  {tile.action.label}
+                </AppButton>
+              </div>
+            ) : tile.action ? (
               <AppButton
                 className={kn.overviewStatAction}
                 onClick={tile.action.onClick}

@@ -6,12 +6,13 @@
  */
 
 import { DeploymentUnitOutlined, FolderOpenOutlined, TableOutlined } from "@ant-design/icons";
-import { Alert, Tag } from "antd";
+import { Alert } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { setProjectArchived } from "@/modules/bkn-project/services/project.service";
 import { getProjectStatus } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -28,10 +29,10 @@ const PREFIX = "bknProject.overview.dataSources";
 /** How soon a source that could not be checked is asked about again. */
 export const DATA_SOURCES_RETRY_MS = 30_000;
 
-/** The platform Tag's colours by state, as the knowledge network's pages use them. */
-const TAG_COLOR: Record<DataSourceState, string> = {
+/** The platform's status tag by state. */
+const TONE: Record<DataSourceState, LightStatusTone> = {
   missing: "error",
-  not_bound: "default",
+  not_bound: "neutral",
   ok: "success",
   unreachable: "warning",
 };
@@ -162,7 +163,9 @@ export function DataSourceHealth({
               <div className={styles.sourceHead}>
                 <span className={styles.sourceIcon}>{ICONS[source]}</span>
                 <span className={styles.sourceName}>{t(`${PREFIX}.${source}.label`)}</span>
-                <Tag color={TAG_COLOR[state] ?? "default"}>{t(`${PREFIX}.state.${state}`)}</Tag>
+                <LightStatusTag tone={TONE[state] ?? "neutral"}>
+                  {t(`${PREFIX}.state.${state}`)}
+                </LightStatusTag>
               </div>
               <span className={styles.sourceNote}>{value(source, sources[source])}</span>
             </div>
