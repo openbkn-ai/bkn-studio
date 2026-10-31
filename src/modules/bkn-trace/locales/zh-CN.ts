@@ -36,6 +36,7 @@ export const bknTraceZhCN = {
           answerMissing: "回答未记录",
         },
         function: {
+          recordedFailures: "记录到 {{count}} 次调用失败",
           title: "业务函数",
           input: "业务输入",
           process: "业务处理",

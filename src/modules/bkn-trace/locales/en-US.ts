@@ -37,6 +37,7 @@ export const bknTraceEnUS = {
           answerMissing: "Answer not recorded",
         },
         function: {
+          recordedFailures: "Recorded failures: {{count}}",
           title: "Business function",
           input: "Business inputs",
           process: "Business processing",

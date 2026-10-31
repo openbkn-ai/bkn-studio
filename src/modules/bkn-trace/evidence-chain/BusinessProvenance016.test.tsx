@@ -906,6 +906,15 @@ describe("BusinessProvenance016", () => {
     );
   });
 
+  it("keeps actual failed attempts visible without a composite capture verdict", () => {
+    const observed = structuredClone(view);
+    const attempt = observed.timeRail?.find((item) => item.operation_id === "op-sql");
+    if (!attempt) throw new Error("missing recorded attempt");
+    attempt.status = "failed";
+    render(<BusinessProvenance016 view={observed} evidenceOnly />);
+    expect(screen.getByText(/记录到 1 次调用失败/)).toBeTruthy();
+    expect(screen.queryByText("采集完整性")).toBeNull();
+  });
   it("does not present a composite function verdict as capture completeness", () => {
     const mixed = structuredClone(view);
     const graph = mixed.selectedPairGraphs?.["pair-stock"];
