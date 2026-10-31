@@ -33,6 +33,7 @@ export const bknProjectZhCN = {
         updated: "更新时间",
         actions: "操作",
       },
+      networkInUseFailed: "暂时读不到使用方在用的网络，请稍后再试。",
       sameNetwork: "同网络 · 另有 {{count}} 个项目",
       sameNetwork_one: "同网络 · 另有 {{count}} 个项目",
       sameNetwork_other: "同网络 · 另有 {{count}} 个项目",
@@ -102,6 +103,7 @@ export const bknProjectZhCN = {
       graph: {
         title: "本体概念模型",
         emptyDescription: "草稿里还没有对象类。",
+        counts: "{{objects}} 个对象类 · {{relations}} 个关系",
         legend: "节点 = 对象类，连线 = 关系类，淡色和虚线 = 还没有采纳",
       },
       status: {
@@ -522,7 +524,9 @@ export const bknProjectZhCN = {
         redraft: "去重新起草",
       },
       fields: {
-        network: "目标网络",
+        baseNetwork: "基础网络",
+        inUse: "在用版本",
+        latestRelease: "最新发布",
         owner: "负责人",
         updated: "更新时间",
         id: "ID",
@@ -582,6 +586,7 @@ export const bknProjectZhCN = {
         draft: "草稿",
         latestRelease: "最近发布",
         unpublished: "尚未发布",
+        inUseUnknown: "暂时无法确认",
         noDraft: "还没有草稿",
         draftUpdated: "{{time}} 更新",
       },

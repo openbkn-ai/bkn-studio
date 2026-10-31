@@ -6,7 +6,7 @@
  */
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -16,6 +16,7 @@ const createProjectMock = vi.hoisted(() => vi.fn());
 const listNetworksMock = vi.hoisted(() => vi.fn());
 const setArchivedMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
+const getNetworkInUseMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const confirmMock = vi.hoisted(() => vi.fn());
 // Stable like the real `t`; options are appended so counts can be asserted.
@@ -44,6 +45,10 @@ vi.mock("@/modules/bkn-project/services/project.service", () => ({
   setProjectArchived: setArchivedMock,
 }));
 
+vi.mock("@/modules/bkn-project/services/release.service", () => ({
+  getNetworkInUse: getNetworkInUseMock,
+}));
+
 vi.mock("@/shared/catalog", () => ({
   catalogListAllQuery: (overrides: object) => overrides,
   listCatalogs: listCatalogsMock,
@@ -51,12 +56,20 @@ vi.mock("@/shared/catalog", () => ({
 
 import { ProjectListScene } from "./ProjectListScene";
 
+function NetworkOpened() {
+  return <div>opened {useParams().networkId}</div>;
+}
+
 function renderScene() {
   return render(
     <MemoryRouter initialEntries={["/bkn-project"]}>
       <Routes>
         <Route element={<ProjectListScene />} path="/bkn-project" />
         <Route element={<div>opened overview</div>} path="/bkn-project/:projectId/overview" />
+        <Route
+          element={<NetworkOpened />}
+          path="/knowledge-network/workspace/:networkId/overview"
+        />
       </Routes>
     </MemoryRouter>,
   );
@@ -129,6 +142,41 @@ describe("ProjectListScene", () => {
       limit: 20,
       name: "",
     });
+  });
+
+  it("opens the network the project's consumers use from its network name", async () => {
+    listProjectsMock.mockResolvedValue({ items: [project({})], nextCursor: null, total: 1 });
+    getNetworkInUseMock.mockResolvedValue({
+      base: false,
+      networkId: "orders_v1_0_0",
+      version: "1.0.0",
+    });
+    renderScene();
+
+    const link = await screen.findByRole("link", { name: "Orders network" });
+    // Without script, the link still leads to the base network.
+    expect(link).toHaveAttribute("href", "/knowledge-network/workspace/orders/overview");
+    fireEvent.click(link);
+    expect(await screen.findByText("opened orders_v1_0_0")).toBeInTheDocument();
+    expect(getNetworkInUseMock).toHaveBeenCalledWith("p1");
+  });
+
+  it("says so when the network in use cannot be read, and lets other ways of opening through", async () => {
+    listProjectsMock.mockResolvedValue({ items: [project({})], nextCursor: null, total: 1 });
+    getNetworkInUseMock.mockRejectedValue(new Error("down"));
+    renderScene();
+
+    const link = await screen.findByRole("link", { name: "Orders network" });
+    fireEvent.click(link);
+    await waitFor(() =>
+      expect(messageMock.error).toHaveBeenCalledWith("bknProject.list.networkInUseFailed"),
+    );
+    expect(screen.queryByText(/^opened /)).toBeNull();
+
+    // A modifier opens the link as it is, to the lineage's base network, without reading.
+    getNetworkInUseMock.mockClear();
+    fireEvent.click(link, { ctrlKey: true });
+    expect(getNetworkInUseMock).not.toHaveBeenCalled();
   });
 
   it("searches by name and shows archived projects on request, from the first page", async () => {

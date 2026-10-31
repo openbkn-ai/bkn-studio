@@ -31,6 +31,10 @@ export const updateFieldFocus = (objectTypeId: string) => `update-field:${object
 export const projectObjectTypePath = (projectId: string, itemId: string) =>
   `${projectSectionPath(projectId, "model")}/object-types/${encodeURIComponent(itemId)}`;
 
+/** A knowledge network's workspace, opened at its overview. */
+export const networkWorkspacePath = (networkId: string) =>
+  `/knowledge-network/workspace/${encodeURIComponent(networkId)}/overview`;
+
 export function projectSectionPath(projectId: string, section: ProjectSection) {
   return `/bkn-project/${encodeURIComponent(projectId)}/${section}`;
 }

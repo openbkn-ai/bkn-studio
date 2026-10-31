@@ -21,6 +21,7 @@ import {
   drawnRadius,
   labelScale,
   relationNameAt,
+  spreadParallelEdges,
   typeColors,
 } from "./ontology-graph-data";
 
@@ -155,6 +156,87 @@ describe("drawnRadius", () => {
     // Within the room the arrangement keeps, so dots never overlap.
     expect(drawnRadius(400, true)).toBeLessThan(HUB_RADIUS);
     expect(drawnRadius(400, false)).toBeLessThan(NODE_RADIUS);
+  });
+});
+
+describe("spreadParallelEdges", () => {
+  const pair = (edges: { id: string; sourceId: string; targetId: string }[]) => ({
+    nodes: graph.nodes,
+    edges: edges.map((edge) => ({ ...edge, name: edge.id })),
+  });
+  const offsets = (next: ReturnType<typeof spreadParallelEdges>) =>
+    Object.fromEntries(next.edges.map((edge) => [edge.id, edge.curveOffset ?? 0]));
+
+  it("leaves a graph with one relation per pair of types as it is", () => {
+    expect(spreadParallelEdges(graph)).toBe(graph);
+  });
+
+  it("bows relations between the same two types apart, either way round", () => {
+    const next = spreadParallelEdges(
+      pair([
+        { id: "places", sourceId: "customer", targetId: "order" },
+        { id: "pays", sourceId: "customer", targetId: "order" },
+        { id: "placed_by", sourceId: "order", targetId: "customer" },
+      ]),
+      40,
+    );
+    // Odd in number: the middle one stays straight, the others bow to opposite sides; one drawn
+    // the other way round has its offset turned, so it bows to the side its place says.
+    expect(offsets(next)).toEqual({ places: -40, pays: 0, placed_by: -40 });
+    const drawn = relationNameAt(
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      false,
+      {
+        source: 0,
+        target: 0,
+      },
+      -40,
+    );
+    const reversed = relationNameAt(
+      { x: 100, y: 0 },
+      { x: 0, y: 0 },
+      false,
+      {
+        source: 0,
+        target: 0,
+      },
+      40,
+    );
+    expect(drawn).toEqual(reversed);
+    expect(drawn.y).toBe(20);
+  });
+
+  it("keeps a relation from a type to itself as a loop", () => {
+    const next = spreadParallelEdges(
+      pair([
+        { id: "parent", sourceId: "order", targetId: "order" },
+        { id: "child", sourceId: "order", targetId: "order" },
+      ]),
+    );
+    expect(offsets(next)).toEqual({ child: 0, parent: 0 });
+  });
+
+  it("draws a bowed relation as a curve, and the rest as straight lines", () => {
+    const spread = spreadParallelEdges(
+      pair([
+        { id: "places", sourceId: "customer", targetId: "order" },
+        { id: "pays", sourceId: "customer", targetId: "order" },
+        { id: "contains", sourceId: "order", targetId: "product" },
+      ]),
+    );
+    const structure = buildOntologyStructure({
+      graph: spread,
+      layout: layoutOntologyGraph(spread, "force", undefined),
+      renderMode: "force",
+      tokens,
+      ungroupedLabel: "",
+    });
+    const edge = (id: string) => structure.edges.find((item) => item.id === id)!;
+    expect(edge("places")).toMatchObject({ type: "quadratic", style: { curveOffset: -28 } });
+    expect(edge("pays")).toMatchObject({ type: "quadratic", style: { curveOffset: 28 } });
+    expect(edge("contains").type).toBeUndefined();
+    expect(edge("contains").style).not.toHaveProperty("curveOffset");
   });
 });
 

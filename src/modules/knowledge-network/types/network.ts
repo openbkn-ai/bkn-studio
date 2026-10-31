@@ -88,6 +88,11 @@ export type KnowledgeNetworkPreviewNode = {
 };
 
 export type KnowledgeNetworkPreviewEdge = {
+  /**
+   * How far the line bows to one side, for relations between the same two types drawn apart;
+   * absent or 0 draws it straight.
+   */
+  curveOffset?: number;
   /** Drawn dashed and faint, as a faded node is. */
   faded?: boolean;
   id: string;

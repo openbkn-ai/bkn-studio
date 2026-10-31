@@ -42,7 +42,14 @@ export function DraftConceptGraph({
       fadedIds={records.faded}
       legend={
         <>
-          {t("bknProject.model.graph.legend")}
+          {/* Every drafted type and relation the graph draws, adopted or not. */}
+          <span>
+            {t("bknProject.model.graph.counts", {
+              objects: records.objectTypes.length,
+              relations: records.relationTypes.length,
+            })}
+          </span>
+          <span>{t("bknProject.model.graph.legend")}</span>
           {action}
         </>
       }
@@ -57,6 +64,7 @@ export function DraftConceptGraph({
           onOpen?.(id);
         }
       }}
+      parallelEdges
       relationTypes={records.relationTypes}
       selectedId={null}
       title={title}
