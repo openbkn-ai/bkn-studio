@@ -193,6 +193,35 @@ beforeEach(() => {
 });
 
 describe("ObjectMetricFormScene object properties", () => {
+  it.each(["atomic", "composite"] as const)(
+    "removes the redundant result-form section from the %s editor",
+    async (metricType) => {
+      mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+      mocks.searchParams.current = `objectTypeId=order&metricType=${metricType}`;
+      mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+
+      render(<ObjectMetricFormScene mode="create" />);
+
+      expect(await screen.findByText("2. 计算逻辑")).toBeInTheDocument();
+      expect(screen.queryByText("2. 结果形态")).not.toBeInTheDocument();
+      expect(screen.getByText("3. 结果与分析")).toBeInTheDocument();
+      expect(screen.getByText("4. 校验与发布")).toBeInTheDocument();
+    },
+  );
+
+  it("keeps the base-metric section and numbering in the derived editor", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=derived";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+
+    render(<ObjectMetricFormScene mode="create" />);
+
+    expect(await screen.findByText("2. 选择基础对象指标")).toBeInTheDocument();
+    expect(screen.getByText("3. 业务限定")).toBeInTheDocument();
+    expect(screen.getByText("4. 结果与分析")).toBeInTheDocument();
+    expect(screen.getByText("5. 校验与发布")).toBeInTheDocument();
+  });
+
   it("uses the configured Agent model and keeps the form when starting another conversation", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
     mocks.searchParams.current = "objectTypeId=order&metricType=atomic";

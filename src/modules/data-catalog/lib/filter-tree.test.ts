@@ -27,8 +27,13 @@ describe("filter-tree", () => {
       expect(filterValidationError(rule, [wide])).toBeNull();
       expect(filterToBackend(rule, [wide])).toMatchObject({ sub_conditions: [{ value }] });
     }
-    expect(filterOperationsForField(wide, "source")).toEqual(["==", "!=", ">", "<"]);
-    expect(filterOperationsForField(wide, "local_index")).toEqual(["==", "!="]);
+    expect(filterOperationsForField(wide, "source")).toEqual(
+      expect.arrayContaining(["==", "!=", ">", "<", ">=", "<=", "in", "range"]),
+    );
+    expect(filterOperationsForField(wide, "local_index")).toEqual(
+      expect.arrayContaining(["==", "!=", "in"]),
+    );
+    expect(filterOperationsForField(wide, "local_index")).not.toContain(">");
     // Local indexes store LARGEINT as keyword text, so equality accepts string literals.
     for (const value of ["1.2", "1e3", "NaN", "abc"]) {
       const rule = parseFilterCondition({ field: "wide", operation: "==", value })!;
@@ -54,12 +59,16 @@ describe("filter-tree", () => {
   it("uses keyword Feature for exact Text filters on the local index path", () => {
     const text = { name: "description", type: "text" };
     const rule = parseFilterCondition({ field: "description", operation: "==", value: "open" })!;
-    expect(filterOperationsForField(text, "source")).toEqual(["==", "!="]);
+    expect(filterOperationsForField(text, "source")).toEqual(
+      expect.arrayContaining(["==", "!=", "like"]),
+    );
     expect(filterValidationError(rule, [text], "source")).toBeNull();
-    expect(filterOperationsForField(text, "local_index")).toEqual([]);
+    expect(filterOperationsForField(text, "local_index")).not.toContain("==");
     expect(filterValidationError(rule, [text], "local_index")).toBe("invalidField");
     const indexed = { ...text, features: [{ featureType: "keyword" as const }] };
-    expect(filterOperationsForField(indexed, "local_index")).toEqual(["==", "!="]);
+    expect(filterOperationsForField(indexed, "local_index")).toEqual(
+      expect.arrayContaining(["==", "!=", "in"]),
+    );
     expect(filterValidationError(rule, [indexed], "local_index")).toBeNull();
   });
 
@@ -96,7 +105,9 @@ describe("filter-tree", () => {
   });
 
   it("rejects invalid or unsupported filters before submission", () => {
-    expect(parseFilterCondition({ field: "age", operation: "in", value: [1, 2] })).toBeNull();
+    expect(
+      parseFilterCondition({ field: "age", operation: "knn_vector", value: [1, 2] }),
+    ).toBeNull();
     const parsed = parseFilterCondition({ field: "age", operation: ">", value: 3 })!;
     parsed.children.push({ kind: "group", operation: "or", children: [] });
     expect(filterValidationError(parsed, fields)).toBe("emptyGroup");

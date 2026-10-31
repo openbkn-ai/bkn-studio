@@ -49,9 +49,12 @@ export type BusinessProvenanceQuery = {
   conversationId?: string;
 };
 
+export type BusinessProvenanceConversationQuery = Pick<
+  BusinessProvenanceQuery,
+  "page" | "pageSize" | "keyword" | "agentOrApp" | "knowledgeNetwork" | "conversationId"
+>;
+
 export type BusinessProvenanceConversation = {
-  currentRecordIntegrity?: RecordIntegrity;
-  recordIntegrityCheckFailed?: boolean;
   conversationId: string;
   agentName?: string;
   questionPreview?: string;
@@ -59,10 +62,8 @@ export type BusinessProvenanceConversation = {
   previewUnavailable?: boolean;
   resultPreview?: string;
   startedAt?: string;
-  status?: string;
   interactionCount?: number;
   durationMs?: number;
-  evidenceCompleteness?: string;
 };
 
 export type BusinessProvenanceInteractionListItem = {
@@ -165,16 +166,12 @@ type BackendConversation = {
   question_preview?: string;
   result_preview?: string;
   started_at?: string;
-  status?: string;
   interaction_count?: number;
   duration_ms?: number;
-  evidence_completeness?: string;
-  current_record_integrity?: RecordIntegrity;
-  record_integrity_check_failed?: boolean;
 };
 
 export async function getBusinessProvenanceConversations(
-  query: BusinessProvenanceQuery = {},
+  query: BusinessProvenanceConversationQuery = {},
 ): Promise<BusinessProvenancePage<BusinessProvenanceConversation>> {
   const response = await http.get<{
     entries?: BackendConversation[];
@@ -185,7 +182,14 @@ export async function getBusinessProvenanceConversations(
     truncated?: boolean;
     partial_reasons?: string[];
   }>(`${EE_PROVENANCE_PREFIX}/conversations`, {
-    params: provenanceParams(query),
+    params: provenanceParams({
+      page: query.page,
+      pageSize: query.pageSize,
+      keyword: query.keyword,
+      agentOrApp: query.agentOrApp,
+      knowledgeNetwork: query.knowledgeNetwork,
+      conversationId: query.conversationId,
+    }),
     skipErrorToast: true,
   });
   return {
@@ -196,12 +200,8 @@ export async function getBusinessProvenanceConversations(
       previewUnavailable: response.data.partial === true || response.data.truncated === true,
       resultPreview: entry.result_preview,
       startedAt: entry.started_at,
-      status: entry.status,
       interactionCount: entry.interaction_count,
       durationMs: entry.duration_ms,
-      evidenceCompleteness: entry.evidence_completeness,
-      currentRecordIntegrity: entry.current_record_integrity,
-      recordIntegrityCheckFailed: entry.record_integrity_check_failed,
     })),
     total: response.data.total ?? 0,
     page: response.data.page,

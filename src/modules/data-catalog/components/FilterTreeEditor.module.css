@@ -30,6 +30,7 @@
 }
 
 .rule {
+  align-items: flex-start;
   padding: 12px;
   border: 1px solid var(--color-border);
   border-left: 3px solid var(--color-primary, #1677ff);
@@ -78,4 +79,70 @@
   color: var(--color-text-primary);
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.valueEditor,
+.valueList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.valueRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.valueRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.valueRow > :global(.ant-select) {
+  min-width: 100px;
+}
+.valueHint {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.combinedValue {
+  display: flex;
+  min-width: 0;
+}
+
+.combinedValue > .valueSourceSelect {
+  flex: 0 0 104px;
+}
+
+.combinedValue > :last-child {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+}
+
+.hintTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: help;
+}
+
+.hintTrigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.noValueHint {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--color-text-tertiary);
 }

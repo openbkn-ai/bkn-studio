@@ -161,6 +161,7 @@ function BusinessFunctionCard({
     (item) => item.capability?.evidence_contract === managedFunctionContract,
   );
   const recordedResult = managedRoot ? managedFunctionFacts(managedRoot).outputSummary : undefined;
+  const failedAttempts = attempts.filter((item) => item.status === "failed").length;
   return (
     <article className={styles.functionCard}>
       <header>
@@ -168,13 +169,11 @@ function BusinessFunctionCard({
           <span className={styles.kicker}>{p16Text("function.title")}</span>
           <h3>{value.displayName}</h3>
         </div>
-        <Tag color={value.validationStatus === "invalid" ? "error" : "blue"}>
+        <Tag color={value.validationStatus === "invalid" || failedAttempts > 0 ? "error" : "blue"}>
           {capabilityLabel(value.capabilityKind)}
-          {value.technicalExecution.completeness === "failed"
-            ? ` · ${statusLabel("failed")}`
-            : value.technicalExecution.completeness === "partial"
-              ? ` · ${statusLabel("partial")}`
-              : ""}
+          {failedAttempts > 0
+            ? ` · ${p16Text("function.recordedFailures", { count: failedAttempts })}`
+            : ""}
         </Tag>
       </header>
       <p className={styles.purpose}>{value.businessPurpose}</p>
@@ -268,10 +267,6 @@ function BusinessFunctionCard({
               <dd>
                 {value.technicalExecution.outputPayloadRef || p16Text("function.inlineOrMissing")}
               </dd>
-            </div>
-            <div>
-              <dt>{p16Text("function.completeness")}</dt>
-              <dd>{value.technicalExecution.completeness || p16Text("function.notRecorded")}</dd>
             </div>
           </dl>
           {attempts.map((item) => (

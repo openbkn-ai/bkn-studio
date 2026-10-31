@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -185,22 +185,20 @@ describe("ProjectWorkspaceScene", () => {
     directoryMock.clear();
   });
 
-  it("heads the workspace with the project, its network and its live version", async () => {
+  it("names the page in the navigation only, and shows the network on the overview", async () => {
     renderScene();
 
+    // The breadcrumb names the project; the page has no heading of its own.
+    expect(await screen.findByText("Orders network")).toBeInTheDocument();
+    expect(document.querySelector("h2")).toBeNull();
     expect(
-      await screen.findByText("Delivery warning", { selector: "header *" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("p1", { selector: "header code" })).toBeInTheDocument();
-    expect(
-      screen.getByText('bknProject.workspace.targetNetwork:{"name":"Orders network"}'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('bknProject.workspace.live:{"version":"1.0.0"}')).toBeInTheDocument();
+      screen.getByRole("button", { name: /bknProject.workspace.sections.overview/ }),
+    ).toHaveAttribute("aria-current", "page");
   });
 
   it("lays the overview out as info, four tiles, the model and two columns, with no alert", async () => {
     const { container } = renderScene();
-    await screen.findAllByText("Delivery warning");
+    await screen.findByText("Orders network");
 
     const regions = [...container.querySelectorAll("[data-region]")].map((node) =>
       node.getAttribute("data-region"),
@@ -329,7 +327,7 @@ describe("ProjectWorkspaceScene", () => {
     renderScene();
 
     expect(await screen.findByText("bknProject.overview.model.loadFailed")).toBeInTheDocument();
-    expect(screen.getAllByText("Delivery warning").length).toBeGreaterThan(0);
+    expect(screen.getByText("Orders network")).toBeInTheDocument();
     fireEvent.click(screen.getByText("common.retry"));
     expect(await screen.findByText("concept graph")).toBeInTheDocument();
   });
@@ -359,6 +357,8 @@ describe("ProjectWorkspaceScene", () => {
     try {
       getDraftMock
         .mockResolvedValueOnce({ ...draftWithDecisions(), status: "drafting" })
+        // The navigation's count reads it once too, after the overview.
+        .mockResolvedValueOnce({ ...draftWithDecisions(), status: "drafting" })
         .mockRejectedValueOnce(new Error("down"))
         .mockReturnValue(new Promise(() => undefined));
       renderScene();
@@ -373,7 +373,7 @@ describe("ProjectWorkspaceScene", () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
       });
-      expect(getDraftMock).toHaveBeenCalledTimes(3);
+      expect(getDraftMock).toHaveBeenCalledTimes(4);
       expect(screen.getByText("bknProject.overview.model.loadFailed")).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
@@ -383,7 +383,7 @@ describe("ProjectWorkspaceScene", () => {
   it("shows the model loading while the draft is read", async () => {
     getDraftMock.mockReturnValue(new Promise(() => undefined));
     const { container } = renderScene();
-    await screen.findAllByText("Delivery warning");
+    await screen.findByText("Orders network");
 
     expect(container.querySelector('[data-region="model"] .ant-spin')).not.toBeNull();
   });
@@ -392,8 +392,7 @@ describe("ProjectWorkspaceScene", () => {
     getLatestReleaseMock.mockResolvedValue(null);
     renderScene();
 
-    expect(await screen.findByText("bknProject.workspace.unpublished")).toBeInTheDocument();
-    expect(screen.getByText("bknProject.overview.versions.unpublished")).toBeInTheDocument();
+    expect(await screen.findByText("bknProject.overview.versions.unpublished")).toBeInTheDocument();
   });
 
   it("falls back to the network id, and to no version, when they cannot be read", async () => {
@@ -401,10 +400,8 @@ describe("ProjectWorkspaceScene", () => {
     getLatestReleaseMock.mockRejectedValue(new Error("down"));
     renderScene();
 
-    expect(
-      await screen.findByText('bknProject.workspace.targetNetwork:{"name":"orders"}'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("bknProject.workspace.unpublished")).toBeNull();
+    expect(await screen.findByText("orders")).toBeInTheDocument();
+    expect(screen.queryByText("bknProject.overview.versions.unpublished")).toBeNull();
   });
 
   it("answers a project the caller cannot see as not found", async () => {
@@ -419,9 +416,7 @@ describe("ProjectWorkspaceScene", () => {
     renderScene("model");
 
     expect(await screen.findByText("model of p1 on the first tab")).toBeInTheDocument();
-    expect(
-      screen.getByText("bknProject.workspace.sections.model", { selector: "h2" }),
-    ).toBeInTheDocument();
+    expect(document.querySelector("h2")).toBeNull();
   });
 
   it("opens the modeling tab a link asks for", async () => {
@@ -445,12 +440,8 @@ describe("ProjectWorkspaceScene", () => {
     });
     renderScene("release");
 
-    expect(await screen.findByText("bknProject.workspace.unpublished")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "publish" }));
-    expect(
-      await screen.findByText('bknProject.workspace.live:{"version":"1.0.0"}'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("bknProject.workspace.unpublished")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "publish" }));
+    await waitFor(() => expect(getLatestReleaseMock).toHaveBeenCalledTimes(2));
   });
 
   it("shows the requirements of the project", async () => {

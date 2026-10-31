@@ -124,7 +124,11 @@ function formatResponseView(text: string): ResponseView {
       return { kind: "toon", text: joined };
     }
   }
-  return { kind: "json", text: formatPrecisionSafeJSON(candidate) };
+  try {
+    return { kind: "json", text: formatPrecisionSafeJSON(candidate) };
+  } catch {
+    return { kind: "toon", text };
+  }
 }
 
 /** Recursively finds an array property by key, such as nested concept_groups. */

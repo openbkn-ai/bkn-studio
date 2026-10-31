@@ -278,6 +278,7 @@
 .panelTitleBox {
   align-items: center;
   display: flex;
+  flex: 1 1 auto;
   gap: 8px;
   min-width: 0;
 }
@@ -298,9 +299,12 @@
 
 .panelTitle {
   color: var(--color-text-primary);
+  display: block;
+  flex: 1 1 auto;
   font-size: 14px;
   font-weight: 600;
   max-width: 180px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -426,14 +430,22 @@
 .itemContent {
   align-items: center;
   display: flex;
+  flex: 1 1 auto;
   gap: 8px;
+  min-width: 0;
+}
+
+.itemText {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 .itemName {
   color: var(--color-text-primary);
+  display: block;
   font-size: 14px;
   font-weight: 500;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -445,6 +457,14 @@
   display: flex;
   font-size: 12px;
   gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.itemTechNameText {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

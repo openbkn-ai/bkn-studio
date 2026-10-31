@@ -15,7 +15,7 @@ export const bknTraceZhCN = {
           unsupported: "证据不足",
           contradicted: "记录冲突",
           missing: "未回答",
-          analysis_pending: "归因整理中",
+          analysis_pending: "归因未完成",
           completed: "成功",
           failed: "失败",
           running: "进行中",
@@ -36,6 +36,7 @@ export const bknTraceZhCN = {
           answerMissing: "回答未记录",
         },
         function: {
+          recordedFailures: "记录到 {{count}} 次调用失败",
           title: "业务函数",
           input: "业务输入",
           process: "业务处理",
@@ -52,7 +53,6 @@ export const bknTraceZhCN = {
           inputPayload: "输入载荷",
           outputPayload: "输出载荷",
           errorPayload: "错误载荷",
-          completeness: "采集完整性",
           notRecorded: "未记录",
           inlineOrMissing: "内联于时间链 / 未记录",
         },
@@ -523,7 +523,6 @@ export const bknTraceZhCN = {
         callCount_other: "{{count}} 次调用",
         columns: {
           duration: "耗时",
-          evidence: "记录完整性",
           interactions: "交互轮次",
           question: "用户问题",
           result: "业务结果",
@@ -569,7 +568,6 @@ export const bknTraceZhCN = {
           interactionsLoad: "交互轮次加载失败",
           markdownLoad: "知识网络优化事实 Markdown 加载失败",
         },
-        evidence: { byRound: "按轮次查看", complete: "完整", partial: "有缺失" },
         integrity: {
           checkedAt: "调用记录核查时间：",
           call_outcome_missing: "调用结局未记录",
@@ -596,7 +594,6 @@ export const bknTraceZhCN = {
         filters: {
           agent: "Agent / 应用",
           endedAt: "结束时间",
-          evidence: "记录完整性",
           keyword: "搜索问题、结果或会话 ID",
           network: "知识网络",
           startedAt: "开始时间",
@@ -743,7 +740,15 @@ export const bknTraceZhCN = {
           viewFullInput: "查看完整本轮输入",
           viewFullOutput: "查看完整本轮输出",
         },
-        status: { active: "可继续对话", completed: "已结束", failed: "失败", running: "执行中" },
+        status: {
+          active: "进行中",
+          completed: "已结束",
+          failed: "失败",
+          running: "执行中",
+          canceled: "已取消",
+          handedOff: "已转交",
+          abandoned: "未正常结束",
+        },
         timeNotRecorded: "时间未记录",
         timeline: {
           all: "全部 {{count}}",
