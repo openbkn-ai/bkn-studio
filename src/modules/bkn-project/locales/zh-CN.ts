@@ -1176,7 +1176,8 @@ export const bknProjectZhCN = {
         state: {
           ready: "可以发布",
           published: "已发布",
-          waiting: "等待确认",
+          waitConfirm: "等待确认",
+          waitCheck: "等待校验",
         },
         publishedTag: "已发布 v{{version}}",
         inUse: "使用方正在用 v{{version}}",

@@ -1246,7 +1246,8 @@ export const bknProjectEnUS = {
         state: {
           ready: "Ready to publish",
           published: "Published",
-          waiting: "Waiting",
+          waitConfirm: "Awaiting confirmation",
+          waitCheck: "Awaiting the data check",
         },
         publishedTag: "Published v{{version}}",
         inUse: "Consumers use v{{version}}",

@@ -151,7 +151,12 @@ export function QuestionsView({
               {question.scenarioIds.map(scenarioName).join(t("bknProject.listSeparator"))}
             </Field>
             <Field label={t(`${PREFIX}.questions.template`)}>
-              <TemplateText drafted={drafted} question={question} spec={spec} />
+              {/* An empty template leaves the field out, as before. */}
+              {question.template ? (
+                <TemplateText drafted={drafted} question={question} spec={spec} />
+              ) : (
+                ""
+              )}
             </Field>
             {question.inputs ? (
               <Field label={t(`${PREFIX}.questions.inputs`)}>

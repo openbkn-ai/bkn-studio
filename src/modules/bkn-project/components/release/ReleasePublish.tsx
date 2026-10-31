@@ -108,7 +108,10 @@ export function ReleasePublish({
   ) : release ? (
     <LightStatusTag tone="success">{t(`${PREFIX}.state.published`)}</LightStatusTag>
   ) : (
-    <LightStatusTag tone="neutral">{t(`${PREFIX}.state.waiting`)}</LightStatusTag>
+    // Confirmed but not checked yet waits for the check, not for confirming: as the line below says.
+    <LightStatusTag tone="neutral">
+      {t(`${PREFIX}.state.${WAITING.has(status.stage) ? "waitCheck" : "waitConfirm"}`)}
+    </LightStatusTag>
   );
 
   return (
