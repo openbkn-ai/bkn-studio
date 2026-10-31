@@ -275,9 +275,10 @@ describe("ObjectTypeDataAttributeEditor when another resource's fields cannot be
     expect(readResourceFields).toHaveBeenCalledWith("res-other");
     // The bound table's fields stay, nothing is rebound, and there is no retry for the old table.
     expect(screen.getByText("Customer")).toBeInTheDocument();
-    expect(onChange).not.toHaveBeenCalledWith(
-      expect.objectContaining({ dataSource: expect.objectContaining({ id: "res-other" }) }),
+    const bound = (onChange.mock.calls as [{ dataSource?: { id: string } }][]).map(
+      ([value]) => value.dataSource?.id,
     );
+    expect(bound).not.toContain("res-other");
     expect(screen.queryByText("knowledgeNetwork.objectTypeResourceFieldsFailed")).toBeNull();
   });
 });
