@@ -588,13 +588,6 @@ function ClampedText({ value }: { value: string }) {
   );
 }
 
-function evidenceLabel(conversation: BusinessProvenanceConversation) {
-  if (conversation.currentRecordIntegrity?.status === "complete")
-    return bpText("evidence.complete");
-  if (conversation.currentRecordIntegrity?.status === "missing") return bpText("evidence.partial");
-  return "—";
-}
-
 function textValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -722,7 +715,6 @@ export function BusinessProvenanceScene() {
   const [conversationKeyword, setConversationKeyword] = useState("");
   const [conversationAgent, setConversationAgent] = useState("");
   const [conversationKnowledgeNetwork, setConversationKnowledgeNetwork] = useState("");
-  const [conversationEvidence, setConversationEvidence] = useState<string>();
   const [conversationQuery, setConversationQuery] = useState<
     Parameters<typeof getBusinessProvenanceConversations>[0]
   >(() => (linkedConversationId ? { conversationId: linkedConversationId } : {}));
@@ -1036,9 +1028,8 @@ export function BusinessProvenanceScene() {
       keyword: conversationKeyword,
       agentOrApp: conversationAgent,
       knowledgeNetwork: conversationKnowledgeNetwork,
-      recordIntegrity: conversationEvidence,
     });
-  }, [conversationAgent, conversationEvidence, conversationKeyword, conversationKnowledgeNetwork]);
+  }, [conversationAgent, conversationKeyword, conversationKnowledgeNetwork]);
 
   const conversationColumns: ColumnsType<BusinessProvenanceConversation> = [
     {
@@ -1091,21 +1082,6 @@ export function BusinessProvenanceScene() {
       title: "Agent",
       width: "14%",
       render: (value?: string) => <ClampedText value={value || bpText("agentNotRecorded")} />,
-    },
-    {
-      title: bpText("columns.evidence"),
-      width: "9%",
-      render: (_, item) => (
-        <span
-          className={
-            item.currentRecordIntegrity?.status === "missing"
-              ? styles.evidenceMissing
-              : styles.evidence
-          }
-        >
-          {evidenceLabel(item)}
-        </span>
-      ),
     },
     {
       dataIndex: "durationMs",
@@ -1184,16 +1160,6 @@ export function BusinessProvenanceScene() {
               onPressEnter={submitConversationQuery}
               placeholder={bpText("filters.network")}
             />
-            <Select
-              allowClear
-              placeholder={bpText("filters.evidence")}
-              value={conversationEvidence}
-              options={[
-                { value: "complete", label: bpText("evidence.complete") },
-                { value: "missing", label: bpText("evidence.partial") },
-              ]}
-              onChange={setConversationEvidence}
-            />
             <Button type="primary" icon={<SearchOutlined />} onClick={submitConversationQuery}>
               {bpText("actions.query")}
             </Button>
@@ -1204,7 +1170,6 @@ export function BusinessProvenanceScene() {
                 setConversationKeyword("");
                 setConversationAgent("");
                 setConversationKnowledgeNetwork("");
-                setConversationEvidence(undefined);
                 setConversationPage(1);
                 setConversationQuery({});
               }}

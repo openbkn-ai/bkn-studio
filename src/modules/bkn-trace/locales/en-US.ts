@@ -558,7 +558,6 @@ export const bknTraceEnUS = {
         callCount_other: "{{count}} calls",
         columns: {
           duration: "Duration",
-          evidence: "Record completeness",
           interactions: "Interactions",
           question: "User question",
           result: "Business result",
@@ -608,11 +607,6 @@ export const bknTraceEnUS = {
           interactionsLoad: "Failed to load interactions",
           markdownLoad: "Failed to load knowledge-network optimization facts",
         },
-        evidence: {
-          byRound: "View by interaction",
-          complete: "Complete",
-          partial: "Missing",
-        },
         integrity: {
           checkedAt: "Call records checked:",
           call_outcome_missing: "Call outcome not recorded",
@@ -639,7 +633,6 @@ export const bknTraceEnUS = {
         filters: {
           agent: "Agent / application",
           endedAt: "End time",
-          evidence: "Record completeness",
           keyword: "Search question, result, or conversation ID",
           network: "Knowledge network",
           startedAt: "Start time",

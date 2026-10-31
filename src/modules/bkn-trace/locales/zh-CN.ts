@@ -523,7 +523,6 @@ export const bknTraceZhCN = {
         callCount_other: "{{count}} 次调用",
         columns: {
           duration: "耗时",
-          evidence: "记录完整性",
           interactions: "交互轮次",
           question: "用户问题",
           result: "业务结果",
@@ -569,7 +568,6 @@ export const bknTraceZhCN = {
           interactionsLoad: "交互轮次加载失败",
           markdownLoad: "知识网络优化事实 Markdown 加载失败",
         },
-        evidence: { byRound: "按轮次查看", complete: "完整", partial: "有缺失" },
         integrity: {
           checkedAt: "调用记录核查时间：",
           call_outcome_missing: "调用结局未记录",
@@ -596,7 +594,6 @@ export const bknTraceZhCN = {
         filters: {
           agent: "Agent / 应用",
           endedAt: "结束时间",
-          evidence: "记录完整性",
           keyword: "搜索问题、结果或会话 ID",
           network: "知识网络",
           startedAt: "开始时间",

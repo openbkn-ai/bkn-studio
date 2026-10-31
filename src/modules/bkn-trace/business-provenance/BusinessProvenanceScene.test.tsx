@@ -906,7 +906,7 @@ describe("BusinessProvenanceScene", () => {
     expect(normalizedStyles).not.toContain(".conversationHeading h1{width:100%;font-size:25px;}");
   });
 
-  it("keeps an eight-column conversation list before opening one interaction workspace", async () => {
+  it("keeps a conversation list without state columns before opening one interaction workspace", async () => {
     getConversations.mockResolvedValue({
       entries: [
         {
@@ -980,10 +980,13 @@ describe("BusinessProvenanceScene", () => {
     });
     renderWithoutAntdStyles(<BusinessProvenanceScene />);
     expect(screen.getByRole("main").className).toContain("pageSurface");
-    await screen.findByRole("columnheader", { name: "记录完整性" });
+    await screen.findByRole("columnheader", { name: "用户问题" });
+    expect(screen.queryByRole("columnheader", { name: "记录完整性" })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "状态" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "记录完整性" })).toBeNull();
     expect(screen.getByRole("columnheader", { name: "用户问题" })).not.toBeNull();
     expect(screen.getByRole("columnheader", { name: "业务结果" })).not.toBeNull();
-    expect(await screen.findByText("完整")).not.toBeNull();
+    expect(screen.queryByText("完整")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "查询采购订单" }));
     await waitFor(() =>
       expect(getInteractions).toHaveBeenCalledWith(
