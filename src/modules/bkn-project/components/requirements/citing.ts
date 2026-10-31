@@ -12,6 +12,7 @@ import type {
   RequirementConcept,
   RequirementConflict,
   RequirementItemKind,
+  ReviewedKind,
 } from "@/modules/bkn-project/types/requirements";
 
 /** What a quote needs from the page: document names, and a way to open one at a passage. */
@@ -36,6 +37,8 @@ export type SpecEditing = {
   map: (concept: RequirementConcept) => void;
   remove: (kind: RequirementItemKind, itemId: string, label: string) => void;
   resolve: (conflict: RequirementConflict) => void;
+  /** Accepts what AI generated, or takes it back. */
+  review: (kind: ReviewedKind, itemId: string, accept: boolean) => void;
 };
 
 export const Editing = createContext<SpecEditing | null>(null);

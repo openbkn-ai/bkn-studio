@@ -42,6 +42,9 @@ export type RequirementCitation = {
 /** The kinds of item a person adds, edits and removes, as the routes name them. */
 export type RequirementItemKind = "concepts" | "questions" | "rules" | "scenarios";
 
+/** The kinds of item a person accepts or takes back after AI generated them. */
+export type ReviewedKind = "questions" | "scenarios";
+
 /** A drafted object type or relation type, by its draft item id. */
 export type RequirementItemRef = { id: string; kind: string };
 
@@ -52,15 +55,24 @@ type Cited = {
   supplementReason: string;
 };
 
-export type RequirementScenario = Cited & {
-  actor: string;
-  capabilities: { definition: string; kind: string; name: string }[];
-  decision: string;
-  id: string;
-  knowledge: string[];
-  name: string;
-  trigger: string;
-};
+/**
+ * Whether a person accepted what AI generated. Items a person added or edited count as accepted;
+ * regenerating keeps the accepted ones as they are.
+ */
+type Reviewed = { accepted: boolean };
+
+export type RequirementScenario = Cited &
+  Reviewed & {
+    /** One of its questions may no longer fit the ontology. */
+    ontologyChanged: boolean;
+    actor: string;
+    capabilities: { definition: string; kind: string; name: string }[];
+    decision: string;
+    id: string;
+    knowledge: string[];
+    name: string;
+    trigger: string;
+  };
 
 export type RequirementConcept = Cited & {
   /** object, event, property, relation, evidence or not_ontology. */
@@ -85,28 +97,34 @@ export type QuestionInput = {
   role: string;
 };
 
-export type RequirementQuestion = Cited & {
-  answerShape: string;
-  id: string;
-  /**
-   * Null when drafted before questions had inputs, or when every input given was dropped: then
-   * nothing is said. An empty list: the question is asked about no given value.
-   */
-  inputs: QuestionInput[] | null;
-  /** `knowledge` (the ontology answers it) or `capability` (another team builds what it needs). */
-  layer: string;
-  needs: RequirementItemRef[];
-  /** `concepts` when the needs follow its concepts, `person` when someone set them. */
-  needsSource: string;
-  /** Computed on read: `capability_without_basis`. */
-  notes: string[];
-  /** The question counts the latest period up to its reference time. */
-  relativeWindow: boolean;
-  scenarioIds: string[];
-  template: string;
-  text: string;
-  type: string;
-};
+export type RequirementQuestion = Cited &
+  Reviewed & {
+    answerShape: string;
+    id: string;
+    /**
+     * Null when drafted before questions had inputs, or when every input given was dropped: then
+     * nothing is said. An empty list: the question is asked about no given value.
+     */
+    inputs: QuestionInput[] | null;
+    /** `knowledge` (the ontology answers it) or `capability` (another team builds what it needs). */
+    layer: string;
+    needs: RequirementItemRef[];
+    /** `concepts` when the needs follow its concepts, `person` when someone set them. */
+    needsSource: string;
+    /** Computed on read: `capability_without_basis`. */
+    notes: string[];
+    /**
+     * The ontology it needs changed in structure since it was generated or accepted, so it may no
+     * longer fit; renaming does not count.
+     */
+    ontologyChanged: boolean;
+    /** The question counts the latest period up to its reference time. */
+    relativeWindow: boolean;
+    scenarioIds: string[];
+    template: string;
+    text: string;
+    type: string;
+  };
 
 export type RequirementRule = Omit<Cited, "supplementReason"> & {
   compilesTo: string;
@@ -158,6 +176,8 @@ export type RequirementSpec = {
 export type Requirements = {
   /** Why drafting failed, as a code. */
   error: string;
+  /** Adopted object types no question rests on yet, such as ones adopted since drafting. */
+  ontologyUncovered: { id: string; kind: string; name: string }[];
   spec: RequirementSpec;
   /** The documents, their types, the catalogs or the naming language changed since drafting. */
   stale: boolean;

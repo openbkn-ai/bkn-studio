@@ -134,6 +134,7 @@ export function requirementErrorText(t: TFunction, code: string | undefined) {
     "ProjectArchived",
     "NoDocuments",
     "NoCatalogs",
+    "NoAdoptedOntology",
     "InputsTooLarge",
     "Drafting",
     "DocumentNotFound",

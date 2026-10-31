@@ -33,6 +33,7 @@ import type {
   RequirementItemKind,
   RequirementItemRef,
   RequirementSpec,
+  ReviewedKind,
 } from "@/modules/bkn-project/types/requirements";
 
 import styles from "./Requirements.module.css";
@@ -107,6 +108,59 @@ function AddItem({ kind }: { kind: RequirementItemKind }) {
       <AppButton onClick={() => editing.add(kind)}>{t(`${PREFIX}.editing.add.${kind}`)}</AppButton>
     </div>
   ) : null;
+}
+
+/**
+ * What a person still has to look at: an item AI generated and nobody accepted, and one whose
+ * ontology changed since. The owner accepts it here, or takes an accepted one back.
+ */
+function ReviewTags({ accepted, stale }: { accepted: boolean; stale: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      {accepted ? null : (
+        <LightStatusTag tone="warning">{t(`${PREFIX}.review.pending`)}</LightStatusTag>
+      )}
+      {stale ? <LightStatusTag tone="error">{t(`${PREFIX}.review.stale`)}</LightStatusTag> : null}
+    </>
+  );
+}
+
+function ReviewAction({
+  accepted,
+  itemId,
+  kind,
+  label,
+}: {
+  accepted: boolean;
+  itemId: string;
+  kind: ReviewedKind;
+  label: string;
+}) {
+  const { t } = useTranslation();
+  const editing = useContext(Editing);
+  if (!editing) {
+    return null;
+  }
+  return accepted ? (
+    <AppButton
+      aria-label={t(`${PREFIX}.review.unacceptItem`, { name: label })}
+      onClick={() => editing.review(kind, itemId, false)}
+      size="small"
+      type="link"
+    >
+      {t(`${PREFIX}.review.unaccept`)}
+    </AppButton>
+  ) : (
+    <AppButton
+      aria-label={t(`${PREFIX}.review.acceptItem`, { name: label })}
+      onClick={() => editing.review(kind, itemId, true)}
+      size="small"
+      type="primary"
+    >
+      {t(`${PREFIX}.review.accept`)}
+    </AppButton>
+  );
 }
 
 function EditedTag({ edited }: { edited: boolean }) {
@@ -192,9 +246,15 @@ export function QuestionsView({
         </div>
       ),
       extra: (
-        // The row's own actions do not open or close it.
-        <span className={styles.row} onClick={(event) => event.stopPropagation()}>
+        // The row's own actions do not open or close it, and stay on one line beside long text.
+        <span className={styles.rowActions} onClick={(event) => event.stopPropagation()}>
           <ItemActions itemId={question.id} kind="questions" label={question.text} />
+          <ReviewAction
+            accepted={question.accepted}
+            itemId={question.id}
+            kind="questions"
+            label={question.text}
+          />
         </span>
       ),
       // Kept in the page while closed, so what it says can be found on it; only the tests wait.
@@ -213,6 +273,7 @@ export function QuestionsView({
             <LightStatusTag tone="warning">{t(`${PREFIX}.questions.hasWarnings`)}</LightStatusTag>
           ) : null}
           <EditedTag edited={question.edited} />
+          <ReviewTags accepted={question.accepted} stale={question.ontologyChanged} />
         </span>
       ),
     };
@@ -275,7 +336,14 @@ export function ScenariosView({ spec }: { spec: RequirementSpec }) {
           <div className={styles.row}>
             <h4 className={styles.cardTitle}>{scenario.name}</h4>
             <EditedTag edited={scenario.edited} />
+            <ReviewTags accepted={scenario.accepted} stale={scenario.ontologyChanged} />
             <ItemActions itemId={scenario.id} kind="scenarios" label={scenario.name} />
+            <ReviewAction
+              accepted={scenario.accepted}
+              itemId={scenario.id}
+              kind="scenarios"
+              label={scenario.name}
+            />
           </div>
           <div className={styles.field}>
             <Field label={t(`${PREFIX}.scenarios.actor`)}>{scenario.actor}</Field>
