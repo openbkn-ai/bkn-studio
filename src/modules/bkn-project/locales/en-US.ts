@@ -338,7 +338,63 @@ export const bknProjectEnUS = {
         unadoptedEnds_other:
           "{{count}} relation types are adopted although an object type they connect is not. Unadopt them, or adopt the object types at both ends first.",
       },
+      candidates: {
+        catalog: "Filter by added catalog",
+        allCatalogs: "All catalogs",
+        acceptSuggestions: "Accept all suggestions",
+        acceptTitle: "Confirm every candidate as drafting suggested?",
+        acceptContent:
+          "Candidates nobody confirmed are confirmed as drafting suggested them: adopted where it suggested adopting, left out where it did not. Object types that need an identifier and relations whose ends are not adopted are skipped, for you to settle.",
+        accepted: "Candidates confirmed as suggested.",
+        acceptedSkipped: "Candidates confirmed as suggested; {{count}} need you to settle them.",
+        acceptedSkipped_one: "Candidates confirmed as suggested; {{count}} needs you to settle it.",
+        acceptedSkipped_other:
+          "Candidates confirmed as suggested; {{count}} need you to settle them.",
+        allReviewed: "Every candidate is confirmed.",
+        concept: "Concept: {{term}}",
+        source: "{{name}} · {{rows}} rows",
+        loadFailed: "Failed to load the candidates",
+        columns: {
+          name: "Candidate",
+          state: "State",
+          marks: "Marks",
+          source: "Source table",
+        },
+        kind: {
+          object_types: "Object type",
+          relation_types: "Relation type",
+        },
+        state: {
+          pending: "To confirm",
+          adopted: "Adopted",
+          excluded: "Left out",
+        },
+        mark: {
+          needed: "Needed by requirements",
+          added: "Added catalog",
+          identity: "Needs an identifier",
+          ends: "Ends not adopted",
+        },
+        review: {
+          adoptNext: "Adopt and next",
+          excludeNext: "Leave out and next",
+          next: "Next",
+          excludeTitle: "Leave out “{{name}}”",
+          reason: "Reason (optional)",
+          reasonPlaceholder: "For example: this table is a log, not a business object",
+          confirm: "Leave out",
+        },
+        unreviewed:
+          "{{count}} candidates were not confirmed one by one; confirming the draft takes them as they are adopted now.",
+        unreviewed_one:
+          "{{count}} candidate was not confirmed one by one; confirming the draft takes it as it is adopted now.",
+        unreviewed_other:
+          "{{count}} candidates were not confirmed one by one; confirming the draft takes them as they are adopted now.",
+      },
       tabs: {
+        review: "To confirm {{count}}",
+        review_one: "To confirm {{count}}",
+        review_other: "To confirm {{count}}",
         objects: "Object types {{count}}",
         objects_one: "Object type {{count}}",
         objects_other: "Object types {{count}}",

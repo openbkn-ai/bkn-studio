@@ -38,6 +38,7 @@ import {
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
 
 import styles from "./ObjectTypePanel.module.css";
+import { ReviewActions, type CandidateReview } from "./ReviewActions";
 
 const PREFIX = "bknProject.objectEditor";
 const DESCRIPTION_MAX_LENGTH = 1000;
@@ -85,6 +86,7 @@ export function ObjectTypePanel({
   onReload,
   onSaved,
   project,
+  review,
 }: {
   /** The draft the panel opens on; later reads of it do not reset what is being edited. */
   draft: Draft;
@@ -96,6 +98,8 @@ export function ObjectTypePanel({
   onReload: () => Promise<Draft | null>;
   onSaved: (draft: Draft) => void;
   project: Project;
+  /** Going through the candidates: confirming this one, then the next. */
+  review?: CandidateReview;
 }) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
@@ -237,9 +241,10 @@ export function ObjectTypePanel({
     }
   };
 
-  const save = async () => {
+  // Replies the draft saved, or null when nothing was.
+  const save = async (): Promise<Draft | null> => {
     if (!base) {
-      return;
+      return null;
     }
     let values: BasicValues;
     let checked: ObjectTypeDataProperty[];
@@ -248,7 +253,7 @@ export function ObjectTypePanel({
       checked = (await editorRef.current!.validateFields()).dataProperties;
     } catch {
       // The form marks its fields; the editor says what is missing above its canvas.
-      return;
+      return null;
     }
     // Every property of a draft maps a column of its table: say which do not before sending.
     const unmapped = checked.filter((property) => !property.mappedField);
@@ -259,7 +264,7 @@ export function ObjectTypePanel({
           names: unmapped.map((property) => property.displayName || property.name).join(separator),
         }),
       });
-      return;
+      return null;
     }
     setSaving(true);
     setProblem(null);
@@ -273,11 +278,24 @@ export function ObjectTypePanel({
       message.success(t(`${PREFIX}.saved`, { name: values.name.trim() }));
       onSaved(next);
       reset(next);
+      return next;
     } catch (error) {
       setProblem(explain(error));
+      return null;
     } finally {
       setSaving(false);
     }
+  };
+
+  // Before deciding on the candidate, what was changed here is saved; the decision follows it.
+  const prepare = async () => {
+    if (!base) {
+      return null;
+    }
+    if (!changed) {
+      return base.draft.updateTime;
+    }
+    return (await save())?.updateTime ?? null;
   };
 
   const reload = async () => {
@@ -293,6 +311,7 @@ export function ObjectTypePanel({
         <span className={styles.title}>{base?.objectType.name ?? t(`${PREFIX}.title`)}</span>
         {changed ? <span className={styles.unsaved}>{t(`${PREFIX}.unsaved`)}</span> : null}
         <span className={styles.actions}>
+          {review && base ? <ReviewActions prepare={prepare} review={review} /> : null}
           {onAsk ? <AppButton onClick={onAsk}>{t(`${PREFIX}.ask`)}</AppButton> : null}
           <AppButton disabled={!base} loading={saving} onClick={() => void save()} type="primary">
             {t(`${PREFIX}.save`)}

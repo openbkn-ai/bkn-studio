@@ -303,4 +303,52 @@ describe("ObjectTypePanel", () => {
     renderPanel(undefined, "missing");
     expect(screen.getByText("bknProject.objectEditor.notFound")).toBeInTheDocument();
   });
+
+  it("goes through candidates: adopts or leaves out over the draft as it is, saving changes first", async () => {
+    const draft = mapDraft(mockDraft("p1"));
+    const saved = structuredClone(draft);
+    saved.updateTime = draft.updateTime + 1;
+    mocks.save.mockResolvedValue(saved);
+    const review = {
+      name: "customers",
+      onAdopt: vi.fn().mockResolvedValue(undefined),
+      onExclude: vi.fn().mockResolvedValue(undefined),
+      onNext: vi.fn(),
+    };
+    renderWithoutAntdStyles(
+      <ObjectTypePanel
+        draft={draft}
+        objectTypeId="customers"
+        onClose={vi.fn()}
+        onReload={vi.fn()}
+        onSaved={vi.fn()}
+        project={project}
+        review={review}
+      />,
+    );
+    const button = (name: string) =>
+      screen.getByRole("button", { name: `bknProject.model.candidates.review.${name}` });
+
+    // Nothing changed: the decision is made on the draft as read.
+    fireEvent.click(button("adoptNext"));
+    await waitFor(() => expect(review.onAdopt).toHaveBeenCalledWith(draft.updateTime));
+    expect(mocks.save).not.toHaveBeenCalled();
+
+    // A change is saved first, and the decision follows the draft saved.
+    fireEvent.change(nameBox(), { target: { value: "Clients" } });
+    fireEvent.click(button("adoptNext"));
+    await waitFor(() => expect(review.onAdopt).toHaveBeenLastCalledWith(saved.updateTime));
+    expect(mocks.save).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(button("excludeNext"));
+    const asked = mocks.confirm.mock.lastCall![0] as { onOk: () => Promise<void>; title: string };
+    expect(asked.title).toBe(
+      `bknProject.model.candidates.review.excludeTitle:${JSON.stringify({ name: "customers" })}`,
+    );
+    await asked.onOk();
+    expect(review.onExclude).toHaveBeenCalledWith(saved.updateTime, "");
+
+    fireEvent.click(button("next"));
+    expect(review.onNext).toHaveBeenCalled();
+  });
 });

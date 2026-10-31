@@ -172,6 +172,41 @@ export type DraftItemEdit = {
   /** Object types only; empty clears it. */
   incrementalKey?: string;
   name?: string;
+  /** Why an item is left out, with `adopted: false`; up to 200 characters. */
+  reason?: string;
+};
+
+/**
+ * Where a candidate stands: `pending` until a person confirms it, then `adopted` or `excluded`.
+ * Adopting or leaving it out, choosing its identity, saving it whole or making it confirm it;
+ * renaming or describing it does not.
+ */
+export type CandidateState = "adopted" | "excluded" | "pending";
+
+/** An object or relation type of the draft, as the list of candidates to confirm shows it. */
+export type Candidate = {
+  /** The catalog whose adding drafted it; empty for one the draft was made with. */
+  addedByCatalog: string;
+  adopted: boolean;
+  excludeReason: string;
+  id: string;
+  kind: "object_types" | "relation_types";
+  name: string;
+  /** What a ready requirement specification needs it for; null when there is none. */
+  neededBy: {
+    concepts: { id: string; term: string }[];
+    questions: { id: string; text: string }[];
+  } | null;
+  reviewed: { by: ProjectAccount; time: number } | null;
+  state: CandidateState;
+  /** The table it comes from, and how many rows it has; null when there is none. */
+  table: { name: string; rows: number } | null;
+};
+
+/** The candidates in the order to confirm them: what requirements need first, then the rest. */
+export type Candidates = {
+  counts: Record<CandidateState, number>;
+  items: Candidate[];
 };
 
 /**

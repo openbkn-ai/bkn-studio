@@ -59,6 +59,7 @@ function status(changed: boolean, allowed = true, reason = "not_owner"): Project
     stale: changed ? ["source_changed"] : [],
     undecided: 0,
     unresolvedConflicts: 0,
+    unreviewed: 0,
   } as unknown as ProjectStatus;
 }
 

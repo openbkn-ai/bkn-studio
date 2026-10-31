@@ -15,6 +15,8 @@ import type { ObjectTypeResourceField } from "@/modules/knowledge-network/types/
 import { mockAddProjectCatalogs } from "@/modules/bkn-project/services/project.service";
 import type {
   AskAnswer,
+  Candidate,
+  Candidates,
   Draft,
   DraftItemEdit,
   DraftItemKind,
@@ -477,6 +479,10 @@ function editMockDraft(
       kind,
       time: now,
     });
+  // Deciding whether to adopt confirms the item, the same decision again included.
+  if (edit.adopted !== undefined) {
+    markMockReviewed(projectId, kind, itemId, edit.adopted ? "" : (edit.reason ?? ""));
+  }
   if (edit.adopted !== undefined && edit.adopted !== item.adopted) {
     item.adopted = edit.adopted;
     decide(edit.adopted ? "adopt" : "unadopt", !edit.adopted, edit.adopted);
@@ -527,6 +533,7 @@ function chooseMockIdentity(
   if (!item) {
     throw mockConflict("ItemNotFound", `No item ${itemId}.`);
   }
+  markMockReviewed(projectId, "object_types", itemId);
   const now = Date.now();
   (draft.items.decisions ??= []).push({
     action: "identity",
@@ -620,6 +627,7 @@ function saveMockObjectType(
   if (!item) {
     throw mockConflict("ItemNotFound", `No item ${itemId}.`);
   }
+  markMockReviewed(projectId, "object_types", itemId);
   const kept = new Set(value.properties.map((property) => property.name));
   const objectName = (id: string) =>
     draft.items.object_types?.find((candidate) => candidate.id === id)?.name ?? id;
@@ -871,7 +879,11 @@ function saveMockRelationType(
     after: value.name,
     before: existing?.name ?? null,
     by: mockDrafter,
-    item_id: existing?.id ?? relations[relations.length - 1].id,
+    item_id: markMockReviewed(
+      projectId,
+      "relation_types",
+      existing?.id ?? relations[relations.length - 1].id,
+    ),
     kind: "relation_types",
     time: now,
   });
@@ -906,6 +918,100 @@ function deleteMockRelationType(
   });
   draft.update_time = now;
   return draft;
+}
+
+/** Who confirmed which items of a mock draft, and why one was left out. */
+const mockReviews: Record<string, Map<string, { reason: string; time: number }>> = {};
+
+/** Records a person's confirming an item; replies its id. */
+function markMockReviewed(projectId: string, kind: string, itemId: string, reason = "") {
+  (mockReviews[projectId] ??= new Map()).set(`${kind}/${itemId}`, { reason, time: Date.now() });
+  return itemId;
+}
+
+/** How many items of a mock draft nobody confirmed yet; for the mock status. */
+export function mockUnreviewedCount(projectId: string) {
+  return mockCandidates(projectId).counts.pending;
+}
+
+function mockCandidates(projectId: string, catalogId = ""): Candidates {
+  const draft = mockDrafts[projectId];
+  const reviews = mockReviews[projectId] ?? new Map<string, { reason: string; time: number }>();
+  // The mock specification needs the customers and the orders.
+  const needed = new Set(["customers", "sales_orders"]);
+  const items: Candidate[] = [
+    ...(draft?.items.object_types ?? []).map((item) => ({
+      item,
+      kind: "object_types" as const,
+      table: item.table,
+    })),
+    ...(draft?.items.relation_types ?? []).map((item) => ({
+      item,
+      kind: "relation_types" as const,
+      table: item.link_table,
+    })),
+  ].map(({ item, kind, table }) => {
+    const review = reviews.get(`${kind}/${item.id}`);
+    const added = (item as { added_by_catalog?: string }).added_by_catalog ?? "";
+    return {
+      addedByCatalog: added,
+      adopted: item.adopted,
+      excludeReason: review?.reason ?? "",
+      id: item.id,
+      kind,
+      name: item.name,
+      neededBy: needed.has(item.id)
+        ? { concepts: [{ id: `c-${item.id}`, term: item.name }], questions: [] }
+        : null,
+      reviewed: review ? { by: mockDrafter, time: review.time } : null,
+      state: review ? (item.adopted ? "adopted" : "excluded") : "pending",
+      table: table ? { name: table.name, rows: 120 } : null,
+    } satisfies Candidate;
+  });
+  const order = (item: Candidate) => [
+    item.neededBy ? 0 : 1,
+    item.state === "pending" ? 0 : 1,
+    item.kind === "object_types" ? 0 : 1,
+  ];
+  const sorted = items
+    .filter((item) => !catalogId || item.addedByCatalog === catalogId)
+    .sort((a, b) => {
+      const [x, y] = [order(a), order(b)];
+      return x[0] - y[0] || x[1] - y[1] || x[2] - y[2] || a.name.localeCompare(b.name);
+    });
+  const counts = { adopted: 0, excluded: 0, pending: 0 };
+  sorted.forEach((item) => (counts[item.state] += 1));
+  return { counts, items: sorted };
+}
+
+/**
+ * Confirms every candidate nobody confirmed as drafting suggested it, adopted or not. An object
+ * type waiting for its identity and a relation an end of which is not adopted are skipped.
+ */
+function acceptMockSuggestions(projectId: string, updateTime: number) {
+  const draft = readyMockDraft(projectId, updateTime);
+  const adopted = new Set(
+    (draft.items.object_types ?? []).filter((item) => item.adopted).map((item) => item.id),
+  );
+  let skipped = 0;
+  for (const candidate of mockCandidates(projectId).items) {
+    if (candidate.state !== "pending") {
+      continue;
+    }
+    const relation = draft.items.relation_types?.find((item) => item.id === candidate.id);
+    const objectType = draft.items.object_types?.find((item) => item.id === candidate.id);
+    const waits =
+      candidate.kind === "object_types"
+        ? Boolean(objectType?.needs_identity)
+        : !relation || !adopted.has(relation.source) || !adopted.has(relation.target);
+    if (waits) {
+      skipped += 1;
+    } else {
+      markMockReviewed(projectId, candidate.kind, candidate.id);
+    }
+  }
+  draft.update_time = Date.now();
+  return { draft, skipped };
 }
 
 /* ------------------------------- API ------------------------------- */
@@ -978,6 +1084,84 @@ export async function addDraftCatalogs(projectId: string, catalogIds: string[]):
   return mapDraft(response.data);
 }
 
+type BackendCandidate = {
+  added_by_catalog?: string;
+  adopted: boolean;
+  exclude_reason?: string;
+  id: string;
+  kind: Candidate["kind"];
+  name: string;
+  needed_by_requirements?: {
+    concepts?: { id: string; term: string }[] | null;
+    questions?: { id: string; text: string }[] | null;
+  } | null;
+  reviewed?: { by: BackendAccount; time: number } | null;
+  state: Candidate["state"];
+  table?: { name: string; rows?: number } | null;
+};
+
+/**
+ * The draft's object and relation types as candidates to confirm, in bkn-project's order;
+ * `catalogId` keeps those an added catalog drafted.
+ */
+export async function getCandidates(projectId: string, catalogId = ""): Promise<Candidates> {
+  if (useMock) {
+    return wait(mockCandidates(projectId, catalogId));
+  }
+  const response = await http.get<{
+    counts?: Partial<Candidates["counts"]>;
+    items?: BackendCandidate[] | null;
+  }>(`${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/candidates`, {
+    params: catalogId ? { catalog_id: catalogId } : undefined,
+    skipErrorToast: true,
+  });
+  const { counts, items } = response.data;
+  return {
+    counts: {
+      adopted: counts?.adopted ?? 0,
+      excluded: counts?.excluded ?? 0,
+      pending: counts?.pending ?? 0,
+    },
+    items: (items ?? []).map((item) => ({
+      addedByCatalog: item.added_by_catalog ?? "",
+      adopted: item.adopted,
+      excludeReason: item.exclude_reason ?? "",
+      id: item.id,
+      kind: item.kind,
+      name: item.name,
+      neededBy: item.needed_by_requirements
+        ? {
+            concepts: item.needed_by_requirements.concepts ?? [],
+            questions: item.needed_by_requirements.questions ?? [],
+          }
+        : null,
+      reviewed: item.reviewed ?? null,
+      state: item.state,
+      table: item.table ? { name: item.table.name, rows: item.table.rows ?? 0 } : null,
+    })),
+  };
+}
+
+/**
+ * Confirms every candidate nobody confirmed as drafting suggested it, over the draft made at
+ * `updateTime`; replies the draft and how many were skipped for a person to settle.
+ */
+export async function acceptDraftSuggestions(
+  projectId: string,
+  updateTime: number,
+): Promise<{ draft: Draft; skipped: number }> {
+  if (useMock) {
+    const { draft, skipped } = acceptMockSuggestions(projectId, updateTime);
+    return wait({ draft: mapDraft(draft), skipped });
+  }
+  const response = await http.post<{ draft: BackendDraft; skipped?: number }>(
+    `${draftPath(projectId)}:accept_suggestions`,
+    { update_time: updateTime },
+    { skipErrorToast: true },
+  );
+  return { draft: mapDraft(response.data.draft), skipped: response.data.skipped ?? 0 };
+}
+
 /**
  * Edits one item of a ready draft made at `updateTime`; replies the draft. bkn-project records
  * the change as a decision and, for an object type no longer adopted, stops adopting the
@@ -1000,6 +1184,7 @@ export async function editDraftItem(
       description: edit.description,
       incremental_key: edit.incrementalKey,
       name: edit.name,
+      reason: edit.reason,
       update_time: updateTime,
     },
     { skipErrorToast: true },

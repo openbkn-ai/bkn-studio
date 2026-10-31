@@ -18,6 +18,8 @@ const getProjectStatusMock = vi.hoisted(() => vi.fn());
 const generateDraftMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
 const editDraftItemMock = vi.hoisted(() => vi.fn());
+const getCandidatesMock = vi.hoisted(() => vi.fn());
+const acceptSuggestionsMock = vi.hoisted(() => vi.fn());
 const chooseIdentityMock = vi.hoisted(() => vi.fn());
 const restoreFieldMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({
@@ -56,8 +58,10 @@ vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
 
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
+  acceptDraftSuggestions: acceptSuggestionsMock,
   addDraftCatalogs: addDraftCatalogsMock,
   chooseIdentity: chooseIdentityMock,
+  getCandidates: getCandidatesMock,
   editDraftItem: editDraftItemMock,
   restoreField: restoreFieldMock,
   generateDraft: generateDraftMock,
@@ -157,6 +161,7 @@ function projectStatus(nextActions: ProjectStatus["nextActions"]): ProjectStatus
     stale: [],
     undecided: 0,
     unresolvedConflicts: 0,
+    unreviewed: 0,
   };
 }
 
@@ -189,6 +194,10 @@ function renderModel(
 describe("ProjectModel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getCandidatesMock.mockResolvedValue({
+      counts: { adopted: 0, excluded: 0, pending: 0 },
+      items: [],
+    });
     // Ant Design's table reads breakpoints, which jsdom lacks.
     vi.stubGlobal(
       "matchMedia",
@@ -442,6 +451,72 @@ describe("ProjectModel", () => {
     fireEvent.click(screen.getByRole("button", { name: relation.name }));
     const opened = await screen.findByRole("region", { name: "bknProject.relationEditor.title" });
     expect(within(opened).getByDisplayValue(relation.name)).toBeInTheDocument();
+  });
+
+  it("goes through the candidates in turn from the list, deciding on each over the draft", async () => {
+    const draft = ready();
+    getDraftMock.mockResolvedValue(draft);
+    const item = (id: string, name: string) => ({
+      addedByCatalog: "",
+      adopted: false,
+      excludeReason: "",
+      id,
+      kind: "object_types" as const,
+      name,
+      neededBy: null,
+      reviewed: null,
+      state: "pending" as const,
+      table: null,
+    });
+    getCandidatesMock.mockResolvedValue({
+      counts: { adopted: 0, excluded: 0, pending: 2 },
+      items: [item("customers", "customers"), item("sales_orders", "sales_orders")],
+    });
+    editDraftItemMock.mockResolvedValue(draft);
+    renderModel(undefined, undefined, "review");
+
+    // The graph lists the types too; the candidates' row is the last, once they are read.
+    await screen.findAllByText("bknProject.model.candidates.state.pending");
+    fireEvent.click(screen.getAllByRole("button", { name: "customers" }).at(-1)!);
+    const panel = await screen.findByRole("region", { name: "bknProject.objectEditor.title" });
+    fireEvent.click(
+      within(panel).getByRole("button", { name: "bknProject.model.candidates.review.adoptNext" }),
+    );
+    await waitFor(() =>
+      expect(editDraftItemMock).toHaveBeenCalledWith(
+        "p1",
+        "object_types",
+        "customers",
+        draft.updateTime,
+        { adopted: true },
+      ),
+    );
+    // The next in the list's order opens in its place.
+    expect(
+      await within(
+        await screen.findByRole("region", { name: "bknProject.objectEditor.title" }),
+      ).findByDisplayValue("sales_orders"),
+    ).toBeInTheDocument();
+  });
+
+  it("accepts the suggestions over the draft, saying how many wait for a person", async () => {
+    const draft = ready();
+    getDraftMock.mockResolvedValue(draft);
+    getCandidatesMock.mockResolvedValue({
+      counts: { adopted: 0, excluded: 0, pending: 3 },
+      items: [],
+    });
+    acceptSuggestionsMock.mockResolvedValue({ draft, skipped: 2 });
+    renderModel(undefined, undefined, "review");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknProject.model.candidates.acceptSuggestions" }),
+    );
+    await confirmMock.mock.lastCall![0].onOk();
+    expect(acceptSuggestionsMock).toHaveBeenCalledWith("p1", draft.updateTime);
+    expect(messageMock.info).toHaveBeenCalledWith(
+      `bknProject.model.candidates.acceptedSkipped:${JSON.stringify({ count: 2 })}`,
+    );
   });
 
   it("opens the object type a link asked for in the panel, and drops the link on closing", async () => {
