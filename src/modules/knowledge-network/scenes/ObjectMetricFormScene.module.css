@@ -400,64 +400,90 @@
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 0 0;
+  padding: 10px 0 0;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-surface);
 }
 
-.aiComposerToolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+.aiComposerShell {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.aiModelLabel {
-  flex: 0 0 auto;
-  color: var(--metric-text-muted, var(--color-text-secondary));
-  font-size: 12px;
+.aiComposerShell:focus-within {
+  border-color: var(--color-primary-600);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-600) 12%, transparent);
+}
+
+.aiComposerShell :global(.ant-input) {
+  min-height: 54px;
+  padding: 12px 13px 4px;
+  resize: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.aiComposerFooter {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 2px 6px 5px 12px;
+}
+
+.aiComposerActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-left: auto;
 }
 
 .aiModelSelect {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
-  max-width: 240px;
+  width: 152px;
 }
 
-.aiComposerToolbar :global(.ant-btn) {
-  flex: 0 0 auto;
-  margin-left: auto;
+.aiModelSelect :global(.ant-select-selector) {
+  height: 32px !important;
+  padding-inline: 9px !important;
+  border-radius: 8px !important;
+  background: var(--color-bg-raised) !important;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.aiModelOption {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.aiModelOption > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aiModelOption > span:first-child {
   color: var(--color-text-secondary);
+  font-size: 14px;
 }
 
-.aiModelNotice {
-  color: var(--metric-text-muted, var(--color-text-secondary));
-  font-size: 12px;
-}
-
-.aiComposerInputRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 10px;
-}
-
-.aiDialogComposer :global(.ant-input) {
-  resize: none;
-}
-
-.aiComposerInputRow :global(.ant-btn) {
-  width: 86px;
-  height: 48px;
-}
-
-.aiDialogFootnote {
+.aiComposerSubmit:global(.ant-btn) {
   flex: 0 0 auto;
-  margin: 10px 0 0;
-  color: var(--metric-text-muted, var(--color-text-secondary));
-  font-size: 12px;
-  line-height: 1.5;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 16px;
 }
 
 .form :global(.ant-form-item) {
@@ -1434,18 +1460,8 @@
 }
 
 @media (max-width: 480px) {
-  .aiComposerToolbar {
-    flex-wrap: wrap;
-  }
   .aiModelSelect {
-    max-width: none;
-  }
-  .aiComposerInputRow {
-    grid-template-columns: 1fr;
-  }
-  .aiComposerInputRow :global(.ant-btn) {
-    width: 100%;
-    height: 40px;
+    width: 148px;
   }
   .aiDialogExamples {
     align-items: flex-start;

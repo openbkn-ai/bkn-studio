@@ -222,7 +222,7 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(screen.getByText("5. 校验与发布")).toBeInTheDocument();
   });
 
-  it("uses the configured Agent model and keeps the form when starting another conversation", async () => {
+  it("pins an authorized model to one conversation and keeps the form when starting another", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
     mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
     mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
@@ -230,19 +230,26 @@ describe("ObjectMetricFormScene object properties", () => {
 
     render(<ObjectMetricFormScene mode="create" />);
     await screen.findByText("平台默认模型");
-    expect(document.querySelector("#metric-ai-model")).not.toBeInTheDocument();
-    expect(mocks.listObjectMetricAnswerModels).not.toHaveBeenCalled();
+    const modelSelect = document.querySelector<HTMLInputElement>("#metric-ai-model");
+    if (!modelSelect) throw new Error("expected model select");
+    await waitFor(() => expect(mocks.listObjectMetricAnswerModels).toHaveBeenCalled());
+    fireEvent.mouseDown(modelSelect);
+    fireEvent.click(await screen.findByText("测试对话模型"));
+    expect(screen.queryByText("回答模型")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Enter 发送/)).not.toBeInTheDocument();
     fireEvent.change(await screen.findByLabelText("描述要创建的对象指标"), {
       target: { value: "统计订单数" },
     });
     fireEvent.click(screen.getByLabelText("发送对象指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(1));
-    expect(mocks.runObjectMetricDesigner.mock.calls[0][0]).not.toHaveProperty("modelId");
+    expect(mocks.runObjectMetricDesigner.mock.calls[0][0].modelId).toBe("model-1");
     expect(await screen.findByText("新对话")).toBeInTheDocument();
+    expect(modelSelect).toBeDisabled();
     fireEvent.change(screen.getByLabelText("对象指标名称"), {
       target: { value: "人工填写" },
     });
     fireEvent.click(getButtonByText("新对话"));
+    expect(modelSelect).not.toBeDisabled();
     expect(screen.getByLabelText("对象指标名称")).toHaveValue("人工填写");
     expect(screen.queryByText("待应用的修改建议")).not.toBeInTheDocument();
   }, 90_000);
@@ -937,7 +944,7 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(aiPanel).toBeInTheDocument();
     const scrollContent = screen.getByTestId("metric-ai-scroll-content");
     expect(scrollContent).toHaveTextContent("描述业务口径，我会先给出修改建议；确认后再更新表单。");
-    expect(aiPanel).toHaveTextContent("不会自动保存或发布");
+    expect(aiPanel).not.toHaveTextContent("不会自动保存或发布");
     expect(screen.queryByText("验证与试算")).not.toBeInTheDocument();
     expect(scrollContent).not.toContainElement(screen.getByLabelText("描述要创建的对象指标"));
     expect(queryButtonByText("验证当前表单")).not.toBeInTheDocument();

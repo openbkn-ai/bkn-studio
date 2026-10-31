@@ -89,6 +89,7 @@ describe("runObjectMetricDesigner", () => {
 
     const result = await runObjectMetricDesigner({
       ...baseParams,
+      modelId: "model-1",
       diagnostic: {
         kind: "trial",
         form_revision: "rev-1",
@@ -112,8 +113,8 @@ describe("runObjectMetricDesigner", () => {
         entry_count: 2,
       },
       message: "改成金额",
+      model_id: "model-1",
     });
-    expect(JSON.parse(init?.body as string)).not.toHaveProperty("model_id");
     expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer token-1");
     expect(chunks).toEqual(["建议调整"]);
     expect(result).toEqual({ answer: "建议调整", proposal, runId: "run-1", threadId: "thread-1" });
