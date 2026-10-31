@@ -682,7 +682,7 @@ describe("ProjectModel", () => {
     expect(screen.getAllByRole("switch").length).toBeGreaterThan(0);
   });
 
-  it("reads the draft again when adding found it changed, and asks to save once more", async () => {
+  it("reads the draft again when adding found it changed, and asks to add once more", async () => {
     listCatalogsMock.mockResolvedValue({
       items: [
         { id: "cat-001", name: "ERP" },
