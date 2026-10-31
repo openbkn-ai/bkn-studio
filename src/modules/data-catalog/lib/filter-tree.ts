@@ -7,7 +7,10 @@
 
 import type { ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 import BigNumber from "bignumber.js";
-import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
+import {
+  parsePrecisionPreservingJSON,
+  precisionPreservingValueText,
+} from "@/framework/request/precision-safe-json";
 import { temporalFilterValue } from "./filter-temporal";
 
 const COMPARISONS = ["==", "!=", ">", "<", ">=", "<="] as const;
@@ -156,8 +159,8 @@ export function parseFilterCondition(
         kind === "none"
           ? ""
           : Array.isArray(node.value)
-            ? node.value.map(String)
-            : String(node.value),
+            ? node.value.map(precisionPreservingValueText)
+            : precisionPreservingValueText(node.value),
       ...(node.value_from === "field" ? { valueFrom: "field" as const } : {}),
     };
   };

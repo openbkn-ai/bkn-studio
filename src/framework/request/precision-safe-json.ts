@@ -10,6 +10,7 @@ import BigNumber from "bignumber.js";
 import { isLosslessNumber, parse } from "lossless-json";
 
 const precisionPreservingJSON = JSONBig();
+const numericLiterals = new WeakMap<BigNumber, string>();
 
 /** Keep the previous numeric/string boundary and preserve extreme exponents. */
 function preciseNumber(text: string): number | BigNumber {
@@ -17,7 +18,18 @@ function preciseNumber(text: string): number | BigNumber {
   const exact = new BigNumber(text);
   if (!exact.isFinite() || (exact.isZero() && /[1-9]/.test(text.split(/[eE]/)[0])))
     throw new RangeError("JSON number exceeds the supported precision range.");
-  return text.length > 15 || !Number.isFinite(number) || !exact.isEqualTo(number) ? exact : number;
+  if (text.length > 15 || !Number.isFinite(number) || !exact.isEqualTo(number)) {
+    numericLiterals.set(exact, text);
+    return exact;
+  }
+  return number;
+}
+
+/** Keep the original JSON spelling for precise values without expanding extreme exponents. */
+export function precisionPreservingValueText(value: unknown): string {
+  return BigNumber.isBigNumber(value)
+    ? (numericLiterals.get(value) ?? String(value))
+    : String(value);
 }
 
 function parseWithNumbers(data: string, numberValue: (text: string) => unknown): unknown {

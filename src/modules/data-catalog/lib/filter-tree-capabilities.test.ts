@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
+import {
+  parsePrecisionPreservingJSON,
+  transformPrecisionSafeJSONRequest,
+} from "@/framework/request/precision-safe-json";
 import type { FilterGroup } from "./filter-tree";
 import { describe, expect, it } from "vitest";
 import {
@@ -28,6 +31,28 @@ const fields = [
 ];
 
 describe("structured filter capabilities", () => {
+  it.each([
+    "12345678901234567890123",
+    "0.0000000000000000001234500",
+    "1.234567890123456789E+40",
+    "1e-10000000",
+    "1e10000000",
+  ])(
+    "keeps the original precise numeric spelling for scalar and collection inputs: %s",
+    (literal) => {
+      for (const operation of ["==", "in"] as const) {
+        const raw = parsePrecisionPreservingJSON(
+          `{"field":"amount","operation":"${operation}","value":${operation === "in" ? `[${literal}]` : literal}}`,
+        );
+        const parsed = parseFilterCondition(raw)!;
+        expect(parsed.children[0]).toMatchObject({
+          value: operation === "in" ? [literal] : literal,
+        });
+        expect(filterValidationError(parsed, fields)).toBeNull();
+      }
+    },
+  );
+
   it.each(["before", "current"] as const)(
     "round-trips %s week on the source channel",
     (operation) => {
