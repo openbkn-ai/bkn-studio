@@ -245,10 +245,12 @@ describe("ProjectWorkspaceScene", () => {
 
     // Two adopted object types and one relation between them; material_bom waits for its identity
     // and an adopted relation has an unadopted end.
+    // The figure is the object types; the relations are the small line under it.
     expect(
-      await screen.findByText(
-        'bknProject.overview.tiles.ontologyValue:{"objects":2,"relations":1}',
-      ),
+      await screen.findByText('bknProject.overview.tiles.ontologyValue:{"count":2}'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('bknProject.overview.tiles.ontologyRelations:{"count":1}'),
     ).toBeInTheDocument();
     expect(
       screen.getByText('bknProject.overview.tiles.ontologyPendingSub:{"count":2}'),
@@ -286,7 +288,9 @@ describe("ProjectWorkspaceScene", () => {
     settled.items.relationTypes.forEach((item) => (item.adopted = false));
     getDraftMock.mockResolvedValue(settled);
     renderScene();
-    fireEvent.click(await screen.findByText("bknProject.overview.tiles.ontologyAction"));
+    // Once the draft is read, the card shows its relations beside the link.
+    await screen.findByText('bknProject.overview.tiles.ontologyRelations:{"count":0}');
+    fireEvent.click(screen.getByText("bknProject.overview.tiles.ontologyAction"));
     expect(screen.getByTestId("location")).toHaveTextContent(/\/bkn-project\/p1\/model$/);
   });
 

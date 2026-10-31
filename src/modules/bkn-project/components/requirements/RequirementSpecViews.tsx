@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Collapse, Tag } from "antd";
+import { Alert, Collapse } from "antd";
 import dayjs from "dayjs";
 import { type ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
@@ -203,12 +203,14 @@ export function QuestionsView({
       label: (
         <span className={styles.questionRow}>
           <span className={styles.questionText}>{question.text}</span>
-          {question.type ? <Tag>{questionTypeText(t, question.type)}</Tag> : null}
-          <Tag color={question.layer === "knowledge" ? "success" : "default"}>
+          {question.type ? (
+            <LightStatusTag tone="neutral">{questionTypeText(t, question.type)}</LightStatusTag>
+          ) : null}
+          <LightStatusTag tone={question.layer === "knowledge" ? "success" : "neutral"}>
             {layerText(t, question.layer)}
-          </Tag>
+          </LightStatusTag>
           {warnings.length ? (
-            <Tag color="warning">{t(`${PREFIX}.questions.hasWarnings`)}</Tag>
+            <LightStatusTag tone="warning">{t(`${PREFIX}.questions.hasWarnings`)}</LightStatusTag>
           ) : null}
           <EditedTag edited={question.edited} />
         </span>
@@ -537,7 +539,9 @@ function QuestionInputs({
               )}
             </LightStatusTag>
             {described.known ? null : (
-              <Tag color="warning">{t(`${PREFIX}.questions.propertyGone`)}</Tag>
+              <LightStatusTag tone="warning">
+                {t(`${PREFIX}.questions.propertyGone`)}
+              </LightStatusTag>
             )}
             {described.known && input.propertyFromKey ? (
               <span className={styles.muted}>{t(`${PREFIX}.questions.propertyFromKey`)}</span>

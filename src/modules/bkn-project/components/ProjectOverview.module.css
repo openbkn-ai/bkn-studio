@@ -53,6 +53,22 @@
   color: var(--color-text-tertiary);
 }
 
+/* A stat card's bottom row with a short figure on the left and its link on the right. */
+.statFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 36px;
+  border-top: 1px solid var(--color-border);
+}
+
+.statFooterNote {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 /* Where a stat card has no page to open, its line says what the figure means. */
 .statNote {
   display: flex;

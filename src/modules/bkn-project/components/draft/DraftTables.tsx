@@ -6,7 +6,7 @@
  */
 
 import { EditOutlined } from "@ant-design/icons";
-import { Switch, Tag, Tooltip } from "antd";
+import { Switch, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -149,7 +149,9 @@ export function IdentityEvidence({
         {objectType.needsIdentity ? (
           <Tooltip title={details}>
             <span className={styles.identityName}>
-              <Tag color="warning">{t("bknProject.model.identityPending")}</Tag>
+              <LightStatusTag tone="warning">
+                {t("bknProject.model.identityPending")}
+              </LightStatusTag>
             </span>
           </Tooltip>
         ) : (
@@ -162,9 +164,9 @@ export function IdentityEvidence({
         {keyWarnings(key).length ? (
           <span className={styles.tags}>
             {keyWarnings(key).map((warning) => (
-              <Tag color="warning" key={warning.key}>
+              <LightStatusTag key={warning.key} tone="warning">
                 {say(t, warning)}
-              </Tag>
+              </LightStatusTag>
             ))}
           </span>
         ) : null}
