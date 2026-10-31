@@ -102,16 +102,31 @@ export function ReleasePublish({
     };
   }, [projectId, regressionReads, regressionRunning, releasedAs]);
 
+  // Where publishing stands, as the other panels say theirs: ready, published, or waiting.
+  const stateTag = review ? (
+    <LightStatusTag tone="info">{t(`${PREFIX}.state.ready`)}</LightStatusTag>
+  ) : release ? (
+    <LightStatusTag tone="success">{t(`${PREFIX}.state.published`)}</LightStatusTag>
+  ) : (
+    // Confirmed but not checked yet waits for the check, not for confirming: as the line below says.
+    <LightStatusTag tone="neutral">
+      {t(`${PREFIX}.state.${WAITING.has(status.stage) ? "waitCheck" : "waitConfirm"}`)}
+    </LightStatusTag>
+  );
+
   return (
     <Section
       actions={
-        review ? (
-          <AppButton onClick={() => setReviewing(true)} type="primary">
-            {t(`${PREFIX}.${canPublish ? "open" : "openReadOnly"}`, {
-              version: review.suggestedVersion,
-            })}
-          </AppButton>
-        ) : null
+        <>
+          {stateTag}
+          {review ? (
+            <AppButton onClick={() => setReviewing(true)} type="primary">
+              {t(`${PREFIX}.${canPublish ? "open" : "openReadOnly"}`, {
+                version: review.suggestedVersion,
+              })}
+            </AppButton>
+          ) : null}
+        </>
       }
       description={t(`${PREFIX}.description`)}
       title={t(`${PREFIX}.title`)}

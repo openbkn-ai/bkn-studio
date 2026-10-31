@@ -129,3 +129,21 @@
 .row :global(.ant-select) {
   min-width: 160px;
 }
+
+/* The identity in a table cell: its properties by name; the details are its tooltip. */
+.identityName {
+  color: var(--color-text-primary);
+  cursor: help;
+  text-decoration: underline dotted var(--color-text-tertiary);
+  text-underline-offset: 3px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tags :global(.ant-tag) {
+  margin-inline-end: 0;
+}

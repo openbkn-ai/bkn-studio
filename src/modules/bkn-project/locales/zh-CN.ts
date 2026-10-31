@@ -141,6 +141,7 @@ export const bknProjectZhCN = {
         saved: "数据目录已更换，起草时会读取新的数据目录。",
       },
       identity: {
+        detailSeparator: "；",
         title: "选择「{{name}}」的唯一标识",
         intro:
           "唯一标识用来区分每一条记录，值相同的记录会合并成一个实例。只选一个属性时，会统计它在整张表里的重复值和空值。",
@@ -1039,6 +1040,8 @@ export const bknProjectZhCN = {
           reference_time: "参照时间",
         },
         noInputs: "不针对某条具体记录提问",
+        slot: "〈{{name}}〉",
+        hasWarnings: "需要留意",
         propertyGone: "本体中没有这个属性",
         relativeWindow: "统计截至参照时间的最近一段时间，时长以问题为准",
         capabilityWithoutBasis: "这个能力层问题没有写明要用哪个指标、函数或技能。",
@@ -1181,6 +1184,12 @@ export const bknProjectZhCN = {
         readyAgain: "确认之后有新的内容，可以发布为 v{{version}}。",
         waitCheck: "数据校验通过后才能发布。",
         waitConfirm: "确认草稿并通过数据校验后才能发布。",
+        state: {
+          ready: "可以发布",
+          published: "已发布",
+          waitConfirm: "等待确认",
+          waitCheck: "等待校验",
+        },
         publishedTag: "已发布 v{{version}}",
         inUse: "使用方正在用 v{{version}}",
         regressionLabel: "场景问题回归",
