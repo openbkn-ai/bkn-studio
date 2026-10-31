@@ -7,6 +7,7 @@ overrides:
   brace-expansion@5: 5.0.9
   browserslist: 4.28.7
   esbuild: 0.28.1
+  follow-redirects: 1.16.2
   js-yaml: 4.3.2
   postcss: 8.5.23
   zod: 4.6.6
