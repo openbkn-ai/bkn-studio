@@ -48,6 +48,11 @@
   cursor: pointer;
 }
 
+/* A network of the lineage in the header, opened in its workspace. */
+.headerLink {
+  color: var(--color-text-link);
+}
+
 .muted {
   margin: 0;
   color: var(--color-text-tertiary);

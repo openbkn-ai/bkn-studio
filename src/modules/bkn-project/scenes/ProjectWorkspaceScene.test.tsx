@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +15,7 @@ const getProjectMock = vi.hoisted(() => vi.fn());
 const getNetworkMock = vi.hoisted(() => vi.fn());
 const getLatestReleaseMock = vi.hoisted(() => vi.fn());
 const getDraftMock = vi.hoisted(() => vi.fn());
+const getNetworkInUseMock = vi.hoisted(() => vi.fn());
 const directoryMock = vi.hoisted(() => new Map<string, string>());
 const translate = vi.hoisted(
   () => (key: string, options?: Record<string, unknown>) =>
@@ -81,6 +82,10 @@ vi.mock("@/modules/bkn-project/components/requirements/ProjectRequirements", () 
 // The data sources read the project's status, tested on their own.
 vi.mock("@/modules/bkn-project/components/DataSourceHealth", () => ({
   DataSourceHealth: () => null,
+}));
+
+vi.mock("@/modules/bkn-project/services/release.service", () => ({
+  getNetworkInUse: getNetworkInUseMock,
 }));
 
 vi.mock("@/modules/bkn-project/components/draft/DraftConceptGraph", () => ({
@@ -182,7 +187,45 @@ describe("ProjectWorkspaceScene", () => {
       version: "1.0.0",
     });
     getDraftMock.mockResolvedValue(null);
+    getNetworkInUseMock.mockResolvedValue({ base: true, networkId: "orders", version: "" });
     directoryMock.clear();
+  });
+
+  it("links the base network, the one in use and the latest release to their workspaces", async () => {
+    getNetworkInUseMock.mockResolvedValue({
+      base: false,
+      networkId: "orders_v0_9_0",
+      version: "0.9.0",
+    });
+    renderScene();
+
+    const header = (await screen.findByText("Orders network")).closest("section") as HTMLElement;
+    expect(within(header).getByRole("link", { name: "Orders network" })).toHaveAttribute(
+      "href",
+      "/knowledge-network/workspace/orders/overview",
+    );
+    expect(await within(header).findByRole("link", { name: "v0.9.0" })).toHaveAttribute(
+      "href",
+      "/knowledge-network/workspace/orders_v0_9_0/overview",
+    );
+    expect(within(header).getByRole("link", { name: "v1.0.0" })).toHaveAttribute(
+      "href",
+      "/knowledge-network/workspace/orders_v1_0_0/overview",
+    );
+    expect(getNetworkInUseMock).toHaveBeenCalledWith(project);
+  });
+
+  it("says the base network is in use before any release, and that nothing is published", async () => {
+    getLatestReleaseMock.mockResolvedValue(null);
+    renderScene();
+
+    const header = (await screen.findByText("Orders network")).closest("section") as HTMLElement;
+    expect(
+      await within(header).findByRole("link", { name: "bknProject.overview.fields.baseNetwork" }),
+    ).toHaveAttribute("href", "/knowledge-network/workspace/orders/overview");
+    expect(
+      within(header).getByText("bknProject.overview.versions.unpublished"),
+    ).toBeInTheDocument();
   });
 
   it("names the page in the navigation only, and shows the network on the overview", async () => {

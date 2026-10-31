@@ -107,6 +107,7 @@ export const bknProjectEnUS = {
       graph: {
         title: "Concept model",
         emptyDescription: "The draft has no object types yet.",
+        counts: "Object types: {{objects}} · Relations: {{relations}}",
         legend: "Node = object type, edge = relation type, faint and dashed = not adopted yet",
       },
       status: {
@@ -552,7 +553,9 @@ export const bknProjectEnUS = {
         redraft: "Draft again",
       },
       fields: {
-        network: "Target network",
+        baseNetwork: "Base network",
+        inUse: "In use",
+        latestRelease: "Latest release",
         owner: "Owner",
         updated: "Updated",
         id: "ID",

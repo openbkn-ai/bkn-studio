@@ -102,6 +102,7 @@ export const bknProjectZhCN = {
       graph: {
         title: "本体概念模型",
         emptyDescription: "草稿里还没有对象类。",
+        counts: "{{objects}} 个对象类 · {{relations}} 个关系",
         legend: "节点 = 对象类，连线 = 关系类，淡色和虚线 = 还没有采纳",
       },
       status: {
@@ -521,7 +522,9 @@ export const bknProjectZhCN = {
         redraft: "去重新起草",
       },
       fields: {
-        network: "目标网络",
+        baseNetwork: "基础网络",
+        inUse: "在用版本",
+        latestRelease: "最新发布",
         owner: "负责人",
         updated: "更新时间",
         id: "ID",

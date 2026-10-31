@@ -353,6 +353,18 @@ const rollbackNetwork = (network: BackendRollbackNetwork): RollbackNetwork => ({
   version: network.version ?? "",
 });
 
+/**
+ * The network of the project's lineage consumers use: the base network before any switch. A read
+ * that fails gives the base network, which the project always has.
+ */
+export async function getNetworkInUse(project: { id: string; knId: string }) {
+  try {
+    return (await getRollbackPlan(project.id)).from;
+  } catch {
+    return { base: true, networkId: project.knId, version: "" };
+  }
+}
+
 /** What rolling consumers back to the network before the one in use would do; changes nothing. */
 export async function getRollbackPlan(projectId: string): Promise<RollbackPlan> {
   if (useMock) {

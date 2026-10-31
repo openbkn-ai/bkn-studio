@@ -19,7 +19,10 @@ import { useTranslation } from "react-i18next";
 
 import { OntologyGraphView } from "@/modules/knowledge-network/components/preview/OntologyGraphView";
 import { OntologyInspectorPanel } from "@/modules/knowledge-network/components/preview/OntologyInspectorPanel";
-import { typeColors } from "@/modules/knowledge-network/components/preview/ontology-graph-data";
+import {
+  spreadParallelEdges,
+  typeColors,
+} from "@/modules/knowledge-network/components/preview/ontology-graph-data";
 import {
   getKnowledgeNetworkConceptGroup,
   listKnowledgeNetworkConceptGroups,
@@ -51,6 +54,8 @@ type OntologyGraphCardProps = {
   objectTypes?: KnowledgeNetworkObjectTypeRecord[];
   onExpandNode?: (id: string) => void;
   onSelectedIdChange?: (id: string | null) => void;
+  /** Draws relations between the same two types apart, rather than as one line over another. */
+  parallelEdges?: boolean;
   relationTypes?: KnowledgeNetworkRelationTypeRecord[];
   selectedId?: string | null;
   showInspector?: boolean;
@@ -68,6 +73,7 @@ export function OntologyGraphCard({
   objectTypes: objectTypesProp,
   onExpandNode,
   onSelectedIdChange,
+  parallelEdges = false,
   relationTypes: relationTypesProp,
   selectedId: selectedIdProp,
   showInspector = true,
@@ -131,7 +137,8 @@ export function OntologyGraphCard({
   const relationTypes = controlled ? relationTypesProp : fetchedRelationTypes;
 
   const graph = useMemo(() => {
-    const built = buildModelingPreviewGraph(objectTypes, relationTypes);
+    const drawn = buildModelingPreviewGraph(objectTypes, relationTypes);
+    const built = parallelEdges ? spreadParallelEdges(drawn) : drawn;
     if (!fadedIds?.size) {
       return built;
     }
@@ -139,7 +146,7 @@ export function OntologyGraphCard({
       edges: built.edges.map((edge) => (fadedIds.has(edge.id) ? { ...edge, faded: true } : edge)),
       nodes: built.nodes.map((node) => (fadedIds.has(node.id) ? { ...node, faded: true } : node)),
     };
-  }, [fadedIds, objectTypes, relationTypes]);
+  }, [fadedIds, objectTypes, parallelEdges, relationTypes]);
 
   const indexedIds = useMemo(
     () => new Set(objectTypes.filter((item) => item.hasIndex).map((item) => item.id)),

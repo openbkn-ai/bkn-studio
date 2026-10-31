@@ -27,8 +27,9 @@ import {
   listProjects,
   setProjectArchived,
 } from "@/modules/bkn-project/services/project.service";
+import { getNetworkInUse } from "@/modules/bkn-project/services/release.service";
 import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
-import { projectSectionPath } from "@/modules/bkn-project/types/workspace";
+import { networkWorkspacePath, projectSectionPath } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectListScene.module.css";
@@ -207,7 +208,18 @@ export function ProjectListScene() {
       width: 260,
       render: (value: string, record) => (
         <div className={styles.stack}>
-          <span>{networkNames[value] ?? value}</span>
+          {/* Opens the network consumers use now: the base one until a release is switched to. */}
+          <Link
+            onClick={(event) => {
+              event.preventDefault();
+              void getNetworkInUse(record).then(({ networkId }) =>
+                navigate(networkWorkspacePath(networkId)),
+              );
+            }}
+            to={networkWorkspacePath(value)}
+          >
+            {networkNames[value] ?? value}
+          </Link>
           <code className={styles.id}>{value}</code>
           {record.otherProjects > 0 ? (
             <Tag color="warning">

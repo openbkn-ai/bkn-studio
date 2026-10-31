@@ -20,7 +20,7 @@ import { Alert, Spin, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -37,11 +37,17 @@ import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftC
 import { draftGraph } from "@/modules/bkn-project/components/draft/graph";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
 import { DRAFT_POLL_MS, getDraft } from "@/modules/bkn-project/services/draft.service";
+import { getNetworkInUse } from "@/modules/bkn-project/services/release.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
+import type { RollbackNetwork } from "@/modules/bkn-project/types/release";
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
-import { projectSectionPath, type ProjectSection } from "@/modules/bkn-project/types/workspace";
+import {
+  networkWorkspacePath,
+  projectSectionPath,
+  type ProjectSection,
+} from "@/modules/bkn-project/types/workspace";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 // The knowledge network's overview: the project's header card and stat cards are the same.
 import kn from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene.module.css";
@@ -98,6 +104,20 @@ export function ProjectOverview({
     void navigate(
       `${projectSectionPath(project.id, section)}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`,
     );
+
+  // The network consumers use, undefined while it is read.
+  const [inUse, setInUse] = useState<RollbackNetwork | undefined>(undefined);
+  useEffect(() => {
+    let current = true;
+    void getNetworkInUse(project).then((network) => {
+      if (current) {
+        setInUse(network);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [project]);
 
   // undefined while loading, null before the first draft.
   const [draft, setDraft] = useState<Draft | null | undefined>(undefined);
@@ -231,12 +251,24 @@ export function ProjectOverview({
     },
   ];
 
-  const releaseVersion =
+  const inUseVersion =
+    inUse === undefined
+      ? PLACEHOLDER
+      : inUse.base
+        ? t("bknProject.overview.fields.baseNetwork")
+        : `v${inUse.version}`;
+  const latestVersion =
     latestRelease === undefined
       ? PLACEHOLDER
       : latestRelease
         ? `v${latestRelease.version}`
         : t("bknProject.overview.versions.unpublished");
+  // A network of the lineage, opened in its knowledge network workspace.
+  const networkLink = (networkId: string, label: string) => (
+    <Link className={styles.headerLink} to={networkWorkspacePath(networkId)}>
+      {label}
+    </Link>
+  );
   const owner = ownerIsCaller
     ? t("bknProject.list.ownerYou")
     : (directory.get(project.owner.id) ?? project.owner.id);
@@ -262,9 +294,23 @@ export function ProjectOverview({
         <div className={kn.overviewHeaderFooter}>
           <DeploymentUnitOutlined />
           <span className={kn.overviewHeaderFooterLabel}>
-            {t("bknProject.overview.fields.network")}:
+            {t("bknProject.overview.fields.baseNetwork")}:
           </span>
-          <span className={kn.overviewHeaderFooterValue}>{networkName}</span>
+          <span className={kn.overviewHeaderFooterValue}>
+            {networkLink(project.knId, networkName)}
+          </span>
+          <span className={kn.overviewHeaderFooterLabel}>
+            {t("bknProject.overview.fields.inUse")}:
+          </span>
+          <span className={kn.overviewHeaderFooterValue}>
+            {inUse ? networkLink(inUse.networkId, inUseVersion) : inUseVersion}
+          </span>
+          <span className={kn.overviewHeaderFooterLabel}>
+            {t("bknProject.overview.fields.latestRelease")}:
+          </span>
+          <span className={kn.overviewHeaderFooterValue}>
+            {latestRelease ? networkLink(latestRelease.networkId, latestVersion) : latestVersion}
+          </span>
           <UserOutlined />
           <span className={kn.overviewHeaderFooterLabel}>
             {t("bknProject.overview.fields.owner")}:
@@ -426,7 +472,7 @@ export function ProjectOverview({
           {/* Labels and values in a compact two-column grid, not a row stretched end to end. */}
           <dl className={styles.keyValues}>
             <dt>{t("bknProject.overview.versions.live")}</dt>
-            <dd>{releaseVersion}</dd>
+            <dd>{inUseVersion}</dd>
             <dt>{t("bknProject.overview.versions.draft")}</dt>
             <dd>
               {draft

@@ -15,7 +15,9 @@ import { DraftConceptGraph } from "./DraftConceptGraph";
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: object) => (options ? `${key}:${JSON.stringify(options)}` : key),
+  }),
 }));
 
 // Stands in for the drawing: lists what it is given, and clicks the first type.
@@ -37,7 +39,11 @@ vi.mock("@/modules/knowledge-network/components/preview/OntologyGraphView", () =
         </span>
       ))}
       {graph.edges.map((edge) => (
-        <span data-faded={String(Boolean(edge.faded))} key={edge.id}>
+        <span
+          data-curve={edge.curveOffset ?? 0}
+          data-faded={String(Boolean(edge.faded))}
+          key={edge.id}
+        >
           {edge.id}
         </span>
       ))}
@@ -45,15 +51,8 @@ vi.mock("@/modules/knowledge-network/components/preview/OntologyGraphView", () =
   ),
 }));
 
-function renderGraph(onOpen?: (id: string) => void) {
-  render(
-    <DraftConceptGraph
-      draft={mapDraft(mockDraft("p1"))}
-      networkId="n1"
-      onOpen={onOpen}
-      title="Concept model"
-    />,
-  );
+function renderGraph(onOpen?: (id: string) => void, draft = mapDraft(mockDraft("p1"))) {
+  render(<DraftConceptGraph draft={draft} networkId="n1" onOpen={onOpen} title="Concept model" />);
 }
 
 describe("DraftConceptGraph", () => {
@@ -70,6 +69,28 @@ describe("DraftConceptGraph", () => {
     expect(node("material_bom").dataset.faded).toBe("true");
     expect(node("material_bom_to_sales_orders").dataset.faded).toBe("true");
     expect(node("customers").dataset.color).toMatch(/^#/);
+  });
+
+  it("counts every drafted type and relation, and draws two relations of one pair apart", () => {
+    const draft = mapDraft(mockDraft("p1"));
+    const first = draft.items.relationTypes[0];
+    draft.items.relationTypes.push({ ...first, id: `${first.id}_again`, name: `${first.name}2` });
+    renderGraph(undefined, draft);
+
+    expect(
+      screen.getByText(
+        `bknProject.model.graph.counts:${JSON.stringify({
+          objects: draft.items.objectTypes.length,
+          relations: draft.items.relationTypes.length,
+        })}`,
+      ),
+    ).toBeInTheDocument();
+    const edge = (id: string) =>
+      screen.getAllByText(id).find((element) => element.dataset.curve !== undefined)!;
+    expect(Number(edge(first.id).dataset.curve)).not.toBe(0);
+    expect(Number(edge(`${first.id}_again`).dataset.curve)).toBe(
+      -Number(edge(first.id).dataset.curve),
+    );
   });
 
   it("opens the same object type on every click", () => {
