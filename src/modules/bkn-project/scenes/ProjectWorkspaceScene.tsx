@@ -166,7 +166,7 @@ export function ProjectWorkspaceScene({
           className={
             section === "overview"
               ? `${kn.workspaceContent} ${kn.workspaceContentOverview}`
-              : kn.workspaceContent
+              : `${kn.workspaceContent} ${styles.content}`
           }
         >
           <div className={section === "overview" ? kn.overviewBox : kn.workspaceSectionPage}>
@@ -183,6 +183,7 @@ export function ProjectWorkspaceScene({
             ) : section === "model" ? (
               <ProjectModel
                 focus={searchParams.get("focus")}
+                initialObject={searchParams.get("object")}
                 initialTab={searchParams.get("tab")}
                 // The check and the local indexes of a confirmation show on the release page.
                 onConfirmed={() => void navigate(projectSectionPath(project.id, "release"))}

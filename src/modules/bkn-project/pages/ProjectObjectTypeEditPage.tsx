@@ -5,21 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 
-import { ProjectObjectTypeEditScene } from "@/modules/bkn-project/scenes/ProjectObjectTypeEditScene";
-import { KnowledgeNetworkResourceConfigStandalonePage } from "@/modules/knowledge-network/pages/KnowledgeNetworkResourceConfigStandalonePage";
+import { projectObjectTypePath } from "@/modules/bkn-project/types/workspace";
 
-/** An object type of a project's draft, edited full screen as a network's object type is. */
+/** An object type's former editing page: it opens in the modeling page's panel now. */
 export function ProjectObjectTypeEditPage() {
   const { itemId = "", projectId = "" } = useParams<{ itemId: string; projectId: string }>();
-  return (
-    <KnowledgeNetworkResourceConfigStandalonePage immersive>
-      <ProjectObjectTypeEditScene
-        itemId={itemId}
-        key={`${projectId}/${itemId}`}
-        projectId={projectId}
-      />
-    </KnowledgeNetworkResourceConfigStandalonePage>
-  );
+  return <Navigate replace to={projectObjectTypePath(projectId, itemId)} />;
 }

@@ -418,9 +418,32 @@ describe("ProjectModel", () => {
 
     // The graph lists the types beside it too; the table's row is the last.
     fireEvent.click((await screen.findAllByRole("button", { name: /^customers/ })).at(-1)!);
-    expect(screen.getByTestId("location")).toHaveTextContent(
-      `/bkn-project/${project.id}/model/object-types/customers`,
+    // In a panel over the page: the page stays where it was, under it.
+    const panel = await screen.findByRole("region", { name: "bknProject.objectEditor.title" });
+    expect(within(panel).getByDisplayValue("customers")).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent(`/`);
+    expect(screen.getAllByRole("button", { name: /^customers/ }).length).toBeGreaterThan(0);
+
+    fireEvent.click(within(panel).getByRole("button", { name: "bknProject.objectEditor.close" }));
+    expect(screen.queryByRole("region", { name: "bknProject.objectEditor.title" })).toBeNull();
+  });
+
+  it("opens the object type a link asked for in the panel", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderWithoutAntdStyles(
+      <MemoryRouter>
+        <ProjectModel
+          initialObject="customers"
+          onConfirmed={vi.fn()}
+          onProjectChange={onProjectChange}
+          ownerIsCaller
+          project={project}
+        />
+      </MemoryRouter>,
     );
+    expect(
+      await screen.findByRole("region", { name: "bknProject.objectEditor.title" }),
+    ).toBeInTheDocument();
   });
 
   it("opens an object type with its identity, properties and the fields left out", async () => {
