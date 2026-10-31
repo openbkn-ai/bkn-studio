@@ -585,6 +585,12 @@ export const bknProjectZhCN = {
         draftUpdated: "{{time}} 更新",
       },
     },
+    collapsedList: {
+      showAll: "展开全部（共 {{count}} 条）",
+      showAll_one: "展开全部（共 {{count}} 条）",
+      showAll_other: "展开全部（共 {{count}} 条）",
+      collapse: "收起",
+    },
     listSeparator: "、",
     sentenceSeparator: "",
     understand: {
