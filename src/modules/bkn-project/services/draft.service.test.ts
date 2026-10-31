@@ -508,8 +508,27 @@ describe("draft.service", () => {
       );
       const added = made.items.relationTypes.at(-1)!;
       expect(added).toMatchObject({ name: "Again", origin: "manual" });
-      const left = await settle(deleteDraftRelationType("p-001", added.id, made.updateTime));
+      // Made after it, deleting the first and making a third leaves every id its own.
+      const second = await settle(
+        createDraftRelationType("p-001", made.updateTime, {
+          ...join,
+          mapping: [{ sourceProperty: "order_no", targetProperty: "name" }],
+          name: "Second",
+        }),
+      );
+      const kept = second.items.relationTypes.at(-1)!;
+      const left = await settle(deleteDraftRelationType("p-001", added.id, second.updateTime));
       expect(left.items.relationTypes.map((item) => item.id)).not.toContain(added.id);
+      const third = await settle(
+        createDraftRelationType("p-001", left.updateTime, {
+          ...join,
+          mapping: [{ sourceProperty: "order_no", targetProperty: "customer_id" }],
+          name: "Third",
+        }),
+      );
+      const ids = third.items.relationTypes.map((item) => item.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(ids).toContain(kept.id);
     } finally {
       vi.useRealTimers();
     }

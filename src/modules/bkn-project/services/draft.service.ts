@@ -752,6 +752,15 @@ const mockPairs = (mapping: DraftRelationTypeSave["mapping"]) =>
     target_property: pair.targetProperty,
   }));
 
+/** The first id from `stem` no relation of the draft has: a deleted one leaves its number free. */
+function freeMockRelationId(relations: { id: string }[], stem: string) {
+  let n = relations.length + 1;
+  while (relations.some((item) => item.id === `${stem}_${n}`)) {
+    n += 1;
+  }
+  return `${stem}_${n}`;
+}
+
 function saveMockRelationType(
   projectId: string,
   updateTime: number,
@@ -851,7 +860,7 @@ function saveMockRelationType(
         rows: 0,
         source_distinct: 0,
       },
-      id: `${value.source}_to_${value.target}_${relations.length + 1}`,
+      id: freeMockRelationId(relations, `${value.source}_to_${value.target}`),
       name: value.name,
       origin: "manual",
       verification: "unconfirmed",
