@@ -38,6 +38,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { DEFAULT_RESOURCE_COLOR } from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { listObjectTypeResourceFields } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -350,6 +351,8 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const [mappingFilter, setMappingFilter] = useState<MappingFilter>("all");
   const [connections, setConnections] = useState<ConnectionPoint[]>([]);
   const [alertMessage, setAlertMessage] = useState("");
+  // The resource whose fields could not be read: the page says so instead of an empty list.
+  const [fieldsFailedId, setFieldsFailedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<ObjectTypeDataProperty | undefined>();
   const [descriptionFillModalOpen, setDescriptionFillModalOpen] = useState(false);
@@ -501,26 +504,39 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     );
   }, [t]);
 
-  const loadViewFields = useCallback(
+  // A resource's fields as the canvas lists them; a read that fails throws.
+  const readViewFields = useCallback(
     async (viewId: string) => {
-      if (!viewId) {
-        setViewFields([]);
-        return [];
-      }
-
       const fields = await (readResourceFields
         ? readResourceFields(viewId)
         : listObjectTypeResourceFields(networkId, viewId));
-      const filteredFields = fields
+      return fields
         .filter((item) => isSupportedResourceFieldName(item.name))
         .map((item) => ({
           ...item,
           name: item.name.replace(/\./g, "_"),
         }));
-      setViewFields(filteredFields);
-      return filteredFields;
     },
     [networkId, readResourceFields],
+  );
+
+  // The fields of the resource the object type is bound to. When they cannot be read the page says
+  // so: not an empty table, and nothing is mapped against fields that are not known.
+  const loadViewFields = useCallback(
+    async (viewId: string) => {
+      if (!viewId) {
+        setViewFields([]);
+        return;
+      }
+      try {
+        setViewFields(await readViewFields(viewId));
+        setFieldsFailedId(null);
+      } catch {
+        setViewFields([]);
+        setFieldsFailedId(viewId);
+      }
+    },
+    [readViewFields],
   );
 
   useEffect(() => {
@@ -686,11 +702,20 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   );
 
   const handleSelectResource = async (view: ObjectTypeDataSource) => {
-    setSelectedViewId(view.id);
     setPendingViewField(null);
     setResourceModalOpen(false);
 
-    const filteredFields = await loadViewFields(view.id);
+    let filteredFields: ObjectTypeResourceField[];
+    try {
+      filteredFields = await readViewFields(view.id);
+    } catch {
+      // The resource stays the one it was, with its fields and mappings: nothing was changed.
+      setAlertMessage(t("knowledgeNetwork.objectTypeReplaceResourceFieldsFailed"));
+      return;
+    }
+    setSelectedViewId(view.id);
+    setViewFields(filteredFields);
+    setFieldsFailedId(null);
     const mappedProperties = buildMappedPropertiesFromViewFields(filteredFields, dataProperties);
 
     updateProperties(mappedProperties, view);
@@ -1145,6 +1170,18 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   return (
     <div className={styles.root}>
+      {fieldsFailedId ? (
+        <Alert
+          action={
+            <AppButton onClick={() => void loadViewFields(fieldsFailedId)} size="small">
+              {t("common.retry")}
+            </AppButton>
+          }
+          banner
+          message={t("knowledgeNetwork.objectTypeResourceFieldsFailed")}
+          type="error"
+        />
+      ) : null}
       {alertMessage ? (
         <Alert
           banner
@@ -1226,12 +1263,15 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
           options={mappingFilterOptions}
           value={mappingFilter}
         />
-        <span className={styles.mappingSummary}>
-          {t("knowledgeNetwork.objectTypeMappingSummary", {
-            mapped: mappedPropertyCount,
-            total: validProperties.length,
-          })}
-        </span>
+        {/* Without the fields there is no telling what maps them. */}
+        {fieldsFailedId ? null : (
+          <span className={styles.mappingSummary}>
+            {t("knowledgeNetwork.objectTypeMappingSummary", {
+              mapped: mappedPropertyCount,
+              total: validProperties.length,
+            })}
+          </span>
+        )}
       </div>
 
       <div className={styles.canvasWrapper}>
