@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import iconfontSvg from "./iconfont.svg?raw";
+import iconfontSvg from "./iconfont-dip-object.svg?raw";
 
 const SPRITE_ID = "resource-iconfont-dip-object-sprite";
 

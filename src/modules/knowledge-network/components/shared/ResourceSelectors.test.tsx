@@ -11,7 +11,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/app/locales/i18n";
 
 import { ResourceColorSelect } from "./ResourceColorSelect";
-import { ResourceIconSelect } from "./ResourceIconSelect";
+import {
+  DEFAULT_RESOURCE_ICON,
+  RESOURCE_ICON_OPTIONS,
+  ResourceIconSelect,
+  renderResourceIcon,
+} from "./ResourceIconSelect";
 
 beforeEach(async () => {
   await i18n.changeLanguage("en-US");
@@ -41,10 +46,45 @@ describe("resource appearance selectors", () => {
 
     fireEvent.click(screen.getByRole("button"));
 
-    expect(screen.getByPlaceholderText("Search icons by keyword")).toBeTruthy();
+    fireEvent.change(screen.getByPlaceholderText("Search icons by keyword"), {
+      target: { value: "代码" },
+    });
 
-    const iconButtons = screen.getAllByRole("button");
-    fireEvent.click(iconButtons[2]);
-    expect(onChange).toHaveBeenCalled();
+    fireEvent.click(screen.getByTitle("代码"));
+    expect(onChange).toHaveBeenCalledWith("icon-daima");
+  });
+
+  it("emits the default icon when the value is empty", () => {
+    const onChange = vi.fn();
+    render(<ResourceIconSelect inModal={false} onChange={onChange} />);
+
+    expect(onChange).toHaveBeenCalledWith(DEFAULT_RESOURCE_ICON);
+  });
+
+  it("injects a drawable symbol for every icon option and keeps icon references compatible", () => {
+    const { container } = render(
+      <>
+        {renderResourceIcon("icon-yingyongguanli")}
+        <ResourceIconSelect inModal={false} value="icon-yingyongguanli" />
+      </>,
+    );
+
+    const sprite = document.getElementById("resource-iconfont-dip-object-sprite");
+    const symbolIds = Array.from(sprite?.querySelectorAll("symbol") ?? [], (symbol) => symbol.id);
+    expect(symbolIds).toHaveLength(RESOURCE_ICON_OPTIONS.length);
+    expect(new Set(symbolIds)).toEqual(
+      new Set(RESOURCE_ICON_OPTIONS.map((option) => option.value)),
+    );
+
+    for (const symbolId of symbolIds) {
+      const symbol = sprite?.querySelector(`#${symbolId}`);
+      expect(symbol?.namespaceURI).toBe("http://www.w3.org/2000/svg");
+      expect(symbol?.querySelector("path[d]")).toBeTruthy();
+    }
+
+    const renderedUse = container.querySelector("use");
+    expect(renderedUse?.getAttribute("href") ?? renderedUse?.getAttribute("xlink:href")).toBe(
+      "#icon-yingyongguanli",
+    );
   });
 });
