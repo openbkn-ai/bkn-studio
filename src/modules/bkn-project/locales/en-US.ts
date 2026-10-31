@@ -339,7 +339,7 @@ export const bknProjectEnUS = {
           "{{count}} relation types are adopted although an object type they connect is not. Unadopt them, or adopt the object types at both ends first.",
       },
       candidates: {
-        catalog: "Filter by added catalog",
+        catalog: "Filter by catalog",
         allCatalogs: "All catalogs",
         acceptSuggestions: "Accept all suggestions",
         acceptTitle: "Confirm every candidate as drafting suggested?",

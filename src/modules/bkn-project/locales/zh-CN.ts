@@ -311,7 +311,7 @@ export const bknProjectZhCN = {
           "有 {{count}} 个关系类已采纳，但它连接的对象类没有采纳。请取消采纳这些关系类，或先采纳两端的对象类。",
       },
       candidates: {
-        catalog: "按新增目录筛选",
+        catalog: "按目录筛选",
         allCatalogs: "全部目录",
         acceptSuggestions: "按建议全部采纳",
         acceptTitle: "按起草建议确认全部候选？",

@@ -1140,7 +1140,7 @@ export async function getCandidates(projectId: string, catalogId = ""): Promise<
         : null,
       reviewed: item.reviewed ?? null,
       state: item.state,
-      table: item.table ? { name: item.table.name, rows: item.rows ?? 0 } : null,
+      table: item.table ? { name: item.table.name, rows: item.rows ?? null } : null,
     })),
   };
 }

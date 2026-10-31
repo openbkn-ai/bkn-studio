@@ -47,6 +47,7 @@ export function CandidatesList({
   accepting,
   candidates,
   catalog,
+  catalogIds,
   catalogNames,
   draft,
   error,
@@ -57,8 +58,10 @@ export function CandidatesList({
   accepting: boolean;
   /** undefined while it is read. */
   candidates: Candidates | undefined;
-  /** The added catalog the list keeps to; empty for all. */
+  /** The catalog the list keeps to; empty for all. */
   catalog: string;
+  /** The project's catalogs, to keep the list to one of. */
+  catalogIds: string[];
   catalogNames: Record<string, string>;
   draft: Draft;
   error: string | null;
@@ -70,13 +73,6 @@ export function CandidatesList({
 }) {
   const { t } = useTranslation();
   const items = candidates?.items ?? [];
-  // The catalogs added to the project, as far as their candidates tell.
-  const added = [
-    ...new Set([
-      ...items.map((item) => item.addedByCatalog).filter(Boolean),
-      ...(catalog ? [catalog] : []),
-    ]),
-  ];
 
   const columns: ColumnsType<Candidate> = [
     {
@@ -157,8 +153,11 @@ export function CandidatesList({
       title: t(`${PREFIX}.columns.source`),
       key: "source",
       render: (_value, record) =>
+        // A row count only where bkn-project gave one; never a made-up zero.
         record.table
-          ? t(`${PREFIX}.source`, { name: record.table.name, rows: record.table.rows })
+          ? record.table.rows === null
+            ? record.table.name
+            : t(`${PREFIX}.source`, { name: record.table.name, rows: record.table.rows })
           : null,
     },
   ];
@@ -166,13 +165,13 @@ export function CandidatesList({
   return (
     <div className={styles.stack}>
       <div className={styles.toolbar}>
-        {added.length ? (
+        {catalogIds.length > 1 ? (
           <Select
             aria-label={t(`${PREFIX}.catalog`)}
             onChange={onCatalog}
             options={[
               { label: t(`${PREFIX}.allCatalogs`), value: "" },
-              ...added.map((id) => ({ label: catalogNames[id] ?? id, value: id })),
+              ...catalogIds.map((id) => ({ label: catalogNames[id] ?? id, value: id })),
             ]}
             style={{ minWidth: 200 }}
             value={catalog}

@@ -199,8 +199,8 @@ export type Candidate = {
   } | null;
   reviewed: { by: ProjectAccount; time: number } | null;
   state: CandidateState;
-  /** The table it comes from, and how many rows it has; null when there is none. */
-  table: { name: string; rows: number } | null;
+  /** The table it comes from, and how many rows it has when known; null when there is none. */
+  table: { name: string; rows: number | null } | null;
 };
 
 /** The candidates in the order to confirm them: what requirements need first, then the rest. */

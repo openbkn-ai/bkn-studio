@@ -42,7 +42,12 @@ const list: Candidates = {
       neededBy: { concepts: [{ id: "c1", term: "Client" }], questions: [] },
       table: { name: "customers", rows: 120 },
     }),
-    candidate({ addedByCatalog: "cat-2", id: "material_bom", name: "BOM" }),
+    candidate({
+      addedByCatalog: "cat-2",
+      id: "material_bom",
+      name: "BOM",
+      table: { name: "bom", rows: null },
+    }),
     candidate({ id: "material_bom_to_sales_orders", kind: "relation_types", name: "BOM orders" }),
     candidate({ excludeReason: "A log", id: "sales_orders", name: "Orders", state: "excluded" }),
   ],
@@ -72,6 +77,7 @@ function renderList(extra: Partial<Parameters<typeof CandidatesList>[0]> = {}) {
     accepting: false,
     candidates: list,
     catalog: "",
+    catalogIds: ["cat-001", "cat-2"],
     catalogNames: { "cat-2": "CRM" },
     draft: mapDraft(mockDraft("p1")),
     error: null,
@@ -107,6 +113,8 @@ describe("CandidatesList", () => {
     expect(
       within(row("BOM orders")).getByText("bknProject.model.candidates.mark.ends"),
     ).toBeInTheDocument();
+    // Without a row count, only the table's name: never a made-up zero.
+    expect(within(row("BOM")).getByText("bom")).toBeInTheDocument();
     expect(
       within(row("Orders")).getByText("bknProject.model.candidates.state.excluded"),
     ).toBeInTheDocument();
@@ -126,9 +134,10 @@ describe("CandidatesList", () => {
     expect(props.onAcceptSuggestions).toHaveBeenCalled();
   });
 
-  it("offers nothing to change where nothing can, and no catalog filter without added ones", () => {
+  it("offers nothing to change where nothing can, and no catalog filter with one catalog", () => {
     renderList({
       candidates: { ...list, items: [list.items[0]] },
+      catalogIds: ["cat-001"],
       onAcceptSuggestions: undefined,
       onOpen: undefined,
     });

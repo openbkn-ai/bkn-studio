@@ -7,7 +7,7 @@
 
 import { PlusOutlined } from "@ant-design/icons";
 import { Alert, Segmented, Space, Spin } from "antd";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
@@ -142,6 +142,8 @@ export function ProjectModel({
   const [accepting, setAccepting] = useState(false);
   // The candidates in the order they are gone through, from where one was opened in the list.
   const [reviewOrder, setReviewOrder] = useState<Candidate[] | null>(null);
+  // Counts the draft read again under an open panel, which then starts over from it.
+  const [panelReads, setPanelReads] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
   // A link's object type is open until the panel closes: the link then no longer opens it again.
   const closePanel = () => {
@@ -181,14 +183,28 @@ export function ProjectModel({
 
   // The candidates follow the draft: read again whenever it changes.
   const candidatesTime = draft?.status === "ready" ? draft.updateTime : null;
+  // Only the latest read counts: an earlier one answering late, as for another catalog, is dropped.
+  const candidateReads = useRef(0);
+  // How many candidates of the whole draft wait, whichever catalog the list is kept to.
+  const [pendingTotal, setPendingTotal] = useState(0);
   const loadCandidates = useCallback(async () => {
+    const read = ++candidateReads.current;
     try {
-      const next = await getCandidates(project.id, candidateCatalog);
+      const [next, all] = await Promise.all([
+        getCandidates(project.id, candidateCatalog),
+        candidateCatalog ? getCandidates(project.id) : null,
+      ]);
+      if (read !== candidateReads.current) {
+        return null;
+      }
       setCandidates(next);
+      setPendingTotal((all ?? next).counts.pending);
       setCandidatesError(null);
-      return next;
+      return all ?? next;
     } catch (error) {
-      setCandidatesError(extractRequestErrorMessage(error));
+      if (read === candidateReads.current) {
+        setCandidatesError(extractRequestErrorMessage(error));
+      }
       return null;
     }
   }, [candidateCatalog, project.id]);
@@ -685,7 +701,9 @@ export function ProjectModel({
       } catch (error) {
         if (draftErrorCode(error) === "Stale") {
           message.warning(t("bknProject.model.edit.stale"));
+          // The panel opens again on the draft as it is now, so the next decision follows it.
           await loadDraft();
+          setPanelReads((count) => count + 1);
           return;
         }
         message.error(extractRequestErrorMessage(error));
@@ -754,7 +772,7 @@ export function ProjectModel({
     ...(draft.status === "ready"
       ? [
           {
-            label: t("bknProject.model.tabs.review", { count: candidates?.counts.pending ?? 0 }),
+            label: t("bknProject.model.tabs.review", { count: pendingTotal }),
             value: "review" as const,
           },
         ]
@@ -884,6 +902,7 @@ export function ProjectModel({
               accepting={accepting}
               candidates={candidates}
               catalog={candidateCatalog}
+              catalogIds={project.catalogIds}
               catalogNames={catalogNames}
               draft={draft}
               error={candidatesError ? t("bknProject.model.candidates.loadFailed") : null}
@@ -969,7 +988,7 @@ export function ProjectModel({
           {relationPanel && editable ? (
             <RelationTypePanel
               draft={draft}
-              key={relationPanel.id ?? "new"}
+              key={`${relationPanel.id ?? "new"}/${panelReads}`}
               onClose={() => setRelationPanel(null)}
               onReload={readDraftAgain}
               onSaved={setDraft}
@@ -981,7 +1000,7 @@ export function ProjectModel({
           {panelId && editable ? (
             <ObjectTypePanel
               draft={draft}
-              key={panelId}
+              key={`${panelId}/${panelReads}`}
               objectTypeId={panelId}
               onAsk={() => setOpenId(panelId)}
               onClose={closePanel}

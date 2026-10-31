@@ -499,6 +499,77 @@ describe("ProjectModel", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens the panel again on the draft read after a decision found it changed", async () => {
+    const draft = ready();
+    const moved = { ...ready(), updateTime: draft.updateTime + 5 };
+    getDraftMock.mockResolvedValueOnce(draft).mockResolvedValue(moved);
+    getCandidatesMock.mockResolvedValue({
+      counts: { adopted: 0, excluded: 0, pending: 1 },
+      items: [
+        {
+          addedByCatalog: "",
+          adopted: false,
+          excludeReason: "",
+          id: "customers",
+          kind: "object_types",
+          name: "customers",
+          neededBy: null,
+          reviewed: null,
+          state: "pending",
+          table: null,
+        },
+      ],
+    });
+    editDraftItemMock.mockRejectedValueOnce(conflict("Stale")).mockResolvedValue(moved);
+    renderModel(undefined, undefined, "review");
+
+    await screen.findAllByText("bknProject.model.candidates.state.pending");
+    fireEvent.click(screen.getAllByRole("button", { name: "customers" }).at(-1)!);
+    const adopt = async () =>
+      fireEvent.click(
+        within(
+          await screen.findByRole("region", { name: "bknProject.objectEditor.title" }),
+        ).getByRole("button", { name: "bknProject.model.candidates.review.adoptNext" }),
+      );
+    await adopt();
+    await waitFor(() => expect(messageMock.warning).toHaveBeenCalled());
+    await adopt();
+    await waitFor(() =>
+      expect(editDraftItemMock).toHaveBeenLastCalledWith(
+        "p1",
+        "object_types",
+        "customers",
+        moved.updateTime,
+        { adopted: true },
+      ),
+    );
+  });
+
+  it("keeps the latest read of the candidates, and counts the whole draft on the tab", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    let answerAll: (value: unknown) => void = () => undefined;
+    const counts = (pending: number) => ({ adopted: 0, excluded: 0, pending });
+    getCandidatesMock.mockImplementation((_id: string, catalog = "") =>
+      catalog
+        ? Promise.resolve({ counts: counts(1), items: [] })
+        : new Promise((resolve) => (answerAll = resolve)),
+    );
+    renderModel({ catalogIds: ["cat-001", "cat-2"] }, undefined, "review");
+    await waitFor(() => expect(getCandidatesMock).toHaveBeenCalled());
+    const first = answerAll;
+
+    // Kept to a catalog: the list reads it, and the whole draft for the tab's count.
+    fireEvent.mouseDown(
+      await screen.findByRole("combobox", { name: "bknProject.model.candidates.catalog" }),
+    );
+    fireEvent.click(await screen.findByTitle("cat-2"));
+    await waitFor(() => expect(getCandidatesMock).toHaveBeenCalledWith("p1", "cat-2"));
+    answerAll({ counts: counts(4), items: [] });
+    // The first read for all catalogs answers last, and is dropped.
+    first({ counts: counts(9), items: [] });
+    expect(await screen.findByText('bknProject.model.tabs.review:{"count":4}')).toBeInTheDocument();
+  });
+
   it("accepts the suggestions over the draft, saying how many wait for a person", async () => {
     const draft = ready();
     getDraftMock.mockResolvedValue(draft);
