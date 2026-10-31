@@ -52,6 +52,7 @@
     "graphology-types": "0.24.8",
     "i18next": "^25.6.0",
     "json-bigint": "^1.0.0",
+    "lossless-json": "4.3.3",
     "monaco-editor": "^0.52.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

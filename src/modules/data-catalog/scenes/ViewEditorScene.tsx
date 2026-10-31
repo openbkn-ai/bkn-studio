@@ -21,6 +21,10 @@ import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  formatPrecisionSafeJSON,
+  transformPrecisionSafeJSONRequest,
+} from "@/framework/request/precision-safe-json";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { LimitedTagsSelect } from "@/framework/ui/common/LimitedTagsSelect";
@@ -214,7 +218,7 @@ export function ViewEditorScene({
           })) ?? [];
         setFields(viewFields);
         const existingFilter = currentView?.logicDefinition?.filterCondition;
-        const parsed = parseFilterCondition(existingFilter);
+        const parsed = parseFilterCondition(existingFilter, sourceFilterQueryPath(currentSource));
         const cannotEditFilter = Boolean(existingFilter) && parsed === null;
         setFilter(parsed ?? emptyFilterGroup());
         setUnsupportedFilter(cannotEditFilter);
@@ -949,6 +953,18 @@ export function ViewEditorScene({
                     {unsupportedFilter ? (
                       <Alert
                         message={t("dataCatalog.viewEditor.unsupportedFilter")}
+                        description={
+                          <Input.TextArea
+                            readOnly
+                            aria-label={t("dataCatalog.viewEditor.fixedFilter")}
+                            autoSize={{ minRows: 3, maxRows: 12 }}
+                            value={formatPrecisionSafeJSON(
+                              transformPrecisionSafeJSONRequest(
+                                view?.logicDefinition?.filterCondition,
+                              ),
+                            )}
+                          />
+                        }
                         showIcon
                         type="warning"
                       />

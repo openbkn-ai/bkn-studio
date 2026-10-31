@@ -6,22 +6,66 @@
  */
 
 import JSONBig from "json-bigint";
+import BigNumber from "bignumber.js";
+import { isLosslessNumber, parse } from "lossless-json";
 
-const precisionSafeJSON = JSONBig({ storeAsString: true });
 const precisionPreservingJSON = JSONBig();
+const numericLiterals = new WeakMap<BigNumber, string>();
 
-/**
- * Parses JSON without converting integers outside JavaScript's safe range to
- * lossy numbers. Unsafe integers become decimal strings; safe integers keep
- * their number type.
- */
+/** Keep the previous numeric/string boundary and preserve extreme exponents. */
+function preciseNumber(text: string): number | BigNumber {
+  const number = Number(text);
+  const exact = new BigNumber(text);
+  if (!exact.isFinite() || (exact.isZero() && /[1-9]/.test(text.split(/[eE]/)[0])))
+    throw new RangeError("JSON number exceeds the supported precision range.");
+  if (text.length > 15 || !Number.isFinite(number) || !exact.isEqualTo(number)) {
+    numericLiterals.set(exact, text);
+    return exact;
+  }
+  return number;
+}
+
+/** Keep the original JSON spelling for precise values without expanding extreme exponents. */
+export function precisionPreservingValueText(value: unknown): string {
+  return BigNumber.isBigNumber(value)
+    ? (numericLiterals.get(value) ?? String(value))
+    : String(value);
+}
+
+function parseWithNumbers(data: string, numberValue: (text: string) => unknown): unknown {
+  return parse(
+    data,
+    (key, value) => {
+      // Retain json-bigint's existing protection for special object keys.
+      if (key === "__proto__" || key === "constructor")
+        throw new SyntaxError("Unsupported JSON object key.");
+      return isLosslessNumber(value) ? numberValue(value.value) : value;
+    },
+    { onDuplicateKey: ({ newValue }) => newValue },
+  );
+}
+
+/** Unsafe numeric literals remain decimal strings; safe numbers keep their type. */
 export function parsePrecisionSafeJSON(data: string): unknown {
-  return precisionSafeJSON.parse(data) as unknown;
+  return parseWithNumbers(data, (text) => {
+    try {
+      const value = preciseNumber(text);
+      return BigNumber.isBigNumber(value) ? text : value;
+    } catch (error) {
+      if (error instanceof RangeError) return text;
+      throw error;
+    }
+  });
+}
+
+/** Retain numeric literals as numbers or BigNumbers, distinct from quoted strings. */
+export function parsePrecisionPreservingJSON(data: string): unknown {
+  return parseWithNumbers(data, preciseNumber);
 }
 
 /** Pretty-prints JSON while keeping precise numeric literals as JSON numbers. */
 export function formatPrecisionSafeJSON(data: string): string {
-  return precisionPreservingJSON.stringify(precisionPreservingJSON.parse(data), null, 2);
+  return precisionPreservingJSON.stringify(parsePrecisionPreservingJSON(data), null, 2);
 }
 
 /** Axios request transformer for bodies containing precise numeric literals. */

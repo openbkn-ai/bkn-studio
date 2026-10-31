@@ -184,9 +184,12 @@ export function ResourcePreviewPanel({
     resource.schema.some((field) => field.type.trim().toLowerCase() === "binary");
   const queriesSource = !hasLocalIndex || ignoreLocalIndex;
   const queryPath: FilterQueryPath =
+    resource.category === "dataset" ||
     resource.category === "index" ||
     (resource.category === "table" && !queriesSource) ||
-    (resource.category === "logical_view" && result?.querySource === "local_index")
+    (resource.category === "logical_view" &&
+      (resource.sourceMetadata?.sourceCategory === "index" ||
+        result?.querySource === "local_index"))
       ? "local_index"
       : "source";
   const activeFilter =
