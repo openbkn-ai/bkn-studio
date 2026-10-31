@@ -16,6 +16,11 @@ import { useCapability } from "@/framework/entitlement/use-entitlement";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import {
+  isPropertyDisplayNameWithinLimit,
+  PROPERTY_DISPLAY_NAME_COUNT,
+  PROPERTY_DISPLAY_NAME_MAX_LENGTH,
+} from "@/modules/knowledge-network/lib/resource-constraints";
 import type {
   ObjectTypeDataProperty,
   ObjectTypeMaskRule,
@@ -373,13 +378,27 @@ export function ObjectTypeDataAttributeFormDrawer({
                   message: t("knowledgeNetwork.objectTypePropertyDisplayNameRequired"),
                   required: true,
                 },
+                {
+                  validator: (_rule, value?: string) =>
+                    isPropertyDisplayNameWithinLimit(value ?? "")
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(
+                            t("knowledgeNetwork.objectTypePropertyDisplayNameMaxLength", {
+                              max: PROPERTY_DISPLAY_NAME_MAX_LENGTH,
+                            }),
+                          ),
+                        ),
+                },
               ]}
             >
               <Input
+                count={PROPERTY_DISPLAY_NAME_COUNT}
                 onChange={() => {
                   isDisplayNameManuallyEdited.current = true;
                 }}
                 placeholder={t("knowledgeNetwork.pleaseInput")}
+                showCount
               />
             </Form.Item>
             <Form.Item

@@ -211,6 +211,32 @@ describe("ObjectTypeDataAttributeFormDrawer modes", () => {
     expect(screen.getByText("knowledgeNetwork.objectTypePropertyName")).not.toBeNull();
   });
 
+  it("rejects a data-property display name over 128 Unicode code points", async () => {
+    const onSubmit = vi.fn();
+
+    render(
+      <ObjectTypeDataAttributeFormDrawer
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+        open
+        property={property}
+      />,
+    );
+
+    const displayNameInput = await screen.findByLabelText(
+      "knowledgeNetwork.objectTypePropertyDisplayName",
+    );
+    const oversizedDisplayName = "😀".repeat(129);
+    fireEvent.change(displayNameInput, { target: { value: oversizedDisplayName } });
+    expect(displayNameInput).toHaveValue(oversizedDisplayName);
+    fireEvent.click(screen.getByRole("button", { name: "common.ok" }));
+
+    expect(
+      await screen.findByText("knowledgeNetwork.objectTypePropertyDisplayNameMaxLength"),
+    ).not.toBeNull();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it("keeps the drawer open and reports a rejected submission", async () => {
     const onClose = vi.fn();
     const onSubmit = vi.fn().mockRejectedValue(new Error("Save failed"));
