@@ -45,6 +45,19 @@ const DARK_STATUS_TOKENS = {
 
 const DEFAULT_PRIMARY = "#1e3a8a";
 const DEFAULT_DARK_PRIMARY = { base: "#3b82f6", hover: "#5b95f7", active: "#2f6fdc" };
+/**
+ * The solid primary button on dark surfaces, kept apart from the dark accent above: white text
+ * on it reads at about 5.2:1 (4.7:1 on hover), where the brighter accent falls short. Mirrored by
+ * --color-button-primary* in global.css for the controls styled outside AntD's tokens.
+ */
+const DEFAULT_DARK_BUTTON = { base: "#2563eb", hover: "#2f6fdc", active: "#1d4ed8" };
+
+/** The solid primary button in dark mode: the platform's own, or the brand's lifted primary. */
+export function darkButtonFor(primaryColor: string) {
+  return primaryColor.trim().toLowerCase() === DEFAULT_PRIMARY
+    ? DEFAULT_DARK_BUTTON
+    : darkPrimaryFor(primaryColor);
+}
 
 function hexToHsl(hex: string): [number, number, number] | null {
   const match = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex.trim());
@@ -124,6 +137,7 @@ export function createThemeConfig(
 ): ThemeConfig {
   const isDark = resolvedTheme === "dark";
   const darkPrimary = darkPrimaryFor(runtimeConfig.theme.primaryColor);
+  const darkButton = darkButtonFor(runtimeConfig.theme.primaryColor);
 
   return {
     algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
@@ -157,9 +171,9 @@ export function createThemeConfig(
         primaryShadow: "none",
         dangerShadow: "none",
         primaryColor: "#ffffff",
-        colorPrimary: isDark ? darkPrimary.base : "#1e3a8a",
-        colorPrimaryHover: isDark ? darkPrimary.hover : "#17306f",
-        colorPrimaryActive: isDark ? darkPrimary.active : "#0f2a4a",
+        colorPrimary: isDark ? darkButton.base : "#1e3a8a",
+        colorPrimaryHover: isDark ? darkButton.hover : "#17306f",
+        colorPrimaryActive: isDark ? darkButton.active : "#0f2a4a",
       },
       Input: {
         activeBorderColor: "#2563eb",
