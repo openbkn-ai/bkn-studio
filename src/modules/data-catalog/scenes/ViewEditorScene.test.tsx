@@ -838,39 +838,43 @@ describe("ViewEditorScene", () => {
   });
 
   it("creates a fixed set filter using typed integer values", async () => {
-    renderEditor({ catalogId: "cat-1" });
+    const { container } = renderEditor({ catalogId: "cat-1" });
     await screen.findByRole("heading", { name: "dataCatalog.viewEditor.typeTitle" });
+    const footer = within(container.querySelector("footer") as HTMLElement);
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog.viewEditor.derivedType/ }));
-    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    fireEvent.click(footer.getByRole("button", { name: "common.next" }));
     fireEvent.mouseDown(
-      screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" }),
+      screen.getByLabelText("dataCatalog.viewEditor.sourceSearch", { selector: "input" }),
     );
     fireEvent.click(await screen.findByText("public.orders"));
     await screen.findByLabelText("dataCatalog.viewEditor.outputName 1");
     fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.name"), {
       target: { value: "filtered_orders" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.addRule" }));
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "dataCatalog.filter.field" }));
+    const filter = within(
+      screen.getByText("dataCatalog.viewEditor.fixedFilter").closest("section") as HTMLElement,
+    );
+    fireEvent.click(filter.getByRole("button", { name: "dataCatalog.filter.addRule" }));
+    fireEvent.mouseDown(filter.getByLabelText("dataCatalog.filter.field", { selector: "input" }));
     const fieldDropdown = document.querySelector(
       ".ant-select-dropdown:not(.ant-select-dropdown-hidden)",
     ) as HTMLElement;
     fireEvent.click(within(fieldDropdown).getByText("Order ID"));
-    const operator = screen.getByRole("combobox", { name: "dataCatalog.filter.operator" });
+    const operator = filter.getByLabelText("dataCatalog.filter.operator", { selector: "input" });
     fireEvent.mouseDown(operator);
     fireEvent.change(operator, { target: { value: "dataCatalog.filter.operations.in" } });
     const dropdown = document.querySelector(
       ".ant-select-dropdown:not(.ant-select-dropdown-hidden)",
     ) as HTMLElement;
     fireEvent.click(within(dropdown).getByText("dataCatalog.filter.operations.in"));
-    fireEvent.change(screen.getByLabelText("dataCatalog.filter.value 1"), {
+    fireEvent.change(filter.getByLabelText("dataCatalog.filter.value 1"), {
       target: { value: "10" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.addValue" }));
-    fireEvent.change(screen.getByLabelText("dataCatalog.filter.value 2"), {
+    fireEvent.click(filter.getByRole("button", { name: "dataCatalog.filter.addValue" }));
+    fireEvent.change(filter.getByLabelText("dataCatalog.filter.value 2"), {
       target: { value: "12" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
+    fireEvent.click(footer.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
     await waitFor(() =>
       expect(createViewMock).toHaveBeenCalledWith(
         expect.objectContaining({
