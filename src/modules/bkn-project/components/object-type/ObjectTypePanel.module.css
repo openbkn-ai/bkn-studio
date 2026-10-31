@@ -82,3 +82,11 @@
 .missing {
   margin: 24px;
 }
+
+/* A relation's ends and mapping: a table that grows with its rows, scrolled within the panel. */
+.mapping {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 16px;
+}

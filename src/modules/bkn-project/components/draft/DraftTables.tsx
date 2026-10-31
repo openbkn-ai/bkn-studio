@@ -297,11 +297,14 @@ export function DraftRelationsTable({
   actions,
   items,
   objectNames,
+  onOpen,
   unadoptedEnds,
 }: {
   actions: DraftItemActions;
   items: DraftRelationType[];
   objectNames: Record<string, string>;
+  /** Opens a relation type where it is edited; its name is plain text without it. */
+  onOpen?: (id: string) => void;
   /** Relations adopted while an end is not, marked for people to unadopt. */
   unadoptedEnds: ReadonlySet<string>;
 }) {
@@ -311,7 +314,14 @@ export function DraftRelationsTable({
       title: t("bknProject.model.columns.relationType"),
       dataIndex: "name",
       key: "name",
-      render: (value: string) => <strong>{value}</strong>,
+      render: (value: string, record) =>
+        onOpen ? (
+          <button className={styles.link} onClick={() => onOpen(record.id)} type="button">
+            <strong>{value}</strong>
+          </button>
+        ) : (
+          <strong>{value}</strong>
+        ),
     },
     {
       title: t("bknProject.model.columns.ends"),

@@ -8,7 +8,8 @@
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockGet, mockPatch, mockPost, mockPut } = vi.hoisted(() => ({
+const { mockDelete, mockGet, mockPatch, mockPost, mockPut } = vi.hoisted(() => ({
+  mockDelete: vi.fn(),
   mockGet: vi.fn(),
   mockPatch: vi.fn(),
   mockPost: vi.fn(),
@@ -16,7 +17,7 @@ const { mockGet, mockPatch, mockPost, mockPut } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: mockGet, patch: mockPatch, post: mockPost, put: mockPut },
+  http: { delete: mockDelete, get: mockGet, patch: mockPatch, post: mockPost, put: mockPut },
 }));
 
 // useMock is read when the module loads, so each case stubs the env and imports afresh.
@@ -386,6 +387,129 @@ describe("draft.service", () => {
       const done = (await settle(getDraft("p-001")))!;
       expect(done.items.adding).toBeNull();
       expect(done.items.decisions.at(-1)).toMatchObject({ action: "add_catalogs", kind: "draft" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("makes, saves and deletes relation types as bkn-backend's", async () => {
+    const { createDraftRelationType, deleteDraftRelationType, mockDraft, saveDraftRelationType } =
+      await importService();
+    mockPost.mockResolvedValue({ data: mockDraft("p1"), status: 201 });
+    mockPut.mockResolvedValue({ data: mockDraft("p1") });
+    mockDelete.mockResolvedValue({ data: mockDraft("p1") });
+    const direct = {
+      description: "",
+      mapping: [{ sourceProperty: "customer_id", targetProperty: "id" }],
+      name: "Orders of customer",
+      source: "orders",
+      target: "customers",
+    };
+
+    await createDraftRelationType("p 1", 7, direct);
+    expect(mockPost).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%201/ontology/draft/relation_types",
+      {
+        comment: "",
+        mapping_rules: [
+          { source_property: { name: "customer_id" }, target_property: { name: "id" } },
+        ],
+        name: "Orders of customer",
+        source_object_type_id: "orders",
+        target_object_type_id: "customers",
+        type: "direct",
+        update_time: 7,
+      },
+      { skipErrorToast: true },
+    );
+
+    await saveDraftRelationType("p 1", "r 1", 8, {
+      ...direct,
+      link: {
+        resourceId: "res-items",
+        sourceMapping: [{ sourceProperty: "id", targetProperty: "order_id" }],
+        targetMapping: [{ sourceProperty: "customer_id", targetProperty: "id" }],
+      },
+      mapping: [],
+    });
+    expect(mockPut).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%201/ontology/draft/relation_types/r%201",
+      expect.objectContaining({
+        mapping_rules: {
+          backing_data_source: { id: "res-items", type: "resource" },
+          source_mapping_rules: [
+            { source_property: { name: "id" }, target_property: { name: "order_id" } },
+          ],
+          target_mapping_rules: [
+            { source_property: { name: "customer_id" }, target_property: { name: "id" } },
+          ],
+        },
+        type: "indirect",
+        update_time: 8,
+      }),
+      { skipErrorToast: true },
+    );
+
+    await deleteDraftRelationType("p 1", "r 1", 9);
+    expect(mockDelete).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%201/ontology/draft/relation_types/r%201",
+      { params: { update_time: 9 }, skipErrorToast: true },
+    );
+  });
+
+  it("makes relations in the mock as bkn-project does, deleting only those people made", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const { createDraftRelationType, deleteDraftRelationType, getDraft } =
+      await import("@/modules/bkn-project/services/draft.service");
+    vi.useFakeTimers();
+    try {
+      const settle = async <T>(promise: Promise<T>) => {
+        await vi.runAllTimersAsync();
+        return promise;
+      };
+      // Caught before the timers run, as the mock refuses at once.
+      const refusal = async (promise: Promise<unknown>) => {
+        const caught = promise.catch((error: AxiosError) => error);
+        await vi.runAllTimersAsync();
+        return ((await caught) as AxiosError<{ error_details?: { reason?: string } }>).response
+          ?.data.error_details?.reason;
+      };
+      const before = (await settle(getDraft("p-001")))!;
+      const drafted = before.items.relationTypes[0];
+      const join = {
+        description: "",
+        mapping: drafted.mapping,
+        name: "Again",
+        source: drafted.source,
+        target: drafted.target,
+      };
+
+      expect(await refusal(createDraftRelationType("p-001", before.updateTime, join))).toBe(
+        "duplicate",
+      );
+      expect(
+        await refusal(
+          createDraftRelationType("p-001", before.updateTime, {
+            ...join,
+            mapping: [{ sourceProperty: "nothing", targetProperty: "customer_id" }],
+          }),
+        ),
+      ).toBe("unknown_property");
+      expect(await refusal(deleteDraftRelationType("p-001", drafted.id, before.updateTime))).toBe(
+        "not_manual",
+      );
+
+      const made = await settle(
+        createDraftRelationType("p-001", before.updateTime, {
+          ...join,
+          mapping: [{ sourceProperty: "customer_id", targetProperty: "name" }],
+        }),
+      );
+      const added = made.items.relationTypes.at(-1)!;
+      expect(added).toMatchObject({ name: "Again", origin: "manual" });
+      const left = await settle(deleteDraftRelationType("p-001", added.id, made.updateTime));
+      expect(left.items.relationTypes.map((item) => item.id)).not.toContain(added.id);
     } finally {
       vi.useRealTimers();
     }

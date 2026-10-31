@@ -49,6 +49,8 @@ type OntologyGraphViewProps = {
   groupNames?: Map<string, string>;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** A relation clicked; relations take no clicks without it. */
+  onSelectEdge?: (id: string) => void;
 };
 
 /** The first opaque background up from an element: what the graph is drawn on. */
@@ -67,6 +69,7 @@ export function OntologyGraphView({
   groupNames,
   selectedId,
   onSelect,
+  onSelectEdge,
 }: OntologyGraphViewProps) {
   const { t } = useTranslation();
   const theme = useResolvedTheme();
@@ -227,6 +230,7 @@ export function OntologyGraphView({
           maximized={maximized}
           onBlankClick={() => onSelect(null)}
           onNodeClick={(id) => onSelect(id === selectedId ? null : id)}
+          onEdgeClick={onSelectEdge}
           onZoom={setZoom}
           ref={canvasRef}
           structure={structure}

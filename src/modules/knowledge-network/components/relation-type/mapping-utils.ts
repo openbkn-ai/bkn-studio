@@ -11,6 +11,24 @@ import type {
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
+/** A field or property a mapping can name, as the mapping tables list them. */
+export type RelationTypeMappingField = {
+  comment?: string;
+  displayName: string;
+  name: string;
+  type: string;
+};
+
+/**
+ * Where the mapping reads object types' properties and data resources' fields from, for a caller
+ * whose object types are not a network's own, such as a project's draft. Absent, the network's are
+ * read.
+ */
+export type RelationTypeMappingReaders = {
+  readObjectTypeProperties: (objectTypeId: string) => Promise<RelationTypeMappingField[]>;
+  readResourceFields: (resourceId: string) => Promise<RelationTypeMappingField[]>;
+};
+
 export type RelationTypeMappingFormValues = {
   mappingMode: "direct" | "resource";
   mappingRules: RelationTypeMappingConfig;

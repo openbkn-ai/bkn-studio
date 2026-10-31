@@ -21,6 +21,7 @@ import type {
   DraftKeyEvidence,
   DraftObjectType,
   DraftObjectTypeSave,
+  DraftRelationTypeSave,
   DraftRelationType,
   DraftTable,
   DraftValueType,
@@ -97,7 +98,9 @@ type BackendRelationType = {
   name: string;
   origin: string;
   source: string;
+  source_mapping?: BackendMapping[] | null;
   target: string;
+  target_mapping?: BackendMapping[] | null;
   verification: string;
 };
 
@@ -179,6 +182,11 @@ const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
   table: mapTable(item.table),
 });
 
+const mapMapping = (mapping: BackendMapping) => ({
+  sourceProperty: mapping.source_property,
+  targetProperty: mapping.target_property,
+});
+
 const mapRelationType = (item: BackendRelationType): DraftRelationType => ({
   adopted: item.adopted,
   cardinality: item.cardinality,
@@ -195,14 +203,13 @@ const mapRelationType = (item: BackendRelationType): DraftRelationType => ({
   },
   id: item.id,
   linkTable: item.link_table ? mapTable(item.link_table) : undefined,
-  mapping: (item.mapping ?? []).map((mapping) => ({
-    sourceProperty: mapping.source_property,
-    targetProperty: mapping.target_property,
-  })),
+  mapping: (item.mapping ?? []).map(mapMapping),
   name: item.name,
   origin: item.origin,
   source: item.source,
+  sourceMapping: (item.source_mapping ?? []).map(mapMapping),
   target: item.target,
+  targetMapping: (item.target_mapping ?? []).map(mapMapping),
   verification: item.verification,
 });
 
@@ -727,6 +734,171 @@ function finishMockAdding(projectId: string) {
   draft.update_time = now;
 }
 
+/** The 400 bkn-project answers for a relation the save cannot take, and why. */
+function mockInvalidRelation(details: Record<string, unknown>) {
+  return new AxiosError("Invalid relation", "ERR_BAD_REQUEST", undefined, undefined, {
+    data: {
+      description: "Invalid relation",
+      error_code: "BknProject.Draft.InvalidRelation",
+      error_details: details,
+    },
+    status: 400,
+  } as AxiosResponse);
+}
+
+const mockPairs = (mapping: DraftRelationTypeSave["mapping"]) =>
+  mapping.map((pair) => ({
+    source_property: pair.sourceProperty,
+    target_property: pair.targetProperty,
+  }));
+
+function saveMockRelationType(
+  projectId: string,
+  updateTime: number,
+  value: DraftRelationTypeSave,
+  itemId?: string,
+): BackendDraft {
+  const draft = readyMockDraft(projectId, updateTime);
+  const objects = draft.items.object_types ?? [];
+  const relations = (draft.items.relation_types ??= []);
+  const end = (id: string) => objects.find((item) => item.id === id);
+  const source = end(value.source);
+  const target = end(value.target);
+  if (!source || !target) {
+    throw mockInvalidRelation({
+      object_type: source ? value.target : value.source,
+      reason: "unknown_end",
+    });
+  }
+  const pairs = value.link
+    ? [...value.link.sourceMapping, ...value.link.targetMapping]
+    : value.mapping;
+  if (!pairs.length) {
+    throw mockInvalidRelation({ reason: "no_mapping" });
+  }
+  const has = (item: typeof source, name: string) =>
+    (item.properties ?? []).some((property) => property.name === name);
+  const missing = value.link
+    ? [
+        ...value.link.sourceMapping
+          .filter((pair) => !has(source, pair.sourceProperty))
+          .map((pair) => ({ object_type: source.id, property: pair.sourceProperty })),
+        ...value.link.targetMapping
+          .filter((pair) => !has(target, pair.targetProperty))
+          .map((pair) => ({ object_type: target.id, property: pair.targetProperty })),
+      ]
+    : [
+        ...value.mapping
+          .filter((pair) => !has(source, pair.sourceProperty))
+          .map((pair) => ({ object_type: source.id, property: pair.sourceProperty })),
+        ...value.mapping
+          .filter((pair) => !has(target, pair.targetProperty))
+          .map((pair) => ({ object_type: target.id, property: pair.targetProperty })),
+      ];
+  if (missing.length) {
+    throw mockInvalidRelation({ ...missing[0], reason: "unknown_property" });
+  }
+  const join = JSON.stringify([value.source, value.target, mockPairs(value.mapping)]);
+  const same = relations.find(
+    (other) =>
+      other.id !== itemId &&
+      JSON.stringify([other.source, other.target, other.mapping ?? []]) === join,
+  );
+  if (same && !value.link) {
+    throw mockInvalidRelation({
+      reason: "duplicate",
+      relation: { id: same.id, kind: "relation_types", name: same.name },
+    });
+  }
+  const now = Date.now();
+  const adopted =
+    objects.some((item) => item.id === source.id && item.adopted) &&
+    objects.some((item) => item.id === target.id && item.adopted);
+  const joined = {
+    link_table: value.link
+      ? { catalog_id: "", name: value.link.resourceId, resource_id: value.link.resourceId }
+      : undefined,
+    mapping: value.link ? [] : mockPairs(value.mapping),
+    source: value.source,
+    source_mapping: value.link ? mockPairs(value.link.sourceMapping) : [],
+    target: value.target,
+    target_mapping: value.link ? mockPairs(value.link.targetMapping) : [],
+  };
+  const existing = itemId ? relations.find((item) => item.id === itemId) : undefined;
+  if (itemId && !existing) {
+    throw mockConflict("ItemNotFound", `No item ${itemId}.`);
+  }
+  if (existing) {
+    Object.assign(existing, joined, {
+      adopted: existing.adopted && adopted,
+      description: value.description,
+      name: value.name,
+    });
+  } else {
+    relations.push({
+      ...joined,
+      adopted,
+      cardinality: "many_to_one",
+      description: value.description,
+      // Counted only for a single property within one catalog; the mock counts none.
+      evidence: {
+        computed: false,
+        hit_rate: 0,
+        hits: 0,
+        nulls: 0,
+        orphans: 0,
+        reason: value.link ? "link_table" : "not_identity",
+        rows: 0,
+        source_distinct: 0,
+      },
+      id: `${value.source}_to_${value.target}_${relations.length + 1}`,
+      name: value.name,
+      origin: "manual",
+      verification: "unconfirmed",
+    });
+  }
+  (draft.items.decisions ??= []).push({
+    action: existing ? "save" : "create",
+    after: value.name,
+    before: existing?.name ?? null,
+    by: mockDrafter,
+    item_id: existing?.id ?? relations[relations.length - 1].id,
+    kind: "relation_types",
+    time: now,
+  });
+  draft.update_time = now;
+  return draft;
+}
+
+function deleteMockRelationType(
+  projectId: string,
+  itemId: string,
+  updateTime: number,
+): BackendDraft {
+  const draft = readyMockDraft(projectId, updateTime);
+  const relations = draft.items.relation_types ?? [];
+  const at = relations.findIndex((item) => item.id === itemId);
+  if (at < 0) {
+    throw mockConflict("ItemNotFound", `No item ${itemId}.`);
+  }
+  if (relations[at].origin !== "manual") {
+    throw mockInvalidRelation({ reason: "not_manual", relation: itemId });
+  }
+  const [gone] = relations.splice(at, 1);
+  const now = Date.now();
+  (draft.items.decisions ??= []).push({
+    action: "delete",
+    after: null,
+    before: gone.name,
+    by: mockDrafter,
+    item_id: itemId,
+    kind: "relation_types",
+    time: now,
+  });
+  draft.update_time = now;
+  return draft;
+}
+
 /* ------------------------------- API ------------------------------- */
 
 const draftPath = (projectId: string) =>
@@ -884,6 +1056,102 @@ export async function saveDraftObjectType(
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
+}
+
+/** A relation type as bkn-backend's, the body making or saving it sends. */
+function relationBody(value: DraftRelationTypeSave, updateTime: number, id?: string) {
+  const pairs = (mapping: DraftRelationTypeSave["mapping"]) =>
+    mapping.map((pair) => ({
+      source_property: { name: pair.sourceProperty },
+      target_property: { name: pair.targetProperty },
+    }));
+  return {
+    ...(id ? { id } : {}),
+    comment: value.description,
+    mapping_rules: value.link
+      ? {
+          backing_data_source: { id: value.link.resourceId, type: "resource" },
+          source_mapping_rules: pairs(value.link.sourceMapping),
+          target_mapping_rules: pairs(value.link.targetMapping),
+        }
+      : pairs(value.mapping),
+    name: value.name,
+    source_object_type_id: value.source,
+    target_object_type_id: value.target,
+    type: value.link ? "indirect" : "direct",
+    update_time: updateTime,
+  };
+}
+
+/**
+ * Makes a relation type in the draft made at `updateTime`; replies the draft. It is adopted when
+ * both its ends are; bkn-project counts the join where it can.
+ */
+export async function createDraftRelationType(
+  projectId: string,
+  updateTime: number,
+  value: DraftRelationTypeSave,
+): Promise<Draft> {
+  if (useMock) {
+    return wait(mapDraft(saveMockRelationType(projectId, updateTime, value)));
+  }
+  const response = await http.post<BackendDraft>(
+    `${draftPath(projectId)}/relation_types`,
+    relationBody(value, updateTime),
+    { skipErrorToast: true },
+  );
+  return mapDraft(response.data);
+}
+
+/** Saves a relation type whole, as the editor leaves it; replies the draft. */
+export async function saveDraftRelationType(
+  projectId: string,
+  itemId: string,
+  updateTime: number,
+  value: DraftRelationTypeSave,
+): Promise<Draft> {
+  if (useMock) {
+    return wait(mapDraft(saveMockRelationType(projectId, updateTime, value, itemId)));
+  }
+  const response = await http.put<BackendDraft>(
+    `${draftPath(projectId)}/relation_types/${encodeURIComponent(itemId)}`,
+    relationBody(value, updateTime),
+    { skipErrorToast: true },
+  );
+  return mapDraft(response.data);
+}
+
+/** Deletes a relation type a person made; one drafting found is left out instead. */
+export async function deleteDraftRelationType(
+  projectId: string,
+  itemId: string,
+  updateTime: number,
+): Promise<Draft> {
+  if (useMock) {
+    return wait(mapDraft(deleteMockRelationType(projectId, itemId, updateTime)));
+  }
+  const response = await http.delete<BackendDraft>(
+    `${draftPath(projectId)}/relation_types/${encodeURIComponent(itemId)}`,
+    { params: { update_time: updateTime }, skipErrorToast: true },
+  );
+  return mapDraft(response.data);
+}
+
+/**
+ * A data resource's fields, such as a link table's, for a relation to map. The mock has no tables:
+ * it reads an object type's off the draft and finds no others.
+ */
+export async function listDraftResourceFields(
+  project: { id: string; knId: string },
+  resourceId: string,
+): Promise<ObjectTypeResourceField[]> {
+  if (useMock) {
+    const item = mockDrafts[project.id]?.items.object_types?.find(
+      (candidate) => candidate.table.resource_id === resourceId,
+    );
+    return item ? listDraftTableFields(project, item.id, resourceId) : wait([]);
+  }
+  return listResourceFields(project.knId, resourceId);
 }
 
 /**

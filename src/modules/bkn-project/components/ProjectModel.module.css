@@ -134,3 +134,9 @@
   color: var(--color-text-secondary);
   font-size: 12px;
 }
+
+/* Actions over a tab's list, such as making a relation type. */
+.tabActions {
+  display: flex;
+  justify-content: flex-end;
+}

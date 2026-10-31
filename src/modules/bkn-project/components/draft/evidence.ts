@@ -26,9 +26,15 @@ export const say = (t: TFunction, phrase: Phrase) => t(phrase.key, phrase.params
 const PREFIX = "bknProject.model.evidence";
 
 const KEY_SOURCES = ["primary_key", "unique_index", "inferred", "chosen", "none"];
-const ORIGINS = ["foreign_key", "name_match", "stem_match", "link_table"];
+const ORIGINS = ["foreign_key", "name_match", "stem_match", "link_table", "manual"];
 const VERIFICATIONS = ["confirmed", "unconfirmed"];
-const COUNT_REASONS = ["composite_key", "query_failed", "cross_catalog", "link_table"];
+const COUNT_REASONS = [
+  "composite_key",
+  "query_failed",
+  "cross_catalog",
+  "link_table",
+  "not_identity",
+];
 
 const known = (group: string, values: string[], value: string): Phrase =>
   values.includes(value)

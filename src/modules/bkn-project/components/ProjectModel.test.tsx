@@ -428,6 +428,21 @@ describe("ProjectModel", () => {
     expect(screen.queryByRole("region", { name: "bknProject.objectEditor.title" })).toBeNull();
   });
 
+  it("makes a relation and opens one from its name, in a panel over the page", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderModel(undefined, undefined, "relations");
+
+    fireEvent.click(await screen.findByRole("button", { name: /bknProject.relationEditor.add/ }));
+    const made = await screen.findByRole("region", { name: "bknProject.relationEditor.title" });
+    expect(within(made).getByText("bknProject.relationEditor.newTitle")).toBeInTheDocument();
+    fireEvent.click(within(made).getByRole("button", { name: "bknProject.objectEditor.close" }));
+
+    const relation = ready().items.relationTypes[0];
+    fireEvent.click(screen.getByRole("button", { name: relation.name }));
+    const opened = await screen.findByRole("region", { name: "bknProject.relationEditor.title" });
+    expect(within(opened).getByDisplayValue(relation.name)).toBeInTheDocument();
+  });
+
   it("opens the object type a link asked for in the panel", async () => {
     getDraftMock.mockResolvedValue(ready());
     renderWithoutAntdStyles(

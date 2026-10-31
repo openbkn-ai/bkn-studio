@@ -11,15 +11,25 @@ import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-netwo
 
 import { RelationTypeResourceMappingRules } from "./RelationTypeResourceMappingRules";
 import { RelationTypeDirectMappingRules } from "./RelationTypeDirectMappingRules";
-import { resetMappingRulesForMode, type RelationTypeMappingFormValues } from "./mapping-utils";
+import {
+  resetMappingRulesForMode,
+  type RelationTypeMappingFormValues,
+  type RelationTypeMappingReaders,
+} from "./mapping-utils";
 import { RelationTypeMappingShell } from "./RelationTypeMappingShell";
 
-export type { RelationTypeMappingFormValues } from "./mapping-utils";
+export type {
+  RelationTypeMappingField,
+  RelationTypeMappingFormValues,
+  RelationTypeMappingReaders,
+} from "./mapping-utils";
 
 type RelationTypeMappingEditorProps = {
   mappingModeField?: boolean;
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
+  /** Reads properties and fields from elsewhere than the network, as a project's draft does. */
+  readers?: RelationTypeMappingReaders;
   value: RelationTypeMappingFormValues;
   onChange: (value: RelationTypeMappingFormValues) => void;
 };
@@ -35,6 +45,7 @@ export function RelationTypeMappingEditor({
   mappingModeField = true,
   networkId,
   objectTypes,
+  readers,
   value,
   onChange,
 }: RelationTypeMappingEditorProps) {
@@ -74,6 +85,7 @@ export function RelationTypeMappingEditor({
         <RelationTypeDirectMappingRules
           networkId={networkId}
           objectTypes={objectTypes}
+          readers={readers}
           onChange={handleMappingRulesChange}
           value={value.mappingRules}
         />
@@ -81,6 +93,7 @@ export function RelationTypeMappingEditor({
         <RelationTypeResourceMappingRules
           networkId={networkId}
           objectTypes={objectTypes}
+          readers={readers}
           onChange={handleMappingRulesChange}
           value={value.mappingRules}
         />

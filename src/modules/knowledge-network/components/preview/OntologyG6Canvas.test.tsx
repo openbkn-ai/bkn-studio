@@ -89,6 +89,7 @@ vi.mock("@antv/g6", () => {
   }
   return {
     Graph,
+    EdgeEvent: { CLICK: "edge:click" },
     NodeEvent: { CLICK: "node:click" },
     CanvasEvent: { CLICK: "canvas:click" },
     GraphEvent: { AFTER_TRANSFORM: "aftertransform" },
@@ -175,6 +176,8 @@ describe("OntologyG6Canvas", () => {
 
     graph.listeners.get("node:click")?.({ target: { id: "order" } });
     await waitFor(() => expect(onNodeClick).toHaveBeenCalledWith("order"));
+    // Without an edge handler, clicking a relation does nothing.
+    expect(() => graph.listeners.get("edge:click")?.({ target: { id: "places" } })).not.toThrow();
   });
 
   it("draws a frame after names change, so they do not wait for the next pan", async () => {

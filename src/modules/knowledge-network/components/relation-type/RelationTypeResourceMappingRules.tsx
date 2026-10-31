@@ -24,7 +24,7 @@ import type {
   RelationTypeMappingConfig,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { createEmptyResourceMapping } from "./mapping-utils";
+import { type RelationTypeMappingReaders, createEmptyResourceMapping } from "./mapping-utils";
 import { RelationTypeObjectTypeSelect } from "./RelationTypeObjectTypeSelect";
 import styles from "./RelationTypeResourceMappingRules.module.css";
 import {
@@ -53,6 +53,8 @@ type ResourceTableRow =
 type RelationTypeResourceMappingRulesProps = {
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
+  /** Reads properties and fields from elsewhere than the network, as a project's draft does. */
+  readers?: RelationTypeMappingReaders;
   value: RelationTypeMappingConfig;
   onChange: (value: RelationTypeMappingConfig) => void;
 };
@@ -73,6 +75,7 @@ function mapPropertyOptions(
 export function RelationTypeResourceMappingRules({
   networkId,
   objectTypes,
+  readers,
   value,
   onChange,
 }: RelationTypeResourceMappingRulesProps) {
@@ -106,8 +109,12 @@ export function RelationTypeResourceMappingRules({
         return;
       }
 
-      const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId);
-      const options = mapPropertyOptions(detail?.dataProperties ?? []);
+      const options = mapPropertyOptions(
+        readers
+          ? await readers.readObjectTypeProperties(objectTypeId)
+          : ((await getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId))?.dataProperties ??
+              []),
+      );
 
       if (target === "source") {
         setSourcePropertyOptions(options);
@@ -115,7 +122,7 @@ export function RelationTypeResourceMappingRules({
         setTargetPropertyOptions(options);
       }
     },
-    [networkId],
+    [networkId, readers],
   );
 
   const loadResourcePropertyOptions = useCallback(
@@ -125,10 +132,12 @@ export function RelationTypeResourceMappingRules({
         return;
       }
 
-      const fields = await listObjectTypeResourceFields(networkId, resourceId);
+      const fields = await (readers
+        ? readers.readResourceFields(resourceId)
+        : listObjectTypeResourceFields(networkId, resourceId));
       setResourcePropertyOptions(mapPropertyOptions(fields));
     },
-    [networkId],
+    [networkId, readers],
   );
 
   useEffect(() => {
@@ -254,7 +263,8 @@ export function RelationTypeResourceMappingRules({
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
-            networkId={networkId}
+            // The caller's object types are all listed: nothing is looked up in the network.
+            networkId={readers ? undefined : networkId}
             objectTypes={objectTypes}
             onChange={(nextValue) => handleSourceObjectChange(nextValue ?? "")}
             placeholder={t("knowledgeNetwork.relationTypeSourceObjectPlaceholder")}
@@ -339,7 +349,8 @@ export function RelationTypeResourceMappingRules({
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
-            networkId={networkId}
+            // The caller's object types are all listed: nothing is looked up in the network.
+            networkId={readers ? undefined : networkId}
             objectTypes={objectTypes}
             onChange={(nextValue) => handleTargetObjectChange(nextValue ?? "")}
             placeholder={t("knowledgeNetwork.relationTypeTargetObjectPlaceholder")}

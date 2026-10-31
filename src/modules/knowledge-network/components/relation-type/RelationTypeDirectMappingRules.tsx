@@ -19,7 +19,7 @@ import type {
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { createEmptyPropertyMapping } from "./mapping-utils";
+import { type RelationTypeMappingReaders, createEmptyPropertyMapping } from "./mapping-utils";
 import { RelationTypeObjectTypeSelect } from "./RelationTypeObjectTypeSelect";
 import styles from "./RelationTypeDirectMappingRules.module.css";
 import {
@@ -45,6 +45,8 @@ type MappingTableRow =
 type RelationTypeDirectMappingRulesProps = {
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
+  /** Reads properties and fields from elsewhere than the network, as a project's draft does. */
+  readers?: RelationTypeMappingReaders;
   value: RelationTypeMappingConfig;
   onChange: (value: RelationTypeMappingConfig) => void;
 };
@@ -65,6 +67,7 @@ function mapPropertyOptions(
 export function RelationTypeDirectMappingRules({
   networkId,
   objectTypes,
+  readers,
   value,
   onChange,
 }: RelationTypeDirectMappingRulesProps) {
@@ -94,8 +97,12 @@ export function RelationTypeDirectMappingRules({
         return;
       }
 
-      const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId);
-      const options = mapPropertyOptions(detail?.dataProperties ?? []);
+      const options = mapPropertyOptions(
+        readers
+          ? await readers.readObjectTypeProperties(objectTypeId)
+          : ((await getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId))?.dataProperties ??
+              []),
+      );
 
       if (target === "source") {
         setSourcePropertyOptions(options);
@@ -103,7 +110,7 @@ export function RelationTypeDirectMappingRules({
         setTargetPropertyOptions(options);
       }
     },
-    [networkId],
+    [networkId, readers],
   );
 
   useEffect(() => {
@@ -213,7 +220,8 @@ export function RelationTypeDirectMappingRules({
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
-            networkId={networkId}
+            // The caller's object types are all listed: nothing is looked up in the network.
+            networkId={readers ? undefined : networkId}
             objectTypes={objectTypes}
             onChange={(nextValue) => handleSourceObjectChange(nextValue ?? "")}
             placeholder={t("knowledgeNetwork.relationTypeSourceObjectPlaceholder")}
@@ -241,7 +249,8 @@ export function RelationTypeDirectMappingRules({
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
-            networkId={networkId}
+            // The caller's object types are all listed: nothing is looked up in the network.
+            networkId={readers ? undefined : networkId}
             objectTypes={objectTypes}
             onChange={(nextValue) => handleTargetObjectChange(nextValue ?? "")}
             placeholder={t("knowledgeNetwork.relationTypeTargetObjectPlaceholder")}
