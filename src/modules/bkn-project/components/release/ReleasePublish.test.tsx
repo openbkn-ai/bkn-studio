@@ -259,6 +259,36 @@ describe("ReleasePublish", () => {
     expect(onChanged).not.toHaveBeenCalled();
   });
 
+  it("keeps the dialog open on a failed publishing, says why and lets the owner try again", async () => {
+    publishReleaseMock
+      .mockRejectedValueOnce(
+        new AxiosError("x", "ERR_BAD_RESPONSE", undefined, undefined, {
+          data: {},
+          status: 500,
+        } as AxiosResponse),
+      )
+      .mockRejectedValueOnce(refusal("Lineage.UnfinishedAttempt"))
+      .mockResolvedValueOnce({ networkId: "n_v1_0_3" });
+    renderPublish();
+
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    fireEvent.click(await view.findByText("知道部分索引还没就绪，仍然发布"));
+    fireEvent.click(publishButton());
+    expect(await view.findByText("没能发布，请稍后重试。")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(onChanged).not.toHaveBeenCalled();
+
+    fireEvent.click(publishButton());
+    expect(
+      await view.findByText("上次发布未完成，分支此后有改动，请换一个新的版本号。"),
+    ).toBeInTheDocument();
+    expect(view.queryByText("没能发布，请稍后重试。")).toBeNull();
+
+    fireEvent.click(publishButton());
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+
   it("reviews another version only after checking it again", async () => {
     renderPublish();
     fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));

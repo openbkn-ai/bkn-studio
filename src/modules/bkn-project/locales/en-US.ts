@@ -542,8 +542,16 @@ export const bknProjectEnUS = {
         id: "ID",
       },
       tiles: {
-        questions: "Questions expected to be answerable",
-        questionsSub: "Estimated once requirements are drafted",
+        questions: "Scenario questions",
+        questionsSub: "Shown once the requirements are drafted",
+        questionsReadySub: "Requirements version {{version}}",
+        questionsValue: "{{count}}",
+        questionsValue_one: "{{count}}",
+        questionsValue_other: "{{count}}",
+        questionsStatus: {
+          drafting: "Drafting",
+          failed: "Drafting failed",
+        },
         ontology: "Ontology",
         ontologySub: "Shown once drafted from tables",
         ontologyValue: "{{objects}} object types · {{relations}} relations",
@@ -557,7 +565,8 @@ export const bknProjectEnUS = {
         sourcesValue_other: "{{count}} catalogs",
         sourcesSub: "Referenced, never copied",
         instances: "Instances",
-        instancesSub: "Created once the draft is confirmed",
+        instancesValue: "Not counted here",
+        instancesSub: "See the records in the published knowledge network",
       },
       model: {
         title: "Ontology concept model",
@@ -1352,6 +1361,8 @@ export const bknProjectEnUS = {
           Drift: "The live version was edited outside the project; commit those edits first.",
           MergeConflict:
             "Live edits conflict with the project's edits; resolve them before publishing.",
+          UnfinishedAttempt:
+            "The last publishing of this version did not finish and the branch has changed since. Choose a new version number.",
           other: "Could not publish; try again later.",
         },
       },

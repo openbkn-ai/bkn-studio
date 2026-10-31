@@ -65,6 +65,7 @@ const PUBLISH_ERRORS = new Set([
   "BranchBehind",
   "Drift",
   "MergeConflict",
+  "UnfinishedAttempt",
 ]);
 const CAPABILITY_REASONS = new Set(["changed", "network_id"]);
 

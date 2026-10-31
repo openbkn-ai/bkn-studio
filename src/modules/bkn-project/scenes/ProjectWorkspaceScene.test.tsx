@@ -92,6 +92,13 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
   getDraft: getDraftMock,
 }));
 
+const getRequirementsMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/modules/bkn-project/services/requirements.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/requirements.service")>()),
+  getRequirements: getRequirementsMock,
+}));
+
 vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
   useAccountDirectory: () => directoryMock,
 }));
@@ -166,6 +173,7 @@ function draftWithDecisions() {
 describe("ProjectWorkspaceScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getRequirementsMock.mockResolvedValue(null);
     getProjectMock.mockResolvedValue(project);
     getNetworkMock.mockResolvedValue({ id: "orders", name: "Orders network" });
     getLatestReleaseMock.mockResolvedValue({
@@ -205,6 +213,29 @@ describe("ProjectWorkspaceScene", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("bknProject.list.ownerYou")).toBeInTheDocument();
     expect(screen.getByText("v1.0.0")).toBeInTheDocument();
+  });
+
+  it("counts the scenario questions of the drafted requirements, and says why instances show none", async () => {
+    getRequirementsMock.mockResolvedValue({
+      spec: { questions: [{ id: "q1" }, { id: "q2" }, { id: "q3" }] },
+      status: "ready",
+      version: 4,
+    });
+    renderScene();
+    expect(
+      await screen.findByText('bknProject.overview.tiles.questionsValue:{"count":3}'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('bknProject.overview.tiles.questionsReadySub:{"version":4}'),
+    ).toBeInTheDocument();
+    expect(screen.getByText("bknProject.overview.tiles.instancesValue")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.overview.tiles.instancesSub")).toBeInTheDocument();
+  });
+
+  it("says the questions come once the requirements are drafted", async () => {
+    getRequirementsMock.mockResolvedValue(null);
+    renderScene();
+    expect(await screen.findByText("bknProject.overview.tiles.questionsSub")).toBeInTheDocument();
   });
 
   it("fills the ontology tile, the model and the recent changes from the draft", async () => {

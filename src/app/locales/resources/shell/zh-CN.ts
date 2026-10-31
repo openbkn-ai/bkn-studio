@@ -29,7 +29,7 @@ export const shellZhCN = {
     items: {
       home: "首页",
       globalBusinessKnowledgeNetwork: "全局业务知识网络",
-      bknProject: "BKN项目管理",
+      bknProject: "项目管理",
       domainKnowledgeNetwork: "领域知识网络",
       knowledgeNetworkManagement: "知识网络管理",
       knowledgeNetworkIntegration: "知识网络对接",
