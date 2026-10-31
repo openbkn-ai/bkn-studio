@@ -7,13 +7,13 @@
 
 import { CloseOutlined } from "@ant-design/icons";
 import { Alert, Form, Input } from "antd";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { AskAiSidebar } from "@/modules/bkn-project/components/ai/AskAiSidebar";
+import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
 import { applyObjectRevisions, objectPreview } from "@/modules/bkn-project/components/ai/revisions";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import {
@@ -305,12 +305,31 @@ export function ObjectTypePanel({
     }
   };
 
+  // What the editor holds now, for taking back what Ask AI put in only while nothing changed since.
+  const holding = useRef({ basic, properties });
+  useEffect(() => {
+    holding.current = { basic, properties };
+  });
+  const sent = (values: { basic: BasicValues; properties: ObjectTypeDataProperty[] }) =>
+    base ? JSON.stringify(draftSave(base.objectType, values.basic, values.properties)) : "";
+  const put = (values: { basic: BasicValues; properties: ObjectTypeDataProperty[] }) => {
+    setBasic(values.basic);
+    basicForm.setFieldsValue(values.basic);
+    setProperties(values.properties);
+  };
+
   // Ask AI's changes go into the editor as if typed; saving writes them.
-  const adopt = (revisions: AskRevision[]) => {
-    const next = applyObjectRevisions({ basic, properties }, revisions);
-    setBasic(next.basic);
-    basicForm.setFieldsValue(next.basic);
-    setProperties(next.properties);
+  const apply = (revisions: AskRevision[]): UndoApply => {
+    const before = { basic, properties };
+    const after = applyObjectRevisions(before, revisions);
+    put(after);
+    return () => {
+      if (sent(holding.current) !== sent(after)) {
+        return false;
+      }
+      put(before);
+      return true;
+    };
   };
 
   return (
@@ -395,13 +414,15 @@ export function ObjectTypePanel({
           </div>
           {asking ? (
             <AskAiSidebar
-              canAdopt
               itemId={objectTypeId}
               kind="object_types"
-              onAdopt={adopt}
+              onApply={apply}
               onClose={() => setAsking(false)}
               preview={(revision) => objectPreview(t, { basic, properties }, revision)}
               projectId={project.id}
+              subtitle={t("bknProject.model.ask.subtitle.object_types", {
+                name: base.objectType.name,
+              })}
               working={() => draftSave(base.objectType, basic, properties)}
             />
           ) : null}

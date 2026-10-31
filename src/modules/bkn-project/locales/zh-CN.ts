@@ -465,29 +465,45 @@ export const bknProjectZhCN = {
       ask: {
         title: "AI 助手",
         close: "收起 AI 助手",
-        hint: {
+        subtitle: {
+          object_types: "对象类 · {{name}}",
+          relation_types: "关系类 · {{name}}",
+        },
+        intro: {
           object_types:
-            "可以问这个对象类的名称、描述、唯一标识、标题和各属性的显示名。AI 会读到编辑器里还没保存的修改。",
+            "说说你想怎么改这个对象类，我会先给出修改建议；确认后再更新表单。还没保存的修改我也能看到。",
           relation_types:
-            "可以问这个关系类的名称、描述，以及两端和关联方式。AI 会读到编辑器里还没保存的修改。",
+            "说说你想怎么改这个关系类，我会先给出修改建议；确认后再更新表单。还没保存的修改我也能看到。",
+        },
+        examplesTitle: "示例",
+        examples: {
+          object_types: ["唯一标识选得对吗？", "帮我补全描述", "哪些属性的显示名不够清楚？"],
+          relation_types: [
+            "这两个对象类这样关联对吗？",
+            "帮我起一个更清楚的关系名",
+            "帮我补全描述",
+          ],
         },
         question: "你的问题",
         placeholder: {
-          object_types: "比如：唯一标识选得对吗？属性的显示名怎么起更清楚？",
-          relation_types: "比如：这两个对象类这样关联对吗？关系名怎么起更清楚？",
+          object_types: "描述你想怎么改这个对象类，或继续提问…",
+          relation_types: "描述你想怎么改这个关系类，或继续提问…",
         },
         submit: "发送",
-        asking: "正在回答…",
-        notKept: "问答不会保存，关闭编辑后清空。",
+        asking: "正在理解并给出建议…",
+        newConversation: "新对话",
         retry: "重新提问",
-        revisions: "建议修改 {{count}} 处",
-        revisions_one: "建议修改 {{count}} 处",
-        revisions_other: "建议修改 {{count}} 处",
-        adoptAll: "全部采纳",
-        adopt: "采纳",
-        adopted: "已采纳",
+        proposalTitle: "待应用的修改建议",
+        proposalHint: "只更新勾选的项；应用后不会自动保存，点“保存”才写入草稿。",
+        apply: "应用所选修改",
+        reject: "拒绝建议",
+        applied: "已将所选建议应用到当前表单，尚未保存。",
+        undo: "撤销本次应用",
+        undone: "已撤销本次 AI 修改，表单恢复到应用前的样子。",
+        undoStale: "表单已有新的修改，不能自动撤销；请手动调整需要恢复的项。",
+        before: "当前：{{value}}",
+        after: "建议：{{value}}",
         empty: "（空）",
-        arrow: "→",
         field: {
           name: "名称",
           comment: "描述",
@@ -524,7 +540,6 @@ export const bknProjectZhCN = {
           },
         },
         error: {
-          InvalidQuestion: "问题不能为空，且不超过 500 字。",
           NotReady: "草稿还没有起草完成，暂时不能提问。",
           ItemNotFound: "草稿里已经没有这一项了，请刷新页面。",
           AskUnavailable: "AI 暂时无法回答，可以稍后重新提问。",

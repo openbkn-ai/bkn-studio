@@ -5,39 +5,42 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CloseOutlined } from "@ant-design/icons";
-import { Alert, Input } from "antd";
+import { CloseOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { Button, Checkbox, Space } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { AppButton } from "@/framework/ui/common/AppButton";
+import { useAppServices } from "@/framework/context/use-app-services";
 import {
-  ASK_HISTORY_TURNS,
-  ASK_MAX_LENGTH,
   AskError,
+  ASK_HISTORY_TURNS,
   askDraftItem,
 } from "@/modules/bkn-project/services/ask.service";
 import type {
   AskDropped,
   AskKind,
   AskRevision,
+  AskTurn,
   DraftObjectTypeSave,
   DraftRelationTypeSave,
 } from "@/modules/bkn-project/types/draft";
+import { AiPromptComposer } from "@/modules/knowledge-network/components/shared/AiPromptComposer";
+import {
+  listObjectMetricAnswerModels,
+  type ObjectMetricAnswerModel,
+} from "@/modules/knowledge-network/services/object-metric-models.service";
 
 import styles from "./AskAiSidebar.module.css";
 
 const PREFIX = "bknProject.model.ask";
+/** How many examples are offered before the first question. */
+const EXAMPLES = 3;
 
 /** Why Ask AI did not answer, as the page says it; any other is said as `other`. */
-const ERRORS = new Set([
-  "InvalidQuestion",
-  "NotReady",
-  "ItemNotFound",
-  "AskUnavailable",
-  "AskTimeout",
-]);
-/** Why a proposed change was not adopted, as the page says it; any other is said as `other`. */
+const ERRORS = new Set(["NotReady", "ItemNotFound", "AskUnavailable", "AskTimeout"]);
+/** What a proposed change was to, as the page names it; any other is named as `other`. */
+const FIELDS = new Set(["name", "comment", "primary_keys", "display_key", "property", "ends"]);
+/** Why a proposed change was not used, as the page says it; any other is said as `other`. */
 const DROPPED = new Set([
   "unchanged",
   "unknown_property",
@@ -48,148 +51,182 @@ const DROPPED = new Set([
   "duplicate",
 ]);
 
-/** What a proposed change was to, as the page names it; any other is named as `other`. */
-const FIELDS = new Set(["name", "comment", "primary_keys", "display_key", "property", "ends"]);
-
-/** A change as the person sees it before adopting it: what it changes, from what to what. */
+/** A change as the person sees it before applying it: what it changes, from what to what. */
 export type RevisionPreview = { after: string; before: string; label: string };
 
-type Turn = {
-  answer: string;
-  /** The changes adopted, by their place in `revisions`. */
-  adopted: number[];
+/** Takes back what was applied; false when the editor changed since, and nothing was. */
+export type UndoApply = () => boolean;
+
+type Message = {
+  content: string;
+  id: number;
+  /** A question that stopped, asked again from its message. */
+  retry?: string;
+  role: "assistant" | "user";
+  tone?: "error";
+};
+
+type Proposal = {
   dropped: AskDropped[];
-  /** Why it stopped, said as the page says it; null while it answers and once it has. */
-  failure: string | null;
   /** How each change read against the editor when the answer came, kept as it was then. */
   previews: RevisionPreview[];
-  question: string;
   revisions: AskRevision[];
-  state: "answering" | "answered" | "failed";
+  /** The changes to apply, by their place in `revisions`; all of them at first. */
+  selected: number[];
 };
 
 /**
- * Ask AI beside an editor: questions about what is being edited, unsaved changes included, with
- * the questions before them. Its answers propose changes, each shown from what it is now to what
- * it would be; adopting one only changes the editor, and saving writes it. Nothing is kept:
- * closing the editor forgets the conversation.
+ * Ask AI beside an editor, as a conversation like the knowledge network's object metric
+ * designer: a question about what is being edited, unsaved changes included, gets an answer and
+ * the changes it proposes, each from what it is now to what it would be. Chosen changes go into
+ * the editor only when applied, can be taken back, and are written only by saving. Closing the
+ * editor forgets the conversation.
  */
 export function AskAiSidebar({
-  canAdopt,
   itemId,
   kind,
-  onAdopt,
+  onApply,
   onClose,
   preview,
   projectId,
+  subtitle,
   working,
 }: {
-  canAdopt: boolean;
   itemId: string;
   kind: AskKind;
-  /** Puts the changes into the editor. */
-  onAdopt: (revisions: AskRevision[]) => void;
+  /** Puts the changes into the editor; replies how to take them back. */
+  onApply: (revisions: AskRevision[]) => UndoApply;
   onClose: () => void;
   /** How a change reads against the editor as it is now. */
   preview: (revision: AskRevision) => RevisionPreview;
   projectId: string;
+  /** What is being edited, under the title. */
+  subtitle: string;
   /** What the editor holds now, saved or not. */
   working: () => DraftObjectTypeSave | DraftRelationTypeSave;
 }) {
   const { t } = useTranslation();
-  const [question, setQuestion] = useState("");
-  const [turns, setTurns] = useState<Turn[]>([]);
+  const { message } = useAppServices();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [written, setWritten] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [undo, setUndo] = useState<{ take: UndoApply } | null>(null);
+  const [promptRequest, setPromptRequest] = useState<{ revision: number; value: string }>();
+  const [models, setModels] = useState<ObjectMetricAnswerModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelsUnavailable, setModelsUnavailable] = useState(false);
+  const [modelId, setModelId] = useState<string>();
+  const turns = useRef<AskTurn[]>([]);
+  const nextId = useRef(0);
   const asking = useRef<AbortController | null>(null);
-  const end = useRef<HTMLDivElement>(null);
   // An answer is read against the editor as it is when it comes, not as it was when asked.
   const previewNow = useRef(preview);
-  previewNow.current = preview;
-
-  // Closing the editor stops an answer still being written.
-  useEffect(() => () => asking.current?.abort(), []);
   useEffect(() => {
-    end.current?.scrollIntoView?.({ block: "end" });
-  }, [turns]);
+    previewNow.current = preview;
+  });
 
-  const answering = turns.some((turn) => turn.state === "answering");
-  const update = (at: number, change: (turn: Turn) => Turn) =>
-    setTurns((current) => current.map((turn, index) => (index === at ? change(turn) : turn)));
+  useEffect(() => {
+    let alive = true;
+    listObjectMetricAnswerModels()
+      .then((list) => {
+        if (alive) setModels(list);
+      })
+      .catch(() => {
+        if (alive) setModelsUnavailable(true);
+      })
+      .finally(() => {
+        if (alive) setModelsLoading(false);
+      });
+    return () => {
+      alive = false;
+      // Closing the editor stops an answer still being written.
+      asking.current?.abort();
+    };
+  }, []);
 
-  /** Asks a question; one asked again after it stopped replaces the turn that stopped. */
-  const ask = async (text: string, again?: number) => {
-    const before = turns.slice(0, again ?? turns.length);
-    const at = before.length;
-    const history = before
-      .filter((turn) => turn.state === "answered")
-      .slice(-ASK_HISTORY_TURNS)
-      .map((turn) => ({ answer: turn.answer, question: turn.question }));
-    setTurns([
-      ...before,
-      {
-        adopted: [],
-        answer: "",
-        dropped: [],
-        failure: null,
-        previews: [],
-        question: text,
-        revisions: [],
-        state: "answering",
-      },
-    ]);
+  const say = (content: Omit<Message, "id">) =>
+    setMessages((current) => [...current, { ...content, id: nextId.current++ }]);
+
+  const ask = async (question: string, again = false) => {
+    if (!again) {
+      say({ content: question, role: "user" });
+    }
+    setGenerating(true);
+    setProposal(null);
+    setUndo(null);
+    setWritten("");
+    let text = "";
     const controller = new AbortController();
     asking.current = controller;
-    const request = { history, itemId, projectId, question: text, signal: controller.signal };
-    const onText = (piece: string) =>
-      update(at, (turn) => ({ ...turn, answer: turn.answer + piece }));
+    const request = {
+      history: turns.current.slice(-ASK_HISTORY_TURNS),
+      itemId,
+      modelId,
+      onText: (piece: string) => {
+        text += piece;
+        setWritten(text);
+      },
+      projectId,
+      question,
+      signal: controller.signal,
+    };
     try {
       const reply = await (kind === "object_types"
-        ? askDraftItem({
-            ...request,
-            kind,
-            onText,
-            working: working() as DraftObjectTypeSave,
-          })
-        : askDraftItem({
-            ...request,
-            kind,
-            onText,
-            working: working() as DraftRelationTypeSave,
-          }));
-      update(at, (turn) => ({
-        ...turn,
-        answer: reply.answer || turn.answer,
-        dropped: reply.dropped,
-        previews: reply.revisions.map((revision) => previewNow.current(revision)),
-        revisions: reply.revisions,
-        state: "answered",
-      }));
-    } catch (error) {
-      if (controller.signal.aborted) {
-        return;
+        ? askDraftItem({ ...request, kind, working: working() as DraftObjectTypeSave })
+        : askDraftItem({ ...request, kind, working: working() as DraftRelationTypeSave }));
+      const answer = reply.answer || text;
+      turns.current = [...turns.current, { answer, question }];
+      say({ content: answer, role: "assistant" });
+      if (reply.revisions.length || reply.dropped.length) {
+        setProposal({
+          dropped: reply.dropped,
+          previews: reply.revisions.map((revision) => previewNow.current(revision)),
+          revisions: reply.revisions,
+          selected: reply.revisions.map((_, index) => index),
+        });
       }
-      const code = error instanceof AskError ? error.code : "other";
-      // What was written stays; the question can be asked again.
-      update(at, (turn) => ({
-        ...turn,
-        failure: t(`${PREFIX}.error.${ERRORS.has(code) ? code : "other"}`),
-        state: "failed",
-      }));
+    } catch (error) {
+      // What was written stays; a question that stopped can be asked again.
+      if (text) {
+        say({ content: text, role: "assistant" });
+      }
+      if (!controller.signal.aborted) {
+        const code = error instanceof AskError ? error.code : "other";
+        say({
+          content: t(`${PREFIX}.error.${ERRORS.has(code) ? code : "other"}`),
+          retry: question,
+          role: "assistant",
+          tone: "error",
+        });
+      }
+    } finally {
+      setWritten("");
+      setGenerating(false);
     }
   };
 
-  const send = () => {
-    const text = question.trim();
-    if (!text || answering) {
-      return;
-    }
-    setQuestion("");
-    void ask(text);
+  const restart = () => {
+    turns.current = [];
+    setMessages([]);
+    setProposal(null);
+    setUndo(null);
   };
 
-  const adopt = (at: number, which: number[]) => {
-    const turn = turns[at];
-    onAdopt(which.map((index) => turn.revisions[index]));
-    update(at, (current) => ({ ...current, adopted: [...current.adopted, ...which] }));
+  const apply = () => {
+    if (proposal) {
+      setUndo({ take: onApply(proposal.selected.map((index) => proposal.revisions[index])) });
+      setProposal(null);
+    }
+  };
+
+  const takeBack = () => {
+    if (undo?.take()) {
+      message.success(t(`${PREFIX}.undone`));
+    } else {
+      message.warning(t(`${PREFIX}.undoStale`));
+    }
+    setUndo(null);
   };
 
   const droppedText = (item: AskDropped) =>
@@ -198,130 +235,184 @@ export function AskAiSidebar({
       reason: t(`${PREFIX}.dropped.reason.${DROPPED.has(item.reason) ? item.reason : "other"}`),
     });
 
+  const empty = !messages.length && !generating;
   return (
-    <aside aria-label={t(`${PREFIX}.title`)} className={styles.sidebar}>
-      <header className={styles.header}>
-        <span className={styles.title}>{t(`${PREFIX}.title`)}</span>
-        <AppButton
-          aria-label={t(`${PREFIX}.close`)}
-          icon={<CloseOutlined />}
-          onClick={onClose}
-          size="small"
-          type="text"
-        />
-      </header>
-      <div className={styles.conversation}>
-        {turns.length ? null : <p className={styles.hint}>{t(`${PREFIX}.hint.${kind}`)}</p>}
-        {turns.map((turn, at) => {
-          const waiting = turn.revisions
-            .map((_, index) => index)
-            .filter((index) => !turn.adopted.includes(index));
-          return (
-            <div className={styles.turn} key={at}>
-              <p className={styles.question}>{turn.question}</p>
-              {turn.answer ? <p className={styles.answer}>{turn.answer}</p> : null}
-              {turn.state === "answering" ? (
-                <p className={styles.muted}>{t(`${PREFIX}.asking`)}</p>
-              ) : null}
-              {turn.state === "failed" ? (
-                <Alert
-                  action={
-                    answering ? undefined : (
-                      <AppButton onClick={() => void ask(turn.question, at)} size="small">
-                        {t(`${PREFIX}.retry`)}
-                      </AppButton>
-                    )
-                  }
-                  message={turn.failure}
-                  showIcon
-                  type="warning"
-                />
-              ) : null}
-              {turn.revisions.length ? (
-                <div className={styles.revisions}>
-                  <div className={styles.revisionsHead}>
-                    <span>{t(`${PREFIX}.revisions`, { count: turn.revisions.length })}</span>
-                    {canAdopt && waiting.length > 1 ? (
-                      <AppButton onClick={() => adopt(at, waiting)} size="small">
-                        {t(`${PREFIX}.adoptAll`)}
-                      </AppButton>
-                    ) : null}
-                  </div>
-                  {turn.revisions.map((revision, index) => {
-                    const shown = turn.previews[index];
-                    const adopted = turn.adopted.includes(index);
-                    return (
-                      <div className={styles.revision} key={index}>
-                        <div className={styles.revisionHead}>
-                          <span className={styles.label}>{shown.label}</span>
-                          {canAdopt ? (
-                            <AppButton
-                              disabled={adopted}
-                              onClick={() => adopt(at, [index])}
-                              size="small"
-                              type={adopted ? "text" : "primary"}
-                            >
-                              {t(`${PREFIX}.${adopted ? "adopted" : "adopt"}`)}
-                            </AppButton>
-                          ) : null}
-                        </div>
-                        <div className={styles.diff}>
-                          <span className={styles.before}>
-                            {shown.before || t(`${PREFIX}.empty`)}
-                          </span>
-                          <span className={styles.arrow}>{t(`${PREFIX}.arrow`)}</span>
-                          <span className={styles.after}>
-                            {shown.after || t(`${PREFIX}.empty`)}
-                          </span>
-                        </div>
-                        {revision.reason ? <p className={styles.muted}>{revision.reason}</p> : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : null}
-              {turn.dropped.length ? (
-                <div className={styles.dropped}>
-                  <span>{t(`${PREFIX}.dropped.title`, { count: turn.dropped.length })}</span>
-                  <ul>
-                    {turn.dropped.map((item, index) => (
-                      <li key={index}>{droppedText(item)}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-        <div ref={end} />
-      </div>
-      <footer className={styles.footer}>
-        <Input.TextArea
-          aria-label={t(`${PREFIX}.question`)}
-          autoSize={{ maxRows: 4, minRows: 2 }}
-          maxLength={ASK_MAX_LENGTH}
-          onChange={(event) => setQuestion(event.target.value)}
-          onPressEnter={(event) => {
-            if (!event.shiftKey && !event.nativeEvent.isComposing) {
-              event.preventDefault();
-              send();
-            }
-          }}
-          placeholder={t(`${PREFIX}.placeholder.${kind}`)}
-          value={question}
-        />
-        <div className={styles.footerRow}>
-          <span className={styles.muted}>{t(`${PREFIX}.notKept`)}</span>
-          <AppButton
-            disabled={!question.trim() || answering}
-            loading={answering}
-            onClick={send}
-            type="primary"
-          >
-            {t(`${PREFIX}.submit`)}
-          </AppButton>
+    <aside aria-label={t(`${PREFIX}.title`)} className={styles.panel}>
+      <div className={styles.header}>
+        <div className={styles.title}>
+          <span aria-hidden="true" className={styles.titleIcon}>
+            <ThunderboltOutlined />
+          </span>
+          <div>
+            <strong>{t(`${PREFIX}.title`)}</strong>
+            <span>{subtitle}</span>
+          </div>
         </div>
-      </footer>
+        <div className={styles.actions}>
+          {messages.length ? (
+            <Button disabled={generating} onClick={restart} size="small" type="text">
+              {t(`${PREFIX}.newConversation`)}
+            </Button>
+          ) : null}
+          <Button
+            aria-label={t(`${PREFIX}.close`)}
+            icon={<CloseOutlined />}
+            onClick={onClose}
+            type="text"
+          />
+        </div>
+      </div>
+      <div className={`${styles.content} ${empty ? styles.contentEmpty : ""}`}>
+        {empty ? (
+          <p className={styles.intro}>{t(`${PREFIX}.intro.${kind}`)}</p>
+        ) : (
+          <div aria-live="polite" className={styles.conversation}>
+            {messages.map((item) => (
+              <div
+                className={`${styles.message} ${
+                  item.role === "user" ? styles.messageUser : styles.messageAssistant
+                } ${item.tone === "error" ? styles.messageError : ""}`}
+                key={item.id}
+              >
+                {item.content}
+                {item.retry && !generating ? (
+                  <Button
+                    className={styles.retry}
+                    onClick={() => void ask(item.retry ?? "", true)}
+                    size="small"
+                    type="link"
+                  >
+                    {t(`${PREFIX}.retry`)}
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+            {generating ? (
+              <div className={`${styles.message} ${styles.messageAssistant}`}>
+                {written || (
+                  <>
+                    <span className={styles.thinking}>
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    {t(`${PREFIX}.asking`)}
+                  </>
+                )}
+              </div>
+            ) : null}
+          </div>
+        )}
+        {proposal && !generating ? (
+          <div className={styles.proposal}>
+            {proposal.revisions.length ? (
+              <>
+                <strong>{t(`${PREFIX}.proposalTitle`)}</strong>
+                <p>{t(`${PREFIX}.proposalHint`)}</p>
+                {proposal.revisions.map((revision, index) => {
+                  const shown = proposal.previews[index];
+                  return (
+                    <Checkbox
+                      checked={proposal.selected.includes(index)}
+                      key={index}
+                      onChange={(event) =>
+                        setProposal({
+                          ...proposal,
+                          selected: event.target.checked
+                            ? [...proposal.selected, index].sort((a, b) => a - b)
+                            : proposal.selected.filter((item) => item !== index),
+                        })
+                      }
+                    >
+                      <span className={styles.proposalField}>{shown.label}</span>
+                      <span className={styles.proposalDiff}>
+                        <span className={styles.proposalValue} title={shown.before}>
+                          {t(`${PREFIX}.before`, {
+                            value: shown.before || t(`${PREFIX}.empty`),
+                          })}
+                        </span>
+                        <span className={styles.proposalValue} title={shown.after}>
+                          {t(`${PREFIX}.after`, { value: shown.after || t(`${PREFIX}.empty`) })}
+                        </span>
+                      </span>
+                      {revision.reason ? (
+                        <span className={styles.proposalReason}>{revision.reason}</span>
+                      ) : null}
+                    </Checkbox>
+                  );
+                })}
+              </>
+            ) : null}
+            {proposal.dropped.length ? (
+              <div className={styles.dropped}>
+                <span>{t(`${PREFIX}.dropped.title`, { count: proposal.dropped.length })}</span>
+                <ul>
+                  {proposal.dropped.map((item, index) => (
+                    <li key={index}>{droppedText(item)}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {proposal.revisions.length ? (
+              <Space>
+                <Button disabled={!proposal.selected.length} onClick={apply} type="primary">
+                  {t(`${PREFIX}.apply`)}
+                </Button>
+                <Button onClick={() => setProposal(null)}>{t(`${PREFIX}.reject`)}</Button>
+              </Space>
+            ) : null}
+          </div>
+        ) : null}
+        {undo && !proposal && !generating ? (
+          <div className={styles.undo}>
+            <span>{t(`${PREFIX}.applied`)}</span>
+            <Button onClick={takeBack} size="small">
+              {t(`${PREFIX}.undo`)}
+            </Button>
+          </div>
+        ) : null}
+        {messages.length ? null : (
+          <div className={styles.examples}>
+            <span>{t(`${PREFIX}.examplesTitle`)}</span>
+            {Array.from({ length: EXAMPLES }, (_, index) => {
+              const example = t(`${PREFIX}.examples.${kind}.${index}`);
+              return (
+                <button
+                  key={index}
+                  onClick={() =>
+                    setPromptRequest((current) => ({
+                      revision: (current?.revision ?? 0) + 1,
+                      value: example,
+                    }))
+                  }
+                  type="button"
+                >
+                  {example}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div className={styles.composer}>
+        <AiPromptComposer
+          checking={false}
+          generating={generating}
+          inputLabel={t(`${PREFIX}.question`)}
+          modelId={modelId}
+          models={models}
+          modelsLoading={modelsLoading}
+          modelsUnavailable={modelsUnavailable}
+          // One conversation keeps one model, as the object metric designer does.
+          modelSelectionLocked={messages.length > 0}
+          onModelChange={setModelId}
+          onStop={() => asking.current?.abort()}
+          onSubmit={(question) => void ask(question)}
+          placeholder={t(`${PREFIX}.placeholder.${kind}`)}
+          promptRequest={promptRequest}
+          sendLabel={t(`${PREFIX}.submit`)}
+        />
+      </div>
     </aside>
   );
 }

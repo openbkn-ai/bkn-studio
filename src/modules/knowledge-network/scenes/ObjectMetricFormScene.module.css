@@ -405,87 +405,6 @@
   background: var(--color-bg-surface);
 }
 
-.aiComposerShell {
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-bg-surface);
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.aiComposerShell:focus-within {
-  border-color: var(--color-primary-600);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-600) 12%, transparent);
-}
-
-.aiComposerShell :global(.ant-input) {
-  min-height: 54px;
-  padding: 12px 13px 4px;
-  resize: none;
-  background: transparent;
-  box-shadow: none;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.aiComposerFooter {
-  display: flex;
-  align-items: center;
-  min-height: 38px;
-  padding: 2px 6px 5px 12px;
-}
-
-.aiComposerActions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  margin-left: auto;
-}
-
-.aiModelSelect {
-  flex: 0 1 auto;
-  min-width: 0;
-  width: 152px;
-}
-
-.aiModelSelect :global(.ant-select-selector) {
-  height: 32px !important;
-  padding-inline: 9px !important;
-  border-radius: 8px !important;
-  background: var(--color-bg-raised) !important;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.aiModelOption {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-}
-
-.aiModelOption > span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.aiModelOption > span:first-child {
-  color: var(--color-text-secondary);
-  font-size: 14px;
-}
-
-.aiComposerSubmit:global(.ant-btn) {
-  flex: 0 0 auto;
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  padding: 0;
-  font-size: 16px;
-}
-
 .form :global(.ant-form-item) {
   margin-bottom: 18px;
 }
@@ -1460,9 +1379,6 @@
 }
 
 @media (max-width: 480px) {
-  .aiModelSelect {
-    width: 148px;
-  }
   .aiDialogExamples {
     align-items: flex-start;
     flex-direction: column;

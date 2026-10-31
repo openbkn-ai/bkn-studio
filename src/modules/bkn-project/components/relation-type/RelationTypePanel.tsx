@@ -7,13 +7,13 @@
 
 import { CloseOutlined } from "@ant-design/icons";
 import { Alert, Form, Input } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { AskAiSidebar } from "@/modules/bkn-project/components/ai/AskAiSidebar";
+import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
 import {
   applyRelationRevisions,
   relationPreview,
@@ -360,12 +360,33 @@ export function RelationTypePanel({
       tables.find((table) => table.resourceId === resourceId)?.name || resourceId,
   };
 
-  // Ask AI's changes go into the editor as if made by hand; saving writes them.
-  const adopt = (revisions: AskRevision[]) => {
-    const next = applyRelationRevisions({ basic, values }, revisions, tables);
+  // What the editor holds now, for taking back what Ask AI put in only while nothing changed since.
+  const holding = useRef({ basic, values });
+  useEffect(() => {
+    holding.current = { basic, values };
+  });
+  const put = (next: { basic: BasicValues; values: RelationTypeMappingFormValues }) => {
     setBasic(next.basic);
     basicForm.setFieldsValue(next.basic);
     setValues(next.values);
+  };
+
+  // Ask AI's changes go into the editor as if made by hand; saving writes them.
+  const apply = (revisions: AskRevision[]): UndoApply => {
+    const before = { basic, values };
+    const after = applyRelationRevisions(before, revisions, tables);
+    put(after);
+    return () => {
+      const now = holding.current;
+      if (
+        JSON.stringify(relationSave(now.basic, now.values)) !==
+        JSON.stringify(relationSave(after.basic, after.values))
+      ) {
+        return false;
+      }
+      put(before);
+      return true;
+    };
   };
 
   return (
@@ -462,15 +483,15 @@ export function RelationTypePanel({
           </div>
           {asking && relation ? (
             <AskAiSidebar
-              canAdopt
               itemId={relation.id}
               kind="relation_types"
-              onAdopt={adopt}
+              onApply={apply}
               onClose={() => setAsking(false)}
               preview={(revision) =>
                 relationPreview(t, endNames, basic, relationSave(basic, values), revision)
               }
               projectId={project.id}
+              subtitle={t("bknProject.model.ask.subtitle.relation_types", { name: relation.name })}
               working={() => relationSave(basic, values)}
             />
           ) : null}

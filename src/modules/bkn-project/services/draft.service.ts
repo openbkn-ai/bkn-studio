@@ -1230,24 +1230,6 @@ export async function chooseIdentity(
   return mapDraft(response.data);
 }
 
-/** An object type as bkn-project saves it, the body saving sends without its draft's time. */
-export function objectTypeBody(value: DraftObjectTypeSave) {
-  return {
-    comment: value.description,
-    data_properties: value.properties.map((property) => ({
-      comment: property.description,
-      display_name: property.displayName,
-      ...(property.mappedField ? { mapped_field: { name: property.mappedField } } : {}),
-      name: property.name,
-      type: property.type,
-    })),
-    display_key: value.displayKey,
-    incremental_key: value.incrementalKey,
-    name: value.name,
-    primary_keys: value.primaryKeys,
-  };
-}
-
 /**
  * Saves an object type whole, as the editor leaves it, over the draft made at `updateTime`;
  * replies the draft. bkn-project checks it as it checks each edit and records the decisions.
@@ -1263,17 +1245,28 @@ export async function saveDraftObjectType(
   }
   const response = await http.put<BackendDraft>(
     `${draftPath(projectId)}/object_types/${encodeURIComponent(itemId)}`,
-    { ...objectTypeBody(value), update_time: updateTime },
+    {
+      comment: value.description,
+      data_properties: value.properties.map((property) => ({
+        comment: property.description,
+        display_name: property.displayName,
+        ...(property.mappedField ? { mapped_field: { name: property.mappedField } } : {}),
+        name: property.name,
+        type: property.type,
+      })),
+      display_key: value.displayKey,
+      incremental_key: value.incrementalKey,
+      name: value.name,
+      primary_keys: value.primaryKeys,
+      update_time: updateTime,
+    },
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
 }
 
-/**
- * A relation type as bkn-backend's, the body making or saving it sends; without a time, what is
- * being edited, as Ask AI is told it.
- */
-export function relationBody(value: DraftRelationTypeSave, updateTime?: number, id?: string) {
+/** A relation type as bkn-backend's, the body making or saving it sends. */
+function relationBody(value: DraftRelationTypeSave, updateTime: number, id?: string) {
   const pairs = (mapping: DraftRelationTypeSave["mapping"]) =>
     mapping.map((pair) => ({
       source_property: { name: pair.sourceProperty },
@@ -1293,7 +1286,7 @@ export function relationBody(value: DraftRelationTypeSave, updateTime?: number, 
     source_object_type_id: value.source,
     target_object_type_id: value.target,
     type: value.link ? "indirect" : "direct",
-    ...(updateTime === undefined ? {} : { update_time: updateTime }),
+    update_time: updateTime,
   };
 }
 

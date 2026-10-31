@@ -502,31 +502,51 @@ export const bknProjectEnUS = {
       ask: {
         title: "AI assistant",
         close: "Hide the AI assistant",
-        hint: {
+        subtitle: {
+          object_types: "Object type · {{name}}",
+          relation_types: "Relation type · {{name}}",
+        },
+        intro: {
           object_types:
-            "Ask about this object type's name, description, identity, title and its properties' display names. AI sees changes in the editor that are not saved yet.",
+            "Say how you would like to change this object type. I suggest changes first, and update the form once you confirm them. I can see changes you have not saved yet.",
           relation_types:
-            "Ask about this relation type's name, description, and its ends and how they join. AI sees changes in the editor that are not saved yet.",
+            "Say how you would like to change this relation type. I suggest changes first, and update the form once you confirm them. I can see changes you have not saved yet.",
+        },
+        examplesTitle: "Examples",
+        examples: {
+          object_types: [
+            "Is the identity right?",
+            "Write the description",
+            "Which display names are unclear?",
+          ],
+          relation_types: [
+            "Should these two object types join like this?",
+            "Suggest a clearer name",
+            "Write the description",
+          ],
         },
         question: "Your question",
         placeholder: {
-          object_types:
-            "For example: is the identity right? What display names would read more clearly?",
-          relation_types:
-            "For example: should these two object types join like this? What name would read more clearly?",
+          object_types: "Describe how to change this object type, or ask more…",
+          relation_types: "Describe how to change this relation type, or ask more…",
         },
         submit: "Send",
-        asking: "Answering…",
-        notKept: "Questions and answers are not kept; closing the editor clears them.",
+        asking: "Reading it and suggesting changes…",
+        newConversation: "New conversation",
         retry: "Ask again",
-        revisions: "{{count}} suggested changes",
-        revisions_one: "{{count}} suggested change",
-        revisions_other: "{{count}} suggested changes",
-        adoptAll: "Adopt all",
-        adopt: "Adopt",
-        adopted: "Adopted",
+        proposalTitle: "Suggested changes to apply",
+        proposalHint:
+          "Only the checked changes are applied. Applying does not save; Save writes them to the draft.",
+        apply: "Apply selected changes",
+        reject: "Reject suggestions",
+        applied: "The selected suggestions are in the form, not saved yet.",
+        undo: "Undo this apply",
+        undone: "The AI changes were undone; the form is as it was before.",
+        undoStale:
+          "The form has changed since, so this cannot be undone automatically. Change back what you need by hand.",
+        before: "Now: {{value}}",
+        after: "Suggested: {{value}}",
         empty: "(empty)",
-        arrow: "→",
         field: {
           name: "Name",
           comment: "Description",
@@ -563,7 +583,6 @@ export const bknProjectEnUS = {
           },
         },
         error: {
-          InvalidQuestion: "Enter a question of at most 500 characters.",
           NotReady: "The draft is not ready yet, so questions cannot be asked.",
           ItemNotFound: "This is no longer in the draft. Refresh the page.",
           AskUnavailable: "AI cannot answer right now. Ask again later.",
