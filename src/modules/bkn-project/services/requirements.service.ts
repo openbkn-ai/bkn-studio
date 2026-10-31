@@ -25,6 +25,7 @@ import type {
   RequirementDocumentContent,
   Requirements,
   RequirementSpec,
+  ReviewedKind,
   UploadResult,
 } from "@/modules/bkn-project/types/requirements";
 
@@ -67,6 +68,8 @@ type BackendCited = {
   supplement_reason?: string;
 };
 
+type BackendReviewed = { accepted?: boolean };
+
 type BackendSpec = {
   catalogs_unlisted?: string[] | null;
   choices?:
@@ -108,47 +111,52 @@ type BackendSpec = {
       }[]
     | null;
   questions?:
-    | (BackendCited & {
-        answer_shape: string;
-        id: string;
-        inputs?:
-          | {
-              concept_id: string;
-              name: string;
-              property?: string;
-              property_from_key?: boolean;
-              role: string;
-            }[]
-          | null;
-        layer: string;
-        needs?: { id: string; kind: string }[] | null;
-        needs_source: string;
-        notes?: string[] | null;
-        relative_window?: boolean;
-        scenario_ids?: string[] | null;
-        template: string;
-        text: string;
-        type: string;
-      })[]
+    | (BackendCited &
+        BackendReviewed & {
+          answer_shape: string;
+          id: string;
+          inputs?:
+            | {
+                concept_id: string;
+                name: string;
+                property?: string;
+                property_from_key?: boolean;
+                role: string;
+              }[]
+            | null;
+          layer: string;
+          needs?: { id: string; kind: string }[] | null;
+          needs_source: string;
+          notes?: string[] | null;
+          ontology_changed?: boolean;
+          relative_window?: boolean;
+          scenario_ids?: string[] | null;
+          template: string;
+          text: string;
+          type: string;
+        })[]
     | null;
   rejected?: { kind: string; reason: string; text: string }[] | null;
   rules?: (BackendCited & { compiles_to: string; id: string; statement: string })[] | null;
   scenarios?:
-    | (BackendCited & {
-        actor: string;
-        capabilities?: { definition?: string; kind: string; name: string }[] | null;
-        decision: string;
-        id: string;
-        knowledge?: string[] | null;
-        name: string;
-        trigger: string;
-      })[]
+    | (BackendCited &
+        BackendReviewed & {
+          actor: string;
+          capabilities?: { definition?: string; kind: string; name: string }[] | null;
+          decision: string;
+          id: string;
+          knowledge?: string[] | null;
+          name: string;
+          ontology_changed?: boolean;
+          trigger: string;
+        })[]
     | null;
   tables_omitted?: number;
 };
 
 type BackendRequirements = {
   error?: string;
+  ontology_uncovered?: { id: string; kind: string; name: string }[] | null;
   spec: BackendSpec;
   stale?: boolean;
   status: string;
@@ -232,6 +240,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
     })),
     questions: (spec.questions ?? []).map((question) => ({
       ...cited(question),
+      accepted: question.accepted ?? false,
       answerShape: question.answer_shape,
       id: question.id,
       // Absent means nothing is said about inputs; an empty list means none.
@@ -248,6 +257,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
       needs: (question.needs ?? []).map(({ id, kind }) => ({ id, kind })),
       needsSource: question.needs_source,
       notes: question.notes ?? [],
+      ontologyChanged: question.ontology_changed ?? false,
       relativeWindow: question.relative_window ?? false,
       scenarioIds: question.scenario_ids ?? [],
       template: question.template,
@@ -264,6 +274,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
     })),
     scenarios: (spec.scenarios ?? []).map((scenario) => ({
       ...cited(scenario),
+      accepted: scenario.accepted ?? false,
       actor: scenario.actor,
       capabilities: (scenario.capabilities ?? []).map((capability) => ({
         definition: capability.definition ?? "",
@@ -274,6 +285,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
       id: scenario.id,
       knowledge: scenario.knowledge ?? [],
       name: scenario.name,
+      ontologyChanged: scenario.ontology_changed ?? false,
       trigger: scenario.trigger,
     })),
     tablesOmitted: spec.tables_omitted ?? 0,
@@ -282,6 +294,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
 
 export const mapRequirements = (requirements: BackendRequirements): Requirements => ({
   error: requirements.error ?? "",
+  ontologyUncovered: requirements.ontology_uncovered ?? [],
   spec: mapSpec(requirements.spec ?? {}),
   stale: requirements.stale ?? false,
   status: requirements.status,
@@ -413,8 +426,9 @@ export async function getRequirements(projectId: string): Promise<Requirements |
 }
 
 /**
- * Drafts the specification from the documents in the background. `discardDecisions` agrees to
- * drop the conflict resolutions and choices made.
+ * Generates the scenarios and questions from the adopted ontology, and the documents when there
+ * are any, in the background. What was accepted is kept as it is; `discardDecisions` starts over
+ * from nothing instead.
  */
 export async function draftRequirements(
   projectId: string,
@@ -694,6 +708,43 @@ export async function removeItem(
   );
 }
 
+/**
+ * Accepts or takes back scenarios and questions AI generated, several at once, on the
+ * specification read at `updateTime`.
+ */
+export async function reviewRequirements(
+  projectId: string,
+  updateTime: number,
+  accept: { id: string; kind: ReviewedKind }[],
+  unaccept: { id: string; kind: ReviewedKind }[] = [],
+): Promise<Requirements> {
+  if (useMock) {
+    return wait(
+      mockEdit(updateTime, (spec) => {
+        for (const [items, accepted] of [
+          [accept, true],
+          [unaccept, false],
+        ] as const) {
+          for (const { id, kind } of items) {
+            const item = (spec[kind] as { accepted: boolean; id: string }[]).find(
+              (entry) => entry.id === id,
+            );
+            if (!item) {
+              throw refused(404, "Requirement.ItemNotFound");
+            }
+            item.accepted = accepted;
+          }
+        }
+      }),
+    );
+  }
+  return sendEdit("post", `${requirementsPath(projectId)}:review`, {
+    accept,
+    unaccept,
+    update_time: updateTime,
+  });
+}
+
 /** Sets the drafted item a concept is, or clears it with null. */
 export async function setConceptMapping(
   projectId: string,
@@ -923,6 +974,8 @@ const mockSpec = (): RequirementSpec => ({
       citations: [quote("d1", "which orders of a customer are late")],
       edited: false,
       id: "q1",
+      accepted: true,
+      ontologyChanged: false,
       layer: "knowledge",
       needs: [
         { id: "sales_orders", kind: "object_type" },
@@ -943,6 +996,8 @@ const mockSpec = (): RequirementSpec => ({
       citations: [],
       edited: false,
       id: "q2",
+      accepted: false,
+      ontologyChanged: true,
       inputs: [
         { conceptId: "c3", name: "customer", property: "customer_id", role: "record" },
         { conceptId: "c1", name: "as_of", property: "signed_at", role: "reference_time" },
@@ -963,6 +1018,8 @@ const mockSpec = (): RequirementSpec => ({
       citations: [],
       edited: false,
       id: "q3",
+      accepted: false,
+      ontologyChanged: false,
       inputs: [],
       layer: "capability",
       needs: [],
@@ -980,6 +1037,8 @@ const mockSpec = (): RequirementSpec => ({
       citations: [],
       edited: false,
       id: "q4",
+      accepted: false,
+      ontologyChanged: false,
       // Drafted before questions had inputs: nothing is said about them.
       inputs: null,
       layer: "knowledge",
@@ -1012,6 +1071,8 @@ const mockSpec = (): RequirementSpec => ({
       decision: "Whom to call first",
       edited: false,
       id: "s1",
+      accepted: false,
+      ontologyChanged: true,
       knowledge: ["Orders and their promised dates"],
       name: "Delivery delay warning",
       supplementReason: "",
@@ -1029,6 +1090,7 @@ function mockRequirementsNow(): Requirements | null {
   if (drafting) {
     return {
       error: "",
+      ontologyUncovered: [],
       spec: mapSpec({}),
       stale: false,
       status: "drafting",
@@ -1044,6 +1106,7 @@ function mockRequirementsNow(): Requirements | null {
   const { spec, updateTime } = mockCurrent;
   return {
     error: "",
+    ontologyUncovered: [{ id: "material_bom", kind: "object_type", name: "material_bom" }],
     spec: structuredClone(spec),
     stale: false,
     status: "ready",
@@ -1076,6 +1139,8 @@ function mockAdd(spec: RequirementSpec, kind: RequirementItemKind, fields: Requi
   if (kind === "scenarios") {
     spec.scenarios.push({
       ...base,
+      accepted: true,
+      ontologyChanged: false,
       actor: fields.actor ?? "",
       capabilities: [],
       decision: fields.decision ?? "",
@@ -1097,6 +1162,7 @@ function mockAdd(spec: RequirementSpec, kind: RequirementItemKind, fields: Requi
   } else if (kind === "questions") {
     spec.questions.push({
       ...base,
+      accepted: true,
       answerShape: fields.answerShape ?? "",
       id: nextId("q", spec.questions),
       inputs: fields.inputs ?? null,
@@ -1104,6 +1170,7 @@ function mockAdd(spec: RequirementSpec, kind: RequirementItemKind, fields: Requi
       needs: fields.needs ?? [],
       needsSource: fields.needs ? "person" : "concepts",
       notes: [],
+      ontologyChanged: false,
       relativeWindow: fields.relativeWindow ?? false,
       scenarioIds: fields.scenarioIds ?? [],
       template: fields.template ?? "",
@@ -1132,7 +1199,11 @@ function mockChange(
     throw refused(404, "Requirement.ItemNotFound");
   }
   const { followConcepts, ...rest } = fields;
-  Object.assign(item, rest, { edited: true });
+  // An item a person edited counts as accepted, as bkn-project has it.
+  Object.assign(item, rest, {
+    edited: true,
+    ...(kind === "questions" || kind === "scenarios" ? { accepted: true } : {}),
+  });
   if (kind === "questions" && (fields.needs || followConcepts)) {
     Object.assign(item, { needsSource: followConcepts ? "concepts" : "person" });
   }

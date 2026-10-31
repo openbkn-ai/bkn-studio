@@ -206,6 +206,7 @@ export function ProjectWorkspaceScene({
               />
             ) : section === "scenarios" ? (
               <ProjectRequirements
+                onGoToModel={() => go("model")}
                 onGoToResources={() => go("resources")}
                 ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
                 project={project}

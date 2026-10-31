@@ -35,6 +35,14 @@
   gap: 8px;
 }
 
+.rowActions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
 .muted {
   margin: 0;
   color: var(--color-text-secondary);

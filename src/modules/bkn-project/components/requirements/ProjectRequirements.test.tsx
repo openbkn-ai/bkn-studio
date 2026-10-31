@@ -16,6 +16,8 @@ import type { RequirementDocument, Requirements } from "@/modules/bkn-project/ty
 
 const getRequirementsMock = vi.hoisted(() => vi.fn());
 const onGoToResources = vi.hoisted(() => vi.fn());
+const onGoToModel = vi.hoisted(() => vi.fn());
+const reviewRequirementsMock = vi.hoisted(() => vi.fn());
 const listDocumentsMock = vi.hoisted(() => vi.fn());
 const getDocumentMock = vi.hoisted(() => vi.fn());
 const draftRequirementsMock = vi.hoisted(() => vi.fn());
@@ -48,6 +50,7 @@ vi.mock("@/modules/bkn-project/services/requirements.service", async (importOrig
   editItem: editItemMock,
   removeItem: removeItemMock,
   resolveConflict: resolveConflictMock,
+  reviewRequirements: reviewRequirementsMock,
   setConceptMapping: setConceptMappingMock,
   getDocument: getDocumentMock,
   getRequirements: getRequirementsMock,
@@ -100,6 +103,7 @@ const quote = { block_id: "b2", document_id: "d1", end: 15, quote: "哪些订单
 function requirements(extra: Partial<Requirements> = {}): Requirements {
   return {
     error: "",
+    ontologyUncovered: [],
     spec: mapSpec({
       choices: [
         {
@@ -187,6 +191,7 @@ function requirements(extra: Partial<Requirements> = {}): Requirements {
 function renderPage(owner = true) {
   return renderWithoutAntdStyles(
     <ProjectRequirements
+      onGoToModel={onGoToModel}
       onGoToResources={onGoToResources}
       ownerIsCaller={owner}
       project={project}
@@ -296,56 +301,157 @@ describe("ProjectRequirements", () => {
     expect(screen.getByText("约束")).toBeInTheDocument();
   });
 
-  it("drafts from the documents before the first drafting, which are uploaded elsewhere", async () => {
+  it("generates from the adopted ontology before the first time, with documents optional", async () => {
     getRequirementsMock.mockResolvedValueOnce(null);
+    listDocumentsMock.mockResolvedValueOnce([]);
     draftRequirementsMock.mockResolvedValue(
       requirements({ spec: mapSpec({}), status: "drafting", version: 1 }),
     );
     renderPage();
 
     expect(
-      await screen.findByText("还没有需求规格。上传需求文档后，从资料起草。"),
+      await screen.findByText("还没有业务场景。AI 会基于已采纳的本体生成场景和问题，再由你审核。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("需求文档是可选的；上传后，生成时会参考并引用原文。"),
     ).toBeInTheDocument();
     // The documents are managed on the requirements and resources page, not here.
-    expect(screen.queryByText("supply-prd.md")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "去上传文档" }));
+    fireEvent.click(screen.getByRole("button", { name: "管理需求文档" }));
     expect(onGoToResources).toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "从资料起草" }));
+    // No document is needed to generate.
+    fireEvent.click(screen.getByRole("button", { name: "生成业务场景" }));
     await waitFor(() => expect(draftRequirementsMock).toHaveBeenCalledWith("p1", false));
     expect(
       await screen.findByText("正在从资料起草需求规格，通常需要一两分钟。"),
     ).toBeInTheDocument();
   });
 
-  it("leads to uploading documents when there are none to draft from", async () => {
+  it("leads to ontology modeling when no object type is adopted yet", async () => {
     getRequirementsMock.mockResolvedValueOnce(null);
-    listDocumentsMock.mockResolvedValueOnce([]);
-    renderPage();
-
-    expect(
-      await screen.findByText("还没有需求文档。先在“需求与资源”里上传需求文档，再起草业务场景。"),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "从资料起草" })).toBeDisabled();
-  });
-
-  it("asks before drafting again discards what was decided", async () => {
     draftRequirementsMock.mockRejectedValueOnce(
       new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {
-        data: { error_code: "BknProject.Requirement.HasDecisions" },
+        data: { error_code: "BknProject.Requirement.NoAdoptedOntology" },
         status: 409,
       } as AxiosResponse),
     );
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "重新起草" }));
+    fireEvent.click(await screen.findByRole("button", { name: "生成业务场景" }));
+    expect(
+      await screen.findByText("先在本体建模中采纳对象类，再生成业务场景。"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "去本体建模" }));
+    expect(onGoToModel).toHaveBeenCalled();
+    expect(messageMock.error).not.toHaveBeenCalled();
+  });
+
+  it("keeps what was accepted when generating again, and asks before starting over", async () => {
+    draftRequirementsMock.mockResolvedValue(requirements({ updateTime: 2 }));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "重新生成" }));
+    await waitFor(() => expect(draftRequirementsMock).toHaveBeenCalledWith("p1", false));
+    expect(confirmMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "全部重来" }));
     await waitFor(() =>
       expect(confirmMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: "重新起草会丢弃已做的冲突裁决和建模选择。",
-          title: "重新起草需求规格？",
-        }),
+        expect.objectContaining({ title: "全部重新生成？" }),
       ),
     );
+    await (confirmMock.mock.calls[0][0] as { onOk: () => Promise<void> }).onOk();
+    expect(draftRequirementsMock).toHaveBeenLastCalledWith("p1", true);
+  });
+
+  it("marks what AI generated for review, and accepts one item or all of them", async () => {
+    const accepted = requirements({ updateTime: 2 });
+    reviewRequirementsMock.mockResolvedValue(accepted);
+    const first = renderPage();
+
+    // The question here, its scenario on its own tab.
+    expect(await screen.findByText("AI 生成，待审核")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "还有 2 条由 AI 生成，等你审核：看过没问题就采纳；需要调整的可以编辑，编辑后自动算采纳。",
+      ),
+    ).toBeInTheDocument();
+    // A second click while the first is sent sends nothing: it would go on the old version.
+    let answer: (value: unknown) => void = () => undefined;
+    reviewRequirementsMock.mockImplementationOnce(
+      () => new Promise((resolve) => (answer = resolve)),
+    );
+    const accept = screen.getByRole("button", { name: "采纳「某个客户哪些订单晚了？」" });
+    fireEvent.click(accept);
+    await waitFor(() => expect(accept).toBeDisabled());
+    fireEvent.click(accept);
+    expect(reviewRequirementsMock).toHaveBeenCalledTimes(1);
+    expect(reviewRequirementsMock).toHaveBeenCalledWith("p1", 1, [{ id: "q1", kind: "questions" }]);
+    answer(accepted);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "采纳「某个客户哪些订单晚了？」" })).toBeEnabled(),
+    );
+
+    first.unmount();
+    reviewRequirementsMock.mockClear();
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "全部采纳（2）" }));
+    await waitFor(() =>
+      expect(reviewRequirementsMock).toHaveBeenCalledWith(
+        "p1",
+        1,
+        expect.arrayContaining([
+          { id: "s1", kind: "scenarios" },
+          { id: "q1", kind: "questions" },
+        ]),
+      ),
+    );
+  });
+
+  it("says when the ontology changed under the questions, and what it does not cover yet", async () => {
+    getRequirementsMock.mockResolvedValue(
+      requirements({
+        ontologyUncovered: [{ id: "ward", kind: "object_type", name: "病区" }],
+        spec: mapSpec({
+          questions: [
+            {
+              accepted: true,
+              answer_shape: "列表",
+              id: "q1",
+              layer: "knowledge",
+              needs: [{ id: "bed", kind: "object_type" }],
+              needs_source: "concepts",
+              ontology_changed: true,
+              scenario_ids: ["s1"],
+              template: "",
+              text: "哪些床位空着？",
+              type: "filter",
+            },
+          ],
+          scenarios: [
+            {
+              accepted: true,
+              actor: "护士长",
+              ontology_changed: true,
+              decision: "安排入院",
+              id: "s1",
+              name: "床位调度",
+              trigger: "每天早上",
+            },
+          ],
+        }),
+      }),
+    );
+    renderPage();
+
+    expect(await screen.findByText("本体有变化，部分场景可能过期")).toBeInTheDocument();
+    expect(screen.getByText("还有 1 个对象类没有场景覆盖：病区")).toBeInTheDocument();
+    expect(screen.getByText("可能过期")).toBeInTheDocument();
+    // Accepted: nothing waits for review.
+    expect(screen.queryByText("AI 生成，待审核")).toBeNull();
+    // Its scenario too, as one of its questions may no longer fit.
+    fireEvent.click(screen.getByText(/^业务场景/));
+    const scenario = (await screen.findByText("床位调度")).closest("section")!;
+    expect(within(scenario).getByText("可能过期")).toBeInTheDocument();
   });
 
   it("names only what waits", async () => {

@@ -275,6 +275,54 @@ describe("requirements.service", () => {
     );
   });
 
+  it("accepts and takes back generated items in one request, and reads what is reviewed", async () => {
+    const { reviewRequirements } = await importService();
+    mockPost.mockResolvedValue({
+      data: {
+        ontology_uncovered: [{ id: "site", kind: "object_type", name: "Site" }],
+        spec: {
+          questions: [
+            {
+              accepted: true,
+              answer_shape: "",
+              id: "q1",
+              layer: "knowledge",
+              needs_source: "concepts",
+              ontology_changed: true,
+              template: "",
+              text: "Which waybills are late?",
+              type: "filter",
+            },
+          ],
+          scenarios: [{ actor: "", decision: "", id: "s1", name: "Dispatch", trigger: "" }],
+        },
+        status: "ready",
+        update_time: 9,
+        version: 2,
+      },
+    });
+
+    const reviewed = await reviewRequirements(
+      "p/1",
+      7,
+      [{ id: "q1", kind: "questions" }],
+      [{ id: "s1", kind: "scenarios" }],
+    );
+    expect(mockPost).toHaveBeenCalledWith(
+      `${prefix}:review`,
+      {
+        accept: [{ id: "q1", kind: "questions" }],
+        unaccept: [{ id: "s1", kind: "scenarios" }],
+        update_time: 7,
+      },
+      { skipErrorToast: true },
+    );
+    expect(reviewed.spec.questions[0]).toMatchObject({ accepted: true, ontologyChanged: true });
+    // Absent reads as not accepted: AI generated it and nobody reviewed it.
+    expect(reviewed.spec.scenarios[0].accepted).toBe(false);
+    expect(reviewed.ontologyUncovered).toEqual([{ id: "site", kind: "object_type", name: "Site" }]);
+  });
+
   it("sends each edit with the update time read, and only the fields set", async () => {
     const { addItem, decideChoice, editItem, removeItem, resolveConflict, setConceptMapping } =
       await importService();
