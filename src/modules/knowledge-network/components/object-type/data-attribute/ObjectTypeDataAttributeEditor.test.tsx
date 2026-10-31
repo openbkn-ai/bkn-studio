@@ -196,3 +196,45 @@ describe("ObjectTypeDataAttributeEditor with a given resource", () => {
     expect(document.querySelectorAll(".anticon-ellipsis")).toHaveLength(2);
   });
 });
+
+describe("ObjectTypeDataAttributeEditor when the fields cannot be read", () => {
+  it("says so with a retry, and gives no mapped count until they are read", async () => {
+    const readResourceFields = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("401"))
+      .mockResolvedValue([{ displayName: "Customer", name: "customer_id", type: "string" }]);
+    renderWithoutAntdStyles(
+      <ObjectTypeDataAttributeEditor
+        basicValue={{ color: "#1677ff", name: "Customers" }}
+        dataProperties={[
+          {
+            displayKey: false,
+            displayName: "Customer",
+            incrementalKey: false,
+            mappedField: { displayName: "Customer", name: "customer_id", type: "string" },
+            name: "customer_id",
+            primaryKey: true,
+            type: "string",
+          },
+        ]}
+        dataSource={{ id: "res-customers", name: "customers" }}
+        networkId="network-1"
+        onChange={vi.fn()}
+        readResourceFields={readResourceFields}
+        resourceFixed
+      />,
+    );
+
+    expect(
+      await screen.findByText("knowledgeNetwork.objectTypeResourceFieldsFailed"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("knowledgeNetwork.objectTypeMappingSummary")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(readResourceFields).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByText("knowledgeNetwork.objectTypeResourceFieldsFailed")).toBeNull(),
+    );
+    expect(screen.getByText("knowledgeNetwork.objectTypeMappingSummary")).toBeInTheDocument();
+  });
+});
