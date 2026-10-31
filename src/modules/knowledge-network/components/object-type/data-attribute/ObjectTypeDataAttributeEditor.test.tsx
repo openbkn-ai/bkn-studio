@@ -160,3 +160,39 @@ describe("ObjectTypeDataAttributeEditor overflowing labels", () => {
     expect(screen.getByTestId("property-drawer")).toBeInTheDocument();
   });
 });
+
+describe("ObjectTypeDataAttributeEditor with a given resource", () => {
+  it("reads the fields with the caller's reader and offers no other resource", async () => {
+    const readResourceFields = vi
+      .fn()
+      .mockResolvedValue([{ displayName: "Customer", name: "customer_id", type: "string" }]);
+    const { rerender } = renderWithoutAntdStyles(
+      <ObjectTypeDataAttributeEditor
+        basicValue={{ color: "#1677ff", name: "Customers" }}
+        dataProperties={[]}
+        dataSource={{ id: "res-customers", name: "customers" }}
+        networkId="network-1"
+        onChange={vi.fn()}
+        readResourceFields={readResourceFields}
+        resourceFixed
+      />,
+    );
+
+    expect(await screen.findByText("Customer")).toBeInTheDocument();
+    expect(readResourceFields).toHaveBeenCalledWith("res-customers");
+    expect(mocks.listObjectTypeResourceFields).not.toHaveBeenCalled();
+    // Neither replacing nor clearing the resource is on offer: the only menu is the properties'.
+    expect(document.querySelectorAll(".anticon-ellipsis")).toHaveLength(1);
+    rerender(
+      <ObjectTypeDataAttributeEditor
+        basicValue={{ color: "#1677ff", name: "Customers" }}
+        dataProperties={[]}
+        dataSource={{ id: "res-customers", name: "customers" }}
+        networkId="network-1"
+        onChange={vi.fn()}
+        readResourceFields={readResourceFields}
+      />,
+    );
+    expect(document.querySelectorAll(".anticon-ellipsis")).toHaveLength(2);
+  });
+});

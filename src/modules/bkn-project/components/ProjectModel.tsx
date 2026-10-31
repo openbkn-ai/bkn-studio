@@ -8,6 +8,7 @@
 import { Alert, Segmented, Space, Spin } from "antd";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -58,6 +59,7 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 import { getProjectPending } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
+import { projectObjectTypePath } from "@/modules/bkn-project/types/workspace";
 import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
@@ -108,6 +110,7 @@ export function ProjectModel({
   project: Project;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { message, modal, runtimeConfig } = useAppServices();
   const directory = useAccountDirectory();
   // undefined while loading, null before the first draft.
@@ -548,6 +551,9 @@ export function ProjectModel({
     onEdit: (kind, item) => setEditing({ item, kind }),
     onRestore: (field) => restore(field, objectNames[field.objectType] ?? field.objectType),
   };
+  // A ready draft of a project in use opens an object type in the editor; otherwise its details.
+  const editable = draft.status === "ready" && !project.archived;
+  const openEditor = (id: string) => void navigate(projectObjectTypePath(project.id, id));
   const pending =
     items.objectTypes.filter((item) => item.needsIdentity).length + unadoptedEnds.length;
   const leftOut = items.excluded.length + items.unreadable.length;
@@ -665,7 +671,7 @@ export function ProjectModel({
               actions={actions}
               catalogNames={catalogNames}
               items={items.objectTypes}
-              onOpen={setOpenId}
+              onOpen={editable ? openEditor : setOpenId}
             />
           ) : activeTab === "relations" ? (
             <DraftRelationsTable
@@ -723,6 +729,7 @@ export function ProjectModel({
             excluded={items.excluded}
             objectType={items.objectTypes.find((item) => item.id === openId) ?? null}
             onClose={() => setOpenId(null)}
+            onEdit={editable ? openEditor : undefined}
           />
           {choosingIdentity ? (
             <IdentityDialog

@@ -21,6 +21,11 @@ const ProjectWorkspacePage = lazy(async () => {
   return { default: module.ProjectWorkspacePage };
 });
 
+const ProjectObjectTypeEditPage = lazy(async () => {
+  const module = await import("@/modules/bkn-project/pages/ProjectObjectTypeEditPage");
+  return { default: module.ProjectObjectTypeEditPage };
+});
+
 function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
@@ -56,6 +61,11 @@ export const bknProjectStandaloneRoutes: RouteObject[] = [
     path: "/bkn-project/:projectId/:section",
     handle: { console: workspaceConsole },
     element: withRouteLoading(<ProjectWorkspacePage />),
+  },
+  {
+    path: "/bkn-project/:projectId/model/object-types/:itemId",
+    handle: { console: workspaceConsole },
+    element: withRouteLoading(<ProjectObjectTypeEditPage />),
   },
 ];
 

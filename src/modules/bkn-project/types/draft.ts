@@ -54,6 +54,8 @@ export type DraftProperty = {
 
 export type DraftObjectType = {
   adopted: boolean;
+  /** The data resource its table is, as the knowledge network's object type editor takes it. */
+  dataSource: { id: string; name: string };
   description: string;
   displayKey: string;
   id: string;
@@ -164,6 +166,28 @@ export type DraftItemEdit = {
   /** Object types only; empty clears it. */
   incrementalKey?: string;
   name?: string;
+};
+
+/**
+ * An object type as a person saves it from the editor, whole: what it is called and describes,
+ * its properties and the columns they map, and which identify, name and update its records. A
+ * column newly mapped adds a property, an excluded one mapped again restores it, and a property
+ * left out is removed.
+ */
+export type DraftObjectTypeSave = {
+  description: string;
+  displayKey: string;
+  incrementalKey: string;
+  name: string;
+  primaryKeys: string[];
+  properties: {
+    description: string;
+    displayName: string;
+    /** The column it maps; absent for a property that maps none. */
+    mappedField?: string;
+    name: string;
+    type: string;
+  }[];
 };
 
 /**

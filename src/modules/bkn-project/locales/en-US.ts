@@ -439,6 +439,7 @@ export const bknProjectEnUS = {
       },
       detail: {
         apiName: "ID",
+        edit: "Edit",
         name: "Name",
         description: "Description",
         noDescription: "No description",
@@ -617,6 +618,36 @@ export const bknProjectEnUS = {
         unpublished: "Not published yet",
         noDraft: "No draft yet",
         draftUpdated: "Updated {{time}}",
+      },
+    },
+    objectEditor: {
+      title: "Edit object type",
+      name: "Name",
+      nameRequired: "Enter a name for the object type",
+      nameTooLong: "The name is too long; shorten it",
+      description: "Description",
+      save: "Save",
+      saved: "Saved “{{name}}”",
+      reload: "Read again",
+      notFound: "The draft has no such object type, or it is still being drafted.",
+      leaveTitle: "Leave the editor?",
+      leaveDescription: "Changes that are not saved will be lost.",
+      leave: "Leave",
+      listSeparator: ", ",
+      errors: {
+        Stale:
+          "The draft changed while you were editing. Read it again, then make and save your changes; these ones are not kept.",
+        InvalidName: "This name cannot be used; choose another",
+        InvalidDescription: "The description is not accepted; change it",
+        PropertyInUse:
+          "These relations use a property you removed: {{relations}}. Change the relations first, or keep the property.",
+        InvalidProperty:
+          "The column of property “{{property}}” does not exist, is mapped by another property, or has another type.",
+        InvalidPropertyUnnamed:
+          "A property's column does not exist, is mapped by another property, or has another type.",
+        InvalidIdentity: "The identifier needs properties that tell every record apart.",
+        NeedsIdentity: "Choose an identifier for the object type.",
+        InvalidIncrementalKey: "The update field needs to be a date or time property.",
       },
     },
     collapsedList: {
