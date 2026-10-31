@@ -18,6 +18,10 @@ import { draftGraphRecords } from "@/modules/bkn-project/components/draft/graph"
 // The object type panel's frame: both editors open the same way.
 import styles from "@/modules/bkn-project/components/object-type/ObjectTypePanel.module.css";
 import {
+  ReviewActions,
+  type CandidateReview,
+} from "@/modules/bkn-project/components/object-type/ReviewActions";
+import {
   relationEditorValues,
   relationSave,
 } from "@/modules/bkn-project/components/relation-type/relation-values";
@@ -85,6 +89,7 @@ export function RelationTypePanel({
   onSaved,
   project,
   relationTypeId,
+  review,
 }: {
   /** The draft the panel opens on; later reads of it do not reset what is being edited. */
   draft: Draft;
@@ -95,6 +100,8 @@ export function RelationTypePanel({
   project: Project;
   /** The relation type to edit; null makes a new one. */
   relationTypeId: string | null;
+  /** Going through the candidates: confirming this one, then the next. */
+  review?: CandidateReview;
 }) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
@@ -232,22 +239,23 @@ export function RelationTypePanel({
     }
   };
 
-  const save = async () => {
+  // Replies the draft saved, or null when nothing was.
+  const save = async (): Promise<Draft | null> => {
     if (!base) {
-      return;
+      return null;
     }
     let named: BasicValues;
     try {
       named = await basicForm.validateFields();
     } catch {
       // The form marks its fields.
-      return;
+      return null;
     }
     // The mapping says what it misses, as on the knowledge network.
     const missing = validateRelationTypeMappingValues(t, values);
     if (missing) {
       setProblem({ kind: "other", text: missing });
-      return;
+      return null;
     }
     setSaving(true);
     setProblem(null);
@@ -268,8 +276,10 @@ export function RelationTypePanel({
       }
       onSaved(next);
       reset(next, saved?.id ?? relation?.id ?? null);
+      return next;
     } catch (error) {
       setProblem(explain(error));
+      return null;
     } finally {
       setSaving(false);
     }
@@ -297,6 +307,17 @@ export function RelationTypePanel({
     });
   };
 
+  // Before deciding on the candidate, what was changed here is saved; the decision follows it.
+  const prepare = async () => {
+    if (!base) {
+      return null;
+    }
+    if (!changed) {
+      return base.draft.updateTime;
+    }
+    return (await save())?.updateTime ?? null;
+  };
+
   const reload = async () => {
     const next = await onReload();
     if (next) {
@@ -312,6 +333,7 @@ export function RelationTypePanel({
           <span className={styles.unsaved}>{t("bknProject.objectEditor.unsaved")}</span>
         ) : null}
         <span className={styles.actions}>
+          {review && relation ? <ReviewActions prepare={prepare} review={review} /> : null}
           {/* Only a relation a person made is deleted; one drafting found is left out instead. */}
           {relation?.origin === "manual" ? (
             <AppButton danger onClick={remove}>

@@ -7,7 +7,7 @@
 
 import { PlusOutlined } from "@ant-design/icons";
 import { Alert, Segmented, Space, Spin } from "antd";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
@@ -20,7 +20,9 @@ import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftC
 import { DraftChangesPanel } from "@/modules/bkn-project/components/draft/DraftChangesPanel";
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
 import { IdentityDialog } from "@/modules/bkn-project/components/draft/IdentityDialog";
+import { CandidatesList } from "@/modules/bkn-project/components/draft/CandidatesList";
 import { DraftObjectDrawer } from "@/modules/bkn-project/components/draft/DraftObjectDrawer";
+import type { CandidateReview } from "@/modules/bkn-project/components/object-type/ReviewActions";
 import { ObjectTypePanel } from "@/modules/bkn-project/components/object-type/ObjectTypePanel";
 import { RelationTypePanel } from "@/modules/bkn-project/components/relation-type/RelationTypePanel";
 import { ConfirmDraft } from "@/modules/bkn-project/components/model/ConfirmDraftDialog";
@@ -46,14 +48,18 @@ import {
   relationsWithUnadoptedEnds,
 } from "@/modules/bkn-project/components/draft/evidence";
 import {
+  acceptDraftSuggestions,
   chooseIdentity,
   DRAFT_POLL_MS,
   editDraftItem,
   generateDraft,
+  getCandidates,
   getDraft,
   restoreField,
 } from "@/modules/bkn-project/services/draft.service";
 import type {
+  Candidate,
+  Candidates,
   Draft,
   DraftExcludedField,
   DraftItemEdit,
@@ -68,7 +74,7 @@ import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectModel.module.css";
 
-const TABS = ["changes", "excluded", "objects", "relations", "valueTypes"] as const;
+const TABS = ["changes", "excluded", "objects", "relations", "review", "valueTypes"] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (value: string | null | undefined): value is Tab =>
   (TABS as readonly string[]).includes(value ?? "");
@@ -129,6 +135,15 @@ export function ProjectModel({
   const [panelId, setPanelId] = useState<string | null>(initialObject ?? null);
   // The relation type open in its panel: null makes a new one.
   const [relationPanel, setRelationPanel] = useState<{ id: string | null } | null>(null);
+  // The candidates to confirm, undefined while read; the added catalog they are kept to.
+  const [candidates, setCandidates] = useState<Candidates | undefined>(undefined);
+  const [candidatesError, setCandidatesError] = useState<string | null>(null);
+  const [candidateCatalog, setCandidateCatalog] = useState("");
+  const [accepting, setAccepting] = useState(false);
+  // The candidates in the order they are gone through, from where one was opened in the list.
+  const [reviewOrder, setReviewOrder] = useState<Candidate[] | null>(null);
+  // Counts the draft read again under an open panel, which then starts over from it.
+  const [panelReads, setPanelReads] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
   // A link's object type is open until the panel closes: the link then no longer opens it again.
   const closePanel = () => {
@@ -165,6 +180,39 @@ export function ProjectModel({
   useEffect(() => {
     void loadDraft();
   }, [loadDraft]);
+
+  // The candidates follow the draft: read again whenever it changes.
+  const candidatesTime = draft?.status === "ready" ? draft.updateTime : null;
+  // Only the latest read counts: an earlier one answering late, as for another catalog, is dropped.
+  const candidateReads = useRef(0);
+  // How many candidates of the whole draft wait, whichever catalog the list is kept to.
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const loadCandidates = useCallback(async () => {
+    const read = ++candidateReads.current;
+    try {
+      const [next, all] = await Promise.all([
+        getCandidates(project.id, candidateCatalog),
+        candidateCatalog ? getCandidates(project.id) : null,
+      ]);
+      if (read !== candidateReads.current) {
+        return null;
+      }
+      setCandidates(next);
+      setPendingTotal((all ?? next).counts.pending);
+      setCandidatesError(null);
+      return all ?? next;
+    } catch (error) {
+      if (read === candidateReads.current) {
+        setCandidatesError(extractRequestErrorMessage(error));
+      }
+      return null;
+    }
+  }, [candidateCatalog, project.id]);
+  useEffect(() => {
+    if (candidatesTime !== null) {
+      void loadCandidates();
+    }
+  }, [candidatesTime, loadCandidates]);
 
   // Without the list, catalogs show by id, nothing is reported missing and they cannot be
   // changed; the owner is told and may try again.
@@ -604,14 +652,106 @@ export function ProjectModel({
   };
   // A ready draft of a project in use opens an object type in the editor; otherwise its details.
   const editable = draft.status === "ready" && !project.archived;
-  const openEditor = (id: string) => {
+  // Opened anywhere but the candidates, a panel goes through no list.
+  const openEditor = (id: string, order: Candidate[] | null = null) => {
+    setReviewOrder(order);
     setOpenId(null);
     setRelationPanel(null);
     setPanelId(id);
   };
-  const openRelation = (id: string | null) => {
+  const openRelation = (id: string | null, order: Candidate[] | null = null) => {
+    setReviewOrder(order);
     closePanel();
     setRelationPanel({ id });
+  };
+  const openCandidate = (candidate: Candidate, order: Candidate[]) =>
+    candidate.kind === "object_types"
+      ? openEditor(candidate.id, order)
+      : openRelation(candidate.id, order);
+  const closeReview = () => {
+    setReviewOrder(null);
+    closePanel();
+    setRelationPanel(null);
+  };
+
+  // Going through the candidates from the panel: decide on the one open, then open the next in
+  // the list's order; past the last, the panel closes.
+  const reviewOf = (kind: Candidate["kind"], id: string): CandidateReview | undefined => {
+    const at = reviewOrder?.findIndex((item) => item.kind === kind && item.id === id) ?? -1;
+    if (!reviewOrder || at < 0) {
+      return undefined;
+    }
+    const next = () => {
+      const following = reviewOrder[at + 1];
+      if (following) {
+        openCandidate(following, reviewOrder);
+        return;
+      }
+      closeReview();
+      void loadCandidates().then((read) => {
+        if (read && !read.counts.pending) {
+          message.success(t("bknProject.model.candidates.allReviewed"));
+        }
+      });
+    };
+    const decide = async (updateTime: number, edit: DraftItemEdit) => {
+      try {
+        setDraft(await editDraftItem(project.id, kind, id, updateTime, edit));
+        next();
+      } catch (error) {
+        if (draftErrorCode(error) === "Stale") {
+          message.warning(t("bknProject.model.edit.stale"));
+          // The panel opens again on the draft as it is now, so the next decision follows it.
+          await loadDraft();
+          setPanelReads((count) => count + 1);
+          return;
+        }
+        message.error(extractRequestErrorMessage(error));
+      }
+    };
+    return {
+      name: reviewOrder[at].name,
+      onAdopt: (updateTime) => decide(updateTime, { adopted: true }),
+      onExclude: (updateTime, reason) =>
+        decide(updateTime, { adopted: false, ...(reason ? { reason } : {}) }),
+      onNext: next,
+    };
+  };
+
+  const acceptSuggestions = () => {
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t("bknProject.model.candidates.acceptContent"),
+      okText: t("bknProject.model.candidates.acceptSuggestions"),
+      onOk: async () => {
+        setAccepting(true);
+        try {
+          const {
+            accepted,
+            draft: next,
+            skipped,
+          } = await acceptDraftSuggestions(project.id, draft.updateTime);
+          setDraft(next);
+          if (skipped) {
+            message.info(
+              t("bknProject.model.candidates.acceptedSkipped", { count: skipped, accepted }),
+            );
+          } else {
+            message.success(t("bknProject.model.candidates.accepted", { count: accepted }));
+          }
+        } catch (error) {
+          if (draftErrorCode(error) === "Stale") {
+            message.warning(t("bknProject.model.edit.stale"));
+            await loadDraft();
+          } else {
+            message.error(extractRequestErrorMessage(error));
+          }
+        } finally {
+          setAccepting(false);
+        }
+      },
+      title: t("bknProject.model.candidates.acceptTitle"),
+    });
   };
   // The panel's own read of the draft after it moved: the page shows it too.
   const readDraftAgain = async () => {
@@ -628,6 +768,15 @@ export function ProjectModel({
     items.objectTypes.filter((item) => item.needsIdentity).length + unadoptedEnds.length;
   const leftOut = items.excluded.length + items.unreadable.length;
   const tabs: { label: ReactNode; value: Tab }[] = [
+    // What waits to be confirmed comes first, while the draft can be confirmed on.
+    ...(draft.status === "ready"
+      ? [
+          {
+            label: t("bknProject.model.tabs.review", { count: pendingTotal }),
+            value: "review" as const,
+          },
+        ]
+      : []),
     {
       label: t("bknProject.model.tabs.objects", { count: items.objectTypes.length }),
       value: "objects",
@@ -748,7 +897,20 @@ export function ProjectModel({
             title={t("bknProject.model.graph.title")}
           />
           <Segmented<Tab> onChange={setTab} options={tabs} value={activeTab} />
-          {activeTab === "objects" ? (
+          {activeTab === "review" ? (
+            <CandidatesList
+              accepting={accepting}
+              candidates={candidates}
+              catalog={candidateCatalog}
+              catalogIds={project.catalogIds}
+              catalogNames={catalogNames}
+              draft={draft}
+              error={candidatesError ? t("bknProject.model.candidates.loadFailed") : null}
+              onAcceptSuggestions={editable ? acceptSuggestions : undefined}
+              onCatalog={setCandidateCatalog}
+              onOpen={editable ? openCandidate : undefined}
+            />
+          ) : activeTab === "objects" ? (
             <DraftObjectsTable
               actions={actions}
               catalogNames={catalogNames}
@@ -826,24 +988,26 @@ export function ProjectModel({
           {relationPanel && editable ? (
             <RelationTypePanel
               draft={draft}
-              key={relationPanel.id ?? "new"}
+              key={`${relationPanel.id ?? "new"}/${panelReads}`}
               onClose={() => setRelationPanel(null)}
               onReload={readDraftAgain}
               onSaved={setDraft}
               project={project}
               relationTypeId={relationPanel.id}
+              review={relationPanel.id ? reviewOf("relation_types", relationPanel.id) : undefined}
             />
           ) : null}
           {panelId && editable ? (
             <ObjectTypePanel
               draft={draft}
-              key={panelId}
+              key={`${panelId}/${panelReads}`}
               objectTypeId={panelId}
               onAsk={() => setOpenId(panelId)}
               onClose={closePanel}
               onReload={readDraftAgain}
               onSaved={setDraft}
               project={project}
+              review={reviewOf("object_types", panelId)}
             />
           ) : null}
           {choosingIdentity ? (

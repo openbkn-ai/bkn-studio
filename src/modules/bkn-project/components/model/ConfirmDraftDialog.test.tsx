@@ -56,6 +56,7 @@ function status(action: Partial<ProjectNextAction> | null, extra: Partial<Projec
     stale: [],
     undecided: 0,
     unresolvedConflicts: 0,
+    unreviewed: 0,
     ...extra,
   } satisfies ProjectStatus;
 }
@@ -170,6 +171,16 @@ describe("ConfirmDraft", () => {
         updateTime: draft.updateTime,
       }),
     );
+  });
+
+  it("reminds of candidates nobody confirmed, without holding confirming back", async () => {
+    getProjectStatusMock.mockResolvedValue(status({}, { unreviewed: 2 }));
+    renderConfirm();
+
+    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText(/^还有 2 个候选没有逐个确认/)).toBeInTheDocument();
+    expect(okButton()).toBeEnabled();
   });
 
   it("asks for the conflicts a refusal names when the status did not say", async () => {

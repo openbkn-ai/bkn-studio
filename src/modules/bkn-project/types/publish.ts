@@ -80,6 +80,8 @@ export type ProjectStatus = {
   /** `confirmation_outdated`, `check_outdated`. */
   stale: string[];
   undecided: number;
+  /** Candidates nobody confirmed one by one yet; confirming the draft does not wait for them. */
+  unreviewed: number;
   /** Conflicts between requirement documents no one ruled on, which confirming has to accept. */
   unresolvedConflicts: number;
 };

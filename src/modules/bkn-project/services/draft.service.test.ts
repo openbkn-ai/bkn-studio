@@ -534,6 +534,110 @@ describe("draft.service", () => {
     }
   });
 
+  it("reads the candidates in bkn-project's order, kept to an added catalog on request", async () => {
+    const { getCandidates } = await importService();
+    mockGet.mockResolvedValue({
+      data: {
+        candidates: [
+          {
+            added_by_catalog: "c2",
+            adopted: false,
+            id: "leads",
+            kind: "object_types",
+            name: "Leads",
+            needed_by_requirements: { questions: [{ id: "q1", text: "Who calls?" }] },
+            rows: 40,
+            state: "pending",
+            table: { catalog_id: "c2", name: "crm_leads", resource_id: "res-leads" },
+          },
+          { adopted: true, id: "orders", kind: "object_types", name: "Orders", state: "adopted" },
+        ],
+        counts: { adopted: 1, pending: 1 },
+      },
+    });
+
+    const read = await getCandidates("p 1", "c2");
+
+    expect(mockGet).toHaveBeenCalledWith("/bkn-project/v1/projects/p%201/ontology/candidates", {
+      params: { catalog_id: "c2" },
+      skipErrorToast: true,
+    });
+    expect(read.counts).toEqual({ adopted: 1, excluded: 0, pending: 1 });
+    expect(read.items[0]).toMatchObject({
+      addedByCatalog: "c2",
+      neededBy: { concepts: [], questions: [{ id: "q1", text: "Who calls?" }] },
+      table: { name: "crm_leads", rows: 40 },
+    });
+    expect(read.items[1]).toMatchObject({ addedByCatalog: "", neededBy: null, table: null });
+  });
+
+  it("accepts the suggestions with the draft's time, and sends why an item is left out", async () => {
+    const { acceptDraftSuggestions, editDraftItem, mockDraft } = await importService();
+    mockPost.mockResolvedValue({
+      data: {
+        accepted: ["object_types/orders"],
+        draft: mockDraft("p1"),
+        skipped: ["object_types/bom", "relation_types/bom_to_orders"],
+      },
+    });
+    mockPatch.mockResolvedValue({ data: mockDraft("p1") });
+
+    expect(await acceptDraftSuggestions("p 1", 7)).toMatchObject({ accepted: 1, skipped: 2 });
+    expect(mockPost).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%201/ontology/draft:accept_suggestions",
+      { update_time: 7 },
+      { skipErrorToast: true },
+    );
+
+    await editDraftItem("p1", "object_types", "customers", 8, {
+      adopted: false,
+      reason: "A log",
+    });
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p1/ontology/draft/items/object_types/customers",
+      expect.objectContaining({ adopted: false, reason: "A log", update_time: 8 }),
+      { skipErrorToast: true },
+    );
+  });
+
+  it("confirms candidates in the mock as people decide, and as suggested where it can", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const { acceptDraftSuggestions, editDraftItem, getCandidates, getDraft } =
+      await import("@/modules/bkn-project/services/draft.service");
+    vi.useFakeTimers();
+    try {
+      const settle = async <T>(promise: Promise<T>) => {
+        await vi.runAllTimersAsync();
+        return promise;
+      };
+      const before = (await settle(getDraft("p-001")))!;
+      const first = await settle(getCandidates("p-001"));
+      expect(first.counts.pending).toBe(first.items.length);
+      // What the requirements need comes first.
+      expect(first.items[0].neededBy).not.toBeNull();
+
+      const left = await settle(
+        editDraftItem("p-001", "object_types", "customers", before.updateTime, {
+          adopted: false,
+          reason: "Not now",
+        }),
+      );
+      const customers = (await settle(getCandidates("p-001"))).items.find(
+        (item) => item.id === "customers",
+      );
+      expect(customers).toMatchObject({ excludeReason: "Not now", state: "excluded" });
+
+      // An object type waiting for its identity, and relations with an end left out, are skipped.
+      const { skipped } = await settle(acceptDraftSuggestions("p-001", left.updateTime));
+      const after = await settle(getCandidates("p-001"));
+      expect(skipped).toBe(after.counts.pending);
+      expect(after.items.find((item) => item.id === "sales_orders")?.state).toBe("adopted");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("chooses an identity and waits longer than bkn-project counts", async () => {
     const { chooseIdentity, IDENTITY_TIMEOUT_MS, mockDraft } = await importService();
     mockPut.mockResolvedValue({ data: mockDraft("p1") });

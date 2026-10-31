@@ -14,6 +14,7 @@ import {
   type BackendDraft,
   getDraft,
   mapDraft,
+  mockUnreviewedCount,
 } from "@/modules/bkn-project/services/draft.service";
 import { getProject } from "@/modules/bkn-project/services/project.service";
 import {
@@ -95,6 +96,7 @@ type BackendStatus = {
   stale: string[] | null;
   undecided: number;
   unresolved_conflicts?: number;
+  unreviewed?: number;
 };
 
 type BackendPending = {
@@ -267,6 +269,7 @@ function mapStatus(status: BackendStatus): ProjectStatus {
     stale: status.stale ?? [],
     undecided: status.undecided,
     unresolvedConflicts: status.unresolved_conflicts ?? 0,
+    unreviewed: status.unreviewed ?? 0,
   };
 }
 
@@ -564,6 +567,7 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
     stale: [],
     undecided: 0,
     unresolvedConflicts: 0,
+    unreviewed: draft ? mockUnreviewedCount(projectId) : 0,
   };
   // The mock's sources all exist: what is read is checked once there is a draft to read for.
   const adopted = draft && draft.status === "ready" ? adoptedObjects(draft).length : 0;

@@ -153,3 +153,17 @@
   outline: 2px solid var(--color-primary-600);
   outline-offset: 2px;
 }
+
+/* A list's filter on the left and its action on the right, above it. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* What a tooltip lists, one item a line. */
+.tooltipList {
+  margin: 0;
+  padding-left: 16px;
+}

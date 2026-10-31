@@ -87,6 +87,7 @@ describe("publish.service", () => {
       stale: ["confirmation_outdated"],
       undecided: 3,
       unresolvedConflicts: 0,
+      unreviewed: 0,
     });
   });
 

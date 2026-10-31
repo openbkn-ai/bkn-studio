@@ -257,6 +257,14 @@ export function ConfirmDraft({
           {status.confirmation ? (
             <span className={styles.summary}>{t("bknProject.confirm.dialog.replaces")}</span>
           ) : null}
+          {/* A reminder, never a block: what nobody confirmed goes as it is adopted now. */}
+          {status.unreviewed > 0 ? (
+            <Alert
+              message={t("bknProject.model.candidates.unreviewed", { count: status.unreviewed })}
+              showIcon
+              type="warning"
+            />
+          ) : null}
           {needsUndecided ? (
             pendingFailed ? (
               <Alert

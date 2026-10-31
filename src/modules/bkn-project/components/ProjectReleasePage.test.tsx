@@ -93,6 +93,7 @@ function status(extra: Partial<ProjectStatus> = {}): ProjectStatus {
     stale: [],
     undecided: 0,
     unresolvedConflicts: 0,
+    unreviewed: 0,
     ...extra,
   };
 }
