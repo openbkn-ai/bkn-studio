@@ -906,6 +906,50 @@ describe("BusinessProvenance016", () => {
     );
   });
 
+  it("keeps actual failed attempts visible without a composite capture verdict", () => {
+    const observed = structuredClone(view);
+    const attempt = observed.timeRail?.find((item) => item.operation_id === "op-sql");
+    if (!attempt) throw new Error("missing recorded attempt");
+    attempt.status = "failed";
+    render(<BusinessProvenance016 view={observed} evidenceOnly />);
+    expect(screen.getByText(/记录到 1 次调用失败/)).toBeTruthy();
+    expect(screen.queryByText("采集完整性")).toBeNull();
+  });
+  it("does not present a composite function verdict as capture completeness", () => {
+    const mixed = structuredClone(view);
+    const graph = mixed.selectedPairGraphs?.["pair-stock"];
+    if (!graph) throw new Error("missing fixture graph");
+    graph.businessFunctions[0].technicalExecution.completeness = "partial";
+    render(<BusinessProvenance016 view={mixed} evidenceOnly />);
+    const card = screen.getByRole("heading", { name: "汇总物料可用库存" }).closest("article");
+    expect(card).toBeTruthy();
+    expect(screen.queryByText("采集完整性")).toBeNull();
+    expect(card?.textContent).not.toContain("SQL 数据查询 · 部分成立");
+  });
+  it("does not imply background work for a saved unfinished attribution", () => {
+    render(
+      <BusinessProvenance016
+        view={{
+          ...view,
+          generationStatus: "analysis_pending",
+          questionPairs: [
+            {
+              id: "pending",
+              question: "问题",
+              answer: "答案",
+              summary: "问题",
+              status: "analysis_pending",
+              claimIds: [],
+            },
+          ],
+          selectedPairGraphs: {},
+        }}
+        evidenceOnly
+      />,
+    );
+    expect(screen.getByText("归因未完成")).toBeTruthy();
+    expect(screen.queryByText("归因整理中")).toBeNull();
+  });
   it("keeps question cards visible when attribution has not produced a graph", () => {
     render(
       <BusinessProvenance016

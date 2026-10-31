@@ -385,7 +385,7 @@ describe("EE business provenance service", () => {
   });
 });
 
-describe("current record integrity", () => {
+describe("interaction record integrity", () => {
   it("maps the independent assessment and sends its own filter", async () => {
     const report = {
       status: "missing",
@@ -402,22 +402,57 @@ describe("current record integrity", () => {
     };
     getMock.mockResolvedValue({
       data: {
-        entries: [
-          {
-            conversation_id: "conv",
-            evidence_completeness: "complete",
-            current_record_integrity: report,
-          },
-        ],
+        entries: [{ interaction_id: "int", current_record_integrity: report }],
         total: 1,
       },
     });
-    const { getBusinessProvenanceConversations } = await import("./business-provenance.service");
-    const page = await getBusinessProvenanceConversations({ recordIntegrity: "missing" });
+    const { getBusinessProvenanceInteractions } = await import("./business-provenance.service");
+    const page = await getBusinessProvenanceInteractions({ recordIntegrity: "missing" });
     expect(page.entries[0].currentRecordIntegrity).toEqual(report);
     expect(getMock).toHaveBeenLastCalledWith(
-      "/agent-observability/v1/business-provenance/conversations",
+      "/agent-observability/v1/business-provenance/interactions",
       expect.objectContaining({ params: { record_integrity: "missing" } }),
     );
   });
+});
+
+it("does not map or forward legacy conversation state fields", async () => {
+  getMock.mockResolvedValue({
+    data: {
+      entries: [
+        {
+          conversation_id: "conv",
+          status: "closed",
+          evidence_completeness: "partial",
+          current_record_integrity: { status: "missing" },
+          record_integrity_check_failed: true,
+        },
+      ],
+      total: 1,
+      partial: true,
+      partial_reasons: ["preview_read_incomplete"],
+    },
+  });
+  const { getBusinessProvenanceConversations } = await import("./business-provenance.service");
+  const legacyQuery = {
+    keyword: "stock",
+    status: "closed",
+    recordIntegrity: "missing",
+    evidenceCompleteness: "partial",
+  };
+  const page = await getBusinessProvenanceConversations(legacyQuery);
+  expect(getMock).toHaveBeenLastCalledWith(
+    "/agent-observability/v1/business-provenance/conversations",
+    expect.objectContaining({ params: { keyword: "stock" } }),
+  );
+  expect(page.entries[0].conversationId).toBe("conv");
+  for (const key of [
+    "status",
+    "evidenceCompleteness",
+    "currentRecordIntegrity",
+    "recordIntegrityCheckFailed",
+  ])
+    expect(page.entries[0]).not.toHaveProperty(key);
+  expect(page.partial).toBe(true);
+  expect(page.partialReasons).toEqual(["preview_read_incomplete"]);
 });

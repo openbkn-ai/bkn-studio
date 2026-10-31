@@ -39,13 +39,10 @@
 }
 .filters {
   display: grid;
-  grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(120px, 1fr)) auto auto;
+  grid-template-columns: minmax(180px, 2fr) repeat(2, minmax(120px, 1fr)) auto auto;
   gap: 12px;
   padding: 12px;
   border-bottom: 1px solid var(--color-divider);
-}
-.filters :global(.ant-select) {
-  width: 100%;
 }
 .filters :global(.ant-btn-primary) {
   min-width: 88px;
@@ -109,14 +106,6 @@
 }
 .statusText {
   color: var(--color-text-secondary);
-}
-.evidence {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-}
-.evidenceMissing {
-  color: var(--color-warning-text);
-  font-size: 12px;
 }
 .integrityCheckedAt {
   display: block;

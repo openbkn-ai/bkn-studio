@@ -40,10 +40,10 @@ function Location() {
   return <span data-testid="location">{useLocation().pathname}</span>;
 }
 
-function renderNav() {
+function renderNav(counts?: Partial<Record<"model" | "requirements", number>>) {
   render(
     <MemoryRouter initialEntries={["/bkn-project/p1/overview"]}>
-      <ProjectWorkspaceNav active="overview" projectId="p1" />
+      <ProjectWorkspaceNav active="overview" counts={counts} projectId="p1" />
       <Routes>
         <Route element={<Location />} path="*" />
       </Routes>
@@ -51,11 +51,28 @@ function renderNav() {
   );
 }
 
-const itemLabels = () => screen.getAllByRole("button").map((button) => button.textContent);
+// The pages, not the button that folds the navigation.
+const itemLabels = () =>
+  screen
+    .getAllByRole("button")
+    .filter((button) => button.title !== "shell.collapseSidenav")
+    .map((button) => button.textContent);
 
 describe("ProjectWorkspaceNav", () => {
   beforeEach(() => {
     kb.mode = "hidden";
+  });
+
+  it("counts what a page holds, and folds to icons", () => {
+    renderNav({ model: 13, requirements: 10 });
+    expect(screen.getByRole("button", { name: /requirements/ })).toHaveTextContent("10");
+    expect(screen.getByRole("button", { name: /model/ })).toHaveTextContent("13");
+
+    fireEvent.click(screen.getByTitle("shell.collapseSidenav"));
+    // Folded: the names and counts give way to the icons; each page keeps its name as its title.
+    expect(screen.queryByText("bknProject.workspace.sections.overview")).toBeNull();
+    expect(screen.queryByText("10")).toBeNull();
+    expect(screen.getByTitle("bknProject.workspace.sections.overview")).toBeInTheDocument();
   });
 
   it("shows the four community pages in two groups, with no knowledge-base page", () => {

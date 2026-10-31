@@ -97,6 +97,34 @@ type ObjectTypeDataAttributeEditorProps = {
   }) => void;
 };
 
+type OverflowTooltipTextProps = {
+  className: string;
+  text: string;
+};
+
+function OverflowTooltipText({ className, text }: OverflowTooltipTextProps) {
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (!nextOpen) {
+      setOpen(false);
+      return;
+    }
+
+    const element = textRef.current;
+    setOpen(Boolean(element && element.scrollWidth > element.clientWidth));
+  }, []);
+
+  return (
+    <Tooltip onOpenChange={handleOpenChange} open={open} title={text}>
+      <span className={className} ref={textRef}>
+        {text}
+      </span>
+    </Tooltip>
+  );
+}
+
 export type ObjectTypeDataAttributeEditorHandle = {
   getDataProperties: () => Promise<{
     dataProperties: ObjectTypeDataProperty[];
@@ -1270,9 +1298,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                   <span className={`${styles.panelIcon} ${styles.panelIconView}`}>
                     <TableOutlined />
                   </span>
-                  <span className={styles.panelTitle}>
-                    {selectedResource?.name ?? t("knowledgeNetwork.objectTypeResource")}
-                  </span>
+                  <OverflowTooltipText
+                    className={styles.panelTitle}
+                    text={selectedResource?.name ?? t("knowledgeNetwork.objectTypeResource")}
+                  />
                   <span className={styles.panelCount}>{viewFields.length}</span>
                 </div>
                 <div className={styles.panelActions}>
@@ -1356,9 +1385,17 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                           >
                             <div className={styles.itemContent}>
                               <FieldTypeIcon type={field.type} />
-                              <div>
-                                <div className={styles.itemName}>{field.displayName}</div>
-                                <div className={styles.itemTechName}>{field.name}</div>
+                              <div className={styles.itemText}>
+                                <OverflowTooltipText
+                                  className={styles.itemName}
+                                  text={field.displayName}
+                                />
+                                <div className={styles.itemTechName}>
+                                  <OverflowTooltipText
+                                    className={styles.itemTechNameText}
+                                    text={field.name}
+                                  />
+                                </div>
                               </div>
                             </div>
                             <span
@@ -1399,7 +1436,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                   >
                     {renderResourceIcon(basicValue.icon)}
                   </span>
-                  <span className={styles.panelTitle}>{basicValue.name}</span>
+                  <OverflowTooltipText className={styles.panelTitle} text={basicValue.name} />
                   <span className={styles.panelCount}>{validProperties.length}</span>
                 </div>
                 <div className={styles.panelActions}>
@@ -1471,12 +1508,16 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                             />
                             <div className={styles.itemContent}>
                               <FieldTypeIcon type={property.type} />
-                              <div>
-                                <div className={styles.itemName}>
-                                  {property.displayName || property.name || "-"}
-                                </div>
+                              <div className={styles.itemText}>
+                                <OverflowTooltipText
+                                  className={styles.itemName}
+                                  text={property.displayName || property.name || "-"}
+                                />
                                 <div className={styles.itemTechName}>
-                                  <span>{property.name || "-"}</span>
+                                  <OverflowTooltipText
+                                    className={styles.itemTechNameText}
+                                    text={property.name || "-"}
+                                  />
                                   {hasInvalidName ? (
                                     <Tooltip
                                       title={t(

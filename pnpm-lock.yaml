@@ -94,6 +94,9 @@ importers:
       json-bigint:
         specifier: ^1.0.0
         version: 1.0.0
+      lossless-json:
+        specifier: 4.3.3
+        version: 4.3.3
       monaco-editor:
         specifier: ^0.52.2
         version: 0.52.2
@@ -2073,6 +2076,9 @@ packages:
 
   longest-streak@3.1.0:
     resolution: {integrity: sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g==}
+
+  lossless-json@4.3.3:
+    resolution: {integrity: sha512-FGFrGArHsv7BRiYOf37ZRieT9HlKw+Kpu9HvtpYjcoOEo8lqNkjny8A2YAfWNWWQC+9pcLIrLZ+IviKJhaHwGQ==}
 
   lru-cache@11.5.1:
     resolution: {integrity: sha512-RPimw/7aMdv2oqRrxKwvZXcPfwBrn/JZ2xYcY9Hus/6LaS3VOAKVWKWgNLCFSiOm1ESXinjsDlidVU7JlnCN2A==}
@@ -5069,6 +5075,8 @@ snapshots:
   lodash@4.18.1: {}
 
   longest-streak@3.1.0: {}
+
+  lossless-json@4.3.3: {}
 
   lru-cache@11.5.1: {}
 

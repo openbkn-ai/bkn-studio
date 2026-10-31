@@ -11,15 +11,16 @@ import {
   validateMockExpectedUpdateTime,
 } from "@/framework/request/mock-error";
 import {
-  parsePrecisionSafeJSON,
+  parsePrecisionPreservingJSON,
   transformPrecisionSafeJSONRequest,
   transformPrecisionSafeJSONResponse,
 } from "@/framework/request/precision-safe-json";
-import JSONBig from "json-bigint";
+import BigNumber from "bignumber.js";
+import { isNumericFilterType, isTemporalFilterType } from "@/modules/data-catalog/lib/filter-tree";
+import { temporalFilterValue } from "@/modules/data-catalog/lib/filter-temporal";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-count";
-import { parseFilterCondition } from "@/modules/data-catalog/lib/filter-tree";
 import {
   emitMockChange,
   formatMockTimestamp,
@@ -277,22 +278,15 @@ function transformResourceDetailResponse(data: unknown): unknown {
   if (typeof data !== "string" || !response || typeof response !== "object") return response;
 
   const safeEntries = (response as { entries?: BackendResource[] }).entries;
-  if (
-    !safeEntries?.some(
-      (entry) =>
-        entry.logic_definition?.filter_condition &&
-        parseFilterCondition(entry.logic_definition.filter_condition) === null,
-    )
-  ) {
-    return response;
-  }
+  if (!safeEntries?.some((entry) => entry.logic_definition?.filter_condition)) return response;
 
-  // The display parser turns unsafe JSON numbers into strings. For an unsupported
-  // filter, retain the original numeric types so a complete PUT can preserve it.
-  const preciseEntries = (JSONBig().parse(data) as { entries?: BackendResource[] }).entries;
+  // Keep stored condition literals precise regardless of the editor's capabilities.
+  // Numeric constants and string literals must remain distinct on a complete PUT.
+  const preciseEntries = (parsePrecisionPreservingJSON(data) as { entries?: BackendResource[] })
+    .entries;
   safeEntries.forEach((entry, index) => {
     const condition = entry.logic_definition?.filter_condition;
-    if (!condition || parseFilterCondition(condition) !== null) return;
+    if (!condition) return;
     const preciseCondition = preciseEntries?.[index]?.logic_definition?.filter_condition;
     if (!preciseCondition || !entry.logic_definition) return;
     entry.logic_definition.filter_condition = preciseCondition;
@@ -378,6 +372,7 @@ function mapSourceMetadata(
     source?.category === "table" || source?.category === "index" ? source.category : undefined;
 
   return {
+    sourceCategory,
     foreignKeyCount: metadata.foreign_keys?.length,
     indexCount: metadata.indices?.length,
     objectType:
@@ -464,7 +459,7 @@ function mapDerivedDefinition(
 
 function mockResponseFilterCondition(condition?: Record<string, unknown> | null) {
   if (condition == null) return condition;
-  return parsePrecisionSafeJSON(transformPrecisionSafeJSONRequest(condition)) as Record<
+  return parsePrecisionPreservingJSON(transformPrecisionSafeJSONRequest(condition)) as Record<
     string,
     unknown
   >;
@@ -765,6 +760,7 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
       rowCount: null,
       schema: input.schema,
       sourceIdentifier: "",
+      sourceMetadata: { sourceCategory: source.category },
       tags: input.tags,
       updateTime: formatMockTimestamp(timestamp),
     };
@@ -813,6 +809,7 @@ export async function updateDerivedView(
       throwMockRequestError(409, "VegaBackend.Resource.UpdateConflict", "View has changed.");
     }
     const timestamp = Date.now();
+    const source = mockResources.find((item) => item.id === input.sourceResourceId);
     const next: CatalogResource = {
       ...current,
       description: input.description,
@@ -824,6 +821,13 @@ export async function updateDerivedView(
       },
       name: input.name,
       schema: input.schema,
+      sourceMetadata: {
+        ...current.sourceMetadata,
+        sourceCategory:
+          source?.category === "table" || source?.category === "index"
+            ? source.category
+            : undefined,
+      },
       tags: input.tags,
       updateTime: formatMockTimestamp(timestamp),
     };
@@ -952,17 +956,20 @@ export async function setCatalogResourceEnabled(id: string, enabled: boolean) {
 const PREVIEW_CELL_POOL: Record<string, (row: number) => unknown> = {
   bigint: (row) => 100000 + row * 7,
   decimal: (row) => ((row * 137) % 9000) + Math.round(row * 0.37 * 100) / 100,
-  datetime: (row) => formatMockTimestamp(Date.now() - row * 3_600_000).slice(0, 16),
+  datetime: (row) => formatMockTimestamp(Date.now() - row * 3_600_000),
   text: (row) =>
     row % 7 === 0 ? null : i18n.t("dataCatalog.preview.mockLongText", { row: row + 1 }),
   varchar: (row) => `value_${row + 1}`,
 };
 function mockCell(field: ResourceSchemaField, row: number) {
   const type = field.type.toLowerCase();
-  if (type.startsWith("bigint") || type.startsWith("int")) {
+  if (type === "boolean") return row % 7 === 0 ? null : row % 2 === 0;
+  if (type === "date") return formatMockTimestamp(Date.now() - row * 86_400_000).slice(0, 10);
+  if (type === "large_integer") return String(PREVIEW_CELL_POOL.bigint(row));
+  if (type.startsWith("bigint") || type.startsWith("int") || type === "unsigned integer") {
     return PREVIEW_CELL_POOL.bigint(row);
   }
-  if (type.startsWith("decimal") || type.startsWith("numeric")) {
+  if (type.startsWith("decimal") || type.startsWith("numeric") || type === "float") {
     return PREVIEW_CELL_POOL.decimal(row);
   }
   if (type.startsWith("datetime") || type.startsWith("timestamp")) {
@@ -1035,36 +1042,126 @@ function mockBinaryContent(row: number, byteLength: number) {
   return btoa(String.fromCharCode(...bytes));
 }
 
-function mockFilterMatches(condition: unknown, row: Record<string, unknown>): boolean {
+function assertMockFilterSupported(condition: unknown): void {
+  if (!condition || typeof condition !== "object" || Array.isArray(condition)) return;
+  const node = condition as Record<string, unknown>;
+  // Do not silently simulate backend-specific search or calendar semantics as an empty result.
+  if (
+    ["regex", "match", "match_phrase", "multi_match", "knn_vector", "before", "current"].includes(
+      String(node.operation),
+    )
+  ) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.Query.UnsupportedOperation",
+      "This filter requires a connected data service; the mock preview does not simulate it.",
+    );
+  }
+  if (Array.isArray(node.sub_conditions)) {
+    for (const child of node.sub_conditions) assertMockFilterSupported(child);
+  }
+}
+
+function mockFilterMatches(
+  condition: unknown,
+  row: Record<string, unknown>,
+  fields: ResourceSchemaField[],
+  localIndex: boolean,
+): boolean {
   if (!condition || typeof condition !== "object" || Array.isArray(condition)) return true;
   const node = condition as Record<string, unknown>;
   if (node.operation === "and" || node.operation === "or") {
     const children = Array.isArray(node.sub_conditions) ? node.sub_conditions : [];
     return node.operation === "and"
-      ? children.every((child) => mockFilterMatches(child, row))
-      : children.some((child) => mockFilterMatches(child, row));
+      ? children.every((child) => mockFilterMatches(child, row, fields, localIndex))
+      : children.some((child) => mockFilterMatches(child, row, fields, localIndex));
   }
   if (typeof node.field !== "string") return false;
   const actual = row[node.field];
-  if (actual === null || actual === undefined) return false;
-  const expected = node.value;
-  const left =
-    typeof actual === "number"
-      ? actual
-      : typeof actual === "string" || typeof actual === "boolean"
-        ? String(actual)
-        : null;
-  if (left === null) return false;
-  const right = typeof actual === "number" ? Number(expected) : String(expected);
+  const absent = actual === null || actual === undefined;
+  if (node.operation === "null" || node.operation === "not_exist") return absent;
+  if (node.operation === "not_null" || node.operation === "exist") return !absent;
+  if (absent) return false;
+  if (typeof actual !== "string" && typeof actual !== "number" && typeof actual !== "boolean")
+    return false;
+  const expected =
+    node.value_from === "field" && typeof node.value === "string" ? row[node.value] : node.value;
+  const type = fields.find((field) => field.name === node.field)?.type ?? "string";
+  const compare = (value: unknown): number | null => {
+    if (
+      typeof value !== "string" &&
+      typeof value !== "number" &&
+      typeof value !== "boolean" &&
+      !BigNumber.isBigNumber(value)
+    )
+      return null;
+    if (isNumericFilterType(type) && !(localIndex && type === "large_integer"))
+      return new BigNumber(String(actual)).comparedTo(String(value));
+    if (isTemporalFilterType(type)) {
+      const left = temporalFilterValue(type, String(actual)),
+        right = temporalFilterValue(type, String(value));
+      if (!left || !right || left.absolute !== right.absolute) return null;
+      return left.nanoseconds === right.nanoseconds
+        ? 0
+        : left.nanoseconds < right.nanoseconds
+          ? -1
+          : 1;
+    }
+    return String(actual) === String(value) ? 0 : String(actual) < String(value) ? -1 : 1;
+  };
+  const comparison = compare(expected);
+  const values = Array.isArray(expected) ? (expected as unknown[]) : [];
   switch (node.operation) {
     case "==":
-      return left === right;
+      return comparison === 0;
     case "!=":
-      return left !== right;
+      return comparison !== null && comparison !== 0;
     case ">":
-      return left > right;
+      return comparison !== null && comparison > 0;
+    case ">=":
+      return comparison !== null && comparison >= 0;
     case "<":
-      return left < right;
+      return comparison !== null && comparison < 0;
+    case "<=":
+      return comparison !== null && comparison <= 0;
+    case "in":
+      return values.some((value) => compare(value) === 0);
+    case "not_in":
+      return values.every((value) => compare(value) !== 0);
+    case "range":
+    case "between":
+    case "out_range": {
+      const lower = compare(values[0]),
+        upper = compare(values[1]);
+      if (lower === null || upper === null) return false;
+      return node.operation === "out_range" ? lower < 0 || upper > 0 : lower >= 0 && upper <= 0;
+    }
+    case "empty":
+      return actual === "";
+    case "not_empty":
+      return actual !== "";
+    case "prefix":
+      return String(actual).startsWith(String(expected));
+    case "not_prefix":
+      return !String(actual).startsWith(String(expected));
+    case "like":
+    case "not_like": {
+      const literal = String(expected).replace(/\\([%_\\])/g, "$1");
+      return node.operation === "like"
+        ? String(actual).includes(literal)
+        : !String(actual).includes(literal);
+    }
+    case "contain":
+    case "not_contain": {
+      const items = localIndex ? [String(actual)] : String(actual).split(",");
+      if (node.operation === "not_contain")
+        return localIndex
+          ? values.every((value) => !items.includes(String(value)))
+          : values.some((value) => !items.includes(String(value)));
+      return localIndex
+        ? values.some((value) => items.includes(String(value)))
+        : values.every((value) => items.includes(String(value)));
+    }
     default:
       return false;
   }
@@ -1080,19 +1177,28 @@ export async function previewCatalogResource(
       return wait({ rows: [], total: 0 });
     }
 
-    const usesLocalIndex =
-      !query.ignoreLocalIndex &&
-      resource.category === "table" &&
-      resource.localIndexStatus === "available" &&
-      Boolean(resource.localIndexName);
     const source = resource.logicDefinition?.sourceResourceId
       ? mockResources.find((item) => item.id === resource.logicDefinition?.sourceResourceId)
       : null;
+    const physicalResource = source ?? resource;
+    const usesLocalIndex =
+      !query.ignoreLocalIndex &&
+      physicalResource.category === "table" &&
+      physicalResource.localIndexStatus === "available" &&
+      Boolean(physicalResource.localIndexName);
+    const usesIndexFilters =
+      physicalResource.category === "dataset" ||
+      physicalResource.category === "index" ||
+      usesLocalIndex;
+    const fixed = resource.logicDefinition?.filterCondition;
+    const dynamic = query.filterCondition;
+    assertMockFilterSupported(fixed);
+    assertMockFilterSupported(dynamic);
     const total = resourceCountForPagination(source?.rowCount ?? resource.rowCount);
     const makeRow = (rowIndex: number) => {
       const sourceCells = source?.schema.map((field) => ({
         field,
-        value: mockResourcePreviewCell(source, field, rowIndex, query, false),
+        value: mockResourcePreviewCell(source, field, rowIndex, query, usesLocalIndex),
       }));
       const sourceRow = sourceCells
         ? Object.fromEntries(sourceCells.map(({ field, value }) => [field.name, value]))
@@ -1112,8 +1218,6 @@ export async function previewCatalogResource(
       );
       return { row, sourceRow };
     };
-    const fixed = resource.logicDefinition?.filterCondition;
-    const dynamic = query.filterCondition;
     let rows: Record<string, unknown>[] = [];
     let matchingTotal = total;
     if (!fixed && !dynamic) {
@@ -1123,7 +1227,15 @@ export async function previewCatalogResource(
       matchingTotal = 0;
       for (let rowIndex = 0; rowIndex < total; rowIndex++) {
         const { row, sourceRow } = makeRow(rowIndex);
-        if (!mockFilterMatches(fixed, sourceRow ?? row) || !mockFilterMatches(dynamic, row))
+        if (
+          !mockFilterMatches(
+            fixed,
+            sourceRow ?? row,
+            source?.schema ?? resource.schema,
+            usesIndexFilters,
+          ) ||
+          !mockFilterMatches(dynamic, row, resource.schema, usesIndexFilters)
+        )
           continue;
         if (matchingTotal >= query.offset && rows.length < query.limit) rows.push(row);
         matchingTotal++;

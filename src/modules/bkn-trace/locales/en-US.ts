@@ -15,7 +15,7 @@ export const bknTraceEnUS = {
           unsupported: "Insufficient evidence",
           contradicted: "Conflicting record",
           missing: "Unanswered",
-          analysis_pending: "Attribution pending",
+          analysis_pending: "Attribution incomplete",
           completed: "Succeeded",
           failed: "Failed",
           running: "In progress",
@@ -37,6 +37,7 @@ export const bknTraceEnUS = {
           answerMissing: "Answer not recorded",
         },
         function: {
+          recordedFailures: "Recorded failures: {{count}}",
           title: "Business function",
           input: "Business inputs",
           process: "Business processing",
@@ -53,7 +54,6 @@ export const bknTraceEnUS = {
           inputPayload: "Input payload",
           outputPayload: "Output payload",
           errorPayload: "Error payload",
-          completeness: "Capture completeness",
           notRecorded: "Not recorded",
           inlineOrMissing: "Inline in timeline / not recorded",
         },
@@ -558,7 +558,6 @@ export const bknTraceEnUS = {
         callCount_other: "{{count}} calls",
         columns: {
           duration: "Duration",
-          evidence: "Record completeness",
           interactions: "Interactions",
           question: "User question",
           result: "Business result",
@@ -608,11 +607,6 @@ export const bknTraceEnUS = {
           interactionsLoad: "Failed to load interactions",
           markdownLoad: "Failed to load knowledge-network optimization facts",
         },
-        evidence: {
-          byRound: "View by interaction",
-          complete: "Complete",
-          partial: "Missing",
-        },
         integrity: {
           checkedAt: "Call records checked:",
           call_outcome_missing: "Call outcome not recorded",
@@ -639,7 +633,6 @@ export const bknTraceEnUS = {
         filters: {
           agent: "Agent / application",
           endedAt: "End time",
-          evidence: "Record completeness",
           keyword: "Search question, result, or conversation ID",
           network: "Knowledge network",
           startedAt: "Start time",
@@ -788,10 +781,13 @@ export const bknTraceEnUS = {
           viewFullOutput: "View full interaction output",
         },
         status: {
-          active: "Open for follow-up",
+          active: "In progress",
           completed: "Ended",
           failed: "Failed",
           running: "Running",
+          canceled: "Canceled",
+          handedOff: "Handed off",
+          abandoned: "Ended unexpectedly",
         },
         timeNotRecorded: "Time not recorded",
         timeline: {

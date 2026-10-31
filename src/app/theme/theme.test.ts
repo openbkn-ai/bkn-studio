@@ -125,4 +125,23 @@ describe("createThemeConfig", () => {
     });
     expect(createThemeConfig(runtimeConfig, "dark").token?.colorPrimary).toBe("#3b82f6");
   });
+
+  it("gives the solid primary button its own colors, apart from the dark accent", () => {
+    const dark = createThemeConfig(runtimeConfig, "dark");
+    expect(dark.components?.Button).toMatchObject({
+      colorPrimary: "#2563eb",
+      colorPrimaryActive: "#1d4ed8",
+      colorPrimaryHover: "#2f6fdc",
+      primaryColor: "#ffffff",
+    });
+    // Links, switches and other accents keep the brighter blue.
+    expect(dark.token?.colorPrimary).toBe("#3b82f6");
+    expect(dark.token?.colorLink).toBe("#60a5fa");
+
+    expect(createThemeConfig(runtimeConfig, "light").components?.Button).toMatchObject({
+      colorPrimary: "#1e3a8a",
+      colorPrimaryActive: "#0f2a4a",
+      colorPrimaryHover: "#17306f",
+    });
+  });
 });

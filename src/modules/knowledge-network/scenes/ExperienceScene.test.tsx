@@ -17,6 +17,7 @@ import type { DataBrowserPanel } from "./DataBrowserPanel";
 const mocks = vi.hoisted(() => ({
   fetchKnDetailRest: vi.fn(),
   listMcpCatalog: vi.fn(),
+  sendRequest: vi.fn(),
   writeTextToClipboard: vi.fn(),
   message: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
   runtimeConfig: {
@@ -48,6 +49,14 @@ vi.mock("@/modules/knowledge-network/services/context-loader.service", async (im
   >()),
   fetchKnDetailRest: mocks.fetchKnDetailRest,
   listMcpCatalog: mocks.listMcpCatalog,
+  sendRequest: mocks.sendRequest,
+}));
+
+vi.mock("@/modules/knowledge-network/services/bkn-lifecycle.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/knowledge-network/services/bkn-lifecycle.service")
+  >()),
+  withManagedTurn: (_lifecycle: unknown, _purpose: string, send: () => Promise<unknown>) => send(),
 }));
 
 vi.mock("./McpIntegrationModals", () => ({
@@ -63,6 +72,9 @@ vi.mock("./ContextLoaderIntegrationPanel", () => ({
     onBodyTextChange,
     onFillTestData,
     dataBrowserPanel,
+    onSend,
+    sending,
+    responseView,
   }: ComponentProps<typeof ContextLoaderIntegrationPanel>) => (
     <>
       <button
@@ -80,6 +92,11 @@ vi.mock("./ContextLoaderIntegrationPanel", () => ({
         value={bodyText}
         onChange={(event) => onBodyTextChange(event.target.value)}
       />
+      <button type="button" onClick={onSend} disabled={sending}>
+        Send request
+      </button>
+      <output aria-label="Response kind">{responseView?.kind}</output>
+      <output aria-label="Response text">{responseView?.text}</output>
       {dataBrowserPanel}
     </>
   ),
@@ -110,19 +127,19 @@ async function renderConsole(mode: "rest" | "mcp") {
   return screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Request body" });
 }
 
-describe.each(["rest", "mcp"] as const)("ExperienceScene resource fill in %s", (mode) => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.writeTextToClipboard.mockResolvedValue(undefined);
-    mocks.listMcpCatalog.mockResolvedValue({ tools: [{ name: "run_sql" }] });
-    mocks.fetchKnDetailRest.mockResolvedValue({
-      id: "kn_demo",
-      object_types: [{ id: "order", data_source: { id: "res_orders" } }],
-      relation_types: [],
-      concept_groups: [],
-    });
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.writeTextToClipboard.mockResolvedValue(undefined);
+  mocks.listMcpCatalog.mockResolvedValue({ tools: [{ name: "run_sql" }] });
+  mocks.fetchKnDetailRest.mockResolvedValue({
+    id: "kn_demo",
+    object_types: [{ id: "order", data_source: { id: "res_orders" } }],
+    relation_types: [],
+    concept_groups: [],
   });
+});
 
+describe.each(["rest", "mcp"] as const)("ExperienceScene resource fill in %s", (mode) => {
   it("keeps generated test SQL canonical when the resource is filled again", async () => {
     const body = await renderConsole(mode);
     fireEvent.click(screen.getByRole("button", { name: "Fill test data" }));
@@ -162,5 +179,33 @@ describe.each(["rest", "mcp"] as const)("ExperienceScene resource fill in %s", (
 
     expect(mocks.writeTextToClipboard).toHaveBeenCalledExactlyOnceWith("{{res_orders}}");
     expect(body.value).toBe("{invalid JSON");
+  });
+});
+
+describe("ExperienceScene response display", () => {
+  it.each([
+    { name: "JSON overflow", text: '{"value":1e10000001}' },
+    { name: "JSON underflow", text: '{"value":1e-10000001}' },
+    { name: "SSE overflow", text: 'event: result\ndata: {"value":1e10000001}\n\n' },
+    { name: "SSE underflow", text: 'event: result\ndata: {"value":1e-10000001}\n\n' },
+  ])("falls back to the complete original response for $name", async ({ text }) => {
+    mocks.sendRequest.mockResolvedValue({ ok: true, status: 200, text, sizeBytes: text.length });
+    await renderConsole("rest");
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+    await waitFor(() => expect(screen.getByLabelText("Response text").textContent).toBe(text));
+    expect(screen.getByLabelText("Response kind")).toHaveTextContent("toon");
+    expect(screen.getByRole("button", { name: "Send request" })).not.toBeDisabled();
+  });
+
+  it.each([
+    { name: "JSON", text: '{"value":42}', expected: '{\n  "value": 42\n}' },
+    { name: "SSE", text: 'data: {"value":42}\n\n', expected: '{\n  "value": 42\n}' },
+    { name: "precise JSON", text: '{"value":1e309}', expected: '{\n  "value": 1e+309\n}' },
+  ])("keeps formatting supported $name responses", async ({ text, expected }) => {
+    mocks.sendRequest.mockResolvedValue({ ok: true, status: 200, text, sizeBytes: text.length });
+    await renderConsole("rest");
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+    await waitFor(() => expect(screen.getByLabelText("Response text").textContent).toBe(expected));
+    expect(screen.getByLabelText("Response kind")).toHaveTextContent("json");
   });
 });

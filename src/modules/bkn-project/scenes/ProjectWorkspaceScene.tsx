@@ -5,7 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { LeftOutlined } from "@ant-design/icons";
 import { Alert, Spin } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +20,8 @@ import { ProjectOverview } from "@/modules/bkn-project/components/ProjectOvervie
 import { ProjectRequirements } from "@/modules/bkn-project/components/requirements/ProjectRequirements";
 import { ProjectReleasePage } from "@/modules/bkn-project/components/ProjectReleasePage";
 import { ProjectWorkspaceNav } from "@/modules/bkn-project/components/ProjectWorkspaceNav";
+import { getDraft } from "@/modules/bkn-project/services/draft.service";
+import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
 import {
   getLatestRelease,
   getProject,
@@ -32,6 +33,9 @@ import {
   projectSectionPath,
   type ProjectSection,
 } from "@/modules/bkn-project/types/workspace";
+
+// The knowledge network workspace's layout: the project's pages sit as a network's do.
+import kn from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene.module.css";
 
 import styles from "./ProjectWorkspaceScene.module.css";
 
@@ -82,6 +86,34 @@ export function ProjectWorkspaceScene({
     void load();
   }, [load]);
 
+  // What the navigation counts: scenario questions and object types, read again on each page so
+  // a change made on one shows when moving on. A failed read leaves the count off.
+  const [counts, setCounts] = useState<Partial<Record<ProjectSection, number>>>({});
+  // Read once the project is, after the page's own reads: the counts only add to it.
+  const loadedId = loaded?.project.id;
+  useEffect(() => {
+    if (!loadedId) {
+      return undefined;
+    }
+    let active = true;
+    void Promise.all([
+      getRequirements(projectId).catch(() => null),
+      getDraft(projectId).catch(() => null),
+    ]).then(([requirements, draft]) => {
+      if (active) {
+        setCounts({
+          ...(requirements?.status === "ready" && requirements.spec
+            ? { requirements: requirements.spec.questions.length }
+            : {}),
+          ...(draft?.status === "ready" ? { model: draft.items.objectTypes.length } : {}),
+        });
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [loadedId, projectId, section]);
+
   const backToList = () => void navigate("/bkn-project");
 
   if (notFound) {
@@ -123,83 +155,67 @@ export function ProjectWorkspaceScene({
   }
 
   const { latestRelease, networkName, project } = loaded;
-  const live = latestRelease
-    ? t("bknProject.workspace.live", { version: latestRelease.version })
-    : latestRelease === null
-      ? t("bknProject.workspace.unpublished")
-      : null;
-  const sectionTitle = t(`bknProject.workspace.sections.${section}`);
 
+  // No heading of its own: the navigation names the page, as in a network's workspace. The
+  // overview lays panels on the page's grey; every other page is one white sheet.
   return (
-    <div className={styles.workspace}>
-      <header className={styles.head}>
-        <button
-          aria-label={t("bknProject.workspace.backToList")}
-          className={styles.back}
-          onClick={backToList}
-          title={t("bknProject.workspace.backToList")}
-          type="button"
+    <section className={kn.workspace}>
+      <div className={kn.workspaceLayout}>
+        <ProjectWorkspaceNav active={section} counts={counts} projectId={project.id} />
+        <main
+          className={
+            section === "overview"
+              ? `${kn.workspaceContent} ${kn.workspaceContentOverview}`
+              : kn.workspaceContent
+          }
         >
-          <LeftOutlined />
-        </button>
-        <span className={styles.name}>{project.name}</span>
-        <code className={styles.id}>{project.id}</code>
-        <span className={styles.meta}>
-          {t("bknProject.workspace.targetNetwork", { name: networkName })}
-        </span>
-        {live ? <span className={styles.meta}>{live}</span> : null}
-      </header>
-      <div className={styles.body}>
-        <aside className={styles.side}>
-          <ProjectWorkspaceNav active={section} projectId={project.id} />
-        </aside>
-        <main className={styles.content}>
-          <h2 className={styles.title}>{sectionTitle}</h2>
-          {section === "overview" ? (
-            <ProjectOverview
-              latestRelease={latestRelease}
-              networkName={networkName}
-              onProjectChange={(next) =>
-                setLoaded((current) => (current ? { ...current, project: next } : current))
-              }
-              ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
-              project={project}
-            />
-          ) : section === "model" ? (
-            <ProjectModel
-              initialTab={searchParams.get("tab")}
-              // The check and the local indexes of a confirmation show on the release page.
-              onConfirmed={() => void navigate(projectSectionPath(project.id, "release"))}
-              onProjectChange={(next) =>
-                setLoaded((current) => (current ? { ...current, project: next } : current))
-              }
-              ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
-              project={project}
-            />
-          ) : section === "requirements" ? (
-            <ProjectRequirements
-              ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
-              project={project}
-            />
-          ) : section === "release" ? (
-            <ProjectReleasePage
-              onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
-              onReleaseChanged={() => void load()}
-              ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
-              project={project}
-            />
-          ) : KNOWLEDGE_BASE_SECTIONS.includes(section) ? (
-            <BknProjectKbSlot>
-              <EmptyStatePanel title={t("bknProject.workspace.comingSoon")} />
-            </BknProjectKbSlot>
-          ) : (
-            <EmptyStatePanel
-              description={t("bknProject.workspace.comingSoonDescription")}
-              title={t("bknProject.workspace.comingSoon")}
-            />
-          )}
+          <div className={section === "overview" ? kn.overviewBox : kn.workspaceSectionPage}>
+            {section === "overview" ? (
+              <ProjectOverview
+                latestRelease={latestRelease}
+                networkName={networkName}
+                onProjectChange={(next) =>
+                  setLoaded((current) => (current ? { ...current, project: next } : current))
+                }
+                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                project={project}
+              />
+            ) : section === "model" ? (
+              <ProjectModel
+                initialTab={searchParams.get("tab")}
+                // The check and the local indexes of a confirmation show on the release page.
+                onConfirmed={() => void navigate(projectSectionPath(project.id, "release"))}
+                onProjectChange={(next) =>
+                  setLoaded((current) => (current ? { ...current, project: next } : current))
+                }
+                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                project={project}
+              />
+            ) : section === "requirements" ? (
+              <ProjectRequirements
+                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                project={project}
+              />
+            ) : section === "release" ? (
+              <ProjectReleasePage
+                onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
+                onReleaseChanged={() => void load()}
+                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                project={project}
+              />
+            ) : KNOWLEDGE_BASE_SECTIONS.includes(section) ? (
+              <BknProjectKbSlot>
+                <EmptyStatePanel title={t("bknProject.workspace.comingSoon")} />
+              </BknProjectKbSlot>
+            ) : (
+              <EmptyStatePanel
+                description={t("bknProject.workspace.comingSoonDescription")}
+                title={t("bknProject.workspace.comingSoon")}
+              />
+            )}
+          </div>
         </main>
       </div>
-    </div>
+    </section>
   );
 }

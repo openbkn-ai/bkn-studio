@@ -7,6 +7,8 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  atomicCompositeResultAnalysisSectionTitle: "3. 结果与分析",
+  atomicCompositeValidationPublishSectionTitle: "4. 校验与发布",
   analysisGroupBy: "按维度分组",
   analysisHavingOperator: "结果筛选",
   analysisHavingValue: "比较值",
@@ -718,7 +720,6 @@ export const objectMetricV1Part = {
   ma6bbba71a0a7: "请选择数值或时长属性；如果源字段以文本存储，请先配置类型转换。",
   ma75762e1e47e: "所选可查询时间维度未由基础对象指标开放。",
   ma757a2b18321: "计算时间范围",
-  ma7d66d99c5ec: "2. 结果形态",
   ma80a5b61e0bd: "参数 {{p0}}",
   ma8601f5e09f8: "请删除该维度，或先在基础原子对象指标中开放该分析维度。",
   ma8c3698b5b8c: "已停用",
@@ -742,7 +743,7 @@ export const objectMetricV1Part = {
   mae25d81d750f: "取值方式",
   mae5a0f0a072e: "旧配置中的统计时区无法被服务端识别。",
   mae87f64d5821: "已填写当前表单。你可以继续提出调整，或关闭窗口检查配置。",
-  maeb999515d25: "3. 计算逻辑",
+  maeb999515d25: "2. 计算逻辑",
   maedd6814ff8c: "列表",
   maf1405fb0f94: "毫克 · mg",
   mb0592ef95e17:
