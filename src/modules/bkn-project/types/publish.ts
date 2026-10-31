@@ -71,6 +71,8 @@ export type ProjectStatus = {
   /** null while drafting: what is read is checked from the first draft on. */
   dataSources: DataSources | null;
   draft: { decisions: number; placeholders: number; status: string; updateTime: number } | null;
+  /** Advice that never blocks, such as `catalogs_unnamed` with how many tables lack a description. */
+  hints: { code: string; count?: number; total?: number }[];
   nextActions: ProjectNextAction[];
   /** The project's release, once the newest release is its own and came after its confirmation. */
   release: { inUse: boolean; networkId: string; version: string } | null;
@@ -92,8 +94,13 @@ export type PendingItem = {
   name: string;
   /** The scenario questions of the ready requirements that need the item to be answered. */
   neededBy: PendingQuestion[];
-  /** `needs_identity`, `unadopted_ends` or `undecided`. */
+  /** `needs_identity`, `unadopted_ends`, `undecided` or `needs_update_field`. */
   reason: string;
+  /**
+   * For `needs_update_field`: the time properties to choose the update field from, by name, and
+   * whether the caller may set it.
+   */
+  updateField?: { allowed: boolean; reason?: string; values: string[] };
 };
 
 export type PendingQuestion = { id: string; text: string };

@@ -19,11 +19,14 @@ import {
   understandingMinutesLeft,
 } from "@/modules/bkn-project/components/publish/messages";
 import {
+  getProjectStatus,
   getUnderstanding,
   UNDERSTANDING_POLL_MS,
   understandCatalogs,
 } from "@/modules/bkn-project/services/publish.service";
 import type {
+  ProjectNextAction,
+  ProjectStatus,
   UnderstandApplyMode,
   UnderstandingCatalog,
 } from "@/modules/bkn-project/types/publish";
@@ -85,6 +88,23 @@ export function UnderstandingBar({
   // Set once tables waited or ran while the page was open: what finishes then renamed them.
   const sawRunning = useRef(false);
   const [renamed, setRenamed] = useState(false);
+  // Advice from the project's state: most tables have no business name, so understand them first.
+  const [unnamed, setUnnamed] = useState<ProjectStatus["hints"][number] | null>(null);
+  const [understandAction, setUnderstandAction] = useState<ProjectNextAction | null>(null);
+  const loadHint = useCallback(async () => {
+    try {
+      const status = await getProjectStatus(projectId);
+      setUnnamed(status.hints.find((hint) => hint.code === "catalogs_unnamed") ?? null);
+      setUnderstandAction(
+        status.nextActions.find((action) => action.action === "understand_catalogs") ?? null,
+      );
+    } catch {
+      // Advice only: without the state the bar shows what it has.
+    }
+  }, [projectId]);
+  useEffect(() => {
+    void loadHint();
+  }, [loadHint]);
 
   const load = useCallback(async () => {
     try {
@@ -110,6 +130,14 @@ export function UnderstandingBar({
 
   const counts = catalogs ? tally(catalogs) : null;
   const running = Boolean(counts?.remaining);
+  // Once a run ends, the tables may have their names: the advice is read again, not kept from before.
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && !running) {
+      void loadHint();
+    }
+    wasRunning.current = running;
+  }, [loadHint, running]);
   useEffect(() => {
     if (!running) {
       return undefined;
@@ -143,6 +171,7 @@ export function UnderstandingBar({
         );
       }
       await load();
+      void loadHint();
     } catch (error) {
       message.error(refusalText(t, error, "bknProject.understand.failed"));
     } finally {
@@ -181,6 +210,32 @@ export function UnderstandingBar({
 
   return (
     <div className={styles.understanding}>
+      {unnamed && !running ? (
+        <Alert
+          action={
+            canRun && understandAction?.allowed !== false ? (
+              <AppButton onClick={() => setAsking(true)} size="small" type="primary">
+                {t("bknProject.understand.hint.run")}
+              </AppButton>
+            ) : null
+          }
+          description={
+            understandAction?.reason === "not_owner"
+              ? t("bknProject.understand.hint.ownerOnly")
+              : undefined
+          }
+          message={
+            unnamed.count !== undefined && unnamed.total !== undefined
+              ? t("bknProject.understand.hint.unnamed", {
+                  count: unnamed.count,
+                  total: unnamed.total,
+                })
+              : t("bknProject.understand.hint.unnamedUncounted")
+          }
+          showIcon
+          type="warning"
+        />
+      ) : null}
       <div className={styles.understandingHead}>
         <span>{summary}</span>
         {running && minutes !== null ? (

@@ -78,6 +78,7 @@ type BackendStatus = {
     tables: BackendDataSourceCount & { affected?: AffectedItem[] | null };
   };
   draft?: { decisions: number; placeholders: number; status: string; update_time: number };
+  hints?: { code: string; count?: number; total?: number }[] | null;
   next_actions:
     | {
         accepts?: string[];
@@ -106,6 +107,7 @@ type BackendPending = {
         kind: string;
         name: string;
         needed_by?: { id: string; text: string }[];
+        options?: { action: string; allowed: boolean; reason?: string; values?: string[] }[] | null;
         reason: string;
       }[]
     | null;
@@ -233,6 +235,12 @@ function mapStatus(status: BackendStatus): ProjectStatus {
           updateTime: status.draft.update_time,
         }
       : null,
+    // A count the server did not give stays unsaid, never read as zero.
+    hints: (status.hints ?? []).map((hint) => ({
+      code: hint.code,
+      ...(hint.count === undefined ? {} : { count: hint.count }),
+      ...(hint.total === undefined ? {} : { total: hint.total }),
+    })),
     nextActions: (status.next_actions ?? []).map((action) => ({
       accepts: action.accepts ?? [],
       action: action.action,
@@ -259,15 +267,27 @@ function mapStatus(status: BackendStatus): ProjectStatus {
 function mapPending(pending: BackendPending): ProjectPending {
   return {
     draftUpdateTime: pending.draft_update_time,
-    items: (pending.items ?? []).map((item): PendingItem => ({
-      blocking: item.blocking,
-      ...(item.because ? { because: item.because } : {}),
-      itemId: item.item_id,
-      kind: item.kind,
-      name: item.name,
-      neededBy: (item.needed_by ?? []).map(({ id, text }) => ({ id, text })),
-      reason: item.reason,
-    })),
+    items: (pending.items ?? []).map((item): PendingItem => {
+      const setKey = (item.options ?? []).find((option) => option.action === "set_incremental_key");
+      return {
+        blocking: item.blocking,
+        ...(item.because ? { because: item.because } : {}),
+        itemId: item.item_id,
+        kind: item.kind,
+        name: item.name,
+        neededBy: (item.needed_by ?? []).map(({ id, text }) => ({ id, text })),
+        reason: item.reason,
+        ...(setKey
+          ? {
+              updateField: {
+                allowed: setKey.allowed,
+                ...(setKey.reason ? { reason: setKey.reason } : {}),
+                values: setKey.values ?? [],
+              },
+            }
+          : {}),
+      };
+    }),
   };
 }
 
@@ -507,6 +527,7 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
     check: null,
     confirmation: null,
     dataSources: null,
+    hints: [],
     draft: draft
       ? {
           decisions: draft.items.decisions.length,

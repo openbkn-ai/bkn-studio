@@ -17,6 +17,7 @@ import type {
 
 const getUnderstandingMock = vi.hoisted(() => vi.fn());
 const understandCatalogsMock = vi.hoisted(() => vi.fn());
+const getProjectStatusMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
+  getProjectStatus: getProjectStatusMock,
   getUnderstanding: getUnderstandingMock,
   understandCatalogs: understandCatalogsMock,
 }));
@@ -79,6 +81,40 @@ describe("UnderstandingBar", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     await i18n.changeLanguage("zh-CN");
+    getProjectStatusMock.mockResolvedValue({ hints: [], nextActions: [] });
+  });
+
+  it("advises understanding the catalogs first when most tables have no business name", async () => {
+    getUnderstandingMock.mockResolvedValue([catalog(["not_started", "not_started"])]);
+    getProjectStatusMock.mockResolvedValue({
+      hints: [{ code: "catalogs_unnamed", count: 18, total: 20 }],
+      nextActions: [
+        { accepts: [], action: "understand_catalogs", allowed: true, discardsDecisions: 0 },
+      ],
+    });
+    const view = renderBar();
+    expect(
+      await screen.findByText(/目录里大多数表还没有业务名称（18\/20 张没有描述）/),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "开始语义理解" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    view.unmount();
+
+    getProjectStatusMock.mockResolvedValue({
+      hints: [{ code: "catalogs_unnamed", count: 18, total: 20 }],
+      nextActions: [
+        {
+          accepts: [],
+          action: "understand_catalogs",
+          allowed: false,
+          discardsDecisions: 0,
+          reason: "not_owner",
+        },
+      ],
+    });
+    renderBar({ ownerIsCaller: false });
+    expect(await screen.findByText("只有项目负责人可以发起语义理解")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "开始语义理解" })).toBeNull();
   });
 
   afterEach(() => {
@@ -145,6 +181,39 @@ describe("UnderstandingBar", () => {
     );
 
     await waitFor(() => expect(messageMock.error).toHaveBeenCalledWith("项目还没有选择数据目录"));
+  });
+
+  it("reads the advice again once understanding ends, and says no numbers it was not given", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getUnderstandingMock
+      .mockResolvedValueOnce([catalog(["running", "pending"])])
+      .mockResolvedValue([catalog(["completed", "completed"])]);
+    getProjectStatusMock
+      .mockResolvedValueOnce({ hints: [{ code: "catalogs_unnamed" }], nextActions: [] })
+      .mockResolvedValue({ hints: [], nextActions: [] });
+    renderBar();
+    await screen.findByText("语义理解：已完成 0 / 2 张表");
+    expect(getProjectStatusMock).toHaveBeenCalledTimes(1);
+
+    await act(() => vi.advanceTimersByTimeAsync(UNDERSTANDING_POLL_MS));
+    expect(await screen.findByText("语义理解已完成")).toBeInTheDocument();
+    await waitFor(() => expect(getProjectStatusMock).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/大多数表还没有业务名称/)).toBeNull();
+  });
+
+  it("words the advice without numbers when the counts are missing", async () => {
+    getUnderstandingMock.mockResolvedValue([catalog(["not_started"])]);
+    getProjectStatusMock.mockResolvedValue({
+      hints: [{ code: "catalogs_unnamed" }],
+      nextActions: [],
+    });
+    renderBar();
+    expect(
+      await screen.findByText(
+        "目录里大多数表还没有业务名称，起草出的名称会直接用表名和字段名。建议先做语义理解，再起草。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/0\/0/)).toBeNull();
   });
 
   it("shows the progress, estimates minutes for two tables or more, and stops polling when done", async () => {

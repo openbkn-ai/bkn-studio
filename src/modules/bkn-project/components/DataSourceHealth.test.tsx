@@ -58,6 +58,7 @@ function status(
     confirmation: null,
     dataSources,
     draft: null,
+    hints: [],
     nextActions,
     release: null,
     stage: "deciding",

@@ -72,6 +72,7 @@ describe("publish.service", () => {
       confirmation: { current: false, time: 20 },
       dataSources: null,
       draft: { decisions: 2, placeholders: 0, status: "ready", updateTime: 30 },
+      hints: [],
       nextActions: [
         {
           accepts: ["undecided_items"],
@@ -145,6 +146,68 @@ describe("publish.service", () => {
       "archive",
       "confirm_draft",
     ]);
+  });
+
+  it("reads an update field to choose, and the hint to understand the catalogs first", async () => {
+    const { getProjectPending, getProjectStatus } = await importService();
+    mockGet.mockResolvedValueOnce({
+      data: {
+        draft_update_time: 7,
+        items: [
+          {
+            blocking: false,
+            item_id: "orders",
+            kind: "object_types",
+            name: "Orders",
+            options: [
+              {
+                action: "set_incremental_key",
+                allowed: false,
+                body: { incremental_key: "$value", update_time: "$draft_update_time" },
+                method: "PATCH",
+                path: "x",
+                reason: "archived",
+                values: ["updated_at", "created_at"],
+              },
+            ],
+            reason: "needs_update_field",
+          },
+        ],
+      },
+    });
+    const pending = await getProjectPending("p/1");
+    expect(pending.items[0].updateField).toEqual({
+      allowed: false,
+      reason: "archived",
+      values: ["updated_at", "created_at"],
+    });
+
+    mockGet.mockResolvedValueOnce({
+      data: {
+        blockers: null,
+        hints: [{ code: "catalogs_unnamed", count: 18, total: 20 }],
+        next_actions: null,
+        stage: "no_draft",
+        stale: null,
+        undecided: 0,
+      },
+    });
+    expect((await getProjectStatus("p/1")).hints).toEqual([
+      { code: "catalogs_unnamed", count: 18, total: 20 },
+    ]);
+
+    mockGet.mockResolvedValueOnce({
+      data: {
+        blockers: null,
+        hints: [{ code: "catalogs_unnamed" }],
+        next_actions: null,
+        stage: "no_draft",
+        stale: null,
+        undecided: 0,
+      },
+    });
+    // A count not given is not made up as zero.
+    expect((await getProjectStatus("p/1")).hints).toEqual([{ code: "catalogs_unnamed" }]);
   });
 
   it("reads the release a published project has, and the version a review suggests", async () => {

@@ -84,6 +84,7 @@ function status(extra: Partial<ProjectStatus> = {}): ProjectStatus {
     check: { current: true, status: "passed" },
     confirmation: { current: true, time: confirmedAt },
     dataSources: null,
+    hints: [],
     draft: { decisions: 0, placeholders: 0, status: "ready", updateTime: 1 },
     nextActions: [],
     release: null,

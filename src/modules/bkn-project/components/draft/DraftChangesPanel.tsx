@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { useMemo } from "react";
+import { Select } from "antd";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { formatDateTime } from "@/framework/i18n/format";
@@ -17,8 +18,8 @@ import {
   whoDecided,
 } from "@/modules/bkn-project/components/draft/changes";
 import type { DraftItemActions } from "@/modules/bkn-project/components/draft/DraftTables";
-import type { Draft, DraftRelationType } from "@/modules/bkn-project/types/draft";
-import type { PendingQuestion } from "@/modules/bkn-project/types/publish";
+import type { Draft, DraftObjectType, DraftRelationType } from "@/modules/bkn-project/types/draft";
+import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
 
 import styles from "./DraftTables.module.css";
 
@@ -33,7 +34,9 @@ export function DraftChangesPanel({
   directory,
   draft,
   neededBy,
+  onSetUpdateField,
   unadoptedEnds,
+  updateFields = [],
 }: {
   actions: DraftItemActions;
   currentUserId: string | null | undefined;
@@ -42,7 +45,11 @@ export function DraftChangesPanel({
   draft: Draft;
   /** The scenario questions that need a waiting item, by `kind/item_id`. */
   neededBy: ReadonlyMap<string, PendingQuestion[]>;
+  /** Sets an object type's update field; true once the draft has it. */
+  onSetUpdateField?: (objectTypeId: string, property: string) => Promise<boolean>;
   unadoptedEnds: DraftRelationType[];
+  /** Object types without an update field, suggested after what blocks and what is undecided. */
+  updateFields?: PendingItem[];
 }) {
   const { t } = useTranslation();
   const names = useMemo(() => itemNames(draft), [draft]);
@@ -50,7 +57,14 @@ export function DraftChangesPanel({
   const decisions = [...draft.items.decisions].sort((a, b) => b.time - a.time);
   const disabled = actions.archived || actions.busy;
 
-  if (!waiting.length && !unadoptedEnds.length && !decisions.length) {
+  const objectTypes = new Map(draft.items.objectTypes.map((item) => [item.id, item]));
+  // Only those the draft still has without one: a suggestion read before the draft moved drops out.
+  const suggested = updateFields.filter((item) => {
+    const objectType = objectTypes.get(item.itemId);
+    return objectType && !objectType.incrementalKey;
+  });
+
+  if (!waiting.length && !unadoptedEnds.length && !suggested.length && !decisions.length) {
     return (
       <EmptyStatePanel
         description={t("bknProject.model.changes.none")}
@@ -61,7 +75,7 @@ export function DraftChangesPanel({
 
   return (
     <div className={styles.stack}>
-      {waiting.length || unadoptedEnds.length ? (
+      {waiting.length || unadoptedEnds.length || suggested.length ? (
         <section>
           <h3 className={styles.sectionTitle}>{t("bknProject.model.changes.waitingTitle")}</h3>
           <ul className={styles.changes}>
@@ -97,6 +111,15 @@ export function DraftChangesPanel({
                   {t("bknProject.model.changes.unadopt")}
                 </AppButton>
               </li>
+            ))}
+            {suggested.map((item) => (
+              <UpdateFieldRow
+                disabled={disabled}
+                item={item}
+                key={`update-field-${item.itemId}`}
+                objectType={objectTypes.get(item.itemId)!}
+                onSet={onSetUpdateField}
+              />
             ))}
           </ul>
         </section>
@@ -137,6 +160,68 @@ export function DraftChangesPanel({
         </section>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * An object type whose local index could refresh only the records that changed, once it has an
+ * update field: one of its time properties, named as people know them, is chosen and set.
+ */
+function UpdateFieldRow({
+  disabled,
+  item,
+  objectType,
+  onSet,
+}: {
+  disabled: boolean;
+  item: PendingItem;
+  objectType: DraftObjectType;
+  onSet?: (objectTypeId: string, property: string) => Promise<boolean>;
+}) {
+  const { t } = useTranslation();
+  const values = item.updateField?.values ?? [];
+  const [value, setValue] = useState<string | undefined>(values[0]);
+  const [saving, setSaving] = useState(false);
+  const allowed = Boolean(onSet) && item.updateField?.allowed !== false;
+  const label = (name: string) =>
+    objectType.properties.find((property) => property.name === name)?.displayName || name;
+
+  return (
+    <li className={styles.change}>
+      <span className={styles.changeText}>
+        <strong>{t("bknProject.model.changes.updateField.title")}</strong>
+        {t("bknProject.model.changes.updateField.description", { name: objectType.name })}
+      </span>
+      {values.length ? (
+        <span className={styles.row}>
+          <Select
+            aria-label={t("bknProject.model.changes.updateField.title")}
+            disabled={disabled || !allowed}
+            onChange={setValue}
+            options={values.map((name) => ({ label: label(name), value: name }))}
+            size="small"
+            value={value}
+          />
+          <AppButton
+            disabled={disabled || !allowed || !value}
+            loading={saving}
+            onClick={() => {
+              if (!value || !onSet) {
+                return;
+              }
+              setSaving(true);
+              void onSet(objectType.id, value).finally(() => setSaving(false));
+            }}
+            size="small"
+            type="primary"
+          >
+            {t("bknProject.model.changes.updateField.set")}
+          </AppButton>
+        </span>
+      ) : (
+        <span className={styles.muted}>{t("bknProject.model.changes.updateField.none")}</span>
+      )}
+    </li>
   );
 }
 
