@@ -229,14 +229,10 @@ export type OntologyDecorations = {
   states: Record<string, string[]>;
 };
 
-/**
- * Canvas units per screen pixel for names. Zoomed out, names keep their size on screen instead of
- * shrinking past reading with the graph. Zoomed in, they grow with it, more slowly than the dots
- * (by the square root of the zoom), so they stay in proportion without swelling.
- */
+/** Canvas units per screen pixel for labels kept at a fixed visual size by G6. */
 export function labelScale(zoom: number): number {
   if (zoom <= 0) return 1;
-  return zoom < 1 ? 1 / zoom : 1 / Math.sqrt(zoom);
+  return 1 / zoom;
 }
 
 /** Approximate width of a line of text: CJK characters are square, the rest about half as wide. */
@@ -369,7 +365,7 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
       }
       const font = (node.id === input.hubId ? HUB_NAME_FONT : NAME_FONT) * scale;
       const halfW = textWidth(text, font) / 2 + 2 * scale;
-      const top = at.y + radiusOf(node.id) + NAME_OFFSET * scale;
+      const top = at.y + radiusOf(node.id) + NAME_OFFSET;
       const box = { x0: at.x - halfW, y0: top, x1: at.x + halfW, y1: top + font * 1.3 };
       // The selected type is always named.
       if (node.id !== selectedId && names.covers(box)) return;
@@ -437,8 +433,6 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
       id: node.id,
       style: {
         labelText: nodeNames.get(node.id) ?? "",
-        labelFontSize: (node.id === input.hubId ? HUB_NAME_FONT : NAME_FONT) * scale,
-        labelOffsetY: NAME_OFFSET * scale,
         // A small green dot on the disc's edge at its top right: the object type has an index.
         badges: indexedIds.has(node.id) ? [indexBadge(node.id)] : [],
       },
@@ -454,10 +448,6 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
       target: edge.targetId,
       style: {
         labelText: relationNames.get(edge.id) ?? "",
-        labelFontSize: RELATION_FONT * scale,
-        labelPadding: [2 * scale, 6 * scale],
-        labelBackgroundRadius: 8 * scale,
-        labelBackgroundLineWidth: scale,
       },
     };
   });

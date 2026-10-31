@@ -12,7 +12,15 @@ import { readGraphTokens } from "@/modules/knowledge-network/lib/graph-style";
 
 import { OntologyG6Canvas } from "./OntologyG6Canvas";
 
-type Behavior = { type: string; enable?: (event: unknown) => boolean; preventDefault?: boolean };
+type FixedShape = { shape: string };
+type Behavior = {
+  type: string;
+  combo?: FixedShape;
+  edge?: FixedShape;
+  enable?: boolean | ((event: unknown) => boolean);
+  node?: FixedShape;
+  preventDefault?: boolean;
+};
 type Plugin = {
   type: string;
   enable?: (event: unknown) => boolean;
@@ -112,15 +120,23 @@ function renderCanvas(onNodeClick = vi.fn()) {
   return created[created.length - 1];
 }
 
+function enableGuard(behavior: Behavior | undefined) {
+  if (typeof behavior?.enable !== "function") {
+    throw new Error(`${behavior?.type ?? "missing behavior"} must have an enable guard`);
+  }
+  return behavior.enable;
+}
+
 describe("OntologyG6Canvas", () => {
   it("zooms only with Ctrl/⌘ held and leaves a plain wheel to the page", () => {
     const graph = renderCanvas();
     const zoom = graph.options.behaviors.find((behavior) => behavior.type === "zoom-canvas");
+    const canZoom = enableGuard(zoom);
 
     expect(zoom?.preventDefault).toBe(false);
-    expect(zoom?.enable?.({ ctrlKey: false, metaKey: false })).toBe(false);
-    expect(zoom?.enable?.({ ctrlKey: true })).toBe(true);
-    expect(zoom?.enable?.({ metaKey: true })).toBe(true);
+    expect(canZoom({ ctrlKey: false, metaKey: false })).toBe(false);
+    expect(canZoom({ ctrlKey: true })).toBe(true);
+    expect(canZoom({ metaKey: true })).toBe(true);
 
     const area = screen.getByRole("img", { name: "graph" });
     const plain = new WheelEvent("wheel", { cancelable: true, deltaY: 10 });
@@ -131,17 +147,31 @@ describe("OntologyG6Canvas", () => {
     expect(pinch.defaultPrevented).toBe(true);
   });
 
+  it("keeps labels at native screen size instead of raster-scaling their fonts", () => {
+    const graph = renderCanvas();
+    const fixed = graph.options.behaviors.find((behavior) => behavior.type === "fix-element-size");
+
+    expect(fixed).toMatchObject({
+      combo: { shape: "label" },
+      edge: { shape: "label" },
+      enable: true,
+      node: { shape: "label" },
+    });
+  });
+
   it("drags types and group boxes, pans on blank canvas, and reports a clicked node", async () => {
     const onNodeClick = vi.fn();
     const graph = renderCanvas(onNodeClick);
     const drag = graph.options.behaviors.find((behavior) => behavior.type === "drag-element");
     const pan = graph.options.behaviors.find((behavior) => behavior.type === "drag-canvas");
+    const canDrag = enableGuard(drag);
+    const canPan = enableGuard(pan);
 
-    expect(drag?.enable?.({ targetType: "node" })).toBe(true);
-    expect(drag?.enable?.({ targetType: "combo" })).toBe(true);
-    expect(drag?.enable?.({ targetType: "edge" })).toBe(false);
-    expect(pan?.enable?.({ targetType: "canvas" })).toBe(true);
-    expect(pan?.enable?.({ targetType: "node" })).toBe(false);
+    expect(canDrag({ targetType: "node" })).toBe(true);
+    expect(canDrag({ targetType: "combo" })).toBe(true);
+    expect(canDrag({ targetType: "edge" })).toBe(false);
+    expect(canPan({ targetType: "canvas" })).toBe(true);
+    expect(canPan({ targetType: "node" })).toBe(false);
 
     graph.listeners.get("node:click")?.({ target: { id: "order" } });
     await waitFor(() => expect(onNodeClick).toHaveBeenCalledWith("order"));

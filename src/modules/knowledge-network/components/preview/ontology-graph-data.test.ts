@@ -102,6 +102,8 @@ describe("buildOntologyStructure", () => {
     expect(structure.combos).toEqual([]);
     // Names sit under the dots in every arrangement.
     expect(structure.nodes[0].style?.labelPlacement).toBe("bottom");
+    expect(structure.nodes[0].style?.labelFontSize).toBe(11);
+    expect(structure.edges[0].style?.labelFontSize).toBe(9);
     // A dimmed element can only come back if its normal opacity is stated.
     expect(structure.nodes.every((node) => node.style?.opacity === 1)).toBe(true);
     expect(structure.edges.every((edge) => edge.style?.opacity === 1)).toBe(true);
@@ -216,13 +218,16 @@ describe("buildOntologyDecorations", () => {
     expect(nodes.find((node) => node.id === "customer")?.style?.badges).toEqual([]);
   });
 
-  it("keeps names readable when zoomed out, and grows them more slowly than the graph", () => {
+  it("measures fixed-size labels in canvas units without changing their raster font size", () => {
     expect(labelScale(0.25)).toBe(4);
     expect(labelScale(1)).toBe(1);
-    // At 400% a name is drawn twice its size on screen, the dots four times theirs.
-    expect(labelScale(4) * 4).toBe(2);
+    expect(labelScale(4) * 4).toBe(1);
     const node = decorate({ zoom: 0.25 }).nodes[0];
-    expect(node.style?.labelFontSize).toBe(11 * 4);
+    const edge = decorate({ zoom: 0.25 }).edges[0];
+    expect(node.style).not.toHaveProperty("labelFontSize");
+    expect(node.style).not.toHaveProperty("labelOffsetY");
+    expect(edge.style).not.toHaveProperty("labelFontSize");
+    expect(edge.style).not.toHaveProperty("labelPadding");
   });
 
   it("names the best-connected types first and leaves out names that would collide", () => {

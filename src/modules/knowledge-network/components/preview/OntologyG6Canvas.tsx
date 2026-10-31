@@ -129,8 +129,8 @@ export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6Canva
       graph.updateEdgeData(next.edges);
       await graph.draw();
       await graph.setElementState(next.states, false);
-      // A name's new size is not drawn until the next frame G6 renders for its own reasons, such
-      // as a pan; draw one now, or the names stay as they were before the zoom.
+      // A changed name is not painted until the next frame G6 renders for its own reasons, such
+      // as a pan; draw one now so labels appear with the current collision result immediately.
       Object.values(graph.getCanvas().getLayers()).forEach((layer) => layer.render());
     };
 
@@ -173,6 +173,16 @@ export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6Canva
           },
           // The page scrolls under a plain wheel; the listener below stops it only while zooming.
           { type: "zoom-canvas", preventDefault: false, enable: zoomModifierHeld },
+          {
+            // Draw labels at their native screen size. Changing labelFontSize to compensate for
+            // fit-view zoom makes Canvas rasterize a large glyph through a fractional transform,
+            // which blurs names on wide ontology arrangements.
+            type: "fix-element-size",
+            enable: true,
+            node: { shape: "label" },
+            edge: { shape: "label" },
+            combo: { shape: "label" },
+          },
           {
             type: "drag-element",
             animation: false,
