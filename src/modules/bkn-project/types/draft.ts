@@ -309,7 +309,7 @@ export type AskEnds = Pick<DraftRelationTypeSave, "link" | "mapping" | "source" 
 export type AskRevision = { reason: string } & (
   | { field: "name" | "comment" | "display_key"; value: string }
   | { field: "primary_keys"; value: string[] }
-  | { field: "property"; value: { comment?: string; displayName?: string; name: string } }
+  | { field: "data_property"; value: { comment?: string; displayName?: string; name: string } }
   | { field: "ends"; value: AskEnds }
 );
 

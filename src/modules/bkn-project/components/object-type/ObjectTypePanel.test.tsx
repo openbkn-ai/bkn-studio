@@ -322,7 +322,7 @@ describe("ObjectTypePanel", () => {
         revisions: [
           { field: "comment", reason: "Empty.", value: "A buyer." },
           {
-            field: "property",
+            field: "data_property",
             reason: "",
             value: { displayName: "Customer ID", name: "customer_id" },
           },
@@ -415,6 +415,24 @@ describe("ObjectTypePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.undo" }));
     expect(description()).toHaveValue("Mine.");
     expect(mocks.message.warning).toHaveBeenCalledWith("bknProject.model.ask.undoStale");
+  });
+
+  it("asks again only from the last question that stopped", async () => {
+    mocks.ask
+      .mockRejectedValueOnce(new AskError("AskUnavailable"))
+      .mockResolvedValueOnce({ answer: "Second.", dropped: [], revisions: [] });
+    renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
+    askAi("One?");
+    expect(
+      await screen.findByText("bknProject.model.ask.error.AskUnavailable"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "bknProject.model.ask.retry" })).toBeInTheDocument();
+
+    askAi("Two?");
+    expect(await screen.findByText("Second.")).toBeInTheDocument();
+    // The answer after it built on the conversation as it was: the stopped one is not asked again.
+    expect(screen.queryByRole("button", { name: "bknProject.model.ask.retry" })).toBeNull();
   });
 
   it("keeps what was written when the answer stops, and asks again with the turns before", async () => {

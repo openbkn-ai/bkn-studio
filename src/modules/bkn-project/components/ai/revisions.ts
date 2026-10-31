@@ -75,7 +75,7 @@ export function objectPreview(
         label: t(`${PREFIX}.field.display_key`),
       };
     }
-    case "property": {
+    case "data_property": {
       const property = properties.find((item) => item.name === revision.value.name);
       const parts = (values: { comment?: string; displayName?: string }) =>
         [
@@ -125,7 +125,7 @@ export function applyObjectRevisions(values: ObjectValues, revisions: AskRevisio
             displayKey: property.name === revision.value,
           })),
         };
-      case "property": {
+      case "data_property": {
         const { comment, displayName, name } = revision.value;
         return {
           basic,

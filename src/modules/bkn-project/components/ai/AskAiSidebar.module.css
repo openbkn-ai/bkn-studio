@@ -146,6 +146,13 @@
   font-size: 13px;
 }
 
+.settling {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
 .thinking {
   display: inline-flex;
   gap: 3px;

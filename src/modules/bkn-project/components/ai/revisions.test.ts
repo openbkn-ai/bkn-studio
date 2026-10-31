@@ -49,7 +49,7 @@ describe("Ask AI revisions", () => {
       { field: "name", reason: "", value: "Staff member" },
       { field: "primary_keys", reason: "", value: ["emp_no", "dept_no"] },
       { field: "display_key", reason: "", value: "full_name" },
-      { field: "property", reason: "", value: { comment: "Works in", name: "dept_no" } },
+      { field: "data_property", reason: "", value: { comment: "Works in", name: "dept_no" } },
     ]);
 
     expect(next.basic).toEqual({ description: "", name: "Staff member" });
@@ -86,7 +86,7 @@ describe("Ask AI revisions", () => {
     });
     expect(
       objectPreview(t, values, {
-        field: "property",
+        field: "data_property",
         reason: "",
         value: { displayName: "Beds", name: "bed_count" },
       }),

@@ -25,30 +25,36 @@ import type {
   DraftRelationTypeSave,
 } from "@/modules/bkn-project/types/draft";
 import { AiPromptComposer } from "@/modules/knowledge-network/components/shared/AiPromptComposer";
-import {
-  listObjectMetricAnswerModels,
-  type ObjectMetricAnswerModel,
-} from "@/modules/knowledge-network/services/object-metric-models.service";
 
 import styles from "./AskAiSidebar.module.css";
 
 const PREFIX = "bknProject.model.ask";
 /** How many examples are offered before the first question. */
 const EXAMPLES = 3;
+/**
+ * How long the answer's text stays still before the page says the changes are being put together:
+ * bkn-project reads them off the answer after it is written.
+ */
+const SETTLE_MS = 1000;
 
 /** Why Ask AI did not answer, as the page says it; any other is said as `other`. */
 const ERRORS = new Set(["NotReady", "ItemNotFound", "AskUnavailable", "AskTimeout"]);
 /** What a proposed change was to, as the page names it; any other is named as `other`. */
-const FIELDS = new Set(["name", "comment", "primary_keys", "display_key", "property", "ends"]);
+const FIELDS = new Set(["name", "comment", "primary_keys", "display_key", "data_property", "ends"]);
 /** Why a proposed change was not used, as the page says it; any other is said as `other`. */
 const DROPPED = new Set([
   "unchanged",
+  "repeated",
+  "not_editable",
+  "invalid_name",
+  "invalid_description",
+  "invalid_identity",
   "unknown_property",
   "unknown_end",
   "type_mismatch",
-  "too_long",
-  "invalid_name",
+  "no_mapping",
   "duplicate",
+  "too_long",
 ]);
 
 /** A change as the person sees it before applying it: what it changes, from what to what. */
@@ -109,14 +115,12 @@ export function AskAiSidebar({
   const { message } = useAppServices();
   const [messages, setMessages] = useState<Message[]>([]);
   const [written, setWritten] = useState("");
+  const [settling, setSettling] = useState(false);
+  const settle = useRef<number | undefined>(undefined);
   const [generating, setGenerating] = useState(false);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [undo, setUndo] = useState<{ take: UndoApply } | null>(null);
   const [promptRequest, setPromptRequest] = useState<{ revision: number; value: string }>();
-  const [models, setModels] = useState<ObjectMetricAnswerModel[]>([]);
-  const [modelsLoading, setModelsLoading] = useState(true);
-  const [modelsUnavailable, setModelsUnavailable] = useState(false);
-  const [modelId, setModelId] = useState<string>();
   const turns = useRef<AskTurn[]>([]);
   const nextId = useRef(0);
   const asking = useRef<AbortController | null>(null);
@@ -126,24 +130,14 @@ export function AskAiSidebar({
     previewNow.current = preview;
   });
 
-  useEffect(() => {
-    let alive = true;
-    listObjectMetricAnswerModels()
-      .then((list) => {
-        if (alive) setModels(list);
-      })
-      .catch(() => {
-        if (alive) setModelsUnavailable(true);
-      })
-      .finally(() => {
-        if (alive) setModelsLoading(false);
-      });
-    return () => {
-      alive = false;
-      // Closing the editor stops an answer still being written.
+  // Closing the editor stops an answer still being written; bkn-project stops asking then too.
+  useEffect(
+    () => () => {
       asking.current?.abort();
-    };
-  }, []);
+      window.clearTimeout(settle.current);
+    },
+    [],
+  );
 
   const say = (content: Omit<Message, "id">) =>
     setMessages((current) => [...current, { ...content, id: nextId.current++ }]);
@@ -162,10 +156,12 @@ export function AskAiSidebar({
     const request = {
       history: turns.current.slice(-ASK_HISTORY_TURNS),
       itemId,
-      modelId,
       onText: (piece: string) => {
         text += piece;
         setWritten(text);
+        setSettling(false);
+        window.clearTimeout(settle.current);
+        settle.current = window.setTimeout(() => setSettling(true), SETTLE_MS);
       },
       projectId,
       question,
@@ -188,8 +184,9 @@ export function AskAiSidebar({
       }
     } catch (error) {
       // What was written stays; a question that stopped can be asked again.
-      if (text) {
-        say({ content: text, role: "assistant" });
+      const kept = (error instanceof AskError && error.answer) || text;
+      if (kept) {
+        say({ content: kept, role: "assistant" });
       }
       if (!controller.signal.aborted) {
         const code = error instanceof AskError ? error.code : "other";
@@ -201,6 +198,8 @@ export function AskAiSidebar({
         });
       }
     } finally {
+      window.clearTimeout(settle.current);
+      setSettling(false);
       setWritten("");
       setGenerating(false);
     }
@@ -267,7 +266,7 @@ export function AskAiSidebar({
           <p className={styles.intro}>{t(`${PREFIX}.intro.${kind}`)}</p>
         ) : (
           <div aria-live="polite" className={styles.conversation}>
-            {messages.map((item) => (
+            {messages.map((item, at) => (
               <div
                 className={`${styles.message} ${
                   item.role === "user" ? styles.messageUser : styles.messageAssistant
@@ -275,7 +274,8 @@ export function AskAiSidebar({
                 key={item.id}
               >
                 {item.content}
-                {item.retry && !generating ? (
+                {/* Only the last question that stopped is asked again: later ones built on it. */}
+                {item.retry && !generating && at === messages.length - 1 ? (
                   <Button
                     className={styles.retry}
                     onClick={() => void ask(item.retry ?? "", true)}
@@ -289,15 +289,16 @@ export function AskAiSidebar({
             ))}
             {generating ? (
               <div className={`${styles.message} ${styles.messageAssistant}`}>
-                {written || (
-                  <>
+                {written}
+                {written && !settling ? null : (
+                  <span className={written ? styles.settling : undefined}>
                     <span className={styles.thinking}>
                       <i />
                       <i />
                       <i />
                     </span>
-                    {t(`${PREFIX}.asking`)}
-                  </>
+                    {t(`${PREFIX}.${written ? "settling" : "asking"}`)}
+                  </span>
                 )}
               </div>
             ) : null}
@@ -399,13 +400,6 @@ export function AskAiSidebar({
           checking={false}
           generating={generating}
           inputLabel={t(`${PREFIX}.question`)}
-          modelId={modelId}
-          models={models}
-          modelsLoading={modelsLoading}
-          modelsUnavailable={modelsUnavailable}
-          // One conversation keeps one model, as the object metric designer does.
-          modelSelectionLocked={messages.length > 0}
-          onModelChange={setModelId}
           onStop={() => asking.current?.abort()}
           onSubmit={(question) => void ask(question)}
           placeholder={t(`${PREFIX}.placeholder.${kind}`)}

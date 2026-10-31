@@ -27,12 +27,7 @@ export function AiPromptComposer({
   checking,
   generating,
   inputLabel,
-  modelId,
-  models,
-  modelsLoading,
-  modelsUnavailable,
-  modelSelectionLocked,
-  onModelChange,
+  model,
   onStop,
   onSubmit,
   placeholder,
@@ -43,12 +38,15 @@ export function AiPromptComposer({
   generating: boolean;
   /** Names the input for assistive technology. */
   inputLabel: string;
-  modelId?: string;
-  models: ObjectMetricAnswerModel[];
-  modelsLoading: boolean;
-  modelsUnavailable: boolean;
-  modelSelectionLocked: boolean;
-  onModelChange: (modelId?: string) => void;
+  /** The answer model to choose; absent where the platform's default answers. */
+  model?: {
+    id?: string;
+    loading: boolean;
+    locked: boolean;
+    onChange: (modelId?: string) => void;
+    options: ObjectMetricAnswerModel[];
+    unavailable: boolean;
+  };
   onStop: () => void;
   onSubmit: (prompt: string) => void;
   placeholder: string;
@@ -90,41 +88,43 @@ export function AiPromptComposer({
       />
       <div className={styles.aiComposerFooter}>
         <div className={styles.aiComposerActions}>
-          <Tooltip
-            title={modelsUnavailable ? objectMetricText("aiModelListUnavailable") : undefined}
-          >
-            <Select
-              aria-label={objectMetricText("aiAnswerModel")}
-              className={styles.aiModelSelect}
-              disabled={generating || checking || modelSelectionLocked}
-              id="metric-ai-model"
-              loading={modelsLoading}
-              onChange={(value: string) => onModelChange(value || undefined)}
-              options={[
-                {
-                  label: (
-                    <span className={styles.aiModelOption}>
-                      <CodeSandboxOutlined aria-hidden="true" />
-                      <span>{objectMetricText("aiPlatformDefaultModel")}</span>
-                    </span>
-                  ),
-                  value: "",
-                },
-                ...models.map((model) => ({
-                  label: (
-                    <span className={styles.aiModelOption}>
-                      <CodeSandboxOutlined aria-hidden="true" />
-                      <span>{model.name}</span>
-                    </span>
-                  ),
-                  value: model.id,
-                })),
-              ]}
-              popupMatchSelectWidth={false}
-              suffixIcon={<DownOutlined aria-hidden="true" />}
-              value={modelId ?? ""}
-            />
-          </Tooltip>
+          {model ? (
+            <Tooltip
+              title={model.unavailable ? objectMetricText("aiModelListUnavailable") : undefined}
+            >
+              <Select
+                aria-label={objectMetricText("aiAnswerModel")}
+                className={styles.aiModelSelect}
+                disabled={generating || checking || model.locked}
+                id="metric-ai-model"
+                loading={model.loading}
+                onChange={(value: string) => model.onChange(value || undefined)}
+                options={[
+                  {
+                    label: (
+                      <span className={styles.aiModelOption}>
+                        <CodeSandboxOutlined aria-hidden="true" />
+                        <span>{objectMetricText("aiPlatformDefaultModel")}</span>
+                      </span>
+                    ),
+                    value: "",
+                  },
+                  ...model.options.map((option) => ({
+                    label: (
+                      <span className={styles.aiModelOption}>
+                        <CodeSandboxOutlined aria-hidden="true" />
+                        <span>{option.name}</span>
+                      </span>
+                    ),
+                    value: option.id,
+                  })),
+                ]}
+                popupMatchSelectWidth={false}
+                suffixIcon={<DownOutlined aria-hidden="true" />}
+                value={model.id ?? ""}
+              />
+            </Tooltip>
+          ) : null}
           <Button
             aria-label={generating ? objectMetricText("mca4d973c0b00") : sendLabel}
             className={styles.aiComposerSubmit}

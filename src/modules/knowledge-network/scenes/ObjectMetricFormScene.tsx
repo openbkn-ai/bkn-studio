@@ -5417,12 +5417,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               checking={aiChecking}
               inputLabel={objectMetricText("m15a3900b6bf9")}
               generating={aiGenerating}
-              modelId={aiModelId}
-              models={aiModels}
-              modelsLoading={aiModelsLoading}
-              modelsUnavailable={aiModelsUnavailable}
-              modelSelectionLocked={Boolean(aiThreadRef.current)}
-              onModelChange={setAiModelId}
+              model={{
+                id: aiModelId,
+                loading: aiModelsLoading,
+                locked: Boolean(aiThreadRef.current),
+                onChange: setAiModelId,
+                options: aiModels,
+                unavailable: aiModelsUnavailable,
+              }}
               onStop={stopAiGeneration}
               onSubmit={(prompt) => void generateWithAi(prompt)}
               placeholder={objectMetricText("m7d7fca1df843")}
