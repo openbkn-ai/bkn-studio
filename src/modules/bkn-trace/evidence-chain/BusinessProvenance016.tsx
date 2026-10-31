@@ -170,11 +170,6 @@ function BusinessFunctionCard({
         </div>
         <Tag color={value.validationStatus === "invalid" ? "error" : "blue"}>
           {capabilityLabel(value.capabilityKind)}
-          {value.technicalExecution.completeness === "failed"
-            ? ` · ${statusLabel("failed")}`
-            : value.technicalExecution.completeness === "partial"
-              ? ` · ${statusLabel("partial")}`
-              : ""}
         </Tag>
       </header>
       <p className={styles.purpose}>{value.businessPurpose}</p>
@@ -268,10 +263,6 @@ function BusinessFunctionCard({
               <dd>
                 {value.technicalExecution.outputPayloadRef || p16Text("function.inlineOrMissing")}
               </dd>
-            </div>
-            <div>
-              <dt>{p16Text("function.completeness")}</dt>
-              <dd>{value.technicalExecution.completeness || p16Text("function.notRecorded")}</dd>
             </div>
           </dl>
           {attempts.map((item) => (

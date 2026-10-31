@@ -242,6 +242,38 @@ describe("BusinessProvenanceScene", () => {
     expect(await screen.findByRole("button", { name: /关联轮次/ })).not.toBeNull();
   });
 
+  it.each([
+    ["active", "进行中"],
+    ["canceled", "已取消"],
+    ["handed_off", "已转交"],
+    ["abandoned", "未正常结束"],
+  ])("shows the recorded interaction state %s without raw protocol text", async (status, label) => {
+    window.history.replaceState(
+      {},
+      "",
+      "/observability/business-provenance?conversation_id=conv-state&interaction_id=int-state",
+    );
+    getConversations.mockResolvedValue({
+      entries: [{ conversationId: "conv-state", interactionCount: 1 }],
+      total: 1,
+    });
+    getInteractions.mockResolvedValue({
+      entries: [{ interactionId: "int-state", questionPreview: "本轮输入", status }],
+      total: 1,
+    });
+    getInteraction.mockResolvedValue({
+      interactionId: "int-state",
+      interactionQuestion: "本轮输入",
+      operations: [],
+      conversationContext: [],
+      derivedFacts: [],
+      contextRelations: [],
+    });
+    renderWithoutAntdStyles(<BusinessProvenanceScene />);
+    expect((await screen.findAllByText(new RegExp(label))).length).toBeGreaterThan(0);
+    expect(screen.queryByText(status)).toBeNull();
+    expect(screen.queryByText("可继续对话")).toBeNull();
+  });
   it("keeps the original question and timeline available when integrity reads fail", async () => {
     window.history.replaceState(
       {},

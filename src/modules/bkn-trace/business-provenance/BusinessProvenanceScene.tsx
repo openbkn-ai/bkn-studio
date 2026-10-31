@@ -124,6 +124,9 @@ function statusLabel(value?: string) {
   if (value === "failed") return bpText("status.failed");
   if (value === "active") return bpText("status.active");
   if (value === "running") return bpText("status.running");
+  if (value === "canceled") return bpText("status.canceled");
+  if (value === "handed_off") return bpText("status.handedOff");
+  if (value === "abandoned") return bpText("status.abandoned");
   return value || bpText("notRecorded");
 }
 
