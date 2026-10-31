@@ -51,10 +51,17 @@
   margin-left: auto;
 }
 
-/* Room is left on the right for the AI panel of a later phase. */
+/* The editor, with Ask AI on its right when it is open. */
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .body {
   display: flex;
   flex: 1;
+  min-width: 0;
   flex-direction: column;
   gap: 12px;
   min-height: 0;

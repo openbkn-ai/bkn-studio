@@ -14,7 +14,6 @@ import { listObjectTypeResourceFields as listResourceFields } from "@/modules/kn
 import type { ObjectTypeResourceField } from "@/modules/knowledge-network/types/object-type";
 import { mockAddProjectCatalogs } from "@/modules/bkn-project/services/project.service";
 import type {
-  AskAnswer,
   Candidate,
   Candidates,
   Draft,
@@ -1231,6 +1230,24 @@ export async function chooseIdentity(
   return mapDraft(response.data);
 }
 
+/** An object type as bkn-project saves it: the body saving sends, without its draft's time. */
+export function objectTypeBody(value: DraftObjectTypeSave) {
+  return {
+    comment: value.description,
+    data_properties: value.properties.map((property) => ({
+      comment: property.description,
+      display_name: property.displayName,
+      ...(property.mappedField ? { mapped_field: { name: property.mappedField } } : {}),
+      name: property.name,
+      type: property.type,
+    })),
+    display_key: value.displayKey,
+    incremental_key: value.incrementalKey,
+    name: value.name,
+    primary_keys: value.primaryKeys,
+  };
+}
+
 /**
  * Saves an object type whole, as the editor leaves it, over the draft made at `updateTime`;
  * replies the draft. bkn-project checks it as it checks each edit and records the decisions.
@@ -1246,28 +1263,17 @@ export async function saveDraftObjectType(
   }
   const response = await http.put<BackendDraft>(
     `${draftPath(projectId)}/object_types/${encodeURIComponent(itemId)}`,
-    {
-      comment: value.description,
-      data_properties: value.properties.map((property) => ({
-        comment: property.description,
-        display_name: property.displayName,
-        ...(property.mappedField ? { mapped_field: { name: property.mappedField } } : {}),
-        name: property.name,
-        type: property.type,
-      })),
-      display_key: value.displayKey,
-      incremental_key: value.incrementalKey,
-      name: value.name,
-      primary_keys: value.primaryKeys,
-      update_time: updateTime,
-    },
+    { ...objectTypeBody(value), update_time: updateTime },
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
 }
 
-/** A relation type as bkn-backend's, the body making or saving it sends. */
-function relationBody(value: DraftRelationTypeSave, updateTime: number, id?: string) {
+/**
+ * A relation type as bkn-backend's, the body making or saving it sends; without a time, what is
+ * being edited, as Ask AI is told it.
+ */
+export function relationBody(value: DraftRelationTypeSave, updateTime?: number, id?: string) {
   const pairs = (mapping: DraftRelationTypeSave["mapping"]) =>
     mapping.map((pair) => ({
       source_property: { name: pair.sourceProperty },
@@ -1287,7 +1293,7 @@ function relationBody(value: DraftRelationTypeSave, updateTime: number, id?: str
     source_object_type_id: value.source,
     target_object_type_id: value.target,
     type: value.link ? "indirect" : "direct",
-    update_time: updateTime,
+    ...(updateTime === undefined ? {} : { update_time: updateTime }),
   };
 }
 
@@ -1513,57 +1519,4 @@ export async function draftSourceChanges(projectId: string, signature: string): 
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
-}
-
-/** Ask AI answers within 45 seconds; the page waits a little longer than that. */
-export const ASK_TIMEOUT_MS = 60_000;
-
-/**
- * Asks AI about one object type of a ready draft. The draft is not changed and nothing of the
- * question is kept: a suggestion is adopted through the edit it names.
- */
-export async function askAboutObjectType(
-  projectId: string,
-  itemId: string,
-  question: string,
-): Promise<AskAnswer> {
-  if (useMock) {
-    return wait(
-      {
-        answer: `"${itemId}" is identified by its key and read from one table.`,
-        suggestion: {
-          field: "description",
-          properties: [],
-          reason: "The description is empty.",
-          value: "One record per row of its table.",
-        },
-      },
-      600,
-    );
-  }
-  const response = await http.post<{
-    answer: string;
-    suggestion: {
-      field: string;
-      properties?: string[] | null;
-      reason?: string;
-      value?: string;
-    } | null;
-  }>(
-    `${draftPath(projectId)}/object_types/${encodeURIComponent(itemId)}/ask`,
-    { question },
-    { skipErrorToast: true, timeout: ASK_TIMEOUT_MS },
-  );
-  const suggestion = response.data.suggestion;
-  return {
-    answer: response.data.answer,
-    suggestion: suggestion
-      ? {
-          field: suggestion.field,
-          properties: suggestion.properties ?? [],
-          reason: suggestion.reason ?? "",
-          value: suggestion.value ?? "",
-        }
-      : null,
-  };
 }

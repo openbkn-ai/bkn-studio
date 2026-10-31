@@ -1,0 +1,298 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/* Beside the editor, on its right: laid out as the object metric designer's AI pane. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 12px;
+  width: 380px;
+  min-height: 0;
+  padding: 18px;
+  overflow: hidden;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.titleIcon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--color-primary-600);
+  color: var(--color-text-inverse);
+  font-size: 17px;
+}
+
+.title > div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.title strong {
+  color: var(--color-text-primary);
+  font-size: 15px;
+}
+
+.title span:last-child {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.contentEmpty {
+  justify-content: flex-start;
+  padding-top: 12px;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary-bg) 22%, var(--color-bg-layout)) 0%,
+    var(--color-bg-layout) 70%
+  );
+}
+
+.message {
+  width: fit-content;
+  max-width: 84%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.messageAssistant {
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  border-top-left-radius: 2px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.messageUser {
+  align-self: flex-end;
+  border: 1px solid var(--color-primary-border);
+  border-top-right-radius: 2px;
+  background: var(--color-primary-600);
+  color: var(--color-text-inverse);
+}
+
+.messageError {
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.retry:global(.ant-btn) {
+  height: auto;
+  padding: 0 0 0 6px;
+  font-size: 13px;
+}
+
+.settling {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.thinking {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 8px;
+  vertical-align: 2px;
+}
+
+.thinking i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  animation: thinking 1.1s ease-in-out infinite;
+}
+
+.thinking i:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.thinking i:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+@keyframes thinking {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.proposal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  font-size: 12px;
+}
+
+.proposal p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.proposalField {
+  display: block;
+  font-weight: 600;
+}
+
+.proposalDiff {
+  display: grid;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.proposalValue {
+  display: block;
+  max-width: 290px;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proposalReason {
+  display: block;
+  margin-top: 5px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.dropped {
+  color: var(--color-text-secondary);
+}
+
+.dropped ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 8px;
+  background: var(--color-primary-bg);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.examples {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.examples > span {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.examples button {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 4px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.examples button:hover,
+.examples button:focus-visible {
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-600);
+  outline: none;
+}
+
+.composer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--color-border);
+}
