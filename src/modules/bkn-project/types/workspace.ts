@@ -24,6 +24,9 @@ export function isProjectSection(value: string | undefined): value is ProjectSec
   return (PROJECT_SECTIONS as readonly string[]).includes(value ?? "");
 }
 
+/** What a link to the modeling page asks it to show: the update field an object type waits for. */
+export const updateFieldFocus = (objectTypeId: string) => `update-field:${objectTypeId}`;
+
 export function projectSectionPath(projectId: string, section: ProjectSection) {
   return `/bkn-project/${encodeURIComponent(projectId)}/${section}`;
 }

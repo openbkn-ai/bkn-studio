@@ -37,12 +37,14 @@ function refusal(code: string, details?: unknown) {
 
 const indexItem = (overrides: Partial<IndexItem>): IndexItem => ({
   build: null,
+  fullRebuildOnly: false,
   id: "orders",
   missing: [],
   name: "Orders",
   state: "ready",
   table: { catalogId: "c", name: "orders", resourceId: "r" },
   task: null,
+  updateField: null,
   ...overrides,
 });
 
@@ -169,7 +171,7 @@ describe("publish messages", () => {
         time,
       }),
     ).toBe(
-      "The identity field's type cannot be used for an index (it must be a number or text). No update field can be used. You can choose one for the object type in ontology modeling.",
+      "The identity field's type cannot be used for an index (it must be a number or text). The update field's type cannot drive refreshes; it needs to be a date or time.",
     );
     expect(buildOutcomeText(en, { outcome: "failed", reason: "vega said 500", time })).toBe(
       "The build could not start. You can build again later.",

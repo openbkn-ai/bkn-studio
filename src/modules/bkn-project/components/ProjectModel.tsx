@@ -89,12 +89,15 @@ function failureKey(error: string) {
  * bkn-project; the page shows what it answers and the evidence behind each item.
  */
 export function ProjectModel({
+  focus,
   initialTab,
   onConfirmed,
   onProjectChange,
   ownerIsCaller,
   project,
 }: {
+  /** What a link asked to show on its tab, such as the update field an object type waits for. */
+  focus?: string | null;
   /** The tab a link asked for, such as the overview's "View all" changes; others are ignored. */
   initialTab?: string | null;
   /** Called once the draft is confirmed, to show what follows. */
@@ -683,6 +686,7 @@ export function ProjectModel({
               currentUserId={runtimeConfig.currentUser.id}
               directory={directory}
               draft={draft}
+              focus={focus}
               neededBy={neededBy}
               onSetUpdateField={async (objectTypeId, property) =>
                 (await sendEdit("object_types", objectTypeId, { incrementalKey: property })) !==

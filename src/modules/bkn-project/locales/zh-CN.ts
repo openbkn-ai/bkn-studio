@@ -1573,6 +1573,9 @@ export const bknProjectZhCN = {
           primary_key_fields: "唯一标识字段",
           incremental_fields: "更新字段",
         },
+        fullRebuildOnly: "没有更新字段，只能全量重建",
+        noTimeField: "这个对象类没有可用的时间字段",
+        chooseUpdateField: "选择更新字段",
         outcome: {
           created: "已开始构建",
           existing: "已有构建在进行",
@@ -1581,7 +1584,7 @@ export const bknProjectZhCN = {
           failed: "没能开始构建，可以稍后重新构建。",
           notConfigurable: {
             primary_key_fields: "唯一标识字段的类型不能用来建索引（需要是数字或文字）。",
-            incremental_fields: "没有可用的更新字段，可以在本体建模中为对象类指定。",
+            incremental_fields: "更新字段的类型不能用来增量刷新，需要是日期或时间。",
             other: "这张表缺少构建所需的设置。",
           },
         },

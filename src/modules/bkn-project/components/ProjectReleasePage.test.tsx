@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { MemoryRouter } from "react-router-dom";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -140,11 +141,13 @@ const onGoToModel = vi.fn();
 
 function renderRelease(override: { archived?: boolean; ownerIsCaller?: boolean } = {}) {
   return renderWithoutAntdStyles(
-    <ProjectReleasePage
-      onGoToModel={onGoToModel}
-      ownerIsCaller={override.ownerIsCaller ?? true}
-      project={{ ...project, archived: override.archived ?? false }}
-    />,
+    <MemoryRouter>
+      <ProjectReleasePage
+        onGoToModel={onGoToModel}
+        ownerIsCaller={override.ownerIsCaller ?? true}
+        project={{ ...project, archived: override.archived ?? false }}
+      />
+    </MemoryRouter>,
   );
 }
 

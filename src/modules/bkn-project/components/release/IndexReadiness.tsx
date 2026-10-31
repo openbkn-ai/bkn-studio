@@ -9,6 +9,7 @@ import { Alert, Spin } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -29,6 +30,7 @@ import {
   INDEX_POLL_MS,
 } from "@/modules/bkn-project/services/publish.service";
 import type { IndexItem, ProjectIndex } from "@/modules/bkn-project/types/publish";
+import { projectSectionPath, updateFieldFocus } from "@/modules/bkn-project/types/workspace";
 
 import styles from "../ProjectReleasePage.module.css";
 
@@ -62,6 +64,7 @@ export function IndexReadiness({
 }) {
   const { t } = useTranslation();
   const { message } = useAppServices();
+  const navigate = useNavigate();
   // undefined while loading, null before the first draft.
   const [index, setIndex] = useState<ProjectIndex | null | undefined>(undefined);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -152,6 +155,14 @@ export function IndexReadiness({
           {item.state === "not_configured" && item.missing.length ? (
             <div className={styles.muted}>{missingFieldsText(t, item.missing)}</div>
           ) : null}
+          <UpdateFieldNote
+            item={item}
+            onChoose={() =>
+              void navigate(
+                `${projectSectionPath(projectId, "model")}?tab=changes&focus=${encodeURIComponent(updateFieldFocus(item.id))}`,
+              )
+            }
+          />
         </div>
       ),
       title: t("bknProject.release.index.stateColumn"),
@@ -233,5 +244,30 @@ export function IndexReadiness({
         </>
       )}
     </Section>
+  );
+}
+
+/**
+ * How the table's index refreshes, said as information: without an update field it is rebuilt in
+ * full, and the modeling page is where one is chosen, when the table has a time field to be one.
+ */
+function UpdateFieldNote({ item, onChoose }: { item: IndexItem; onChoose: () => void }) {
+  const { t } = useTranslation();
+  const field = item.updateField;
+  const noTimeField = field !== null && !field.property && !field.candidates.length;
+  if (!item.fullRebuildOnly && !field?.pending && !noTimeField) {
+    return null;
+  }
+  return (
+    <div className={styles.updateFieldNote}>
+      {item.fullRebuildOnly ? <span>{t("bknProject.release.index.fullRebuildOnly")}</span> : null}
+      {noTimeField ? (
+        <span>{t("bknProject.release.index.noTimeField")}</span>
+      ) : field?.pending ? (
+        <AppButton onClick={onChoose} size="small" type="link">
+          {t("bknProject.release.index.chooseUpdateField")}
+        </AppButton>
+      ) : null}
+    </div>
   );
 }

@@ -52,13 +52,19 @@ function updateField(extra: Partial<PendingItem["updateField"]> = {}): PendingIt
   };
 }
 
-function renderPanel(items: PendingItem[], onSet = vi.fn().mockResolvedValue(true), of = draft()) {
+function renderPanel(
+  items: PendingItem[],
+  onSet = vi.fn().mockResolvedValue(true),
+  of = draft(),
+  focus?: string,
+) {
   renderWithoutAntdStyles(
     <DraftChangesPanel
       actions={actions}
       currentUserId="me"
       directory={new Map()}
       draft={of}
+      focus={focus}
       neededBy={new Map()}
       onSetUpdateField={onSet}
       unadoptedEnds={[]}
@@ -117,6 +123,11 @@ describe("DraftChangesPanel update field", () => {
     renderPanel([updateField({ values: [] })]);
     expect(screen.getByText("没有可用的时间字段")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "设为更新字段" })).toBeNull();
+  });
+
+  it("marks the update field a link led to", () => {
+    renderPanel([updateField()], undefined, undefined, "update-field:customers");
+    expect(screen.getByText("选择更新字段").closest("li")?.className).toMatch(/changeFocused/);
   });
 
   it("drops the suggestion once the draft has an update field", () => {

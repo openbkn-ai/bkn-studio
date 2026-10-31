@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -36,14 +37,21 @@ import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { IndexReadiness } from "./IndexReadiness";
 
+function Location() {
+  const location = useLocation();
+  return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
+}
+
 const item = (id: string, overrides: Partial<IndexItem> = {}): IndexItem => ({
   build: { outcome: "created", time: 1 },
+  fullRebuildOnly: false,
   id,
   missing: [],
   name: `${id} name`,
   state: "ready",
   table: { catalogId: "c", name: `${id}_table`, resourceId: `r-${id}` },
   task: null,
+  updateField: null,
   ...overrides,
 });
 
@@ -58,7 +66,12 @@ function readiness(items: IndexItem[], tasksVisible = true): ProjectIndex {
 const section = () => within(screen.getByRole("region", { name: "本地索引" }));
 
 function renderIndex(canRun = true) {
-  return renderWithoutAntdStyles(<IndexReadiness canRun={canRun} projectId="p1" />);
+  return renderWithoutAntdStyles(
+    <MemoryRouter>
+      <IndexReadiness canRun={canRun} projectId="p1" />
+      <Location />
+    </MemoryRouter>,
+  );
 }
 
 describe("IndexReadiness", () => {
@@ -90,6 +103,35 @@ describe("IndexReadiness", () => {
 
   afterAll(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("says how a table without an update field refreshes, and where to choose one", async () => {
+    getOntologyIndexMock.mockResolvedValue(
+      readiness([
+        item("orders", {
+          fullRebuildOnly: true,
+          updateField: { candidates: ["signed_at"], pending: true, property: "" },
+        }),
+        item("regions", {
+          fullRebuildOnly: true,
+          updateField: { candidates: [], pending: false, property: "" },
+        }),
+        item("customers", {
+          updateField: { candidates: ["updated_at"], pending: false, property: "updated_at" },
+        }),
+      ]),
+    );
+    renderIndex();
+
+    // Information, not a problem: it is said in the state cell, never as a warning or an error.
+    expect(await screen.findAllByText("没有更新字段，只能全量重建")).toHaveLength(2);
+    expect(screen.getByText("这个对象类没有可用的时间字段")).toBeInTheDocument();
+    expect(screen.queryByText(/缺少：/)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "选择更新字段" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/bkn-project/p1/model?tab=changes&focus=update-field%3Aorders",
+    );
   });
 
   it("shows each table's index and what its last build did, in plain words", async () => {
@@ -175,7 +217,11 @@ describe("IndexReadiness", () => {
       )
       .mockResolvedValue(readiness([item("customers")]));
     const onSettled = vi.fn();
-    renderWithoutAntdStyles(<IndexReadiness canRun onSettled={onSettled} projectId="p1" />);
+    renderWithoutAntdStyles(
+      <MemoryRouter>
+        <IndexReadiness canRun onSettled={onSettled} projectId="p1" />
+      </MemoryRouter>,
+    );
 
     expect(await section().findByText("构建中")).toBeInTheDocument();
     expect(onSettled).not.toHaveBeenCalled();

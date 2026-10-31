@@ -75,3 +75,18 @@
 .nowrap {
   white-space: nowrap;
 }
+
+/* How an index refreshes, and where its update field is chosen: information, not a problem. */
+.updateFieldNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.updateFieldNote :global(.ant-btn) {
+  height: auto;
+  padding: 0;
+}

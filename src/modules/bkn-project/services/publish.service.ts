@@ -155,12 +155,18 @@ type BackendIndex = {
   object_types:
     | {
         build?: { outcome: IndexBuild["outcome"]; reason?: string; task_id?: string; time: number };
+        full_rebuild_only?: boolean;
         id: string;
         missing?: string[];
         name: string;
         state: IndexItem["state"];
         table: BackendTable;
         task?: { id: string; status: string };
+        update_field?: {
+          candidates?: string[] | null;
+          pending?: boolean;
+          property?: string;
+        } | null;
       }[]
     | null;
   tasks_visible: boolean;
@@ -342,12 +348,20 @@ function mapIndex(index: BackendIndex): ProjectIndex {
             time: item.build.time,
           }
         : null,
+      fullRebuildOnly: item.full_rebuild_only ?? false,
       id: item.id,
       missing: item.missing ?? [],
       name: item.name,
       state: item.state,
       table: mapTable(item.table),
       task: item.task ? { id: item.task.id, status: item.task.status } : null,
+      updateField: item.update_field
+        ? {
+            candidates: item.update_field.candidates ?? [],
+            pending: item.update_field.pending ?? false,
+            property: item.update_field.property ?? "",
+          }
+        : null,
     })),
     tasksVisible: index.tasks_visible,
   };
@@ -487,20 +501,24 @@ function mockIndexOf(projectId: string, draft: Draft): ProjectIndex {
   const builtAt = mockRebuilds[projectId] ?? confirmation?.time;
   const objects = adoptedObjects(draft);
   const items = objects.map((item, at): IndexItem => {
-    // The last table has no update field, so the page shows a table the build cannot configure.
-    const unconfigurable = objects.length > 1 && at === objects.length - 1;
+    // The last table has no update field: its identity stands in, so it rebuilds in full only,
+    // and the modeling page asks for one of its time properties.
+    const noUpdateField = objects.length > 1 && at === objects.length - 1;
     const built = builtAt !== undefined && Date.now() - builtAt >= MOCK_BUILD_MS;
-    const base = { id: item.id, missing: [], name: item.name, table: item.table, task: null };
-    if (unconfigurable) {
-      return {
-        ...base,
-        build: confirmation
-          ? { outcome: "not_configurable", reason: "incremental_fields", time: confirmation.time }
-          : null,
-        missing: ["incremental_fields"],
-        state: "not_configured",
-      };
-    }
+    const times = item.properties
+      .filter((property) => /^(date|time|datetime|timestamp)$/.test(property.type))
+      .map((property) => property.name);
+    const base = {
+      fullRebuildOnly: noUpdateField,
+      id: item.id,
+      missing: [],
+      name: item.name,
+      table: item.table,
+      task: null,
+      updateField: noUpdateField
+        ? { candidates: times, pending: times.length > 0, property: "" }
+        : { candidates: times, pending: false, property: item.incrementalKey },
+    };
     if (builtAt === undefined) {
       return { ...base, build: null, state: "not_built" };
     }
