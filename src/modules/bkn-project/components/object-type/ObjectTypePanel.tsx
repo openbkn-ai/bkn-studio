@@ -13,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { AskAiSidebar } from "@/modules/bkn-project/components/ai/AskAiSidebar";
+import { applyObjectRevisions, objectPreview } from "@/modules/bkn-project/components/ai/revisions";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import {
   draftSave,
@@ -24,7 +26,7 @@ import {
   saveDraftObjectType,
 } from "@/modules/bkn-project/services/draft.service";
 import { projectErrorDetails } from "@/modules/bkn-project/services/publish.service";
-import type { Draft, DraftObjectType } from "@/modules/bkn-project/types/draft";
+import type { AskRevision, Draft, DraftObjectType } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import {
   ObjectTypeDataAttributeEditor,
@@ -81,7 +83,6 @@ type Base = { draft: Draft; objectType: DraftObjectType };
 export function ObjectTypePanel({
   draft,
   objectTypeId,
-  onAsk,
   onClose,
   onReload,
   onSaved,
@@ -91,8 +92,6 @@ export function ObjectTypePanel({
   /** The draft the panel opens on; later reads of it do not reset what is being edited. */
   draft: Draft;
   objectTypeId: string;
-  /** Opens the object type's details, where AI can be asked about it. */
-  onAsk?: () => void;
   onClose: () => void;
   /** Reads the draft again, replying it, or null when it cannot be read. */
   onReload: () => Promise<Draft | null>;
@@ -120,6 +119,7 @@ export function ObjectTypePanel({
   );
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<SaveProblem | null>(null);
+  const [asking, setAsking] = useState(false);
 
   // Starts over from a draft: the one just saved, or the one read again after it moved.
   const reset = (from: Draft) => {
@@ -305,6 +305,14 @@ export function ObjectTypePanel({
     }
   };
 
+  // Ask AI's changes go into the editor as if typed; saving writes them.
+  const adopt = (revisions: AskRevision[]) => {
+    const next = applyObjectRevisions({ basic, properties }, revisions);
+    setBasic(next.basic);
+    basicForm.setFieldsValue(next.basic);
+    setProperties(next.properties);
+  };
+
   return (
     <section aria-label={t(`${PREFIX}.title`)} className={styles.panel}>
       <header className={styles.header}>
@@ -312,7 +320,11 @@ export function ObjectTypePanel({
         {changed ? <span className={styles.unsaved}>{t(`${PREFIX}.unsaved`)}</span> : null}
         <span className={styles.actions}>
           {review && base ? <ReviewActions prepare={prepare} review={review} /> : null}
-          {onAsk ? <AppButton onClick={onAsk}>{t(`${PREFIX}.ask`)}</AppButton> : null}
+          {base ? (
+            <AppButton aria-pressed={asking} onClick={() => setAsking(!asking)}>
+              {t(`${PREFIX}.ask`)}
+            </AppButton>
+          ) : null}
           <AppButton disabled={!base} loading={saving} onClick={() => void save()} type="primary">
             {t(`${PREFIX}.save`)}
           </AppButton>
@@ -325,60 +337,74 @@ export function ObjectTypePanel({
         </span>
       </header>
       {base ? (
-        <div className={styles.body}>
-          {problem ? (
-            <Alert
-              action={
-                problem.kind === "stale" ? (
-                  <AppButton onClick={() => void reload()} size="small">
-                    {t(`${PREFIX}.reload`)}
-                  </AppButton>
-                ) : undefined
-              }
-              message={problem.kind === "stale" ? t(`${PREFIX}.errors.Stale`) : problem.text}
-              showIcon
-              type={problem.kind === "stale" ? "warning" : "error"}
+        <div className={styles.workspace}>
+          <div className={styles.body}>
+            {problem ? (
+              <Alert
+                action={
+                  problem.kind === "stale" ? (
+                    <AppButton onClick={() => void reload()} size="small">
+                      {t(`${PREFIX}.reload`)}
+                    </AppButton>
+                  ) : undefined
+                }
+                message={problem.kind === "stale" ? t(`${PREFIX}.errors.Stale`) : problem.text}
+                showIcon
+                type={problem.kind === "stale" ? "warning" : "error"}
+              />
+            ) : null}
+            <Form
+              className={styles.basic}
+              colon={false}
+              form={basicForm}
+              initialValues={basic}
+              labelCol={{ flex: "72px" }}
+              onValuesChange={(_, values) => setBasic(values)}
+              wrapperCol={{ flex: "auto" }}
+            >
+              <Form.Item
+                label={t(`${PREFIX}.name`)}
+                name="name"
+                rules={[
+                  { message: t(`${PREFIX}.nameRequired`), required: true, whitespace: true },
+                  { max: RESOURCE_NAME_MAX_LENGTH, message: t(`${PREFIX}.nameTooLong`) },
+                ]}
+              >
+                <Input count={RESOURCE_NAME_COUNT} showCount />
+              </Form.Item>
+              <Form.Item label={t(`${PREFIX}.description`)} name="description">
+                <Input.TextArea
+                  autoSize={{ maxRows: 3, minRows: 1 }}
+                  maxLength={DESCRIPTION_MAX_LENGTH}
+                  showCount
+                />
+              </Form.Item>
+            </Form>
+            <div className={styles.canvas}>
+              <ObjectTypeDataAttributeEditor
+                basicValue={{ color: DEFAULT_RESOURCE_COLOR, name: basic.name }}
+                dataProperties={properties}
+                dataSource={dataSource}
+                networkId={project.knId}
+                onChange={({ dataProperties }) => setProperties(dataProperties)}
+                readResourceFields={readResourceFields}
+                ref={editorRef}
+                resourceFixed
+              />
+            </div>
+          </div>
+          {asking ? (
+            <AskAiSidebar
+              canAdopt
+              itemId={objectTypeId}
+              kind="object_types"
+              onAdopt={adopt}
+              onClose={() => setAsking(false)}
+              preview={(revision) => objectPreview(t, { basic, properties }, revision)}
+              projectId={project.id}
+              working={() => draftSave(base.objectType, basic, properties)}
             />
           ) : null}
-          <Form
-            className={styles.basic}
-            colon={false}
-            form={basicForm}
-            initialValues={basic}
-            labelCol={{ flex: "72px" }}
-            onValuesChange={(_, values) => setBasic(values)}
-            wrapperCol={{ flex: "auto" }}
-          >
-            <Form.Item
-              label={t(`${PREFIX}.name`)}
-              name="name"
-              rules={[
-                { message: t(`${PREFIX}.nameRequired`), required: true, whitespace: true },
-                { max: RESOURCE_NAME_MAX_LENGTH, message: t(`${PREFIX}.nameTooLong`) },
-              ]}
-            >
-              <Input count={RESOURCE_NAME_COUNT} showCount />
-            </Form.Item>
-            <Form.Item label={t(`${PREFIX}.description`)} name="description">
-              <Input.TextArea
-                autoSize={{ maxRows: 3, minRows: 1 }}
-                maxLength={DESCRIPTION_MAX_LENGTH}
-                showCount
-              />
-            </Form.Item>
-          </Form>
-          <div className={styles.canvas}>
-            <ObjectTypeDataAttributeEditor
-              basicValue={{ color: DEFAULT_RESOURCE_COLOR, name: basic.name }}
-              dataProperties={properties}
-              dataSource={dataSource}
-              networkId={project.knId}
-              onChange={({ dataProperties }) => setProperties(dataProperties)}
-              readResourceFields={readResourceFields}
-              ref={editorRef}
-              resourceFixed
-            />
-          </div>
         </div>
       ) : (
         <Alert className={styles.missing} message={t(`${PREFIX}.notFound`)} showIcon type="error" />

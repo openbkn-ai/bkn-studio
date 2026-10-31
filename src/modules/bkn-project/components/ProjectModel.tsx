@@ -965,20 +965,6 @@ export function ProjectModel({
             />
           )}
           <DraftObjectDrawer
-            ask={
-              draft.status === "ready"
-                ? {
-                    canAdopt: !project.archived,
-                    onAdopt: async (objectType, suggestion) =>
-                      (suggestion.field === "identity"
-                        ? await sendIdentity(objectType, suggestion.properties)
-                        : await sendEdit("object_types", objectType.id, {
-                            [suggestion.field]: suggestion.value,
-                          })) === "done",
-                    projectId: project.id,
-                  }
-                : undefined
-            }
             catalogNames={catalogNames}
             excluded={items.excluded}
             objectType={items.objectTypes.find((item) => item.id === openId) ?? null}
@@ -1002,7 +988,6 @@ export function ProjectModel({
               draft={draft}
               key={`${panelId}/${panelReads}`}
               objectTypeId={panelId}
-              onAsk={() => setOpenId(panelId)}
               onClose={closePanel}
               onReload={readDraftAgain}
               onSaved={setDraft}

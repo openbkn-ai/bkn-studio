@@ -20,7 +20,10 @@ import {
  */
 
 export function relationEditorValues(
-  relation?: DraftRelationType,
+  relation?: Pick<
+    DraftRelationType,
+    "linkTable" | "mapping" | "source" | "sourceMapping" | "target" | "targetMapping"
+  >,
   ends?: { source?: string; target?: string },
 ): RelationTypeMappingFormValues {
   if (!relation) {

@@ -10,6 +10,7 @@ import { AxiosError, type AxiosResponse } from "axios";
 import { forwardRef, useEffect, useImperativeHandle } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AskError } from "@/modules/bkn-project/services/ask.service";
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   confirm: vi.fn(),
   listFields: vi.fn(),
   message: { error: vi.fn(), success: vi.fn() },
+  ask: vi.fn(),
   removed: new Set<string>(),
   save: vi.fn(),
   // Stable like the real `t`; options are appended so they can be asserted.
@@ -39,6 +41,11 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
   listDraftTableFields: mocks.listFields,
   saveDraftObjectType: mocks.save,
+}));
+
+vi.mock("@/modules/bkn-project/services/ask.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/ask.service")>()),
+  askDraftItem: mocks.ask,
 }));
 
 // Stands in for the canvas: hands back the properties it was given, as checked.
@@ -92,7 +99,6 @@ const project: Project = {
 
 function renderPanel(draft: Draft = mapDraft(mockDraft("p1")), objectTypeId = "customers") {
   const handlers = {
-    onAsk: vi.fn(),
     onClose: vi.fn(),
     onReload: vi.fn().mockResolvedValue(null),
     onSaved: vi.fn(),
@@ -293,10 +299,119 @@ describe("ObjectTypePanel", () => {
     expect(mocks.save).not.toHaveBeenCalled();
   });
 
-  it("opens the details to ask AI about the object type", () => {
-    const { onAsk } = renderPanel();
+  it("asks AI with the unsaved values, and puts adopted changes into the editor to save", async () => {
+    const draft = mapDraft(mockDraft("p1"));
+    mocks.save.mockResolvedValueOnce(draft);
+    mocks.ask.mockImplementationOnce(({ onText }: { onText: (text: string) => void }) => {
+      onText("Customers are ");
+      onText("known by their name.");
+      return Promise.resolve({
+        answer: "Customers are known by their name.",
+        dropped: [{ field: "display_key", reason: "unknown_property" }],
+        revisions: [
+          { field: "comment", reason: "Empty.", value: "A buyer." },
+          {
+            field: "property",
+            reason: "",
+            value: { displayName: "Customer ID", name: "customer_id" },
+          },
+          { field: "primary_keys", reason: "", value: ["customer_id", "name"] },
+        ],
+      });
+    });
+    renderPanel(draft);
+    fireEvent.change(nameBox(), { target: { value: "Customer" } });
     fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
-    expect(onAsk).toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
+      target: { value: "Is the identity right?" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
+
+    expect(await screen.findByText("Customers are known by their name.")).toBeInTheDocument();
+    expect(mocks.ask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        history: [],
+        itemId: "customers",
+        kind: "object_types",
+        projectId: "p1",
+        question: "Is the identity right?",
+      }),
+    );
+    // What the editor holds, the name not saved yet included.
+    expect((mocks.ask.mock.calls[0] as [{ working: object }])[0].working).toMatchObject({
+      name: "Customer",
+      primaryKeys: ["customer_id"],
+    });
+    // Each change from what the editor holds to what it would be; what was dropped, in words.
+    expect(screen.getByText("A buyer.")).toBeInTheDocument();
+    expect(
+      screen.getByText('bknProject.model.ask.preview.displayName:{"value":"Customer ID"}'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'bknProject.model.ask.dropped.item:{"field":"bknProject.model.ask.field.display_key","reason":"bknProject.model.ask.dropped.reason.unknown_property"}',
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.adoptAll" }));
+    expect(screen.getAllByRole("button", { name: "bknProject.model.ask.adopted" })).toHaveLength(3);
+    // Adopting only changes the editor; saving writes it.
+    expect(mocks.save).not.toHaveBeenCalled();
+    save();
+    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+    const [projectId, itemId, updateTime, saved] = mocks.save.mock.calls[0] as [
+      string,
+      string,
+      number,
+      { properties: object[] },
+    ];
+    expect([projectId, itemId, updateTime]).toEqual(["p1", "customers", draft.updateTime]);
+    expect(saved).toMatchObject({
+      description: "A buyer.",
+      name: "Customer",
+      primaryKeys: ["customer_id", "name"],
+    });
+    expect(saved.properties[0]).toMatchObject({ displayName: "Customer ID", name: "customer_id" });
+  });
+
+  it("keeps what was written when the answer stops, and asks again with the turns before", async () => {
+    mocks.ask
+      .mockResolvedValueOnce({ answer: "First.", dropped: [], revisions: [] })
+      .mockImplementationOnce(({ onText }: { onText: (text: string) => void }) => {
+        onText("Half an ans");
+        return Promise.reject(new AskError("AskTimeout"));
+      })
+      .mockResolvedValueOnce({ answer: "Whole.", dropped: [], revisions: [] });
+    renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
+    const ask = (question: string) => {
+      fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
+        target: { value: question },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
+    };
+    ask("One?");
+    expect(await screen.findByText("First.")).toBeInTheDocument();
+    ask("Two?");
+
+    expect(await screen.findByText("bknProject.model.ask.error.AskTimeout")).toBeInTheDocument();
+    expect(screen.getByText("Half an ans")).toBeInTheDocument();
+    expect(mocks.ask).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        history: [{ answer: "First.", question: "One?" }],
+        question: "Two?",
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.retry" }));
+    expect(await screen.findByText("Whole.")).toBeInTheDocument();
+    expect(screen.queryByText("Half an ans")).toBeNull();
+    expect(mocks.ask).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        history: [{ answer: "First.", question: "One?" }],
+        question: "Two?",
+      }),
+    );
   });
 
   it("says when the draft has no such object type", () => {

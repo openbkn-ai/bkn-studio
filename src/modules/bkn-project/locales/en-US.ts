@@ -500,29 +500,75 @@ export const bknProjectEnUS = {
         },
       },
       ask: {
-        title: "Ask AI",
-        question: "Your question",
-        placeholder:
-          "For example: is this object type's identity right? How should its description read?",
-        submit: "Ask",
-        asking: "Answering; this takes up to a minute",
-        notKept:
-          "AI reads only this object type as the draft defines it, never its data. Questions and answers are not kept.",
-        suggest: {
-          name: 'Suggests renaming it to "{{value}}"',
-          description: "Suggests the description: {{value}}",
-          identity: "Suggests the identity {{properties}}",
+        title: "AI assistant",
+        close: "Hide the AI assistant",
+        hint: {
+          object_types:
+            "Ask about this object type's name, description, identity, title and its properties' display names. AI sees changes in the editor that are not saved yet.",
+          relation_types:
+            "Ask about this relation type's name, description, and its ends and how they join. AI sees changes in the editor that are not saved yet.",
         },
+        question: "Your question",
+        placeholder: {
+          object_types:
+            "For example: is the identity right? What display names would read more clearly?",
+          relation_types:
+            "For example: should these two object types join like this? What name would read more clearly?",
+        },
+        submit: "Send",
+        asking: "Answering…",
+        notKept: "Questions and answers are not kept; closing the editor clears them.",
+        retry: "Ask again",
+        revisions: "{{count}} suggested changes",
+        revisions_one: "{{count}} suggested change",
+        revisions_other: "{{count}} suggested changes",
+        adoptAll: "Adopt all",
         adopt: "Adopt",
         adopted: "Adopted",
+        empty: "(empty)",
+        arrow: "→",
+        field: {
+          name: "Name",
+          comment: "Description",
+          primary_keys: "Identity",
+          display_key: "Title",
+          property: "Property",
+          ends: "Ends and how they join",
+          other: "A change",
+        },
+        preview: {
+          property: "Property \u201c{{name}}\u201d",
+          displayName: "display name: {{value}}",
+          comment: "description: {{value}}",
+          ends: "{{source}} → {{target}}: {{rules}}",
+          link: "through {{table}}, {{rules}}",
+          pair: "{{source}} = {{target}}",
+          separator: "; ",
+          keySeparator: " + ",
+        },
+        dropped: {
+          title: "{{count}} more suggestions were not used:",
+          title_one: "{{count}} more suggestion was not used:",
+          title_other: "{{count}} more suggestions were not used:",
+          item: "{{field}}: {{reason}}",
+          reason: {
+            unchanged: "it is the same as now",
+            unknown_property: "it names a property this object type does not have",
+            unknown_end: "it names an object type that is not in the draft",
+            type_mismatch: "the properties joining the ends are of different types",
+            too_long: "it is too long",
+            invalid_name: "the name is not allowed",
+            duplicate: "the same relation already exists",
+            other: "it would not pass the checks on saving",
+          },
+        },
         error: {
           InvalidQuestion: "Enter a question of at most 500 characters.",
           NotReady: "The draft is not ready yet, so questions cannot be asked.",
-          ItemNotFound: "This object type is no longer in the draft. Refresh the page.",
-          AskUnavailable: "AI cannot answer right now. Try again later.",
-          AskTimeout:
-            "AI took too long to answer. Try again later, or ask something more specific.",
-          other: "The question could not be asked. Try again later.",
+          ItemNotFound: "This is no longer in the draft. Refresh the page.",
+          AskUnavailable: "AI cannot answer right now. Ask again later.",
+          AskTimeout: "The answer took too long. Ask again, or ask something more specific.",
+          other: "The answer stopped. Ask again.",
         },
       },
       detail: {

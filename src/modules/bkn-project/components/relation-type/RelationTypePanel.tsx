@@ -13,6 +13,12 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { AskAiSidebar } from "@/modules/bkn-project/components/ai/AskAiSidebar";
+import {
+  applyRelationRevisions,
+  relationPreview,
+  type EndNames,
+} from "@/modules/bkn-project/components/ai/revisions";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { draftGraphRecords } from "@/modules/bkn-project/components/draft/graph";
 // The object type panel's frame: both editors open the same way.
@@ -32,7 +38,12 @@ import {
   saveDraftRelationType,
 } from "@/modules/bkn-project/services/draft.service";
 import { projectErrorDetails } from "@/modules/bkn-project/services/publish.service";
-import type { Draft, DraftRelationType } from "@/modules/bkn-project/types/draft";
+import type {
+  AskRevision,
+  Draft,
+  DraftRelationType,
+  DraftTable,
+} from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import {
   RelationTypeMappingEditor,
@@ -124,6 +135,7 @@ export function RelationTypePanel({
   );
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<SaveProblem | null>(null);
+  const [asking, setAsking] = useState(false);
 
   // Starts over from a draft: the one just saved, or the one read again after it moved.
   const reset = (from: Draft, id: string | null) => {
@@ -325,6 +337,37 @@ export function RelationTypePanel({
     }
   };
 
+  // The draft's tables, to name a link table Ask AI proposes.
+  const tables = useMemo(() => {
+    const found = new Map<string, DraftTable>();
+    for (const item of current.items.objectTypes) {
+      found.set(item.table.resourceId, item.table);
+    }
+    for (const item of current.items.relationTypes) {
+      if (item.linkTable) {
+        found.set(item.linkTable.resourceId, item.linkTable);
+      }
+    }
+    return [...found.values()];
+  }, [current]);
+  const endNames: EndNames = {
+    object: objectName,
+    property: (objectTypeId, name) =>
+      current.items.objectTypes
+        .find((item) => item.id === objectTypeId)
+        ?.properties.find((property) => property.name === name)?.displayName || name,
+    table: (resourceId) =>
+      tables.find((table) => table.resourceId === resourceId)?.name || resourceId,
+  };
+
+  // Ask AI's changes go into the editor as if made by hand; saving writes them.
+  const adopt = (revisions: AskRevision[]) => {
+    const next = applyRelationRevisions({ basic, values }, revisions, tables);
+    setBasic(next.basic);
+    basicForm.setFieldsValue(next.basic);
+    setValues(next.values);
+  };
+
   return (
     <section aria-label={t(`${PREFIX}.title`)} className={styles.panel}>
       <header className={styles.header}>
@@ -340,6 +383,11 @@ export function RelationTypePanel({
               {t(`${PREFIX}.delete`)}
             </AppButton>
           ) : null}
+          {relation ? (
+            <AppButton aria-pressed={asking} onClick={() => setAsking(!asking)}>
+              {t("bknProject.objectEditor.ask")}
+            </AppButton>
+          ) : null}
           <AppButton disabled={!base} loading={saving} onClick={() => void save()} type="primary">
             {t("bknProject.objectEditor.save")}
           </AppButton>
@@ -352,62 +400,80 @@ export function RelationTypePanel({
         </span>
       </header>
       {base ? (
-        <div className={styles.body}>
-          {problem ? (
-            <Alert
-              action={
-                problem.kind === "stale" ? (
-                  <AppButton onClick={() => void reload()} size="small">
-                    {t("bknProject.objectEditor.reload")}
-                  </AppButton>
-                ) : undefined
+        <div className={styles.workspace}>
+          <div className={styles.body}>
+            {problem ? (
+              <Alert
+                action={
+                  problem.kind === "stale" ? (
+                    <AppButton onClick={() => void reload()} size="small">
+                      {t("bknProject.objectEditor.reload")}
+                    </AppButton>
+                  ) : undefined
+                }
+                message={
+                  problem.kind === "stale"
+                    ? t("bknProject.objectEditor.errors.Stale")
+                    : problem.text
+                }
+                showIcon
+                type={problem.kind === "stale" ? "warning" : "error"}
+              />
+            ) : null}
+            <Form
+              className={styles.basic}
+              colon={false}
+              form={basicForm}
+              initialValues={basic}
+              labelCol={{ flex: "72px" }}
+              onValuesChange={(_, next) => setBasic(next)}
+              wrapperCol={{ flex: "auto" }}
+            >
+              <Form.Item
+                label={t("bknProject.objectEditor.name")}
+                name="name"
+                rules={[
+                  { message: t(`${PREFIX}.nameRequired`), required: true, whitespace: true },
+                  {
+                    max: RESOURCE_NAME_MAX_LENGTH,
+                    message: t("bknProject.objectEditor.nameTooLong"),
+                  },
+                ]}
+              >
+                <Input count={RESOURCE_NAME_COUNT} showCount />
+              </Form.Item>
+              <Form.Item label={t("bknProject.objectEditor.description")} name="description">
+                <Input.TextArea
+                  autoSize={{ maxRows: 3, minRows: 1 }}
+                  maxLength={DESCRIPTION_MAX_LENGTH}
+                  showCount
+                />
+              </Form.Item>
+            </Form>
+            <div className={styles.mapping}>
+              <RelationTypeMappingEditor
+                networkId={project.knId}
+                objectTypes={objectTypes}
+                onChange={setValues}
+                readers={readers}
+                value={values}
+              />
+            </div>
+          </div>
+          {asking && relation ? (
+            <AskAiSidebar
+              canAdopt
+              itemId={relation.id}
+              kind="relation_types"
+              onAdopt={adopt}
+              onClose={() => setAsking(false)}
+              preview={(revision) =>
+                relationPreview(t, endNames, basic, relationSave(basic, values), revision)
               }
-              message={
-                problem.kind === "stale" ? t("bknProject.objectEditor.errors.Stale") : problem.text
-              }
-              showIcon
-              type={problem.kind === "stale" ? "warning" : "error"}
+              projectId={project.id}
+              working={() => relationSave(basic, values)}
             />
           ) : null}
-          <Form
-            className={styles.basic}
-            colon={false}
-            form={basicForm}
-            initialValues={basic}
-            labelCol={{ flex: "72px" }}
-            onValuesChange={(_, next) => setBasic(next)}
-            wrapperCol={{ flex: "auto" }}
-          >
-            <Form.Item
-              label={t("bknProject.objectEditor.name")}
-              name="name"
-              rules={[
-                { message: t(`${PREFIX}.nameRequired`), required: true, whitespace: true },
-                {
-                  max: RESOURCE_NAME_MAX_LENGTH,
-                  message: t("bknProject.objectEditor.nameTooLong"),
-                },
-              ]}
-            >
-              <Input count={RESOURCE_NAME_COUNT} showCount />
-            </Form.Item>
-            <Form.Item label={t("bknProject.objectEditor.description")} name="description">
-              <Input.TextArea
-                autoSize={{ maxRows: 3, minRows: 1 }}
-                maxLength={DESCRIPTION_MAX_LENGTH}
-                showCount
-              />
-            </Form.Item>
-          </Form>
-          <div className={styles.mapping}>
-            <RelationTypeMappingEditor
-              networkId={project.knId}
-              objectTypes={objectTypes}
-              onChange={setValues}
-              readers={readers}
-              value={values}
-            />
-          </div>
         </div>
       ) : (
         <Alert className={styles.missing} message={t(`${PREFIX}.notFound`)} showIcon type="error" />

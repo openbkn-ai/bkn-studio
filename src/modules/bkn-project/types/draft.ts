@@ -293,16 +293,28 @@ export type SourceChanges = {
   state: string;
 };
 
-/**
- * A change Ask AI suggests for an object type: its `name` or `description` (`value`), or its
- * `identity` (`properties`), adopted through the edit that changes that field.
- */
-export type AskSuggestion = {
-  field: string;
-  properties: string[];
-  reason: string;
-  value: string;
-};
+/** What Ask AI is asked about: an object type or a relation type of the draft. */
+export type AskKind = "object_types" | "relation_types";
 
-/** Ask AI's answer about one object type of the draft; nothing is kept between questions. */
-export type AskAnswer = { answer: string; suggestion: AskSuggestion | null };
+/** A question asked before and its answer, sent back so the next question follows on. */
+export type AskTurn = { answer: string; question: string };
+
+/** A relation type's ends and how they join, as saving sends them. */
+export type AskEnds = Pick<DraftRelationTypeSave, "link" | "mapping" | "source" | "target">;
+
+/**
+ * A change Ask AI proposes to what is being edited, checked by bkn-project as saving would check
+ * it. Adopting one only changes the editor; saving writes it.
+ */
+export type AskRevision = { reason: string } & (
+  | { field: "name" | "comment" | "display_key"; value: string }
+  | { field: "primary_keys"; value: string[] }
+  | { field: "property"; value: { comment?: string; displayName?: string; name: string } }
+  | { field: "ends"; value: AskEnds }
+);
+
+/** A change Ask AI proposed that did not pass the checks, and why; it cannot be adopted. */
+export type AskDropped = { field: string; reason: string };
+
+/** Ask AI's answer, and the changes it proposes; nothing is kept between questions. */
+export type AskAnswer = { answer: string; dropped: AskDropped[]; revisions: AskRevision[] };
