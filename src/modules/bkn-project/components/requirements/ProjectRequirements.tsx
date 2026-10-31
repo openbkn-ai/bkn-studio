@@ -53,6 +53,7 @@ import {
   removeItem,
   REQUIREMENTS_POLL_MS,
   resolveConflict,
+  reviewRequirements,
   setConceptMapping,
 } from "@/modules/bkn-project/services/requirements.service";
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -87,10 +88,13 @@ type Tab = (typeof TABS)[number];
  * project's other inputs, on the requirements and resources page.
  */
 export function ProjectRequirements({
+  onGoToModel,
   onGoToResources,
   ownerIsCaller,
   project,
 }: {
+  /** Opens ontology modeling, where the object types scenarios are generated from are adopted. */
+  onGoToModel: () => void;
   /** Opens the requirements and resources page, where the documents are uploaded. */
   onGoToResources: () => void;
   ownerIsCaller: boolean;
@@ -103,10 +107,13 @@ export function ProjectRequirements({
   const [documents, setDocuments] = useState<RequirementDocument[]>([]);
   const [failed, setFailed] = useState(false);
   const [drafting, setDrafting] = useState(false);
+  // Generating was refused because no object type is adopted yet.
+  const [noOntology, setNoOntology] = useState(false);
   const [tab, setTab] = useState<Tab | null>(null);
   const [drafted, setDrafted] = useState<DraftedItem[]>([]);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [saving, setSaving] = useState(false);
+  const sending = useRef(false);
   // The server's reasons for a question's refused inputs, shown on their rows.
   const [inputErrors, setInputErrors] = useState<Record<string, string>>({});
   const [viewing, setViewing] = useState<{
@@ -184,21 +191,20 @@ export function ProjectRequirements({
     return () => window.clearTimeout(timer);
   }, [isDrafting, load, reads]);
 
+  /**
+   * Generates the scenarios and questions from the adopted ontology. What was accepted is kept;
+   * starting over keeps nothing, so it asks first.
+   */
   const draft = async (discardDecisions: boolean) => {
     setDrafting(true);
     try {
       latest.current += 1;
       setRequirements(await draftRequirements(project.id, discardDecisions));
+      setNoOntology(false);
     } catch (error) {
       const code = projectErrorCode(error);
-      if (!discardDecisions && code === "Requirement.HasDecisions") {
-        void modal.confirm({
-          cancelText: t("common.cancel"),
-          content: t(`${PREFIX}.redraftDiscards`),
-          okText: t(`${PREFIX}.redraft`),
-          onOk: () => draft(true),
-          title: t(`${PREFIX}.redraftTitle`),
-        });
+      if (code === "Requirement.NoAdoptedOntology") {
+        setNoOntology(true);
       } else {
         message.error(requirementErrorText(t, code));
       }
@@ -206,6 +212,16 @@ export function ProjectRequirements({
       setDrafting(false);
     }
   };
+
+  const startOver = () =>
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t(`${PREFIX}.startOverContent`),
+      okButtonProps: { danger: true },
+      okText: t(`${PREFIX}.startOver`),
+      onOk: () => draft(true),
+      title: t(`${PREFIX}.startOverTitle`),
+    });
 
   const citing = useMemo(
     () => ({
@@ -225,9 +241,11 @@ export function ProjectRequirements({
    * reads it again and says so; nothing is overwritten.
    */
   const apply = async (send: (updateTime: number) => Promise<Requirements>) => {
-    if (!requirements) {
+    // One edit at a time, set at once: two clicks in a row would both send the version read.
+    if (!requirements || sending.current) {
       return false;
     }
+    sending.current = true;
     setSaving(true);
     try {
       latest.current += 1;
@@ -252,6 +270,7 @@ export function ProjectRequirements({
       }
       return false;
     } finally {
+      sending.current = false;
       setSaving(false);
     }
   };
@@ -273,6 +292,13 @@ export function ProjectRequirements({
               title: t(`${PREFIX}.editing.removeTitle`, { name: label }),
             }),
           resolve: (conflict) => setDialog({ conflict, type: "conflict" }),
+          saving,
+          review: (kind, itemId, accept) =>
+            void apply((time) =>
+              accept
+                ? reviewRequirements(project.id, time, [{ id: itemId, kind }])
+                : reviewRequirements(project.id, time, [], [{ id: itemId, kind }]),
+            ),
         }
       : null;
 
@@ -300,6 +326,18 @@ export function ProjectRequirements({
 
   const spec = requirements?.spec;
   const ready = requirements?.status === "ready";
+  // What AI generated and nobody accepted yet, scenarios and questions alike.
+  const waiting = spec
+    ? [
+        ...spec.scenarios
+          .filter((item) => !item.accepted)
+          .map(({ id }) => ({ id, kind: "scenarios" as const })),
+        ...spec.questions
+          .filter((item) => !item.accepted)
+          .map(({ id }) => ({ id, kind: "questions" as const })),
+      ]
+    : [];
+  const outdated = spec?.questions.filter((question) => question.ontologyChanged).length ?? 0;
   const activeTab: Tab = tab ?? "questions";
   return (
     <Citing.Provider value={citing}>
@@ -320,9 +358,18 @@ export function ProjectRequirements({
             ) : null}
             <span className={styles.spacer} />
             {requirements ? <RequirementsExport projectId={project.id} ready={ready} /> : null}
+            {canEdit && ready && waiting.length ? (
+              <AppButton
+                disabled={saving}
+                onClick={() => void apply((time) => reviewRequirements(project.id, time, waiting))}
+                type="primary"
+              >
+                {t(`${PREFIX}.review.acceptAll`, { count: waiting.length })}
+              </AppButton>
+            ) : null}
             {canEdit ? (
               <AppButton
-                disabled={isDrafting || !documents.length}
+                disabled={isDrafting}
                 loading={drafting}
                 onClick={() => void draft(false)}
                 type={requirements ? "default" : "primary"}
@@ -330,7 +377,24 @@ export function ProjectRequirements({
                 {t(`${PREFIX}.${requirements ? "redraft" : "draft"}`)}
               </AppButton>
             ) : null}
+            {canEdit && requirements ? (
+              <AppButton danger disabled={isDrafting || drafting} onClick={startOver} type="text">
+                {t(`${PREFIX}.startOver`)}
+              </AppButton>
+            ) : null}
           </div>
+          {noOntology ? (
+            <Alert
+              action={
+                <AppButton onClick={onGoToModel} size="small">
+                  {t(`${PREFIX}.goToModel`)}
+                </AppButton>
+              }
+              message={t(`${PREFIX}.error.NoAdoptedOntology`)}
+              showIcon
+              type="warning"
+            />
+          ) : null}
           {!requirements ? (
             <Alert
               action={
@@ -338,7 +402,10 @@ export function ProjectRequirements({
                   {t(`${PREFIX}.goToDocuments`)}
                 </AppButton>
               }
-              message={t(documents.length ? `${PREFIX}.notDrafted` : `${PREFIX}.noDocuments`)}
+              description={t(
+                documents.length ? `${PREFIX}.notDraftedDocuments` : `${PREFIX}.noDocuments`,
+              )}
+              message={t(`${PREFIX}.notDrafted`)}
               showIcon
               type="info"
             />
@@ -349,6 +416,38 @@ export function ProjectRequirements({
           ) : null}
           {requirements?.stale ? (
             <Alert message={t(`${PREFIX}.stale`)} showIcon type="warning" />
+          ) : null}
+          {ready && outdated ? (
+            <Alert
+              action={
+                canEdit ? (
+                  <AppButton disabled={drafting} onClick={() => void draft(false)} size="small">
+                    {t(`${PREFIX}.redraft`)}
+                  </AppButton>
+                ) : undefined
+              }
+              description={t(`${PREFIX}.review.outdatedDetail`, { count: outdated })}
+              message={t(`${PREFIX}.review.outdated`)}
+              showIcon
+              type="warning"
+            />
+          ) : null}
+          {ready && requirements.ontologyUncovered.length ? (
+            <Alert
+              message={t(`${PREFIX}.review.uncovered`, {
+                count: requirements.ontologyUncovered.length,
+                names: requirements.ontologyUncovered
+                  .map((item) => item.name)
+                  .join(t("bknProject.listSeparator")),
+              })}
+              showIcon
+              type="info"
+            />
+          ) : null}
+          {ready && waiting.length ? (
+            <p className={styles.muted}>
+              {t(`${PREFIX}.review.waiting`, { count: waiting.length })}
+            </p>
           ) : null}
           {ready && (requirements.unresolvedConflicts || requirements.undecidedChoices) ? (
             <Alert

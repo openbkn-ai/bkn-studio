@@ -1061,15 +1061,49 @@ export const bknProjectEnUS = {
         drafting: "Drafting",
         failed: "Not drafted",
       },
-      draft: "Draft from the documents",
-      redraft: "Draft again",
-      redraftTitle: "Draft the requirements again?",
-      redraftDiscards: "Drafting again discards the conflict rulings and modelling choices made.",
-      notDrafted: "No requirements yet. Upload requirement documents, then draft from them.",
+      draft: "Generate business scenarios",
+      redraft: "Generate again",
+      notDrafted:
+        "No business scenarios yet. AI generates scenarios and questions from the adopted ontology, then you review them.",
+      notDraftedDocuments:
+        "Generating also reads the uploaded requirement documents and quotes them.",
       noDocuments:
-        "No requirement documents yet. Upload them under Requirements and resources, then draft the business scenarios.",
-      goToDocuments: "Upload documents",
-      drafting: "Drafting the requirements from the documents; this usually takes a minute or two.",
+        "Requirement documents are optional; once uploaded, generating reads and quotes them.",
+      goToDocuments: "Manage documents",
+      goToModel: "Go to ontology modeling",
+      startOver: "Start over",
+      startOverTitle: "Generate everything again?",
+      startOverContent:
+        "Accepted scenarios and questions, and the conflicts and choices settled, are not kept; everything is generated again. To refresh only what is not accepted, use Generate again.",
+      review: {
+        pending: "AI-generated, to review",
+        stale: "May be outdated",
+        accept: "Accept",
+        acceptItem: "Accept \u201c{{name}}\u201d",
+        unaccept: "Take back",
+        unacceptItem: "Take back \u201c{{name}}\u201d",
+        acceptAll: "Accept all ({{count}})",
+        acceptAll_one: "Accept all ({{count}})",
+        acceptAll_other: "Accept all ({{count}})",
+        waiting:
+          "{{count}} items AI generated wait for your review: accept those that look right; edit those that need changes, which accepts them.",
+        waiting_one:
+          "{{count}} item AI generated waits for your review: accept it if it looks right; edit it if it needs changes, which accepts it.",
+        waiting_other:
+          "{{count}} items AI generated wait for your review: accept those that look right; edit those that need changes, which accepts them.",
+        outdated: "The ontology changed; some scenarios may be outdated",
+        outdatedDetail:
+          "The ontology {{count}} questions use changed in structure. Generating again keeps what was accepted.",
+        outdatedDetail_one:
+          "The ontology {{count}} question uses changed in structure. Generating again keeps what was accepted.",
+        outdatedDetail_other:
+          "The ontology {{count}} questions use changed in structure. Generating again keeps what was accepted.",
+        uncovered: "{{count}} object types have no scenario yet: {{names}}",
+        uncovered_one: "{{count}} object type has no scenario yet: {{names}}",
+        uncovered_other: "{{count}} object types have no scenario yet: {{names}}",
+      },
+      drafting:
+        "Generating the business scenarios and questions from the adopted ontology; this usually takes a minute or two.",
       stale:
         "The documents, their types, the data catalogs or the naming language changed after drafting; draft again.",
       waiting: {
@@ -1332,7 +1366,10 @@ export const bknProjectEnUS = {
         NotOwner: "Only the project owner can change the requirements.",
         ProjectArchived: "The project is archived; its requirements cannot change.",
         NoDocuments: "There are no requirement documents; upload some first.",
-        NoCatalogs: "The project has no data catalogs; choose them in ontology modeling first.",
+        NoCatalogs:
+          "The project has no data catalogs; choose them under Requirements and resources first.",
+        NoAdoptedOntology:
+          "Adopt object types in ontology modeling first, then generate the business scenarios.",
         InputsTooLarge: "The documents are more than drafting can read; trim them and draft again.",
         Drafting: "Drafting is running; wait for it to finish.",
         DocumentNotFound: "This document no longer exists.",
