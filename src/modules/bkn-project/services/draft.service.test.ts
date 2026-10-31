@@ -342,6 +342,55 @@ describe("draft.service", () => {
     }
   });
 
+  it("adds catalogs with the custom method and reads which are being added", async () => {
+    const { addDraftCatalogs, mockDraft } = await importService();
+    const backend = mockDraft("p1");
+    backend.items.adding = { by: { id: "u1", type: "user" }, catalog_ids: ["c2"], since: 5 };
+    mockPost.mockResolvedValue({ data: backend, status: 202 });
+
+    const draft = await addDraftCatalogs("p 1", ["c2"]);
+
+    expect(mockPost).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%201/catalogs:add",
+      { catalog_ids: ["c2"] },
+      { skipErrorToast: true },
+    );
+    expect(draft.status).toBe("ready");
+    expect(draft.items.adding).toEqual({
+      by: { id: "u1", type: "user" },
+      catalogIds: ["c2"],
+      since: 5,
+    });
+  });
+
+  it("adds catalogs in the mock in the background, refusing another adding meanwhile", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const { addDraftCatalogs, getDraft } =
+      await import("@/modules/bkn-project/services/draft.service");
+    vi.useFakeTimers();
+    try {
+      const settle = async <T>(promise: Promise<T>) => {
+        await vi.runAllTimersAsync();
+        return promise;
+      };
+      const adding = await settle(addDraftCatalogs("p-001", ["cat-002"]));
+      expect(adding.items.adding?.catalogIds).toEqual(["cat-002"]);
+      const again = addDraftCatalogs("p-001", ["cat-003"]).catch((error: AxiosError) => error);
+      await vi.runAllTimersAsync();
+      expect(((await again) as AxiosError<{ error_code: string }>).response?.data.error_code).toBe(
+        "BknProject.Draft.Drafting",
+      );
+
+      vi.advanceTimersByTime(10_000);
+      const done = (await settle(getDraft("p-001")))!;
+      expect(done.items.adding).toBeNull();
+      expect(done.items.decisions.at(-1)).toMatchObject({ action: "add_catalogs", kind: "draft" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("chooses an identity and waits longer than bkn-project counts", async () => {
     const { chooseIdentity, IDENTITY_TIMEOUT_MS, mockDraft } = await importService();
     mockPut.mockResolvedValue({ data: mockDraft("p1") });

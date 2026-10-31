@@ -10,45 +10,74 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { setProjectCatalogs } from "@/modules/bkn-project/services/project.service";
+import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
+import { addDraftCatalogs } from "@/modules/bkn-project/services/draft.service";
+import { getProject, setProjectCatalogs } from "@/modules/bkn-project/services/project.service";
+import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 
 import styles from "./ProjectModel.module.css";
 
 /**
- * Replaces the data catalogs a project drafts from. It starts from the project's catalogs the
- * caller can still see; the ones that are gone are named, since saving removes them.
+ * Replaces the data catalogs a project drafts from, or adds some to them. Replacing starts from
+ * the project's catalogs the caller can still see and names the ones that are gone, since saving
+ * removes them; adding offers the catalogs the project does not have yet.
  */
 export function ProjectCatalogsModal({
   catalogs,
+  mode = "replace",
   onCancel,
   onSaved,
+  onStale,
   project,
 }: {
   /** Catalogs the caller can see, by id. */
   catalogs: Map<string, string>;
+  mode?: "add" | "replace";
   onCancel: () => void;
-  onSaved: (project: Project) => void;
+  /** With the draft adding replied, when catalogs were added. */
+  onSaved: (project: Project, draft?: Draft) => void;
+  /** Adding was refused on a draft changed since it was read: read it again. */
+  onStale?: () => void;
   project: Project;
 }) {
   const { t } = useTranslation();
+  const adding = mode === "add";
   const [selected, setSelected] = useState(() =>
-    project.catalogIds.filter((id) => catalogs.has(id)),
+    adding ? [] : project.catalogIds.filter((id) => catalogs.has(id)),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const gone = project.catalogIds.filter((id) => !catalogs.has(id));
-  const unchanged =
-    selected.length === project.catalogIds.length &&
-    selected.every((id) => project.catalogIds.includes(id));
+  const gone = adding ? [] : project.catalogIds.filter((id) => !catalogs.has(id));
+  const unchanged = adding
+    ? selected.length === 0
+    : selected.length === project.catalogIds.length &&
+      selected.every((id) => project.catalogIds.includes(id));
+  const options = [...catalogs]
+    .filter(([id]) => !adding || !project.catalogIds.includes(id))
+    .map(([id, name]) => ({ label: name, value: id }));
 
   const save = async () => {
     setSaving(true);
     setError(null);
     try {
-      onSaved(await setProjectCatalogs(project.id, selected));
+      if (adding) {
+        const draft = await addDraftCatalogs(project.id, selected);
+        onSaved(await getProject(project.id), draft);
+      } else {
+        onSaved(await setProjectCatalogs(project.id, selected));
+      }
     } catch (cause) {
-      setError(extractRequestErrorMessage(cause));
+      // Adding is refused while catalogs are being added, or on a draft changed since it was read.
+      const code = adding ? draftErrorCode(cause) : undefined;
+      if (code === "Stale") {
+        onStale?.();
+      }
+      setError(
+        code === "Drafting" || code === "Stale"
+          ? t(`bknProject.model.catalogs.addRefused.${code}`)
+          : extractRequestErrorMessage(cause),
+      );
     } finally {
       setSaving(false);
     }
@@ -64,11 +93,11 @@ export function ProjectCatalogsModal({
       onCancel={onCancel}
       onOk={() => void save()}
       open
-      title={t("bknProject.model.catalogs.title")}
+      title={t(adding ? "bknProject.model.catalogs.addTitle" : "bknProject.model.catalogs.title")}
     >
       <Form layout="vertical">
         <Form.Item
-          extra={t("bknProject.model.catalogs.hint")}
+          extra={t(adding ? "bknProject.model.catalogs.addHint" : "bknProject.model.catalogs.hint")}
           htmlFor="project-catalogs"
           label={t("bknProject.model.catalogs.label")}
         >
@@ -77,7 +106,7 @@ export function ProjectCatalogsModal({
             mode="multiple"
             onChange={setSelected}
             optionFilterProp="label"
-            options={[...catalogs].map(([id, name]) => ({ label: name, value: id }))}
+            options={options}
             placeholder={t("bknProject.create.catalogsPlaceholder")}
             value={selected}
           />

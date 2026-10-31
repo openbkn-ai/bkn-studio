@@ -7,7 +7,7 @@
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useEffect, useImperativeHandle } from "react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   getProject: vi.fn(),
   listFields: vi.fn(),
   message: { error: vi.fn(), success: vi.fn() },
+  removed: new Set<string>(),
   save: vi.fn(),
   // Stable like the real `t`; options are appended so they can be asserted.
   t: (key: string, options?: object) => (options ? `${key}:${JSON.stringify(options)}` : key),
@@ -54,12 +55,22 @@ vi.mock(
     ObjectTypeDataAttributeEditor: forwardRef(function Editor(
       props: {
         dataProperties: ObjectTypeDataProperty[];
+        onChange: (value: { dataProperties: ObjectTypeDataProperty[] }) => void;
         readResourceFields?: (id: string) => Promise<unknown>;
         resourceFixed?: boolean;
       },
       ref,
     ) {
       mocks.editorProps(props);
+      // Removes the properties a case names, as a person would on the canvas.
+      const { dataProperties, onChange } = props;
+      useEffect(() => {
+        if (dataProperties.some((property) => mocks.removed.has(property.name))) {
+          onChange({
+            dataProperties: dataProperties.filter((property) => !mocks.removed.has(property.name)),
+          });
+        }
+      }, [dataProperties, onChange]);
       useImperativeHandle(ref, () => ({
         validateFields: () => Promise.resolve({ dataProperties: props.dataProperties }),
       }));
@@ -136,6 +147,7 @@ afterAll(() => {
 describe("ProjectObjectTypeEditScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.removed.clear();
     mocks.getProject.mockResolvedValue(project);
     mocks.getDraft.mockResolvedValue(mapDraft(mockDraft("p1")));
     mocks.listFields.mockResolvedValue([]);
@@ -195,6 +207,12 @@ describe("ProjectObjectTypeEditScene", () => {
   });
 
   it("names the relations that use a removed property, and a refused name on its field", async () => {
+    // Removed in the editor, the property is named as it was loaded.
+    const draft = mapDraft(mockDraft("p1"));
+    draft.items.objectTypes.find((item) => item.id === "customers")!.properties[0].displayName =
+      "Customer number";
+    mocks.getDraft.mockResolvedValue(draft);
+    mocks.removed.add("customer_id");
     const end = (name: string) => ({ id: name, kind: "object_types", name });
     mocks.save.mockRejectedValueOnce(
       refusal(409, "PropertyInUse", [
@@ -223,7 +241,7 @@ describe("ProjectObjectTypeEditScene", () => {
       })}`;
     // Grouped by property: both relations that join by customer_id under it.
     const use = `bknProject.objectEditor.propertyUse:${JSON.stringify({
-      property: "customer_id",
+      property: "Customer number",
       relations: `${relation("Orders of customer", "Order")}bknProject.objectEditor.listSeparator${relation("Invoices of customer", "Invoice")}`,
     })}`;
     expect(

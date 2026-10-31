@@ -134,7 +134,12 @@ export type DraftDecision = {
   time: number;
 };
 
+/** Catalogs being added to a ready draft: their tables are drafted in the background. */
+export type DraftAdding = { by: ProjectAccount; catalogIds: string[]; since: number };
+
 export type DraftItems = {
+  /** null unless catalogs are being added; the draft stays editable meanwhile. */
+  adding: DraftAdding | null;
   decisions: DraftDecision[];
   excluded: DraftExcludedField[];
   objectTypes: DraftObjectType[];

@@ -163,9 +163,12 @@ export function ProjectObjectTypeEditScene({
 
   // A refusal names what is wrong where it is: the name or description on their fields, the rest
   // over the properties.
-  // Properties by name, shown by their display names; a name not among them is shown as it is.
+  // Properties by name, shown by their display names: a property removed in the editor, as one a
+  // relation still joins by, is named as it was loaded; a name found nowhere is shown as it is.
   const shown = (name: string) =>
-    properties.find((property) => property.name === name)?.displayName || name;
+    properties.find((property) => property.name === name)?.displayName ||
+    loaded?.objectType.properties.find((property) => property.name === name)?.displayName ||
+    name;
   const separator = t(`${PREFIX}.listSeparator`);
 
   const explain = (error: unknown): SaveProblem | null => {

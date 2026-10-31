@@ -12,6 +12,7 @@ import { isRequestNotFound } from "@/framework/request/error-message";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import { listObjectTypeResourceFields as listResourceFields } from "@/modules/knowledge-network/services/object-type-resource.service";
 import type { ObjectTypeResourceField } from "@/modules/knowledge-network/types/object-type";
+import { mockAddProjectCatalogs } from "@/modules/bkn-project/services/project.service";
 import type {
   AskAnswer,
   Draft,
@@ -116,6 +117,7 @@ export type BackendDraft = {
   drafter: BackendAccount;
   error: string;
   items: {
+    adding?: { by: BackendAccount; catalog_ids: string[] | null; since: number } | null;
     decisions?: {
       action: string;
       after: unknown;
@@ -225,6 +227,13 @@ export function mapDraft(draft: BackendDraft): Draft {
     drafter: draft.drafter,
     error: draft.error,
     items: {
+      adding: items.adding
+        ? {
+            by: items.adding.by,
+            catalogIds: items.adding.catalog_ids ?? [],
+            since: items.adding.since,
+          }
+        : null,
       decisions: (items.decisions ?? []).map((decision) => ({
         action: decision.action,
         after: decision.after,
@@ -676,6 +685,48 @@ function saveMockObjectType(
   return draft;
 }
 
+/** How long the mock takes to draft the tables of added catalogs. */
+const MOCK_ADDING_MS = 6000;
+
+function addMockCatalogs(projectId: string, catalogIds: string[]): BackendDraft {
+  const draft = mockDrafts[projectId];
+  if (!draft || draft.status !== "ready") {
+    throw mockConflict("NotReady", "The draft is not ready.");
+  }
+  if (draft.items.adding) {
+    throw mockConflict("Drafting", "Catalogs are being added.");
+  }
+  draft.items.adding = { by: mockDrafter, catalog_ids: catalogIds, since: Date.now() };
+  mockAddProjectCatalogs(projectId, catalogIds);
+  return draft;
+}
+
+/** Once its time is up, the mock's adding is done: it found nothing new, and says so. */
+function finishMockAdding(projectId: string) {
+  const draft = mockDrafts[projectId];
+  const adding = draft?.items.adding;
+  if (!draft || !adding || Date.now() - adding.since < MOCK_ADDING_MS) {
+    return;
+  }
+  const now = Date.now();
+  draft.items.adding = null;
+  (draft.items.decisions ??= []).push({
+    action: "add_catalogs",
+    after: {
+      catalog_ids: adding.catalog_ids,
+      object_types: [],
+      relation_types: [],
+      value_types: [],
+    },
+    before: null,
+    by: adding.by,
+    item_id: "",
+    kind: "draft",
+    time: now,
+  });
+  draft.update_time = now;
+}
+
 /* ------------------------------- API ------------------------------- */
 
 const draftPath = (projectId: string) =>
@@ -687,6 +738,7 @@ export const DRAFT_POLL_MS = 5000;
 /** Returns the project's draft, or null before the first one. */
 export async function getDraft(projectId: string): Promise<Draft | null> {
   if (useMock) {
+    finishMockAdding(projectId);
     const draft = mockDrafts[projectId];
     return wait(draft ? mapDraft(draft) : null);
   }
@@ -723,6 +775,23 @@ export async function generateDraft(
   const response = await http.post<BackendDraft>(
     `${draftPath(projectId)}:generate`,
     options.discardDecisions ? { discard_decisions: true } : {},
+    { skipErrorToast: true },
+  );
+  return mapDraft(response.data);
+}
+
+/**
+ * Adds data catalogs to a project with a ready draft, as its owner; replies the draft, still ready
+ * and editable, its `adding` naming them while their tables are drafted in the background. Read
+ * it again to follow: once done, `adding` is cleared and an `add_catalogs` decision says what came.
+ */
+export async function addDraftCatalogs(projectId: string, catalogIds: string[]): Promise<Draft> {
+  if (useMock) {
+    return wait(mapDraft(addMockCatalogs(projectId, catalogIds)));
+  }
+  const response = await http.post<BackendDraft>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/catalogs:add`,
+    { catalog_ids: catalogIds },
     { skipErrorToast: true },
   );
   return mapDraft(response.data);

@@ -143,6 +143,21 @@ export const bknProjectEnUS = {
         archived: "The project is archived and cannot be changed",
       },
       catalogs: {
+        adding:
+          "Finding candidates in the {{count}} added data catalogs; the draft can be edited meanwhile.",
+        adding_one:
+          "Finding candidates in the added data catalog; the draft can be edited meanwhile.",
+        adding_other:
+          "Finding candidates in the {{count}} added data catalogs; the draft can be edited meanwhile.",
+        addRefused: {
+          Drafting: "Data catalogs are being added; add more once that is done.",
+          Stale: "The draft just changed and has been read again; add once more.",
+        },
+        add: "Add data catalogs",
+        addTitle: "Add data catalogs",
+        addHint:
+          "AI drafts object and relation types from the tables of the added catalogs; the draft so far and the decisions made stay as they are.",
+        added: "Data catalogs added; finding candidates in their tables.",
         change: "Change data catalogs",
         choose: "Choose data catalogs",
         title: "The project's data catalogs",
@@ -231,6 +246,18 @@ export const bknProjectEnUS = {
           identity: "Chose {{properties}} as the identity of {{name}}",
           restore: "Restored field {{field}} as property {{property}} of {{name}}",
           other: "Changed {{kind}} {{name}}",
+        },
+        addCatalogs: {
+          done: "Added {{count}} data catalogs, finding {{objects}} object types and {{relations}} relation types",
+          done_one:
+            "Added a data catalog, finding {{objects}} object types and {{relations}} relation types",
+          done_other:
+            "Added {{count}} data catalogs, finding {{objects}} object types and {{relations}} relation types",
+          failed:
+            "Drafting the tables of {{count}} added data catalogs failed; they can be added again",
+          failed_one: "Drafting the tables of the added data catalog failed; it can be added again",
+          failed_other:
+            "Drafting the tables of {{count}} added data catalogs failed; they can be added again",
         },
         confirmation: {
           accept_partial: "Confirmed the draft without {{count}} tables that could not be read",

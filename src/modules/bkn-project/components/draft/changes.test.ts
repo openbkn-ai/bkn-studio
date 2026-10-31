@@ -159,3 +159,38 @@ describe("change log", () => {
     );
   });
 });
+
+describe("catalogs added", () => {
+  it("counts what adding catalogs drafted, or says drafting their tables failed", () => {
+    const added = describeDecision(
+      t,
+      decision({
+        action: "add_catalogs",
+        after: {
+          catalog_ids: ["c2"],
+          object_types: ["leads", "visits"],
+          relation_types: ["visits_to_leads"],
+          value_types: [],
+        },
+        before: null,
+        itemId: "",
+        kind: "draft",
+      }),
+      {},
+    );
+    expect(added.text).toBe(
+      'bknProject.model.changes.addCatalogs.done:{"count":1,"objects":2,"relations":1}',
+    );
+    const failed = describeDecision(
+      t,
+      decision({
+        action: "add_catalogs",
+        after: { catalog_ids: ["c2", "c3"], error: "timeout" },
+        itemId: "",
+        kind: "draft",
+      }),
+      {},
+    );
+    expect(failed.text).toBe('bknProject.model.changes.addCatalogs.failed:{"count":2}');
+  });
+});
