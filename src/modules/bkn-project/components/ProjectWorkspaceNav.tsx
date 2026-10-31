@@ -85,6 +85,8 @@ export function ProjectWorkspaceNav({
                 return (
                   <button
                     aria-current={section === active ? "page" : undefined}
+                    // Named by its page alone: the count beside it is not part of the name.
+                    aria-label={label}
                     className={section === active ? kn.sideItemActive : kn.sideItem}
                     key={section}
                     onClick={() => void navigate(projectSectionPath(projectId, section))}

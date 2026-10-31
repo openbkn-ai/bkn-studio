@@ -29,8 +29,10 @@ const LOCALES = [
 const SECTIONS_WITH_VIEWS = [1, 2];
 
 async function openSection(page: Page, name: string) {
-  await page.getByRole("navigation").getByRole("button", { name, exact: true }).click();
-  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  const item = page.getByRole("navigation").getByRole("button", { name, exact: true });
+  await item.click();
+  // The page has no heading of its own: the navigation marks it as the current one.
+  await expect(item).toHaveAttribute("aria-current", "page");
 }
 
 /** Scans the section, then each of its views in turn. */
