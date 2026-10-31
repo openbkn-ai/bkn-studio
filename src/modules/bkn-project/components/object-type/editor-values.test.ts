@@ -40,8 +40,8 @@ describe("editor values", () => {
       type: "string",
     });
     expect(editorDataSource(objectType)).toEqual({
-      id: objectType.dataSource.id,
-      name: objectType.dataSource.name,
+      id: objectType.table.resourceId,
+      name: objectType.table.name,
       type: "resource",
     });
   });

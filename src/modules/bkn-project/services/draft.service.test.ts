@@ -187,14 +187,9 @@ describe("draft.service", () => {
     }
   });
 
-  it("saves an object type whole as bkn-project names it, and reads its data source", async () => {
+  it("saves an object type whole as bkn-project names it", async () => {
     const { mockDraft, saveDraftObjectType } = await importService();
     const backend = mockDraft("p1");
-    backend.items.object_types![0].data_source = {
-      id: "res-c",
-      name: "Customers table",
-      type: "resource",
-    };
     mockPut.mockResolvedValue({ data: backend });
 
     const draft = await saveDraftObjectType("p/1", "customers", 7, {
@@ -211,7 +206,13 @@ describe("draft.service", () => {
           name: "customer_id",
           type: "string",
         },
-        { description: "Shown", displayName: "Name", name: "name", type: "string" },
+        {
+          description: "Shown",
+          displayName: "Name",
+          mappedField: "name",
+          name: "name",
+          type: "string",
+        },
       ],
     });
 
@@ -227,7 +228,13 @@ describe("draft.service", () => {
             name: "customer_id",
             type: "string",
           },
-          { comment: "Shown", display_name: "Name", name: "name", type: "string" },
+          {
+            comment: "Shown",
+            display_name: "Name",
+            mapped_field: { name: "name" },
+            name: "name",
+            type: "string",
+          },
         ],
         display_key: "name",
         incremental_key: "",
@@ -237,12 +244,7 @@ describe("draft.service", () => {
       },
       { skipErrorToast: true },
     );
-    expect(draft.items.objectTypes[0].dataSource).toEqual({ id: "res-c", name: "Customers table" });
-    // A draft written before the data source was given names its table's resource.
-    expect(draft.items.objectTypes[1].dataSource).toEqual({
-      id: "res-sales_orders",
-      name: "sales_orders",
-    });
+    expect(draft.items.objectTypes[0].name).toBe("customers");
   });
 
   it("refuses in the mock as bkn-project does: a joined property, a column mapped twice", async () => {
@@ -294,7 +296,14 @@ describe("draft.service", () => {
       const inUse = await refusal(save([{ mappedField: "name", name: "name" }], before.updateTime));
       expect(inUse.response?.data).toMatchObject({
         error_code: "BknProject.Draft.PropertyInUse",
-        error_details: { relations: ["sales_orders_to_customers"] },
+        error_details: [
+          {
+            property: "customer_id",
+            relation: { id: "sales_orders_to_customers", name: "sales_orders_to_customers" },
+            source: { id: "sales_orders", name: "sales_orders" },
+            target: { id: "customers", name: "customers" },
+          },
+        ],
       });
       const twice = await refusal(
         save(
@@ -307,7 +316,7 @@ describe("draft.service", () => {
       );
       expect(twice.response?.data).toMatchObject({
         error_code: "BknProject.Draft.InvalidProperty",
-        error_details: { property: "name" },
+        error_details: { field: "customer_id", reason: "field_mapped_twice" },
       });
       const stale = await refusal(save([], before.updateTime - 1));
       expect(stale.response?.data.error_code).toBe("BknProject.Draft.Stale");

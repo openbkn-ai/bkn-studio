@@ -54,8 +54,6 @@ export type DraftProperty = {
 
 export type DraftObjectType = {
   adopted: boolean;
-  /** The data resource its table is, as the knowledge network's object type editor takes it. */
-  dataSource: { id: string; name: string };
   description: string;
   displayKey: string;
   id: string;

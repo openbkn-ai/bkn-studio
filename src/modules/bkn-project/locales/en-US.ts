@@ -634,19 +634,34 @@ export const bknProjectEnUS = {
       leaveDescription: "Changes that are not saved will be lost.",
       leave: "Leave",
       listSeparator: ", ",
+      unmapped:
+        "These properties map no column of the table yet: {{names}}. Connect them to a column, or remove them.",
+      propertyUse:
+        "property \u201c{{property}}\u201d is used by relation \u201c{{relation}}\u201d ({{source}} \u2192 {{target}})",
+      invalidProperty: {
+        no_mapped_field: "Property \u201c{{name}}\u201d maps no column of the table.",
+        field_mapped_twice:
+          "Column \u201c{{name}}\u201d is mapped by more than one property; a column maps one.",
+        mapping_changed:
+          "Property \u201c{{name}}\u201d cannot move to another column or type; remove it and add it again.",
+        field_not_mappable: "Column \u201c{{name}}\u201d has a type a property cannot take.",
+        invalid_name: "Property name \u201c{{name}}\u201d is not accepted; change it.",
+        too_long: "The display name or description of property \u201c{{name}}\u201d is too long.",
+        display_key:
+          "Title property \u201c{{name}}\u201d is not among the object type's properties.",
+      },
       errors: {
         Stale:
           "The draft changed while you were editing. Read it again, then make and save your changes; these ones are not kept.",
         InvalidName: "This name cannot be used; choose another",
         InvalidDescription: "The description is not accepted; change it",
         PropertyInUse:
-          "These relations use a property you removed: {{relations}}. Change the relations first, or keep the property.",
-        InvalidProperty:
-          "The column of property “{{property}}” does not exist, is mapped by another property, or has another type.",
+          "Relations still use properties you removed: {{uses}}. Change the relations first, or keep the properties.",
         InvalidPropertyUnnamed:
           "A property's column does not exist, is mapped by another property, or has another type.",
         InvalidIdentity: "The identifier needs properties that tell every record apart.",
         NeedsIdentity: "Choose an identifier for the object type.",
+        FieldNotFound: "The object type\u2019s table cannot be read right now; try again later.",
         InvalidIncrementalKey: "The update field needs to be a date or time property.",
       },
     },

@@ -55,6 +55,26 @@ type BasicValues = { description: string; name: string };
 type SaveProblem =
   { kind: "stale" } | { kind: "properties"; text: string } | { kind: "other"; text: string };
 
+/** A property a relation joins by, as bkn-project names it when removing it is refused. */
+type PropertyUse = {
+  property: string;
+  relation?: { name: string };
+  source?: { name: string };
+  target?: { name: string };
+};
+
+/** Why bkn-project refused a property or field; the property, the field or the title it names. */
+type InvalidProperty = { display_key?: string; field?: string; property?: string; reason?: string };
+
+const INVALID_PROPERTY_REASONS = new Set([
+  "no_mapped_field",
+  "field_mapped_twice",
+  "mapping_changed",
+  "field_not_mappable",
+  "invalid_name",
+  "too_long",
+]);
+
 type Loaded = { draft: Draft; objectType: DraftObjectType; project: Project };
 
 /**
@@ -143,12 +163,14 @@ export function ProjectObjectTypeEditScene({
 
   // A refusal names what is wrong where it is: the name or description on their fields, the rest
   // over the properties.
+  // Properties by name, shown by their display names; a name not among them is shown as it is.
+  const shown = (name: string) =>
+    properties.find((property) => property.name === name)?.displayName || name;
+  const separator = t(`${PREFIX}.listSeparator`);
+
   const explain = (error: unknown): SaveProblem | null => {
     const code = draftErrorCode(error);
-    const details = (projectErrorDetails(error) ?? {}) as {
-      property?: string;
-      relations?: string[];
-    };
+    const details = projectErrorDetails(error);
     switch (code) {
       case "Stale":
         return { kind: "stale" };
@@ -163,26 +185,44 @@ export function ProjectObjectTypeEditScene({
         ]);
         return null;
       case "PropertyInUse":
+        // Each property a relation joins by, with the relation and its two ends.
         return {
           kind: "properties",
           text: t(`${PREFIX}.errors.PropertyInUse`, {
-            relations: (details.relations ?? []).join(t(`${PREFIX}.listSeparator`)),
+            uses: (Array.isArray(details) ? (details as PropertyUse[]) : [])
+              .map((use) =>
+                t(`${PREFIX}.propertyUse`, {
+                  property: shown(use.property),
+                  relation: use.relation?.name ?? "",
+                  source: use.source?.name ?? "",
+                  target: use.target?.name ?? "",
+                }),
+              )
+              .join(separator),
           }),
         };
       case "InvalidProperty":
-        return {
-          kind: "properties",
-          text: details.property
-            ? t(`${PREFIX}.errors.InvalidProperty`, { property: details.property })
-            : t(`${PREFIX}.errors.InvalidPropertyUnnamed`),
-        };
+        return { kind: "properties", text: invalidPropertyText(details) };
       case "InvalidIdentity":
       case "NeedsIdentity":
       case "InvalidIncrementalKey":
+      case "FieldNotFound":
         return { kind: "properties", text: t(`${PREFIX}.errors.${code}`) };
       default:
         return { kind: "other", text: extractRequestErrorMessage(error) };
     }
+  };
+
+  // What was wrong with a property or field, by the reason bkn-project gives.
+  const invalidPropertyText = (details: unknown) => {
+    const { display_key: title, field, property, reason } = (details ?? {}) as InvalidProperty;
+    if (title) {
+      return t(`${PREFIX}.invalidProperty.display_key`, { name: shown(title) });
+    }
+    const name = property ? shown(property) : field;
+    return name && reason && INVALID_PROPERTY_REASONS.has(reason)
+      ? t(`${PREFIX}.invalidProperty.${reason}`, { name })
+      : t(`${PREFIX}.errors.InvalidPropertyUnnamed`);
   };
 
   const save = async () => {
@@ -194,6 +234,17 @@ export function ProjectObjectTypeEditScene({
       checked = (await editorRef.current!.validateFields()).dataProperties;
     } catch {
       // The editor says what is missing above its canvas.
+      return;
+    }
+    // Every property of a draft maps a column of its table: say which do not before sending.
+    const unmapped = checked.filter((property) => !property.mappedField);
+    if (unmapped.length) {
+      setProblem({
+        kind: "properties",
+        text: t(`${PREFIX}.unmapped`, {
+          names: unmapped.map((property) => property.displayName || property.name).join(separator),
+        }),
+      });
       return;
     }
     setSaving(true);

@@ -16,8 +16,9 @@ import type {
  * editor marks the identity and the title on each property; the draft names them on the type.
  */
 
+/** The object type's table, as the data resource the editor maps from. */
 export function editorDataSource(objectType: DraftObjectType): ObjectTypeDataSource {
-  return { id: objectType.dataSource.id, name: objectType.dataSource.name, type: "resource" };
+  return { id: objectType.table.resourceId, name: objectType.table.name, type: "resource" };
 }
 
 export function editorProperties(objectType: DraftObjectType): ObjectTypeDataProperty[] {

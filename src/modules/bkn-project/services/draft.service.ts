@@ -51,8 +51,6 @@ type BackendKey = {
 
 type BackendObjectType = {
   adopted: boolean;
-  /** The data resource of its table, as bkn-backend's object types name theirs. */
-  data_source?: { id: string; name: string; type?: string };
   description: string;
   display_key: string;
   id: string;
@@ -158,10 +156,6 @@ const mapKey = (key: BackendKey): DraftKeyEvidence => ({
 
 const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
   adopted: item.adopted,
-  // A draft written before the data source was given names its table's resource instead.
-  dataSource: item.data_source
-    ? { id: item.data_source.id, name: item.data_source.name }
-    : { id: item.table.resource_id, name: item.table.name },
   description: item.description,
   displayKey: item.display_key,
   id: item.id,
@@ -587,13 +581,13 @@ function restoreMockField(
   return draft;
 }
 
-/** The 400 bkn-project answers for a property the save cannot take. */
-function mockInvalidProperty(property: string, description: string) {
+/** The 400 bkn-project answers for a property the save cannot take, and why. */
+function mockInvalidProperty(details: Record<string, string>, description: string) {
   return new AxiosError(description, "ERR_BAD_REQUEST", undefined, undefined, {
     data: {
       description,
       error_code: "BknProject.Draft.InvalidProperty",
-      error_details: { property },
+      error_details: details,
     },
     status: 400,
   } as AxiosResponse);
@@ -611,29 +605,43 @@ function saveMockObjectType(
     throw mockConflict("ItemNotFound", `No item ${itemId}.`);
   }
   const kept = new Set(value.properties.map((property) => property.name));
+  const objectName = (id: string) =>
+    draft.items.object_types?.find((candidate) => candidate.id === id)?.name ?? id;
   // A property a relation joins by stays while the relation does.
-  const joined = (draft.items.relation_types ?? []).filter((relation) =>
-    (relation.mapping ?? []).some(
-      (pair) =>
-        (relation.source === itemId && !kept.has(pair.source_property)) ||
-        (relation.target === itemId && !kept.has(pair.target_property)),
-    ),
+  const uses = (draft.items.relation_types ?? []).flatMap((relation) =>
+    (relation.mapping ?? [])
+      .flatMap((pair) => [
+        ...(relation.source === itemId ? [pair.source_property] : []),
+        ...(relation.target === itemId ? [pair.target_property] : []),
+      ])
+      .filter((property) => !kept.has(property))
+      .map((property) => ({
+        property,
+        relation: { id: relation.id, kind: "relation_types", name: relation.name },
+        source: { id: relation.source, kind: "object_types", name: objectName(relation.source) },
+        target: { id: relation.target, kind: "object_types", name: objectName(relation.target) },
+      })),
   );
-  if (joined.length) {
+  if (uses.length) {
     const error = mockConflict("PropertyInUse", "A relation joins by the property.");
-    (error.response!.data as { error_details?: unknown }).error_details = {
-      relations: joined.map((relation) => relation.name),
-    };
+    (error.response!.data as { error_details?: unknown }).error_details = uses;
     throw error;
   }
   const columns = new Map<string, string>();
   for (const property of value.properties) {
-    if (property.mappedField) {
-      if (columns.has(property.mappedField)) {
-        throw mockInvalidProperty(property.name, "The column is mapped already.");
-      }
-      columns.set(property.mappedField, property.name);
+    if (!property.mappedField) {
+      throw mockInvalidProperty(
+        { property: property.name, reason: "no_mapped_field" },
+        "Every property maps a field.",
+      );
     }
+    if (columns.has(property.mappedField)) {
+      throw mockInvalidProperty(
+        { field: property.mappedField, reason: "field_mapped_twice" },
+        "The field is mapped already.",
+      );
+    }
+    columns.set(property.mappedField, property.name);
   }
   const now = Date.now();
   (draft.items.decisions ??= []).push({

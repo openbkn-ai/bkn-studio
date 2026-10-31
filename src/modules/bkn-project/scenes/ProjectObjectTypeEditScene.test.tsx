@@ -195,17 +195,39 @@ describe("ProjectObjectTypeEditScene", () => {
   });
 
   it("names the relations that use a removed property, and a refused name on its field", async () => {
+    const end = (name: string) => ({ id: name, kind: "object_types", name });
     mocks.save.mockRejectedValueOnce(
-      refusal(409, "PropertyInUse", { relations: ["Orders of customer", "Invoices"] }),
+      refusal(409, "PropertyInUse", [
+        {
+          property: "customer_id",
+          relation: { id: "r1", kind: "relation_types", name: "Orders of customer" },
+          source: end("Order"),
+          target: end("Customer"),
+        },
+      ]),
     );
     renderScene();
     await toProperties();
     save();
+    const use = `bknProject.objectEditor.propertyUse:${JSON.stringify({
+      property: "customer_id",
+      relation: "Orders of customer",
+      source: "Order",
+      target: "Customer",
+    })}`;
     expect(
       await screen.findByText(
-        `bknProject.objectEditor.errors.PropertyInUse:${JSON.stringify({
-          relations: "Orders of customerbknProject.objectEditor.listSeparatorInvoices",
-        })}`,
+        `bknProject.objectEditor.errors.PropertyInUse:${JSON.stringify({ uses: use })}`,
+      ),
+    ).toBeInTheDocument();
+
+    mocks.save.mockRejectedValueOnce(
+      refusal(400, "InvalidProperty", { field: "customer_id", reason: "field_mapped_twice" }),
+    );
+    save();
+    expect(
+      await screen.findByText(
+        `bknProject.objectEditor.invalidProperty.field_mapped_twice:${JSON.stringify({ name: "customer_id" })}`,
       ),
     ).toBeInTheDocument();
 
@@ -215,6 +237,18 @@ describe("ProjectObjectTypeEditScene", () => {
       await screen.findByText("bknProject.objectEditor.errors.InvalidName"),
     ).toBeInTheDocument();
     expect(screen.getByDisplayValue("customers")).toBeVisible();
+  });
+
+  it("names the properties that map no column, without sending", async () => {
+    const draft = mapDraft(mockDraft("p1"));
+    draft.items.objectTypes.find((item) => item.id === "customers")!.properties[1].mappedField = "";
+    mocks.getDraft.mockResolvedValue(draft);
+    renderScene();
+    await toProperties();
+    save();
+
+    expect(await screen.findByText(/^bknProject\.objectEditor\.unmapped:/)).toBeInTheDocument();
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 
   it("says when the draft has no such object type", async () => {
