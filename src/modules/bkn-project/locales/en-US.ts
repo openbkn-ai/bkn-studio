@@ -141,6 +141,11 @@ export const bknProjectEnUS = {
         archived: "The project is archived and cannot be changed",
       },
       catalogs: {
+        add: "Add data catalogs",
+        addTitle: "Add data catalogs",
+        addHint:
+          "AI drafts object and relation types from the tables of the added catalogs; the draft so far and the decisions made stay as they are.",
+        added: "Data catalogs added. AI is drafting from their tables.",
         change: "Change data catalogs",
         choose: "Choose data catalogs",
         title: "The project's data catalogs",

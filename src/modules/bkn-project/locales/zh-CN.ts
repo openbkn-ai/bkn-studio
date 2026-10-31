@@ -131,6 +131,10 @@ export const bknProjectZhCN = {
         archived: "项目已归档，不能修改",
       },
       catalogs: {
+        add: "增加数据目录",
+        addTitle: "增加数据目录",
+        addHint: "AI 会为新增数据目录里的表起草对象和关系，已有的草稿和决定保持不变。",
+        added: "已增加数据目录，AI 正在为新增的表起草。",
         change: "更换数据目录",
         choose: "选择数据目录",
         title: "项目的数据目录",

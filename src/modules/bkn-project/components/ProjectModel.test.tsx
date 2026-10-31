@@ -26,6 +26,8 @@ const messageMock = vi.hoisted(() => ({
   warning: vi.fn(),
 }));
 const setProjectCatalogsMock = vi.hoisted(() => vi.fn());
+const addProjectCatalogsMock = vi.hoisted(() => vi.fn());
+const getProjectMock = vi.hoisted(() => vi.fn());
 const onProjectChange = vi.hoisted(() => vi.fn());
 const confirmMock = vi.hoisted(() => vi.fn<(config: { onOk: () => Promise<void> }) => void>());
 const translate = vi.hoisted(
@@ -84,6 +86,8 @@ vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal)
 
 vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/project.service")>()),
+  addProjectCatalogs: addProjectCatalogsMock,
+  getProject: getProjectMock,
   setProjectCatalogs: setProjectCatalogsMock,
 }));
 
@@ -635,6 +639,51 @@ describe("ProjectModel", () => {
       expect.objectContaining({ catalogIds: ["cat-001"] }),
     );
     expect(messageMock.success).toHaveBeenCalledWith("bknProject.model.catalogs.saved");
+  });
+
+  it("adds catalogs the project lacks to a ready draft, and follows the drafting", async () => {
+    listCatalogsMock.mockResolvedValue({
+      items: [
+        { id: "cat-001", name: "ERP" },
+        { id: "cat-002", name: "CRM" },
+      ],
+      total: 2,
+    });
+    getDraftMock.mockResolvedValue(ready());
+    addProjectCatalogsMock.mockResolvedValue(undefined);
+    getProjectMock.mockResolvedValue({ ...project, catalogIds: ["cat-001", "cat-002"] });
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.catalogs.add" }));
+    const dialog = await openDialog();
+    expect(dialog.getByText("bknProject.model.catalogs.addHint")).toBeInTheDocument();
+    // Saving waits for a catalog to add.
+    expect(dialog.getByRole("button", { name: "common.save" })).toBeDisabled();
+    fireEvent.mouseDown(dialog.getByRole("combobox"));
+    // Only the catalog the project does not have is offered.
+    expect(screen.queryByTitle("ERP")).toBeNull();
+    fireEvent.click(await screen.findByTitle("CRM"));
+    const reads = getDraftMock.mock.calls.length;
+    fireEvent.click(dialog.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => expect(addProjectCatalogsMock).toHaveBeenCalledWith("p1", ["cat-002"]));
+    await waitFor(() =>
+      expect(onProjectChange).toHaveBeenCalledWith(
+        expect.objectContaining({ catalogIds: ["cat-001", "cat-002"] }),
+      ),
+    );
+    expect(messageMock.success).toHaveBeenCalledWith("bknProject.model.catalogs.added");
+    await waitFor(() => expect(getDraftMock.mock.calls.length).toBeGreaterThan(reads));
+  });
+
+  it("offers no catalogs to add when the project has every one", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    renderModel();
+
+    expect(
+      await screen.findByRole("button", { name: "bknProject.model.catalogs.change" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "bknProject.model.catalogs.add" })).toBeNull();
   });
 
   it("asks someone else to contact the owner instead of offering the change", async () => {

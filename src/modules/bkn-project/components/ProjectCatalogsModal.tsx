@@ -10,43 +10,60 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { setProjectCatalogs } from "@/modules/bkn-project/services/project.service";
+import {
+  addProjectCatalogs,
+  getProject,
+  setProjectCatalogs,
+} from "@/modules/bkn-project/services/project.service";
 import type { Project } from "@/modules/bkn-project/types/project";
 
 import styles from "./ProjectModel.module.css";
 
 /**
- * Replaces the data catalogs a project drafts from. It starts from the project's catalogs the
- * caller can still see; the ones that are gone are named, since saving removes them.
+ * Replaces the data catalogs a project drafts from, or adds some to them. Replacing starts from
+ * the project's catalogs the caller can still see and names the ones that are gone, since saving
+ * removes them; adding offers the catalogs the project does not have yet.
  */
 export function ProjectCatalogsModal({
   catalogs,
+  mode = "replace",
   onCancel,
   onSaved,
   project,
 }: {
   /** Catalogs the caller can see, by id. */
   catalogs: Map<string, string>;
+  mode?: "add" | "replace";
   onCancel: () => void;
   onSaved: (project: Project) => void;
   project: Project;
 }) {
   const { t } = useTranslation();
+  const adding = mode === "add";
   const [selected, setSelected] = useState(() =>
-    project.catalogIds.filter((id) => catalogs.has(id)),
+    adding ? [] : project.catalogIds.filter((id) => catalogs.has(id)),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const gone = project.catalogIds.filter((id) => !catalogs.has(id));
-  const unchanged =
-    selected.length === project.catalogIds.length &&
-    selected.every((id) => project.catalogIds.includes(id));
+  const gone = adding ? [] : project.catalogIds.filter((id) => !catalogs.has(id));
+  const unchanged = adding
+    ? selected.length === 0
+    : selected.length === project.catalogIds.length &&
+      selected.every((id) => project.catalogIds.includes(id));
+  const options = [...catalogs]
+    .filter(([id]) => !adding || !project.catalogIds.includes(id))
+    .map(([id, name]) => ({ label: name, value: id }));
 
   const save = async () => {
     setSaving(true);
     setError(null);
     try {
-      onSaved(await setProjectCatalogs(project.id, selected));
+      if (adding) {
+        await addProjectCatalogs(project.id, selected);
+        onSaved(await getProject(project.id));
+      } else {
+        onSaved(await setProjectCatalogs(project.id, selected));
+      }
     } catch (cause) {
       setError(extractRequestErrorMessage(cause));
     } finally {
@@ -64,11 +81,11 @@ export function ProjectCatalogsModal({
       onCancel={onCancel}
       onOk={() => void save()}
       open
-      title={t("bknProject.model.catalogs.title")}
+      title={t(adding ? "bknProject.model.catalogs.addTitle" : "bknProject.model.catalogs.title")}
     >
       <Form layout="vertical">
         <Form.Item
-          extra={t("bknProject.model.catalogs.hint")}
+          extra={t(adding ? "bknProject.model.catalogs.addHint" : "bknProject.model.catalogs.hint")}
           htmlFor="project-catalogs"
           label={t("bknProject.model.catalogs.label")}
         >
@@ -77,7 +94,7 @@ export function ProjectCatalogsModal({
             mode="multiple"
             onChange={setSelected}
             optionFilterProp="label"
-            options={[...catalogs].map(([id, name]) => ({ label: name, value: id }))}
+            options={options}
             placeholder={t("bknProject.create.catalogsPlaceholder")}
             value={selected}
           />

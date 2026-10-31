@@ -227,6 +227,27 @@ export async function setProjectCatalogs(id: string, catalogIds: string[]): Prom
 }
 
 /**
+ * Adds data catalogs to a project with a ready draft. bkn-project drafts the new catalogs' tables
+ * in the background, leaving what people decided as it is; read the draft again to follow it.
+ */
+export async function addProjectCatalogs(id: string, catalogIds: string[]): Promise<void> {
+  if (useMock) {
+    const project = mockProjects.find((item) => item.id === id);
+    if (!project) {
+      throw mockNotFound(id);
+    }
+    project.catalog_ids = [...new Set([...(project.catalog_ids ?? []), ...catalogIds])];
+    project.update_time = Date.now();
+    return wait(undefined);
+  }
+  await http.post(
+    `${API_PREFIX}/${encodeURIComponent(id)}/catalogs:add`,
+    { catalog_ids: catalogIds },
+    { skipErrorToast: true },
+  );
+}
+
+/**
  * Lists every knowledge network the caller can see, in one request: bkn-backend filters by
  * permission, the same way bkn-project decides which projects are visible.
  */

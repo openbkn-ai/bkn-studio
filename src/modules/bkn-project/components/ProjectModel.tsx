@@ -122,6 +122,7 @@ export function ProjectModel({
   const [saving, setSaving] = useState(false);
   const [choosingIdentity, setChoosingIdentity] = useState<DraftObjectType | null>(null);
   const [changingCatalogs, setChangingCatalogs] = useState(false);
+  const [addingCatalogs, setAddingCatalogs] = useState(false);
   const [neededBy, setNeededBy] = useState<ReadonlyMap<string, PendingQuestion[]>>(new Map());
   // Adopted object types that could refresh their local index by an update field, and have none.
   const [updateFields, setUpdateFields] = useState<PendingItem[]>([]);
@@ -396,6 +397,31 @@ export function ProjectModel({
         {t(label)}
       </AppButton>
     ) : null;
+  // Adding drafts the new catalogs' tables into a ready draft; offered while there is one to add.
+  const addCatalogsButton =
+    canChangeCatalogs &&
+    draft?.status === "ready" &&
+    [...catalogs.keys()].some((id) => !project.catalogIds.includes(id)) ? (
+      <AppButton onClick={() => setAddingCatalogs(true)}>
+        {t("bknProject.model.catalogs.add")}
+      </AppButton>
+    ) : null;
+  const addCatalogsDialog =
+    addingCatalogs && catalogs ? (
+      <ProjectCatalogsModal
+        catalogs={catalogs}
+        mode="add"
+        onCancel={() => setAddingCatalogs(false)}
+        onSaved={(next) => {
+          setAddingCatalogs(false);
+          onProjectChange(next);
+          message.success(t("bknProject.model.catalogs.added"));
+          // The draft is drafting the new tables now: read it to follow.
+          void loadDraft();
+        }}
+        project={project}
+      />
+    ) : null;
   const catalogsDialog =
     changingCatalogs && catalogs ? (
       <ProjectCatalogsModal
@@ -532,6 +558,7 @@ export function ProjectModel({
           title={t("bknProject.model.empty.title")}
         />
         {catalogsDialog}
+        {addCatalogsDialog}
       </div>
     );
   }
@@ -614,6 +641,7 @@ export function ProjectModel({
           ) : null}
         </span>
         <span className={styles.spacer} />
+        {projectMissing.length ? null : addCatalogsButton}
         {projectMissing.length ? null : changeCatalogsButton("bknProject.model.catalogs.change")}
         {generateButton}
         {draft.status === "ready" && !project.archived ? (
@@ -627,6 +655,7 @@ export function ProjectModel({
         ) : null}
       </div>
       {catalogsDialog}
+      {addCatalogsDialog}
       {notices}
       {understanding}
       {draft.status === "drafting" ? (
