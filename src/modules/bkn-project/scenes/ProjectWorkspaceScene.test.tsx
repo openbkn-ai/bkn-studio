@@ -74,8 +74,25 @@ vi.mock("@/modules/bkn-project/components/ProjectReleasePage", () => ({
 }));
 
 vi.mock("@/modules/bkn-project/components/requirements/ProjectRequirements", () => ({
-  ProjectRequirements: ({ ownerIsCaller }: { ownerIsCaller: boolean }) => (
-    <div>requirements page {ownerIsCaller ? "owner" : "reader"}</div>
+  ProjectRequirements: ({
+    onGoToResources,
+    ownerIsCaller,
+  }: {
+    onGoToResources: () => void;
+    ownerIsCaller: boolean;
+  }) => (
+    <div>
+      requirements page {ownerIsCaller ? "owner" : "reader"}
+      <button onClick={onGoToResources} type="button">
+        go to resources
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("@/modules/bkn-project/components/resources/ProjectResources", () => ({
+  ProjectResources: ({ ownerIsCaller }: { ownerIsCaller: boolean }) => (
+    <div>resources page {ownerIsCaller ? "owner" : "reader"}</div>
   ),
 }));
 
@@ -138,7 +155,7 @@ const project: Project = {
 };
 
 function renderScene(
-  section: "model" | "overview" | "release" | "requirements" = "overview",
+  section: "model" | "overview" | "release" | "resources" | "scenarios" = "overview",
   entry = "/",
 ) {
   return render(
@@ -504,9 +521,20 @@ describe("ProjectWorkspaceScene", () => {
     await waitFor(() => expect(getLatestReleaseMock).toHaveBeenCalledTimes(2));
   });
 
-  it("shows the requirements of the project", async () => {
-    renderScene("requirements");
+  it("shows the business scenarios, with the documents a link away", async () => {
+    renderScene("scenarios");
 
     expect(await screen.findByText(/requirements page/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "go to resources" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/resources");
+  });
+
+  it("shows the requirements and resources, counting the catalogs in the navigation", async () => {
+    renderScene("resources");
+
+    expect(await screen.findByText(/resources page owner/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "bknProject.workspace.sections.resources" }),
+    ).toHaveTextContent("2");
   });
 });

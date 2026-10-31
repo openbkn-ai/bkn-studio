@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
+import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { Citing } from "@/modules/bkn-project/components/requirements/citing";
 import {
   DOC_TYPES,
@@ -36,7 +37,8 @@ import styles from "./Requirements.module.css";
 const PREFIX = "bknProject.requirements.documents";
 
 /**
- * The requirement documents the specification is drafted from. The owner uploads, types and
+ * The requirement documents and regulations the specification is drafted from, an optional input
+ * of the project. The owner uploads, types and
  * removes them; a document's type decides which side prevails when documents conflict.
  */
 export function RequirementDocuments({
@@ -146,6 +148,8 @@ export function RequirementDocuments({
     <section className={styles.card}>
       <div className={styles.row}>
         <h3 className={styles.cardTitle}>{t(`${PREFIX}.title`)}</h3>
+        {/* A project is built without them; they add the business background. */}
+        <LightStatusTag tone="neutral">{t("bknProject.resources.optional")}</LightStatusTag>
         <span className={styles.spacer} />
         {canEdit ? (
           <AppButton onClick={() => setUploading(true)} type="primary">
