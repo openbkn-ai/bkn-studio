@@ -10,8 +10,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 import i18n from "@/app/locales/i18n";
 import type { DraftItemActions } from "@/modules/bkn-project/components/draft/DraftTables";
+import { COLLAPSED_ITEMS } from "@/modules/bkn-project/components/useCollapsedList";
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
-import type { Draft } from "@/modules/bkn-project/types/draft";
+import type { Draft, DraftRelationType } from "@/modules/bkn-project/types/draft";
 import type { PendingItem } from "@/modules/bkn-project/types/publish";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
@@ -74,6 +75,23 @@ function renderPanel(
   return onSet;
 }
 
+/** The panel as a link to customers' update field opens it. */
+function panel(of: Draft, ends: DraftRelationType[], items: PendingItem[]) {
+  return (
+    <DraftChangesPanel
+      actions={actions}
+      currentUserId="me"
+      directory={new Map()}
+      draft={of}
+      focus="update-field:customers"
+      neededBy={new Map()}
+      onSetUpdateField={vi.fn().mockResolvedValue(true)}
+      unadoptedEnds={ends}
+      updateFields={items}
+    />
+  );
+}
+
 describe("DraftChangesPanel update field", () => {
   beforeAll(() => {
     // Ant Design reads breakpoints, which jsdom lacks.
@@ -128,6 +146,33 @@ describe("DraftChangesPanel update field", () => {
   it("marks the update field a link led to", () => {
     renderPanel([updateField()], undefined, undefined, "update-field:customers");
     expect(screen.getByText("选择更新字段").closest("li")?.className).toMatch(/changeFocused/);
+  });
+
+  it("opens the folded list when the update field a link led to is past the first few", () => {
+    const of = draft();
+    // Three relations waiting for their ends come first and fill the folded list.
+    const ends = Array.from({ length: COLLAPSED_ITEMS }, (_, at) => ({
+      ...of.items.relationTypes[0],
+      id: `ends-${at}`,
+      name: `关系${at}`,
+    }));
+    renderWithoutAntdStyles(panel(of, ends, [updateField()]));
+    expect(screen.getByText("选择更新字段").closest("li")?.className).toMatch(/changeFocused/);
+    expect(screen.getByRole("button", { name: "收起" })).toBeInTheDocument();
+  });
+
+  it("opens the folded list when the linked update field arrives after the first render", () => {
+    const of = draft();
+    const ends = Array.from({ length: COLLAPSED_ITEMS }, (_, at) => ({
+      ...of.items.relationTypes[0],
+      id: `ends-${at}`,
+      name: `关系${at}`,
+    }));
+    const { rerender } = renderWithoutAntdStyles(panel(of, ends, []));
+    expect(screen.queryByText("选择更新字段")).toBeNull();
+    rerender(panel(of, ends, [updateField()]));
+    expect(screen.getByText("选择更新字段")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "收起" })).toBeInTheDocument();
   });
 
   it("drops the suggestion once the draft has an update field", () => {
