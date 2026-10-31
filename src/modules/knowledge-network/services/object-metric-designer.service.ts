@@ -88,6 +88,7 @@ export type RunObjectMetricDesignParams = {
   message: string;
   diagnostic?: ObjectMetricDesignDiagnostic;
   threadId?: string;
+  modelId?: string;
   signal?: AbortSignal;
   onText?: (text: string) => void;
 };
@@ -236,6 +237,7 @@ export async function runObjectMetricDesigner(
     body: JSON.stringify({
       client_request_id: newClientRequestId(),
       ...(params.threadId ? { thread_id: params.threadId } : {}),
+      ...(params.modelId ? { model_id: params.modelId } : {}),
       scope: params.scope,
       base_form_revision: params.baseFormRevision,
       form_snapshot: params.formSnapshot,

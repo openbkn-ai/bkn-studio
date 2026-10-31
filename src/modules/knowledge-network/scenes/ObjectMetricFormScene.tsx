@@ -6,14 +6,16 @@
  */
 
 import {
+  ArrowUpOutlined,
   CloseOutlined,
+  CodeSandboxOutlined,
   CompressOutlined,
   DeleteOutlined,
+  DownOutlined,
   ExpandOutlined,
   LeftOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
-  SendOutlined,
   StopOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
@@ -90,6 +92,10 @@ import {
   runObjectMetricDesigner,
   type ObjectMetricDesignDiagnostic,
 } from "@/modules/knowledge-network/services/object-metric-designer.service";
+import {
+  listObjectMetricAnswerModels,
+  type ObjectMetricAnswerModel,
+} from "@/modules/knowledge-network/services/object-metric-models.service";
 import {
   objectMetricAiChanges,
   objectMetricDesignFormSnapshot,
@@ -1326,12 +1332,24 @@ function HelpTooltip({ label, title }: { label: string; title: string }) {
 function AiPromptComposer({
   checking,
   generating,
+  modelId,
+  models,
+  modelsLoading,
+  modelsUnavailable,
+  modelSelectionLocked,
+  onModelChange,
   onStop,
   onSubmit,
   promptRequest,
 }: {
   checking: boolean;
   generating: boolean;
+  modelId?: string;
+  models: ObjectMetricAnswerModel[];
+  modelsLoading: boolean;
+  modelsUnavailable: boolean;
+  modelSelectionLocked: boolean;
+  onModelChange: (modelId?: string) => void;
   onStop: () => void;
   onSubmit: (prompt: string) => void;
   promptRequest?: { revision: number; value: string };
@@ -1350,7 +1368,7 @@ function AiPromptComposer({
   };
 
   return (
-    <div className={styles.aiComposerInputRow}>
+    <div className={styles.aiComposerShell}>
       <Input.TextArea
         aria-label={objectMetricText("m15a3900b6bf9")}
         autoFocus
@@ -1366,17 +1384,57 @@ function AiPromptComposer({
         }}
         placeholder={objectMetricText("m7d7fca1df843")}
         value={prompt}
+        variant="borderless"
       />
-      <Button
-        aria-label={objectMetricText("m24d9e58a6e44")}
-        danger={generating}
-        disabled={!generating && (checking || !prompt.trim())}
-        icon={generating ? <StopOutlined /> : <SendOutlined />}
-        onClick={generating ? onStop : submit}
-        type={generating ? "default" : "primary"}
-      >
-        {generating ? objectMetricText("mca4d973c0b00") : objectMetricText("medecf0ae6e51")}
-      </Button>
+      <div className={styles.aiComposerFooter}>
+        <div className={styles.aiComposerActions}>
+          <Tooltip
+            title={modelsUnavailable ? objectMetricText("aiModelListUnavailable") : undefined}
+          >
+            <Select
+              aria-label={objectMetricText("aiAnswerModel")}
+              className={styles.aiModelSelect}
+              disabled={generating || checking || modelSelectionLocked}
+              id="metric-ai-model"
+              loading={modelsLoading}
+              onChange={(value: string) => onModelChange(value || undefined)}
+              options={[
+                {
+                  label: (
+                    <span className={styles.aiModelOption}>
+                      <CodeSandboxOutlined aria-hidden="true" />
+                      <span>{objectMetricText("aiPlatformDefaultModel")}</span>
+                    </span>
+                  ),
+                  value: "",
+                },
+                ...models.map((model) => ({
+                  label: (
+                    <span className={styles.aiModelOption}>
+                      <CodeSandboxOutlined aria-hidden="true" />
+                      <span>{model.name}</span>
+                    </span>
+                  ),
+                  value: model.id,
+                })),
+              ]}
+              popupMatchSelectWidth={false}
+              suffixIcon={<DownOutlined aria-hidden="true" />}
+              value={modelId ?? ""}
+            />
+          </Tooltip>
+          <Button
+            aria-label={objectMetricText(generating ? "mca4d973c0b00" : "m24d9e58a6e44")}
+            className={styles.aiComposerSubmit}
+            danger={generating}
+            disabled={!generating && (checking || !prompt.trim())}
+            icon={generating ? <StopOutlined /> : <ArrowUpOutlined />}
+            onClick={generating ? onStop : submit}
+            shape="circle"
+            type={generating ? "default" : "primary"}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -1431,6 +1489,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const [preview, setPreview] = useState<ObjectMetricPreviewV1>();
   const [trialDefinition, setTrialDefinition] = useState<ObjectMetricDefinitionV1>();
   const [aiPromptRequest, setAiPromptRequest] = useState<{ revision: number; value: string }>();
+  const [aiModelId, setAiModelId] = useState<string | undefined>();
+  const [aiModels, setAiModels] = useState<ObjectMetricAnswerModel[]>([]);
+  const [aiModelsLoading, setAiModelsLoading] = useState(false);
+  const [aiModelsUnavailable, setAiModelsUnavailable] = useState(false);
   const [aiOpen, setAiOpen] = useState(mode === "create");
   const [aiExpanded, setAiExpanded] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -1476,6 +1538,28 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     [],
   );
 
+  useEffect(() => {
+    if (!aiOpen) return;
+    let active = true;
+    setAiModelsLoading(true);
+    void listObjectMetricAnswerModels()
+      .then((models) => {
+        if (active) {
+          setAiModels(models);
+          setAiModelsUnavailable(false);
+        }
+      })
+      .catch(() => {
+        if (active) setAiModelsUnavailable(true);
+      })
+      .finally(() => {
+        if (active) setAiModelsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [aiOpen]);
+
   const definition = record?.definition;
   const metricType = definition?.metric_type ?? requestedMetricType;
   const ownerObjectTypeId = definition?.owner_object_type_id ?? requestedObjectTypeId;
@@ -1492,6 +1576,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   useEffect(() => {
     aiAbortRef.current?.abort();
     aiThreadRef.current = null;
+    setAiModelId(undefined);
     aiTrialRequestedRef.current = false;
     aiTrialSnapshotRef.current = null;
     setAiConversation([]);
@@ -2106,6 +2191,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             }
           : {}),
         message: prompt,
+        modelId: aiModelId,
         scope: {
           kn_id: networkId,
           owner_object_type_id: ownerObjectTypeId,
@@ -5281,6 +5367,22 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               </div>
             </div>
             <div className={styles.aiPanelActions}>
+              {aiConversation.length ? (
+                <Button
+                  disabled={aiGenerating || aiChecking}
+                  onClick={() => {
+                    aiThreadRef.current = null;
+                    setAiConversation([]);
+                    setAiProposal(undefined);
+                    setAiUndo(undefined);
+                    setAiDiagnostic(undefined);
+                  }}
+                  size="small"
+                  type="text"
+                >
+                  {objectMetricText("aiNewConversation")}
+                </Button>
+              ) : null}
               <Button
                 aria-label={objectMetricText(aiExpanded ? "aiRestorePane" : "aiExpandPane")}
                 aria-pressed={aiExpanded}
@@ -5424,37 +5526,20 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             ) : null}
           </div>
           <div className={styles.aiDialogComposer}>
-            <div className={styles.aiComposerToolbar}>
-              <span className={styles.aiModelLabel}>{objectMetricText("aiAnswerModel")}</span>
-              <span className={styles.aiModelSelect}>
-                {objectMetricText("aiPlatformDefaultModel")}
-              </span>
-              {aiConversation.length ? (
-                <Button
-                  disabled={aiGenerating || aiChecking}
-                  onClick={() => {
-                    aiThreadRef.current = null;
-                    setAiConversation([]);
-                    setAiProposal(undefined);
-                    setAiUndo(undefined);
-                    setAiDiagnostic(undefined);
-                  }}
-                  size="small"
-                  type="text"
-                >
-                  {objectMetricText("aiNewConversation")}
-                </Button>
-              ) : null}
-            </div>
             <AiPromptComposer
               checking={aiChecking}
               generating={aiGenerating}
+              modelId={aiModelId}
+              models={aiModels}
+              modelsLoading={aiModelsLoading}
+              modelsUnavailable={aiModelsUnavailable}
+              modelSelectionLocked={Boolean(aiThreadRef.current)}
+              onModelChange={setAiModelId}
               onStop={stopAiGeneration}
               onSubmit={(prompt) => void generateWithAi(prompt)}
               promptRequest={aiPromptRequest}
             />
           </div>
-          <p className={styles.aiDialogFootnote}>{objectMetricText("m1917adbea87f")}</p>
         </aside>
       ) : null}
       <Drawer
