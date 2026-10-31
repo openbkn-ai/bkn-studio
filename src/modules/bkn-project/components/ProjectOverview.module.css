@@ -5,90 +5,38 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/*
+ * The overview sits in the knowledge network's overview box and uses its header card and stat
+ * cards; the project's own panels below take the same surface, border and spacing.
+ */
 .overview {
   display: flex;
   flex-direction: column;
-  gap: 16px;
 }
 
-.card {
-  padding: 16px 18px;
+.panel {
+  margin-bottom: 14px;
+  padding: 16px;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--color-bg-surface);
 }
 
-.fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 28px;
-}
-
-.field {
-  display: flex;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.fieldLabel {
-  color: var(--color-text-tertiary);
-}
-
-.fieldValue {
-  color: var(--color-text-primary);
-}
-
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.tile,
-.tileLink {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-surface);
-  text-align: left;
-}
-
-.tileLink {
-  cursor: pointer;
-}
-
-.tileLink:hover {
-  border-color: var(--color-primary-500);
-}
-
-.tileLabel {
-  color: var(--color-text-secondary);
-  font-size: 13px;
-}
-
-.tileValue {
-  color: var(--color-text-primary);
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.tileSub {
-  color: var(--color-text-tertiary);
-  font-size: 12px;
+.block {
+  margin-bottom: 14px;
 }
 
 .cardHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .cardTitle {
   color: var(--color-text-primary);
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -100,36 +48,33 @@
   cursor: pointer;
 }
 
-.columns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
 .muted {
   margin: 0;
   color: var(--color-text-tertiary);
 }
 
-.rows {
+/* Where a stat card has no page to open, its line says what the figure means. */
+.statNote {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  height: 36px;
+  margin: 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
+  font-size: 12px;
 }
 
-.row {
-  display: flex;
-  justify-content: space-between;
-  color: var(--color-text-secondary);
-  font-size: 13px;
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.columns .panel {
+  margin-bottom: 0;
 }
 
 @media (max-width: 900px) {
-  .tiles,
-  .columns {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .columns {
     grid-template-columns: 1fr;
   }
@@ -148,6 +93,79 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  font-size: 13px;
+}
+
+/* Labels and values in two columns, kept together rather than stretched across the panel. */
+.keyValues {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 24px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.keyValues dt {
+  color: var(--color-text-secondary);
+}
+
+.keyValues dd {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+/* The data sources: three cells side by side, a gone one in the warning colours. */
+.sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .sources {
+    grid-template-columns: 1fr;
+  }
+}
+
+.source,
+.sourceMissing {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+}
+
+.sourceMissing {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+}
+
+.sourceHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sourceHead :global(.ant-tag) {
+  margin-inline-end: 0;
+  margin-left: auto;
+}
+
+.sourceIcon {
+  color: var(--color-text-secondary);
+  font-size: 16px;
+}
+
+.sourceName {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sourceNote {
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
