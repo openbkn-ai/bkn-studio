@@ -5,13 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Input, Select } from "antd";
+import { Select } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import {
   filterOperationsForField,
+  filterValueKind,
+  filterSupportsFieldValue,
   type FilterGroup,
   type FilterNode,
   type FilterOperation,
@@ -20,6 +22,7 @@ import {
 import type { ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./FilterTreeEditor.module.css";
+import { FilterRuleValueEditor } from "./FilterRuleValueEditor";
 
 type Props = {
   value: FilterGroup;
@@ -118,7 +121,30 @@ export function FilterTreeEditor({
                     />
                   </span>
                   <span className={styles.readOnlyCell}>{child.operation}</span>
-                  <span className={styles.readOnlyCell}>{child.value}</span>
+                  <span className={styles.readOnlyCell}>
+                    {child.valueFrom === "field" ? (
+                      <FieldIdentity
+                        field={fields.find((field) => field.name === child.value)}
+                        name={String(child.value)}
+                        layout="inline"
+                        showNameWhenSame
+                      />
+                    ) : filterValueKind(child.operation) === "none" ? (
+                      t("dataCatalog.filter.noValue")
+                    ) : Array.isArray(child.value) ? (
+                      child.value
+                        .map((value) =>
+                          value === "" || (value !== undefined && /^\s+$/.test(value))
+                            ? JSON.stringify(value)
+                            : value,
+                        )
+                        .join(" · ")
+                    ) : child.value === "" ? (
+                      '""'
+                    ) : (
+                      child.value
+                    )}
+                  </span>
                 </>
               ) : (
                 <>
@@ -129,12 +155,21 @@ export function FilterTreeEditor({
                       const nextField = fields.find((item) => item.name === field);
                       if (!nextField) return;
                       const operations = filterOperationsForField(nextField, queryPath);
+                      const operation = operations.includes(child.operation)
+                        ? child.operation
+                        : (operations[0] ?? "==");
+                      const kind = filterValueKind(operation);
                       updateAt(childPath, () => ({
                         ...child,
                         field,
-                        operation: operations.includes(child.operation)
-                          ? child.operation
-                          : (operations[0] ?? "=="),
+                        operation,
+                        valueFrom: "const",
+                        value:
+                          kind === "set"
+                            ? [undefined]
+                            : kind === "range" || kind === "before"
+                              ? [undefined, undefined]
+                              : undefined,
                       }));
                     }}
                     options={fieldOptions}
@@ -145,22 +180,45 @@ export function FilterTreeEditor({
                   />
                   <Select
                     aria-label={t("dataCatalog.filter.operator")}
+                    showSearch
+                    optionFilterProp="label"
                     onChange={(operation: FilterOperation) =>
-                      updateAt(childPath, () => ({ ...child, operation }))
+                      updateAt(childPath, () => ({
+                        ...child,
+                        operation,
+                        valueFrom: filterSupportsFieldValue(operation) ? child.valueFrom : "const",
+                        value:
+                          filterValueKind(operation) === filterValueKind(child.operation) &&
+                          (child.valueFrom !== "field" || filterSupportsFieldValue(operation))
+                            ? child.value
+                            : ["set", "range", "before"].includes(filterValueKind(operation))
+                              ? filterValueKind(operation) === "set"
+                                ? [undefined]
+                                : [undefined, undefined]
+                              : filterValueKind(operation) === "none"
+                                ? ""
+                                : undefined,
+                      }))
                     }
                     options={(selectedField
                       ? filterOperationsForField(selectedField, queryPath)
                       : []
-                    ).map((operation) => ({ label: operation, value: operation }))}
+                    ).map((operation) => ({
+                      label: ["==", "!=", ">", "<", ">=", "<="].includes(operation)
+                        ? operation
+                        : t(
+                            `dataCatalog.filter.operations.${operation === "contain" && queryPath === "local_index" ? "containAny" : operation}`,
+                          ),
+                      value: operation,
+                    }))}
                     value={child.operation}
                   />
-                  <Input
-                    aria-label={t("dataCatalog.filter.value")}
-                    onChange={(event) =>
-                      updateAt(childPath, () => ({ ...child, value: event.target.value }))
-                    }
-                    placeholder={t("dataCatalog.filter.value")}
-                    value={child.value}
+                  <FilterRuleValueEditor
+                    rule={child}
+                    field={selectedField}
+                    fields={fields}
+                    queryPath={queryPath}
+                    onChange={(next) => updateAt(childPath, () => next)}
                   />
                   <AppButton onClick={() => updateAt(childPath, () => null)} type="link">
                     {t("dataCatalog.filter.removeRule")}
@@ -174,7 +232,7 @@ export function FilterTreeEditor({
           <div className={styles.actions}>
             <AppButton
               disabled={group.children.length >= 100 || !fieldOptions.length}
-              onClick={() => add({ kind: "rule", field: "", operation: "==", value: "" })}
+              onClick={() => add({ kind: "rule", field: "", operation: "==", value: undefined })}
             >
               {t("dataCatalog.filter.addRule")}
             </AppButton>

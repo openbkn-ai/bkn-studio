@@ -837,8 +837,310 @@ describe("ViewEditorScene", () => {
     expect(screen.queryByRole("button", { name: /dataCatalog.viewEditor.derivedType/ })).toBeNull();
   });
 
+  it("creates a fixed set filter using typed integer values", async () => {
+    renderEditor({ catalogId: "cat-1" });
+    await screen.findByRole("heading", { name: "dataCatalog.viewEditor.typeTitle" });
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog.viewEditor.derivedType/ }));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "dataCatalog.viewEditor.sourceSearch" }),
+    );
+    fireEvent.click(await screen.findByText("public.orders"));
+    await screen.findByLabelText("dataCatalog.viewEditor.outputName 1");
+    fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.name"), {
+      target: { value: "filtered_orders" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.addRule" }));
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "dataCatalog.filter.field" }));
+    const fieldDropdown = document.querySelector(
+      ".ant-select-dropdown:not(.ant-select-dropdown-hidden)",
+    ) as HTMLElement;
+    fireEvent.click(within(fieldDropdown).getByText("Order ID"));
+    const operator = screen.getByRole("combobox", { name: "dataCatalog.filter.operator" });
+    fireEvent.mouseDown(operator);
+    fireEvent.change(operator, { target: { value: "dataCatalog.filter.operations.in" } });
+    const dropdown = document.querySelector(
+      ".ant-select-dropdown:not(.ant-select-dropdown-hidden)",
+    ) as HTMLElement;
+    fireEvent.click(within(dropdown).getByText("dataCatalog.filter.operations.in"));
+    fireEvent.change(screen.getByLabelText("dataCatalog.filter.value 1"), {
+      target: { value: "10" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.addValue" }));
+    fireEvent.change(screen.getByLabelText("dataCatalog.filter.value 2"), {
+      target: { value: "12" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.create" }));
+    await waitFor(() =>
+      expect(createViewMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [
+              { field: "id", operation: "in", value_from: "const", value: [10, 12] },
+            ],
+          },
+        }),
+      ),
+    );
+  });
+
+  it("edits an API-created time range on an unprojected source field without losing nested filters", async () => {
+    const lower = "2026-10-19T00:00:00.123456789+08:00";
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logical_view",
+      logicType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      logicDefinition: {
+        sourceResourceId: "source-1",
+        filterCondition: {
+          operation: "and",
+          sub_conditions: [
+            { field: "at", operation: "range", value: [lower, "2026-10-22 00:00:00"] },
+            {
+              operation: "or",
+              sub_conditions: [
+                { field: "id", operation: "in", value: [1, 2] },
+                { field: "id", operation: ">=", value: 10 },
+              ],
+            },
+          ],
+        },
+      },
+    } as CatalogResource;
+    const timeSource = { ...source, schema: [...source.schema, { name: "at", type: "datetime" }] };
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : timeSource),
+    );
+    renderEditor({ resourceId: "view-1" });
+    const upper = await screen.findByLabelText("dataCatalog.filter.upperBound");
+    expect(screen.queryByText("dataCatalog.viewEditor.unsupportedFilter")).toBeNull();
+    expect(screen.getByLabelText("dataCatalog.filter.lowerBound")).toHaveValue(lower);
+    fireEvent.change(upper, { target: { value: "2026-10-23 00:00:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    await waitFor(() =>
+      expect(updateViewMock).toHaveBeenCalledWith(
+        "view-1",
+        expect.objectContaining({
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [
+              {
+                field: "at",
+                operation: "range",
+                value_from: "const",
+                value: [lower, "2026-10-23 00:00:00"],
+              },
+              {
+                operation: "or",
+                sub_conditions: [
+                  { field: "id", operation: "in", value_from: "const", value: [1, 2] },
+                  { field: "id", operation: ">=", value_from: "const", value: 10 },
+                ],
+              },
+            ],
+          },
+        }),
+      ),
+    );
+  });
+
+  it.each([false, true])(
+    "edits an API-created before week condition with indexed=%s",
+    async (indexed) => {
+      const view: CatalogResource = {
+        ...source,
+        id: "view-1",
+        category: "logical_view",
+        logicType: "derived",
+        name: "orders_view",
+        expectedUpdateTime: 42,
+        logicDefinition: {
+          sourceResourceId: source.id,
+          filterCondition: {
+            field: "at",
+            operation: "before",
+            value: [3, "week"],
+          },
+        },
+      };
+      const timeSource = {
+        ...source,
+        localIndexName: indexed ? "idx_orders" : undefined,
+        localIndexStatus: indexed ? ("available" as const) : ("unavailable" as const),
+        schema: [...source.schema, { name: "at", type: "datetime" }],
+      };
+      getResourceMock.mockImplementation((id: string) =>
+        Promise.resolve(id === view.id ? view : timeSource),
+      );
+      renderEditor({ resourceId: view.id });
+      const interval = await screen.findByLabelText("dataCatalog.filter.interval");
+      expect(screen.queryByText("dataCatalog.viewEditor.unsupportedFilter")).toBeNull();
+      expect(interval).toHaveValue("3");
+      fireEvent.change(interval, { target: { value: "4" } });
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+      await waitFor(() =>
+        expect(updateViewMock).toHaveBeenCalledWith(
+          view.id,
+          expect.objectContaining({
+            filterCondition: {
+              operation: "and",
+              sub_conditions: [
+                { field: "at", operation: "before", value: [4, "week"], value_from: "const" },
+              ],
+            },
+          }),
+        ),
+      );
+    },
+  );
+
+  it("edits an indexed TEXT prefix condition using its keyword Feature", async () => {
+    const view: CatalogResource = {
+      ...source,
+      id: "view-1",
+      category: "logical_view",
+      logicType: "derived",
+      name: "text_view",
+      expectedUpdateTime: 42,
+      logicDefinition: {
+        sourceResourceId: source.id,
+        filterCondition: { field: "body", operation: "prefix", value: "word" },
+      },
+    };
+    const textSource: CatalogResource = {
+      ...source,
+      localIndexName: "idx_orders",
+      localIndexStatus: "available",
+      schema: [
+        ...source.schema,
+        { name: "body", type: "text", features: [{ featureType: "keyword" }] },
+      ],
+    };
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === view.id ? view : textSource),
+    );
+    renderEditor({ resourceId: view.id });
+    const input = await screen.findByLabelText("dataCatalog.filter.value");
+    expect(input).toHaveValue("word");
+    expect(screen.queryByText("dataCatalog.viewEditor.unsupportedFilter")).toBeNull();
+    fireEvent.change(input, { target: { value: "updated" } });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    await waitFor(() =>
+      expect(updateViewMock).toHaveBeenCalledWith(
+        view.id,
+        expect.objectContaining({
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [
+              { field: "body", operation: "prefix", value: "updated", value_from: "const" },
+            ],
+          },
+        }),
+      ),
+    );
+  });
+
+  it.each([
+    {
+      filterCondition: { field: "at", operation: "before", value: [3, "2026-10-30T00:00:00Z"] },
+      indexed: true,
+    },
+    ...[true, false].flatMap((indexed) =>
+      ["empty", "not_empty"].map((operation) => ({
+        filterCondition: { field: "title", operation },
+        indexed,
+      })),
+    ),
+  ])(
+    "preserves an existing $filterCondition.operation definition with indexed=$indexed while editing metadata",
+    async ({ filterCondition, indexed }) => {
+      const indexedSource: CatalogResource = {
+        ...source,
+        localIndexName: indexed ? "idx_orders" : undefined,
+        localIndexStatus: indexed ? "available" : "unavailable",
+        schema: [
+          ...source.schema,
+          { name: "at", type: "datetime" },
+          { name: "title", type: "string" },
+          { name: "body", type: "text", features: [{ featureType: "keyword" }] },
+        ],
+      };
+      const view: CatalogResource = {
+        ...source,
+        id: "view-1",
+        category: "logical_view",
+        logicType: "derived",
+        name: "orders_view",
+        expectedUpdateTime: 42,
+        logicDefinition: { sourceResourceId: "source-1", filterCondition },
+      };
+      getResourceMock.mockImplementation((id: string) =>
+        Promise.resolve(id === "view-1" ? view : indexedSource),
+      );
+      renderEditor({ resourceId: "view-1" });
+      await screen.findByDisplayValue("orders_view");
+      expect(screen.getByText("dataCatalog.viewEditor.unsupportedFilter")).toBeTruthy();
+      expect(
+        screen.getByRole("textbox", { name: "dataCatalog.viewEditor.fixedFilter" }),
+      ).toHaveValue(JSON.stringify(filterCondition, null, 2));
+      fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.displayName 1"), {
+        target: { value: "Order Number" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+      await waitFor(() =>
+        expect(updateViewMock).toHaveBeenCalledWith(
+          "view-1",
+          expect.objectContaining({ filterCondition }),
+        ),
+      );
+    },
+  );
+
+  it("saves API-created empty string collection values without changing their definition", async () => {
+    const filterCondition = {
+      field: "title",
+      operation: "in",
+      value: ["", "active"],
+      value_from: "const",
+    };
+    const stringSource: CatalogResource = {
+      ...source,
+      schema: [...source.schema, { name: "title", type: "string" }],
+    };
+    const view: CatalogResource = {
+      ...source,
+      id: "view-1",
+      category: "logical_view",
+      logicType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      logicDefinition: { sourceResourceId: "source-1", filterCondition },
+    };
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : stringSource),
+    );
+    renderEditor({ resourceId: "view-1" });
+    expect(await screen.findByLabelText("dataCatalog.filter.value 1")).toHaveValue("");
+    fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.displayName 1"), {
+      target: { value: "Order Number" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    await waitFor(() =>
+      expect(updateViewMock).toHaveBeenCalledWith(
+        "view-1",
+        expect.objectContaining({
+          filterCondition: { operation: "and", sub_conditions: [filterCondition] },
+        }),
+      ),
+    );
+  });
+
   it("preserves an unsupported existing filter while editing display names", async () => {
-    const filter = { field: "id", operation: "in", value: [1, 2] };
+    const filter = { field: "id", operation: "knn_vector", value: [1, 2] };
     const view = {
       ...source,
       id: "view-1",
@@ -975,7 +1277,7 @@ describe("ViewEditorScene", () => {
       expectedUpdateTime: 42,
       logicDefinition: {
         sourceResourceId: "source-1",
-        filterCondition: { field: "id", operation: "in", value: [1, 2] },
+        filterCondition: { field: "id", operation: "knn_vector", value: [1, 2] },
       },
     } as CatalogResource;
     let sourceReads = 0;

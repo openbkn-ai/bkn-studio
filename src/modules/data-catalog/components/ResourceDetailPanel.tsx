@@ -17,6 +17,10 @@ import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { formatDateTime } from "@/framework/i18n/format";
 import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
+import {
+  formatPrecisionSafeJSON,
+  transformPrecisionSafeJSONRequest,
+} from "@/framework/request/precision-safe-json";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -843,7 +847,21 @@ export function ResourceDetailPanel({
           {fixedFilter?.children.length ? (
             <FilterTreeEditor fields={filterSourceFields} readOnly value={fixedFilter} />
           ) : resource.logicDefinition?.filterCondition ? (
-            <Alert message={t("dataCatalog.resource.filterUnsupported")} showIcon type="warning" />
+            <Alert
+              message={t("dataCatalog.resource.filterUnsupported")}
+              description={
+                <Input.TextArea
+                  readOnly
+                  aria-label={t("dataCatalog.resource.viewFixedFilter")}
+                  autoSize={{ minRows: 3, maxRows: 12 }}
+                  value={formatPrecisionSafeJSON(
+                    transformPrecisionSafeJSONRequest(resource.logicDefinition.filterCondition),
+                  )}
+                />
+              }
+              showIcon
+              type="warning"
+            />
           ) : (
             <span className={styles.basicInfoValue}>-</span>
           )}

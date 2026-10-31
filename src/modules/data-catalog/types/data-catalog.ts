@@ -58,6 +58,7 @@ export type ResourceIndexConfig = {
 };
 
 export type ResourceSourceMetadata = {
+  sourceCategory?: "table" | "index";
   foreignKeyCount?: number;
   indexCount?: number;
   objectType?: string;
