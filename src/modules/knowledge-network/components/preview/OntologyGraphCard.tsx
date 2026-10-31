@@ -46,6 +46,8 @@ type OntologyGraphCardProps = {
   /** Types and relations drawn faint and dashed: shown for context, not part of the model. */
   fadedIds?: ReadonlySet<string>;
   fillAvailableHeight?: boolean;
+  /** A click opens something over the page: the graph leaves the maximized view first. */
+  leaveMaximizedOnSelect?: boolean;
   /** Replaces the header's key to the drawing, for a graph whose marks mean something else. */
   legend?: ReactNode;
   loadConceptGroups?: boolean;
@@ -66,6 +68,7 @@ export function OntologyGraphCard({
   emptyDescription,
   fadedIds,
   fillAvailableHeight = false,
+  leaveMaximizedOnSelect,
   legend,
   loadConceptGroups = true,
   logicalGrouping = true,
@@ -265,6 +268,7 @@ export function OntologyGraphCard({
               groupNames={groupNames}
               selectedId={selectedId}
               onSelect={handleSelect}
+              leaveMaximizedOnSelect={leaveMaximizedOnSelect}
             />
           </div>
           {showInspector ? (

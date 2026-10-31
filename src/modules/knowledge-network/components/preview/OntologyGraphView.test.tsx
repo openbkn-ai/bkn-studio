@@ -167,6 +167,37 @@ describe("OntologyGraphView", () => {
     expect(wrap.dataset.maximized).toBeUndefined();
   });
 
+  it("leaves the maximized view on a click that opens something over the page, and only then", async () => {
+    const onSelect = vi.fn();
+    const { container, rerender } = render(
+      <OntologyGraphView
+        graph={graph}
+        indexedIds={new Set()}
+        onSelect={onSelect}
+        selectedId={null}
+      />,
+    );
+    await screen.findByTestId("ontology-graph-canvas");
+    const wrap = container.firstElementChild as HTMLElement;
+
+    fireEvent.click(screen.getByTitle("knowledgeNetwork.previewMaximize"));
+    fireEvent.click(screen.getByRole("button", { name: "customer" }));
+    expect(wrap.dataset.maximized).toBe("true");
+
+    rerender(
+      <OntologyGraphView
+        graph={graph}
+        indexedIds={new Set()}
+        leaveMaximizedOnSelect
+        onSelect={onSelect}
+        selectedId={null}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "customer" }));
+    await waitFor(() => expect(wrap.dataset.maximized).toBeUndefined());
+    expect(onSelect).toHaveBeenLastCalledWith("customer");
+  });
+
   it("hides object type names from the toolbar, beside the relation names switch", async () => {
     render(
       <OntologyGraphView
