@@ -158,7 +158,25 @@ describe("ProjectListScene", () => {
     expect(link).toHaveAttribute("href", "/knowledge-network/workspace/orders/overview");
     fireEvent.click(link);
     expect(await screen.findByText("opened orders_v1_0_0")).toBeInTheDocument();
-    expect(getNetworkInUseMock).toHaveBeenCalledWith(expect.objectContaining({ id: "p1" }));
+    expect(getNetworkInUseMock).toHaveBeenCalledWith("p1");
+  });
+
+  it("says so when the network in use cannot be read, and lets other ways of opening through", async () => {
+    listProjectsMock.mockResolvedValue({ items: [project({})], nextCursor: null, total: 1 });
+    getNetworkInUseMock.mockRejectedValue(new Error("down"));
+    renderScene();
+
+    const link = await screen.findByRole("link", { name: "Orders network" });
+    fireEvent.click(link);
+    await waitFor(() =>
+      expect(messageMock.error).toHaveBeenCalledWith("bknProject.list.networkInUseFailed"),
+    );
+    expect(screen.queryByText(/^opened /)).toBeNull();
+
+    // A modifier opens the link as it is, to the lineage's base network, without reading.
+    getNetworkInUseMock.mockClear();
+    fireEvent.click(link, { ctrlKey: true });
+    expect(getNetworkInUseMock).not.toHaveBeenCalled();
   });
 
   it("searches by name and shows archived projects on request, from the first page", async () => {

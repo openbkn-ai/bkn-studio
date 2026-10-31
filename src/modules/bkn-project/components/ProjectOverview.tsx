@@ -106,14 +106,22 @@ export function ProjectOverview({
     );
 
   // The network consumers use, undefined while it is read.
-  const [inUse, setInUse] = useState<RollbackNetwork | undefined>(undefined);
+  // undefined while it is read, null when it could not be: the page says so, never guesses.
+  const [inUse, setInUse] = useState<RollbackNetwork | null | undefined>(undefined);
   useEffect(() => {
     let current = true;
-    void getNetworkInUse(project).then((network) => {
-      if (current) {
-        setInUse(network);
-      }
-    });
+    getNetworkInUse(project.id).then(
+      (network) => {
+        if (current) {
+          setInUse(network);
+        }
+      },
+      () => {
+        if (current) {
+          setInUse(null);
+        }
+      },
+    );
     return () => {
       current = false;
     };
@@ -254,9 +262,11 @@ export function ProjectOverview({
   const inUseVersion =
     inUse === undefined
       ? PLACEHOLDER
-      : inUse.base
-        ? t("bknProject.overview.fields.baseNetwork")
-        : `v${inUse.version}`;
+      : inUse === null
+        ? t("bknProject.overview.versions.inUseUnknown")
+        : inUse.base
+          ? t("bknProject.overview.fields.baseNetwork")
+          : `v${inUse.version}`;
   const latestVersion =
     latestRelease === undefined
       ? PLACEHOLDER

@@ -212,7 +212,20 @@ describe("ProjectWorkspaceScene", () => {
       "href",
       "/knowledge-network/workspace/orders_v1_0_0/overview",
     );
-    expect(getNetworkInUseMock).toHaveBeenCalledWith(project);
+    expect(getNetworkInUseMock).toHaveBeenCalledWith("p1");
+  });
+
+  it("says it cannot tell the network in use when that cannot be read, rather than guess", async () => {
+    getNetworkInUseMock.mockRejectedValue(new Error("down"));
+    renderScene();
+
+    const header = (await screen.findByText("Orders network")).closest("section") as HTMLElement;
+    expect(
+      await within(header).findByText("bknProject.overview.versions.inUseUnknown"),
+    ).toBeInTheDocument();
+    expect(
+      within(header).queryByRole("link", { name: "bknProject.overview.fields.baseNetwork" }),
+    ).toBeNull();
   });
 
   it("says the base network is in use before any release, and that nothing is published", async () => {
