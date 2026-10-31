@@ -39,6 +39,7 @@ import {
   getInstallStatusUrl,
 } from "@/framework/runtime/install-status-url";
 import type { SupportedLocale } from "@/framework/runtime/types";
+import { getProject } from "@/modules/bkn-project/services/project.service";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { resolveKnowledgeNetworkListPath } from "@/modules/knowledge-network/lib/knowledge-network-list-navigation";
 import {
@@ -51,7 +52,7 @@ export function TopBar() {
   const location = useLocation();
   const matches = useMatches();
   const navigate = useNavigate();
-  const { networkId } = useParams<{ networkId?: string }>();
+  const { networkId, projectId } = useParams<{ networkId?: string; projectId?: string }>();
   const runtimeConfig = useRuntimeConfig();
   const updateLocale = useUpdateLocale();
   const resolvedTheme = useResolvedTheme();
@@ -60,12 +61,14 @@ export function TopBar() {
   const { snapshot } = useEntitlementContext();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const [networkName, setNetworkName] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState<string | null>(null);
   const [pendingPermissionRequestCount, setPendingPermissionRequestCount] = useState<number | null>(
     null,
   );
   const [aboutOpen, setAboutOpen] = useState(false);
   const isKnowledgeNetworkRoute =
     routeHandle?.console?.menuKey?.startsWith("domain-knowledge-network") ?? false;
+  const isProjectRoute = routeHandle?.console?.menuKey === "bkn-project";
   const permissionRequestsAvailable = !isCommunityBuild(entitlement);
 
   useEffect(() => {
@@ -129,6 +132,26 @@ export function TopBar() {
     };
   }, [isKnowledgeNetworkRoute, networkId]);
 
+  // A project's pages end the trail with its name, as a network's do; a failed read leaves it off.
+  useEffect(() => {
+    if (!isProjectRoute || !projectId) {
+      setProjectName(null);
+      return;
+    }
+    let disposed = false;
+    setProjectName(null);
+    void getProject(projectId)
+      .then((project) => {
+        if (!disposed) {
+          setProjectName(project.name);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      disposed = true;
+    };
+  }, [isProjectRoute, projectId]);
+
   const rawTrail = getConsoleNavTrail(routeHandle?.console?.menuKey);
   const listReturnPath =
     isKnowledgeNetworkRoute && networkId
@@ -152,6 +175,7 @@ export function TopBar() {
           },
         ]
       : []),
+    ...(projectName ? [{ label: projectName, path: undefined, title: projectName }] : []),
   ];
 
   const installStatusUrl = getInstallStatusUrl();
