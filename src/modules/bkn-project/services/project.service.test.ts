@@ -138,19 +138,6 @@ describe("project.service", () => {
     expect(project.catalogIds).toEqual(["c2"]);
   });
 
-  it("adds catalogs with the custom method, which drafts their tables in the background", async () => {
-    mockPost.mockResolvedValue({ data: undefined, status: 202 });
-    const { addProjectCatalogs } = await importService();
-
-    await addProjectCatalogs("p 1", ["c2", "c3"]);
-
-    expect(mockPost).toHaveBeenCalledWith(
-      "/bkn-project/v1/projects/p%201/catalogs:add",
-      { catalog_ids: ["c2", "c3"] },
-      { skipErrorToast: true },
-    );
-  });
-
   it("archives and unarchives with the custom methods", async () => {
     mockPost.mockResolvedValue({ data: backendProject });
     const { setProjectArchived } = await importService();

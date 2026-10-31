@@ -195,13 +195,15 @@ export function ProjectModel({
 
   // A draft that is drafting is read again until it is done; leaving the page stops it.
   const drafting = draft?.status === "drafting";
+  // Catalogs being added are drafted in the background too, while the draft stays editable.
+  const followed = drafting || Boolean(draft?.items.adding);
   useEffect(() => {
-    if (!drafting) {
+    if (!followed) {
       return undefined;
     }
     const timer = window.setTimeout(() => void loadDraft(), DRAFT_POLL_MS);
     return () => window.clearTimeout(timer);
-  }, [drafting, loadDraft, reads]);
+  }, [followed, loadDraft, reads]);
 
   const generate = async (discardDecisions: boolean) => {
     setGenerating(true);
@@ -401,6 +403,7 @@ export function ProjectModel({
   const addCatalogsButton =
     canChangeCatalogs &&
     draft?.status === "ready" &&
+    !draft.items.adding &&
     [...catalogs.keys()].some((id) => !project.catalogIds.includes(id)) ? (
       <AppButton onClick={() => setAddingCatalogs(true)}>
         {t("bknProject.model.catalogs.add")}
@@ -412,12 +415,14 @@ export function ProjectModel({
         catalogs={catalogs}
         mode="add"
         onCancel={() => setAddingCatalogs(false)}
-        onSaved={(next) => {
+        onSaved={(next, adding) => {
           setAddingCatalogs(false);
           onProjectChange(next);
           message.success(t("bknProject.model.catalogs.added"));
-          // The draft is drafting the new tables now: read it to follow.
-          void loadDraft();
+          // The draft names the catalogs being added; it is read again until they are done.
+          if (adding) {
+            setDraft(adding);
+          }
         }}
         project={project}
       />
@@ -657,6 +662,15 @@ export function ProjectModel({
       {catalogsDialog}
       {addCatalogsDialog}
       {notices}
+      {draft.items.adding ? (
+        <Alert
+          message={t("bknProject.model.catalogs.adding", {
+            count: draft.items.adding.catalogIds.length,
+          })}
+          showIcon
+          type="info"
+        />
+      ) : null}
       {understanding}
       {draft.status === "drafting" ? (
         <EmptyStatePanel

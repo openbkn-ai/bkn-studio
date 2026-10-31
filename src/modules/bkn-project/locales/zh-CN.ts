@@ -131,10 +131,17 @@ export const bknProjectZhCN = {
         archived: "项目已归档，不能修改",
       },
       catalogs: {
+        adding: "正在从新增的 {{count}} 个数据目录发现候选，期间可以照常编辑草稿。",
+        adding_one: "正在从新增的 {{count}} 个数据目录发现候选，期间可以照常编辑草稿。",
+        adding_other: "正在从新增的 {{count}} 个数据目录发现候选，期间可以照常编辑草稿。",
+        addRefused: {
+          Drafting: "正在增加数据目录，请等这次完成后再增加。",
+          Stale: "草稿刚被修改过，请关闭后重新打开再增加。",
+        },
         add: "增加数据目录",
         addTitle: "增加数据目录",
         addHint: "AI 会为新增数据目录里的表起草对象和关系，已有的草稿和决定保持不变。",
-        added: "已增加数据目录，AI 正在为新增的表起草。",
+        added: "已增加数据目录，正在从新增的表发现候选。",
         change: "更换数据目录",
         choose: "选择数据目录",
         title: "项目的数据目录",
@@ -219,6 +226,16 @@ export const bknProjectZhCN = {
           identity: "为「{{name}}」选择了唯一标识 {{properties}}",
           restore: "把字段 {{field}} 恢复为「{{name}}」的属性 {{property}}",
           other: "修改了{{kind}}「{{name}}」",
+        },
+        addCatalogs: {
+          done: "增加了 {{count}} 个数据目录，发现 {{objects}} 个对象类、{{relations}} 个关系类",
+          done_one:
+            "增加了 {{count}} 个数据目录，发现 {{objects}} 个对象类、{{relations}} 个关系类",
+          done_other:
+            "增加了 {{count}} 个数据目录，发现 {{objects}} 个对象类、{{relations}} 个关系类",
+          failed: "增加 {{count}} 个数据目录时没能起草新表，可以再增加一次",
+          failed_one: "增加 {{count}} 个数据目录时没能起草新表，可以再增加一次",
+          failed_other: "增加 {{count}} 个数据目录时没能起草新表，可以再增加一次",
         },
         confirmation: {
           accept_partial: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",

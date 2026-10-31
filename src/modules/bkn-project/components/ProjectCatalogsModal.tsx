@@ -10,11 +10,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import {
-  addProjectCatalogs,
-  getProject,
-  setProjectCatalogs,
-} from "@/modules/bkn-project/services/project.service";
+import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
+import { addDraftCatalogs } from "@/modules/bkn-project/services/draft.service";
+import { getProject, setProjectCatalogs } from "@/modules/bkn-project/services/project.service";
+import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 
 import styles from "./ProjectModel.module.css";
@@ -35,7 +34,8 @@ export function ProjectCatalogsModal({
   catalogs: Map<string, string>;
   mode?: "add" | "replace";
   onCancel: () => void;
-  onSaved: (project: Project) => void;
+  /** With the draft adding replied, when catalogs were added. */
+  onSaved: (project: Project, draft?: Draft) => void;
   project: Project;
 }) {
   const { t } = useTranslation();
@@ -59,13 +59,19 @@ export function ProjectCatalogsModal({
     setError(null);
     try {
       if (adding) {
-        await addProjectCatalogs(project.id, selected);
-        onSaved(await getProject(project.id));
+        const draft = await addDraftCatalogs(project.id, selected);
+        onSaved(await getProject(project.id), draft);
       } else {
         onSaved(await setProjectCatalogs(project.id, selected));
       }
     } catch (cause) {
-      setError(extractRequestErrorMessage(cause));
+      // Adding is refused while catalogs are being added, or on a draft changed since it was read.
+      const code = adding ? draftErrorCode(cause) : undefined;
+      setError(
+        code === "Drafting" || code === "Stale"
+          ? t(`bknProject.model.catalogs.addRefused.${code}`)
+          : extractRequestErrorMessage(cause),
+      );
     } finally {
       setSaving(false);
     }
