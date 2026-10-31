@@ -18,6 +18,7 @@ import {
   whoDecided,
 } from "@/modules/bkn-project/components/draft/changes";
 import type { DraftItemActions } from "@/modules/bkn-project/components/draft/DraftTables";
+import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
 import type { Draft, DraftObjectType, DraftRelationType } from "@/modules/bkn-project/types/draft";
 import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
 
@@ -64,6 +65,53 @@ export function DraftChangesPanel({
     return objectType && !objectType.incrementalKey;
   });
 
+  // What waits, in order: identities, relation ends, then update fields. A few at first.
+  const rows = [
+    ...waiting.map((objectType) => (
+      <li className={styles.change} key={`identity-${objectType.id}`}>
+        <span className={styles.changeText}>
+          {t("bknProject.model.changes.needsIdentity", { name: objectType.name })}
+          <NeededBy questions={neededBy.get(`object_types/${objectType.id}`)} />
+        </span>
+        <AppButton
+          aria-label={t("bknProject.model.identity.choose", { name: objectType.name })}
+          disabled={disabled}
+          onClick={() => actions.onChooseIdentity(objectType)}
+          size="small"
+          type="primary"
+        >
+          {t("bknProject.model.identity.chooseLabel")}
+        </AppButton>
+      </li>
+    )),
+    ...unadoptedEnds.map((relation) => (
+      <li className={styles.change} key={`ends-${relation.id}`}>
+        <span className={styles.changeText}>
+          {t("bknProject.model.changes.unadoptedEnd", { name: relation.name })}
+          <NeededBy questions={neededBy.get(`relation_types/${relation.id}`)} />
+        </span>
+        <AppButton
+          aria-label={t("bknProject.model.changes.unadoptItem", { name: relation.name })}
+          disabled={disabled}
+          onClick={() => actions.onAdopt("relation_types", relation, false)}
+          size="small"
+        >
+          {t("bknProject.model.changes.unadopt")}
+        </AppButton>
+      </li>
+    )),
+    ...suggested.map((item) => (
+      <UpdateFieldRow
+        disabled={disabled}
+        item={item}
+        key={`update-field-${item.itemId}`}
+        objectType={objectTypes.get(item.itemId)!}
+        onSet={onSetUpdateField}
+      />
+    )),
+  ];
+  const waitingRows = useCollapsedList(rows);
+
   if (!waiting.length && !unadoptedEnds.length && !suggested.length && !decisions.length) {
     return (
       <EmptyStatePanel
@@ -78,50 +126,8 @@ export function DraftChangesPanel({
       {waiting.length || unadoptedEnds.length || suggested.length ? (
         <section>
           <h3 className={styles.sectionTitle}>{t("bknProject.model.changes.waitingTitle")}</h3>
-          <ul className={styles.changes}>
-            {waiting.map((objectType) => (
-              <li className={styles.change} key={`identity-${objectType.id}`}>
-                <span className={styles.changeText}>
-                  {t("bknProject.model.changes.needsIdentity", { name: objectType.name })}
-                  <NeededBy questions={neededBy.get(`object_types/${objectType.id}`)} />
-                </span>
-                <AppButton
-                  aria-label={t("bknProject.model.identity.choose", { name: objectType.name })}
-                  disabled={disabled}
-                  onClick={() => actions.onChooseIdentity(objectType)}
-                  size="small"
-                  type="primary"
-                >
-                  {t("bknProject.model.identity.chooseLabel")}
-                </AppButton>
-              </li>
-            ))}
-            {unadoptedEnds.map((relation) => (
-              <li className={styles.change} key={`ends-${relation.id}`}>
-                <span className={styles.changeText}>
-                  {t("bknProject.model.changes.unadoptedEnd", { name: relation.name })}
-                  <NeededBy questions={neededBy.get(`relation_types/${relation.id}`)} />
-                </span>
-                <AppButton
-                  aria-label={t("bknProject.model.changes.unadoptItem", { name: relation.name })}
-                  disabled={disabled}
-                  onClick={() => actions.onAdopt("relation_types", relation, false)}
-                  size="small"
-                >
-                  {t("bknProject.model.changes.unadopt")}
-                </AppButton>
-              </li>
-            ))}
-            {suggested.map((item) => (
-              <UpdateFieldRow
-                disabled={disabled}
-                item={item}
-                key={`update-field-${item.itemId}`}
-                objectType={objectTypes.get(item.itemId)!}
-                onSet={onSetUpdateField}
-              />
-            ))}
-          </ul>
+          <ul className={styles.changes}>{waitingRows.visible}</ul>
+          {waitingRows.toggle}
         </section>
       ) : null}
       {decisions.length ? (

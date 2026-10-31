@@ -22,6 +22,7 @@ import {
   publishErrorText,
   refusalText,
 } from "@/modules/bkn-project/components/release/releaseMessages";
+import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
 import {
   commitDrift,
@@ -397,6 +398,8 @@ function CheckRow({
   onSettle: (action: "commitDrift" | "sync") => void;
 }) {
   const { t } = useTranslation();
+  // The items a check names, such as those whose tables are gone: a few at first.
+  const details = useCollapsedList(checkDetailRows(t, check));
   const icon = check.passed ? (
     <CheckCircleFilled className={styles.passed} />
   ) : check.accept ? (
@@ -414,13 +417,14 @@ function CheckRow({
         {checkTitle(t, check.code)}
       </span>
       {check.passed ? null : <p className={styles.detail}>{checkReasonText(t, check)}</p>}
-      {checkDetailRows(t, check).length ? (
+      {details.visible.length ? (
         <ul className={styles.detailRows}>
-          {checkDetailRows(t, check).map((row, index) => (
+          {details.visible.map((row, index) => (
             <li key={index}>{row}</li>
           ))}
         </ul>
       ) : null}
+      {details.toggle ? <span className={styles.indent}>{details.toggle}</span> : null}
       {check.accept ? (
         <Checkbox
           checked={accepted}

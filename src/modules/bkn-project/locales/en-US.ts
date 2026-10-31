@@ -619,6 +619,12 @@ export const bknProjectEnUS = {
         draftUpdated: "Updated {{time}}",
       },
     },
+    collapsedList: {
+      showAll: "Show all ({{count}})",
+      showAll_one: "Show all ({{count}})",
+      showAll_other: "Show all ({{count}})",
+      collapse: "Show fewer",
+    },
     listSeparator: ", ",
     sentenceSeparator: " ",
     understand: {
