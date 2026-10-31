@@ -142,6 +142,7 @@ describe("ObjectTypeDataAttributeEditor overflowing labels", () => {
     const shortName = screen.getByText("短显示名");
     setTextDimensions(shortName, 120, 80);
     fireEvent.mouseEnter(shortName);
+    await new Promise((resolve) => window.setTimeout(resolve, 200));
     expect(screen.queryByRole("tooltip")).toBeNull();
 
     for (const text of [
