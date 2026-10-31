@@ -1666,6 +1666,9 @@ export const bknProjectEnUS = {
           primary_key_fields: "identity field",
           incremental_fields: "update field",
         },
+        fullRebuildOnly: "No update field, so it rebuilds in full only",
+        noTimeField: "This object type has no time field to use",
+        chooseUpdateField: "Choose an update field",
         outcome: {
           created: "Build started",
           existing: "A build is already running",
@@ -1678,7 +1681,7 @@ export const bknProjectEnUS = {
             primary_key_fields:
               "The identity field's type cannot be used for an index (it must be a number or text).",
             incremental_fields:
-              "No update field can be used. You can choose one for the object type in ontology modeling.",
+              "The update field's type cannot drive refreshes; it needs to be a date or time.",
             other: "The table lacks settings the build needs.",
           },
         },

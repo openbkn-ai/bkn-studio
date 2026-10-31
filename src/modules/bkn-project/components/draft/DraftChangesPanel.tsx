@@ -6,7 +6,7 @@
  */
 
 import { Select } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { formatDateTime } from "@/framework/i18n/format";
@@ -18,9 +18,13 @@ import {
   whoDecided,
 } from "@/modules/bkn-project/components/draft/changes";
 import type { DraftItemActions } from "@/modules/bkn-project/components/draft/DraftTables";
-import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
+import {
+  COLLAPSED_ITEMS,
+  useCollapsedList,
+} from "@/modules/bkn-project/components/useCollapsedList";
 import type { Draft, DraftObjectType, DraftRelationType } from "@/modules/bkn-project/types/draft";
 import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
+import { updateFieldFocus } from "@/modules/bkn-project/types/workspace";
 
 import styles from "./DraftTables.module.css";
 
@@ -34,6 +38,7 @@ export function DraftChangesPanel({
   currentUserId,
   directory,
   draft,
+  focus,
   neededBy,
   onSetUpdateField,
   unadoptedEnds,
@@ -44,6 +49,8 @@ export function DraftChangesPanel({
   /** Names of people, when the caller may read them. */
   directory: ReadonlyMap<string, string>;
   draft: Draft;
+  /** The item a link asked for, such as `update-field:<object type>`: it is scrolled to and marked. */
+  focus?: string | null;
   /** The scenario questions that need a waiting item, by `kind/item_id`. */
   neededBy: ReadonlyMap<string, PendingQuestion[]>;
   /** Sets an object type's update field; true once the draft has it. */
@@ -103,6 +110,7 @@ export function DraftChangesPanel({
     ...suggested.map((item) => (
       <UpdateFieldRow
         disabled={disabled}
+        focused={focus === updateFieldFocus(item.itemId)}
         item={item}
         key={`update-field-${item.itemId}`}
         objectType={objectTypes.get(item.itemId)!}
@@ -110,7 +118,13 @@ export function DraftChangesPanel({
       />
     )),
   ];
-  const waitingRows = useCollapsedList(rows);
+  // A link to an update field opens the list when that item is folded away.
+  const focusedAt = suggested.findIndex((item) => focus === updateFieldFocus(item.itemId));
+  const waitingRows = useCollapsedList(
+    rows,
+    COLLAPSED_ITEMS,
+    focusedAt >= 0 && waiting.length + unadoptedEnds.length + focusedAt >= COLLAPSED_ITEMS,
+  );
 
   if (!waiting.length && !unadoptedEnds.length && !suggested.length && !decisions.length) {
     return (
@@ -175,11 +189,14 @@ export function DraftChangesPanel({
  */
 function UpdateFieldRow({
   disabled,
+  focused,
   item,
   objectType,
   onSet,
 }: {
   disabled: boolean;
+  /** A link asked for this item: it is scrolled into view and marked. */
+  focused: boolean;
   item: PendingItem;
   objectType: DraftObjectType;
   onSet?: (objectTypeId: string, property: string) => Promise<boolean>;
@@ -189,11 +206,17 @@ function UpdateFieldRow({
   const [value, setValue] = useState<string | undefined>(values[0]);
   const [saving, setSaving] = useState(false);
   const allowed = Boolean(onSet) && item.updateField?.allowed !== false;
+  const row = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (focused) {
+      row.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    }
+  }, [focused]);
   const label = (name: string) =>
     objectType.properties.find((property) => property.name === name)?.displayName || name;
 
   return (
-    <li className={styles.change}>
+    <li className={focused ? `${styles.change} ${styles.changeFocused}` : styles.change} ref={row}>
       <span className={styles.changeText}>
         <strong>{t("bknProject.model.changes.updateField.title")}</strong>
         {t("bknProject.model.changes.updateField.description", { name: objectType.name })}

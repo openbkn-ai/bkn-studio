@@ -147,3 +147,9 @@
 .tags :global(.ant-tag) {
   margin-inline-end: 0;
 }
+
+/* The item a link led to, marked until the page is left. */
+.changeFocused {
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 2px;
+}

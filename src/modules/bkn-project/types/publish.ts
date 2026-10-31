@@ -179,6 +179,8 @@ export type IndexBuild = {
 
 export type IndexItem = {
   build: IndexBuild | null;
+  /** No update field: the identity's fields stand in, so the index refreshes only by a full build. */
+  fullRebuildOnly: boolean;
   id: string;
   /** For `not_configured`: `primary_key_fields`, `incremental_fields`. */
   missing: string[];
@@ -187,6 +189,11 @@ export type IndexItem = {
   table: DraftTable;
   /** A build running for the table; also on a ready index being rebuilt. */
   task: { id: string; status: string } | null;
+  /**
+   * The update field chosen (`property`, empty for none), the date and time properties it can be
+   * (`candidates`), and `pending` while the modeling page asks for one.
+   */
+  updateField: { candidates: string[]; pending: boolean; property: string } | null;
 };
 
 export type ProjectIndex = {

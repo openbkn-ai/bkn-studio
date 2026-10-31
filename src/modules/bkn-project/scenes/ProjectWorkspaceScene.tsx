@@ -182,6 +182,7 @@ export function ProjectWorkspaceScene({
               />
             ) : section === "model" ? (
               <ProjectModel
+                focus={searchParams.get("focus")}
                 initialTab={searchParams.get("tab")}
                 // The check and the local indexes of a confirmation show on the release page.
                 onConfirmed={() => void navigate(projectSectionPath(project.id, "release"))}
