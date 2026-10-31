@@ -225,7 +225,7 @@ test("community image: from tables and requirements to a published, switched rel
   // object types, which the questions' needs and the test-question checks rely on.
   await test.step("5. draft the requirements from the document", async () => {
     await openSection(page, "业务场景");
-    await page.getByRole("button", { name: "从资料起草" }).click();
+    await page.getByRole("button", { name: "生成业务场景" }).click();
     await expect(page.getByText("需求规格第 1 版 · 已起草")).toBeVisible(BACKGROUND);
     const questions = page.getByText(/^场景问题 (\d+)$/);
     await expect(questions).not.toHaveText("场景问题 0");
