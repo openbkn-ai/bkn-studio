@@ -8,8 +8,9 @@
 /** The pages of a project workspace, as they appear in its URL. */
 export const PROJECT_SECTIONS = [
   "overview",
-  "requirements",
+  "resources",
   "model",
+  "scenarios",
   "instances",
   "release",
   "builds",
@@ -23,6 +24,15 @@ export const KNOWLEDGE_BASE_SECTIONS: readonly ProjectSection[] = ["instances", 
 export function isProjectSection(value: string | undefined): value is ProjectSection {
   return (PROJECT_SECTIONS as readonly string[]).includes(value ?? "");
 }
+
+/**
+ * Pages that moved, by the address they had: links and bookmarks to them open where their content
+ * is now. The requirements page held the scenarios and their documents; the documents moved to
+ * the requirements and resources page.
+ */
+export const MOVED_SECTIONS: Readonly<Record<string, ProjectSection>> = {
+  requirements: "scenarios",
+};
 
 /** What a link to the modeling page asks it to show: the update field an object type waits for. */
 export const updateFieldFocus = (objectTypeId: string) => `update-field:${objectTypeId}`;

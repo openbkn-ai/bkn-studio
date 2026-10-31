@@ -15,18 +15,22 @@ import { expectNoForbiddenWords } from "../../helpers/forbidden-words";
 const LOCALES = [
   {
     locale: "zh-CN",
-    sections: ["项目概览", "需求场景", "本体建模", "确认与发布"],
-    documents: /^输入资料 \d+$/,
+    sections: ["项目概览", "需求与资源", "本体建模", "业务场景", "确认与发布"],
   },
   {
     locale: "en-US",
-    sections: ["Overview", "Requirements", "Ontology modeling", "Confirm and release"],
-    documents: /^Documents \d+$/,
+    sections: [
+      "Overview",
+      "Requirements and resources",
+      "Ontology modeling",
+      "Business scenarios",
+      "Confirm and release",
+    ],
   },
 ] as const;
 
-// Requirements and ontology modeling switch between views; the other sections have none.
-const SECTIONS_WITH_VIEWS = [1, 2];
+// Ontology modeling and the business scenarios switch between views; the other sections have none.
+const SECTIONS_WITH_VIEWS = [2, 3];
 
 async function openSection(page: Page, name: string) {
   const item = page.getByRole("navigation").getByRole("button", { name, exact: true });
@@ -58,7 +62,7 @@ async function closeDialog(page: Page) {
   await expect(page.getByRole("dialog")).toBeHidden();
 }
 
-for (const { locale, sections, documents } of LOCALES) {
+for (const { locale, sections } of LOCALES) {
   test(`bkn project (${locale}): the community image shows no professional wording`, async ({
     page,
   }) => {
@@ -85,9 +89,9 @@ for (const { locale, sections, documents } of LOCALES) {
       await scanSection(page, section, SECTIONS_WITH_VIEWS.includes(index));
     }
 
-    // Uploading accepts Markdown and plain text only; PDF / DOCX belong to the extension.
+    // Uploading accepts Markdown and plain text only; PDF / DOCX belong to the extension. The
+    // documents are on the requirements and resources page.
     await openSection(page, sections[1]);
-    await page.getByText(documents).click();
     await page.getByRole("button", { name: /上传文档|Upload documents/ }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expectNoForbiddenWords(page, "upload dialog");

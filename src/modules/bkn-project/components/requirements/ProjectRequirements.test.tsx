@@ -15,6 +15,7 @@ import type { Project } from "@/modules/bkn-project/types/project";
 import type { RequirementDocument, Requirements } from "@/modules/bkn-project/types/requirements";
 
 const getRequirementsMock = vi.hoisted(() => vi.fn());
+const onGoToResources = vi.hoisted(() => vi.fn());
 const listDocumentsMock = vi.hoisted(() => vi.fn());
 const getDocumentMock = vi.hoisted(() => vi.fn());
 const draftRequirementsMock = vi.hoisted(() => vi.fn());
@@ -184,7 +185,13 @@ function requirements(extra: Partial<Requirements> = {}): Requirements {
 }
 
 function renderPage(owner = true) {
-  return renderWithoutAntdStyles(<ProjectRequirements ownerIsCaller={owner} project={project} />);
+  return renderWithoutAntdStyles(
+    <ProjectRequirements
+      onGoToResources={onGoToResources}
+      ownerIsCaller={owner}
+      project={project}
+    />,
+  );
 }
 
 describe("ProjectRequirements", () => {
@@ -289,7 +296,7 @@ describe("ProjectRequirements", () => {
     expect(screen.getByText("约束")).toBeInTheDocument();
   });
 
-  it("starts from the documents before the first drafting, and drafts from them", async () => {
+  it("drafts from the documents before the first drafting, which are uploaded elsewhere", async () => {
     getRequirementsMock.mockResolvedValueOnce(null);
     draftRequirementsMock.mockResolvedValue(
       requirements({ spec: mapSpec({}), status: "drafting", version: 1 }),
@@ -299,13 +306,26 @@ describe("ProjectRequirements", () => {
     expect(
       await screen.findByText("还没有需求规格。上传需求文档后，从资料起草。"),
     ).toBeInTheDocument();
-    expect(screen.getByText("supply-prd.md")).toBeInTheDocument();
-    expect(screen.getByText("2 KB")).toBeInTheDocument();
+    // The documents are managed on the requirements and resources page, not here.
+    expect(screen.queryByText("supply-prd.md")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "去上传文档" }));
+    expect(onGoToResources).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "从资料起草" }));
     await waitFor(() => expect(draftRequirementsMock).toHaveBeenCalledWith("p1", false));
     expect(
       await screen.findByText("正在从资料起草需求规格，通常需要一两分钟。"),
     ).toBeInTheDocument();
+  });
+
+  it("leads to uploading documents when there are none to draft from", async () => {
+    getRequirementsMock.mockResolvedValueOnce(null);
+    listDocumentsMock.mockResolvedValueOnce([]);
+    renderPage();
+
+    expect(
+      await screen.findByText("还没有需求文档。先在“需求与资源”里上传需求文档，再起草业务场景。"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "从资料起草" })).toBeDisabled();
   });
 
   it("asks before drafting again discards what was decided", async () => {
@@ -346,60 +366,6 @@ describe("ProjectRequirements", () => {
     renderPage();
     expect(await screen.findByText("起草超时了，请重新起草。")).toBeInTheDocument();
     expect(screen.queryByText(/agent_timeout/)).toBeNull();
-  });
-
-  it("uploads documents and says how each went", async () => {
-    uploadDocumentsMock.mockResolvedValue([
-      { code: "", documentId: "d3", name: "new.md", outcome: "created" },
-      { code: "Requirement.UnsupportedFormat", documentId: "", name: "a.pdf", outcome: "rejected" },
-    ]);
-    renderPage();
-    await screen.findByText("某个客户哪些订单晚了？");
-
-    fireEvent.click(screen.getByText(/^输入资料/));
-    fireEvent.click(screen.getByRole("button", { name: "上传文档" }));
-    const dialog = within(await screen.findByRole("dialog"));
-    const input = dialog
-      .getByText("拖入文件，或点击选择")
-      .closest(".ant-upload")!
-      .querySelector("input")!;
-    // Two files of one name stay two, and one of them can be taken out on its own.
-    fireEvent.change(input, {
-      target: { files: [new File(["# x"], "new.md"), new File(["# y"], "new.md")] },
-    });
-    const listed = () => document.querySelectorAll(".ant-upload-list-item");
-    await waitFor(() => expect(listed()).toHaveLength(2));
-    fireEvent.click(listed()[1].querySelector(".ant-upload-list-item-actions button")!);
-    await waitFor(() => expect(listed()).toHaveLength(1));
-    fireEvent.click(await dialog.findByRole("button", { name: "上传所选" }));
-    expect(uploadDocumentsMock.mock.calls[0][1]).toHaveLength(1);
-
-    expect(await dialog.findByText("已上传")).toBeInTheDocument();
-    expect(dialog.getByText("只支持 Markdown 和纯文本文件")).toBeInTheDocument();
-    fireEvent.click(dialog.getByRole("button", { name: /完\s*成/ }));
-    // Closing reads the documents again, once; the files went up once.
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 5000 });
-    await waitFor(() => expect(listDocumentsMock).toHaveBeenCalledTimes(2), { timeout: 5000 });
-    expect(uploadDocumentsMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("lets the owner type a document; others only read", async () => {
-    setDocumentTypeMock.mockResolvedValue(undefined);
-    const view = renderPage();
-    await screen.findByText("某个客户哪些订单晚了？");
-    fireEvent.click(screen.getByText(/^输入资料/));
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "「supply-prd.md」的文档类型" }));
-    fireEvent.click(await screen.findByTitle("标准"));
-    await waitFor(() => expect(setDocumentTypeMock).toHaveBeenCalledWith("p1", "d1", "standard"));
-    view.unmount();
-
-    renderPage(false);
-    await screen.findByText("某个客户哪些订单晚了？");
-    expect(screen.queryByRole("button", { name: "重新起草" })).toBeNull();
-    fireEvent.click(screen.getByText(/^输入资料/));
-    expect(screen.getByText("产品需求")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "上传文档" })).toBeNull();
-    expect(screen.queryByRole("combobox")).toBeNull();
   });
 
   describe("editing", () => {

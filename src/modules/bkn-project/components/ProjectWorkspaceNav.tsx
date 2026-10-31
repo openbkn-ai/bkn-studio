@@ -11,6 +11,7 @@ import {
   DatabaseOutlined,
   FileSearchOutlined,
   FileTextOutlined,
+  FolderOpenOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   RocketOutlined,
@@ -33,7 +34,12 @@ type NavGroup = { sections: ProjectSection[]; titleKey?: string };
 
 const NAV_GROUPS: NavGroup[] = [
   { sections: ["overview"] },
-  { sections: ["requirements", "model", "instances"], titleKey: "bknProject.workspace.groupBuild" },
+  // In the order a project is built: its inputs, the ontology, the scenarios that test it, then
+  // the knowledge base drawn by the ontology.
+  {
+    sections: ["resources", "model", "scenarios", "instances"],
+    titleKey: "bknProject.workspace.groupBuild",
+  },
   { sections: ["release", "builds"], titleKey: "bknProject.workspace.groupRelease" },
 ];
 
@@ -43,7 +49,8 @@ const ICONS: Record<ProjectSection, ReactNode> = {
   model: <ApartmentOutlined />,
   overview: <FileTextOutlined />,
   release: <RocketOutlined />,
-  requirements: <FileSearchOutlined />,
+  resources: <FolderOpenOutlined />,
+  scenarios: <FileSearchOutlined />,
 };
 
 /**
@@ -57,7 +64,7 @@ export function ProjectWorkspaceNav({
   projectId,
 }: {
   active: ProjectSection;
-  /** How many items a page holds, such as scenario questions or object types; none while unknown. */
+  /** How many items a page holds, such as catalogs, object types or questions; none while unknown. */
   counts?: Partial<Record<ProjectSection, number>>;
   projectId: string;
 }) {

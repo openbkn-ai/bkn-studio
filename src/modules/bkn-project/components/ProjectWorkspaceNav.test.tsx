@@ -40,7 +40,7 @@ function Location() {
   return <span data-testid="location">{useLocation().pathname}</span>;
 }
 
-function renderNav(counts?: Partial<Record<"model" | "requirements", number>>) {
+function renderNav(counts?: Partial<Record<"model" | "resources" | "scenarios", number>>) {
   render(
     <MemoryRouter initialEntries={["/bkn-project/p1/overview"]}>
       <ProjectWorkspaceNav active="overview" counts={counts} projectId="p1" />
@@ -64,9 +64,10 @@ describe("ProjectWorkspaceNav", () => {
   });
 
   it("counts what a page holds, and folds to icons", () => {
-    renderNav({ model: 13, requirements: 10 });
-    expect(screen.getByRole("button", { name: /requirements/ })).toHaveTextContent("10");
+    renderNav({ model: 13, resources: 2, scenarios: 10 });
+    expect(screen.getByRole("button", { name: /resources/ })).toHaveTextContent("2");
     expect(screen.getByRole("button", { name: /model/ })).toHaveTextContent("13");
+    expect(screen.getByRole("button", { name: /scenarios/ })).toHaveTextContent("10");
 
     fireEvent.click(screen.getByTitle("shell.collapseSidenav"));
     // Folded: the names and counts give way to the icons; each page keeps its name as its title.
@@ -75,13 +76,14 @@ describe("ProjectWorkspaceNav", () => {
     expect(screen.getByTitle("bknProject.workspace.sections.overview")).toBeInTheDocument();
   });
 
-  it("shows the four community pages in two groups, with no knowledge-base page", () => {
+  it("shows the community pages in the order a project is built, with no knowledge-base page", () => {
     renderNav();
 
     expect(itemLabels()).toEqual([
       "bknProject.workspace.sections.overview",
-      "bknProject.workspace.sections.requirements",
+      "bknProject.workspace.sections.resources",
       "bknProject.workspace.sections.model",
+      "bknProject.workspace.sections.scenarios",
       "bknProject.workspace.sections.release",
     ]);
     expect(screen.getByText("bknProject.workspace.groupBuild")).toBeInTheDocument();
@@ -98,8 +100,9 @@ describe("ProjectWorkspaceNav", () => {
 
     expect(itemLabels()).toEqual([
       "bknProject.workspace.sections.overview",
-      "bknProject.workspace.sections.requirements",
+      "bknProject.workspace.sections.resources",
       "bknProject.workspace.sections.model",
+      "bknProject.workspace.sections.scenarios",
       "bknProject.workspace.sections.instancesprofessional",
       "bknProject.workspace.sections.release",
       "bknProject.workspace.sections.buildsprofessional",
