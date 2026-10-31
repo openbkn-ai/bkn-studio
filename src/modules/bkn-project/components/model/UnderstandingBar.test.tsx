@@ -183,6 +183,39 @@ describe("UnderstandingBar", () => {
     await waitFor(() => expect(messageMock.error).toHaveBeenCalledWith("项目还没有选择数据目录"));
   });
 
+  it("reads the advice again once understanding ends, and says no numbers it was not given", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getUnderstandingMock
+      .mockResolvedValueOnce([catalog(["running", "pending"])])
+      .mockResolvedValue([catalog(["completed", "completed"])]);
+    getProjectStatusMock
+      .mockResolvedValueOnce({ hints: [{ code: "catalogs_unnamed" }], nextActions: [] })
+      .mockResolvedValue({ hints: [], nextActions: [] });
+    renderBar();
+    await screen.findByText("语义理解：已完成 0 / 2 张表");
+    expect(getProjectStatusMock).toHaveBeenCalledTimes(1);
+
+    await act(() => vi.advanceTimersByTimeAsync(UNDERSTANDING_POLL_MS));
+    expect(await screen.findByText("语义理解已完成")).toBeInTheDocument();
+    await waitFor(() => expect(getProjectStatusMock).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/大多数表还没有业务名称/)).toBeNull();
+  });
+
+  it("words the advice without numbers when the counts are missing", async () => {
+    getUnderstandingMock.mockResolvedValue([catalog(["not_started"])]);
+    getProjectStatusMock.mockResolvedValue({
+      hints: [{ code: "catalogs_unnamed" }],
+      nextActions: [],
+    });
+    renderBar();
+    expect(
+      await screen.findByText(
+        "目录里大多数表还没有业务名称，起草出的名称会直接用表名和字段名。建议先做语义理解，再起草。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/0\/0/)).toBeNull();
+  });
+
   it("shows the progress, estimates minutes for two tables or more, and stops polling when done", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     getUnderstandingMock

@@ -130,6 +130,14 @@ export function UnderstandingBar({
 
   const counts = catalogs ? tally(catalogs) : null;
   const running = Boolean(counts?.remaining);
+  // Once a run ends, the tables may have their names: the advice is read again, not kept from before.
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && !running) {
+      void loadHint();
+    }
+    wasRunning.current = running;
+  }, [loadHint, running]);
   useEffect(() => {
     if (!running) {
       return undefined;
@@ -216,10 +224,14 @@ export function UnderstandingBar({
               ? t("bknProject.understand.hint.ownerOnly")
               : undefined
           }
-          message={t("bknProject.understand.hint.unnamed", {
-            count: unnamed.count,
-            total: unnamed.total,
-          })}
+          message={
+            unnamed.count !== undefined && unnamed.total !== undefined
+              ? t("bknProject.understand.hint.unnamed", {
+                  count: unnamed.count,
+                  total: unnamed.total,
+                })
+              : t("bknProject.understand.hint.unnamedUncounted")
+          }
           showIcon
           type="warning"
         />

@@ -235,10 +235,11 @@ function mapStatus(status: BackendStatus): ProjectStatus {
           updateTime: status.draft.update_time,
         }
       : null,
+    // A count the server did not give stays unsaid, never read as zero.
     hints: (status.hints ?? []).map((hint) => ({
       code: hint.code,
-      count: hint.count ?? 0,
-      total: hint.total ?? 0,
+      ...(hint.count === undefined ? {} : { count: hint.count }),
+      ...(hint.total === undefined ? {} : { total: hint.total }),
     })),
     nextActions: (status.next_actions ?? []).map((action) => ({
       accepts: action.accepts ?? [],

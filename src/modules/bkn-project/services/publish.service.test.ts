@@ -195,6 +195,19 @@ describe("publish.service", () => {
     expect((await getProjectStatus("p/1")).hints).toEqual([
       { code: "catalogs_unnamed", count: 18, total: 20 },
     ]);
+
+    mockGet.mockResolvedValueOnce({
+      data: {
+        blockers: null,
+        hints: [{ code: "catalogs_unnamed" }],
+        next_actions: null,
+        stage: "no_draft",
+        stale: null,
+        undecided: 0,
+      },
+    });
+    // A count not given is not made up as zero.
+    expect((await getProjectStatus("p/1")).hints).toEqual([{ code: "catalogs_unnamed" }]);
   });
 
   it("reads the release a published project has, and the version a review suggests", async () => {

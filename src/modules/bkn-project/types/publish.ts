@@ -72,7 +72,7 @@ export type ProjectStatus = {
   dataSources: DataSources | null;
   draft: { decisions: number; placeholders: number; status: string; updateTime: number } | null;
   /** Advice that never blocks, such as `catalogs_unnamed` with how many tables lack a description. */
-  hints: { code: string; count: number; total: number }[];
+  hints: { code: string; count?: number; total?: number }[];
   nextActions: ProjectNextAction[];
   /** The project's release, once the newest release is its own and came after its confirmation. */
   release: { inUse: boolean; networkId: string; version: string } | null;

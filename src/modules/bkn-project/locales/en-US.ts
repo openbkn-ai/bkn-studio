@@ -612,6 +612,8 @@ export const bknProjectEnUS = {
           "Most tables in the catalogs have no business names yet ({{count}} of {{total}} has no description), so drafting would name items after table and field names. Run semantic understanding first, then draft.",
         unnamed_other:
           "Most tables in the catalogs have no business names yet ({{count}} of {{total}} have no description), so drafting would name items after table and field names. Run semantic understanding first, then draft.",
+        unnamedUncounted:
+          "Most tables in the catalogs have no business names yet, so drafting would name items after table and field names. Run semantic understanding first, then draft.",
         run: "Run semantic understanding",
         ownerOnly: "Only the project owner can run semantic understanding",
       },
