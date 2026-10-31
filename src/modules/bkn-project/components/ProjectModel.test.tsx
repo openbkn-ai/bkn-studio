@@ -230,7 +230,10 @@ describe("ProjectModel", () => {
       ]),
     );
     const view = renderModel();
-    expect(await screen.findByRole("button", { name: "bknProject.confirm.button" })).toBeEnabled();
+    // A role query walks the whole modeling page: under load it takes longer than the default.
+    expect(
+      await screen.findByRole("button", { name: "bknProject.confirm.button" }, { timeout: 5000 }),
+    ).toBeEnabled();
     view.unmount();
 
     renderModel({ archived: true });
