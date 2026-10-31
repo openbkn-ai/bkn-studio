@@ -6,7 +6,7 @@
  */
 
 import { EditOutlined } from "@ant-design/icons";
-import { Switch, Tooltip } from "antd";
+import { Switch, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -121,9 +121,56 @@ function editColumn<T extends EditableItem>(
 }
 
 /** The identity of an object type with its basis, its counts and their warnings. */
-export function IdentityEvidence({ objectType }: { objectType: DraftObjectType }) {
+export function IdentityEvidence({
+  compact = false,
+  objectType,
+}: {
+  /**
+   * In a table cell: the identity by its properties' display names, warnings as tags, and the
+   * field names and the counts in a tooltip, not in the cell.
+   */
+  compact?: boolean;
+  objectType: DraftObjectType;
+}) {
   const { t } = useTranslation();
   const { key } = objectType;
+  if (compact) {
+    const label = (name: string) =>
+      objectType.properties.find((property) => property.name === name)?.displayName || name;
+    const details = [
+      objectType.primaryKeys.join(t("bknProject.listSeparator")),
+      say(t, keySourcePhrase(key.source)),
+      say(t, keyCountPhrase(key)),
+    ]
+      .filter(Boolean)
+      .join(t("bknProject.model.identity.detailSeparator"));
+    return (
+      <div className={styles.evidence}>
+        {objectType.needsIdentity ? (
+          <Tooltip title={details}>
+            <span className={styles.identityName}>
+              <Tag color="warning">{t("bknProject.model.identityPending")}</Tag>
+            </span>
+          </Tooltip>
+        ) : (
+          <Tooltip title={details}>
+            <span className={styles.identityName}>
+              {objectType.primaryKeys.map(label).join(t("bknProject.listSeparator"))}
+            </span>
+          </Tooltip>
+        )}
+        {keyWarnings(key).length ? (
+          <span className={styles.tags}>
+            {keyWarnings(key).map((warning) => (
+              <Tag color="warning" key={warning.key}>
+                {say(t, warning)}
+              </Tag>
+            ))}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <div className={styles.evidence}>
       {objectType.needsIdentity ? (
@@ -150,10 +197,11 @@ function TableSource({
   catalogNames: Record<string, string>;
   table: DraftTable;
 }) {
+  // The table by its name; which catalog it is in is a tooltip, not part of the cell.
   return (
-    <span className={styles.muted}>
-      {table.name} · {catalogNames[table.catalogId] ?? table.catalogId}
-    </span>
+    <Tooltip title={catalogNames[table.catalogId] ?? table.catalogId}>
+      <span>{table.name}</span>
+    </Tooltip>
   );
 }
 
@@ -196,7 +244,7 @@ export function DraftObjectsTable({
       key: "identity",
       render: (_value, record) => (
         <div className={styles.evidence}>
-          <IdentityEvidence objectType={record} />
+          <IdentityEvidence compact objectType={record} />
           <AppButton
             aria-label={t(
               record.needsIdentity

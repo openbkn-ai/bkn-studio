@@ -152,6 +152,7 @@ export const bknProjectEnUS = {
         saved: "Data catalogs changed. Drafting reads the new catalogs.",
       },
       identity: {
+        detailSeparator: "; ",
         title: "Choose the identity of {{name}}",
         intro:
           "The identity tells records apart; records with the same value become one instance. With a single property, its duplicates and empty values are counted over the whole table.",
@@ -1092,6 +1093,8 @@ export const bknProjectEnUS = {
           reference_time: "Reference time",
         },
         noInputs: "Asked about no given record",
+        slot: "<{{name}}>",
+        hasWarnings: "Needs attention",
         propertyGone: "The ontology has no such property",
         relativeWindow:
           "Counts the latest period up to the reference time; the question says how long",
@@ -1240,6 +1243,11 @@ export const bknProjectEnUS = {
           "There is new content since the last release; it can be published as v{{version}}.",
         waitCheck: "Publishing waits for the data check to pass.",
         waitConfirm: "Publishing waits for the draft to be confirmed and its data check to pass.",
+        state: {
+          ready: "Ready to publish",
+          published: "Published",
+          waiting: "Waiting",
+        },
         publishedTag: "Published v{{version}}",
         inUse: "Consumers use v{{version}}",
         regressionLabel: "Scenario question regression",

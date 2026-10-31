@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Collapse } from "antd";
+import { Alert, Collapse, Tag } from "antd";
 import dayjs from "dayjs";
 import { type ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
@@ -127,20 +127,22 @@ export function QuestionsView({
 }) {
   const { t } = useTranslation();
   const scenarioName = (id: string) => spec.scenarios.find((item) => item.id === id)?.name ?? id;
-  return (
-    <div className={styles.stack}>
-      <AddItem kind="questions" />
-      {spec.questions.length ? null : <Empty text={t(`${PREFIX}.questions.none`)} />}
-      {spec.questions.map((question) => (
-        <section className={styles.card} key={question.id}>
-          <div className={styles.row}>
-            <h4 className={styles.cardTitle}>{question.text}</h4>
-            <LightStatusTag tone={question.layer === "knowledge" ? "success" : "neutral"}>
-              {layerText(t, question.layer)}
-            </LightStatusTag>
-            <EditedTag edited={question.edited} />
-            <ItemActions itemId={question.id} kind="questions" label={question.text} />
-          </div>
+  // A question is a row: its text and tags, opened for its fields. Warnings head the opened row.
+  const items = spec.questions.map((question) => {
+    const warnings = [
+      question.notes.includes("capability_without_basis")
+        ? t(`${PREFIX}.questions.capabilityWithoutBasis`)
+        : "",
+      question.notes.includes("reference_time_unbound")
+        ? t(`${PREFIX}.questions.referenceTimeUnbound`)
+        : "",
+    ].filter(Boolean);
+    return {
+      children: (
+        <div className={styles.stack}>
+          {warnings.map((warning) => (
+            <Alert key={warning} message={warning} showIcon type="warning" />
+          ))}
           <div className={styles.field}>
             <Field label={t(`${PREFIX}.questions.type`)}>
               {question.type ? questionTypeText(t, question.type) : ""}
@@ -148,7 +150,9 @@ export function QuestionsView({
             <Field label={t(`${PREFIX}.questions.scenarios`)}>
               {question.scenarioIds.map(scenarioName).join(t("bknProject.listSeparator"))}
             </Field>
-            <Field label={t(`${PREFIX}.questions.template`)}>{question.template}</Field>
+            <Field label={t(`${PREFIX}.questions.template`)}>
+              <TemplateText drafted={drafted} question={question} spec={spec} />
+            </Field>
             {question.inputs ? (
               <Field label={t(`${PREFIX}.questions.inputs`)}>
                 <QuestionInputs drafted={drafted} question={question} spec={spec} />
@@ -166,14 +170,6 @@ export function QuestionsView({
                 : ""}
             </Field>
           </div>
-          {question.notes.includes("capability_without_basis") ? (
-            <span className={styles.warning}>
-              {t(`${PREFIX}.questions.capabilityWithoutBasis`)}
-            </span>
-          ) : null}
-          {question.notes.includes("reference_time_unbound") ? (
-            <span className={styles.warning}>{t(`${PREFIX}.questions.referenceTimeUnbound`)}</span>
-          ) : null}
           <Citations citations={question.citations} supplementReason={question.supplementReason} />
           <Collapse
             destroyOnHidden
@@ -188,9 +184,76 @@ export function QuestionsView({
             ]}
             size="small"
           />
-        </section>
-      ))}
+        </div>
+      ),
+      extra: (
+        // The row's own actions do not open or close it.
+        <span className={styles.row} onClick={(event) => event.stopPropagation()}>
+          <ItemActions itemId={question.id} kind="questions" label={question.text} />
+        </span>
+      ),
+      // Kept in the page while closed, so what it says can be found on it; only the tests wait.
+      forceRender: true,
+      key: question.id,
+      label: (
+        <span className={styles.questionRow}>
+          <span className={styles.questionText}>{question.text}</span>
+          {question.type ? <Tag>{questionTypeText(t, question.type)}</Tag> : null}
+          <Tag color={question.layer === "knowledge" ? "success" : "default"}>
+            {layerText(t, question.layer)}
+          </Tag>
+          {warnings.length ? (
+            <Tag color="warning">{t(`${PREFIX}.questions.hasWarnings`)}</Tag>
+          ) : null}
+          <EditedTag edited={question.edited} />
+        </span>
+      ),
+    };
+  });
+  return (
+    <div className={styles.stack}>
+      <AddItem kind="questions" />
+      {spec.questions.length ? (
+        <Collapse className={styles.questionList} items={items} />
+      ) : (
+        <Empty text={t(`${PREFIX}.questions.none`)} />
+      )}
     </div>
+  );
+}
+
+/**
+ * A question's template as people read it: each `{name}` it is asked about reads as the input's
+ * concept, in the locale's brackets, rather than as the name in braces.
+ */
+function TemplateText({
+  drafted,
+  question,
+  spec,
+}: {
+  drafted: DraftedItem[];
+  question: RequirementSpec["questions"][number];
+  spec: RequirementSpec;
+}) {
+  const { t } = useTranslation();
+  const inputs = new Map((question.inputs ?? []).map((input) => [input.name, input]));
+  const parts = question.template.split(/(\{[^{}]+\})/);
+  return (
+    <span>
+      {parts.map((part, index) => {
+        const name = /^\{([^{}]+)\}$/.exec(part)?.[1];
+        if (!name) {
+          return part;
+        }
+        const input = inputs.get(name);
+        const label = input ? describeInput(spec, drafted, input).concept : name;
+        return (
+          <span className={styles.slot} key={`${index}-${name}`}>
+            {t(`${PREFIX}.questions.slot`, { name: label })}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
@@ -469,7 +532,7 @@ function QuestionInputs({
               )}
             </LightStatusTag>
             {described.known ? null : (
-              <span className={styles.warning}>{t(`${PREFIX}.questions.propertyGone`)}</span>
+              <Tag color="warning">{t(`${PREFIX}.questions.propertyGone`)}</Tag>
             )}
             {described.known && input.propertyFromKey ? (
               <span className={styles.muted}>{t(`${PREFIX}.questions.propertyFromKey`)}</span>

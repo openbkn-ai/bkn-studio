@@ -240,7 +240,8 @@ describe("ProjectRequirements", () => {
     expect(screen.getByText("还有 1 个需求冲突、1 个建模选择等你处理。")).toBeInTheDocument();
     expect(screen.getByText("某个客户哪些订单晚了？")).toBeInTheDocument();
     expect(screen.getByText("知识层")).toBeInTheDocument();
-    expect(screen.getByText("筛选")).toBeInTheDocument();
+    // The type tags the question's row, and is its first field once opened.
+    expect(screen.getAllByText("筛选").length).toBeGreaterThan(0);
     expect(screen.getByText("交付延误预警")).toBeInTheDocument();
     expect(await screen.findByText("销售订单、gone（按候选概念）")).toBeInTheDocument();
     expect(screen.getByText("出自「supply-prd.md」")).toBeInTheDocument();
@@ -256,6 +257,8 @@ describe("ProjectRequirements", () => {
     });
     renderPage();
 
+    // A question's fields show once its row is opened.
+    fireEvent.click(await screen.findByText("某个客户哪些订单晚了？"));
     fireEvent.click(await screen.findByRole("button", { name: "查看原文" }));
     const drawer = within(await screen.findByRole("dialog"));
     await waitFor(() => expect(getDocumentMock).toHaveBeenCalledWith("p1", "d1"));

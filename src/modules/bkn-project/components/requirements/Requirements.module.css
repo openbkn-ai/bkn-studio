@@ -149,3 +149,31 @@
   min-width: 160px;
   max-width: 220px;
 }
+
+/* Scenario questions: one row each, opened for its fields. */
+.questionList {
+  background: var(--color-bg-surface);
+}
+
+.questionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.questionText {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.questionRow :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+/* A value the question is asked about, as people name it, set apart from the words around it. */
+.slot {
+  color: var(--color-text-link);
+}

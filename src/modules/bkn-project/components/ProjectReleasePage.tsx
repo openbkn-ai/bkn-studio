@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Spin } from "antd";
+import { Alert, Spin, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
@@ -127,10 +127,11 @@ function CheckSection({
   const name = (id: string) => names[id] ?? id;
   const result = (item: CheckCountState, issue: boolean) =>
     item.state === "counted" ? (
+      // The platform's tag, as on every panel: a result is read at a glance.
       issue ? (
-        <span className={styles.issue}>{t("bknProject.release.check.result.issue")}</span>
+        <Tag color="error">{t("bknProject.release.check.result.issue")}</Tag>
       ) : (
-        t("bknProject.release.check.result.ok")
+        <Tag color="success">{t("bknProject.release.check.result.ok")}</Tag>
       )
     ) : (
       <span className={styles.muted}>{checkReasonText(t, item.reason)}</span>

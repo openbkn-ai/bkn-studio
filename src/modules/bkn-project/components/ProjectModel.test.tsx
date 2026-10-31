@@ -325,8 +325,13 @@ describe("ProjectModel", () => {
     expect(
       await screen.findByText(/bknProject.model.evidence.warning.notUnique/),
     ).toHaveTextContent('{"distinct":911,"rows":1972}');
+    // What counting found is the identity's tooltip, not part of the cell.
+    expect(screen.queryByText(/bknProject.model.evidence.countReason.query_failed/)).toBeNull();
+    document
+      .querySelectorAll('[class*="identityName"]')
+      .forEach((element) => fireEvent.mouseEnter(element));
     expect(
-      screen.getByText(/bknProject.model.evidence.countReason.query_failed/),
+      await screen.findByText(/bknProject.model.evidence.countReason.query_failed/),
     ).toBeInTheDocument();
     // A data source's raw reply means nothing to people here; the page only says counting did not finish.
     expect(screen.queryByText(/Public.Forbidden/)).not.toBeInTheDocument();
