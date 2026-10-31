@@ -993,6 +993,7 @@ function acceptMockSuggestions(projectId: string, updateTime: number) {
   const adopted = new Set(
     (draft.items.object_types ?? []).filter((item) => item.adopted).map((item) => item.id),
   );
+  let accepted = 0;
   let skipped = 0;
   for (const candidate of mockCandidates(projectId).items) {
     if (candidate.state !== "pending") {
@@ -1008,10 +1009,11 @@ function acceptMockSuggestions(projectId: string, updateTime: number) {
       skipped += 1;
     } else {
       markMockReviewed(projectId, candidate.kind, candidate.id);
+      accepted += 1;
     }
   }
   draft.update_time = Date.now();
-  return { draft, skipped };
+  return { accepted, draft, skipped };
 }
 
 /* ------------------------------- API ------------------------------- */
@@ -1096,8 +1098,9 @@ type BackendCandidate = {
     questions?: { id: string; text: string }[] | null;
   } | null;
   reviewed?: { by: BackendAccount; time: number } | null;
+  rows?: number;
   state: Candidate["state"];
-  table?: { name: string; rows?: number } | null;
+  table?: BackendTable | null;
 };
 
 /**
@@ -1109,13 +1112,13 @@ export async function getCandidates(projectId: string, catalogId = ""): Promise<
     return wait(mockCandidates(projectId, catalogId));
   }
   const response = await http.get<{
+    candidates?: BackendCandidate[] | null;
     counts?: Partial<Candidates["counts"]>;
-    items?: BackendCandidate[] | null;
   }>(`${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/candidates`, {
     params: catalogId ? { catalog_id: catalogId } : undefined,
     skipErrorToast: true,
   });
-  const { counts, items } = response.data;
+  const { candidates: items, counts } = response.data;
   return {
     counts: {
       adopted: counts?.adopted ?? 0,
@@ -1137,29 +1140,40 @@ export async function getCandidates(projectId: string, catalogId = ""): Promise<
         : null,
       reviewed: item.reviewed ?? null,
       state: item.state,
-      table: item.table ? { name: item.table.name, rows: item.table.rows ?? 0 } : null,
+      table: item.table ? { name: item.table.name, rows: item.rows ?? 0 } : null,
     })),
   };
 }
 
 /**
  * Confirms every candidate nobody confirmed as drafting suggested it, over the draft made at
- * `updateTime`; replies the draft and how many were skipped for a person to settle.
+ * `updateTime`; replies the draft and how many were confirmed and skipped for a person to settle.
  */
 export async function acceptDraftSuggestions(
   projectId: string,
   updateTime: number,
-): Promise<{ draft: Draft; skipped: number }> {
+): Promise<{ accepted: number; draft: Draft; skipped: number }> {
   if (useMock) {
-    const { draft, skipped } = acceptMockSuggestions(projectId, updateTime);
-    return wait({ draft: mapDraft(draft), skipped });
+    const { accepted, draft, skipped } = acceptMockSuggestions(projectId, updateTime);
+    return wait({ accepted, draft: mapDraft(draft), skipped });
   }
-  const response = await http.post<{ draft: BackendDraft; skipped?: number }>(
+  // Both lists name the candidates as kind/item_id; the page counts them.
+  const response = await http.post<{
+    accepted?: string[] | null;
+    draft: BackendDraft;
+    skipped?: string[] | null;
+  }>(
     `${draftPath(projectId)}:accept_suggestions`,
     { update_time: updateTime },
-    { skipErrorToast: true },
+    {
+      skipErrorToast: true,
+    },
   );
-  return { draft: mapDraft(response.data.draft), skipped: response.data.skipped ?? 0 };
+  return {
+    accepted: response.data.accepted?.length ?? 0,
+    draft: mapDraft(response.data.draft),
+    skipped: response.data.skipped?.length ?? 0,
+  };
 }
 
 /**

@@ -708,15 +708,18 @@ export function ProjectModel({
       onOk: async () => {
         setAccepting(true);
         try {
-          const { draft: next, skipped } = await acceptDraftSuggestions(
-            project.id,
-            draft.updateTime,
-          );
+          const {
+            accepted,
+            draft: next,
+            skipped,
+          } = await acceptDraftSuggestions(project.id, draft.updateTime);
           setDraft(next);
           if (skipped) {
-            message.info(t("bknProject.model.candidates.acceptedSkipped", { count: skipped }));
+            message.info(
+              t("bknProject.model.candidates.acceptedSkipped", { count: skipped, accepted }),
+            );
           } else {
-            message.success(t("bknProject.model.candidates.accepted"));
+            message.success(t("bknProject.model.candidates.accepted", { count: accepted }));
           }
         } catch (error) {
           if (draftErrorCode(error) === "Stale") {

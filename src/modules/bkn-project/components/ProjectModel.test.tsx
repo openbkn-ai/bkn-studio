@@ -506,7 +506,7 @@ describe("ProjectModel", () => {
       counts: { adopted: 0, excluded: 0, pending: 3 },
       items: [],
     });
-    acceptSuggestionsMock.mockResolvedValue({ draft, skipped: 2 });
+    acceptSuggestionsMock.mockResolvedValue({ accepted: 1, draft, skipped: 2 });
     renderModel(undefined, undefined, "review");
 
     fireEvent.click(
@@ -515,7 +515,7 @@ describe("ProjectModel", () => {
     await confirmMock.mock.lastCall![0].onOk();
     expect(acceptSuggestionsMock).toHaveBeenCalledWith("p1", draft.updateTime);
     expect(messageMock.info).toHaveBeenCalledWith(
-      `bknProject.model.candidates.acceptedSkipped:${JSON.stringify({ count: 2 })}`,
+      `bknProject.model.candidates.acceptedSkipped:${JSON.stringify({ count: 2, accepted: 1 })}`,
     );
   });
 

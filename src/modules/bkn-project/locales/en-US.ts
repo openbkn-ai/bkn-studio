@@ -345,11 +345,14 @@ export const bknProjectEnUS = {
         acceptTitle: "Confirm every candidate as drafting suggested?",
         acceptContent:
           "Candidates nobody confirmed are confirmed as drafting suggested them: adopted where it suggested adopting, left out where it did not. Object types that need an identifier and relations whose ends are not adopted are skipped, for you to settle.",
-        accepted: "Candidates confirmed as suggested.",
-        acceptedSkipped: "Candidates confirmed as suggested; {{count}} need you to settle them.",
-        acceptedSkipped_one: "Candidates confirmed as suggested; {{count}} needs you to settle it.",
+        accepted: "Confirmed {{count}} candidates.",
+        accepted_one: "Confirmed {{count}} candidate.",
+        accepted_other: "Confirmed {{count}} candidates.",
+        acceptedSkipped: "Confirmed {{accepted}}; skipped {{count}} that need you to settle them.",
+        acceptedSkipped_one:
+          "Confirmed {{accepted}}; skipped {{count}} that needs you to settle it.",
         acceptedSkipped_other:
-          "Candidates confirmed as suggested; {{count}} need you to settle them.",
+          "Confirmed {{accepted}}; skipped {{count}} that need you to settle them.",
         allReviewed: "Every candidate is confirmed.",
         concept: "Concept: {{term}}",
         source: "{{name}} · {{rows}} rows",

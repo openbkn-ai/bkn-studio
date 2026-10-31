@@ -538,8 +538,7 @@ describe("draft.service", () => {
     const { getCandidates } = await importService();
     mockGet.mockResolvedValue({
       data: {
-        counts: { adopted: 1, pending: 1 },
-        items: [
+        candidates: [
           {
             added_by_catalog: "c2",
             adopted: false,
@@ -547,11 +546,13 @@ describe("draft.service", () => {
             kind: "object_types",
             name: "Leads",
             needed_by_requirements: { questions: [{ id: "q1", text: "Who calls?" }] },
+            rows: 40,
             state: "pending",
-            table: { name: "crm_leads", rows: 40 },
+            table: { catalog_id: "c2", name: "crm_leads", resource_id: "res-leads" },
           },
           { adopted: true, id: "orders", kind: "object_types", name: "Orders", state: "adopted" },
         ],
+        counts: { adopted: 1, pending: 1 },
       },
     });
 
@@ -572,10 +573,16 @@ describe("draft.service", () => {
 
   it("accepts the suggestions with the draft's time, and sends why an item is left out", async () => {
     const { acceptDraftSuggestions, editDraftItem, mockDraft } = await importService();
-    mockPost.mockResolvedValue({ data: { draft: mockDraft("p1"), skipped: 2 } });
+    mockPost.mockResolvedValue({
+      data: {
+        accepted: ["object_types/orders"],
+        draft: mockDraft("p1"),
+        skipped: ["object_types/bom", "relation_types/bom_to_orders"],
+      },
+    });
     mockPatch.mockResolvedValue({ data: mockDraft("p1") });
 
-    expect((await acceptDraftSuggestions("p 1", 7)).skipped).toBe(2);
+    expect(await acceptDraftSuggestions("p 1", 7)).toMatchObject({ accepted: 1, skipped: 2 });
     expect(mockPost).toHaveBeenCalledWith(
       "/bkn-project/v1/projects/p%201/ontology/draft:accept_suggestions",
       { update_time: 7 },
