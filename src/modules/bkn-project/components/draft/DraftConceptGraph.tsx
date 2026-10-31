@@ -5,69 +5,61 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
-import { draftGraph } from "@/modules/bkn-project/components/draft/graph";
+import { draftGraphRecords } from "@/modules/bkn-project/components/draft/graph";
 import type { Draft } from "@/modules/bkn-project/types/draft";
-import { OntologyGraphView } from "@/modules/knowledge-network/components/preview/OntologyGraphView";
-
-import styles from "./DraftTables.module.css";
-
-const NO_INDEX = new Set<string>();
+import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
 
 /**
- * The draft's concept model: what is adopted, drawn as object types and the relations between
- * them. Clicking an object type opens it when the page can; otherwise it is highlighted.
+ * The draft's concept model, drawn as the knowledge network draws its ontology: one colour per
+ * object type, arrows for relations and the types listed beside it. What the draft would not
+ * publish (not adopted, or waiting on a decision) is drawn faint and dashed. Clicking an object
+ * type opens it where the page can.
  */
 export function DraftConceptGraph({
+  action,
   draft,
+  networkId,
   onOpen,
   title,
 }: {
+  /** Shown after the key in the header, such as a link to the modeling page. */
+  action?: ReactNode;
   draft: Draft;
+  /** The project's network: the graph is drawn as its ontology. */
+  networkId: string;
   onOpen?: (objectTypeId: string) => void;
-  /** Shown above the graph when the page around it has no heading for it. */
-  title?: string;
+  title: string;
 }) {
   const { t } = useTranslation();
-  const graph = useMemo(() => draftGraph(draft), [draft]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const records = useMemo(() => draftGraphRecords(draft), [draft]);
 
-  let body: ReactNode;
-  if (!graph.nodes.length) {
-    body = (
-      <EmptyStatePanel
-        description={t("bknProject.model.graph.emptyDescription")}
-        title={t("bknProject.model.graph.empty")}
-      />
-    );
-  } else {
-    body = (
-      <div className={styles.graph} data-testid="draft-concept-graph">
-        <OntologyGraphView
-          graph={graph}
-          indexedIds={NO_INDEX}
-          onSelect={(id) => {
-            setSelectedId(id);
-            if (id) {
-              onOpen?.(id);
-            }
-          }}
-          // A click on the selected node unselects it. Where a click opens the object type,
-          // nothing stays selected, so clicking the same node after closing it opens it again.
-          selectedId={onOpen ? null : selectedId}
-        />
-      </div>
-    );
-  }
-  return title ? (
-    <section>
-      <h3 className={styles.sectionTitle}>{title}</h3>
-      {body}
-    </section>
-  ) : (
-    body
+  return (
+    <OntologyGraphCard
+      emptyDescription={t("bknProject.model.graph.emptyDescription")}
+      fadedIds={records.faded}
+      legend={
+        <>
+          {t("bknProject.model.graph.legend")}
+          {action}
+        </>
+      }
+      loadConceptGroups={false}
+      logicalGrouping={false}
+      networkId={networkId}
+      objectTypes={records.objectTypes}
+      // Nothing stays selected: the types beside the graph stay listed, and a click opens the
+      // object type where the page can, so clicking it again after closing it opens it again.
+      onSelectedIdChange={(id) => {
+        if (id) {
+          onOpen?.(id);
+        }
+      }}
+      relationTypes={records.relationTypes}
+      selectedId={null}
+      title={title}
+    />
   );
 }

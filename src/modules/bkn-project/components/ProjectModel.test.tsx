@@ -363,18 +363,19 @@ describe("ProjectModel", () => {
     expect(screen.queryByText(/bknProject.model.notice.missingCatalogs/)).not.toBeInTheDocument();
   });
 
-  it("draws the concept model, and says how to fill it while nothing is adopted", async () => {
+  it("draws the concept model with every object type, also while nothing is adopted", async () => {
     getDraftMock.mockResolvedValue(ready());
     const view = renderModel();
-    expect(await screen.findByTestId("draft-concept-graph")).toBeInTheDocument();
+    expect(await screen.findByText("bknProject.model.graph.legend")).toBeInTheDocument();
     view.unmount();
 
+    // What is not adopted is drawn faded, not left out: the graph still shows the draft.
     getDraftMock.mockResolvedValue(
       edited((draft) => draft.items.objectTypes.forEach((item) => (item.adopted = false))),
     );
     renderModel();
-    expect(await screen.findByText("bknProject.model.graph.empty")).toBeInTheDocument();
-    expect(screen.queryByTestId("draft-concept-graph")).not.toBeInTheDocument();
+    expect(await screen.findByText("bknProject.model.graph.legend")).toBeInTheDocument();
+    expect(screen.queryByText("bknProject.model.graph.emptyDescription")).not.toBeInTheDocument();
   });
 
   it("opens on the tab a link asks for, and on the objects for any other", async () => {
@@ -394,7 +395,8 @@ describe("ProjectModel", () => {
     getDraftMock.mockResolvedValue(ready());
     renderModel();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^customers/ }));
+    // The graph lists the types beside it too; the table's row is the last.
+    fireEvent.click((await screen.findAllByRole("button", { name: /^customers/ })).at(-1)!);
 
     expect(await screen.findByText("bknProject.model.detail.propertiesTitle")).toBeInTheDocument();
     expect(screen.getByText("contact_phone")).toBeInTheDocument();

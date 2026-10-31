@@ -5,12 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { KnowledgeNetworkPreviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
+import type {
+  KnowledgeNetworkObjectTypeRecord,
+  KnowledgeNetworkPreviewGraph,
+  KnowledgeNetworkRelationTypeRecord,
+} from "@/modules/knowledge-network/types/knowledge-network";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
 import type { Draft } from "@/modules/bkn-project/types/draft";
-
-/** Nodes take the theme's primary color, so the graph follows light and dark themes. */
-const NODE_COLOR = "var(--color-primary-600)";
 
 /**
  * The concept model the draft would publish: adopted object types, and adopted relation types
@@ -29,8 +30,60 @@ export function draftGraph(draft: Draft): KnowledgeNetworkPreviewGraph {
         sourceId: item.source,
         targetId: item.target,
       })),
+    // No colour of its own: the graph gives each type one from the knowledge network's palette.
     nodes: draft.items.objectTypes
       .filter((item) => item.adopted)
-      .map((item) => ({ color: NODE_COLOR, id: item.id, name: item.name })),
+      .map((item) => ({ color: "", id: item.id, name: item.name })),
+  };
+}
+
+/**
+ * The whole draft as the knowledge network's ontology graph reads it: every object type, and
+ * every relation type between two of them. What the draft would not publish is listed in
+ * `faded`, so the graph draws it faint and dashed beside the model.
+ */
+export function draftGraphRecords(draft: Draft): {
+  faded: Set<string>;
+  objectTypes: KnowledgeNetworkObjectTypeRecord[];
+  relationTypes: KnowledgeNetworkRelationTypeRecord[];
+} {
+  const published = draftGraph(draft);
+  const kept = new Set([...published.nodes, ...published.edges].map((item) => item.id));
+  const names = new Map(draft.items.objectTypes.map((item) => [item.id, item.name]));
+  const relationTypes = draft.items.relationTypes.filter(
+    (item) => names.has(item.source) && names.has(item.target),
+  );
+  return {
+    faded: new Set(
+      [...draft.items.objectTypes, ...relationTypes]
+        .map((item) => item.id)
+        .filter((id) => !kept.has(id)),
+    ),
+    objectTypes: draft.items.objectTypes.map((item) => ({
+      color: "",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      description: item.description,
+      hasIndex: false,
+      id: item.id,
+      name: item.name,
+      tags: [],
+      updateTime: "",
+      updaterName: "",
+    })),
+    relationTypes: relationTypes.map((item) => ({
+      color: "",
+      description: item.description,
+      id: item.id,
+      mappingMode: "direct",
+      name: item.name,
+      sourceObjectTypeId: item.source,
+      sourceObjectTypeName: names.get(item.source) ?? "",
+      tags: [],
+      targetObjectTypeId: item.target,
+      targetObjectTypeName: names.get(item.target) ?? "",
+      updateTime: "",
+      updaterName: "",
+    })),
   };
 }
