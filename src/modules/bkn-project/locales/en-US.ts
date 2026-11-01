@@ -871,6 +871,13 @@ export const bknProjectEnUS = {
       collapse: "Show fewer",
     },
     listSeparator: ", ",
+    leaveUnsaved: {
+      title: "You have changes not saved",
+      content: "Save them before leaving this page? Changes not saved will be lost.",
+      save: "Save and leave",
+      discard: "Leave without saving",
+      stay: "Stay on this page",
+    },
     sentenceSeparator: " ",
     understand: {
       hint: {

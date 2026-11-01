@@ -531,7 +531,7 @@ export function ProjectRequirements({
                 setInputErrors({});
               }}
               onSave={(fields) =>
-                void apply((time) =>
+                apply((time) =>
                   dialog.itemId
                     ? editItem(project.id, dialog.kind, dialog.itemId, fields, time)
                     : addItem(project.id, dialog.kind, fields, time),

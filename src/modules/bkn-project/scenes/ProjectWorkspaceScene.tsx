@@ -21,6 +21,7 @@ import { ProjectRequirements } from "@/modules/bkn-project/components/requiremen
 import { ProjectReleasePage } from "@/modules/bkn-project/components/ProjectReleasePage";
 import { ProjectResources } from "@/modules/bkn-project/components/resources/ProjectResources";
 import { ProjectWorkspaceNav } from "@/modules/bkn-project/components/ProjectWorkspaceNav";
+import { UnsavedLeaveGuard } from "@/modules/bkn-project/components/unsaved/UnsavedLeaveGuard";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
 import {
@@ -163,74 +164,76 @@ export function ProjectWorkspaceScene({
   // No heading of its own: the navigation names the page, as in a network's workspace. The
   // overview lays panels on the page's grey; every other page is one white sheet.
   return (
-    <section className={kn.workspace}>
-      <div className={kn.workspaceLayout}>
-        <ProjectWorkspaceNav
-          active={section}
-          counts={{ ...counts, resources: project.catalogIds.length }}
-          projectId={project.id}
-        />
-        <main
-          className={
-            section === "overview"
-              ? `${kn.workspaceContent} ${kn.workspaceContentOverview}`
-              : `${kn.workspaceContent} ${styles.content}`
-          }
-        >
-          <div className={section === "overview" ? kn.overviewBox : kn.workspaceSectionPage}>
-            {section === "overview" ? (
-              <ProjectOverview
-                latestRelease={latestRelease}
-                networkName={networkName}
-                onProjectChange={setProject}
-                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
-                project={project}
-              />
-            ) : section === "model" ? (
-              <ProjectModel
-                focus={searchParams.get("focus")}
-                initialObject={searchParams.get("object")}
-                initialTab={searchParams.get("tab")}
-                // The check and the local indexes of a confirmation show on the release page.
-                onConfirmed={() => go("release")}
-                onGoToResources={() => go("resources")}
-                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
-                project={project}
-              />
-            ) : section === "resources" ? (
-              <ProjectResources
-                onGoToModel={() => go("model")}
-                onProjectChange={setProject}
-                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
-                project={project}
-              />
-            ) : section === "scenarios" ? (
-              <ProjectRequirements
-                onGoToModel={() => go("model")}
-                onGoToResources={() => go("resources")}
-                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
-                project={project}
-              />
-            ) : section === "release" ? (
-              <ProjectReleasePage
-                onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
-                onReleaseChanged={() => void load()}
-                ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
-                project={project}
-              />
-            ) : KNOWLEDGE_BASE_SECTIONS.includes(section) ? (
-              <BknProjectKbSlot>
-                <EmptyStatePanel title={t("bknProject.workspace.comingSoon")} />
-              </BknProjectKbSlot>
-            ) : (
-              <EmptyStatePanel
-                description={t("bknProject.workspace.comingSoonDescription")}
-                title={t("bknProject.workspace.comingSoon")}
-              />
-            )}
-          </div>
-        </main>
-      </div>
-    </section>
+    <UnsavedLeaveGuard>
+      <section className={kn.workspace}>
+        <div className={kn.workspaceLayout}>
+          <ProjectWorkspaceNav
+            active={section}
+            counts={{ ...counts, resources: project.catalogIds.length }}
+            projectId={project.id}
+          />
+          <main
+            className={
+              section === "overview"
+                ? `${kn.workspaceContent} ${kn.workspaceContentOverview}`
+                : `${kn.workspaceContent} ${styles.content}`
+            }
+          >
+            <div className={section === "overview" ? kn.overviewBox : kn.workspaceSectionPage}>
+              {section === "overview" ? (
+                <ProjectOverview
+                  latestRelease={latestRelease}
+                  networkName={networkName}
+                  onProjectChange={setProject}
+                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  project={project}
+                />
+              ) : section === "model" ? (
+                <ProjectModel
+                  focus={searchParams.get("focus")}
+                  initialObject={searchParams.get("object")}
+                  initialTab={searchParams.get("tab")}
+                  // The check and the local indexes of a confirmation show on the release page.
+                  onConfirmed={() => go("release")}
+                  onGoToResources={() => go("resources")}
+                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  project={project}
+                />
+              ) : section === "resources" ? (
+                <ProjectResources
+                  onGoToModel={() => go("model")}
+                  onProjectChange={setProject}
+                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  project={project}
+                />
+              ) : section === "scenarios" ? (
+                <ProjectRequirements
+                  onGoToModel={() => go("model")}
+                  onGoToResources={() => go("resources")}
+                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  project={project}
+                />
+              ) : section === "release" ? (
+                <ProjectReleasePage
+                  onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
+                  onReleaseChanged={() => void load()}
+                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  project={project}
+                />
+              ) : KNOWLEDGE_BASE_SECTIONS.includes(section) ? (
+                <BknProjectKbSlot>
+                  <EmptyStatePanel title={t("bknProject.workspace.comingSoon")} />
+                </BknProjectKbSlot>
+              ) : (
+                <EmptyStatePanel
+                  description={t("bknProject.workspace.comingSoonDescription")}
+                  title={t("bknProject.workspace.comingSoon")}
+                />
+              )}
+            </div>
+          </main>
+        </div>
+      </section>
+    </UnsavedLeaveGuard>
   );
 }
