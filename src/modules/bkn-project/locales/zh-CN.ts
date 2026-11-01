@@ -468,10 +468,13 @@ export const bknProjectZhCN = {
         title: "AI 助手",
         close: "收起 AI 助手",
         subtitle: {
+          relation_types_new: "关系类 · 新建",
           object_types: "对象类 · {{name}}",
           relation_types: "关系类 · {{name}}",
         },
         intro: {
+          relation_types_new:
+            "说说你想建什么样的关系，我会先给出建议；确认后再填进表单，点“保存”才创建。表单里已经填的内容我也能看到。",
           object_types:
             "说说你想怎么改这个对象类，我会先给出修改建议；确认后再更新表单。还没保存的修改我也能看到。",
           relation_types:
@@ -479,6 +482,11 @@ export const bknProjectZhCN = {
         },
         examplesTitle: "示例",
         examples: {
+          relation_types_new: [
+            "这个对象应该和谁建立关系？",
+            "这两个对象之间怎么连接？",
+            "帮我起一个关系名",
+          ],
           object_types: ["唯一标识选得对吗？", "帮我补全描述", "哪些属性的显示名不够清楚？"],
           relation_types: [
             "这两个对象类这样关联对吗？",
@@ -488,6 +496,7 @@ export const bknProjectZhCN = {
         },
         question: "你的问题",
         placeholder: {
+          relation_types_new: "描述你想建立的关系，或继续提问…",
           object_types: "描述你想怎么改这个对象类，或继续提问…",
           relation_types: "描述你想怎么改这个关系类，或继续提问…",
         },
@@ -772,6 +781,11 @@ export const bknProjectZhCN = {
       open: "打开并确认",
     },
     relationEditor: {
+      sourceSuggestions: {
+        title: "按字段找到的「{{name}}」的关系",
+        ends: "{{source}} → {{target}}",
+        use: "填入",
+      },
       title: "编辑关系",
       newTitle: "新增关系",
       nameRequired: "请填写关系的名称",
