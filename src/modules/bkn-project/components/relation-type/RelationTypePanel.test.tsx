@@ -19,10 +19,11 @@ import type {
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 const mocks = vi.hoisted(() => ({
+  ask: vi.fn(),
   confirm: vi.fn(),
   create: vi.fn(),
   editorProps: vi.fn(),
-  message: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
+  message: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
   remove: vi.fn(),
   save: vi.fn(),
   suggest: vi.fn(),
@@ -44,6 +45,11 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
   createDraftRelationType: mocks.create,
   deleteDraftRelationType: mocks.remove,
   saveDraftRelationType: mocks.save,
+}));
+
+vi.mock("@/modules/bkn-project/services/ask.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/ask.service")>()),
+  askDraftItem: mocks.ask,
 }));
 
 vi.mock("@/modules/bkn-project/services/relation-suggestions.service", () => ({
@@ -385,5 +391,73 @@ describe("RelationTypePanel", () => {
     renderPanel(draft, draft.items.relationTypes[0].id);
     expect(nameBox()).toHaveValue(draft.items.relationTypes[0].name);
     expect(screen.queryByRole("button", { name: "bknProject.relationEditor.delete" })).toBeNull();
+  });
+});
+
+describe("document relation assistant", () => {
+  it("applies document rules, supports undo and waits for an explicit save", async () => {
+    vi.clearAllMocks();
+    const draft = mapDraft(mockDraft("p1"));
+    const relation = draft.items.relationTypes[0];
+    relation.document = {
+      role: "relation",
+      layer: "business",
+      reason: "Printed order",
+      citations: [],
+      selectionId: "lock",
+      selectionRevision: 7,
+      timeProperty: "",
+      participantRelations: [],
+    };
+    relation.documentMapping = {
+      mode: "linking",
+      mentionProperty: "customer_id",
+      identityProperty: "customer_id",
+    };
+    relation.cardinality = "many_to_one";
+    const revision = {
+      field: "ends",
+      reason: "Same file",
+      value: {
+        source: relation.source,
+        target: relation.target,
+        mapping: [],
+        documentMapping: {
+          mode: "same_document",
+          sourceNameProperty: "customer_id",
+          targetNameProperty: "customer_id",
+        },
+        cardinality: "one_to_many",
+      },
+    };
+    mocks.ask.mockResolvedValue({
+      answer: "Use the same document.",
+      dropped: [],
+      revisions: [revision],
+    });
+    mocks.save.mockResolvedValue(draft);
+    renderPanel(draft, relation.id);
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
+    const ask = () => {
+      fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
+        target: { value: "Connect these" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
+    };
+    ask();
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.ask.apply" }));
+    expect(mocks.save).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.undo" }));
+    expect(mocks.message.success).toHaveBeenCalledWith("bknProject.model.ask.undone");
+    ask();
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.ask.apply" }));
+    save();
+    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+    expect(mocks.save.mock.calls[0][3]).toMatchObject({
+      documentMapping: revision.value.documentMapping,
+      cardinality: "one_to_many",
+      mapping: [],
+    });
+    expect(mocks.editorProps).not.toHaveBeenCalled();
   });
 });

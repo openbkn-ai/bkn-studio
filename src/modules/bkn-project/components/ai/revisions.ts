@@ -216,7 +216,7 @@ export function endsText(t: TFunction, names: EndNames, ends: AskEnds): string {
     target: end(ends.target),
   });
   return document && ends.cardinality
-    ? `${line}${separator}${t(`bknProject.documentEditor.${documentCardinalityKey(ends.cardinality)}`)}`
+    ? `${line}${separator}${t(documentCardinalityKey(ends.cardinality))}`
     : line;
 }
 

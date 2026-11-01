@@ -6,6 +6,9 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { createInstance } from "i18next";
+import { bknProjectEnUS } from "@/modules/bkn-project/locales/en-US";
+import { bknProjectZhCN } from "@/modules/bkn-project/locales/zh-CN";
 import {
   applyDocumentObjectRevisions,
   applyDocumentRelationRevisions,
@@ -128,3 +131,32 @@ describe("document assistant revisions", () => {
     expect(endsText(t, names, current)).toContain("sameDocument");
   });
 });
+
+it.each(["en-US", "zh-CN"])(
+  "uses a real cardinality translation in %s document previews",
+  async (language) => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: language,
+      fallbackLng: false,
+      resources: {
+        "en-US": { translation: bknProjectEnUS },
+        "zh-CN": { translation: bknProjectZhCN },
+      },
+    });
+    const names: EndNames = {
+      object: (id) => id,
+      property: (_id, name) => name,
+      table: (id) => id,
+    };
+    const line = endsText(i18n.t, names, {
+      source: "contract_doc",
+      target: "order",
+      mapping: [],
+      documentMapping: { mode: "linking", mentionProperty: "number", identityProperty: "id" },
+      cardinality: "many_to_one",
+    });
+    expect(line).toContain(i18n.t("bknProject.documentEditor.manyToOne"));
+    expect(line).not.toContain("bknProject.");
+  },
+);
