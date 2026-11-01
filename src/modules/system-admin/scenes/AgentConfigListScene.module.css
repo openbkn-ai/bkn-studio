@@ -160,6 +160,16 @@
   white-space: nowrap;
 }
 
+.description {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .builtinTag {
   align-self: flex-start;
   padding: 1px 7px;

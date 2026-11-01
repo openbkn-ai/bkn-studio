@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 
-import { agentDisplayName } from "./agent-config-names";
+import { agentDescription, agentDisplayName } from "./agent-config-names";
 
 describe.each(["zh-CN", "en-US"])("Agent name fallback in %s", (language) => {
   it.each([
@@ -74,3 +74,28 @@ it.each([
     expect(agentDisplayName({ agent_id, name }, i18n.getFixedT("en-US"))).toBe(english);
   },
 );
+
+it.each([
+  ["bkn-project-requirements", "BKNProjectRequirements", "项目管理 - 需求起草", "Project - Requirements"],
+  ["bkn-project-answer-judge", "BKNProjectAnswerJudge", "项目管理 - 回归判答", "Project - Regression Judge"],
+  ["bkn-project-ontology-ask", "BKNProjectOntologyAsk", "项目管理 - 本体建模助手", "Project - Ontology Assistant"],
+])("names the project Agent %s, seeded as %s, in either language", (agent_id, stored, zh, en) => {
+  for (const name of [stored, zh, en]) {
+    expect(agentDisplayName({ agent_id, name }, i18n.getFixedT("zh-CN"))).toBe(zh);
+    expect(agentDisplayName({ agent_id, name }, i18n.getFixedT("en-US"))).toBe(en);
+  }
+});
+
+it("keeps a project Agent's name an administrator changed", () => {
+  const agent = { agent_id: "bkn-project-requirements", name: "Team Requirements" };
+  expect(agentDisplayName(agent, i18n.getFixedT("zh-CN"))).toBe("Team Requirements");
+});
+
+it("describes the project Agents in either language, and no other Agent", () => {
+  const zh = agentDescription({ agent_id: "bkn-project-ontology-ask" }, i18n.getFixedT("zh-CN"));
+  const en = agentDescription({ agent_id: "bkn-project-ontology-ask" }, i18n.getFixedT("en-US"));
+  expect(zh).toContain("对象类或关系类");
+  expect(en).toContain("object type or relation type");
+  expect(agentDescription({ agent_id: "graph_explorer" }, i18n.getFixedT("en-US"))).toBe("");
+  expect(agentDescription({ agent_id: "custom-agent" }, i18n.getFixedT("en-US"))).toBe("");
+});
