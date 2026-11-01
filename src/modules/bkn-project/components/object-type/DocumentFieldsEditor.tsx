@@ -17,7 +17,12 @@ import type {
   DraftObjectTypeSave,
   SamplePreview,
 } from "@/modules/bkn-project/types/draft";
-import { originalLocation, renameDocumentProperty, selectedExample } from "./document-values";
+import {
+  originalLocation,
+  renameDocumentProperty,
+  removeDocumentProperty,
+  selectedExample,
+} from "./document-values";
 
 const P = "bknProject.documentEditor";
 export function DocumentFieldsEditor({
@@ -207,7 +212,7 @@ export function DocumentFieldsEditor({
         </Space>
       )}
       {value.properties.map((p, i) =>
-        readonly.has(p.name) || fixed ? (
+        readonly.has(referenceNames.current[i] ?? p.name) || fixed ? (
           <Card size="small" key={p.name} title={p.displayName || p.name}>
             <Typography.Text type="secondary">{t(`${P}.managed`)}</Typography.Text>
             <p>{p.description}</p>
@@ -221,13 +226,9 @@ export function DocumentFieldsEditor({
               <AppButton
                 danger
                 onClick={() => {
+                  const referenceName = referenceNames.current[i];
                   referenceNames.current.splice(i, 1);
-                  onChange({
-                    ...value,
-                    properties: value.properties.filter((_, at) => at !== i),
-                    primaryKeys: value.primaryKeys.filter((k) => k !== p.name),
-                    displayKey: value.displayKey === p.name ? "" : value.displayKey,
-                  });
+                  onChange(removeDocumentProperty(value, i, referenceName));
                 }}
               >
                 {t(`${P}.remove`)}
@@ -329,7 +330,8 @@ export function DocumentFieldsEditor({
       )}
       {!fixed && (
         <AppButton
-          onClick={() =>
+          onClick={() => {
+            referenceNames.current[value.properties.length] = "";
             onChange({
               ...value,
               properties: [
@@ -342,8 +344,8 @@ export function DocumentFieldsEditor({
                   extraction: { instruction: "", examples: [] },
                 },
               ],
-            })
-          }
+            });
+          }}
         >
           {t(`${P}.add`)}
         </AppButton>

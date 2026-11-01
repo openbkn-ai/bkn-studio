@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { forwardRef, useEffect, useImperativeHandle } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -620,6 +620,19 @@ describe("document object panel", () => {
     const apiName = screen.getByRole("textbox", { name: "bknProject.documentEditor.apiName" });
     fireEvent.change(apiName, { target: { value: "" } });
     fireEvent.change(apiName, { target: { value: "contract_no" } });
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.documentEditor.add" }));
+    const added = screen.getAllByRole("textbox", { name: "bknProject.documentEditor.apiName" })[1];
+    fireEvent.change(added, { target: { value: "document_id" } });
+    expect(
+      screen.getAllByRole("textbox", { name: "bknProject.documentEditor.apiName" }),
+    ).toHaveLength(2);
+    fireEvent.change(added, { target: { value: "scratch" } });
+    const card = added.closest(".ant-card");
+    if (!(card instanceof HTMLElement)) throw new Error("missing editable field card");
+    fireEvent.click(within(card).getByRole("button", { name: "bknProject.documentEditor.remove" }));
+    expect(
+      screen.getAllByRole("textbox", { name: "bknProject.documentEditor.apiName" }),
+    ).toHaveLength(1);
     fireEvent.change(
       screen.getByRole("textbox", { name: /bknProject.documentEditor.instruction/ }),
       { target: { value: "Use the printed business number only" } },

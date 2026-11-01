@@ -118,3 +118,31 @@ const DOCUMENT_CARDINALITIES: Record<string, string> = {
 export function documentCardinalityKey(value: string): string {
   return `bknProject.documentEditor.${DOCUMENT_CARDINALITIES[value] ?? "cardinality"}`;
 }
+
+/** Drop only references owned by this row, including its retained editing name. */
+export function removeDocumentProperty(
+  value: DraftObjectTypeSave,
+  index: number,
+  referenceName?: string,
+): DraftObjectTypeSave {
+  const properties = value.properties.filter((_, at) => at !== index);
+  const gone = new Set(
+    [value.properties[index].name, referenceName].filter(
+      (name): name is string => Boolean(name) && !properties.some((p) => p.name === name),
+    ),
+  );
+  return {
+    ...value,
+    properties,
+    primaryKeys: value.primaryKeys.filter((name) => !gone.has(name)),
+    displayKey: gone.has(value.displayKey) ? "" : value.displayKey,
+    ...(value.document
+      ? {
+          document: {
+            ...value.document,
+            timeProperty: gone.has(value.document.timeProperty) ? "" : value.document.timeProperty,
+          },
+        }
+      : {}),
+  };
+}
