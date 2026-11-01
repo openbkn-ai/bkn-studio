@@ -1206,6 +1206,9 @@ export const systemAdminZhCN = {
       legacyBuiltinNames: {
         business_provenance_claim_attribution: "业务溯源结论识别Agent",
         business_provenance_optimizer: "知识网络优化Agent",
+        "bkn-project-requirements": "BKNProjectRequirements",
+        "bkn-project-answer-judge": "BKNProjectAnswerJudge",
+        "bkn-project-ontology-ask": "BKNProjectOntologyAsk",
       },
       builtinNames: {
         graph_explorer: "图探索",
@@ -1215,6 +1218,17 @@ export const systemAdminZhCN = {
         business_provenance_optimizer: "知识网络优化",
         "catalog-semantic-understanding": "数据目录语义理解",
         "resource-semantic-understanding": "数据资源语义理解",
+        "bkn-project-requirements": "项目管理 - 需求起草",
+        "bkn-project-answer-judge": "项目管理 - 回归判答",
+        "bkn-project-ontology-ask": "项目管理 - 本体建模助手",
+      },
+      builtinDescriptions: {
+        "bkn-project-requirements":
+          "基于项目已采纳的本体和可选的需求文档，起草业务场景和场景问题，并为每个问题生成测试问法和开发指引。",
+        "bkn-project-answer-judge":
+          "项目发布后，判断新知识网络上的回答是否答到了对应的场景问题，用于回归测试。",
+        "bkn-project-ontology-ask":
+          "回答正在建模的对象类或关系类的相关问题，并提出修改建议，由建模人审核后保存。",
       },
       intro:
         "这里是所有知识网络共用的配置。各网络的配置和用户个人偏好只能在此基础上追加提示词、收窄工具和限制。",

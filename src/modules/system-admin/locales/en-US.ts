@@ -1304,6 +1304,9 @@ export const systemAdminEnUS = {
       legacyBuiltinNames: {
         business_provenance_claim_attribution: "Business Provenance Claim Attribution Agent",
         business_provenance_optimizer: "Knowledge Network Optimizer Agent",
+        "bkn-project-requirements": "BKNProjectRequirements",
+        "bkn-project-answer-judge": "BKNProjectAnswerJudge",
+        "bkn-project-ontology-ask": "BKNProjectOntologyAsk",
       },
       builtinNames: {
         graph_explorer: "Graph Explorer",
@@ -1313,6 +1316,17 @@ export const systemAdminEnUS = {
         business_provenance_optimizer: "Knowledge Network Optimizer",
         "catalog-semantic-understanding": "Data Catalog Semantic Understanding",
         "resource-semantic-understanding": "Data Resource Semantic Understanding",
+        "bkn-project-requirements": "Project - Requirements",
+        "bkn-project-answer-judge": "Project - Regression Judge",
+        "bkn-project-ontology-ask": "Project - Ontology Assistant",
+      },
+      builtinDescriptions: {
+        "bkn-project-requirements":
+          "Drafts a project's business scenarios and scenario questions from its adopted ontology and optional requirement documents, and the test questions and guidance of each question.",
+        "bkn-project-answer-judge":
+          "After a project release, judges whether each answer on the new knowledge network answers its scenario question, for the regression.",
+        "bkn-project-ontology-ask":
+          "Answers questions about an object type or relation type being modelled, and proposes changes the modeller can review and save.",
       },
       intro:
         "This configuration is shared by every knowledge network. Network settings and personal preferences can only add instructions or narrow tools and limits on top of it.",
