@@ -15,12 +15,19 @@ const BUILTIN_AGENT_IDS: readonly string[] = [
   "business_provenance_optimizer",
   "catalog-semantic-understanding",
   "resource-semantic-understanding",
+  "bkn-project-requirements",
+  "bkn-project-answer-judge",
+  "bkn-project-ontology-ask",
 ];
 
-// Recognize names stored before the display-only Agent suffix was removed.
+// Recognize names stored before the display-only Agent suffix was removed, and the identifiers
+// the project Agents are seeded with.
 const LEGACY_BUILTIN_IDS: readonly string[] = [
   "business_provenance_claim_attribution",
   "business_provenance_optimizer",
+  "bkn-project-requirements",
+  "bkn-project-answer-judge",
+  "bkn-project-ontology-ask",
 ];
 
 /** Only translate shipped names; a renamed built-in or an unknown Agent keeps its stored name. */
@@ -37,4 +44,10 @@ export function agentDisplayName(agent: { agent_id: string; name: string }, t: T
       : []),
   ];
   return shippedNames.includes(agent.name) ? t(key) : agent.name;
+}
+
+/** What a built-in Agent does, in the current language; empty for an Agent without one. */
+export function agentDescription(agent: { agent_id: string }, t: TFunction): string {
+  if (!BUILTIN_AGENT_IDS.includes(agent.agent_id)) return "";
+  return t(`systemAdmin.agentConfig.builtinDescriptions.${agent.agent_id}`, { defaultValue: "" });
 }
