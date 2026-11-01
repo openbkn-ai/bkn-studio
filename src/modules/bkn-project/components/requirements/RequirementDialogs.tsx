@@ -156,7 +156,10 @@ export function ItemDialog({
         string,
         unknown
       > | null;
-      return values !== null && onSave(fieldsOf(values));
+      // As the dialog's own save: a question's inputs are sent only once each is complete.
+      return (
+        values !== null && (kind !== "questions" || inputsComplete) && onSave(fieldsOf(values))
+      );
     },
   );
 
