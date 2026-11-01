@@ -1209,8 +1209,10 @@ export const systemAdminZhCN = {
         "bkn-project-requirements": "BKNProjectRequirements",
         "bkn-project-answer-judge": "BKNProjectAnswerJudge",
         "bkn-project-ontology-ask": "BKNProjectOntologyAsk",
+        "bkn-project-concept-extraction": "BKNProjectConceptExtraction",
       },
       builtinNames: {
+        "bkn-project-concept-extraction": "项目管理 - 概念抽取",
         graph_explorer: "图探索",
         studio_smart_qa: "Studio智能问答",
         cypher_generation: "Cypher生成",
@@ -1223,6 +1225,8 @@ export const systemAdminZhCN = {
         "bkn-project-ontology-ask": "项目管理 - 本体建模助手",
       },
       builtinDescriptions: {
+        "bkn-project-concept-extraction":
+          "从选定的知识库样本提出对象类、事件、关系和抽取规则建议，由建模人审核确认。",
         "bkn-project-requirements":
           "基于项目已采纳的本体和可选的需求文档，起草业务场景和场景问题，并为每个问题生成测试问法和开发指引。",
         "bkn-project-answer-judge":

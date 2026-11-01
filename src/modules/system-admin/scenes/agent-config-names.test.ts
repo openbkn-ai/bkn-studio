@@ -77,6 +77,12 @@ it.each([
 
 it.each([
   [
+    "bkn-project-concept-extraction",
+    "BKNProjectConceptExtraction",
+    "项目管理 - 概念抽取",
+    "Project - Concept Extraction",
+  ],
+  [
     "bkn-project-requirements",
     "BKNProjectRequirements",
     "项目管理 - 需求起草",
@@ -113,4 +119,19 @@ it("describes the project Agents in either language, and no other Agent", () => 
   expect(en).toContain("object type or relation type");
   expect(agentDescription({ agent_id: "graph_explorer" }, i18n.getFixedT("en-US"))).toBe("");
   expect(agentDescription({ agent_id: "custom-agent" }, i18n.getFixedT("en-US"))).toBe("");
+});
+
+it("describes concept extraction as proposals from samples requiring confirmation", () => {
+  expect(
+    agentDescription({ agent_id: "bkn-project-concept-extraction" }, i18n.getFixedT("zh-CN")),
+  ).toContain("样本");
+  expect(
+    agentDescription({ agent_id: "bkn-project-concept-extraction" }, i18n.getFixedT("en-US")),
+  ).toContain("confirmation");
+  expect(
+    agentDisplayName(
+      { agent_id: "bkn-project-concept-extraction", name: "Team Models" },
+      i18n.getFixedT("zh-CN"),
+    ),
+  ).toBe("Team Models");
 });

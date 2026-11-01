@@ -18,6 +18,7 @@ const BUILTIN_AGENT_IDS: readonly string[] = [
   "bkn-project-requirements",
   "bkn-project-answer-judge",
   "bkn-project-ontology-ask",
+  "bkn-project-concept-extraction",
 ];
 
 // Recognize names stored before the display-only Agent suffix was removed, and the identifiers
@@ -28,6 +29,7 @@ const LEGACY_BUILTIN_IDS: readonly string[] = [
   "bkn-project-requirements",
   "bkn-project-answer-judge",
   "bkn-project-ontology-ask",
+  "bkn-project-concept-extraction",
 ];
 
 /** Only translate shipped names; a renamed built-in or an unknown Agent keeps its stored name. */
