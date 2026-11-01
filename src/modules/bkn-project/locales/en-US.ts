@@ -15,6 +15,8 @@ export const bknProjectEnUS = {
       incomplete:
         "Complete each business field name, valid API name, extraction instruction and at least one verified example.",
       relationHelp: "Connect objects by global identity or names in the same document.",
+      sameDocumentScope:
+        "Same-document links connect files, objects within a document, facts and events. Connect business objects by their business identifiers.",
       sourceObject: "Source object",
       targetObject: "Target object",
       connection: "Connect by",

@@ -14,6 +14,8 @@ export const bknProjectZhCN = {
         "先在需求与资源中选取知识库目录和调试文件，再从文档抽取模型；也可以添加结构化数据目录。",
       incomplete: "请填写属性名称、有效 API 名称、抽取说明，并为每个业务属性选择至少一个原文例子。",
       relationHelp: "通过全局编号或同一文档中的名称建立关系，不合并两侧对象。",
+      sameDocumentScope:
+        "同一文档内连接适用于文件、文档内对象、事实和事件。业务对象请通过业务编号关联。",
       sourceObject: "起点对象",
       targetObject: "终点对象",
       connection: "连接方式",
