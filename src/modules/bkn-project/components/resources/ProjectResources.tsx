@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { BknProjectKbBadge, BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
+import { extensionProjectKnowledgeBaseResources } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
@@ -61,6 +62,7 @@ export function ProjectResources({
   const { message } = useAppServices();
   const kbMode = useBknProjectKbMode();
   const canEdit = ownerIsCaller && !project.archived;
+  const KnowledgeBaseResources = extensionProjectKnowledgeBaseResources();
 
   // The catalogs the caller can see, by id; null while read or when they could not be.
   const [catalogs, setCatalogs] = useState<Map<string, string> | null>(null);
@@ -322,7 +324,16 @@ export function ProjectResources({
             <BknProjectKbSlot
               preview={<p className={styles.muted}>{t(`${PREFIX}.knowledgeBases.preview`)}</p>}
             >
-              <p className={styles.muted}>{t(`${PREFIX}.knowledgeBases.comingSoon`)}</p>
+              {KnowledgeBaseResources ? (
+                <KnowledgeBaseResources
+                  key={project.id}
+                  projectId={project.id}
+                  canEdit={canEdit}
+                  canManageHolds={ownerIsCaller}
+                />
+              ) : (
+                <p className={styles.muted}>{t(`${PREFIX}.knowledgeBases.comingSoon`)}</p>
+              )}
             </BknProjectKbSlot>
           </section>
         )}

@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
+import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { UnderstandingCatalog } from "@/modules/bkn-project/types/publish";
 
@@ -158,6 +159,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
+  resetExtensionsForTesting();
   vi.clearAllMocks();
   mocks.kb.mode = "hidden";
   mocks.getDraft.mockResolvedValue(ready());
@@ -371,5 +373,29 @@ describe("ProjectResources", () => {
     renderPage();
     expect(await screen.findByText(title)).toBeInTheDocument();
     expect(screen.queryByTestId("kb-locked")).toBeNull();
+  });
+
+  it("mounts the registered panel only when enabled and preserves archived-owner cleanup", async () => {
+    const panel = vi.fn(
+      ({ canEdit, canManageHolds }: { canEdit: boolean; canManageHolds: boolean }) => (
+        <p>{`edit:${String(canEdit)} cleanup:${String(canManageHolds)}`}</p>
+      ),
+    );
+    registerExtension({
+      id: "kb",
+      capability: "knowledge_base",
+      projectKnowledgeBaseResources: panel,
+    });
+    mocks.kb.mode = "locked";
+    const locked = renderPage();
+    expect(await screen.findByTestId("kb-locked")).toBeInTheDocument();
+    expect(panel).not.toHaveBeenCalled();
+    locked.unmount();
+    mocks.kb.mode = "enabled";
+    const archived = renderPage({ archived: true });
+    expect(await screen.findByText("edit:false cleanup:true")).toBeInTheDocument();
+    archived.unmount();
+    renderPage({}, false);
+    expect(await screen.findByText("edit:false cleanup:false")).toBeInTheDocument();
   });
 });
