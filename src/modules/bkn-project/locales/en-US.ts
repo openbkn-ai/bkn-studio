@@ -505,10 +505,13 @@ export const bknProjectEnUS = {
         title: "AI assistant",
         close: "Hide the AI assistant",
         subtitle: {
+          relation_types_new: "Relation type · new",
           object_types: "Object type · {{name}}",
           relation_types: "Relation type · {{name}}",
         },
         intro: {
+          relation_types_new:
+            "Say what relation you want to make. I suggest first, and fill the form once you confirm; Save makes it. I can see what the form already holds.",
           object_types:
             "Say how you would like to change this object type. I suggest changes first, and update the form once you confirm them. I can see changes you have not saved yet.",
           relation_types:
@@ -516,6 +519,11 @@ export const bknProjectEnUS = {
         },
         examplesTitle: "Examples",
         examples: {
+          relation_types_new: [
+            "Which object should this one relate to?",
+            "How do these two objects connect?",
+            "Suggest a name for the relation",
+          ],
           object_types: [
             "Is the identity right?",
             "Write the description",
@@ -529,12 +537,15 @@ export const bknProjectEnUS = {
         },
         question: "Your question",
         placeholder: {
+          relation_types_new: "Describe the relation you want to make, or ask more…",
           object_types: "Describe how to change this object type, or ask more…",
           relation_types: "Describe how to change this relation type, or ask more…",
         },
         submit: "Send",
         asking: "Reading it and suggesting changes…",
         settling: "Putting the suggested changes together…",
+        onlySuggestions: "AI suggested the changes below.",
+        noAnswer: "AI gave no answer or suggestion this time; try asking another way.",
         newConversation: "New conversation",
         retry: "Ask again",
         proposalTitle: "Suggested changes to apply",
@@ -564,6 +575,8 @@ export const bknProjectEnUS = {
           displayName: "display name: {{value}}",
           comment: "description: {{value}}",
           ends: "{{source}} → {{target}}: {{rules}}",
+          endsOnly: "{{source}} → {{target}}",
+          unset: "(not chosen)",
           link: "through {{table}}, {{rules}}",
           pair: "{{source}} = {{target}}",
           separator: "; ",
@@ -586,6 +599,7 @@ export const bknProjectEnUS = {
             type_mismatch: "the properties joining the ends are of different types",
             no_mapping: "it does not say how the ends join",
             duplicate: "the same relation already exists",
+            not_from_given_end: "it does not start from the object you chose",
             too_long: "it is too long",
             other: "it would not pass the checks on saving",
           },
@@ -820,6 +834,11 @@ export const bknProjectEnUS = {
       open: "Open and check",
     },
     relationEditor: {
+      sourceSuggestions: {
+        title: "Relations the fields suggest for \u201c{{name}}\u201d",
+        ends: "{{source}} → {{target}}",
+        use: "Fill in",
+      },
       title: "Edit relation",
       newTitle: "New relation",
       nameRequired: "Enter a name for the relation",

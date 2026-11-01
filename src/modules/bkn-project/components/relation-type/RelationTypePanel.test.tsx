@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   message: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
   remove: vi.fn(),
   save: vi.fn(),
+  suggest: vi.fn(),
   // Stable like the real `t`; options are appended so they can be asserted.
   t: (key: string, options?: object) => (options ? `${key}:${JSON.stringify(options)}` : key),
 }));
@@ -43,6 +44,14 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
   createDraftRelationType: mocks.create,
   deleteDraftRelationType: mocks.remove,
   saveDraftRelationType: mocks.save,
+}));
+
+vi.mock("@/modules/bkn-project/services/relation-suggestions.service", () => ({
+  getRelationSuggestions: mocks.suggest,
+}));
+
+vi.mock("@/modules/knowledge-network/services/object-metric-models.service", () => ({
+  listObjectMetricAnswerModels: () => Promise.resolve([]),
 }));
 
 // Stands in for the mapping tables: a button fills in the ends and one pair.
@@ -109,6 +118,28 @@ function renderPanel(draft: Draft = mapDraft(mockDraft("p1")), id: string | null
   );
   return handlers;
 }
+
+/** A relation the fields suggest from sales orders to customers. */
+const suggestion = (name: string) => ({
+  ends: {
+    mapping: [{ sourceProperty: "customer_id", targetProperty: "customer_id" }],
+    source: "sales_orders",
+    target: "customers",
+  },
+  evidence: {
+    computed: true,
+    hitRate: 1,
+    hits: 10,
+    nulls: 0,
+    orphans: 0,
+    rows: 10,
+    sourceDistinct: 10,
+  },
+  name,
+  origin: "name_match",
+  reason: "",
+  relationTypeId: "",
+});
 
 function refusal(status: number, code: string, details?: unknown) {
   return new AxiosError(code, "ERR_BAD_REQUEST", undefined, undefined, {
@@ -231,6 +262,60 @@ describe("RelationTypePanel", () => {
         source: "sales_orders",
         target: "customers",
       }),
+    );
+  });
+
+  it("asks AI about a relation being made, and fills in a suggestion for its source", async () => {
+    const draft = mapDraft(mockDraft("p1"));
+    mocks.create.mockResolvedValue(madeDraft(draft));
+    mocks.suggest.mockResolvedValue({
+      answer: "",
+      candidates: [
+        { ...suggestion("Already drafted"), origin: "drafted", relationTypeId: "rt1" },
+        suggestion("Orders of a customer"),
+      ],
+      objectType: { id: "sales_orders", name: "sales_orders" },
+    });
+    renderWithoutAntdStyles(
+      <RelationTypePanel
+        draft={draft}
+        onClose={vi.fn()}
+        onReload={vi.fn().mockResolvedValue(null)}
+        onSaved={vi.fn()}
+        // Only its source chosen so far.
+        prefill={{ ends: { mapping: [], source: "sales_orders", target: "" }, name: "" }}
+        project={project}
+        relationTypeId={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
+    // Examples for a relation being made.
+    expect(
+      screen.getByRole("button", { name: "bknProject.model.ask.examples.relation_types_new.0" }),
+    ).toBeInTheDocument();
+    // The source's suggestions from its fields, without the one the draft already has.
+    expect(await screen.findByText("Orders of a customer")).toBeInTheDocument();
+    expect(mocks.suggest).toHaveBeenCalledWith("p1", "sales_orders");
+    expect(screen.queryByText("Already drafted")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknProject.relationEditor.sourceSuggestions.use" }),
+    );
+    expect(nameBox()).toHaveValue("Orders of a customer");
+    expect(mocks.create).not.toHaveBeenCalled();
+    save();
+    await waitFor(() =>
+      expect(mocks.create).toHaveBeenCalledWith(
+        "p1",
+        draft.updateTime,
+        expect.objectContaining({
+          mapping: [{ sourceProperty: "customer_id", targetProperty: "customer_id" }],
+          name: "Orders of a customer",
+          source: "sales_orders",
+          target: "customers",
+        }),
+      ),
     );
   });
 

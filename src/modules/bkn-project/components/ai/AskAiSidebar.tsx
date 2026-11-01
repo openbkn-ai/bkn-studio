@@ -7,7 +7,7 @@
 
 import { CloseOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { Button, Checkbox, Space } from "antd";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -54,6 +54,7 @@ const DROPPED = new Set([
   "type_mismatch",
   "no_mapping",
   "duplicate",
+  "not_from_given_end",
   "too_long",
 ]);
 
@@ -96,9 +97,11 @@ export function AskAiSidebar({
   preview,
   projectId,
   subtitle,
+  top,
   working,
 }: {
-  itemId: string;
+  /** The item asked about; null for one being made. */
+  itemId: string | null;
   kind: AskKind;
   /** Puts the changes into the editor; replies how to take them back. */
   onApply: (revisions: AskRevision[]) => UndoApply;
@@ -108,6 +111,8 @@ export function AskAiSidebar({
   projectId: string;
   /** What is being edited, under the title. */
   subtitle: string;
+  /** Shown above the conversation, such as suggestions to start from. */
+  top?: ReactNode;
   /** What the editor holds now, saved or not. */
   working: () => DraftObjectTypeSave | DraftRelationTypeSave;
 }) {
@@ -171,9 +176,12 @@ export function AskAiSidebar({
       const reply = await (kind === "object_types"
         ? askDraftItem({ ...request, kind, working: working() as DraftObjectTypeSave })
         : askDraftItem({ ...request, kind, working: working() as DraftRelationTypeSave }));
-      const answer = reply.answer || text;
-      turns.current = [...turns.current, { answer, question }];
-      say({ content: answer, role: "assistant" });
+      const answer = (reply.answer || text).trim();
+      const proposed = reply.revisions.length > 0 || reply.dropped.length > 0;
+      // AI may give only its changes: they show with a line saying so, never an empty bubble.
+      const said = answer || t(`${PREFIX}.${proposed ? "onlySuggestions" : "noAnswer"}`);
+      turns.current = [...turns.current, { answer: said, question }];
+      say({ content: said, role: "assistant" });
       if (reply.revisions.length || reply.dropped.length) {
         setProposal({
           dropped: reply.dropped,
@@ -234,6 +242,8 @@ export function AskAiSidebar({
       reason: t(`${PREFIX}.dropped.reason.${DROPPED.has(item.reason) ? item.reason : "other"}`),
     });
 
+  // A relation type being made is asked about differently from one that exists.
+  const topic = itemId === null ? `${kind}_new` : kind;
   const empty = !messages.length && !generating;
   return (
     <aside aria-label={t(`${PREFIX}.title`)} className={styles.panel}>
@@ -262,8 +272,9 @@ export function AskAiSidebar({
         </div>
       </div>
       <div className={`${styles.content} ${empty ? styles.contentEmpty : ""}`}>
+        {top}
         {empty ? (
-          <p className={styles.intro}>{t(`${PREFIX}.intro.${kind}`)}</p>
+          <p className={styles.intro}>{t(`${PREFIX}.intro.${topic}`)}</p>
         ) : (
           <div aria-live="polite" className={styles.conversation}>
             {messages.map((item, at) => (
@@ -376,7 +387,7 @@ export function AskAiSidebar({
           <div className={styles.examples}>
             <span>{t(`${PREFIX}.examplesTitle`)}</span>
             {Array.from({ length: EXAMPLES }, (_, index) => {
-              const example = t(`${PREFIX}.examples.${kind}.${index}`);
+              const example = t(`${PREFIX}.examples.${topic}.${index}`);
               return (
                 <button
                   key={index}
@@ -402,7 +413,7 @@ export function AskAiSidebar({
           inputLabel={t(`${PREFIX}.question`)}
           onStop={() => asking.current?.abort()}
           onSubmit={(question) => void ask(question)}
-          placeholder={t(`${PREFIX}.placeholder.${kind}`)}
+          placeholder={t(`${PREFIX}.placeholder.${topic}`)}
           promptRequest={promptRequest}
           sendLabel={t(`${PREFIX}.submit`)}
         />

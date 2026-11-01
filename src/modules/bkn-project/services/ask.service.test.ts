@@ -174,6 +174,34 @@ describe("askDraftItem", () => {
     ]);
   });
 
+  it("asks about a relation being made, with what is filled in so far", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(stream([frame("result", { answer: "A", dropped: [], revisions: [] })]));
+    vi.stubGlobal("fetch", fetchMock);
+    const { askDraftItem } = await importService();
+
+    await askDraftItem({
+      ...base,
+      itemId: null,
+      kind: "relation_types",
+      onText: vi.fn(),
+      // Only the source chosen: no target, no mapping, no name yet.
+      working: { description: "", mapping: [], name: "", source: "waybill", target: "" },
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/bkn-project/v1/projects/p%2F1/ontology/draft/relation_types:ask");
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      working: {
+        mapping_rules: [],
+        name: "",
+        source_object_type_id: "waybill",
+        target_object_type_id: "",
+      },
+    });
+  });
+
   it("says why it did not answer, keeping what was written", async () => {
     const { AskError, askDraftItem } = await importService();
     const ask = () => askDraftItem({ ...base, kind: "object_types", onText: vi.fn() });

@@ -14,6 +14,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
+import { SourceSuggestions } from "@/modules/bkn-project/components/relation-type/SourceSuggestions";
 import {
   applyRelationRevisions,
   relationPreview,
@@ -404,7 +405,7 @@ export function RelationTypePanel({
               {t(`${PREFIX}.delete`)}
             </AppButton>
           ) : null}
-          {relation ? (
+          {base ? (
             <AppButton aria-pressed={asking} onClick={() => setAsking(!asking)}>
               {t("bknProject.objectEditor.ask")}
             </AppButton>
@@ -481,9 +482,9 @@ export function RelationTypePanel({
               />
             </div>
           </div>
-          {asking && relation ? (
+          {asking ? (
             <AskAiSidebar
-              itemId={relation.id}
+              itemId={relation?.id ?? null}
               kind="relation_types"
               onApply={apply}
               onClose={() => setAsking(false)}
@@ -491,7 +492,26 @@ export function RelationTypePanel({
                 relationPreview(t, endNames, basic, relationSave(basic, values), revision)
               }
               projectId={project.id}
-              subtitle={t("bknProject.model.ask.subtitle.relation_types", { name: relation.name })}
+              subtitle={
+                relation
+                  ? t("bknProject.model.ask.subtitle.relation_types", { name: relation.name })
+                  : t("bknProject.model.ask.subtitle.relation_types_new")
+              }
+              top={
+                relation ? null : (
+                  <SourceSuggestions
+                    objectName={objectName}
+                    onPick={(suggestion) =>
+                      put({
+                        basic: { ...basic, name: basic.name.trim() ? basic.name : suggestion.name },
+                        values: endsEditorValues(suggestion.ends, tables),
+                      })
+                    }
+                    projectId={project.id}
+                    sourceId={values.mappingRules.sourceObjectTypeId}
+                  />
+                )
+              }
               working={() => relationSave(basic, values)}
             />
           ) : null}

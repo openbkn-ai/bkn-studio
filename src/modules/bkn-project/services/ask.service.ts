@@ -37,7 +37,8 @@ export class AskError extends Error {
 
 export type AskRequest = {
   history: AskTurn[];
-  itemId: string;
+  /** The item asked about; null for a relation type being made, which has none yet. */
+  itemId: string | null;
   /** The answer's text as it is written. */
   onText: (text: string) => void;
   projectId: string;
@@ -206,7 +207,11 @@ export async function askDraftItem(request: AskRequest): Promise<AskAnswer> {
     return askMock(request);
   }
   const { apiBaseUrl, auth, locale } = getRuntimeConfig();
-  const url = `${apiBaseUrl}${API_PREFIX}/${encodeURIComponent(request.projectId)}/ontology/draft/${request.kind}/${encodeURIComponent(request.itemId)}/ask`;
+  const draft = `${apiBaseUrl}${API_PREFIX}/${encodeURIComponent(request.projectId)}/ontology/draft`;
+  const url =
+    request.itemId === null
+      ? `${draft}/${request.kind}:ask`
+      : `${draft}/${request.kind}/${encodeURIComponent(request.itemId)}/ask`;
   // Signed in as the page is, once more with a fresh token when the one it had expired.
   const post = (init: RequestInit, token: string | null) => {
     const headers = new Headers(init.headers);

@@ -127,5 +127,9 @@ describe("Ask AI revisions", () => {
     expect(endsText(t, names, ends)).toContain('"source":"Employee"');
     expect(endsText(t, names, ends)).toContain('\\"table\\":\\"assignments\\"');
     expect(endsText(t, names, { mapping: [], source: "", target: "" })).toBe("");
+    // A relation being made, with only its source chosen: no mapping, the other end not chosen.
+    expect(endsText(t, names, { mapping: [], source: "staff", target: "" })).toBe(
+      'bknProject.model.ask.preview.endsOnly:{"rules":"","source":"Employee","target":"bknProject.model.ask.preview.unset"}',
+    );
   });
 });

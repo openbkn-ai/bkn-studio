@@ -390,6 +390,25 @@ describe("ObjectTypePanel", () => {
     expect(saved.properties[0]).not.toMatchObject({ displayName: "Customer ID" });
   });
 
+  it("says AI gave only changes when it wrote no answer, never an empty bubble", async () => {
+    mocks.ask.mockResolvedValueOnce({
+      answer: "",
+      dropped: [{ field: "ends", reason: "not_from_given_end" }],
+      revisions: [{ field: "comment", reason: "", value: "A buyer." }],
+    });
+    renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
+    askAi("Describe it");
+
+    expect(await screen.findByText("bknProject.model.ask.onlySuggestions")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "bknProject.model.ask.apply" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'bknProject.model.ask.dropped.item:{"field":"bknProject.model.ask.field.ends","reason":"bknProject.model.ask.dropped.reason.not_from_given_end"}',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("takes back what was applied, unless the form changed since", async () => {
     const reply = {
       answer: "A.",
