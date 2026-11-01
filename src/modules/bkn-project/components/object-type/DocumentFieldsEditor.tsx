@@ -330,7 +330,8 @@ export function DocumentFieldsEditor({
       )}
       {!fixed && (
         <AppButton
-          onClick={() =>
+          onClick={() => {
+            referenceNames.current[value.properties.length] = "";
             onChange({
               ...value,
               properties: [
@@ -343,8 +344,8 @@ export function DocumentFieldsEditor({
                   extraction: { instruction: "", examples: [] },
                 },
               ],
-            })
-          }
+            });
+          }}
         >
           {t(`${P}.add`)}
         </AppButton>
