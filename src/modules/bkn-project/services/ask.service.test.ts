@@ -240,3 +240,48 @@ describe("askDraftItem", () => {
     await expect(ask()).rejects.toMatchObject({ answer: "Half", code: "other" });
   });
 });
+
+describe("document assistant wire format", () => {
+  it("retains instruction-only proposals and document join rules", async () => {
+    const { mapAnswer } = await importService();
+    const result = mapAnswer({
+      revisions: [
+        {
+          field: "data_property",
+          value: { name: "number", extraction_instruction: "Read explicit only" },
+        },
+        {
+          field: "ends",
+          value: {
+            source_object_type_id: "contract_doc",
+            target_object_type_id: "order",
+            document_mapping: {
+              mode: "linking",
+              mention_property: "number",
+              identity_property: "id",
+            },
+            cardinality: "many_to_one",
+          },
+        },
+      ],
+    });
+    expect(result.revisions).toEqual([
+      {
+        field: "data_property",
+        reason: "",
+        value: { name: "number", extractionInstruction: "Read explicit only" },
+      },
+      {
+        field: "ends",
+        reason: "",
+        value: {
+          source: "contract_doc",
+          target: "order",
+          mapping: [],
+          documentMapping: { mode: "linking", mentionProperty: "number", identityProperty: "id" },
+          cardinality: "many_to_one",
+        },
+      },
+    ]);
+  });
+});

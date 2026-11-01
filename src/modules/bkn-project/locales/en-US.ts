@@ -642,6 +642,10 @@ export const bknProjectEnUS = {
           other: "A change",
         },
         preview: {
+          extractionInstruction: "extraction instruction: {{value}}",
+          linking: "by business identity: {{rules}}",
+          sameDocument: "within the same document: {{rules}}",
+
           property: "Property \u201c{{name}}\u201d",
           displayName: "display name: {{value}}",
           comment: "description: {{value}}",
