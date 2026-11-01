@@ -598,6 +598,10 @@ export const bknProjectZhCN = {
           other: "一处修改",
         },
         preview: {
+          extractionInstruction: "抽取说明：{{value}}",
+          linking: "通过业务标识：{{rules}}",
+          sameDocument: "同一文档内：{{rules}}",
+
           property: "属性「{{name}}」",
           displayName: "显示名：{{value}}",
           comment: "说明：{{value}}",

@@ -7,6 +7,7 @@
 
 import type { TFunction } from "i18next";
 
+import { documentCardinalityKey } from "@/modules/bkn-project/components/object-type/document-values";
 import { endsEditorValues } from "@/modules/bkn-project/components/relation-type/relation-values";
 import type { AskEnds, AskRevision, DraftTable } from "@/modules/bkn-project/types/draft";
 import type { RelationTypeMappingFormValues } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor";
@@ -54,7 +55,16 @@ function withBasic(basic: Basic, revision: AskRevision): Basic {
 /** How a revision of an object type reads; properties by their display names. */
 export function objectPreview(
   t: TFunction,
-  { basic, properties }: ObjectValues,
+  {
+    basic,
+    properties,
+  }: {
+    basic: Basic;
+    properties: Pick<
+      ObjectTypeDataProperty,
+      "name" | "displayName" | "comment" | "primaryKey" | "displayKey"
+    >[];
+  },
   revision: AskRevision,
 ): RevisionPreview {
   const shown = (name: string) =>
@@ -160,33 +170,54 @@ export function endsText(t: TFunction, names: EndNames, ends: AskEnds): string {
   }
   const pair = (source: string, target: string) => t(`${PREFIX}.preview.pair`, { source, target });
   const separator = t(`${PREFIX}.preview.separator`);
-  const rules = ends.link
-    ? t(`${PREFIX}.preview.link`, {
-        rules: [
-          ...ends.link.sourceMapping.map((item) =>
-            pair(names.property(ends.source, item.sourceProperty), item.targetProperty),
+  const document = ends.documentMapping;
+  const rules = document
+    ? t(`${PREFIX}.preview.${document.mode === "same_document" ? "sameDocument" : "linking"}`, {
+        rules: pair(
+          names.property(
+            ends.source,
+            document.mode === "same_document"
+              ? (document.sourceNameProperty ?? "")
+              : (document.mentionProperty ?? ""),
           ),
-          ...ends.link.targetMapping.map((item) =>
-            pair(item.sourceProperty, names.property(ends.target, item.targetProperty)),
+          names.property(
+            ends.target,
+            document.mode === "same_document"
+              ? (document.targetNameProperty ?? "")
+              : (document.identityProperty ?? ""),
           ),
-        ].join(separator),
-        table: names.table(ends.link.resourceId),
+        ),
       })
-    : ends.mapping
-        .map((item) =>
-          pair(
-            names.property(ends.source, item.sourceProperty),
-            names.property(ends.target, item.targetProperty),
-          ),
-        )
-        .join(separator);
+    : ends.link
+      ? t(`${PREFIX}.preview.link`, {
+          rules: [
+            ...ends.link.sourceMapping.map((item) =>
+              pair(names.property(ends.source, item.sourceProperty), item.targetProperty),
+            ),
+            ...ends.link.targetMapping.map((item) =>
+              pair(item.sourceProperty, names.property(ends.target, item.targetProperty)),
+            ),
+          ].join(separator),
+          table: names.table(ends.link.resourceId),
+        })
+      : ends.mapping
+          .map((item) =>
+            pair(
+              names.property(ends.source, item.sourceProperty),
+              names.property(ends.target, item.targetProperty),
+            ),
+          )
+          .join(separator);
   // An end not chosen yet, as in a relation being made, says so; no mapping, no colon after it.
   const end = (id: string) => (id ? names.object(id) : t(`${PREFIX}.preview.unset`));
-  return t(`${PREFIX}.preview.${rules ? "ends" : "endsOnly"}`, {
+  const line = t(`${PREFIX}.preview.${rules ? "ends" : "endsOnly"}`, {
     rules,
     source: end(ends.source),
     target: end(ends.target),
   });
+  return document && ends.cardinality
+    ? `${line}${separator}${t(`bknProject.documentEditor.${documentCardinalityKey(ends.cardinality)}`)}`
+    : line;
 }
 
 /** How a revision of a relation type reads, its ends against the ends being edited. */

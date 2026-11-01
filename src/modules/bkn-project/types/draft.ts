@@ -343,7 +343,10 @@ export type AskKind = "object_types" | "relation_types";
 export type AskTurn = { answer: string; question: string };
 
 /** A relation type's ends and how they join, as saving sends them. */
-export type AskEnds = Pick<DraftRelationTypeSave, "link" | "mapping" | "source" | "target">;
+export type AskEnds = Pick<
+  DraftRelationTypeSave,
+  "link" | "mapping" | "source" | "target" | "documentMapping" | "cardinality"
+>;
 
 /**
  * A change Ask AI proposes to what is being edited, checked by bkn-project as saving would check
@@ -352,7 +355,15 @@ export type AskEnds = Pick<DraftRelationTypeSave, "link" | "mapping" | "source" 
 export type AskRevision = { reason: string } & (
   | { field: "name" | "comment" | "display_key"; value: string }
   | { field: "primary_keys"; value: string[] }
-  | { field: "data_property"; value: { comment?: string; displayName?: string; name: string } }
+  | {
+      field: "data_property";
+      value: {
+        comment?: string;
+        displayName?: string;
+        name: string;
+        extractionInstruction?: string;
+      };
+    }
   | { field: "ends"; value: AskEnds }
 );
 

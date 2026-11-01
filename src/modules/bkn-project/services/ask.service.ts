@@ -59,6 +59,7 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 
 /** A relation's ends as bkn-project proposes them: its two ends, joined directly. */
 function mapEnds(value: Record<string, unknown>): AskEnds {
+  const document = asRecord(value.document_mapping);
   return {
     mapping: (Array.isArray(value.mapping_rules) ? (value.mapping_rules as BackendPair[]) : []).map(
       (pair) => ({
@@ -66,6 +67,26 @@ function mapEnds(value: Record<string, unknown>): AskEnds {
         targetProperty: pair.target_property?.name ?? "",
       }),
     ),
+    ...(document
+      ? {
+          documentMapping: {
+            mode: text(document.mode),
+            ...(typeof document.mention_property === "string"
+              ? { mentionProperty: text(document.mention_property) }
+              : {}),
+            ...(typeof document.identity_property === "string"
+              ? { identityProperty: text(document.identity_property) }
+              : {}),
+            ...(typeof document.source_name_property === "string"
+              ? { sourceNameProperty: text(document.source_name_property) }
+              : {}),
+            ...(typeof document.target_name_property === "string"
+              ? { targetNameProperty: text(document.target_name_property) }
+              : {}),
+          },
+        }
+      : {}),
+    ...(typeof value.cardinality === "string" ? { cardinality: value.cardinality } : {}),
     source: text(value.source_object_type_id),
     target: text(value.target_object_type_id),
   };
@@ -96,8 +117,13 @@ function mapRevision(value: unknown): AskRevision | null {
             field: "data_property",
             reason,
             value: {
-              comment: text(property.comment),
-              displayName: text(property.display_name),
+              ...(typeof property.comment === "string" ? { comment: property.comment } : {}),
+              ...(typeof property.display_name === "string"
+                ? { displayName: property.display_name }
+                : {}),
+              ...(typeof property.extraction_instruction === "string"
+                ? { extractionInstruction: property.extraction_instruction }
+                : {}),
               name: property.name,
             },
           }

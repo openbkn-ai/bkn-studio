@@ -592,6 +592,31 @@ describe("document object panel", () => {
     mocks.save.mockResolvedValue({ ...draft, updateTime: draft.updateTime + 1 });
     renderPanel(draft, object.id);
     expect(screen.queryByText("property editor")).not.toBeInTheDocument();
+    mocks.ask.mockResolvedValue({
+      answer: "Read only the explicit number.",
+      dropped: [],
+      revisions: [
+        {
+          field: "data_property",
+          reason: "Avoid inference",
+          value: { name: "number", extractionInstruction: "Read only the printed contract number" },
+        },
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
+      target: { value: "Improve extraction" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.ask.apply" }));
+    expect(
+      screen.getByRole("textbox", { name: /bknProject.documentEditor.instruction/ }),
+    ).toHaveValue("Read only the printed contract number");
+    expect(mocks.save).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.undo" }));
+    expect(
+      screen.getByRole("textbox", { name: /bknProject.documentEditor.instruction/ }),
+    ).toHaveValue("Read the explicit order number");
     const apiName = screen.getByRole("textbox", { name: "bknProject.documentEditor.apiName" });
     fireEvent.change(apiName, { target: { value: "" } });
     fireEvent.change(apiName, { target: { value: "contract_no" } });

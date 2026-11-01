@@ -14,6 +14,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
+import { applyDocumentRelationRevisions } from "@/modules/bkn-project/components/ai/document-revisions";
 import { SourceSuggestions } from "@/modules/bkn-project/components/relation-type/SourceSuggestions";
 import {
   applyRelationRevisions,
@@ -372,9 +373,9 @@ export function RelationTypePanel({
   };
 
   // What the editor holds now, for taking back what Ask AI put in only while nothing changed since.
-  const holding = useRef({ basic, values });
+  const holding = useRef({ basic, values, documentValue });
   useEffect(() => {
-    holding.current = { basic, values };
+    holding.current = { basic, values, documentValue };
   });
   const put = (next: { basic: BasicValues; values: RelationTypeMappingFormValues }) => {
     setBasic(next.basic);
@@ -385,17 +386,28 @@ export function RelationTypePanel({
   // Ask AI's changes go into the editor as if made by hand; saving writes them.
   const apply = (revisions: AskRevision[]): UndoApply => {
     const before = { basic, values };
-    const after = applyRelationRevisions(before, revisions, tables);
+    const beforeDocument = documentValue;
+    const afterDocument = beforeDocument
+      ? applyDocumentRelationRevisions(beforeDocument, revisions)
+      : null;
+    const after = applyRelationRevisions(
+      before,
+      documentValue ? revisions.filter((r) => r.field !== "ends") : revisions,
+      tables,
+    );
     put(after);
+    setDocumentValue(afterDocument);
     return () => {
       const now = holding.current;
       if (
+        JSON.stringify(now.documentValue) !== JSON.stringify(afterDocument) ||
         JSON.stringify(relationSave(now.basic, now.values)) !==
-        JSON.stringify(relationSave(after.basic, after.values))
+          JSON.stringify(relationSave(after.basic, after.values))
       ) {
         return false;
       }
       put(before);
+      setDocumentValue(beforeDocument);
       return true;
     };
   };
@@ -531,7 +543,13 @@ export function RelationTypePanel({
               onApply={apply}
               onClose={() => setAsking(false)}
               preview={(revision) =>
-                relationPreview(t, endNames, basic, relationSave(basic, values), revision)
+                relationPreview(
+                  t,
+                  endNames,
+                  basic,
+                  documentValue ?? relationSave(basic, values),
+                  revision,
+                )
               }
               projectId={project.id}
               subtitle={
@@ -540,7 +558,7 @@ export function RelationTypePanel({
                   : t("bknProject.model.ask.subtitle.relation_types_new")
               }
               top={
-                relation ? null : (
+                relation || documentValue ? null : (
                   <SourceSuggestions
                     objectName={objectName}
                     onPick={(suggestion) =>

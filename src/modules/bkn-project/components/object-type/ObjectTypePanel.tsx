@@ -14,6 +14,10 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
+import {
+  applyDocumentObjectRevisions,
+  documentObjectPreview,
+} from "@/modules/bkn-project/components/ai/document-revisions";
 import { applyObjectRevisions, objectPreview } from "@/modules/bkn-project/components/ai/revisions";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import {
@@ -364,34 +368,13 @@ export function ObjectTypePanel({
     const beforeDocument = documentValue;
     const after = applyObjectRevisions(before, revisions);
     const afterDocument = beforeDocument
-      ? {
-          ...beforeDocument,
-          properties: beforeDocument.properties.map((p) => {
-            if (base?.objectType.properties.some((old) => old.name === p.name && old.readOnly))
-              return p;
-            const revision = revisions.find(
-              (r) => r.field === "data_property" && r.value.name === p.name,
-            );
-            return revision?.field === "data_property"
-              ? {
-                  ...p,
-                  ...(revision.value.displayName !== undefined
-                    ? { displayName: revision.value.displayName }
-                    : {}),
-                  ...(revision.value.comment !== undefined
-                    ? { description: revision.value.comment }
-                    : {}),
-                }
-              : p;
-          }),
-        }
+      ? applyDocumentObjectRevisions(
+          beforeDocument,
+          revisions,
+          base?.objectType.properties.filter((p) => p.readOnly).map((p) => p.name) ?? [],
+          base?.objectType.document?.role ?? "",
+        )
       : null;
-    for (const revision of revisions) {
-      if (!afterDocument) break;
-      if (revision.field === "display_key") afterDocument.displayKey = revision.value;
-      if (revision.field === "primary_keys" && base?.objectType.document?.role === "entity")
-        afterDocument.primaryKeys = revision.value;
-    }
     put(after);
     setDocumentValue(afterDocument);
     return () => {
@@ -504,7 +487,11 @@ export function ObjectTypePanel({
               kind="object_types"
               onApply={apply}
               onClose={() => setAsking(false)}
-              preview={(revision) => objectPreview(t, { basic, properties }, revision)}
+              preview={(revision) =>
+                documentValue
+                  ? documentObjectPreview(t, { ...documentValue, ...basic }, revision)
+                  : objectPreview(t, { basic, properties }, revision)
+              }
               projectId={project.id}
               subtitle={t("bknProject.model.ask.subtitle.object_types", {
                 name: base.objectType.name,
