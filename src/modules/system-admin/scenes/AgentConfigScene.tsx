@@ -75,7 +75,7 @@ import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import { useAgentAdminParams } from "@/modules/system-admin/scenes/agent-config-admin";
 
 import styles from "./AgentConfigScene.module.css";
-import { agentDisplayName } from "./agent-config-names";
+import { agentDescription, agentDisplayName } from "./agent-config-names";
 
 const P = "systemAdmin.agentConfig";
 const L = "knowledgeNetwork.agentChat.config";
@@ -604,6 +604,9 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
           {shared.agent_id}
         </Typography.Text>
       </Space>
+      {agentDescription(shared, t) ? (
+        <Typography.Paragraph>{agentDescription(shared, t)}</Typography.Paragraph>
+      ) : null}
       <Typography.Paragraph type="secondary">
         {t(shared.layered ? `${P}.intro` : `${P}.introPlain`)}
       </Typography.Paragraph>

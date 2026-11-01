@@ -32,7 +32,7 @@ import {
 
 import { agentConfigPath, useAgentAdminParams } from "./agent-config-admin";
 import styles from "./AgentConfigListScene.module.css";
-import { agentDisplayName } from "./agent-config-names";
+import { agentDescription, agentDisplayName } from "./agent-config-names";
 
 const P = "systemAdmin.agentConfig";
 
@@ -66,6 +66,9 @@ function AgentCard({ agent, onOpen }: { agent: SharedAgent; onOpen: () => void }
         <div className={styles.titleContent}>
           <div className={styles.titleText}>{agentDisplayName(agent, t)}</div>
           <div className={styles.agentId}>{agent.agent_id}</div>
+          {agentDescription(agent, t) ? (
+            <div className={styles.description}>{agentDescription(agent, t)}</div>
+          ) : null}
           <span className={styles.builtinTag}>{t(`${P}.builtinTag`)}</span>
         </div>
       </div>
