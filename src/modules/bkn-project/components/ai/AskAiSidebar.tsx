@@ -54,6 +54,7 @@ const DROPPED = new Set([
   "type_mismatch",
   "no_mapping",
   "duplicate",
+  "not_from_given_end",
   "too_long",
 ]);
 
@@ -175,9 +176,12 @@ export function AskAiSidebar({
       const reply = await (kind === "object_types"
         ? askDraftItem({ ...request, kind, working: working() as DraftObjectTypeSave })
         : askDraftItem({ ...request, kind, working: working() as DraftRelationTypeSave }));
-      const answer = reply.answer || text;
-      turns.current = [...turns.current, { answer, question }];
-      say({ content: answer, role: "assistant" });
+      const answer = (reply.answer || text).trim();
+      const proposed = reply.revisions.length > 0 || reply.dropped.length > 0;
+      // AI may give only its changes: they show with a line saying so, never an empty bubble.
+      const said = answer || t(`${PREFIX}.${proposed ? "onlySuggestions" : "noAnswer"}`);
+      turns.current = [...turns.current, { answer: said, question }];
+      say({ content: said, role: "assistant" });
       if (reply.revisions.length || reply.dropped.length) {
         setProposal({
           dropped: reply.dropped,
