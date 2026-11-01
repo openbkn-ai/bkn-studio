@@ -318,3 +318,27 @@ export type AskDropped = { field: string; reason: string };
 
 /** Ask AI's answer, and the changes it proposes; nothing is kept between questions. */
 export type AskAnswer = { answer: string; dropped: AskDropped[]; revisions: AskRevision[] };
+
+/** An adopted object type no adopted relation type connects, directly or through a link table. */
+export type IsolatedObjectType = { id: string; name: string };
+
+/**
+ * A relation type that could connect an object type: one drafting found and nobody adopted
+ * (`drafted`, by `relationTypeId`), one the fields suggest (`foreign_key`, `name_match`,
+ * `stem_match`), or one AI proposed (`ai`). bkn-project checks and counts each; nothing is written
+ * until a person adopts or saves one.
+ */
+export type RelationSuggestion = {
+  ends: AskEnds;
+  evidence: DraftJoinEvidence;
+  name: string;
+  origin: string;
+  /** Why it fits, in business terms; only once AI has been asked. */
+  reason: string;
+  relationTypeId: string;
+};
+
+export type RelationSuggestions = {
+  candidates: RelationSuggestion[];
+  objectType: IsolatedObjectType;
+};
