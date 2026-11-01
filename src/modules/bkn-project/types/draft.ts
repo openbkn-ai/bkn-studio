@@ -41,7 +41,41 @@ export type DraftKeyEvidence = {
   source: string;
 };
 
+export type DraftSourceCitation = {
+  knowledgeBaseId: string;
+  fileId: string;
+  contentVersionId: string;
+  blockId: string;
+  start: number;
+  end: number;
+  quote?: string;
+};
+export type DraftExtractionField = { instruction: string; examples: DraftSourceCitation[] };
+export type DraftDocumentSettings = { timeProperty: string; participantRelations: string[] };
+export type DraftDocumentModel = DraftDocumentSettings & {
+  role: string;
+  layer: string;
+  reason: string;
+  citations: DraftSourceCitation[];
+  selectionId: string;
+  selectionRevision: number;
+};
+export type DraftDocumentMapping = {
+  mode: string;
+  mentionProperty?: string;
+  identityProperty?: string;
+  sourceNameProperty?: string;
+  targetNameProperty?: string;
+};
+export type SamplePreview = {
+  selectionId: string;
+  selectionRevision: number;
+  fragments: { text: string; fileName: string; citation: DraftSourceCitation }[];
+};
+
 export type DraftProperty = {
+  extraction?: DraftExtractionField;
+  readOnly?: boolean;
   description: string;
   displayName: string;
   mappedField: string;
@@ -53,6 +87,7 @@ export type DraftProperty = {
 };
 
 export type DraftObjectType = {
+  document?: DraftDocumentModel;
   adopted: boolean;
   description: string;
   displayKey: string;
@@ -88,6 +123,8 @@ export type DraftJoinEvidence = {
 };
 
 export type DraftRelationType = {
+  document?: DraftDocumentModel;
+  documentMapping?: DraftDocumentMapping;
   adopted: boolean;
   cardinality: string;
   description: string;
@@ -185,6 +222,8 @@ export type CandidateState = "adopted" | "excluded" | "pending";
 
 /** An object or relation type of the draft, as the list of candidates to confirm shows it. */
 export type Candidate = {
+  source?: string;
+  document?: DraftDocumentModel;
   /** The catalog whose adding drafted it; empty for one the draft was made with. */
   addedByCatalog: string;
   adopted: boolean;
@@ -216,12 +255,14 @@ export type Candidates = {
  * left out is removed.
  */
 export type DraftObjectTypeSave = {
+  document?: DraftDocumentSettings;
   description: string;
   displayKey: string;
   incrementalKey: string;
   name: string;
   primaryKeys: string[];
   properties: {
+    extraction?: DraftExtractionField;
     description: string;
     displayName: string;
     /** The column it maps; absent for a property that maps none. */
@@ -237,6 +278,8 @@ export type DraftObjectTypeSave = {
  * fields each end's properties map.
  */
 export type DraftRelationTypeSave = {
+  documentMapping?: DraftDocumentMapping;
+  cardinality?: string;
   description: string;
   /** Through a link table: the table's data resource, and each end's properties to its fields. */
   link?: {

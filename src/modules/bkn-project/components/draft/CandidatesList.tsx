@@ -15,6 +15,7 @@ import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/Ligh
 import type { Candidate, Candidates, Draft } from "@/modules/bkn-project/types/draft";
 
 import styles from "./DraftTables.module.css";
+import { originalLocation } from "@/modules/bkn-project/components/object-type/document-values";
 
 const PREFIX = "bknProject.model.candidates";
 const PAGE_SIZE = 20;
@@ -154,11 +155,33 @@ export function CandidatesList({
       key: "source",
       render: (_value, record) =>
         // A row count only where bkn-project gave one; never a made-up zero.
-        record.table
-          ? record.table.rows === null
-            ? record.table.name
-            : t(`${PREFIX}.source`, { name: record.table.name, rows: record.table.rows })
-          : null,
+        record.document ? (
+          <Space direction="vertical" size={2}>
+            <Tooltip title={record.document.reason}>
+              <span>
+                {t(`bknProject.documentEditor.roles.${record.document.role}`, {
+                  defaultValue: t("bknProject.documentEditor.source"),
+                })}
+              </span>
+            </Tooltip>
+            {record.document.citations.slice(0, 3).map((q, i) => (
+              <a
+                key={`${q.blockId}-${q.start}-${i}`}
+                href={originalLocation(q)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("bknProject.documentEditor.original", { number: i + 1 })}
+              </a>
+            ))}
+          </Space>
+        ) : record.table ? (
+          record.table.rows === null ? (
+            record.table.name
+          ) : (
+            t(`${PREFIX}.source`, { name: record.table.name, rows: record.table.rows })
+          )
+        ) : null,
     },
   ];
 

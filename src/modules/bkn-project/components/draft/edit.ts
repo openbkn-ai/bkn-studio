@@ -92,7 +92,11 @@ export function nameEdit(
 const IDENTITY_TYPES = new Set(["integer", "string", "text", "unsigned integer"]);
 
 export const identityCandidates = (objectType: DraftObjectType): DraftProperty[] =>
-  objectType.properties.filter((property) => IDENTITY_TYPES.has(property.type));
+  objectType.properties.filter(
+    (property) =>
+      IDENTITY_TYPES.has(property.type) &&
+      (!objectType.document || (objectType.document.role === "entity" && !property.readOnly)),
+  );
 
 /**
  * The identity drafting counted unique and non-null for an object type waiting for one: a pair

@@ -74,6 +74,8 @@ import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccoun
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectModel.module.css";
+import { extensionProjectKnowledgeBaseModel } from "@/framework/extension/registry";
+import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 
 const TABS = ["changes", "excluded", "objects", "relations", "review", "valueTypes"] as const;
 type Tab = (typeof TABS)[number];
@@ -125,6 +127,7 @@ export function ProjectModel({
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const directory = useAccountDirectory();
+  const KnowledgeBaseModel = extensionProjectKnowledgeBaseModel();
   // undefined while loading, null before the first draft.
   const [draft, setDraft] = useState<Draft | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -497,6 +500,16 @@ export function ProjectModel({
 
   const notices = (
     <>
+      {KnowledgeBaseModel && (
+        <BknProjectKbSlot>
+          <KnowledgeBaseModel
+            projectId={project.id}
+            draftUpdateTime={draft?.updateTime ?? 0}
+            canEdit={ownerIsCaller && !project.archived && !drafting && !generating}
+            onChanged={() => void loadDraft()}
+          />
+        </BknProjectKbSlot>
+      )}
       {ownerIsCaller && catalogsFailed ? (
         <Alert
           action={
@@ -585,11 +598,13 @@ export function ProjectModel({
             )
           }
           description={t(
-            noCatalogs
-              ? ownerIsCaller
-                ? "bknProject.model.empty.noCatalogs"
-                : "bknProject.model.empty.noCatalogsAskOwner"
-              : "bknProject.model.empty.description",
+            noCatalogs && KnowledgeBaseModel
+              ? "bknProject.documentEditor.sourcesHint"
+              : noCatalogs
+                ? ownerIsCaller
+                  ? "bknProject.model.empty.noCatalogs"
+                  : "bknProject.model.empty.noCatalogsAskOwner"
+                : "bknProject.model.empty.description",
           )}
           title={t("bknProject.model.empty.title")}
         />

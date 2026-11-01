@@ -6,7 +6,7 @@
  */
 
 import { CloseOutlined } from "@ant-design/icons";
-import { Alert, Form, Input } from "antd";
+import { Alert, Form, Input, Switch } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -47,6 +47,7 @@ import type {
   AskRevision,
   Draft,
   DraftRelationType,
+  DraftRelationTypeSave,
 } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import {
@@ -59,6 +60,9 @@ import {
   RESOURCE_NAME_COUNT,
   RESOURCE_NAME_MAX_LENGTH,
 } from "@/modules/knowledge-network/lib/resource-constraints";
+
+import { DocumentRelationEditor } from "./DocumentRelationEditor";
+import { documentRelationSave } from "@/modules/bkn-project/components/object-type/document-values";
 
 const PREFIX = "bknProject.relationEditor";
 const DESCRIPTION_MAX_LENGTH = 1000;
@@ -142,6 +146,9 @@ export function RelationTypePanel({
       ? endsEditorValues(prefill.ends, draftTables(draft))
       : relationEditorValues(base?.relation ?? undefined),
   );
+  const [documentValue, setDocumentValue] = useState<DraftRelationTypeSave | null>(() =>
+    base?.relation?.document ? documentRelationSave(base.relation) : null,
+  );
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<SaveProblem | null>(null);
   const [asking, setAsking] = useState(false);
@@ -159,6 +166,7 @@ export function RelationTypePanel({
       setBasic(start);
       basicForm.setFieldsValue(start);
       setValues(relationEditorValues(next.relation ?? undefined));
+      setDocumentValue(next.relation?.document ? documentRelationSave(next.relation) : null);
     }
   };
 
@@ -187,12 +195,14 @@ export function RelationTypePanel({
   const relation = base?.relation ?? null;
   const changed =
     base !== null &&
-    JSON.stringify(relationSave(basic, values)) !==
+    JSON.stringify(documentValue ? { ...documentValue, ...basic } : relationSave(basic, values)) !==
       JSON.stringify(
-        relationSave(
-          { description: relation?.description ?? "", name: relation?.name ?? "" },
-          relationEditorValues(relation ?? undefined),
-        ),
+        relation?.document
+          ? documentRelationSave(relation)
+          : relationSave(
+              { description: relation?.description ?? "", name: relation?.name ?? "" },
+              relationEditorValues(relation ?? undefined),
+            ),
       );
 
   const close = () => {
@@ -273,7 +283,7 @@ export function RelationTypePanel({
       return null;
     }
     // The mapping says what it misses, as on the knowledge network.
-    const missing = validateRelationTypeMappingValues(t, values);
+    const missing = documentValue ? null : validateRelationTypeMappingValues(t, values);
     if (missing) {
       setProblem({ kind: "other", text: missing });
       return null;
@@ -281,7 +291,7 @@ export function RelationTypePanel({
     setSaving(true);
     setProblem(null);
     try {
-      const value = relationSave(named, values);
+      const value = documentValue ? { ...documentValue, ...named } : relationSave(named, values);
       const next = relation
         ? await saveDraftRelationType(project.id, relation.id, base.draft.updateTime, value)
         : await createDraftRelationType(project.id, base.draft.updateTime, value);
@@ -472,14 +482,46 @@ export function RelationTypePanel({
                 />
               </Form.Item>
             </Form>
+            {!relation && current.items.objectTypes.some((o) => o.document) && (
+              <label>
+                {t("bknProject.documentEditor.documentRelation")}{" "}
+                <Switch
+                  checked={documentValue !== null}
+                  onChange={(checked) =>
+                    setDocumentValue(
+                      checked
+                        ? {
+                            name: basic.name,
+                            description: basic.description,
+                            source: "",
+                            target: "",
+                            mapping: [],
+                            documentMapping: { mode: "linking" },
+                            cardinality: "many_to_one",
+                          }
+                        : null,
+                    )
+                  }
+                />
+              </label>
+            )}
             <div className={styles.mapping}>
-              <RelationTypeMappingEditor
-                networkId={project.knId}
-                objectTypes={objectTypes}
-                onChange={setValues}
-                readers={readers}
-                value={values}
-              />
+              {documentValue ? (
+                <DocumentRelationEditor
+                  draft={current}
+                  value={documentValue}
+                  onChange={setDocumentValue}
+                  readonly={relation?.document?.role.startsWith("evidence_")}
+                />
+              ) : (
+                <RelationTypeMappingEditor
+                  networkId={project.knId}
+                  objectTypes={objectTypes}
+                  onChange={setValues}
+                  readers={readers}
+                  value={values}
+                />
+              )}
             </div>
           </div>
           {asking ? (
@@ -512,7 +554,9 @@ export function RelationTypePanel({
                   />
                 )
               }
-              working={() => relationSave(basic, values)}
+              working={() =>
+                documentValue ? { ...documentValue, ...basic } : relationSave(basic, values)
+              }
             />
           ) : null}
         </div>

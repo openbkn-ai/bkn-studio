@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Edit document models in the existing project panels, including grounded examples, event participants and document relation rules; show source reasons and original locations in candidate review. (bkn-foundry#2839)
+
 - Align data-property and logic-property display names with the backend's 128-Unicode-character limit, including visible counts and validation without silent truncation. (#1105)
 
 - Clear the login session when token refresh fails or a refreshed token is rejected, including disabled accounts; ordinary permission denials keep the user signed in.
