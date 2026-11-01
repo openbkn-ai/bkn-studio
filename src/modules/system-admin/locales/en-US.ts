@@ -1307,8 +1307,10 @@ export const systemAdminEnUS = {
         "bkn-project-requirements": "BKNProjectRequirements",
         "bkn-project-answer-judge": "BKNProjectAnswerJudge",
         "bkn-project-ontology-ask": "BKNProjectOntologyAsk",
+        "bkn-project-concept-extraction": "BKNProjectConceptExtraction",
       },
       builtinNames: {
+        "bkn-project-concept-extraction": "Project - Concept Extraction",
         graph_explorer: "Graph Explorer",
         studio_smart_qa: "Studio Smart Q&A",
         cypher_generation: "Cypher Generation",
@@ -1321,6 +1323,8 @@ export const systemAdminEnUS = {
         "bkn-project-ontology-ask": "Project - Ontology Assistant",
       },
       builtinDescriptions: {
+        "bkn-project-concept-extraction":
+          "Proposes object types, events, relations and extraction rules from selected knowledge-base samples for human review and confirmation.",
         "bkn-project-requirements":
           "Drafts a project's business scenarios and scenario questions from its adopted ontology and optional requirement documents, and the test questions and guidance of each question.",
         "bkn-project-answer-judge":
