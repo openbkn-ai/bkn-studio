@@ -42,6 +42,7 @@ import {
   DraftRelationsTable,
   DraftValueTypesTable,
 } from "@/modules/bkn-project/components/draft/DraftTables";
+import { RelationSuggestionsEntry } from "@/modules/bkn-project/components/draft/RelationSuggestionsDrawer";
 import {
   missingCatalogs,
   relationsWithUnadoptedEnds,
@@ -59,6 +60,7 @@ import {
 import type {
   Candidate,
   Candidates,
+  RelationSuggestion,
   Draft,
   DraftExcludedField,
   DraftItemEdit,
@@ -134,7 +136,11 @@ export function ProjectModel({
   // The object type open in the editing panel over the page.
   const [panelId, setPanelId] = useState<string | null>(initialObject ?? null);
   // The relation type open in its panel: null makes a new one.
-  const [relationPanel, setRelationPanel] = useState<{ id: string | null } | null>(null);
+  const [relationPanel, setRelationPanel] = useState<{
+    id: string | null;
+    /** A suggestion a new relation type starts from. */
+    prefill?: RelationSuggestion;
+  } | null>(null);
   // The candidates to confirm, undefined while read; the added catalog they are kept to.
   const [candidates, setCandidates] = useState<Candidates | undefined>(undefined);
   const [candidatesError, setCandidatesError] = useState<string | null>(null);
@@ -869,11 +875,26 @@ export function ProjectModel({
             />
           ) : activeTab === "relations" ? (
             <>
-              {editable ? (
+              {draft.status === "ready" ? (
                 <div className={styles.tabActions}>
-                  <AppButton icon={<PlusOutlined />} onClick={() => openRelation(null)}>
-                    {t("bknProject.relationEditor.add")}
-                  </AppButton>
+                  <RelationSuggestionsEntry
+                    draft={draft}
+                    editable={editable}
+                    onAdopt={async (relationTypeId) => {
+                      await sendEdit("relation_types", relationTypeId, { adopted: true });
+                    }}
+                    onCreate={(suggestion) => {
+                      setReviewOrder(null);
+                      closePanel();
+                      setRelationPanel({ id: null, prefill: suggestion });
+                    }}
+                    projectId={project.id}
+                  />
+                  {editable ? (
+                    <AppButton icon={<PlusOutlined />} onClick={() => openRelation(null)}>
+                      {t("bknProject.relationEditor.add")}
+                    </AppButton>
+                  ) : null}
                 </div>
               ) : null}
               <DraftRelationsTable
@@ -924,10 +945,12 @@ export function ProjectModel({
           {relationPanel && editable ? (
             <RelationTypePanel
               draft={draft}
-              key={`${relationPanel.id ?? "new"}/${panelReads}`}
+              // Another suggestion opened starts the editor over from it.
+              key={`${relationPanel.id ?? "new"}/${panelReads}/${relationPanel.prefill ? JSON.stringify([relationPanel.prefill.ends, relationPanel.prefill.name, relationPanel.prefill.origin]) : ""}`}
               onClose={() => setRelationPanel(null)}
               onReload={readDraftAgain}
               onSaved={setDraft}
+              prefill={relationPanel.prefill}
               project={project}
               relationTypeId={relationPanel.id}
               review={relationPanel.id ? reviewOf("relation_types", relationPanel.id) : undefined}

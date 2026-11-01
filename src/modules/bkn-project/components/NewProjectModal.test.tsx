@@ -73,7 +73,8 @@ describe("NewProjectModal", () => {
     fireEvent.click(screen.getByText("bknProject.create.submit"));
 
     expect(await screen.findByText("bknProject.create.nameRequired")).toBeInTheDocument();
-    expect(screen.getByText("bknProject.create.networkRequired")).toBeInTheDocument();
+    // Each field says what it lacks once its own check ends: wait for the second too.
+    expect(await screen.findByText("bknProject.create.networkRequired")).toBeInTheDocument();
     expect(createProjectMock).not.toHaveBeenCalled();
   });
 

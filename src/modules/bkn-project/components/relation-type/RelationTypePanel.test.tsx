@@ -196,6 +196,44 @@ describe("RelationTypePanel", () => {
     expect(screen.getByRole("button", { name: "bknProject.relationEditor.delete" })).toBeVisible();
   });
 
+  it("starts a new relation from a suggestion, saved only when the person saves it", async () => {
+    const draft = mapDraft(mockDraft("p1"));
+    mocks.create.mockResolvedValue(madeDraft(draft));
+    renderWithoutAntdStyles(
+      <RelationTypePanel
+        draft={draft}
+        onClose={vi.fn()}
+        onReload={vi.fn().mockResolvedValue(null)}
+        onSaved={vi.fn()}
+        prefill={{
+          ends: {
+            mapping: [{ sourceProperty: "customer_id", targetProperty: "customer_id" }],
+            source: "sales_orders",
+            target: "customers",
+          },
+          name: "Orders of a customer",
+        }}
+        project={project}
+        relationTypeId={null}
+      />,
+    );
+
+    expect(nameBox()).toHaveValue("Orders of a customer");
+    // Unsaved until the person saves it.
+    expect(screen.getByText("bknProject.objectEditor.unsaved")).toBeInTheDocument();
+    expect(mocks.create).not.toHaveBeenCalled();
+    save();
+    await waitFor(() =>
+      expect(mocks.create).toHaveBeenCalledWith("p1", draft.updateTime, {
+        description: "",
+        mapping: [{ sourceProperty: "customer_id", targetProperty: "customer_id" }],
+        name: "Orders of a customer",
+        source: "sales_orders",
+        target: "customers",
+      }),
+    );
+  });
+
   it("asks what the mapping misses before sending", async () => {
     renderPanel();
     fireEvent.change(nameBox(), { target: { value: "Orders by name" } });

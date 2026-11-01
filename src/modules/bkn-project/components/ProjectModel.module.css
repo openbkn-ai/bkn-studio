@@ -138,5 +138,7 @@
 /* Actions over a tab's list, such as making a relation type. */
 .tabActions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 8px;
 }

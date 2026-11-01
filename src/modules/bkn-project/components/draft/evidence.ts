@@ -34,6 +34,7 @@ const COUNT_REASONS = [
   "cross_catalog",
   "link_table",
   "not_identity",
+  "not_counted",
 ];
 
 const known = (group: string, values: string[], value: string): Phrase =>

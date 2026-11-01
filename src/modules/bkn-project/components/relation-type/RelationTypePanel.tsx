@@ -29,6 +29,8 @@ import {
   type CandidateReview,
 } from "@/modules/bkn-project/components/object-type/ReviewActions";
 import {
+  draftTables,
+  endsEditorValues,
   relationEditorValues,
   relationSave,
 } from "@/modules/bkn-project/components/relation-type/relation-values";
@@ -40,10 +42,10 @@ import {
 } from "@/modules/bkn-project/services/draft.service";
 import { projectErrorDetails } from "@/modules/bkn-project/services/publish.service";
 import type {
+  AskEnds,
   AskRevision,
   Draft,
   DraftRelationType,
-  DraftTable,
 } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import {
@@ -99,6 +101,7 @@ export function RelationTypePanel({
   onClose,
   onReload,
   onSaved,
+  prefill,
   project,
   relationTypeId,
   review,
@@ -109,6 +112,8 @@ export function RelationTypePanel({
   /** Reads the draft again, replying it, or null when it cannot be read. */
   onReload: () => Promise<Draft | null>;
   onSaved: (draft: Draft) => void;
+  /** What a new relation type starts from, such as a suggested one: its ends, mapping and name. */
+  prefill?: { ends: AskEnds; name: string };
   project: Project;
   /** The relation type to edit; null makes a new one. */
   relationTypeId: string | null;
@@ -129,10 +134,12 @@ export function RelationTypePanel({
   const [base, setBase] = useState<Base | null>(() => startOf(draft, relationTypeId));
   const [basic, setBasic] = useState<BasicValues>(() => ({
     description: base?.relation?.description ?? "",
-    name: base?.relation?.name ?? "",
+    name: base?.relation?.name ?? (relationTypeId === null ? (prefill?.name ?? "") : ""),
   }));
   const [values, setValues] = useState<RelationTypeMappingFormValues>(() =>
-    relationEditorValues(base?.relation ?? undefined),
+    relationTypeId === null && prefill
+      ? endsEditorValues(prefill.ends, draftTables(draft))
+      : relationEditorValues(base?.relation ?? undefined),
   );
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<SaveProblem | null>(null);
@@ -342,18 +349,7 @@ export function RelationTypePanel({
   };
 
   // The draft's tables, to name a link table Ask AI proposes.
-  const tables = useMemo(() => {
-    const found = new Map<string, DraftTable>();
-    for (const item of current.items.objectTypes) {
-      found.set(item.table.resourceId, item.table);
-    }
-    for (const item of current.items.relationTypes) {
-      if (item.linkTable) {
-        found.set(item.linkTable.resourceId, item.linkTable);
-      }
-    }
-    return [...found.values()];
-  }, [current]);
+  const tables = useMemo(() => draftTables(current), [current]);
   const endNames: EndNames = {
     object: objectName,
     property: (objectTypeId, name) =>

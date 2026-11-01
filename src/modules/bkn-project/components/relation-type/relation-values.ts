@@ -5,7 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { DraftRelationType, DraftRelationTypeSave } from "@/modules/bkn-project/types/draft";
+import type {
+  AskEnds,
+  Draft,
+  DraftRelationType,
+  DraftRelationTypeSave,
+  DraftTable,
+} from "@/modules/bkn-project/types/draft";
 import {
   buildRelationTypeMappingRulesFromDetail,
   createDefaultRelationTypeMappingValues,
@@ -110,4 +116,36 @@ export function relationSave(
     },
     mapping: [],
   };
+}
+
+/** The draft's tables, the object types' and the link tables', to name a link table by. */
+export function draftTables(draft: Draft): DraftTable[] {
+  const found = new Map<string, DraftTable>();
+  for (const item of draft.items.objectTypes) {
+    found.set(item.table.resourceId, item.table);
+  }
+  for (const item of draft.items.relationTypes) {
+    if (item.linkTable) {
+      found.set(item.linkTable.resourceId, item.linkTable);
+    }
+  }
+  return [...found.values()];
+}
+
+/** A relation's ends and how they join, as the relation mapping takes them. */
+export function endsEditorValues(
+  { link, mapping, source, target }: AskEnds,
+  tables: DraftTable[],
+): RelationTypeMappingFormValues {
+  const table = link ? tables.find((item) => item.resourceId === link.resourceId) : undefined;
+  return relationEditorValues({
+    linkTable: link
+      ? { catalogId: table?.catalogId ?? "", name: table?.name ?? "", resourceId: link.resourceId }
+      : undefined,
+    mapping,
+    source,
+    sourceMapping: link?.sourceMapping ?? [],
+    target,
+    targetMapping: link?.targetMapping ?? [],
+  });
 }

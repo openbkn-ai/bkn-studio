@@ -7,7 +7,7 @@
 
 import type { TFunction } from "i18next";
 
-import { relationEditorValues } from "@/modules/bkn-project/components/relation-type/relation-values";
+import { endsEditorValues } from "@/modules/bkn-project/components/relation-type/relation-values";
 import type { AskEnds, AskRevision, DraftTable } from "@/modules/bkn-project/types/draft";
 import type { RelationTypeMappingFormValues } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor";
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
@@ -217,24 +217,6 @@ export function applyRelationRevisions(
     if (revision.field !== "ends") {
       return { ...current, basic: withBasic(current.basic, revision) };
     }
-    const { link, mapping, source, target } = revision.value;
-    const table = link ? tables.find((item) => item.resourceId === link.resourceId) : undefined;
-    return {
-      ...current,
-      values: relationEditorValues({
-        linkTable: link
-          ? {
-              catalogId: table?.catalogId ?? "",
-              name: table?.name ?? "",
-              resourceId: link.resourceId,
-            }
-          : undefined,
-        mapping,
-        source,
-        sourceMapping: link?.sourceMapping ?? [],
-        target,
-        targetMapping: link?.targetMapping ?? [],
-      }),
-    };
+    return { ...current, values: endsEditorValues(revision.value, tables) };
   }, values);
 }
