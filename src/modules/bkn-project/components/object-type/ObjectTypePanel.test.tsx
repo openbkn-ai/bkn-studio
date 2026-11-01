@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { forwardRef, useEffect, useImperativeHandle } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -539,5 +539,93 @@ describe("ObjectTypePanel", () => {
 
     fireEvent.click(button("next"));
     expect(review.onNext).toHaveBeenCalled();
+  });
+});
+
+describe("document object panel", () => {
+  it("edits extraction instructions in the existing panel without a table mapping", async () => {
+    vi.clearAllMocks();
+    const draft = mapDraft(mockDraft("p1"));
+    const object = draft.items.objectTypes[0];
+    const proof = {
+      knowledgeBaseId: "1",
+      fileId: "41",
+      contentVersionId: "8",
+      blockId: "b1",
+      start: 0,
+      end: 9,
+    };
+    object.document = {
+      role: "entity",
+      layer: "business",
+      reason: "Explicit order",
+      citations: [proof],
+      selectionId: "lock",
+      selectionRevision: 7,
+      timeProperty: "",
+      participantRelations: [],
+    };
+    object.properties = [
+      {
+        name: "number",
+        displayName: "Order number",
+        description: "Business identity",
+        type: "string",
+        mappedField: "",
+        missingDescription: false,
+        sourceOfRecord: "",
+        extraction: { instruction: "Read the explicit order number", examples: [proof] },
+      },
+      {
+        name: "document_id",
+        displayName: "Original document",
+        description: "Source",
+        type: "string",
+        mappedField: "",
+        missingDescription: false,
+        sourceOfRecord: "",
+        readOnly: true,
+      },
+    ];
+    object.primaryKeys = ["number"];
+    object.displayKey = "number";
+    mocks.save.mockResolvedValue({ ...draft, updateTime: draft.updateTime + 1 });
+    renderPanel(draft, object.id);
+    expect(screen.queryByText("property editor")).not.toBeInTheDocument();
+    const apiName = screen.getByRole("textbox", { name: "bknProject.documentEditor.apiName" });
+    fireEvent.change(apiName, { target: { value: "" } });
+    fireEvent.change(apiName, { target: { value: "contract_no" } });
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.documentEditor.add" }));
+    const added = screen.getAllByRole("textbox", { name: "bknProject.documentEditor.apiName" })[1];
+    fireEvent.change(added, { target: { value: "document_id" } });
+    expect(
+      screen.getAllByRole("textbox", { name: "bknProject.documentEditor.apiName" }),
+    ).toHaveLength(2);
+    fireEvent.change(added, { target: { value: "scratch" } });
+    const card = added.closest(".ant-card");
+    if (!(card instanceof HTMLElement)) throw new Error("missing editable field card");
+    fireEvent.click(within(card).getByRole("button", { name: "bknProject.documentEditor.remove" }));
+    expect(
+      screen.getAllByRole("textbox", { name: "bknProject.documentEditor.apiName" }),
+    ).toHaveLength(1);
+    fireEvent.change(
+      screen.getByRole("textbox", { name: /bknProject.documentEditor.instruction/ }),
+      { target: { value: "Use the printed business number only" } },
+    );
+    save();
+    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+    expect(mocks.save.mock.calls[0][3]).toMatchObject({
+      primaryKeys: ["contract_no"],
+      displayKey: "contract_no",
+      properties: [
+        {
+          name: "contract_no",
+          extraction: { instruction: "Use the printed business number only", examples: [proof] },
+        },
+        { name: "document_id" },
+      ],
+    });
+    expect(mocks.editorProps).not.toHaveBeenCalled();
+    expect(mocks.listFields).not.toHaveBeenCalled();
   });
 });

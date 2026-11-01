@@ -14,6 +14,11 @@ import { listObjectTypeResourceFields as listResourceFields } from "@/modules/kn
 import type { ObjectTypeResourceField } from "@/modules/knowledge-network/types/object-type";
 import { mockAddProjectCatalogs } from "@/modules/bkn-project/services/project.service";
 import type {
+  DraftSourceCitation,
+  DraftExtractionField,
+  DraftDocumentModel,
+  DraftDocumentMapping,
+  SamplePreview,
   Candidate,
   Candidates,
   Draft,
@@ -52,7 +57,82 @@ type BackendKey = {
   source: string;
 };
 
+type BackendCitation = {
+  knowledge_base_id: string;
+  file_id: string;
+  content_version_id: string;
+  block_id: string;
+  start: number;
+  end: number;
+  quote?: string;
+};
+type BackendExtraction = { instruction: string; examples: BackendCitation[] | null };
+type BackendDocument = {
+  role: string;
+  layer: string;
+  reason: string;
+  citations: BackendCitation[] | null;
+  time_property?: string;
+  participant_relations?: string[] | null;
+  selection_id: string;
+  selection_revision: number;
+};
+type BackendDocumentMapping = {
+  mode: string;
+  mention_property?: string;
+  identity_property?: string;
+  source_name_property?: string;
+  target_name_property?: string;
+};
+const mapCitation = (q: BackendCitation): DraftSourceCitation => ({
+  knowledgeBaseId: q.knowledge_base_id,
+  fileId: q.file_id,
+  contentVersionId: q.content_version_id,
+  blockId: q.block_id,
+  start: q.start,
+  end: q.end,
+  ...(q.quote ? { quote: q.quote } : {}),
+});
+const citationBody = (q: DraftSourceCitation): BackendCitation => ({
+  knowledge_base_id: q.knowledgeBaseId,
+  file_id: q.fileId,
+  content_version_id: q.contentVersionId,
+  block_id: q.blockId,
+  start: q.start,
+  end: q.end,
+  ...(q.quote ? { quote: q.quote } : {}),
+});
+const mapDocument = (d: BackendDocument): DraftDocumentModel => ({
+  role: d.role,
+  layer: d.layer,
+  reason: d.reason,
+  citations: (d.citations ?? []).map(mapCitation),
+  timeProperty: d.time_property ?? "",
+  participantRelations: d.participant_relations ?? [],
+  selectionId: d.selection_id,
+  selectionRevision: d.selection_revision,
+});
+const mapExtraction = (e: BackendExtraction): DraftExtractionField => ({
+  instruction: e.instruction,
+  examples: (e.examples ?? []).map(mapCitation),
+});
+const mapDocumentMapping = (m: BackendDocumentMapping): DraftDocumentMapping => ({
+  mode: m.mode,
+  mentionProperty: m.mention_property,
+  identityProperty: m.identity_property,
+  sourceNameProperty: m.source_name_property,
+  targetNameProperty: m.target_name_property,
+});
+const documentMappingBody = (m: DraftDocumentMapping): BackendDocumentMapping => ({
+  mode: m.mode,
+  mention_property: m.mentionProperty,
+  identity_property: m.identityProperty,
+  source_name_property: m.sourceNameProperty,
+  target_name_property: m.targetNameProperty,
+});
+
 type BackendObjectType = {
+  document?: BackendDocument;
   adopted: boolean;
   description: string;
   display_key: string;
@@ -64,6 +144,8 @@ type BackendObjectType = {
   primary_keys: string[] | null;
   properties:
     | {
+        extraction?: BackendExtraction;
+        read_only?: boolean;
         description: string;
         display_name: string;
         mapped_field: string;
@@ -80,6 +162,8 @@ type BackendObjectType = {
 type BackendMapping = { source_property: string; target_property: string };
 
 type BackendRelationType = {
+  document?: BackendDocument;
+  document_mapping?: BackendDocumentMapping;
   adopted: boolean;
   cardinality: string;
   description: string;
@@ -161,6 +245,7 @@ const mapKey = (key: BackendKey): DraftKeyEvidence => ({
 });
 
 const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
+  ...(item.document ? { document: mapDocument(item.document) } : {}),
   adopted: item.adopted,
   description: item.description,
   displayKey: item.display_key,
@@ -171,6 +256,8 @@ const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
   needsIdentity: item.needs_identity,
   primaryKeys: item.primary_keys ?? [],
   properties: (item.properties ?? []).map((property) => ({
+    ...(property.extraction ? { extraction: mapExtraction(property.extraction) } : {}),
+    ...(property.read_only ? { readOnly: true } : {}),
     description: property.description,
     displayName: property.display_name,
     mappedField: property.mapped_field,
@@ -189,6 +276,8 @@ const mapMapping = (mapping: BackendMapping) => ({
 });
 
 const mapRelationType = (item: BackendRelationType): DraftRelationType => ({
+  ...(item.document ? { document: mapDocument(item.document) } : {}),
+  ...(item.document_mapping ? { documentMapping: mapDocumentMapping(item.document_mapping) } : {}),
   adopted: item.adopted,
   cardinality: item.cardinality,
   description: item.description,
@@ -1086,6 +1175,8 @@ export async function addDraftCatalogs(projectId: string, catalogIds: string[]):
 }
 
 type BackendCandidate = {
+  source?: string;
+  document?: BackendDocument;
   added_by_catalog?: string;
   adopted: boolean;
   exclude_reason?: string;
@@ -1125,6 +1216,8 @@ export async function getCandidates(projectId: string, catalogId = ""): Promise<
       pending: counts?.pending ?? 0,
     },
     items: (items ?? []).map((item) => ({
+      ...(item.document ? { document: mapDocument(item.document) } : {}),
+      ...(item.source ? { source: item.source } : {}),
       addedByCatalog: item.added_by_catalog ?? "",
       adopted: item.adopted,
       excludeReason: item.exclude_reason ?? "",
@@ -1233,8 +1326,24 @@ export async function chooseIdentity(
 /** An object type as bkn-project saves it: the body saving sends, without its draft's time. */
 export function objectTypeBody(value: DraftObjectTypeSave) {
   return {
+    ...(value.document
+      ? {
+          document: {
+            time_property: value.document.timeProperty,
+            participant_relations: value.document.participantRelations,
+          },
+        }
+      : {}),
     comment: value.description,
     data_properties: value.properties.map((property) => ({
+      ...(property.extraction
+        ? {
+            extraction: {
+              instruction: property.extraction.instruction,
+              examples: property.extraction.examples.map(citationBody),
+            },
+          }
+        : {}),
       comment: property.description,
       display_name: property.displayName,
       ...(property.mappedField ? { mapped_field: { name: property.mappedField } } : {}),
@@ -1282,13 +1391,21 @@ export function relationBody(value: DraftRelationTypeSave, updateTime?: number, 
   return {
     ...(id ? { id } : {}),
     comment: value.description,
-    mapping_rules: value.link
+    ...(value.documentMapping
       ? {
-          backing_data_source: { id: value.link.resourceId, type: "resource" },
-          source_mapping_rules: pairs(value.link.sourceMapping),
-          target_mapping_rules: pairs(value.link.targetMapping),
+          document_mapping: documentMappingBody(value.documentMapping),
+          cardinality: value.cardinality,
         }
-      : pairs(value.mapping),
+      : {}),
+    mapping_rules: value.documentMapping
+      ? undefined
+      : value.link
+        ? {
+            backing_data_source: { id: value.link.resourceId, type: "resource" },
+            source_mapping_rules: pairs(value.link.sourceMapping),
+            target_mapping_rules: pairs(value.link.targetMapping),
+          }
+        : pairs(value.mapping),
     name: value.name,
     source_object_type_id: value.source,
     target_object_type_id: value.target,
@@ -1519,4 +1636,54 @@ export async function draftSourceChanges(projectId: string, signature: string): 
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
+}
+
+/** Explicit debug-fragment read; never cached or persisted in browser storage. */
+export async function readDocumentSamples(
+  projectId: string,
+  selectionId: string,
+  selectionRevision: number,
+): Promise<SamplePreview> {
+  const { data } = await http.get<{
+    selection_id: string;
+    selection_revision: number;
+    fragments: { text: string; file_name: string; citation: BackendCitation }[];
+  }>(`${API_PREFIX}/${encodeURIComponent(projectId)}/kb/samples`, {
+    params: { selection_id: selectionId, selection_revision: selectionRevision },
+    skipErrorToast: true,
+  });
+  return {
+    selectionId: data.selection_id,
+    selectionRevision: data.selection_revision,
+    fragments: (data.fragments ?? []).map((f) => ({
+      text: f.text,
+      fileName: f.file_name,
+      citation: mapCitation(f.citation),
+    })),
+  };
+}
+export async function extractDocumentModels(
+  projectId: string,
+  selectionId: string,
+  selectionRevision: number,
+  draftUpdateTime: number,
+): Promise<{ draft: Draft | null; addedObjects: number; addedRelations: number }> {
+  const { data } = await http.post<{
+    draft: BackendDraft | null;
+    added_objects: number;
+    added_relations: number;
+  }>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/kb/concepts:extract`,
+    {
+      selection_id: selectionId,
+      selection_revision: selectionRevision,
+      draft_update_time: draftUpdateTime,
+    },
+    { skipErrorToast: true, timeout: 150000 },
+  );
+  return {
+    draft: data.draft ? mapDraft(data.draft) : null,
+    addedObjects: data.added_objects ?? 0,
+    addedRelations: data.added_relations ?? 0,
+  };
 }

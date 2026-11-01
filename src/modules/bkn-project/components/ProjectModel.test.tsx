@@ -13,6 +13,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { ProjectStatus } from "@/modules/bkn-project/types/publish";
 
+const kbModel = vi.hoisted(() => ({ mode: "hidden", installed: false }));
+vi.mock("@/framework/entitlement/bkn-project-kb-mode", () => ({
+  useBknProjectKbMode: () => kbModel.mode,
+}));
+vi.mock("@/framework/extension/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/framework/extension/registry")>()),
+  extensionProjectKnowledgeBaseModel: () =>
+    kbModel.installed ? () => <span>document modeling extension</span> : undefined,
+}));
+
 const getDraftMock = vi.hoisted(() => vi.fn());
 const getProjectStatusMock = vi.hoisted(() => vi.fn());
 const generateDraftMock = vi.hoisted(() => vi.fn());
@@ -193,6 +203,8 @@ function renderModel(
 
 describe("ProjectModel", () => {
   beforeEach(() => {
+    kbModel.mode = "hidden";
+    kbModel.installed = false;
     vi.clearAllMocks();
     getCandidatesMock.mockResolvedValue({
       counts: { adopted: 0, excluded: 0, pending: 0 },
@@ -221,6 +233,24 @@ describe("ProjectModel", () => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
+
+  it.each([
+    ["hidden", true, "bknProject.model.empty.noCatalogs"],
+    ["locked", true, "bknProject.model.empty.noCatalogs"],
+    ["enabled", true, "bknProject.documentEditor.sourcesHint"],
+    ["enabled", false, "bknProject.model.empty.noCatalogsAskOwner"],
+  ] as const)(
+    "keeps source guidance aligned with mode %s and owner %s",
+    async (mode, owner, key) => {
+      kbModel.mode = mode;
+      kbModel.installed = true;
+      getDraftMock.mockResolvedValue(null);
+      renderModel({ catalogIds: [] }, owner);
+      expect(await screen.findByText(key)).toBeInTheDocument();
+      if (mode !== "enabled" || !owner)
+        expect(screen.queryByText("bknProject.documentEditor.sourcesHint")).not.toBeInTheDocument();
+    },
+  );
 
   it("offers to draft before the first draft, unless the project has no catalogs", async () => {
     getDraftMock.mockResolvedValue(null);

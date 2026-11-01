@@ -731,3 +731,69 @@ describe("draft.service", () => {
     );
   });
 });
+
+describe("document draft transport", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("preserves source proof, extraction instructions and protected fields", async () => {
+    const { getDraft, mockDraft, objectTypeBody } = await importService();
+    const backend = mockDraft("p");
+    const proof = {
+      knowledge_base_id: "1",
+      file_id: "41",
+      content_version_id: "8",
+      block_id: "b1",
+      start: 2,
+      end: 7,
+    };
+    Object.assign(backend.items.object_types![0], {
+      document: {
+        role: "entity",
+        layer: "business",
+        reason: "Explicit number",
+        citations: [proof],
+        selection_id: "lock",
+        selection_revision: 7,
+      },
+      table: { catalog_id: "", name: "", resource_id: "" },
+    });
+    Object.assign(backend.items.object_types![0].properties![0], {
+      extraction: { instruction: "Read the number", examples: [proof] },
+      read_only: false,
+    });
+    Object.assign(backend.items.object_types![0].properties![1], { read_only: true });
+    mockGet.mockResolvedValue({ data: backend });
+    const object = (await getDraft("p"))!.items.objectTypes[0];
+    expect(object.document).toMatchObject({
+      selectionId: "lock",
+      selectionRevision: 7,
+      citations: [{ contentVersionId: "8", blockId: "b1", start: 2, end: 7 }],
+    });
+    expect(object.properties[0].extraction?.instruction).toBe("Read the number");
+    expect(object.properties[1].readOnly).toBe(true);
+    const body = objectTypeBody({
+      description: object.description,
+      name: object.name,
+      displayKey: object.displayKey,
+      incrementalKey: "",
+      primaryKeys: object.primaryKeys,
+      properties: object.properties,
+      document: { timeProperty: "", participantRelations: [] },
+    });
+    expect(body.data_properties[0]).toMatchObject({
+      extraction: { instruction: "Read the number", examples: [proof] },
+    });
+  });
+});
+
+describe("empty document proposal", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("preserves an empty first result without inventing a draft", async () => {
+    const { extractDocumentModels } = await importService();
+    mockPost.mockResolvedValue({ data: { draft: null, added_objects: 0, added_relations: 0 } });
+    expect(await extractDocumentModels("p", "lock", 7, 0)).toEqual({
+      draft: null,
+      addedObjects: 0,
+      addedRelations: 0,
+    });
+  });
+});

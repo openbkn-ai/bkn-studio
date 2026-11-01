@@ -97,3 +97,8 @@
   overflow: auto;
   padding-bottom: 16px;
 }
+
+.documentCanvas {
+  overflow: auto;
+  padding: 16px;
+}

@@ -54,7 +54,20 @@ export type StudioExtension = {
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
   /** Embedded in the existing project resources page, inside its KB edition slot. */
   projectKnowledgeBaseResources?: ComponentType<ProjectKnowledgeBaseResourceProps>;
+  /** Embedded in the existing modeling page; the core owns draft refresh. */
+  projectKnowledgeBaseModel?: ComponentType<ProjectKnowledgeBaseModelProps>;
 };
+
+export type ProjectKnowledgeBaseModelProps = {
+  projectId: string;
+  draftUpdateTime: number;
+  canEdit: boolean;
+  onChanged: () => void;
+};
+export function extensionProjectKnowledgeBaseModel() {
+  return installed.find((e) => e.capability === "knowledge_base" && e.projectKnowledgeBaseModel)
+    ?.projectKnowledgeBaseModel;
+}
 
 export type ProjectKnowledgeBaseResourceProps = {
   projectId: string;

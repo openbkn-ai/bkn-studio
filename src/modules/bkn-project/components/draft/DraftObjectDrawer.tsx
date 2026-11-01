@@ -24,6 +24,7 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 
 import styles from "./DraftTables.module.css";
+import { originalLocation } from "@/modules/bkn-project/components/object-type/document-values";
 
 /** An object type of the draft: its table, identity, properties and the fields left out. */
 export function DraftObjectDrawer({
@@ -48,7 +49,9 @@ export function DraftObjectDrawer({
       key: "name",
       render: (value: string, record) => (
         <div className={styles.evidence}>
-          <code className={styles.mono}>{value}</code>
+          <code className={styles.mono}>
+            {objectType?.document ? record.displayName || value : value}
+          </code>
           {record.missingDescription ? (
             <LightStatusTag tone="neutral">
               {t("bknProject.model.detail.missingDescription")}
@@ -67,10 +70,30 @@ export function DraftObjectDrawer({
       render: (value: string) => t(propertyTypeKey(value)),
     },
     {
-      title: t("bknProject.model.detail.mappedField"),
+      title: t(
+        objectType?.document
+          ? "bknProject.documentEditor.instruction"
+          : "bknProject.model.detail.mappedField",
+      ),
       dataIndex: "mappedField",
       key: "mappedField",
-      render: (value: string) => <code className={styles.mono}>{value}</code>,
+      render: (value: string, record) =>
+        objectType?.document ? (
+          <div>
+            {record.readOnly
+              ? t("bknProject.documentEditor.managed")
+              : record.extraction?.instruction}
+            {record.extraction?.examples.map((q, i) => (
+              <div key={`${q.blockId}-${i}`}>
+                <a href={originalLocation(q)} target="_blank" rel="noopener noreferrer">
+                  {t("bknProject.documentEditor.original", { number: i + 1 })}
+                </a>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <code className={styles.mono}>{value}</code>
+        ),
     },
   ];
   const left = objectType ? excluded.filter((field) => field.objectType === objectType.id) : [];
@@ -108,15 +131,31 @@ export function DraftObjectDrawer({
                 <span className={styles.muted}>{t("bknProject.model.detail.noDescription")}</span>
               )}
             </Descriptions.Item>
-            <Descriptions.Item label={t("bknProject.model.detail.table")}>
-              {objectType.table.name} ·{" "}
-              {catalogNames[objectType.table.catalogId] ?? objectType.table.catalogId}
+            <Descriptions.Item
+              label={t(
+                objectType.document
+                  ? "bknProject.model.columns.source"
+                  : "bknProject.model.detail.table",
+              )}
+            >
+              {objectType.document ? (
+                objectType.document.reason
+              ) : (
+                <>
+                  {objectType.table.name} ·{" "}
+                  {catalogNames[objectType.table.catalogId] ?? objectType.table.catalogId}
+                </>
+              )}
             </Descriptions.Item>
             <Descriptions.Item label={t("bknProject.model.detail.identity")}>
               <IdentityEvidence objectType={objectType} />
             </Descriptions.Item>
             <Descriptions.Item label={t("bknProject.model.detail.displayKey")}>
-              <code className={styles.mono}>{objectType.displayKey}</code>
+              <code className={styles.mono}>
+                {objectType.document
+                  ? objectType.properties.find((p) => p.name === objectType.displayKey)?.displayName
+                  : objectType.displayKey}
+              </code>
             </Descriptions.Item>
           </Descriptions>
           <section>

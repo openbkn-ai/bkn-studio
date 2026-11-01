@@ -27,7 +27,12 @@ import {
 } from "@/modules/bkn-project/services/draft.service";
 import { useUnsavedChanges } from "@/modules/bkn-project/components/unsaved/unsaved";
 import { projectErrorDetails } from "@/modules/bkn-project/services/publish.service";
-import type { AskRevision, Draft, DraftObjectType } from "@/modules/bkn-project/types/draft";
+import type {
+  AskRevision,
+  Draft,
+  DraftObjectType,
+  DraftObjectTypeSave,
+} from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import {
   ObjectTypeDataAttributeEditor,
@@ -41,6 +46,8 @@ import {
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
 
 import styles from "./ObjectTypePanel.module.css";
+import { DocumentFieldsEditor } from "./DocumentFieldsEditor";
+import { documentSave } from "./document-values";
 import { ReviewActions, type CandidateReview } from "./ReviewActions";
 
 const PREFIX = "bknProject.objectEditor";
@@ -118,6 +125,9 @@ export function ObjectTypePanel({
   const [properties, setProperties] = useState<ObjectTypeDataProperty[]>(() =>
     base ? editorProperties(base.objectType) : [],
   );
+  const [documentValue, setDocumentValue] = useState<DraftObjectTypeSave | null>(() =>
+    base?.objectType.document ? documentSave(base.objectType) : null,
+  );
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<SaveProblem | null>(null);
   const [asking, setAsking] = useState(false);
@@ -132,6 +142,7 @@ export function ObjectTypePanel({
       setBasic(values);
       basicForm.setFieldsValue(values);
       setProperties(editorProperties(next.objectType));
+      setDocumentValue(next.objectType.document ? documentSave(next.objectType) : null);
     }
   };
 
@@ -145,13 +156,19 @@ export function ObjectTypePanel({
   // What saving would send now against what was loaded: anything else is a change not saved.
   const changed =
     base !== null &&
-    JSON.stringify(draftSave(base.objectType, basic, properties)) !==
+    JSON.stringify(
+      documentValue
+        ? { ...documentValue, ...basic }
+        : draftSave(base.objectType, basic, properties),
+    ) !==
       JSON.stringify(
-        draftSave(
-          base.objectType,
-          { description: base.objectType.description, name: base.objectType.name },
-          editorProperties(base.objectType),
-        ),
+        base.objectType.document
+          ? documentSave(base.objectType)
+          : draftSave(
+              base.objectType,
+              { description: base.objectType.description, name: base.objectType.name },
+              editorProperties(base.objectType),
+            ),
       );
 
   const close = () => {
@@ -251,20 +268,37 @@ export function ObjectTypePanel({
     let checked: ObjectTypeDataProperty[];
     try {
       values = await basicForm.validateFields();
-      checked = (await editorRef.current!.validateFields()).dataProperties;
+      checked = documentValue
+        ? properties
+        : (await editorRef.current!.validateFields()).dataProperties;
     } catch {
       // The form marks its fields; the editor says what is missing above its canvas.
       return null;
     }
     // Every property of a draft maps a column of its table: say which do not before sending.
     const unmapped = checked.filter((property) => !property.mappedField);
-    if (unmapped.length) {
+    if (!documentValue && unmapped.length) {
       setProblem({
         kind: "properties",
         text: t(`${PREFIX}.unmapped`, {
           names: unmapped.map((property) => property.displayName || property.name).join(separator),
         }),
       });
+      return null;
+    }
+    if (
+      documentValue &&
+      documentValue.properties.some(
+        (p) =>
+          !base.objectType.properties.some((old) => old.name === p.name && old.readOnly) &&
+          !base.objectType.document?.role.startsWith("evidence_") &&
+          (!/^[a-z][a-z0-9_]{0,39}$/.test(p.name) ||
+            !p.displayName.trim() ||
+            !p.extraction?.instruction.trim() ||
+            !p.extraction.examples.length),
+      )
+    ) {
+      setProblem({ kind: "properties", text: t("bknProject.documentEditor.incomplete") });
       return null;
     }
     setSaving(true);
@@ -274,7 +308,9 @@ export function ObjectTypePanel({
         project.id,
         objectTypeId,
         base.draft.updateTime,
-        draftSave(base.objectType, values, checked),
+        documentValue
+          ? { ...documentValue, ...values }
+          : draftSave(base.objectType, values, checked),
       );
       message.success(t(`${PREFIX}.saved`, { name: values.name.trim() }));
       onSaved(next);
@@ -310,9 +346,9 @@ export function ObjectTypePanel({
   };
 
   // What the editor holds now, for taking back what Ask AI put in only while nothing changed since.
-  const holding = useRef({ basic, properties });
+  const holding = useRef({ basic, properties, documentValue });
   useEffect(() => {
-    holding.current = { basic, properties };
+    holding.current = { basic, properties, documentValue };
   });
   const sent = (values: { basic: BasicValues; properties: ObjectTypeDataProperty[] }) =>
     base ? JSON.stringify(draftSave(base.objectType, values.basic, values.properties)) : "";
@@ -325,13 +361,48 @@ export function ObjectTypePanel({
   // Ask AI's changes go into the editor as if typed; saving writes them.
   const apply = (revisions: AskRevision[]): UndoApply => {
     const before = { basic, properties };
+    const beforeDocument = documentValue;
     const after = applyObjectRevisions(before, revisions);
+    const afterDocument = beforeDocument
+      ? {
+          ...beforeDocument,
+          properties: beforeDocument.properties.map((p) => {
+            if (base?.objectType.properties.some((old) => old.name === p.name && old.readOnly))
+              return p;
+            const revision = revisions.find(
+              (r) => r.field === "data_property" && r.value.name === p.name,
+            );
+            return revision?.field === "data_property"
+              ? {
+                  ...p,
+                  ...(revision.value.displayName !== undefined
+                    ? { displayName: revision.value.displayName }
+                    : {}),
+                  ...(revision.value.comment !== undefined
+                    ? { description: revision.value.comment }
+                    : {}),
+                }
+              : p;
+          }),
+        }
+      : null;
+    for (const revision of revisions) {
+      if (!afterDocument) break;
+      if (revision.field === "display_key") afterDocument.displayKey = revision.value;
+      if (revision.field === "primary_keys" && base?.objectType.document?.role === "entity")
+        afterDocument.primaryKeys = revision.value;
+    }
     put(after);
+    setDocumentValue(afterDocument);
     return () => {
-      if (sent(holding.current) !== sent(after)) {
+      if (
+        JSON.stringify(holding.current.documentValue) !== JSON.stringify(afterDocument) ||
+        sent(holding.current) !== sent(after)
+      ) {
         return false;
       }
       put(before);
+      setDocumentValue(beforeDocument);
       return true;
     };
   };
@@ -403,17 +474,28 @@ export function ObjectTypePanel({
                 />
               </Form.Item>
             </Form>
-            <div className={styles.canvas}>
-              <ObjectTypeDataAttributeEditor
-                basicValue={{ color: DEFAULT_RESOURCE_COLOR, name: basic.name }}
-                dataProperties={properties}
-                dataSource={dataSource}
-                networkId={project.knId}
-                onChange={({ dataProperties }) => setProperties(dataProperties)}
-                readResourceFields={readResourceFields}
-                ref={editorRef}
-                resourceFixed
-              />
+            <div className={[styles.canvas, documentValue ? styles.documentCanvas : ""].join(" ")}>
+              {documentValue ? (
+                <DocumentFieldsEditor
+                  key={`${objectTypeId}-${base.draft.updateTime}`}
+                  object={base.objectType}
+                  draft={base.draft}
+                  projectId={project.id}
+                  value={documentValue}
+                  onChange={setDocumentValue}
+                />
+              ) : (
+                <ObjectTypeDataAttributeEditor
+                  basicValue={{ color: DEFAULT_RESOURCE_COLOR, name: basic.name }}
+                  dataProperties={properties}
+                  dataSource={dataSource}
+                  networkId={project.knId}
+                  onChange={({ dataProperties }) => setProperties(dataProperties)}
+                  readResourceFields={readResourceFields}
+                  ref={editorRef}
+                  resourceFixed
+                />
+              )}
             </div>
           </div>
           {asking ? (
@@ -427,7 +509,11 @@ export function ObjectTypePanel({
               subtitle={t("bknProject.model.ask.subtitle.object_types", {
                 name: base.objectType.name,
               })}
-              working={() => draftSave(base.objectType, basic, properties)}
+              working={() =>
+                documentValue
+                  ? { ...documentValue, ...basic }
+                  : draftSave(base.objectType, basic, properties)
+              }
             />
           ) : null}
         </div>

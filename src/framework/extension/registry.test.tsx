@@ -16,6 +16,7 @@ import { EntitlementContext } from "@/framework/entitlement/entitlement-context"
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
   extensionProjectKnowledgeBaseResources,
+  extensionProjectKnowledgeBaseModel,
   extensionInstanceHandOvers,
   handOverLimit,
   extensionRoutes,
@@ -249,5 +250,20 @@ describe("extension registry", () => {
 
     expect(i18n.getResource("en-US", "translation", "extensionDemo.kept")).toBe("core");
     expect(i18n.getResource("en-US", "translation", "extensionDemo.added")).toBe("extension");
+  });
+});
+
+describe("project document modeling extension", () => {
+  it("uses only the knowledge-base capability and is absent in the community registry", () => {
+    const Panel = () => null;
+    expect(extensionProjectKnowledgeBaseModel()).toBeUndefined();
+    registerExtension({ id: "wrong", capability: "other", projectKnowledgeBaseModel: Panel });
+    expect(extensionProjectKnowledgeBaseModel()).toBeUndefined();
+    registerExtension({
+      id: "kb-model",
+      capability: "knowledge_base",
+      projectKnowledgeBaseModel: Panel,
+    });
+    expect(extensionProjectKnowledgeBaseModel()).toBe(Panel);
   });
 });

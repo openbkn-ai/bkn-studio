@@ -40,6 +40,7 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 
 import styles from "./DraftTables.module.css";
+import { documentCardinalityKey } from "@/modules/bkn-project/components/object-type/document-values";
 
 const PAGE_SIZE = 50;
 
@@ -134,6 +135,20 @@ export function IdentityEvidence({
 }) {
   const { t } = useTranslation();
   const { key } = objectType;
+  if (objectType.document)
+    return (
+      <span>
+        {objectType.needsIdentity
+          ? t("bknProject.model.identityPending")
+          : objectType.document.role !== "entity"
+            ? t("bknProject.documentEditor.recordIdentity")
+            : objectType.primaryKeys
+                .map(
+                  (name) => objectType.properties.find((p) => p.name === name)?.displayName || name,
+                )
+                .join(t("bknProject.listSeparator"))}
+      </span>
+    );
   if (compact) {
     const label = (name: string) =>
       objectType.properties.find((property) => property.name === name)?.displayName || name;
@@ -247,25 +262,27 @@ export function DraftObjectsTable({
       render: (_value, record) => (
         <div className={styles.evidence}>
           <IdentityEvidence compact objectType={record} />
-          <AppButton
-            aria-label={t(
-              record.needsIdentity
-                ? "bknProject.model.identity.choose"
-                : "bknProject.model.identity.change",
-              { name: record.name },
-            )}
-            className={record.needsIdentity ? undefined : styles.inlineAction}
-            disabled={actions.archived || actions.busy}
-            onClick={() => actions.onChooseIdentity(record)}
-            size="small"
-            type={record.needsIdentity ? "primary" : "link"}
-          >
-            {t(
-              record.needsIdentity
-                ? "bknProject.model.identity.chooseLabel"
-                : "bknProject.model.identity.changeLabel",
-            )}
-          </AppButton>
+          {(!record.document || record.document.role === "entity") && (
+            <AppButton
+              aria-label={t(
+                record.needsIdentity
+                  ? "bknProject.model.identity.choose"
+                  : "bknProject.model.identity.change",
+                { name: record.name },
+              )}
+              className={record.needsIdentity ? undefined : styles.inlineAction}
+              disabled={actions.archived || actions.busy}
+              onClick={() => actions.onChooseIdentity(record)}
+              size="small"
+              type={record.needsIdentity ? "primary" : "link"}
+            >
+              {t(
+                record.needsIdentity
+                  ? "bknProject.model.identity.chooseLabel"
+                  : "bknProject.model.identity.changeLabel",
+              )}
+            </AppButton>
+          )}
         </div>
       ),
     },
@@ -278,7 +295,18 @@ export function DraftObjectsTable({
     {
       title: t("bknProject.model.columns.source"),
       key: "source",
-      render: (_value, record) => <TableSource catalogNames={catalogNames} table={record.table} />,
+      render: (_value, record) =>
+        record.document ? (
+          <Tooltip title={record.document.reason}>
+            <span>
+              {t(`bknProject.documentEditor.roles.${record.document.role}`, {
+                defaultValue: t("bknProject.documentEditor.source"),
+              })}
+            </span>
+          </Tooltip>
+        ) : (
+          <TableSource catalogNames={catalogNames} table={record.table} />
+        ),
     },
     editColumn<DraftObjectType>("object_types", actions, t),
   ];
@@ -334,13 +362,18 @@ export function DraftRelationsTable({
       dataIndex: "cardinality",
       key: "cardinality",
       width: 110,
-      render: (value: string) =>
-        CARDINALITY[value] ? t(`bknProject.model.cardinality.${CARDINALITY[value]}`) : value,
+      render: (value: string, record) =>
+        record.document
+          ? t(documentCardinalityKey(value))
+          : CARDINALITY[value]
+            ? t(`bknProject.model.cardinality.${CARDINALITY[value]}`)
+            : value,
     },
     {
       title: t("bknProject.model.columns.evidence"),
       key: "evidence",
       render: (_value, record) => {
+        if (record.document) return <span>{record.document.reason}</span>;
         return (
           <div className={styles.evidence}>
             <span>
