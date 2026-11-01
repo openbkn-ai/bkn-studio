@@ -599,6 +599,7 @@ export const bknProjectZhCN = {
           cross_catalog: "两张表在不同的数据目录，不做统计",
           link_table: "经关联表连接，不做统计",
           not_identity: "没有按对端的唯一标识关联，不做统计",
+          not_counted: "候选太多，这一条没有统计",
           other: "没有统计",
         },
         keyCount: "{{rows}} 行，{{distinct}} 个不同值，{{nulls}} 个空值",
@@ -755,6 +756,7 @@ export const bknProjectZhCN = {
       ask: "让 AI 补充",
       asking: "AI 正在补充建议，最多约一分钟…",
       askFailed: "AI 暂时无法补充，下面是按字段找到的建议。",
+      answerTitle: "AI 的看法",
       origin: {
         drafted: "草稿里已有",
         foreign_key: "外键",

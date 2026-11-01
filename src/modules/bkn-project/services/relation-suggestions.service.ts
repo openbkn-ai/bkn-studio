@@ -29,8 +29,11 @@ type BackendSuggestion = {
     computed?: boolean;
     hit_rate?: number;
     hits?: number;
+    nulls?: number;
+    orphans?: number;
     reason?: string;
     rows?: number;
+    source_distinct?: number;
   } | null;
   mapping_rules?:
     | BackendPair[]
@@ -50,6 +53,7 @@ type BackendSuggestion = {
 };
 
 type BackendSuggestions = {
+  answer?: string;
   candidates?: BackendSuggestion[] | null;
   object_type: { id: string; name: string };
 };
@@ -90,11 +94,11 @@ const mapSuggestion = (item: BackendSuggestion): RelationSuggestion => {
       computed: item.evidence?.computed ?? false,
       hitRate: item.evidence?.hit_rate ?? 0,
       hits,
-      nulls: 0,
-      orphans: Math.max(0, rows - hits),
+      nulls: item.evidence?.nulls ?? 0,
+      orphans: item.evidence?.orphans ?? Math.max(0, rows - hits),
       ...(item.evidence?.reason ? { reason: item.evidence.reason } : {}),
       rows,
-      sourceDistinct: 0,
+      sourceDistinct: item.evidence?.source_distinct ?? 0,
     },
     name: item.name ?? "",
     origin: item.origin ?? "",
@@ -104,6 +108,7 @@ const mapSuggestion = (item: BackendSuggestion): RelationSuggestion => {
 };
 
 export const mapSuggestions = (data: BackendSuggestions): RelationSuggestions => ({
+  answer: data.answer ?? "",
   candidates: (data.candidates ?? []).map(mapSuggestion),
   objectType: data.object_type,
 });
@@ -133,7 +138,7 @@ async function mockSuggestions(projectId: string, objectTypeId: string, asked: b
   const draft = await getDraft(projectId);
   const objectType = draft?.items.objectTypes.find((item) => item.id === objectTypeId);
   if (!draft || !objectType) {
-    return { candidates: [], objectType: { id: objectTypeId, name: objectTypeId } };
+    return { answer: "", candidates: [], objectType: { id: objectTypeId, name: objectTypeId } };
   }
   const drafted: RelationSuggestion[] = draft.items.relationTypes
     .filter(
@@ -201,6 +206,9 @@ async function mockSuggestions(projectId: string, objectTypeId: string, asked: b
         ]
       : [];
   return {
+    answer: asked
+      ? "It likely connects through the field it shares with another object; the drafted relation already says so."
+      : "",
     candidates: [...drafted, ...named, ...ai],
     objectType: { id: objectType.id, name: objectType.name },
   };

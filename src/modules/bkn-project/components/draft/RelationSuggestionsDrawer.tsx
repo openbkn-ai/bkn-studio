@@ -255,6 +255,14 @@ export function RelationSuggestionsEntry({
               {askFailed ? (
                 <Alert message={t(`${PREFIX}.askFailed`)} showIcon type="warning" />
               ) : null}
+              {suggestions.answer ? (
+                <Alert
+                  description={suggestions.answer}
+                  message={t(`${PREFIX}.answerTitle`)}
+                  showIcon
+                  type="info"
+                />
+              ) : null}
               {suggestions.candidates.length ? null : (
                 <p className={styles.muted}>{t(`${PREFIX}.none`)}</p>
               )}

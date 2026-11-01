@@ -64,6 +64,7 @@ const fields: RelationSuggestion = {
   relationTypeId: "",
 };
 const suggestions = (...candidates: RelationSuggestion[]): RelationSuggestions => ({
+  answer: "",
   candidates,
   objectType: { id: "customers", name: "Customer" },
 });
@@ -151,12 +152,13 @@ describe("RelationSuggestionsEntry", () => {
 
   it("adds what AI suggests, and keeps the fields' suggestions when it cannot", async () => {
     mocks.ask
-      .mockResolvedValueOnce(
-        suggestions(
+      .mockResolvedValueOnce({
+        ...suggestions(
           { ...drafted, reason: "Each order names its customer." },
           { ...fields, name: "AI link", origin: "ai", reason: "Bills go to customers." },
         ),
-      )
+        answer: "Customers connect through the orders they place.",
+      })
       .mockRejectedValueOnce(new Error("502"));
     renderEntry();
     await openCustomers();
@@ -165,6 +167,10 @@ describe("RelationSuggestionsEntry", () => {
       await screen.findByRole("button", { name: "bknProject.relationSuggestions.ask" }),
     );
     expect(await screen.findByText("Each order names its customer.")).toBeInTheDocument();
+    // AI's view of how it connects, above the suggestions.
+    expect(
+      screen.getByText("Customers connect through the orders they place."),
+    ).toBeInTheDocument();
     expect(screen.getByText("bknProject.relationSuggestions.origin.ai")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "bknProject.relationSuggestions.ask" }));

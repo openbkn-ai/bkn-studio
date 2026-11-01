@@ -642,6 +642,7 @@ export const bknProjectEnUS = {
           cross_catalog: "The two tables are in different data catalogs, so they are not counted",
           link_table: "Connected through a linking table, so not counted",
           not_identity: "Not joined by the other end\u2019s identifier; not counted",
+          not_counted: "Too many candidates to count them all; this one is not counted",
           other: "Not counted",
         },
         keyCount: "{{rows}} rows, {{distinct}} distinct, {{nulls}} empty",
@@ -803,6 +804,7 @@ export const bknProjectEnUS = {
       ask: "Ask AI to add more",
       asking: "AI is adding suggestions; this takes up to a minute…",
       askFailed: "AI cannot add to them right now; these are the suggestions the fields give.",
+      answerTitle: "What AI thinks",
       origin: {
         drafted: "Already in the draft",
         foreign_key: "Foreign key",

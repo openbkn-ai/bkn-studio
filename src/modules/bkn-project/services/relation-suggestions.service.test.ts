@@ -23,7 +23,15 @@ const path = "/bkn-project/v1/projects/p%2F1/ontology/draft/relation-suggestions
 const reply = {
   candidates: [
     {
-      evidence: { computed: true, hit_rate: 0.96, hits: 1180, rows: 1234 },
+      evidence: {
+        computed: true,
+        hit_rate: 0.96,
+        hits: 1180,
+        nulls: 4,
+        orphans: 50,
+        rows: 1234,
+        source_distinct: 40,
+      },
       mapping_rules: [{ source_property: { name: "ward_id" }, target_property: { name: "id" } }],
       name: "Bed in ward",
       origin: "drafted",
@@ -88,8 +96,16 @@ describe("relation suggestions", () => {
         source: "bed",
         target: "ward",
       },
-      // Counted as a drafted relation is: the rows that found no record are the rest.
-      evidence: { computed: true, hitRate: 0.96, hits: 1180, orphans: 54, rows: 1234 },
+      // As bkn-project counted it: the empty rows apart from those that found no record.
+      evidence: {
+        computed: true,
+        hitRate: 0.96,
+        hits: 1180,
+        nulls: 4,
+        orphans: 50,
+        rows: 1234,
+        sourceDistinct: 40,
+      },
       origin: "drafted",
       reason: "",
       relationTypeId: "rt_bed_ward",
@@ -112,9 +128,11 @@ describe("relation suggestions", () => {
 
   it("asks AI for one object type, waiting longer than other requests", async () => {
     const { ASK_RELATIONS_TIMEOUT_MS, askRelationSuggestions } = await importService();
-    mockPost.mockResolvedValue({ data: reply });
 
-    expect((await askRelationSuggestions("p/1", "ward")).candidates).toHaveLength(2);
+    mockPost.mockResolvedValue({ data: { ...reply, answer: "Wards hold beds and nurses." } });
+    const asked = await askRelationSuggestions("p/1", "ward");
+    expect(asked.candidates).toHaveLength(2);
+    expect(asked.answer).toBe("Wards hold beds and nurses.");
     expect(mockPost).toHaveBeenCalledWith(
       `${path}:ask`,
       { object_type: "ward" },

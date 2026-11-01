@@ -339,6 +339,8 @@ export type RelationSuggestion = {
 };
 
 export type RelationSuggestions = {
+  /** How AI thinks the object type connects, once AI has been asked. */
+  answer: string;
   candidates: RelationSuggestion[];
   objectType: IsolatedObjectType;
 };
