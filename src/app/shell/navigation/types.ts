@@ -46,6 +46,11 @@ export type ConsoleNavItem = {
   /** 徽标上写哪一档(取自能力登记表快照)。仅在 locked 时有值。 */
   lockedEdition?: Edition;
   children?: ConsoleNavItem[];
+  /**
+   * A product stage shown beside the label, such as `beta` for a feature still taking shape.
+   * Shown only, never hiding or locking the entry.
+   */
+  stage?: "beta";
   disabled?: boolean;
   icon?: ReactNode;
   key: string;

@@ -16,6 +16,8 @@ export const bknProjectNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.bknProject",
       icon: <ProjectOutlined />,
       path: "/bkn-project",
+      // Project management is still taking shape.
+      stage: "beta",
     },
   ],
 };

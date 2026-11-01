@@ -15,6 +15,9 @@ export const shellZhCN = {
     userMenuTagline: "控制台",
     versionLine: "版本 {{version}}",
     headerAside: "统一应用壳层",
+    stage: {
+      beta: "Beta",
+    },
     collapseSidenav: "收起导航",
     expandSidenav: "展开导航",
     theme: {
