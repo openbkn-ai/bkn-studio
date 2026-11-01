@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
+  extensionProjectKnowledgeBaseResources,
   extensionInstanceHandOvers,
   handOverLimit,
   extensionRoutes,
@@ -60,6 +61,22 @@ function registerDemo() {
 }
 
 describe("extension registry", () => {
+  it("offers an optional project resource panel only from the knowledge-base extension", () => {
+    expect(extensionProjectKnowledgeBaseResources()).toBeUndefined();
+    const Panel = () => <p>source selection</p>;
+    registerExtension({
+      id: "unrelated",
+      capability: "demo_capability",
+      projectKnowledgeBaseResources: Panel,
+    });
+    expect(extensionProjectKnowledgeBaseResources()).toBeUndefined();
+    registerExtension({
+      id: "kb",
+      capability: "knowledge_base",
+      projectKnowledgeBaseResources: Panel,
+    });
+    expect(extensionProjectKnowledgeBaseResources()).toBe(Panel);
+  });
   it("renders an extension page where the server reports its capability", () => {
     registerDemo();
     renderStandalone(

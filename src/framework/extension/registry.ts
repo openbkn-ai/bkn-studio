@@ -6,7 +6,7 @@
  */
 
 import i18n from "i18next";
-import { createElement, type ReactNode } from "react";
+import { createElement, type ComponentType, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import { RequireCapability } from "@/framework/entitlement/RequireCapability";
@@ -52,7 +52,24 @@ export type StudioExtension = {
   instanceHandOvers?: InstanceHandOver[];
   /** Copy merged into the translation resources, by locale. */
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
+  /** Embedded in the existing project resources page, inside its KB edition slot. */
+  projectKnowledgeBaseResources?: ComponentType<ProjectKnowledgeBaseResourceProps>;
 };
+
+export type ProjectKnowledgeBaseResourceProps = {
+  projectId: string;
+  /** Owner of an open project: may lock sources and change samples. */
+  canEdit: boolean;
+  /** Owner, including archived projects: may finish retention cleanup. */
+  canManageHolds: boolean;
+};
+
+export function extensionProjectKnowledgeBaseResources() {
+  return installed.find(
+    (extension) =>
+      extension.capability === "knowledge_base" && extension.projectKnowledgeBaseResources,
+  )?.projectKnowledgeBaseResources;
+}
 
 /**
  * A button that opens one of the extension's pages for the network on screen, in a new tab.
