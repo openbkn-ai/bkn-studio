@@ -40,6 +40,7 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 
 import styles from "./DraftTables.module.css";
+import { documentCardinalityKey } from "@/modules/bkn-project/components/object-type/document-values";
 
 const PAGE_SIZE = 50;
 
@@ -363,9 +364,7 @@ export function DraftRelationsTable({
       width: 110,
       render: (value: string, record) =>
         record.document
-          ? t(`bknProject.documentEditor.${value}`, {
-              defaultValue: t("bknProject.documentEditor.cardinality"),
-            })
+          ? t(documentCardinalityKey(value))
           : CARDINALITY[value]
             ? t(`bknProject.model.cardinality.${CARDINALITY[value]}`)
             : value,

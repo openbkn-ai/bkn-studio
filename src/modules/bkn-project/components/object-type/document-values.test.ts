@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { selectedExample } from "./document-values";
+import { originalLocation, renameDocumentProperty, selectedExample } from "./document-values";
 
 describe("native example selection", () => {
   const fragment = {
@@ -30,5 +30,46 @@ describe("native example selection", () => {
     expect(selectedExample(fragment, "wrong")).toBeNull();
     expect(selectedExample(fragment, "")).toBeNull();
     expect(selectedExample({ ...fragment, text: "X".repeat(4001) }, "X".repeat(4001))).toBeNull();
+  });
+});
+
+describe("document editor references", () => {
+  it("uses the runtime deployment basename for originals", () => {
+    const before = window.__BKN_STUDIO_RUNTIME__;
+    try {
+      window.__BKN_STUDIO_RUNTIME__ = { router: { basename: "/custom" } };
+      expect(
+        originalLocation({
+          knowledgeBaseId: "1",
+          fileId: "2",
+          contentVersionId: "3",
+          blockId: "b",
+          start: 0,
+          end: 2,
+        }),
+      ).toBe("/custom/knowledge-base/original/3?block=b&start=0&end=2");
+    } finally {
+      window.__BKN_STUDIO_RUNTIME__ = before;
+    }
+  });
+  it("renames all local field references without mutating the previous form", () => {
+    const value = {
+      name: "Event",
+      description: "",
+      incrementalKey: "",
+      displayKey: "when",
+      primaryKeys: ["when"],
+      document: { timeProperty: "when", participantRelations: ["participant"] },
+      properties: [{ name: "when", displayName: "Time", description: "", type: "datetime" }],
+    };
+    const next = renameDocumentProperty(value, 0, "occurred_at");
+    expect(next).toMatchObject({
+      displayKey: "occurred_at",
+      primaryKeys: ["occurred_at"],
+      document: { timeProperty: "occurred_at", participantRelations: ["participant"] },
+      properties: [{ name: "occurred_at" }],
+    });
+    expect(value.displayKey).toBe("when");
+    expect(value.properties[0].name).toBe("when");
   });
 });

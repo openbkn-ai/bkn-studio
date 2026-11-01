@@ -17,7 +17,7 @@ import type {
   DraftObjectTypeSave,
   SamplePreview,
 } from "@/modules/bkn-project/types/draft";
-import { originalLocation, selectedExample } from "./document-values";
+import { originalLocation, renameDocumentProperty, selectedExample } from "./document-values";
 
 const P = "bknProject.documentEditor";
 export function DocumentFieldsEditor({
@@ -235,7 +235,7 @@ export function DocumentFieldsEditor({
                 <Input
                   value={p.name}
                   maxLength={40}
-                  onChange={(e) => changeProperty(i, { name: e.target.value })}
+                  onChange={(e) => onChange(renameDocumentProperty(value, i, e.target.value))}
                 />
               </label>
               <label>

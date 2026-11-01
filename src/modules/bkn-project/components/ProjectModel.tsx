@@ -75,6 +75,7 @@ import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectModel.module.css";
 import { extensionProjectKnowledgeBaseModel } from "@/framework/extension/registry";
+import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 
 const TABS = ["changes", "excluded", "objects", "relations", "review", "valueTypes"] as const;
@@ -128,6 +129,7 @@ export function ProjectModel({
   const { message, modal, runtimeConfig } = useAppServices();
   const directory = useAccountDirectory();
   const KnowledgeBaseModel = extensionProjectKnowledgeBaseModel();
+  const kbMode = useBknProjectKbMode();
   // undefined while loading, null before the first draft.
   const [draft, setDraft] = useState<Draft | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -598,7 +600,7 @@ export function ProjectModel({
             )
           }
           description={t(
-            noCatalogs && KnowledgeBaseModel
+            noCatalogs && KnowledgeBaseModel && kbMode === "enabled" && ownerIsCaller
               ? "bknProject.documentEditor.sourcesHint"
               : noCatalogs
                 ? ownerIsCaller

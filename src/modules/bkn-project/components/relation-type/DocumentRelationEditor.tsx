@@ -8,6 +8,7 @@
 import { Alert, Select, Space } from "antd";
 import { useTranslation } from "react-i18next";
 import type { Draft, DraftRelationTypeSave } from "@/modules/bkn-project/types/draft";
+import { documentCardinalityKey } from "@/modules/bkn-project/components/object-type/document-values";
 const P = "bknProject.documentEditor";
 export function DocumentRelationEditor({
   draft,
@@ -107,7 +108,10 @@ export function DocumentRelationEditor({
           style={{ minWidth: 180 }}
           value={value.cardinality}
           options={["one_to_one", "one_to_many", "many_to_one", "many_to_many"].map(
-            (cardinality) => ({ value: cardinality, label: t(`${P}.${cardinality}`) }),
+            (cardinality) => ({
+              value: cardinality,
+              label: t(documentCardinalityKey(cardinality)),
+            }),
           )}
           onChange={(cardinality) => onChange({ ...value, cardinality })}
         />
