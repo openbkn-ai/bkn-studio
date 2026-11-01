@@ -139,6 +139,15 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                     {!collapsed ? (
                       <>
                         <span className="console-sidenav-label">{t(item.labelKey)}</span>
+                        {item.stage ? (
+                          <span className="console-sidenav-tier">
+                            <span
+                              className={`console-edition-badge console-stage-badge-${item.stage}`}
+                            >
+                              {t(`shell.stage.${item.stage}`)}
+                            </span>
+                          </span>
+                        ) : null}
                         {(item.lockedEdition ?? item.paidEdition) ? (
                           <span className="console-sidenav-tier">
                             <EditionBadge

@@ -865,6 +865,13 @@ blockquote {
   color: var(--color-text-secondary);
 }
 
+/* A product stage beside a menu entry, drawn as the edition badges are, in the info color. */
+.console-stage-badge-beta {
+  border-color: var(--color-info-border);
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
 /* 企业档的升级面走紫,与版本页那张企业卡同源;专业档保持暖金。两处颜色对不上,客户会
    以为看的是两种东西。 */
 .console-upgrade-hero.is-enterprise {

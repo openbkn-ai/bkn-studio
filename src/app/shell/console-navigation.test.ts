@@ -27,6 +27,15 @@ describe("consoleNavigation — 主线菜单顺序", () => {
   });
 });
 
+describe("consoleNavigation — product stages", () => {
+  it("marks project management as beta, and no other entry", () => {
+    const staged = consoleNavigation
+      .flatMap((item) => [item, ...(item.children ?? [])])
+      .filter((item) => item.stage);
+    expect(staged.map((item) => [item.key, item.stage])).toEqual([["bkn-project", "beta"]]);
+  });
+});
+
 describe("filterNavByPermission — 系统管理按功能独立授权", () => {
   it("无权限用户显示首页和固定业务入口", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, []));

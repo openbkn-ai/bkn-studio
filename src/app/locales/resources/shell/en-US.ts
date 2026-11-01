@@ -15,6 +15,9 @@ export const shellEnUS = {
     userMenuTagline: "Console",
     versionLine: "Version {{version}}",
     headerAside: "Application shell baseline",
+    stage: {
+      beta: "Beta",
+    },
     collapseSidenav: "Collapse navigation",
     expandSidenav: "Expand navigation",
     theme: {
