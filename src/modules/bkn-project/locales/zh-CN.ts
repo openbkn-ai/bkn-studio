@@ -812,6 +812,13 @@ export const bknProjectZhCN = {
       collapse: "收起",
     },
     listSeparator: "、",
+    leaveUnsaved: {
+      title: "有修改还没保存",
+      content: "离开这一页前要保存吗？不保存的话，刚才的修改会丢失。",
+      save: "保存并离开",
+      discard: "不保存，离开",
+      stay: "留在这一页",
+    },
     sentenceSeparator: "",
     understand: {
       hint: {

@@ -22,6 +22,7 @@ import {
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { draftGraphRecords } from "@/modules/bkn-project/components/draft/graph";
 // The object type panel's frame: both editors open the same way.
+import { useUnsavedChanges } from "@/modules/bkn-project/components/unsaved/unsaved";
 import styles from "@/modules/bkn-project/components/object-type/ObjectTypePanel.module.css";
 import {
   ReviewActions,
@@ -318,6 +319,9 @@ export function RelationTypePanel({
       title: t(`${PREFIX}.deleteTitle`, { name: relation.name }),
     });
   };
+
+  // Leaving the project's page with changes not saved asks first, and can save them here.
+  useUnsavedChanges(changed, async () => (await save()) !== null);
 
   // Before deciding on the candidate, what was changed here is saved; the decision follows it.
   const prepare = async () => {

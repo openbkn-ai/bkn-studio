@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { Citing } from "@/modules/bkn-project/components/requirements/citing";
 import { InputsEditor } from "@/modules/bkn-project/components/requirements/InputsEditor";
+import { useUnsavedChanges } from "@/modules/bkn-project/components/unsaved/unsaved";
 import {
   categoryText,
   layerText,
@@ -66,11 +67,14 @@ export function ItemDialog({
   inputErrors?: Record<string, string>;
   itemId: string | null;
   kind: RequirementItemKind;
-  onSave: (fields: RequirementItemFields) => void;
+  /** Saves the item; true once it is saved. */
+  onSave: (fields: RequirementItemFields) => Promise<boolean>;
   spec: RequirementSpec;
 }) {
   const { t } = useTranslation();
   const [form] = Form.useForm();
+  // Typed in since the dialog opened: leaving the page then asks first.
+  const [typed, setTyped] = useState(false);
   const current = itemId
     ? (spec[kind] as { id: string }[]).find((item) => item.id === itemId)
     : undefined;
@@ -100,7 +104,7 @@ export function ItemDialog({
     return current;
   })();
 
-  const save = (values: Record<string, unknown>) => {
+  const fieldsOf = (values: Record<string, unknown>): RequirementItemFields => {
     const text = (name: string) => {
       const value = values[name];
       return typeof value === "string" ? value.trim() : "";
@@ -139,8 +143,25 @@ export function ItemDialog({
                     ? { needs: ((values.needs as string[] | undefined) ?? []).map(fromKey) }
                     : {}),
               };
-    onSave(fields);
+    return fields;
   };
+  const save = (values: Record<string, unknown>) => void onSave(fieldsOf(values));
+  useUnsavedChanges(
+    typed ||
+      inputsChanged ||
+      followConcepts ||
+      relativeWindow !== (question?.relativeWindow ?? false),
+    async () => {
+      const values = (await form.validateFields().catch(() => null)) as Record<
+        string,
+        unknown
+      > | null;
+      // As the dialog's own save: a question's inputs are sent only once each is complete.
+      return (
+        values !== null && (kind !== "questions" || inputsComplete) && onSave(fieldsOf(values))
+      );
+    },
+  );
 
   // Needs are sent only when the person changed them: sending them makes them the person's.
   const neededChanged = (needs: string[] | undefined) => {
@@ -164,7 +185,13 @@ export function ItemDialog({
       // A question's inputs take a row each: its dialog is wider.
       width={kind === "questions" ? 820 : 640}
     >
-      <Form form={form} initialValues={initial} layout="vertical" onFinish={save}>
+      <Form
+        form={form}
+        initialValues={initial}
+        layout="vertical"
+        onFinish={save}
+        onValuesChange={() => setTyped(true)}
+      >
         {kind === "scenarios" ? (
           <>
             <Form.Item label={t(`${PREFIX}.fields.name`)} name="name" rules={[required]}>

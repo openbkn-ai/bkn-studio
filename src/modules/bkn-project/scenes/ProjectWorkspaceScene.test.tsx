@@ -6,7 +6,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -158,12 +158,22 @@ function renderScene(
   section: "model" | "overview" | "release" | "resources" | "scenarios" = "overview",
   entry = "/",
 ) {
-  return render(
-    <MemoryRouter initialEntries={[entry]}>
-      <ProjectWorkspaceScene projectId="p1" section={section} />
-      <Location />
-    </MemoryRouter>,
+  // A data router, as the app's: leaving with changes not saved is blocked through it.
+  const router = createMemoryRouter(
+    [
+      {
+        element: (
+          <>
+            <ProjectWorkspaceScene projectId="p1" section={section} />
+            <Location />
+          </>
+        ),
+        path: "*",
+      },
+    ],
+    { initialEntries: [entry] },
   );
+  return render(<RouterProvider router={router} />);
 }
 
 /** The mock draft, with one decision by someone else and one by the caller. */

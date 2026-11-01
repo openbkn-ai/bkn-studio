@@ -25,6 +25,7 @@ import {
   listDraftTableFields,
   saveDraftObjectType,
 } from "@/modules/bkn-project/services/draft.service";
+import { useUnsavedChanges } from "@/modules/bkn-project/components/unsaved/unsaved";
 import { projectErrorDetails } from "@/modules/bkn-project/services/publish.service";
 import type { AskRevision, Draft, DraftObjectType } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -286,6 +287,9 @@ export function ObjectTypePanel({
       setSaving(false);
     }
   };
+
+  // Leaving the project's page with changes not saved asks first, and can save them here.
+  useUnsavedChanges(changed, async () => (await save()) !== null);
 
   // Before deciding on the candidate, what was changed here is saved; the decision follows it.
   const prepare = async () => {

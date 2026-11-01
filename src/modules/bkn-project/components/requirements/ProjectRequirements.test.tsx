@@ -59,6 +59,7 @@ vi.mock("@/modules/bkn-project/services/requirements.service", async (importOrig
   uploadDocuments: uploadDocumentsMock,
 }));
 
+import { Unsaved } from "@/modules/bkn-project/components/unsaved/unsaved";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { ProjectRequirements } from "./ProjectRequirements";
@@ -726,6 +727,41 @@ describe("ProjectRequirements", () => {
       expect(
         screen.queryByText(/reference_time|record|capability_without_basis|from_key/),
       ).toBeNull();
+    });
+
+    it("saves nothing on leaving the page while an input is not complete", async () => {
+      getRequirementsMock.mockResolvedValue(withInputs());
+      // The page's leave guard, as the workspace provides it: it saves what registers.
+      const saves: { current: () => Promise<boolean> }[] = [];
+      renderWithoutAntdStyles(
+        <Unsaved.Provider
+          value={{
+            add: (save) => {
+              saves.push(save);
+              return () => saves.splice(saves.indexOf(save), 1);
+            },
+          }}
+        >
+          <ProjectRequirements
+            onGoToModel={onGoToModel}
+            onGoToResources={onGoToResources}
+            ownerIsCaller
+            project={project}
+          />
+        </Unsaved.Provider>,
+      );
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "编辑「某个客户哪些订单晚了？」" }),
+      );
+      const dialog = within(await screen.findByRole("dialog"));
+      fireEvent.click(dialog.getByRole("button", { name: "添加输入" }));
+      await waitFor(() => expect(saves).toHaveLength(1));
+
+      // Not sent, as the dialog's own save is disabled: the page stays with the dialog open.
+      expect(await saves[0].current()).toBe(false);
+      expect(editItemMock).not.toHaveBeenCalled();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
 
     it("sends changed inputs, and shows the server's refusal on the input it names", async () => {
