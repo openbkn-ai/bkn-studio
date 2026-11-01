@@ -202,6 +202,26 @@ describe("RelationSuggestionsEntry", () => {
     ).toBeEnabled();
   });
 
+  it("shows AI's suggestions without an empty answer when AI wrote none", async () => {
+    mocks.ask.mockResolvedValueOnce(
+      suggestions(drafted, {
+        ...fields,
+        name: "AI link",
+        origin: "ai",
+        reason: "Bills go to customers.",
+      }),
+    );
+    renderEntry();
+    await openCustomers();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknProject.relationSuggestions.ask" }),
+    );
+    expect(await screen.findByText("AI link")).toBeInTheDocument();
+    expect(screen.getByText("Bills go to customers.")).toBeInTheDocument();
+    expect(screen.queryByText("bknProject.relationSuggestions.answerTitle")).toBeNull();
+  });
+
   it("offers no adopting or asking to someone who cannot edit", async () => {
     renderEntry(false);
     await openCustomers();

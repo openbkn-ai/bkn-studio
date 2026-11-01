@@ -108,7 +108,8 @@ const mapSuggestion = (item: BackendSuggestion): RelationSuggestion => {
 };
 
 export const mapSuggestions = (data: BackendSuggestions): RelationSuggestions => ({
-  answer: data.answer ?? "",
+  // AI may give no answer, only its suggestions: none is shown then.
+  answer: data.answer?.trim() ?? "",
   candidates: (data.candidates ?? []).map(mapSuggestion),
   objectType: data.object_type,
 });

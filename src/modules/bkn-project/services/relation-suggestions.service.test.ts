@@ -133,6 +133,12 @@ describe("relation suggestions", () => {
     const asked = await askRelationSuggestions("p/1", "ward");
     expect(asked.candidates).toHaveLength(2);
     expect(asked.answer).toBe("Wards hold beds and nurses.");
+
+    // No answer, or only blanks: none.
+    mockPost.mockResolvedValue({ data: reply });
+    expect((await askRelationSuggestions("p/1", "ward")).answer).toBe("");
+    mockPost.mockResolvedValue({ data: { ...reply, answer: "  " } });
+    expect((await askRelationSuggestions("p/1", "ward")).answer).toBe("");
     expect(mockPost).toHaveBeenCalledWith(
       `${path}:ask`,
       { object_type: "ward" },
