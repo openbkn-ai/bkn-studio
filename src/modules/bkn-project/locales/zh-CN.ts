@@ -530,6 +530,8 @@ export const bknProjectZhCN = {
           displayName: "显示名：{{value}}",
           comment: "说明：{{value}}",
           ends: "{{source}} → {{target}}：{{rules}}",
+          endsOnly: "{{source}} → {{target}}",
+          unset: "（未选）",
           link: "经 {{table}}，{{rules}}",
           pair: "{{source}} = {{target}}",
           separator: "；",

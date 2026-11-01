@@ -573,6 +573,8 @@ export const bknProjectEnUS = {
           displayName: "display name: {{value}}",
           comment: "description: {{value}}",
           ends: "{{source}} → {{target}}: {{rules}}",
+          endsOnly: "{{source}} → {{target}}",
+          unset: "(not chosen)",
           link: "through {{table}}, {{rules}}",
           pair: "{{source}} = {{target}}",
           separator: "; ",

@@ -180,10 +180,12 @@ export function endsText(t: TFunction, names: EndNames, ends: AskEnds): string {
           ),
         )
         .join(separator);
-  return t(`${PREFIX}.preview.ends`, {
+  // An end not chosen yet, as in a relation being made, says so; no mapping, no colon after it.
+  const end = (id: string) => (id ? names.object(id) : t(`${PREFIX}.preview.unset`));
+  return t(`${PREFIX}.preview.${rules ? "ends" : "endsOnly"}`, {
     rules,
-    source: names.object(ends.source),
-    target: names.object(ends.target),
+    source: end(ends.source),
+    target: end(ends.target),
   });
 }
 
