@@ -76,9 +76,24 @@ it.each([
 );
 
 it.each([
-  ["bkn-project-requirements", "BKNProjectRequirements", "项目管理 - 需求起草", "Project - Requirements"],
-  ["bkn-project-answer-judge", "BKNProjectAnswerJudge", "项目管理 - 回归判答", "Project - Regression Judge"],
-  ["bkn-project-ontology-ask", "BKNProjectOntologyAsk", "项目管理 - 本体建模助手", "Project - Ontology Assistant"],
+  [
+    "bkn-project-requirements",
+    "BKNProjectRequirements",
+    "项目管理 - 需求起草",
+    "Project - Requirements",
+  ],
+  [
+    "bkn-project-answer-judge",
+    "BKNProjectAnswerJudge",
+    "项目管理 - 回归判答",
+    "Project - Regression Judge",
+  ],
+  [
+    "bkn-project-ontology-ask",
+    "BKNProjectOntologyAsk",
+    "项目管理 - 本体建模助手",
+    "Project - Ontology Assistant",
+  ],
 ])("names the project Agent %s, seeded as %s, in either language", (agent_id, stored, zh, en) => {
   for (const name of [stored, zh, en]) {
     expect(agentDisplayName({ agent_id, name }, i18n.getFixedT("zh-CN"))).toBe(zh);
