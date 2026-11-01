@@ -82,6 +82,8 @@ export function RelationSuggestionsEntry({
       setLoading(true);
       setFailed(false);
       setAskFailed(false);
+      // A newer read supersedes an answer AI is still writing: it is dropped when it comes.
+      setAsking(false);
       try {
         const next = await getRelationSuggestions(projectId, objectTypeId);
         if (read === latest.current) {

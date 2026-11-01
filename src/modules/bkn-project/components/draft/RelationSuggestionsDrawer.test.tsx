@@ -172,6 +172,30 @@ describe("RelationSuggestionsEntry", () => {
     expect(screen.getByText("AI link")).toBeInTheDocument();
   });
 
+  it("lets AI be asked again once another read supersedes an answer still coming", async () => {
+    mocks.isolated.mockResolvedValue([
+      { id: "customers", name: "Customer" },
+      { id: "sales_orders", name: "Order" },
+    ]);
+    mocks.ask.mockImplementationOnce(() => new Promise(() => undefined));
+    renderEntry();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: 'bknProject.relationSuggestions.entry:{"count":2}',
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Customer" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknProject.relationSuggestions.ask" }),
+    );
+    expect(await screen.findByText("bknProject.relationSuggestions.asking")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Order" }));
+    expect(
+      await screen.findByRole("button", { name: "bknProject.relationSuggestions.ask" }),
+    ).toBeEnabled();
+  });
+
   it("offers no adopting or asking to someone who cannot edit", async () => {
     renderEntry(false);
     await openCustomers();

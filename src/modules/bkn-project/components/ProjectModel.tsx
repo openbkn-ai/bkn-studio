@@ -946,7 +946,7 @@ export function ProjectModel({
             <RelationTypePanel
               draft={draft}
               // Another suggestion opened starts the editor over from it.
-              key={`${relationPanel.id ?? "new"}/${panelReads}/${relationPanel.prefill ? JSON.stringify(relationPanel.prefill.ends) : ""}`}
+              key={`${relationPanel.id ?? "new"}/${panelReads}/${relationPanel.prefill ? JSON.stringify([relationPanel.prefill.ends, relationPanel.prefill.name, relationPanel.prefill.origin]) : ""}`}
               onClose={() => setRelationPanel(null)}
               onReload={readDraftAgain}
               onSaved={setDraft}
