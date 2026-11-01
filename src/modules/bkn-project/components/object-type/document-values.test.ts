@@ -107,3 +107,32 @@ describe("partially typed document field names", () => {
     expect(renamed.primaryKeys).toEqual(["title"]);
   });
 });
+
+describe("document field rename editing sessions", () => {
+  it("keeps row references through clearing and retyping without capturing another field", () => {
+    const value = {
+      name: "Event",
+      description: "",
+      incrementalKey: "",
+      displayKey: "title",
+      primaryKeys: ["title"],
+      document: { timeProperty: "title", participantRelations: [] },
+      properties: [
+        { name: "title", displayName: "Title", description: "", type: "string" },
+        { name: "other", displayName: "Other", description: "", type: "string" },
+      ],
+    };
+    const blank = renameDocumentProperty(value, 0, "", "title");
+    expect(blank.displayKey).toBe("title");
+    expect(blank.primaryKeys).toEqual(["title"]);
+    const renamed = renameDocumentProperty(blank, 0, "headline", "title");
+    expect(renamed.displayKey).toBe("headline");
+    expect(renamed.primaryKeys).toEqual(["headline"]);
+    expect(renamed.document?.timeProperty).toBe("headline");
+    const duplicate = renameDocumentProperty(value, 0, "other", "title");
+    expect(duplicate.displayKey).toBe("title");
+    const unique = renameDocumentProperty(duplicate, 0, "other_title", "title");
+    expect(unique.displayKey).toBe("other_title");
+    expect(unique.properties[1].name).toBe("other");
+  });
+});

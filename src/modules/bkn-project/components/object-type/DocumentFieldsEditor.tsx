@@ -40,6 +40,18 @@ export function DocumentFieldsEditor({
   const [quote, setQuote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Keep the last unique name per row while an API name is temporarily empty
+  // or duplicates another row. These editing references never enter a DTO.
+  const referenceNames = useRef(value.properties.map((p) => p.name));
+  useEffect(() => {
+    referenceNames.current = object.properties.map((p) => p.name);
+  }, [object]);
+  const rename = (index: number, name: string) => {
+    const next = renameDocumentProperty(value, index, name, referenceNames.current[index]);
+    if (name && !value.properties.some((p, at) => at !== index && p.name === name))
+      referenceNames.current[index] = name;
+    onChange(next);
+  };
   const epoch = useRef(0);
   useEffect(
     () => () => {
@@ -208,14 +220,15 @@ export function DocumentFieldsEditor({
             extra={
               <AppButton
                 danger
-                onClick={() =>
+                onClick={() => {
+                  referenceNames.current.splice(i, 1);
                   onChange({
                     ...value,
                     properties: value.properties.filter((_, at) => at !== i),
                     primaryKeys: value.primaryKeys.filter((k) => k !== p.name),
                     displayKey: value.displayKey === p.name ? "" : value.displayKey,
-                  })
-                }
+                  });
+                }}
               >
                 {t(`${P}.remove`)}
               </AppButton>
@@ -232,11 +245,7 @@ export function DocumentFieldsEditor({
               </label>
               <label>
                 {t(`${P}.apiName`)}
-                <Input
-                  value={p.name}
-                  maxLength={40}
-                  onChange={(e) => onChange(renameDocumentProperty(value, i, e.target.value))}
-                />
+                <Input value={p.name} maxLength={40} onChange={(e) => rename(i, e.target.value)} />
               </label>
               <label>
                 {t(`${P}.type`)}{" "}

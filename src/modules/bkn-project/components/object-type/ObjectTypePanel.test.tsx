@@ -592,6 +592,9 @@ describe("document object panel", () => {
     mocks.save.mockResolvedValue({ ...draft, updateTime: draft.updateTime + 1 });
     renderPanel(draft, object.id);
     expect(screen.queryByText("property editor")).not.toBeInTheDocument();
+    const apiName = screen.getByRole("textbox", { name: "bknProject.documentEditor.apiName" });
+    fireEvent.change(apiName, { target: { value: "" } });
+    fireEvent.change(apiName, { target: { value: "contract_no" } });
     fireEvent.change(
       screen.getByRole("textbox", { name: /bknProject.documentEditor.instruction/ }),
       { target: { value: "Use the printed business number only" } },
@@ -599,9 +602,11 @@ describe("document object panel", () => {
     save();
     await waitFor(() => expect(mocks.save).toHaveBeenCalled());
     expect(mocks.save.mock.calls[0][3]).toMatchObject({
+      primaryKeys: ["contract_no"],
+      displayKey: "contract_no",
       properties: [
         {
-          name: "number",
+          name: "contract_no",
           extraction: { instruction: "Use the printed business number only", examples: [proof] },
         },
         { name: "document_id" },

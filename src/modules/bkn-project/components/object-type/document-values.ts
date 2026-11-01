@@ -77,9 +77,16 @@ export function renameDocumentProperty(
   value: DraftObjectTypeSave,
   index: number,
   name: string,
+  referenceName?: string,
 ): DraftObjectTypeSave {
-  const old = value.properties[index].name;
-  if (!old || value.properties.some((property, at) => at !== index && property.name === old)) {
+  const old = referenceName ?? value.properties[index].name;
+  if (
+    !old ||
+    !name ||
+    value.properties.some(
+      (property, at) => at !== index && (property.name === old || property.name === name),
+    )
+  ) {
     return {
       ...value,
       properties: value.properties.map((property, at) =>
