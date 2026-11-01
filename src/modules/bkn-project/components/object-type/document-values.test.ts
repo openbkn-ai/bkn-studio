@@ -6,7 +6,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { originalLocation, renameDocumentProperty, selectedExample } from "./document-values";
+import {
+  originalLocation,
+  renameDocumentProperty,
+  removeDocumentProperty,
+  selectedExample,
+} from "./document-values";
 
 describe("native example selection", () => {
   const fragment = {
@@ -134,5 +139,43 @@ describe("document field rename editing sessions", () => {
     const unique = renameDocumentProperty(duplicate, 0, "other_title", "title");
     expect(unique.displayKey).toBe("other_title");
     expect(unique.properties[1].name).toBe("other");
+  });
+});
+
+describe("removing a partially renamed document field", () => {
+  it("clears references to the row's retained name, including event time", () => {
+    const value = {
+      name: "Event",
+      description: "",
+      incrementalKey: "",
+      displayKey: "title",
+      primaryKeys: ["title"],
+      document: { timeProperty: "title", participantRelations: ["participant"] },
+      properties: [
+        { name: "", displayName: "Title", description: "", type: "string" },
+        { name: "other", displayName: "Other", description: "", type: "string" },
+      ],
+    };
+    const next = removeDocumentProperty(value, 0, "title");
+    expect(next.primaryKeys).toEqual([]);
+    expect(next.displayKey).toBe("");
+    expect(next.document).toEqual({ timeProperty: "", participantRelations: ["participant"] });
+    expect(next.properties.map((p) => p.name)).toEqual(["other"]);
+  });
+  it("preserves references belonging to another row with the same temporarily typed name", () => {
+    const value = {
+      name: "Object",
+      description: "",
+      incrementalKey: "",
+      displayKey: "title",
+      primaryKeys: ["title"],
+      properties: [
+        { name: "title", displayName: "Title", description: "", type: "string" },
+        { name: "title", displayName: "English title", description: "", type: "string" },
+      ],
+    };
+    const next = removeDocumentProperty(value, 1, "title_en");
+    expect(next.primaryKeys).toEqual(["title"]);
+    expect(next.displayKey).toBe("title");
   });
 });
