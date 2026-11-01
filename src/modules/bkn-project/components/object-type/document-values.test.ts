@@ -73,3 +73,37 @@ describe("document editor references", () => {
     expect(value.properties[0].name).toBe("when");
   });
 });
+
+describe("partially typed document field names", () => {
+  it("does not select a new unnamed field as a display or event-time field", () => {
+    const value = {
+      name: "Event",
+      description: "",
+      incrementalKey: "",
+      displayKey: "",
+      primaryKeys: [],
+      document: { timeProperty: "", participantRelations: [] },
+      properties: [{ name: "", displayName: "New", description: "", type: "string" }],
+    };
+    const renamed = renameDocumentProperty(value, 0, "n");
+    expect(renamed.displayKey).toBe("");
+    expect(renamed.document?.timeProperty).toBe("");
+  });
+  it("does not move another field's references while a duplicate name is typed", () => {
+    const value = {
+      name: "Event",
+      description: "",
+      incrementalKey: "",
+      displayKey: "title",
+      primaryKeys: ["title"],
+      document: { timeProperty: "", participantRelations: [] },
+      properties: [
+        { name: "title", displayName: "Title", description: "", type: "string" },
+        { name: "title", displayName: "English title", description: "", type: "string" },
+      ],
+    };
+    const renamed = renameDocumentProperty(value, 1, "title_e");
+    expect(renamed.displayKey).toBe("title");
+    expect(renamed.primaryKeys).toEqual(["title"]);
+  });
+});
