@@ -733,6 +733,19 @@ export const dataCatalogEnUS = {
       copyFullValueSuccess: "Full value copied",
       copyFullValueFailed: "Unable to copy full value",
       queryOriginalSource: "Query original data",
+      queryOriginalAlreadyActive:
+        "This preview already queries original data directly. No switch is needed.",
+      queryOriginalUnavailable: "This resource has no source table query channel to switch to.",
+      queryOriginalLoading: "Loading the preview. Please wait before switching query sources.",
+      queryOriginalFailed: "The preview query failed. See the error below.",
+      invalidViewMetadata:
+        "The logic view details are incomplete: the view type, source resource reference or source category is missing. Refresh the resource details or contact an administrator.",
+      invalidQuerySource:
+        "The preview response contains no valid query source. Refresh the preview or contact an administrator.",
+      fixedFilterRequiresIndex:
+        "This view's fixed filter requires full-text or vector search. Original data queries are unavailable.",
+      fixedFilterSourceUnknown:
+        "This view's fixed filter cannot be confirmed to support original data queries. Switching is unavailable.",
       loadBinaryContent: "Load Binary content",
       dataSourceIndex: "Source: local index",
       indexPageLimit:

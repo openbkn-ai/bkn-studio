@@ -170,6 +170,162 @@ describe("resource.service · previewCatalogResource", () => {
     }
   });
 
+  it.each([false, true])(
+    "previews the channel-switch demo with ignoreLocalIndex=%s and preserves its hidden fixed filter",
+    async (ignoreLocalIndex) => {
+      vi.resetModules();
+      vi.stubEnv("VITE_USE_MOCK", "true");
+      const { previewCatalogResource } = await import("./resource.service");
+      const result = await previewCatalogResource("res-query-source-switch-view", {
+        ignoreLocalIndex,
+        limit: 10,
+        offset: 0,
+      });
+      expect(result).toEqual({
+        querySource: ignoreLocalIndex ? "source" : "local_index",
+        total: 3,
+        rows: [
+          { record_id: 4, content: null, label: "d" },
+          { record_id: 5, content: "alpha searchable", label: "e" },
+          { record_id: 6, content: "beta searchable", label: "f" },
+        ],
+      });
+      const filtered = await previewCatalogResource("res-query-source-switch-view", {
+        ignoreLocalIndex,
+        limit: 10,
+        offset: 0,
+        filterCondition: { field: "record_id", operation: "==", value: 4 },
+      });
+      expect(filtered.rows).toEqual([{ record_id: 4, content: null, label: "d" }]);
+      expect(filtered.total).toBe(1);
+      const excluded = await previewCatalogResource("res-query-source-switch-view", {
+        ignoreLocalIndex,
+        limit: 10,
+        offset: 0,
+        filterCondition: { field: "record_id", operation: "<", value: 4 },
+      });
+      expect(excluded.rows).toEqual([]);
+      expect(excluded.total).toBe(0);
+      const page = await previewCatalogResource("res-query-source-switch-view", {
+        ignoreLocalIndex,
+        limit: 1,
+        offset: 1,
+      });
+      expect(page.rows).toEqual([{ record_id: 5, content: "alpha searchable", label: "e" }]);
+      expect(page.total).toBe(3);
+    },
+  );
+
+  it("provides the fulltext demo's known index hits and rejects forcing source queries", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } = await import("./resource.service");
+    const result = await previewCatalogResource("res-query-source-fulltext-view", {
+      limit: 10,
+      offset: 0,
+    });
+    expect(result).toEqual({
+      querySource: "local_index",
+      total: 1,
+      rows: [{ record_id: 5, content: "alpha searchable", label: "e" }],
+    });
+    const excluded = await previewCatalogResource("res-query-source-fulltext-view", {
+      limit: 10,
+      offset: 0,
+      filterCondition: { field: "record_id", operation: "==", value: 4 },
+    });
+    expect(excluded.total).toBe(0);
+    expect(excluded.rows).toEqual([]);
+    await expect(
+      previewCatalogResource("res-query-source-fulltext-view", {
+        ignoreLocalIndex: true,
+        limit: 10,
+        offset: 0,
+      }),
+    ).rejects.toMatchObject({ response: { status: 400 } });
+    await expect(
+      previewCatalogResource("res-query-source-fulltext-view", {
+        limit: 10,
+        offset: 0,
+        filterCondition: { field: "content", operation: "match", value: "beta" },
+      }),
+    ).rejects.toMatchObject({
+      response: { status: 400, data: { error_code: "VegaBackend.Query.UnsupportedOperation" } },
+    });
+  });
+
+  it("preserves the fulltext demo after an unchanged editor save adds default value_from", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { getCatalogResource, updateDerivedView, previewCatalogResource } =
+      await import("./resource.service");
+    const { mockResources } = await import("./mock-db");
+    const { parseFilterCondition, filterToBackend } = await import("../lib/filter-tree");
+    const index = mockResources.findIndex((item) => item.id === "res-query-source-fulltext-view");
+    const original = mockResources[index];
+    const view = await getCatalogResource(original.id);
+    const source = await getCatalogResource(view.logicDefinition!.sourceResourceId);
+    const parsed = parseFilterCondition(view.logicDefinition!.filterCondition, "local_index");
+    expect(parsed).not.toBeNull();
+    try {
+      await updateDerivedView(original.id, {
+        catalogId: original.catalogId,
+        name: original.name,
+        description: original.description,
+        enabled: original.enabled !== false,
+        expectedUpdateTime: original.expectedUpdateTime,
+        sourceResourceId: source.id,
+        schema: original.schema,
+        tags: original.tags ?? [],
+        filterCondition: filterToBackend(parsed!, source.schema, "local_index"),
+      });
+      const result = await previewCatalogResource(original.id, { limit: 10, offset: 0 });
+      expect(result).toEqual({
+        querySource: "local_index",
+        total: 1,
+        rows: [{ record_id: 5, content: "alpha searchable", label: "e" }],
+      });
+    } finally {
+      mockResources[index] = original;
+    }
+  });
+
+  it("does not reuse precomputed fulltext hits after editing the demo definition", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } = await import("./resource.service");
+    const { mockResources } = await import("./mock-db");
+    const view = mockResources.find((item) => item.id === "res-query-source-fulltext-view")!;
+    expect(view).toBeDefined();
+    const original = view.logicDefinition;
+    try {
+      view.logicDefinition = {
+        sourceResourceId: "res-query-source-table",
+        filterCondition: { field: "content", operation: "match", value: "beta" },
+      };
+      await expect(previewCatalogResource(view.id, { limit: 10, offset: 0 })).rejects.toMatchObject(
+        {
+          response: { status: 400, data: { error_code: "VegaBackend.Query.UnsupportedOperation" } },
+        },
+      );
+    } finally {
+      view.logicDefinition = original;
+    }
+  });
+
+  it("previews the unindexed-source demo using source rows", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } = await import("./resource.service");
+    const result = await previewCatalogResource("res-query-source-no-index-view", {
+      limit: 10,
+      offset: 0,
+    });
+    expect(result.querySource).toBe("source");
+    expect(result.total).toBe(3);
+    expect(result.rows.map((row) => row.record_id)).toEqual([4, 5, 6]);
+  });
+
   it("maps mock derived rows by the source field originalName", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
