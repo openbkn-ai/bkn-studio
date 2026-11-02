@@ -17,9 +17,10 @@ import { CAPABILITIES } from "@/framework/entitlement/capabilities";
  *
  * Workshop has no capability key of its own yet: it borrows the graph explorer's, which starts
  * at the same edition (professional). Change it here once the key is registered.
+ *
+ * It sits right below project management, by its place in console-navigation's list.
  */
 export const workshopNavigation: ConsoleNavContribution = {
-  afterKey: "general-business-knowledge-network",
   items: [
     {
       capability: CAPABILITIES.GRAPH_EXPLORER,

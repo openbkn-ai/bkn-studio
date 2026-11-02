@@ -26,13 +26,13 @@ import { modelResourcesNavigation } from "@/modules/model-resources/navigation";
 const navigationContributions: ConsoleNavContribution[] = [
   homeNavigation,
   bknProjectNavigation,
+  // Right below project management: both are top-level entries, listed in this order.
+  workshopNavigation,
   knowledgeNetworkNavigation,
   dataConnectNavigation,
   dataCatalogNavigation,
   executionFactoryNavigation,
   modelResourcesNavigation,
-  // Before bknTraceNavigation: both follow the business network group, Workshop first.
-  workshopNavigation,
   bknTraceNavigation,
   executionFactoryLabNavigation,
 ];
