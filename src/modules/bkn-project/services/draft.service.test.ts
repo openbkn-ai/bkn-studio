@@ -50,6 +50,78 @@ describe("draft.service", () => {
     expect(mapDraft(backend).datasetPreparation).toEqual({ state: "failed", ready: 2, total: 4 });
   });
 
+  it("sends business-key verification intent without echoing server-owned proof", async () => {
+    const { relationBody } = await importService();
+    const body = relationBody(
+      {
+        name: "Same business object",
+        description: "",
+        source: "document",
+        target: "system",
+        mapping: [],
+        cardinality: "one_to_one",
+        verifyBusinessIdentity: true,
+        documentMapping: {
+          mode: "linking",
+          mentionProperty: "number",
+          identityProperty: "number",
+          businessIdentity: { rows: 10, distinct: 10, nulls: 0, blanks: 0, checkedAt: 1 },
+        },
+      },
+      10,
+    );
+    expect(body.verify_business_identity).toBe(true);
+    expect(body.document_mapping).not.toHaveProperty("business_identity");
+    expect(body.document_mapping).toMatchObject({ mode: "linking", identity_property: "number" });
+  });
+
+  it("sends field choices without server-owned confirmation metadata", async () => {
+    const { objectTypeBody } = await importService();
+    const choice = {
+      systemObjectTypeId: "system",
+      fileObjectTypeId: "file",
+      relationTypeId: "same",
+      fields: [
+        {
+          name: "number",
+          category: "both" as const,
+          sourceOfRecord: "table" as const,
+          destinationObjectTypeId: "system",
+        },
+      ],
+      confirm: true,
+      confirmedBy: { id: "private-owner", type: "user" },
+      confirmedAt: 42,
+      signature: "private-signature",
+      state: "confirmed",
+    };
+    const body = objectTypeBody({
+      name: "Agreement",
+      description: "",
+      properties: [],
+      primaryKeys: [],
+      displayKey: "",
+      incrementalKey: "",
+      document: { timeProperty: "", participantRelations: [], dualSource: choice },
+    });
+    expect(body.document?.dual_source).toEqual({
+      system_object_type_id: "system",
+      file_object_type_id: "file",
+      relation_type_id: "same",
+      fields: [
+        {
+          name: "number",
+          category: "both",
+          source_of_record: "table",
+          destination_object_type_id: "system",
+        },
+      ],
+      confirm: true,
+    });
+    expect(JSON.stringify(body)).not.toContain("private-");
+    expect(body.document?.dual_source).not.toHaveProperty("confirmed_at");
+  });
+
   it("reads the draft and maps every item, null lists as empty", async () => {
     const { getDraft, mockDraft } = await importService();
     const backend = mockDraft("p1");

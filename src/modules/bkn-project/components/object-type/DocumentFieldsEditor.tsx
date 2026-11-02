@@ -24,6 +24,8 @@ import {
   selectedExample,
 } from "./document-values";
 
+import { DualSourceFieldsEditor } from "./DualSourceFieldsEditor";
+
 const P = "bknProject.documentEditor";
 export function DocumentFieldsEditor({
   object,
@@ -133,6 +135,9 @@ export function DocumentFieldsEditor({
           {t(`${P}.original`, { number: i + 1 })}
         </Typography.Link>
       ))}
+      {!fixed && (
+        <DualSourceFieldsEditor object={object} draft={draft} value={value} onChange={onChange} />
+      )}
       {!fixed && (
         <Space wrap>
           {object.document?.role === "entity" && (

@@ -91,3 +91,57 @@ it("retains business labels while repairing a legacy entity same-document mappin
   expect(screen.queryByText(source.id)).not.toBeInTheDocument();
   expect(screen.queryByText(target.id)).not.toBeInTheDocument();
 });
+
+it.each(["one_to_one", "many_to_one"])(
+  "requires explicit business-number verification only for same-object %s links",
+  (cardinality) => {
+    const draft = mapDraft(mockDraft("p"));
+    const source = draft.items.objectTypes[0],
+      target = draft.items.objectTypes[1];
+    const seed = source.properties[0];
+    source.document = {
+      role: "entity",
+      layer: "entity",
+      reason: "Business identity",
+      citations: [],
+      selectionId: "lock",
+      selectionRevision: 1,
+      timeProperty: "",
+      participantRelations: [],
+    };
+    source.primaryKeys = ["number"];
+    source.needsIdentity = false;
+    source.properties = [
+      { ...seed, name: "number", displayName: "Business number", type: "string", readOnly: false },
+    ];
+    delete target.document;
+    target.primaryKeys = ["internal_id"];
+    target.needsIdentity = false;
+    target.properties = [
+      { ...seed, name: "internal_id", type: "string" },
+      { ...seed, name: "number", type: "string", readOnly: false },
+    ];
+    const value: DraftRelationTypeSave = {
+      name: "Same asset",
+      description: "",
+      mapping: [],
+      source: source.id,
+      target: target.id,
+      cardinality,
+      documentMapping: { mode: "linking", mentionProperty: "number", identityProperty: "number" },
+    };
+    const onChange = vi.fn();
+    render(<DocumentRelationEditor draft={draft} value={value} onChange={onChange} />);
+    const check = screen.queryByRole("checkbox", {
+      name: "bknProject.documentEditor.verifyBusinessIdentity",
+    });
+    if (cardinality === "many_to_one") {
+      expect(check).not.toBeInTheDocument();
+      return;
+    }
+    expect(check).not.toBeChecked();
+    fireEvent.click(check!);
+    expect(onChange).toHaveBeenCalledWith({ ...value, verifyBusinessIdentity: true });
+    expect(target.primaryKeys).toEqual(["internal_id"]);
+  },
+);

@@ -7,7 +7,60 @@
 
 export const bknProjectEnUS = {
   bknProject: {
+    sourceFields: {
+      undoClear: "Undo clearing",
+      pendingSave: "Selected for confirmation; save the model to apply",
+
+      title: "Dual-source field list",
+      help: "Review placement and authority using the extracted models. The system keeps its table binding; this phase creates identity links without a fused projection.",
+      systemConnection: "System and text identity relation",
+      chooseConnection: "Choose the corresponding relation",
+      mainFile: "File model for the main document",
+      chooseFile: "Choose the main-document model",
+      verifyFirst:
+        "Confirm the relation identifier first. A business number requires full-table verification.",
+      field: "Field",
+      placement: "Field category",
+      authority: "Authority",
+      destination: "Placement",
+      chooseFact: "Choose a fact or event model",
+      placementHelp:
+        "Shared current values remain in the system. The text object keeps its unique attributes and business identifier; changing values belong in facts or events. Adjust those models before confirming.",
+      priority:
+        "Fusion compares effective time, evidence strength and recorded time in that order. Other sources only contribute checks.",
+      confirm: "Confirm this field list when saving",
+      clear: "Clear field list",
+      clearPending:
+        "Saving will clear this list. An adopted same-business relation still requires a confirmed list.",
+      changedField: "Changed field",
+      changedDestination: "Placement changed; choose again",
+      unnamedModel: "Unnamed model",
+      addTemporal: "Add a field from an existing fact or event",
+      remove: "Remove",
+      state: {
+        proposed: "Field list awaits confirmation",
+        confirmed: "Field list confirmed",
+        stale: "Models changed; review and confirm the field list again",
+      },
+      category: {
+        system_only: "System only",
+        both: "Both sources",
+        text_only: "Text only",
+        temporal: "Changes over time",
+      },
+      authorityKind: {
+        table: "System table",
+        document: "Main document",
+        fusion: "Knowledge fusion",
+      },
+    },
     documentEditor: {
+      businessIdentityHelp:
+        "A business number can connect the same object. Verify it is unique and nonempty across the full table when saving; the system primary key stays unchanged.",
+      businessIdentityVerified:
+        "Last verified across {{rows}} records. Confirmation and building check it again.",
+      verifyBusinessIdentity: "Verify this business identifier when saving",
+
       recordIdentity: "Stable record identity, maintained by the system",
       managedRelation: "This source relationship is maintained by the system.",
       sourcesHint:
@@ -995,6 +1048,16 @@ export const bknProjectEnUS = {
           "Properties you removed are still used: {{uses}}. Change the relations first, or keep the properties.",
         InvalidPropertyUnnamed:
           "A property's column does not exist, is mapped by another property, or has another type.",
+        DualSourceNotConfirmed:
+          "Confirm the dual-source field list and adopt its file and fact models first.",
+        InvalidSourceFields:
+          "The field list differs from the current models. Check names, placement and authority, then confirm again.",
+        BusinessIdentityNotVerified:
+          "Verify and save the business identifier in the relationship settings first. The system primary key stays unchanged.",
+        BusinessIdentityNotUnique:
+          "The business identifier has duplicate or empty values. Resolve them and verify again; the system primary key is unchanged.",
+        BusinessIdentityUnavailable:
+          "The full-table business identifier check could not finish. Check source access and try again.",
         InvalidIdentity: "The identifier needs properties that tell every record apart.",
         NeedsIdentity: "Choose an identifier for the object type.",
         FieldNotFound: "The object type\u2019s table cannot be read right now; try again later.",
