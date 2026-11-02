@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
@@ -84,6 +85,7 @@ export function KnowledgeNetworkWorkspaceScene({
   const location = useLocation();
   const navigate = useNavigate();
   const { message } = useAppServices();
+  const { hiddenNavigation } = useRuntimeConfig();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
@@ -204,8 +206,11 @@ export function KnowledgeNetworkWorkspaceScene({
           ]),
     ];
 
-    return items;
-  }, [activeNetworkId, detail, kbMode, objectMetricsCapability, t]);
+    // Entries for services this deployment does not run (RuntimeConfig.hiddenNavigation).
+    return hiddenNavigation.length > 0
+      ? items.filter((item) => !hiddenNavigation.includes(item.key))
+      : items;
+  }, [activeNetworkId, detail, hiddenNavigation, kbMode, objectMetricsCapability, t]);
 
   const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
   const experienceNavItems = navigationItems.filter(

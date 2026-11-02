@@ -14,6 +14,7 @@ import type { Entitlement } from "@/framework/entitlement/types";
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
 
 const mocks = vi.hoisted(() => ({
+  hiddenNavigation: [] as string[],
   navigate: vi.fn(),
 }));
 
@@ -27,7 +28,10 @@ vi.mock("react-i18next", async (importOriginal) => {
         ({
           "common.entitlement.editions.professional": "专业版",
           "common.entitlement.editionsShort.professional": "专业版",
+          "knowledgeNetwork.workspaceExperienceAgent": "智能问答",
+          "knowledgeNetwork.workspaceExperienceCypher": "数据查询",
           "knowledgeNetwork.workspaceExperienceMcp": "MCP 调试",
+          "knowledgeNetwork.workspaceFunctions": "函数",
           "knowledgeNetwork.workspaceKnowledgeBases": "知识库",
           "knowledgeNetwork.workspaceMcpTools": "MCP 资源",
           "knowledgeNetwork.workspaceMetrics": "对象指标",
@@ -49,6 +53,10 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: { success: vi.fn() } }),
+}));
+
+vi.mock("@/framework/context/use-runtime-config", () => ({
+  useRuntimeConfig: () => ({ hiddenNavigation: mocks.hiddenNavigation }),
 }));
 
 vi.mock("@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal", () => ({
@@ -213,6 +221,29 @@ describe("KnowledgeNetworkWorkspaceScene MCP navigation", () => {
     renderScene(entitlement());
 
     expect(screen.queryByRole("button", { name: "MCP 调试" })).toBeNull();
+    expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
+  });
+});
+
+describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
+  beforeEach(() => {
+    mocks.hiddenNavigation = [];
+  });
+
+  it("shows every workspace entry by default", () => {
+    renderScene(entitlement());
+
+    expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /函数/ })).toBeTruthy();
+  });
+
+  it("leaves out the entries the deployment hides and keeps the rest", () => {
+    mocks.hiddenNavigation = ["experience-agent", "functions"];
+    renderScene(entitlement());
+
+    expect(screen.queryByRole("button", { name: /智能问答/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /函数/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /数据查询/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
   });
 });

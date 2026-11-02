@@ -7,7 +7,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { consoleNavigation, filterNavByPermission } from "@/app/shell/console-navigation";
+import {
+  consoleNavigation,
+  filterNavByHiddenKeys,
+  filterNavByPermission,
+} from "@/app/shell/console-navigation";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 const keys = (items: { key: string }[]) => items.map((item) => item.key);
@@ -167,5 +171,37 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
 
     expect(keys(observabilityChildren(regular))).toContain("observability-settings");
     expect(keys(observabilityChildren(superAdmin))).toContain("observability-settings");
+  });
+});
+
+describe("filterNavByHiddenKeys — entries the deployment hides", () => {
+  it("returns the navigation unchanged when nothing is hidden", () => {
+    expect(filterNavByHiddenKeys(consoleNavigation, [])).toBe(consoleNavigation);
+  });
+
+  it("hides top-level entries and whole groups by key", () => {
+    const filtered = filterNavByHiddenKeys(consoleNavigation, ["bkn-project", "observability"]);
+
+    expect(keys(filtered)).not.toContain("bkn-project");
+    expect(keys(filtered)).not.toContain("observability");
+    expect(keys(filtered)).toContain("execution-factory");
+  });
+
+  it("hides a child entry and keeps its siblings", () => {
+    const filtered = filterNavByHiddenKeys(consoleNavigation, ["all-execution-units"]);
+    const executionFactory = filtered.find((item) => item.key === "execution-factory");
+
+    expect(keys(executionFactory?.children ?? [])).not.toContain("all-execution-units");
+    expect(keys(executionFactory?.children ?? [])).toContain("execution-unit-management");
+  });
+
+  it("drops a group without a page once all its children are hidden", () => {
+    const observability = consoleNavigation.find((item) => item.key === "observability");
+    const childKeys = keys(observability?.children ?? []);
+    expect(childKeys.length).toBeGreaterThan(0);
+
+    const filtered = filterNavByHiddenKeys(consoleNavigation, childKeys);
+
+    expect(keys(filtered)).not.toContain("observability");
   });
 });
