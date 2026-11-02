@@ -1308,8 +1308,10 @@ export const systemAdminEnUS = {
         "bkn-project-answer-judge": "BKNProjectAnswerJudge",
         "bkn-project-ontology-ask": "BKNProjectOntologyAsk",
         "bkn-project-concept-extraction": "BKNProjectConceptExtraction",
+        "bkn-project-document-extraction": "BKNProjectDocumentExtraction",
       },
       builtinNames: {
+        "bkn-project-document-extraction": "Project - Document Extraction",
         "bkn-project-concept-extraction": "Project - Concept Extraction",
         graph_explorer: "Graph Explorer",
         studio_smart_qa: "Studio Smart Q&A",
@@ -1323,6 +1325,8 @@ export const systemAdminEnUS = {
         "bkn-project-ontology-ask": "Project - Ontology Assistant",
       },
       builtinDescriptions: {
+        "bkn-project-document-extraction":
+          "Extracts file records, objects within documents, facts and events from confirmed models, keeping source evidence for review.",
         "bkn-project-concept-extraction":
           "Proposes object types, events, relations and extraction rules from selected knowledge-base samples for human review and confirmation.",
         "bkn-project-requirements":

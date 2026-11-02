@@ -106,6 +106,8 @@ const mapSourceChoice = (choice: BackendSourceChoice): DualSourceChoice => ({
   })),
 });
 type BackendDocument = {
+  sentence_identity?: { properties: string[]; confirmed_at: number };
+  file_identity?: { property: string; confirmed_at: number };
   dual_source?: BackendSourceChoice & {
     confirmed_at: number;
     state?: "proposed" | "confirmed" | "stale";
@@ -152,6 +154,22 @@ const citationBody = (q: DraftSourceCitation): BackendCitation => ({
   ...(q.quote ? { quote: q.quote } : {}),
 });
 const mapDocument = (d: BackendDocument): DraftDocumentModel => ({
+  ...(d.sentence_identity
+    ? {
+        sentenceIdentity: {
+          properties: d.sentence_identity.properties,
+          confirmedAt: d.sentence_identity.confirmed_at,
+        },
+      }
+    : {}),
+  ...(d.file_identity
+    ? {
+        fileIdentity: {
+          property: d.file_identity.property,
+          confirmedAt: d.file_identity.confirmed_at,
+        },
+      }
+    : {}),
   ...(d.dual_source
     ? {
         dualSource: {
@@ -1404,6 +1422,10 @@ export function objectTypeBody(value: DraftObjectTypeSave) {
     ...(value.document
       ? {
           document: {
+            ...(value.document.fileIdentity ? { file_identity: value.document.fileIdentity } : {}),
+            ...(value.document.sentenceIdentity
+              ? { sentence_identity: value.document.sentenceIdentity }
+              : {}),
             time_property: value.document.timeProperty,
             participant_relations: value.document.participantRelations,
             ...(value.document.dualSource

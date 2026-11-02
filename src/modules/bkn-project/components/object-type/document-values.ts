@@ -24,6 +24,22 @@ export function documentSave(object: DraftObjectType): DraftObjectTypeSave {
     incrementalKey: "",
     primaryKeys: [...object.primaryKeys],
     document: {
+      ...(object.document?.sentenceIdentity
+        ? {
+            sentenceIdentity: {
+              properties: [...object.document.sentenceIdentity.properties],
+              confirm: object.document.sentenceIdentity.confirmedAt > 0,
+            },
+          }
+        : {}),
+      ...(object.document?.fileIdentity
+        ? {
+            fileIdentity: {
+              property: object.document.fileIdentity.property,
+              confirm: object.document.fileIdentity.confirmedAt > 0,
+            },
+          }
+        : {}),
       timeProperty: object.document?.timeProperty ?? "",
       participantRelations: [...(object.document?.participantRelations ?? [])],
     },
@@ -104,6 +120,19 @@ export function renameDocumentProperty(
           document: {
             ...value.document,
             timeProperty: value.document.timeProperty === old ? name : value.document.timeProperty,
+            ...(value.document.sentenceIdentity?.properties.includes(old)
+              ? {
+                  sentenceIdentity: {
+                    properties: value.document.sentenceIdentity.properties.map((key) =>
+                      key === old ? name : key,
+                    ),
+                    confirm: false,
+                  },
+                }
+              : {}),
+            ...(value.document.fileIdentity?.property === old
+              ? { fileIdentity: { property: name, confirm: false } }
+              : {}),
           },
         }
       : {}),
@@ -141,6 +170,22 @@ export function removeDocumentProperty(
           document: {
             ...value.document,
             timeProperty: gone.has(value.document.timeProperty) ? "" : value.document.timeProperty,
+            ...(value.document.sentenceIdentity?.properties.some((key) => gone.has(key))
+              ? {
+                  sentenceIdentity: {
+                    properties: value.document.sentenceIdentity.properties.filter(
+                      (key) => !gone.has(key),
+                    ),
+                    confirm: false,
+                    ...(value.document.sentenceIdentity.properties.every((key) => gone.has(key))
+                      ? { clear: true }
+                      : {}),
+                  },
+                }
+              : {}),
+            ...(value.document.fileIdentity && gone.has(value.document.fileIdentity.property)
+              ? { fileIdentity: { property: "", confirm: false, clear: true } }
+              : {}),
           },
         }
       : {}),

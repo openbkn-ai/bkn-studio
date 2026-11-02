@@ -25,6 +25,8 @@ import {
 } from "./document-values";
 
 import { DualSourceFieldsEditor } from "./DualSourceFieldsEditor";
+import { SentenceIdentityEditor } from "./SentenceIdentityEditor";
+import { FileIdentityEditor } from "./FileIdentityEditor";
 
 const P = "bknProject.documentEditor";
 export function DocumentFieldsEditor({
@@ -72,6 +74,19 @@ export function DocumentFieldsEditor({
     onChange({
       ...value,
       properties: value.properties.map((p, i) => (i === at ? { ...p, ...patch } : p)),
+      ...(patch.type && patch.type !== value.properties[at].type && value.document
+        ? {
+            document: {
+              ...value.document,
+              ...(value.document.fileIdentity?.property === value.properties[at].name
+                ? { fileIdentity: { ...value.document.fileIdentity, confirm: false } }
+                : {}),
+              ...(value.document.sentenceIdentity?.properties.includes(value.properties[at].name)
+                ? { sentenceIdentity: { ...value.document.sentenceIdentity, confirm: false } }
+                : {}),
+            },
+          }
+        : {}),
     });
   const openExamples = async (at: number) => {
     if (!object.document) return;
@@ -137,6 +152,12 @@ export function DocumentFieldsEditor({
       ))}
       {!fixed && (
         <DualSourceFieldsEditor object={object} draft={draft} value={value} onChange={onChange} />
+      )}
+      {!fixed && (
+        <>
+          <FileIdentityEditor object={object} draft={draft} value={value} onChange={onChange} />
+          <SentenceIdentityEditor object={object} value={value} onChange={onChange} />
+        </>
       )}
       {!fixed && (
         <Space wrap>

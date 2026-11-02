@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { extensionProjectKnowledgeBaseBuilds } from "@/framework/extension/registry";
 import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage, isRequestNotFound } from "@/framework/request/error-message";
@@ -56,6 +57,7 @@ export function ProjectWorkspaceScene({
   section: ProjectSection;
 }) {
   const { t } = useTranslation();
+  const KnowledgeBaseBuilds = extensionProjectKnowledgeBaseBuilds();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { runtimeConfig } = useAppServices();
@@ -222,7 +224,18 @@ export function ProjectWorkspaceScene({
                 />
               ) : KNOWLEDGE_BASE_SECTIONS.includes(section) ? (
                 <BknProjectKbSlot>
-                  <EmptyStatePanel title={t("bknProject.workspace.comingSoon")} />
+                  {KnowledgeBaseBuilds && (section === "instances" || section === "builds") ? (
+                    <KnowledgeBaseBuilds
+                      projectId={project.id}
+                      section={section}
+                      canEdit={
+                        project.owner.id === runtimeConfig.currentUser.id && !project.archived
+                      }
+                      canManageBuilds={project.owner.id === runtimeConfig.currentUser.id}
+                    />
+                  ) : (
+                    <EmptyStatePanel title={t("bknProject.workspace.comingSoon")} />
+                  )}
                 </BknProjectKbSlot>
               ) : (
                 <EmptyStatePanel
