@@ -11,7 +11,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dataCatalogEnUS } from "@/modules/data-catalog/locales/en-US";
 import { dataCatalogZhCN } from "@/modules/data-catalog/locales/zh-CN";
-import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import type {
+  CatalogResource,
+  ResourcePreviewResult,
+} from "@/modules/data-catalog/types/data-catalog";
 
 const previewCatalogResourceMock = vi.hoisted(() => vi.fn());
 const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
@@ -421,6 +424,140 @@ describe("ResourcePreviewPanel", () => {
       previewCatalogResourceMock.mockClear();
     }
   });
+
+  it.each(["source", "local_index"] as const)(
+    "retries the same failed %s filter until recovery without repeating successful queries",
+    async (querySource) => {
+      previewCatalogResourceMock.mockReset();
+      const failure = Object.assign(new Error("temporary failure"), {
+        isAxiosError: true,
+        response: {
+          status: 500,
+          data: {
+            error_code: "VegaBackend.Resource.InternalError",
+            description: "temporary failure",
+          },
+        },
+      });
+      Object.assign(testFilterRule, { field: "id", operation: "==", value: "3" });
+      previewCatalogResourceMock
+        .mockResolvedValue({ rows: [{ id: 3 }], total: 1, querySource })
+        .mockResolvedValueOnce({ rows: [], total: 0, querySource })
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure);
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            ...(querySource === "local_index"
+              ? { localIndexStatus: "available", localIndexName: "idx_orders" }
+              : {}),
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+      await screen.findByText("dataCatalog.preview.empty");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(apply);
+      await screen.findByText("temporary failure");
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+      const failedQuery = previewCatalogResourceMock.mock.lastCall?.[1] as unknown;
+      expect(failedQuery).toMatchObject({
+        filterCondition: {
+          operation: "and",
+          sub_conditions: [{ field: "id", operation: "==", value: 3, value_from: "const" }],
+        },
+        offset: 0,
+      });
+
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3));
+      await screen.findByText("temporary failure");
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toEqual(failedQuery);
+
+      fireEvent.click(apply);
+      await screen.findByRole("cell", { name: "3" });
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(4);
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toEqual(failedQuery);
+      expect(screen.queryByText("temporary failure")).not.toBeInTheDocument();
+
+      fireEvent.click(apply);
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(4);
+      Object.assign(testFilterRule, { value: "4" });
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(5));
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+        filterCondition: {
+          sub_conditions: [{ field: "id", operation: "==", value: 4, value_from: "const" }],
+        },
+        offset: 0,
+      });
+    },
+  );
+
+  it.each(["source", "local_index"] as const)(
+    "ignores a late failed %s retry after a newer filter succeeds",
+    async (querySource) => {
+      previewCatalogResourceMock.mockReset();
+      let rejectRetry: ((reason: Error) => void) | undefined;
+      const retryRequest = new Promise<ResourcePreviewResult>((_resolve, reject) => {
+        rejectRetry = reject;
+      });
+      previewCatalogResourceMock
+        .mockResolvedValue({ rows: [{ id: 4 }], total: 1, querySource })
+        .mockResolvedValueOnce({ rows: [], total: 0, querySource })
+        .mockRejectedValueOnce(new Error("temporary failure"))
+        .mockReturnValueOnce(retryRequest);
+      Object.assign(testFilterRule, { field: "id", operation: "==", value: "3" });
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            ...(querySource === "local_index"
+              ? { localIndexStatus: "available", localIndexName: "idx_orders" }
+              : {}),
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+      await screen.findByText("dataCatalog.preview.empty");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(apply);
+      await screen.findByText("temporary failure");
+
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3));
+      fireEvent.click(apply);
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3);
+
+      Object.assign(testFilterRule, { field: "missing" });
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(apply);
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3);
+
+      Object.assign(testFilterRule, { field: "id", value: "4" });
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(apply);
+      await screen.findByRole("cell", { name: "4" });
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(4);
+      if (!rejectRetry) throw new Error("expected the retry request to remain pending");
+      await act(async () => {
+        rejectRetry?.(new Error("late retry failure"));
+        await expect(retryRequest).rejects.toThrow("late retry failure");
+      });
+      expect(screen.getByRole("cell", { name: "4" })).toBeInTheDocument();
+      expect(screen.queryByText("late retry failure")).not.toBeInTheDocument();
+      expect(screen.queryByText("temporary failure")).not.toBeInTheDocument();
+    },
+  );
 
   it.each([
     {

@@ -165,6 +165,7 @@ export function ResourcePreviewPanel({
   const [binaryContent, setBinaryContent] = useState(false);
   const [filterDraft, setFilterDraft] = useState<FilterGroup>(emptyFilterGroup);
   const [appliedFilter, setAppliedFilter] = useState<FilterGroup>(emptyFilterGroup);
+  const [filterRetryVersion, setFilterRetryVersion] = useState(0);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const requestVersionRef = useRef(0);
@@ -320,7 +321,7 @@ export function ResourcePreviewPanel({
     return () => {
       requestVersionRef.current += 1;
     };
-  }, [active, canQueryData, disabled, load, previewUnavailable, resource.id]);
+  }, [active, canQueryData, disabled, filterRetryVersion, load, previewUnavailable, resource.id]);
 
   const offset = (page - 1) * pageSize;
 
@@ -473,7 +474,11 @@ export function ResourcePreviewPanel({
                   setFilterError(t(`dataCatalog.filter.errors.${validation}`));
                   return;
                 }
-                setAppliedFilter(filterDraft);
+                if (filterDraft === appliedFilter && error) {
+                  setFilterRetryVersion((version) => version + 1);
+                } else {
+                  setAppliedFilter(filterDraft);
+                }
               }}
             >
               {t("dataCatalog.preview.applyFilter")}
