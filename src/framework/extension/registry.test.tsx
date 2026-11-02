@@ -17,6 +17,7 @@ import type { Entitlement } from "@/framework/entitlement/types";
 import {
   extensionProjectKnowledgeBaseResources,
   extensionProjectKnowledgeBaseModel,
+  extensionProjectKnowledgeBaseBuilds,
   extensionInstanceHandOvers,
   handOverLimit,
   extensionRoutes,
@@ -62,6 +63,23 @@ function registerDemo() {
 }
 
 describe("extension registry", () => {
+  it("offers a build panel only from the knowledge-base extension", () => {
+    const Panel = () => <p>build progress</p>;
+    expect(extensionProjectKnowledgeBaseBuilds()).toBeUndefined();
+    registerExtension({
+      id: "unrelated-builds",
+      capability: "other",
+      projectKnowledgeBaseBuilds: Panel,
+    });
+    expect(extensionProjectKnowledgeBaseBuilds()).toBeUndefined();
+    registerExtension({
+      id: "document-builds",
+      capability: "knowledge_base",
+      projectKnowledgeBaseBuilds: Panel,
+    });
+    expect(extensionProjectKnowledgeBaseBuilds()).toBe(Panel);
+  });
+
   it("offers an optional project resource panel only from the knowledge-base extension", () => {
     expect(extensionProjectKnowledgeBaseResources()).toBeUndefined();
     const Panel = () => <p>source selection</p>;

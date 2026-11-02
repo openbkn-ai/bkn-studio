@@ -70,11 +70,18 @@ export type DualSourcePlan = DualSourceChoice & {
   state?: "proposed" | "confirmed" | "stale";
 };
 export type DraftDocumentSettings = {
+  fileIdentity?: { property: string; confirm: boolean; clear?: boolean };
+  sentenceIdentity?: { properties: string[]; confirm: boolean; clear?: boolean };
   timeProperty: string;
   participantRelations: string[];
   dualSource?: DualSourceDecision;
 };
-export type DraftDocumentModel = Omit<DraftDocumentSettings, "dualSource"> & {
+export type DraftDocumentModel = Omit<
+  DraftDocumentSettings,
+  "dualSource" | "fileIdentity" | "sentenceIdentity"
+> & {
+  fileIdentity?: { property: string; confirmedAt: number };
+  sentenceIdentity?: { properties: string[]; confirmedAt: number };
   dualSource?: DualSourcePlan;
   role: string;
   layer: string;

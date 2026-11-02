@@ -68,6 +68,16 @@ export const bknProjectEnUS = {
         "I confirm the identifier and field placement. Review this object individually before adoption.",
     },
     documentEditor: {
+      sentenceKey: "Within-sentence identity (optional)",
+      sentenceKeyHelp:
+        "No setting is needed for one record per sentence. For multiple records, confirm stable fields that distinguish them within that sentence. Global uniqueness is not required; missing or duplicate keys require review.",
+      confirmSentenceKey: "Confirm these fields distinguish records within the same sentence",
+      fileNumber: "Business number",
+      fileNumberHelp:
+        "Choose the existing business number that identifies what this file describes. It keeps records stable when the file is extracted again; the system record identity stays unchanged.",
+      fileNumberInherited: "Uses the entity number from the confirmed field-authority list.",
+      confirmFileNumber: "I confirm this is the business number for these file records",
+      unnamedField: "Unnamed field",
       repairRequired: "Relationship needs repair",
       repairHelp:
         "Correct the target identity or document scope and save before adopting. Object roles and cardinality are never changed automatically.",

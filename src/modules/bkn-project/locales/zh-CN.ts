@@ -60,6 +60,16 @@ export const bknProjectZhCN = {
       confirm: "我已确认编号及字段归属；此对象仍需逐项审核。",
     },
     documentEditor: {
+      sentenceKey: "句内区分字段（按需）",
+      sentenceKeyHelp:
+        "一句只抽出一条时无需设置。同一句可能抽出多条时，确认用于区分条目的稳定字段组合；不要求全局唯一，缺失或重复时会提示核查。",
+      confirmSentenceKey: "确认这些字段能区分同一句内的不同条目",
+      fileNumber: "业务编号",
+      fileNumberHelp:
+        "选择文件所描述业务对象的已有编号字段。重抽同一文件时据此保持记录稳定，系统维护的记录标识不变。",
+      fileNumberInherited: "沿用已确认字段清单中的实体编号。",
+      confirmFileNumber: "我确认这是文件记录所对应的业务编号",
+      unnamedField: "未命名的字段",
       repairRequired: "关系需要修正",
       repairHelp:
         "请修正终点标识或同一文档内的适用范围，保存并通过校验后才能采纳。原提议的对象用途和对应数量不会自动改变。",

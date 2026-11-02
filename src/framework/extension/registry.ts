@@ -56,7 +56,20 @@ export type StudioExtension = {
   projectKnowledgeBaseResources?: ComponentType<ProjectKnowledgeBaseResourceProps>;
   /** Embedded in the existing modeling page; the core owns draft refresh. */
   projectKnowledgeBaseModel?: ComponentType<ProjectKnowledgeBaseModelProps>;
+  /** Build progress and evidence previews, inside the existing project pages. */
+  projectKnowledgeBaseBuilds?: ComponentType<ProjectKnowledgeBaseBuildProps>;
 };
+
+export type ProjectKnowledgeBaseBuildProps = {
+  projectId: string;
+  section: "instances" | "builds";
+  canEdit: boolean;
+  canManageBuilds: boolean;
+};
+export function extensionProjectKnowledgeBaseBuilds() {
+  return installed.find((e) => e.capability === "knowledge_base" && e.projectKnowledgeBaseBuilds)
+    ?.projectKnowledgeBaseBuilds;
+}
 
 export type ProjectKnowledgeBaseModelProps = {
   projectId: string;

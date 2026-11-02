@@ -1210,8 +1210,10 @@ export const systemAdminZhCN = {
         "bkn-project-answer-judge": "BKNProjectAnswerJudge",
         "bkn-project-ontology-ask": "BKNProjectOntologyAsk",
         "bkn-project-concept-extraction": "BKNProjectConceptExtraction",
+        "bkn-project-document-extraction": "BKNProjectDocumentExtraction",
       },
       builtinNames: {
+        "bkn-project-document-extraction": "项目管理 - 文档抽取",
         "bkn-project-concept-extraction": "项目管理 - 概念抽取",
         graph_explorer: "图探索",
         studio_smart_qa: "Studio智能问答",
@@ -1225,6 +1227,8 @@ export const systemAdminZhCN = {
         "bkn-project-ontology-ask": "项目管理 - 本体建模助手",
       },
       builtinDescriptions: {
+        "bkn-project-document-extraction":
+          "按已确认模型逐份抽取文件记录、文档内对象、事实和事件，保留原文证据供核对。",
         "bkn-project-concept-extraction":
           "从选定的知识库样本提出对象类、事件、关系和抽取规则建议，由建模人审核确认。",
         "bkn-project-requirements":

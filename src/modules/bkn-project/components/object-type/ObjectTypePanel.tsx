@@ -308,6 +308,22 @@ export function ObjectTypePanel({
       setProblem({ kind: "properties", text: t("bknProject.documentEditor.incomplete") });
       return null;
     }
+    if (
+      documentValue?.document?.fileIdentity &&
+      !documentValue.document.fileIdentity.clear &&
+      !documentValue.document.fileIdentity.confirm
+    ) {
+      setProblem({ kind: "properties", text: t("bknProject.documentEditor.confirmFileNumber") });
+      return null;
+    }
+    if (
+      documentValue?.document?.sentenceIdentity &&
+      !documentValue.document.sentenceIdentity.clear &&
+      !documentValue.document.sentenceIdentity.confirm
+    ) {
+      setProblem({ kind: "properties", text: t("bknProject.documentEditor.confirmSentenceKey") });
+      return null;
+    }
     setSaving(true);
     setProblem(null);
     try {
