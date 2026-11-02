@@ -193,6 +193,31 @@ beforeEach(() => {
 });
 
 describe("ObjectMetricFormScene object properties", () => {
+  it("defaults distinct counts to allowing approximation and exposes an exact option", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      dataProperties: [{ displayName: "订单 ID", name: "order_id", type: "int64" }],
+    });
+    render(<ObjectMetricFormScene mode="create" />);
+    fireEvent.mouseDown(await screen.findByLabelText("聚合方式"));
+    fireEvent.click(await screen.findByText("去重计数"));
+    fireEvent.mouseDown(await screen.findByRole("combobox", { name: "取值属性" }));
+    fireEvent.click(await screen.findByText("订单 ID · order_id"));
+    const checkbox = await screen.findByRole("checkbox", { name: "允许近似计算" });
+    expect(checkbox).toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+    fireEvent.change(screen.getByLabelText("对象指标名称"), { target: { value: "去重订单数" } });
+    fireEvent.change(screen.getByLabelText("业务定义"), {
+      target: { value: "统计不同订单 ID，要求精确结果。" },
+    });
+    fireEvent.click(getButtonByText("保存草稿"));
+    await waitFor(() => expect(mocks.createObjectMetricDraftV1).toHaveBeenCalled());
+    expect(mocks.createObjectMetricDraftV1.mock.lastCall?.[1]).toMatchObject({
+      specification: { measure: { aggregation: "count_distinct", allow_approximate: false } },
+    });
+  });
   it.each(["atomic", "composite"] as const)(
     "removes the redundant result-form section from the %s editor",
     async (metricType) => {

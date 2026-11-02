@@ -80,6 +80,20 @@ function chooseChart(label: string) {
 }
 
 describe("ObjectMetricAnalysisPanel", () => {
+  it("marks approximate summary values even below the precision threshold", () => {
+    render(
+      <ObjectMetricAnalysisPanel
+        result={{
+          ...result,
+          is_approximate: true,
+          model: { ...result.model, output_shape: "summary" },
+          entries: [{ status: "ok", value: 15020 }],
+        }}
+      />,
+    );
+    expect(screen.getByText(/≈.*15,020/)).toBeInTheDocument();
+    expect(screen.getByText("此结果包含近似计算，不保证与精确值完全一致。")).toBeInTheDocument();
+  });
   it("keeps selected-bucket actions inside the analysis panel above the chart", () => {
     render(
       <ObjectMetricAnalysisPanel

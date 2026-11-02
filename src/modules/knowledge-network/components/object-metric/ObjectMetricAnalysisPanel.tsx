@@ -714,6 +714,11 @@ export function ObjectMetricAnalysisPanel({
         </p>
       ) : null}
       {selectionControls}
+      {result.is_approximate ? (
+        <p className={styles.precisionNotice} role="status">
+          {objectMetricText("approximateResultNotice")}
+        </p>
+      ) : null}
       {hasPrecisionSensitiveValues && resolvedView !== "table" ? (
         <p className={styles.precisionNotice}>{objectMetricText("analysisApproximateChart")}</p>
       ) : null}
@@ -745,6 +750,7 @@ export function ObjectMetricAnalysisPanel({
         >
           <span>{objectMetricText("m6018e00aca78")}</span>
           <strong>
+            {result.is_approximate ? "≈" : ""}
             {typeof summaryEntry?.value === "string"
               ? summaryEntry.value
               : formatNumber(summaryValue)}
