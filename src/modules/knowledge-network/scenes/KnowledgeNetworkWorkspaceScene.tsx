@@ -8,6 +8,7 @@
 import {
   ApiOutlined,
   ApartmentOutlined,
+  AppstoreOutlined,
   CloudServerOutlined,
   CodeOutlined,
   DatabaseOutlined,
@@ -43,6 +44,7 @@ import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/component
 import { SkillsSparkIcon } from "@/modules/knowledge-network/components/shared/SkillsSparkIcon";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
+import { WorkspaceDevelopSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceDevelopSection";
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
 import { visibleWorkspaceExtensionEntries } from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
@@ -121,6 +123,11 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "overview",
         label: t("knowledgeNetwork.workspaceOverviewShort"),
         icon: <FileTextOutlined />,
+      },
+      {
+        key: "develop",
+        label: t("knowledgeNetwork.appDevelopment.nav"),
+        icon: <AppstoreOutlined />,
       },
       {
         key: "experience-agent",
@@ -213,7 +220,9 @@ export function KnowledgeNetworkWorkspaceScene({
       : items;
   }, [activeNetworkId, detail, hiddenNavigation, kbMode, objectMetricsCapability, t]);
 
-  const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
+  const primaryNavItems = navigationItems.filter(
+    (item) => item.key === "overview" || item.key === "develop",
+  );
   const experienceNavItems = navigationItems.filter(
     (item) => item.key === "experience-agent" || item.key === "experience-cypher",
   );
@@ -300,6 +309,17 @@ export function KnowledgeNetworkWorkspaceScene({
           recentObjects={recentObjects}
         />
       );
+    }
+
+    if (section === "develop") {
+      return detail ? (
+        <WorkspaceDevelopSection
+          key={detail.identifier || detail.id}
+          knId={detail.identifier || detail.id}
+          networkId={activeNetworkId}
+          networkName={detail.name || detail.identifier || detail.id}
+        />
+      ) : null;
     }
 
     if (section === "experience-agent" || section === "experience-mcp") {

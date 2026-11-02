@@ -21,6 +21,7 @@ import { contextLoaderPanelPart } from "./context-loader-panel";
 import { cypherQueryPart } from "./cypher-query";
 import { graphOverviewPart } from "./graph-overview";
 import { sampleExperiencePart } from "./sample-experience";
+import { appDevelopmentPart } from "./app-development";
 
 export const knowledgeNetworkEnUS = {
   knowledgeNetwork: {
@@ -40,5 +41,6 @@ export const knowledgeNetworkEnUS = {
     ...cypherQueryPart,
     ...graphOverviewPart,
     ...sampleExperiencePart,
+    ...appDevelopmentPart,
   },
 } as const;
