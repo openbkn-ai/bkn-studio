@@ -16,7 +16,6 @@ import {
 } from "@/modules/knowledge-network/services/app-development-examples";
 import {
   cypherClauses,
-  defaultOAuthEndpoints,
   literal,
   renderAgentExecution,
   renderLoginPython,
@@ -170,7 +169,9 @@ describe("BKN Agent", () => {
 
 describe("OAuth", () => {
   const endpoints = {
-    ...defaultOAuthEndpoints(ORIGIN),
+    authorization: `${ORIGIN}/oauth2/auth`,
+    token: `${ORIGIN}/oauth2/token`,
+    device: `${ORIGIN}/oauth2/device/auth`,
     registration: `${ORIGIN}/api/safe/v1/oauth/register`,
   };
 

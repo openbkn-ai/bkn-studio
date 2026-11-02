@@ -94,7 +94,7 @@ async function loadAppDevelopmentData(
     await Promise.allSettled([
       fetchKnDetailRest(env, auth, signal),
       listKnowledgeNetworkObjectTypes(networkId, { skipErrorToast: true }),
-      listKnowledgeNetworkActionTypes(networkId),
+      listKnowledgeNetworkActionTypes(networkId, { skipErrorToast: true }),
       fetchFirstMountedFunction(env, auth, signal),
       fetchPlatformVersion(),
       listMcpTools(env, auth, signal),
@@ -211,9 +211,9 @@ async function loadAppDevelopmentData(
   const action = async () => {
     const first = settled(actionsResult)?.at(0);
     if (!first) return null;
-    const actionDetail = await getKnowledgeNetworkActionTypeDetail(networkId, first.id).catch(
-      () => null,
-    );
+    const actionDetail = await getKnowledgeNetworkActionTypeDetail(networkId, first.id, {
+      skipErrorToast: true,
+    }).catch(() => null);
     const inputs = (actionDetail?.executionConfig.parameters ?? [])
       .filter((parameter) => parameter.valueFrom === "input")
       .map((parameter) => ({ name: parameter.name, type: parameter.type }));

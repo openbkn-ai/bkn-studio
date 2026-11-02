@@ -221,11 +221,41 @@ describe("loginLanguages", () => {
   });
 
   it("has no authorization-code sign-in without self-registration", () => {
-    const closed = { ...data, platformVersion: "0.2.1", oauth: null };
+    const closed = {
+      ...data,
+      platformVersion: "0.2.1",
+      oauth: { ...data.oauth!, registration: undefined },
+    };
     expect(loginCode(closed, "https://x", "code", "python", k)).toBeNull();
     expect(loginCode(closed, "https://x", "device", "python", k)).toContain("device_login");
     expect(sampleAppCode(closed, "supply", "https://x", k)).toBeNull();
     // The API Key version needs no registration.
     expect(sampleAppCode(closed, "supply", "https://x", k, "apiKey")).toContain("API_KEY");
+  });
+
+  it("shows no sign-in the platform does not publish, rather than guessed endpoints", () => {
+    const noDevice = {
+      ...data,
+      platformVersion: "0.2.1",
+      oauth: { ...data.oauth!, device: undefined },
+    };
+    for (const language of ["rest", "python", "typescript"] as const) {
+      expect(loginCode(noDevice, "https://x", "device", language, k)).toBeNull();
+    }
+    expect(loginCode(noDevice, "https://x", "code", "rest", k)).toContain("oauth/register");
+    const guide = toMarkdown(
+      buildGuide({ data: noDevice, knId: "supply", networkName: "n", origin: "https://x" }, k),
+    );
+    expect(guide).toContain("login.deviceUnavailable");
+    expect(guide).not.toContain("/oauth2/device/auth");
+
+    // No metadata at all: neither flow, and no endpoint made up from the origin.
+    const unknown = { ...data, platformVersion: "0.2.1", oauth: null };
+    expect(loginCode(unknown, "https://x", "device", "rest", k)).toBeNull();
+    expect(loginCode(unknown, "https://x", "code", "rest", k)).toBeNull();
+    const unknownGuide = toMarkdown(
+      buildGuide({ data: unknown, knId: "supply", networkName: "n", origin: "https://x" }, k),
+    );
+    expect(unknownGuide).not.toContain("/oauth2/");
   });
 });

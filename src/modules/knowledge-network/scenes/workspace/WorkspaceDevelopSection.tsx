@@ -75,7 +75,6 @@ import {
   sdkProjectCommands,
   type SampleAppVersion,
   mcpUrl,
-  oauthEndpoints,
   oauthLoginCode,
   osdkExamples,
   osdkGenerateCommand,
@@ -726,7 +725,8 @@ function LoginCode({ data, flow }: { data: AppDevelopmentData; flow: LoginFlow }
 
 function LoginBlock({ data }: { data: AppDevelopmentData }) {
   const k = useCopy();
-  const registration = oauthEndpoints(data, platformOrigin()).registration;
+  const device = data.oauth?.device;
+  const registration = data.oauth?.registration;
 
   return (
     <Block
@@ -736,8 +736,14 @@ function LoginBlock({ data }: { data: AppDevelopmentData }) {
     >
       <section className={styles.capability}>
         <h3 className={styles.capabilityTitle}>{k("login.deviceTitle")}</h3>
-        <p className={styles.note}>{k("login.device")}</p>
-        <LoginCode data={data} flow="device" />
+        {device ? (
+          <>
+            <p className={styles.note}>{k("login.device")}</p>
+            <LoginCode data={data} flow="device" />
+          </>
+        ) : (
+          <p className={styles.empty}>{k("login.deviceUnavailable")}</p>
+        )}
       </section>
       <section className={styles.capability}>
         <h3 className={styles.capabilityTitle}>{k("login.codeTitle")}</h3>

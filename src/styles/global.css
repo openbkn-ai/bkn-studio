@@ -67,6 +67,13 @@
   --color-interface-panel-muted: rgba(15, 30, 54, 0.52);
   --color-interface-code-bg: #ffffff;
   --color-interface-code-text: #182235;
+  --color-interface-code-comment: #008000;
+  --color-interface-code-key: #0451a5;
+  --color-interface-code-string: #a31515;
+  --color-interface-code-number: #098658;
+  --color-interface-code-keyword: #0000ff;
+  --color-interface-code-variable: #001080;
+  --color-interface-code-type: #267f99;
   --color-interface-success-dot: #0f9f6e;
   --color-interface-success-ring: rgba(15, 159, 110, 0.12);
   --color-interface-warning-bg: #fffaf3;
@@ -147,6 +154,13 @@
   --color-interface-panel-muted: rgba(203, 213, 225, 0.72);
   --color-interface-code-bg: #111318;
   --color-interface-code-text: #e2e8f0;
+  --color-interface-code-comment: #6a9955;
+  --color-interface-code-key: #9cdcfe;
+  --color-interface-code-string: #ce9178;
+  --color-interface-code-number: #b5cea8;
+  --color-interface-code-keyword: #569cd6;
+  --color-interface-code-variable: #9cdcfe;
+  --color-interface-code-type: #4ec9b0;
   --color-interface-success-dot: #34d399;
   --color-interface-success-ring: rgba(52, 211, 153, 0.16);
   --color-interface-warning-bg: #3b2c12;

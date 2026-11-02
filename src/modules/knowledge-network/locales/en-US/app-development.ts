@@ -143,7 +143,11 @@ export const appDevelopmentPart = {
       parametersInvalid: "Parameters must be a JSON object",
       run: "Run",
       rows: "{{count}} rows",
+      rows_one: "{{count}} row",
+      rows_other: "{{count}} rows",
       truncated: "Showing the first {{count}} rows",
+      truncated_one: "Showing the first {{count}} row",
+      truncated_other: "Showing the first {{count}} rows",
       noRows: "No results",
       failed: "Run failed: {{message}}",
     },
@@ -247,6 +251,8 @@ export const appDevelopmentPart = {
       connectedClients: "Connected clients",
       codeUnavailable:
         "This platform does not let clients register themselves; use device authorization.",
+      deviceUnavailable:
+        "This platform does not publish a device authorization endpoint, so there is no device sign-in example.",
       registerTitle: "Register a new client",
       registerNote:
         "Registering needs no sign-in and creates a public client on the platform; you can also register with the curl in step 1 of the REST version below.",

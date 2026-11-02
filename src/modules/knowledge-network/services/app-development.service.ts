@@ -113,8 +113,9 @@ export async function trySearchInstances(
 }
 
 /**
- * The platform's OAuth endpoints from its public metadata (RFC 8414). `registration` is present
- * only where the deployment lets clients register themselves. Null when the metadata is missing.
+ * The platform's OAuth endpoints from its public metadata (RFC 8414). `device` and `registration`
+ * are present only where the deployment publishes them. Null when the metadata is missing; the
+ * page then shows no sign-in examples rather than guessed endpoints.
  */
 export async function fetchOAuthEndpoints(signal?: AbortSignal): Promise<OAuthEndpoints | null> {
   const response = await fetch(`${window.location.origin}/.well-known/oauth-authorization-server`, {
@@ -132,7 +133,7 @@ export async function fetchOAuthEndpoints(signal?: AbortSignal): Promise<OAuthEn
   return {
     authorization,
     token,
-    device: text("device_authorization_endpoint") ?? token.replace(/\/token$/, "/device/auth"),
+    device: text("device_authorization_endpoint"),
     registration: text("registration_endpoint"),
   };
 }

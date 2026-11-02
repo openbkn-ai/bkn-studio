@@ -38,7 +38,6 @@ import {
   type OsdkExample,
 } from "@/modules/knowledge-network/services/app-development-osdk";
 import {
-  defaultOAuthEndpoints,
   EXAMPLE_REDIRECT_URI,
   renderAgentExecution,
   renderLoginPython,
@@ -294,11 +293,7 @@ export function typeScriptVersionNote(platformVersion: string | null, k: Copy) {
     : k("start.typescriptVersion", { version: sdk.version });
 }
 
-export function oauthEndpoints(data: AppDevelopmentData, origin: string): OAuthEndpoints {
-  return data.oauth ?? defaultOAuthEndpoints(origin);
-}
-
-export function deviceLoginCode(endpoints: OAuthEndpoints, k: Copy) {
+export function deviceLoginCode(endpoints: OAuthEndpoints & { device: string }, k: Copy) {
   return renderDeviceLogin(endpoints, {
     start: k("login.deviceComments.start"),
     poll: k("login.deviceComments.poll"),
@@ -360,13 +355,15 @@ export function loginCode(
   language: LoginLanguage,
   k: Copy,
 ): string | null {
-  const endpoints = oauthEndpoints(data, origin);
-  const registration = endpoints.registration;
-  if (flow === "code" && !registration) return null;
+  // Only the endpoints the platform publishes: no metadata, or no endpoint for this flow, no code.
+  const endpoints = data.oauth;
+  if (!endpoints) return null;
+  const { device, registration } = endpoints;
+  if (flow === "device" ? !device : !registration) return null;
   if (!loginLanguages(data).includes(language)) return null;
   if (language === "rest") {
     return flow === "device"
-      ? deviceLoginCode(endpoints, k)
+      ? deviceLoginCode({ ...endpoints, device: device ?? "" }, k)
       : clientRegistrationCode({ ...endpoints, registration: registration ?? "" }, k);
   }
   const call = data.queryObjects?.call ?? null;
@@ -560,7 +557,7 @@ function sampleAppBuild(
     run: sampleAppStartCommand(version, tool),
   };
   if (version === "apiKey") return apiKeyAppParts(origin, knId, setup, text, objects, mode);
-  if (!oauthEndpoints(data, origin).registration) return null;
+  if (!data.oauth?.registration) return null;
   return sampleAppParts(origin, knId, setup, text, objects, mode);
 }
 
@@ -793,7 +790,7 @@ export function buildGuide(
   const version = data.platformVersion;
   const sdk = sdkVersionOf(version);
   const osdk = osdkExamples(data, knId, origin, k);
-  const endpoints = oauthEndpoints(data, origin);
+  const endpoints = data.oauth;
   const scenarios = agentScenarios(data, knId, k);
   const question = scenarios[0]?.example ?? "";
 
@@ -825,10 +822,14 @@ export function buildGuide(
     { kind: "heading", level: 2, text: k("login.title") },
     { kind: "paragraph", text: k("login.description") },
     { kind: "heading", level: 3, text: k("login.deviceTitle") },
-    { kind: "paragraph", text: k("login.device") },
-    ...loginNodes(data, origin, "device", k),
+    ...(endpoints?.device
+      ? ([
+          { kind: "paragraph", text: k("login.device") },
+          ...loginNodes(data, origin, "device", k),
+        ] satisfies GuideNode[])
+      : ([{ kind: "paragraph", text: k("login.deviceUnavailable") }] satisfies GuideNode[])),
     { kind: "heading", level: 3, text: k("login.codeTitle") },
-    ...(endpoints.registration
+    ...(endpoints?.registration
       ? ([
           { kind: "paragraph", text: k("login.code") },
           ...loginNodes(data, origin, "code", k),

@@ -295,58 +295,33 @@
   overflow-wrap: anywhere;
 }
 
-/* Token colors follow the editors' themes (VS Code light and dark), so samples read the same. */
+/* Token colors are theme tokens (VS Code light and dark), so samples read as in an editor. */
 .tkComment {
-  color: #008000;
+  color: var(--color-interface-code-comment);
 }
 
 .tkKey {
-  color: #0451a5;
+  color: var(--color-interface-code-key);
 }
 
 .tkString {
-  color: #a31515;
+  color: var(--color-interface-code-string);
 }
 
 .tkNumber {
-  color: #098658;
+  color: var(--color-interface-code-number);
 }
 
 .tkKeyword {
-  color: #0000ff;
+  color: var(--color-interface-code-keyword);
 }
 
 .tkVariable {
-  color: #001080;
+  color: var(--color-interface-code-variable);
 }
 
 .tkType {
-  color: #267f99;
-}
-
-:global(:root[data-theme="dark"]) .tkComment {
-  color: #6a9955;
-}
-
-:global(:root[data-theme="dark"]) .tkKey,
-:global(:root[data-theme="dark"]) .tkVariable {
-  color: #9cdcfe;
-}
-
-:global(:root[data-theme="dark"]) .tkString {
-  color: #ce9178;
-}
-
-:global(:root[data-theme="dark"]) .tkNumber {
-  color: #b5cea8;
-}
-
-:global(:root[data-theme="dark"]) .tkKeyword {
-  color: #569cd6;
-}
-
-:global(:root[data-theme="dark"]) .tkType {
-  color: #4ec9b0;
+  color: var(--color-interface-code-type);
 }
 
 .tryBox {

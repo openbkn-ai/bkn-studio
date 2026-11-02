@@ -313,21 +313,14 @@ export function renderAgentExecution(origin: string, knId: string, question: str
 export type OAuthEndpoints = {
   authorization: string;
   token: string;
-  device: string;
+  /** Absent when the deployment does not publish a device authorization endpoint. */
+  device?: string;
   /** Absent when the deployment does not let clients register themselves. */
   registration?: string;
 };
 
 /** The public client every deployment ships for the device flow; it needs no registration. */
 export const PUBLIC_CLIENT_ID = "openbkn-sdk";
-
-export function defaultOAuthEndpoints(origin: string): OAuthEndpoints {
-  return {
-    authorization: `${origin}/oauth2/auth`,
-    token: `${origin}/oauth2/token`,
-    device: `${origin}/oauth2/device/auth`,
-  };
-}
 
 function form(url: string, fields: Array<[string, string]>) {
   return [
@@ -340,7 +333,7 @@ function form(url: string, fields: Array<[string, string]>) {
 }
 
 export function renderDeviceLogin(
-  endpoints: OAuthEndpoints,
+  endpoints: OAuthEndpoints & { device: string },
   comments: { start: string; poll: string; refresh: string },
 ) {
   return [
