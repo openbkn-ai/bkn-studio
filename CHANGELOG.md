@@ -4,6 +4,8 @@
 
 - Complete document candidate review with visible relationship repair blocks and explicit derivation of current-text/file-claim objects from saved, verified fields. Derived candidates remain pending individual review. (bkn-foundry#2840)
 
+- Explain bounded Trace list summary loading in localized, actionable language without exposing internal reason codes or conflating it with execution failure or missing Spans. Keep detail diagnostics separate. (bkn-foundry#2882)
+
 - Refill the current grantor's editable direct permissions when reselecting a metric or other object-grant subject, without copying inherited or independently authored access. (#1171)
 
 - Edit document models in the existing project panels, including grounded examples, event participants and document relation rules; show source reasons and original locations in candidate review. (bkn-foundry#2839)

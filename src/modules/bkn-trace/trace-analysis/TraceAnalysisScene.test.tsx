@@ -274,6 +274,33 @@ describe("TraceAnalysisScene", () => {
     },
   );
 
+  it.each([
+    ["projection_scan_cap_reached", "listProjectionLimit", "completed"],
+    ["projection_scan_cap_reached", "listProjectionLimit", "error"],
+    ["unknown_future_reason", "listPartialOther", "completed"],
+  ])(
+    "explains list truncation without exposing %s as missing Trace data",
+    async (reason, copyKey, status) => {
+      vi.mocked(listTechnicalTraces).mockResolvedValue({
+        entries: [{ traceId: "budget-trace", status, spanCount: 10 }],
+        page: 1,
+        pageSize: 20,
+        partial: true,
+        partialReasons: [reason],
+        total: 1,
+        truncated: true,
+      });
+      renderWithoutAntdStyles(<TraceAnalysisScene />);
+      expect(await screen.findByText("bknTrace.traceWorkspace.listPartial")).toBeInTheDocument();
+      expect(screen.getByText(`bknTrace.traceWorkspace.${copyKey}`)).toBeInTheDocument();
+      expect(screen.queryByText(reason)).not.toBeInTheDocument();
+      expect(screen.queryByText("bknTrace.traceWorkspace.partial")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "budget-trace" })).toBeInTheDocument();
+      expect(screen.getByText(status)).toBeInTheDocument();
+      expect(getTechnicalTrace).not.toHaveBeenCalled();
+    },
+  );
+
   it("localizes legacy truncation without inventing total metadata or enabling browsing", async () => {
     const detail = await vi.mocked(getTechnicalTrace).getMockImplementation()!("trace");
     detail.partialReasons = ["trace_query_truncated"];
