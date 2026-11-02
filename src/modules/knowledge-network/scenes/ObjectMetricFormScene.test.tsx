@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => {
   };
   return {
     createObjectMetricDraftV1: vi.fn(),
+    updateObjectMetricDraftV1: vi.fn(),
     trialObjectMetricDataV1: vi.fn(),
     validateObjectMetricV1:
       vi.fn<(networkId: string, definition: ObjectMetricDefinitionV1) => Promise<unknown>>(),
@@ -66,6 +67,7 @@ vi.mock(
       typeof import("@/modules/knowledge-network/services/knowledge-network.service")
     >()),
     createObjectMetricDraftV1: mocks.createObjectMetricDraftV1,
+    updateObjectMetricDraftV1: mocks.updateObjectMetricDraftV1,
     trialObjectMetricDataV1: mocks.trialObjectMetricDataV1,
     validateObjectMetricV1: mocks.validateObjectMetricV1,
     previewObjectMetricV1: mocks.previewObjectMetricV1,
@@ -169,6 +171,7 @@ beforeEach(() => {
   mocks.getObjectMetricCapabilitiesV1.mockResolvedValue(undefined);
   mocks.listObjectMetricAnswerModels.mockResolvedValue([{ id: "model-1", name: "测试对话模型" }]);
   mocks.createObjectMetricDraftV1.mockResolvedValue(undefined);
+  mocks.updateObjectMetricDraftV1.mockResolvedValue(undefined);
   mocks.listObjectMetricsV1.mockResolvedValue({ entries: [], total_count: 0 });
   mocks.validateObjectMetricV1.mockResolvedValue({
     valid: true,
@@ -202,9 +205,9 @@ describe("ObjectMetricFormScene object properties", () => {
     render(<ObjectMetricFormScene mode="create" />);
     fireEvent.mouseDown(await screen.findByLabelText("聚合方式"));
     fireEvent.click(await screen.findByText("去重计数"));
-    fireEvent.mouseDown(await screen.findByRole("combobox", { name: "取值属性" }));
+    fireEvent.mouseDown(await screen.findByLabelText("取值属性", { selector: "input" }));
     fireEvent.click(await screen.findByText("订单 ID · order_id"));
-    const checkbox = await screen.findByRole("checkbox", { name: "允许近似计算" });
+    const checkbox = await screen.findByLabelText("允许近似计算");
     expect(checkbox).toBeChecked();
     fireEvent.click(checkbox);
     expect(checkbox).not.toBeChecked();
@@ -217,6 +220,44 @@ describe("ObjectMetricFormScene object properties", () => {
     expect(mocks.createObjectMetricDraftV1.mock.lastCall?.[1]).toMatchObject({
       specification: { measure: { aggregation: "count_distinct", allow_approximate: false } },
     });
+  });
+  it("preserves an exact distinct requirement when editing and saving a draft", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.id = "metric-1";
+    definition.name = "去重订单数";
+    definition.description = "统计不同订单 ID，要求精确结果。";
+    definition.specification = {
+      kind: "atomic",
+      measure: {
+        aggregation: "count_distinct",
+        allow_approximate: false,
+        expression: {
+          node_type: "property",
+          property_ref: { object_type_id: "order", property_name: "order_id" },
+        },
+      },
+    };
+    definition.result_semantics.value = { physical_type: "int64", semantic_type: "count" };
+    mocks.getObjectMetricV1.mockResolvedValue({ definition });
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      dataProperties: [{ displayName: "订单 ID", name: "order_id", type: "int64" }],
+    });
+
+    render(<ObjectMetricFormScene mode="edit" />);
+
+    const checkbox = await screen.findByLabelText("允许近似计算");
+    expect(checkbox).not.toBeChecked();
+    expect(await screen.findByText("订单 ID · order_id")).toBeInTheDocument();
+    fireEvent.click(getButtonByText("保存草稿"));
+    await waitFor(() => expect(mocks.updateObjectMetricDraftV1).toHaveBeenCalled());
+    expect(mocks.updateObjectMetricDraftV1.mock.lastCall?.slice(0, 2)).toEqual([
+      "network-1",
+      "metric-1",
+    ]);
+    expect(mocks.updateObjectMetricDraftV1.mock.lastCall?.[2]).toMatchObject({
+      specification: { measure: { aggregation: "count_distinct", allow_approximate: false } },
+    });
+    expect(mocks.createObjectMetricDraftV1).not.toHaveBeenCalled();
   });
   it.each(["atomic", "composite"] as const)(
     "removes the redundant result-form section from the %s editor",
