@@ -2311,70 +2311,142 @@ describe("ResourcePreviewPanel", () => {
     }
   });
 
-  it("preserves an oversized filter when the user explicitly queries the source", async () => {
-    const value = "CLOSED" + "X".repeat(251);
-    const filterCondition = {
-      operation: "and",
-      sub_conditions: [{ field: "status", operation: "==", value, value_from: "const" }],
-    };
-    Object.assign(testFilterRule, { field: "status", operation: "==", value });
-    previewCatalogResourceMock
-      .mockResolvedValueOnce({ rows: [{ status: "OPEN" }], total: 1, querySource: "local_index" })
-      .mockRejectedValue(
+  it.each(["table", "logical_view"] as const)(
+    "preserves an oversized %s filter when the user explicitly queries the source",
+    async (category) => {
+      const value = "CLOSED" + "X".repeat(251);
+      const filterCondition = {
+        operation: "and",
+        sub_conditions: [{ field: "status", operation: "==", value, value_from: "const" }],
+      };
+      Object.assign(testFilterRule, { field: "status", operation: "==", value });
+      previewCatalogResourceMock
+        .mockResolvedValueOnce({ rows: [{ status: "OPEN" }], total: 1, querySource: "local_index" })
+        .mockRejectedValue(
+          Object.assign(new Error("rejected"), {
+            isAxiosError: true,
+            response: {
+              status: 400,
+              data: {
+                error_code: "VegaBackend.Resource.QueryValueExceedsKeywordLimit",
+                description: "Invalid resource parameter",
+                error_details: "private diagnostic",
+                metadata: { field: "status", limit: 256 },
+              },
+            },
+          }),
+        );
+      const previewResource: CatalogResource = {
+        ...(category === "logical_view" ? tableView : resource),
+        schema: [{ name: "status", type: "string" }],
+        localIndexStatus: "available",
+        localIndexName: "index",
+      };
+      render(<ResourcePreviewPanel active resource={previewResource} />);
+      await screen.findByText("OPEN");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      expect(
+        await screen.findByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("dataCatalog.preview.keywordLimitSourceHint")).toBeInTheDocument();
+      expect(screen.queryByText("private diagnostic")).not.toBeInTheDocument();
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+      expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(previewResource.id, {
+        filterCondition,
+        limit: 10,
+        offset: 0,
+      });
+      previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
+      fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3));
+      expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(previewResource.id, {
+        filterCondition,
+        limit: 10,
+        offset: 0,
+        ignoreLocalIndex: true,
+      });
+      await waitFor(() =>
+        expect(
+          screen.queryByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
+        ).not.toBeInTheDocument(),
+      );
+    },
+  );
+
+  it.each([
+    {
+      name: "source-supported fixed filter",
+      sourceCategory: "table" as const,
+      operation: "==",
+      hint: "keywordLimitSourceHint",
+      switchable: true,
+    },
+    {
+      name: "fulltext fixed filter",
+      sourceCategory: "table" as const,
+      operation: "match",
+      hint: "keywordLimitShortenHint",
+      switchable: false,
+    },
+    {
+      name: "unrecognized fixed filter",
+      sourceCategory: "table" as const,
+      operation: "future_operation",
+      hint: "keywordLimitShortenHint",
+      switchable: false,
+    },
+    {
+      name: "native index source",
+      sourceCategory: "index" as const,
+      operation: "==",
+      hint: "keywordLimitShortenHint",
+      switchable: false,
+    },
+  ])(
+    "gives the correct keyword-limit recovery hint on initial failure with $name",
+    async ({ sourceCategory, operation, hint, switchable }) => {
+      previewCatalogResourceMock.mockRejectedValue(
         Object.assign(new Error("rejected"), {
           isAxiosError: true,
           response: {
             status: 400,
             data: {
               error_code: "VegaBackend.Resource.QueryValueExceedsKeywordLimit",
-              description: "Invalid resource parameter",
-              error_details: "private diagnostic",
               metadata: { field: "status", limit: 256 },
             },
           },
         }),
       );
-    render(
-      <ResourcePreviewPanel
-        active
-        resource={{
-          ...resource,
-          schema: [{ name: "status", type: "string" }],
-          localIndexStatus: "available",
-          localIndexName: "index",
-        }}
-      />,
-    );
-    await screen.findByText("OPEN");
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
-    fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
-    expect(
-      await screen.findByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("dataCatalog.preview.keywordLimitSourceHint")).toBeInTheDocument();
-    expect(screen.queryByText("private diagnostic")).not.toBeInTheDocument();
-    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
-    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(resource.id, {
-      filterCondition,
-      limit: 10,
-      offset: 0,
-    });
-    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
-    fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
-    await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3));
-    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(resource.id, {
-      filterCondition,
-      limit: 10,
-      offset: 0,
-      ignoreLocalIndex: true,
-    });
-    await waitFor(() =>
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...tableView,
+            sourceMetadata: { sourceCategory },
+            schema: [{ name: "status", type: "string" }],
+            logicDefinition: {
+              sourceResourceId: "source-1",
+              filterCondition: { field: "status", operation, value: "long value" },
+            },
+          }}
+        />,
+      );
+      expect(await screen.findByRole("alert")).toHaveTextContent(`dataCatalog.preview.${hint}`);
       expect(
-        screen.queryByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
-      ).not.toBeInTheDocument(),
-    );
-  });
+        screen.queryByText(
+          `dataCatalog.preview.${switchable ? "keywordLimitShortenHint" : "keywordLimitSourceHint"}`,
+        ),
+      ).not.toBeInTheDocument();
+      const toggle = screen.getByRole("checkbox", {
+        name: "dataCatalog.preview.queryOriginalSource",
+      });
+      if (switchable) expect(toggle).toBeEnabled();
+      else expect(toggle).toBeDisabled();
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it.each([
     undefined,

@@ -309,7 +309,7 @@ function ResourcePreviewContent({
               ? t("dataCatalog.preview.keywordLimitExceeded", { field, limit })
               : t("dataCatalog.preview.keywordLimitExceededGeneric"),
             description: t(
-              hasLocalIndex && !ignoreLocalIndex
+              !ignoreLocalIndex && (hasLocalIndex || (isTableView && sourceBlockReason === null))
                 ? "dataCatalog.preview.keywordLimitSourceHint"
                 : "dataCatalog.preview.keywordLimitShortenHint",
             ),
@@ -344,6 +344,7 @@ function ResourcePreviewContent({
       invalidViewMetadata,
       isDerivedView,
       isTableView,
+      sourceBlockReason,
       queriesSource,
       filterQueryPath,
       activeFilter,
