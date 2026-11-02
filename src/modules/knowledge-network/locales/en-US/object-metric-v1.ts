@@ -7,6 +7,11 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  allowApproximate: "Allow approximate results",
+  allowApproximateHelp:
+    "Allow estimates to reduce computation cost. Turning this off requires exact results and may take longer or fail when the execution budget is exhausted.",
+  approximateResultNotice:
+    "This result includes approximate calculations and may differ from the exact value.",
   atomicCompositeResultAnalysisSectionTitle: "3. Results and analysis",
   atomicCompositeValidationPublishSectionTitle: "4. Verification and release",
   analysisGroupBy: "Group by dimensions",

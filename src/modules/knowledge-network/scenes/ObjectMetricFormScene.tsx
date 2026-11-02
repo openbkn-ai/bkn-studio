@@ -344,6 +344,7 @@ function expressionWithDeclaredPropertyTypes(
 }
 
 type FormValues = {
+  allowApproximate: boolean;
   aggregation: "count_rows" | "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
   analysisDimensions: string[];
   alignmentTimeKey?: string;
@@ -803,6 +804,7 @@ function initialFormValues(metricType: ObjectMetricTypeV1): Partial<FormValues> 
   const isAtomic = metricType === "atomic";
   return {
     aggregation: "count_rows",
+    allowApproximate: true,
     analysisDimensions: [],
     code: "",
     description: "",
@@ -1241,6 +1243,7 @@ function formValuesFromDefinition(definition: ObjectMetricDefinitionV1): Partial
   };
   if (definition.specification.kind === "atomic") {
     common.aggregation = definition.specification.measure.aggregation;
+    common.allowApproximate = definition.specification.measure.allow_approximate ?? true;
   }
   if (definition.specification.kind === "derived") {
     const qualifiers = definition.specification.business_qualifiers;
@@ -2806,6 +2809,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         kind: "atomic",
         measure: {
           aggregation: values.aggregation,
+          allow_approximate:
+            values.aggregation === "count_distinct" ? (values.allowApproximate ?? true) : undefined,
           expression:
             values.aggregation === "count_rows"
               ? undefined
@@ -3443,6 +3448,15 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     )}
                   />
                 </Form.Item>
+                {aggregation === "count_distinct" ? (
+                  <Form.Item
+                    name="allowApproximate"
+                    valuePropName="checked"
+                    extra={objectMetricText("allowApproximateHelp")}
+                  >
+                    <Checkbox>{objectMetricText("allowApproximate")}</Checkbox>
+                  </Form.Item>
+                ) : null}
                 {aggregation !== "count_rows" ? (
                   <div className={styles.full}>
                     <div className={styles.sectionTitle}>

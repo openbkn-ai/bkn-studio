@@ -164,6 +164,7 @@ export type ObjectMetricRelationPathV1 = {
 export type ObjectMetricAtomicSpecV1 = {
   kind: "atomic";
   measure: {
+    allow_approximate?: boolean;
     expression?: ObjectMetricExpressionV1;
     aggregation: "count_rows" | "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
   };
@@ -294,6 +295,7 @@ export type ObjectMetricDataEntryV1 = {
 };
 
 export type ObjectMetricDataV1 = {
+  is_approximate?: boolean;
   model: {
     metric_id: string;
     version: number;

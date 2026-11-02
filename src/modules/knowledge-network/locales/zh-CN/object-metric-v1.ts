@@ -7,6 +7,10 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  allowApproximate: "允许近似计算",
+  allowApproximateHelp:
+    "允许使用估算值以降低计算成本；关闭后必须精确计算，可能耗时更长或因执行预算不足而失败。",
+  approximateResultNotice: "此结果包含近似计算，不保证与精确值完全一致。",
   atomicCompositeResultAnalysisSectionTitle: "3. 结果与分析",
   atomicCompositeValidationPublishSectionTitle: "4. 校验与发布",
   analysisGroupBy: "按维度分组",
