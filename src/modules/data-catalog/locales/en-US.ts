@@ -453,6 +453,8 @@ export const dataCatalogEnUS = {
         emptyGroup: "Add a condition or remove the empty group.",
         tooMany: "A group can contain at most 100 conditions.",
         invalidField: "Select a valid field.",
+        unsupportedOperation:
+          "The current query source does not support this filter operation for the field. Change the operation or query source.",
         missingValue: "Enter a filter value.",
         invalidNumber: "Enter a valid number for this field.",
       },

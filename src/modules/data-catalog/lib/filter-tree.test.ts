@@ -64,13 +64,29 @@ describe("filter-tree", () => {
     );
     expect(filterValidationError(rule, [text], "source")).toBeNull();
     expect(filterOperationsForField(text, "local_index")).not.toContain("==");
-    expect(filterValidationError(rule, [text], "local_index")).toBe("invalidField");
+    expect(filterValidationError(rule, [text], "local_index")).toBe("unsupportedOperation");
     const indexed = { ...text, features: [{ featureType: "keyword" as const }] };
     expect(filterOperationsForField(indexed, "local_index")).toEqual(
       expect.arrayContaining(["==", "!=", "in"]),
     );
     expect(filterValidationError(rule, [indexed], "local_index")).toBeNull();
   });
+
+  it.each(["match", "match_phrase"])(
+    "distinguishes an unsupported %s operation from a missing field",
+    (operation) => {
+      const indexed = {
+        name: "body",
+        type: "string",
+        features: [{ featureType: "fulltext" as const }],
+      };
+      const rule = parseFilterCondition({ field: "body", operation, value: "invoice copy" })!;
+      expect(filterValidationError(rule, [indexed], "local_index")).toBeNull();
+      expect(filterValidationError(rule, [indexed], "source")).toBe("unsupportedOperation");
+      expect(filterValidationError(rule, [], "source")).toBe("invalidField");
+      expect(filterValidationError(rule, [], "local_index")).toBe("invalidField");
+    },
+  );
 
   it("round-trips nested AND/OR groups and keeps numeric values numeric", () => {
     const raw = {

@@ -424,6 +424,7 @@ export const dataCatalogZhCN = {
         emptyGroup: "条件组不能为空，请添加条件或移除该组。",
         tooMany: "每个条件组最多包含 100 个子条件。",
         invalidField: "请选择有效字段。",
+        unsupportedOperation: "当前查询来源不支持该字段的筛选操作，请调整操作或切换查询来源。",
         missingValue: "请填写过滤值。",
         invalidNumber: "数值字段请输入有效数字。",
       },
