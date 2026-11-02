@@ -32,6 +32,7 @@ import {
   resourceCountForPagination,
 } from "@/modules/data-catalog/lib/resource-count";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
+import { fixedFilterSourceBlockReason } from "@/modules/data-catalog/lib/view-query-source";
 import { previewCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
   CatalogResource,
@@ -145,7 +146,12 @@ function formatBinaryPreviewCell(
   return { text: t("dataCatalog.preview.binaryContentUnavailable") };
 }
 
-export function ResourcePreviewPanel({
+export function ResourcePreviewPanel(props: ResourcePreviewPanelProps) {
+  // Query choices, results and in-flight requests belong to one resource.
+  return <ResourcePreviewContent key={props.resource.id} {...props} />;
+}
+
+function ResourcePreviewContent({
   active,
   disabled = false,
   disabledMessage,
@@ -158,10 +164,15 @@ export function ResourcePreviewPanel({
   const [result, setResult] = useState<ResourcePreviewResult | null>(null);
   const [fullValue, setFullValue] = useState<{ field: string; text: string }>();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<{ message: string; description?: string } | null>(null);
+  const [error, setError] = useState<{
+    message: string;
+    description?: string;
+    invalidResponse?: boolean;
+  } | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [sourceReadDetails, setSourceReadDetails] = useState<RequestErrorDetails | null>(null);
-  const [ignoreLocalIndex, setIgnoreLocalIndex] = useState(false);
+  const [sourceSelected, setSourceSelected] = useState(false);
+  const [viewHasLocalIndex, setViewHasLocalIndex] = useState(false);
   const [binaryContent, setBinaryContent] = useState(false);
   const [filterDraft, setFilterDraft] = useState<FilterGroup>(emptyFilterGroup);
   const [appliedFilter, setAppliedFilter] = useState<FilterGroup>(emptyFilterGroup);
@@ -169,7 +180,6 @@ export function ResourcePreviewPanel({
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const requestVersionRef = useRef(0);
-  const previousResourceId = useRef(resource.id);
   const queryBlockReason = resourceQueryBlockReason(resource);
   const resourceDisabled = queryBlockReason === "disabled";
   const resourceMissing = queryBlockReason === "missing";
@@ -180,6 +190,47 @@ export function ResourcePreviewPanel({
     resource.category === "table" &&
     resource.localIndexStatus === "available" &&
     Boolean(resource.localIndexName);
+  const isDerivedView = resource.category === "logical_view" && resource.logicType === "derived";
+  const sourceId = resource.logicDefinition?.sourceResourceId;
+  const invalidViewMetadata =
+    resource.category === "logical_view" &&
+    ((resource.logicType !== "derived" && resource.logicType !== "composite") ||
+      (isDerivedView &&
+        (typeof sourceId !== "string" ||
+          !sourceId.trim() ||
+          (resource.sourceMetadata?.sourceCategory !== "table" &&
+            resource.sourceMetadata?.sourceCategory !== "index"))));
+  const isTableView = isDerivedView && resource.sourceMetadata?.sourceCategory === "table";
+  const sourceBlockReason = isTableView
+    ? fixedFilterSourceBlockReason(resource.logicDefinition?.filterCondition)
+    : null;
+  const canSwitchSource =
+    hasLocalIndex ||
+    (isTableView &&
+      (viewHasLocalIndex || sourceSelected || Boolean(error || forbidden || sourceReadDetails)));
+  const sourceSelectionAllowed =
+    !invalidViewMetadata && canSwitchSource && sourceBlockReason === null;
+  const sourceSwitchDisabled = !sourceSelectionAllowed || Boolean(error?.invalidResponse);
+  const ignoreLocalIndex = sourceSelected && sourceSelectionAllowed;
+  let sourceSwitchHintKey: string | undefined;
+  if (sourceSwitchDisabled) {
+    if (invalidViewMetadata) {
+      sourceSwitchHintKey = "dataCatalog.preview.invalidViewMetadata";
+    } else if (sourceBlockReason) {
+      sourceSwitchHintKey =
+        sourceBlockReason === "indexRequired"
+          ? "dataCatalog.preview.fixedFilterRequiresIndex"
+          : "dataCatalog.preview.fixedFilterSourceUnknown";
+    } else if (isTableView && (error || forbidden || sourceReadDetails)) {
+      sourceSwitchHintKey = "dataCatalog.preview.queryOriginalFailed";
+    } else if (isTableView && (loading || !result)) {
+      sourceSwitchHintKey = "dataCatalog.preview.queryOriginalLoading";
+    } else if (resource.category === "table" || isTableView) {
+      sourceSwitchHintKey = "dataCatalog.preview.queryOriginalAlreadyActive";
+    } else {
+      sourceSwitchHintKey = "dataCatalog.preview.queryOriginalUnavailable";
+    }
+  }
   const hasBinaryField =
     resource.category === "table" &&
     resource.schema.some((field) => field.type.trim().toLowerCase() === "binary");
@@ -190,7 +241,7 @@ export function ResourcePreviewPanel({
     (resource.category === "table" && !queriesSource) ||
     (resource.category === "logical_view" &&
       (resource.sourceMetadata?.sourceCategory === "index" ||
-        result?.querySource === "local_index"))
+        (!ignoreLocalIndex && (viewHasLocalIndex || result?.querySource === "local_index"))))
       ? "local_index"
       : "source";
   const activeFilter =
@@ -202,6 +253,7 @@ export function ResourcePreviewPanel({
 
   const load = useCallback(
     async (nextOffset: number, nextLimit: number) => {
+      if (invalidViewMetadata) return;
       const requestVersion = ++requestVersionRef.current;
       setLoading(true);
       setError(null);
@@ -222,7 +274,16 @@ export function ResourcePreviewPanel({
         if (requestVersion !== requestVersionRef.current) {
           return;
         }
+        if (isDerivedView && data.querySource !== "local_index" && data.querySource !== "source") {
+          setError({ message: t("dataCatalog.preview.invalidQuerySource"), invalidResponse: true });
+          setResult(null);
+          return;
+        }
         setResult(data);
+        if (isTableView && !ignoreLocalIndex) {
+          // A forced source response must not remove the option to switch back to the index.
+          setViewHasLocalIndex(data.querySource === "local_index");
+        }
       } catch (loadError) {
         if (requestVersion !== requestVersionRef.current) {
           return;
@@ -280,21 +341,15 @@ export function ResourcePreviewPanel({
       binaryContent,
       hasBinaryField,
       hasLocalIndex,
+      invalidViewMetadata,
+      isDerivedView,
+      isTableView,
       queriesSource,
       filterQueryPath,
       activeFilter,
       t,
     ],
   );
-
-  useEffect(() => {
-    if (previousResourceId.current === resource.id) return;
-    previousResourceId.current = resource.id;
-    setFilterDraft(emptyFilterGroup());
-    setAppliedFilter(emptyFilterGroup());
-    setFilterError(null);
-    setFilterOpen(false);
-  }, [resource.id]);
 
   useEffect(() => {
     if (active) return;
@@ -320,7 +375,7 @@ export function ResourcePreviewPanel({
   }, [activeFilter.children.length, appliedFilter.children.length, t]);
 
   useEffect(() => {
-    if (!active || disabled || previewUnavailable || !canQueryData) {
+    if (!active || disabled || previewUnavailable || !canQueryData || invalidViewMetadata) {
       requestVersionRef.current += 1;
       return;
     }
@@ -330,7 +385,16 @@ export function ResourcePreviewPanel({
     return () => {
       requestVersionRef.current += 1;
     };
-  }, [active, canQueryData, disabled, filterRetryVersion, load, previewUnavailable, resource.id]);
+  }, [
+    active,
+    canQueryData,
+    disabled,
+    filterRetryVersion,
+    invalidViewMetadata,
+    load,
+    previewUnavailable,
+    resource.id,
+  ]);
 
   const offset = (page - 1) * pageSize;
 
@@ -425,23 +489,29 @@ export function ResourcePreviewPanel({
     <div className={styles.panel}>
       <div className={styles.metaRow}>
         <div className={styles.previewControls}>
-          <Button onClick={() => setFilterOpen((open) => !open)}>
+          <Button disabled={invalidViewMetadata} onClick={() => setFilterOpen((open) => !open)}>
             {t("dataCatalog.preview.filter")}
             {activeFilter.children.length ? ` (${activeFilter.children.length})` : ""}
           </Button>
-          {hasLocalIndex ? (
-            <Checkbox
-              checked={ignoreLocalIndex}
-              onChange={(event) => {
-                setIgnoreLocalIndex(event.target.checked);
-                if (!event.target.checked) {
-                  setBinaryContent(false);
-                }
-              }}
-            >
-              {t("dataCatalog.preview.queryOriginalSource")}
-            </Checkbox>
-          ) : null}
+          <Tooltip
+            title={sourceSwitchHintKey ? t(sourceSwitchHintKey) : undefined}
+            trigger={["hover", "focus"]}
+          >
+            <span tabIndex={sourceSwitchDisabled ? 0 : undefined}>
+              <Checkbox
+                checked={ignoreLocalIndex}
+                disabled={sourceSwitchDisabled}
+                onChange={(event) => {
+                  setSourceSelected(event.target.checked);
+                  if (!event.target.checked) {
+                    setBinaryContent(false);
+                  }
+                }}
+              >
+                {t("dataCatalog.preview.queryOriginalSource")}
+              </Checkbox>
+            </span>
+          </Tooltip>
           {hasBinaryField ? (
             <Checkbox
               checked={binaryContent}
@@ -451,7 +521,7 @@ export function ResourcePreviewPanel({
               {t("dataCatalog.preview.loadBinaryContent")}
             </Checkbox>
           ) : null}
-          {result?.querySource ? (
+          {!invalidViewMetadata && result?.querySource ? (
             <span className={styles.dataSource}>
               {t(
                 result.querySource === "local_index"
@@ -505,7 +575,9 @@ export function ResourcePreviewPanel({
           </div>
         </div>
       ) : null}
-      {sourceReadDetails ? (
+      {invalidViewMetadata ? (
+        <Alert message={t("dataCatalog.preview.invalidViewMetadata")} showIcon type="error" />
+      ) : sourceReadDetails ? (
         <Alert
           description={
             <>
