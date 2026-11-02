@@ -140,4 +140,17 @@ describe("filterNavByCapability", () => {
       keys(filterNavByCapability(filterNavByInstalledPages(consoleNavigation), null)),
     ).not.toContain("workshop");
   });
+
+  // Installed but not licensed: the entry stays and names the edition that unlocks it.
+  it("Workshop 入口:装了没买 → 保留并标出专业版", () => {
+    const workshop = consoleNavigation.filter((item) => item.key === "workshop");
+    const result = filterNavByCapability(
+      workshop,
+      snapshot({ extensions: [CAPABILITIES.GRAPH_EXPLORER], licensed: true, state: "valid" }),
+    );
+
+    expect(result.map((item) => item.key)).toEqual(["workshop"]);
+    expect(result[0]?.locked).toBe(true);
+    expect(result[0]?.lockedEdition).toBe("professional");
+  });
 });
