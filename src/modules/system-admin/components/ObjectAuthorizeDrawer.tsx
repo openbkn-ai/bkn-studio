@@ -160,6 +160,7 @@ export function ObjectAuthorizeDrawer({
   const [sourceAccessorId, setSourceAccessorId] = useState<string>();
   const [loadedResourceKey, setLoadedResourceKey] = useState<string>();
   const loadRequestId = useRef(0);
+  const hydratedCandidateKey = useRef<string | undefined>(undefined);
   const resourceKey = `${objType}\u0000${objId}`;
   const resourceLoaded = loadedResourceKey === resourceKey;
   const scopedGrants = useMemo(() => (resourceLoaded ? grants : []), [grants, resourceLoaded]);
@@ -186,6 +187,11 @@ export function ObjectAuthorizeDrawer({
   // from that exact slice instead of the effective operation summary, which may include inherited
   // access or grants created by another administrator or owner.
   const candidateAuthoritySource = isAdminGrantor ? "admin_authz" : "owner_delegate";
+  const candidateHydrationKey = candidate
+    ? [resourceKey, candidateType, candidateAuthoritySource, currentUserId, candidate].join(
+        "\u0000",
+      )
+    : undefined;
   const candidateGrant = scopedGrants.find((grant) =>
     objectGrantMatchesSubject(grant, candidate, candidateType),
   );
@@ -209,14 +215,16 @@ export function ObjectAuthorizeDrawer({
     const grant = scopedGrants.find((item) =>
       objectGrantMatchesSubject(item, accessorId, candidateType),
     );
-    setCandidateOperations(
-      fineGrained && resourceLoaded
-        ? managedObjectGrantOperations({
-            authoritySource: candidateAuthoritySource,
-            createdBy: currentUserId,
-            grant,
-          })
-        : [],
+    setCandidateOperations((current) =>
+      !fineGrained
+        ? current
+        : resourceLoaded
+          ? managedObjectGrantOperations({
+              authoritySource: candidateAuthoritySource,
+              createdBy: currentUserId,
+              grant,
+            })
+          : [],
     );
   };
 
@@ -224,7 +232,12 @@ export function ObjectAuthorizeDrawer({
   // after the response is scoped to the current resource so an empty loading snapshot cannot be
   // submitted as the grantee's replacement set.
   useEffect(() => {
-    if (!fineGrained || !resourceLoaded || !candidate) return;
+    if (!fineGrained || !resourceLoaded || !candidate || !candidateHydrationKey) {
+      hydratedCandidateKey.current = undefined;
+      return;
+    }
+    if (hydratedCandidateKey.current === candidateHydrationKey) return;
+    hydratedCandidateKey.current = candidateHydrationKey;
     setCandidateOperations(
       managedObjectGrantOperations({
         authoritySource: candidateAuthoritySource,
@@ -236,6 +249,7 @@ export function ObjectAuthorizeDrawer({
     candidate,
     candidateAuthoritySource,
     candidateGrant,
+    candidateHydrationKey,
     currentUserId,
     fineGrained,
     resourceLoaded,

@@ -159,7 +159,10 @@ function deferred<T>() {
 }
 
 function rowDeleteButton(accessorId: string) {
-  const row = screen.getByText(accessorId).closest("tr");
+  const row = screen
+    .getAllByText(accessorId)
+    .map((element) => element.closest("tr"))
+    .find((element): element is HTMLTableRowElement => element !== null);
   if (!row) {
     throw new Error(`Unable to find the grant row for ${accessorId}`);
   }
@@ -549,6 +552,53 @@ describe("ObjectAuthorizeDrawer source records", () => {
         "true",
       );
     });
+  }, 20_000);
+
+  it("keeps an unsaved draft when another grant is revoked and the snapshot reloads", async () => {
+    const alice = directoryUser("user-1", "Alice", "alice");
+    const bob = directoryUser("user-2", "Bob", "bob");
+    const aliceGrant = () =>
+      grant([source({ accessorId: alice.id, createdBy: "u-admin" })], {
+        accessorId: alice.id,
+        accessorName: alice.name,
+        accessorType: "user",
+        objType: "action_type",
+      });
+    const bobGrant = grant([source({ accessorId: bob.id, createdBy: "u-admin" })], {
+      accessorId: bob.id,
+      accessorName: bob.name,
+      accessorType: "user",
+      objType: "action_type",
+    });
+    mocks.listObjectGrantsForObject
+      .mockResolvedValueOnce({ accounts: [alice, bob], grants: [aliceGrant(), bobGrant] })
+      .mockResolvedValue({ accounts: [alice], grants: [aliceGrant()] });
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="action-1"
+        objName="Approve order"
+        objType="action_type"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await screen.findByText("Alice");
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "systemAdmin.objectGrants.grantUserLabel" }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
+    fireEvent.click(screen.getByRole("button", { name: /execute/ }));
+    expect(screen.getByRole("button", { name: /execute/ })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(rowDeleteButton("Bob"));
+    const confirmation = appServices.modal.confirm.mock.calls.at(-1)?.[0] as {
+      onOk: () => Promise<void>;
+    };
+    await act(async () => confirmation.onOk());
+    await waitFor(() => expect(mocks.listObjectGrantsForObject).toHaveBeenCalledTimes(2));
+
+    expect(screen.getByRole("button", { name: /execute/ })).toHaveAttribute("aria-pressed", "true");
   }, 20_000);
 
   it("waits for the current resource grants before hydrating a prefilled subject", async () => {
@@ -1020,6 +1070,36 @@ describe("ObjectAuthorizeDrawer source records", () => {
       objType: "catalog",
     });
   });
+
+  it("preserves a selected Community bundle when the grantee is picked afterward", async () => {
+    const alice = directoryUser("user-1", "Alice", "alice");
+    mocks.useCapability.mockReturnValue("not-licensed");
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [alice], grants: [] });
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await screen.findByText("systemAdmin.objectGrants.newGrantTitle");
+    const bundleButton = screen.getByRole("button", { name: /full_business_access/ });
+    fireEvent.click(bundleButton);
+    expect(bundleButton).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "systemAdmin.objectGrants.grantUserLabel" }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
+
+    expect(bundleButton).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: /systemAdmin\.objectGrants\.addGrant/ }),
+    ).toBeEnabled();
+  }, 20_000);
 
   it("grants the current resource to an existing role without loading role members", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
