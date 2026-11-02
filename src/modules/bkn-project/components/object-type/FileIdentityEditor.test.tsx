@@ -99,3 +99,35 @@ it("reuses an already confirmed dual-source entity number", () => {
   expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   expect(screen.getByRole("combobox")).toBeDisabled();
 });
+
+it("keeps an explicit invalidated business number editable even when an entity can supply it", () => {
+  const f = fixture();
+  f.value.document!.fileIdentity = { property: "number", confirm: false };
+  f.draft.items.objectTypes.push({
+    ...f.object,
+    id: "current_doc",
+    adopted: true,
+    primaryKeys: ["number"],
+    document: {
+      ...f.object.document!,
+      role: "entity",
+      dualSource: {
+        systemObjectTypeId: "system",
+        fileObjectTypeId: f.object.id,
+        relationTypeId: "same",
+        fields: [],
+        confirmedAt: 1,
+        state: "confirmed",
+      },
+    },
+  });
+  const change = vi.fn<(value: DraftObjectTypeSave) => void>();
+  render(<FileIdentityEditor {...f} onChange={change} />);
+  expect(screen.getByRole("checkbox")).not.toBeChecked();
+  expect(screen.getByRole("combobox")).not.toBeDisabled();
+  fireEvent.click(screen.getByRole("checkbox"));
+  expect(change.mock.calls[0]?.[0].document?.fileIdentity).toEqual({
+    property: "number",
+    confirm: true,
+  });
+});

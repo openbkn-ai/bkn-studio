@@ -42,9 +42,17 @@ export function FileIdentityEditor({
     .map((o) => o.primaryKeys[0]);
   const inherited = reused.length > 0 && new Set(reused).size === 1 ? reused[0] : undefined;
   const choice = value.document?.fileIdentity;
-  const property = inherited ?? choice?.property ?? object.document.fileIdentity?.property;
+  // An invalidated explicit choice still needs a visible way to reconfirm it.
+  const reuseIdentity = Boolean(
+    inherited &&
+    (!choice || (choice.confirm && choice.property === inherited)) &&
+    fields.some((field) => field.name === inherited),
+  );
+  const property = reuseIdentity
+    ? inherited
+    : (choice?.property ?? object.document.fileIdentity?.property);
   const confirmed = Boolean(
-    inherited || (choice ? choice.confirm : object.document.fileIdentity?.confirmedAt),
+    reuseIdentity || (choice ? choice.confirm : object.document.fileIdentity?.confirmedAt),
   );
   const update = (next: { property: string; confirm: boolean; clear?: boolean }) =>
     onChange({
@@ -70,7 +78,7 @@ export function FileIdentityEditor({
           aria-label={t(`${P}.fileNumber`)}
           style={{ minWidth: 220 }}
           allowClear
-          disabled={Boolean(inherited)}
+          disabled={reuseIdentity}
           value={fields.some((p) => p.name === property) ? property : undefined}
           options={fields.map((p) => ({
             label: p.displayName || t(`${P}.unnamedField`),
@@ -85,7 +93,7 @@ export function FileIdentityEditor({
           }
         />
       </label>
-      {inherited ? (
+      {reuseIdentity ? (
         <Typography.Text type="secondary">{t(`${P}.fileNumberInherited`)}</Typography.Text>
       ) : (
         <Checkbox
