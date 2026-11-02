@@ -14,6 +14,8 @@ export const bknProjectZhCN = {
         "先在需求与资源中选取知识库目录和调试文件，再从文档抽取模型；也可以添加结构化数据目录。",
       incomplete: "请填写属性名称、有效 API 名称、抽取说明，并为每个业务属性选择至少一个原文例子。",
       relationHelp: "通过全局编号或同一文档中的名称建立关系，不合并两侧对象。",
+      sameDocumentScope:
+        "同一文档内连接适用于文件、文档内对象、事实和事件。业务对象请通过业务编号关联。",
       sourceObject: "起点对象",
       targetObject: "终点对象",
       connection: "连接方式",
@@ -38,6 +40,7 @@ export const bknProjectZhCN = {
         relation: "业务关系",
         evidence_document: "原文文档",
         evidence_block: "原文片段",
+        evidence_media: "图片资源",
         evidence_image: "原文图片",
         evidence_relation: "来源关系",
       },
@@ -171,6 +174,13 @@ export const bknProjectZhCN = {
       comingSoonDescription: "后续版本会在这里提供完整功能。",
     },
     model: {
+      preparation: {
+        pending: "存储准备尚未开始。",
+        preparing: "正在准备数据存储：{{ready}} / {{total}}。",
+        ready: "数据存储已准备好：{{total}} 项。",
+        failed: "数据存储准备中断，已完成 {{ready}} / {{total}}。再次确认草稿可继续。",
+        stale: "模型或来源已变更，下次确认草稿时会重新准备数据存储。",
+      },
       graph: {
         title: "本体概念模型",
         emptyDescription: "草稿里还没有对象类。",

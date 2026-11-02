@@ -189,6 +189,11 @@ export type DraftItems = {
 };
 
 export type Draft = {
+  datasetPreparation?: {
+    state: "pending" | "preparing" | "ready" | "failed" | "stale";
+    ready: number;
+    total: number;
+  };
   createTime: number;
   drafter: ProjectAccount;
   /** interrupted, timeout, or vega-backend's reply; only when failed. */

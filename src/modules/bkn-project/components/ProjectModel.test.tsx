@@ -334,6 +334,30 @@ describe("ProjectModel", () => {
     expect(getDraftMock).toHaveBeenCalledTimes(2);
   });
 
+  it("follows Dataset preparation and stops after the verified resources are ready", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getDraftMock
+      .mockResolvedValueOnce({
+        ...ready(),
+        datasetPreparation: { state: "preparing", ready: 1, total: 3 },
+      })
+      .mockResolvedValueOnce({
+        ...ready(),
+        datasetPreparation: { state: "ready", ready: 3, total: 3 },
+      });
+    const view = renderModel();
+    expect(await screen.findByText(/bknProject.model.preparation.preparing/)).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+    });
+    expect(await screen.findByText(/bknProject.model.preparation.ready/)).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS * 3);
+    });
+    expect(getDraftMock).toHaveBeenCalledTimes(2);
+    view.unmount();
+  });
+
   it("keeps reading a drafting draft after a failed read, and says the read failed", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     getDraftMock

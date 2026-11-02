@@ -7,9 +7,15 @@
 
 import { Alert, Select, Space } from "antd";
 import { useTranslation } from "react-i18next";
-import type { Draft, DraftRelationTypeSave } from "@/modules/bkn-project/types/draft";
+import type {
+  Draft,
+  DraftObjectType,
+  DraftRelationTypeSave,
+} from "@/modules/bkn-project/types/draft";
 import { documentCardinalityKey } from "@/modules/bkn-project/components/object-type/document-values";
 const P = "bknProject.documentEditor";
+const fileScoped = (object: DraftObjectType | undefined) =>
+  ["file", "in_document", "fact", "event"].includes(object?.document?.role ?? "");
 export function DocumentRelationEditor({
   draft,
   value,
@@ -48,7 +54,11 @@ export function DocumentRelationEditor({
   );
   return (
     <Space direction="vertical" style={{ width: "100%" }}>
-      <Alert type="info" message={t(`${P}.relationHelp`)} />
+      <Alert
+        type="info"
+        message={t(`${P}.relationHelp`)}
+        description={t(`${P}.sameDocumentScope`)}
+      />
       <Space wrap>
         <label>
           {t(`${P}.sourceObject`)}{" "}
@@ -58,7 +68,14 @@ export function DocumentRelationEditor({
             value={value.source || undefined}
             options={draft.items.objectTypes
               .filter((o) => o.document?.role && !o.document.role.startsWith("evidence_"))
-              .map((o) => ({ label: o.name, value: o.id }))}
+              .filter(
+                (o) => mapping.mode !== "same_document" || fileScoped(o) || o.id === value.source,
+              )
+              .map((o) => ({
+                label: o.name,
+                value: o.id,
+                disabled: mapping.mode === "same_document" && !fileScoped(o),
+              }))}
             onChange={(source) =>
               onChange({ ...value, source, documentMapping: { mode: mapping.mode } })
             }
@@ -70,7 +87,15 @@ export function DocumentRelationEditor({
             disabled={readonly}
             style={{ minWidth: 180 }}
             value={value.target || undefined}
-            options={draft.items.objectTypes.map((o) => ({ label: o.name, value: o.id }))}
+            options={draft.items.objectTypes
+              .filter(
+                (o) => mapping.mode !== "same_document" || fileScoped(o) || o.id === value.target,
+              )
+              .map((o) => ({
+                label: o.name,
+                value: o.id,
+                disabled: mapping.mode === "same_document" && !fileScoped(o),
+              }))}
             onChange={(target) =>
               onChange({ ...value, target, documentMapping: { mode: mapping.mode } })
             }
@@ -86,6 +111,9 @@ export function DocumentRelationEditor({
           options={["linking", "same_document"].map((mode) => ({
             value: mode,
             label: t(`${P}.${mode}`),
+            disabled:
+              mode === "same_document" &&
+              Boolean((source && !fileScoped(source)) || (target && !fileScoped(target))),
           }))}
           onChange={(mode) => onChange({ ...value, documentMapping: { mode } })}
         />

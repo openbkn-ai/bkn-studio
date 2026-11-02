@@ -201,6 +201,7 @@ type BackendValueType = {
 };
 
 export type BackendDraft = {
+  dataset_preparation?: Draft["datasetPreparation"];
   create_time: number;
   drafter: BackendAccount;
   error: string;
@@ -320,6 +321,7 @@ const mapValueType = (item: BackendValueType): DraftValueType => ({
 export function mapDraft(draft: BackendDraft): Draft {
   const items = draft.items;
   return {
+    ...(draft.dataset_preparation ? { datasetPreparation: draft.dataset_preparation } : {}),
     createTime: draft.create_time,
     drafter: draft.drafter,
     error: draft.error,

@@ -43,6 +43,13 @@ describe("draft.service", () => {
     vi.unstubAllEnvs();
   });
 
+  it("maps preparation progress without exposing storage identities", async () => {
+    const { mapDraft, mockDraft } = await importService();
+    const backend = mockDraft("p1");
+    backend.dataset_preparation = { state: "failed", ready: 2, total: 4 };
+    expect(mapDraft(backend).datasetPreparation).toEqual({ state: "failed", ready: 2, total: 4 });
+  });
+
   it("reads the draft and maps every item, null lists as empty", async () => {
     const { getDraft, mockDraft } = await importService();
     const backend = mockDraft("p1");
