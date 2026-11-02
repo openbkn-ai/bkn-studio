@@ -46,6 +46,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
       "domain-knowledge-network",
       "execution-factory",
       "general-business-knowledge-network",
+      "workshop",
       "observability",
     ]);
   });
@@ -119,6 +120,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
       "domain-knowledge-network",
       "execution-factory",
       "general-business-knowledge-network",
+      "workshop",
       "observability",
       "system-management",
     ]);

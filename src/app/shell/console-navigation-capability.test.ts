@@ -130,4 +130,14 @@ describe("filterNavByCapability", () => {
       "knowledge-base",
     );
   });
+  // Workshop is a top-level entry whose pages are in the enterprise image.
+  it("Workshop 入口:构建里没有扩展就隐藏,与授权快照无关", () => {
+    const keys = (items: ConsoleNavItem[]) => items.map((item) => item.key);
+
+    expect(keys(filterNavByInstalledPages(consoleNavigation))).not.toContain("workshop");
+    expect(keys(filterNavByInstalledPages(consoleNavigation, () => true))).toContain("workshop");
+    expect(
+      keys(filterNavByCapability(filterNavByInstalledPages(consoleNavigation), null)),
+    ).not.toContain("workshop");
+  });
 });
