@@ -424,7 +424,13 @@ export function RelationTypePanel({
           <span className={styles.unsaved}>{t("bknProject.objectEditor.unsaved")}</span>
         ) : null}
         <span className={styles.actions}>
-          {review && relation ? <ReviewActions prepare={prepare} review={review} /> : null}
+          {review && relation ? (
+            <ReviewActions
+              prepare={prepare}
+              review={review}
+              adoptDisabled={Boolean(relation.documentRepair)}
+            />
+          ) : null}
           {/* Only a relation a person made is deleted; one drafting found is left out instead. */}
           {relation?.origin === "manual" ? (
             <AppButton danger onClick={remove}>
@@ -528,6 +534,7 @@ export function RelationTypePanel({
                   value={documentValue}
                   onChange={setDocumentValue}
                   readonly={relation?.document?.role.startsWith("evidence_")}
+                  repairRequired={Boolean(relation?.documentRepair)}
                 />
               ) : (
                 <RelationTypeMappingEditor

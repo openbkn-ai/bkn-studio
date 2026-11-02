@@ -31,8 +31,18 @@ export function draftErrorCode(error: unknown): string | undefined {
   return code?.startsWith(DRAFT_ERROR_PREFIX) ? code.slice(DRAFT_ERROR_PREFIX.length) : undefined;
 }
 
+/** A saved event cannot publish until every blocked participant is repaired. */
+export function eventNeedsRelationRepair(draft: Draft, object: DraftObjectType): boolean {
+  return (
+    object.document?.role === "event" &&
+    object.document.participantRelations.some((id) =>
+      draft.items.relationTypes.some((r) => r.id === id && Boolean(r.documentRepair)),
+    )
+  );
+}
+
 /** Why an item cannot be adopted now, as people can act on it. */
-export type AdoptBlocker = "endsNotAdopted" | "needsIdentity";
+export type AdoptBlocker = "endsNotAdopted" | "needsIdentity" | "relationNeedsRepair";
 
 /**
  * Why the adoption switch may not be turned on, or null when it may. Unadopting is always
@@ -48,10 +58,13 @@ export function adoptBlocker(
     return null;
   }
   if (kind === "object_types") {
+    const object = item as DraftObjectType;
+    if (eventNeedsRelationRepair(draft, object)) return "relationNeedsRepair";
     return (item as DraftObjectType).needsIdentity ? "needsIdentity" : null;
   }
   if (kind === "relation_types") {
     const relation = item as DraftRelationType;
+    if (relation.documentRepair) return "relationNeedsRepair";
     const adopted = new Set(
       draft.items.objectTypes.filter((objectType) => objectType.adopted).map(({ id }) => id),
     );

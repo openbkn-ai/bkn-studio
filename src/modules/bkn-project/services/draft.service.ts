@@ -231,6 +231,7 @@ type BackendObjectType = {
 type BackendMapping = { source_property: string; target_property: string };
 
 type BackendRelationType = {
+  document_repair?: string;
   document?: BackendDocument;
   document_mapping?: BackendDocumentMapping;
   adopted: boolean;
@@ -346,6 +347,7 @@ const mapMapping = (mapping: BackendMapping) => ({
 });
 
 const mapRelationType = (item: BackendRelationType): DraftRelationType => ({
+  ...(item.document_repair ? { documentRepair: item.document_repair } : {}),
   ...(item.document ? { document: mapDocument(item.document) } : {}),
   ...(item.document_mapping ? { documentMapping: mapDocumentMapping(item.document_mapping) } : {}),
   adopted: item.adopted,
@@ -1246,6 +1248,7 @@ export async function addDraftCatalogs(projectId: string, catalogIds: string[]):
 }
 
 type BackendCandidate = {
+  document_repair?: string;
   source?: string;
   document?: BackendDocument;
   added_by_catalog?: string;
@@ -1287,6 +1290,7 @@ export async function getCandidates(projectId: string, catalogId = ""): Promise<
       pending: counts?.pending ?? 0,
     },
     items: (items ?? []).map((item) => ({
+      ...(item.document_repair ? { documentRepair: item.document_repair } : {}),
       ...(item.document ? { document: mapDocument(item.document) } : {}),
       ...(item.source ? { source: item.source } : {}),
       addedByCatalog: item.added_by_catalog ?? "",
@@ -1767,4 +1771,24 @@ export async function extractDocumentModels(
     addedObjects: data.added_objects ?? 0,
     addedRelations: data.added_relations ?? 0,
   };
+}
+
+/** Creates a separate pending candidate. No unsaved fields or citations are sent. */
+export async function deriveDocumentObject(
+  projectId: string,
+  draft: Draft,
+  source: DraftObjectType,
+  derive: import("@/modules/bkn-project/types/draft").DocumentDerivation,
+): Promise<Draft> {
+  const response = await http.put<BackendDraft>(
+    `${draftPath(projectId)}/object_types/${encodeURIComponent(source.id)}`,
+    {
+      update_time: draft.updateTime,
+      name: source.name,
+      comment: source.description,
+      document: { derive },
+    },
+    { skipErrorToast: true },
+  );
+  return mapDraft(response.data);
 }

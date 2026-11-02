@@ -17,6 +17,8 @@ import type { Candidate, Candidates, Draft } from "@/modules/bkn-project/types/d
 import styles from "./DraftTables.module.css";
 import { originalLocation } from "@/modules/bkn-project/components/object-type/document-values";
 
+import { eventNeedsRelationRepair } from "./edit";
+
 const PREFIX = "bknProject.model.candidates";
 const PAGE_SIZE = 20;
 
@@ -27,13 +29,14 @@ const STATE_TONE: Record<Candidate["state"], LightStatusTone> = {
 };
 
 /** What a candidate waits for before it can be adopted, read off the draft as it is. */
-function waitsFor(draft: Draft, candidate: Candidate): "ends" | "identity" | null {
+function waitsFor(draft: Draft, candidate: Candidate): "ends" | "identity" | "repair" | null {
   if (candidate.kind === "object_types") {
-    return draft.items.objectTypes.find((item) => item.id === candidate.id)?.needsIdentity
-      ? "identity"
-      : null;
+    const object = draft.items.objectTypes.find((item) => item.id === candidate.id);
+    if (object && eventNeedsRelationRepair(draft, object)) return "repair";
+    return object?.needsIdentity ? "identity" : null;
   }
   const relation = draft.items.relationTypes.find((item) => item.id === candidate.id);
+  if (relation?.documentRepair || candidate.documentRepair) return "repair";
   const adopted = (id: string) =>
     draft.items.objectTypes.some((item) => item.id === id && item.adopted);
   return relation && (!adopted(relation.source) || !adopted(relation.target)) ? "ends" : null;

@@ -149,3 +149,30 @@ describe("CandidatesList", () => {
     ).toBeNull();
   });
 });
+
+it("marks an event whose participant relationship requires repair", () => {
+  const draft = mapDraft(mockDraft("p1"));
+  const event = draft.items.objectTypes.find((o) => o.id === "customers")!;
+  const relation = draft.items.relationTypes[0];
+  relation.documentRepair = "target_identity";
+  event.document = {
+    role: "event",
+    layer: "fact",
+    reason: "Confirmed source",
+    citations: [],
+    selectionId: "lock",
+    selectionRevision: 1,
+    timeProperty: "occurred_at",
+    participantRelations: [relation.id],
+  };
+  renderList({
+    draft,
+    candidates: {
+      counts: { adopted: 0, pending: 1, excluded: 0 },
+      items: [candidate({ id: event.id, name: "Event" })],
+    },
+  });
+  expect(
+    within(row("Event")).getByText("bknProject.model.candidates.mark.repair"),
+  ).toBeInTheDocument();
+});

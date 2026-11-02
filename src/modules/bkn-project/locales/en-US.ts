@@ -54,7 +54,23 @@ export const bknProjectEnUS = {
         fusion: "Knowledge fusion",
       },
     },
+    documentDerivation: {
+      open: "Complete source objects",
+      create: "Add to pending review",
+      help: "Derive from saved fields and verified sources. Save current edits first, then choose field placement. No new attributes, quotes, links or adoption are added. Confirm links and field authority separately.",
+      role: "Object purpose",
+      entity: "Current text object",
+      file: "File claim object",
+      name: "Object name",
+      fields: "Existing fields to include",
+      identity: "Global business number",
+      confirm:
+        "I confirm the identifier and field placement. Review this object individually before adoption.",
+    },
     documentEditor: {
+      repairRequired: "Relationship needs repair",
+      repairHelp:
+        "Correct the target identity or document scope and save before adopting. Object roles and cardinality are never changed automatically.",
       businessIdentityHelp:
         "A business number can connect the same object. Verify it is unique and nonempty across the full table when saving; the system primary key stays unchanged.",
       businessIdentityVerified:
@@ -274,6 +290,7 @@ export const bknProjectEnUS = {
         ok: "Discard and draft again",
       },
       adoptBlocked: {
+        relationNeedsRepair: "Repair and save the relationship first.",
         needsIdentity: "Choose its identity before adopting it",
         endsNotAdopted: "Adopt the object types it connects before adopting it",
         archived: "The project is archived and cannot be changed",
@@ -376,6 +393,7 @@ export const bknProjectEnUS = {
           value_types: "value type",
         },
         action: {
+          derive: "Derived {{kind}} {{name}} for individual review.",
           adopt: "Adopted {{kind}} {{name}}",
           unadopt: "Unadopted {{kind}} {{name}}",
           rename: "Renamed {{kind}} {{before}} to {{after}}",
@@ -510,6 +528,7 @@ export const bknProjectEnUS = {
           excluded: "Left out",
         },
         mark: {
+          repair: "Needs relationship repair",
           needed: "Needed by requirements",
           added: "Added catalog",
           identity: "Needs an identifier",

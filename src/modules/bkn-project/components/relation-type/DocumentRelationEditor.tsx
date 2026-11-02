@@ -21,11 +21,13 @@ export function DocumentRelationEditor({
   value,
   onChange,
   readonly = false,
+  repairRequired = false,
 }: {
   draft: Draft;
   value: DraftRelationTypeSave;
   onChange: (value: DraftRelationTypeSave) => void;
   readonly?: boolean;
+  repairRequired?: boolean;
 }) {
   const { t } = useTranslation();
   if (readonly) return <Alert type="info" showIcon message={t(`${P}.managedRelation`)} />;
@@ -77,6 +79,14 @@ export function DocumentRelationEditor({
   );
   return (
     <Space direction="vertical" style={{ width: "100%" }}>
+      {repairRequired && (
+        <Alert
+          type="warning"
+          showIcon
+          message={t(`${P}.repairRequired`)}
+          description={t(`${P}.repairHelp`)}
+        />
+      )}
       <Alert
         type="info"
         message={t(`${P}.relationHelp`)}

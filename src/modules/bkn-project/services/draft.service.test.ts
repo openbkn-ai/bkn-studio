@@ -881,3 +881,43 @@ describe("empty document proposal", () => {
     );
   });
 });
+
+describe("explicit source model derivation", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("sends only existing field choices and saved source metadata", async () => {
+    const service = await importService();
+    const raw = service.mockDraft("p");
+    const draft = service.mapDraft(raw);
+    const source = draft.items.objectTypes[0];
+    mockPut.mockResolvedValue({ data: raw });
+    const request = {
+      id: "derived_doc",
+      name: "Source claim",
+      role: "file" as const,
+      fields: [source.properties[0].name],
+      identity: "",
+      confirm: true,
+    };
+    await service.deriveDocumentObject("p", draft, source, request);
+    expect(mockPut).toHaveBeenCalledWith(
+      expect.stringContaining(`/object_types/${source.id}`),
+      {
+        update_time: draft.updateTime,
+        name: source.name,
+        comment: source.description,
+        document: { derive: request },
+      },
+      { skipErrorToast: true },
+    );
+    const body = mockPut.mock.calls.at(-1)![1] as Record<string, unknown>;
+    expect(body).not.toHaveProperty("data_properties");
+    expect(body).not.toHaveProperty("citations");
+  });
+  it("maps a server-owned relationship repair block", async () => {
+    const service = await importService();
+    const raw = service.mockDraft("p");
+    const relation = raw.items.relation_types![0];
+    Object.assign(relation, { document_repair: "target_identity" });
+    expect(service.mapDraft(raw).items.relationTypes[0].documentRepair).toBe("target_identity");
+  });
+});

@@ -32,9 +32,11 @@ export type CandidateReview = {
 export function ReviewActions({
   prepare,
   review,
+  adoptDisabled = false,
 }: {
   prepare: () => Promise<number | null>;
   review: CandidateReview;
+  adoptDisabled?: boolean;
 }) {
   const { t } = useTranslation();
   const { modal } = useAppServices();
@@ -75,7 +77,7 @@ export function ReviewActions({
 
   return (
     <>
-      <AppButton disabled={busy} onClick={() => void run(review.onAdopt)}>
+      <AppButton disabled={busy || adoptDisabled} onClick={() => void run(review.onAdopt)}>
         {t(`${PREFIX}.adoptNext`)}
       </AppButton>
       <AppButton disabled={busy} onClick={exclude}>
