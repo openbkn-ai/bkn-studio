@@ -335,6 +335,18 @@ describe("RelationTypePanel", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
+  it.each([
+    "BusinessIdentityNotVerified",
+    "BusinessIdentityNotUnique",
+    "BusinessIdentityUnavailable",
+  ])("explains %s without backend text", async (code) => {
+    const draft = mapDraft(mockDraft("p1"));
+    renderPanel(draft, draft.items.relationTypes[0].id);
+    mocks.save.mockRejectedValueOnce(refusal(409, code));
+    save();
+    expect(await screen.findByText(`bknProject.objectEditor.errors.${code}`)).toBeInTheDocument();
+  });
+
   it("words a refused relation by its reason, in the names people know", async () => {
     const draft = mapDraft(mockDraft("p1"));
     renderPanel(draft, draft.items.relationTypes[0].id);

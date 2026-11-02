@@ -338,6 +338,9 @@ describe("ConfirmDraft", () => {
     fireEvent.click(okButton());
     await waitFor(() => expect(onStale).toHaveBeenCalled());
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(messageMock.warning).toHaveBeenCalledWith(
+      "文档数据准备尚未完成，请重新加载草稿后再次确认以继续；已审核的候选会保留。",
+    );
   });
 
   it("asks again when new items wait, and names definitions that already exist", async () => {

@@ -2070,6 +2070,13 @@ export const bknProjectZhCN = {
     errors: {
       generic: "操作没有完成，请稍后重试",
       Draft: {
+        DocumentDataNotReady:
+          "文档数据准备尚未完成，请重新加载草稿后再次确认以继续；已审核的候选会保留。",
+        DualSourceNotConfirmed: "请先确认双来源字段清单，并采纳其中指定的文件、事实模型。",
+        BusinessIdentityNotVerified: "请先在关系设置中核验业务编号并保存，再确认草稿。",
+        BusinessIdentityNotUnique: "业务编号存在重复或空值，请处理后重新核验。",
+        BusinessIdentityUnavailable: "暂时无法完成业务编号核验，请检查来源访问权限后重试。",
+
         UndecidedNotAccepted: "有新的未决项，请查看后再确认",
         PartialNotAccepted: "有起草时读取不到的表，请查看后再确认",
         ConflictsNotAccepted: "还有需求冲突没有裁决。勾选下方的「仍然确认」后再确认草稿。",

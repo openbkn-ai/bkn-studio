@@ -2211,6 +2211,17 @@ export const bknProjectEnUS = {
     errors: {
       generic: "That did not go through. Try again later.",
       Draft: {
+        DocumentDataNotReady:
+          "Document data preparation is incomplete. Reload the draft and confirm again to resume; reviewed candidates are kept.",
+        DualSourceNotConfirmed:
+          "Confirm the dual-source field list and adopt its selected file and fact models first.",
+        BusinessIdentityNotVerified:
+          "Verify and save the business identifier in the relationship settings before confirming the draft.",
+        BusinessIdentityNotUnique:
+          "The business identifier has duplicate or empty values. Resolve them and verify again.",
+        BusinessIdentityUnavailable:
+          "The business identifier check could not finish. Check source access and try again.",
+
         UndecidedNotAccepted: "New items are undecided. Review them, then confirm.",
         PartialNotAccepted: "Some tables could not be read in drafting. Review them, then confirm.",
         ConflictsNotAccepted:
