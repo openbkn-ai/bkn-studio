@@ -795,5 +795,10 @@ describe("empty document proposal", () => {
       addedObjects: 0,
       addedRelations: 0,
     });
+    expect(mockPost).toHaveBeenCalledWith(
+      expect.stringContaining("/kb/concepts:extract"),
+      expect.any(Object),
+      expect.objectContaining({ timeout: 360000 }),
+    );
   });
 });
