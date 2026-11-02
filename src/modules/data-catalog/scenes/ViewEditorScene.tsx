@@ -220,17 +220,22 @@ export function ViewEditorScene({
         const existingFilter = currentView?.logicDefinition?.filterCondition;
         const parsed = parseFilterCondition(existingFilter, sourceFilterQueryPath(currentSource));
         const cannotEditFilter = Boolean(existingFilter) && parsed === null;
+        const existingFilterError =
+          parsed && currentSource
+            ? filterValidationError(
+                parsed,
+                currentSource.schema,
+                sourceFilterQueryPath(currentSource),
+              )
+            : null;
         setFilter(parsed ?? emptyFilterGroup());
         setUnsupportedFilter(cannotEditFilter);
         setFilterNeedsReview(
           Boolean(existingFilter) &&
             parsed !== null &&
             (!currentSource ||
-              filterValidationError(
-                parsed,
-                currentSource.schema,
-                sourceFilterQueryPath(currentSource),
-              ) === "invalidField"),
+              existingFilterError === "invalidField" ||
+              existingFilterError === "unsupportedOperation"),
         );
         initialDraft.current = JSON.stringify({
           name: currentView?.name ?? "",

@@ -304,6 +304,15 @@ export function ResourcePreviewPanel({
   }, [active]);
 
   useEffect(() => {
+    // Recheck existing feedback without validating an untouched draft or applying it automatically.
+    setFilterError((current) => {
+      if (current === null) return null;
+      const validation = filterValidationError(filterDraft, resource.schema, queryPath);
+      return validation ? t(`dataCatalog.filter.errors.${validation}`) : null;
+    });
+  }, [filterDraft, queryPath, resource.schema, t]);
+
+  useEffect(() => {
     if (!appliedFilter.children.length || activeFilter.children.length) return;
     setAppliedFilter(emptyFilterGroup());
     setFilterError(t("dataCatalog.preview.filterUnavailableForSource"));
@@ -474,6 +483,7 @@ export function ResourcePreviewPanel({
                   setFilterError(t(`dataCatalog.filter.errors.${validation}`));
                   return;
                 }
+                setFilterError(null);
                 if (filterDraft === appliedFilter && error) {
                   setFilterRetryVersion((version) => version + 1);
                 } else {

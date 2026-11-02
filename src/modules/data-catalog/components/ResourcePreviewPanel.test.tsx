@@ -268,7 +268,9 @@ describe("ResourcePreviewPanel", () => {
           },
         });
       } else {
-        expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+        expect(
+          screen.getByText("dataCatalog.filter.errors.unsupportedOperation"),
+        ).toBeInTheDocument();
         expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
       }
     },
@@ -619,6 +621,235 @@ describe("ResourcePreviewPanel", () => {
       expect(
         await screen.findByText("dataCatalog.preview.filterUnavailableForSource"),
       ).toBeTruthy();
+    },
+  );
+
+  it.each(
+    (["match", "match_phrase"] as const).flatMap((operation) =>
+      [false, true].map((applyAtSource) => ({ operation, applyAtSource })),
+    ),
+  )(
+    "clears stale $operation errors after returning to the index (apply at source: $applyAtSource)",
+    async ({ operation, applyAtSource }) => {
+      Object.assign(testFilterRule, { field: "body", operation, value: "invoice copy" });
+      previewCatalogResourceMock.mockImplementation(
+        (_id: string, query: { ignoreLocalIndex?: boolean; filterCondition?: unknown }) =>
+          Promise.resolve({
+            querySource: query.ignoreLocalIndex ? "source" : "local_index",
+            rows: query.filterCondition
+              ? [
+                  { id: 9, body: "invoice copy" },
+                  { id: 1, body: "invoice copy" },
+                ]
+              : [{ id: 7, body: "other" }],
+            total: query.filterCondition ? 2 : 1,
+          }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            localIndexName: "idx_orders",
+            localIndexStatus: "available",
+            schema: [
+              { name: "id", type: "integer" },
+              { name: "body", type: "string", features: [{ featureType: "fulltext" }] },
+            ],
+          }}
+        />,
+      );
+      await screen.findByRole("cell", { name: "7" });
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(apply);
+      await screen.findByRole("cell", { name: "9" });
+      expect(screen.getByRole("row", { name: "2 1 invoice copy" })).toBeInTheDocument();
+      const filterCondition = {
+        operation: "and",
+        sub_conditions: [{ field: "body", operation, value: "invoice copy", value_from: "const" }],
+      };
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({ filterCondition });
+
+      const sourceToggle = screen.getByLabelText("dataCatalog.preview.queryOriginalSource");
+      fireEvent.click(sourceToggle);
+      await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+      expect(screen.getByRole("cell", { name: "7" })).toBeInTheDocument();
+      expect(
+        screen.getByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).toBeInTheDocument();
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).not.toHaveProperty("filterCondition");
+      if (applyAtSource) {
+        const requests = previewCatalogResourceMock.mock.calls.length;
+        fireEvent.click(apply);
+        expect(
+          screen.getByText("dataCatalog.filter.errors.unsupportedOperation"),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByText("dataCatalog.filter.errors.invalidField"),
+        ).not.toBeInTheDocument();
+        expect(previewCatalogResourceMock).toHaveBeenCalledTimes(requests);
+      }
+
+      fireEvent.click(sourceToggle);
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      expect(
+        screen.queryByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("dataCatalog.filter.errors.unsupportedOperation"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "dataCatalog.preview.filter" }),
+      ).toBeInTheDocument();
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).not.toHaveProperty("filterCondition");
+
+      fireEvent.click(apply);
+      await screen.findByRole("cell", { name: "9" });
+      expect(screen.getByRole("row", { name: "2 1 invoice copy" })).toBeInTheDocument();
+      expect(screen.getByTestId("pagination-total")).toHaveTextContent("2");
+      expect(
+        screen.getByRole("button", { name: "dataCatalog.preview.filter (1)" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toEqual({
+        filterCondition,
+        limit: 10,
+        offset: 0,
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "clears cancellation feedback when applying a valid draft on the same source (request fails: %s)",
+    async (requestFails) => {
+      Object.assign(testFilterRule, { field: "body", operation: "match_phrase", value: "invoice" });
+      previewCatalogResourceMock.mockImplementation(
+        (_id: string, query: { ignoreLocalIndex?: boolean; filterCondition?: unknown }) =>
+          query.ignoreLocalIndex && query.filterCondition && requestFails
+            ? Promise.reject(new Error("source unavailable"))
+            : Promise.resolve({
+                querySource: query.ignoreLocalIndex ? "source" : "local_index",
+                rows: [{ id: 9, body: "invoice" }],
+                total: 1,
+              }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            localIndexName: "idx_orders",
+            localIndexStatus: "available",
+            schema: [
+              { name: "id", type: "integer" },
+              { name: "body", type: "string", features: [{ featureType: "fulltext" }] },
+            ],
+          }}
+        />,
+      );
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      const edit = screen.getByRole("button", { name: "set-test-filter" });
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(edit);
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+
+      Object.assign(testFilterRule, { field: "id", operation: "==", value: "9" });
+      fireEvent.click(edit);
+      fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
+      await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+      expect(
+        screen.getByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).toBeInTheDocument();
+      fireEvent.click(apply);
+      await waitFor(() =>
+        expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+          ignoreLocalIndex: true,
+          filterCondition: { sub_conditions: [{ field: "id", operation: "==", value: 9 }] },
+        }),
+      );
+      if (requestFails) {
+        await screen.findByText("source unavailable");
+      } else {
+        await screen.findByRole("cell", { name: "9" });
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      }
+      expect(
+        screen.queryByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([false, true])(
+    "preserves equality filters and invalid draft errors across source changes (request fails: %s)",
+    async (requestFails) => {
+      Object.assign(testFilterRule, { field: "id", operation: "==", value: "9" });
+      previewCatalogResourceMock.mockImplementation(
+        (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+          query.ignoreLocalIndex && requestFails
+            ? Promise.reject(new Error("source unavailable"))
+            : Promise.resolve({
+                querySource: query.ignoreLocalIndex ? "source" : "local_index",
+                rows: [{ id: 9 }],
+                total: 1,
+              }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            localIndexName: "idx_orders",
+            localIndexStatus: "available",
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+      await screen.findByRole("cell", { name: "9" });
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      const edit = screen.getByRole("button", { name: "set-test-filter" });
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(edit);
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+
+      Object.assign(testFilterRule, { field: "missing" });
+      fireEvent.click(edit);
+      fireEvent.click(apply);
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      const sourceToggle = screen.getByLabelText("dataCatalog.preview.queryOriginalSource");
+      fireEvent.click(sourceToggle);
+      await screen.findByText(
+        requestFails ? "source unavailable" : "dataCatalog.preview.dataSourceOriginal",
+      );
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      expect(
+        screen.queryByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).not.toBeInTheDocument();
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+        ignoreLocalIndex: true,
+        filterCondition: { sub_conditions: [{ field: "id", operation: "==", value: 9 }] },
+      });
+
+      fireEvent.click(sourceToggle);
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      expect(screen.queryByText("source unavailable")).not.toBeInTheDocument();
+      Object.assign(testFilterRule, { field: "id" });
+      fireEvent.click(edit);
+      expect(screen.queryByText("dataCatalog.filter.errors.invalidField")).not.toBeInTheDocument();
+      Object.assign(testFilterRule, { field: "missing" });
+      fireEvent.click(edit);
+      fireEvent.click(apply);
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.clearFilter" }));
+      await waitFor(() =>
+        expect(previewCatalogResourceMock.mock.lastCall?.[1]).not.toHaveProperty("filterCondition"),
+      );
+      expect(screen.queryByText("dataCatalog.filter.errors.invalidField")).not.toBeInTheDocument();
     },
   );
 
