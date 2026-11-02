@@ -601,6 +601,54 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(screen.getByRole("button", { name: /execute/ })).toHaveAttribute("aria-pressed", "true");
   }, 20_000);
 
+  it("rehydrates the current subject after one of its sources is revoked", async () => {
+    const alice = directoryUser("user-1", "Alice", "alice");
+    const aliceGrant = grant(
+      [source({ accessorId: alice.id, createdBy: "u-admin", operation: "execute" })],
+      {
+        accessorId: alice.id,
+        accessorName: alice.name,
+        accessorType: "user",
+        objType: "action_type",
+      },
+    );
+    mocks.listObjectGrantsForObject
+      .mockResolvedValueOnce({ accounts: [alice], grants: [aliceGrant] })
+      .mockResolvedValue({ accounts: [alice], grants: [] });
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="action-1"
+        objName="Approve order"
+        objType="action_type"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await screen.findByText("Alice");
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "systemAdmin.objectGrants.grantUserLabel" }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
+    expect(screen.getByRole("button", { name: /execute/ })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByText("common.viewDetails"));
+    fireEvent.click(
+      screen.getAllByText("systemAdmin.objectGrants.deleteGrant").at(-1) as HTMLElement,
+    );
+    const confirmation = appServices.modal.confirm.mock.calls.at(-1)?.[0] as {
+      onOk: () => Promise<void>;
+    };
+    await act(async () => confirmation.onOk());
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /execute/ })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      ),
+    );
+  }, 20_000);
+
   it("waits for the current resource grants before hydrating a prefilled subject", async () => {
     const response = deferred<{ accounts: AdminUser[]; grants: ObjectGrant[] }>();
     const alice = directoryUser("user-1", "Alice", "alice");
@@ -1088,17 +1136,19 @@ describe("ObjectAuthorizeDrawer source records", () => {
     await screen.findByText("systemAdmin.objectGrants.newGrantTitle");
     const bundleButton = screen.getByRole("button", { name: /full_business_access/ });
     fireEvent.click(bundleButton);
-    expect(bundleButton).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => expect(bundleButton).toHaveAttribute("aria-pressed", "true"));
 
     fireEvent.mouseDown(
       screen.getByRole("combobox", { name: "systemAdmin.objectGrants.grantUserLabel" }),
     );
     fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
 
-    expect(bundleButton).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("button", { name: /systemAdmin\.objectGrants\.addGrant/ }),
-    ).toBeEnabled();
+    await waitFor(() => {
+      expect(bundleButton).toHaveAttribute("aria-pressed", "true");
+      expect(
+        screen.getByRole("button", { name: /systemAdmin\.objectGrants\.addGrant/ }),
+      ).toBeEnabled();
+    });
   }, 20_000);
 
   it("grants the current resource to an existing role without loading role members", async () => {

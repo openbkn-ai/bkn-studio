@@ -157,6 +157,7 @@ export function ObjectAuthorizeDrawer({
   const [candidate, setCandidate] = useState<string>();
   const [candidateType, setCandidateType] = useState<"user" | "role">("user");
   const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
+  const [candidateHydrationVersion, setCandidateHydrationVersion] = useState(0);
   const [sourceAccessorId, setSourceAccessorId] = useState<string>();
   const [loadedResourceKey, setLoadedResourceKey] = useState<string>();
   const loadRequestId = useRef(0);
@@ -188,9 +189,14 @@ export function ObjectAuthorizeDrawer({
   // access or grants created by another administrator or owner.
   const candidateAuthoritySource = isAdminGrantor ? "admin_authz" : "owner_delegate";
   const candidateHydrationKey = candidate
-    ? [resourceKey, candidateType, candidateAuthoritySource, currentUserId, candidate].join(
-        "\u0000",
-      )
+    ? [
+        resourceKey,
+        candidateType,
+        candidateAuthoritySource,
+        currentUserId,
+        candidate,
+        candidateHydrationVersion,
+      ].join("\u0000")
     : undefined;
   const candidateGrant = scopedGrants.find((grant) =>
     objectGrantMatchesSubject(grant, candidate, candidateType),
@@ -566,6 +572,9 @@ export function ObjectAuthorizeDrawer({
           setSourceAccessorId(undefined);
           message.success(t("systemAdmin.objectGrants.toast.revoked"));
           await loadRemote();
+          if (objectGrantMatchesSubject(grant, candidate, candidateType)) {
+            setCandidateHydrationVersion((current) => current + 1);
+          }
           onChanged?.();
         } catch (error) {
           void message.error(extractRequestErrorMessage(error));
@@ -607,6 +616,9 @@ export function ObjectAuthorizeDrawer({
           await revokeObjectGrantForObject(source.grantId);
           message.success(t("systemAdmin.objectGrants.toast.revoked"));
           await loadRemote();
+          if (objectGrantMatchesSubject(grant, candidate, candidateType)) {
+            setCandidateHydrationVersion((current) => current + 1);
+          }
           onChanged?.();
         } catch (error) {
           void message.error(extractRequestErrorMessage(error));
