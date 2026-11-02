@@ -71,12 +71,14 @@ function refusal(code: string, details?: unknown) {
 const onConfirmed = vi.fn();
 const onShowPending = vi.fn();
 const onStale = vi.fn();
+const onSendingChange = vi.fn();
 
 function renderConfirm() {
   return renderWithoutAntdStyles(
     <ConfirmDraft
       draft={draft}
       onConfirmed={onConfirmed}
+      onSendingChange={onSendingChange}
       onShowPending={onShowPending}
       onStale={onStale}
       projectId="p1"
@@ -150,6 +152,7 @@ describe("ConfirmDraft", () => {
     );
     expect(messageMock.success).toHaveBeenCalledWith("草稿已确认");
     expect(onConfirmed).toHaveBeenCalled();
+    expect(onSendingChange.mock.calls).toEqual([[true], [false]]);
   });
 
   it("asks to accept the requirement conflicts the status says confirming leaves", async () => {
@@ -324,6 +327,20 @@ describe("ConfirmDraft", () => {
     await screen.findByRole("dialog");
     fireEvent.click(okButton());
     await waitFor(() => expect(onStale).toHaveBeenCalled());
+  });
+
+  it("reloads preparation progress after a partially completed storage preparation", async () => {
+    getProjectStatusMock.mockResolvedValue(status({}));
+    confirmDraftMock.mockRejectedValueOnce(refusal("Draft.DocumentDataNotReady"));
+    renderConfirm();
+    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    await screen.findByRole("dialog");
+    fireEvent.click(okButton());
+    await waitFor(() => expect(onStale).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(messageMock.warning).toHaveBeenCalledWith(
+      "文档数据准备尚未完成，请重新加载草稿后再次确认以继续；已审核的候选会保留。",
+    );
   });
 
   it("asks again when new items wait, and names definitions that already exist", async () => {

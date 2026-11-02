@@ -219,6 +219,16 @@ describe("ObjectTypePanel", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it.each(["InvalidSourceFields", "DualSourceNotConfirmed"])(
+    "explains %s in business language",
+    async (code) => {
+      mocks.save.mockRejectedValueOnce(refusal(409, code));
+      renderPanel();
+      save();
+      expect(await screen.findByText(`bknProject.objectEditor.errors.${code}`)).toBeInTheDocument();
+    },
+  );
+
   it("offers to read the draft again when it changed, starting over from what it is now", async () => {
     const now = mapDraft(mockDraft("p1"));
     now.items.objectTypes.find((item) => item.id === "customers")!.name = "Client";

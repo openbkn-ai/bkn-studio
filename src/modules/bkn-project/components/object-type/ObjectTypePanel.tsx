@@ -253,6 +253,8 @@ export function ObjectTypePanel({
       }
       case "InvalidProperty":
         return { kind: "properties", text: invalidPropertyText(details) };
+      case "InvalidSourceFields":
+      case "DualSourceNotConfirmed":
       case "InvalidIdentity":
       case "NeedsIdentity":
       case "InvalidIncrementalKey":

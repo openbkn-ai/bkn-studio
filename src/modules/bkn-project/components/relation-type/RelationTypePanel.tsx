@@ -262,6 +262,10 @@ export function RelationTypePanel({
           },
         ]);
         return null;
+      case "BusinessIdentityNotVerified":
+      case "BusinessIdentityNotUnique":
+      case "BusinessIdentityUnavailable":
+        return { kind: "other", text: t(`bknProject.objectEditor.errors.${code}`) };
       case "InvalidRelation":
         return { kind: "other", text: invalidRelationText(projectErrorDetails(error)) };
       case "FieldNotFound":

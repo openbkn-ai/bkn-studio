@@ -135,6 +135,7 @@ export function ProjectModel({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [catalogs, setCatalogs] = useState<Catalogs>(null);
   const [generating, setGenerating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "objects");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -274,7 +275,11 @@ export function ProjectModel({
   // A draft that is drafting is read again until it is done; leaving the page stops it.
   const drafting = draft?.status === "drafting";
   // Catalogs being added are drafted in the background too, while the draft stays editable.
-  const followed = drafting || Boolean(draft?.items.adding);
+  const followed =
+    drafting ||
+    confirming ||
+    Boolean(draft?.items.adding) ||
+    draft?.datasetPreparation?.state === "preparing";
   useEffect(() => {
     if (!followed) {
       return undefined;
@@ -500,6 +505,7 @@ export function ProjectModel({
     />
   );
 
+  const preparation = draft?.datasetPreparation;
   const notices = (
     <>
       {KnowledgeBaseModel && (
@@ -511,6 +517,18 @@ export function ProjectModel({
             onChanged={() => void loadDraft()}
           />
         </BknProjectKbSlot>
+      )}
+      {preparation && (
+        <Alert
+          message={t(`bknProject.model.preparation.${preparation.state}`, {
+            ready: preparation.ready,
+            total: preparation.total,
+          })}
+          showIcon
+          type={
+            preparation.state === "failed" || preparation.state === "stale" ? "warning" : "info"
+          }
+        />
       )}
       {ownerIsCaller && catalogsFailed ? (
         <Alert
@@ -821,6 +839,7 @@ export function ProjectModel({
           <ConfirmDraft
             draft={draft}
             onConfirmed={onConfirmed}
+            onSendingChange={setConfirming}
             onShowPending={() => setTab("changes")}
             onStale={() => void loadDraft()}
             projectId={project.id}

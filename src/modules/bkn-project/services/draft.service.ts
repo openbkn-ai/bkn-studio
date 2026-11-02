@@ -18,6 +18,8 @@ import type {
   DraftExtractionField,
   DraftDocumentModel,
   DraftDocumentMapping,
+  DualSourceChoice,
+  SourceFieldRule,
   SamplePreview,
   Candidate,
   Candidates,
@@ -67,7 +69,47 @@ type BackendCitation = {
   quote?: string;
 };
 type BackendExtraction = { instruction: string; examples: BackendCitation[] | null };
+type BackendSourceChoice = {
+  system_object_type_id: string;
+  file_object_type_id: string;
+  relation_type_id: string;
+  fields: {
+    name: string;
+    category: SourceFieldRule["category"];
+    source_of_record: SourceFieldRule["sourceOfRecord"];
+    destination_object_type_id: string;
+    evidence_order?: string[];
+  }[];
+};
+const sourceChoiceBody = (choice: DualSourceChoice): BackendSourceChoice => ({
+  system_object_type_id: choice.systemObjectTypeId,
+  file_object_type_id: choice.fileObjectTypeId,
+  relation_type_id: choice.relationTypeId,
+  fields: choice.fields.map((field) => ({
+    name: field.name,
+    category: field.category,
+    source_of_record: field.sourceOfRecord,
+    destination_object_type_id: field.destinationObjectTypeId,
+    ...(field.evidenceOrder?.length ? { evidence_order: field.evidenceOrder } : {}),
+  })),
+});
+const mapSourceChoice = (choice: BackendSourceChoice): DualSourceChoice => ({
+  systemObjectTypeId: choice.system_object_type_id,
+  fileObjectTypeId: choice.file_object_type_id,
+  relationTypeId: choice.relation_type_id,
+  fields: choice.fields.map((field) => ({
+    name: field.name,
+    category: field.category,
+    sourceOfRecord: field.source_of_record,
+    destinationObjectTypeId: field.destination_object_type_id,
+    ...(field.evidence_order?.length ? { evidenceOrder: field.evidence_order } : {}),
+  })),
+});
 type BackendDocument = {
+  dual_source?: BackendSourceChoice & {
+    confirmed_at: number;
+    state?: "proposed" | "confirmed" | "stale";
+  };
   role: string;
   layer: string;
   reason: string;
@@ -78,6 +120,13 @@ type BackendDocument = {
   selection_revision: number;
 };
 type BackendDocumentMapping = {
+  business_identity?: {
+    rows: number;
+    distinct: number;
+    nulls: number;
+    blanks: number;
+    checked_at: number;
+  };
   mode: string;
   mention_property?: string;
   identity_property?: string;
@@ -103,6 +152,15 @@ const citationBody = (q: DraftSourceCitation): BackendCitation => ({
   ...(q.quote ? { quote: q.quote } : {}),
 });
 const mapDocument = (d: BackendDocument): DraftDocumentModel => ({
+  ...(d.dual_source
+    ? {
+        dualSource: {
+          ...mapSourceChoice(d.dual_source),
+          confirmedAt: d.dual_source.confirmed_at,
+          state: d.dual_source.state,
+        },
+      }
+    : {}),
   role: d.role,
   layer: d.layer,
   reason: d.reason,
@@ -117,6 +175,17 @@ const mapExtraction = (e: BackendExtraction): DraftExtractionField => ({
   examples: (e.examples ?? []).map(mapCitation),
 });
 const mapDocumentMapping = (m: BackendDocumentMapping): DraftDocumentMapping => ({
+  ...(m.business_identity
+    ? {
+        businessIdentity: {
+          rows: m.business_identity.rows,
+          distinct: m.business_identity.distinct,
+          nulls: m.business_identity.nulls,
+          blanks: m.business_identity.blanks,
+          checkedAt: m.business_identity.checked_at,
+        },
+      }
+    : {}),
   mode: m.mode,
   mentionProperty: m.mention_property,
   identityProperty: m.identity_property,
@@ -201,6 +270,7 @@ type BackendValueType = {
 };
 
 export type BackendDraft = {
+  dataset_preparation?: Draft["datasetPreparation"];
   create_time: number;
   drafter: BackendAccount;
   error: string;
@@ -320,6 +390,7 @@ const mapValueType = (item: BackendValueType): DraftValueType => ({
 export function mapDraft(draft: BackendDraft): Draft {
   const items = draft.items;
   return {
+    ...(draft.dataset_preparation ? { datasetPreparation: draft.dataset_preparation } : {}),
     createTime: draft.create_time,
     drafter: draft.drafter,
     error: draft.error,
@@ -1331,6 +1402,15 @@ export function objectTypeBody(value: DraftObjectTypeSave) {
           document: {
             time_property: value.document.timeProperty,
             participant_relations: value.document.participantRelations,
+            ...(value.document.dualSource
+              ? {
+                  dual_source: {
+                    ...sourceChoiceBody(value.document.dualSource),
+                    confirm: value.document.dualSource.confirm,
+                    ...(value.document.dualSource.clear ? { clear: true } : {}),
+                  },
+                }
+              : {}),
           },
         }
       : {}),
@@ -1395,6 +1475,7 @@ export function relationBody(value: DraftRelationTypeSave, updateTime?: number, 
       ? {
           document_mapping: documentMappingBody(value.documentMapping),
           cardinality: value.cardinality,
+          ...(value.verifyBusinessIdentity ? { verify_business_identity: true } : {}),
         }
       : {}),
     mapping_rules: value.documentMapping

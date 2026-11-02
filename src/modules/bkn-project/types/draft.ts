@@ -51,8 +51,31 @@ export type DraftSourceCitation = {
   quote?: string;
 };
 export type DraftExtractionField = { instruction: string; examples: DraftSourceCitation[] };
-export type DraftDocumentSettings = { timeProperty: string; participantRelations: string[] };
-export type DraftDocumentModel = DraftDocumentSettings & {
+export type SourceFieldRule = {
+  name: string;
+  category: "system_only" | "both" | "text_only" | "temporal";
+  sourceOfRecord: "table" | "document" | "fusion";
+  destinationObjectTypeId: string;
+  evidenceOrder?: string[];
+};
+export type DualSourceChoice = {
+  systemObjectTypeId: string;
+  fileObjectTypeId: string;
+  relationTypeId: string;
+  fields: SourceFieldRule[];
+};
+export type DualSourceDecision = DualSourceChoice & { confirm: boolean; clear?: boolean };
+export type DualSourcePlan = DualSourceChoice & {
+  confirmedAt: number;
+  state?: "proposed" | "confirmed" | "stale";
+};
+export type DraftDocumentSettings = {
+  timeProperty: string;
+  participantRelations: string[];
+  dualSource?: DualSourceDecision;
+};
+export type DraftDocumentModel = Omit<DraftDocumentSettings, "dualSource"> & {
+  dualSource?: DualSourcePlan;
   role: string;
   layer: string;
   reason: string;
@@ -61,6 +84,13 @@ export type DraftDocumentModel = DraftDocumentSettings & {
   selectionRevision: number;
 };
 export type DraftDocumentMapping = {
+  businessIdentity?: {
+    rows: number;
+    distinct: number;
+    nulls: number;
+    blanks: number;
+    checkedAt: number;
+  };
   mode: string;
   mentionProperty?: string;
   identityProperty?: string;
@@ -189,6 +219,11 @@ export type DraftItems = {
 };
 
 export type Draft = {
+  datasetPreparation?: {
+    state: "pending" | "preparing" | "ready" | "failed" | "stale";
+    ready: number;
+    total: number;
+  };
   createTime: number;
   drafter: ProjectAccount;
   /** interrupted, timeout, or vega-backend's reply; only when failed. */
@@ -278,6 +313,7 @@ export type DraftObjectTypeSave = {
  * fields each end's properties map.
  */
 export type DraftRelationTypeSave = {
+  verifyBusinessIdentity?: boolean;
   documentMapping?: DraftDocumentMapping;
   cardinality?: string;
   description: string;

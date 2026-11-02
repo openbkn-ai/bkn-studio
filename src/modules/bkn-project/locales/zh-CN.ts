@@ -7,13 +7,60 @@
 
 export const bknProjectZhCN = {
   bknProject: {
+    sourceFields: {
+      undoClear: "撤销清除",
+      pendingSave: "已选择确认，保存模型后生效",
+
+      title: "双来源字段清单",
+      help: "按已抽出的模型核对每个字段的落点和以谁为准。系统侧继续绑定原表，本期只建关联，不合并投影。",
+      systemConnection: "系统与文本的同一对象关联",
+      chooseConnection: "选择对应关联",
+      mainFile: "作为主文档的文件模型",
+      chooseFile: "选择主文档模型",
+      verifyFirst: "请先在对应关系中确认唯一标识；使用业务编号时需完成全表核验。",
+      field: "字段",
+      placement: "字段类型",
+      authority: "以谁为准",
+      destination: "落点",
+      chooseFact: "选择事实或事件模型",
+      placementHelp:
+        "共有字段的当前值保留在系统侧，文本对象只留独有属性和业务编号；变化字段放事实或事件。请先在模型中调整好落点，再确认清单。",
+      priority: "知识融合按生效时间、证据强度、记录时间依次比较；其他来源仅用于核对。",
+      confirm: "保存时确认这份字段清单",
+      clear: "清除字段清单",
+      clearPending: "保存后将清除这份清单；仍采用同一对象关联时必须重新确认。",
+      changedField: "字段已变更",
+      changedDestination: "落点已变更，请重新选择",
+      unnamedModel: "未命名模型",
+      addTemporal: "添加已有事实或事件中的字段",
+      remove: "移除",
+      state: {
+        proposed: "字段清单尚待确认",
+        confirmed: "字段清单已确认",
+        stale: "模型已变化，请重新核对并确认字段清单",
+      },
+      category: {
+        system_only: "只在系统",
+        both: "两边都有",
+        text_only: "只在文本",
+        temporal: "随时间变化",
+      },
+      authorityKind: { table: "系统原表", document: "主文档", fusion: "知识融合" },
+    },
     documentEditor: {
+      businessIdentityHelp:
+        "可用业务编号连接同一对象。保存时须核验全表唯一且非空，不修改系统对象原有主键。",
+      businessIdentityVerified: "上次已核验 {{rows}} 条记录；确认草稿和构建前还会重新核验。",
+      verifyBusinessIdentity: "保存时核验此业务编号",
+
       recordIdentity: "系统维护的稳定记录标识",
       managedRelation: "这条来源定位关系由系统维护。",
       sourcesHint:
         "先在需求与资源中选取知识库目录和调试文件，再从文档抽取模型；也可以添加结构化数据目录。",
       incomplete: "请填写属性名称、有效 API 名称、抽取说明，并为每个业务属性选择至少一个原文例子。",
       relationHelp: "通过全局编号或同一文档中的名称建立关系，不合并两侧对象。",
+      sameDocumentScope:
+        "同一文档内连接适用于文件、文档内对象、事实和事件。业务对象请通过业务编号关联。",
       sourceObject: "起点对象",
       targetObject: "终点对象",
       connection: "连接方式",
@@ -38,6 +85,7 @@ export const bknProjectZhCN = {
         relation: "业务关系",
         evidence_document: "原文文档",
         evidence_block: "原文片段",
+        evidence_media: "图片资源",
         evidence_image: "原文图片",
         evidence_relation: "来源关系",
       },
@@ -171,6 +219,13 @@ export const bknProjectZhCN = {
       comingSoonDescription: "后续版本会在这里提供完整功能。",
     },
     model: {
+      preparation: {
+        pending: "存储准备尚未开始。",
+        preparing: "正在准备数据存储：{{ready}} / {{total}}。",
+        ready: "数据存储已准备好：{{total}} 项。",
+        failed: "数据存储准备中断，已完成 {{ready}} / {{total}}。再次确认草稿可继续。",
+        stale: "模型或来源已变更，下次确认草稿时会重新准备数据存储。",
+      },
       graph: {
         title: "本体概念模型",
         emptyDescription: "草稿里还没有对象类。",
@@ -924,6 +979,13 @@ export const bknProjectZhCN = {
         InvalidDescription: "描述不符合要求，请修改",
         PropertyInUse: "要移除的属性还在被关系使用：{{uses}}。请先调整这些关系，或者保留这些属性。",
         InvalidPropertyUnnamed: "有属性对应的字段不存在、已被其他属性使用，或者类型不匹配。",
+        DualSourceNotConfirmed: "请先确认双来源字段清单，并采纳其中指定的文件、事实模型。",
+        InvalidSourceFields: "字段清单与当前模型不一致，请核对字段名称、落点和以谁为准后重新确认。",
+        BusinessIdentityNotVerified:
+          "请先在关系设置中勾选业务编号核验并保存，再采纳该关联；不用修改系统对象原有主键。",
+        BusinessIdentityNotUnique:
+          "业务编号存在重复或空值，请处理后重新核验；系统原有主键保持不变。",
+        BusinessIdentityUnavailable: "暂时无法完成业务编号的全表核验，请检查来源访问权限后重试。",
         InvalidIdentity: "唯一标识需要选用能区分每条记录的属性。",
         NeedsIdentity: "请为对象类选择唯一标识。",
         FieldNotFound: "暂时读不到这个对象类的数据表，请稍后再试。",
@@ -2008,6 +2070,13 @@ export const bknProjectZhCN = {
     errors: {
       generic: "操作没有完成，请稍后重试",
       Draft: {
+        DocumentDataNotReady:
+          "文档数据准备尚未完成，请重新加载草稿后再次确认以继续；已审核的候选会保留。",
+        DualSourceNotConfirmed: "请先确认双来源字段清单，并采纳其中指定的文件、事实模型。",
+        BusinessIdentityNotVerified: "请先在关系设置中核验业务编号并保存，再确认草稿。",
+        BusinessIdentityNotUnique: "业务编号存在重复或空值，请处理后重新核验。",
+        BusinessIdentityUnavailable: "暂时无法完成业务编号核验，请检查来源访问权限后重试。",
+
         UndecidedNotAccepted: "有新的未决项，请查看后再确认",
         PartialNotAccepted: "有起草时读取不到的表，请查看后再确认",
         ConflictsNotAccepted: "还有需求冲突没有裁决。勾选下方的「仍然确认」后再确认草稿。",
