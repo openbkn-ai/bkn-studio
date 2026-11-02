@@ -19,7 +19,7 @@ import {
   documentObjectPreview,
 } from "@/modules/bkn-project/components/ai/document-revisions";
 import { applyObjectRevisions, objectPreview } from "@/modules/bkn-project/components/ai/revisions";
-import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
+import { adoptBlocker, draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import {
   draftSave,
   editorDataSource,
@@ -399,7 +399,15 @@ export function ObjectTypePanel({
         <span className={styles.title}>{base?.objectType.name ?? t(`${PREFIX}.title`)}</span>
         {changed ? <span className={styles.unsaved}>{t(`${PREFIX}.unsaved`)}</span> : null}
         <span className={styles.actions}>
-          {review && base ? <ReviewActions prepare={prepare} review={review} /> : null}
+          {review && base ? (
+            <ReviewActions
+              prepare={prepare}
+              review={review}
+              adoptDisabled={
+                adoptBlocker(base.draft, "object_types", base.objectType) === "relationNeedsRepair"
+              }
+            />
+          ) : null}
           {base ? (
             <AppButton aria-pressed={asking} onClick={() => setAsking(!asking)}>
               {t(`${PREFIX}.ask`)}

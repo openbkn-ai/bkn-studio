@@ -664,3 +664,42 @@ describe("document object panel", () => {
     expect(mocks.listFields).not.toHaveBeenCalled();
   });
 });
+
+it("disables event adoption in individual review while a participant requires repair", () => {
+  const draft = mapDraft(mockDraft("p1"));
+  const event = draft.items.objectTypes.find((o) => o.id === "customers")!;
+  event.adopted = false;
+  const relation = draft.items.relationTypes[0];
+  relation.documentRepair = "target_identity";
+  event.document = {
+    role: "event",
+    layer: "fact",
+    reason: "Confirmed source",
+    citations: [],
+    selectionId: "lock",
+    selectionRevision: 1,
+    timeProperty: "occurred_at",
+    participantRelations: [relation.id],
+  };
+  const review = { name: event.name, onAdopt: vi.fn(), onExclude: vi.fn(), onNext: vi.fn() };
+  renderWithoutAntdStyles(
+    <ObjectTypePanel
+      draft={draft}
+      objectTypeId={event.id}
+      onClose={vi.fn()}
+      onReload={vi.fn()}
+      onSaved={vi.fn()}
+      project={project}
+      review={review}
+    />,
+  );
+  const adopt = screen.getByRole("button", {
+    name: "bknProject.model.candidates.review.adoptNext",
+  });
+  expect(adopt).toBeDisabled();
+  fireEvent.click(adopt);
+  expect(review.onAdopt).not.toHaveBeenCalled();
+  expect(
+    screen.getByRole("button", { name: "bknProject.model.candidates.review.excludeNext" }),
+  ).toBeEnabled();
+});
