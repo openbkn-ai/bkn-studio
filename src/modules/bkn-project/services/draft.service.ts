@@ -1679,7 +1679,7 @@ export async function extractDocumentModels(
       selection_revision: selectionRevision,
       draft_update_time: draftUpdateTime,
     },
-    { skipErrorToast: true, timeout: 150000 },
+    { skipErrorToast: true, timeout: 360000 },
   );
   return {
     draft: data.draft ? mapDraft(data.draft) : null,
