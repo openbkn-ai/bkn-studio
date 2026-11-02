@@ -13,6 +13,7 @@ import { EntitlementContext } from "@/framework/entitlement/entitlement-context"
 import type { Entitlement } from "@/framework/entitlement/types";
 import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
+import { visibleWorkspaceExtensionEntries } from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 
 afterEach(() => {
   resetExtensionsForTesting();
@@ -82,6 +83,34 @@ describe("WorkspaceExtensionNavItems", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("common.entitlement.imageMissingTitle");
     expect(dialog.textContent).not.toContain("common.entitlement.upgradeTo");
+  });
+
+  it("leaves out the entries the deployment hides, by entry key and by capability", () => {
+    registerExtension({
+      capability: "graph_explorer",
+      id: "graph-explorer",
+      workspaceNavItems: [
+        {
+          id: "graph-explorer",
+          labelKey: "knowledgeNetwork.graphExplorer.openAction",
+          path: (networkId) => `/knowledge-network/workspace/${networkId}/graph-explorer`,
+        },
+      ],
+    });
+    render(
+      <MemoryRouter basename="/studio" initialEntries={["/studio"]}>
+        <WorkspaceExtensionNavItems
+          collapsed={false}
+          hiddenKeys={["graph-explorer:graph-explorer"]}
+          networkId="network-1"
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByTestId("workspace-nav-graph-explorer")).toBeNull();
+
+    resetExtensionsForTesting();
+    expect(visibleWorkspaceExtensionEntries(["graph_explorer"]).upgrades).toEqual([]);
+    expect(visibleWorkspaceExtensionEntries().upgrades).toHaveLength(1);
   });
 
   it("leaves out overview buttons the extension did not also offer here", () => {

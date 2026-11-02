@@ -46,8 +46,10 @@ export type RuntimeInput = {
    * Navigation keys to leave out of the console side navigation and the knowledge-network
    * workspace side navigation, for deployments that do not run the services behind them.
    * Matches `ConsoleNavItem.key` and the workspace entry keys (for example `"bkn-project"`,
-   * `"observability"`, `"experience-agent"`, `"functions"`). Hiding a group hides its children.
-   * Only navigation is affected; routes stay reachable by URL.
+   * `"observability"`, `"experience-agent"`, `"functions"`). Workspace extension entries match
+   * `<extension id>:<entry id>` and upgrade entries their capability (for example
+   * `"graph_explorer"`). Hiding a group hides its children, and a workspace group with nothing
+   * left loses its title. Only navigation is affected; routes stay reachable by URL.
    */
   hiddenNavigation?: string[];
   locale?: string;

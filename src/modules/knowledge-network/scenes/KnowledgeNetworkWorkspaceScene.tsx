@@ -44,6 +44,7 @@ import { SkillsSparkIcon } from "@/modules/knowledge-network/components/shared/S
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
+import { visibleWorkspaceExtensionEntries } from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
 import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -235,6 +236,13 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "knowledge-bases",
   );
 
+  const extensionEntries = visibleWorkspaceExtensionEntries(hiddenNavigation);
+  // A group whose entries are all hidden loses its divider and title too.
+  const hasAbilityVerification =
+    experienceNavItems.length > 0 ||
+    extensionEntries.items.length > 0 ||
+    extensionEntries.upgrades.length > 0;
+
   const renderSideNavItem = (item: WorkspaceNavItem, options?: { showCount?: boolean }) => {
     const isActive =
       item.key === section || (item.path !== undefined && location.pathname === item.path);
@@ -333,19 +341,33 @@ export function KnowledgeNetworkWorkspaceScene({
         >
           <div className={styles.workspaceSideScroll}>
             {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
-            <div className={styles.sideDivider} />
-            {sideCollapsed ? null : (
-              <div className={styles.sideTitle}>
-                {t("knowledgeNetwork.workspaceAbilityVerification")}
-              </div>
-            )}
-            {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
-            <WorkspaceExtensionNavItems collapsed={sideCollapsed} networkId={activeNetworkId} />
-            <div className={styles.sideDivider} />
-            {sideCollapsed ? null : (
-              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceConceptModel")}</div>
-            )}
-            {resourceNavItems.map((item) => renderSideNavItem(item))}
+            {hasAbilityVerification ? (
+              <>
+                <div className={styles.sideDivider} />
+                {sideCollapsed ? null : (
+                  <div className={styles.sideTitle}>
+                    {t("knowledgeNetwork.workspaceAbilityVerification")}
+                  </div>
+                )}
+                {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+                <WorkspaceExtensionNavItems
+                  collapsed={sideCollapsed}
+                  hiddenKeys={hiddenNavigation}
+                  networkId={activeNetworkId}
+                />
+              </>
+            ) : null}
+            {resourceNavItems.length > 0 ? (
+              <>
+                <div className={styles.sideDivider} />
+                {sideCollapsed ? null : (
+                  <div className={styles.sideTitle}>
+                    {t("knowledgeNetwork.workspaceConceptModel")}
+                  </div>
+                )}
+                {resourceNavItems.map((item) => renderSideNavItem(item))}
+              </>
+            ) : null}
             {dynamicNavItems.length > 0 ? (
               <>
                 <div className={styles.sideDivider} />

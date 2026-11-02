@@ -5,35 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CompassOutlined } from "@ant-design/icons";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
-import {
-  extensionWorkspaceNavItems,
-  isExtensionInstalled,
-  type WorkspaceNavEntry,
-} from "@/framework/extension/registry";
+import type { WorkspaceNavEntry } from "@/framework/extension/registry";
 import { buildReturnToState } from "@/modules/execution-factory/utils/back-navigation";
+import {
+  visibleWorkspaceExtensionEntries,
+  type WorkspaceUpgradeEntry,
+} from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 
 import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
-
-/**
- * Paid pages a build may lack. Where no installed extension brings one, the sidebar still names
- * it, marked with its edition, and opens the upgrade dialog instead of a page.
- */
-const UPGRADE_ENTRIES: { capability: string; icon: ReactNode; labelKey: string }[] = [
-  {
-    capability: CAPABILITIES.GRAPH_EXPLORER,
-    icon: <CompassOutlined />,
-    labelKey: "knowledgeNetwork.workspaceGraphExplorer",
-  },
-];
 
 /**
  * Sidebar entries another build registered for this network (see registry.ts), listed under
@@ -42,17 +28,20 @@ const UPGRADE_ENTRIES: { capability: string; icon: ReactNode; labelKey: string }
  */
 export function WorkspaceExtensionNavItems({
   collapsed,
+  hiddenKeys,
   networkId,
 }: {
   collapsed: boolean;
+  hiddenKeys?: readonly string[];
   networkId: string;
 }) {
+  const { items, upgrades } = visibleWorkspaceExtensionEntries(hiddenKeys);
   return (
     <>
-      {extensionWorkspaceNavItems().map((item) => (
+      {items.map((item) => (
         <ExtensionNavItem collapsed={collapsed} item={item} key={item.key} networkId={networkId} />
       ))}
-      {UPGRADE_ENTRIES.filter((entry) => !isExtensionInstalled(entry.capability)).map((entry) => (
+      {upgrades.map((entry) => (
         <UpgradeNavItem collapsed={collapsed} entry={entry} key={entry.capability} />
       ))}
     </>
@@ -64,7 +53,7 @@ function UpgradeNavItem({
   entry,
 }: {
   collapsed: boolean;
-  entry: (typeof UPGRADE_ENTRIES)[number];
+  entry: WorkspaceUpgradeEntry;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
