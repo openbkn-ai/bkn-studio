@@ -932,6 +932,11 @@ export const bknTraceEnUS = {
       operationId: "Operation ID",
       outputRecorded: "Trace output recorded",
       partial: "This Trace is incomplete",
+      listPartial: "Some Trace list summaries are incomplete",
+      listProjectionLimit:
+        "Summary data for some Traces on this page exceeds the per-request read limit. Fields such as duration may be incomplete. Narrow the time range or query a specific Trace ID; this warning does not indicate missing Spans.",
+      listPartialOther:
+        "This list query returned incomplete summaries. Narrow the query or retry with a specific Trace ID. Execution success or failure is reported separately from this warning.",
       question: "User question",
       referencedPayload: "Load original payload by reference after authorization",
       referencedPayloadFailed: "The payload could not be loaded or is not authorized",

@@ -876,6 +876,11 @@ export const bknTraceZhCN = {
       operationId: "操作 ID",
       outputRecorded: "Trace 输出已记录",
       partial: "当前 Trace 信息不完整",
+      listPartial: "部分 Trace 列表摘要未完整加载",
+      listProjectionLimit:
+        "本页部分 Trace 的摘要数据超过单次读取范围，耗时等摘要字段可能不完整。可缩小时间范围或指定 Trace ID 查询；此提示不表示 Span 数据丢失。",
+      listPartialOther:
+        "本次列表查询返回了不完整的摘要信息。请缩小查询范围或指定 Trace ID 重试；执行成功或失败状态与此提示分开显示。",
       question: "用户问题",
       referencedPayload: "原文需授权后按引用加载",
       referencedPayloadFailed: "原文读取失败或无权访问",

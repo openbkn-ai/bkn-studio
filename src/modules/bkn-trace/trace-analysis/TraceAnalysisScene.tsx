@@ -331,8 +331,12 @@ export function TraceAnalysisScene() {
       ) : null}
       {partialReasons.length ? (
         <Alert
-          description={partialReasons.join(" · ")}
-          message={t("bknTrace.traceWorkspace.partial")}
+          description={t(
+            partialReasons.includes("projection_scan_cap_reached")
+              ? "bknTrace.traceWorkspace.listProjectionLimit"
+              : "bknTrace.traceWorkspace.listPartialOther",
+          )}
+          message={t("bknTrace.traceWorkspace.listPartial")}
           showIcon
           type="warning"
         />
