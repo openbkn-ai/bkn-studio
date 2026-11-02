@@ -50,6 +50,7 @@ import {
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
 
 import styles from "./ObjectTypePanel.module.css";
+import { DeriveDocumentObject } from "./DeriveDocumentObject";
 import { DocumentFieldsEditor } from "./DocumentFieldsEditor";
 import { documentSave } from "./document-values";
 import { ReviewActions, type CandidateReview } from "./ReviewActions";
@@ -461,14 +462,26 @@ export function ObjectTypePanel({
             </Form>
             <div className={[styles.canvas, documentValue ? styles.documentCanvas : ""].join(" ")}>
               {documentValue ? (
-                <DocumentFieldsEditor
-                  key={`${objectTypeId}-${base.draft.updateTime}`}
-                  object={base.objectType}
-                  draft={base.draft}
-                  projectId={project.id}
-                  value={documentValue}
-                  onChange={setDocumentValue}
-                />
+                <>
+                  <DeriveDocumentObject
+                    draft={base.draft}
+                    object={base.objectType}
+                    projectId={project.id}
+                    disabled={changed || saving || asking || Boolean(project.archived)}
+                    onDerived={(next) => {
+                      reset(next);
+                      onSaved(next);
+                    }}
+                  />
+                  <DocumentFieldsEditor
+                    key={`${objectTypeId}-${base.draft.updateTime}`}
+                    object={base.objectType}
+                    draft={base.draft}
+                    projectId={project.id}
+                    value={documentValue}
+                    onChange={setDocumentValue}
+                  />
+                </>
               ) : (
                 <ObjectTypeDataAttributeEditor
                   basicValue={{ color: DEFAULT_RESOURCE_COLOR, name: basic.name }}

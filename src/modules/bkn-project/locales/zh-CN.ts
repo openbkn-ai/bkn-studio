@@ -47,7 +47,22 @@ export const bknProjectZhCN = {
       },
       authorityKind: { table: "系统原表", document: "主文档", fusion: "知识融合" },
     },
+    documentDerivation: {
+      open: "补齐来源对象",
+      create: "加入待确认清单",
+      help: "从已保存的字段和已核验来源中派生对象。先保存当前修改，再选择字段归属；不新增属性、引文或关联，也不自动采纳。关联和字段权威仍须分别确认。",
+      role: "对象用途",
+      entity: "文本当前对象",
+      file: "文件级声明对象",
+      name: "对象名称",
+      fields: "归入此对象的已有字段",
+      identity: "全局业务编号",
+      confirm: "我已确认编号及字段归属；此对象仍需逐项审核。",
+    },
     documentEditor: {
+      repairRequired: "关系需要修正",
+      repairHelp:
+        "请修正终点标识或同一文档内的适用范围，保存并通过校验后才能采纳。原提议的对象用途和对应数量不会自动改变。",
       businessIdentityHelp:
         "可用业务编号连接同一对象。保存时须核验全表唯一且非空，不修改系统对象原有主键。",
       businessIdentityVerified: "上次已核验 {{rows}} 条记录；确认草稿和构建前还会重新核验。",
@@ -254,6 +269,7 @@ export const bknProjectZhCN = {
         ok: "丢弃并重新起草",
       },
       adoptBlocked: {
+        relationNeedsRepair: "请先修正关系并保存。",
         needsIdentity: "先选好唯一标识，才能采纳",
         endsNotAdopted: "先采纳它连接的两个对象类，才能采纳",
         archived: "项目已归档，不能修改",
@@ -348,6 +364,7 @@ export const bknProjectZhCN = {
           value_types: "值类型",
         },
         action: {
+          derive: "派生了{{kind}}「{{name}}」，等待逐项确认。",
           adopt: "采纳了{{kind}}「{{name}}」",
           unadopt: "取消采纳了{{kind}}「{{name}}」",
           rename: "把{{kind}}「{{before}}」改名为「{{after}}」",
@@ -470,6 +487,7 @@ export const bknProjectZhCN = {
           excluded: "不纳入",
         },
         mark: {
+          repair: "需修正关系",
           needed: "需求需要",
           added: "新增目录",
           identity: "需要选标识",

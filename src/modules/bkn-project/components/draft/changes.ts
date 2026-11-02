@@ -12,7 +12,7 @@ import type { ProjectAccount } from "@/modules/bkn-project/types/project";
 
 const PREFIX = "bknProject.model.changes";
 
-const ACTIONS = ["adopt", "unadopt", "rename", "describe", "identity", "restore"];
+const ACTIONS = ["adopt", "unadopt", "rename", "describe", "identity", "restore", "derive"];
 const KINDS = ["object_types", "relation_types", "value_types"];
 /** What a confirmation accepted, recorded on the draft as a whole and listing what it took in. */
 const ACCEPTANCES = ["accept_partial", "accept_undecided", "accept_unresolved_conflicts"];
@@ -75,6 +75,8 @@ export function describeDecision(
   const empty = t(`${PREFIX}.empty`);
   const action = ACTIONS.includes(decision.action) ? decision.action : "other";
   switch (action) {
+    case "derive":
+      return { text: t(`${PREFIX}.action.derive`, { kind, name }) };
     case "rename":
       return {
         text: t(`${PREFIX}.action.rename`, {

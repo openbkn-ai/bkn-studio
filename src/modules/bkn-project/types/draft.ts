@@ -153,6 +153,7 @@ export type DraftJoinEvidence = {
 };
 
 export type DraftRelationType = {
+  documentRepair?: string;
   document?: DraftDocumentModel;
   documentMapping?: DraftDocumentMapping;
   adopted: boolean;
@@ -257,6 +258,7 @@ export type CandidateState = "adopted" | "excluded" | "pending";
 
 /** An object or relation type of the draft, as the list of candidates to confirm shows it. */
 export type Candidate = {
+  documentRepair?: string;
   source?: string;
   document?: DraftDocumentModel;
   /** The catalog whose adding drafted it; empty for one the draft was made with. */
@@ -433,4 +435,14 @@ export type RelationSuggestions = {
   answer: string;
   candidates: RelationSuggestion[];
   objectType: IsolatedObjectType;
+};
+
+/** Explicitly derives an unadopted view from saved, verified source fields. */
+export type DocumentDerivation = {
+  id: string;
+  name: string;
+  role: "entity" | "file";
+  fields: string[];
+  identity: string;
+  confirm: boolean;
 };
