@@ -59,3 +59,35 @@ it.each(["entity", "file"])(
     }
   },
 );
+
+it("retains business labels while repairing a legacy entity same-document mapping", () => {
+  const draft = mapDraft(mockDraft("p"));
+  for (const object of draft.items.objectTypes)
+    object.document = {
+      role: "entity",
+      layer: "entity",
+      reason: "Confirmed source",
+      citations: [],
+      selectionId: "lock",
+      selectionRevision: 1,
+      timeProperty: "",
+      participantRelations: [],
+    };
+  const source = draft.items.objectTypes[0],
+    target = draft.items.objectTypes[1];
+  source.name = "Customer agreements";
+  target.name = "Order documents";
+  const value: DraftRelationTypeSave = {
+    name: "Legacy source",
+    description: "",
+    mapping: [],
+    source: source.id,
+    target: target.id,
+    documentMapping: { mode: "same_document" },
+  };
+  render(<DocumentRelationEditor draft={draft} value={value} onChange={vi.fn()} />);
+  expect(screen.getByText(source.name)).toBeInTheDocument();
+  expect(screen.getByText(target.name)).toBeInTheDocument();
+  expect(screen.queryByText(source.id)).not.toBeInTheDocument();
+  expect(screen.queryByText(target.id)).not.toBeInTheDocument();
+});

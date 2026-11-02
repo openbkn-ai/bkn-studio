@@ -68,8 +68,14 @@ export function DocumentRelationEditor({
             value={value.source || undefined}
             options={draft.items.objectTypes
               .filter((o) => o.document?.role && !o.document.role.startsWith("evidence_"))
-              .filter((o) => mapping.mode !== "same_document" || fileScoped(o))
-              .map((o) => ({ label: o.name, value: o.id }))}
+              .filter(
+                (o) => mapping.mode !== "same_document" || fileScoped(o) || o.id === value.source,
+              )
+              .map((o) => ({
+                label: o.name,
+                value: o.id,
+                disabled: mapping.mode === "same_document" && !fileScoped(o),
+              }))}
             onChange={(source) =>
               onChange({ ...value, source, documentMapping: { mode: mapping.mode } })
             }
@@ -82,8 +88,14 @@ export function DocumentRelationEditor({
             style={{ minWidth: 180 }}
             value={value.target || undefined}
             options={draft.items.objectTypes
-              .filter((o) => mapping.mode !== "same_document" || fileScoped(o))
-              .map((o) => ({ label: o.name, value: o.id }))}
+              .filter(
+                (o) => mapping.mode !== "same_document" || fileScoped(o) || o.id === value.target,
+              )
+              .map((o) => ({
+                label: o.name,
+                value: o.id,
+                disabled: mapping.mode === "same_document" && !fileScoped(o),
+              }))}
             onChange={(target) =>
               onChange({ ...value, target, documentMapping: { mode: mapping.mode } })
             }

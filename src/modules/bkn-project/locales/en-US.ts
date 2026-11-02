@@ -41,6 +41,7 @@ export const bknProjectEnUS = {
         relation: "Business relation",
         evidence_document: "Original document",
         evidence_block: "Original passage",
+        evidence_media: "Image resource",
         evidence_image: "Original image",
         evidence_relation: "Evidence relation",
       },
@@ -179,6 +180,14 @@ export const bknProjectEnUS = {
       comingSoonDescription: "A later version brings the full feature here.",
     },
     model: {
+      preparation: {
+        pending: "Data storage preparation has not started.",
+        preparing: "Preparing data storage: {{ready}} / {{total}}.",
+        ready: "Data storage is ready: {{total}} items.",
+        failed:
+          "Data storage preparation stopped at {{ready}} / {{total}}. Confirm the draft again to resume.",
+        stale: "The model or sources changed. Confirm the draft again to prepare its data storage.",
+      },
       graph: {
         title: "Concept model",
         emptyDescription: "The draft has no object types yet.",

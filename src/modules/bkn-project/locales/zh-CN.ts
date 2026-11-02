@@ -40,6 +40,7 @@ export const bknProjectZhCN = {
         relation: "业务关系",
         evidence_document: "原文文档",
         evidence_block: "原文片段",
+        evidence_media: "图片资源",
         evidence_image: "原文图片",
         evidence_relation: "来源关系",
       },
@@ -173,6 +174,13 @@ export const bknProjectZhCN = {
       comingSoonDescription: "后续版本会在这里提供完整功能。",
     },
     model: {
+      preparation: {
+        pending: "存储准备尚未开始。",
+        preparing: "正在准备数据存储：{{ready}} / {{total}}。",
+        ready: "数据存储已准备好：{{total}} 项。",
+        failed: "数据存储准备中断，已完成 {{ready}} / {{total}}。再次确认草稿可继续。",
+        stale: "模型或来源已变更，下次确认草稿时会重新准备数据存储。",
+      },
       graph: {
         title: "本体概念模型",
         emptyDescription: "草稿里还没有对象类。",

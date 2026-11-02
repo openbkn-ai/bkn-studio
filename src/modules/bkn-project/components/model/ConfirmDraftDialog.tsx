@@ -50,11 +50,14 @@ export function ConfirmDraft({
   draft,
   onConfirmed,
   onShowPending,
+  onSendingChange,
   onStale,
   projectId,
 }: {
   draft: Draft;
   onConfirmed: () => void;
+  /** Lets the model page follow preparation progress while confirmation runs. */
+  onSendingChange?: (sending: boolean) => void;
   /** Shows the items that wait for a decision, which have to be settled first. */
   onShowPending: () => void;
   /** Reloads a draft someone changed since it was read. */
@@ -192,6 +195,7 @@ export function ConfirmDraft({
 
   const send = async () => {
     setSending(true);
+    onSendingChange?.(true);
     try {
       await confirmDraft(projectId, {
         ...(needsPartial ? { acceptPartial } : {}),
@@ -218,7 +222,7 @@ export function ConfirmDraft({
         setOpen(false);
         message.warning(refusalText(t, error));
         onShowPending();
-      } else if (code === "Draft.Stale") {
+      } else if (code === "Draft.Stale" || code === "Draft.DocumentDataNotReady") {
         setOpen(false);
         message.warning(refusalText(t, error));
         onStale();
@@ -227,6 +231,7 @@ export function ConfirmDraft({
       }
     } finally {
       setSending(false);
+      onSendingChange?.(false);
     }
   };
 
