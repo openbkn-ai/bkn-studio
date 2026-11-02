@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { systemAdminEnUS } from "@/modules/system-admin/locales/en-US";
 import { systemAdminZhCN } from "@/modules/system-admin/locales/zh-CN";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
 import { PUBLIC_ACCESSOR_ID } from "@/modules/system-admin/utils/object-grant-guards";
 
@@ -131,6 +132,19 @@ function grant(records: GrantRecord[], overrides: Partial<ObjectGrant> = {}): Ob
     objType: "catalog",
     operations,
     ...overrides,
+  };
+}
+
+function directoryUser(id: string, name: string, account: string): AdminUser {
+  return {
+    account,
+    accountType: "local",
+    email: `${account}@example.com`,
+    enabled: true,
+    id,
+    name,
+    roleIds: [],
+    telephone: "",
   };
 }
 
@@ -324,6 +338,264 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(await screen.findByText("new resource unavailable")).not.toBeNull();
     expect(screen.queryByText("old-user")).toBeNull();
     expect(mocks.revokeObjectGrantsForObject).not.toHaveBeenCalled();
+  });
+
+  it("refills and replaces the current administrator source with the full edited operation set", async () => {
+    const alice = directoryUser("user-1", "Alice", "alice");
+    const initialGrant = grant(
+      [
+        source({ accessorId: alice.id, createdBy: "u-admin" }),
+        source({
+          accessorId: alice.id,
+          createdBy: "u-other",
+          grantId: "grant-other-modify",
+          operation: "modify",
+        }),
+        source({
+          accessorId: alice.id,
+          authoritySource: "owner_delegate",
+          createdBy: "u-owner",
+          grantId: "grant-owner-delete",
+          operation: "delete",
+        }),
+        source({
+          accessorId: alice.id,
+          createdBy: "u-admin",
+          grantId: "grant-inherited-execute",
+          inherited: true,
+          operation: "execute",
+        }),
+      ],
+      {
+        accessorId: alice.id,
+        accessorName: alice.name,
+        accessorType: "user",
+        objType: "action_type",
+      },
+    );
+    const updatedGrant = grant(
+      [
+        source({ accessorId: alice.id, createdBy: "u-admin" }),
+        source({
+          accessorId: alice.id,
+          createdBy: "u-admin",
+          grantId: "grant-admin-execute",
+          operation: "execute",
+        }),
+      ],
+      {
+        accessorId: alice.id,
+        accessorName: alice.name,
+        accessorType: "user",
+        objType: "action_type",
+      },
+    );
+    mocks.listObjectGrantsForObject
+      .mockResolvedValueOnce({ accounts: [alice], grants: [initialGrant] })
+      .mockResolvedValue({ accounts: [alice], grants: [updatedGrant] });
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="action-1"
+        objName="Approve order"
+        objType="action_type"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await screen.findByText("Alice");
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "systemAdmin.objectGrants.grantUserLabel" }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /view_detail/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    expect(screen.getByRole("button", { name: /modify/ })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "delete (delete)" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: /execute/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /execute/ }));
+    fireEvent.click(screen.getByRole("button", { name: /systemAdmin\.objectGrants\.addGrant/ }));
+    await waitFor(() =>
+      expect(mocks.upsertObjectGrantForObject).toHaveBeenCalledWith({
+        accessorId: alice.id,
+        accessorType: "user",
+        effect: "allow",
+        objId: "action-1",
+        objName: "Approve order",
+        objSub: undefined,
+        objType: "action_type",
+        operations: ["view_detail", "execute"],
+      }),
+    );
+    await waitFor(() => expect(mocks.listObjectGrantsForObject).toHaveBeenCalledTimes(2));
+
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "systemAdmin.objectGrants.grantUserLabel" }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /view_detail/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: /execute/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+  }, 20_000);
+
+  it("clears the permission draft when the selected subject or subject type changes", async () => {
+    const alice = directoryUser("user-1", "Alice", "alice");
+    const bob = directoryUser("user-2", "Bob", "bob");
+    mocks.listGrantableRolesForObject.mockResolvedValue([
+      { description: "Executes actions", id: "role-executors", name: "Executors" },
+    ]);
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [alice, bob],
+      grants: [
+        grant([source({ accessorId: alice.id, createdBy: "u-admin" })], {
+          accessorId: alice.id,
+          accessorName: alice.name,
+          accessorType: "user",
+          objType: "action_type",
+        }),
+        grant(
+          [
+            source({
+              accessorId: "role-executors",
+              createdBy: "u-admin",
+              grantId: "grant-role-view",
+            }),
+            source({
+              accessorId: "role-executors",
+              createdBy: "u-admin",
+              grantId: "grant-role-execute",
+              operation: "execute",
+            }),
+          ],
+          {
+            accessorId: "role-executors",
+            accessorName: "Executors",
+            accessorType: "role",
+            objType: "action_type",
+          },
+        ),
+      ],
+    });
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="action-1"
+        objName="Approve order"
+        objType="action_type"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await screen.findByText("Alice");
+    const userPicker = screen.getByRole("combobox", {
+      name: "systemAdmin.objectGrants.grantUserLabel",
+    });
+    fireEvent.mouseDown(userPicker);
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /view_detail/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+
+    fireEvent.mouseDown(userPicker);
+    fireEvent.click(await screen.findByRole("option", { name: /Bob/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /view_detail/ })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /execute/ }));
+    fireEvent.click(screen.getByText("knowledgeNetwork.propertyAuthorizationRole"));
+    expect(screen.getByRole("button", { name: /execute/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", {
+        name: "knowledgeNetwork.propertyAuthorizationSearchRole",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: /Executors/ }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /view_detail/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: /execute/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+  }, 20_000);
+
+  it("waits for the current resource grants before hydrating a prefilled subject", async () => {
+    const response = deferred<{ accounts: AdminUser[]; grants: ObjectGrant[] }>();
+    const alice = directoryUser("user-1", "Alice", "alice");
+    mocks.listObjectGrantsForObject.mockImplementationOnce(() => response.promise);
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="action-1"
+        objName="Approve order"
+        objType="action_type"
+        onClose={vi.fn()}
+        open
+        prefillGranteeId={alice.id}
+      />,
+    );
+    const addButton = screen.getByRole("button", {
+      name: /systemAdmin\.objectGrants\.addGrant/,
+    });
+    expect(addButton).toBeDisabled();
+    expect(screen.getByRole("button", { name: /view_detail/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    act(() =>
+      response.resolve({
+        accounts: [alice],
+        grants: [
+          grant([source({ accessorId: alice.id, createdBy: "u-admin" })], {
+            accessorId: alice.id,
+            accessorName: alice.name,
+            accessorType: "user",
+            objType: "action_type",
+          }),
+        ],
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /view_detail/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    expect(addButton).toBeDisabled();
+    expect(mocks.upsertObjectGrantForObject).not.toHaveBeenCalled();
   });
 
   it("renders the backend effective decision instead of merging source operations", async () => {

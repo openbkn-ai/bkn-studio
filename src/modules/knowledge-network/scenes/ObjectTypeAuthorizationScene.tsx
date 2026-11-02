@@ -89,10 +89,13 @@ import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog"
 import {
   canManageGrantSource,
   grantCreatorUserId,
-  PUBLIC_ACCESSOR_ID,
-  isRoleGrantSubject,
   isDelegateProtectedGrant,
+  isRoleGrantSubject,
   isSelfAuthorizeLockout,
+  managedObjectGrantOperations,
+  managedObjectGrantSources,
+  objectGrantMatchesSubject,
+  PUBLIC_ACCESSOR_ID,
 } from "@/modules/system-admin/utils/object-grant-guards";
 import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
 
@@ -123,20 +126,6 @@ function mergeUsers(primary: AdminUser[], secondary: AdminUser[]) {
 
 function grantGranteeLabel(grant: ObjectGrant, user?: AdminUser) {
   return grant.accessorName || grant.accessorAccount || user?.name;
-}
-
-function grantMatchesSubject(
-  grant: ObjectGrant,
-  accessorId: string | undefined,
-  subjectType: "user" | "role",
-) {
-  if (!accessorId || grant.accessorId !== accessorId) return false;
-  if (subjectType === "role") return isRoleGrantSubject(grant);
-  return (
-    !isRoleGrantSubject(grant) &&
-    grant.accessorType !== "public" &&
-    grant.accessorId !== PUBLIC_ACCESSOR_ID
-  );
 }
 
 function collapseGrantSources(records: GrantRecord[]): GrantSourceRow[] {
@@ -401,7 +390,7 @@ export function ObjectTypeAuthorizationScene() {
       return [];
     }
     return (
-      objectGrants.find((grant) => grantMatchesSubject(grant, subjectId, subjectType))
+      objectGrants.find((grant) => objectGrantMatchesSubject(grant, subjectId, subjectType))
         ?.effectiveDecisions ?? []
     )
       .filter((decision) => decision.decision === "allow")
@@ -718,22 +707,17 @@ export function ObjectTypeAuthorizationScene() {
     });
 
   const candidateGrant = objectGrants.find((grant) =>
-    grantMatchesSubject(grant, candidateUserId, candidateSubjectType),
+    objectGrantMatchesSubject(grant, candidateUserId, candidateSubjectType),
   );
   // `POST /me/object-grants` replaces one professional-rule source slice. The server derives the
   // authority source from the current grantor, so an owner must not submit an administrator's
   // operations (and vice versa) as part of its own replacement set.
   const candidateAuthoritySource = isAdminGrantor ? "admin_authz" : "owner_delegate";
-  const candidateManagedSources = (candidateGrant?.grants ?? []).filter(
-    (source) =>
-      source.active &&
-      !source.inherited &&
-      source.effect === "allow" &&
-      source.policySource === "professional_rule" &&
-      source.authoritySource === candidateAuthoritySource &&
-      source.createdBy === runtimeConfig.currentUser.id &&
-      Boolean(source.grantId),
-  );
+  const candidateManagedSources = managedObjectGrantSources({
+    authoritySource: candidateAuthoritySource,
+    createdBy: runtimeConfig.currentUser.id,
+    grant: candidateGrant,
+  });
   const candidateManagedOperations = new Set(
     candidateManagedSources.map((source) => source.operation),
   );
@@ -750,24 +734,15 @@ export function ObjectTypeAuthorizationScene() {
   const selectCandidateSubject = (accessorId?: string) => {
     setCandidateUserId(accessorId);
     const grant = objectGrants.find((candidate) =>
-      grantMatchesSubject(candidate, accessorId, candidateSubjectType),
+      objectGrantMatchesSubject(candidate, accessorId, candidateSubjectType),
     );
-    const directOperations = [
-      ...new Set(
-        (grant?.grants ?? [])
-          .filter(
-            (source) =>
-              source.active &&
-              !source.inherited &&
-              source.effect === "allow" &&
-              source.policySource === "professional_rule" &&
-              source.authoritySource === candidateAuthoritySource &&
-              source.createdBy === runtimeConfig.currentUser.id,
-          )
-          .map((source) => source.operation),
-      ),
-    ];
-    setCandidateOperations(directOperations);
+    setCandidateOperations(
+      managedObjectGrantOperations({
+        authoritySource: candidateAuthoritySource,
+        createdBy: runtimeConfig.currentUser.id,
+        grant,
+      }),
+    );
   };
 
   const toggleCandidateOperation = (operationKey: string) => {

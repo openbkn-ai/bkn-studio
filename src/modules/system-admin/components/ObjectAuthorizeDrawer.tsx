@@ -57,10 +57,13 @@ import {
 import {
   canManageGrantSource,
   grantCreatorUserId,
-  PUBLIC_ACCESSOR_ID,
-  isRoleGrantSubject,
   isDelegateProtectedGrant,
+  isRoleGrantSubject,
   isSelfAuthorizeLockout,
+  managedObjectGrantOperations,
+  managedObjectGrantSources,
+  objectGrantMatchesSubject,
+  PUBLIC_ACCESSOR_ID,
 } from "@/modules/system-admin/utils/object-grant-guards";
 import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
@@ -178,6 +181,65 @@ export function ObjectAuthorizeDrawer({
       ),
     [isAdminGrantor, objType, objectAuthorized, operationsForType],
   );
+
+  // The write endpoint replaces only the source slice owned by this actor. Populate the editor
+  // from that exact slice instead of the effective operation summary, which may include inherited
+  // access or grants created by another administrator or owner.
+  const candidateAuthoritySource = isAdminGrantor ? "admin_authz" : "owner_delegate";
+  const candidateGrant = scopedGrants.find((grant) =>
+    objectGrantMatchesSubject(grant, candidate, candidateType),
+  );
+  const candidateManagedSources = managedObjectGrantSources({
+    authoritySource: candidateAuthoritySource,
+    createdBy: currentUserId,
+    grant: candidateGrant,
+  });
+  const candidateManagedOperations = new Set(
+    candidateManagedSources.map((source) => source.operation),
+  );
+  const candidateHasDuplicateManagedOperations =
+    candidateManagedSources.length !== candidateManagedOperations.size;
+  const candidateHasChanges =
+    candidateHasDuplicateManagedOperations ||
+    candidateOperations.length !== candidateManagedOperations.size ||
+    candidateOperations.some((operation) => !candidateManagedOperations.has(operation));
+
+  const selectCandidateSubject = (accessorId?: string) => {
+    setCandidate(accessorId);
+    const grant = scopedGrants.find((item) =>
+      objectGrantMatchesSubject(item, accessorId, candidateType),
+    );
+    setCandidateOperations(
+      fineGrained && resourceLoaded
+        ? managedObjectGrantOperations({
+            authoritySource: candidateAuthoritySource,
+            createdBy: currentUserId,
+            grant,
+          })
+        : [],
+    );
+  };
+
+  // `prefillGranteeId` is installed before the asynchronous grant list is ready. Hydrate it only
+  // after the response is scoped to the current resource so an empty loading snapshot cannot be
+  // submitted as the grantee's replacement set.
+  useEffect(() => {
+    if (!fineGrained || !resourceLoaded || !candidate) return;
+    setCandidateOperations(
+      managedObjectGrantOperations({
+        authoritySource: candidateAuthoritySource,
+        createdBy: currentUserId,
+        grant: candidateGrant,
+      }),
+    );
+  }, [
+    candidate,
+    candidateAuthoritySource,
+    candidateGrant,
+    currentUserId,
+    fineGrained,
+    resourceLoaded,
+  ]);
 
   const candidateRequirements = useMemo(
     () =>
@@ -374,6 +436,9 @@ export function ObjectAuthorizeDrawer({
       return;
     }
     if (!candidateOperations.length) {
+      return;
+    }
+    if (fineGrained && !candidateHasChanges) {
       return;
     }
     setBusy(true);
@@ -945,6 +1010,7 @@ export function ObjectAuthorizeDrawer({
                 onChange={(value) => {
                   setCandidateType(value as "user" | "role");
                   setCandidate(undefined);
+                  setCandidateOperations([]);
                 }}
                 options={[
                   {
@@ -966,7 +1032,7 @@ export function ObjectAuthorizeDrawer({
                   id="object-grant-user"
                   initialUsers={scopedGrantUsers}
                   loading={loading}
-                  onChange={setCandidate}
+                  onChange={selectCandidateSubject}
                   onUsersChange={(users) => {
                     if (!users.length) return;
                     setGrantUsers((current) => {
@@ -985,7 +1051,7 @@ export function ObjectAuthorizeDrawer({
                   ariaLabel={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
                   id="object-grant-user"
                   loading={loading}
-                  onChange={setCandidate}
+                  onChange={selectCandidateSubject}
                   placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
                   resourceId={objId}
                   resourceType={objType}
@@ -1106,20 +1172,22 @@ export function ObjectAuthorizeDrawer({
                           ? "systemAdmin.objectGrants.grantNeedsOperation"
                           : "systemAdmin.objectGrants.grantNeedsBundle",
                       )
-                    : fineGrained
-                      ? t(
-                          candidateType === "role"
-                            ? "systemAdmin.objectGrants.grantRoleReady"
-                            : "systemAdmin.objectGrants.grantReady",
-                          {
-                            count: candidateOperations.length,
-                          },
-                        )
-                      : t(
-                          candidateType === "role"
-                            ? "systemAdmin.objectGrants.grantRoleBundleReady"
-                            : "systemAdmin.objectGrants.grantBundleReady",
-                        )}
+                    : fineGrained && !candidateHasChanges
+                      ? t("systemAdmin.objectGrants.grantNoChanges")
+                      : fineGrained
+                        ? t(
+                            candidateType === "role"
+                              ? "systemAdmin.objectGrants.grantRoleReady"
+                              : "systemAdmin.objectGrants.grantReady",
+                            {
+                              count: candidateOperations.length,
+                            },
+                          )
+                        : t(
+                            candidateType === "role"
+                              ? "systemAdmin.objectGrants.grantRoleBundleReady"
+                              : "systemAdmin.objectGrants.grantBundleReady",
+                          )}
               </span>
               <AppButton
                 disabled={
@@ -1127,7 +1195,8 @@ export function ObjectAuthorizeDrawer({
                   loading ||
                   !resourceLoaded ||
                   !candidate ||
-                  !candidateOperations.length
+                  !candidateOperations.length ||
+                  (fineGrained && !candidateHasChanges)
                 }
                 icon={<PlusOutlined />}
                 loading={busy}
