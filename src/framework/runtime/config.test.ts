@@ -32,4 +32,17 @@ describe("createRuntimeConfig", () => {
     expect(createRuntimeConfig({ locale: "en-GB" }).locale).toBe("en-US");
     expect(createRuntimeConfig({ locale: "zh_Hans_CN" }).locale).toBe("zh-CN");
   });
+
+  it("defaults hiddenNavigation to empty and keeps only string keys", () => {
+    expect(createRuntimeConfig().hiddenNavigation).toEqual([]);
+    expect(
+      createRuntimeConfig({
+        hiddenNavigation: ["bkn-project", 42, "functions"] as unknown as string[],
+      }).hiddenNavigation,
+    ).toEqual(["bkn-project", "functions"]);
+    expect(
+      createRuntimeConfig({ hiddenNavigation: "bkn-project" as unknown as string[] })
+        .hiddenNavigation,
+    ).toEqual([]);
+  });
 });

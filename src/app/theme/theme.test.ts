@@ -26,6 +26,7 @@ const runtimeConfig: RuntimeConfig = {
     permissions: [],
     roles: [],
   },
+  hiddenNavigation: [],
   locale: "zh-CN",
   mode: "standalone",
   router: { basename: "/studio" },

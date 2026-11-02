@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
@@ -43,6 +44,7 @@ import { SkillsSparkIcon } from "@/modules/knowledge-network/components/shared/S
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
+import { visibleWorkspaceExtensionEntries } from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
 import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -84,6 +86,7 @@ export function KnowledgeNetworkWorkspaceScene({
   const location = useLocation();
   const navigate = useNavigate();
   const { message } = useAppServices();
+  const { hiddenNavigation } = useRuntimeConfig();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
@@ -204,8 +207,11 @@ export function KnowledgeNetworkWorkspaceScene({
           ]),
     ];
 
-    return items;
-  }, [activeNetworkId, detail, kbMode, objectMetricsCapability, t]);
+    // Entries for services this deployment does not run (RuntimeConfig.hiddenNavigation).
+    return hiddenNavigation.length > 0
+      ? items.filter((item) => !hiddenNavigation.includes(item.key))
+      : items;
+  }, [activeNetworkId, detail, hiddenNavigation, kbMode, objectMetricsCapability, t]);
 
   const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
   const experienceNavItems = navigationItems.filter(
@@ -229,6 +235,13 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "skills" ||
       item.key === "knowledge-bases",
   );
+
+  const extensionEntries = visibleWorkspaceExtensionEntries(hiddenNavigation);
+  // A group whose entries are all hidden loses its divider and title too.
+  const hasAbilityVerification =
+    experienceNavItems.length > 0 ||
+    extensionEntries.items.length > 0 ||
+    extensionEntries.upgrades.length > 0;
 
   const renderSideNavItem = (item: WorkspaceNavItem, options?: { showCount?: boolean }) => {
     const isActive =
@@ -328,19 +341,33 @@ export function KnowledgeNetworkWorkspaceScene({
         >
           <div className={styles.workspaceSideScroll}>
             {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
-            <div className={styles.sideDivider} />
-            {sideCollapsed ? null : (
-              <div className={styles.sideTitle}>
-                {t("knowledgeNetwork.workspaceAbilityVerification")}
-              </div>
-            )}
-            {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
-            <WorkspaceExtensionNavItems collapsed={sideCollapsed} networkId={activeNetworkId} />
-            <div className={styles.sideDivider} />
-            {sideCollapsed ? null : (
-              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceConceptModel")}</div>
-            )}
-            {resourceNavItems.map((item) => renderSideNavItem(item))}
+            {hasAbilityVerification ? (
+              <>
+                <div className={styles.sideDivider} />
+                {sideCollapsed ? null : (
+                  <div className={styles.sideTitle}>
+                    {t("knowledgeNetwork.workspaceAbilityVerification")}
+                  </div>
+                )}
+                {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+                <WorkspaceExtensionNavItems
+                  collapsed={sideCollapsed}
+                  hiddenKeys={hiddenNavigation}
+                  networkId={activeNetworkId}
+                />
+              </>
+            ) : null}
+            {resourceNavItems.length > 0 ? (
+              <>
+                <div className={styles.sideDivider} />
+                {sideCollapsed ? null : (
+                  <div className={styles.sideTitle}>
+                    {t("knowledgeNetwork.workspaceConceptModel")}
+                  </div>
+                )}
+                {resourceNavItems.map((item) => renderSideNavItem(item))}
+              </>
+            ) : null}
             {dynamicNavItems.length > 0 ? (
               <>
                 <div className={styles.sideDivider} />

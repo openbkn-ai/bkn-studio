@@ -102,6 +102,39 @@ export function filterNavByInstalledPages(
     );
 }
 
+/**
+ * Drop entries the deployment asked to hide (`RuntimeConfig.hiddenNavigation`), matched by key at
+ * any depth. A hidden group takes its children with it, and a non-navigable group left without
+ * children is dropped too.
+ */
+export function filterNavByHiddenKeys(
+  items: ConsoleNavItem[],
+  hiddenKeys: readonly string[],
+): ConsoleNavItem[] {
+  if (hiddenKeys.length === 0) {
+    return items;
+  }
+  const hidden = new Set(hiddenKeys);
+  const visible: ConsoleNavItem[] = [];
+
+  for (const item of items) {
+    if (hidden.has(item.key)) {
+      continue;
+    }
+    if (item.children?.length) {
+      const children = filterNavByHiddenKeys(item.children, hiddenKeys);
+      if (children.length === 0 && !item.path) {
+        continue;
+      }
+      visible.push({ ...item, children });
+    } else {
+      visible.push(item);
+    }
+  }
+
+  return visible;
+}
+
 export function filterNavByCapability(
   items: ConsoleNavItem[],
   snapshot: EntitlementView | null,
