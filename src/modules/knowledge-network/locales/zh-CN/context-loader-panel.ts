@@ -196,15 +196,34 @@ export const contextLoaderPanelPart = {
       apiKey: "API Key",
       oauthHint: "配置里只填地址，首次连接时在浏览器登录本平台，之后客户端自动续期。",
       apiKeyHint: "请求头带 bak_ 开头的长期 Key，适合脚本、服务或不支持登录授权的客户端。",
-      stepCopy:
-        "选择客户端并复制配置：WorkBuddy 在「连接 → 自定义连接 → 配置 MCP」中粘贴（即 ~/.workbuddy/mcp.json）；Claude Code 直接运行命令；Cursor 写入 ~/.cursor/mcp.json。",
-      stepSignIn: "在客户端里点「连接」或「授权」，浏览器会打开本平台登录页，登录并同意授权。",
       stepRenew:
         "之后客户端会自动续期，无需再次登录。要查看或断开已连接的客户端，前往个人中心 API Key 页面的「已连接的客户端」。",
       connectedClients: "查看已连接的客户端 →",
-      workbuddyHint:
-        "在 WorkBuddy 中打开「连接 → 自定义连接 → 配置 MCP」粘贴下方配置，或直接写入 ~/.workbuddy/mcp.json。",
       copiedWorkbuddy: "WorkBuddy 配置已复制",
+    },
+    // Connect steps for the client selected on the right. `copy` serves both connect modes;
+    // `signIn` only the sign-in mode, and {{name}} is the server name the config registers.
+    // The WorkBuddy labels follow its 5.9.3 Chinese UI.
+    mcpClientSteps: {
+      heading: "{{client}} 接入步骤",
+      claude: {
+        copy: "运行右侧的命令（所有项目可用），或把配置写入项目根目录的 .mcp.json（只对该项目生效）。",
+        signIn:
+          "在 Claude Code 里执行 /mcp，选中 {{name}} 登录。浏览器会打开本平台登录页，登录并同意授权。",
+      },
+      cursor: {
+        copy: "把配置写入 ~/.cursor/mcp.json（所有项目可用），或项目里的 .cursor/mcp.json。",
+        signIn:
+          "在 Cursor 设置的 MCP 列表里找到 {{name}}，按提示登录。浏览器会打开本平台登录页，登录并同意授权。",
+      },
+      workbuddy: {
+        copy: "在 WorkBuddy 的「连接器 → 自定义连接器 → 配置 MCP」中粘贴配置（即 ~/.workbuddy/mcp.json）。",
+        signIn: "{{name}} 显示「需要认证」时点「连接」。浏览器会打开本平台登录页，登录并同意授权。",
+      },
+      generic: {
+        copy: "复制整段配置，粘贴到客户端的 MCP 服务配置中。",
+        signIn: "在客户端里点「连接」或「授权」。浏览器会打开本平台登录页，登录并同意授权。",
+      },
     },
     mcpConnect: {
       title: "让智能体调用 OpenBKN 能力",
@@ -212,7 +231,6 @@ export const contextLoaderPanelPart = {
         "这里生成的是 MCP 接入配置。复制到智能体平台后，智能体可通过 MCP 工具访问 OpenBKN 暴露的检索、查询和行动能力。",
       stepIssueKey:
         "前往个人中心签发 API Key，并将 bak_ 开头的长期 Key 填入右侧配置的 Bearer Key。",
-      stepCopyConfig: "选择智能体平台类型，复制整段配置并粘贴到对应的 MCP 服务配置中。",
       stepUseAgent:
         "保存后回到智能体对话，直接提问并让智能体通过 MCP 工具完成检索、查询或行动调用。",
       genericTab: "通用 mcp.json",

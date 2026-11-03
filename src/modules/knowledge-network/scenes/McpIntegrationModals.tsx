@@ -20,10 +20,16 @@ import {
   createMcpUrlJsonConfig,
   getMcpConnectionProtocol,
   isLikelySelfSignedMcpHost,
+  mcpServerNameFor,
 } from "@/modules/knowledge-network/services/mcp-client-config";
 
 import styles from "./ExperienceScene.module.css";
-import { McpAuthModeSwitch, McpOauthSteps } from "./McpAuthMode";
+import {
+  McpAuthModeSwitch,
+  McpClientStepsHeading,
+  McpOauthSteps,
+  type McpClient,
+} from "./McpAuthMode";
 import { McpConnectionSecurity } from "./McpConnectionSecurity";
 
 const JSON_TOKEN_RE =
@@ -123,7 +129,7 @@ export function McpSetupModal({
   const { t } = useTranslation();
   const [authMode, setAuthMode] = useMcpAuthMode();
   const isOauthMode = authMode === "oauth";
-  const [tab, setTab] = useState("claude");
+  const [tab, setTab] = useState<McpClient>("claude");
   // WorkBuddy is only offered for the sign-in mode; fall back when switching to API Key.
   const activeTab = !isOauthMode && tab === "workbuddy" ? "claude" : tab;
   const tk = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
@@ -139,24 +145,25 @@ export function McpSetupModal({
   const claudeCli = isOauthMode
     ? createClaudeCodeMcpUrlCommand(mcpUrl)
     : createClaudeCodeMcpCommand(mcpUrl, tk, options);
+  const clientLabels: Record<McpClient, string> = {
+    claude: "Claude Code",
+    cursor: "Cursor",
+    workbuddy: "WorkBuddy",
+    generic: t("knowledgeNetwork.contextLoaderPanel.mcpSetup.genericTab"),
+  };
   const workbuddyTab = {
     key: "workbuddy",
     label: "WorkBuddy",
     children: (
-      <>
-        <p className={styles.guideNote}>
-          {t("knowledgeNetwork.contextLoaderPanel.mcpAuth.workbuddyHint")}
-        </p>
-        <CodeBlock
-          title="~/.workbuddy/mcp.json"
-          code={jsonConfig}
-          json
-          onCopy={() =>
-            copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpAuth.copiedWorkbuddy"))
-          }
-          copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
-        />
-      </>
+      <CodeBlock
+        title="~/.workbuddy/mcp.json"
+        code={jsonConfig}
+        json
+        onCopy={() =>
+          copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpAuth.copiedWorkbuddy"))
+        }
+        copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+      />
     ),
   };
 
@@ -184,7 +191,10 @@ export function McpSetupModal({
         </ul>
         <McpAuthModeSwitch value={authMode} onChange={setAuthMode} />
         {isOauthMode ? (
-          <McpOauthSteps />
+          <>
+            <McpClientStepsHeading label={clientLabels[activeTab]} />
+            <McpOauthSteps client={activeTab} serverName={mcpServerNameFor(mcpUrl)} />
+          </>
         ) : (
           <p className={styles.guideNote}>
             {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.apiKeyHeaderNote")}
@@ -204,7 +214,7 @@ export function McpSetupModal({
         />
         <Tabs
           activeKey={activeTab}
-          onChange={setTab}
+          onChange={(key) => setTab(key as McpClient)}
           items={[
             {
               key: "claude",
@@ -242,13 +252,16 @@ export function McpSetupModal({
               label: "Cursor",
               children: (
                 <>
-                  <p className={styles.guideNote}>
-                    {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintPrefix")}
-                    <code>~/.cursor/mcp.json</code>
-                    {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintMiddle")}
-                    <code>.cursor/mcp.json</code>
-                    {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintSuffix")}
-                  </p>
+                  {/* Signing in, the steps above already say where Cursor takes the config. */}
+                  {isOauthMode ? null : (
+                    <p className={styles.guideNote}>
+                      {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintPrefix")}
+                      <code>~/.cursor/mcp.json</code>
+                      {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintMiddle")}
+                      <code>.cursor/mcp.json</code>
+                      {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintSuffix")}
+                    </p>
+                  )}
                   <CodeBlock
                     title="~/.cursor/mcp.json"
                     code={jsonConfig}
