@@ -68,6 +68,20 @@ export const bknProjectEnUS = {
         "I confirm the identifier and field placement. Review this object individually before adoption.",
     },
     documentEditor: {
+      fieldAuthority: "Value authority",
+      authorityDocument: "Document",
+      authorityFusion: "Knowledge fusion",
+      fieldAuthorityHelp:
+        "Use fusion rules to resolve differences across files. Document-owned conflicts require review.",
+
+      clearFilePeriod: "Leave the effective period unspecified",
+      filePeriod: "File effective period (optional)",
+      filePeriodHelp:
+        "Choose existing extracted effective and expiry date fields, then confirm. File timestamps and field names never decide validity; conflicts with unknown dates need review.",
+      effectiveDate: "Effective date",
+      expiryDate: "Expiry date",
+      confirmFilePeriod: "I confirm these fields describe the file's effective period",
+
       sentenceKey: "Within-sentence identity (optional)",
       sentenceKeyHelp:
         "No setting is needed for one record per sentence. For multiple records, confirm stable fields that distinguish them within that sentence. Global uniqueness is not required; missing or duplicate keys require review.",

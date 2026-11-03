@@ -106,6 +106,7 @@ const mapSourceChoice = (choice: BackendSourceChoice): DualSourceChoice => ({
   })),
 });
 type BackendDocument = {
+  file_period?: { from?: string; until?: string; confirmed_at: number };
   sentence_identity?: { properties: string[]; confirmed_at: number };
   file_identity?: { property: string; confirmed_at: number };
   dual_source?: BackendSourceChoice & {
@@ -154,6 +155,15 @@ const citationBody = (q: DraftSourceCitation): BackendCitation => ({
   ...(q.quote ? { quote: q.quote } : {}),
 });
 const mapDocument = (d: BackendDocument): DraftDocumentModel => ({
+  ...(d.file_period
+    ? {
+        filePeriod: {
+          from: d.file_period.from,
+          until: d.file_period.until,
+          confirmedAt: d.file_period.confirmed_at,
+        },
+      }
+    : {}),
   ...(d.sentence_identity
     ? {
         sentenceIdentity: {
@@ -1422,6 +1432,24 @@ export function objectTypeBody(value: DraftObjectTypeSave) {
     ...(value.document
       ? {
           document: {
+            ...(value.document.fieldSources?.length
+              ? {
+                  field_sources: value.document.fieldSources
+                    .filter((decision) =>
+                      value.properties.some(
+                        (field) =>
+                          field.name === decision.property &&
+                          (!decision.type || decision.type === field.type),
+                      ),
+                    )
+                    .map((decision) => ({
+                      property: decision.property,
+                      source_of_record: decision.sourceOfRecord,
+                      confirm: decision.confirm,
+                    })),
+                }
+              : {}),
+            ...(value.document.filePeriod ? { file_period: value.document.filePeriod } : {}),
             ...(value.document.fileIdentity ? { file_identity: value.document.fileIdentity } : {}),
             ...(value.document.sentenceIdentity
               ? { sentence_identity: value.document.sentenceIdentity }

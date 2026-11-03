@@ -70,6 +70,13 @@ export type DualSourcePlan = DualSourceChoice & {
   state?: "proposed" | "confirmed" | "stale";
 };
 export type DraftDocumentSettings = {
+  fieldSources?: {
+    property: string;
+    sourceOfRecord: "document" | "fusion";
+    confirm: boolean;
+    type?: string;
+  }[];
+  filePeriod?: { from?: string; until?: string; confirm: boolean; clear?: boolean };
   fileIdentity?: { property: string; confirm: boolean; clear?: boolean };
   sentenceIdentity?: { properties: string[]; confirm: boolean; clear?: boolean };
   timeProperty: string;
@@ -78,8 +85,9 @@ export type DraftDocumentSettings = {
 };
 export type DraftDocumentModel = Omit<
   DraftDocumentSettings,
-  "dualSource" | "fileIdentity" | "sentenceIdentity"
+  "dualSource" | "fileIdentity" | "sentenceIdentity" | "filePeriod" | "fieldSources"
 > & {
+  filePeriod?: { from?: string; until?: string; confirmedAt: number };
   fileIdentity?: { property: string; confirmedAt: number };
   sentenceIdentity?: { properties: string[]; confirmedAt: number };
   dualSource?: DualSourcePlan;

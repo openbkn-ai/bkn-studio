@@ -60,6 +60,20 @@ export const bknProjectZhCN = {
       confirm: "我已确认编号及字段归属；此对象仍需逐项审核。",
     },
     documentEditor: {
+      fieldAuthority: "以谁为准",
+      authorityDocument: "文档",
+      authorityFusion: "知识融合",
+      fieldAuthorityHelp:
+        "多份文档有差异时，可选择按融合规则确定当前值；以文档为准的冲突保留待核查。",
+
+      clearFilePeriod: "不指定有效期",
+      filePeriod: "文件有效期（可选）",
+      filePeriodHelp:
+        "选择已抽取的生效、失效日期字段并确认。未确认日期时不按文件时间或字段名推断，时间不明的冲突会进入待核查。",
+      effectiveDate: "生效日期",
+      expiryDate: "失效日期",
+      confirmFilePeriod: "我确认这些字段表示文件的有效期",
+
       sentenceKey: "句内区分字段（按需）",
       sentenceKeyHelp:
         "一句只抽出一条时无需设置。同一句可能抽出多条时，确认用于区分条目的稳定字段组合；不要求全局唯一，缺失或重复时会提示核查。",
