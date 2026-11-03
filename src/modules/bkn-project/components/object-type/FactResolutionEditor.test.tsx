@@ -68,7 +68,7 @@ function fixture() {
     source: object.id,
     target: target.id,
     adopted: true,
-    document: { ...object.document!, role: "relation" },
+    document: { ...object.document, role: "relation" },
     documentMapping: {
       mode: "linking" as const,
       mentionProperty: "order_no",
@@ -81,7 +81,7 @@ function fixture() {
 }
 it("prefills unique choices without granting authority and submits only a human decision", () => {
   const { draft, object } = fixture();
-  const changed = vi.fn();
+  const changed = vi.fn<(body: ReturnType<typeof objectTypeBody>) => void>();
   function View() {
     const [value, setValue] = useState(documentSave(object));
     return (
@@ -102,29 +102,17 @@ it("prefills unique choices without granting authority and submits only a human 
   expect(confirm).not.toBeDisabled();
   expect(changed).not.toHaveBeenCalled();
   fireEvent.click(confirm);
-  expect(changed).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      document: expect.objectContaining({
-        fact_resolution: {
-          value_property: "delivery",
-          subject_relation_id: "applies-to",
-          confirm: true,
-        },
-      }),
-    }),
-  );
+  expect(changed.mock.lastCall?.[0].document?.fact_resolution).toEqual({
+    value_property: "delivery",
+    subject_relation_id: "applies-to",
+    confirm: true,
+  });
   fireEvent.click(confirm);
-  expect(changed).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      document: expect.objectContaining({
-        fact_resolution: {
-          value_property: "delivery",
-          subject_relation_id: "applies-to",
-          confirm: false,
-        },
-      }),
-    }),
-  );
+  expect(changed.mock.lastCall?.[0].document?.fact_resolution).toEqual({
+    value_property: "delivery",
+    subject_relation_id: "applies-to",
+    confirm: false,
+  });
 });
 it("does not assign one status to a fact with multiple business values", () => {
   const { draft, object } = fixture();
