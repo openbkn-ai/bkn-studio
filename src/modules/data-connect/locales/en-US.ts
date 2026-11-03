@@ -80,7 +80,7 @@ export const dataConnectEnUS = {
     connectorTypeEmpty: "No connector types match the current filters.",
     connectorTypeDisabled: "Disabled",
     connectorTypeUnavailable: "Unavailable",
-    connectorTypeEditionRequired: "Requires {{edition}} or higher",
+    connectorTypeUnlock: "Unlock",
     discardChangesTitle: "Discard unsaved changes?",
     discardChangesDescription:
       "The connection information you entered has not been saved and will be lost if you go back.",
@@ -425,10 +425,10 @@ export const dataConnectEnUS = {
           description: "Connect fileset and document resources.",
         },
         mariadb: {
-          description: "Connect MariaDB-compatible relational databases.",
+          description: "Connect MariaDB relational databases.",
         },
         mysql: {
-          description: "Connect MySQL-compatible relational databases.",
+          description: "Connect MySQL relational databases.",
         },
         opensearch: {
           description: "Connect OpenSearch indexes.",

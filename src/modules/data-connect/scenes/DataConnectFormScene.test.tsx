@@ -795,7 +795,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeDisabled");
       expect(
         within(sqlServerButton.parentElement!).getByRole("button", {
-          name: "dataConnect.connectorTypeEditionRequired",
+          name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
         }),
       ).toHaveAttribute("aria-haspopup", "dialog");
     },
@@ -824,7 +824,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
       expect(
         within(sqlServerButton.parentElement!).queryByRole("button", {
-          name: "dataConnect.connectorTypeEditionRequired",
+          name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
         }),
       ).not.toBeInTheDocument();
     },
@@ -864,14 +864,14 @@ describe("DataConnectFormScene · connection preflight", () => {
       if (available) {
         expect(
           within(hanaButton.parentElement!).queryByRole("button", {
-            name: "dataConnect.connectorTypeEditionRequired",
+            name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
           }),
         ).not.toBeInTheDocument();
         expect(hanaButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
       } else {
         expect(
           within(hanaButton.parentElement!).getByRole("button", {
-            name: "dataConnect.connectorTypeEditionRequired",
+            name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
           }),
         ).toHaveAttribute("aria-haspopup", "dialog");
         expect(hanaButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
@@ -904,7 +904,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
       expect(
         within(sqlServerButton.parentElement!).getByRole("button", {
-          name: "dataConnect.connectorTypeEditionRequired",
+          name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
         }),
       ).toHaveAttribute("aria-haspopup", "dialog");
     },

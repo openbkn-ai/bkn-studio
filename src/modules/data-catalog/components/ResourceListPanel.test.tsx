@@ -7,7 +7,7 @@
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogRecord } from "@/shared/catalog";
@@ -24,26 +24,32 @@ const confirmMock = vi.hoisted(() => vi.fn<(options: DeleteConfirmation) => void
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
 const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
-const editionMock = vi.hoisted(() => ({ value: "professional" }));
+const editionMock = vi.hoisted(() => ({
+  value: "professional",
+  known: true,
+  extensions: ["enterprise"],
+}));
 
 vi.mock("@/framework/entitlement/use-entitlement", () => ({
   useEntitlement: () => ({
     edition: editionMock.value,
     licensed: editionMock.value !== "community",
     capabilities: [],
-    extensions: ["enterprise"],
+    extensions: editionMock.extensions,
     limits: {},
     state: "valid",
   }),
   useEntitlementContext: () => ({
-    snapshot: {
-      edition: editionMock.value,
-      licensed: editionMock.value !== "community",
-      capabilities: [],
-      extensions: ["enterprise"],
-      limits: {},
-      state: "valid",
-    },
+    snapshot: editionMock.known
+      ? {
+          edition: editionMock.value,
+          licensed: editionMock.value !== "community",
+          capabilities: [],
+          extensions: editionMock.extensions,
+          limits: {},
+          state: "valid",
+        }
+      : null,
   }),
 }));
 
@@ -104,6 +110,10 @@ const catalog: CatalogRecord = {
   updaterName: "test",
 };
 
+function LocationProbe() {
+  return <output data-testid="location">{useLocation().pathname}</output>;
+}
+
 function renderPanel(
   record: CatalogRecord,
   onOpenResource = vi.fn(),
@@ -112,6 +122,7 @@ function renderPanel(
 ) {
   const view = render(
     <MemoryRouter initialEntries={[initialEntry]}>
+      <LocationProbe />
       <ResourceListPanel
         catalog={record}
         onCreateResource={vi.fn()}
@@ -151,6 +162,8 @@ describe("ResourceListPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     editionMock.value = "professional";
+    editionMock.known = true;
+    editionMock.extensions = ["enterprise"];
     currentPermissions.value = [];
     drawerProps.value = null;
     listCatalogResourcePageMock.mockResolvedValue({ items: [], total: 0 });
@@ -457,23 +470,99 @@ describe("ResourceListPanel", () => {
     ).toBeTruthy();
   });
 
-  it("hides View creation without a professional license", async () => {
+  it("offers a professional upgrade dialog for Community View creation", async () => {
     editionMock.value = "community";
+    editionMock.extensions = [];
+    renderPanel({ ...catalog, operations: ["resource_manage"] });
+    await act(async () => {});
+
+    const create = screen.getByRole("button", { name: /dataCatalog.viewEditor.create/ });
+    expect(within(create).getByText("common.entitlement.editionsShort.professional")).toBeTruthy();
+    expect(create.getAttribute("aria-haspopup")).toBe("dialog");
+    fireEvent.click(create);
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("subscription.capabilities.vega_logic_view.name")).toBeTruthy();
+    expect(
+      within(dialog)
+        .getByRole("link", { name: "common.entitlement.upgradeTo" })
+        .getAttribute("href"),
+    ).toBe("https://license.openbkn.ai/");
+    expect(screen.getByTestId("location").textContent).toBe("/");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByTestId("location").textContent).toBe("/");
+  });
+
+  it("offers the same upgrade action in the empty logical Catalog", async () => {
+    editionMock.value = "community";
+    renderPanel({
+      ...catalog,
+      type: "logical",
+      connectorType: "",
+      operations: ["resource_manage"],
+    });
+    await act(async () => {});
+
+    const actions = screen.getAllByRole("button", { name: /dataCatalog.viewEditor.create/ });
+    expect(actions).toHaveLength(2);
+    for (const action of actions) {
+      expect(
+        within(action).getByText("common.entitlement.editionsShort.professional"),
+      ).toBeTruthy();
+    }
+    fireEvent.click(actions[1]);
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "common.entitlement.compareEditions" }),
+    );
+    expect(screen.getByTestId("location").textContent).toBe("/system/subscription");
+  });
+
+  it.each(["professional", "enterprise", "industry"])(
+    "creates Views directly with a valid %s license",
+    async (edition) => {
+      editionMock.value = edition;
+      renderPanel({ ...catalog, operations: ["resource_manage"] });
+      await act(async () => {});
+
+      const create = screen.getByRole("button", { name: "dataCatalog.viewEditor.create" });
+      expect(
+        within(create).queryByText("common.entitlement.editionsShort.professional"),
+      ).toBeNull();
+      fireEvent.click(create);
+      expect(screen.getByTestId("location").textContent).toBe(
+        "/data-catalog/catalog/catalog-1/views/new",
+      );
+      expect(screen.queryByRole("dialog")).toBeNull();
+    },
+  );
+
+  it("keeps View creation hidden while the entitlement is unknown", async () => {
+    editionMock.known = false;
     renderPanel({ ...catalog, operations: ["resource_manage"] });
     await act(async () => {});
     expect(screen.queryByText("dataCatalog.viewEditor.create")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("does not offer View creation on built-in or disabled Catalogs", async () => {
-    const first = renderPanel({ ...catalog, builtin: true, operations: ["resource_manage"] });
-    await act(async () => {});
-    expect(screen.queryByText("dataCatalog.viewEditor.create")).toBeNull();
-    first.unmount();
-
-    renderPanel({ ...catalog, enabled: false, operations: ["resource_manage"] });
-    await act(async () => {});
-    expect(screen.queryByText("dataCatalog.viewEditor.create")).toBeNull();
-  });
+  it.each(["community", "professional"])(
+    "does not offer View creation on ineligible Catalogs in %s",
+    async (edition) => {
+      editionMock.value = edition;
+      for (const overrides of [
+        { builtin: true },
+        { enabled: false },
+        { status: "disabled" as const },
+        { operations: ["view_detail"] },
+      ]) {
+        const view = renderPanel({ ...catalog, operations: ["resource_manage"], ...overrides });
+        await act(async () => {});
+        expect(screen.queryByText("dataCatalog.viewEditor.create")).toBeNull();
+        view.unmount();
+      }
+    },
+  );
 
   // Built-in catalogs stay read-only in Studio, owner row or not.
   it("hides the entry on an internal catalog", async () => {
