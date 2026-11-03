@@ -40,6 +40,7 @@ import {
   createMcpUrlJsonConfig,
   getMcpConnectionProtocol,
   isLikelySelfSignedMcpHost,
+  mcpServerNameFor,
   withMcpTrailingSlash,
 } from "@/modules/knowledge-network/services/mcp-client-config";
 import {
@@ -54,7 +55,13 @@ import {
 } from "@/modules/knowledge-network/services/mcp-schema-doc";
 
 import styles from "./ExperienceScene.module.css";
-import { McpAuthModeSwitch, McpOauthSteps } from "./McpAuthMode";
+import {
+  McpAuthModeSwitch,
+  McpClientCopyStep,
+  McpClientStepsHeading,
+  McpOauthSteps,
+  type McpClient,
+} from "./McpAuthMode";
 import { McpConnectionSecurity } from "./McpConnectionSecurity";
 
 export type ResponseView = { kind: "json" | "toon"; text: string };
@@ -407,9 +414,7 @@ export function ContextLoaderIntegrationPanel({
   const [callParamsOpen, setCallParamsOpen] = useState(true);
   const [resultOpen, setResultOpen] = useState(true);
   const [mcpResultTab, setMcpResultTab] = useState<"result" | "debug">("result");
-  const [mcpConfigTab, setMcpConfigTab] = useState<"claude" | "cursor" | "workbuddy" | "generic">(
-    "claude",
-  );
+  const [mcpConfigTab, setMcpConfigTab] = useState<McpClient>("claude");
   const [mcpAuthMode, setMcpAuthMode] = useMcpAuthMode();
   const [mcpConfigKey, setMcpConfigKey] = useState(appKeyValue);
   const [mcpConfigKeyDraft, setMcpConfigKeyDraft] = useState("");
@@ -641,12 +646,22 @@ export function ContextLoaderIntegrationPanel({
             <p className={styles.mcpConnectDesc}>
               {t("knowledgeNetwork.contextLoaderPanel.mcpConnect.description")}
             </p>
+            <McpClientStepsHeading
+              label={
+                mcpConfigTabs.find(([key]) => key === activeMcpConfigTab)?.[1] ?? activeMcpConfigTab
+              }
+            />
             {isOauthMode ? (
-              <McpOauthSteps />
+              <McpOauthSteps
+                client={activeMcpConfigTab}
+                serverName={mcpServerNameFor(mcpUrlWithSlash)}
+              />
             ) : (
               <ol className={styles.mcpSteps}>
                 <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepIssueKey")}</li>
-                <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepCopyConfig")}</li>
+                <li>
+                  <McpClientCopyStep client={activeMcpConfigTab} />
+                </li>
                 <li>{t("knowledgeNetwork.contextLoaderPanel.mcpConnect.stepUseAgent")}</li>
               </ol>
             )}
@@ -747,22 +762,17 @@ export function ContextLoaderIntegrationPanel({
                 />
               ) : null}
               {activeMcpConfigTab === "workbuddy" ? (
-                <>
-                  <p className={styles.guideNote}>
-                    {t("knowledgeNetwork.contextLoaderPanel.mcpAuth.workbuddyHint")}
-                  </p>
-                  <CodeBlock
-                    title="~/.workbuddy/mcp.json"
-                    code={mcpRemoteJsonConfig}
-                    json
-                    onCopy={() =>
-                      onCopy(
-                        mcpRemoteJsonConfig,
-                        t("knowledgeNetwork.contextLoaderPanel.mcpAuth.copiedWorkbuddy"),
-                      )
-                    }
-                  />
-                </>
+                <CodeBlock
+                  title="~/.workbuddy/mcp.json"
+                  code={mcpRemoteJsonConfig}
+                  json
+                  onCopy={() =>
+                    onCopy(
+                      mcpRemoteJsonConfig,
+                      t("knowledgeNetwork.contextLoaderPanel.mcpAuth.copiedWorkbuddy"),
+                    )
+                  }
+                />
               ) : null}
               {activeMcpConfigTab === "generic" ? (
                 <CodeBlock

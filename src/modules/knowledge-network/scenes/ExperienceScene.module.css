@@ -322,6 +322,18 @@
   list-style: none;
 }
 
+.mcpStepsHeading {
+  margin: 22px 0 0;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.mcpStepsHeading + .mcpSteps {
+  margin-top: 10px;
+}
+
 .mcpSteps li {
   position: relative;
   padding-left: 30px;

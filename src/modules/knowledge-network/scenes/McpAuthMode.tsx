@@ -42,13 +42,41 @@ export function McpAuthModeSwitch({
 /** Personal API key page, opened on its connected-clients tab. */
 const CONNECTED_CLIENTS_PATH = "/account/api-keys?tab=clients";
 
-/** Steps for the sign-in mode: copy the URL-only config, sign in once, the client renews itself. */
-export function McpOauthSteps() {
+/** The clients the connect guide has a tab for; the steps beside it follow the selected one. */
+export type McpClient = "claude" | "cursor" | "workbuddy" | "generic";
+
+/** Names the selected client above the steps, so switching clients visibly changes them. */
+export function McpClientStepsHeading({ label }: { label: string }) {
+  const { t } = useTranslation();
+  return (
+    <p className={styles.mcpStepsHeading}>
+      {t("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.heading", { client: label })}
+    </p>
+  );
+}
+
+/** Where the selected client takes the config. The same in both connect modes. */
+export function McpClientCopyStep({ client }: { client: McpClient }) {
+  const { t } = useTranslation();
+  return <>{t(`knowledgeNetwork.contextLoaderPanel.mcpClientSteps.${client}.copy`)}</>;
+}
+
+/**
+ * Steps for the sign-in mode: copy the URL-only config, sign in once, the client renews itself.
+ * The first two are written for the selected client, using the server name its config registers.
+ */
+export function McpOauthSteps({ client, serverName }: { client: McpClient; serverName: string }) {
   const { t } = useTranslation();
   return (
     <ol className={styles.mcpSteps}>
-      <li>{t("knowledgeNetwork.contextLoaderPanel.mcpAuth.stepCopy")}</li>
-      <li>{t("knowledgeNetwork.contextLoaderPanel.mcpAuth.stepSignIn")}</li>
+      <li>
+        <McpClientCopyStep client={client} />
+      </li>
+      <li>
+        {t(`knowledgeNetwork.contextLoaderPanel.mcpClientSteps.${client}.signIn`, {
+          name: serverName,
+        })}
+      </li>
       <li>
         {t("knowledgeNetwork.contextLoaderPanel.mcpAuth.stepRenew")}{" "}
         <Link to={CONNECTED_CLIENTS_PATH}>

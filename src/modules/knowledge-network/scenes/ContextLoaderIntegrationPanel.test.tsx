@@ -116,7 +116,9 @@ describe("ContextLoaderIntegrationPanel MCP connect guide", () => {
   it("defaults to sign-in with a URL-only config and no API key entry", () => {
     renderPanel({ showMcpConnect: true });
 
-    expect(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.stepSignIn")).toBeTruthy();
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.claude.signIn"),
+    ).toBeTruthy();
     expect(screen.queryByText("knowledgeNetwork.contextLoaderPanel.appKey.issue")).toBeNull();
     // A domain name: assume a proper certificate until the user says otherwise.
     expect(screen.getByRole("checkbox")).toHaveProperty("checked", false);
@@ -125,10 +127,49 @@ describe("ContextLoaderIntegrationPanel MCP connect guide", () => {
         "claude mcp add --transport http --scope user bkn-agent-retrieval https://platform.example.com/api/agent-retrieval/v1/mcp/",
       ),
     ).toBeTruthy();
+  });
+
+  it("writes the steps for the selected client", () => {
+    renderPanel({ showMcpConnect: true });
+
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.heading"),
+    ).toBeTruthy();
+
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.claude.copy"),
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "WorkBuddy" }));
     expect(
-      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.workbuddyHint"),
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.workbuddy.copy"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.workbuddy.signIn"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.claude.copy"),
+    ).toBeNull();
+
+    // With an API key there is no sign-in step, but the copy step still follows the client.
+    fireEvent.click(screen.getByRole("button", { name: "Cursor" }));
+    fireEvent.click(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.apiKey"));
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.cursor.copy"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.cursor.signIn"),
+    ).toBeNull();
+  });
+
+  it("falls back to the Claude Code steps when WorkBuddy is selected and API key is chosen", () => {
+    renderPanel({ showMcpConnect: true });
+
+    fireEvent.click(screen.getByRole("button", { name: "WorkBuddy" }));
+    fireEvent.click(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.apiKey"));
+
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.claude.copy"),
     ).toBeTruthy();
   });
 
@@ -171,7 +212,9 @@ describe("ContextLoaderIntegrationPanel MCP connect guide", () => {
     });
 
     renderPanel({ showMcpConnect: true });
-    expect(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.stepSignIn")).toBeTruthy();
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.claude.signIn"),
+    ).toBeTruthy();
     fireEvent.click(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpAuth.apiKey"));
     expect(screen.getByText("knowledgeNetwork.contextLoaderPanel.appKey.issue")).toBeTruthy();
 

@@ -9,7 +9,7 @@ export const integrationPart = {
   integration: {
     title: "对接 OpenBKN 能力",
     description:
-      "面向智能体平台和业务系统提供统一调用入口。MCP 用于智能体工具调用，CLI 用于终端与 Agent，SDK 用于 Node.js 服务端集成。",
+      "面向智能体平台和业务系统提供统一调用入口。MCP 用于智能体工具调用，CLI 用于终端与 Agent，SDK 用于基于知识网络开发应用。",
     descriptionHelpLabel: "查看接入方式说明",
     modeLabel: "接入方式",
     tabsAriaLabel: "知识网络对接方式",
@@ -101,72 +101,28 @@ openbkn help all`,
         },
       },
     },
+    // The SDK tab only links on: SDK examples are generated per network, on its 应用开发 page.
     sdk: {
-      guideTitle: "通过 SDK 集成 OpenBKN",
+      guideTitle: "基于知识网络开发应用",
       guideDescription:
-        "适用于 Node.js 服务端项目。SDK 使用账号密码建立并自动刷新 OAuth 会话，同时封装平台请求、MCP 会话、JSON-RPC 调用与响应解析。",
+        "SDK 示例按知识网络的真实结构生成，放在每个网络的「应用开发」页：对象类、关系、行动、函数等能力，每项都有 Python、TypeScript 和 REST 写法。",
       steps: {
-        install: "安装 @openbkn/bkn-sdk。",
-        token: "配置 OpenBKN 账号和密码；SDK 会建立可自动刷新的 OAuth 会话。",
-        client: "异步创建已认证客户端，并传入平台地址。",
-        tools:
-          "先获取知识网络 ID；随后可调用 bkn、resource、vega 或 context 能力，具体范围由账号权限决定。",
+        pick: "在右侧选择要开发应用的知识网络。",
+        start: "在「应用开发」页按步骤获取令牌、安装 SDK，并生成这个网络的本体 SDK。",
+        examples:
+          "复制各项能力的示例，或下载完整的问答网页示例。整页也可以导出为 Markdown，交给开发者或编程 Agent。",
       },
-      installSuccessMessage: "SDK 安装命令已复制",
-      installTitle: "安装 SDK",
-      title: "SDK 调用示例",
-      ariaLabel: "SDK 示例",
-      successMessage: "SDK 示例已复制",
-      examples: {
-        "quick-start": {
-          label: "快速开始",
-          title: "使用账号密码创建已认证客户端并检索知识模型",
-          code: `import { createAuthenticatedClient } from "@openbkn/bkn-sdk";
-
-const bkn = await createAuthenticatedClient({
-  baseUrl: process.env.BKN_BASE_URL!,
-  auth: {
-    username: process.env.BKN_USERNAME!,
-    password: process.env.BKN_PASSWORD!,
-  },
-});
-
-// 将知识网络 ID 配置给服务。
-const knId = process.env.BKN_KN_ID!;
-
-const result = await bkn.context.searchSchema(
-  knId,
-  "查询订单相关对象和关系",
-  { searchScope: ["object", "relation"], maxConcepts: 10 },
-);`,
-        },
-        "instance-query": {
-          label: "查询实例",
-          title: "按对象类与条件查询对象实例",
-          code: `const result = await bkn.context.queryObjectInstance(knId, {
-  ot_id: "order",
-  condition: {
-    operation: "and",
-    sub_conditions: [
-      { field: "status", operation: "==", value_from: "const", value: "paid" },
-    ],
-  },
-  limit: 20,
-});`,
-        },
-        "dynamic-tool": {
-          label: "动态工具",
-          title: "发现并调用当前知识网络开放的 MCP 工具",
-          code: `// 步骤 1：发现当前知识网络开放的工具
-const tools = await bkn.context.tools(knId);
-
-// 步骤 2：调用指定工具
-const result = await bkn.context.toolCall(knId, "search_schema", {
-  query: "查询订单相关对象和关系",
-  response_format: "json",
-});`,
-        },
-      },
+      eyebrow: "Python / TypeScript / REST",
+      title: "选择知识网络",
+      searchPlaceholder: "搜索知识网络名称",
+      loading: "正在加载知识网络……",
+      loadFailed: "知识网络加载失败。",
+      retry: "重试",
+      noNetworks: "还没有可用的知识网络。",
+      noMatch: "没有匹配的知识网络。",
+      more: "还有 {{count}} 个知识网络，输入名称搜索。",
+      more_one: "还有 {{count}} 个知识网络，输入名称搜索。",
+      more_other: "还有 {{count}} 个知识网络，输入名称搜索。",
     },
   },
 } as const;

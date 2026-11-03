@@ -234,38 +234,6 @@
   line-height: 18px;
 }
 
-.sdkInstallBlock {
-  margin-top: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.sdkInstallHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-interface-panel-bg);
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.sdkInstallCode {
-  margin: 0;
-  padding: 12px;
-  overflow: auto;
-  background: var(--color-interface-code-bg);
-  color: var(--color-interface-code-text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12.5px;
-  line-height: 20px;
-  white-space: pre;
-}
-
 .sdkExampleTabs {
   display: inline-flex;
   gap: 4px;
@@ -401,4 +369,80 @@
   .tab {
     padding-inline: 9px;
   }
+}
+
+.sdkNetworkSearch {
+  max-width: 420px;
+  margin-top: 16px;
+}
+
+.sdkNetworkList {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sdkNetworkLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.sdkNetworkLink:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-link-hover);
+}
+
+.sdkNetworkLink:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.sdkNetworkName {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdkNetworkIdentifier {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdkNetworkArrow {
+  flex: 0 0 auto;
+  color: var(--color-link);
+}
+
+.sdkNetworkNote {
+  margin: 14px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sdkRetryButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-link);
+  cursor: pointer;
+  font: inherit;
 }

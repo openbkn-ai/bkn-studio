@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -44,5 +44,26 @@ describe("McpSetupModal certificate option", () => {
   it("is left unticked for a domain name", () => {
     renderModal("https://platform.example.com/api/agent-retrieval/v1/mcp");
     expect(screen.getByRole("checkbox")).toHaveProperty("checked", false);
+  });
+});
+
+describe("McpSetupModal connect steps", () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("follows the selected client tab", () => {
+    renderModal("https://platform.example.com/api/agent-retrieval/v1/mcp");
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.claude.signIn"),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("tab", { name: "WorkBuddy" }));
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.workbuddy.signIn"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("knowledgeNetwork.contextLoaderPanel.mcpClientSteps.claude.signIn"),
+    ).toBeNull();
   });
 });
