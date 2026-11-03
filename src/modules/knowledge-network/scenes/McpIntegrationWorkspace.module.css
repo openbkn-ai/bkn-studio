@@ -140,6 +140,10 @@
   line-height: 1.7;
 }
 
+.emptyState .retryButton {
+  margin-top: 14px;
+}
+
 @media (max-width: 900px) {
   .viewBar {
     align-items: stretch;

@@ -205,4 +205,37 @@ describe("McpIntegrationWorkspace", () => {
     ).toBeTruthy();
     expect(screen.queryByTestId("experience-scene")).toBeNull();
   });
+
+  it("leaves loading networks to the picker when the URL names none", async () => {
+    mocks.listKnowledgeNetworks.mockResolvedValue({
+      items: [network("network-1", "sales_kn", "Sales")],
+      total: 1,
+    });
+    renderWorkspace("/knowledge-network/integration?tab=mcp&mcpView=debug");
+
+    await screen.findByRole("option", { name: "Sales (sales_kn)" });
+    // Only the picker's first page: no full list behind it, no request thrown away.
+    expect(mocks.listKnowledgeNetworks).toHaveBeenCalledTimes(1);
+    expect(mocks.listKnowledgeNetworks).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, pageSize: 50 }),
+    );
+  });
+
+  it("offers a retry when the network named in the URL cannot be checked", async () => {
+    mocks.listKnowledgeNetworks.mockRejectedValueOnce(new Error("503"));
+    mocks.listKnowledgeNetworks.mockResolvedValue({
+      items: [network("network-1", "sales_kn", "Sales")],
+      total: 1,
+    });
+    renderWorkspace("/knowledge-network/integration?tab=mcp&mcpView=debug&networkId=network-1");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "knowledgeNetwork.integration.mcpWorkspace.loadFailedTitle",
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /knowledgeNetwork\.integration\.mcpWorkspace\.retry/ }),
+    );
+
+    expect(await screen.findByTestId("experience-scene")).toHaveTextContent("debug:sales_kn");
+  });
 });
