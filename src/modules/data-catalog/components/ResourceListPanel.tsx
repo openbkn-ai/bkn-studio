@@ -10,6 +10,7 @@ import {
   EllipsisOutlined,
   FilterOutlined,
   KeyOutlined,
+  PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuProps } from "antd";
@@ -20,6 +21,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { useEntitlement } from "@/framework/entitlement/use-entitlement";
@@ -163,16 +165,18 @@ export function ResourceListPanel({
   const [resourceRevision, setResourceRevision] = useState(0);
   const [resourceLoadError, setResourceLoadError] = useState<string | null>(null);
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
+  const [viewUpgradeOpen, setViewUpgradeOpen] = useState(false);
   const [authorizeResource, setAuthorizeResource] = useState<CatalogResource | null>(null);
   const physical = isCatalogPhysical(catalog);
   const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
   const canManageResources = hasCatalogOperation(catalog, "resource_manage");
-  const canCreateView =
-    canManageDerivedViews(snapshot) &&
+  const canShowCreateView =
+    snapshot !== null &&
     !catalog.builtin &&
     catalog.enabled &&
     catalog.status === "enabled" &&
     canManageResources;
+  const canCreateView = canManageDerivedViews(snapshot);
   const activeFilterCount = [
     categoryFilter,
     statusFilter,
@@ -199,7 +203,7 @@ export function ResourceListPanel({
     hasResourceQuery ||
     canAuthorizeCatalog ||
     canRequestCatalogPermission ||
-    canCreateView ||
+    canShowCreateView ||
     (dataCatalogCreationAvailable && !physical && !catalog.builtin);
 
   const displayResources = resources;
@@ -581,6 +585,24 @@ export function ResourceListPanel({
     setDiscoverStatusFilter("");
   };
 
+  const createViewButton = canShowCreateView ? (
+    <AppButton
+      aria-haspopup={canCreateView ? undefined : "dialog"}
+      icon={<PlusOutlined aria-hidden />}
+      onClick={() => {
+        if (canCreateView) {
+          void navigate(`/data-catalog/catalog/${catalog.id}/views/new`);
+        } else {
+          setViewUpgradeOpen(true);
+        }
+      }}
+      type="primary"
+    >
+      {t("dataCatalog.viewEditor.create")}
+      <EditionBadge capability={CAPABILITIES.VEGA_LOGICAL_VIEW} edition="professional" />
+    </AppButton>
+  ) : null;
+
   return (
     <section className={styles.contentSurface}>
       {showOperationBar ? (
@@ -607,16 +629,7 @@ export function ResourceListPanel({
                   {t("dataCatalog.catalog.authorize")}
                 </AppButton>
               ) : null}
-              {canCreateView ? (
-                <AppButton
-                  onClick={() => {
-                    void navigate(`/data-catalog/catalog/${catalog.id}/views/new`);
-                  }}
-                  type="primary"
-                >
-                  {t("dataCatalog.viewEditor.create")}
-                </AppButton>
-              ) : null}
+              {createViewButton}
               {canRequestCatalogPermission ? (
                 <ResourcePermissionRequestAction
                   operations={catalog.operations}
@@ -756,16 +769,9 @@ export function ResourceListPanel({
                   <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                     {t("dataCatalog.resource.create")}
                   </AppButton>
-                ) : canCreateView ? (
-                  <AppButton
-                    onClick={() => {
-                      void navigate(`/data-catalog/catalog/${catalog.id}/views/new`);
-                    }}
-                    type="primary"
-                  >
-                    {t("dataCatalog.viewEditor.create")}
-                  </AppButton>
-                ) : null
+                ) : (
+                  createViewButton
+                )
               ) : null
             }
             description={
@@ -807,6 +813,15 @@ export function ResourceListPanel({
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
           total={resourceTotal}
+        />
+      ) : null}
+
+      {viewUpgradeOpen && canShowCreateView && !canCreateView ? (
+        <CapabilityUpgradeDialog
+          capability={CAPABILITIES.VEGA_LOGICAL_VIEW}
+          minEdition="professional"
+          onClose={() => setViewUpgradeOpen(false)}
+          open
         />
       ) : null}
 

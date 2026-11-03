@@ -76,7 +76,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     name: "MariaDB",
     category: "table",
     mode: "local",
-    description: "Connect MariaDB / MySQL-compatible databases.",
+    description: "Connect MariaDB relational databases.",
     enabled: true,
     field_config: {
       host: mockField("Host", "Database host address", "string", true),
@@ -92,7 +92,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     name: "MySQL",
     category: "table",
     mode: "local",
-    description: "Connect MySQL-compatible databases.",
+    description: "Connect MySQL relational databases.",
     enabled: false,
     field_config: {
       host: mockField("Host", "Database host address", "string", true),

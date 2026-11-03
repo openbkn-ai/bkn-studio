@@ -7,7 +7,7 @@
 
 import { DatabaseOutlined, FileTextOutlined } from "@ant-design/icons";
 import { Empty, Input, Select, Tabs } from "antd";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { DataSourceFamilyKey } from "@/modules/data-connect/lib/connector-template";
@@ -20,11 +20,33 @@ import {
 } from "@/modules/data-connect/lib/connector-template";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { atLeast, type Edition } from "@/framework/entitlement/edition";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { AppButton } from "@/framework/ui/common/AppButton";
+import dorisLogo from "@/modules/data-connect/assets/connectors/doris.svg";
+import hanaLogo from "@/modules/data-connect/assets/connectors/hana.png";
+import mariadbLogo from "@/modules/data-connect/assets/connectors/mariadb.png";
+import mysqlLogo from "@/modules/data-connect/assets/connectors/mysql.png";
+import opensearchLogo from "@/modules/data-connect/assets/connectors/opensearch.png";
+import oracleLogo from "@/modules/data-connect/assets/connectors/oracle.png";
+import postgresqlLogo from "@/modules/data-connect/assets/connectors/postgresql.png";
+import sqlserverLogo from "@/modules/data-connect/assets/connectors/sqlserver.png";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 import styles from "./ConnectorTypePicker.module.css";
+
+// Assets are copied from a pinned DBeaver revision; unknown types keep the generic icon.
+const CONNECTOR_LOGOS = new Map([
+  ["doris", dorisLogo],
+  ["hana", hanaLogo],
+  ["mariadb", mariadbLogo],
+  ["mysql", mysqlLogo],
+  ["opensearch", opensearchLogo],
+  ["oracle", oracleLogo],
+  ["postgresql", postgresqlLogo],
+  ["sqlserver", sqlserverLogo],
+]);
 
 type ConnectorTypePickerProps = {
   onChange: (value: string) => void;
@@ -34,6 +56,7 @@ type ConnectorTypePickerProps = {
 
 export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypePickerProps) {
   const { t } = useTranslation();
+  const descriptionIdPrefix = useId();
   const [nameKeyword, setNameKeyword] = useState("");
   const [tag, setTag] = useState<string>();
   const [family, setFamily] = useState<DataSourceFamilyKey>("structured");
@@ -123,6 +146,9 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
               const selectable = item.available && item.enabled;
               const active = selectable && item.type === value;
               const templateMeta = getConnectorTemplateMeta(item);
+              const description = templateMeta.description || item.description || "-";
+              const logo = CONNECTOR_LOGOS.get(item.type);
+              const descriptionId = `${descriptionIdPrefix}-${item.type}`;
 
               return (
                 <div
@@ -136,14 +162,21 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
                   key={item.type}
                 >
                   <button
+                    aria-describedby={descriptionId}
                     aria-pressed={active}
                     className={styles.cardSelect}
                     disabled={!selectable}
                     onClick={() => onChange(item.type)}
+                    title={`${item.name}\n${description}`}
                     type="button"
                   >
                     <div className={styles.cardHeader}>
-                      <strong className={styles.cardName}>{item.name}</strong>
+                      <div className={styles.identity}>
+                        <span aria-hidden className={styles.logo}>
+                          {logo ? <img alt="" src={logo} /> : <DatabaseOutlined />}
+                        </span>
+                        <strong className={styles.cardName}>{item.name}</strong>
+                      </div>
                       <span className={styles.badgeGroup}>
                         {!item.isPlaceholder && !item.enabled ? (
                           <span className={styles.disabledBadge}>
@@ -157,22 +190,24 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
                         <span className={styles.badge}>{templateMeta.label}</span>
                       </span>
                     </div>
-                    <p className={styles.cardDescription}>
-                      {templateMeta.description || item.description || "-"}
-                    </p>
                   </button>
-                  {upgradeEdition ? (
-                    <button
-                      aria-haspopup="dialog"
-                      className={styles.editionAction}
-                      onClick={() => setUpgradeDialogEdition(upgradeEdition)}
-                      type="button"
-                    >
-                      {t("dataConnect.connectorTypeEditionRequired", {
-                        edition: t(`common.entitlement.editions.${upgradeEdition}`),
-                      })}
-                    </button>
-                  ) : null}
+                  <div className={styles.cardFooter}>
+                    <p className={styles.cardDescription} id={descriptionId}>
+                      {description}
+                    </p>
+                    {upgradeEdition ? (
+                      <AppButton
+                        aria-haspopup="dialog"
+                        aria-label={`${t("dataConnect.connectorTypeUnlock")} ${t(`common.entitlement.editionsShort.${upgradeEdition}`)}`}
+                        className={styles.editionAction}
+                        onClick={() => setUpgradeDialogEdition(upgradeEdition)}
+                        type="primary"
+                      >
+                        {t("dataConnect.connectorTypeUnlock")}
+                        <EditionBadge alwaysShow edition={upgradeEdition} />
+                      </AppButton>
+                    ) : null}
+                  </div>
                 </div>
               );
             })}

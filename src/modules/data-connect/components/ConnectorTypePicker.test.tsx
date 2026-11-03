@@ -84,8 +84,12 @@ describe("ConnectorTypePicker edition guidance", () => {
     const { button, onChange } = renderPicker("community", { type });
     expect(button).toBeDisabled();
     expect(button).toHaveTextContent("不可用");
-    const action = screen.getByRole("button", { name: `需要${edition}及以上` });
+    const action = screen.getByRole("button", { name: `解锁使用 ${edition}` });
     expect(action).toHaveAttribute("aria-haspopup", "dialog");
+    expect(action).toBeEnabled();
+    expect(within(action).getByText(edition)).toHaveClass(
+      `console-edition-badge-${type === "hana" ? "enterprise" : "professional"}`,
+    );
     expect(button).not.toContainElement(action);
     fireEvent.click(button);
     expect(onChange).not.toHaveBeenCalled();
@@ -110,32 +114,26 @@ describe("ConnectorTypePicker edition guidance", () => {
       const { button } = renderPicker(edition, { type: "doris" });
       expect(button).toBeDisabled();
       expect(button).toHaveTextContent("不可用");
-      expect(
-        screen.queryByRole("button", { name: /需要.*及以上|Requires .* or higher/ }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /解锁使用|Unlock/ })).not.toBeInTheDocument();
     },
   );
 
   it("requires Enterprise for HANA in Professional", () => {
     renderPicker("professional", { type: "hana" });
-    expect(screen.getByRole("button", { name: "需要企业版及以上" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "解锁使用 企业版" })).toBeInTheDocument();
   });
 
   it.each(["enterprise", "industry"] as const)("does not upsell HANA in %s", (edition) => {
     const { button } = renderPicker(edition, { type: "hana" });
     expect(button).toBeDisabled();
-    expect(
-      screen.queryByRole("button", { name: /需要.*及以上|Requires .* or higher/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /解锁使用|Unlock/ })).not.toBeInTheDocument();
   });
 
   it("does not infer edition insufficiency from an unknown snapshot", () => {
     const { button } = renderPicker(null);
     expect(button).toBeDisabled();
     expect(button).toHaveTextContent("不可用");
-    expect(
-      screen.queryByRole("button", { name: /需要.*及以上|Requires .* or higher/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /解锁使用|Unlock/ })).not.toBeInTheDocument();
   });
 
   it.each([true, false])("prioritizes administrator disablement when available=%s", (available) => {
@@ -181,23 +179,19 @@ describe("ConnectorTypePicker edition guidance", () => {
 
   it("uses backend metadata ahead of the product fallback", () => {
     renderPicker("professional", { requiredEdition: "enterprise" });
-    expect(screen.getByRole("button", { name: "需要企业版及以上" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "解锁使用 企业版" })).toBeInTheDocument();
   });
 
   it("does not replace a backend Community requirement with the fallback", () => {
     renderPicker("community", { requiredEdition: "community" });
-    expect(
-      screen.queryByRole("button", { name: /需要.*及以上|Requires .* or higher/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /解锁使用|Unlock/ })).not.toBeInTheDocument();
   });
 
   it.each([{ type: "custom" }, { type: "sqlserver", mode: "remote" }])(
     "does not invent edition metadata for $type in $mode mode",
     (connector) => {
       renderPicker("community", connector);
-      expect(
-        screen.queryByRole("button", { name: /需要.*及以上|Requires .* or higher/ }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /解锁使用|Unlock/ })).not.toBeInTheDocument();
     },
   );
 
@@ -207,7 +201,7 @@ describe("ConnectorTypePicker edition guidance", () => {
       const { button, onChange } = renderPicker("community", { available: true, type });
       expect(button).toBeEnabled();
       const edition = type === "hana" ? "企业版" : "专业版";
-      const action = screen.getByRole("button", { name: `需要${edition}及以上` });
+      const action = screen.getByRole("button", { name: `解锁使用 ${edition}` });
       fireEvent.click(button);
       expect(onChange).toHaveBeenCalledExactlyOnceWith(type);
       fireEvent.click(action);
@@ -232,16 +226,14 @@ describe("ConnectorTypePicker edition guidance", () => {
   it("allows selection when server state and edition permit it", () => {
     const { button, onChange } = renderPicker("professional", { available: true });
     expect(button).toBeEnabled();
-    expect(
-      screen.queryByRole("button", { name: /需要.*及以上|Requires .* or higher/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /解锁使用|Unlock/ })).not.toBeInTheDocument();
     fireEvent.click(button);
     expect(onChange).toHaveBeenCalledExactlyOnceWith("sqlserver");
   });
 
   it("closes the dialog without selecting the unavailable connector", () => {
     const { button, onChange } = renderPicker("community");
-    fireEvent.click(screen.getByRole("button", { name: "需要专业版及以上" }));
+    fireEvent.click(screen.getByRole("button", { name: "解锁使用 专业版" }));
     const dialog = screen.getByRole("dialog", { name: "解锁专业版能力" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -249,11 +241,47 @@ describe("ConnectorTypePicker edition guidance", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it.each([true, false])(
+    "keeps the footer description accessible when selection is available=%s",
+    (available) => {
+      const { button } = renderPicker("community", { available, type: "mysql" });
+      expect(button).toHaveAccessibleDescription("连接 MySQL 关系型数据库。");
+      expect(button.disabled).toBe(!available);
+    },
+  );
+
+  it.each(["mysql", "mariadb", "postgresql", "sqlserver", "oracle", "hana", "doris", "opensearch"])(
+    "renders the bundled %s logo without duplicating its accessible name",
+    (type) => {
+      const { button } = renderPicker("community", { type, available: true });
+      const image = button.querySelector("img");
+      expect(image).toHaveAttribute(
+        "src",
+        expect.stringMatching(
+          type === "doris" ? /\.svg|^data:image\/svg\+xml/ : /\.png|^data:image\/png/,
+        ),
+      );
+      expect(image).toHaveAttribute("alt", "");
+      expect(within(button).queryByRole("img")).not.toBeInTheDocument();
+      expect(button).toHaveAccessibleName(/Test connector/);
+    },
+  );
+
+  it.each(["custom", "constructor"])(
+    "uses a generic icon for unknown connector type %s",
+    (type) => {
+      const { button, onChange } = renderPicker("community", { type, available: true });
+      expect(button.querySelector("img")).not.toBeInTheDocument();
+      expect(button.querySelector('[data-icon="database"]')).toBeInTheDocument();
+      expect(within(button).queryByRole("img")).not.toBeInTheDocument();
+      fireEvent.click(button);
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(type);
+    },
+  );
+
   it("localizes the upgrade dialog action in English", async () => {
     await i18n.changeLanguage("en-US");
     renderPicker("community", { type: "hana" });
-    expect(
-      screen.getByRole("button", { name: "Requires Enterprise standard or higher" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unlock Enterprise" })).toBeInTheDocument();
   });
 });

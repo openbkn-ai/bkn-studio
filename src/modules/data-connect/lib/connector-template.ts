@@ -82,10 +82,10 @@ const CATEGORY_TO_TEMPLATE_FALLBACKS: Record<string, { description: string; labe
 
 const TYPE_TO_TEMPLATE_FALLBACKS: Record<string, { description?: string; label?: string }> = {
   mariadb: {
-    description: "Connect MariaDB-compatible relational databases.",
+    description: "Connect MariaDB relational databases.",
   },
   mysql: {
-    description: "Connect MySQL-compatible relational databases.",
+    description: "Connect MySQL relational databases.",
   },
   postgresql: {
     description: "Connect PostgreSQL relational databases.",

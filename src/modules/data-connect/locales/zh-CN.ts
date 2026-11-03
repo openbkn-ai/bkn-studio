@@ -72,7 +72,7 @@ export const dataConnectZhCN = {
     connectorTypeEmpty: "当前筛选条件下没有可选连接器类型。",
     connectorTypeDisabled: "停用",
     connectorTypeUnavailable: "不可用",
-    connectorTypeEditionRequired: "需要{{edition}}及以上",
+    connectorTypeUnlock: "解锁使用",
     discardChangesTitle: "放弃未保存的内容？",
     discardChangesDescription: "当前填写的连接信息尚未保存，返回后将无法恢复。",
     discardChangesConfirm: "放弃并返回",
@@ -398,10 +398,10 @@ export const dataConnectZhCN = {
           description: "面向文件集 / 文档资源接入。",
         },
         mariadb: {
-          description: "连接 MariaDB 兼容的关系型数据库。",
+          description: "连接 MariaDB 关系型数据库。",
         },
         mysql: {
-          description: "连接 MySQL 兼容的关系型数据库。",
+          description: "连接 MySQL 关系型数据库。",
         },
         opensearch: {
           description: "连接 OpenSearch 检索索引。",
