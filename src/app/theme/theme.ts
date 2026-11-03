@@ -7,6 +7,7 @@
 
 import { theme as antdTheme, type ThemeConfig } from "antd";
 
+import { colorWithAlpha, createSemanticColors } from "@/app/theme/semantic-colors";
 import type { ResolvedTheme } from "@/app/theme/theme-mode";
 import type { RuntimeConfig } from "@/framework/runtime/types";
 
@@ -43,90 +44,27 @@ const DARK_STATUS_TOKENS = {
   blue7: "#93c5fd",
 };
 
-const DEFAULT_PRIMARY = "#1e3a8a";
-const DEFAULT_DARK_PRIMARY = { base: "#3b82f6", hover: "#5b95f7", active: "#2f6fdc" };
-/**
- * The solid primary button on dark surfaces, kept apart from the dark accent above: white text
- * on it reads at about 5.2:1 (4.7:1 on hover), where the brighter accent falls short.
- */
-const DEFAULT_DARK_BUTTON = { base: "#2563eb", hover: "#2f6fdc", active: "#1d4ed8" };
-
-/** The solid primary button in dark mode: the platform's own, or the brand's lifted primary. */
+/** Compatibility helper for consumers that need the dark solid-action state colors. */
 export function darkButtonFor(primaryColor: string) {
-  return primaryColor.trim().toLowerCase() === DEFAULT_PRIMARY
-    ? DEFAULT_DARK_BUTTON
-    : darkPrimaryFor(primaryColor);
-}
-
-function hexToHsl(hex: string): [number, number, number] | null {
-  const match = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex.trim());
-  if (!match) {
-    return null;
-  }
-
-  const [r, g, b] = match.slice(1).map((channel) => Number.parseInt(channel, 16) / 255);
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const lightness = (max + min) / 2;
-  if (max === min) {
-    return [0, 0, lightness];
-  }
-
-  const delta = max - min;
-  const saturation = lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min);
-  const hue =
-    max === r
-      ? (g - b) / delta + (g < b ? 6 : 0)
-      : max === g
-        ? (b - r) / delta + 2
-        : (r - g) / delta + 4;
-  return [hue * 60, saturation, lightness];
-}
-
-function hslToHex(hue: number, saturation: number, lightness: number): string {
-  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
-  const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
-  const m = lightness - chroma / 2;
-  const [r, g, b] =
-    hue < 60
-      ? [chroma, x, 0]
-      : hue < 120
-        ? [x, chroma, 0]
-        : hue < 180
-          ? [0, chroma, x]
-          : hue < 240
-            ? [0, x, chroma]
-            : hue < 300
-              ? [x, 0, chroma]
-              : [chroma, 0, x];
-  return `#${[r, g, b]
-    .map((channel) =>
-      Math.round((channel + m) * 255)
-        .toString(16)
-        .padStart(2, "0"),
-    )
-    .join("")}`;
+  const colors = createSemanticColors(primaryColor, "dark");
+  return {
+    active: colors.actionPrimaryActive,
+    base: colors.actionPrimary,
+    hover: colors.actionPrimaryHover,
+    text: colors.actionPrimaryText,
+  };
 }
 
 /**
- * A brand primary tuned for white surfaces (often a deep navy) disappears on dark ones. Keep the
- * configured hue but lift its lightness so host / OEM brand colors still apply in dark mode.
+ * Compatibility helper for consumers that need the dark accent state colors. The semantic color
+ * generator adjusts the configured brand just enough to meet contrast on the dark page surface.
  */
 export function darkPrimaryFor(primaryColor: string) {
-  if (primaryColor.trim().toLowerCase() === DEFAULT_PRIMARY) {
-    return DEFAULT_DARK_PRIMARY;
-  }
-
-  const hsl = hexToHsl(primaryColor);
-  if (!hsl) {
-    return DEFAULT_DARK_PRIMARY;
-  }
-
-  const [hue, saturation] = hsl;
+  const colors = createSemanticColors(primaryColor, "dark");
   return {
-    base: hslToHex(hue, saturation, 0.6),
-    hover: hslToHex(hue, saturation, 0.68),
-    active: hslToHex(hue, saturation, 0.52),
+    active: colors.accentPrimaryActive,
+    base: colors.accentPrimary,
+    hover: colors.accentPrimaryHover,
   };
 }
 
@@ -135,33 +73,35 @@ export function createThemeConfig(
   resolvedTheme: ResolvedTheme,
 ): ThemeConfig {
   const isDark = resolvedTheme === "dark";
-  const darkPrimary = darkPrimaryFor(runtimeConfig.theme.primaryColor);
-  const darkButton = darkButtonFor(runtimeConfig.theme.primaryColor);
+  const colors = createSemanticColors(runtimeConfig.theme.primaryColor, resolvedTheme);
 
   return {
     algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
     token: {
-      colorPrimary: isDark ? darkPrimary.base : runtimeConfig.theme.primaryColor,
+      colorPrimary: colors.accentPrimary,
       borderRadius: runtimeConfig.theme.borderRadius,
       colorBgLayout: isDark ? "#111318" : "#f6f8fb",
       colorBgContainer: isDark ? "#1a1d23" : "#ffffff",
       ...(isDark ? { colorBgElevated: "#20232a", colorBorderSecondary: "#23262d" } : {}),
       colorBorder: isDark ? "#2b2f37" : "#e5eaf2",
       colorInfo: "#2563eb",
-      colorLink: isDark ? "#60a5fa" : "#2563eb",
-      ...(isDark ? { colorLinkHover: "#93c5fd", colorLinkActive: "#3b82f6" } : {}),
+      colorLink: colors.link,
+      colorLinkHover: colors.linkHover,
+      colorLinkActive: colors.accentPrimaryActive,
       colorSuccess: isDark ? "#4ade80" : "#15803d",
       // Dark status tints: the hue at 12% alpha with a 35% border, so tags adapt to whatever row or
       // panel they sit on. AntD's generated dark palette lands on near-black maroon/olive.
       ...(isDark ? DARK_STATUS_TOKENS : {}),
       colorText: isDark ? "#e6e8eb" : "#111827",
       colorTextSecondary: isDark ? "#a8afba" : "#475569",
-      colorTextTertiary: isDark ? "#7d8592" : "#94a3b8",
+      colorTextTertiary: colors.textTertiary,
+      colorTextPlaceholder: colors.textPlaceholder,
+      colorTextDisabled: colors.textDisabled,
       // Keyboard focus ring. AntD's default 4px ring and light derived border blur into a gray
       // box on square controls; use a 2px solid primary color to preserve accessibility without
       // looking like an accidental selection state.
       lineWidthFocus: 2,
-      colorPrimaryBorder: "#2563eb",
+      colorPrimaryBorder: colors.focusRing,
     },
     components: {
       Button: {
@@ -169,26 +109,26 @@ export function createThemeConfig(
         defaultShadow: "none",
         primaryShadow: "none",
         dangerShadow: "none",
-        primaryColor: "#ffffff",
-        colorPrimary: isDark ? darkButton.base : "#1e3a8a",
-        colorPrimaryHover: isDark ? darkButton.hover : "#17306f",
-        colorPrimaryActive: isDark ? darkButton.active : "#0f2a4a",
+        primaryColor: colors.actionPrimaryText,
+        colorPrimary: colors.actionPrimary,
+        colorPrimaryHover: colors.actionPrimaryHover,
+        colorPrimaryActive: colors.actionPrimaryActive,
       },
       Input: {
-        activeBorderColor: "#2563eb",
-        activeShadow: "0 0 0 3px rgba(37, 99, 235, 0.12)",
+        activeBorderColor: colors.focusRing,
+        activeShadow: `0 0 0 3px ${colorWithAlpha(colors.focusRing, 0.12)}`,
         hoverBorderColor: isDark ? "#454b56" : "#cbd5e1",
       },
       Select: {
-        activeBorderColor: "#2563eb",
-        activeOutlineColor: "rgba(37, 99, 235, 0.12)",
+        activeBorderColor: colors.focusRing,
+        activeOutlineColor: colorWithAlpha(colors.focusRing, 0.12),
         hoverBorderColor: isDark ? "#454b56" : "#cbd5e1",
       },
       Tabs: {
-        inkBarColor: isDark ? "#60a5fa" : "#2563eb",
-        itemActiveColor: isDark ? "#93c5fd" : "#1e3a8a",
-        itemHoverColor: isDark ? "#bfdbfe" : "#2563eb",
-        itemSelectedColor: isDark ? "#93c5fd" : "#1e3a8a",
+        inkBarColor: colors.selectionAccent,
+        itemActiveColor: colors.selectionAccent,
+        itemHoverColor: colors.linkHover,
+        itemSelectedColor: colors.selectionAccent,
       },
       Segmented: {
         // Give options room to breathe and keep the track one step above the card, not a black slot.
@@ -204,9 +144,9 @@ export function createThemeConfig(
       Table: {
         // Keep selectable rows easy to scan: hover gives a quiet cue, selection
         // remains legible, and selected-hover adds only a small amount of emphasis.
-        rowHoverBg: isDark ? "#20232a" : "#f8fafc",
-        rowSelectedBg: isDark ? "#1c2638" : "#eff6ff",
-        rowSelectedHoverBg: isDark ? "#223049" : "#dbeafe",
+        rowHoverBg: colors.bgHover,
+        rowSelectedBg: colors.bgSelected,
+        rowSelectedHoverBg: colors.bgSelectedHover,
       },
     },
   };

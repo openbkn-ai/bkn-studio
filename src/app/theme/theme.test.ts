@@ -7,7 +7,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { createThemeConfig, darkPrimaryFor } from "@/app/theme/theme";
+import { contrastRatio } from "@/app/theme/semantic-colors";
+import { createThemeConfig, darkButtonFor, darkPrimaryFor } from "@/app/theme/theme";
 import type { RuntimeConfig } from "@/framework/runtime/types";
 
 const runtimeConfig: RuntimeConfig = {
@@ -97,9 +98,9 @@ describe("createThemeConfig", () => {
     const lightTabs = createThemeConfig(runtimeConfig, "light").components?.Tabs;
     const darkTabs = createThemeConfig(runtimeConfig, "dark").components?.Tabs;
 
-    expect(lightTabs?.itemSelectedColor).toBe("#1e3a8a");
-    expect(darkTabs?.itemSelectedColor).toBe("#93c5fd");
-    expect(darkTabs?.itemActiveColor).toBe("#93c5fd");
+    expect(lightTabs?.itemSelectedColor).toBe("#2563eb");
+    expect(darkTabs?.itemSelectedColor).toBe("#60a5fa");
+    expect(darkTabs?.itemActiveColor).toBe("#60a5fa");
     expect(darkTabs?.itemHoverColor).toBe("#bfdbfe");
   });
 
@@ -112,19 +113,18 @@ describe("createThemeConfig", () => {
     const derived = darkPrimaryFor("#7c2d12");
 
     expect(darkTheme.token?.colorPrimary).toBe(derived.base);
-    expect(darkTheme.components?.Button?.colorPrimary).toBe(derived.base);
+    expect(darkTheme.components?.Button?.colorPrimary).toBe(darkButtonFor("#7c2d12").base);
     expect(derived.base).not.toBe("#3b82f6");
-    // Same hue family (orange-brown), lifted for dark surfaces.
-    expect(derived.base).toBe("#e5744d");
+    expect(contrastRatio(derived.base, "#111318")).toBeGreaterThanOrEqual(4.5);
   });
 
   it("maps the default primary to the tuned dark blue", () => {
     expect(darkPrimaryFor("#1e3a8a")).toEqual({
-      base: "#3b82f6",
-      hover: "#5b95f7",
-      active: "#2f6fdc",
+      base: "#60a5fa",
+      hover: "#93c5fd",
+      active: "#3b82f6",
     });
-    expect(createThemeConfig(runtimeConfig, "dark").token?.colorPrimary).toBe("#3b82f6");
+    expect(createThemeConfig(runtimeConfig, "dark").token?.colorPrimary).toBe("#60a5fa");
   });
 
   it("gives the solid primary button its own colors, apart from the dark accent", () => {
@@ -136,8 +136,8 @@ describe("createThemeConfig", () => {
       primaryColor: "#ffffff",
     });
     // Links, switches and other accents keep the brighter blue.
-    expect(dark.token?.colorPrimary).toBe("#3b82f6");
-    expect(dark.token?.colorLink).toBe("#60a5fa");
+    expect(dark.token?.colorPrimary).toBe("#60a5fa");
+    expect(dark.token?.colorLink).toBe("#93c5fd");
 
     expect(createThemeConfig(runtimeConfig, "light").components?.Button).toMatchObject({
       colorPrimary: "#1e3a8a",

@@ -6,11 +6,13 @@
  */
 
 import type { PropsWithChildren } from "react";
+import { useLayoutEffect } from "react";
 
 import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
 import { App as AntdApp, ConfigProvider } from "antd";
 
+import { createSemanticColors, semanticColorCssVariables } from "@/app/theme/semantic-colors";
 import { useResolvedTheme } from "@/app/theme/theme-context";
 import { createThemeConfig } from "@/app/theme/theme";
 import { AppServicesProviderBridge } from "@/framework/context/app-context";
@@ -27,6 +29,27 @@ type AntdProvidersProps = PropsWithChildren<{
 
 export function AntdProviders({ children, runtimeConfig }: AntdProvidersProps) {
   const resolvedTheme = useResolvedTheme();
+
+  useLayoutEffect(() => {
+    const rootStyle = document.documentElement.style;
+    const variables = semanticColorCssVariables(
+      createSemanticColors(runtimeConfig.theme.primaryColor, resolvedTheme),
+    );
+    const previousValues = Object.fromEntries(
+      Object.keys(variables).map((name) => [name, rootStyle.getPropertyValue(name)]),
+    );
+
+    Object.entries(variables).forEach(([name, value]) => rootStyle.setProperty(name, value));
+    return () => {
+      Object.entries(previousValues).forEach(([name, value]) => {
+        if (value) {
+          rootStyle.setProperty(name, value);
+        } else {
+          rootStyle.removeProperty(name);
+        }
+      });
+    };
+  }, [resolvedTheme, runtimeConfig.theme.primaryColor]);
 
   return (
     <ConfigProvider

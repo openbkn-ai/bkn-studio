@@ -9,15 +9,21 @@
   --admin-color-text: var(--color-text-primary);
   --admin-color-heading: var(--color-text-primary);
   --admin-color-secondary: var(--color-text-secondary);
-  --admin-color-muted: var(--color-text-muted);
-  --admin-color-placeholder: var(--color-text-muted);
+  --admin-color-muted: var(--color-text-tertiary);
+  --admin-color-placeholder: var(--color-text-placeholder);
   --admin-color-border: var(--color-border);
   --admin-color-border-soft: var(--color-divider);
   --admin-color-surface: var(--color-bg-surface);
   --admin-color-surface-muted: var(--color-interface-panel-bg);
   --admin-color-surface-hover: var(--color-hover);
   --admin-color-surface-subtle: var(--color-interface-panel-bg);
-  --admin-color-primary: var(--color-primary-700);
+  --admin-color-primary: var(--color-selection-accent);
+  --admin-color-primary-hover: var(--color-link-hover);
+  --admin-color-action: var(--color-action-primary);
+  --admin-color-action-hover: var(--color-action-primary-hover);
+  --admin-color-action-text: var(--color-action-primary-text);
+  --admin-color-primary-border: var(--color-focus-ring);
+  --admin-color-selection: var(--color-selection-accent);
   --admin-color-link: var(--color-text-link);
   --admin-color-link-hover: var(--color-text-link-hover);
   --admin-color-link-bg: var(--color-primary-100);
@@ -42,17 +48,23 @@
   --admin-color-text: var(--color-text-primary);
   --admin-color-heading: var(--color-text-primary);
   --admin-color-secondary: var(--color-text-secondary);
-  --admin-color-muted: var(--color-text-muted);
-  --admin-color-placeholder: var(--color-text-muted);
+  --admin-color-muted: var(--color-text-tertiary);
+  --admin-color-placeholder: var(--color-text-placeholder);
   --admin-color-border: var(--color-border);
   --admin-color-border-soft: var(--color-divider);
   --admin-color-surface: var(--color-bg-surface);
   --admin-color-surface-muted: var(--color-interface-panel-bg);
   --admin-color-surface-hover: var(--color-hover);
   --admin-color-surface-subtle: var(--color-interface-panel-bg);
-  --admin-color-primary: var(--color-primary-600);
-  --admin-color-link: var(--color-primary-700);
-  --admin-color-link-hover: var(--color-primary-600);
+  --admin-color-primary: var(--color-selection-accent);
+  --admin-color-primary-hover: var(--color-link-hover);
+  --admin-color-action: var(--color-action-primary);
+  --admin-color-action-hover: var(--color-action-primary-hover);
+  --admin-color-action-text: var(--color-action-primary-text);
+  --admin-color-primary-border: var(--color-focus-ring);
+  --admin-color-selection: var(--color-selection-accent);
+  --admin-color-link: var(--color-link);
+  --admin-color-link-hover: var(--color-link-hover);
   --admin-color-link-bg: var(--color-primary-100);
   --admin-color-link-border: var(--color-primary-border);
   --admin-color-danger: var(--color-error-text);
@@ -100,12 +112,12 @@
 }
 
 .contentSurface :global(.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: var(--admin-color-primary);
+  color: var(--admin-color-selection);
   font-weight: var(--admin-font-weight-medium);
 }
 
 .contentSurface :global(.ant-tabs-ink-bar) {
-  background: var(--admin-color-primary);
+  background: var(--admin-color-selection);
 }
 
 .adminOverlay :global(.ant-modal-content),
@@ -508,13 +520,13 @@
 
 .licensePortalLink {
   width: fit-content;
-  color: var(--admin-color-primary);
+  color: var(--admin-color-link);
   font-size: var(--admin-font-size-meta);
   line-height: 1.5;
 }
 
 .licensePortalLink:hover {
-  color: var(--admin-color-primary-hover);
+  color: var(--admin-color-link-hover);
 }
 
 .licenseScopeGrid {
@@ -2012,12 +2024,12 @@
 }
 
 .authzWorkspaceTabs :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: var(--admin-color-primary);
+  color: var(--admin-color-selection);
   font-weight: var(--admin-font-weight-strong);
 }
 
 .authzWorkspaceTabs :global(.ant-tabs-ink-bar) {
-  background: var(--admin-color-primary);
+  background: var(--admin-color-selection);
 }
 
 .authzWorkspacePane {
