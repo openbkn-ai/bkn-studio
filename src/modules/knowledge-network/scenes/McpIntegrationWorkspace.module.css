@@ -60,7 +60,7 @@
   gap: 8px;
 }
 
-.networkPicker label {
+.networkPicker > span {
   flex: 0 0 auto;
   color: var(--color-text-secondary);
   font-size: 13px;
