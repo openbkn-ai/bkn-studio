@@ -9,7 +9,7 @@ export const integrationPart = {
   integration: {
     title: "Integrate OpenBKN capabilities",
     description:
-      "Provide a unified integration entry for agent platforms and business systems. MCP is for agent tool calls, CLI is for terminals and agents, and SDK is for Node.js services.",
+      "Provide a unified integration entry for agent platforms and business systems. MCP is for agent tool calls, CLI is for terminals and agents, and SDK is for building apps on a knowledge network.",
     descriptionHelpLabel: "View integration method help",
     modeLabel: "Integration method",
     tabsAriaLabel: "Knowledge network integration methods",
@@ -105,74 +105,29 @@ openbkn help all`,
         },
       },
     },
+    // The SDK tab only links on: SDK examples are generated per network, on its App development page.
     sdk: {
-      guideTitle: "Integrate OpenBKN with the SDK",
+      guideTitle: "Build apps on a knowledge network",
       guideDescription:
-        "Use this for Node.js server-side projects. The SDK establishes and refreshes OAuth sessions with account credentials, and wraps platform requests, MCP sessions, JSON-RPC calls, and response parsing.",
+        "SDK examples are generated from each knowledge network's actual structure, on its App development page: object types, relations, actions, functions and more, each in Python, TypeScript and REST.",
       steps: {
-        install: "Install @openbkn/bkn-sdk.",
-        token:
-          "Configure an OpenBKN account and password; the SDK establishes a refreshable OAuth session.",
-        client: "Create an authenticated client asynchronously with the platform URL.",
-        tools:
-          "Get a knowledge network ID first, then call bkn, resource, vega, or context capabilities as permitted by the account.",
+        pick: "Pick the knowledge network to build on, on the right.",
+        start:
+          "On its App development page, get a token, install the SDK and generate the network's ontology SDK.",
+        examples:
+          "Copy the example for each capability, or download the full Q&A web app example. The whole page also exports as Markdown for a developer or a coding agent.",
       },
-      installSuccessMessage: "SDK install command copied",
-      installTitle: "Install SDK",
-      title: "SDK examples",
-      ariaLabel: "SDK examples",
-      successMessage: "SDK example copied",
-      examples: {
-        "quick-start": {
-          label: "Quick start",
-          title:
-            "Create an authenticated client with account credentials and search knowledge models",
-          code: `import { createAuthenticatedClient } from "@openbkn/bkn-sdk";
-
-const bkn = await createAuthenticatedClient({
-  baseUrl: process.env.BKN_BASE_URL!,
-  auth: {
-    username: process.env.BKN_USERNAME!,
-    password: process.env.BKN_PASSWORD!,
-  },
-});
-
-// Configure the knowledge network ID for the service.
-const knId = process.env.BKN_KN_ID!;
-
-const result = await bkn.context.searchSchema(
-  knId,
-  "Find order-related objects and relations",
-  { searchScope: ["object", "relation"], maxConcepts: 10 },
-);`,
-        },
-        "instance-query": {
-          label: "Query instances",
-          title: "Query object instances by object type and conditions",
-          code: `const result = await bkn.context.queryObjectInstance(knId, {
-  ot_id: "order",
-  condition: {
-    operation: "and",
-    sub_conditions: [
-      { field: "status", operation: "==", value_from: "const", value: "paid" },
-    ],
-  },
-  limit: 20,
-});`,
-        },
-        "dynamic-tool": {
-          label: "Dynamic tools",
-          title: "Discover and call MCP tools exposed by the current knowledge network",
-          code: `// Step 1: Discover tools exposed by the knowledge network
-const tools = await bkn.context.tools(knId);
-
-// Step 2: Call the selected tool
-const result = await bkn.context.toolCall(knId, "search_schema", {
-  query: "Find order-related objects and relations",
-  response_format: "json",
-});`,
-        },
-      },
+      eyebrow: "Python / TypeScript / REST",
+      title: "Choose a knowledge network",
+      searchPlaceholder: "Search knowledge networks by name",
+      loading: "Loading knowledge networks…",
+      loadFailed: "Could not load knowledge networks.",
+      retry: "Retry",
+      noNetworks: "No knowledge networks yet.",
+      noMatch: "No matching knowledge networks.",
+      more: "{{count}} more knowledge networks. Type a name to search.",
+      more_one: "{{count}} more knowledge network. Type a name to search.",
+      more_other: "{{count}} more knowledge networks. Type a name to search.",
     },
   },
 } as const;

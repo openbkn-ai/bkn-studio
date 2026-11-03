@@ -16,10 +16,10 @@ import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { McpIntegrationWorkspace } from "@/modules/knowledge-network/scenes/McpIntegrationWorkspace";
 
 import styles from "./KnowledgeNetworkIntegrationPage.module.css";
+import { SdkAppDevelopmentPanel } from "./SdkAppDevelopmentPanel";
 
 type IntegrationTab = "mcp" | "cli" | "sdk";
 type CliExampleKey = "setup" | "context" | "agent-skill";
-type SdkExampleKey = "quick-start" | "instance-query" | "dynamic-tool";
 type CodeExample = { code: string; label: string; title: string };
 
 const platformOrigin =
@@ -27,7 +27,6 @@ const platformOrigin =
   (typeof window !== "undefined" ? window.location.origin : "https://your-platform");
 
 const cliExampleKeys: CliExampleKey[] = ["setup", "context", "agent-skill"];
-const sdkExampleKeys: SdkExampleKey[] = ["quick-start", "instance-query", "dynamic-tool"];
 
 type CodeIntegrationPanelProps<T extends string> = {
   ariaLabel: string;
@@ -38,9 +37,6 @@ type CodeIntegrationPanelProps<T extends string> = {
   guideDescription: string;
   guideSteps: string[];
   guideTitle: string;
-  installCommand?: string;
-  installSuccessMessage?: string;
-  installTitle?: string;
   packageLabel: string;
   packageUrl: string;
   successMessage: string;
@@ -56,9 +52,6 @@ function CodeIntegrationPanel<T extends string>({
   guideDescription,
   guideSteps,
   guideTitle,
-  installCommand,
-  installSuccessMessage,
-  installTitle,
   packageLabel,
   packageUrl,
   successMessage,
@@ -99,22 +92,6 @@ function CodeIntegrationPanel<T extends string>({
             {packageLabel}
           </a>
         </div>
-
-        {installCommand && installTitle && installSuccessMessage ? (
-          <div className={styles.sdkInstallBlock}>
-            <div className={styles.sdkInstallHeader}>
-              <span>{installTitle}</span>
-              <button
-                type="button"
-                className={styles.sdkCopyButton}
-                onClick={() => void copyText(installCommand, installSuccessMessage)}
-              >
-                <CopyOutlined /> {copyLabel}
-              </button>
-            </div>
-            <pre className={styles.sdkInstallCode}>{installCommand}</pre>
-          </div>
-        ) : null}
 
         <div className={styles.sdkExampleTabs} role="tablist" aria-label={ariaLabel}>
           {(Object.keys(examples) as T[]).map((key) => (
@@ -171,24 +148,6 @@ function useCliExamples() {
   );
 }
 
-function useSdkExamples() {
-  const { t } = useTranslation();
-  return useMemo(
-    () =>
-      Object.fromEntries(
-        sdkExampleKeys.map((key) => [
-          key,
-          {
-            code: t(`knowledgeNetwork.integration.sdk.examples.${key}.code`),
-            label: t(`knowledgeNetwork.integration.sdk.examples.${key}.label`),
-            title: t(`knowledgeNetwork.integration.sdk.examples.${key}.title`),
-          },
-        ]),
-      ) as Record<SdkExampleKey, CodeExample>,
-    [t],
-  );
-}
-
 function CliIntegrationPanel() {
   const { t } = useTranslation();
   const examples = useCliExamples();
@@ -212,36 +171,6 @@ function CliIntegrationPanel() {
       packageUrl="https://www.npmjs.com/package/@openbkn/bkn-sdk"
       successMessage={t("knowledgeNetwork.integration.cli.successMessage")}
       title={t("knowledgeNetwork.integration.cli.title")}
-    />
-  );
-}
-
-function SdkIntegrationPanel() {
-  const { t } = useTranslation();
-  const examples = useSdkExamples();
-
-  return (
-    <CodeIntegrationPanel
-      ariaLabel={t("knowledgeNetwork.integration.sdk.ariaLabel")}
-      copyFailedMessage={t("knowledgeNetwork.integration.copyFailed")}
-      copyLabel={t("knowledgeNetwork.integration.copy")}
-      examples={examples}
-      eyebrow="TypeScript / Node.js"
-      guideDescription={t("knowledgeNetwork.integration.sdk.guideDescription")}
-      guideSteps={[
-        t("knowledgeNetwork.integration.sdk.steps.install"),
-        t("knowledgeNetwork.integration.sdk.steps.token"),
-        t("knowledgeNetwork.integration.sdk.steps.client"),
-        t("knowledgeNetwork.integration.sdk.steps.tools"),
-      ]}
-      guideTitle={t("knowledgeNetwork.integration.sdk.guideTitle")}
-      installCommand="npm install @openbkn/bkn-sdk"
-      installSuccessMessage={t("knowledgeNetwork.integration.sdk.installSuccessMessage")}
-      installTitle={t("knowledgeNetwork.integration.sdk.installTitle")}
-      packageLabel={t("knowledgeNetwork.integration.packageLabel")}
-      packageUrl="https://www.npmjs.com/package/@openbkn/bkn-sdk"
-      successMessage={t("knowledgeNetwork.integration.sdk.successMessage")}
-      title={t("knowledgeNetwork.integration.sdk.title")}
     />
   );
 }
@@ -307,7 +236,7 @@ export function KnowledgeNetworkIntegrationPage() {
         ) : activeTab === "cli" ? (
           <CliIntegrationPanel />
         ) : (
-          <SdkIntegrationPanel />
+          <SdkAppDevelopmentPanel />
         )}
       </div>
     </section>
