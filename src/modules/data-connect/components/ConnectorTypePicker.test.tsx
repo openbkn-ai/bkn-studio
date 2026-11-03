@@ -201,12 +201,33 @@ describe("ConnectorTypePicker edition guidance", () => {
     },
   );
 
-  it("keeps confirmed insufficient editions disabled even if available=true", () => {
-    const { button, onChange } = renderPicker("community", { available: true });
-    expect(button).toBeDisabled();
-    fireEvent.click(button);
-    expect(onChange).not.toHaveBeenCalled();
-  });
+  it.each(["sqlserver", "oracle", "doris", "hana"])(
+    "honors server availability for %s when edition metadata is absent",
+    (type) => {
+      const { button, onChange } = renderPicker("community", { available: true, type });
+      expect(button).toBeEnabled();
+      const edition = type === "hana" ? "企业版" : "专业版";
+      const action = screen.getByRole("button", { name: `需要${edition}及以上` });
+      fireEvent.click(button);
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(type);
+      fireEvent.click(action);
+      expect(screen.getByRole("dialog", { name: `解锁${edition}能力` })).toBeInTheDocument();
+      expect(onChange).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(["professional", "enterprise"] as const)(
+    "uses backend edition %s for guidance without overriding server availability",
+    (requiredEdition) => {
+      const { button, onChange } = renderPicker("community", {
+        available: true,
+        requiredEdition,
+      });
+      expect(button).toBeEnabled();
+      fireEvent.click(button);
+      expect(onChange).toHaveBeenCalledExactlyOnceWith("sqlserver");
+    },
+  );
 
   it("allows selection when server state and edition permit it", () => {
     const { button, onChange } = renderPicker("professional", { available: true });

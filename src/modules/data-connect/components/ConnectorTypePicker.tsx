@@ -109,7 +109,7 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
           <div className={styles.grid}>
             {filtered.map((item) => {
               /*
-                Server availability and administrator enablement remain required for selection.
+                Server availability and administrator enablement determine selection.
                 Product edition metadata only explains the requirement; an unknown snapshot
                 must not be treated as confirmed edition insufficiency.
               */
@@ -120,7 +120,7 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
                 !atLeast(snapshot.edition, requiredEdition)
                   ? requiredEdition
                   : undefined;
-              const selectable = item.available && item.enabled && upgradeEdition === undefined;
+              const selectable = item.available && item.enabled;
               const active = selectable && item.type === value;
               const templateMeta = getConnectorTemplateMeta(item);
 
