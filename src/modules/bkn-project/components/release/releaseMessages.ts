@@ -118,8 +118,19 @@ export function checkReasonText(t: TFunction, check: ReleaseCheck): string {
   return t(`${PREFIX}.reason.${reason}`);
 }
 
-/** The items a check names one per line: those whose tables are gone. */
+/** Business details of a check, including the confirmed originals scope. */
 export function checkDetailRows(t: TFunction, check: ReleaseCheck): string[] {
+  if (
+    check.code === "knowledge_base" &&
+    check.passed &&
+    check.details &&
+    typeof check.details === "object"
+  ) {
+    const count = (check.details as { original_documents?: unknown }).original_documents;
+    if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0) {
+      return [t(`${PREFIX}.originalDocuments`, { count })];
+    }
+  }
   if (check.passed || check.reason !== "table_missing" || !Array.isArray(check.details)) {
     return [];
   }

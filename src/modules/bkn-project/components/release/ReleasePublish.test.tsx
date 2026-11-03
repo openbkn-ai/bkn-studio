@@ -175,6 +175,22 @@ describe("ReleasePublish", () => {
     getRegressionMock.mockResolvedValue(null);
   });
 
+  it("shows the confirmed number of document originals included in search", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        checks: [{ code: "knowledge_base", passed: true, details: { original_documents: 5 } }],
+        accepts: [],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText("5 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。"),
+    ).toBeInTheDocument();
+    expect(view.queryByText(/original_documents|knowledge_base/)).not.toBeInTheDocument();
+  });
+
   it("reviews the release in plain words, and publishes once the owner accepts what did not pass", async () => {
     publishReleaseMock.mockResolvedValue({ networkId: "n_v1_0_3" });
     renderPublish();
@@ -259,6 +275,23 @@ describe("ReleasePublish", () => {
     );
     await waitFor(() => expect(getReleaseReviewMock).toHaveBeenCalledTimes(2));
     expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["KnowledgeBaseNotReady", "请先完成当前模型的知识库全量构建和结果核对。"],
+    ["SourcePermission", "请确认来源知识库的查询权限和目标知识网络的配置权限。"],
+    ["KnowledgeBaseUnavailable", "暂时无法核对知识库发布条件，请稍后重试。"],
+  ])("explains %s after a publication refusal and preserves the retry", async (code, text) => {
+    publishReleaseMock.mockRejectedValue(refusal(`Release.${code}`));
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    fireEvent.click(await view.findByText("知道部分索引还没就绪，仍然发布"));
+    fireEvent.click(publishButton());
+    expect(await view.findByText(text)).toBeInTheDocument();
+    expect(publishButton()).toBeEnabled();
+    expect(onChanged).not.toHaveBeenCalled();
+    expect(view.queryByText(code)).not.toBeInTheDocument();
   });
 
   it("keeps the dialog open on a failed publishing, says why and lets the owner try again", async () => {
