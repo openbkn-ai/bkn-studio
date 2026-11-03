@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
+import { NetworkPickerGuide } from "@/modules/knowledge-network/scenes/NetworkPickerGuide";
 import { listKnowledgeNetworks } from "@/modules/knowledge-network/services/network.service";
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
@@ -155,7 +156,7 @@ export function McpIntegrationWorkspace() {
           ))}
         </div>
 
-        {view === "debug" ? (
+        {view === "debug" && selectedNetwork ? (
           <div className={styles.networkPicker}>
             <label htmlFor="mcp-debug-network">
               {t("knowledgeNetwork.integration.mcpWorkspace.networkLabel")}
@@ -229,22 +230,24 @@ export function McpIntegrationWorkspace() {
             }}
           />
         ) : (
-          <div className={styles.emptyState} role="status">
-            <h2>
-              {selectedNetworkUnavailable
-                ? t("knowledgeNetwork.integration.mcpWorkspace.networkUnavailableTitle")
-                : networks.length === 0
-                  ? t("knowledgeNetwork.integration.mcpWorkspace.noNetworksTitle")
-                  : t("knowledgeNetwork.integration.mcpWorkspace.selectNetworkTitle")}
-            </h2>
-            <p>
-              {selectedNetworkUnavailable
+          <NetworkPickerGuide
+            guideTitle={t("knowledgeNetwork.integration.mcpWorkspace.guide.heading")}
+            guideDescription={t("knowledgeNetwork.integration.mcpWorkspace.guide.description")}
+            steps={[
+              t("knowledgeNetwork.integration.mcpWorkspace.guide.steps.pick"),
+              t("knowledgeNetwork.integration.mcpWorkspace.guide.steps.tool"),
+              t("knowledgeNetwork.integration.mcpWorkspace.guide.steps.run"),
+            ]}
+            eyebrow={t("knowledgeNetwork.integration.mcpWorkspace.guide.eyebrow")}
+            title={t("knowledgeNetwork.integration.mcpWorkspace.guide.title")}
+            actionLabel={t("knowledgeNetwork.integration.mcpWorkspace.guide.open")}
+            notice={
+              selectedNetworkUnavailable
                 ? t("knowledgeNetwork.integration.mcpWorkspace.networkUnavailableDescription")
-                : networks.length === 0
-                  ? t("knowledgeNetwork.integration.mcpWorkspace.noNetworksDescription")
-                  : t("knowledgeNetwork.integration.mcpWorkspace.selectNetworkDescription")}
-            </p>
-          </div>
+                : undefined
+            }
+            onOpen={(network) => updateNetwork(network.id)}
+          />
         )}
       </div>
     </section>

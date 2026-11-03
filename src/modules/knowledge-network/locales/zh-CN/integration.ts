@@ -24,6 +24,19 @@ export const integrationPart = {
         connect: "客户端接入",
         debug: "工具调试",
       },
+      guide: {
+        heading: "在线调试 MCP 工具",
+        description:
+          "直接调用平台开放给智能体的 MCP 工具，查看每个工具的参数定义、请求和返回结果。接入客户端前，可以先在这里确认工具在这个知识网络上能正常工作。",
+        steps: {
+          pick: "在右侧选择要调试的知识网络，页面会加载这个网络可用的工具。",
+          tool: "在左侧列表里选一个工具，查看它的「接口文档」；点「自动填参」，用网络的真实结构和样本数据生成请求。",
+          run: "点「运行」查看返回结果；在「请求调试」里可以复制本次调用的 cURL 命令，在终端里复现。",
+        },
+        eyebrow: "MCP tools/call",
+        title: "选择知识网络",
+        open: "开始调试",
+      },
       networkLabel: "知识网络",
       networkLoading: "正在加载知识网络……",
       networkPlaceholder: "请选择知识网络",
@@ -32,12 +45,6 @@ export const integrationPart = {
       retry: "重试",
       loadFailedTitle: "知识网络加载失败",
       loadFailedDescription: "暂时无法获取可调试的知识网络，请重试。",
-      selectNetworkTitle: "选择要调试的知识网络",
-      selectNetworkDescription:
-        "MCP 工具调用需要明确的知识网络上下文。选择后将加载该网络的可用工具。",
-      noNetworksTitle: "暂无可调试的知识网络",
-      noNetworksDescription: "请先创建知识网络，或向管理员申请相应访问权限。",
-      networkUnavailableTitle: "原知识网络不可用",
       networkUnavailableDescription: "链接中的知识网络不存在或当前账号无权访问，请重新选择。",
     },
     packageLabel: "查看 npm 包",
@@ -101,28 +108,29 @@ openbkn help all`,
         },
       },
     },
-    // The SDK tab only links on: SDK examples are generated per network, on its 应用开发 page.
-    sdk: {
-      guideTitle: "基于知识网络开发应用",
-      guideDescription:
-        "SDK 示例按知识网络的真实结构生成，放在每个网络的「应用开发」页：对象类、关系、行动、函数等能力，每项都有 Python、TypeScript 和 REST 写法。",
-      steps: {
-        pick: "在右侧选择要开发应用的知识网络。",
-        start: "在「应用开发」页按步骤获取令牌、安装 SDK，并生成这个网络的本体 SDK。",
-        examples:
-          "复制各项能力的示例，或下载完整的问答网页示例。整页也可以导出为 Markdown，交给开发者或编程 Agent。",
-      },
-      eyebrow: "Python / TypeScript / REST",
-      title: "选择知识网络",
+    // The knowledge network picker shared by the SDK tab and tool debugging.
+    networkPicker: {
       searchPlaceholder: "搜索知识网络名称",
       loading: "正在加载知识网络……",
       loadFailed: "知识网络加载失败。",
       retry: "重试",
       noNetworks: "还没有可用的知识网络。",
       noMatch: "没有匹配的知识网络。",
-      more: "还有 {{count}} 个知识网络，输入名称搜索。",
-      more_one: "还有 {{count}} 个知识网络，输入名称搜索。",
-      more_other: "还有 {{count}} 个知识网络，输入名称搜索。",
+    },
+    // The SDK tab only links on: SDK examples are generated per network, on its 应用开发 page.
+    sdk: {
+      guideTitle: "基于知识网络开发应用",
+      guideDescription:
+        "SDK 示例按知识网络的真实结构生成，放在每个网络的「应用开发」页：对象类、关系、行动、函数等能力，每项都有 Python、TypeScript 和 REST 写法。",
+      steps: {
+        pick: "在右侧选择知识网络，进入它的「应用开发」页。",
+        start: "在「应用开发」页按步骤获取令牌、安装 SDK，并生成这个网络的本体 SDK。",
+        examples:
+          "复制各项能力的示例，或下载完整的问答网页示例。整页也可以导出为 Markdown，交给开发者或编程 Agent。",
+      },
+      eyebrow: "Python / TypeScript / REST",
+      open: "进入应用开发",
+      title: "选择知识网络",
     },
   },
 } as const;
