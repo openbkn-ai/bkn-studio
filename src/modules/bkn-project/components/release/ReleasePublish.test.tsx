@@ -569,4 +569,25 @@ describe("ReleasePublish", () => {
     expect(screen.getByText("数据校验通过后才能发布。")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /发布审核/ })).toBeNull();
   });
+  it.each([
+    ["knowledge_base_not_ready", "请先完成当前模型的知识库全量构建和结果核对。"],
+    ["knowledge_base_permission", "请确认来源知识库的查询权限和目标知识网络的配置权限。"],
+    ["knowledge_base_unavailable", "暂时无法核对知识库发布条件，请稍后重新审核。"],
+  ])("blocks knowledge-base publication in business language: %s", async (reason, message) => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        blocked: true,
+        checks: [{ code: "knowledge_base", passed: false, reason }],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(await view.findByText("知识库构建与来源权限")).toBeInTheDocument();
+    expect(view.getByText(message)).toBeInTheDocument();
+    expect(publishButton()).toBeDisabled();
+    expect(view.queryByText(/knowledge_base/)).not.toBeInTheDocument();
+    expect(publishReleaseMock).not.toHaveBeenCalled();
+  });
 });

@@ -17,6 +17,7 @@ import type { Regression, ReleaseCheck, ReleaseItem } from "@/modules/bkn-projec
 const PREFIX = "bknProject.release.publish";
 
 const CHECKS = new Set([
+  "knowledge_base",
   "confirmed",
   "mapped",
   "data_source",
@@ -27,6 +28,9 @@ const CHECKS = new Set([
   "baseline",
 ]);
 const REASONS = new Set([
+  "knowledge_base_not_ready",
+  "knowledge_base_permission",
+  "knowledge_base_unavailable",
   "not_confirmed",
   "confirmation_outdated",
   "mapping_missing",
@@ -54,6 +58,9 @@ const REFUSALS = new Set([
   "CapabilitiesSkipped",
 ]);
 const PUBLISH_ERRORS = new Set([
+  "KnowledgeBaseNotReady",
+  "SourcePermission",
+  "KnowledgeBaseUnavailable",
   "NotOwner",
   "ProjectArchived",
   "ReviewOutdated",
