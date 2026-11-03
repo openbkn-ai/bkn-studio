@@ -6,49 +6,35 @@
  */
 
 import { ArrowRightOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Select } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 import { NetworkPickerGuide } from "@/modules/knowledge-network/scenes/NetworkPickerGuide";
-import { listKnowledgeNetworks } from "@/modules/knowledge-network/services/network.service";
+import { NetworkSelect } from "@/modules/knowledge-network/scenes/NetworkSelect";
+import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/network.service";
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./McpIntegrationWorkspace.module.css";
 
 type McpWorkspaceView = "connect" | "debug";
 
-const NETWORK_PAGE_SIZE = 200;
+/** The check of the network named in the URL. */
+type NetworkCheck =
+  | { id: string; status: "loading" }
+  | { id: string; status: "ready"; network: KnowledgeNetworkRecord }
+  | { id: string; status: "unavailable" }
+  | { id: string; status: "error" };
 
 function mcpWorkspaceViewOf(value: string | null): McpWorkspaceView {
   return value === "debug" ? "debug" : "connect";
 }
 
-async function listAllKnowledgeNetworks() {
-  const records: KnowledgeNetworkRecord[] = [];
-  let page = 1;
-  let total = 0;
-
-  do {
-    const result = await listKnowledgeNetworks({
-      direction: "asc",
-      keyword: "",
-      page,
-      pageSize: NETWORK_PAGE_SIZE,
-      sortBy: "name",
-    });
-    records.push(...result.items);
-    total = result.total;
-    page += 1;
-
-    if (result.items.length === 0) {
-      break;
-    }
-  } while (records.length < total);
-
-  return records;
+/** A network that is gone or not visible to this account, as opposed to a failed request. */
+function isUnavailable(error: unknown) {
+  return axios.isAxiosError(error) && [403, 404].includes(error.response?.status ?? 0);
 }
 
 export function McpIntegrationWorkspace() {
@@ -56,60 +42,44 @@ export function McpIntegrationWorkspace() {
   const [searchParams, setSearchParams] = useSearchParams();
   const view = mcpWorkspaceViewOf(searchParams.get("mcpView"));
   const selectedNetworkId = searchParams.get("networkId") ?? "";
-  const [networks, setNetworks] = useState<KnowledgeNetworkRecord[]>([]);
-  // Starts as loading so a network named in the URL is not reported unavailable before it is checked.
-  const [networksLoading, setNetworksLoading] = useState(true);
-  const [networksError, setNetworksError] = useState(false);
+  const [check, setCheck] = useState<NetworkCheck | null>(null);
   const [reloadSequence, setReloadSequence] = useState(0);
 
-  // The full list only backs the top-right switcher and the check of a network named in the URL.
-  // Without one, the guide's picker loads and searches networks itself.
-  const needsNetworkList = view === "debug" && selectedNetworkId !== "";
-
+  // Only the network named in the URL is fetched; pickers load the list lazily themselves.
+  // A network just picked arrives with its record, so it needs no fetch.
+  const checkedId = check?.status === "ready" ? check.id : "";
   useEffect(() => {
-    if (!needsNetworkList) {
+    if (view !== "debug" || !selectedNetworkId || checkedId === selectedNetworkId) {
       return undefined;
     }
 
     let cancelled = false;
-    setNetworksLoading(true);
-    setNetworksError(false);
-
-    void listAllKnowledgeNetworks()
-      .then((records) => {
-        if (!cancelled) {
-          setNetworks(records);
-        }
+    setCheck({ id: selectedNetworkId, status: "loading" });
+    getKnowledgeNetwork(selectedNetworkId, { skipErrorToast: true })
+      .then((network) => {
+        if (cancelled) return;
+        setCheck(
+          network
+            ? { id: selectedNetworkId, status: "ready", network }
+            : { id: selectedNetworkId, status: "unavailable" },
+        );
       })
-      .catch(() => {
-        if (!cancelled) {
-          setNetworks([]);
-          setNetworksError(true);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setNetworksLoading(false);
-        }
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setCheck({ id: selectedNetworkId, status: isUnavailable(error) ? "unavailable" : "error" });
       });
-
     return () => {
       cancelled = true;
     };
-  }, [reloadSequence, needsNetworkList]);
+  }, [view, selectedNetworkId, checkedId, reloadSequence]);
 
-  const selectedNetwork = useMemo(
-    () => networks.find((network) => network.id === selectedNetworkId) ?? null,
-    [networks, selectedNetworkId],
-  );
-  const networkOptions = useMemo(
-    () =>
-      networks.map((network) => ({
-        label: `${network.name} (${network.identifier})`,
-        value: network.id,
-      })),
-    [networks],
-  );
+  // Until the check for this id has finished, treat it as loading.
+  const current: NetworkCheck | null = !selectedNetworkId
+    ? null
+    : check?.id === selectedNetworkId
+      ? check
+      : { id: selectedNetworkId, status: "loading" };
+  const selectedNetwork = current?.status === "ready" ? current.network : null;
 
   const updateView = useCallback(
     (nextView: McpWorkspaceView) => {
@@ -122,12 +92,13 @@ export function McpIntegrationWorkspace() {
   );
 
   const updateNetwork = useCallback(
-    (networkId: string) => {
+    (network: KnowledgeNetworkRecord | null) => {
       const next = new URLSearchParams(searchParams);
       next.set("tab", "mcp");
       next.set("mcpView", "debug");
-      if (networkId) {
-        next.set("networkId", networkId);
+      if (network) {
+        setCheck({ id: network.id, status: "ready", network });
+        next.set("networkId", network.id);
       } else {
         next.delete("networkId");
       }
@@ -136,8 +107,7 @@ export function McpIntegrationWorkspace() {
     [searchParams, setSearchParams],
   );
 
-  const selectedNetworkUnavailable =
-    !networksLoading && !networksError && selectedNetworkId !== "" && selectedNetwork === null;
+  const selectedNetworkUnavailable = current?.status === "unavailable";
 
   const networkPickerGuide = (
     <NetworkPickerGuide
@@ -156,7 +126,7 @@ export function McpIntegrationWorkspace() {
           ? t("knowledgeNetwork.integration.mcpWorkspace.networkUnavailableDescription")
           : undefined
       }
-      onOpen={(network) => updateNetwork(network.id)}
+      onOpen={updateNetwork}
     />
   );
 
@@ -184,27 +154,13 @@ export function McpIntegrationWorkspace() {
 
         {view === "debug" && selectedNetwork ? (
           <div className={styles.networkPicker}>
-            <label htmlFor="mcp-debug-network">
-              {t("knowledgeNetwork.integration.mcpWorkspace.networkLabel")}
-            </label>
-            <Select
-              id="mcp-debug-network"
+            <span>{t("knowledgeNetwork.integration.mcpWorkspace.networkLabel")}</span>
+            <NetworkSelect
               className={styles.networkSelect}
-              value={selectedNetwork?.id}
-              disabled={networksLoading || networksError}
-              loading={networksLoading}
-              options={networkOptions}
-              placeholder={
-                networksLoading
-                  ? t("knowledgeNetwork.integration.mcpWorkspace.networkLoading")
-                  : t("knowledgeNetwork.integration.mcpWorkspace.networkPlaceholder")
-              }
-              aria-label={t("knowledgeNetwork.integration.mcpWorkspace.networkLabel")}
+              value={selectedNetwork}
+              onChange={updateNetwork}
+              ariaLabel={t("knowledgeNetwork.integration.mcpWorkspace.networkLabel")}
               allowClear
-              showSearch
-              optionFilterProp="label"
-              notFoundContent={t("knowledgeNetwork.integration.mcpWorkspace.networkNoMatch")}
-              onChange={(networkId) => updateNetwork(networkId || "")}
             />
             {selectedNetwork ? (
               <Link
@@ -217,15 +173,6 @@ export function McpIntegrationWorkspace() {
                 <ArrowRightOutlined />
               </Link>
             ) : null}
-            {networksError ? (
-              <button
-                type="button"
-                className={styles.retryButton}
-                onClick={() => setReloadSequence((value) => value + 1)}
-              >
-                <ReloadOutlined /> {t("knowledgeNetwork.integration.mcpWorkspace.retry")}
-              </button>
-            ) : null}
           </div>
         ) : null}
       </div>
@@ -235,7 +182,7 @@ export function McpIntegrationWorkspace() {
           <ExperienceScene embedded initialMode="mcp" lockMode showMcpConnect />
         ) : !selectedNetworkId ? (
           networkPickerGuide
-        ) : networksError ? (
+        ) : current?.status === "error" ? (
           <div className={styles.emptyState} role="alert">
             <h2>{t("knowledgeNetwork.integration.mcpWorkspace.loadFailedTitle")}</h2>
             <p>{t("knowledgeNetwork.integration.mcpWorkspace.loadFailedDescription")}</p>
@@ -247,7 +194,7 @@ export function McpIntegrationWorkspace() {
               <ReloadOutlined /> {t("knowledgeNetwork.integration.mcpWorkspace.retry")}
             </button>
           </div>
-        ) : networksLoading ? (
+        ) : current?.status === "loading" ? (
           <div className={styles.emptyState} aria-busy="true">
             <p>{t("knowledgeNetwork.integration.mcpWorkspace.networkLoading")}</p>
           </div>
