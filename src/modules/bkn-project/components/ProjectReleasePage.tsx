@@ -17,6 +17,7 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { formatRate } from "@/modules/bkn-project/components/draft/evidence";
+import { KnowledgeRefreshSection } from "@/modules/bkn-project/components/release/KnowledgeRefreshSection";
 import { IndexReadiness } from "@/modules/bkn-project/components/release/IndexReadiness";
 import { RegressionDrawer } from "@/modules/bkn-project/components/release/RegressionDrawer";
 import { ReleasePublish } from "@/modules/bkn-project/components/release/ReleasePublish";
@@ -504,6 +505,7 @@ export function ProjectReleasePage({
         projectId={project.id}
         releases={releases}
       />
+      <KnowledgeRefreshSection lineageId={project.knId} />
       {regressionOf ? (
         <RegressionDrawer
           canRun={canRun}

@@ -19,7 +19,7 @@ export function Section({
   actions?: ReactNode;
   children: ReactNode;
   description: string;
-  title: string;
+  title: ReactNode;
 }) {
   const id = useId();
   return (

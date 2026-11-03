@@ -7,6 +7,80 @@
 
 export const bknProjectEnUS = {
   bknProject: {
+    knowledgeRefresh: {
+      title: "Knowledge-base data updates",
+      description:
+        "Update the version in use with its confirmed model. Batches needing a decision appear here.",
+      preview: "Review directory changes, exceptional batches and the latest update.",
+      check: "Check for changes",
+      release: "Release this batch",
+      discard: "Discard this batch",
+      discardTitle: "Discard this unapplied batch?",
+      discardBody:
+        "Keep existing network data and release this batch’s retained source versions. A later check can propose a fresh batch.",
+      confirmTitle: "Process this update batch?",
+      confirmBody:
+        "Use the current model for the selected new or updated files and retire data for removed files.",
+      accepted: "Request accepted. Follow the update progress here.",
+      actionFailed: "The update could not continue. Read the latest status and try again.",
+      loadFailed: "Update status could not be read.",
+      updated: "Last checked: {{time}}",
+      changed: "To update: {{value}}",
+      removed: "To retire: {{value}}",
+      reused: "Reused: {{value}}",
+      completed: "Verified: {{completed}} / {{total}}",
+      durationUnknown: "Estimated extraction time is not yet available.",
+      durationNone: "No extraction is required.",
+      duration: "Estimated extraction: {{minutes}} min",
+      pending: "Needs review — links: {{links}}, fields: {{fields}}, facts: {{facts}}.",
+      limits:
+        "Owner review is required above {{changed}}% new/updated files, {{removed}}% removals, or {{minutes}} min estimated extraction. Unknown estimates also need review.",
+      state: {
+        idle: "Up to date",
+        running: "Reading and extracting",
+        ready: "Checking results",
+        applying: "Updating network data",
+        finishing: "Completing update",
+        discarding: "Discarding unapplied batch",
+        attention: "Owner review needed",
+        unknown: "Update status needs checking",
+      },
+      review: {
+        changes_large: "The proportion of new or updated files exceeds the automatic limit.",
+        removals_large: "The proportion of removed files exceeds the automatic limit.",
+        duration_unknown: "A reliable extraction-time estimate is not available yet.",
+        duration_large: "Estimated extraction time exceeds the automatic limit.",
+        other: "This batch needs review.",
+      },
+      reason: {
+        batch_review_required: "Review this batch before it starts.",
+        submission_unknown:
+          "The extraction request has no confirmed task receipt. Check it before starting another batch.",
+        source_or_publication_changed:
+          "Source access or the version in use changed. Check before continuing.",
+        source_access_changed: "Source access changed. Ask the owner to restore access.",
+        source_unavailable: "The source file version could not be read.",
+        source_hold_unavailable: "The source version could not be retained for this update.",
+        unsupported_content:
+          "A file has no supported readable text. Check its content before continuing.",
+        invalid_evidence: "The source location could not be verified.",
+        invalid_extraction: "The extracted result needs correction before it can be applied.",
+        extraction_failed: "Extraction did not finish. Check the file and assistant configuration.",
+        execution_changed:
+          "The configured extraction model or rules changed. Review the model version.",
+        execution_unknown: "The actual extraction version could not be verified.",
+        task_unavailable: "The extraction task could not be read.",
+        write_set_changed: "The validated results changed. Review this batch again.",
+        write_plan_changed: "The planned update changed. Review this batch again.",
+        write_plan_unavailable: "The update could not be rechecked.",
+        dataset_write_unavailable:
+          "Network data could not be updated. The same update will be resumed.",
+        hold_release_unavailable: "The update needs its source-version cleanup completed.",
+        discard_requested: "Releasing source versions retained for the discarded batch.",
+        previous_version_update: "An update from the previously used version needs to be settled.",
+        other: "The update needs checking before it can continue.",
+      },
+    },
     sourceFields: {
       undoClear: "Undo clearing",
       pendingSave: "Selected for confirmation; save the model to apply",
