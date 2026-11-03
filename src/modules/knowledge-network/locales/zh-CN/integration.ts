@@ -39,8 +39,6 @@ export const integrationPart = {
       },
       networkLabel: "知识网络",
       networkLoading: "正在加载知识网络……",
-      networkPlaceholder: "请选择知识网络",
-      networkNoMatch: "未找到匹配的知识网络",
       openNetwork: "查看知识网络",
       retry: "重试",
       loadFailedTitle: "知识网络加载失败",

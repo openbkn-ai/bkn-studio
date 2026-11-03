@@ -39,8 +39,6 @@ export const integrationPart = {
       },
       networkLabel: "Knowledge network",
       networkLoading: "Loading knowledge networks…",
-      networkPlaceholder: "Select a knowledge network",
-      networkNoMatch: "No matching knowledge networks",
       openNetwork: "View knowledge network",
       retry: "Retry",
       loadFailedTitle: "Failed to load knowledge networks",

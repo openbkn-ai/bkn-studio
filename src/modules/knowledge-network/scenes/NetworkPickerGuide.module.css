@@ -97,13 +97,9 @@
 .picker {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   margin-top: 16px;
-}
-
-.select {
-  width: min(420px, 100%);
 }
 
 .note {
@@ -111,15 +107,6 @@
   color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
-}
-
-.retryButton {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-link);
-  cursor: pointer;
-  font: inherit;
 }
 
 @media (max-width: 1100px) {
