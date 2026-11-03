@@ -1864,7 +1864,9 @@ export const bknProjectEnUS = {
         target: "Creates the new version {{name}}, based on live v{{version}}.",
         targetFirst: "Creates the first version, {{name}}.",
         join: "; ",
-        originalDocuments:
+        originalDocuments_one:
+          "Originals from {{count}} document will be included in network search. Other documents retain evidence locations only.",
+        originalDocuments_other:
           "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         checksTitle: "Release checks",
         check: {

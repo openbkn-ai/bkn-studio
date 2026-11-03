@@ -191,6 +191,24 @@ describe("ReleasePublish", () => {
     expect(view.queryByText(/original_documents|knowledge_base/)).not.toBeInTheDocument();
   });
 
+  it("uses the English singular for one original document", async () => {
+    await i18n.changeLanguage("en-US");
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        checks: [{ code: "knowledge_base", passed: true, details: { original_documents: 1 } }],
+        accepts: [],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "Review release v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        "Originals from 1 document will be included in network search. Other documents retain evidence locations only.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("reviews the release in plain words, and publishes once the owner accepts what did not pass", async () => {
     publishReleaseMock.mockResolvedValue({ networkId: "n_v1_0_3" });
     renderPublish();
