@@ -396,11 +396,14 @@
   text-decoration: none;
 }
 
-.sdkNetworkLink:hover,
+.sdkNetworkLink:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-link-hover);
+}
+
 .sdkNetworkLink:focus-visible {
-  border-color: var(--color-primary-border);
-  color: var(--color-text-link);
-  outline: none;
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
 }
 
 .sdkNetworkName {
@@ -425,7 +428,7 @@
 
 .sdkNetworkArrow {
   flex: 0 0 auto;
-  color: var(--color-text-link);
+  color: var(--color-link);
 }
 
 .sdkNetworkNote {
@@ -439,7 +442,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--color-text-link);
+  color: var(--color-link);
   cursor: pointer;
   font: inherit;
 }
