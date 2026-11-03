@@ -24,6 +24,19 @@ export const integrationPart = {
         connect: "Client setup",
         debug: "Tool debugging",
       },
+      guide: {
+        heading: "Debug MCP tools online",
+        description:
+          "Call the MCP tools the platform offers agents, and see each tool's parameters, request and result. Before connecting a client, check here that the tools work on this knowledge network.",
+        steps: {
+          pick: "Pick the knowledge network to debug on the right. Its tools load.",
+          tool: "Pick a tool in the list on the left and read its API doc. Auto-fill builds a request from the network's actual structure and sample rows.",
+          run: "Run it to see the result. Request debug has this call's cURL command, to repeat it in a terminal.",
+        },
+        eyebrow: "MCP tools/call",
+        title: "Choose a knowledge network",
+        open: "Start debugging",
+      },
       networkLabel: "Knowledge network",
       networkLoading: "Loading knowledge networks…",
       networkPlaceholder: "Select a knowledge network",
@@ -32,13 +45,6 @@ export const integrationPart = {
       retry: "Retry",
       loadFailedTitle: "Failed to load knowledge networks",
       loadFailedDescription: "The available knowledge networks could not be loaded. Please retry.",
-      selectNetworkTitle: "Select a knowledge network to debug",
-      selectNetworkDescription:
-        "MCP tool calls require an explicit knowledge-network context. Selecting one loads the tools available for that network.",
-      noNetworksTitle: "No knowledge networks available for debugging",
-      noNetworksDescription:
-        "Create a knowledge network first, or ask an administrator for access to one.",
-      networkUnavailableTitle: "The original knowledge network is unavailable",
       networkUnavailableDescription:
         "The knowledge network in this link does not exist or is not accessible to the current account. Select another network.",
     },
@@ -105,29 +111,30 @@ openbkn help all`,
         },
       },
     },
-    // The SDK tab only links on: SDK examples are generated per network, on its App development page.
-    sdk: {
-      guideTitle: "Build apps on a knowledge network",
-      guideDescription:
-        "SDK examples are generated from each knowledge network's actual structure, on its App development page: object types, relations, actions, functions and more, each in Python, TypeScript and REST.",
-      steps: {
-        pick: "Pick the knowledge network to build on, on the right.",
-        start:
-          "On its App development page, get a token, install the SDK and generate the network's ontology SDK.",
-        examples:
-          "Copy the example for each capability, or download the full Q&A web app example. The whole page also exports as Markdown for a developer or a coding agent.",
-      },
-      eyebrow: "Python / TypeScript / REST",
-      title: "Choose a knowledge network",
+    // The knowledge network picker shared by the SDK tab and tool debugging.
+    networkPicker: {
       searchPlaceholder: "Search knowledge networks by name",
       loading: "Loading knowledge networks…",
       loadFailed: "Could not load knowledge networks.",
       retry: "Retry",
       noNetworks: "No knowledge networks yet.",
       noMatch: "No matching knowledge networks.",
-      more: "{{count}} more knowledge networks. Type a name to search.",
-      more_one: "{{count}} more knowledge network. Type a name to search.",
-      more_other: "{{count}} more knowledge networks. Type a name to search.",
+    },
+    // The SDK tab only links on: SDK examples are generated per network, on its App development page.
+    sdk: {
+      guideTitle: "Build apps on a knowledge network",
+      guideDescription:
+        "SDK examples are generated from each knowledge network's actual structure, on its App development page: object types, relations, actions, functions and more, each in Python, TypeScript and REST.",
+      steps: {
+        pick: "Pick a knowledge network on the right and open its App development page.",
+        start:
+          "On its App development page, get a token, install the SDK and generate the network's ontology SDK.",
+        examples:
+          "Copy the example for each capability, or download the full Q&A web app example. The whole page also exports as Markdown for a developer or a coding agent.",
+      },
+      eyebrow: "Python / TypeScript / REST",
+      open: "Open app development",
+      title: "Choose a knowledge network",
     },
   },
 } as const;

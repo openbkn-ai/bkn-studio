@@ -6,6 +6,7 @@
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,6 +22,19 @@ vi.mock("react-i18next", async (importOriginal) => ({
 }));
 
 vi.mock("antd", () => ({
+  Button: ({
+    children,
+    disabled,
+    onClick,
+  }: {
+    children: ReactNode;
+    disabled?: boolean;
+    onClick: () => void;
+  }) => (
+    <button type="button" disabled={disabled} onClick={onClick}>
+      {children}
+    </button>
+  ),
   Select: ({
     disabled,
     onChange,
@@ -128,13 +142,20 @@ describe("McpIntegrationWorkspace", () => {
     });
     renderWorkspace("/knowledge-network/integration?tab=mcp&mcpView=debug");
 
-    expect(await screen.findByRole("combobox")).toBeTruthy();
+    expect(
+      await screen.findByText("knowledgeNetwork.integration.mcpWorkspace.guide.heading"),
+    ).toBeTruthy();
     await waitFor(() => {
       expect(screen.getByRole("option", { name: "Sales (sales_kn)" })).toBeTruthy();
     });
     expect(screen.queryByTestId("experience-scene")).toBeNull();
 
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "network-1" } });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /knowledgeNetwork\.integration\.mcpWorkspace\.guide\.open/,
+      }),
+    );
 
     expect(await screen.findByTestId("experience-scene")).toHaveTextContent("debug:sales_kn");
     expect(
@@ -178,8 +199,43 @@ describe("McpIntegrationWorkspace", () => {
     );
 
     expect(
-      await screen.findByText("knowledgeNetwork.integration.mcpWorkspace.networkUnavailableTitle"),
+      await screen.findByText(
+        "knowledgeNetwork.integration.mcpWorkspace.networkUnavailableDescription",
+      ),
     ).toBeTruthy();
     expect(screen.queryByTestId("experience-scene")).toBeNull();
+  });
+
+  it("leaves loading networks to the picker when the URL names none", async () => {
+    mocks.listKnowledgeNetworks.mockResolvedValue({
+      items: [network("network-1", "sales_kn", "Sales")],
+      total: 1,
+    });
+    renderWorkspace("/knowledge-network/integration?tab=mcp&mcpView=debug");
+
+    await screen.findByRole("option", { name: "Sales (sales_kn)" });
+    // Only the picker's first page: no full list behind it, no request thrown away.
+    expect(mocks.listKnowledgeNetworks).toHaveBeenCalledTimes(1);
+    expect(mocks.listKnowledgeNetworks).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, pageSize: 50 }),
+    );
+  });
+
+  it("offers a retry when the network named in the URL cannot be checked", async () => {
+    mocks.listKnowledgeNetworks.mockRejectedValueOnce(new Error("503"));
+    mocks.listKnowledgeNetworks.mockResolvedValue({
+      items: [network("network-1", "sales_kn", "Sales")],
+      total: 1,
+    });
+    renderWorkspace("/knowledge-network/integration?tab=mcp&mcpView=debug&networkId=network-1");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "knowledgeNetwork.integration.mcpWorkspace.loadFailedTitle",
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /knowledgeNetwork\.integration\.mcpWorkspace\.retry/ }),
+    );
+
+    expect(await screen.findByTestId("experience-scene")).toHaveTextContent("debug:sales_kn");
   });
 });
