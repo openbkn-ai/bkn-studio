@@ -17,6 +17,7 @@ import type { Regression, ReleaseCheck, ReleaseItem } from "@/modules/bkn-projec
 const PREFIX = "bknProject.release.publish";
 
 const CHECKS = new Set([
+  "knowledge_base",
   "confirmed",
   "mapped",
   "data_source",
@@ -27,6 +28,9 @@ const CHECKS = new Set([
   "baseline",
 ]);
 const REASONS = new Set([
+  "knowledge_base_not_ready",
+  "knowledge_base_permission",
+  "knowledge_base_unavailable",
   "not_confirmed",
   "confirmation_outdated",
   "mapping_missing",
@@ -54,6 +58,9 @@ const REFUSALS = new Set([
   "CapabilitiesSkipped",
 ]);
 const PUBLISH_ERRORS = new Set([
+  "KnowledgeBaseNotReady",
+  "SourcePermission",
+  "KnowledgeBaseUnavailable",
   "NotOwner",
   "ProjectArchived",
   "ReviewOutdated",
@@ -111,8 +118,19 @@ export function checkReasonText(t: TFunction, check: ReleaseCheck): string {
   return t(`${PREFIX}.reason.${reason}`);
 }
 
-/** The items a check names one per line: those whose tables are gone. */
+/** Business details of a check, including the confirmed originals scope. */
 export function checkDetailRows(t: TFunction, check: ReleaseCheck): string[] {
+  if (
+    check.code === "knowledge_base" &&
+    check.passed &&
+    check.details &&
+    typeof check.details === "object"
+  ) {
+    const count = (check.details as { original_documents?: unknown }).original_documents;
+    if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0) {
+      return [t(`${PREFIX}.originalDocuments`, { count })];
+    }
+  }
   if (check.passed || check.reason !== "table_missing" || !Array.isArray(check.details)) {
     return [];
   }

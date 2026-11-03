@@ -1741,8 +1741,13 @@ export const bknProjectZhCN = {
         target: "将创建新版本「{{name}}」，基于线上的 v{{version}}。",
         targetFirst: "将创建第一个版本「{{name}}」。",
         join: "；",
+        originalDocuments: "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
+        originalDocuments_one: "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
+        originalDocuments_other:
+          "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
         checksTitle: "发布检查",
         check: {
+          knowledge_base: "知识库构建与来源权限",
           confirmed: "草稿确认",
           mapped: "数据表对应",
           data_source: "数据来源",
@@ -1754,6 +1759,9 @@ export const bknProjectZhCN = {
           other: "其他检查",
         },
         reason: {
+          knowledge_base_not_ready: "请先完成当前模型的知识库全量构建和结果核对。",
+          knowledge_base_permission: "请确认来源知识库的查询权限和目标知识网络的配置权限。",
+          knowledge_base_unavailable: "暂时无法核对知识库发布条件，请稍后重新审核。",
           not_confirmed: "草稿还没有确认。",
           confirmation_outdated: "确认之后草稿又有修改，需要重新确认。",
           mapping_missing: "这些对象类还没有完整对应到数据表：{{names}}",
@@ -1846,6 +1854,9 @@ export const bknProjectZhCN = {
         published: "v{{version}} 已发布，场景问题的回归已在后台开始。",
         regressionHint: "发布后会自动用场景问题做一次回归，回归结果不影响发布。",
         error: {
+          KnowledgeBaseNotReady: "请先完成当前模型的知识库全量构建和结果核对。",
+          SourcePermission: "请确认来源知识库的查询权限和目标知识网络的配置权限。",
+          KnowledgeBaseUnavailable: "暂时无法核对知识库发布条件，请稍后重试。",
           NotOwner: "只有项目负责人可以发布。",
           ProjectArchived: "项目已归档，不能发布。",
           ReviewOutdated: "检查之后草稿或线上版本又变了，已重新检查，请再看一遍。",

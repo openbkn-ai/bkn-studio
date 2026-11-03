@@ -175,6 +175,40 @@ describe("ReleasePublish", () => {
     getRegressionMock.mockResolvedValue(null);
   });
 
+  it("shows the confirmed number of document originals included in search", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        checks: [{ code: "knowledge_base", passed: true, details: { original_documents: 5 } }],
+        accepts: [],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText("5 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。"),
+    ).toBeInTheDocument();
+    expect(view.queryByText(/original_documents|knowledge_base/)).not.toBeInTheDocument();
+  });
+
+  it("uses the English singular for one original document", async () => {
+    await i18n.changeLanguage("en-US");
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        checks: [{ code: "knowledge_base", passed: true, details: { original_documents: 1 } }],
+        accepts: [],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "Review release v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        "Originals from 1 document will be included in network search. Other documents retain evidence locations only.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("reviews the release in plain words, and publishes once the owner accepts what did not pass", async () => {
     publishReleaseMock.mockResolvedValue({ networkId: "n_v1_0_3" });
     renderPublish();
@@ -259,6 +293,23 @@ describe("ReleasePublish", () => {
     );
     await waitFor(() => expect(getReleaseReviewMock).toHaveBeenCalledTimes(2));
     expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["KnowledgeBaseNotReady", "请先完成当前模型的知识库全量构建和结果核对。"],
+    ["SourcePermission", "请确认来源知识库的查询权限和目标知识网络的配置权限。"],
+    ["KnowledgeBaseUnavailable", "暂时无法核对知识库发布条件，请稍后重试。"],
+  ])("explains %s after a publication refusal and preserves the retry", async (code, text) => {
+    publishReleaseMock.mockRejectedValue(refusal(`Release.${code}`));
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    fireEvent.click(await view.findByText("知道部分索引还没就绪，仍然发布"));
+    fireEvent.click(publishButton());
+    expect(await view.findByText(text)).toBeInTheDocument();
+    expect(publishButton()).toBeEnabled();
+    expect(onChanged).not.toHaveBeenCalled();
+    expect(view.queryByText(code)).not.toBeInTheDocument();
   });
 
   it("keeps the dialog open on a failed publishing, says why and lets the owner try again", async () => {
@@ -568,5 +619,26 @@ describe("ReleasePublish", () => {
     renderPublish(status({ nextActions: [], stage: "checking" }));
     expect(screen.getByText("数据校验通过后才能发布。")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /发布审核/ })).toBeNull();
+  });
+  it.each([
+    ["knowledge_base_not_ready", "请先完成当前模型的知识库全量构建和结果核对。"],
+    ["knowledge_base_permission", "请确认来源知识库的查询权限和目标知识网络的配置权限。"],
+    ["knowledge_base_unavailable", "暂时无法核对知识库发布条件，请稍后重新审核。"],
+  ])("blocks knowledge-base publication in business language: %s", async (reason, message) => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        blocked: true,
+        checks: [{ code: "knowledge_base", passed: false, reason }],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(await view.findByText("知识库构建与来源权限")).toBeInTheDocument();
+    expect(view.getByText(message)).toBeInTheDocument();
+    expect(publishButton()).toBeDisabled();
+    expect(view.queryByText(/knowledge_base/)).not.toBeInTheDocument();
+    expect(publishReleaseMock).not.toHaveBeenCalled();
   });
 });

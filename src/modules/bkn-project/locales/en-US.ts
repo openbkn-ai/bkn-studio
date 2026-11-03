@@ -1864,8 +1864,15 @@ export const bknProjectEnUS = {
         target: "Creates the new version {{name}}, based on live v{{version}}.",
         targetFirst: "Creates the first version, {{name}}.",
         join: "; ",
+        originalDocuments:
+          "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
+        originalDocuments_one:
+          "Originals from {{count}} document will be included in network search. Other documents retain evidence locations only.",
+        originalDocuments_other:
+          "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         checksTitle: "Release checks",
         check: {
+          knowledge_base: "Knowledge-base build and source access",
           confirmed: "Draft confirmation",
           mapped: "Table mapping",
           data_source: "Data source",
@@ -1877,6 +1884,12 @@ export const bknProjectEnUS = {
           other: "Another check",
         },
         reason: {
+          knowledge_base_not_ready:
+            "Complete and review the full knowledge-base build for the current model.",
+          knowledge_base_permission:
+            "Check source query access and permission to configure the target knowledge network.",
+          knowledge_base_unavailable:
+            "Knowledge-base publication cannot be verified right now. Review again shortly.",
           not_confirmed: "The draft is not confirmed yet.",
           confirmation_outdated: "The draft changed after it was confirmed; confirm it again.",
           mapping_missing: "These object types do not fully map to a table yet: {{names}}",
@@ -1974,6 +1987,12 @@ export const bknProjectEnUS = {
         regressionHint:
           "After publishing, the scenario questions are asked once as a regression; its result does not affect the release.",
         error: {
+          KnowledgeBaseNotReady:
+            "Complete and review the full knowledge-base build for the current model.",
+          SourcePermission:
+            "Check source query access and permission to configure the target knowledge network.",
+          KnowledgeBaseUnavailable:
+            "Knowledge-base publication cannot be verified right now. Try again shortly.",
           NotOwner: "Only the project owner can publish.",
           ProjectArchived: "The project is archived and cannot be published.",
           ReviewOutdated:
