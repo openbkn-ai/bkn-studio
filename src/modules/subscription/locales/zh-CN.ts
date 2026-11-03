@@ -32,17 +32,19 @@ export const subscriptionZhCN = {
       },
       connector_certified: {
         bullets: {
-          b1: "SQL Server、Oracle 直连，无需导出中间文件",
+          b1: "SQL Server、Oracle、Doris 直连；SAP HANA 需企业版及以上",
           b2: "连接参数、驱动与方言由官方维护并随版本验证",
           b3: "与社区连接器同一套建模、索引与查询链路,切换不改模型",
+          b4: "使用连接器需要有效的对应版本授权，以及包含对应连接器实现的 Vega 部署镜像",
         },
         // 卡片只列连得上哪些库;上面的整句卖点留给升级弹窗。
         cardBullets: {
           b1: "SQL Server",
           b2: "Oracle",
+          b3: "Doris",
         },
         description:
-          "认证/高级数据源连接器：专业版支持 SQL Server、Oracle，企业版增加 SAP HANA；社区版仅开放基础连接器",
+          "认证/高级数据源连接器：专业版支持 SQL Server、Oracle、Doris，企业版增加 SAP HANA；社区版仅开放基础连接器",
         name: "高级数据连接",
       },
       vega_logic_view: {

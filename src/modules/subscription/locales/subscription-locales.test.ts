@@ -75,13 +75,13 @@ describe("subscription capability copy", () => {
     ).toEqual(["Timeline", "Evidence chain"]);
   });
 
-  it("lists Oracle in Professional and SAP HANA in Enterprise without version labels", () => {
+  it("lists Doris in Professional and SAP HANA in Enterprise without version labels", () => {
     expect(
       Object.values(subscriptionZhCN.subscription.capabilities.connector_certified.cardBullets),
-    ).toEqual(["SQL Server", "Oracle"]);
+    ).toEqual(["SQL Server", "Oracle", "Doris"]);
     expect(
       Object.values(subscriptionEnUS.subscription.capabilities.connector_certified.cardBullets),
-    ).toEqual(["SQL Server", "Oracle"]);
+    ).toEqual(["SQL Server", "Oracle", "Doris"]);
     expect(subscriptionZhCN.subscription.capabilities.connector_certified.name).toBe(
       "高级数据连接",
     );
@@ -94,6 +94,7 @@ describe("subscription capability copy", () => {
       subscriptionZhCN.subscription.capabilities.connector_certified,
       subscriptionEnUS.subscription.capabilities.connector_certified,
     ]) {
+      expect(copy.description).toContain("Doris");
       expect(copy.description).not.toContain("0.2.0");
       expect(Object.values(copy.bullets).join(" ")).not.toContain("0.2.0");
     }

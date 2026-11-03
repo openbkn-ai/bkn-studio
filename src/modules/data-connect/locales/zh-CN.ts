@@ -72,6 +72,7 @@ export const dataConnectZhCN = {
     connectorTypeEmpty: "当前筛选条件下没有可选连接器类型。",
     connectorTypeDisabled: "停用",
     connectorTypeUnavailable: "不可用",
+    connectorTypeEditionRequired: "需要{{edition}}及以上",
     discardChangesTitle: "放弃未保存的内容？",
     discardChangesDescription: "当前填写的连接信息尚未保存，返回后将无法恢复。",
     discardChangesConfirm: "放弃并返回",
