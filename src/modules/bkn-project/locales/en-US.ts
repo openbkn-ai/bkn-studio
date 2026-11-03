@@ -68,6 +68,19 @@ export const bknProjectEnUS = {
         "I confirm the identifier and field placement. Review this object individually before adoption.",
     },
     documentEditor: {
+      factResolution: "Current fact rule",
+      factResolutionHelp:
+        "Choose the fact value and its entity relationship. Unique choices are suggestions; only confirmation enables time-based status decisions. Unconfirmed or conflicting facts stay pending review.",
+      factSingleValueRequired:
+        "Split independent business values into separate facts before confirming this rule.",
+      factSubjectRequired: "First adopt an identifier relationship from this fact to an entity.",
+      factSubject: "Applies to entity through",
+      factValue: "Fact value",
+      factResolutionStale:
+        "The confirmed fields or relationship changed. Review and confirm again.",
+      confirmFactResolution: "Confirm these choices for current fact decisions",
+      clearFactResolution: "Remove current fact rule",
+
       fieldAuthority: "Value authority",
       authorityDocument: "Document",
       authorityFusion: "Knowledge fusion",

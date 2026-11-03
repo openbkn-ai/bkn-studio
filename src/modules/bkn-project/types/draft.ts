@@ -69,7 +69,14 @@ export type DualSourcePlan = DualSourceChoice & {
   confirmedAt: number;
   state?: "proposed" | "confirmed" | "stale";
 };
+export type FactResolutionChoice = {
+  valueProperty?: string;
+  subjectRelationId?: string;
+  confirm: boolean;
+  clear?: boolean;
+};
 export type DraftDocumentSettings = {
+  factResolution?: FactResolutionChoice;
   fieldSources?: {
     property: string;
     sourceOfRecord: "document" | "fusion";
@@ -85,8 +92,19 @@ export type DraftDocumentSettings = {
 };
 export type DraftDocumentModel = Omit<
   DraftDocumentSettings,
-  "dualSource" | "fileIdentity" | "sentenceIdentity" | "filePeriod" | "fieldSources"
+  | "dualSource"
+  | "fileIdentity"
+  | "sentenceIdentity"
+  | "filePeriod"
+  | "fieldSources"
+  | "factResolution"
 > & {
+  factResolution?: {
+    valueProperty: string;
+    subjectRelationId: string;
+    confirmedAt: number;
+    state?: "proposed" | "confirmed" | "stale";
+  };
   filePeriod?: { from?: string; until?: string; confirmedAt: number };
   fileIdentity?: { property: string; confirmedAt: number };
   sentenceIdentity?: { properties: string[]; confirmedAt: number };

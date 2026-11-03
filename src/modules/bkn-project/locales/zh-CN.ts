@@ -60,6 +60,17 @@ export const bknProjectZhCN = {
       confirm: "我已确认编号及字段归属；此对象仍需逐项审核。",
     },
     documentEditor: {
+      factResolution: "事实当前状态",
+      factResolutionHelp:
+        "选择事实值及其作用实体的关系。唯一候选仅为建议，确认后才按生效时间判断状态；未确认或有冲突的事实保持待核查。",
+      factSingleValueRequired: "请先将其他独立业务值拆成单独事实，再确认当前状态规则。",
+      factSubjectRequired: "请先采纳从该事实通过编号指向实体的关系。",
+      factSubject: "通过哪条关系作用于实体",
+      factValue: "事实值字段",
+      factResolutionStale: "已确认的字段或关系发生变化，请重新核对并确认。",
+      confirmFactResolution: "确认这些选择用于判断事实当前状态",
+      clearFactResolution: "移除事实状态规则",
+
       fieldAuthority: "以谁为准",
       authorityDocument: "文档",
       authorityFusion: "知识融合",

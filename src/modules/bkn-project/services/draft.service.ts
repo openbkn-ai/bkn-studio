@@ -106,6 +106,12 @@ const mapSourceChoice = (choice: BackendSourceChoice): DualSourceChoice => ({
   })),
 });
 type BackendDocument = {
+  fact_resolution?: {
+    value_property: string;
+    subject_relation_id: string;
+    confirmed_at: number;
+    state?: "proposed" | "confirmed" | "stale";
+  };
   file_period?: { from?: string; until?: string; confirmed_at: number };
   sentence_identity?: { properties: string[]; confirmed_at: number };
   file_identity?: { property: string; confirmed_at: number };
@@ -155,6 +161,16 @@ const citationBody = (q: DraftSourceCitation): BackendCitation => ({
   ...(q.quote ? { quote: q.quote } : {}),
 });
 const mapDocument = (d: BackendDocument): DraftDocumentModel => ({
+  ...(d.fact_resolution
+    ? {
+        factResolution: {
+          valueProperty: d.fact_resolution.value_property,
+          subjectRelationId: d.fact_resolution.subject_relation_id,
+          confirmedAt: d.fact_resolution.confirmed_at,
+          state: d.fact_resolution.state,
+        },
+      }
+    : {}),
   ...(d.file_period
     ? {
         filePeriod: {
@@ -1447,6 +1463,20 @@ export function objectTypeBody(value: DraftObjectTypeSave) {
                       source_of_record: decision.sourceOfRecord,
                       confirm: decision.confirm,
                     })),
+                }
+              : {}),
+            ...(value.document.factResolution
+              ? {
+                  fact_resolution: {
+                    ...(value.document.factResolution.valueProperty
+                      ? { value_property: value.document.factResolution.valueProperty }
+                      : {}),
+                    ...(value.document.factResolution.subjectRelationId
+                      ? { subject_relation_id: value.document.factResolution.subjectRelationId }
+                      : {}),
+                    confirm: value.document.factResolution.confirm,
+                    ...(value.document.factResolution.clear ? { clear: true } : {}),
+                  },
                 }
               : {}),
             ...(value.document.filePeriod ? { file_period: value.document.filePeriod } : {}),
