@@ -38,7 +38,12 @@ export function FilePeriodEditor({
       document: { timeProperty: "", participantRelations: [], ...value.document, filePeriod: next },
     });
   const choose = (key: "from" | "until", name?: string) => {
-    const next = { ...choice, [key]: name, confirm: false };
+    const next = {
+      ...(choice?.from ? { from: choice.from } : {}),
+      ...(choice?.until ? { until: choice.until } : {}),
+      [key]: name,
+      confirm: false,
+    };
     if (!next.from && !next.until) update({ clear: true, confirm: false });
     else update(next);
   };
@@ -76,7 +81,13 @@ export function FilePeriodEditor({
       <Checkbox
         disabled={!valid}
         checked={Boolean(valid && choice?.confirm)}
-        onChange={(event) => update({ ...choice, confirm: event.target.checked })}
+        onChange={(event) =>
+          update({
+            ...(choice?.from ? { from: choice.from } : {}),
+            ...(choice?.until ? { until: choice.until } : {}),
+            confirm: event.target.checked,
+          })
+        }
       >
         {t(`${P}.confirmFilePeriod`)}
       </Checkbox>

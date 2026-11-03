@@ -79,6 +79,12 @@ export function DocumentFieldsEditor({
         ? {
             document: {
               ...value.document,
+              ...(value.document.filePeriod &&
+              [value.document.filePeriod.from, value.document.filePeriod.until].includes(
+                value.properties[at].name,
+              )
+                ? { filePeriod: { ...value.document.filePeriod, confirm: false } }
+                : {}),
               ...(value.document.fileIdentity?.property === value.properties[at].name
                 ? { fileIdentity: { ...value.document.fileIdentity, confirm: false } }
                 : {}),
@@ -279,6 +285,7 @@ export function DocumentFieldsEditor({
               <label>
                 {t(`${P}.type`)}{" "}
                 <Select
+                  aria-label={`${t(`${P}.type`)} ${p.displayName || t(`${P}.unnamedField`)}`}
                   value={p.type}
                   style={{ minWidth: 180 }}
                   options={[

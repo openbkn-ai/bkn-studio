@@ -4,6 +4,7 @@
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
  * Conditions. See LICENSE for the full text.
  */
+import { useState } from "react";
 import { fireEvent, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { mapDraft, mockDraft, objectTypeBody } from "@/modules/bkn-project/services/draft.service";
@@ -11,6 +12,7 @@ import type { DraftObjectTypeSave } from "@/modules/bkn-project/types/draft";
 import { renderWithoutAntdStyles as render } from "@/test/render-without-antd-styles";
 import { documentSave, renameDocumentProperty, removeDocumentProperty } from "./document-values";
 import { FilePeriodEditor } from "./FilePeriodEditor";
+import { DocumentFieldsEditor } from "./DocumentFieldsEditor";
 
 vi.mock("react-i18next", async (original) => ({
   ...(await original<typeof import("react-i18next")>()),
@@ -108,4 +110,68 @@ it("requires reconfirmation after a chosen field stops being a date", () => {
     screen.getByRole("button", { name: "bknProject.documentEditor.clearFilePeriod" }),
   );
   expect(onChange.mock.calls[0]?.[0].document?.filePeriod).toEqual({ clear: true, confirm: false });
+});
+
+function ControlledPeriod({ onChange }: { onChange: (value: DraftObjectTypeSave) => void }) {
+  const object = fixture();
+  object.document!.filePeriod = { from: "starts", confirmedAt: 10 };
+  const [value, setValue] = useState(() => documentSave(object));
+  return (
+    <FilePeriodEditor
+      object={object}
+      value={value}
+      onChange={(next) => {
+        setValue(next);
+        onChange(next);
+      }}
+    />
+  );
+}
+it("requires a fresh confirmation after clearing and selecting a period again", async () => {
+  const changed = vi.fn<(value: DraftObjectTypeSave) => void>();
+  render(<ControlledPeriod onChange={changed} />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "bknProject.documentEditor.clearFilePeriod" }),
+  );
+  fireEvent.mouseDown(
+    screen.getByRole("combobox", { name: "bknProject.documentEditor.effectiveDate" }),
+  );
+  fireEvent.click(await screen.findByText("Effective date"));
+  const selected = changed.mock.calls.at(-1)![0];
+  expect(selected.document?.filePeriod).toEqual({ from: "starts", confirm: false });
+  expect(selected.document?.filePeriod?.clear).toBeUndefined();
+  expect(screen.getByRole("checkbox")).not.toBeChecked();
+  expect(
+    screen.getByRole("button", { name: "bknProject.documentEditor.clearFilePeriod" }),
+  ).toBeVisible();
+  fireEvent.click(screen.getByRole("checkbox"));
+  expect(objectTypeBody(changed.mock.calls.at(-1)![0]).document?.file_period).toEqual({
+    from: "starts",
+    confirm: true,
+  });
+});
+it("invalidates confirmation through the actual field-type editing control", async () => {
+  const object = fixture();
+  object.properties = [object.properties[0]];
+  object.document!.filePeriod = { from: "starts", confirmedAt: 10 };
+  const draft = mapDraft(mockDraft("p"));
+  draft.items.objectTypes = [object];
+  const changed = vi.fn<(value: DraftObjectTypeSave) => void>();
+  render(
+    <DocumentFieldsEditor
+      object={object}
+      draft={draft}
+      projectId="p"
+      value={documentSave(object)}
+      onChange={changed}
+    />,
+  );
+  fireEvent.mouseDown(
+    screen.getByRole("combobox", { name: "bknProject.documentEditor.type Effective date" }),
+  );
+  fireEvent.click(await screen.findByText("bknProject.documentEditor.types.string"));
+  const value = changed.mock.calls.at(-1)![0];
+  expect(value.properties[0].type).toBe("string");
+  expect(value.document?.filePeriod?.confirm).toBe(false);
+  expect(objectTypeBody(value).document?.file_period?.confirm).toBe(false);
 });
