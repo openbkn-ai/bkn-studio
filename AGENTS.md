@@ -1,55 +1,22 @@
 # AGENTS.md
 
-Entry point for AI agents (Claude Code / Codex / others) working in this repo.
-Read this first, then load the relevant project documents below. Before working in any subdirectory, locate and read every `AGENTS.md` from the repository root through that target directory; rules in the more specific (deeper) file take precedence.
+Entry point for AI agents (Claude Code / Codex / others) working in this repo. Before working in any subdirectory, locate and read every `AGENTS.md` from the repository root through that target directory; rules in the more specific (deeper) file take precedence.
 
-## Read before doing anything
-
-| Topic                                         | File                                                                 |
-| --------------------------------------------- | -------------------------------------------------------------------- |
-| Contribution guide (branches, commits, style) | [CONTRIBUTING.md](CONTRIBUTING.md)                                   |
-| Architecture & module boundaries              | [ARCHITECTURE.md](ARCHITECTURE.md)                                   |
-| Development conventions                       | [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)                         |
-| Agent composition conventions                 | [AGENT_COMPOSITION_CHARTER.md](AGENT_COMPOSITION_CHARTER.md)         |
-| Issue templates (bug / feature / task)        | [.github/ISSUE_TEMPLATE/](.github/ISSUE_TEMPLATE/)                   |
-| Pull request template                         | [.github/pull_request_template.md](.github/pull_request_template.md) |
-
-## Hard rules for Agents
+## Rules for every task
 
 - **Review before external writes**: Unless the requester explicitly directs otherwise, after making and verifying code changes, present the working-tree diff for review first. Do **not** commit, push, create or update a PR, or post Issue/PR comments before the requester approves.
 - **Language**: Communicate with users in Chinese by default. Use another language only when the requester explicitly asks for it or the artifact itself requires it.
 - **Clarify material ambiguity**: Before editing, ask for direction when an ambiguity would materially change scope, behavior, risk, or the intended solution; otherwise proceed with a stated, reasonable assumption.
 - **Bug regression coverage**: For bug fixes, add or update a focused regression test that demonstrates the reported failure whenever it is practical.
 - **Verification handoff**: After implementing a change, report relevant edge cases and any remaining test-coverage gaps along with the commands run.
-- **Issue / PR templates**: Before creating an Issue, select the matching template under [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) and preserve its structure when filling in all applicable sections. Before creating or updating a PR, read and fully complete [`.github/pull_request_template.md`](.github/pull_request_template.md). Do not delete required sections; mark non-applicable items explicitly with a brief reason.
-- **Only pick up Issues labeled `agent-ready`** (acceptance criteria complete + independently doable) that are unassigned. Self-assign to lock.
-- **Acceptance criteria**: a human approves them (label `ac-approved`) before an Issue becomes `agent-ready`. You may _draft_ them for human approval.
-- **Risky operations** (deploy, delete/modify data, schema migration, prod config, secrets/permissions, major dependency bumps, cross-service breaking changes): do **not** execute. Post the three-part confirmation (what / blast radius / rollback), apply label `awaiting-confirmation`, and wait for an Owner to apply `owner-confirmed`.
-- **You may never**: merge a PR, bypass or skip CI, or act without the confirmation above. Merging is human-only. Do not approve PRs yourself either — the sole exception is the automated review workflow ([`automation-claude-review.yml`](.github/workflows/automation-claude-review.yml)), which may submit an approving or change-requesting review as a signal; its approval never merges and never replaces the human merge decision.
-- **Open PRs with `Closes #<issue>`** and write back progress as Issue/PR comments. Label your PRs `by-agent`.
-- **Stuck / off-track / tests won't pass** → comment the blocker, return the Issue to triage, clear your assignee, label `needs-human`.
+- **Local tests**: Run only the test files directly affected by the change, e.g. `pnpm exec vitest --run --maxWorkers=50% path/to/affected.test.tsx`. Do not run the repository-wide Vitest suite locally unless the requester explicitly asks; remote CI runs it.
+- **Risky operations** (deploy, delete/modify data, schema migration, prod config, secrets/permissions, major dependency bumps, cross-service breaking changes): do **not** execute. Follow the confirmation process in [docs/agents/github-workflow.md](docs/agents/github-workflow.md#risky-operations).
+- **You may never** merge a PR, approve a PR yourself, bypass or skip CI, or act without the risky-operation confirmation. Merging is human-only. The sole approval exception is the automated review workflow ([`automation-claude-review.yml`](.github/workflows/automation-claude-review.yml)); its approval is a signal that never merges.
 
-## Commits & branches
+## Read when it applies
 
-- Conventional Commits: `type(scope): subject` (`feat` / `fix` / `chore` / `refactor` / `docs` / `test`; scope = service name).
-- Branch from the Issue's "Create a branch"; one PR per Issue, kept small.
-- Branch names must use a valid type prefix and at most two path segments after it: `<type>/<description>`, `<type>/<issue-number>-<description>`, or `<type>/<module>/<description>`; segments start with lowercase letters or digits and may contain `-`, `.`, or `_`.
-
-## Mandatory local pre-commit checks
-
-Before **every** commit, run the repository formatter first, review its changes, and then run the following local quality checks. Formatting is mandatory for every commit; do not rely on `format:check` or remote CI to discover files that still need formatting. Remote CI runs the repository-wide suite; the local Vitest command must target only test files directly affected by the change. Do not commit if any command fails or emits warnings where CI requires zero warnings:
-
-```bash
-pnpm run format
-node scripts/check-license-headers.mjs
-pnpm run format:check
-pnpm exec eslint . --config eslint.config.typechecked.js --max-warnings 0
-pnpm exec vitest --run --maxWorkers=50% path/to/affected.test.tsx
-pnpm exec tsc -b --pretty false
-pnpm exec vite build
-pnpm audit --prod
-```
-
-For frontend tests, run only the modules or test files directly affected by the change and use `--maxWorkers=50%` by default. Repository-wide Vitest runs belong to remote CI and must not be run locally unless the requester explicitly asks for them. Every required check must finish with an observable successful exit code before committing. Starting a command, seeing partial output, a truncated log, or a terminal session that detaches before reporting completion is not evidence that the check passed. When the terminal cannot retain a long-running command's result, use an observable log and process/exit-status workflow; do not commit until the successful result is confirmed.
-
-For changes under `src/modules/execution-factory/**`, also run `pnpm test:execution-factory`, matching the path-scoped CI workflow. Report every command run and any CI-only check that was not practical to run locally.
+- Before **every** commit: [docs/agents/pre-commit-checks.md](docs/agents/pre-commit-checks.md) (mandatory checks).
+- Picking up or creating an Issue, opening a PR, branching, committing: [docs/agents/github-workflow.md](docs/agents/github-workflow.md).
+- Changing code under `src/` (module boundaries, routes, menus, permissions): [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md).
+- Composing agents or changing a module's public capabilities: [AGENT_COMPOSITION_CHARTER.md](AGENT_COMPOSITION_CHARTER.md).
+- Team collaboration and review norms: [CONTRIBUTING.md](CONTRIBUTING.md).
