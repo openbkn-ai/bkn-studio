@@ -1482,6 +1482,8 @@ export type KnRelatedMetric = {
   scope_ref?: string;
   analysis_dimensions?: string[];
   time_dimension?: string;
+  /** Published, immutable version; query_metric requires it. */
+  version?: number;
 };
 
 export type KnObjectType = {

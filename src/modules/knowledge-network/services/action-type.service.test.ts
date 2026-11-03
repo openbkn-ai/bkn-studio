@@ -214,3 +214,59 @@ describe("action-type.service - getKnowledgeNetworkActionTypeExecutionLogDetail"
     expect(detail?.resultsTotal).toBe(8808);
   });
 });
+
+describe("action-type.service - optional reads", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // The app development page reads action types as optional data: a 403 must not raise a toast.
+  it("passes skipErrorToast to the list request", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { listKnowledgeNetworkActionTypes } =
+      await import("@/modules/knowledge-network/services/action-type.service");
+
+    await listKnowledgeNetworkActionTypes("kn-1", { skipErrorToast: true });
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/bkn-backend/v1/knowledge-networks/kn-1/action-types",
+      expect.objectContaining({ skipErrorToast: true }),
+    );
+  });
+
+  it("passes skipErrorToast to the detail request and its operations fallback", async () => {
+    getMock
+      .mockResolvedValueOnce({
+        data: {
+          entries: [
+            { action_type: "modify", id: "action-1", name: "Update", object_type_id: "ot-1" },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ data: { entries: [{ id: "action-1", operations: ["view"] }] } });
+    const { getKnowledgeNetworkActionTypeDetail } =
+      await import("@/modules/knowledge-network/services/action-type.service");
+
+    const detail = await getKnowledgeNetworkActionTypeDetail("kn-1", "action-1", {
+      skipErrorToast: true,
+    });
+
+    expect(detail?.operations).toEqual(["view"]);
+    expect(getMock).toHaveBeenNthCalledWith(
+      1,
+      "/bkn-backend/v1/knowledge-networks/kn-1/action-types/action-1",
+      { skipErrorToast: true },
+    );
+    expect(getMock).toHaveBeenNthCalledWith(
+      2,
+      "/bkn-backend/v1/knowledge-networks/kn-1/action-types",
+      expect.objectContaining({ skipErrorToast: true }),
+    );
+  });
+});
