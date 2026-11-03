@@ -274,6 +274,7 @@ service 不负责：
 - 模块样式优先使用 CSS Modules
 - 全局样式只负责壳层、主题和通用类
 - 不在业务页随意覆盖全局组件行为
+- 交互色、文字色和状态色必须使用[语义颜色 Token](docs/theme-color-system.md)，不得用数字 Primary 色阶表达按钮、链接、焦点或选中语义
 
 ## AI 开发约束
 

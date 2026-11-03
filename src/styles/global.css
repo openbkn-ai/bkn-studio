@@ -17,6 +17,19 @@
   --color-primary-bg: var(--color-primary-100);
   --color-primary-border: #bfd2ff;
 
+  /* Semantic interaction colors. Keep component intent independent from the raw brand palette. */
+  --color-action-primary: #1e3a8a;
+  --color-action-primary-hover: #17306f;
+  --color-action-primary-active: #0f2a4a;
+  --color-action-primary-text: #ffffff;
+  --color-accent-primary: #2563eb;
+  --color-accent-primary-hover: #1d4ed8;
+  --color-accent-primary-active: #1e40af;
+  --color-link: #1d4ed8;
+  --color-link-hover: #1e40af;
+  --color-focus-ring: #2563eb;
+  --color-selection-accent: #2563eb;
+
   /* Neutral */
   --color-bg-page: #f6f8fb;
   --color-bg-layout: var(--color-bg-page);
@@ -27,11 +40,12 @@
   --color-fill-quaternary: #f5f5f5;
   --color-text-primary: #111827;
   --color-text-secondary: #475569;
-  --color-text-tertiary: #94a3b8;
-  --color-text-muted: #94a3b8;
+  --color-text-tertiary: #64748b;
+  --color-text-placeholder: #94a3b8;
+  --color-text-muted: var(--color-text-tertiary);
   --color-text-faint: #b4bed0;
-  --color-text-link: #1d4ed8;
-  --color-text-link-hover: #1e40af;
+  --color-text-link: var(--color-link);
+  --color-text-link-hover: var(--color-link-hover);
   --color-text-link-inverse: #93c5fd;
   --color-text-disabled: #94a3b8;
   --color-text-inverse: #ffffff;
@@ -41,7 +55,10 @@
   --color-border: #e5eaf2;
   --color-divider: #eef2f7;
   --color-border-secondary: var(--color-divider);
-  --color-hover: #f2f6fc;
+  --color-bg-hover: #f8fafc;
+  --color-bg-selected: #eff6ff;
+  --color-bg-selected-hover: #dbeafe;
+  --color-hover: var(--color-bg-hover);
   --color-accent-bg: #f5f2ff;
   --color-accent-border: #b9a7ec;
   --color-accent-solid: #7c3aed;
@@ -99,6 +116,18 @@
   --color-primary-bg: var(--color-primary-100);
   --color-primary-border: #365379;
 
+  --color-action-primary: #2563eb;
+  --color-action-primary-hover: #2f6fdc;
+  --color-action-primary-active: #1d4ed8;
+  --color-action-primary-text: #ffffff;
+  --color-accent-primary: #60a5fa;
+  --color-accent-primary-hover: #93c5fd;
+  --color-accent-primary-active: #3b82f6;
+  --color-link: #93c5fd;
+  --color-link-hover: #bfdbfe;
+  --color-focus-ring: #60a5fa;
+  --color-selection-accent: #60a5fa;
+
   /* Near-neutral cool grays: layers step up in lightness instead of relying on borders. */
   --color-bg-page: #111318;
   --color-bg-layout: var(--color-bg-page);
@@ -110,10 +139,11 @@
   --color-text-primary: #e6e8eb;
   --color-text-secondary: #a8afba;
   --color-text-tertiary: #7d8592;
-  --color-text-muted: #7d8592;
+  --color-text-placeholder: #69717e;
+  --color-text-muted: var(--color-text-tertiary);
   --color-text-faint: #565d69;
-  --color-text-link: #93c5fd;
-  --color-text-link-hover: #bfdbfe;
+  --color-text-link: var(--color-link);
+  --color-text-link-hover: var(--color-link-hover);
   --color-text-link-inverse: #93c5fd;
   --color-text-disabled: #565d69;
   --color-text-inverse: #ffffff;
@@ -123,7 +153,10 @@
   --color-border: #2b2f37;
   --color-divider: #23262d;
   --color-border-secondary: var(--color-divider);
-  --color-hover: #23262d;
+  --color-bg-hover: #20232a;
+  --color-bg-selected: #1c2638;
+  --color-bg-selected-hover: #223049;
+  --color-hover: var(--color-bg-hover);
   --color-accent-bg: #30214d;
   --color-accent-border: #7c5bc0;
   --color-accent-solid: #8b5cf6;
@@ -234,7 +267,7 @@ blockquote {
 }
 
 .console-brand-home:focus-visible {
-  outline: 2px solid var(--color-primary-600);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
@@ -292,7 +325,7 @@ blockquote {
 }
 
 .console-brand-path-link:hover {
-  color: var(--color-primary-600);
+  color: var(--color-link);
 }
 
 .console-brand-path-item .is-current {
@@ -346,12 +379,12 @@ blockquote {
 .console-theme-toggle:hover {
   border-color: var(--color-primary-border);
   background: var(--color-hover);
-  color: var(--color-primary-600);
+  color: var(--color-accent-primary);
   transform: translateY(-1px);
 }
 
 .console-theme-toggle:focus-visible {
-  outline: 2px solid var(--color-primary-600);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
@@ -518,20 +551,29 @@ blockquote {
 }
 
 .console-about-modal-link {
-  border: 1px solid var(--color-primary-border);
+  border: 1px solid var(--color-focus-ring);
   background: var(--color-bg-surface);
-  color: var(--color-primary-700);
+  color: var(--color-link);
 }
 
 .console-about-modal-primary {
-  border: 1px solid var(--color-primary-600);
-  background: var(--color-primary-600);
-  color: var(--color-text-inverse);
+  border: 1px solid var(--color-action-primary);
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-text);
 }
 
-.console-about-modal-link:hover,
+.console-about-modal-link:hover {
+  color: var(--color-link-hover);
+}
+
 .console-about-modal-primary:hover {
-  opacity: 0.88;
+  border-color: var(--color-action-primary-hover);
+  background: var(--color-action-primary-hover);
+}
+
+.console-about-modal-primary:active {
+  border-color: var(--color-action-primary-active);
+  background: var(--color-action-primary-active);
 }
 
 .console-language-menu-option {
@@ -713,7 +755,7 @@ blockquote {
 
 .console-sidenav-return:hover {
   background: var(--color-hover);
-  color: var(--color-primary-700);
+  color: var(--color-link);
 }
 
 .console-sidenav.is-collapsed .console-sidenav-return {
@@ -757,18 +799,18 @@ blockquote {
 
 .console-sidenav-link:hover:not(.is-disabled) {
   background: var(--color-hover);
-  color: var(--color-primary-700);
+  color: var(--color-link);
 }
 
 .console-sidenav-link.is-active {
-  background: var(--color-primary-100);
-  color: var(--color-primary-700);
+  background: var(--color-bg-selected);
+  color: var(--color-selection-accent);
   box-shadow: inset 0 0 0 1px var(--color-primary-border);
 }
 
 .console-sidenav-link.is-parent-active:not(.is-active) {
   background: transparent;
-  color: var(--color-primary-700);
+  color: var(--color-selection-accent);
   font-weight: 500;
 }
 
@@ -780,7 +822,7 @@ blockquote {
   bottom: 0;
   width: 3px;
   border-radius: 0;
-  background: var(--color-primary-600);
+  background: var(--color-selection-accent);
 }
 
 .console-sidenav-link.is-disabled {
@@ -1045,7 +1087,7 @@ blockquote {
 }
 
 .console-user-menu-edition-cta {
-  color: var(--color-primary-600);
+  color: var(--color-link);
   font-weight: 600;
 }
 
@@ -1325,7 +1367,7 @@ blockquote {
   width: 38px;
   height: 38px;
   border: 3px solid var(--color-primary-100);
-  border-top-color: var(--color-primary-700);
+  border-top-color: var(--color-selection-accent);
   border-radius: 999px;
   animation: spin 0.8s linear infinite;
 }
@@ -1351,7 +1393,7 @@ blockquote {
 .status-code {
   display: inline-block;
   margin-bottom: 12px;
-  color: var(--color-primary-700);
+  color: var(--color-accent-primary);
   font-size: 56px;
   font-weight: 700;
   line-height: 1;
@@ -1390,20 +1432,26 @@ blockquote {
 }
 
 .status-button:hover {
-  border-color: var(--color-primary-border);
-  color: var(--color-primary-700);
+  border-color: var(--color-focus-ring);
+  color: var(--color-link);
 }
 
 .status-button-primary {
-  border-color: var(--color-primary-700);
-  background: var(--color-primary-700);
-  color: var(--color-text-inverse);
+  border-color: var(--color-action-primary);
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-text);
 }
 
 .status-button-primary:hover {
-  border-color: #17306f;
-  background: #17306f;
-  color: var(--color-text-inverse);
+  border-color: var(--color-action-primary-hover);
+  background: var(--color-action-primary-hover);
+  color: var(--color-action-primary-text);
+}
+
+.status-button-primary:active {
+  border-color: var(--color-action-primary-active);
+  background: var(--color-action-primary-active);
+  color: var(--color-action-primary-text);
 }
 
 .page-container {
