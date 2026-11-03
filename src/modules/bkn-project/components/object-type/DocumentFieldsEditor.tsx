@@ -28,6 +28,7 @@ import { DualSourceFieldsEditor } from "./DualSourceFieldsEditor";
 import { SentenceIdentityEditor } from "./SentenceIdentityEditor";
 import { FileIdentityEditor } from "./FileIdentityEditor";
 import { FilePeriodEditor } from "./FilePeriodEditor";
+import { FactResolutionEditor } from "./FactResolutionEditor";
 
 const P = "bknProject.documentEditor";
 export function DocumentFieldsEditor({
@@ -35,7 +36,7 @@ export function DocumentFieldsEditor({
   draft,
   projectId,
   value,
-  onChange,
+  onChange: commitChange,
 }: {
   object: DraftObjectType;
   draft: Draft;
@@ -44,6 +45,21 @@ export function DocumentFieldsEditor({
   onChange: (value: DraftObjectTypeSave) => void;
 }) {
   const { t } = useTranslation();
+  const onChange = (next: DraftObjectTypeSave) => {
+    const previous = new Map(value.properties.map((field) => [field.name, field.type]));
+    const changed =
+      value.properties.length !== next.properties.length ||
+      next.properties.some((field) => previous.get(field.name) !== field.type);
+    if (changed && next.document?.factResolution?.confirm)
+      next = {
+        ...next,
+        document: {
+          ...next.document,
+          factResolution: { ...next.document.factResolution, confirm: false },
+        },
+      };
+    commitChange(next);
+  };
   const [picker, setPicker] = useState<number | null>(null);
   const [preview, setPreview] = useState<SamplePreview | null>(null);
   const [fragment, setFragment] = useState(0);
@@ -164,6 +180,7 @@ export function DocumentFieldsEditor({
         <>
           <FileIdentityEditor object={object} draft={draft} value={value} onChange={onChange} />
           <FilePeriodEditor object={object} value={value} onChange={onChange} />
+          <FactResolutionEditor object={object} draft={draft} value={value} onChange={onChange} />
           <SentenceIdentityEditor object={object} value={value} onChange={onChange} />
         </>
       )}

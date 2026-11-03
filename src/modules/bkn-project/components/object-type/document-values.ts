@@ -24,6 +24,17 @@ export function documentSave(object: DraftObjectType): DraftObjectTypeSave {
     incrementalKey: "",
     primaryKeys: [...object.primaryKeys],
     document: {
+      ...(object.document?.factResolution
+        ? {
+            factResolution: {
+              valueProperty: object.document.factResolution.valueProperty,
+              subjectRelationId: object.document.factResolution.subjectRelationId,
+              confirm:
+                object.document.factResolution.confirmedAt > 0 &&
+                object.document.factResolution.state !== "stale",
+            },
+          }
+        : {}),
       ...(object.document?.filePeriod
         ? {
             filePeriod: {
@@ -129,6 +140,15 @@ export function renameDocumentProperty(
           document: {
             ...value.document,
             timeProperty: value.document.timeProperty === old ? name : value.document.timeProperty,
+            ...(value.document.factResolution?.valueProperty === old
+              ? {
+                  factResolution: {
+                    ...value.document.factResolution,
+                    valueProperty: name,
+                    confirm: false,
+                  },
+                }
+              : {}),
             ...(value.document.sentenceIdentity?.properties.includes(old)
               ? {
                   sentenceIdentity: {
@@ -195,6 +215,16 @@ export function removeDocumentProperty(
       ? {
           document: {
             ...value.document,
+            ...(value.document.factResolution?.valueProperty &&
+            gone.has(value.document.factResolution.valueProperty)
+              ? {
+                  factResolution: {
+                    ...value.document.factResolution,
+                    valueProperty: undefined,
+                    confirm: false,
+                  },
+                }
+              : {}),
             timeProperty: gone.has(value.document.timeProperty) ? "" : value.document.timeProperty,
             ...(value.document.sentenceIdentity?.properties.some((key) => gone.has(key))
               ? {
