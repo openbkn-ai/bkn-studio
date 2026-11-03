@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CheckOutlined, DatabaseOutlined, FileTextOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, FileTextOutlined } from "@ant-design/icons";
 import { Empty, Input, Select, Tabs } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,12 +13,14 @@ import { useTranslation } from "react-i18next";
 import type { DataSourceFamilyKey } from "@/modules/data-connect/lib/connector-template";
 import {
   filterConnectorTypes,
+  getConnectorRequiredEdition,
   getConnectorTemplateMeta,
   getConnectorTypeTags,
   getPrimaryDataSourceFamilies,
 } from "@/modules/data-connect/lib/connector-template";
-import { EditionBadge } from "@/framework/entitlement/EditionBadge";
-import { atLeast } from "@/framework/entitlement/edition";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
+import { atLeast, type Edition } from "@/framework/entitlement/edition";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
@@ -35,6 +37,7 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
   const [nameKeyword, setNameKeyword] = useState("");
   const [tag, setTag] = useState<string>();
   const [family, setFamily] = useState<DataSourceFamilyKey>("structured");
+  const [upgradeDialogEdition, setUpgradeDialogEdition] = useState<Edition>();
   const { snapshot } = useEntitlementContext();
 
   const familyOptions = getPrimaryDataSourceFamilies().filter((item) => item.key === "structured");
@@ -106,23 +109,23 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
           <div className={styles.grid}>
             {filtered.map((item) => {
               /*
-                `available` 是 Vega 在当前二进制与授权下的可用性，`enabled` 是管理员停用
-                开关；两者都为 true 才允许选择，前端不以授权快照覆盖它。
-                `requiredEdition` 是 Vega 为本连接器声明的最低档位：已拿到快照且当前档位
-                不足时显示；快照未知或后端未声明时不作推断，避免首屏加载时闪出错误提示。
+                Server availability and administrator enablement remain required for selection.
+                Product edition metadata only explains the requirement; an unknown snapshot
+                must not be treated as confirmed edition insufficiency.
               */
-              const requiredEditionBadge =
-                item.requiredEdition !== undefined &&
+              const requiredEdition = getConnectorRequiredEdition(item);
+              const upgradeEdition =
+                requiredEdition !== undefined &&
                 snapshot !== null &&
-                !atLeast(snapshot.edition, item.requiredEdition)
-                  ? item.requiredEdition
+                !atLeast(snapshot.edition, requiredEdition)
+                  ? requiredEdition
                   : undefined;
-              const selectable = item.available && item.enabled;
+              const selectable = item.available && item.enabled && upgradeEdition === undefined;
               const active = selectable && item.type === value;
               const templateMeta = getConnectorTemplateMeta(item);
 
               return (
-                <button
+                <div
                   className={[
                     styles.card,
                     active ? styles.cardActive : "",
@@ -130,45 +133,47 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  disabled={!selectable}
                   key={item.type}
-                  onClick={() => onChange(item.type)}
-                  type="button"
                 >
-                  <div className={styles.cardHeader}>
-                    {/* 档位徽标跟在连接器名后面:它说的是「这个连接器要哪一档」,右侧那组
-                        标签说的是「它属于哪类数据源」,两件事别挤在同一排。 */}
-                    <strong className={styles.cardName}>
-                      {item.name}
-                      {requiredEditionBadge ? (
-                        <EditionBadge alwaysShow edition={requiredEditionBadge} />
-                      ) : null}
-                    </strong>
-                    <span className={styles.badgeGroup}>
-                      {!item.available ? (
-                        <span className={styles.disabledBadge}>
-                          {t("dataConnect.connectorTypeUnavailable")}
-                        </span>
-                      ) : !item.enabled ? (
-                        <span className={styles.disabledBadge}>
-                          {t("dataConnect.connectorTypeDisabled")}
-                        </span>
-                      ) : null}
-                      <span className={styles.badge}>{templateMeta.label}</span>
-                      <span
-                        aria-hidden
-                        className={[styles.checkMark, active ? "" : styles.checkMarkPlaceholder]
-                          .filter(Boolean)
-                          .join(" ")}
-                      >
-                        {active ? <CheckOutlined /> : null}
+                  <button
+                    aria-pressed={active}
+                    className={styles.cardSelect}
+                    disabled={!selectable}
+                    onClick={() => onChange(item.type)}
+                    type="button"
+                  >
+                    <div className={styles.cardHeader}>
+                      <strong className={styles.cardName}>{item.name}</strong>
+                      <span className={styles.badgeGroup}>
+                        {!item.isPlaceholder && !item.enabled ? (
+                          <span className={styles.disabledBadge}>
+                            {t("dataConnect.connectorTypeDisabled")}
+                          </span>
+                        ) : !item.available ? (
+                          <span className={styles.disabledBadge}>
+                            {t("dataConnect.connectorTypeUnavailable")}
+                          </span>
+                        ) : null}
+                        <span className={styles.badge}>{templateMeta.label}</span>
                       </span>
-                    </span>
-                  </div>
-                  <p className={styles.cardDescription}>
-                    {templateMeta.description || item.description || "-"}
-                  </p>
-                </button>
+                    </div>
+                    <p className={styles.cardDescription}>
+                      {templateMeta.description || item.description || "-"}
+                    </p>
+                  </button>
+                  {upgradeEdition ? (
+                    <button
+                      aria-haspopup="dialog"
+                      className={styles.editionAction}
+                      onClick={() => setUpgradeDialogEdition(upgradeEdition)}
+                      type="button"
+                    >
+                      {t("dataConnect.connectorTypeEditionRequired", {
+                        edition: t(`common.entitlement.editions.${upgradeEdition}`),
+                      })}
+                    </button>
+                  ) : null}
+                </div>
               );
             })}
           </div>
@@ -178,6 +183,16 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
           </div>
         )}
       </div>
+      {upgradeDialogEdition &&
+      snapshot !== null &&
+      !atLeast(snapshot.edition, upgradeDialogEdition) ? (
+        <CapabilityUpgradeDialog
+          capability={CAPABILITIES.CONNECTOR_CERTIFIED}
+          minEdition={upgradeDialogEdition}
+          onClose={() => setUpgradeDialogEdition(undefined)}
+          open
+        />
+      ) : null}
     </div>
   );
 }

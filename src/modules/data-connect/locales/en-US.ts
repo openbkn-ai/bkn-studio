@@ -80,6 +80,7 @@ export const dataConnectEnUS = {
     connectorTypeEmpty: "No connector types match the current filters.",
     connectorTypeDisabled: "Disabled",
     connectorTypeUnavailable: "Unavailable",
+    connectorTypeEditionRequired: "Requires {{edition}} or higher",
     discardChangesTitle: "Discard unsaved changes?",
     discardChangesDescription:
       "The connection information you entered has not been saved and will be lost if you go back.",

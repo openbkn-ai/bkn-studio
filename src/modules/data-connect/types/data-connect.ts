@@ -30,6 +30,8 @@ export type DataConnectConnectorType = {
   description: string;
   enabled: boolean;
   fieldConfig: Record<string, ConnectorFieldConfig>;
+  /** Display-only entry synthesized when the backend omits a known connector type. */
+  isPlaceholder?: boolean;
   mode: string;
   name: string;
   requiredEdition?: Edition;

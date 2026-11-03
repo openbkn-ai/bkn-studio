@@ -148,6 +148,55 @@
   transform: translateY(-1px);
 }
 
+.cardSelect {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: inherit;
+}
+
+.cardSelect::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.cardSelect:focus-visible {
+  outline: none;
+}
+
+.card:has(.cardSelect:focus-visible) {
+  outline: 2px solid var(--color-text-link);
+  outline-offset: 2px;
+}
+
+.editionAction {
+  position: relative;
+  z-index: 1;
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-link);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: left;
+  cursor: pointer;
+}
+
+.editionAction:hover {
+  color: var(--color-text-link);
+  text-decoration: underline;
+}
+
 .cardDisabled,
 .cardDisabled:hover {
   border-color: var(--color-border);
@@ -164,28 +213,13 @@
   color: var(--color-text-tertiary);
 }
 
-.cardActive {
+.cardActive,
+.cardActive:hover {
   border-color: var(--color-primary-600);
   background: linear-gradient(180deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
   box-shadow:
     0 0 0 1px rgba(46, 104, 255, 0.18),
     0 8px 18px rgba(37, 99, 235, 0.1);
-}
-
-.checkMark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 0;
-  background: var(--color-primary-600);
-  color: var(--color-text-inverse);
-  font-size: 11px;
-}
-
-.checkMarkPlaceholder {
-  visibility: hidden;
 }
 
 .cardHeader {

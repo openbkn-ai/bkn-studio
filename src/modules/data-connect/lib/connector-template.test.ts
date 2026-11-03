@@ -213,6 +213,7 @@ describe("connector-template · SQL Server", () => {
       available: false,
       enabled: false,
       fieldConfig: {},
+      isPlaceholder: true,
     });
   });
 

@@ -30,17 +30,19 @@ export const subscriptionEnUS = {
       },
       connector_certified: {
         bullets: {
-          b1: "Connect directly to SQL Server and Oracle without an intermediate export",
+          b1: "Connect directly to SQL Server, Oracle and Doris; SAP HANA requires Enterprise or higher",
           b2: "Connection parameters, drivers and dialects are vendor-maintained and validated each release",
           b3: "Same modelling, indexing and query path as the community connectors — switching changes no model",
+          b4: "Using a connector requires a valid licence for its edition and a Vega deployment image containing its implementation",
         },
         // The card lists only which databases connect; the full sentences above stay in the upgrade dialog.
         cardBullets: {
           b1: "SQL Server",
           b2: "Oracle",
+          b3: "Doris",
         },
         description:
-          "Certified and advanced source connectors: Professional includes SQL Server and Oracle; Enterprise adds SAP HANA. Community ships the basic connectors only.",
+          "Certified and advanced source connectors: Professional includes SQL Server, Oracle and Doris; Enterprise adds SAP HANA. Community ships the basic connectors only.",
         name: "Advanced data connectivity",
       },
       vega_logic_view: {
