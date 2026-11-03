@@ -1742,6 +1742,9 @@ export const bknProjectZhCN = {
         targetFirst: "将创建第一个版本「{{name}}」。",
         join: "；",
         originalDocuments: "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
+        originalDocuments_one: "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
+        originalDocuments_other:
+          "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
         checksTitle: "发布检查",
         check: {
           knowledge_base: "知识库构建与来源权限",
