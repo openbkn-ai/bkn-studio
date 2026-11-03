@@ -309,6 +309,14 @@ export function ObjectTypePanel({
       return null;
     }
     if (
+      documentValue?.document?.filePeriod &&
+      !documentValue.document.filePeriod.clear &&
+      !documentValue.document.filePeriod.confirm
+    ) {
+      setProblem({ kind: "properties", text: t("bknProject.documentEditor.confirmFilePeriod") });
+      return null;
+    }
+    if (
       documentValue?.document?.fileIdentity &&
       !documentValue.document.fileIdentity.clear &&
       !documentValue.document.fileIdentity.confirm

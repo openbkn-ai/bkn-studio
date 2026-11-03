@@ -27,6 +27,7 @@ import {
 import { DualSourceFieldsEditor } from "./DualSourceFieldsEditor";
 import { SentenceIdentityEditor } from "./SentenceIdentityEditor";
 import { FileIdentityEditor } from "./FileIdentityEditor";
+import { FilePeriodEditor } from "./FilePeriodEditor";
 
 const P = "bknProject.documentEditor";
 export function DocumentFieldsEditor({
@@ -78,6 +79,12 @@ export function DocumentFieldsEditor({
         ? {
             document: {
               ...value.document,
+              ...(value.document.filePeriod &&
+              [value.document.filePeriod.from, value.document.filePeriod.until].includes(
+                value.properties[at].name,
+              )
+                ? { filePeriod: { ...value.document.filePeriod, confirm: false } }
+                : {}),
               ...(value.document.fileIdentity?.property === value.properties[at].name
                 ? { fileIdentity: { ...value.document.fileIdentity, confirm: false } }
                 : {}),
@@ -156,6 +163,7 @@ export function DocumentFieldsEditor({
       {!fixed && (
         <>
           <FileIdentityEditor object={object} draft={draft} value={value} onChange={onChange} />
+          <FilePeriodEditor object={object} value={value} onChange={onChange} />
           <SentenceIdentityEditor object={object} value={value} onChange={onChange} />
         </>
       )}
@@ -277,6 +285,7 @@ export function DocumentFieldsEditor({
               <label>
                 {t(`${P}.type`)}{" "}
                 <Select
+                  aria-label={`${t(`${P}.type`)} ${p.displayName || t(`${P}.unnamedField`)}`}
                   value={p.type}
                   style={{ minWidth: 180 }}
                   options={[
@@ -296,6 +305,52 @@ export function DocumentFieldsEditor({
                   onChange={(type) => changeProperty(i, { type })}
                 />
               </label>
+              {object.document?.role === "entity" &&
+                !object.document.dualSource &&
+                !value.primaryKeys.includes(p.name) && (
+                  <label>
+                    {t(`${P}.fieldAuthority`)}{" "}
+                    <Select<"document" | "fusion">
+                      aria-label={`${t(`${P}.fieldAuthority`)} ${p.displayName || p.name}`}
+                      style={{ minWidth: 180 }}
+                      value={
+                        value.document?.fieldSources?.find(
+                          (decision) =>
+                            decision.property === p.name &&
+                            (!decision.type || decision.type === p.type),
+                        )?.sourceOfRecord ??
+                        (object.properties.find(
+                          (field) => field.name === p.name && field.type === p.type,
+                        )?.sourceOfRecord === "fusion"
+                          ? "fusion"
+                          : "document")
+                      }
+                      options={[
+                        { value: "document", label: t(`${P}.authorityDocument`) },
+                        { value: "fusion", label: t(`${P}.authorityFusion`) },
+                      ]}
+                      onChange={(sourceOfRecord) =>
+                        onChange({
+                          ...value,
+                          document: {
+                            timeProperty: "",
+                            participantRelations: [],
+                            ...value.document,
+                            fieldSources: [
+                              ...(value.document?.fieldSources ?? []).filter(
+                                (decision) => decision.property !== p.name,
+                              ),
+                              { property: p.name, type: p.type, sourceOfRecord, confirm: true },
+                            ],
+                          },
+                        })
+                      }
+                    />
+                    <Typography.Paragraph type="secondary">
+                      {t(`${P}.fieldAuthorityHelp`)}
+                    </Typography.Paragraph>
+                  </label>
+                )}
               <label>
                 {t(`${P}.description`)}
                 <Input.TextArea

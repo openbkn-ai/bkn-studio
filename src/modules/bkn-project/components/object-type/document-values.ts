@@ -24,6 +24,15 @@ export function documentSave(object: DraftObjectType): DraftObjectTypeSave {
     incrementalKey: "",
     primaryKeys: [...object.primaryKeys],
     document: {
+      ...(object.document?.filePeriod
+        ? {
+            filePeriod: {
+              from: object.document.filePeriod.from,
+              until: object.document.filePeriod.until,
+              confirm: object.document.filePeriod.confirmedAt > 0,
+            },
+          }
+        : {}),
       ...(object.document?.sentenceIdentity
         ? {
             sentenceIdentity: {
@@ -130,6 +139,23 @@ export function renameDocumentProperty(
                   },
                 }
               : {}),
+            ...(value.document.filePeriod &&
+            (value.document.filePeriod.from === old || value.document.filePeriod.until === old)
+              ? {
+                  filePeriod: {
+                    ...value.document.filePeriod,
+                    from:
+                      value.document.filePeriod.from === old
+                        ? name
+                        : value.document.filePeriod.from,
+                    until:
+                      value.document.filePeriod.until === old
+                        ? name
+                        : value.document.filePeriod.until,
+                    confirm: false,
+                  },
+                }
+              : {}),
             ...(value.document.fileIdentity?.property === old
               ? { fileIdentity: { property: name, confirm: false } }
               : {}),
@@ -178,6 +204,27 @@ export function removeDocumentProperty(
                     ),
                     confirm: false,
                     ...(value.document.sentenceIdentity.properties.every((key) => gone.has(key))
+                      ? { clear: true }
+                      : {}),
+                  },
+                }
+              : {}),
+            ...(value.document.filePeriod &&
+            [value.document.filePeriod.from, value.document.filePeriod.until].some(
+              (name) => name && gone.has(name),
+            )
+              ? {
+                  filePeriod: {
+                    from: gone.has(value.document.filePeriod.from ?? "")
+                      ? undefined
+                      : value.document.filePeriod.from,
+                    until: gone.has(value.document.filePeriod.until ?? "")
+                      ? undefined
+                      : value.document.filePeriod.until,
+                    confirm: false,
+                    ...([value.document.filePeriod.from, value.document.filePeriod.until].every(
+                      (name) => !name || gone.has(name),
+                    )
                       ? { clear: true }
                       : {}),
                   },
