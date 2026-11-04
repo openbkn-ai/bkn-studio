@@ -166,6 +166,7 @@ export const CHECK_STATUS_TONE: Record<CheckStatus, LightStatusTone> = {
 };
 
 const CHECK_REASONS = new Set([
+  "knowledge_base_build",
   "cross_catalog",
   "no_key",
   "query_failed",

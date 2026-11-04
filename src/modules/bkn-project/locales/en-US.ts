@@ -2295,6 +2295,7 @@ export const bknProjectEnUS = {
           issue: "Repeated or empty values",
         },
         reason: {
+          knowledge_base_build: "Checked by the knowledge-base build",
           cross_catalog: "The two tables are in different data catalogs and cannot be checked",
           several_fields: "Made of several fields; not checked yet",
           unmapped: "Not mapped to a field of the table",
