@@ -873,7 +873,7 @@ blockquote {
 }
 
 /* 与档位徽标同排时,长名省略而不是折行(截图里「角色管理」被挤成了两行)。 */
-.console-sidenav-link:has(.console-sidenav-tier) .console-sidenav-label {
+.console-sidenav-link:has(.console-sidenav-tier, .console-sidenav-badges) .console-sidenav-label {
   display: block;
   text-overflow: ellipsis;
   white-space: nowrap;
