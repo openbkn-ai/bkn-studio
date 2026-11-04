@@ -12,6 +12,7 @@
  */
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { EditorProps } from "@monaco-editor/react";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -36,6 +37,12 @@ vi.mock(
 );
 
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ message: { success: vi.fn(), error: vi.fn() } }),
+}));
+vi.mock("@/framework/monaco/MonacoEditor", () => ({
+  MonacoEditor: ({ value }: EditorProps) => <pre data-testid="run-code-editor">{value}</pre>,
+}));
 
 const call = (id: string, name: string, input: unknown = {}): ExecutionEvent => ({
   type: "tool_started",
@@ -90,6 +97,81 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe("ChatPane 工具调用折叠", () => {
+  it("已保存的历史字符串参数可预览，原始历史保持不变", () => {
+    const code = "if True:\r\n\tprint('中文')";
+    const args = JSON.stringify({ code, language: "python" });
+    localStorage.setItem(
+      "bkn-studio:agentchat:kn-demo",
+      JSON.stringify({
+        messages: [
+          {
+            role: "assistant",
+            content: "",
+            toolCalls: [
+              {
+                id: "history-code",
+                name: "run_code",
+                args,
+                status: "done",
+                result: "ok",
+                startedAt: 0,
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    renderPane();
+    fireEvent.click(screen.getByText("run_code"));
+    expect(screen.getByTestId("run-code-editor").textContent).toBe(code);
+    fireEvent.click(screen.getByRole("tab", { name: "原始参数" }));
+    expect(screen.getByLabelText("原始参数", { selector: "pre" }).textContent).toBe(
+      JSON.stringify(args, null, 2),
+    );
+    expect(startExecution).not.toHaveBeenCalled();
+  });
+  it.each([
+    ["单行 AI 代码", { code: "x = 1; print(x)" }, "x = 1; print(x)"],
+    ["多行", { code: "if True:\n    print(1)" }, "if True:\n    print(1)"],
+    ["字面量反斜杠", { code: String.raw`print("a\nb")` }, String.raw`print("a\nb")`],
+  ])("run_code %s 接入真实调用卡片", async (_, args, code) => {
+    const eventArgs = {
+      ...args,
+      kn_id: "kn-demo",
+      bkn_context: { conversation_id: "conv_1", interaction_id: "int_1" },
+    };
+    streams([call("code-1", "run_code", eventArgs), done("code-1", "run_code")]);
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("查看代码");
+      await Promise.resolve();
+    });
+    fireEvent.click(screen.getByText("run_code"));
+    expect(screen.getByTestId("run-code-editor").textContent).toBe(code);
+    fireEvent.click(screen.getByRole("tab", { name: "原始参数" }));
+    const rawParameters = JSON.parse(
+      screen.getByLabelText("原始参数", { selector: "pre" }).textContent ?? "{}",
+    ) as Record<string, unknown>;
+    expect(rawParameters).toEqual(eventArgs);
+  });
+
+  it.each([
+    ["run_code", { code: null }],
+    ["run_shell", { code: "保持旧展示" }],
+  ])("%s 的非代码参数保持原有展示", async (name, args) => {
+    streams([call("other", name, args), done("other", name)]);
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("查看参数");
+      await Promise.resolve();
+    });
+    fireEvent.click(screen.getByText(name));
+    expect(screen.queryByRole("tab", { name: "代码" })).toBeNull();
+    const raw = [...document.querySelectorAll("pre")].find((node) =>
+      node.textContent?.startsWith("{"),
+    );
+    expect(JSON.parse(raw?.textContent ?? "{}")).toMatchObject(args);
+  });
   it("连续调用折叠成一组，出文字后重新开一组", async () => {
     streams([
       call("c1", "search_schema"),

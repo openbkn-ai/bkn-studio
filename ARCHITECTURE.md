@@ -301,6 +301,12 @@ src/modules/<module-name>/
 - 页面结构骨架
 - 仅提供通用结构，不承载具体业务语义
 
+### `framework/code-preview`
+
+- 为聊天调用与 Trace 输入详情提供共享的只读代码预览，复用 Monaco、主题和剪贴板能力。
+- 只识别参数容器中的代码与语言并展示原文，不组装执行请求，不格式化或修复代码。
+- 是否为 `run_code` 由各业务模块判断；组件交互与回退规则见 [代码预览说明](docs/run-code-preview.md)。
+
 ## 新功能接入原则
 
 - 页面落到 `src/modules/<module>/pages`

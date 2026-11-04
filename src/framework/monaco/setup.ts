@@ -17,13 +17,16 @@ import { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
+import typescriptWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 
 self.MonacoEnvironment = {
   getWorker(_workerId: string, label: string) {
-    // JSON has a dedicated validation/completion worker. Other languages, including this project's
-    // Python, can use the generic editor worker because syntax highlighting uses Monarch rules.
+    // JSON 和 JavaScript/TypeScript 使用专用线程；Python 等语法着色使用通用线程。
     if (label === "json") {
       return new jsonWorker();
+    }
+    if (label === "typescript" || label === "javascript") {
+      return new typescriptWorker();
     }
 
     return new editorWorker();
