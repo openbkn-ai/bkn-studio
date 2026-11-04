@@ -247,13 +247,22 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                           {!collapsed ? (
                             <>
                               <span className="console-sidenav-label">{t(child.labelKey)}</span>
-                              {(child.lockedEdition ?? child.paidEdition) ? (
-                                <span className="console-sidenav-tier">
-                                  <EditionBadge
-                                    alwaysShow={shouldAlwaysShowEditionBadge(child)}
-                                    capability={child.paidCapability}
-                                    edition={(child.lockedEdition ?? child.paidEdition)!}
-                                  />
+                              {child.stage || (child.lockedEdition ?? child.paidEdition) ? (
+                                <span className="console-sidenav-badges">
+                                  {child.stage ? (
+                                    <span
+                                      className={`console-edition-badge console-stage-badge-${child.stage}`}
+                                    >
+                                      {t(`shell.stage.${child.stage}`)}
+                                    </span>
+                                  ) : null}
+                                  {(child.lockedEdition ?? child.paidEdition) ? (
+                                    <EditionBadge
+                                      alwaysShow={shouldAlwaysShowEditionBadge(child)}
+                                      capability={child.paidCapability}
+                                      edition={(child.lockedEdition ?? child.paidEdition)!}
+                                    />
+                                  ) : null}
                                 </span>
                               ) : null}
                             </>
