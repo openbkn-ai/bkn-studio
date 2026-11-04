@@ -10,6 +10,8 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { KnowledgeBaseLicensePage } from "@/framework/entitlement/KnowledgeBaseLicensePage";
 import { useCapability, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 type RequireCapabilityProps = {
@@ -54,6 +56,15 @@ export function RequireCapability({
         title={t("common.entitlement.unknownTitle")}
       />
     );
+  }
+
+  // Knowledge bases advertise a licence entry in every build, including community.
+  // The real implementation remains unmounted until its capability is available.
+  if (
+    capability === CAPABILITIES.KNOWLEDGE_BASE &&
+    (state === "not-licensed" || state === "not-installed")
+  ) {
+    return <>{upgradeFallback ?? <KnowledgeBaseLicensePage />}</>;
   }
 
   if (state === "not-licensed") {

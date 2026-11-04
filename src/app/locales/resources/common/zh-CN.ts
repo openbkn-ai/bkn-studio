@@ -124,6 +124,12 @@ export const commonZhCN = {
       },
       upgrade: "升级",
       // 专业版扩展所依赖的知识库没装或接口不可用时的空状态;只用结构化数据的流程不受影响。
+      knowledgeBaseLicense: {
+        title: "知识库需要专业版许可",
+        description: "启用专业版或企业版许可后即可使用知识库。请联系管理员启用此功能。",
+        enableTitle: "请启用知识库",
+        enableDescription: "当前许可已包含知识库，请联系管理员在当前部署中启用。",
+      },
       knowledgeBaseUnavailable: {
         title: "需要知识库数据管理",
         description:
