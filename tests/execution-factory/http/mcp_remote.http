@@ -39,7 +39,7 @@ Content-Type: application/json
   "tool_name": "maps_text_search",
   "parameters": {
       "city": "上海",
-      "keywords": "爱数大厦",
+      "keywords": "人民广场",
       "citylimit": true
   }
 }

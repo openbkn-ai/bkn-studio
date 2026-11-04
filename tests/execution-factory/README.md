@@ -56,7 +56,8 @@ copy config\env.openbkn.example.ini config\env.ini
 py -m pytest testcases/data-operator-hub/api/tool -q
 ```
 
-Requires Hydra auth + MySQL + `eisoo` package. See `agent-at/LOCAL_SETUP.md` in this mirror.
+Requires Hydra auth, MySQL, and the legacy platform client package. See
+`agent-at/LOCAL_SETUP.md` in this mirror.
 
 ## 5. DIP operator-web Jest (run in original repo)
 
