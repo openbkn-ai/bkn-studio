@@ -2140,6 +2140,7 @@ export const bknProjectZhCN = {
           issue: "有重复或空值",
         },
         reason: {
+          knowledge_base_build: "由知识库构建检查负责",
           cross_catalog: "两张表在不同的数据目录，无法核对",
           several_fields: "由多个字段组成，暂不核对",
           unmapped: "没有对应到表中的字段",

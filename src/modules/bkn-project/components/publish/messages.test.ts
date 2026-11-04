@@ -133,6 +133,8 @@ describe("publish messages", () => {
     }
     expect(checkReasonText(zh, "cross_catalog")).toBe("两张表在不同的数据目录，无法核对");
     expect(checkReasonText(en, "new_reason")).toBe("Not checked");
+    expect(checkReasonText(zh, "knowledge_base_build")).toBe("由知识库构建检查负责");
+    expect(checkReasonText(en, "knowledge_base_build")).toBe("Checked by the knowledge-base build");
     for (const status of CHECK_STATUSES) {
       expect.soft(translated(zh(`bknProject.release.check.status.${status}`))).toBe(true);
     }
