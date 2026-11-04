@@ -11,6 +11,10 @@
  * a capability key, EditionBadge can use the entitlement snapshot instead.
  */
 export function shouldAlwaysShowEditionBadge(item: { paidCapability?: string }) {
+  // The knowledge base entry advertises a licence requirement in community builds too.
+  // Its badge follows the active licence; route guards still decide actual availability.
+  if (item.paidCapability === CAPABILITIES.KNOWLEDGE_BASE) return false;
   return !item.paidCapability || !capabilityReportedByEndpoint(item.paidCapability);
 }
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";

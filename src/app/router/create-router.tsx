@@ -17,6 +17,7 @@ import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import { NotFoundPage } from "@/app/router/NotFoundPage";
 import { RouteErrorPage } from "@/app/router/RouteErrorPage";
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { knowledgeBaseLicenseRoutes } from "@/modules/data-catalog/routes";
 import { extensionRoutes, extensionStandaloneRoutes } from "@/framework/extension/registry";
 
 const AppShell = lazy(async () => {
@@ -45,6 +46,7 @@ export function createAppRouter(basename?: string) {
             element: <Navigate replace to={defaultModuleRoutePath} />,
           },
           ...moduleRoutes,
+          ...knowledgeBaseLicenseRoutes(),
           ...extensionRoutes(),
           {
             path: "*",

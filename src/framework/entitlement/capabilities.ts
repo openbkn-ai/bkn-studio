@@ -52,8 +52,7 @@ export const CAPABILITIES = {
    * 本体知识库:接入文件来源,管理内容版本,解析、切片与原文定位。专业档起。
    *
    * 与图探索同一种做法:页面代码在企业版前端镜像里,经 `@/app/extensions/installed` 注册;
-   * bkn-safe-ee 登记装配表,入口按 `capabilityState()` 判。社区构建没有这个页面,入口由
-   * `extensionPage` 直接隐藏(不依赖授权快照)。登记表里目前是 planned,发布时再进能力目录(capability-catalog)。
+   * bkn-safe-ee 登记装配表,入口按 `capabilityState()` 判。社区构建保留 Beta / 专业版入口及许可提示页,实际知识库页面仍由扩展提供。登记表里目前是 planned,发布时再进能力目录(capability-catalog)。
    *
    * BKN 项目里的知识库扩展(概念模型抽取、实体识别与链接、属性关系事件抽取、知识融合)也按它门控,
    * 不另设 key(bkn-foundry#2522):同为专业档,扩展本就依赖知识库。三态见 `bkn-project-kb-mode.ts`。

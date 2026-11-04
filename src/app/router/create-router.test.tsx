@@ -38,4 +38,20 @@ describe("createAppRouter", () => {
 
     expect(router.routes.some((route) => route.path === "/demo-standalone")).toBe(false);
   });
+  it("provides a community knowledge base licence page without an installed extension", () => {
+    const router = createAppRouter();
+    const shell = router.routes.find((r) => r.path === DEFAULT_APP_ENTRY_PATH);
+    expect(shell?.children?.some((r) => r.path === "knowledge-base/*")).toBe(true);
+  });
+  it("does not shadow the installed knowledge base routes with a community fallback", () => {
+    registerExtension({
+      id: "knowledge-base",
+      capability: "knowledge_base",
+      routes: [{ path: "knowledge-base", element: <p>Installed knowledge base</p> }],
+    });
+    const router = createAppRouter();
+    const shell = router.routes.find((r) => r.path === DEFAULT_APP_ENTRY_PATH);
+    expect(shell?.children?.some((r) => r.path === "knowledge-base")).toBe(true);
+    expect(shell?.children?.some((r) => r.path === "knowledge-base/*")).toBe(false);
+  });
 });

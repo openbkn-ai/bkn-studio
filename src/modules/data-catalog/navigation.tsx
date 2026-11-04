@@ -20,10 +20,10 @@ export const dataCatalogNavigation: ConsoleNavContribution = {
       path: "/data-catalog",
     },
     {
-      // 页面在企业版前端镜像里(openbkn-ee studio/ 注册 /knowledge-base)。extensionPage 让社区构建
-      // 无论授权快照是否到位都不出现这一项;企业版再按 capability 判。
-      capability: CAPABILITIES.KNOWLEDGE_BASE,
-      extensionPage: true,
+      // The community entry explains the licence; installed routes retain their own guards.
+      paidCapability: CAPABILITIES.KNOWLEDGE_BASE,
+      paidEdition: "professional",
+      stage: "beta",
       key: "knowledge-base",
       labelKey: "shell.items.knowledgeBase",
       icon: <FileTextOutlined />,

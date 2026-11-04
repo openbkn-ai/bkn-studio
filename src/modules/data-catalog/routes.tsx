@@ -9,6 +9,9 @@ import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { KnowledgeBaseLicensePage } from "@/framework/entitlement/KnowledgeBaseLicensePage";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { isExtensionInstalled } from "@/framework/extension/registry";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
 
@@ -117,3 +120,16 @@ export const dataCatalogRouteContribution: AppRouteContribution = {
   moduleId: "data-catalog",
   routes: dataCatalogRoutes,
 };
+
+/** Resolve after extension registration so the real page is never shadowed. */
+export function knowledgeBaseLicenseRoutes(): RouteObject[] {
+  return isExtensionInstalled(CAPABILITIES.KNOWLEDGE_BASE)
+    ? []
+    : [
+        {
+          path: "knowledge-base/*",
+          handle: { console: { menuKey: "knowledge-base", titleKey: "shell.items.knowledgeBase" } },
+          element: <KnowledgeBaseLicensePage />,
+        },
+      ];
+}
