@@ -27,6 +27,8 @@ import {
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
+import { CodePayloadPreview } from "@/framework/code-preview/CodePayloadPreview";
+import { getCodePayload } from "@/framework/code-preview/code-payload";
 
 import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
 import type { NormalizedAgentError } from "@/modules/knowledge-network/services/agent-error";
@@ -283,6 +285,7 @@ function ToolCallCard({
   const requestLabel = call.clientBlocked
     ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlockedRequest", { name: call.name })
     : t("knowledgeNetwork.agentChat.chatPane.toolCall.request", { name: call.name });
+  const codePayload = call.name === "run_code" ? getCodePayload(call.args, "python") : null;
   return (
     <div className={`${styles.call} ${open ? styles.callOpen : ""}`}>
       <button
@@ -300,7 +303,11 @@ function ToolCallCard({
         <div className={styles.callBody}>
           <div className={styles.callSec}>
             <div className={styles.callLbl}>{requestLabel}</div>
-            <pre className={styles.callPre}>{formatArgs(call.args)}</pre>
+            {codePayload ? (
+              <CodePayloadPreview {...codePayload} rawText={formatArgs(call.args)} />
+            ) : (
+              <pre className={styles.callPre}>{formatArgs(call.args)}</pre>
+            )}
           </div>
           <div className={styles.callSec}>
             <div className={styles.callLbl}>

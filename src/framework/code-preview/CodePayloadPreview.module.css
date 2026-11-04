@@ -1,0 +1,114 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/* 复用宿主主题，预览不引入独立配色或卡片外框。 */
+.root,
+.codeContent {
+  min-width: 0;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-bottom: 8px;
+}
+.tabs {
+  display: flex;
+  gap: 12px;
+}
+.tabs button {
+  padding: 3px 0 5px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tabs button[aria-selected="true"] {
+  color: var(--color-text-link);
+  border-bottom-color: var(--color-text-link);
+}
+.tabs button:focus-visible {
+  outline: 2px solid var(--color-text-link);
+  outline-offset: 3px;
+}
+.actions,
+.modalActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.language {
+  margin-inline-end: 6px;
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font:
+    11px/1.5 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+}
+.raw,
+.plainCode,
+.plainWrapped {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  color: var(--color-text-primary);
+  font:
+    12px/20px ui-monospace,
+    "SF Mono",
+    Menlo,
+    Consolas,
+    monospace;
+  tab-size: 4;
+}
+.raw,
+.plainWrapped {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.plainCode {
+  white-space: pre;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: 8px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+.empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.modalContent {
+  margin-block: 12px;
+  min-width: 0;
+}
+.modalContent .raw,
+.modalContent .plainCode,
+.modalContent .plainWrapped {
+  max-height: 60vh;
+}
+@media (pointer: coarse) {
+  .tabs button {
+    min-height: 44px;
+  }
+}
