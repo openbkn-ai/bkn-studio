@@ -126,6 +126,14 @@ export const commonEnUS = {
         industry: "Industry",
       },
       upgrade: "Upgrade",
+      knowledgeBaseLicense: {
+        title: "Knowledge base requires a Professional licence",
+        description:
+          "Activate a Professional or Enterprise licence to use knowledge bases. Contact your administrator to enable this feature.",
+        enableTitle: "Enable knowledge bases",
+        enableDescription:
+          "Your licence includes knowledge bases. Contact your administrator to enable them in this deployment.",
+      },
       knowledgeBaseUnavailable: {
         title: "Knowledge base management required",
         description:

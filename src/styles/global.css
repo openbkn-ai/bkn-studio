@@ -1085,6 +1085,13 @@ blockquote {
 /* 侧栏里的档位徽标只管布局,配色走 .console-edition-badge-*(与版本页卡片同源)。
    229px 的侧栏再算上图标、子项缩进与边框,徽标必须比正文小一号并且只占自己那点宽度,
    否则「业务溯源分析」会被省略成「业务溯源…」——菜单名被截断比徽标小一号严重得多。 */
+.console-sidenav-badges {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
 .console-sidenav-tier {
   flex: 0 0 auto;
   margin-left: 6px;
