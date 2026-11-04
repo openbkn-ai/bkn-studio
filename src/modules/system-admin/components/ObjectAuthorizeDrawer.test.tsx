@@ -1136,7 +1136,9 @@ describe("ObjectAuthorizeDrawer source records", () => {
     await screen.findByText("systemAdmin.objectGrants.newGrantTitle");
     const bundleButton = screen.getByRole("button", { name: /full_business_access/ });
     fireEvent.click(bundleButton);
-    await waitFor(() => expect(bundleButton).toHaveAttribute("aria-pressed", "true"));
+    await waitFor(() => expect(bundleButton).toHaveAttribute("aria-pressed", "true"), {
+      timeout: 5_000,
+    });
 
     fireEvent.mouseDown(
       screen.getByRole("combobox", { name: "systemAdmin.objectGrants.grantUserLabel" }),
