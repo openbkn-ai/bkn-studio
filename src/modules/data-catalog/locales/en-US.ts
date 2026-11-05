@@ -878,6 +878,8 @@ export const dataCatalogEnUS = {
       defaultEmbeddingModel: "Default Embedding Model",
       defaultAnalyzerRequired: "Full-text fields are selected; set the resource default analyzer.",
       configCanBuild: "Configuration status",
+      decimalSchemaUnsupported:
+        "These Decimal fields have missing or unsupported precision declarations: {{fields}}. Check the source precision and refresh the resource. Actual values are also checked for safe encoding during the build.",
       configCanBuildYes: "Ready",
       configChecking: "Checking",
       configCannotBuild: "Configuration incomplete",

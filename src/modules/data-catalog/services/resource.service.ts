@@ -261,6 +261,7 @@ type BackendResourceDetailFields = {
     filter_condition?: Record<string, unknown> | null;
   } | null;
   source_metadata?: {
+    columns?: Array<{ name: string; num_precision?: number; num_scale?: number }>;
     description?: string;
     foreign_keys?: unknown[];
     indices?: unknown[];
@@ -378,6 +379,15 @@ function mapSourceMetadata(
     source?.category === "table" || source?.category === "index" ? source.category : undefined;
 
   return {
+    ...(metadata.columns
+      ? {
+          columns: metadata.columns.map((column) => ({
+            name: column.name,
+            numPrecision: column.num_precision ?? 0,
+            numScale: column.num_scale ?? 0,
+          })),
+        }
+      : {}),
     sourceCategory,
     foreignKeyCount: metadata.foreign_keys?.length,
     indexCount: metadata.indices?.length,

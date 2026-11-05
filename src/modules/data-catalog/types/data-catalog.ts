@@ -58,6 +58,7 @@ export type ResourceIndexConfig = {
 };
 
 export type ResourceSourceMetadata = {
+  columns?: Array<{ name: string; numPrecision: number; numScale: number }>;
   sourceCategory?: "table" | "index";
   foreignKeyCount?: number;
   indexCount?: number;

@@ -29,6 +29,7 @@ import type {
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
 import {
+  decimalBuildSchemaIssues,
   invalidKeyFields,
   isIncrementalField,
   isPrimaryKeyField,
@@ -94,6 +95,18 @@ export function BuildTaskLaunchPanel({
   const [models, setModels] = useState<SmallModel[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const decimalIssues = decimalBuildSchemaIssues(resource);
+  const decimalReadinessError =
+    decimalIssues.length > 0
+      ? t("dataCatalog.build.decimalSchemaUnsupported", {
+          fields: decimalIssues
+            .map(
+              (field) =>
+                `${field.name} (${field.type}${field.originalType ? `; ${field.originalType}` : ""})`,
+            )
+            .join(", "),
+        })
+      : null;
   const config = useMemo(() => indexFormValuesFromResource(resource), [resource]);
   const primaryKeyFields = config.primaryKeyFields ?? EMPTY_KEY_FIELDS;
   const incrementalFields = config.incrementalFields ?? EMPTY_KEY_FIELDS;
@@ -198,11 +211,16 @@ export function BuildTaskLaunchPanel({
   const controlsDisabled = disabled || !taskStatusReady || actionsLocked;
   const startDisabled =
     controlsDisabled ||
+    decimalIssues.length > 0 ||
     !hasResourceConfig ||
     batchNeedsKeyFields ||
     invalidConfiguredKeyFields.length > 0;
 
   const createTask = async () => {
+    if (decimalReadinessError) {
+      setError({ description: decimalReadinessError });
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -227,6 +245,10 @@ export function BuildTaskLaunchPanel({
 
   const startBuild = () => {
     if (disabled || !taskStatusReady) return;
+    if (decimalReadinessError) {
+      setError({ description: decimalReadinessError });
+      return;
+    }
     if (invalidConfiguredKeyFields.length > 0) {
       setError({
         description: t("dataCatalog.build.invalidKeyFields", {
@@ -301,6 +323,9 @@ export function BuildTaskLaunchPanel({
 
   return (
     <div className={formStyles.launchBody}>
+      {decimalReadinessError ? (
+        <Alert message={decimalReadinessError} showIcon type="warning" />
+      ) : null}
       {!hasResourceConfig ? (
         <Alert
           action={
