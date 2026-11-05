@@ -7,6 +7,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { cypherQueryPart as enUS } from "../locales/en-US/cypher-query";
+import { cypherQueryPart as zhCN } from "../locales/zh-CN/cypher-query";
 import { previewRawText } from "./raw-preview";
 
 const lines = (count: number) => Array.from({ length: count }, (_, i) => `line ${i}`).join("\n");
@@ -44,5 +46,20 @@ describe("previewRawText", () => {
     const preview = previewRawText(text, 2000, 1000);
     expect(preview).toMatchObject({ truncated: true, cutBy: "chars", totalLines: 5 });
     expect(preview.text).toHaveLength(1000);
+  });
+});
+
+describe("raw view messages", () => {
+  // The scene test's t() returns keys, so a message under the wrong block would only show on screen.
+  it.each([
+    ["zh-CN", zhCN],
+    ["en-US", enUS],
+  ])("%s has every message the raw view reads", (_, part) => {
+    const raw: Record<string, string> = part.cypherQuery.raw;
+    for (const key of ["download", "truncated", "truncatedChars"]) {
+      expect(raw[key], key).toMatch(/\S/);
+    }
+    expect(raw.truncated).toContain("{{shown}}");
+    expect(raw.truncatedChars).toContain("{{shown}}");
   });
 });

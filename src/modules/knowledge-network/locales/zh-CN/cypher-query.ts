@@ -150,7 +150,6 @@ export const cypherQueryPart = {
       count: "数量",
       basis: "关联依据",
       truncated: "共 {{total}} 个节点，只画出前 {{limit}} 个",
-      truncatedChars: "响应较大，已显示前 {{shown}} 个字符，共 {{total}} 个字符。",
       noNodes: "没有返回节点",
       inspectorEmpty: "点节点或关系看详情",
       computed: "计算值",
@@ -164,6 +163,7 @@ export const cypherQueryPart = {
       copy: "复制",
       download: "下载完整响应",
       truncated: "响应较大，已显示前 {{shown}} 行，共 {{total}} 行。",
+      truncatedChars: "响应较大，已显示前 {{shown}} 个字符，共 {{total}} 个字符。",
     },
     style: {
       default: "默认",
