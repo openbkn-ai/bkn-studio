@@ -25,7 +25,7 @@ describe("previewRawText", () => {
 
   it("cuts at the line budget and counts every line", () => {
     const preview = previewRawText(lines(69_041), 2000, 10_000_000);
-    expect(preview.truncated).toBe(true);
+    expect(preview).toMatchObject({ truncated: true, cutBy: "lines" });
     expect(preview.shownLines).toBe(2000);
     expect(preview.totalLines).toBe(69_041);
     expect(preview.text.endsWith("line 1999")).toBe(true);
@@ -34,7 +34,15 @@ describe("previewRawText", () => {
   it("cuts at the character budget when lines are long", () => {
     const text = "x".repeat(5000);
     const preview = previewRawText(text, 2000, 1000);
-    expect(preview).toMatchObject({ shownLines: 1, totalLines: 1, truncated: true });
+    expect(preview).toMatchObject({ totalLines: 1, truncated: true, cutBy: "chars" });
+    expect(preview.text).toHaveLength(1000);
+  });
+
+  it("tells a cut mid-line by characters, not by a line count that looks whole", () => {
+    // Few lines, one of them very long: the cut lands inside line 3 of 5.
+    const text = ["{", '  "a": 1,', `  "big": "${"y".repeat(5000)}",`, '  "b": 2', "}"].join("\n");
+    const preview = previewRawText(text, 2000, 1000);
+    expect(preview).toMatchObject({ truncated: true, cutBy: "chars", totalLines: 5 });
     expect(preview.text).toHaveLength(1000);
   });
 });

@@ -155,6 +155,7 @@ export const cypherQueryPart = {
       count: "Count",
       basis: "Match basis",
       truncated: "{{total}} nodes in total; only the first {{limit}} are drawn",
+      truncatedChars: "Large response: showing the first {{shown}} of {{total}} characters.",
       noNodes: "No nodes returned",
       inspectorEmpty: "Click a node or line for details",
       computed: "Computed values",
