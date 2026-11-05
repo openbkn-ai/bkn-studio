@@ -18,3 +18,10 @@
 .content {
   position: relative;
 }
+
+/* The step a project goes on to, at the end of a page. */
+.nextStep {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

@@ -314,7 +314,7 @@ export const bknProjectEnUS = {
       success: "Project created",
       failed: "Failed to create the project",
       name: "Project name",
-      namePlaceholder: "For example: Delivery delay warning",
+      namePlaceholder: "For example: Business exception warning",
       nameRequired: "Enter a project name",
       nameTooLong: "The project name must be at most {{max}} characters",
       target: "Target knowledge network",
@@ -326,7 +326,7 @@ export const bknProjectEnUS = {
       newNetwork: "New knowledge network",
       newNetworkDescription: "Start from an empty network; the first release is v1.0.0",
       newNetworkName: "Network name",
-      newNetworkNamePlaceholder: "For example: Delivery management",
+      newNetworkNamePlaceholder: "For example: Business management",
       newNetworkNameRequired: "Enter a network name",
       catalogs: "Data sources",
       catalogsHint:
@@ -356,6 +356,7 @@ export const bknProjectEnUS = {
       notFound: "Project not found",
       notFoundDescription: "The project does not exist, or you cannot see its knowledge network.",
       loadFailed: "Failed to load the project",
+      nextStep: "Next: {{section}}",
       comingSoon: "This page is under construction",
       comingSoonDescription: "A later version brings the full feature here.",
     },
@@ -1340,7 +1341,7 @@ export const bknProjectEnUS = {
         end_not_adopted: "An object type at one end is still undecided",
         other: "Not adopted in drafting",
       },
-      done: "Draft confirmed",
+      done: "Draft confirmed. Next, check the business scenarios; the data check and local indexes are on the release page.",
       failed: "The draft could not be confirmed. Try again later.",
     },
     resources: {
@@ -1351,7 +1352,11 @@ export const bknProjectEnUS = {
         description:
           "The ontology finds its object and relation types in these catalogs' tables, and released instances are read from them.",
         empty: "No data catalogs chosen yet",
-        gone: "{{name}} (no longer exists)",
+        gone: "{{count}} selected data catalogs no longer exist. Change the data catalogs.",
+        gone_one: "{{count}} selected data catalog no longer exists. Change the data catalogs.",
+        gone_other: "{{count}} selected data catalogs no longer exist. Change the data catalogs.",
+        unnamed: "Unknown catalog",
+        nameUnread: "—",
         goToModel: "Go to ontology modeling",
       },
       tables: {
@@ -1364,12 +1369,16 @@ export const bknProjectEnUS = {
         loadFailed: "The tables' semantic understanding cannot be read right now.",
       },
       knowledgeBases: {
-        title: "Knowledge-base catalogs",
+        title: "Knowledge bases",
         description:
           "Concept models drawn from documents add object types, properties and relations; instances are extracted afterwards.",
         preview:
           "With knowledge-base catalogs chosen, ontology modeling also draws on the business concepts in their documents.",
         comingSoon: "Choosing knowledge-base catalogs is coming soon.",
+      },
+      tabs: {
+        documents: "Requirement documents and regulations",
+        needsAttention: "Needs attention",
       },
       documents: {
         loadFailed: "The requirement documents cannot be read right now.",

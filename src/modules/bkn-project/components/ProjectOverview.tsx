@@ -24,9 +24,9 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import {
   describeDecision,
   itemNames,
@@ -140,12 +140,12 @@ export function ProjectOverview({
       // Cleared only once a read succeeds, so a failing poll does not flash the warning away.
       setDraftError(null);
     } catch (error) {
-      setDraftError(extractRequestErrorMessage(error));
+      setDraftError(requestFailureText(t, error));
     } finally {
       setReading(false);
       setReads((count) => count + 1);
     }
-  }, [project.id]);
+  }, [project.id, t]);
   useEffect(() => {
     void loadDraft();
   }, [loadDraft]);
@@ -362,7 +362,7 @@ export function ProjectOverview({
 
       <DataSourceHealth
         onGoToModel={() => go("model")}
-        onGoToResources={() => go("resources")}
+        onGoToResources={() => go("resources", "catalogs")}
         onProjectChange={onProjectChange}
         project={project}
       />

@@ -90,8 +90,10 @@ for (const { locale, sections } of LOCALES) {
     }
 
     // Uploading accepts Markdown and plain text only; PDF / DOCX belong to the extension. The
-    // documents are on the requirements and resources page.
+    // documents have a tab on the requirements and resources page.
     await openSection(page, sections[1]);
+    await page.getByRole("tab", { name: /需求文档与规范|Requirement documents/ }).click();
+    await expectNoForbiddenWords(page, "documents tab");
     await page.getByRole("button", { name: /上传文档|Upload documents/ }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expectNoForbiddenWords(page, "upload dialog");

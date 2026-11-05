@@ -88,6 +88,15 @@ export type ProjectKnowledgeBaseResourceProps = {
   canEdit: boolean;
   /** Owner, including archived projects: may finish retention cleanup. */
   canManageHolds: boolean;
+  /** What the page's tab says of the panel: reported once read, and whenever it changes. */
+  onStatusChange?: (status: ProjectKnowledgeBaseResourceStatus) => void;
+};
+
+export type ProjectKnowledgeBaseResourceStatus = {
+  /** The files in scope; null before any are chosen or while they cannot be read. */
+  fileCount: number | null;
+  /** Something waits for the person, such as source changes or a selection not saved. */
+  needsAttention: boolean;
 };
 
 export function extensionProjectKnowledgeBaseResources() {

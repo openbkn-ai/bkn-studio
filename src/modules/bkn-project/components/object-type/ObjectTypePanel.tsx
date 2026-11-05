@@ -11,8 +11,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
 import {
   applyDocumentObjectRevisions,
@@ -262,7 +262,7 @@ export function ObjectTypePanel({
       case "FieldNotFound":
         return { kind: "properties", text: t(`${PREFIX}.errors.${code}`) };
       default:
-        return { kind: "other", text: extractRequestErrorMessage(error) };
+        return { kind: "other", text: requestFailureText(t, error) };
     }
   };
 

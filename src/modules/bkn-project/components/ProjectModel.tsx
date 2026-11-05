@@ -12,10 +12,10 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftConceptGraph";
 import { DraftChangesPanel } from "@/modules/bkn-project/components/draft/DraftChangesPanel";
 import { DraftItemDialog } from "@/modules/bkn-project/components/draft/DraftItemDialog";
@@ -71,6 +71,7 @@ import { getProjectPending } from "@/modules/bkn-project/services/publish.servic
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
+import type { ResourceTab } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectModel.module.css";
@@ -108,6 +109,7 @@ export function ProjectModel({
   initialTab,
   onConfirmed,
   onGoToResources,
+  onViewConfirmation,
   ownerIsCaller,
   project,
 }: {
@@ -119,8 +121,10 @@ export function ProjectModel({
   initialTab?: string | null;
   /** Called once the draft is confirmed, to show what follows. */
   onConfirmed: () => void;
+  /** Shows what an earlier confirmation started, on the release page. */
+  onViewConfirmation: () => void;
   /** Opens the requirements and resources page, where the project's catalogs are chosen. */
-  onGoToResources: () => void;
+  onGoToResources: (tab?: ResourceTab) => void;
   /** Only the owner may replace the project's catalogs; others are asked to contact them. */
   ownerIsCaller: boolean;
   project: Project;
@@ -181,11 +185,11 @@ export function ProjectModel({
       setDraft(await getDraft(project.id));
       setLoadError(null);
     } catch (error) {
-      setLoadError(extractRequestErrorMessage(error));
+      setLoadError(requestFailureText(t, error));
     } finally {
       setReads((count) => count + 1);
     }
-  }, [project.id]);
+  }, [project.id, t]);
 
   useEffect(() => {
     void loadDraft();
@@ -213,11 +217,11 @@ export function ProjectModel({
       return all ?? next;
     } catch (error) {
       if (read === candidateReads.current) {
-        setCandidatesError(extractRequestErrorMessage(error));
+        setCandidatesError(requestFailureText(t, error));
       }
       return null;
     }
-  }, [candidateCatalog, project.id]);
+  }, [candidateCatalog, project.id, t]);
   useEffect(() => {
     if (candidatesTime !== null) {
       void loadCandidates();
@@ -307,7 +311,7 @@ export function ProjectModel({
         // Without the reloaded draft the count is unknown; the page never guesses one.
         confirmRegenerate(fresh ? fresh.items.decisions.length : null);
       } else {
-        setGenerateError(extractRequestErrorMessage(error));
+        setGenerateError(requestFailureText(t, error));
       }
     } finally {
       setGenerating(false);
@@ -365,7 +369,7 @@ export function ProjectModel({
         await loadDraft();
         return "stale";
       }
-      message.error(extractRequestErrorMessage(error));
+      message.error(requestFailureText(t, error));
       return "failed";
     } finally {
       setSaving(false);
@@ -477,7 +481,7 @@ export function ProjectModel({
   // is led there, as nobody else may change them. No change on an archived project.
   const catalogsLink = (label: string, primary = false) =>
     ownerIsCaller && !project.archived ? (
-      <AppButton onClick={onGoToResources} type={primary ? "primary" : "default"}>
+      <AppButton onClick={() => onGoToResources("catalogs")} type={primary ? "primary" : "default"}>
         {t(label)}
       </AppButton>
     ) : null;
@@ -700,7 +704,7 @@ export function ProjectModel({
           setPanelReads((count) => count + 1);
           return;
         }
-        message.error(extractRequestErrorMessage(error));
+        message.error(requestFailureText(t, error));
       }
     };
     return {
@@ -738,7 +742,7 @@ export function ProjectModel({
             message.warning(t("bknProject.model.edit.stale"));
             await loadDraft();
           } else {
-            message.error(extractRequestErrorMessage(error));
+            message.error(requestFailureText(t, error));
           }
         } finally {
           setAccepting(false);
@@ -754,7 +758,7 @@ export function ProjectModel({
       setDraft(next);
       return next;
     } catch (error) {
-      message.error(extractRequestErrorMessage(error));
+      message.error(requestFailureText(t, error));
       return null;
     }
   };
@@ -839,6 +843,7 @@ export function ProjectModel({
           <ConfirmDraft
             draft={draft}
             onConfirmed={onConfirmed}
+            onViewConfirmation={onViewConfirmation}
             onSendingChange={setConfirming}
             onShowPending={() => setTab("changes")}
             onStale={() => void loadDraft()}

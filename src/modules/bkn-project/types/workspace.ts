@@ -45,6 +45,36 @@ export const projectObjectTypePath = (projectId: string, itemId: string) =>
 export const networkWorkspacePath = (networkId: string) =>
   `/knowledge-network/workspace/${encodeURIComponent(networkId)}/overview`;
 
+/** The tabs of the requirements and resources page, as they appear in its URL. */
+export const RESOURCE_TABS = ["catalogs", "knowledge-base", "documents"] as const;
+
+export type ResourceTab = (typeof RESOURCE_TABS)[number];
+
+/** The requirements and resources page, on a tab or on the one needing action first. */
+export function projectResourcesPath(projectId: string, tab?: ResourceTab) {
+  const path = projectSectionPath(projectId, "resources");
+  return tab ? `${path}?tab=${tab}` : path;
+}
+
+/**
+ * The page a project goes on to, in the order it is built: its inputs, the ontology, the scenarios
+ * that test it, the knowledge base where the edition has one, then the release. None past the end.
+ */
+export function nextProjectSection(
+  section: ProjectSection,
+  knowledgeBaseEnabled: boolean,
+): ProjectSection | null {
+  const order: ProjectSection[] = [
+    "resources",
+    "model",
+    "scenarios",
+    ...(knowledgeBaseEnabled ? (["instances"] as const) : []),
+    "release",
+  ];
+  const index = order.indexOf(section);
+  return index < 0 ? null : (order[index + 1] ?? null);
+}
+
 export function projectSectionPath(projectId: string, section: ProjectSection) {
   return `/bkn-project/${encodeURIComponent(projectId)}/${section}`;
 }
