@@ -161,6 +161,8 @@ export const cypherQueryPart = {
       request: "请求",
       response: "响应",
       copy: "复制",
+      download: "下载完整响应",
+      truncated: "响应较大，已显示前 {{shown}} 行，共 {{total}} 行。",
     },
     style: {
       default: "默认",
