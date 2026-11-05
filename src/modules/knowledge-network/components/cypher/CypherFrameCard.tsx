@@ -10,6 +10,7 @@ import {
   CloseOutlined,
   CommentOutlined,
   DownOutlined,
+  DownloadOutlined,
   ExportOutlined,
   EditOutlined,
   FullscreenExitOutlined,
@@ -31,6 +32,7 @@ import { CypherResultTable } from "@/modules/knowledge-network/components/cypher
 import type { CypherFrame } from "@/modules/knowledge-network/cypher/cypher-frames";
 import { splitExplain } from "@/modules/knowledge-network/cypher/cypher-plan";
 import { downloadText } from "@/modules/knowledge-network/cypher/download";
+import { previewRawText } from "@/modules/knowledge-network/cypher/raw-preview";
 import { useGraphStyle } from "@/modules/knowledge-network/cypher/graph-style-context";
 import {
   buildCypherGraph,
@@ -43,19 +45,25 @@ import styles from "./CypherQueryScene.module.css";
 
 type View = "table" | "graph" | "raw" | "plan";
 
-function RawView({ frame }: { frame: CypherFrame }) {
+function RawView({ frame, fileName }: { frame: CypherFrame; fileName: string }) {
   const { t } = useTranslation();
-  if (!frame.exchange) return null;
-  const request = JSON.stringify(
-    { method: "POST", url: frame.exchange.url, body: frame.exchange.request },
-    null,
-    2,
+  const exchange = frame.exchange;
+  const request = useMemo(
+    () =>
+      exchange
+        ? JSON.stringify({ method: "POST", url: exchange.url, body: exchange.request }, null, 2)
+        : "",
+    [exchange],
   );
-  const response = JSON.stringify(
-    { status: frame.exchange.status, body: frame.exchange.response },
-    null,
-    2,
+  const response = useMemo(
+    () =>
+      exchange ? JSON.stringify({ status: exchange.status, body: exchange.response }, null, 2) : "",
+    [exchange],
   );
+  // Only the start of a large response goes on the page; copy and download carry all of it.
+  const preview = useMemo(() => previewRawText(response), [response]);
+  if (!exchange) return null;
+  const download = () => downloadText(`${fileName}-response.json`, response, "application/json");
   return (
     <div className={styles.rawView}>
       <div className={styles.cellDetailTitle}>
@@ -66,8 +74,38 @@ function RawView({ frame }: { frame: CypherFrame }) {
       <div className={styles.cellDetailTitle}>
         {t("knowledgeNetwork.cypherQuery.raw.response")}
         <Typography.Text copyable={{ text: response }} />
+        <Tooltip title={t("knowledgeNetwork.cypherQuery.raw.download")}>
+          <Button
+            aria-label={t("knowledgeNetwork.cypherQuery.raw.download")}
+            data-testid="cypher-raw-download"
+            icon={<DownloadOutlined />}
+            onClick={download}
+            size="small"
+            type="text"
+          />
+        </Tooltip>
       </div>
-      <pre className={styles.rawBlock}>{response}</pre>
+      {preview.truncated ? (
+        <div className={styles.rawNotice} data-testid="cypher-raw-truncated">
+          <span>
+            {preview.cutBy === "chars"
+              ? t("knowledgeNetwork.cypherQuery.raw.truncatedChars", {
+                  shown: preview.text.length.toLocaleString(),
+                  total: response.length.toLocaleString(),
+                })
+              : t("knowledgeNetwork.cypherQuery.raw.truncated", {
+                  shown: preview.shownLines.toLocaleString(),
+                  total: preview.totalLines.toLocaleString(),
+                })}
+          </span>
+          <Button onClick={download} size="small" type="link">
+            {t("knowledgeNetwork.cypherQuery.raw.download")}
+          </Button>
+        </div>
+      ) : null}
+      <pre className={styles.rawBlock} data-testid="cypher-raw-response">
+        {preview.text}
+      </pre>
     </div>
   );
 }
@@ -333,7 +371,7 @@ export function CypherFrameCard({
                 {
                   key: "raw",
                   label: t("knowledgeNetwork.cypherQuery.views.raw"),
-                  children: <RawView frame={frame} />,
+                  children: <RawView fileName={fileName} frame={frame} />,
                 },
               ]}
               size="small"
@@ -358,7 +396,7 @@ export function CypherFrameCard({
             value={view === "raw" ? "raw" : "plan"}
           />
           {view === "raw" ? (
-            <RawView frame={frame} />
+            <RawView fileName={fileName} frame={frame} />
           ) : (
             <CypherPlanView names={names} plan={plan} />
           )}
@@ -411,7 +449,7 @@ export function CypherFrameCard({
         {view === "table" ? (
           <CypherResultTable fullHeight={fullscreen} names={names} result={frame.result} />
         ) : null}
-        {view === "raw" ? <RawView frame={frame} /> : null}
+        {view === "raw" ? <RawView fileName={fileName} frame={frame} /> : null}
         <div className={styles.statusBar}>
           <span>
             {t("knowledgeNetwork.cypherQuery.status.rows", { count: frame.result.entries.length })}
