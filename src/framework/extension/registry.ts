@@ -41,8 +41,8 @@ export type StudioExtension = {
   workspaceActions?: WorkspaceAction[];
   /**
    * Entries in the knowledge-network workspace sidebar, under ability verification after the
-   * built-in Q&A and MCP entries. Separate from workspaceActions, so the extension decides where
-   * each of its pages is offered.
+   * built-in Q&A and MCP entries, or in the analysis group (see WorkspaceNavEntry.section).
+   * Separate from workspaceActions, so the extension decides where each of its pages is offered.
    */
   workspaceNavItems?: WorkspaceNavEntry[];
   /**
@@ -126,7 +126,14 @@ export type WorkspaceNavEntry = {
   labelKey: string;
   /** Path inside the app, without the basename, for the given network. */
   path: (networkId: string) => string;
+  /**
+   * The sidebar group it is listed in: ability verification (the default), or analysis, a group
+   * after ability verification that the sidebar shows only while some entry is listed there.
+   */
+  section?: WorkspaceNavSection;
 };
+
+export type WorkspaceNavSection = "verification" | "analysis";
 
 /**
  * A button on the graph overview that opens one of the extension's pages, in a new tab, with the
@@ -220,12 +227,17 @@ export function extensionWorkspaceActions(): (WorkspaceAction & { key: string })
   );
 }
 
-export function extensionWorkspaceNavItems(): (WorkspaceNavEntry & { key: string })[] {
+/** The workspace sidebar entries extensions registered, or those of one group when named. */
+export function extensionWorkspaceNavItems(
+  section?: WorkspaceNavSection,
+): (WorkspaceNavEntry & { key: string })[] {
   return installed.flatMap((extension) =>
-    (extension.workspaceNavItems ?? []).map((item) => ({
-      ...item,
-      key: `${extension.id}:${item.id}`,
-    })),
+    (extension.workspaceNavItems ?? [])
+      .filter((item) => !section || (item.section ?? "verification") === section)
+      .map((item) => ({
+        ...item,
+        key: `${extension.id}:${item.id}`,
+      })),
   );
 }
 

@@ -266,6 +266,7 @@ export const networkPart = {
   updatedBy: "Updated by: {{name}}",
   workspaceActionTypes: "Action types",
   workspaceAbilityVerification: "Capability verification",
+  workspaceAnalysis: "Analysis",
   workspaceExperienceAgent: "Q&A verification",
   workspaceExperienceMcp: "MCP integration",
   workspaceExperienceCypher: "Data query",

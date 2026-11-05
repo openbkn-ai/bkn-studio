@@ -9,7 +9,11 @@ import { CompassOutlined } from "@ant-design/icons";
 import type { ReactNode } from "react";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
-import { extensionWorkspaceNavItems, isExtensionInstalled } from "@/framework/extension/registry";
+import {
+  extensionWorkspaceNavItems,
+  isExtensionInstalled,
+  type WorkspaceNavSection,
+} from "@/framework/extension/registry";
 
 export type WorkspaceUpgradeEntry = { capability: string; icon: ReactNode; labelKey: string };
 
@@ -26,15 +30,24 @@ const UPGRADE_ENTRIES: WorkspaceUpgradeEntry[] = [
 ];
 
 /**
- * The extension and upgrade entries to show. `hiddenKeys` (RuntimeConfig.hiddenNavigation) leaves
- * out an extension entry by its key (`<extension id>:<entry id>`) and an upgrade entry by its
- * capability (for example `graph_explorer`).
+ * The extension and upgrade entries to show in one sidebar group (ability verification by
+ * default); upgrade entries are listed under ability verification only. `hiddenKeys`
+ * (RuntimeConfig.hiddenNavigation) leaves out an extension entry by its key
+ * (`<extension id>:<entry id>`) and an upgrade entry by its capability (for example
+ * `graph_explorer`).
  */
-export function visibleWorkspaceExtensionEntries(hiddenKeys: readonly string[] = []) {
+export function visibleWorkspaceExtensionEntries(
+  hiddenKeys: readonly string[] = [],
+  section: WorkspaceNavSection = "verification",
+) {
   return {
-    items: extensionWorkspaceNavItems().filter((item) => !hiddenKeys.includes(item.key)),
-    upgrades: UPGRADE_ENTRIES.filter(
-      (entry) => !isExtensionInstalled(entry.capability) && !hiddenKeys.includes(entry.capability),
-    ),
+    items: extensionWorkspaceNavItems(section).filter((item) => !hiddenKeys.includes(item.key)),
+    upgrades:
+      section === "verification"
+        ? UPGRADE_ENTRIES.filter(
+            (entry) =>
+              !isExtensionInstalled(entry.capability) && !hiddenKeys.includes(entry.capability),
+          )
+        : [],
   };
 }
