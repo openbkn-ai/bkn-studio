@@ -18,6 +18,8 @@ export type RawPreview = {
   shownLines: number;
   totalLines: number;
   truncated: boolean;
+  /** Which budget cut the text; a cut by characters can end mid-line, so it is told in characters. */
+  cutBy?: "lines" | "chars";
 };
 
 function countLines(text: string): number {
@@ -35,11 +37,13 @@ export function previewRawText(
 ): RawPreview {
   const totalLines = countLines(text);
   let end = Math.min(text.length, maxChars);
+  let cutBy: RawPreview["cutBy"] = "chars";
   let lines = 0;
   for (let at = text.indexOf("\n"); at !== -1 && at < end; at = text.indexOf("\n", at + 1)) {
     lines += 1;
     if (lines === maxLines) {
       end = at;
+      cutBy = "lines";
       break;
     }
   }
@@ -47,5 +51,5 @@ export function previewRawText(
     return { text, shownLines: totalLines, totalLines, truncated: false };
   }
   const shown = text.slice(0, end);
-  return { text: shown, shownLines: countLines(shown), totalLines, truncated: true };
+  return { text: shown, shownLines: countLines(shown), totalLines, truncated: true, cutBy };
 }

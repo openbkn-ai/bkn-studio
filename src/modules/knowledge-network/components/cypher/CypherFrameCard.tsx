@@ -88,10 +88,15 @@ function RawView({ frame, fileName }: { frame: CypherFrame; fileName: string }) 
       {preview.truncated ? (
         <div className={styles.rawNotice} data-testid="cypher-raw-truncated">
           <span>
-            {t("knowledgeNetwork.cypherQuery.raw.truncated", {
-              shown: preview.shownLines.toLocaleString(),
-              total: preview.totalLines.toLocaleString(),
-            })}
+            {preview.cutBy === "chars"
+              ? t("knowledgeNetwork.cypherQuery.raw.truncatedChars", {
+                  shown: preview.text.length.toLocaleString(),
+                  total: response.length.toLocaleString(),
+                })
+              : t("knowledgeNetwork.cypherQuery.raw.truncated", {
+                  shown: preview.shownLines.toLocaleString(),
+                  total: preview.totalLines.toLocaleString(),
+                })}
           </span>
           <Button onClick={download} size="small" type="link">
             {t("knowledgeNetwork.cypherQuery.raw.download")}
