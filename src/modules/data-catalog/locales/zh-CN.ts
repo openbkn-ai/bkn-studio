@@ -809,6 +809,8 @@ export const dataCatalogZhCN = {
       defaultEmbeddingModel: "默认 Embedding 模型",
       defaultAnalyzerRequired: "已选择全文字段，请设置资源默认分词器。",
       configCanBuild: "配置状态",
+      decimalSchemaUnsupported:
+        "以下 Decimal 字段缺少有效精度或超出本地索引支持的声明范围：{{fields}}。请检查源字段精度并刷新资源；构建时仍会逐值检查安全编码范围。",
       configCanBuildYes: "可构建",
       configChecking: "检查中",
       configCannotBuild: "配置不完整",

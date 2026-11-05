@@ -16,6 +16,41 @@ vi.mock("@/framework/request/http", () => ({
   http: { delete: deleteMock, get: getMock, post: postMock, put: putMock },
 }));
 
+describe("resource.service decimal metadata", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("preserves discovered precision and signed scale for shared build readiness", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockResolvedValueOnce({
+      data: {
+        entries: [
+          {
+            id: "resource-1",
+            catalog_id: "catalog-1",
+            schema_definition: [
+              { name: "amount", original_name: "AMOUNT", type: "decimal", original_type: "number" },
+            ],
+            source_metadata: {
+              columns: [
+                { name: "AMOUNT", num_precision: 2, num_scale: -3 },
+                { name: "ID", num_precision: 10 },
+              ],
+            },
+          },
+        ],
+      },
+    });
+    const { getCatalogResource } = await import("./resource.service");
+    const { decimalBuildSchemaIssues } = await import("../lib/build-guards");
+    const result = await getCatalogResource("resource-1");
+    expect(result.sourceMetadata?.columns).toEqual([
+      { name: "AMOUNT", numPrecision: 2, numScale: -3 },
+      { name: "ID", numPrecision: 10, numScale: 0 },
+    ]);
+    expect(decimalBuildSchemaIssues(result)).toEqual([]);
+  });
+});
+
 describe("resource.service · deleteCatalogResource", () => {
   beforeEach(() => {
     vi.resetModules();
