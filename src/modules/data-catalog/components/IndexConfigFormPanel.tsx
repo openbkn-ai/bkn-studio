@@ -53,6 +53,7 @@ import {
   type EmbeddingModelsLoadState,
 } from "@/modules/data-catalog/utils/embedding-model-options";
 import {
+  decimalBuildSchemaIssues,
   invalidKeyFields,
   isIncrementalField,
   isPrimaryKeyField,
@@ -835,7 +836,20 @@ export function IndexConfigFormPanel({
       : []),
     ...(configurationValidationError ? [configurationValidationError] : []),
   ];
+  const decimalIssues = decimalBuildSchemaIssues({ ...resource, schema });
+  const decimalReadinessError =
+    decimalIssues.length > 0
+      ? t("dataCatalog.build.decimalSchemaUnsupported", {
+          fields: decimalIssues
+            .map(
+              (field) =>
+                `${field.name} (${field.type}${field.originalType ? `; ${field.originalType}` : ""})`,
+            )
+            .join(", "),
+        })
+      : null;
   const buildReadinessIssues = [
+    ...(decimalReadinessError ? [decimalReadinessError] : []),
     ...configurationIssues,
     ...(formValidationError && !configurationIssues.includes(formValidationError)
       ? [formValidationError]
@@ -843,6 +857,7 @@ export function IndexConfigFormPanel({
   ];
   const canBuild = buildReadinessIssues.length === 0;
   const capabilityCheckPending =
+    decimalIssues.length === 0 &&
     configurationIssues.length === 0 &&
     ((fulltextFields.length > 0 && analyzersLoading) ||
       (embeddingFields.length > 0 && modelsLoading));

@@ -75,6 +75,54 @@ describe("BuildTaskLaunchPanel", () => {
     });
   });
 
+  it.each(["decimal(12,2)", "decimal(38,0)", "number(2,-3)", "numeric(3,5)"])(
+    "keeps declared %s buildable",
+    async (originalType) => {
+      render(
+        <BuildTaskLaunchPanel
+          active
+          onGoConfigure={vi.fn()}
+          onStarted={vi.fn()}
+          resource={{
+            ...resource,
+            schema: [...resource.schema, { name: "price", type: "decimal", originalType }],
+          }}
+        />,
+      );
+      await waitFor(() =>
+        expect(
+          screen
+            .getByRole("button", { name: /dataCatalog\.build\.startBuild/ })
+            .hasAttribute("disabled"),
+        ).toBe(false),
+      );
+      expect(screen.queryByText("dataCatalog.build.decimalSchemaUnsupported")).toBeNull();
+    },
+  );
+
+  it("blocks decimals without an indexable declaration before confirmation", async () => {
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={{
+          ...resource,
+          schema: [...resource.schema, { name: "price", type: "decimal", originalType: "numeric" }],
+        }}
+      />,
+    );
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalled());
+    expect(await screen.findByText("dataCatalog.build.decimalSchemaUnsupported")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: /dataCatalog\.build\.startBuild/ })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(modalConfirmMock).not.toHaveBeenCalled();
+    expect(createBuildTaskMock).not.toHaveBeenCalled();
+  });
+
   it("keeps streaming disabled and exposes the persisted incremental batch entry", () => {
     expect(STREAMING_BUILD_ENTRY_ENABLED).toBe(false);
 
