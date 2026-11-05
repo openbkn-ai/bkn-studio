@@ -472,6 +472,41 @@ describe("ProjectResources", () => {
     expect(within(catalogs).getByRole("img", { name: DOT })).toBeInTheDocument();
   });
 
+  it("waits for the catalog list before settling on the opening tab", async () => {
+    mocks.kb.mode = "enabled";
+    registerPanel({ fileCount: 12, needsAttention: true });
+    let answer!: (value: unknown) => void;
+    mocks.listCatalogs.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    renderPage({ catalogIds: ["cat-001", "old-catalog"] });
+
+    await tab(/knowledgeBases.title/);
+    answer({ items: [{ id: "cat-001", name: "ERP" }], total: 1 });
+    const catalogs = await tab(/catalogs.title/);
+    await waitFor(() => expect(within(catalogs).getByRole("img", { name: DOT })).toBeTruthy());
+    expect(catalogs).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("does not call a catalog unknown before its list is read", async () => {
+    mocks.listCatalogs.mockRejectedValue(new Error("down"));
+    mocks.getUnderstanding.mockResolvedValue(understanding([["orders", "completed"]]));
+    renderPage();
+
+    expect(await screen.findByText("orders")).toBeInTheDocument();
+    expect(screen.queryByText("bknProject.resources.catalogs.unnamed")).toBeNull();
+    expect(screen.getByText("bknProject.resources.catalogs.nameUnread")).toBeInTheDocument();
+  });
+
+  it("says catalogs it cannot name only once", async () => {
+    mocks.listCatalogs.mockResolvedValue({ items: [], total: 0 });
+    mocks.getUnderstanding.mockResolvedValue([
+      { catalogId: "a", counts: {}, tables: [], visible: false },
+      { catalogId: "b", counts: {}, tables: [], visible: false },
+    ]);
+    renderPage({ catalogIds: ["a", "b"] });
+
+    expect(await screen.findAllByText(/understand.progress.invisible/)).toHaveLength(1);
+  });
+
   it("keeps the panel's state across tabs", async () => {
     mocks.kb.mode = "enabled";
     registerPanel({ fileCount: 1, needsAttention: false });

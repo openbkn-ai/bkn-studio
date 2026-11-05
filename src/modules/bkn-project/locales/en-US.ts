@@ -1356,6 +1356,7 @@ export const bknProjectEnUS = {
         gone_one: "{{count}} selected data catalog no longer exists. Change the data catalogs.",
         gone_other: "{{count}} selected data catalogs no longer exist. Change the data catalogs.",
         unnamed: "Unknown catalog",
+        nameUnread: "—",
         goToModel: "Go to ontology modeling",
       },
       tables: {

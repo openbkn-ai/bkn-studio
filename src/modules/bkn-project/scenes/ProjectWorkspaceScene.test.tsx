@@ -539,9 +539,7 @@ describe("ProjectWorkspaceScene", () => {
   it("offers the next step in the order a project is built", async () => {
     renderScene("scenarios");
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: /bknProject\.workspace\.nextStep/ }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: /bknProject\.workspace\.nextStep/ }));
     expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/release");
   });
 

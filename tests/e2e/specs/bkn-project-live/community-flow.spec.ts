@@ -131,8 +131,9 @@ test("community image: from tables and requirements to a published, switched rel
   });
 
   await test.step("4. upload a Markdown requirements document", async () => {
-    // The documents are on the requirements and resources page.
+    // The documents have a tab on the requirements and resources page.
     await openSection(page, "需求与资源");
+    await page.getByRole("tab", { name: /需求文档与规范/ }).click();
     await page.getByRole("button", { name: "上传文档" }).click();
     const dialog = page.getByRole("dialog");
     // Markdown and plain text only: PDF / DOCX belong to the extension and are not offered.
@@ -300,7 +301,9 @@ test("community image: from tables and requirements to a published, switched rel
     ).toBeVisible();
     await acceptAll(page);
     await ok.click();
-    await expect(page).toHaveURL(/\/release$/);
+    // Confirming goes on to the scenarios; what it started shows on the release page.
+    await expect(page).toHaveURL(/\/scenarios$/);
+    await openSection(page, "确认与发布");
     await expect(page.getByText(/^已于 .+ 确认$/)).toBeVisible();
   });
 

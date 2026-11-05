@@ -652,7 +652,7 @@ describe("ProjectModel", () => {
         <ProjectModel
           initialObject="customers"
           onConfirmed={vi.fn()}
-        onViewConfirmation={vi.fn()}
+          onViewConfirmation={vi.fn()}
           onGoToResources={onGoToResources}
           ownerIsCaller
           project={project}

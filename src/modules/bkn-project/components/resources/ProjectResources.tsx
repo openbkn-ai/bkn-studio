@@ -137,7 +137,11 @@ export function ProjectResources({
     range?: { end: number; start: number };
   } | null>(null);
 
-  const catalogName = (id: string) => catalogs?.get(id) ?? t(`${PREFIX}.catalogs.unnamed`);
+  // "Unknown" only once the list is read and lacks it: not while it is read, or could not be.
+  const catalogName = (id: string) =>
+    catalogs
+      ? (catalogs.get(id) ?? t(`${PREFIX}.catalogs.unnamed`))
+      : t(`${PREFIX}.catalogs.nameUnread`);
   // The object types of the draft by the table they read, adopted or not.
   const usedBy = useMemo(() => {
     const byTable = new Map<string, string[]>();
@@ -210,11 +214,12 @@ export function ProjectResources({
   // said what waits: dealing with something does not move the person away from it.
   const [openingTab, setOpeningTab] = useState<ResourceTab | null>(null);
   const panelHasSpoken = !kbMounted || kbStatus !== null;
+  const catalogsSettled = catalogs !== null || catalogsFailed;
   useEffect(() => {
-    if (panelHasSpoken) {
+    if (panelHasSpoken && catalogsSettled) {
       setOpeningTab((current) => current ?? waitingTab);
     }
-  }, [panelHasSpoken, waitingTab]);
+  }, [catalogsSettled, panelHasSpoken, waitingTab]);
 
   const asked = RESOURCE_TABS.find((tab) => tab === searchParams.get("tab"));
   const activeTab =
@@ -323,11 +328,18 @@ export function ProjectResources({
                   ) : null}
                   {project.catalogIds.length ? (
                     <>
-                      {invisible.map((catalog) => (
-                        <p className={styles.muted} key={catalog.catalogId}>
-                          {t("bknProject.understand.progress.invisible", {
-                            name: catalogName(catalog.catalogId),
-                          })}
+                      {/* Without a name to tell them apart, catalogs say so once. */}
+                      {[
+                        ...new Set(
+                          invisible.map((catalog) =>
+                            t("bknProject.understand.progress.invisible", {
+                              name: catalogName(catalog.catalogId),
+                            }),
+                          ),
+                        ),
+                      ].map((text) => (
+                        <p className={styles.muted} key={text}>
+                          {text}
                         </p>
                       ))}
                       {understanding === null ? (

@@ -50,7 +50,13 @@ test("bkn project: understand the data, confirm the draft, and see its check and
   await dialog.getByText("知道这些表没有参与起草，仍然确认").click();
   await ok.click();
 
-  // Confirming leads to the release page, where the check and the builds run in the background.
+  // Confirming goes on to the scenarios; the check and the builds run in the background, on the
+  // release page.
+  await expect(page).toHaveURL(/\/bkn-project\/p-001\/scenarios$/);
+  await page
+    .getByRole("navigation", { name: "项目导航" })
+    .getByRole("button", { name: "确认与发布" })
+    .click();
   await expect(page).toHaveURL(/\/bkn-project\/p-001\/release$/);
   await expect(page.getByText(/^已于 .+ 确认$/)).toBeVisible();
   const check = page.getByRole("region", { name: "数据校验" });

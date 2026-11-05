@@ -1259,6 +1259,7 @@ export const bknProjectZhCN = {
         gone_one: "有 {{count}} 个已选的数据目录已不存在，请更改数据目录。",
         gone_other: "有 {{count}} 个已选的数据目录已不存在，请更改数据目录。",
         unnamed: "未知目录",
+        nameUnread: "—",
         goToModel: "去本体建模",
       },
       tables: {
