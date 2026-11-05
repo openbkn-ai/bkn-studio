@@ -10,12 +10,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import { extensionProjectKnowledgeBaseBuilds } from "@/framework/extension/registry";
 import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage, isRequestNotFound } from "@/framework/request/error-message";
+import { isRequestNotFound } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { ProjectModel } from "@/modules/bkn-project/components/ProjectModel";
 import { ProjectOverview } from "@/modules/bkn-project/components/ProjectOverview";
 import { ProjectRequirements } from "@/modules/bkn-project/components/requirements/ProjectRequirements";
@@ -33,8 +35,11 @@ import {
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
 import {
   KNOWLEDGE_BASE_SECTIONS,
+  nextProjectSection,
+  projectResourcesPath,
   projectSectionPath,
   type ProjectSection,
+  type ResourceTab,
 } from "@/modules/bkn-project/types/workspace";
 
 // The knowledge network workspace's layout: the project's pages sit as a network's do.
@@ -58,6 +63,7 @@ export function ProjectWorkspaceScene({
 }) {
   const { t } = useTranslation();
   const KnowledgeBaseBuilds = extensionProjectKnowledgeBaseBuilds();
+  const kbMode = useBknProjectKbMode();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { runtimeConfig } = useAppServices();
@@ -81,10 +87,10 @@ export function ProjectWorkspaceScene({
       if (isRequestNotFound(error)) {
         setNotFound(true);
       } else {
-        setLoadError(extractRequestErrorMessage(error));
+        setLoadError(requestFailureText(t, error));
       }
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   useEffect(() => {
     void load();
@@ -162,6 +168,8 @@ export function ProjectWorkspaceScene({
   const setProject = (next: Project) =>
     setLoaded((current) => (current ? { ...current, project: next } : current));
   const go = (to: ProjectSection) => void navigate(projectSectionPath(project.id, to));
+  const goToResources = (tab?: ResourceTab) => void navigate(projectResourcesPath(project.id, tab));
+  const next = nextProjectSection(section, kbMode === "enabled");
 
   // No heading of its own: the navigation names the page, as in a network's workspace. The
   // overview lays panels on the page's grey; every other page is one white sheet.
@@ -195,9 +203,11 @@ export function ProjectWorkspaceScene({
                   focus={searchParams.get("focus")}
                   initialObject={searchParams.get("object")}
                   initialTab={searchParams.get("tab")}
-                  // The check and the local indexes of a confirmation show on the release page.
-                  onConfirmed={() => go("release")}
-                  onGoToResources={() => go("resources")}
+                  // Confirming goes on in the order a project is built; the check and the local
+                  // indexes a confirmation started stay a link away, on the release page.
+                  onConfirmed={() => go("scenarios")}
+                  onGoToResources={goToResources}
+                  onViewConfirmation={() => go("release")}
                   ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
                   project={project}
                 />
@@ -211,7 +221,7 @@ export function ProjectWorkspaceScene({
               ) : section === "scenarios" ? (
                 <ProjectRequirements
                   onGoToModel={() => go("model")}
-                  onGoToResources={() => go("resources")}
+                  onGoToResources={goToResources}
                   ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
                   project={project}
                 />
@@ -243,6 +253,15 @@ export function ProjectWorkspaceScene({
                   title={t("bknProject.workspace.comingSoon")}
                 />
               )}
+              {next ? (
+                <div className={styles.nextStep}>
+                  <AppButton onClick={() => go(next)} type="link">
+                    {t("bknProject.workspace.nextStep", {
+                      section: t(`bknProject.workspace.sections.${next}`),
+                    })}
+                  </AppButton>
+                </div>
+              ) : null}
             </div>
           </main>
         </div>

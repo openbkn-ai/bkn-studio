@@ -8,7 +8,7 @@ import { Alert, Checkbox, Input, Modal, Select, Space } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { deriveDocumentObject } from "@/modules/bkn-project/services/draft.service";
 import type { Draft, DraftObjectType } from "@/modules/bkn-project/types/draft";
 
@@ -72,7 +72,7 @@ export function DeriveDocumentObject({
       setOpen(false);
       onDerived(next);
     } catch (e) {
-      setError(extractRequestErrorMessage(e));
+      setError(requestFailureText(t, e));
     } finally {
       setBusy(false);
     }

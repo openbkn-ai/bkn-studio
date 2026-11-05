@@ -7,11 +7,16 @@
 
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
-import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
+import {
+  registerExtension,
+  resetExtensionsForTesting,
+  type ProjectKnowledgeBaseResourceProps,
+} from "@/framework/extension/registry";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { UnderstandingCatalog } from "@/modules/bkn-project/types/publish";
 
@@ -84,7 +89,10 @@ vi.mock("@/shared/catalog", async (importOriginal) => ({
 }));
 
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
+import { useUnsavedChanges } from "@/modules/bkn-project/components/unsaved/unsaved";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
+
+import { UnsavedLeaveGuard } from "@/modules/bkn-project/components/unsaved/UnsavedLeaveGuard";
 
 import { ProjectResources } from "./ProjectResources";
 
@@ -126,15 +134,49 @@ const understanding = (tables: [string, string][]): UnderstandingCatalog[] => [
   },
 ];
 
-function renderPage(override: Partial<Project> = {}, ownerIsCaller = true) {
-  return renderWithoutAntdStyles(
-    <ProjectResources
-      onGoToModel={mocks.onGoToModel}
-      onProjectChange={mocks.onProjectChange}
-      ownerIsCaller={ownerIsCaller}
-      project={{ ...project, ...override }}
-    />,
+function renderPage(override: Partial<Project> = {}, ownerIsCaller = true, entry = "/") {
+  const router = createMemoryRouter(
+    [
+      {
+        element: (
+          <UnsavedLeaveGuard>
+            <ProjectResources
+              onGoToModel={mocks.onGoToModel}
+              onProjectChange={mocks.onProjectChange}
+              ownerIsCaller={ownerIsCaller}
+              project={{ ...project, ...override }}
+            />
+          </UnsavedLeaveGuard>
+        ),
+        path: "*",
+      },
+    ],
+    { initialEntries: [entry] },
   );
+  return Object.assign(renderWithoutAntdStyles(<RouterProvider router={router} />), { router });
+}
+
+const tab = (name: RegExp) => screen.findByRole("tab", { name });
+const DOT = "bknProject.resources.tabs.needsAttention";
+
+/** A panel saying what waits in it, as the professional extension does. */
+function registerPanel(status: { fileCount: number | null; needsAttention: boolean }) {
+  const Panel = ({ onStatusChange }: ProjectKnowledgeBaseResourceProps) => {
+    useEffect(() => onStatusChange?.(status), [onStatusChange]);
+    const [typed, setTyped] = useState("");
+    return (
+      <input
+        aria-label="panel input"
+        onChange={(event) => setTyped(event.target.value)}
+        value={typed}
+      />
+    );
+  };
+  registerExtension({
+    id: "kb",
+    capability: "knowledge_base",
+    projectKnowledgeBaseResources: Panel,
+  });
 }
 
 const openDialog = async () => within(await screen.findByRole("dialog"));
@@ -194,8 +236,9 @@ describe("ProjectResources", () => {
     renderPage({ catalogIds: ["cat-001", "old-catalog"] });
 
     expect(
-      await screen.findByText('bknProject.resources.catalogs.gone:{"name":"old-catalog"}'),
+      await screen.findByText('bknProject.resources.catalogs.gone:{"count":1}'),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/old-catalog/)).toBeNull();
     fireEvent.click(await button("bknProject.model.catalogs.change"));
     const dialog = await openDialog();
     expect(await dialog.findByText(/bknProject.model.catalogs.removed/)).toHaveTextContent(
@@ -345,34 +388,122 @@ describe("ProjectResources", () => {
     expect(screen.queryByRole("button", { name: "bknProject.model.catalogs.add" })).toBeNull();
   });
 
-  it("holds the requirement documents, as an optional input", async () => {
+  it("holds the requirement documents on their own tab, as an optional input", async () => {
     mocks.listDocuments.mockResolvedValue([]);
-    renderPage();
+    renderPage({}, true, "/?tab=documents");
 
     expect(await screen.findByText("bknProject.requirements.documents.title")).toBeInTheDocument();
     expect(screen.getByText("bknProject.resources.optional")).toBeInTheDocument();
     await waitFor(() => expect(mocks.listDocuments).toHaveBeenCalledWith("p1"));
   });
 
-  it("shows the knowledge-base catalogs by edition: left out, masked, or open", async () => {
-    const title = "bknProject.resources.knowledgeBases.title";
+  it("keeps the tab in the URL, so going back and links land on it", async () => {
+    const { router } = renderPage();
+
+    fireEvent.click(await tab(/bknProject.resources.tabs.documents/));
+    await waitFor(() => expect(router.state.location.search).toBe("?tab=documents"));
+    expect(await screen.findByText("bknProject.requirements.documents.title")).toBeInTheDocument();
+
+    await router.navigate(-1);
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: /catalogs.title/ })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      ),
+    );
+  });
+
+  it("shows the knowledge base by edition: left out, masked, or open", async () => {
+    const title = /bknProject.resources.knowledgeBases.title/;
     const view = renderPage();
-    expect(await screen.findByText("bknProject.resources.catalogs.title")).toBeInTheDocument();
-    expect(screen.queryByText(title)).toBeNull();
+    expect(await tab(/catalogs.title/)).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: title })).toBeNull();
     view.unmount();
 
+    // A link to the hidden tab opens the page where it would open anyway.
+    const linked = renderPage({}, true, "/?tab=knowledge-base");
+    expect(await tab(/catalogs.title/)).toHaveAttribute("aria-selected", "true");
+    linked.unmount();
+
     mocks.kb.mode = "locked";
-    const locked = renderPage();
-    expect(await screen.findByText(title)).toBeInTheDocument();
-    expect(screen.getByTestId("kb-locked")).toHaveTextContent(
+    const locked = renderPage({}, true, "/?tab=knowledge-base");
+    expect(await tab(title)).toBeInTheDocument();
+    expect(await screen.findByTestId("kb-locked")).toHaveTextContent(
       "bknProject.resources.knowledgeBases.preview",
     );
     locked.unmount();
 
     mocks.kb.mode = "enabled";
-    renderPage();
-    expect(await screen.findByText(title)).toBeInTheDocument();
+    renderPage({}, true, "/?tab=knowledge-base");
+    expect(await tab(title)).toBeInTheDocument();
     expect(screen.queryByTestId("kb-locked")).toBeNull();
+  });
+
+  it("opens on the catalogs while nothing waits, and marks no tab", async () => {
+    mocks.kb.mode = "enabled";
+    registerPanel({ fileCount: 12, needsAttention: false });
+    renderPage();
+
+    expect(await tab(/knowledgeBases.title.*12/)).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tab", { name: /catalogs.title/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.queryByRole("img", { name: DOT })).toBeNull();
+  });
+
+  it("opens on the knowledge base when it alone waits, and marks its tab", async () => {
+    mocks.kb.mode = "enabled";
+    registerPanel({ fileCount: 12, needsAttention: true });
+    renderPage();
+
+    const kb = await tab(/knowledgeBases.title/);
+    await waitFor(() => expect(kb).toHaveAttribute("aria-selected", "true"));
+    expect(within(kb).getByRole("img", { name: DOT })).toBeInTheDocument();
+  });
+
+  it("opens on the catalogs first when none is chosen, and marks their tab", async () => {
+    mocks.kb.mode = "enabled";
+    registerPanel({ fileCount: 12, needsAttention: true });
+    renderPage({ catalogIds: [] });
+
+    const catalogs = await tab(/catalogs.title/);
+    expect(catalogs).toHaveAttribute("aria-selected", "true");
+    expect(within(catalogs).getByRole("img", { name: DOT })).toBeInTheDocument();
+  });
+
+  it("keeps the panel's state across tabs", async () => {
+    mocks.kb.mode = "enabled";
+    registerPanel({ fileCount: 1, needsAttention: false });
+    renderPage({}, true, "/?tab=knowledge-base");
+
+    fireEvent.change(await screen.findByLabelText("panel input"), { target: { value: "kept" } });
+    fireEvent.click(await tab(/tabs.documents/));
+    fireEvent.click(await tab(/knowledgeBases.title/));
+    expect(screen.getByLabelText("panel input")).toHaveValue("kept");
+  });
+
+  it("does not ask before switching tabs, and still asks before leaving the page", async () => {
+    mocks.kb.mode = "enabled";
+    const Editing = () => {
+      useUnsavedChanges(true, () => Promise.resolve(true));
+      return <p>editing</p>;
+    };
+    registerExtension({
+      id: "kb",
+      capability: "knowledge_base",
+      projectKnowledgeBaseResources: Editing,
+    });
+    const { router } = renderPage({}, true, "/bkn-project/p1/resources?tab=knowledge-base");
+    await screen.findByText("editing");
+
+    fireEvent.click(await tab(/tabs.documents/));
+    await waitFor(() => expect(router.state.location.search).toBe("?tab=documents"));
+    expect(screen.queryByText("bknProject.leaveUnsaved.title")).toBeNull();
+
+    void router.navigate("/bkn-project/p1/model");
+    expect(await screen.findByText("bknProject.leaveUnsaved.title")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/bkn-project/p1/resources");
   });
 
   it("mounts the registered panel only when enabled and preserves archived-owner cleanup", async () => {
@@ -387,7 +518,7 @@ describe("ProjectResources", () => {
       projectKnowledgeBaseResources: panel,
     });
     mocks.kb.mode = "locked";
-    const locked = renderPage();
+    const locked = renderPage({}, true, "/?tab=knowledge-base");
     expect(await screen.findByTestId("kb-locked")).toBeInTheDocument();
     expect(panel).not.toHaveBeenCalled();
     locked.unmount();

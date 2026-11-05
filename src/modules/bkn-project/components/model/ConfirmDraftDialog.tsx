@@ -49,13 +49,17 @@ function adoptedCounts(draft: Draft) {
 export function ConfirmDraft({
   draft,
   onConfirmed,
+  onViewConfirmation,
   onShowPending,
   onSendingChange,
   onStale,
   projectId,
 }: {
   draft: Draft;
+  /** The draft was confirmed just now: the project goes on to its next step. */
   onConfirmed: () => void;
+  /** Shows what an earlier confirmation started: its data check and local indexes. */
+  onViewConfirmation: () => void;
   /** Lets the model page follow preparation progress while confirmation runs. */
   onSendingChange?: (sending: boolean) => void;
   /** Shows the items that wait for a decision, which have to be settled first. */
@@ -160,7 +164,7 @@ export function ConfirmDraft({
   if (!action) {
     // A draft confirmed as it is: say so, and lead to what the confirmation started.
     return status.confirmation?.current ? (
-      <AppButton onClick={onConfirmed} type="link">
+      <AppButton onClick={onViewConfirmation} type="link">
         {t("bknProject.release.confirmed", { time: formatTime(status.confirmation.time) })}
       </AppButton>
     ) : null;

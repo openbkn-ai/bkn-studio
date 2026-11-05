@@ -9,7 +9,7 @@ import { Alert, Card, Input, Modal, Select, Space, Typography } from "antd";
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { readDocumentSamples } from "@/modules/bkn-project/services/draft.service";
 import type {
   Draft,
@@ -128,7 +128,7 @@ export function DocumentFieldsEditor({
       );
       if (request === epoch.current) setPreview(next);
     } catch (e) {
-      if (request === epoch.current) setError(extractRequestErrorMessage(e));
+      if (request === epoch.current) setError(requestFailureText(t, e));
     } finally {
       if (request === epoch.current) setLoading(false);
     }

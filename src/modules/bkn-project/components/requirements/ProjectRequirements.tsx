@@ -66,6 +66,7 @@ import type {
   RequirementItemRef,
   Requirements,
 } from "@/modules/bkn-project/types/requirements";
+import type { ResourceTab } from "@/modules/bkn-project/types/workspace";
 
 /** The dialog the owner has open, if any. */
 type Dialog =
@@ -96,7 +97,7 @@ export function ProjectRequirements({
   /** Opens ontology modeling, where the object types scenarios are generated from are adopted. */
   onGoToModel: () => void;
   /** Opens the requirements and resources page, where the documents are uploaded. */
-  onGoToResources: () => void;
+  onGoToResources: (tab?: ResourceTab) => void;
   ownerIsCaller: boolean;
   project: Project;
 }) {
@@ -398,7 +399,7 @@ export function ProjectRequirements({
           {!requirements ? (
             <Alert
               action={
-                <AppButton onClick={onGoToResources} size="small">
+                <AppButton onClick={() => onGoToResources("documents")} size="small">
                   {t(`${PREFIX}.goToDocuments`)}
                 </AppButton>
               }

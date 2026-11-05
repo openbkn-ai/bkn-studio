@@ -5,15 +5,19 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Space, Spin } from "antd";
+import { Alert, Space, Spin, Tabs } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { BknProjectKbBadge, BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
-import { extensionProjectKnowledgeBaseResources } from "@/framework/extension/registry";
+import {
+  extensionProjectKnowledgeBaseResources,
+  type ProjectKnowledgeBaseResourceStatus,
+} from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
@@ -30,6 +34,7 @@ import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { UnderstandingCatalog, UnderstandingTable } from "@/modules/bkn-project/types/publish";
 import type { RequirementDocument } from "@/modules/bkn-project/types/requirements";
+import { RESOURCE_TABS, type ResourceTab } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectResources.module.css";
@@ -41,10 +46,12 @@ const PAGE_SIZE = 20;
 type TableRow = UnderstandingTable & { catalogId: string; usedBy: string[] };
 
 /**
- * What a project is built from, in one place: the data catalogs its ontology and instances come
- * from, with each table's semantic understanding and the object types that use it; in the
- * professional edition, the knowledge-base catalogs; and the requirement documents and
- * regulations that give the business background. Catalogs are chosen, added and changed here.
+ * What a project is built from, one kind to a tab: the data catalogs its ontology and instances
+ * come from, with each table's semantic understanding and the object types that use it; in the
+ * professional edition, the knowledge bases; and the requirement documents and regulations that
+ * give the business background. The tab lives in the URL, so refreshing, going back and links from
+ * other pages land on it; without one the page opens where something waits. The knowledge-base
+ * panel stays mounted across tabs: it reports its count and what waits, and keeps what is not saved.
  */
 export function ProjectResources({
   onGoToModel,
@@ -63,6 +70,8 @@ export function ProjectResources({
   const kbMode = useBknProjectKbMode();
   const canEdit = ownerIsCaller && !project.archived;
   const KnowledgeBaseResources = extensionProjectKnowledgeBaseResources();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [kbStatus, setKbStatus] = useState<ProjectKnowledgeBaseResourceStatus | null>(null);
 
   // The catalogs the caller can see, by id; null while read or when they could not be.
   const [catalogs, setCatalogs] = useState<Map<string, string> | null>(null);
@@ -128,7 +137,7 @@ export function ProjectResources({
     range?: { end: number; start: number };
   } | null>(null);
 
-  const catalogName = (id: string) => catalogs?.get(id) ?? id;
+  const catalogName = (id: string) => catalogs?.get(id) ?? t(`${PREFIX}.catalogs.unnamed`);
   // The object types of the draft by the table they read, adopted or not.
   const usedBy = useMemo(() => {
     const byTable = new Map<string, string[]>();
@@ -191,174 +200,247 @@ export function ProjectResources({
     },
   ];
 
+  const goneCatalogs = catalogs ? project.catalogIds.filter((id) => !catalogs.has(id)).length : 0;
+  const catalogsWait = !project.catalogIds.length || goneCatalogs > 0;
+  const kbMounted = kbMode === "enabled" && Boolean(KnowledgeBaseResources);
+  const kbWaits = kbMounted && Boolean(kbStatus?.needsAttention);
+  const waitingTab: ResourceTab = !catalogsWait && kbWaits ? "knowledge-base" : "catalogs";
+
+  // Without a tab in the URL the page opens on the first needing action, settled once the panel has
+  // said what waits: dealing with something does not move the person away from it.
+  const [openingTab, setOpeningTab] = useState<ResourceTab | null>(null);
+  const panelHasSpoken = !kbMounted || kbStatus !== null;
+  useEffect(() => {
+    if (panelHasSpoken) {
+      setOpeningTab((current) => current ?? waitingTab);
+    }
+  }, [panelHasSpoken, waitingTab]);
+
+  const asked = RESOURCE_TABS.find((tab) => tab === searchParams.get("tab"));
+  const activeTab =
+    asked && (asked !== "knowledge-base" || kbMode !== "hidden")
+      ? asked
+      : (openingTab ?? waitingTab);
+
+  const tabLabel = (label: ReactNode, count: number | null | undefined, waits: boolean) => (
+    <span className={styles.tabLabel}>
+      {label}
+      {count === null || count === undefined ? null : (
+        <span className={styles.tabCount}>{count}</span>
+      )}
+      {waits ? (
+        <span
+          aria-label={t(`${PREFIX}.tabs.needsAttention`)}
+          className={styles.attentionDot}
+          role="img"
+        />
+      ) : null}
+    </span>
+  );
+
   return (
     <Citing.Provider
       value={{
         documentName: (documentId) =>
-          documents?.find((document) => document.id === documentId)?.name ?? documentId,
+          documents?.find((document) => document.id === documentId)?.name ??
+          t(`${PREFIX}.tabs.documents`),
         openDocument: (documentId, range) => setViewing({ documentId, range }),
       }}
     >
       <div className={styles.page}>
-        <section className={styles.section}>
-          <header className={styles.sectionHead}>
-            <div>
-              <h3 className={styles.sectionTitle}>
-                {t(`${PREFIX}.catalogs.title`)}
-                <LightStatusTag tone="info">{t(`${PREFIX}.required`)}</LightStatusTag>
-              </h3>
-              <p className={styles.muted}>{t(`${PREFIX}.catalogs.description`)}</p>
-            </div>
-            <Space>
-              {canAdd ? (
-                <AppButton onClick={() => setChanging("add")}>
-                  {t("bknProject.model.catalogs.add")}
-                </AppButton>
-              ) : null}
-              {canChange ? (
-                <AppButton
-                  onClick={() => setChanging("replace")}
-                  type={project.catalogIds.length ? "default" : "primary"}
-                >
-                  {t(
-                    project.catalogIds.length
-                      ? "bknProject.model.catalogs.change"
-                      : "bknProject.model.catalogs.choose",
+        <Tabs
+          activeKey={activeTab}
+          items={[
+            {
+              key: "catalogs",
+              label: tabLabel(
+                t(`${PREFIX}.catalogs.title`),
+                project.catalogIds.length,
+                catalogsWait,
+              ),
+              children: (
+                <div className={styles.tab}>
+                  <header className={styles.tabHead}>
+                    <p className={styles.muted}>
+                      <LightStatusTag tone="info">{t(`${PREFIX}.required`)}</LightStatusTag>{" "}
+                      {t(`${PREFIX}.catalogs.description`)}
+                    </p>
+                    <Space>
+                      {canAdd ? (
+                        <AppButton onClick={() => setChanging("add")}>
+                          {t("bknProject.model.catalogs.add")}
+                        </AppButton>
+                      ) : null}
+                      {canChange ? (
+                        <AppButton
+                          onClick={() => setChanging("replace")}
+                          type={project.catalogIds.length ? "default" : "primary"}
+                        >
+                          {t(
+                            project.catalogIds.length
+                              ? "bknProject.model.catalogs.change"
+                              : "bknProject.model.catalogs.choose",
+                          )}
+                        </AppButton>
+                      ) : null}
+                    </Space>
+                  </header>
+                  {ownerIsCaller && catalogsFailed ? (
+                    <Alert
+                      action={
+                        <AppButton
+                          onClick={() => setCatalogReads((count) => count + 1)}
+                          size="small"
+                        >
+                          {t("common.retry")}
+                        </AppButton>
+                      }
+                      message={t("bknProject.model.catalogs.loadFailed")}
+                      showIcon
+                      type="warning"
+                    />
+                  ) : null}
+                  {goneCatalogs ? (
+                    <Alert
+                      message={t(`${PREFIX}.catalogs.gone`, { count: goneCatalogs })}
+                      showIcon
+                      type="warning"
+                    />
+                  ) : null}
+                  {draft?.status === "ready" && draft.items.adding ? (
+                    <Alert
+                      action={
+                        <AppButton onClick={onGoToModel} size="small">
+                          {t(`${PREFIX}.catalogs.goToModel`)}
+                        </AppButton>
+                      }
+                      message={t("bknProject.model.catalogs.adding", {
+                        count: draft.items.adding.catalogIds.length,
+                      })}
+                      showIcon
+                      type="info"
+                    />
+                  ) : null}
+                  {project.catalogIds.length ? (
+                    <>
+                      {invisible.map((catalog) => (
+                        <p className={styles.muted} key={catalog.catalogId}>
+                          {t("bknProject.understand.progress.invisible", {
+                            name: catalogName(catalog.catalogId),
+                          })}
+                        </p>
+                      ))}
+                      {understanding === null ? (
+                        <Alert
+                          action={
+                            <AppButton onClick={() => void loadUnderstanding()} size="small">
+                              {t("common.retry")}
+                            </AppButton>
+                          }
+                          message={t(`${PREFIX}.tables.loadFailed`)}
+                          showIcon
+                          type="warning"
+                        />
+                      ) : (
+                        <AppTable<TableRow>
+                          columns={columns}
+                          dataSource={rows}
+                          loading={understanding === undefined}
+                          pagination={rows.length > PAGE_SIZE ? { pageSize: PAGE_SIZE } : false}
+                          rowKey="resourceId"
+                          size="middle"
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <EmptyStatePanel
+                      description={t(
+                        ownerIsCaller
+                          ? "bknProject.model.empty.noCatalogs"
+                          : "bknProject.model.empty.noCatalogsAskOwner",
+                      )}
+                      title={t(`${PREFIX}.catalogs.empty`)}
+                    />
                   )}
-                </AppButton>
-              ) : null}
-            </Space>
-          </header>
-          {ownerIsCaller && catalogsFailed ? (
-            <Alert
-              action={
-                <AppButton onClick={() => setCatalogReads((count) => count + 1)} size="small">
-                  {t("common.retry")}
-                </AppButton>
-              }
-              message={t("bknProject.model.catalogs.loadFailed")}
-              showIcon
-              type="warning"
-            />
-          ) : null}
-          {draft?.status === "ready" && draft.items.adding ? (
-            <Alert
-              action={
-                <AppButton onClick={onGoToModel} size="small">
-                  {t(`${PREFIX}.catalogs.goToModel`)}
-                </AppButton>
-              }
-              message={t("bknProject.model.catalogs.adding", {
-                count: draft.items.adding.catalogIds.length,
-              })}
-              showIcon
-              type="info"
-            />
-          ) : null}
-          {project.catalogIds.length ? (
-            <>
-              <div className={styles.chips}>
-                {project.catalogIds.map((id) => (
-                  <LightStatusTag
-                    key={id}
-                    tone={catalogs && !catalogs.has(id) ? "error" : "neutral"}
-                  >
-                    {catalogs && !catalogs.has(id)
-                      ? t(`${PREFIX}.catalogs.gone`, { name: id })
-                      : catalogName(id)}
-                  </LightStatusTag>
-                ))}
-              </div>
-              {invisible.map((catalog) => (
-                <p className={styles.muted} key={catalog.catalogId}>
-                  {t("bknProject.understand.progress.invisible", {
-                    name: catalogName(catalog.catalogId),
-                  })}
-                </p>
-              ))}
-              {understanding === null ? (
-                <Alert
-                  action={
-                    <AppButton onClick={() => void loadUnderstanding()} size="small">
-                      {t("common.retry")}
-                    </AppButton>
-                  }
-                  message={t(`${PREFIX}.tables.loadFailed`)}
-                  showIcon
-                  type="warning"
-                />
-              ) : (
-                <AppTable<TableRow>
-                  columns={columns}
-                  dataSource={rows}
-                  loading={understanding === undefined}
-                  pagination={rows.length > PAGE_SIZE ? { pageSize: PAGE_SIZE } : false}
-                  rowKey="resourceId"
-                  size="middle"
-                />
-              )}
-            </>
-          ) : (
-            <EmptyStatePanel
-              description={t(
-                ownerIsCaller
-                  ? "bknProject.model.empty.noCatalogs"
-                  : "bknProject.model.empty.noCatalogsAskOwner",
-              )}
-              title={t(`${PREFIX}.catalogs.empty`)}
-            />
-          )}
-        </section>
-
-        {/* Professional: masked in an image without it, left out where it is hidden. */}
-        {kbMode === "hidden" ? null : (
-          <section className={styles.section}>
-            <header className={styles.sectionHead}>
-              <div>
-                <h3 className={styles.sectionTitle}>
-                  <BknProjectKbBadge>{t(`${PREFIX}.knowledgeBases.title`)}</BknProjectKbBadge>
-                </h3>
-                <p className={styles.muted}>{t(`${PREFIX}.knowledgeBases.description`)}</p>
-              </div>
-            </header>
-            <BknProjectKbSlot
-              preview={<p className={styles.muted}>{t(`${PREFIX}.knowledgeBases.preview`)}</p>}
-            >
-              {KnowledgeBaseResources ? (
-                <KnowledgeBaseResources
-                  key={project.id}
-                  projectId={project.id}
-                  canEdit={canEdit}
-                  canManageHolds={ownerIsCaller}
-                />
-              ) : (
-                <p className={styles.muted}>{t(`${PREFIX}.knowledgeBases.comingSoon`)}</p>
-              )}
-            </BknProjectKbSlot>
-          </section>
-        )}
-
-        {documentsFailed && documents === null ? (
-          <Alert
-            action={
-              <AppButton onClick={() => void loadDocuments()} size="small">
-                {t("common.retry")}
-              </AppButton>
-            }
-            message={t(`${PREFIX}.documents.loadFailed`)}
-            showIcon
-            type="error"
-          />
-        ) : documents === null ? (
-          <Spin />
-        ) : (
-          <RequirementDocuments
-            canEdit={canEdit}
-            documents={documents}
-            onChanged={() => void loadDocuments()}
-            projectId={project.id}
-          />
-        )}
+                </div>
+              ),
+            },
+            // Professional: masked in an image without it, left out where it is hidden.
+            ...(kbMode === "hidden"
+              ? []
+              : [
+                  {
+                    key: "knowledge-base",
+                    forceRender: kbMounted,
+                    label: tabLabel(
+                      <BknProjectKbBadge>{t(`${PREFIX}.knowledgeBases.title`)}</BknProjectKbBadge>,
+                      kbMounted ? kbStatus?.fileCount : null,
+                      kbWaits,
+                    ),
+                    children: (
+                      <div className={styles.tab}>
+                        <p className={styles.muted}>{t(`${PREFIX}.knowledgeBases.description`)}</p>
+                        <BknProjectKbSlot
+                          preview={
+                            <p className={styles.muted}>{t(`${PREFIX}.knowledgeBases.preview`)}</p>
+                          }
+                        >
+                          {KnowledgeBaseResources ? (
+                            <KnowledgeBaseResources
+                              key={project.id}
+                              projectId={project.id}
+                              canEdit={canEdit}
+                              canManageHolds={ownerIsCaller}
+                              onStatusChange={setKbStatus}
+                            />
+                          ) : (
+                            <p className={styles.muted}>
+                              {t(`${PREFIX}.knowledgeBases.comingSoon`)}
+                            </p>
+                          )}
+                        </BknProjectKbSlot>
+                      </div>
+                    ),
+                  },
+                ]),
+            {
+              key: "documents",
+              label: tabLabel(t(`${PREFIX}.tabs.documents`), documents?.length, false),
+              children: (
+                <div className={styles.documents}>
+                  {documentsFailed && documents === null ? (
+                    <Alert
+                      action={
+                        <AppButton onClick={() => void loadDocuments()} size="small">
+                          {t("common.retry")}
+                        </AppButton>
+                      }
+                      message={t(`${PREFIX}.documents.loadFailed`)}
+                      showIcon
+                      type="error"
+                    />
+                  ) : documents === null ? (
+                    <Spin />
+                  ) : (
+                    <RequirementDocuments
+                      canEdit={canEdit}
+                      documents={documents}
+                      onChanged={() => void loadDocuments()}
+                      projectId={project.id}
+                    />
+                  )}
+                </div>
+              ),
+            },
+          ]}
+          onChange={(tab) =>
+            setSearchParams((current) => {
+              const next = new URLSearchParams(current);
+              next.set("tab", tab);
+              return next;
+            })
+          }
+        />
 
         {changing && catalogs ? (
           <ProjectCatalogsModal

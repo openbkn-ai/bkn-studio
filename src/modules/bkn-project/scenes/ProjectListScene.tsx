@@ -16,11 +16,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import {
   extractRequestErrorDetails,
-  extractRequestErrorMessage,
 } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { NewProjectModal } from "@/modules/bkn-project/components/NewProjectModal";
 import {
   listProjectNetworks,
@@ -98,13 +98,13 @@ export function ProjectListScene() {
       setItems([]);
       setTotal(0);
       setNextCursor(null);
-      setLoadError(extractRequestErrorMessage(error));
+      setLoadError(requestFailureText(t, error));
     } finally {
       if (load === latestLoad.current) {
         setLoading(false);
       }
     }
-  }, [cursors, name, showArchived]);
+  }, [cursors, name, showArchived, t]);
 
   const loadReferences = useCallback(async () => {
     setNetworksError(null);
@@ -112,7 +112,7 @@ export function ProjectListScene() {
       setNetworks(await listProjectNetworks());
     } catch (error) {
       setNetworks([]);
-      setNetworksError(extractRequestErrorMessage(error));
+      setNetworksError(requestFailureText(t, error));
     }
     // One read serves the catalog names of the list and the picker of the new-project dialog.
     setCatalogsError(null);
@@ -124,9 +124,9 @@ export function ProjectListScene() {
     } catch (error) {
       // The list falls back to catalog ids; the dialog shows the failure.
       setCatalogs([]);
-      setCatalogsError(extractRequestErrorMessage(error));
+      setCatalogsError(requestFailureText(t, error));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadProjects();

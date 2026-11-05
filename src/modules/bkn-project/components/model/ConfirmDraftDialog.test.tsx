@@ -69,6 +69,7 @@ function refusal(code: string, details?: unknown) {
 }
 
 const onConfirmed = vi.fn();
+const onViewConfirmation = vi.fn();
 const onShowPending = vi.fn();
 const onStale = vi.fn();
 const onSendingChange = vi.fn();
@@ -78,6 +79,7 @@ function renderConfirm() {
     <ConfirmDraft
       draft={draft}
       onConfirmed={onConfirmed}
+      onViewConfirmation={onViewConfirmation}
       onSendingChange={onSendingChange}
       onShowPending={onShowPending}
       onStale={onStale}
@@ -150,7 +152,7 @@ describe("ConfirmDraft", () => {
         updateTime: draft.updateTime,
       }),
     );
-    expect(messageMock.success).toHaveBeenCalledWith("草稿已确认");
+    expect(messageMock.success).toHaveBeenCalledWith(expect.stringContaining("草稿已确认"));
     expect(onConfirmed).toHaveBeenCalled();
     expect(onSendingChange.mock.calls).toEqual([[true], [false]]);
   });
@@ -266,7 +268,8 @@ describe("ConfirmDraft", () => {
     const confirmed = await screen.findByRole("button", { name: /^已于 .+ 确认$/ });
     expect(screen.queryByRole("button", { name: /确认草稿|重新确认/ })).toBeNull();
     fireEvent.click(confirmed);
-    expect(onConfirmed).toHaveBeenCalled();
+    expect(onViewConfirmation).toHaveBeenCalled();
+    expect(onConfirmed).not.toHaveBeenCalled();
   });
 
   it("says when it cannot tell whether the draft may be confirmed, and reads again", async () => {
@@ -296,6 +299,7 @@ describe("ConfirmDraft", () => {
       <ConfirmDraft
         draft={{ ...draft, updateTime: draft.updateTime + 1 }}
         onConfirmed={onConfirmed}
+        onViewConfirmation={onViewConfirmation}
         onShowPending={onShowPending}
         onStale={onStale}
         projectId="p1"

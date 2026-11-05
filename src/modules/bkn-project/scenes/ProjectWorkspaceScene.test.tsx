@@ -43,13 +43,23 @@ vi.mock("@/framework/entitlement/BknProjectKbSlot", () => ({
 vi.mock("@/modules/bkn-project/components/ProjectModel", () => ({
   ProjectModel: ({
     initialTab,
+    onConfirmed,
+    onViewConfirmation,
     project,
   }: {
     initialTab?: string | null;
+    onConfirmed: () => void;
+    onViewConfirmation: () => void;
     project: { id: string };
   }) => (
     <div>
       model of {project.id} on {initialTab ?? "the first tab"}
+      <button onClick={onConfirmed} type="button">
+        confirm
+      </button>
+      <button onClick={onViewConfirmation} type="button">
+        view confirmation
+      </button>
     </div>
   ),
 }));
@@ -78,12 +88,12 @@ vi.mock("@/modules/bkn-project/components/requirements/ProjectRequirements", () 
     onGoToResources,
     ownerIsCaller,
   }: {
-    onGoToResources: () => void;
+    onGoToResources: (tab?: string) => void;
     ownerIsCaller: boolean;
   }) => (
     <div>
       requirements page {ownerIsCaller ? "owner" : "reader"}
-      <button onClick={onGoToResources} type="button">
+      <button onClick={() => onGoToResources("documents")} type="button">
         go to resources
       </button>
     </div>
@@ -510,6 +520,36 @@ describe("ProjectWorkspaceScene", () => {
     renderScene("model", "/bkn-project/p1/model?tab=changes");
 
     expect(await screen.findByText("model of p1 on changes")).toBeInTheDocument();
+  });
+
+  it("goes on to the scenarios after confirming, with the confirmation a link away", async () => {
+    renderScene("model");
+
+    fireEvent.click(await screen.findByRole("button", { name: "confirm" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/scenarios");
+  });
+
+  it("opens what a confirmation started on the release page", async () => {
+    renderScene("model");
+
+    fireEvent.click(await screen.findByRole("button", { name: "view confirmation" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/release");
+  });
+
+  it("offers the next step in the order a project is built", async () => {
+    renderScene("scenarios");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /bknProject\.workspace\.nextStep/ }),
+    );
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/release");
+  });
+
+  it("offers no next step past the release", async () => {
+    renderScene("release");
+
+    await screen.findByRole("button", { name: "release page" });
+    expect(screen.queryByRole("button", { name: /bknProject\.workspace\.nextStep/ })).toBeNull();
   });
 
   it("shows the confirmation on the release page, which leads back to modeling", async () => {

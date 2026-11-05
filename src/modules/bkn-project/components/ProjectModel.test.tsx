@@ -192,6 +192,7 @@ function renderModel(
       <ProjectModel
         initialTab={initialTab}
         onConfirmed={vi.fn()}
+        onViewConfirmation={vi.fn()}
         onGoToResources={onGoToResources}
         ownerIsCaller={ownerIsCaller}
         project={{ ...project, ...override }}
@@ -651,6 +652,7 @@ describe("ProjectModel", () => {
         <ProjectModel
           initialObject="customers"
           onConfirmed={vi.fn()}
+        onViewConfirmation={vi.fn()}
           onGoToResources={onGoToResources}
           ownerIsCaller
           project={project}
