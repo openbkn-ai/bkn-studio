@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   runCypherQuery: vi.fn(),
   generateCypher: vi.fn(),
   explainCypher: vi.fn(),
+  downloadText: vi.fn(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -69,6 +70,10 @@ vi.mock(
     cancelExecution: mocks.cancelExecution,
   }),
 );
+
+vi.mock("@/modules/knowledge-network/cypher/download", () => ({
+  downloadText: mocks.downloadText,
+}));
 
 // Monaco does not run in jsdom: a textarea with the same run and history keys stands in.
 vi.mock("@/modules/knowledge-network/components/cypher/CypherEditor", () => ({
@@ -157,6 +162,7 @@ beforeEach(() => {
   mocks.runCypherQuery.mockReset();
   mocks.generateCypher.mockReset();
   mocks.explainCypher.mockReset();
+  mocks.downloadText.mockReset();
 });
 
 afterEach(cleanup);
@@ -183,6 +189,60 @@ describe("CypherQueryScene", () => {
       .getByText("knowledgeNetwork.cypherQuery.views.graph")
       .closest("label");
     expect(graphOption?.className).toMatch(/disabled/);
+  });
+
+  it("shows the start of a large raw response and downloads all of it", async () => {
+    // Sized like the reported query: 1000 rows grow to tens of thousands of formatted lines.
+    const entries = Array.from({ length: 1000 }, (_, i) => ({ t: team(`Team ${i}`) }));
+    const response = { entries: entries.map((entry) => ({ ...entry, extra: { a: 1, b: 2 } })) };
+    mocks.runCypherQuery.mockResolvedValue({
+      ok: true,
+      result: { columns: [{ name: "t" }], entries },
+      exchange: { ...exchange, response },
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    await screen.findByTestId("cypher-schema-object-teams");
+    fireEvent.change(editor(), { target: { value: "MATCH (t:teams) RETURN t" } });
+    fireEvent.keyDown(editor(), { key: "Enter", ctrlKey: true });
+    await screen.findByText("knowledgeNetwork.cypherQuery.views.raw");
+
+    const full = JSON.stringify({ status: 200, body: response }, null, 2);
+    expect(full.split("\n").length).toBeGreaterThan(10_000);
+    // Graph -> raw -> table -> raw: each visit shows the same bounded preview.
+    for (const leave of ["knowledgeNetwork.cypherQuery.views.table", null]) {
+      fireEvent.click(screen.getByText("knowledgeNetwork.cypherQuery.views.raw"));
+      const shown = screen.getByTestId("cypher-raw-response").textContent ?? "";
+      expect(shown.split("\n")).toHaveLength(2000);
+      expect(full.startsWith(shown)).toBe(true);
+      expect(screen.getByTestId("cypher-raw-truncated")).toBeTruthy();
+      if (leave) fireEvent.click(screen.getByText(leave));
+    }
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.cypherQuery.raw.download"));
+    expect(mocks.downloadText).toHaveBeenCalledWith(
+      expect.stringMatching(/^cypher-.+-response\.json$/),
+      full,
+      "application/json",
+    );
+  });
+
+  it("shows a small raw response whole without a notice", async () => {
+    mocks.runCypherQuery.mockResolvedValue({
+      ok: true,
+      result: { columns: [{ name: "n" }], entries: [{ n: 79 }] },
+      exchange,
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    fireEvent.click(await screen.findByTestId("cypher-schema-object-goals"));
+    await screen.findByText("79");
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.cypherQuery.views.raw"));
+    expect(screen.getByTestId("cypher-raw-response").textContent).toBe(
+      JSON.stringify({ status: 200, body: {} }, null, 2),
+    );
+    expect(screen.queryByTestId("cypher-raw-truncated")).toBeNull();
+    fireEvent.click(screen.getByTestId("cypher-raw-download"));
+    expect(mocks.downloadText).toHaveBeenCalledTimes(1);
   });
 
   it("runs the editor's query on Ctrl+Enter, asking returned nodes for their display property", async () => {

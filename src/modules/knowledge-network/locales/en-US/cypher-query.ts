@@ -166,6 +166,8 @@ export const cypherQueryPart = {
       request: "Request",
       response: "Response",
       copy: "Copy",
+      download: "Download full response",
+      truncated: "Large response: showing the first {{shown}} of {{total}} lines.",
     },
     style: {
       default: "Default",
