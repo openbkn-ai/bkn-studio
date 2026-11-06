@@ -1875,6 +1875,7 @@ export const bknProjectEnUS = {
         value_not_in_text: "The test question does not say a value the documents gave",
         value_outside_slot: "The test question says a number, date or code with no basis",
         check_timeout: "The check took too long",
+        data_not_built: "The document data is not built yet; check again after the build",
         table_missing: "The table this test asks about was deleted",
         other: "It did not pass the check",
       },
@@ -2271,6 +2272,8 @@ export const bknProjectEnUS = {
         reason: {
           knowledge_base_not_ready:
             "Complete and review the full knowledge-base build for the current model.",
+          knowledge_base_originals_changed:
+            "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
           knowledge_base_permission:
             "Check source query access and permission to configure the target knowledge network.",
           knowledge_base_unavailable:
@@ -2388,6 +2391,8 @@ export const bknProjectEnUS = {
         error: {
           KnowledgeBaseNotReady:
             "Complete and review the full knowledge-base build for the current model.",
+          OriginalsChanged:
+            "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
           SourcePermission:
             "Check source query access and permission to configure the target knowledge network.",
           KnowledgeBaseUnavailable:

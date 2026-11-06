@@ -1739,6 +1739,7 @@ export const bknProjectZhCN = {
         value_not_in_text: "问法里没有写出资料给的值",
         value_outside_slot: "问法里出现了没有依据的数字、日期或编码",
         check_timeout: "核对超时",
+        data_not_built: "文档数据还没构建，构建完成后再核对",
         table_missing: "测试所问的数据表已被删除",
         other: "没有通过核对",
       },
@@ -2117,6 +2118,8 @@ export const bknProjectZhCN = {
         },
         reason: {
           knowledge_base_not_ready: "请先完成当前模型的知识库全量构建和结果核对。",
+          knowledge_base_originals_changed:
+            "确认模型后，文件是否保留原文的设置已改，请重新确认模型。",
           knowledge_base_permission: "请确认来源知识库的查询权限和目标知识网络的配置权限。",
           knowledge_base_unavailable: "暂时无法核对知识库发布条件，请稍后重新审核。",
           not_confirmed: "草稿还没有确认。",
@@ -2226,6 +2229,7 @@ export const bknProjectZhCN = {
         regressionHint: "发布后会自动用场景问题做一次回归，回归结果不影响发布。",
         error: {
           KnowledgeBaseNotReady: "请先完成当前模型的知识库全量构建和结果核对。",
+          OriginalsChanged: "确认模型后，文件是否保留原文的设置已改，请重新确认模型。",
           SourcePermission: "请确认来源知识库的查询权限和目标知识网络的配置权限。",
           KnowledgeBaseUnavailable: "暂时无法核对知识库发布条件，请稍后重试。",
           NotOwner: "只有项目负责人可以发布。",

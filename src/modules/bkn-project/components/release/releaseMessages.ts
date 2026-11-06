@@ -30,6 +30,7 @@ const CHECKS = new Set([
 ]);
 const REASONS = new Set([
   "knowledge_base_not_ready",
+  "knowledge_base_originals_changed",
   "knowledge_base_permission",
   "knowledge_base_unavailable",
   "not_confirmed",
@@ -61,6 +62,7 @@ const REFUSALS = new Set([
 ]);
 const PUBLISH_ERRORS = new Set([
   "KnowledgeBaseNotReady",
+  "OriginalsChanged",
   "SourcePermission",
   "KnowledgeBaseUnavailable",
   "NotOwner",
