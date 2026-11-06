@@ -20,6 +20,12 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
+import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
+import {
+  editItem,
+  extractRequirementConcepts,
+  getRequirements,
+} from "@/modules/bkn-project/services/requirements.service";
 import {
   acceptDraftSuggestions,
   DRAFT_POLL_MS,
@@ -38,10 +44,17 @@ import type {
 import { CONCEPT_STATES } from "@/modules/bkn-project/types/concepts";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
+import type { Requirements } from "@/modules/bkn-project/types/requirements";
 
 import styles from "./ProjectConcepts.module.css";
 
 const PREFIX = "bknProject.concepts";
+
+/** The key prefix of a requirement concept no draft item is. */
+const REQUIREMENT_CONCEPT = "requirement_concepts/";
+
+/** The specification's category of a verdict, as a requirement concept is judged there. */
+const categoryOf = (verdict: ConceptVerdict) => (verdict === "none" ? "not_ontology" : verdict);
 
 const STATE_TONE: Record<ConceptState, LightStatusTone> = {
   blocked: "warning",
@@ -93,12 +106,15 @@ type Filter = "all" | ConceptState;
  * concept model or out of it at once; one that cannot go in yet says what it waits for.
  */
 export function ProjectConcepts({
+  onGoToKinetic,
   onGoToModel,
   onGoToResources,
   onOpenItem,
   ownerIsCaller,
   project,
 }: {
+  /** Opens kinetic modeling, where what is judged kinetic is implemented. */
+  onGoToKinetic: () => void;
   onGoToModel: () => void;
   onGoToResources: () => void;
   /** Opens a concept's item on the concept modeling page, where what blocks it is settled. */
@@ -112,6 +128,8 @@ export function ProjectConcepts({
   const ConceptSource = extensionProjectConceptSource();
   const [concepts, setConcepts] = useState<Concepts | undefined>(undefined);
   const [draft, setDraft] = useState<Draft | null | undefined>(undefined);
+  // The specification, for the run extracting the documents' concepts; null when unread.
+  const [requirements, setRequirements] = useState<Requirements | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reads, setReads] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
@@ -120,9 +138,15 @@ export function ProjectConcepts({
 
   const load = useCallback(async () => {
     try {
-      const [nextDraft, next] = await Promise.all([getDraft(project.id), getConcepts(project.id)]);
+      const [nextDraft, next, nextRequirements] = await Promise.all([
+        getDraft(project.id),
+        getConcepts(project.id),
+        // The run only adds to the page: a failed read shows none.
+        getRequirements(project.id).catch(() => null),
+      ]);
       setDraft(nextDraft);
       setConcepts(next);
+      setRequirements(nextRequirements);
       setLoadError(null);
     } catch (error) {
       setLoadError(requestFailureText(t, error));
@@ -134,19 +158,27 @@ export function ProjectConcepts({
     void load();
   }, [load]);
 
-  // Extracting runs in the background: read again until it ends.
+  // Extracting runs in the background, from the tables or from the requirement documents: read
+  // again until it ends.
   const drafting = draft?.status === "drafting";
+  const conceptsRun = requirements?.spec.conceptsRun;
+  const extractingRequirements = conceptsRun?.status === "running";
   useEffect(() => {
-    if (!drafting) {
+    if (!drafting && !extractingRequirements) {
       return undefined;
     }
     const timer = window.setTimeout(() => void load(), DRAFT_POLL_MS);
     return () => window.clearTimeout(timer);
-  }, [drafting, load, reads]);
+  }, [drafting, extractingRequirements, load, reads]);
 
   // A change made on a draft someone else changed meanwhile is not replayed: read it again.
   const refused = async (error: unknown, failedKey: string) => {
-    if (draftErrorCode(error) === "Stale") {
+    const code = projectErrorCode(error);
+    if (
+      draftErrorCode(error) === "Stale" ||
+      code === "Requirement.Stale" ||
+      code === "Requirement.Drafting"
+    ) {
       message.warning(t(`${PREFIX}.stale`));
       await load();
     } else {
@@ -165,6 +197,24 @@ export function ProjectConcepts({
       return;
     }
     setBusy(concept.key);
+    // A requirement concept no item is is judged in the specification, as its category.
+    if (!concept.item) {
+      try {
+        await editItem(
+          project.id,
+          "concepts",
+          concept.key.slice(REQUIREMENT_CONCEPT.length),
+          { category: categoryOf(verdict) },
+          concepts.requirementUpdateTime,
+        );
+        await load();
+      } catch (error) {
+        await refused(error, `${PREFIX}.judgeFailed`);
+      } finally {
+        setBusy(null);
+      }
+      return;
+    }
     try {
       setConcepts(
         await judgeConcept(project.id, concepts.draftUpdateTime, {
@@ -191,6 +241,26 @@ export function ProjectConcepts({
       readDraftAgain();
     } catch (error) {
       await refused(error, `${PREFIX}.mergeFailed`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // Extracting the requirement documents' concepts keeps what a person edited of them.
+  const extractRequirements = async () => {
+    setBusy("requirements");
+    try {
+      setRequirements(await extractRequirementConcepts(project.id));
+      message.success(t(`${PREFIX}.requirements.started`));
+    } catch (error) {
+      const code = projectErrorCode(error);
+      message.error(
+        code === "Requirement.NoDocuments"
+          ? t(`${PREFIX}.requirements.noDocuments`)
+          : code === "Requirement.Drafting"
+            ? t(`${PREFIX}.requirements.busy`)
+            : requestFailureText(t, error),
+      );
     } finally {
       setBusy(null);
     }
@@ -310,6 +380,11 @@ export function ProjectConcepts({
 
   const ready = concepts.draftUpdateTime > 0;
   const editable = canEdit && ready && busy === null;
+  // A requirement concept is judged in the specification, while no run rewrites it.
+  const judgeable = (concept: Concept) =>
+    concept.item
+      ? editable
+      : canEdit && busy === null && concepts.requirementUpdateTime > 0 && !extractingRequirements;
   const pending = concepts.counts.pending ?? 0;
   const total = concepts.concepts.length;
   const shown =
@@ -336,6 +411,13 @@ export function ProjectConcepts({
         </AppButton>
       ) : (
         <span className={styles.muted}>{t(`${PREFIX}.destination.noItem`)}</span>
+      );
+    }
+    if (concept.verdict === "kinetic") {
+      return (
+        <AppButton onClick={onGoToKinetic} size="small" type="link">
+          {t(`${PREFIX}.destination.kinetic`)}
+        </AppButton>
       );
     }
     return <span className={styles.muted}>{t(`${PREFIX}.destination.${concept.verdict}`)}</span>;
@@ -387,7 +469,7 @@ export function ProjectConcepts({
     {
       key: "verdict",
       render: (_value, concept) =>
-        editable ? (
+        judgeable(concept) ? (
           <Select<ConceptVerdict>
             aria-label={t(`${PREFIX}.verdictOf`, { name: concept.name })}
             className={styles.verdict}
@@ -485,13 +567,22 @@ export function ProjectConcepts({
               })}
         </span>
         {canEdit ? (
-          <AppButton
-            disabled={drafting || (busy !== null && busy !== "extract")}
-            loading={busy === "extract"}
-            onClick={() => void extract(false)}
-          >
-            {t(`${PREFIX}.reextract`)}
-          </AppButton>
+          <span className={styles.actions}>
+            <AppButton
+              disabled={extractingRequirements || (busy !== null && busy !== "requirements")}
+              loading={busy === "requirements"}
+              onClick={() => void extractRequirements()}
+            >
+              {t(`${PREFIX}.requirements.extract`)}
+            </AppButton>
+            <AppButton
+              disabled={drafting || (busy !== null && busy !== "extract")}
+              loading={busy === "extract"}
+              onClick={() => void extract(false)}
+            >
+              {t(`${PREFIX}.reextract`)}
+            </AppButton>
+          </span>
         ) : (
           <span className={styles.muted}>{t(`${PREFIX}.readOnly`)}</span>
         )}
@@ -523,6 +614,22 @@ export function ProjectConcepts({
       </dl>
 
       {drafting ? <Alert message={t(`${PREFIX}.drafting`)} showIcon type="info" /> : null}
+      {extractingRequirements ? (
+        <Alert message={t(`${PREFIX}.requirements.running`)} showIcon type="info" />
+      ) : conceptsRun?.status === "failed" ? (
+        // What the last run that ended extracted stands: say so, rather than an empty page.
+        <Alert
+          message={t(
+            conceptsRun.extracted
+              ? `${PREFIX}.requirements.failedKept`
+              : `${PREFIX}.requirements.failed`,
+          )}
+          showIcon
+          type="warning"
+        />
+      ) : conceptsRun?.extracted && conceptsRun.stale ? (
+        <Alert message={t(`${PREFIX}.requirements.stale`)} showIcon type="info" />
+      ) : null}
       {pending && ready ? (
         <Alert
           action={

@@ -1907,6 +1907,7 @@ type BackendConcepts = {
   concepts?: BackendConcept[] | null;
   counts?: Record<string, number> | null;
   draft_update_time?: number;
+  requirement_update_time?: number;
 };
 
 function mapConcepts(data: BackendConcepts): Concepts {
@@ -1933,6 +1934,7 @@ function mapConcepts(data: BackendConcepts): Concepts {
     })),
     counts: data.counts ?? {},
     draftUpdateTime: data.draft_update_time ?? 0,
+    requirementUpdateTime: data.requirement_update_time ?? 0,
   };
 }
 
@@ -2087,6 +2089,8 @@ function mockConcepts(projectId: string): Concepts {
     concepts,
     counts,
     draftUpdateTime: draft?.status === "ready" ? draft.update_time : 0,
+    // The mock lists no requirement concept of its own.
+    requirementUpdateTime: 0,
   };
 }
 

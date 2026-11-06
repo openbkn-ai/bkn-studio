@@ -369,6 +369,21 @@ export const bknProjectEnUS = {
       summaryCore:
         "Concepts drawn from {{tables}} tables and {{requirements}} requirement concepts.",
       reextract: "Extract again",
+      requirements: {
+        extract: "Extract requirement concepts",
+        started: "Extracting concepts from the requirement documents",
+        running:
+          "Extracting concepts from the requirement documents; the ones you edited are kept…",
+        failed:
+          "No concepts could be extracted from the requirement documents this time. Try again later.",
+        failedKept:
+          "Extracting again did not finish; these are still the concepts extracted from the requirement documents last time.",
+        stale:
+          "The requirement documents changed. You can extract their concepts again; the ones you edited are kept.",
+        noDocuments:
+          "There are no requirement documents yet. Upload them under Requirements and sources first.",
+        busy: "The requirements are being processed. Try again shortly.",
+      },
       stats: {
         sources: "Sources",
         concepts: "Candidate concepts",

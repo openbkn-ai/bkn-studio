@@ -343,6 +343,16 @@ export const bknProjectZhCN = {
         "从 {{tables}} 张表、{{documents}} 份知识库文件、{{requirements}} 个需求概念抽取概念。",
       summaryCore: "从 {{tables}} 张表、{{requirements}} 个需求概念抽取概念。",
       reextract: "重新抽取",
+      requirements: {
+        extract: "抽取需求概念",
+        started: "已开始从需求文档抽取概念",
+        running: "正在从需求文档抽取概念，你改过的概念会保留…",
+        failed: "这次没能从需求文档抽取到概念，可以稍后重试。",
+        failedKept: "这次重新抽取没有完成，下面仍是上次从需求文档抽取的概念。",
+        stale: "需求文档有变化，可以重新抽取需求概念；你改过的会保留。",
+        noDocuments: "还没有需求文档，先在需求与来源里上传。",
+        busy: "需求正在处理中，稍后再试。",
+      },
       stats: {
         sources: "来源",
         concepts: "候选概念",

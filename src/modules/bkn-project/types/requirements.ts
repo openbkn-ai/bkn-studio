@@ -161,6 +161,17 @@ export type RequirementChoice = {
 
 export type RequirementSpec = {
   catalogsUnlisted: string[];
+  /** The run extracting the documents' concepts, absent before the first. */
+  conceptsRun?: {
+    /** Why it failed, as a code. */
+    error: string;
+    /** A run ended ready once: its concepts stand, even while another runs or after one failed. */
+    extracted: boolean;
+    /** The documents changed since the concepts were extracted. */
+    stale: boolean;
+    /** `running`, `ready` or `failed`. */
+    status: string;
+  };
   choices: RequirementChoice[];
   concepts: RequirementConcept[];
   conflicts: RequirementConflict[];
