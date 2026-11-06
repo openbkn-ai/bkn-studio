@@ -311,7 +311,12 @@ describe("release.service", () => {
       finishTime: 9,
       networkId: "n_v1_0_2",
       questions: [
-        { id: "q1", noRecord: false, tests: [{ expect: "exists", id: "t1", text: "C-1?" }], text: "Q1" },
+        {
+          id: "q1",
+          noRecord: false,
+          tests: [{ expect: "exists", id: "t1", text: "C-1?" }],
+          text: "Q1",
+        },
         { id: "q7", noRecord: true, tests: [], text: "Q7" },
       ],
       results: [

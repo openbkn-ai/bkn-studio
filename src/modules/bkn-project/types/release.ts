@@ -106,7 +106,12 @@ export type RegressionTest = { expect: string; id: string; text: string };
  * A question of a regression. `noRecord`: it asks about a record and the data had none to fill it
  * with, so it was not asked.
  */
-export type RegressionQuestion = { id: string; noRecord: boolean; tests: RegressionTest[]; text: string };
+export type RegressionQuestion = {
+  id: string;
+  noRecord: boolean;
+  tests: RegressionTest[];
+  text: string;
+};
 
 /**
  * How one question or test did. `outcome`: `passed`, `missing` (the release lacks what it
