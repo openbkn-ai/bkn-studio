@@ -137,6 +137,8 @@ export type SamplePreview = {
 };
 
 export type DraftProperty = {
+  /** Other names agents search and understand it by; absent when none. */
+  aliases?: string[];
   extraction?: DraftExtractionField;
   readOnly?: boolean;
   description: string;
@@ -152,6 +154,8 @@ export type DraftProperty = {
 export type DraftObjectType = {
   document?: DraftDocumentModel;
   adopted: boolean;
+  /** Other names agents search and understand it by; empty when none. */
+  aliases: string[];
   description: string;
   displayKey: string;
   id: string;
@@ -186,6 +190,8 @@ export type DraftJoinEvidence = {
 };
 
 export type DraftRelationType = {
+  /** Other names agents search and understand it by; empty when none. */
+  aliases: string[];
   documentRepair?: string;
   document?: DraftDocumentModel;
   documentMapping?: DraftDocumentMapping;
@@ -274,6 +280,8 @@ export type DraftItemKind = "object_types" | "relation_types" | "value_types";
 /** A person's edit of one draft item; fields left out stay as they are. */
 export type DraftItemEdit = {
   adopted?: boolean;
+  /** Object and relation types only; replaces their aliases, empty clears them. */
+  aliases?: string[];
   description?: string;
   /** Object types only; empty clears it. */
   incrementalKey?: string;
@@ -325,6 +333,8 @@ export type Candidates = {
  * left out is removed.
  */
 export type DraftObjectTypeSave = {
+  /** Replaces the object type's aliases; absent keeps them. Not for a document item. */
+  aliases?: string[];
   document?: DraftDocumentSettings;
   description: string;
   displayKey: string;
@@ -348,6 +358,8 @@ export type DraftObjectTypeSave = {
  * fields each end's properties map.
  */
 export type DraftRelationTypeSave = {
+  /** Replaces the relation type's aliases; absent keeps them. Not for a document item. */
+  aliases?: string[];
   verifyBusinessIdentity?: boolean;
   documentMapping?: DraftDocumentMapping;
   cardinality?: string;

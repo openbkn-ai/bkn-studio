@@ -251,6 +251,7 @@ export function ProjectWorkspaceScene({
                 />
               ) : section === "concepts" ? (
                 <ProjectConcepts
+                  onGoToKinetic={() => go("kinetic")}
                   onGoToModel={() => go("model")}
                   onGoToResources={() => goToResources()}
                   onOpenItem={(item) =>

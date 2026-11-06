@@ -21,6 +21,8 @@ import {
   relationPreview,
   type EndNames,
 } from "@/modules/bkn-project/components/ai/revisions";
+import { AliasesField } from "@/modules/bkn-project/components/draft/AliasesField";
+import { aliasRefusalText } from "@/modules/bkn-project/components/draft/aliases";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { draftGraphRecords } from "@/modules/bkn-project/components/draft/graph";
 // The object type panel's frame: both editors open the same way.
@@ -64,7 +66,13 @@ import { documentRelationSave } from "@/modules/bkn-project/components/object-ty
 const PREFIX = "bknProject.relationEditor";
 const DESCRIPTION_MAX_LENGTH = 1000;
 
-type BasicValues = { description: string; name: string };
+type BasicValues = { aliases?: string[]; description: string; name: string };
+
+/** The name and description of the basic values, as a document item saves them: it has no aliases. */
+const documentBasic = ({ description, name }: { description: string; name: string }) => ({
+  description,
+  name,
+});
 
 type SaveProblem = { kind: "stale" } | { kind: "other"; text: string };
 
@@ -133,6 +141,8 @@ export function RelationTypePanel({
   };
   const [base, setBase] = useState<Base | null>(() => startOf(draft, relationTypeId));
   const [basic, setBasic] = useState<BasicValues>(() => ({
+    // A relation not made yet sends aliases only once some are typed.
+    aliases: base?.relation?.aliases,
     description: base?.relation?.description ?? "",
     name: base?.relation?.name ?? (relationTypeId === null ? (prefill?.name ?? "") : ""),
   }));
@@ -155,6 +165,7 @@ export function RelationTypePanel({
     setProblem(null);
     if (next) {
       const start = {
+        aliases: next.relation?.aliases,
         description: next.relation?.description ?? "",
         name: next.relation?.name ?? "",
       };
@@ -190,12 +201,18 @@ export function RelationTypePanel({
   const relation = base?.relation ?? null;
   const changed =
     base !== null &&
-    JSON.stringify(documentValue ? { ...documentValue, ...basic } : relationSave(basic, values)) !==
+    JSON.stringify(
+      documentValue ? { ...documentValue, ...documentBasic(basic) } : relationSave(basic, values),
+    ) !==
       JSON.stringify(
         relation?.document
           ? documentRelationSave(relation)
           : relationSave(
-              { description: relation?.description ?? "", name: relation?.name ?? "" },
+              {
+                aliases: relation?.aliases,
+                description: relation?.description ?? "",
+                name: relation?.name ?? "",
+              },
               relationEditorValues(relation ?? undefined),
             ),
       );
@@ -256,6 +273,11 @@ export function RelationTypePanel({
           },
         ]);
         return null;
+      case "InvalidAliases":
+        basicForm.setFields([
+          { errors: [aliasRefusalText(t, projectErrorDetails(error))], name: "aliases" },
+        ]);
+        return null;
       case "BusinessIdentityNotVerified":
       case "BusinessIdentityNotUnique":
       case "BusinessIdentityUnavailable":
@@ -290,7 +312,9 @@ export function RelationTypePanel({
     setSaving(true);
     setProblem(null);
     try {
-      const value = documentValue ? { ...documentValue, ...named } : relationSave(named, values);
+      const value = documentValue
+        ? { ...documentValue, ...documentBasic(named) }
+        : relationSave(named, values);
       const next = relation
         ? await saveDraftRelationType(project.id, relation.id, base.draft.updateTime, value)
         : await createDraftRelationType(project.id, base.draft.updateTime, value);
@@ -479,6 +503,7 @@ export function RelationTypePanel({
                   showCount
                 />
               </Form.Item>
+              {documentValue ? null : <AliasesField ownNames={[basic.name]} />}
             </Form>
             {!relation && current.items.objectTypes.some((o) => o.document) && (
               <label>
@@ -560,7 +585,9 @@ export function RelationTypePanel({
                 )
               }
               working={() =>
-                documentValue ? { ...documentValue, ...basic } : relationSave(basic, values)
+                documentValue
+                  ? { ...documentValue, ...documentBasic(basic) }
+                  : relationSave(basic, values)
               }
             />
           ) : null}

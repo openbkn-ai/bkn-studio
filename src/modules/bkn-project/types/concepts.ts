@@ -61,8 +61,10 @@ export type Concept = {
 };
 
 export type Concepts = {
-  /** 0 without a ready draft: nothing can be judged then. */
+  /** 0 without a ready draft: no draft item's concept can be judged then. */
   draftUpdateTime: number;
+  /** The specification's update time, 0 without one: its concepts are judged there. */
+  requirementUpdateTime: number;
   concepts: Concept[];
   /** By state, and by verdict as `verdict:<verdict>`. */
   counts: Record<string, number>;
