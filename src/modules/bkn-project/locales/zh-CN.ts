@@ -1836,7 +1836,8 @@ export const bknProjectZhCN = {
         },
         reason: {
           knowledge_base_not_ready: "请先完成当前模型的知识库全量构建和结果核对。",
-          knowledge_base_originals_changed: "确认模型后，文件是否保留原文的设置已改，请重新确认模型。",
+          knowledge_base_originals_changed:
+            "确认模型后，文件是否保留原文的设置已改，请重新确认模型。",
           knowledge_base_permission: "请确认来源知识库的查询权限和目标知识网络的配置权限。",
           knowledge_base_unavailable: "暂时无法核对知识库发布条件，请稍后重新审核。",
           not_confirmed: "草稿还没有确认。",
