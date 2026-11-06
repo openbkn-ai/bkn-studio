@@ -166,13 +166,13 @@ export const bknProjectZhCN = {
         "请修正终点标识或同一文档内的适用范围，保存并通过校验后才能采纳。原提议的对象用途和对应数量不会自动改变。",
       businessIdentityHelp:
         "可用业务编号连接同一对象。保存时须核验全表唯一且非空，不修改系统对象原有主键。",
-      businessIdentityVerified: "上次已核验 {{rows}} 条记录；确认草稿和构建前还会重新核验。",
+      businessIdentityVerified: "上次已核验 {{rows}} 条记录；确认模型和构建前还会重新核验。",
       verifyBusinessIdentity: "保存时核验此业务编号",
 
       recordIdentity: "系统维护的稳定记录标识",
       managedRelation: "这条来源定位关系由系统维护。",
       sourcesHint:
-        "先在需求与来源中选取知识库目录和调试文件，再从文档抽取模型；也可以添加结构化数据目录。",
+        "先在需求与来源中选取知识库目录和调试文件，再到概念抽取页从文档抽取模型；也可以添加结构化数据目录。",
       incomplete: "请填写属性名称、有效 API 名称、抽取说明，并为每个业务属性选择至少一个原文例子。",
       relationHelp: "通过全局编号或同一文档中的名称建立关系，不合并两侧对象。",
       sameDocumentScope:
@@ -357,6 +357,9 @@ export const bknProjectZhCN = {
         sources: "来源",
         concepts: "候选概念",
         inModel: "已进模型",
+        inModelPending: "其中 {{count}} 个起草时已采纳，待确认",
+        inModelPending_one: "其中 {{count}} 个起草时已采纳，待确认",
+        inModelPending_other: "其中 {{count}} 个起草时已采纳，待确认",
       },
       verdict: {
         object: "对象",
@@ -436,6 +439,7 @@ export const bknProjectZhCN = {
         action: "去处理",
       },
       merged: "已合并：{{names}}",
+      notAdopted: "{{because}}，起草时未采纳；需要的话可改判为{{verdict}}",
       confirm: "确认",
       confirmOf: "确认「{{name}}」的判定",
       mergeInto: "合并到…",
@@ -470,8 +474,8 @@ export const bknProjectZhCN = {
         pending: "存储准备尚未开始。",
         preparing: "正在准备数据存储：{{ready}} / {{total}}。",
         ready: "数据存储已准备好：{{total}} 项。",
-        failed: "数据存储准备中断，已完成 {{ready}} / {{total}}。再次确认草稿可继续。",
-        stale: "模型或来源已变更，下次确认草稿时会重新准备数据存储。",
+        failed: "数据存储准备中断，已完成 {{ready}} / {{total}}。再次确认模型可继续。",
+        stale: "模型或来源已变更，下次确认模型时会重新准备数据存储。",
       },
       graph: {
         title: "概念模型",
@@ -617,18 +621,18 @@ export const bknProjectZhCN = {
           failed_other: "增加 {{count}} 个数据目录时没能起草新表，可以再增加一次",
         },
         confirmation: {
-          accept_partial: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",
-          accept_partial_one: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",
-          accept_partial_other: "确认草稿时，有 {{count}} 张表没有读到，仍然确认",
-          accept_undecided: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
-          accept_undecided_one: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
-          accept_undecided_other: "确认草稿时，暂不纳入 {{count}} 项待决定的内容",
-          accept_unresolved_conflicts: "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          accept_partial: "确认模型时，有 {{count}} 张表没有读到，仍然确认",
+          accept_partial_one: "确认模型时，有 {{count}} 张表没有读到，仍然确认",
+          accept_partial_other: "确认模型时，有 {{count}} 张表没有读到，仍然确认",
+          accept_undecided: "确认模型时，暂不纳入 {{count}} 项待决定的内容",
+          accept_undecided_one: "确认模型时，暂不纳入 {{count}} 项待决定的内容",
+          accept_undecided_other: "确认模型时，暂不纳入 {{count}} 项待决定的内容",
+          accept_unresolved_conflicts: "确认模型时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
           accept_unresolved_conflicts_one:
-            "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+            "确认模型时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
           accept_unresolved_conflicts_other:
-            "确认草稿时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
-          other: "确认草稿时做了一项决定",
+            "确认模型时，还有 {{count}} 个需求冲突没有裁决，仍然确认",
+          other: "确认模型时做了一项决定",
         },
         empty: "无",
         aliasSeparator: "、",
@@ -660,7 +664,7 @@ export const bknProjectZhCN = {
       },
       empty: {
         title: "还没有本体草稿",
-        description: "AI 会根据表结构起草对象类、关系类和值类型；确认草稿之前不会生效。",
+        description: "AI 会根据表结构起草对象类、关系类和值类型；确认模型之前不会生效。",
         noCatalogs: "项目还没有数据目录，请先选择结构化数据所在的数据目录。",
         noCatalogsAskOwner: "项目还没有数据目录，请联系项目负责人选择。",
       },
@@ -1069,6 +1073,12 @@ export const bknProjectZhCN = {
         conceptsSub: "从表、知识库样本和需求文档抽取的概念",
         conceptsSubCore: "从表和需求文档中抽取的概念",
         conceptsAction: "去判定",
+        conceptsValue: "{{count}} 个概念",
+        conceptsValue_one: "{{count}} 个概念",
+        conceptsValue_other: "{{count}} 个概念",
+        conceptsInModel: "{{count}} 个已进模型",
+        conceptsInModel_one: "{{count}} 个已进模型",
+        conceptsInModel_other: "{{count}} 个已进模型",
         kineticSub: "指标、函数、Skill 等的实现进度",
         kineticValue: "{{linked}} / {{total}}",
         kineticOpen: "{{count}} 项待实现",
@@ -1307,7 +1317,7 @@ export const bknProjectZhCN = {
       },
     },
     confirm: {
-      button: "确认草稿",
+      button: "确认模型",
       buttonAgain: "重新确认",
       blocked: {
         network_missing: "知识网络已被删除",
@@ -1330,7 +1340,7 @@ export const bknProjectZhCN = {
         other: "现在还不能确认",
       },
       dialog: {
-        title: "确认草稿",
+        title: "确认模型",
         summary: "将把已采纳的 {{objects}} 个对象类和 {{relations}} 个关系类写入项目。",
         replaces: "会替换上次确认写入的内容，项目中的其他定义不受影响。",
         after:
@@ -2100,7 +2110,7 @@ export const bknProjectZhCN = {
         ready: "数据校验已通过，可以发布为 v{{version}}。发布前先看一遍发布审核。",
         readyAgain: "确认之后有新的内容，可以发布为 v{{version}}。",
         waitCheck: "数据校验通过后才能发布。",
-        waitConfirm: "确认草稿并通过数据校验后才能发布。",
+        waitConfirm: "确认模型并通过数据校验后才能发布。",
         state: {
           ready: "可以发布",
           published: "已发布",
@@ -2539,13 +2549,13 @@ export const bknProjectZhCN = {
         DocumentDataNotReady:
           "文档数据准备尚未完成，请重新加载草稿后再次确认以继续；已审核的候选会保留。",
         DualSourceNotConfirmed: "请先确认双来源字段清单，并采纳其中指定的文件、事实模型。",
-        BusinessIdentityNotVerified: "请先在关系设置中核验业务编号并保存，再确认草稿。",
+        BusinessIdentityNotVerified: "请先在关系设置中核验业务编号并保存，再确认模型。",
         BusinessIdentityNotUnique: "业务编号存在重复或空值，请处理后重新核验。",
         BusinessIdentityUnavailable: "暂时无法完成业务编号核验，请检查来源访问权限后重试。",
 
         UndecidedNotAccepted: "有新的未决项，请查看后再确认",
         PartialNotAccepted: "有起草时读取不到的表，请查看后再确认",
-        ConflictsNotAccepted: "还有需求冲突没有裁决。勾选下方的「仍然确认」后再确认草稿。",
+        ConflictsNotAccepted: "还有需求冲突没有裁决。勾选下方的「仍然确认」后再确认模型。",
         HasPending: "还有需要先处理的项，请在“变更”中处理后再确认",
         Stale: "草稿刚被修改过，已重新加载，请查看后再确认",
         NotReady: "草稿还没有准备好，请稍后再试",

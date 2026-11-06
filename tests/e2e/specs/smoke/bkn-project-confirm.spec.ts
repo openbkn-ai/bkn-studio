@@ -31,7 +31,7 @@ test("bkn project: understand the data, confirm the draft, and see its check and
   await expect(page.getByText("语义理解已完成", { exact: true })).toBeVisible();
 
   // An adopted relation waits for the object type at its end, so confirming waits too.
-  const confirm = page.getByRole("button", { name: "确认草稿" });
+  const confirm = page.getByRole("button", { name: "确认模型" });
   await expect(confirm).toBeDisabled();
   await page.getByRole("button", { name: "为material_bom选择唯一标识" }).click();
   const identity = page.getByRole("dialog");

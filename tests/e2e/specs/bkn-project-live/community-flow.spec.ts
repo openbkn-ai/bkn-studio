@@ -288,7 +288,7 @@ test("community image: from tables and requirements to a published, switched rel
 
   await test.step("11. confirm the draft, accepting what is left undecided", async () => {
     await openSection(page, "概念建模");
-    await page.getByRole("button", { name: "确认草稿" }).click();
+    await page.getByRole("button", { name: "确认模型" }).click();
     const dialog = page.getByRole("dialog");
     await expect(
       dialog.getByText(/^将把已采纳的 \d+ 个对象类和 \d+ 个关系类写入项目。$/),

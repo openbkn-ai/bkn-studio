@@ -191,7 +191,7 @@ export const bknProjectEnUS = {
       recordIdentity: "Stable record identity, maintained by the system",
       managedRelation: "This source relationship is maintained by the system.",
       sourcesHint:
-        "Select knowledge-base directories and debug files on Requirements and sources, then extract models. You can also add structured data catalogs.",
+        "Select knowledge-base directories and debug files on Requirements and sources, then extract models on Concept extraction. You can also add structured data catalogs.",
       incomplete:
         "Complete each business field name, valid API name, extraction instruction and at least one verified example.",
       relationHelp: "Connect objects by global identity or names in the same document.",
@@ -388,6 +388,9 @@ export const bknProjectEnUS = {
         sources: "Sources",
         concepts: "Candidate concepts",
         inModel: "In the model",
+        inModelPending: "{{count}} adopted by drafting, not yet confirmed",
+        inModelPending_one: "{{count}} adopted by drafting, not yet confirmed",
+        inModelPending_other: "{{count}} adopted by drafting, not yet confirmed",
       },
       verdict: {
         object: "Object",
@@ -472,6 +475,7 @@ export const bknProjectEnUS = {
         action: "Fix it",
       },
       merged: "Merged: {{names}}",
+      notAdopted: "{{because}}; not adopted when drafting. You can still judge it “{{verdict}}”",
       confirm: "Confirm",
       confirmOf: "Confirm the judgment of “{{name}}”",
       mergeInto: "Merge into…",
@@ -509,8 +513,8 @@ export const bknProjectEnUS = {
         preparing: "Preparing data storage: {{ready}} / {{total}}.",
         ready: "Data storage is ready: {{total}} items.",
         failed:
-          "Data storage preparation stopped at {{ready}} / {{total}}. Confirm the draft again to resume.",
-        stale: "The model or sources changed. Confirm the draft again to prepare its data storage.",
+          "Data storage preparation stopped at {{ready}} / {{total}}. Confirm the model again to resume.",
+        stale: "The model or sources changed. Confirm the model again to prepare its data storage.",
       },
       graph: {
         title: "Concept model",
@@ -671,20 +675,20 @@ export const bknProjectEnUS = {
             "Drafting the tables of {{count}} added data catalogs failed; they can be added again",
         },
         confirmation: {
-          accept_partial: "Confirmed the draft without {{count}} tables that could not be read",
-          accept_partial_one: "Confirmed the draft without {{count}} table that could not be read",
+          accept_partial: "Confirmed the model without {{count}} tables that could not be read",
+          accept_partial_one: "Confirmed the model without {{count}} table that could not be read",
           accept_partial_other:
-            "Confirmed the draft without {{count}} tables that could not be read",
-          accept_undecided: "Confirmed the draft leaving out {{count}} undecided items",
-          accept_undecided_one: "Confirmed the draft leaving out {{count}} undecided item",
-          accept_undecided_other: "Confirmed the draft leaving out {{count}} undecided items",
+            "Confirmed the model without {{count}} tables that could not be read",
+          accept_undecided: "Confirmed the model leaving out {{count}} undecided items",
+          accept_undecided_one: "Confirmed the model leaving out {{count}} undecided item",
+          accept_undecided_other: "Confirmed the model leaving out {{count}} undecided items",
           accept_unresolved_conflicts:
-            "Confirmed the draft with {{count}} requirement conflicts not resolved",
+            "Confirmed the model with {{count}} requirement conflicts not resolved",
           accept_unresolved_conflicts_one:
-            "Confirmed the draft with {{count}} requirement conflict not resolved",
+            "Confirmed the model with {{count}} requirement conflict not resolved",
           accept_unresolved_conflicts_other:
-            "Confirmed the draft with {{count}} requirement conflicts not resolved",
-          other: "Made a decision when confirming the draft",
+            "Confirmed the model with {{count}} requirement conflicts not resolved",
+          other: "Made a decision when confirming the model",
         },
         empty: "none",
         aliasSeparator: ", ",
@@ -720,7 +724,7 @@ export const bknProjectEnUS = {
       empty: {
         title: "No ontology draft yet",
         description:
-          "AI drafts object types, relation types and value types from the structure of the tables; nothing is adopted until you confirm the draft.",
+          "AI drafts object types, relation types and value types from the structure of the tables; nothing is adopted until you confirm the model.",
         noCatalogs:
           "The project has no data catalogs; select the catalogs that hold its structured data first.",
         noCatalogsAskOwner:
@@ -1146,6 +1150,12 @@ export const bknProjectEnUS = {
         conceptsSub: "Concepts drawn from tables, knowledge-base samples and requirement documents",
         conceptsSubCore: "Concepts drawn from tables and requirement documents",
         conceptsAction: "Judge them",
+        conceptsValue: "{{count}} concepts",
+        conceptsValue_one: "{{count}} concept",
+        conceptsValue_other: "{{count}} concepts",
+        conceptsInModel: "{{count}} in the model",
+        conceptsInModel_one: "{{count}} in the model",
+        conceptsInModel_other: "{{count}} in the model",
         kineticSub: "How far metrics, functions, skills and the like are implemented",
         kineticValue: "{{linked}} / {{total}}",
         kineticOpen: "{{count}} to implement",
@@ -1408,7 +1418,7 @@ export const bknProjectEnUS = {
       },
     },
     confirm: {
-      button: "Confirm draft",
+      button: "Confirm model",
       buttonAgain: "Confirm again",
       blocked: {
         network_missing: "The knowledge network has been deleted",
@@ -1435,7 +1445,7 @@ export const bknProjectEnUS = {
         other: "The draft cannot be confirmed yet",
       },
       dialog: {
-        title: "Confirm the draft",
+        title: "Confirm the model",
         summary:
           "Writes the adopted object types ({{objects}}) and relation types ({{relations}}) to the project.",
         replaces:
@@ -1474,7 +1484,7 @@ export const bknProjectEnUS = {
         end_not_adopted: "An object type at one end is still undecided",
         other: "Not adopted in drafting",
       },
-      done: "Draft confirmed. Next, work out the kinetic model; the data check is on the release page and the local indexes on the build page.",
+      done: "Model confirmed. Next, work out the kinetic model; the data check is on the release page and the local indexes on the build page.",
       failed: "The draft could not be confirmed. Try again later.",
     },
     resources: {
@@ -2293,7 +2303,7 @@ export const bknProjectEnUS = {
         goToBuild: "Build the indexes on the build page",
         check: {
           knowledge_base: "Knowledge-base build and source access",
-          confirmed: "Draft confirmation",
+          confirmed: "Model confirmation",
           mapped: "Table mapping",
           data_source: "Data source",
           names: "Repeated names",
@@ -2731,7 +2741,7 @@ export const bknProjectEnUS = {
         DualSourceNotConfirmed:
           "Confirm the dual-source field list and adopt its selected file and fact models first.",
         BusinessIdentityNotVerified:
-          "Verify and save the business identifier in the relationship settings before confirming the draft.",
+          "Verify and save the business identifier in the relationship settings before confirming the model.",
         BusinessIdentityNotUnique:
           "The business identifier has duplicate or empty values. Resolve them and verify again.",
         BusinessIdentityUnavailable:
@@ -2740,7 +2750,7 @@ export const bknProjectEnUS = {
         UndecidedNotAccepted: "New items are undecided. Review them, then confirm.",
         PartialNotAccepted: "Some tables could not be read in drafting. Review them, then confirm.",
         ConflictsNotAccepted:
-          "Some requirement conflicts are not resolved. Select “Confirm anyway” below, then confirm the draft again.",
+          "Some requirement conflicts are not resolved. Select “Confirm anyway” below, then confirm the model again.",
         HasPending: "Some items need attention first. Settle them in Changes, then confirm.",
         Stale: "The draft just changed and was reloaded. Review it, then confirm.",
         NotReady: "The draft is not ready yet. Try again shortly.",
