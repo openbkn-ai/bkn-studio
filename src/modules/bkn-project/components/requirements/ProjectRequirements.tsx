@@ -23,7 +23,6 @@ import {
   ConflictDialog,
   type DraftedItem,
   ItemDialog,
-  MappingDialog,
 } from "@/modules/bkn-project/components/requirements/RequirementDialogs";
 import {
   draftErrorText,
@@ -54,13 +53,11 @@ import {
   REQUIREMENTS_POLL_MS,
   resolveConflict,
   reviewRequirements,
-  setConceptMapping,
 } from "@/modules/bkn-project/services/requirements.service";
 import type { LogicNeedView } from "@/modules/bkn-project/types/kinetic";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type {
   RequirementChoice,
-  RequirementConcept,
   RequirementConflict,
   RequirementDocument,
   RequirementItemKind,
@@ -73,7 +70,6 @@ import type { ResourceTab } from "@/modules/bkn-project/types/workspace";
 type Dialog =
   | { itemId: string | null; kind: RequirementItemKind; type: "item" }
   | { choice: RequirementChoice; type: "choice" }
-  | { concept: RequirementConcept; type: "mapping" }
   | { conflict: RequirementConflict; type: "conflict" };
 
 import styles from "./Requirements.module.css";
@@ -299,7 +295,6 @@ export function ProjectRequirements({
           add: (kind) => setDialog({ itemId: null, kind, type: "item" }),
           decide: (choice) => setDialog({ choice, type: "choice" }),
           edit: (kind, itemId) => setDialog({ itemId, kind, type: "item" }),
-          map: (concept) => setDialog({ concept, type: "mapping" }),
           remove: (kind, itemId, label) =>
             void modal.confirm({
               cancelText: t("common.cancel"),
@@ -579,17 +574,6 @@ export function ProjectRequirements({
               onCancel={() => setDialog(null)}
               onSave={(decision) =>
                 void apply((time) => decideChoice(project.id, dialog.choice.id, decision, time))
-              }
-              saving={saving}
-            />
-          ) : null}
-          {dialog?.type === "mapping" ? (
-            <MappingDialog
-              concept={dialog.concept}
-              drafted={drafted}
-              onCancel={() => setDialog(null)}
-              onSave={(mapsTo) =>
-                void apply((time) => setConceptMapping(project.id, dialog.concept.id, mapsTo, time))
               }
               saving={saving}
             />

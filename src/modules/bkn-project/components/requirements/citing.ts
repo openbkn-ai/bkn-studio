@@ -9,7 +9,6 @@ import { createContext } from "react";
 
 import type {
   RequirementChoice,
-  RequirementConcept,
   RequirementConflict,
   RequirementItemKind,
   ReviewedKind,
@@ -34,7 +33,6 @@ export type SpecEditing = {
   add: (kind: RequirementItemKind) => void;
   decide: (choice: RequirementChoice) => void;
   edit: (kind: RequirementItemKind, itemId: string) => void;
-  map: (concept: RequirementConcept) => void;
   remove: (kind: RequirementItemKind, itemId: string, label: string) => void;
   resolve: (conflict: RequirementConflict) => void;
   /** Accepts what AI generated, or takes it back. */
