@@ -599,6 +599,90 @@ describe("ProjectKinetic", () => {
     expect(mocks.editItem.mock.calls[0][3]).not.toHaveProperty("suggestedMetricType");
   });
 
+  it("guides a metric need by the edition: hidden, locked, enabled", async () => {
+    const editions = {
+      hidden: { capabilities: [], extensions: [] },
+      locked: { capabilities: [], extensions: ["object_metrics"] },
+      enabled: ENABLED,
+    };
+    const seen: Record<string, unknown> = {};
+    for (const [mode, snapshot] of Object.entries(editions)) {
+      mocks.snapshot.current = snapshot;
+      const { unmount } = renderPage();
+      const panel = await openNeed("延误率", "匹配或实现");
+      seen[mode] = {
+        badge: panel.queryByText("专业版") !== null,
+        // The drawer's close icon has no text: it reads by its label.
+        buttons: panel
+          .getAllByRole("button")
+          .map((button) => button.textContent || button.getAttribute("aria-label")),
+        guide: panel.getAllByRole("alert").map((alert) => alert.textContent),
+      };
+      unmount();
+    }
+    expect(seen).toMatchInlineSnapshot(`
+      {
+        "enabled": {
+          "badge": true,
+          "buttons": [
+            "Close",
+            "去实现指标",
+            "关 闭",
+          ],
+          "guide": [
+            "打开知识网络的指标助手，已带入名称、业务定义和关联对象。保存后回到这里，会自动连上。",
+          ],
+        },
+        "hidden": {
+          "badge": false,
+          "buttons": [
+            "Close",
+            "关 闭",
+          ],
+          "guide": [
+            "当前版本没有指标功能，可以先记录需求。",
+          ],
+        },
+        "locked": {
+          "badge": true,
+          "buttons": [
+            "Close",
+            "了解升级",
+            "关 闭",
+          ],
+          "guide": [
+            "指标是专业版功能，升级后可以实现。可以先记录需求。了解升级",
+          ],
+        },
+      }
+    `);
+  });
+
+  it("sends the action type form what it states and fills", async () => {
+    renderPage();
+
+    const panel = await openNeed("改期", "匹配或实现");
+    fireEvent.click(panel.getByRole("button", { name: "去配置行动类" }));
+    await waitFor(() => expect(location()).toContain("/action-types/create"));
+    expect(JSON.parse(location().slice(location().indexOf(" ") + 1))).toMatchInlineSnapshot(`
+      {
+        "actionTypeContext": {
+          "prefill": {
+            "description": "",
+            "name": "改期",
+            "objectTypeId": "orders",
+          },
+          "returnLabel": "回到动力建模",
+          "returnState": {
+            "needId": "n3",
+          },
+          "returnTo": "/bkn-project/p1/kinetic",
+          "title": "项目需要：改期",
+        },
+      }
+    `);
+  });
+
   it("accepts, adds and removes needs on the version read", async () => {
     mocks.reviewRequirements.mockResolvedValue(requirements());
     mocks.addItem.mockResolvedValue(requirements());
