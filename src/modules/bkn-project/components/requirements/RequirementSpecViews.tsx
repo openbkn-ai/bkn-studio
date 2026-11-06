@@ -19,7 +19,6 @@ import type { DraftedItem } from "@/modules/bkn-project/components/requirements/
 import { Citing, Editing } from "@/modules/bkn-project/components/requirements/citing";
 import { needState } from "@/modules/bkn-project/components/kinetic/needs";
 import {
-  categoryText,
   compilesToText,
   conflictKindText,
   layerText,
@@ -365,45 +364,6 @@ export function ScenariosView({ spec }: { spec: RequirementSpec }) {
             </Field>
           </div>
           <Citations citations={scenario.citations} supplementReason={scenario.supplementReason} />
-        </section>
-      ))}
-    </div>
-  );
-}
-
-export function ConceptsView({ itemName, spec }: { itemName: ItemName; spec: RequirementSpec }) {
-  const { t } = useTranslation();
-  const editing = useContext(Editing);
-  return (
-    <div className={styles.stack}>
-      <AddItem kind="concepts" />
-      {spec.concepts.length ? null : <Empty text={t(`${PREFIX}.concepts.none`)} />}
-      {spec.concepts.map((concept) => (
-        <section className={styles.card} key={concept.id}>
-          <div className={styles.row}>
-            <h4 className={styles.cardTitle}>{concept.term}</h4>
-            <LightStatusTag tone={concept.category === "not_ontology" ? "neutral" : "info"}>
-              {categoryText(t, concept.category)}
-            </LightStatusTag>
-            <EditedTag edited={concept.edited} />
-            <ItemActions itemId={concept.id} kind="concepts" label={concept.term} />
-          </div>
-          <div className={styles.field}>
-            <Field label={t(`${PREFIX}.concepts.definition`)}>{concept.definition}</Field>
-            <Field label={t(`${PREFIX}.concepts.mapsTo`)}>
-              {concept.category === "not_ontology"
-                ? concept.notOntologyReason
-                : concept.mapsTo
-                  ? itemName(concept.mapsTo)
-                  : t(`${PREFIX}.concepts.notMapped`)}
-              {editing && concept.category !== "not_ontology" ? (
-                <AppButton onClick={() => editing.map(concept)} size="small" type="link">
-                  {t(`${PREFIX}.editing.mapping.change`)}
-                </AppButton>
-              ) : null}
-            </Field>
-          </div>
-          <Citations citations={concept.citations} supplementReason={concept.supplementReason} />
         </section>
       ))}
     </div>

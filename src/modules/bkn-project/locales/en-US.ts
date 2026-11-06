@@ -1557,6 +1557,8 @@ export const bknProjectEnUS = {
       loadFailed: "The kinetic needs cannot be read right now",
       liveUnavailable:
         "The live knowledge network cannot be read right now; what is implemented may be incomplete.",
+      beforeRelease:
+        "Implementations can be seen and linked after the first release. You can analyse and record kinetic needs now.",
       none: "No kinetic needs yet. Analyzing lists the metrics, functions and Skills needed; you can also add them.",
       noneFiltered: "No kinetic need matches the filters.",
       stats: {
@@ -1602,6 +1604,7 @@ export const bknProjectEnUS = {
         waitingRelease: "Awaits first release",
         recordOnly: "Recorded only",
       },
+      unconnectedMark: "Objects not related",
       cta: {
         view: "View",
         match: "Match or implement",
@@ -1705,6 +1708,10 @@ export const bknProjectEnUS = {
           "Metrics come with the Professional edition; upgrade to implement them. You can record the need now.",
         upgrade: "About upgrading",
         close: "Close",
+        unconnected:
+          "Its object types have no relation between them in the model: {{pairs}}. Implementing it may find no data; add the relations in concept modeling first.",
+        unconnectedPair: "{{from}} — {{to}}",
+        goToModel: "Go to concept modeling",
         implement: {
           metric: "Implement the metric",
           action_type: "Set up the action type",
@@ -1747,9 +1754,11 @@ export const bknProjectEnUS = {
       draft: "Generate business scenarios",
       redraft: "Generate again",
       notDrafted:
-        "No business scenarios yet. AI generates scenarios and questions from the adopted ontology, then you review them.",
+        "No business scenarios yet. Once the concept model is confirmed, AI generates scenarios and questions from the concept model and the kinetic model, then you review them.",
       notDraftedDocuments:
-        "Generating also reads the uploaded requirement documents and quotes them.",
+        "Generating also reads the requirement documents and quotes them; with requirement documents, extract their concepts on the concept extraction page first.",
+      modelNotConfirmed:
+        "Confirm the model in concept modeling first, then generate the business scenarios.",
       noDocuments:
         "Requirement documents are optional; once uploaded, generating reads and quotes them.",
       goToDocuments: "Manage documents",
@@ -1774,19 +1783,19 @@ export const bknProjectEnUS = {
           "{{count}} item AI generated waits for your review: accept it if it looks right; edit it if it needs changes, which accepts it.",
         waiting_other:
           "{{count}} items AI generated wait for your review: accept those that look right; edit those that need changes, which accepts them.",
-        outdated: "The ontology changed; some scenarios may be outdated",
+        outdated: "The concept model changed; some scenarios may be outdated",
         outdatedDetail:
-          "The ontology {{count}} questions use changed in structure. Generating again keeps what was accepted.",
+          "The concept model {{count}} questions use changed in structure. Generating again keeps what was accepted.",
         outdatedDetail_one:
-          "The ontology {{count}} question uses changed in structure. Generating again keeps what was accepted.",
+          "The concept model {{count}} question uses changed in structure. Generating again keeps what was accepted.",
         outdatedDetail_other:
-          "The ontology {{count}} questions use changed in structure. Generating again keeps what was accepted.",
+          "The concept model {{count}} questions use changed in structure. Generating again keeps what was accepted.",
         uncovered: "{{count}} object types have no scenario yet: {{names}}",
         uncovered_one: "{{count}} object type has no scenario yet: {{names}}",
         uncovered_other: "{{count}} object types have no scenario yet: {{names}}",
       },
       drafting:
-        "Generating the business scenarios and questions from the adopted ontology; this usually takes a minute or two.",
+        "Generating the business scenarios and questions from the concept model and the kinetic model; this usually takes a minute or two.",
       stale:
         "The documents, their types, the data catalogs or the naming language changed after drafting; draft again.",
       waiting: {
@@ -1841,7 +1850,8 @@ export const bknProjectEnUS = {
           "The test questions changed just now; they were read again, so make the change once more.",
         notCurrent:
           "The requirements were drafted again or the question changed; the regression will not ask these test questions. Generate again.",
-        ontologyChanged: "What this question needs in the ontology changed since; generate again.",
+        ontologyChanged:
+          "What this question needs in the concept model changed since; generate again.",
         noTests: "No test questions were written: {{reason}}",
         leftOut: "Generating left out {{count}} test questions that did not qualify",
         leftOut_one: "Generating left out {{count}} test question that did not qualify",
@@ -1861,7 +1871,7 @@ export const bknProjectEnUS = {
       },
       inputReason: {
         input_unknown_concept: "The requirements have no such concept",
-        input_concept_not_mapped: "The concept does not map to the ontology yet",
+        input_concept_not_mapped: "The concept does not map to the concept model yet",
         input_unknown_property: "The concept's object type has no such property",
         input_not_in_template: "The question template does not use this input",
         input_not_time: "A reference time takes a date or time property",
@@ -1902,7 +1912,7 @@ export const bknProjectEnUS = {
         different_records: "The two ways of naming are different records",
         no_values: "The test question has no value to check",
         unknown_concept: "A concept it uses is not in the requirements",
-        concept_not_mapped: "A concept it uses is not mapped to the ontology yet",
+        concept_not_mapped: "A concept it uses is not mapped to the concept model yet",
         item_not_drafted: "An object type it needs is not in the draft",
         unknown_property: "A property it uses does not exist",
         property_not_mapped: "A property it uses has no field",
@@ -1930,7 +1940,7 @@ export const bknProjectEnUS = {
           concept: "Concept",
           property: "Property",
           role: "Role",
-          noConcepts: "No concept maps to the ontology yet",
+          noConcepts: "No concept maps to the concept model yet",
           add: "Add input",
           remove: "Remove",
           removeOne: "Remove input {{name}}",
@@ -1987,7 +1997,7 @@ export const bknProjectEnUS = {
           scenarios: "Scenarios",
           template: "Template",
           answerShape: "Answer",
-          needs: "Ontology needed",
+          needs: "Object and relation types used",
           needsHint:
             "Once changed, you set what this question needs; it no longer follows its concepts.",
           followConcepts: "Follow the concepts again",
@@ -1996,7 +2006,7 @@ export const bknProjectEnUS = {
             "A question that uses kinetic needs is answered only with these calculations or operations.",
           noLogicNeeds: "No kinetic needs to choose yet; analyze or add them in kinetic modeling.",
           nothingDrafted:
-            "The ontology draft has no object type or relation type to choose yet; draft it in concept modeling first.",
+            "The concept model has no object type or relation type to choose yet; draft it in concept modeling first.",
         },
         conflict: {
           open: "Rule on it",
@@ -2125,7 +2135,7 @@ export const bknProjectEnUS = {
         noInputs: "Asked about no given record",
         slot: "<{{name}}>",
         hasWarnings: "Needs attention",
-        propertyGone: "The ontology has no such property",
+        propertyGone: "The concept model has no such property",
         relativeWindow:
           "Counts the latest period up to the reference time; the question says how long",
         capabilityWithoutBasis:
@@ -2139,7 +2149,7 @@ export const bknProjectEnUS = {
         scenarios: "Scenarios",
         template: "Template",
         answerShape: "Answer",
-        needs: "Ontology needed",
+        needs: "Object and relation types used",
         needsBy: {
           concepts: "{{names}} (from the concepts)",
           person: "{{names}} (set by hand)",

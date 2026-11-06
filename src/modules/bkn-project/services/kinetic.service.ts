@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import {
@@ -60,10 +61,12 @@ type BackendLogicNeeds = {
         implementation?: BackendImplementation | null;
         link?: BackendLink | null;
         live_object_type_ids?: string[] | null;
+        unconnected?: { from: string; to: string }[] | null;
       })[]
     | null;
   network_id?: string;
   reason?: string;
+  released?: boolean;
   update_time: number;
 };
 
@@ -108,9 +111,11 @@ export const mapLogicNeeds = (data: BackendLogicNeeds): LogicNeeds => ({
     implementation: need.implementation ? mapImplementation(need.implementation) : null,
     link: need.link ? mapLink(need.link) : null,
     liveObjectTypeIds: need.live_object_type_ids ?? [],
+    unconnected: (need.unconnected ?? []).map(({ from, to }) => ({ from, to })),
   })),
   networkId: data.network_id ?? "",
   reason: data.reason ?? "",
+  released: data.released ?? false,
   updateTime: data.update_time,
 });
 
@@ -135,10 +140,18 @@ export async function getLogicNeeds(projectId: string): Promise<LogicNeeds> {
   if (useMock) {
     return mockLogicNeeds(projectId);
   }
-  const response = await http.get<BackendLogicNeeds>(logicNeedsPath(projectId), {
-    skipErrorToast: true,
-  });
-  return mapLogicNeeds(response.data);
+  try {
+    const response = await http.get<BackendLogicNeeds>(logicNeedsPath(projectId), {
+      skipErrorToast: true,
+    });
+    return mapLogicNeeds(response.data);
+  } catch (error) {
+    // An older bkn-project answers 404 before there is a specification: nothing, never released.
+    if (isRequestNotFound(error)) {
+      return { needs: [], networkId: "", reason: "", released: false, updateTime: 0 };
+    }
+    throw error;
+  }
 }
 
 /** What in the live network a need could link to, the likeliest first; a person chooses. */
@@ -294,10 +307,12 @@ async function mockLogicNeeds(projectId: string): Promise<LogicNeeds> {
         implementation: link ? mockImplementation(link) : null,
         link,
         liveObjectTypeIds: need.objectTypeIds.filter((id) => MOCK_LIVE.includes(id)),
+        unconnected: [],
       };
     }),
     networkId: MOCK_NETWORK,
     reason: "",
+    released: true,
     updateTime: requirements?.updateTime ?? 0,
   };
 }

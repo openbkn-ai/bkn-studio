@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockDelete, mockGet, mockPatch, mockPost, mockPut } = vi.hoisted(() => ({
@@ -61,11 +62,13 @@ describe("kinetic.service", () => {
             link: { at: 5, by: { id: "u1" }, id: "m1", type: "object_metric" },
             live_object_type_ids: ["orders"],
             name: "Late rate",
+            unconnected: [{ from: "orders", to: "products" }],
             object_type_ids: ["orders"],
           },
           { id: "n2", kind: "skill", link: null, name: "Triage" },
         ],
         network_id: "net",
+        released: true,
         update_time: 9,
       },
     });
@@ -73,7 +76,7 @@ describe("kinetic.service", () => {
     const read = await kinetic.getLogicNeeds("p/1");
 
     expect(mockGet).toHaveBeenCalledWith(`${prefix}/logic-needs`, { skipErrorToast: true });
-    expect(read).toMatchObject({ networkId: "net", reason: "", updateTime: 9 });
+    expect(read).toMatchObject({ networkId: "net", reason: "", released: true, updateTime: 9 });
     expect(read.needs[0]).toMatchObject({
       implementation: {
         available: true,
@@ -88,6 +91,7 @@ describe("kinetic.service", () => {
       link: { at: 5, boxId: "", byId: "u1", id: "m1", type: "object_metric" },
       liveObjectTypeIds: ["orders"],
       objectTypeIds: ["orders"],
+      unconnected: [{ from: "orders", to: "products" }],
     });
     expect(read.needs[1]).toMatchObject({
       accepted: false,
@@ -95,7 +99,42 @@ describe("kinetic.service", () => {
       link: null,
       liveObjectTypeIds: [],
       objectTypeIds: [],
+      unconnected: [],
     });
+  });
+
+  it("reads no needs and no release when there is none, also from an older 404", async () => {
+    const { kinetic } = await importServices();
+    mockGet.mockResolvedValueOnce({ data: { needs: [], update_time: 0 } });
+    expect(await kinetic.getLogicNeeds("p/1")).toEqual({
+      needs: [],
+      networkId: "",
+      reason: "",
+      released: false,
+      updateTime: 0,
+    });
+
+    mockGet.mockRejectedValueOnce(
+      new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { error_code: "BknProject.Requirement.NotFound" },
+        status: 404,
+      } as AxiosResponse),
+    );
+    expect(await kinetic.getLogicNeeds("p/1")).toEqual({
+      needs: [],
+      networkId: "",
+      reason: "",
+      released: false,
+      updateTime: 0,
+    });
+
+    mockGet.mockRejectedValueOnce(
+      new AxiosError("x", "ERR_BAD_RESPONSE", undefined, undefined, {
+        data: {},
+        status: 500,
+      } as AxiosResponse),
+    );
+    await expect(kinetic.getLogicNeeds("p/1")).rejects.toThrow();
   });
 
   it("reads a need's candidates with why they are offered", async () => {

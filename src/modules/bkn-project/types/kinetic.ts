@@ -35,6 +35,8 @@ export type LogicNeedView = RequirementLogicNeed & {
   link: LogicNeedLink | null;
   /** Its object types the live network has; implementing a need takes one of them. */
   liveObjectTypeIds: string[];
+  /** Pairs of its object types no adopted relation path of at most two relations joins. */
+  unconnected: { from: string; to: string }[];
 };
 
 /** The kinetic needs with what implements them in the project's live network. */
@@ -42,8 +44,10 @@ export type LogicNeeds = {
   needs: LogicNeedView[];
   /** The live network: the latest release's, or the lineage's own before one. */
   networkId: string;
-  /** `unavailable` when the network's object types could not be read. */
+  /** `unavailable` when the released network could not be read. */
   reason: string;
+  /** Whether the project was ever released: before that, nothing is implemented live. */
+  released: boolean;
   /** The specification's, sent with a link. */
   updateTime: number;
 };

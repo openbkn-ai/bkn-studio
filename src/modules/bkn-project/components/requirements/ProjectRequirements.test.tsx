@@ -316,18 +316,20 @@ describe("ProjectRequirements", () => {
     expect((await drawer.findByText("哪些订单晚了")).tagName).toBe("MARK");
   });
 
-  it("shows scenarios, concepts, and the conflicts and choices with the rules", async () => {
+  it("shows scenarios, and the conflicts and choices with the rules, but no concepts", async () => {
     renderPage();
     await screen.findByText("某个客户哪些订单晚了？");
 
     fireEvent.click(screen.getByText(/^业务场景/));
     expect(screen.getByText("销售经理")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(/^候选概念/));
-    expect(screen.getByText("实体")).toBeInTheDocument();
-    expect(screen.getAllByText("销售订单").length).toBeGreaterThan(0);
-    expect(screen.getByText("不进入本体")).toBeInTheDocument();
-    expect(screen.getByText("由订单日期算出。")).toBeInTheDocument();
+    // The concepts are judged on the concept extraction page.
+    expect(screen.queryByText(/^候选概念/)).toBeNull();
+    expect(screen.getAllByRole("radio").map((tab) => tab.closest("label")?.textContent)).toEqual([
+      "场景问题 1",
+      "业务场景 1",
+      "业务规则 3",
+    ]);
 
     fireEvent.click(screen.getByText(/^业务规则/));
     expect(screen.getByText("需求冲突：什么算晚")).toBeInTheDocument();
@@ -348,7 +350,9 @@ describe("ProjectRequirements", () => {
     renderPage();
 
     expect(
-      await screen.findByText("还没有业务场景。AI 会基于已采纳的本体生成场景和问题，再由你审核。"),
+      await screen.findByText(
+        "还没有业务场景。确认概念模型后，AI 会基于概念模型和动力模型生成场景和问题，再由你审核。",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText("需求文档是可选的；上传后，生成时会参考并引用原文。"),
@@ -360,7 +364,7 @@ describe("ProjectRequirements", () => {
     fireEvent.click(screen.getByRole("button", { name: "生成业务场景" }));
     await waitFor(() => expect(draftRequirementsMock).toHaveBeenCalledWith("p1", false));
     expect(
-      await screen.findByText("正在基于已采纳的本体生成业务场景和问题，通常需要一两分钟。"),
+      await screen.findByText("正在基于概念模型和动力模型生成业务场景和问题，通常需要一两分钟。"),
     ).toBeInTheDocument();
   });
 
@@ -381,6 +385,48 @@ describe("ProjectRequirements", () => {
     fireEvent.click(screen.getByRole("button", { name: "去概念建模" }));
     expect(onGoToModel).toHaveBeenCalled();
     expect(messageMock.error).not.toHaveBeenCalled();
+  });
+
+  it("leads to concept modeling when the model is not confirmed yet", async () => {
+    getRequirementsMock.mockResolvedValueOnce(null);
+    draftRequirementsMock.mockRejectedValueOnce(
+      new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { error_code: "BknProject.Requirement.ModelNotConfirmed" },
+        status: 409,
+      } as AxiosResponse),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "生成业务场景" }));
+    expect(await screen.findByText("先在概念建模中确认模型，再生成业务场景。")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "去概念建模" }));
+    expect(onGoToModel).toHaveBeenCalled();
+    expect(messageMock.error).not.toHaveBeenCalled();
+  });
+
+  it("treats a specification with no scenarios or questions yet as not drafted", async () => {
+    // Extracting concepts writes the specification first.
+    getRequirementsMock.mockResolvedValue(
+      requirements({
+        spec: { ...requirements().spec, questions: [], scenarios: [] },
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        "还没有业务场景。确认概念模型后，AI 会基于概念模型和动力模型生成场景和问题，再由你审核。",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "生成时也会参考需求文档并引用原文；有需求文档时，要先在概念抽取中抽取需求概念。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "生成业务场景" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "重新生成" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "全部重来" })).toBeNull();
+    expect(screen.queryByText(/已起草/)).toBeNull();
   });
 
   it("keeps what was accepted when generating again, and asks before starting over", async () => {
@@ -482,7 +528,7 @@ describe("ProjectRequirements", () => {
     );
     renderPage();
 
-    expect(await screen.findByText("本体有变化，部分场景可能过期")).toBeInTheDocument();
+    expect(await screen.findByText("概念模型有变化，部分场景可能过期")).toBeInTheDocument();
     expect(screen.getByText("还有 1 个对象类没有场景覆盖：病区")).toBeInTheDocument();
     expect(screen.getByText("可能过期")).toBeInTheDocument();
     // Accepted: nothing waits for review.
@@ -525,7 +571,7 @@ describe("ProjectRequirements", () => {
       fireEvent.change(dialog.getByLabelText("问题"), {
         target: { value: " 哪些客户最近没下单？ " },
       });
-      fireEvent.mouseDown(dialog.getByLabelText("需要的本体"));
+      fireEvent.mouseDown(dialog.getByLabelText("用到的对象和关系"));
       fireEvent.click(await screen.findByTitle("客户"));
       fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
 
@@ -571,15 +617,14 @@ describe("ProjectRequirements", () => {
       );
     });
 
-    it("decides a modelling choice, and points a concept at a drafted item", async () => {
+    it("decides a modelling choice", async () => {
       decideChoiceMock.mockResolvedValue(edited);
-      setConceptMappingMock.mockResolvedValue(edited);
       renderPage();
       await screen.findByText("某个客户哪些订单晚了？");
 
       fireEvent.click(screen.getByText(/^业务规则/));
       fireEvent.click(screen.getByRole("button", { name: /^选\s*择$/ }));
-      let dialog = within(await screen.findByRole("dialog"));
+      const dialog = within(await screen.findByRole("dialog"));
       fireEvent.click(dialog.getByText("分开"));
       fireEvent.change(dialog.getByLabelText("依据（可选）"), {
         target: { value: "大客户另行管理" },
@@ -591,22 +636,6 @@ describe("ProjectRequirements", () => {
           "f1",
           { basis: "大客户另行管理", optionId: "o2" },
           1,
-        ),
-      );
-
-      fireEvent.click(screen.getByText(/^候选概念/));
-      fireEvent.click(screen.getByRole("button", { name: "改对应" }));
-      dialog = within(await screen.findByRole("dialog"));
-      fireEvent.mouseDown(dialog.getByRole("combobox", { name: "对应本体" }));
-      fireEvent.click(await screen.findByTitle("关系类：订单的客户"));
-      fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
-      await waitFor(() =>
-        expect(setConceptMappingMock).toHaveBeenCalledWith(
-          "p1",
-          "c1",
-          { id: "order_customer", kind: "relation_type" },
-          // The choice's edit moved the spec on: the next edit sends the version it replied.
-          2,
         ),
       );
     });
@@ -636,7 +665,7 @@ describe("ProjectRequirements", () => {
       await waitFor(() => expect(getRequirementsMock).toHaveBeenCalledTimes(2));
     });
 
-    it("tells two sides quoting one document apart, and says when nothing is drafted to map", async () => {
+    it("tells two sides quoting one document apart", async () => {
       getDraftMock.mockResolvedValue(null);
       const twoSides = requirements();
       twoSides.spec.conflicts[0].sides[1] = {
@@ -651,7 +680,7 @@ describe("ProjectRequirements", () => {
 
       fireEvent.click(screen.getByText(/^业务规则/));
       fireEvent.click(screen.getByRole("button", { name: /^裁\s*决$/ }));
-      let dialog = within(await screen.findByRole("dialog"));
+      const dialog = within(await screen.findByRole("dialog"));
       fireEvent.click(dialog.getAllByRole("radio")[1]);
       // Only the side picked is chosen, though both quote one document.
       const chosen = document.querySelectorAll(".ant-radio-wrapper-checked");
@@ -667,14 +696,6 @@ describe("ProjectRequirements", () => {
           1,
         ),
       );
-
-      fireEvent.click(screen.getByText(/^候选概念/));
-      fireEvent.click(screen.getByRole("button", { name: "改对应" }));
-      dialog = within(await screen.findByRole("dialog"));
-      expect(
-        dialog.getByText("本体草稿里还没有对象类或关系类可选，先在概念建模中起草。"),
-      ).toBeInTheDocument();
-      expect(dialog.getByRole("combobox", { name: "对应本体" })).toBeDisabled();
     });
 
     it("offers no edits to others", async () => {
@@ -743,7 +764,7 @@ describe("ProjectRequirements", () => {
       expect(screen.getByText("参照时间")).toBeInTheDocument();
       // A property the draft no longer has keeps its own name and says so.
       expect(screen.getByText("as_of：「销售订单」的「gone_field」")).toBeInTheDocument();
-      expect(screen.getByText("本体中没有这个属性")).toBeInTheDocument();
+      expect(screen.getByText("概念模型中没有这个属性")).toBeInTheDocument();
       expect(
         screen.getByText("统计截至参照时间的最近一段时间，时长以问题为准"),
       ).toBeInTheDocument();
@@ -928,7 +949,7 @@ describe("ProjectRequirements", () => {
       renderPage();
 
       expect(await screen.findByText(/^as_of：/)).toBeInTheDocument();
-      expect(screen.queryByText("本体中没有这个属性")).toBeNull();
+      expect(screen.queryByText("概念模型中没有这个属性")).toBeNull();
     });
 
     it("lists a dropped input and a window without a reference time in business words", async () => {
