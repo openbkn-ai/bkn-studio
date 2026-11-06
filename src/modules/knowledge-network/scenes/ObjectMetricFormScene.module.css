@@ -54,6 +54,11 @@
   min-width: 0;
 }
 
+.contextAlert {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
 .headerActions {
   display: flex;
   flex: 0 0 auto;
@@ -1308,6 +1313,9 @@
   }
   .headerCopy {
     flex: 1;
+  }
+  .contextAlert {
+    flex-basis: 100%;
   }
   .headerActions {
     width: 100%;
