@@ -164,7 +164,10 @@ export const bknProjectZhCN = {
       drafting: "正在抽取概念…",
       loadFailed: "概念暂时读取不到",
       judgeFailed: "没能保存判定，请稍后重试",
-      stale: "其他人刚改过模型，已重新读取，请再判定一次",
+      stale: "打开页面后，模型已有变化，这次判定没有保存。请重新加载后再判定。",
+      sourceChanged:
+        "这个概念来自已不再使用的知识库选择，判定没有保存。请重新选择知识库并抽取概念后再判定。",
+      reload: "重新加载",
       columns: {
         concept: "概念",
         sources: "来源",

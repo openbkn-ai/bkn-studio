@@ -99,6 +99,9 @@ function becauseKey(code: string) {
 
 type Filter = "all" | ConceptState;
 
+/** Why a judgment or merge was refused, and whether reading the page again can help. */
+type Refusal = { reload: boolean; text: string };
+
 /**
  * Concept extraction: what the project's tables, knowledge-base samples and requirement
  * documents hold, each concept judged as an object, an event, a property, a value list, a
@@ -136,9 +139,12 @@ export function ProjectConcepts({
   const [reads, setReads] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  // Why the last judgment or merge was refused, kept on the page until it is dealt with.
+  const [refusal, setRefusal] = useState<Refusal | null>(null);
   const canEdit = ownerIsCaller && !project.archived;
 
-  const load = useCallback(async () => {
+  // Tells whether the page was read: a failed read keeps what was shown before.
+  const load = useCallback(async (): Promise<boolean> => {
     try {
       const [nextDraft, next, nextRequirements] = await Promise.all([
         getDraft(project.id),
@@ -150,8 +156,10 @@ export function ProjectConcepts({
       setConcepts(next);
       setRequirements(nextRequirements);
       setLoadError(null);
+      return true;
     } catch (error) {
       setLoadError(requestFailureText(t, error));
+      return false;
     } finally {
       setReads((count) => count + 1);
     }
@@ -173,18 +181,21 @@ export function ProjectConcepts({
     return () => window.clearTimeout(timer);
   }, [drafting, extractingRequirements, load, reads]);
 
-  // A change made on a draft someone else changed meanwhile is not replayed: read it again.
-  const refused = async (error: unknown, failedKey: string) => {
+  // A refused change is not replayed: the page says why until it is dealt with. A draft someone
+  // else changed meanwhile is read again on request; an item of a knowledge-base selection no
+  // longer in use is refused however often it is read, so reading again is not offered.
+  const refused = (error: unknown, failedKey: string) => {
     const code = projectErrorCode(error);
     if (
       draftErrorCode(error) === "Stale" ||
       code === "Requirement.Stale" ||
       code === "Requirement.Drafting"
     ) {
-      message.warning(t(`${PREFIX}.stale`));
-      await load();
+      setRefusal({ reload: true, text: t(`${PREFIX}.stale`) });
+    } else if (draftErrorCode(error) === "DocumentSourceChanged") {
+      setRefusal({ reload: false, text: t(`${PREFIX}.sourceChanged`) });
     } else {
-      message.error(requestFailureText(t, error) || t(failedKey));
+      setRefusal({ reload: false, text: requestFailureText(t, error, `${PREFIX}.${failedKey}`) });
     }
   };
 
@@ -209,9 +220,10 @@ export function ProjectConcepts({
           { category: categoryOf(verdict) },
           concepts.requirementUpdateTime,
         );
+        setRefusal(null);
         await load();
       } catch (error) {
-        await refused(error, `${PREFIX}.judgeFailed`);
+        refused(error, "judgeFailed");
       } finally {
         setBusy(null);
       }
@@ -225,9 +237,10 @@ export function ProjectConcepts({
           verdict,
         }),
       );
+      setRefusal(null);
       readDraftAgain();
     } catch (error) {
-      await refused(error, `${PREFIX}.judgeFailed`);
+      refused(error, "judgeFailed");
     } finally {
       setBusy(null);
     }
@@ -240,9 +253,10 @@ export function ProjectConcepts({
     setBusy(key);
     try {
       setConcepts(await mergeConcept(project.id, concepts.draftUpdateTime, key, into));
+      setRefusal(null);
       readDraftAgain();
     } catch (error) {
-      await refused(error, `${PREFIX}.mergeFailed`);
+      refused(error, "mergeFailed");
     } finally {
       setBusy(null);
     }
@@ -291,9 +305,10 @@ export function ProjectConcepts({
           ? t(`${PREFIX}.acceptedSkipped`, { accepted, count: skipped })
           : t(`${PREFIX}.accepted`, { count: accepted }),
       );
+      setRefusal(null);
       await load();
     } catch (error) {
-      await refused(error, `${PREFIX}.judgeFailed`);
+      refused(error, "judgeFailed");
     } finally {
       setBusy(null);
     }
@@ -626,6 +641,28 @@ export function ProjectConcepts({
           <span className={styles.muted}>{t(`${PREFIX}.readOnly`)}</span>
         )}
       </div>
+
+      {refusal ? (
+        <Alert
+          action={
+            refusal.reload ? (
+              <AppButton
+                // Polling reads the page too: only reading it on request settles the refusal, and
+                // only once the read succeeds.
+                onClick={() => void load().then((read) => read && setRefusal(null))}
+                size="small"
+              >
+                {t(`${PREFIX}.reload`)}
+              </AppButton>
+            ) : undefined
+          }
+          closable
+          message={refusal.text}
+          onClose={() => setRefusal(null)}
+          showIcon
+          type="warning"
+        />
+      ) : null}
 
       {/* The funnel: where the concepts come from, what they were judged, how many are in. */}
       <dl className={styles.stats} data-region="funnel">
