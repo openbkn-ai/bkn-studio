@@ -1761,6 +1761,12 @@ describe("ObjectMetricFormScene navigation context", () => {
     expect(mocks.navigate).toHaveBeenLastCalledWith(context.returnTo, {
       state: { needId: "need-1", objectMetricCreated: { id: "metric-1" } },
     });
+    // The back arrow brings the draft too, so leaving that way never loses it.
+    mocks.navigate.mockClear();
+    fireEvent.click(screen.getByLabelText(context.returnLabel));
+    expect(mocks.navigate).toHaveBeenLastCalledWith(context.returnTo, {
+      state: { needId: "need-1", objectMetricCreated: { id: "metric-1" } },
+    });
   });
 
   it("returns to the caller with the metric id once published", async () => {
