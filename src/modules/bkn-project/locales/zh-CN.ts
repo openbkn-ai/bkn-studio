@@ -1117,6 +1117,7 @@ export const bknProjectZhCN = {
         undecidedTitle_one: "以下 {{count}} 项起草时没有采纳，也还没有人决定",
         undecidedTitle_other: "以下 {{count}} 项起草时没有采纳，也还没有人决定",
         undecidedAccept: "暂不纳入这些项",
+        undecidedItem: "「{{name}}」：{{because}}",
         neededBy: "不纳入的话，这些问题答不上来：",
         partialTitle: "以下 {{count}} 张表起草时读取不到，没有参与起草",
         partialTitle_one: "以下 {{count}} 张表起草时读取不到，没有参与起草",

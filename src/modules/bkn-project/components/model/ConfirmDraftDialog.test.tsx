@@ -131,6 +131,10 @@ describe("ConfirmDraft", () => {
     fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     const dialog = within(await screen.findByRole("dialog"));
     expect(await dialog.findByText("订单到仓库")).toBeInTheDocument();
+    // Each item is named for assistive technology by what it is and why it waits.
+    expect(
+      dialog.getByRole("listitem", { name: "「订单到仓库」：字段取值太少，关联可能是巧合" }),
+    ).toBeInTheDocument();
     expect(dialog.getByText("字段取值太少，关联可能是巧合")).toBeInTheDocument();
     // Leaving it out leaves the question it is needed by unanswered.
     expect(dialog.getByText("不纳入的话，这些问题答不上来：")).toBeInTheDocument();
