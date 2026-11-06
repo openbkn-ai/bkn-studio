@@ -11,14 +11,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extensionProjectObjectDocumentFields } from "@/framework/extension/registry";
+import { extensionProjectObjectSourceEditor } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
-import {
-  applyDocumentObjectRevisions,
-  documentObjectPreview,
-} from "@/modules/bkn-project/components/ai/document-revisions";
 import { applyObjectRevisions, objectPreview } from "@/modules/bkn-project/components/ai/revisions";
 import { AliasesField } from "@/modules/bkn-project/components/draft/AliasesField";
 import { aliasRefusalText } from "@/modules/bkn-project/components/draft/aliases";
@@ -53,17 +49,14 @@ import {
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
 
 import styles from "./ObjectTypePanel.module.css";
-import { DeriveDocumentObject } from "./DeriveDocumentObject";
-import { DocumentFieldsEditor } from "./DocumentFieldsEditor";
-import { documentSave } from "./document-values";
 
 const PREFIX = "bknProject.objectEditor";
 const DESCRIPTION_MAX_LENGTH = 1000;
 
 type BasicValues = { aliases?: string[]; description: string; name: string };
 
-/** The name and description of the basic values, as a document item saves them: it has no aliases. */
-const documentBasic = ({ description, name }: { description: string; name: string }) => ({
+/** The name and description of the basic values, as an edition's item saves them: no aliases. */
+const sourceBasic = ({ description, name }: { description: string; name: string }) => ({
   description,
   name,
 });
@@ -120,9 +113,11 @@ export function ObjectTypePanel({
   /** Going through the candidates: confirming this one, then the next. */
 }) {
   const { t } = useTranslation();
-  // The professional edition brings its own editor for document fields; until it does, the
-  // built-in one stays.
-  const DocumentFields = extensionProjectObjectDocumentFields() ?? DocumentFieldsEditor;
+  // Items drawn from an edition's source (documents, in the professional edition) are edited by
+  // its editor; without one there are none, and every item maps a table.
+  const sourceEditor = extensionProjectObjectSourceEditor();
+  const sourceOf = (objectType: DraftObjectType) =>
+    sourceEditor?.appliesTo(objectType) ? sourceEditor.toSave(objectType) : null;
   const { message, modal } = useAppServices();
   const [basicForm] = Form.useForm<BasicValues>();
   const editorRef = useRef<ObjectTypeDataAttributeEditorHandle>(null);
@@ -140,8 +135,8 @@ export function ObjectTypePanel({
   const [properties, setProperties] = useState<ObjectTypeDataProperty[]>(() =>
     base ? editorProperties(base.objectType) : [],
   );
-  const [documentValue, setDocumentValue] = useState<DraftObjectTypeSave | null>(() =>
-    base?.objectType.document ? documentSave(base.objectType) : null,
+  const [sourceValue, setSourceValue] = useState<DraftObjectTypeSave | null>(() =>
+    base ? sourceOf(base.objectType) : null,
   );
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<SaveProblem | null>(null);
@@ -161,7 +156,7 @@ export function ObjectTypePanel({
       setBasic(values);
       basicForm.setFieldsValue(values);
       setProperties(editorProperties(next.objectType));
-      setDocumentValue(next.objectType.document ? documentSave(next.objectType) : null);
+      setSourceValue(sourceOf(next.objectType));
     }
   };
 
@@ -176,22 +171,21 @@ export function ObjectTypePanel({
   const changed =
     base !== null &&
     JSON.stringify(
-      documentValue
-        ? { ...documentValue, ...documentBasic(basic) }
+      sourceValue
+        ? { ...sourceValue, ...sourceBasic(basic) }
         : draftSave(base.objectType, basic, properties),
     ) !==
       JSON.stringify(
-        base.objectType.document
-          ? documentSave(base.objectType)
-          : draftSave(
-              base.objectType,
-              {
-                aliases: base.objectType.aliases,
-                description: base.objectType.description,
-                name: base.objectType.name,
-              },
-              editorProperties(base.objectType),
-            ),
+        sourceOf(base.objectType) ??
+          draftSave(
+            base.objectType,
+            {
+              aliases: base.objectType.aliases,
+              description: base.objectType.description,
+              name: base.objectType.name,
+            },
+            editorProperties(base.objectType),
+          ),
       );
 
   const close = () => {
@@ -303,7 +297,7 @@ export function ObjectTypePanel({
     let checked: ObjectTypeDataProperty[];
     try {
       values = await basicForm.validateFields();
-      checked = documentValue
+      checked = sourceValue
         ? properties
         : (await editorRef.current!.validateFields()).dataProperties;
     } catch {
@@ -312,7 +306,7 @@ export function ObjectTypePanel({
     }
     // Every property of a draft maps a column of its table: say which do not before sending.
     const unmapped = checked.filter((property) => !property.mappedField);
-    if (!documentValue && unmapped.length) {
+    if (!sourceValue && unmapped.length) {
       setProblem({
         kind: "properties",
         text: t(`${PREFIX}.unmapped`, {
@@ -321,43 +315,11 @@ export function ObjectTypePanel({
       });
       return null;
     }
-    if (
-      documentValue &&
-      documentValue.properties.some(
-        (p) =>
-          !base.objectType.properties.some((old) => old.name === p.name && old.readOnly) &&
-          !base.objectType.document?.role.startsWith("evidence_") &&
-          (!/^[a-z][a-z0-9_]{0,39}$/.test(p.name) ||
-            !p.displayName.trim() ||
-            !p.extraction?.instruction.trim() ||
-            !p.extraction.examples.length),
-      )
-    ) {
-      setProblem({ kind: "properties", text: t("bknProject.documentEditor.incomplete") });
-      return null;
-    }
-    if (
-      documentValue?.document?.filePeriod &&
-      !documentValue.document.filePeriod.clear &&
-      !documentValue.document.filePeriod.confirm
-    ) {
-      setProblem({ kind: "properties", text: t("bknProject.documentEditor.confirmFilePeriod") });
-      return null;
-    }
-    if (
-      documentValue?.document?.fileIdentity &&
-      !documentValue.document.fileIdentity.clear &&
-      !documentValue.document.fileIdentity.confirm
-    ) {
-      setProblem({ kind: "properties", text: t("bknProject.documentEditor.confirmFileNumber") });
-      return null;
-    }
-    if (
-      documentValue?.document?.sentenceIdentity &&
-      !documentValue.document.sentenceIdentity.clear &&
-      !documentValue.document.sentenceIdentity.confirm
-    ) {
-      setProblem({ kind: "properties", text: t("bknProject.documentEditor.confirmSentenceKey") });
+    // The edition's editor says what its item still needs before it can be saved.
+    const refused =
+      sourceValue && sourceEditor ? sourceEditor.check(sourceValue, base.objectType) : null;
+    if (refused) {
+      setProblem({ kind: "properties", text: t(refused) });
       return null;
     }
     setSaving(true);
@@ -367,8 +329,8 @@ export function ObjectTypePanel({
         project.id,
         objectTypeId,
         base.draft.updateTime,
-        documentValue
-          ? { ...documentValue, ...documentBasic(values) }
+        sourceValue
+          ? { ...sourceValue, ...sourceBasic(values) }
           : draftSave(base.objectType, values, checked),
       );
       message.success(t(`${PREFIX}.saved`, { name: values.name.trim() }));
@@ -394,9 +356,9 @@ export function ObjectTypePanel({
   };
 
   // What the editor holds now, for taking back what Ask AI put in only while nothing changed since.
-  const holding = useRef({ basic, properties, documentValue });
+  const holding = useRef({ basic, properties, sourceValue });
   useEffect(() => {
-    holding.current = { basic, properties, documentValue };
+    holding.current = { basic, properties, sourceValue };
   });
   const sent = (values: { basic: BasicValues; properties: ObjectTypeDataProperty[] }) =>
     base ? JSON.stringify(draftSave(base.objectType, values.basic, values.properties)) : "";
@@ -409,27 +371,23 @@ export function ObjectTypePanel({
   // Ask AI's changes go into the editor as if typed; saving writes them.
   const apply = (revisions: AskRevision[]): UndoApply => {
     const before = { basic, properties };
-    const beforeDocument = documentValue;
+    const beforeSource = sourceValue;
     const after = applyObjectRevisions(before, revisions);
-    const afterDocument = beforeDocument
-      ? applyDocumentObjectRevisions(
-          beforeDocument,
-          revisions,
-          base?.objectType.properties.filter((p) => p.readOnly).map((p) => p.name) ?? [],
-          base?.objectType.document?.role ?? "",
-        )
-      : null;
+    const afterSource =
+      beforeSource && sourceEditor && base
+        ? sourceEditor.applyRevisions(beforeSource, revisions, base.objectType)
+        : null;
     put(after);
-    setDocumentValue(afterDocument);
+    setSourceValue(afterSource);
     return () => {
       if (
-        JSON.stringify(holding.current.documentValue) !== JSON.stringify(afterDocument) ||
+        JSON.stringify(holding.current.sourceValue) !== JSON.stringify(afterSource) ||
         sent(holding.current) !== sent(after)
       ) {
         return false;
       }
       put(before);
-      setDocumentValue(beforeDocument);
+      setSourceValue(beforeSource);
       return true;
     };
   };
@@ -499,28 +457,30 @@ export function ObjectTypePanel({
                   showCount
                 />
               </Form.Item>
-              {documentValue ? null : <AliasesField ownNames={[basic.name]} />}
+              {sourceValue ? null : <AliasesField ownNames={[basic.name]} />}
             </Form>
-            <div className={[styles.canvas, documentValue ? styles.documentCanvas : ""].join(" ")}>
-              {documentValue ? (
+            <div className={[styles.canvas, sourceValue ? styles.sourceCanvas : ""].join(" ")}>
+              {sourceValue && sourceEditor ? (
                 <>
-                  <DeriveDocumentObject
-                    draft={base.draft}
-                    object={base.objectType}
-                    projectId={project.id}
-                    disabled={changed || saving || asking || Boolean(project.archived)}
-                    onDerived={(next) => {
-                      reset(next);
-                      onSaved(next);
-                    }}
-                  />
-                  <DocumentFields
+                  {sourceEditor.Derive ? (
+                    <sourceEditor.Derive
+                      draft={base.draft}
+                      item={base.objectType}
+                      projectId={project.id}
+                      disabled={changed || saving || asking || Boolean(project.archived)}
+                      onDerived={(next) => {
+                        reset(next);
+                        onSaved(next);
+                      }}
+                    />
+                  ) : null}
+                  <sourceEditor.Editor
                     key={`${objectTypeId}-${base.draft.updateTime}`}
-                    object={base.objectType}
+                    item={base.objectType}
                     draft={base.draft}
                     projectId={project.id}
-                    value={documentValue}
-                    onChange={setDocumentValue}
+                    value={sourceValue}
+                    onChange={setSourceValue}
                   />
                 </>
               ) : (
@@ -544,12 +504,8 @@ export function ObjectTypePanel({
               onApply={apply}
               onClose={() => setAsking(false)}
               preview={(revision) =>
-                documentValue
-                  ? documentObjectPreview(
-                      t,
-                      { ...documentValue, ...documentBasic(basic) },
-                      revision,
-                    )
+                sourceValue && sourceEditor
+                  ? sourceEditor.preview(t, { ...sourceValue, ...sourceBasic(basic) }, revision)
                   : objectPreview(t, { basic, properties }, revision)
               }
               projectId={project.id}
@@ -557,8 +513,8 @@ export function ObjectTypePanel({
                 name: base.objectType.name,
               })}
               working={() =>
-                documentValue
-                  ? { ...documentValue, ...documentBasic(basic) }
+                sourceValue
+                  ? { ...sourceValue, ...sourceBasic(basic) }
                   : draftSave(base.objectType, basic, properties)
               }
             />

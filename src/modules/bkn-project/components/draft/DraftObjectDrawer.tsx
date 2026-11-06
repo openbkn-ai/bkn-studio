@@ -9,6 +9,7 @@ import { Descriptions, Drawer } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useTranslation } from "react-i18next";
 
+import { extensionProjectObjectSourceEditor } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
@@ -24,7 +25,6 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 
 import styles from "./DraftTables.module.css";
-import { originalLocation } from "@/modules/bkn-project/components/object-type/document-values";
 
 /** An object type of the draft: its table, identity, properties and the fields left out. */
 export function DraftObjectDrawer({
@@ -42,6 +42,9 @@ export function DraftObjectDrawer({
   onEdit?: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  // An object type from an edition's source has no table: its editor says what each property is.
+  const sourceEditor = extensionProjectObjectSourceEditor();
+  const source = objectType && sourceEditor?.appliesTo(objectType) ? sourceEditor : null;
   const columns: ColumnsType<DraftProperty> = [
     {
       title: t("bknProject.model.detail.property"),
@@ -49,9 +52,7 @@ export function DraftObjectDrawer({
       key: "name",
       render: (value: string, record) => (
         <div className={styles.evidence}>
-          <code className={styles.mono}>
-            {objectType?.document ? record.displayName || value : value}
-          </code>
+          <code className={styles.mono}>{source ? record.displayName || value : value}</code>
           {record.missingDescription ? (
             <LightStatusTag tone="neutral">
               {t("bknProject.model.detail.missingDescription")}
@@ -70,27 +71,15 @@ export function DraftObjectDrawer({
       render: (value: string) => t(propertyTypeKey(value)),
     },
     {
-      title: t(
-        objectType?.document
-          ? "bknProject.documentEditor.instruction"
-          : "bknProject.model.detail.mappedField",
-      ),
+      title:
+        source && objectType
+          ? source.describe(t, objectType).propertyColumn
+          : t("bknProject.model.detail.mappedField"),
       dataIndex: "mappedField",
       key: "mappedField",
       render: (value: string, record) =>
-        objectType?.document ? (
-          <div>
-            {record.readOnly
-              ? t("bknProject.documentEditor.managed")
-              : record.extraction?.instruction}
-            {record.extraction?.examples.map((q, i) => (
-              <div key={`${q.blockId}-${i}`}>
-                <a href={originalLocation(q)} target="_blank" rel="noopener noreferrer">
-                  {t("bknProject.documentEditor.original", { number: i + 1 })}
-                </a>
-              </div>
-            ))}
-          </div>
+        source ? (
+          <source.Property property={record} />
         ) : (
           <code className={styles.mono}>{value}</code>
         ),

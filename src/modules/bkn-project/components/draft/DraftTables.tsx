@@ -12,7 +12,10 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
-import { extensionProjectRelationBasis } from "@/framework/extension/registry";
+import {
+  extensionProjectObjectSourceEditor,
+  extensionProjectRelationBasis,
+} from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
@@ -41,17 +44,11 @@ import type {
   DraftValueType,
 } from "@/modules/bkn-project/types/draft";
 
+import { cardinalityKey } from "@/modules/bkn-project/components/relation-type/relation-values";
+
 import styles from "./DraftTables.module.css";
-import { documentCardinalityKey } from "@/modules/bkn-project/components/object-type/document-values";
 
 const PAGE_SIZE = 50;
-
-// Keys must not end in _one: i18next would read them as plural forms.
-const CARDINALITY: Record<string, string> = {
-  many_to_many: "manyToMany",
-  many_to_one: "manyToOne",
-  one_to_one: "oneToOne",
-};
 
 export function AdoptionTag({ adopted }: { adopted: boolean }) {
   const { t } = useTranslation();
@@ -136,19 +133,20 @@ export function IdentityEvidence({
   objectType: DraftObjectType;
 }) {
   const { t } = useTranslation();
+  const sourceEditor = extensionProjectObjectSourceEditor();
   const { key } = objectType;
-  if (objectType.document)
+  // An object type from an edition's source has no table to count keys on.
+  if (sourceEditor?.appliesTo(objectType))
     return (
       <span>
         {objectType.needsIdentity
           ? t("bknProject.model.identityPending")
-          : objectType.document.role !== "entity"
-            ? t("bknProject.documentEditor.recordIdentity")
-            : objectType.primaryKeys
-                .map(
-                  (name) => objectType.properties.find((p) => p.name === name)?.displayName || name,
-                )
-                .join(t("bknProject.listSeparator"))}
+          : (sourceEditor.describe(t, objectType).identity ??
+            objectType.primaryKeys
+              .map(
+                (name) => objectType.properties.find((p) => p.name === name)?.displayName || name,
+              )
+              .join(t("bknProject.listSeparator")))}
       </span>
     );
   if (compact) {
@@ -236,6 +234,7 @@ export function DraftObjectsTable({
   onOpen: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const sourceEditor = extensionProjectObjectSourceEditor();
   const columns: ColumnsType<DraftObjectType> = [
     {
       title: t("bknProject.model.columns.objectType"),
@@ -298,13 +297,9 @@ export function DraftObjectsTable({
       title: t("bknProject.model.columns.source"),
       key: "source",
       render: (_value, record) =>
-        record.document ? (
-          <Tooltip title={record.document.reason}>
-            <span>
-              {t(`bknProject.documentEditor.roles.${record.document.role}`, {
-                defaultValue: t("bknProject.documentEditor.source"),
-              })}
-            </span>
+        sourceEditor?.appliesTo(record) ? (
+          <Tooltip title={record.document?.reason}>
+            <span>{sourceEditor.describe(t, record).source}</span>
           </Tooltip>
         ) : (
           <TableSource catalogNames={catalogNames} table={record.table} />
@@ -369,12 +364,10 @@ export function DraftRelationsTable({
       dataIndex: "cardinality",
       key: "cardinality",
       width: 110,
-      render: (value: string, record) =>
-        record.document
-          ? t(documentCardinalityKey(value))
-          : CARDINALITY[value]
-            ? t(`bknProject.model.cardinality.${CARDINALITY[value]}`)
-            : value,
+      render: (value: string) => {
+        const key = cardinalityKey(value);
+        return key ? t(key) : value;
+      },
     },
     {
       title: t("bknProject.model.columns.basis"),

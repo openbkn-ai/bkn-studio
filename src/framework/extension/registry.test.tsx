@@ -16,7 +16,9 @@ import { EntitlementContext } from "@/framework/entitlement/entitlement-context"
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
   extensionProjectConceptSource,
-  extensionProjectObjectDocumentFields,
+  extensionKnowledgeNetworkResourcePanel,
+  extensionProjectObjectSourceEditor,
+  extensionProjectRelationSourceEditor,
   extensionProjectOverviewKnowledgeBase,
   extensionProjectRelationBasis,
   extensionProjectRequirementDocumentPicker,
@@ -106,7 +108,9 @@ describe("extension registry", () => {
     const Panel = () => <p>panel</p>;
     const slots = {
       projectConceptSource: extensionProjectConceptSource,
-      projectObjectDocumentFields: extensionProjectObjectDocumentFields,
+      knowledgeNetworkResourcePanel: extensionKnowledgeNetworkResourcePanel,
+      projectObjectSourceEditor: extensionProjectObjectSourceEditor,
+      projectRelationSourceEditor: extensionProjectRelationSourceEditor,
       projectOverviewKnowledgeBase: extensionProjectOverviewKnowledgeBase,
       projectRelationBasis: extensionProjectRelationBasis,
       projectRequirementDocumentPicker: extensionProjectRequirementDocumentPicker,

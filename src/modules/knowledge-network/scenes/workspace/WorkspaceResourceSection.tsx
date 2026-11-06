@@ -8,12 +8,10 @@
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
+import { extensionKnowledgeNetworkResourcePanel } from "@/framework/extension/registry";
 import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-network/contracts/scenes";
 import { ActionTypeListPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeListPanel";
 import { CapabilityListPanel } from "@/modules/knowledge-network/components/capability/CapabilityListPanel";
-import { KnowledgeBaseListPanel } from "@/modules/knowledge-network/components/knowledge-base/KnowledgeBaseListPanel";
-import { KnowledgeBasePreview } from "@/modules/knowledge-network/components/knowledge-base/KnowledgeBasePreview";
 import { ConceptGroupListPanel } from "@/modules/knowledge-network/components/concept-group/ConceptGroupListPanel";
 import { ObjectMetricListPanel } from "@/modules/knowledge-network/components/object-metric/ObjectMetricListPanel";
 import { ObjectTypeListPanel } from "@/modules/knowledge-network/components/object-type/ObjectTypeListPanel";
@@ -178,13 +176,13 @@ export function WorkspaceResourceSection({
         />
       );
     }
-    case "knowledge-bases":
-      // Hidden in the community image; under the edition mask without the license.
-      return (
-        <BknProjectKbSlot preview={<KnowledgeBasePreview />}>
-          <KnowledgeBaseListPanel canModify={canModify} key={networkId} networkId={networkId} />
-        </BknProjectKbSlot>
-      );
+    case "knowledge-bases": {
+      // The professional edition's; the community image has none and shows nothing here.
+      const KnowledgeBases = extensionKnowledgeNetworkResourcePanel();
+      return KnowledgeBases ? (
+        <KnowledgeBases canModify={canModify} key={networkId} networkId={networkId} />
+      ) : null;
+    }
     default:
       return null;
   }

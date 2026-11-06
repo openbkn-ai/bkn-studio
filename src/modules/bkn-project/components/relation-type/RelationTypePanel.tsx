@@ -11,10 +11,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { extensionProjectRelationSourceEditor } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
-import { applyDocumentRelationRevisions } from "@/modules/bkn-project/components/ai/document-revisions";
 import { SourceSuggestions } from "@/modules/bkn-project/components/relation-type/SourceSuggestions";
 import {
   applyRelationRevisions,
@@ -60,16 +60,13 @@ import {
   RESOURCE_NAME_MAX_LENGTH,
 } from "@/modules/knowledge-network/lib/resource-constraints";
 
-import { DocumentRelationEditor } from "./DocumentRelationEditor";
-import { documentRelationSave } from "@/modules/bkn-project/components/object-type/document-values";
-
 const PREFIX = "bknProject.relationEditor";
 const DESCRIPTION_MAX_LENGTH = 1000;
 
 type BasicValues = { aliases?: string[]; description: string; name: string };
 
-/** The name and description of the basic values, as a document item saves them: it has no aliases. */
-const documentBasic = ({ description, name }: { description: string; name: string }) => ({
+/** The name and description of the basic values, as an edition's item saves them: no aliases. */
+const sourceBasic = ({ description, name }: { description: string; name: string }) => ({
   description,
   name,
 });
@@ -131,6 +128,11 @@ export function RelationTypePanel({
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [basicForm] = Form.useForm<BasicValues>();
+  // Relations drawn from an edition's source (documents, in the professional edition) are edited
+  // by its editor; without one there are none, and every relation maps tables.
+  const sourceEditor = extensionProjectRelationSourceEditor();
+  const sourceOf = (relation: DraftRelationType | null | undefined) =>
+    relation && sourceEditor?.appliesTo(relation) ? sourceEditor.toSave(relation) : null;
 
   const startOf = (from: Draft, id: string | null): Base | null => {
     if (id === null) {
@@ -151,8 +153,8 @@ export function RelationTypePanel({
       ? endsEditorValues(prefill.ends, draftTables(draft))
       : relationEditorValues(base?.relation ?? undefined),
   );
-  const [documentValue, setDocumentValue] = useState<DraftRelationTypeSave | null>(() =>
-    base?.relation?.document ? documentRelationSave(base.relation) : null,
+  const [sourceValue, setSourceValue] = useState<DraftRelationTypeSave | null>(() =>
+    sourceOf(base?.relation),
   );
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<SaveProblem | null>(null);
@@ -172,7 +174,7 @@ export function RelationTypePanel({
       setBasic(start);
       basicForm.setFieldsValue(start);
       setValues(relationEditorValues(next.relation ?? undefined));
-      setDocumentValue(next.relation?.document ? documentRelationSave(next.relation) : null);
+      setSourceValue(sourceOf(next.relation));
     }
   };
 
@@ -202,19 +204,18 @@ export function RelationTypePanel({
   const changed =
     base !== null &&
     JSON.stringify(
-      documentValue ? { ...documentValue, ...documentBasic(basic) } : relationSave(basic, values),
+      sourceValue ? { ...sourceValue, ...sourceBasic(basic) } : relationSave(basic, values),
     ) !==
       JSON.stringify(
-        relation?.document
-          ? documentRelationSave(relation)
-          : relationSave(
-              {
-                aliases: relation?.aliases,
-                description: relation?.description ?? "",
-                name: relation?.name ?? "",
-              },
-              relationEditorValues(relation ?? undefined),
-            ),
+        sourceOf(relation) ??
+          relationSave(
+            {
+              aliases: relation?.aliases,
+              description: relation?.description ?? "",
+              name: relation?.name ?? "",
+            },
+            relationEditorValues(relation ?? undefined),
+          ),
       );
 
   const close = () => {
@@ -304,7 +305,7 @@ export function RelationTypePanel({
       return null;
     }
     // The mapping says what it misses, as on the knowledge network.
-    const missing = documentValue ? null : validateRelationTypeMappingValues(t, values);
+    const missing = sourceValue ? null : validateRelationTypeMappingValues(t, values);
     if (missing) {
       setProblem({ kind: "other", text: missing });
       return null;
@@ -312,8 +313,8 @@ export function RelationTypePanel({
     setSaving(true);
     setProblem(null);
     try {
-      const value = documentValue
-        ? { ...documentValue, ...documentBasic(named) }
+      const value = sourceValue
+        ? { ...sourceValue, ...sourceBasic(named) }
         : relationSave(named, values);
       const next = relation
         ? await saveDraftRelationType(project.id, relation.id, base.draft.updateTime, value)
@@ -384,9 +385,9 @@ export function RelationTypePanel({
   };
 
   // What the editor holds now, for taking back what Ask AI put in only while nothing changed since.
-  const holding = useRef({ basic, values, documentValue });
+  const holding = useRef({ basic, values, sourceValue });
   useEffect(() => {
-    holding.current = { basic, values, documentValue };
+    holding.current = { basic, values, sourceValue };
   });
   const put = (next: { basic: BasicValues; values: RelationTypeMappingFormValues }) => {
     setBasic(next.basic);
@@ -397,28 +398,30 @@ export function RelationTypePanel({
   // Ask AI's changes go into the editor as if made by hand; saving writes them.
   const apply = (revisions: AskRevision[]): UndoApply => {
     const before = { basic, values };
-    const beforeDocument = documentValue;
-    const afterDocument = beforeDocument
-      ? applyDocumentRelationRevisions(beforeDocument, revisions)
-      : null;
+    const beforeSource = sourceValue;
+    const afterSource =
+      beforeSource && sourceEditor
+        ? sourceEditor.applyRevisions(beforeSource, revisions, relation)
+        : null;
+    // The ends of an edition's relation are its editor's; the mapping editor takes the rest.
     const after = applyRelationRevisions(
       before,
-      documentValue ? revisions.filter((r) => r.field !== "ends") : revisions,
+      sourceValue ? revisions.filter((r) => r.field !== "ends") : revisions,
       tables,
     );
     put(after);
-    setDocumentValue(afterDocument);
+    setSourceValue(afterSource);
     return () => {
       const now = holding.current;
       if (
-        JSON.stringify(now.documentValue) !== JSON.stringify(afterDocument) ||
+        JSON.stringify(now.sourceValue) !== JSON.stringify(afterSource) ||
         JSON.stringify(relationSave(now.basic, now.values)) !==
           JSON.stringify(relationSave(after.basic, after.values))
       ) {
         return false;
       }
       put(before);
-      setDocumentValue(beforeDocument);
+      setSourceValue(beforeSource);
       return true;
     };
   };
@@ -503,39 +506,27 @@ export function RelationTypePanel({
                   showCount
                 />
               </Form.Item>
-              {documentValue ? null : <AliasesField ownNames={[basic.name]} />}
+              {sourceValue ? null : <AliasesField ownNames={[basic.name]} />}
             </Form>
-            {!relation && current.items.objectTypes.some((o) => o.document) && (
+            {!relation && sourceEditor?.newItem.offered(current) && (
               <label>
-                {t("bknProject.documentEditor.documentRelation")}{" "}
+                {t(sourceEditor.newItem.labelKey)}{" "}
                 <Switch
-                  checked={documentValue !== null}
+                  checked={sourceValue !== null}
                   onChange={(checked) =>
-                    setDocumentValue(
-                      checked
-                        ? {
-                            name: basic.name,
-                            description: basic.description,
-                            source: "",
-                            target: "",
-                            mapping: [],
-                            documentMapping: { mode: "linking" },
-                            cardinality: "many_to_one",
-                          }
-                        : null,
-                    )
+                    setSourceValue(checked ? sourceEditor.newItem.start(basic) : null)
                   }
                 />
               </label>
             )}
             <div className={styles.mapping}>
-              {documentValue ? (
-                <DocumentRelationEditor
+              {sourceValue && sourceEditor ? (
+                <sourceEditor.Editor
                   draft={current}
-                  value={documentValue}
-                  onChange={setDocumentValue}
-                  readonly={relation?.document?.role.startsWith("evidence_")}
-                  repairRequired={Boolean(relation?.documentRepair)}
+                  item={relation}
+                  onChange={setSourceValue}
+                  projectId={project.id}
+                  value={sourceValue}
                 />
               ) : (
                 <RelationTypeMappingEditor
@@ -559,7 +550,7 @@ export function RelationTypePanel({
                   t,
                   endNames,
                   basic,
-                  documentValue ?? relationSave(basic, values),
+                  sourceValue ?? relationSave(basic, values),
                   revision,
                 )
               }
@@ -570,7 +561,7 @@ export function RelationTypePanel({
                   : t("bknProject.model.ask.subtitle.relation_types_new")
               }
               top={
-                relation || documentValue ? null : (
+                relation || sourceValue ? null : (
                   <SourceSuggestions
                     objectName={objectName}
                     onPick={(suggestion) =>
@@ -585,8 +576,8 @@ export function RelationTypePanel({
                 )
               }
               working={() =>
-                documentValue
-                  ? { ...documentValue, ...documentBasic(basic) }
+                sourceValue
+                  ? { ...sourceValue, ...sourceBasic(basic) }
                   : relationSave(basic, values)
               }
             />

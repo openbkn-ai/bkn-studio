@@ -232,7 +232,7 @@ describe("ProjectModel", () => {
   it.each([
     ["hidden", true, "bknProject.model.empty.noCatalogs"],
     ["locked", true, "bknProject.model.empty.noCatalogs"],
-    ["enabled", true, "bknProject.documentEditor.sourcesHint"],
+    ["enabled", true, "bknProject.model.empty.knowledgeBaseSources"],
     ["enabled", false, "bknProject.model.empty.noCatalogsAskOwner"],
   ] as const)(
     "keeps source guidance aligned with mode %s and owner %s",
@@ -243,7 +243,9 @@ describe("ProjectModel", () => {
       renderModel({ catalogIds: [] }, owner);
       expect(await screen.findByText(key)).toBeInTheDocument();
       if (mode !== "enabled" || !owner)
-        expect(screen.queryByText("bknProject.documentEditor.sourcesHint")).not.toBeInTheDocument();
+        expect(
+          screen.queryByText("bknProject.model.empty.knowledgeBaseSources"),
+        ).not.toBeInTheDocument();
     },
   );
 

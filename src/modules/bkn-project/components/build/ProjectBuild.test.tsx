@@ -37,10 +37,10 @@ vi.mock("@/framework/entitlement/BknProjectKbSlot", () => ({
 vi.mock("@/framework/extension/registry", () => ({
   extensionProjectKnowledgeBaseBuilds: () =>
     state.builds
-      ? ({ canEdit, canManageBuilds, section }: ProjectKnowledgeBaseBuildProps) => (
+      ? ({ canEdit, canManageBuilds, lineageId, section }: ProjectKnowledgeBaseBuildProps) => (
           <div>
             document builds {section} {canEdit ? "edit" : "read"}{" "}
-            {canManageBuilds ? "manage" : "watch"}
+            {canManageBuilds ? "manage" : "watch"} of {lineageId}
           </div>
         )
       : undefined,
@@ -48,12 +48,6 @@ vi.mock("@/framework/extension/registry", () => ({
 
 vi.mock("@/modules/bkn-project/components/release/IndexReadiness", () => ({
   IndexReadiness: ({ canRun }: { canRun: boolean }) => <div>indexes {canRun ? "run" : "view"}</div>,
-}));
-
-vi.mock("@/modules/bkn-project/components/release/KnowledgeRefreshSection", () => ({
-  KnowledgeRefreshSection: ({ lineageId }: { lineageId: string }) => (
-    <div>refresh of {lineageId}</div>
-  ),
 }));
 
 import { ProjectBuild } from "./ProjectBuild";
@@ -98,14 +92,13 @@ describe("ProjectBuild", () => {
     expect(screen.queryByText(/document builds/)).toBeNull();
   });
 
-  it("puts the document builds and their refresh on the unstructured tab, with the preview", () => {
+  it("puts the document builds, for the lineage they refresh, on the unstructured tab", () => {
     renderBuild("/bkn-project/p1/build?tab=unstructured");
 
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent(
       "bknProject.build.tabs.unstructured badge",
     );
-    expect(screen.getByText("document builds instances edit manage")).toBeInTheDocument();
-    expect(screen.getByText("refresh of orders")).toBeInTheDocument();
+    expect(screen.getByText("document builds instances edit manage of orders")).toBeInTheDocument();
   });
 
   it("masks the unstructured tab once while it is licensed away", () => {
@@ -113,7 +106,7 @@ describe("ProjectBuild", () => {
     renderBuild("/bkn-project/p1/build?tab=unstructured");
 
     expect(screen.getByText(/mask/)).toHaveTextContent("bknProject.build.unstructured.preview");
-    expect(screen.queryByText(/refresh of/)).toBeNull();
+    expect(screen.queryByText(/document builds/)).toBeNull();
   });
 
   it("says so where the edition brings no document builds", () => {
@@ -125,7 +118,7 @@ describe("ProjectBuild", () => {
 
   it("lets only the owner of an open project build", () => {
     renderBuild("/bkn-project/p1/build?tab=unstructured", true, { ...project, archived: true });
-    expect(screen.getByText("document builds instances read manage")).toBeInTheDocument();
+    expect(screen.getByText("document builds instances read manage of orders")).toBeInTheDocument();
   });
 
   it("keeps the tab in the address", () => {

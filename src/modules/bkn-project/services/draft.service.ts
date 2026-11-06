@@ -20,7 +20,6 @@ import type {
   DraftDocumentMapping,
   DualSourceChoice,
   SourceFieldRule,
-  SamplePreview,
   Candidate,
   Candidates,
   Draft,
@@ -65,7 +64,8 @@ type BackendKey = {
   source: string;
 };
 
-type BackendCitation = {
+/** A citation as bkn-project sends it; the knowledge-base pages read samples with it too. */
+export type BackendCitation = {
   knowledge_base_id: string;
   file_id: string;
   content_version_id: string;
@@ -148,7 +148,7 @@ type BackendDocumentMapping = {
   source_name_property?: string;
   target_name_property?: string;
 };
-const mapCitation = (q: BackendCitation): DraftSourceCitation => ({
+export const mapCitation = (q: BackendCitation): DraftSourceCitation => ({
   knowledgeBaseId: q.knowledge_base_id,
   fileId: q.file_id,
   contentVersionId: q.content_version_id,
@@ -1819,76 +1819,6 @@ export async function draftSourceChanges(projectId: string, signature: string): 
   const response = await http.post<BackendDraft>(
     `${API_PREFIX}/${encodeURIComponent(projectId)}/source-changes:draft`,
     { signature },
-    { skipErrorToast: true },
-  );
-  return mapDraft(response.data);
-}
-
-/** Explicit debug-fragment read; never cached or persisted in browser storage. */
-export async function readDocumentSamples(
-  projectId: string,
-  selectionId: string,
-  selectionRevision: number,
-): Promise<SamplePreview> {
-  const { data } = await http.get<{
-    selection_id: string;
-    selection_revision: number;
-    fragments: { text: string; file_name: string; citation: BackendCitation }[];
-  }>(`${API_PREFIX}/${encodeURIComponent(projectId)}/kb/samples`, {
-    params: { selection_id: selectionId, selection_revision: selectionRevision },
-    skipErrorToast: true,
-  });
-  return {
-    selectionId: data.selection_id,
-    selectionRevision: data.selection_revision,
-    fragments: (data.fragments ?? []).map((f) => ({
-      text: f.text,
-      fileName: f.file_name,
-      citation: mapCitation(f.citation),
-    })),
-  };
-}
-export async function extractDocumentModels(
-  projectId: string,
-  selectionId: string,
-  selectionRevision: number,
-  draftUpdateTime: number,
-): Promise<{ draft: Draft | null; addedObjects: number; addedRelations: number }> {
-  const { data } = await http.post<{
-    draft: BackendDraft | null;
-    added_objects: number;
-    added_relations: number;
-  }>(
-    `${API_PREFIX}/${encodeURIComponent(projectId)}/kb/concepts:extract`,
-    {
-      selection_id: selectionId,
-      selection_revision: selectionRevision,
-      draft_update_time: draftUpdateTime,
-    },
-    { skipErrorToast: true, timeout: 360000 },
-  );
-  return {
-    draft: data.draft ? mapDraft(data.draft) : null,
-    addedObjects: data.added_objects ?? 0,
-    addedRelations: data.added_relations ?? 0,
-  };
-}
-
-/** Creates a separate pending candidate. No unsaved fields or citations are sent. */
-export async function deriveDocumentObject(
-  projectId: string,
-  draft: Draft,
-  source: DraftObjectType,
-  derive: import("@/modules/bkn-project/types/draft").DocumentDerivation,
-): Promise<Draft> {
-  const response = await http.put<BackendDraft>(
-    `${draftPath(projectId)}/object_types/${encodeURIComponent(source.id)}`,
-    {
-      update_time: draft.updateTime,
-      name: source.name,
-      comment: source.description,
-      document: { derive },
-    },
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
