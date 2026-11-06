@@ -432,7 +432,7 @@ describe("ProjectModel", () => {
     expect(screen.getAllByText(/bknProject.model.evidence.joinCount/)[0]).toHaveTextContent(
       '"rate":"99.5%"',
     );
-    expect(screen.getByText(/bknProject.model.evidence.origin.name_match/)).toBeInTheDocument();
+    expect(screen.getByText("bknProject.model.basis.name_match")).toBeInTheDocument();
   });
 
   it("reports catalogs that are gone, and nothing when the catalogs cannot be listed", async () => {
