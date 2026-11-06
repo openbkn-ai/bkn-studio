@@ -371,6 +371,9 @@ export const bknProjectZhCN = {
       pending_other: "待确认 {{count}} 个。可以逐个判定，也可以接受全部建议，之后还能改判。",
       pendingAdopted: "其中已采纳但还没人确认的，确认模型时会照原样写入；不想要的，判为不纳入。",
       acceptAll: "接受全部建议",
+      acceptTitle: "接受全部建议？",
+      acceptContent:
+        "所有待确认的概念会按抽取时的建议判定：建议纳入的采纳，建议不纳入的不采纳。缺唯一标识或端点未采纳的会跳过，留给你处理。之后还能逐个改判。",
       accepted: "已接受 {{count}} 条建议",
       acceptedSkipped: "已接受 {{accepted}} 条建议，{{count}} 条要你处理",
       goToModel: "去概念建模",

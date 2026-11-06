@@ -241,6 +241,18 @@ describe("ProjectConcepts", () => {
     expect((await row("Visits")).queryByRole("button", { name: /confirmOf/ })).toBeNull();
   });
 
+  it("keeps a saved judgment saved when reading the draft again fails", async () => {
+    service.judgeConcept.mockResolvedValue(concepts());
+    service.getDraft
+      .mockResolvedValueOnce({ items: { decisions: [] }, status: "ready", updateTime: 5 })
+      .mockRejectedValue(new Error("down"));
+    renderConcepts();
+
+    fireEvent.click((await row("Orders")).getByRole("button", { name: /confirmOf.*Orders/ }));
+    await waitFor(() => expect(service.getDraft).toHaveBeenCalledTimes(2));
+    expect(messageMock.error).not.toHaveBeenCalled();
+  });
+
   it("offers only the verdicts a concept's item can take", async () => {
     renderConcepts();
 
@@ -275,7 +287,11 @@ describe("ProjectConcepts", () => {
     renderConcepts();
 
     fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.acceptAll" }));
-    await waitFor(() => expect(service.acceptDraftSuggestions).toHaveBeenCalledWith("p1", 5));
+    // Asked first: nothing is judged until the person agrees.
+    await waitFor(() => expect(confirmMock).toHaveBeenCalled());
+    expect(service.acceptDraftSuggestions).not.toHaveBeenCalled();
+    await confirmMock.mock.calls[0][0].onOk();
+    expect(service.acceptDraftSuggestions).toHaveBeenCalledWith("p1", 5);
     expect(messageMock.success).toHaveBeenCalledWith(
       'bknProject.concepts.acceptedSkipped:{"accepted":3,"count":1}',
     );

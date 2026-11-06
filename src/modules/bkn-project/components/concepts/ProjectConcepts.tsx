@@ -154,6 +154,12 @@ export function ProjectConcepts({
     }
   };
 
+  // The draft moved on with what was written. Reading it only tells whether it is being
+  // extracted, so a failed read keeps the one before: what was written stands either way.
+  const readDraftAgain = () => {
+    getDraft(project.id).then(setDraft, () => undefined);
+  };
+
   const judge = async (concept: Concept, verdict: ConceptVerdict) => {
     if (!concepts) {
       return;
@@ -167,8 +173,7 @@ export function ProjectConcepts({
           verdict,
         }),
       );
-      // The draft moved on with the judgment.
-      setDraft(await getDraft(project.id));
+      readDraftAgain();
     } catch (error) {
       await refused(error, `${PREFIX}.judgeFailed`);
     } finally {
@@ -183,7 +188,7 @@ export function ProjectConcepts({
     setBusy(key);
     try {
       setConcepts(await mergeConcept(project.id, concepts.draftUpdateTime, key, into));
-      setDraft(await getDraft(project.id));
+      readDraftAgain();
     } catch (error) {
       await refused(error, `${PREFIX}.mergeFailed`);
     } finally {
@@ -191,16 +196,24 @@ export function ProjectConcepts({
     }
   };
 
-  const acceptAll = async () => {
+  // Judging every pending concept at once is asked first: what it skips stays for a person.
+  const acceptAll = () => {
     if (!concepts) {
       return;
     }
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t(`${PREFIX}.acceptContent`),
+      okText: t(`${PREFIX}.acceptAll`),
+      onOk: () => acceptSuggestions(concepts.draftUpdateTime),
+      title: t(`${PREFIX}.acceptTitle`),
+    });
+  };
+
+  const acceptSuggestions = async (updateTime: number) => {
     setBusy("accept");
     try {
-      const { accepted, skipped } = await acceptDraftSuggestions(
-        project.id,
-        concepts.draftUpdateTime,
-      );
+      const { accepted, skipped } = await acceptDraftSuggestions(project.id, updateTime);
       message.success(
         skipped
           ? t(`${PREFIX}.acceptedSkipped`, { accepted, count: skipped })
@@ -518,7 +531,7 @@ export function ProjectConcepts({
                 <AppButton
                   disabled={busy !== null && busy !== "accept"}
                   loading={busy === "accept"}
-                  onClick={() => void acceptAll()}
+                  onClick={acceptAll}
                   size="small"
                   type="primary"
                 >

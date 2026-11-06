@@ -401,6 +401,9 @@ export const bknProjectEnUS = {
       pendingAdopted:
         "Those already adopted but not confirmed are written as they are when the model is confirmed; judge any you do not want as not included.",
       acceptAll: "Accept all suggestions",
+      acceptTitle: "Accept all suggestions?",
+      acceptContent:
+        "Every concept to confirm is judged as suggested when extracting: those suggested in are adopted, the others left out. Those without an identity or with an end not adopted are skipped for you. You can still change each judgment later.",
       accepted: "Accepted {{count}} suggestions",
       acceptedSkipped: "Accepted {{accepted}} suggestions; {{count}} need you",
       goToModel: "Go to concept modeling",
