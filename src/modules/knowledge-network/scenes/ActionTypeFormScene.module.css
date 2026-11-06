@@ -124,6 +124,12 @@
   max-width: 900px;
 }
 
+.contextAlert {
+  margin: 24px auto 0;
+  max-width: 852px;
+  width: calc(100% - 48px);
+}
+
 .loadingState {
   align-items: center;
   display: flex;
