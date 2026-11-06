@@ -94,6 +94,7 @@ type BackendRegression = {
   questions:
     | {
         id: string;
+        no_record?: boolean;
         tests?: { expect: string; id: string; text: string }[] | null;
         text: string;
       }[]
@@ -195,6 +196,7 @@ export const mapRegression = (regression: BackendRegression): Regression => ({
   networkId: regression.network_id,
   questions: (regression.questions ?? []).map((question) => ({
     id: question.id,
+    noRecord: question.no_record ?? false,
     tests: (question.tests ?? []).map(({ expect, id, text }) => ({ expect, id, text })),
     text: question.text,
   })),
@@ -617,13 +619,14 @@ function mockRegression(networkId: string): Regression | null {
     questions: [
       {
         id: "q1",
+        noRecord: false,
         tests: [
           { expect: "exists", id: "t1", text: "Which orders of customer C-001 are late?" },
           { expect: "not_exists", id: "t2", text: "Which orders of customer C-999 are late?" },
         ],
         text: "Which orders of a customer are late?",
       },
-      { id: "q3", tests: [], text: "Which products use part P-100?" },
+      { id: "q3", noRecord: false, tests: [], text: "Which products use part P-100?" },
     ],
     results: running
       ? []

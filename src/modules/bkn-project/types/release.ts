@@ -102,7 +102,11 @@ export type SwitchPlan = {
 export type RegressionTest = { expect: string; id: string; text: string };
 
 /** A scenario question as the regression asked it: by its tests when it has them. */
-export type RegressionQuestion = { id: string; tests: RegressionTest[]; text: string };
+/**
+ * A question of a regression. `noRecord`: it asks about a record and the data had none to fill it
+ * with, so it was not asked.
+ */
+export type RegressionQuestion = { id: string; noRecord: boolean; tests: RegressionTest[]; text: string };
 
 /**
  * How one question or test did. `outcome`: `passed`, `missing` (the release lacks what it

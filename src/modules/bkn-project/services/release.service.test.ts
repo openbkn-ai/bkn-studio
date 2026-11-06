@@ -278,7 +278,7 @@ describe("release.service", () => {
             tests: [{ expect: "exists", id: "t1", text: "C-1?" }],
             text: "Q1",
           },
-          { id: "q7", needs: [], text: "Q7" },
+          { id: "q7", needs: [], no_record: true, text: "Q7" },
         ],
         results: [
           {
@@ -311,8 +311,8 @@ describe("release.service", () => {
       finishTime: 9,
       networkId: "n_v1_0_2",
       questions: [
-        { id: "q1", tests: [{ expect: "exists", id: "t1", text: "C-1?" }], text: "Q1" },
-        { id: "q7", tests: [], text: "Q7" },
+        { id: "q1", noRecord: false, tests: [{ expect: "exists", id: "t1", text: "C-1?" }], text: "Q1" },
+        { id: "q7", noRecord: true, tests: [], text: "Q7" },
       ],
       results: [
         {

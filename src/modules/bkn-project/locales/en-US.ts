@@ -2324,6 +2324,7 @@ export const bknProjectEnUS = {
         asking: "Asking",
         noResult: "No result",
         asItself: "Asked as written",
+        noRecord: "Not asked: the data has no record to ask about",
         missing: "Missing from the ontology: {{names}}",
         missingTables: 'Not asked: the tables of "{{names}}" no longer exist',
         dataSourceMissing:
