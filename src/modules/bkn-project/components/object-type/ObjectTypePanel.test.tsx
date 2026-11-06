@@ -303,6 +303,56 @@ describe("ObjectTypePanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("edits the object type's aliases, saving them and saying a refusal on their field", async () => {
+    const draft = mapDraft(mockDraft("p1"));
+    draft.items.objectTypes.find((item) => item.id === "customers")!.aliases = ["Clients"];
+    renderPanel(draft);
+    expect(screen.getByText("Clients")).toBeInTheDocument();
+
+    const aliases = screen.getByRole("combobox", { name: "bknProject.aliases.label" });
+    fireEvent.change(aliases, { target: { value: "Buyers" } });
+    fireEvent.keyDown(aliases, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+    expect(await screen.findByText("Buyers")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.objectEditor.unsaved")).toBeInTheDocument();
+
+    mocks.save.mockRejectedValueOnce(
+      refusal(400, "InvalidAliases", {
+        alias: "Buyers",
+        item: "customers",
+        other: "Buyers",
+        reason: "other_name",
+      }),
+    );
+    save();
+    await waitFor(() =>
+      expect(mocks.save).toHaveBeenCalledWith(
+        "p1",
+        "customers",
+        draft.updateTime,
+        expect.objectContaining({ aliases: ["Clients", "Buyers"] }),
+      ),
+    );
+    expect(
+      await screen.findByText(
+        `bknProject.aliases.other_name:${JSON.stringify({ alias: "Buyers", max: 10, other: "Buyers" })}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("refuses an alias that repeats the name before sending", async () => {
+    renderPanel();
+    const aliases = screen.getByRole("combobox", { name: "bknProject.aliases.label" });
+    fireEvent.change(aliases, { target: { value: "customers" } });
+    fireEvent.keyDown(aliases, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+    save();
+    expect(
+      await screen.findByText(
+        `bknProject.aliases.own_name:${JSON.stringify({ alias: "customers" })}`,
+      ),
+    ).toBeInTheDocument();
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
   it("names the properties that map no column, without sending", async () => {
     const draft = mapDraft(mockDraft("p1"));
     draft.items.objectTypes.find((item) => item.id === "customers")!.properties[1].mappedField = "";

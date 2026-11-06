@@ -19,6 +19,8 @@ import {
   documentObjectPreview,
 } from "@/modules/bkn-project/components/ai/document-revisions";
 import { applyObjectRevisions, objectPreview } from "@/modules/bkn-project/components/ai/revisions";
+import { AliasesField } from "@/modules/bkn-project/components/draft/AliasesField";
+import { aliasRefusalText } from "@/modules/bkn-project/components/draft/aliases";
 import { adoptBlocker, draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import {
   draftSave,
@@ -58,7 +60,13 @@ import { ReviewActions, type CandidateReview } from "./ReviewActions";
 const PREFIX = "bknProject.objectEditor";
 const DESCRIPTION_MAX_LENGTH = 1000;
 
-type BasicValues = { description: string; name: string };
+type BasicValues = { aliases?: string[]; description: string; name: string };
+
+/** The name and description of the basic values, as a document item saves them: it has no aliases. */
+const documentBasic = ({ description, name }: { description: string; name: string }) => ({
+  description,
+  name,
+});
 
 /** Why saving did not go, as the page says it: on a field, over the properties, or the draft moved. */
 type SaveProblem =
@@ -124,6 +132,7 @@ export function ObjectTypePanel({
   };
   const [base, setBase] = useState<Base | null>(() => startOf(draft));
   const [basic, setBasic] = useState<BasicValues>(() => ({
+    aliases: base?.objectType.aliases ?? [],
     description: base?.objectType.description ?? "",
     name: base?.objectType.name ?? "",
   }));
@@ -143,7 +152,11 @@ export function ObjectTypePanel({
     setBase(next);
     setProblem(null);
     if (next) {
-      const values = { description: next.objectType.description, name: next.objectType.name };
+      const values = {
+        aliases: next.objectType.aliases,
+        description: next.objectType.description,
+        name: next.objectType.name,
+      };
       setBasic(values);
       basicForm.setFieldsValue(values);
       setProperties(editorProperties(next.objectType));
@@ -163,7 +176,7 @@ export function ObjectTypePanel({
     base !== null &&
     JSON.stringify(
       documentValue
-        ? { ...documentValue, ...basic }
+        ? { ...documentValue, ...documentBasic(basic) }
         : draftSave(base.objectType, basic, properties),
     ) !==
       JSON.stringify(
@@ -171,7 +184,11 @@ export function ObjectTypePanel({
           ? documentSave(base.objectType)
           : draftSave(
               base.objectType,
-              { description: base.objectType.description, name: base.objectType.name },
+              {
+                aliases: base.objectType.aliases,
+                description: base.objectType.description,
+                name: base.objectType.name,
+              },
               editorProperties(base.objectType),
             ),
       );
@@ -254,6 +271,16 @@ export function ObjectTypePanel({
       }
       case "InvalidProperty":
         return { kind: "properties", text: invalidPropertyText(details) };
+      case "InvalidAliases": {
+        // A property's alias is said over the properties; the object type's on its field.
+        const text = aliasRefusalText(t, details);
+        const { item } = (details ?? {}) as { item?: string };
+        if (item && item !== base?.objectType.name && item !== basicForm.getFieldValue("name")) {
+          return { kind: "properties", text };
+        }
+        basicForm.setFields([{ errors: [text], name: "aliases" }]);
+        return null;
+      }
       case "InvalidSourceFields":
       case "DualSourceNotConfirmed":
       case "InvalidIdentity":
@@ -340,7 +367,7 @@ export function ObjectTypePanel({
         objectTypeId,
         base.draft.updateTime,
         documentValue
-          ? { ...documentValue, ...values }
+          ? { ...documentValue, ...documentBasic(values) }
           : draftSave(base.objectType, values, checked),
       );
       message.success(t(`${PREFIX}.saved`, { name: values.name.trim() }));
@@ -491,6 +518,7 @@ export function ObjectTypePanel({
                   showCount
                 />
               </Form.Item>
+              {documentValue ? null : <AliasesField ownNames={[basic.name]} />}
             </Form>
             <div className={[styles.canvas, documentValue ? styles.documentCanvas : ""].join(" ")}>
               {documentValue ? (
@@ -536,7 +564,11 @@ export function ObjectTypePanel({
               onClose={() => setAsking(false)}
               preview={(revision) =>
                 documentValue
-                  ? documentObjectPreview(t, { ...documentValue, ...basic }, revision)
+                  ? documentObjectPreview(
+                      t,
+                      { ...documentValue, ...documentBasic(basic) },
+                      revision,
+                    )
                   : objectPreview(t, { basic, properties }, revision)
               }
               projectId={project.id}
@@ -545,7 +577,7 @@ export function ObjectTypePanel({
               })}
               working={() =>
                 documentValue
-                  ? { ...documentValue, ...basic }
+                  ? { ...documentValue, ...documentBasic(basic) }
                   : draftSave(base.objectType, basic, properties)
               }
             />

@@ -245,6 +245,7 @@ const documentMappingBody = (m: DraftDocumentMapping): BackendDocumentMapping =>
 });
 
 type BackendObjectType = {
+  aliases?: string[] | null;
   document?: BackendDocument;
   adopted: boolean;
   description: string;
@@ -257,6 +258,7 @@ type BackendObjectType = {
   primary_keys: string[] | null;
   properties:
     | {
+        aliases?: string[] | null;
         extraction?: BackendExtraction;
         read_only?: boolean;
         description: string;
@@ -275,6 +277,7 @@ type BackendObjectType = {
 type BackendMapping = { source_property: string; target_property: string };
 
 type BackendRelationType = {
+  aliases?: string[] | null;
   document_repair?: string;
   document?: BackendDocument;
   document_mapping?: BackendDocumentMapping;
@@ -362,6 +365,7 @@ const mapKey = (key: BackendKey): DraftKeyEvidence => ({
 const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
   ...(item.document ? { document: mapDocument(item.document) } : {}),
   adopted: item.adopted,
+  aliases: item.aliases ?? [],
   description: item.description,
   displayKey: item.display_key,
   id: item.id,
@@ -373,6 +377,7 @@ const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
   properties: (item.properties ?? []).map((property) => ({
     ...(property.extraction ? { extraction: mapExtraction(property.extraction) } : {}),
     ...(property.read_only ? { readOnly: true } : {}),
+    ...(property.aliases?.length ? { aliases: property.aliases } : {}),
     description: property.description,
     displayName: property.display_name,
     mappedField: property.mapped_field,
@@ -395,6 +400,7 @@ const mapRelationType = (item: BackendRelationType): DraftRelationType => ({
   ...(item.document ? { document: mapDocument(item.document) } : {}),
   ...(item.document_mapping ? { documentMapping: mapDocumentMapping(item.document_mapping) } : {}),
   adopted: item.adopted,
+  aliases: item.aliases ?? [],
   cardinality: item.cardinality,
   description: item.description,
   evidence: {
@@ -901,6 +907,9 @@ function saveMockObjectType(
   item.needs_identity = value.primaryKeys.length === 0;
   item.display_key = value.displayKey;
   item.incremental_key = value.incrementalKey;
+  if (value.aliases) {
+    item.aliases = value.aliases;
+  }
   draft.update_time = now;
   return draft;
 }
@@ -1053,6 +1062,7 @@ function saveMockRelationType(
   if (existing) {
     Object.assign(existing, joined, {
       adopted: existing.adopted && adopted,
+      ...(value.aliases ? { aliases: value.aliases } : {}),
       description: value.description,
       name: value.name,
     });
@@ -1060,6 +1070,7 @@ function saveMockRelationType(
     relations.push({
       ...joined,
       adopted,
+      aliases: value.aliases ?? [],
       cardinality: "many_to_one",
       description: value.description,
       // Counted only for a single property within one catalog; the mock counts none.
@@ -1406,6 +1417,7 @@ export async function editDraftItem(
     `${draftPath(projectId)}/items/${kind}/${encodeURIComponent(itemId)}`,
     {
       adopted: edit.adopted,
+      aliases: edit.aliases,
       description: edit.description,
       incremental_key: edit.incrementalKey,
       name: edit.name,
@@ -1518,6 +1530,7 @@ export function objectTypeBody(value: DraftObjectTypeSave) {
     incremental_key: value.incrementalKey,
     name: value.name,
     primary_keys: value.primaryKeys,
+    ...(value.aliases ? { aliases: value.aliases } : {}),
   };
 }
 
@@ -1554,6 +1567,7 @@ export function relationBody(value: DraftRelationTypeSave, updateTime?: number, 
     }));
   return {
     ...(id ? { id } : {}),
+    ...(value.aliases ? { aliases: value.aliases } : {}),
     comment: value.description,
     ...(value.documentMapping
       ? {

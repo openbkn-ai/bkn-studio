@@ -510,6 +510,7 @@ export const bknProjectEnUS = {
           unadopt: "Unadopted {{kind}} {{name}}",
           rename: "Renamed {{kind}} {{before}} to {{after}}",
           describe: "Changed the description of {{kind}} {{name}}",
+          aliases: "Changed the aliases of {{kind}} {{name}}",
           identity: "Chose {{properties}} as the identity of {{name}}",
           restore: "Restored field {{field}} as property {{property}} of {{name}}",
           other: "Changed {{kind}} {{name}}",
@@ -543,6 +544,7 @@ export const bknProjectEnUS = {
           other: "Made a decision when confirming the draft",
         },
         empty: "none",
+        aliasSeparator: ", ",
         beforeAfter: "Before: {{before}}  After: {{after}}",
         byAt: "{{who}} · {{time}}",
         you: "You",
@@ -1102,6 +1104,23 @@ export const bknProjectEnUS = {
       through: "through {{table}}: {{pairs}}",
       adopt: "Adopt",
       open: "Open and check",
+    },
+    aliases: {
+      label: "Aliases",
+      placeholder: "Type one name and press Enter; add as many as needed",
+      help: "Other names such as abbreviations, former names or names in another language, so agents understand questions and find this item. Up to {{max}}, each up to {{length}} characters.",
+      too_many: "An item has at most {{max}} aliases. Remove some.",
+      too_long: "Alias \u201c{{alias}}\u201d is longer than {{max}} characters. Shorten it.",
+      comma:
+        "Alias \u201c{{alias}}\u201d holds a comma. Write one name per alias and add the others separately.",
+      repeated: "Alias \u201c{{alias}}\u201d appears twice.",
+      own_name: "Alias \u201c{{alias}}\u201d is the same as the name. No need to add it.",
+      other_name:
+        "\u201c{{alias}}\u201d is already the name of \u201c{{other}}\u201d. As an alias it would confuse agents; choose another.",
+      alias_of_other:
+        "\u201c{{alias}}\u201d is already an alias of \u201c{{other}}\u201d. To use it as the name, remove it from the aliases of \u201c{{other}}\u201d first.",
+      document_item: "Objects and relations extracted from documents cannot have aliases yet.",
+      other: "The aliases are not valid. Check them and save again.",
     },
     relationEditor: {
       sourceSuggestions: {
