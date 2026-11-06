@@ -81,6 +81,11 @@ import {
   objectMetricFormErrorCount,
   objectMetricFormIssues,
 } from "@/modules/knowledge-network/lib/object-metric-form-validation";
+import {
+  objectMetricCreatedState,
+  readObjectMetricContext,
+  type ObjectMetricNavigationContext,
+} from "@/modules/knowledge-network/lib/object-metric-context";
 import { objectMetricReturnPath } from "@/modules/knowledge-network/lib/object-metric-navigation";
 import type { ObjectMetricAiIntent } from "@/modules/knowledge-network/services/object-metric-ai.service";
 import { newClientRequestId } from "@/modules/knowledge-network/services/bkn-agent-execution.service";
@@ -1329,6 +1334,14 @@ function HelpTooltip({ label, title }: { label: string; title: string }) {
   );
 }
 
+/** Keeps the caller's context on navigation between the metric pages. */
+function withNavigationContext(
+  state: Record<string, unknown>,
+  context: ObjectMetricNavigationContext | undefined,
+) {
+  return context ? { ...state, objectMetricContext: context } : state;
+}
+
 export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   useTranslation();
   const params = useParams<{ metricId: string; networkId: string }>();
@@ -1340,6 +1353,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const metricId = params.metricId;
   const requestedMetricType = parseMetricType(searchParams.get("metricType"));
   const requestedObjectTypeId = searchParams.get("objectTypeId") ?? "";
+  const navigationContext = readObjectMetricContext(location.state);
   const [form] = Form.useForm<FormValues>();
   const getFieldValue = <Key extends keyof FormValues>(name: Key): FormValues[Key] | undefined =>
     form.getFieldValue(name) as FormValues[Key] | undefined;
@@ -1378,7 +1392,13 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const [validation, setValidation] = useState<ObjectMetricValidationResultV1>();
   const [preview, setPreview] = useState<ObjectMetricPreviewV1>();
   const [trialDefinition, setTrialDefinition] = useState<ObjectMetricDefinitionV1>();
-  const [aiPromptRequest, setAiPromptRequest] = useState<{ revision: number; value: string }>();
+  const [aiPromptRequest, setAiPromptRequest] = useState<
+    { revision: number; value: string } | undefined
+  >(() =>
+    mode === "create" && navigationContext?.prompt
+      ? { revision: 1, value: navigationContext.prompt }
+      : undefined,
+  );
   const [aiModelId, setAiModelId] = useState<string | undefined>();
   const [aiModels, setAiModels] = useState<ObjectMetricAnswerModel[]>([]);
   const [aiModelsLoading, setAiModelsLoading] = useState(false);
@@ -1454,6 +1474,21 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const metricType = definition?.metric_type ?? requestedMetricType;
   const ownerObjectTypeId = definition?.owner_object_type_id ?? requestedObjectTypeId;
   const returnTo = objectMetricReturnPath(networkId, location.state, ownerObjectTypeId);
+  const sceneState = (state: Record<string, unknown>) =>
+    withNavigationContext(state, navigationContext);
+  const leave = () => {
+    if (navigationContext) {
+      void navigate(navigationContext.returnTo, { state: navigationContext.returnState });
+    } else {
+      void navigate(returnTo);
+    }
+  };
+  const returnWithMetric = (id: string) => {
+    if (!navigationContext) return;
+    void navigate(navigationContext.returnTo, {
+      state: objectMetricCreatedState(navigationContext, id),
+    });
+  };
   const ownerObjectType = objectTypes.find((item) => item.id === ownerObjectTypeId);
   const aiScopeKey = JSON.stringify([
     networkId,
@@ -2429,13 +2464,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               `/knowledge-network/workspace/${networkId}/metrics/${nextRecord.definition.id}/detail`,
               {
                 replace: true,
-                state: {
-                  knowledgeNetworkReturnTo: objectMetricReturnPath(
-                    networkId,
-                    location.state,
-                    nextRecord.definition.owner_object_type_id,
-                  ),
-                },
+                state: withNavigationContext(
+                  {
+                    knowledgeNetworkReturnTo: objectMetricReturnPath(
+                      networkId,
+                      location.state,
+                      nextRecord.definition.owner_object_type_id,
+                    ),
+                  },
+                  readObjectMetricContext(location.state),
+                ),
               },
             );
             return;
@@ -2941,7 +2979,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         if (!record) {
           void navigate(
             `/knowledge-network/workspace/${networkId}/metrics/${saved.definition.id}/edit`,
-            { replace: true, state: { knowledgeNetworkReturnTo: returnTo } },
+            { replace: true, state: sceneState({ knowledgeNetworkReturnTo: returnTo }) },
           );
         }
       }
@@ -2974,7 +3012,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       if (!record) {
         void navigate(
           `/knowledge-network/workspace/${networkId}/metrics/${validated.definition.id}/edit`,
-          { replace: true, state: { knowledgeNetworkReturnTo: returnTo } },
+          { replace: true, state: sceneState({ knowledgeNetworkReturnTo: returnTo }) },
         );
       }
     }
@@ -3114,6 +3152,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       validated?.definition.version ?? saved.definition.version,
     );
     void message.success(objectMetricText("mbf73c8faca59"));
+    if (navigationContext) {
+      returnWithMetric(saved.definition.id);
+      return;
+    }
     void navigate(
       `/knowledge-network/workspace/${networkId}/metrics/${saved.definition.id}/detail`,
       { state: { justPublished: true, knowledgeNetworkReturnTo: returnTo } },
@@ -3140,9 +3182,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         subTitle={objectMetricText("m40f0ad99f292")}
         extra={
           <Space>
-            <Button onClick={() => void navigate(returnTo)}>
-              {objectMetricText("m8d8251782181")}
-            </Button>
+            <Button onClick={leave}>{objectMetricText("m8d8251782181")}</Button>
             {loadError === "unknown" ? (
               <Button onClick={() => setReloadKey((value) => value + 1)} type="primary">
                 {objectMetricText("mb8784c8dd563")}
@@ -3160,7 +3200,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         title={objectMetricText("m31ec9738ea7b")}
         subTitle={objectMetricText("mbe1539a3daff")}
         extra={
-          <Button onClick={() => void navigate(returnTo)} type="primary">
+          <Button onClick={leave} type="primary">
             {objectMetricText("mcdfb4fd1b61d")}
           </Button>
         }
@@ -3199,10 +3239,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     >
       <header className={styles.header}>
         <Button
-          aria-label={objectMetricText("mcdfb4fd1b61d")}
+          aria-label={navigationContext?.returnLabel ?? objectMetricText("mcdfb4fd1b61d")}
           className={styles.backButton}
           icon={<LeftOutlined />}
-          onClick={() => void navigate(returnTo)}
+          onClick={leave}
           type="text"
         />
         <div className={styles.headerCopy}>
@@ -3216,6 +3256,22 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               : objectMetricText("mb3ad01d53b9e")}
           </p>
         </div>
+        {navigationContext ? (
+          <Alert
+            action={
+              record ? (
+                <Button onClick={() => returnWithMetric(record.definition.id)} size="small">
+                  {navigationContext.returnLabel}
+                </Button>
+              ) : undefined
+            }
+            className={styles.contextAlert}
+            description={navigationContext.description}
+            message={navigationContext.title}
+            showIcon
+            type="info"
+          />
+        ) : null}
         <div className={styles.headerActions}>
           <Button
             aria-expanded={aiOpen}
