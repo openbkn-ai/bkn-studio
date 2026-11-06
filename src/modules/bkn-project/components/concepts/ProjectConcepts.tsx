@@ -143,7 +143,8 @@ export function ProjectConcepts({
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const canEdit = ownerIsCaller && !project.archived;
 
-  const load = useCallback(async () => {
+  // Tells whether the page was read: a failed read keeps what was shown before.
+  const load = useCallback(async (): Promise<boolean> => {
     try {
       const [nextDraft, next, nextRequirements] = await Promise.all([
         getDraft(project.id),
@@ -155,8 +156,10 @@ export function ProjectConcepts({
       setConcepts(next);
       setRequirements(nextRequirements);
       setLoadError(null);
+      return true;
     } catch (error) {
       setLoadError(requestFailureText(t, error));
+      return false;
     } finally {
       setReads((count) => count + 1);
     }
@@ -644,8 +647,9 @@ export function ProjectConcepts({
           action={
             refusal.reload ? (
               <AppButton
-                // Polling reads the page too: only reading it on request settles the refusal.
-                onClick={() => void load().then(() => setRefusal(null))}
+                // Polling reads the page too: only reading it on request settles the refusal, and
+                // only once the read succeeds.
+                onClick={() => void load().then((read) => read && setRefusal(null))}
                 size="small"
               >
                 {t(`${PREFIX}.reload`)}

@@ -495,6 +495,20 @@ describe("ProjectConcepts", () => {
     expect(service.judgeConcept).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the stale refusal when reading again fails", async () => {
+    service.judgeConcept.mockRejectedValue(conflict("Stale"));
+    renderConcepts();
+
+    fireEvent.mouseDown((await row("Orders")).getByRole("combobox", { name: /verdictOf.*Orders/ }));
+    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
+    const alert = alertOf(await screen.findByText("bknProject.concepts.stale"));
+
+    service.getConcepts.mockRejectedValueOnce(new Error("offline"));
+    fireEvent.click(within(alert).getByRole("button", { name: "bknProject.concepts.reload" }));
+    await waitFor(() => expect(service.getConcepts).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByText("bknProject.concepts.stale")).toBeInTheDocument());
+  });
+
   it("says a concept of a knowledge-base selection no longer in use cannot be judged, offering no reload", async () => {
     service.judgeConcept.mockRejectedValue(conflict("DocumentSourceChanged"));
     renderConcepts();
