@@ -489,6 +489,9 @@ export function ProjectKinetic({
           {live ? (
             <LightStatusTag tone={needStateTone(state)}>{needStateText(t, state)}</LightStatusTag>
           ) : null}
+          {need.unconnected.length ? (
+            <LightStatusTag tone="warning">{t(`${KINETIC}.unconnectedMark`)}</LightStatusTag>
+          ) : null}
           {need.accepted ? null : (
             <LightStatusTag tone="warning">{t(`${KINETIC}.review.pending`)}</LightStatusTag>
           )}
@@ -708,6 +711,7 @@ export function ProjectKinetic({
             networkId={networkId}
             objectName={objectName}
             onClose={() => setOpenId(null)}
+            onGoToModel={onGoToModel}
             onImplement={implement}
             onLink={link}
             onUnlink={unlink}

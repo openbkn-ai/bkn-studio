@@ -55,6 +55,7 @@ export function KineticNeedPanel({
   onClose,
   onImplement,
   onLink,
+  onGoToModel,
   onUnlink,
   projectId,
   questions,
@@ -70,6 +71,8 @@ export function KineticNeedPanel({
   /** Opens the live network's form for a metric or action type. */
   onImplement: (need: LogicNeedView) => void;
   onLink: (need: LogicNeedView, target: LogicNeedTarget, name: string) => void;
+  /** Opens concept modeling, where the missing relations are added. */
+  onGoToModel?: () => void;
   onUnlink: (need: LogicNeedView) => void;
   projectId: string;
   /** How many scenario questions rest on it. */
@@ -149,6 +152,26 @@ export function KineticNeedPanel({
             <h4 className={styles.blockTitle}>{t(`${PANEL}.objects`)}</h4>
             <p>{need.objectTypeIds.map(objectName).join(t("bknProject.listSeparator"))}</p>
           </section>
+        ) : null}
+        {need.unconnected.length ? (
+          <Alert
+            action={
+              onGoToModel ? (
+                <AppButton onClick={onGoToModel} size="small">
+                  {t(`${PANEL}.goToModel`)}
+                </AppButton>
+              ) : undefined
+            }
+            message={t(`${PANEL}.unconnected`, {
+              pairs: need.unconnected
+                .map(({ from, to }) =>
+                  t(`${PANEL}.unconnectedPair`, { from: objectName(from), to: objectName(to) }),
+                )
+                .join(t("bknProject.listSeparator")),
+            })}
+            showIcon
+            type="warning"
+          />
         ) : null}
         <Citations citations={need.citations} supplementReason={need.supplementReason} />
         {questions ? (

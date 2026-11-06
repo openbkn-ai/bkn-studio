@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   link: vi.fn(),
   listDocuments: vi.fn(),
   message: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
+  onGoToModel: vi.fn(),
   removeItem: vi.fn(),
   reviewRequirements: vi.fn(),
   snapshot: { current: null as { capabilities: string[]; extensions: string[] } | null },
@@ -197,7 +198,7 @@ function renderPage(state?: unknown, owner = true) {
           element={
             <>
               <ProjectKinetic
-                onGoToModel={vi.fn()}
+                onGoToModel={mocks.onGoToModel}
                 onGoToRelease={vi.fn()}
                 ownerIsCaller={owner}
                 project={project}
@@ -373,6 +374,37 @@ describe("ProjectKinetic", () => {
     expect(screen.queryByText("动力需求暂时读取不到")).toBeNull();
     expect(screen.queryByText(/线上知识网络暂时读不到/)).toBeNull();
     expect(screen.getByRole("button", { name: "分析动力需求" })).toBeEnabled();
+  });
+
+  it("warns, by name, of object types the model does not relate, and leads to modeling", async () => {
+    const read = logicNeeds();
+    read.needs[0] = { ...read.needs[0], unconnected: [{ from: "orders", to: "bom" }] };
+    mocks.getLogicNeeds.mockResolvedValue(read);
+    renderPage();
+
+    const row = (await screen.findByText("延误率")).closest("tr")!;
+    expect(within(row).getByText("对象间缺关系")).toBeInTheDocument();
+    const other = screen.getByText("催单排序").closest("tr")!;
+    expect(within(other).queryByText("对象间缺关系")).toBeNull();
+
+    const panel = await openNeed("延误率", "匹配或实现");
+    expect(
+      panel.getByText(
+        "关联对象之间在模型里没有关系：销售订单 — 物料清单。实现时可能取不到数据，可以先在概念建模里补上关系。",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(panel.getByRole("button", { name: "去概念建模" }));
+    expect(mocks.onGoToModel).toHaveBeenCalledTimes(1);
+  });
+
+  it("names an object type the draft lacks by its id", async () => {
+    const read = logicNeeds();
+    read.needs[0] = { ...read.needs[0], unconnected: [{ from: "orders", to: "gone" }] };
+    mocks.getLogicNeeds.mockResolvedValue(read);
+    renderPage();
+
+    const panel = await openNeed("延误率", "匹配或实现");
+    expect(panel.getByText(/销售订单 — gone/)).toBeInTheDocument();
   });
 
   it("cannot analyse before the model is confirmed, and says so", async () => {

@@ -1479,6 +1479,7 @@ export const bknProjectZhCN = {
         waitingRelease: "待首次发布",
         recordOnly: "仅记录",
       },
+      unconnectedMark: "对象间缺关系",
       cta: {
         view: "查看",
         match: "匹配或实现",
@@ -1573,6 +1574,10 @@ export const bknProjectZhCN = {
         metricLocked: "指标是专业版功能，升级后可以实现。可以先记录需求。",
         upgrade: "了解升级",
         close: "关闭",
+        unconnected:
+          "关联对象之间在模型里没有关系：{{pairs}}。实现时可能取不到数据，可以先在概念建模里补上关系。",
+        unconnectedPair: "{{from}} — {{to}}",
+        goToModel: "去概念建模",
         implement: {
           metric: "去实现指标",
           action_type: "去配置行动类",

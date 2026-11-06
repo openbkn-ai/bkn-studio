@@ -1594,6 +1594,7 @@ export const bknProjectEnUS = {
         waitingRelease: "Awaits first release",
         recordOnly: "Recorded only",
       },
+      unconnectedMark: "Objects not related",
       cta: {
         view: "View",
         match: "Match or implement",
@@ -1697,6 +1698,10 @@ export const bknProjectEnUS = {
           "Metrics come with the Professional edition; upgrade to implement them. You can record the need now.",
         upgrade: "About upgrading",
         close: "Close",
+        unconnected:
+          "Its object types have no relation between them in the model: {{pairs}}. Implementing it may find no data; add the relations in concept modeling first.",
+        unconnectedPair: "{{from}} — {{to}}",
+        goToModel: "Go to concept modeling",
         implement: {
           metric: "Implement the metric",
           action_type: "Set up the action type",
