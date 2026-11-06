@@ -16,7 +16,7 @@ test("bkn project: draft, choose an identity, adopt, and see the changes", async
 
   await page.goto("/studio/bkn-project");
   await page.getByText("Delivery Delay Warning").first().click();
-  await page.getByRole("button", { name: "本体建模", exact: true }).click();
+  await page.getByRole("button", { name: "概念建模", exact: true }).click();
 
   // Drafting again over a draft nobody has changed starts at once, then reads the draft until done.
   await page.getByRole("button", { name: "重新起草" }).click();

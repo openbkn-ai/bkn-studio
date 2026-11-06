@@ -15,22 +15,35 @@ import { expectNoForbiddenWords } from "../../helpers/forbidden-words";
 const LOCALES = [
   {
     locale: "zh-CN",
-    sections: ["项目概览", "需求与资源", "本体建模", "业务场景", "确认与发布"],
+    sections: [
+      "项目概览",
+      "需求与来源",
+      "概念抽取",
+      "概念建模",
+      "动力建模",
+      "业务场景",
+      "构建",
+      "发布",
+    ],
   },
   {
     locale: "en-US",
     sections: [
       "Overview",
-      "Requirements and resources",
-      "Ontology modeling",
+      "Requirements and sources",
+      "Concept extraction",
+      "Concept modeling",
+      "Kinetic modeling",
       "Business scenarios",
-      "Confirm and release",
+      "Build",
+      "Release",
     ],
   },
 ] as const;
 
-// Ontology modeling and the business scenarios switch between views; the other sections have none.
-const SECTIONS_WITH_VIEWS = [2, 3];
+// Concept modeling, the business scenarios and the build switch between views; the others have none
+// to check here.
+const SECTIONS_WITH_VIEWS = [3, 5, 6];
 
 async function openSection(page: Page, name: string) {
   const item = page.getByRole("navigation").getByRole("button", { name, exact: true });
@@ -82,7 +95,7 @@ for (const { locale, sections } of LOCALES) {
     await page.getByText("Delivery Delay Warning").first().click();
     const nav = page.getByRole("navigation", { name: /项目导航|Project navigation/ });
     await expect(nav).toBeVisible();
-    // The knowledge-base build section belongs to the extension; the community image has none.
+    // The term library belongs to the extension; the community image has no governance group.
     await expect(nav.getByRole("button")).toHaveCount(sections.length);
     for (const [index, section] of sections.entries()) {
       await openSection(page, section);
@@ -90,7 +103,7 @@ for (const { locale, sections } of LOCALES) {
     }
 
     // Uploading accepts Markdown and plain text only; PDF / DOCX belong to the extension. The
-    // documents have a tab on the requirements and resources page.
+    // documents have a tab on the requirements and sources page.
     await openSection(page, sections[1]);
     await page.getByRole("tab", { name: /需求文档与规范|Requirement documents/ }).click();
     await expectNoForbiddenWords(page, "documents tab");

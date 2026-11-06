@@ -679,6 +679,42 @@ describe("draft.service", () => {
     );
   });
 
+  it("judges concepts in the mock as bkn-project does: adopting, blocking, and asking before redrafting", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const { generateDraft, getConcepts, judgeConcept } =
+      await import("@/modules/bkn-project/services/draft.service");
+    vi.useFakeTimers();
+    try {
+      const settle = async <T>(promise: Promise<T>) => {
+        await vi.runAllTimersAsync();
+        return promise;
+      };
+      const first = await settle(getConcepts("p-001"));
+      expect(first.counts.pending).toBe(first.concepts.length);
+      expect(first.concepts.some((concept) => concept.verdict === "values")).toBe(true);
+      const waiting = first.concepts.find((concept) => concept.item?.id === "material_bom")!;
+
+      const blocked = await settle(
+        judgeConcept("p-001", first.draftUpdateTime, {
+          key: waiting.key,
+          reason: "",
+          verdict: "object",
+        }),
+      );
+      const bom = blocked.concepts.find((concept) => concept.key === waiting.key)!;
+      expect(bom.state).toBe("blocked");
+      expect(bom.blocked).toBe("needs_identity");
+
+      // A judgment is a decision: drafting again asks first.
+      await expect(generateDraft("p-001")).rejects.toMatchObject({
+        response: { data: { error_code: "BknProject.Draft.HasDecisions" } },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("confirms candidates in the mock as people decide, and as suggested where it can", async () => {
     vi.stubEnv("VITE_USE_MOCK", "true");
     vi.resetModules();

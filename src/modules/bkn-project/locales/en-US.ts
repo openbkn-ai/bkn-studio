@@ -191,7 +191,7 @@ export const bknProjectEnUS = {
       recordIdentity: "Stable record identity, maintained by the system",
       managedRelation: "This source relationship is maintained by the system.",
       sourcesHint:
-        "Select knowledge-base directories and debug files on Requirements and resources, then extract models. You can also add structured data catalogs.",
+        "Select knowledge-base directories and debug files on Requirements and sources, then extract models. You can also add structured data catalogs.",
       incomplete:
         "Complete each business field name, valid API name, extraction instruction and at least one verified example.",
       relationHelp: "Connect objects by global identity or names in the same document.",
@@ -338,16 +338,19 @@ export const bknProjectEnUS = {
       title: "Project workspace",
       description: "Requirements, ontology and releases of a project.",
       navLabel: "Project navigation",
-      groupBuild: "Build",
-      groupRelease: "Release and run",
+      groupModeling: "Modeling",
+      groupRelease: "Build and release",
+      groupGovernance: "Governance",
       sections: {
         overview: "Overview",
-        resources: "Requirements and resources",
-        model: "Ontology modeling",
+        resources: "Requirements and sources",
+        concepts: "Concept extraction",
+        model: "Concept modeling",
+        kinetic: "Kinetic modeling",
         scenarios: "Business scenarios",
-        instances: "Knowledge base build",
-        release: "Confirm and release",
-        builds: "Build tasks",
+        build: "Build",
+        release: "Release",
+        terms: "Term library",
       },
       backToList: "Back to projects",
       targetNetwork: "Target network {{name}}",
@@ -359,6 +362,131 @@ export const bknProjectEnUS = {
       nextStep: "Next: {{section}}",
       comingSoon: "This page is under construction",
       comingSoonDescription: "A later version brings the full feature here.",
+    },
+    concepts: {
+      summary:
+        "Concepts drawn from {{tables}} tables, {{documents}} knowledge-base files and {{requirements}} requirement concepts.",
+      summaryCore:
+        "Concepts drawn from {{tables}} tables and {{requirements}} requirement concepts.",
+      reextract: "Extract again",
+      stats: {
+        sources: "Sources",
+        concepts: "Candidate concepts",
+        inModel: "In the model",
+      },
+      verdict: {
+        object: "Object",
+        event: "Event",
+        property: "Property",
+        values: "Value list",
+        relation: "Relation",
+        kinetic: "Kinetic",
+        none: "Not included",
+      },
+      state: {
+        pending: "To confirm",
+        blocked: "Needs action",
+        judged: "Confirmed",
+        in_model: "In the model",
+      },
+      filter: {
+        all: "All",
+      },
+      pending:
+        "{{count}} concepts to confirm. Judge them one by one or accept all suggestions; you can change a judgment later.",
+      pending_one:
+        "{{count}} concept to confirm. Judge it or accept the suggestion; you can change a judgment later.",
+      pending_other:
+        "{{count}} concepts to confirm. Judge them one by one or accept all suggestions; you can change a judgment later.",
+      pendingAdopted:
+        "Those already adopted but not confirmed are written as they are when the model is confirmed; judge any you do not want as not included.",
+      acceptAll: "Accept all suggestions",
+      acceptTitle: "Accept all suggestions?",
+      acceptContent:
+        "Every concept to confirm is judged as suggested when extracting: those suggested in are adopted, the others left out. Those without an identity or with an end not adopted are skipped for you. You can still change each judgment later.",
+      accepted: "Accepted {{count}} suggestions",
+      acceptedSkipped: "Accepted {{accepted}} suggestions; {{count}} need you",
+      goToModel: "Go to concept modeling",
+      empty: {
+        title: "No concepts yet",
+        description:
+          "Concepts are drawn from the requirements and sources. Set up the sources first, then extract the concepts.",
+        action: "Go to requirements and sources",
+      },
+      drafting: "Extracting concepts…",
+      loadFailed: "The concepts cannot be read right now",
+      judgeFailed: "The judgment was not saved. Try again later.",
+      stale: "Someone just changed the model. It was read again; judge once more.",
+      columns: {
+        concept: "Concept",
+        sources: "Sources",
+        verdict: "Judgment",
+        reason: "Why",
+        destination: "Goes to",
+        state: "Status",
+        actions: "Actions",
+      },
+      source: {
+        table: "Table: {{name}}",
+        document: "Knowledge-base file",
+        requirement: "Requirement: {{name}}",
+      },
+      because: {
+        table_entity: "From a business table",
+        code_table: "A code table: it only gives values, used by fields",
+        foreign_key: "A relation the tables declare",
+        name_match: "Suggested by fields of the same name",
+        stem_match: "Suggested by fields of similar names",
+        link_table: "Through a link table",
+        manual: "Made by you",
+        document: "Found in knowledge-base files",
+        requirement: "Named in the requirement documents",
+        other: "Suggested when extracting",
+      },
+      destination: {
+        model: "Into the concept model",
+        property: "As a property of an object",
+        kinetic: "Into the kinetic model",
+        none: "Not into the model",
+        noItem: "No data source yet",
+      },
+      blocked: {
+        needs_identity: "Choose its identity first",
+        end_not_adopted: "Adopt the objects at both ends first",
+        repair: "Fix this relation first",
+        action: "Fix it",
+      },
+      merged: "Merged: {{names}}",
+      confirm: "Confirm",
+      confirmOf: "Confirm the judgment of “{{name}}”",
+      mergeInto: "Merge into…",
+      unmerge: "Take out “{{name}}”",
+      verdictOf: "Judgment of “{{name}}”",
+      mergeIntoOf: "Merge “{{name}}” into",
+      mergeFailed: "The merge was not saved. Try again later.",
+      readOnly: "Only the project owner can judge concepts",
+      history: {
+        judge: "Judged the concept “{{name}}” as {{verdict}}",
+        merge: "Merged the concept “{{name}}” into “{{into}}”",
+        unmerge: "Took the concept “{{name}}” out of its merge",
+      },
+    },
+    build: {
+      tabs: {
+        structured: "Structured index build",
+        unstructured: "Unstructured instance build",
+      },
+      structured: {
+        description:
+          "Structured objects are queried from their source tables. This builds the indexes search needs and leaves the tables unchanged. It starts when the model is confirmed.",
+      },
+      unstructured: {
+        description:
+          "Extracts instances of document objects from knowledge-base files. Accept a sample first; the full run opens once it passes.",
+        preview:
+          "The professional edition extracts instances of document objects from knowledge-base files, accepts a sample before the full run, and records every update.",
+        comingSoon: "This version cannot build unstructured instances yet.",
+      },
     },
     model: {
       preparation: {
@@ -608,66 +736,14 @@ export const bknProjectEnUS = {
           "{{count}} relation types are adopted although an object type they connect is not. Unadopt them, or adopt the object types at both ends first.",
       },
       candidates: {
-        catalog: "Filter by catalog",
-        allCatalogs: "All catalogs",
-        acceptSuggestions: "Accept all suggestions",
-        acceptTitle: "Confirm every candidate as drafting suggested?",
-        acceptContent:
-          "Candidates nobody confirmed are confirmed as drafting suggested them: adopted where it suggested adopting, left out where it did not. Object types that need an identifier and relations whose ends are not adopted are skipped, for you to settle.",
-        accepted: "Confirmed {{count}} candidates.",
-        accepted_one: "Confirmed {{count}} candidate.",
-        accepted_other: "Confirmed {{count}} candidates.",
-        acceptedSkipped: "Confirmed {{accepted}}; skipped {{count}} that need you to settle them.",
-        acceptedSkipped_one:
-          "Confirmed {{accepted}}; skipped {{count}} that needs you to settle it.",
-        acceptedSkipped_other:
-          "Confirmed {{accepted}}; skipped {{count}} that need you to settle them.",
-        allReviewed: "Every candidate is confirmed.",
-        concept: "Concept: {{term}}",
-        source: "{{name}} · {{rows}} rows",
-        loadFailed: "Failed to load the candidates",
-        columns: {
-          name: "Candidate",
-          state: "State",
-          marks: "Marks",
-          source: "Source table",
-        },
-        kind: {
-          object_types: "Object type",
-          relation_types: "Relation type",
-        },
-        state: {
-          pending: "To confirm",
-          adopted: "Adopted",
-          excluded: "Left out",
-        },
-        mark: {
-          repair: "Needs relationship repair",
-          needed: "Needed by requirements",
-          added: "Added catalog",
-          identity: "Needs an identifier",
-          ends: "Ends not adopted",
-        },
-        review: {
-          adoptNext: "Adopt and next",
-          excludeNext: "Leave out and next",
-          next: "Next",
-          excludeTitle: "Leave out “{{name}}”",
-          reason: "Reason (optional)",
-          reasonPlaceholder: "For example: this table is a log, not a business object",
-          confirm: "Leave out",
-        },
         unreviewed:
-          "{{count}} candidates were not confirmed one by one; confirming the draft takes them as they are adopted now.",
+          "{{count}} concepts are not confirmed yet; confirming the model takes them as they are adopted now.",
         unreviewed_one:
-          "{{count}} candidate was not confirmed one by one; confirming the draft takes it as it is adopted now.",
+          "{{count}} concept is not confirmed yet; confirming the model takes it as it is adopted now.",
         unreviewed_other:
-          "{{count}} candidates were not confirmed one by one; confirming the draft takes them as they are adopted now.",
+          "{{count}} concepts are not confirmed yet; confirming the model takes them as they are adopted now.",
       },
       tabs: {
-        review: "To confirm {{count}}",
-        review_one: "To confirm {{count}}",
-        review_other: "To confirm {{count}}",
         objects: "Object types {{count}}",
         objects_one: "Object type {{count}}",
         objects_other: "Object types {{count}}",
@@ -696,7 +772,8 @@ export const bknProjectEnUS = {
         relationType: "Relation type",
         ends: "Source → Target",
         cardinality: "Correspondence",
-        evidence: "Evidence",
+        basis: "Basis",
+        confidence: "Confidence",
         valueType: "Value type",
         baseType: "Base type",
         values: "Values",
@@ -706,6 +783,18 @@ export const bknProjectEnUS = {
         reason: "Reason",
         table: "Table",
       },
+      basis: {
+        foreign_key: "Foreign key",
+        name_match: "Same field name",
+        stem_match: "Similar field names",
+        link_table: "Link table",
+        manual: "Made by you",
+        business_identity: "Same business number",
+        same_document: "Within one document",
+        document: "Found in documents",
+        other: "Other basis",
+      },
+      basisThrough: "Through {{table}}",
       identityPending: "Waiting for you",
       cardinality: {
         oneToOne: "One to one",
@@ -1011,7 +1100,6 @@ export const bknProjectEnUS = {
         id: "ID",
       },
       tiles: {
-        questions: "Scenario questions",
         questionsSub: "Shown once the requirements are drafted",
         questionsAction: "View business scenarios",
         questionsReadySub: "Requirements version {{version}}",
@@ -1022,7 +1110,6 @@ export const bknProjectEnUS = {
           drafting: "Drafting",
           failed: "Drafting failed",
         },
-        ontology: "Ontology",
         ontologySub: "Shown once drafted from tables",
         ontologyAction: "Go to modeling",
         ontologyValue: "{{count}} object types",
@@ -1035,27 +1122,34 @@ export const bknProjectEnUS = {
         ontologyPendingSub: "Adopted so far · {{count}} items wait for you",
         ontologyPendingSub_one: "Adopted so far · {{count}} item waits for you",
         ontologyPendingSub_other: "Adopted so far · {{count}} items wait for you",
-        sources: "Data sources",
         sourcesValue: "{{count}} catalogs",
         sourcesValue_one: "{{count}} catalog",
         sourcesValue_other: "{{count}} catalogs",
         sourcesSub: "Referenced, never copied",
         sourcesAction: "Manage catalogs and documents",
         sourcesChoose: "Choose data catalogs",
-        instances: "Instances",
-        instancesValue: "Not counted here",
-        instancesSub: "See the records in the published knowledge network",
+        conceptsSub: "Concepts drawn from tables, knowledge-base samples and requirement documents",
+        conceptsSubCore: "Concepts drawn from tables and requirement documents",
+        conceptsAction: "Judge them",
+        kineticSub: "How far metrics, functions, skills and the like are implemented",
+        kineticAction: "View the kinetic model",
+        buildSub: "Structured indexes and unstructured instances",
+        buildSubCore: "Indexes of structured objects",
+        buildValue: "{{ready}} / {{total}} tables",
+        buildAction: "View the build",
+        releaseSub: "The latest released version",
+        releaseAction: "View releases",
       },
       model: {
-        title: "Ontology concept model",
-        open: "Open in ontology modeling",
+        title: "Concept model",
+        open: "Open in concept modeling",
         empty: "No ontology draft yet",
         emptyDescription:
           "Once the ontology is drafted from tables, its object and relation types show here.",
         draftingDescription:
           "AI is drafting from the tables; the concept model shows here when it is done.",
         failedDescription:
-          "This draft did not finish. Open ontology modeling to see why and draft again.",
+          "This draft did not finish. Open concept modeling to see why and draft again.",
         loadFailed: "The ontology draft cannot be read right now",
       },
       changes: {
@@ -1075,9 +1169,11 @@ export const bknProjectEnUS = {
       },
     },
     relationSuggestions: {
-      entry: "Unconnected objects {{count}}",
-      entry_one: "Unconnected object {{count}}",
-      entry_other: "Unconnected objects {{count}}",
+      gap: "{{count}} adopted objects have no relation yet, so questions across objects may go unanswered. Choose one to see how to connect it:",
+      gap_one:
+        "{{count}} adopted object has no relation yet, so questions across objects may go unanswered. Choose it to see how to connect it:",
+      gap_other:
+        "{{count}} adopted objects have no relation yet, so questions across objects may go unanswered. Choose one to see how to connect it:",
       allConnected: "Every adopted object is connected",
       title: "Connect unconnected objects",
       hint: "These objects are adopted, but no adopted relation connects them yet. Choose one to see how it could be connected.",
@@ -1327,7 +1423,7 @@ export const bknProjectEnUS = {
         replaces:
           "Replaces what the last confirmation wrote; the project's other definitions stay as they are.",
         after:
-          "After confirming, the data is checked and the tables get local indexes. See the results in “Confirm and release”.",
+          "After confirming, the data is checked and the tables get local indexes. See the data check under “Release” and the indexes under “Build”.",
         undecidedTitle: "{{count}} items were not adopted in drafting and nobody decided on them",
         undecidedTitle_one: "{{count}} item was not adopted in drafting and nobody decided on it",
         undecidedTitle_other:
@@ -1360,7 +1456,7 @@ export const bknProjectEnUS = {
         end_not_adopted: "An object type at one end is still undecided",
         other: "Not adopted in drafting",
       },
-      done: "Draft confirmed. Next, check the business scenarios; the data check and local indexes are on the release page.",
+      done: "Draft confirmed. Next, work out the kinetic model; the data check is on the release page and the local indexes on the build page.",
       failed: "The draft could not be confirmed. Try again later.",
     },
     resources: {
@@ -1376,7 +1472,7 @@ export const bknProjectEnUS = {
         gone_other: "{{count}} selected data catalogs no longer exist. Change the data catalogs.",
         unnamed: "Unknown catalog",
         nameUnread: "—",
-        goToModel: "Go to ontology modeling",
+        goToModel: "Go to concept modeling",
       },
       tables: {
         name: "Table",
@@ -1392,7 +1488,7 @@ export const bknProjectEnUS = {
         description:
           "Concept models drawn from documents add object types, properties and relations; instances are extracted afterwards.",
         preview:
-          "With knowledge-base catalogs chosen, ontology modeling also draws on the business concepts in their documents.",
+          "With knowledge-base catalogs chosen, concept modeling also draws on the business concepts in their documents.",
         comingSoon: "Choosing knowledge-base catalogs is coming soon.",
       },
       tabs: {
@@ -1435,7 +1531,7 @@ export const bknProjectEnUS = {
       noDocuments:
         "Requirement documents are optional; once uploaded, generating reads and quotes them.",
       goToDocuments: "Manage documents",
-      goToModel: "Go to ontology modeling",
+      goToModel: "Go to concept modeling",
       startOver: "Start over",
       startOverTitle: "Generate everything again?",
       startOverContent:
@@ -1673,7 +1769,7 @@ export const bknProjectEnUS = {
             "Once changed, you set what this question needs; it no longer follows its concepts.",
           followConcepts: "Follow the concepts again",
           nothingDrafted:
-            "The ontology draft has no object type or relation type to choose yet; draft it in ontology modeling first.",
+            "The ontology draft has no object type or relation type to choose yet; draft it in concept modeling first.",
         },
         conflict: {
           open: "Rule on it",
@@ -1732,9 +1828,9 @@ export const bknProjectEnUS = {
         ProjectArchived: "The project is archived; its requirements cannot change.",
         NoDocuments: "There are no requirement documents; upload some first.",
         NoCatalogs:
-          "The project has no data catalogs; choose them under Requirements and resources first.",
+          "The project has no data catalogs; choose them under Requirements and sources first.",
         NoAdoptedOntology:
-          "Adopt object types in ontology modeling first, then generate the business scenarios.",
+          "Adopt object types in concept modeling first, then generate the business scenarios.",
         InputsTooLarge: "The documents are more than drafting can read; trim them and draft again.",
         Drafting: "Drafting is running; wait for it to finish.",
         DocumentNotFound: "This document no longer exists.",
@@ -1925,8 +2021,9 @@ export const bknProjectEnUS = {
       loadFailed: "The confirmation could not be loaded",
       empty: {
         title: "The draft is not confirmed yet",
-        description: "Once the draft is confirmed, the data check and local indexes show here.",
-        action: "Go to ontology modeling",
+        description:
+          "Once the draft is confirmed, the data check shows here and it can be released.",
+        action: "Go to concept modeling",
       },
       confirmed: "Confirmed {{time}}",
       outdated: "The draft changed after it was confirmed; those changes are not confirmed.",
@@ -1973,6 +2070,7 @@ export const bknProjectEnUS = {
         originalDocuments_other:
           "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         checksTitle: "Release checks",
+        goToBuild: "Build the indexes on the build page",
         check: {
           knowledge_base: "Knowledge-base build and source access",
           confirmed: "Draft confirmation",

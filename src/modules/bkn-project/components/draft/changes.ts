@@ -77,6 +77,9 @@ export function describeDecision(
       text: t(`${PREFIX}.confirmation.${accepted}`, { count: asList(decision.after).length }),
     };
   }
+  if (decision.kind === "concepts") {
+    return { text: conceptDecisionText(t, decision, names) };
+  }
   const name = names[decision.kind]?.[decision.itemId] ?? decision.itemId;
   const kind = t(
     `${PREFIX}.kind.${KINDS.includes(decision.kind) ? decision.kind : "object_types"}`,
@@ -142,4 +145,30 @@ export function whoDecided(
     return t(`${PREFIX}.you`);
   }
   return directory.get(by.id) ?? t(`${PREFIX}.someone`);
+}
+
+/** A concept's name in the history: its item's, else what follows its kind in its key. */
+function conceptName(key: string, names: ItemNames) {
+  const [kind = "", ...rest] = key.split("/");
+  const id = rest.join("/");
+  return names[kind]?.[id] ?? id;
+}
+
+/** A judgment or merge of a concept, in words. */
+function conceptDecisionText(t: TFunction, decision: DraftDecision, names: ItemNames) {
+  const name = conceptName(decision.itemId, names);
+  switch (decision.action) {
+    case "judge":
+      return t("bknProject.concepts.history.judge", {
+        name,
+        verdict: t(`bknProject.concepts.verdict.${asText(decision.after) || "none"}`),
+      });
+    case "merge":
+      return t("bknProject.concepts.history.merge", {
+        into: conceptName(asText(decision.after), names),
+        name,
+      });
+    default:
+      return t("bknProject.concepts.history.unmerge", { name });
+  }
 }

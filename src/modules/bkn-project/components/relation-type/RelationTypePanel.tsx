@@ -29,10 +29,6 @@ import { draftGraphRecords } from "@/modules/bkn-project/components/draft/graph"
 import { useUnsavedChanges } from "@/modules/bkn-project/components/unsaved/unsaved";
 import styles from "@/modules/bkn-project/components/object-type/ObjectTypePanel.module.css";
 import {
-  ReviewActions,
-  type CandidateReview,
-} from "@/modules/bkn-project/components/object-type/ReviewActions";
-import {
   draftTables,
   endsEditorValues,
   relationEditorValues,
@@ -118,7 +114,6 @@ export function RelationTypePanel({
   prefill,
   project,
   relationTypeId,
-  review,
 }: {
   /** The draft the panel opens on; later reads of it do not reset what is being edited. */
   draft: Draft;
@@ -132,7 +127,6 @@ export function RelationTypePanel({
   /** The relation type to edit; null makes a new one. */
   relationTypeId: string | null;
   /** Going through the candidates: confirming this one, then the next. */
-  review?: CandidateReview;
 }) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
@@ -370,17 +364,6 @@ export function RelationTypePanel({
   // Leaving the project's page with changes not saved asks first, and can save them here.
   useUnsavedChanges(changed, async () => (await save()) !== null);
 
-  // Before deciding on the candidate, what was changed here is saved; the decision follows it.
-  const prepare = async () => {
-    if (!base) {
-      return null;
-    }
-    if (!changed) {
-      return base.draft.updateTime;
-    }
-    return (await save())?.updateTime ?? null;
-  };
-
   const reload = async () => {
     const next = await onReload();
     if (next) {
@@ -448,13 +431,6 @@ export function RelationTypePanel({
           <span className={styles.unsaved}>{t("bknProject.objectEditor.unsaved")}</span>
         ) : null}
         <span className={styles.actions}>
-          {review && relation ? (
-            <ReviewActions
-              prepare={prepare}
-              review={review}
-              adoptDisabled={Boolean(relation.documentRepair)}
-            />
-          ) : null}
           {/* Only a relation a person made is deleted; one drafting found is left out instead. */}
           {relation?.origin === "manual" ? (
             <AppButton danger onClick={remove}>

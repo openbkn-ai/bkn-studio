@@ -35,6 +35,12 @@ import type {
   DraftValueType,
   SourceChanges,
 } from "@/modules/bkn-project/types/draft";
+import type {
+  Concept,
+  ConceptBlocker,
+  Concepts,
+  ConceptVerdict,
+} from "@/modules/bkn-project/types/concepts";
 
 const API_PREFIX = "/bkn-project/v1/projects";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -331,6 +337,7 @@ export type BackendDraft = {
       by: BackendAccount;
       item_id: string;
       kind: string;
+      reason?: string;
       time: number;
     }[];
     excluded: { field: string; keyword?: string; object_type: string; reason: string }[] | null;
@@ -1885,4 +1892,304 @@ export async function deriveDocumentObject(
     { skipErrorToast: true },
   );
   return mapDraft(response.data);
+}
+
+type BackendConcept = {
+  blocked?: string;
+  description?: string;
+  item?: Concept["item"];
+  judged?: Concept["judged"];
+  key: string;
+  merged?: { key: string; name: string }[] | null;
+  name: string;
+  reason?: string;
+  sources?:
+    | {
+        document_ids?: string[] | null;
+        id?: string;
+        kind: Concept["sources"][number]["kind"];
+        name?: string;
+      }[]
+    | null;
+  state: Concept["state"];
+  suggested: ConceptVerdict;
+  suggested_because?: string;
+  verdict: ConceptVerdict;
+};
+
+type BackendConcepts = {
+  concepts?: BackendConcept[] | null;
+  counts?: Record<string, number> | null;
+  draft_update_time?: number;
+};
+
+function mapConcepts(data: BackendConcepts): Concepts {
+  return {
+    concepts: (data.concepts ?? []).map((concept) => ({
+      blocked: (concept.blocked as ConceptBlocker | undefined) || null,
+      description: concept.description ?? "",
+      item: concept.item ?? null,
+      judged: concept.judged ?? null,
+      key: concept.key,
+      merged: concept.merged ?? [],
+      name: concept.name,
+      reason: concept.reason ?? "",
+      sources: (concept.sources ?? []).map((source) => ({
+        documentIds: source.document_ids ?? [],
+        id: source.id ?? "",
+        kind: source.kind,
+        name: source.name ?? "",
+      })),
+      state: concept.state,
+      suggested: concept.suggested,
+      suggestedBecause: concept.suggested_because ?? "",
+      verdict: concept.verdict,
+    })),
+    counts: data.counts ?? {},
+    draftUpdateTime: data.draft_update_time ?? 0,
+  };
+}
+
+/**
+ * The mock's judgments and merges, read from its draft's decisions as bkn-project keeps them, so
+ * drafting again asks before discarding them.
+ */
+function mockConceptDecisions(draft: BackendDraft | undefined) {
+  const judgments = new Map<string, { reason: string; time: number; verdict: ConceptVerdict }>();
+  const merges = new Map<string, string>();
+  for (const decision of draft?.items.decisions ?? []) {
+    if (decision.kind !== "concepts") {
+      continue;
+    }
+    if (decision.action === "judge") {
+      judgments.set(decision.item_id, {
+        reason: decision.reason ?? "",
+        time: decision.time,
+        verdict: decision.after as ConceptVerdict,
+      });
+    } else if (decision.action === "merge") {
+      merges.set(decision.item_id, decision.after as string);
+    } else if (decision.action === "unmerge") {
+      merges.delete(decision.item_id);
+    }
+  }
+  return { judgments, merges };
+}
+
+function recordMockConceptDecision(
+  draft: BackendDraft,
+  action: string,
+  key: string,
+  after: unknown,
+  reason = "",
+) {
+  (draft.items.decisions ??= []).push({
+    action,
+    after,
+    before: null,
+    by: mockDrafter,
+    item_id: key,
+    kind: "concepts",
+    reason,
+    time: Date.now(),
+  });
+  draft.update_time = Math.max(Date.now(), draft.update_time + 1);
+}
+
+/** The mock's concepts: one per draft item, judged as the mock recorded. */
+function mockConcepts(projectId: string): Concepts {
+  const draft = mockDrafts[projectId];
+  const { judgments, merges } = mockConceptDecisions(draft);
+  const reviews = mockReviews[projectId] ?? new Map<string, { reason: string; time: number }>();
+  const all: Concept[] =
+    draft?.status === "ready"
+      ? [
+          ...(draft.items.object_types ?? []).map((item) => ({
+            blocker: item.needs_identity ? ("needs_identity" as const) : null,
+            item: { adopted: item.adopted, id: item.id, kind: "object_types" as const },
+            name: item.name,
+            description: item.description,
+            source: item.table.name,
+            resource: item.table.resource_id,
+            suggested: "object" as const,
+            because: "table_entity",
+          })),
+          ...(draft.items.relation_types ?? []).map((item) => ({
+            blocker: null,
+            item: { adopted: item.adopted, id: item.id, kind: "relation_types" as const },
+            name: item.name,
+            description: item.description,
+            // A relation without a table of its own is found in its source's table.
+            source:
+              item.link_table?.name ??
+              draft.items.object_types?.find((entry) => entry.id === item.source)?.table.name ??
+              item.source,
+            resource:
+              item.link_table?.resource_id ??
+              draft.items.object_types?.find((entry) => entry.id === item.source)?.table
+                .resource_id ??
+              item.source,
+            suggested: "relation" as const,
+            because: item.origin,
+          })),
+          ...(draft.items.value_types ?? []).map((item) => ({
+            blocker: null,
+            item: { adopted: item.adopted, id: item.id, kind: "value_types" as const },
+            name: item.name,
+            description: item.description,
+            source: item.code_table.name,
+            resource: item.code_table.resource_id,
+            suggested: "values" as const,
+            because: "code_table",
+          })),
+        ].map((entry) => {
+          const key = `${entry.item.kind}/${entry.item.id}`;
+          const judgment = judgments.get(key);
+          const review = reviews.get(key);
+          const verdict: ConceptVerdict =
+            judgment?.verdict ?? (review && !entry.item.adopted ? "none" : entry.suggested);
+          const modelItem =
+            (entry.item.kind === "object_types" && (verdict === "object" || verdict === "event")) ||
+            (entry.item.kind === "relation_types" && verdict === "relation") ||
+            (entry.item.kind === "value_types" && verdict === "values");
+          const judged = judgment ?? review;
+          const state: Concept["state"] = !judged
+            ? "pending"
+            : modelItem && entry.item.adopted
+              ? "in_model"
+              : modelItem && entry.blocker
+                ? "blocked"
+                : "judged";
+          return {
+            blocked: state === "blocked" ? entry.blocker : null,
+            description: entry.description,
+            item: entry.item,
+            judged: judged ? { by: mockDrafter, time: judged.time } : null,
+            key,
+            merged: [],
+            name: entry.name,
+            reason: judgment?.reason ?? review?.reason ?? "",
+            sources: [
+              { documentIds: [], id: entry.resource, kind: "table" as const, name: entry.source },
+            ],
+            state,
+            suggested: entry.suggested,
+            suggestedBecause: entry.because,
+            verdict,
+          };
+        })
+      : [];
+  const byKey = new Map(all.map((concept) => [concept.key, concept]));
+  for (const [key, into] of merges) {
+    const target = byKey.get(into);
+    const merged = byKey.get(key);
+    if (target && merged) {
+      target.merged.push({ key, name: merged.name });
+      target.sources.push(...merged.sources);
+    }
+  }
+  const rank = { blocked: 1, in_model: 3, judged: 2, pending: 0 };
+  const concepts = all
+    .filter((concept) => !merges.has(concept.key))
+    .sort((a, b) => rank[a.state] - rank[b.state]);
+  const counts: Record<string, number> = {};
+  for (const concept of concepts) {
+    counts[concept.state] = (counts[concept.state] ?? 0) + 1;
+    counts[`verdict:${concept.verdict}`] = (counts[`verdict:${concept.verdict}`] ?? 0) + 1;
+  }
+  return {
+    concepts,
+    counts,
+    draftUpdateTime: draft?.status === "ready" ? draft.update_time : 0,
+  };
+}
+
+/**
+ * The project's concepts: one per draft item, with the requirement concepts that are it, then the
+ * requirement concepts no item is, each with what it is judged to be and where it stands.
+ */
+export async function getConcepts(projectId: string): Promise<Concepts> {
+  if (useMock) {
+    return wait(mockConcepts(projectId));
+  }
+  const response = await http.get<BackendConcepts>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/concepts`,
+    { skipErrorToast: true },
+  );
+  return mapConcepts(response.data);
+}
+
+/**
+ * Judges a concept over the draft made at `updateTime`: its item goes into the model or out of it
+ * in the same write. An item that cannot go in yet keeps the judgment and is blocked.
+ */
+export async function judgeConcept(
+  projectId: string,
+  updateTime: number,
+  judgment: { key: string; reason: string; verdict: ConceptVerdict },
+): Promise<Concepts> {
+  if (useMock) {
+    const draft = mockDrafts[projectId];
+    if (!draft || draft.update_time !== updateTime) {
+      throw mockConflict("Stale", "The draft changed since it was read; reload it.");
+    }
+    const concept = mockConcepts(projectId).concepts.find((item) => item.key === judgment.key);
+    const item = concept?.item;
+    if (item) {
+      const adopted =
+        (item.kind === "object_types" &&
+          (judgment.verdict === "object" || judgment.verdict === "event")) ||
+        (item.kind === "relation_types" && judgment.verdict === "relation") ||
+        (item.kind === "value_types" && judgment.verdict === "values");
+      // An object type without an identity cannot go in yet: the judgment waits.
+      const blocked =
+        adopted &&
+        item.kind === "object_types" &&
+        Boolean(
+          (draft.items.object_types ?? []).find((entry) => entry.id === item.id)?.needs_identity,
+        );
+      if (!blocked) {
+        editMockDraft(projectId, item.kind, item.id, updateTime, {
+          adopted,
+          reason: judgment.reason,
+        });
+      }
+    }
+    recordMockConceptDecision(draft, "judge", judgment.key, judgment.verdict, judgment.reason);
+    return wait(mockConcepts(projectId));
+  }
+  const response = await http.post<BackendConcepts>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/concepts:judge`,
+    {
+      key: judgment.key,
+      reason: judgment.reason,
+      update_time: updateTime,
+      verdict: judgment.verdict,
+    },
+    { skipErrorToast: true },
+  );
+  return mapConcepts(response.data);
+}
+
+/** Merges a concept into another over the draft made at `updateTime`, or takes it out (no `into`). */
+export async function mergeConcept(
+  projectId: string,
+  updateTime: number,
+  key: string,
+  into = "",
+): Promise<Concepts> {
+  if (useMock) {
+    const draft = mockDrafts[projectId];
+    if (!draft || draft.update_time !== updateTime) {
+      throw mockConflict("Stale", "The draft changed since it was read; reload it.");
+    }
+    recordMockConceptDecision(draft, into ? "merge" : "unmerge", key, into || null);
+    return wait(mockConcepts(projectId));
+  }
+  const response = await http.post<BackendConcepts>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/concepts:merge`,
+    { into, key, update_time: updateTime },
+    { skipErrorToast: true },
+  );
+  return mapConcepts(response.data);
 }

@@ -6,10 +6,12 @@
  */
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project } from "@/modules/bkn-project/types/project";
+import type { ProjectSection } from "@/modules/bkn-project/types/workspace";
 
 const getProjectMock = vi.hoisted(() => vi.fn());
 const getNetworkMock = vi.hoisted(() => vi.fn());
@@ -37,7 +39,8 @@ vi.mock("@/framework/entitlement/bkn-project-kb-mode", () => ({
 
 vi.mock("@/framework/entitlement/BknProjectKbSlot", () => ({
   BknProjectKbBadge: () => null,
-  BknProjectKbSlot: () => null,
+  // The slot's three states are tested on their own: here it lets its content through.
+  BknProjectKbSlot: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/modules/bkn-project/components/ProjectModel", () => ({
@@ -115,6 +118,36 @@ vi.mock("@/modules/bkn-project/services/release.service", () => ({
   getNetworkInUse: getNetworkInUseMock,
 }));
 
+const getOntologyIndexMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
+  getOntologyIndex: getOntologyIndexMock,
+}));
+
+// The concept extraction page is tested on its own.
+vi.mock("@/modules/bkn-project/components/concepts/ProjectConcepts", () => ({
+  ProjectConcepts: ({
+    onOpenItem,
+  }: {
+    onOpenItem: (item: { id: string; kind: string }) => void;
+  }) => (
+    <>
+      <button onClick={() => onOpenItem({ id: "orders", kind: "object_types" })} type="button">
+        open object
+      </button>
+      <button onClick={() => onOpenItem({ id: "r1", kind: "relation_types" })} type="button">
+        open relation
+      </button>
+    </>
+  ),
+}));
+
+// The build page's tabs are tested on their own.
+vi.mock("@/modules/bkn-project/components/build/ProjectBuild", () => ({
+  ProjectBuild: () => <div>build page</div>,
+}));
+
 vi.mock("@/modules/bkn-project/components/draft/DraftConceptGraph", () => ({
   DraftConceptGraph: () => <div>concept graph</div>,
 }));
@@ -164,10 +197,7 @@ const project: Project = {
   updateTime: 1,
 };
 
-function renderScene(
-  section: "model" | "overview" | "release" | "resources" | "scenarios" = "overview",
-  entry = "/",
-) {
+function renderScene(section: ProjectSection = "overview", entry = "/") {
   // A data router, as the app's: leaving with changes not saved is blocked through it.
   const router = createMemoryRouter(
     [
@@ -224,6 +254,7 @@ describe("ProjectWorkspaceScene", () => {
       version: "1.0.0",
     });
     getDraftMock.mockResolvedValue(null);
+    getOntologyIndexMock.mockResolvedValue(null);
     getNetworkInUseMock.mockResolvedValue({ base: true, networkId: "orders", version: "" });
     directoryMock.clear();
   });
@@ -289,7 +320,7 @@ describe("ProjectWorkspaceScene", () => {
     ).toHaveAttribute("aria-current", "page");
   });
 
-  it("lays the overview out as info, four tiles, the model and two columns, with no alert", async () => {
+  it("lays the overview out as info, a card per step, the model and two columns, with no alert", async () => {
     const { container } = renderScene();
     await screen.findByText("Orders network");
 
@@ -297,18 +328,31 @@ describe("ProjectWorkspaceScene", () => {
       node.getAttribute("data-region"),
     );
     expect(regions).toEqual(["info", "stats", "model", "columns"]);
-    expect(container.querySelectorAll('[data-region="stats"] > *')).toHaveLength(4);
-    // The instance tile has no page in the community image, so only three tiles link to one.
-    expect(container.querySelectorAll('[data-region="stats"] button')).toHaveLength(3);
+    // One card per step of the flow, in its order, each leading to its page.
+    expect(
+      [...container.querySelectorAll('[data-region="stats"] dd > p:first-child')].map(
+        (node) => node.textContent,
+      ),
+    ).toEqual([
+      "bknProject.workspace.sections.resources",
+      "bknProject.workspace.sections.concepts",
+      "bknProject.workspace.sections.model",
+      "bknProject.workspace.sections.kinetic",
+      "bknProject.workspace.sections.scenarios",
+      "bknProject.workspace.sections.build",
+      "bknProject.workspace.sections.release",
+    ]);
+    expect(container.querySelectorAll('[data-region="stats"] button')).toHaveLength(7);
     expect(container.querySelector(".ant-alert")).toBeNull();
     expect(
       screen.getByText('bknProject.overview.tiles.sourcesValue:{"count":2}'),
     ).toBeInTheDocument();
     expect(screen.getByText("bknProject.list.ownerYou")).toBeInTheDocument();
-    expect(screen.getByText("v1.0.0")).toBeInTheDocument();
+    // In the header and on the release card.
+    expect(screen.getAllByText("v1.0.0")).toHaveLength(2);
   });
 
-  it("counts the scenario questions of the drafted requirements, and says why instances show none", async () => {
+  it("counts the scenario questions of the drafted requirements", async () => {
     getRequirementsMock.mockResolvedValue({
       spec: { questions: [{ id: "q1" }, { id: "q2" }, { id: "q3" }] },
       status: "ready",
@@ -322,8 +366,22 @@ describe("ProjectWorkspaceScene", () => {
     expect(
       screen.getByTitle('bknProject.overview.tiles.questionsReadySub:{"version":4}'),
     ).toBeInTheDocument();
-    expect(screen.getByText("bknProject.overview.tiles.instancesValue")).toBeInTheDocument();
-    expect(screen.getByText("bknProject.overview.tiles.instancesSub")).toBeInTheDocument();
+  });
+
+  it("counts the tables whose structured index is ready, in community wording", async () => {
+    getOntologyIndexMock.mockResolvedValue({
+      counts: {},
+      objectTypes: [{ state: "ready" }, { state: "building" }],
+      tasksVisible: true,
+    });
+    renderScene();
+
+    expect(
+      await screen.findByText('bknProject.overview.tiles.buildValue:{"ready":1,"total":2}'),
+    ).toBeInTheDocument();
+    // The community image builds no instances and draws no concepts from a knowledge base.
+    expect(screen.getByTitle("bknProject.overview.tiles.buildSubCore")).toBeInTheDocument();
+    expect(screen.getByTitle("bknProject.overview.tiles.conceptsSubCore")).toBeInTheDocument();
   });
 
   it("says the questions come once the requirements are drafted", async () => {
@@ -489,7 +547,8 @@ describe("ProjectWorkspaceScene", () => {
     getLatestReleaseMock.mockResolvedValue(null);
     renderScene();
 
-    expect(await screen.findByText("bknProject.overview.versions.unpublished")).toBeInTheDocument();
+    // On the release card and in the versions.
+    expect(await screen.findAllByText("bknProject.overview.versions.unpublished")).toHaveLength(2);
   });
 
   it("falls back to the network id, and to no version, when they cannot be read", async () => {
@@ -509,7 +568,7 @@ describe("ProjectWorkspaceScene", () => {
     expect(screen.getByText("bknProject.workspace.backToList")).toBeInTheDocument();
   });
 
-  it("shows the ontology modeling page of the project", async () => {
+  it("shows the concept modeling page of the project", async () => {
     renderScene("model");
 
     expect(await screen.findByText("model of p1 on the first tab")).toBeInTheDocument();
@@ -522,11 +581,11 @@ describe("ProjectWorkspaceScene", () => {
     expect(await screen.findByText("model of p1 on changes")).toBeInTheDocument();
   });
 
-  it("goes on to the scenarios after confirming, with the confirmation a link away", async () => {
+  it("goes on to kinetic modeling after confirming, with the confirmation a link away", async () => {
     renderScene("model");
 
     fireEvent.click(await screen.findByRole("button", { name: "confirm" }));
-    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/scenarios");
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/kinetic");
   });
 
   it("opens what a confirmation started on the release page", async () => {
@@ -540,7 +599,37 @@ describe("ProjectWorkspaceScene", () => {
     renderScene("scenarios");
 
     fireEvent.click(await screen.findByRole("button", { name: /bknProject\.workspace\.nextStep/ }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/build");
+  });
+
+  it("opens a concept's item on the concept modeling page", async () => {
+    renderScene("concepts");
+
+    fireEvent.click(await screen.findByRole("button", { name: "open object" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/model?object=orders");
+  });
+
+  it("opens a concept's relation on the modeling page's relations", async () => {
+    renderScene("concepts");
+
+    fireEvent.click(await screen.findByRole("button", { name: "open relation" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/model?tab=relations");
+  });
+
+  it("shows the build page, which goes on to the release", async () => {
+    renderScene("build");
+
+    expect(await screen.findByText("build page")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /bknProject\.workspace\.nextStep/ }));
     expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/release");
+  });
+
+  it("says the term library is not in this version where no extension brings it", async () => {
+    renderScene("terms");
+
+    expect(await screen.findByText("bknProject.workspace.comingSoon")).toBeInTheDocument();
+    // Governance is off the flow: no next step.
+    expect(screen.queryByRole("button", { name: /bknProject\.workspace\.nextStep/ })).toBeNull();
   });
 
   it("offers no next step past the release", async () => {

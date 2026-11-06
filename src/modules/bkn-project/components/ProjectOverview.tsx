@@ -7,13 +7,16 @@
 
 import {
   ApartmentOutlined,
+  BuildOutlined,
+  BulbOutlined,
   ClockCircleOutlined,
-  ClusterOutlined,
   CopyOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
   FileSearchOutlined,
+  FunctionOutlined,
   ProjectOutlined,
+  RocketOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { Alert, Spin, Tooltip } from "antd";
@@ -24,6 +27,8 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
+import { extensionProjectOverviewKnowledgeBase } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
@@ -37,10 +42,12 @@ import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftC
 import { draftGraph } from "@/modules/bkn-project/components/draft/graph";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
 import { DRAFT_POLL_MS, getDraft } from "@/modules/bkn-project/services/draft.service";
+import { getOntologyIndex } from "@/modules/bkn-project/services/publish.service";
 import { getNetworkInUse } from "@/modules/bkn-project/services/release.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
+import type { ProjectIndex } from "@/modules/bkn-project/types/publish";
 import type { RollbackNetwork } from "@/modules/bkn-project/types/release";
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
 import {
@@ -160,6 +167,20 @@ export function ProjectOverview({
   }, [drafting, loadDraft, reads]);
 
   // The drafted requirements, for the questions tile; undefined while reading or when unread.
+  // The structured index of the last confirmation; null before one, or while it cannot be read.
+  const [index, setIndex] = useState<ProjectIndex | null | undefined>(undefined);
+  useEffect(() => {
+    let active = true;
+    getOntologyIndex(project.id)
+      .then((next) => active && setIndex(next))
+      .catch(() => active && setIndex(null));
+    return () => {
+      active = false;
+    };
+  }, [project.id]);
+  const OverviewKnowledgeBase = extensionProjectOverviewKnowledgeBase();
+  const kbMode = useBknProjectKbMode();
+
   const [requirements, setRequirements] = useState<Requirements | null | undefined>(undefined);
   useEffect(() => {
     let active = true;
@@ -188,6 +209,7 @@ export function ProjectOverview({
 
   // In the order a project is built: its inputs, the ontology, the scenarios that test it, then
   // the knowledge base.
+  const indexed = index?.objectTypes ?? [];
   const tiles: StatTile[] = [
     {
       // A project starts from its catalogs: without one, the tile leads to choosing them.
@@ -202,9 +224,26 @@ export function ProjectOverview({
       color: "var(--color-info-text)",
       icon: <DatabaseOutlined />,
       key: "sources",
-      label: t("bknProject.overview.tiles.sources"),
+      label: t("bknProject.workspace.sections.resources"),
       sub: t("bknProject.overview.tiles.sourcesSub"),
       value: t("bknProject.overview.tiles.sourcesValue", { count: project.catalogIds.length }),
+    },
+    {
+      action: {
+        label: t("bknProject.overview.tiles.conceptsAction"),
+        onClick: () => go("concepts"),
+      },
+      color: "var(--color-primary-600)",
+      icon: <BulbOutlined />,
+      key: "concepts",
+      label: t("bknProject.workspace.sections.concepts"),
+      // The community image has no knowledge base to draw them from.
+      sub: t(
+        kbMode === "hidden"
+          ? "bknProject.overview.tiles.conceptsSubCore"
+          : "bknProject.overview.tiles.conceptsSub",
+      ),
+      value: PLACEHOLDER,
     },
     {
       // What waits is listed first on the changes tab, each with the action that settles it.
@@ -217,7 +256,7 @@ export function ProjectOverview({
       color: "var(--color-success-text)",
       icon: <ApartmentOutlined />,
       key: "ontology",
-      label: t("bknProject.overview.tiles.ontology"),
+      label: t("bknProject.workspace.sections.model"),
       // The value counts adopted items only, unlike the modeling page's header, so the line says so.
       sub: t(
         graph
@@ -234,6 +273,15 @@ export function ProjectOverview({
           : PLACEHOLDER,
     },
     {
+      action: { label: t("bknProject.overview.tiles.kineticAction"), onClick: () => go("kinetic") },
+      color: "var(--color-warning-text)",
+      icon: <FunctionOutlined />,
+      key: "kinetic",
+      label: t("bknProject.workspace.sections.kinetic"),
+      sub: t("bknProject.overview.tiles.kineticSub"),
+      value: PLACEHOLDER,
+    },
+    {
       action: {
         label: t("bknProject.overview.tiles.questionsAction"),
         onClick: () => go("scenarios"),
@@ -241,7 +289,7 @@ export function ProjectOverview({
       color: "var(--color-primary-600)",
       icon: <FileSearchOutlined />,
       key: "questions",
-      label: t("bknProject.overview.tiles.questions"),
+      label: t("bknProject.workspace.sections.scenarios"),
       // The scenario questions of the drafted requirements; their state while there are none.
       sub:
         requirements?.status === "ready"
@@ -259,13 +307,36 @@ export function ProjectOverview({
             : PLACEHOLDER,
     },
     {
-      color: "var(--color-warning-text)",
-      icon: <ClusterOutlined />,
-      key: "instances",
-      label: t("bknProject.overview.tiles.instances"),
-      // A project does not count records: the tile says so instead of showing a bare dash.
-      sub: t("bknProject.overview.tiles.instancesSub"),
-      value: t("bknProject.overview.tiles.instancesValue"),
+      action: { label: t("bknProject.overview.tiles.buildAction"), onClick: () => go("build") },
+      color: "var(--color-info-text)",
+      icon: <BuildOutlined />,
+      key: "build",
+      label: t("bknProject.workspace.sections.build"),
+      sub: t(
+        kbMode === "hidden"
+          ? "bknProject.overview.tiles.buildSubCore"
+          : "bknProject.overview.tiles.buildSub",
+      ),
+      value: indexed.length
+        ? t("bknProject.overview.tiles.buildValue", {
+            ready: indexed.filter((item) => item.state === "ready").length,
+            total: indexed.length,
+          })
+        : PLACEHOLDER,
+    },
+    {
+      action: { label: t("bknProject.overview.tiles.releaseAction"), onClick: () => go("release") },
+      color: "var(--color-success-text)",
+      icon: <RocketOutlined />,
+      key: "release",
+      label: t("bknProject.workspace.sections.release"),
+      sub: t("bknProject.overview.tiles.releaseSub"),
+      value:
+        latestRelease === undefined
+          ? PLACEHOLDER
+          : latestRelease
+            ? `v${latestRelease.version}`
+            : t("bknProject.overview.versions.unpublished"),
     },
   ];
 
@@ -368,7 +439,8 @@ export function ProjectOverview({
       />
 
       {/* The network's stat cards: an icon block, the name and figure, a link under them. */}
-      <div className={kn.overviewStatRow} data-region="stats">
+      {/* One card per step of the flow, in the order a project is built. */}
+      <div className={styles.steps} data-region="stats">
         {tiles.map((tile) => (
           <div className={kn.overviewStatCard} key={tile.key} title={tile.sub}>
             <dl className={kn.overviewStatDefinition}>
@@ -401,6 +473,12 @@ export function ProjectOverview({
           </div>
         ))}
       </div>
+
+      {OverviewKnowledgeBase && kbMode === "enabled" ? (
+        <div className={styles.block} data-region="knowledge-base">
+          <OverviewKnowledgeBase projectId={project.id} />
+        </div>
+      ) : null}
 
       {ready ? (
         // The graph comes in the knowledge network's card, with the link in its header.

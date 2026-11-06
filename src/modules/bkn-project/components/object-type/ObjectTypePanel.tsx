@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { extensionProjectObjectDocumentFields } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
@@ -21,7 +22,7 @@ import {
 import { applyObjectRevisions, objectPreview } from "@/modules/bkn-project/components/ai/revisions";
 import { AliasesField } from "@/modules/bkn-project/components/draft/AliasesField";
 import { aliasRefusalText } from "@/modules/bkn-project/components/draft/aliases";
-import { adoptBlocker, draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
+import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import {
   draftSave,
   editorDataSource,
@@ -55,7 +56,6 @@ import styles from "./ObjectTypePanel.module.css";
 import { DeriveDocumentObject } from "./DeriveDocumentObject";
 import { DocumentFieldsEditor } from "./DocumentFieldsEditor";
 import { documentSave } from "./document-values";
-import { ReviewActions, type CandidateReview } from "./ReviewActions";
 
 const PREFIX = "bknProject.objectEditor";
 const DESCRIPTION_MAX_LENGTH = 1000;
@@ -108,7 +108,6 @@ export function ObjectTypePanel({
   onReload,
   onSaved,
   project,
-  review,
 }: {
   /** The draft the panel opens on; later reads of it do not reset what is being edited. */
   draft: Draft;
@@ -119,9 +118,11 @@ export function ObjectTypePanel({
   onSaved: (draft: Draft) => void;
   project: Project;
   /** Going through the candidates: confirming this one, then the next. */
-  review?: CandidateReview;
 }) {
   const { t } = useTranslation();
+  // The professional edition brings its own editor for document fields; until it does, the
+  // built-in one stays.
+  const DocumentFields = extensionProjectObjectDocumentFields() ?? DocumentFieldsEditor;
   const { message, modal } = useAppServices();
   const [basicForm] = Form.useForm<BasicValues>();
   const editorRef = useRef<ObjectTypeDataAttributeEditorHandle>(null);
@@ -385,17 +386,6 @@ export function ObjectTypePanel({
   // Leaving the project's page with changes not saved asks first, and can save them here.
   useUnsavedChanges(changed, async () => (await save()) !== null);
 
-  // Before deciding on the candidate, what was changed here is saved; the decision follows it.
-  const prepare = async () => {
-    if (!base) {
-      return null;
-    }
-    if (!changed) {
-      return base.draft.updateTime;
-    }
-    return (await save())?.updateTime ?? null;
-  };
-
   const reload = async () => {
     const next = await onReload();
     if (next) {
@@ -450,15 +440,6 @@ export function ObjectTypePanel({
         <span className={styles.title}>{base?.objectType.name ?? t(`${PREFIX}.title`)}</span>
         {changed ? <span className={styles.unsaved}>{t(`${PREFIX}.unsaved`)}</span> : null}
         <span className={styles.actions}>
-          {review && base ? (
-            <ReviewActions
-              prepare={prepare}
-              review={review}
-              adoptDisabled={
-                adoptBlocker(base.draft, "object_types", base.objectType) === "relationNeedsRepair"
-              }
-            />
-          ) : null}
           {base ? (
             <AppButton aria-pressed={asking} onClick={() => setAsking(!asking)}>
               {t(`${PREFIX}.ask`)}
@@ -533,7 +514,7 @@ export function ObjectTypePanel({
                       onSaved(next);
                     }}
                   />
-                  <DocumentFieldsEditor
+                  <DocumentFields
                     key={`${objectTypeId}-${base.draft.updateTime}`}
                     object={base.objectType}
                     draft={base.draft}

@@ -129,12 +129,15 @@ function refusal(code: string) {
 const onChanged = vi.fn();
 const onOpenRegression = vi.fn();
 
+const onGoToBuild = vi.fn();
+
 function renderPublish(projectStatus = status(), canPublish = true) {
   return renderWithoutAntdStyles(
     <ReleasePublish
       baseNetworkId="n"
       canPublish={canPublish}
       onChanged={onChanged}
+      onGoToBuild={onGoToBuild}
       onOpenRegression={onOpenRegression}
       projectId="p1"
       status={projectStatus}
@@ -248,6 +251,15 @@ describe("ReleasePublish", () => {
     );
     expect(messageMock.success).toHaveBeenCalledWith("v1.0.3 已发布，场景问题的回归已在后台开始。");
     expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("leads to the build page from indexes that are not ready", async () => {
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+
+    fireEvent.click(await view.findByRole("button", { name: "去构建页处理索引" }));
+    expect(onGoToBuild).toHaveBeenCalledTimes(1);
   });
 
   it("keeps hundreds of changes and long names readable", async () => {
