@@ -303,6 +303,25 @@ describe("ProjectKinetic", () => {
     expect(screen.getByText("没有符合筛选条件的动力需求。")).toBeInTheDocument();
   });
 
+  it("drops the state filter when the live network can no longer be read", async () => {
+    renderPage();
+    await screen.findByText("延误率");
+    const [, state] = screen.getAllByRole("combobox");
+    fireEvent.mouseDown(state);
+    fireEvent.click(await screen.findByTitle("实现已失效"));
+    expect(screen.queryByText("延误率")).toBeNull();
+
+    // An edit reads the needs again, and this time the live network does not answer.
+    mocks.getLogicNeeds.mockRejectedValue(new Error("down"));
+    mocks.removeItem.mockResolvedValue(requirements());
+    fireEvent.click(screen.getByRole("button", { name: "删除「查物流」" }));
+
+    expect(await screen.findByText("延误率")).toBeInTheDocument();
+    expect(screen.getByText("催单排序")).toBeInTheDocument();
+    expect(screen.queryByText("没有符合筛选条件的动力需求。")).toBeNull();
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  });
+
   it("cannot analyse before the model is confirmed, and says so", async () => {
     mocks.getStatus.mockResolvedValue({ confirmation: null });
     renderPage();

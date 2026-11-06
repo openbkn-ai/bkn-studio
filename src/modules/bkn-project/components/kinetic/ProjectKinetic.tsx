@@ -425,7 +425,8 @@ export function ProjectKinetic({
   const shown = states.filter(
     (entry) =>
       (kind === ALL || entry.need.kind === kind) &&
-      (stateFilter === ALL || entry.state === stateFilter),
+      // The state filter shows only with the live read: without it, it is not applied.
+      (!live || stateFilter === ALL || entry.state === stateFilter),
   );
   const waiting = needs.filter((need) => !need.accepted);
   const editable = canEdit && requirements !== null && !running;
