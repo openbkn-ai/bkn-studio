@@ -1476,18 +1476,21 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const returnTo = objectMetricReturnPath(networkId, location.state, ownerObjectTypeId);
   const sceneState = (state: Record<string, unknown>) =>
     withNavigationContext(state, navigationContext);
-  const leave = () => {
-    if (navigationContext) {
-      void navigate(navigationContext.returnTo, { state: navigationContext.returnState });
-    } else {
-      void navigate(returnTo);
-    }
-  };
   const returnWithMetric = (id: string) => {
     if (!navigationContext) return;
     void navigate(navigationContext.returnTo, {
       state: objectMetricCreatedState(navigationContext, id),
     });
+  };
+  // Every way back to the caller brings the metric once one exists, so it is never left unlinked.
+  const leave = () => {
+    if (navigationContext && record) {
+      returnWithMetric(record.definition.id);
+    } else if (navigationContext) {
+      void navigate(navigationContext.returnTo, { state: navigationContext.returnState });
+    } else {
+      void navigate(returnTo);
+    }
   };
   const ownerObjectType = objectTypes.find((item) => item.id === ownerObjectTypeId);
   const aiScopeKey = JSON.stringify([
