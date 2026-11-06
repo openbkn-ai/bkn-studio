@@ -44,6 +44,8 @@ import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/dra
 import { DRAFT_POLL_MS, getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getOntologyIndex } from "@/modules/bkn-project/services/publish.service";
 import { getNetworkInUse } from "@/modules/bkn-project/services/release.service";
+import { needState } from "@/modules/bkn-project/components/kinetic/needs";
+import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
@@ -192,6 +194,26 @@ export function ProjectOverview({
     };
   }, [project.id]);
 
+  // How far the kinetic needs are implemented in the live network; applications link to nothing.
+  const [kinetic, setKinetic] = useState<{ linked: number; total: number } | undefined>(undefined);
+  useEffect(() => {
+    let active = true;
+    getLogicNeeds(project.id)
+      .then((next) => {
+        if (active) {
+          const states = next.needs.map(needState).filter((state) => state !== "recordOnly");
+          setKinetic({
+            linked: states.filter((state) => state === "implemented").length,
+            total: states.length,
+          });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [project.id]);
+
   const ready = draft?.status === "ready" ? draft : null;
   const graph = useMemo(() => (ready ? draftGraph(ready) : null), [ready]);
   const pending = ready
@@ -278,8 +300,23 @@ export function ProjectOverview({
       icon: <FunctionOutlined />,
       key: "kinetic",
       label: t("bknProject.workspace.sections.kinetic"),
+      ...(kinetic?.total
+        ? {
+            note:
+              kinetic.linked === kinetic.total
+                ? t("bknProject.overview.tiles.kineticDone")
+                : t("bknProject.overview.tiles.kineticOpen", {
+                    count: kinetic.total - kinetic.linked,
+                  }),
+          }
+        : {}),
       sub: t("bknProject.overview.tiles.kineticSub"),
-      value: PLACEHOLDER,
+      value: kinetic?.total
+        ? t("bknProject.overview.tiles.kineticValue", {
+            linked: kinetic.linked,
+            total: kinetic.total,
+          })
+        : PLACEHOLDER,
     },
     {
       action: {
