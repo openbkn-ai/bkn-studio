@@ -178,13 +178,13 @@ describe("ConfirmDraft", () => {
     );
   });
 
-  it("reminds of candidates nobody confirmed, without holding confirming back", async () => {
+  it("reminds of concepts nobody confirmed, without holding confirming back", async () => {
     getProjectStatusMock.mockResolvedValue(status({}, { unreviewed: 2 }));
     renderConfirm();
 
     fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
     const dialog = within(await screen.findByRole("dialog"));
-    expect(dialog.getByText(/^还有 2 个候选没有逐个确认/)).toBeInTheDocument();
+    expect(dialog.getByText(/^还有 2 个概念没有确认/)).toBeInTheDocument();
     expect(okButton()).toBeEnabled();
   });
 
