@@ -658,7 +658,8 @@ export const bknProjectZhCN = {
         relationType: "关系类",
         ends: "源 → 目标",
         cardinality: "对应关系",
-        evidence: "依据",
+        basis: "依据",
+        confidence: "可信度",
         valueType: "值类型",
         baseType: "基础类型",
         values: "取值",
@@ -668,6 +669,18 @@ export const bknProjectZhCN = {
         reason: "原因",
         table: "表",
       },
+      basis: {
+        foreign_key: "外键",
+        name_match: "同名字段",
+        stem_match: "相近字段名",
+        link_table: "关联表",
+        manual: "你建的",
+        business_identity: "业务编号相同",
+        same_document: "同一文档内",
+        document: "从文档识别",
+        other: "其他依据",
+      },
+      basisThrough: "经 {{table}} 连接",
       identityPending: "待你决定",
       cardinality: {
         oneToOne: "一对一",
@@ -1027,9 +1040,11 @@ export const bknProjectZhCN = {
       },
     },
     relationSuggestions: {
-      entry: "孤立对象 {{count}}",
-      entry_one: "孤立对象 {{count}}",
-      entry_other: "孤立对象 {{count}}",
+      gap: "{{count}} 个已采纳的对象还没有任何关系，可能答不了跨对象的问题。点对象名查看可以怎样连接：",
+      gap_one:
+        "{{count}} 个已采纳的对象还没有任何关系，可能答不了跨对象的问题。点对象名查看可以怎样连接：",
+      gap_other:
+        "{{count}} 个已采纳的对象还没有任何关系，可能答不了跨对象的问题。点对象名查看可以怎样连接：",
       allConnected: "所有已采纳的对象都已连接",
       title: "连接孤立对象",
       hint: "这些对象已经采纳，但还没有任何已采纳的关系连到它们。选一个对象，看看可以怎样把它连起来。",

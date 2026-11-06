@@ -44,6 +44,43 @@ const known = (group: string, values: string[], value: string): Phrase =>
 
 export const keySourcePhrase = (source: string) => known("keySource", KEY_SOURCES, source);
 export const originPhrase = (origin: string) => known("origin", ORIGINS, origin);
+
+/** What a relation rests on, as the basis column names it. */
+export const RELATION_BASES = [
+  "foreign_key",
+  "name_match",
+  "stem_match",
+  "link_table",
+  "manual",
+  "business_identity",
+  "same_document",
+  "document",
+] as const;
+
+export type RelationBasis = (typeof RELATION_BASES)[number] | "other";
+
+/**
+ * What a relation rests on. A relation drawn from documents is read by how its documents map it
+ * first: by a business number both ends carry, or within one document; only then by its origin.
+ */
+export function relationBasis(relation: {
+  document?: unknown;
+  documentMapping?: { mode: string } | null;
+  origin: string;
+}): RelationBasis {
+  switch (relation.documentMapping?.mode) {
+    case "linking":
+      return "business_identity";
+    case "same_document":
+      return "same_document";
+  }
+  if (relation.document) {
+    return "document";
+  }
+  return (RELATION_BASES as readonly string[]).includes(relation.origin)
+    ? (relation.origin as RelationBasis)
+    : "other";
+}
 export const verificationPhrase = (verification: string) =>
   known("verification", VERIFICATIONS, verification);
 

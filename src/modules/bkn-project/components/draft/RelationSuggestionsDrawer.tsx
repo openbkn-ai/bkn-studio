@@ -195,11 +195,29 @@ export function RelationSuggestionsEntry({
   if (!isolated.length) {
     return <span className={styles.muted}>{t(`${PREFIX}.allConnected`)}</span>;
   }
+  // An object chosen from the notice opens with its suggestions, read only then.
+  const openFor = (objectTypeId: string) => {
+    setSelected(objectTypeId);
+    setOpen(true);
+  };
   return (
     <>
-      <AppButton onClick={() => setOpen(true)}>
-        {t(`${PREFIX}.entry`, { count: isolated.length })}
-      </AppButton>
+      {/* The gap is said where the relations are: the objects nothing connects, each a link. */}
+      <Alert
+        className={styles.gap}
+        message={
+          <span className={styles.gapLine}>
+            <span>{t(`${PREFIX}.gap`, { count: isolated.length })}</span>
+            {isolated.map((item) => (
+              <AppButton key={item.id} onClick={() => openFor(item.id)} size="small" type="link">
+                {item.name}
+              </AppButton>
+            ))}
+          </span>
+        }
+        showIcon
+        type="warning"
+      />
       <Drawer
         destroyOnHidden
         onClose={() => setOpen(false)}

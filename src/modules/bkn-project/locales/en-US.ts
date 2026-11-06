@@ -714,7 +714,8 @@ export const bknProjectEnUS = {
         relationType: "Relation type",
         ends: "Source → Target",
         cardinality: "Correspondence",
-        evidence: "Evidence",
+        basis: "Basis",
+        confidence: "Confidence",
         valueType: "Value type",
         baseType: "Base type",
         values: "Values",
@@ -724,6 +725,18 @@ export const bknProjectEnUS = {
         reason: "Reason",
         table: "Table",
       },
+      basis: {
+        foreign_key: "Foreign key",
+        name_match: "Same field name",
+        stem_match: "Similar field names",
+        link_table: "Link table",
+        manual: "Made by you",
+        business_identity: "Same business number",
+        same_document: "Within one document",
+        document: "Found in documents",
+        other: "Other basis",
+      },
+      basisThrough: "Through {{table}}",
       identityPending: "Waiting for you",
       cardinality: {
         oneToOne: "One to one",
@@ -1098,9 +1111,11 @@ export const bknProjectEnUS = {
       },
     },
     relationSuggestions: {
-      entry: "Unconnected objects {{count}}",
-      entry_one: "Unconnected object {{count}}",
-      entry_other: "Unconnected objects {{count}}",
+      gap: "{{count}} adopted objects have no relation yet, so questions across objects may go unanswered. Choose one to see how to connect it:",
+      gap_one:
+        "{{count}} adopted object has no relation yet, so questions across objects may go unanswered. Choose it to see how to connect it:",
+      gap_other:
+        "{{count}} adopted objects have no relation yet, so questions across objects may go unanswered. Choose one to see how to connect it:",
       allConnected: "Every adopted object is connected",
       title: "Connect unconnected objects",
       hint: "These objects are adopted, but no adopted relation connects them yet. Choose one to see how it could be connected.",

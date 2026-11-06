@@ -943,6 +943,7 @@ export function ProjectModel({
                 items={items.relationTypes}
                 objectNames={objectNames}
                 onOpen={editable ? openRelation : undefined}
+                projectId={project.id}
                 unadoptedEnds={new Set(unadoptedEnds.map((item) => item.id))}
               />
             </>

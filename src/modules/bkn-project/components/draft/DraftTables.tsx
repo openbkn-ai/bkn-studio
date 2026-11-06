@@ -11,6 +11,8 @@ import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
+import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
+import { extensionProjectRelationBasis } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
@@ -19,7 +21,7 @@ import {
   keyCountPhrase,
   keySourcePhrase,
   keyWarnings,
-  originPhrase,
+  relationBasis,
   propertyTypeKey,
   excludedReasonText,
   say,
@@ -326,6 +328,7 @@ export function DraftRelationsTable({
   items,
   objectNames,
   onOpen,
+  projectId,
   unadoptedEnds,
 }: {
   actions: DraftItemActions;
@@ -333,10 +336,14 @@ export function DraftRelationsTable({
   objectNames: Record<string, string>;
   /** Opens a relation type where it is edited; its name is plain text without it. */
   onOpen?: (id: string) => void;
+  /** The project, for the professional edition's view of what a document relation rests on. */
+  projectId?: string;
   /** Relations adopted while an end is not, marked for people to unadopt. */
   unadoptedEnds: ReadonlySet<string>;
 }) {
   const { t } = useTranslation();
+  const kbMode = useBknProjectKbMode();
+  const DocumentBasis = extensionProjectRelationBasis();
   const columns: ColumnsType<DraftRelationType> = [
     {
       title: t("bknProject.model.columns.relationType"),
@@ -370,20 +377,41 @@ export function DraftRelationsTable({
             : value,
     },
     {
-      title: t("bknProject.model.columns.evidence"),
-      key: "evidence",
+      title: t("bknProject.model.columns.basis"),
+      key: "basis",
       render: (_value, record) => {
-        if (record.document) return <span>{record.document.reason}</span>;
+        const basis = relationBasis(record);
         return (
           <div className={styles.evidence}>
-            <span>
-              {say(t, originPhrase(record.origin))} ·{" "}
-              {say(t, verificationPhrase(record.verification))}
-            </span>
-            <span className={styles.muted}>{say(t, joinCountPhrase(record.evidence))}</span>
+            <LightStatusTag tone="neutral">{t(`bknProject.model.basis.${basis}`)}</LightStatusTag>
+            {basis === "link_table" && record.linkTable ? (
+              <span className={styles.muted}>
+                {t("bknProject.model.basisThrough", { table: record.linkTable.name })}
+              </span>
+            ) : null}
           </div>
         );
       },
+    },
+    {
+      title: t("bknProject.model.columns.confidence"),
+      key: "confidence",
+      render: (_value, record) =>
+        record.document ? (
+          <div className={styles.evidence}>
+            <span className={styles.muted}>{record.document.reason}</span>
+            {/* What the professional edition can say of the documents behind it. */}
+            {DocumentBasis && projectId && kbMode === "enabled" ? (
+              <DocumentBasis projectId={projectId} relation={record} />
+            ) : null}
+          </div>
+        ) : (
+          // Counted when drafting, over the tables as they were then.
+          <div className={styles.evidence}>
+            <span>{say(t, joinCountPhrase(record.evidence))}</span>
+            <span className={styles.muted}>{say(t, verificationPhrase(record.verification))}</span>
+          </div>
+        ),
     },
     {
       title: t("bknProject.model.columns.state"),
