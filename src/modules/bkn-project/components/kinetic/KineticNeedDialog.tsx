@@ -54,8 +54,10 @@ export function KineticNeedDialog({
     logicKind: values.kind,
     name: values.name?.trim() ?? "",
     objectTypeIds: values.objectTypeIds ?? [],
-    ...(values.kind === "metric" && values.suggestedMetricType
-      ? { suggestedMetricType: values.suggestedMetricType }
+    // Sent when it differs from the need's: a cleared one goes as empty, else the old one stays.
+    ...(values.kind === "metric" &&
+    (values.suggestedMetricType ?? "") !== (need?.suggestedMetricType ?? "")
+      ? { suggestedMetricType: values.suggestedMetricType ?? "" }
       : {}),
   });
   useUnsavedChanges(typed, async () => {

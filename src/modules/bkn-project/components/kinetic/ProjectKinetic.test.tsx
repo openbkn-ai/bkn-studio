@@ -546,6 +546,40 @@ describe("ProjectKinetic", () => {
     expect(mocks.getCandidates).not.toHaveBeenCalled();
   });
 
+  it("sends a cleared metric type when editing, so the old one does not come back", async () => {
+    mocks.editItem.mockResolvedValue(requirements());
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "编辑「延误率」" }));
+    const dialog = await screen.findByRole("dialog");
+    const clear = dialog.querySelector(".ant-select-clear");
+    expect(clear).not.toBeNull();
+    fireEvent.mouseDown(clear!);
+    fireEvent.click(within(dialog).getByRole("button", { name: /保\s*存/ }));
+
+    await waitFor(() =>
+      expect(mocks.editItem).toHaveBeenCalledWith(
+        "p1",
+        "logic_needs",
+        "n1",
+        expect.objectContaining({ suggestedMetricType: "" }),
+        9,
+      ),
+    );
+  });
+
+  it("leaves an unchanged metric type out of an edit", async () => {
+    mocks.editItem.mockResolvedValue(requirements());
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "编辑「延误率」" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
+
+    await waitFor(() => expect(mocks.editItem).toHaveBeenCalled());
+    expect(mocks.editItem.mock.calls[0][3]).not.toHaveProperty("suggestedMetricType");
+  });
+
   it("accepts, adds and removes needs on the version read", async () => {
     mocks.reviewRequirements.mockResolvedValue(requirements());
     mocks.addItem.mockResolvedValue(requirements());
