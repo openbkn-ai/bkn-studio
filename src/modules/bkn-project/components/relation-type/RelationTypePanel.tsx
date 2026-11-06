@@ -215,7 +215,7 @@ export function RelationTypePanel({
           ? documentRelationSave(relation)
           : relationSave(
               {
-                aliases: relation?.aliases ?? [],
+                aliases: relation?.aliases,
                 description: relation?.description ?? "",
                 name: relation?.name ?? "",
               },

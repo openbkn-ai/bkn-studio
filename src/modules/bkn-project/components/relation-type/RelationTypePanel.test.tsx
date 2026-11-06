@@ -203,6 +203,8 @@ describe("RelationTypePanel", () => {
     mocks.create.mockResolvedValue(made);
     const { onSaved } = renderPanel(draft);
     expect(screen.getByText("bknProject.relationEditor.newTitle")).toBeInTheDocument();
+    // Nothing typed yet is nothing unsaved, aliases included.
+    expect(screen.queryByText("bknProject.objectEditor.unsaved")).toBeNull();
     // A drafted end's properties come from the draft.
     const readers = (mocks.editorProps.mock.lastCall![0] as { readers: RelationTypeMappingReaders })
       .readers;
