@@ -209,7 +209,15 @@ function QuestionResults({
         result: results.find((result) => result.testId === test.id),
         text: test.text,
       }))
-    : [{ expect: "", key: question.id, result: results[0], text: "" }];
+    : [
+        {
+          expect: "",
+          key: question.id,
+          result: results[0],
+          // Not asked: the data had no record for it.
+          text: question.noRecord ? t(`${PREFIX}.noRecord`) : "",
+        },
+      ];
   return (
     <section className={styles.card}>
       <h4 className={styles.blockTitle}>{question.text}</h4>

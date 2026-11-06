@@ -2161,6 +2161,7 @@ export const bknProjectZhCN = {
         asking: "提问中",
         noResult: "没有结果",
         asItself: "按原问题提问",
+        noRecord: "数据里没有可用来提问的记录，未提问",
         missing: "本体中缺少：{{names}}",
         missingTables: "未作答：「{{names}}」的数据表已不存在",
         dataSourceMissing: "数据来源不可用：部分条目的数据表已被删除，用到它们的问题未作答。",
