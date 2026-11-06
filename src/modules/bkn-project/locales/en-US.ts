@@ -1646,7 +1646,7 @@ export const bknProjectEnUS = {
           function:
             "A place to develop functions comes later. Record the need now, or link one that exists.",
           skill:
-            "A place to develop Skills comes later. Record the need now, or link one that exists; Skill documents can be uploaded as its basis.",
+            "A place to develop Skills comes later. Record the need now, or link one that exists.",
           mcp_tool:
             "Choose from the MCP tools the knowledge network has. A place to develop them comes later.",
           api: "Choose from the APIs the knowledge network has. A place to develop them comes later.",
@@ -1948,7 +1948,8 @@ export const bknProjectEnUS = {
             "Once changed, you set what this question needs; it no longer follows its concepts.",
           followConcepts: "Follow the concepts again",
           logicNeeds: "Kinetic needs it uses",
-          logicNeedsHint: "A question that uses kinetic needs is a capability question.",
+          logicNeedsHint:
+            "A question that uses kinetic needs is answered only with these calculations or operations.",
           noLogicNeeds: "No kinetic needs to choose yet; analyze or add them in kinetic modeling.",
           nothingDrafted:
             "The ontology draft has no object type or relation type to choose yet; draft it in concept modeling first.",

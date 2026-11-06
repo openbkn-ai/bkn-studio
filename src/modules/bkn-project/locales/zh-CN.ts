@@ -1533,8 +1533,7 @@ export const bknProjectZhCN = {
           action_type:
             "打开知识网络的行动类表单，已带入名称、关联对象和说明，再选择要绑定的 API 工具或 MCP 工具。行动类没有 AI 助手。保存后回到这里，会自动连上。",
           function: "函数的开发入口后续提供。现在可以先记录需求，或连到已有的实现。",
-          skill:
-            "Skill 的开发入口后续提供。现在可以先记录需求，或连到已有的实现；Skill 文档可以作为需求依据上传。",
+          skill: "Skill 的开发入口后续提供。现在可以先记录需求，或连到已有的实现。",
           mcp_tool: "从知识网络已挂载的 MCP 工具里选。MCP 工具的开发入口后续提供。",
           api: "从知识网络已挂载的接口里选。API 的开发入口后续提供。",
           app: "应用只记录需求，不连接实现。",
@@ -1811,7 +1810,7 @@ export const bknProjectZhCN = {
           followConcepts: "改回跟随候选概念",
           nothingDrafted: "本体草稿里还没有对象类或关系类可选，先在概念建模中起草。",
           logicNeeds: "用到的动力需求",
-          logicNeedsHint: "选了动力需求，这个问题就算能力层。",
+          logicNeedsHint: "选了动力需求，说明这个问题要靠这些计算或操作才能回答。",
           noLogicNeeds: "还没有动力需求可选，先在动力建模中分析或添加。",
         },
         conflict: {

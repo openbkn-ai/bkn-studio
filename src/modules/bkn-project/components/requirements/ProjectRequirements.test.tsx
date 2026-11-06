@@ -862,7 +862,9 @@ describe("ProjectRequirements", () => {
         await screen.findByRole("button", { name: "编辑「某个客户哪些订单晚了？」" }),
       );
       const dialog = within(await screen.findByRole("dialog"));
-      expect(dialog.getByText("选了动力需求，这个问题就算能力层。")).toBeInTheDocument();
+      expect(
+        dialog.getByText("选了动力需求，说明这个问题要靠这些计算或操作才能回答。"),
+      ).toBeInTheDocument();
       fireEvent.mouseDown(dialog.getByLabelText("用到的动力需求"));
       fireEvent.click(await screen.findByTitle("延误率"));
       fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
