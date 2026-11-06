@@ -31,7 +31,6 @@ import {
   requirementErrorText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
 import {
-  ConceptsView,
   QuestionsView,
   RejectedNote,
   RulesView,
@@ -81,7 +80,8 @@ import styles from "./Requirements.module.css";
 
 const PREFIX = "bknProject.requirements";
 
-const TABS = ["questions", "scenarios", "concepts", "rules"] as const;
+// The concepts are judged on the concept extraction page.
+const TABS = ["questions", "scenarios", "rules"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
@@ -113,7 +113,7 @@ export function ProjectRequirements({
   const [failed, setFailed] = useState(false);
   const [drafting, setDrafting] = useState(false);
   // Generating was refused because no object type is adopted yet.
-  const [noOntology, setNoOntology] = useState(false);
+  const [blocked, setBlocked] = useState<"modelNotConfirmed" | "noOntology" | null>(null);
   const [tab, setTab] = useState<Tab | null>(null);
   const [drafted, setDrafted] = useState<DraftedItem[]>([]);
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -216,11 +216,13 @@ export function ProjectRequirements({
     try {
       latest.current += 1;
       setRequirements(await draftRequirements(project.id, discardDecisions));
-      setNoOntology(false);
+      setBlocked(null);
     } catch (error) {
       const code = projectErrorCode(error);
       if (code === "Requirement.NoAdoptedOntology") {
-        setNoOntology(true);
+        setBlocked("noOntology");
+      } else if (code === "Requirement.ModelNotConfirmed") {
+        setBlocked("modelNotConfirmed");
       } else {
         message.error(requirementErrorText(t, code));
       }
@@ -353,6 +355,8 @@ export function ProjectRequirements({
           .map(({ id }) => ({ id, kind: "questions" as const })),
       ]
     : [];
+  // Extracting concepts writes a specification too: it is not drafted until it has scenarios.
+  const started = Boolean(spec && (spec.scenarios.length || spec.questions.length));
   const outdated = spec?.questions.filter((question) => question.ontologyChanged).length ?? 0;
   const activeTab: Tab = tab ?? "questions";
   return (
@@ -360,7 +364,7 @@ export function ProjectRequirements({
       <Editing.Provider value={editing}>
         <div className={styles.page}>
           <div className={styles.head}>
-            {requirements ? (
+            {requirements && (started || !ready) ? (
               <LightStatusTag
                 tone={ready ? "success" : requirements.status === "failed" ? "error" : "info"}
               >
@@ -388,30 +392,34 @@ export function ProjectRequirements({
                 disabled={isDrafting}
                 loading={drafting}
                 onClick={() => void draft(false)}
-                type={requirements ? "default" : "primary"}
+                type={started ? "default" : "primary"}
               >
-                {t(`${PREFIX}.${requirements ? "redraft" : "draft"}`)}
+                {t(`${PREFIX}.${started ? "redraft" : "draft"}`)}
               </AppButton>
             ) : null}
-            {canEdit && requirements ? (
+            {canEdit && started ? (
               <AppButton danger disabled={isDrafting || drafting} onClick={startOver} type="text">
                 {t(`${PREFIX}.startOver`)}
               </AppButton>
             ) : null}
           </div>
-          {noOntology ? (
+          {blocked ? (
             <Alert
               action={
                 <AppButton onClick={onGoToModel} size="small">
                   {t(`${PREFIX}.goToModel`)}
                 </AppButton>
               }
-              message={t(`${PREFIX}.error.NoAdoptedOntology`)}
+              message={t(
+                blocked === "modelNotConfirmed"
+                  ? `${PREFIX}.modelNotConfirmed`
+                  : `${PREFIX}.error.NoAdoptedOntology`,
+              )}
               showIcon
               type="warning"
             />
           ) : null}
-          {!requirements ? (
+          {!requirements || (ready && !started) ? (
             <Alert
               action={
                 <AppButton onClick={() => onGoToResources("documents")} size="small">
@@ -427,7 +435,7 @@ export function ProjectRequirements({
             />
           ) : isDrafting ? (
             <Alert message={t(`${PREFIX}.drafting`)} showIcon type="info" />
-          ) : requirements.status === "failed" ? (
+          ) : requirements?.status === "failed" ? (
             <Alert message={draftErrorText(t, requirements.error)} showIcon type="error" />
           ) : null}
           {requirements?.stale ? (
@@ -501,7 +509,6 @@ export function ProjectRequirements({
                 options={TABS.map((value) => ({
                   label: t(`${PREFIX}.tabs.${value}`, {
                     count: {
-                      concepts: spec.concepts.length,
                       questions: spec.questions.length,
                       rules: spec.rules.length + spec.conflicts.length + spec.choices.length,
                       scenarios: spec.scenarios.length,
@@ -521,8 +528,6 @@ export function ProjectRequirements({
                 />
               ) : activeTab === "scenarios" ? (
                 <ScenariosView spec={spec} />
-              ) : activeTab === "concepts" ? (
-                <ConceptsView itemName={itemName} spec={spec} />
               ) : (
                 <RulesView spec={spec} />
               )}
