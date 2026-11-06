@@ -269,6 +269,33 @@ describe("ProjectConcepts", () => {
     ]);
   });
 
+  it("offers a value list to a concept of the knowledge-base files, with drafting's reason", async () => {
+    service.getConcepts.mockResolvedValue(
+      concepts({
+        concepts: [
+          concept({
+            key: "document_concepts/c1",
+            name: "Ward status",
+            reason: "A fixed list of states",
+            sources: [{ documentIds: [], id: "f1", kind: "document", name: "" }],
+            suggested: "values",
+            suggestedBecause: "document_concept",
+            verdict: "values",
+          }),
+        ],
+      }),
+    );
+    renderConcepts();
+
+    const ward = await row("Ward status");
+    expect(ward.getByText("A fixed list of states")).toBeInTheDocument();
+    fireEvent.mouseDown(ward.getByRole("combobox", { name: /verdictOf.*Ward status/ }));
+    await screen.findByRole("listbox");
+    expect(
+      [...document.querySelectorAll(".ant-select-item-option")].map((option) => option.textContent),
+    ).toContain("bknProject.concepts.verdict.values");
+  });
+
   it("says what a blocked concept waits for and leads to where it is settled", async () => {
     renderConcepts();
 

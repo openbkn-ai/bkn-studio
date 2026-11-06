@@ -52,7 +52,8 @@ const STATE_TONE: Record<ConceptState, LightStatusTone> = {
 
 /** The verdicts that fit a concept: what its item can be, or anything for one with no item. */
 const VERDICTS_OF: Record<"none" | NonNullable<Concept["item"]>["kind"], ConceptVerdict[]> = {
-  none: ["object", "event", "property", "relation", "kinetic", "none"],
+  // A concept of the knowledge-base files may be a value list, as drafting can suggest.
+  none: ["object", "event", "property", "values", "relation", "kinetic", "none"],
   object_types: ["object", "event", "property", "kinetic", "none"],
   relation_types: ["relation", "none"],
   value_types: ["values", "property", "none"],
