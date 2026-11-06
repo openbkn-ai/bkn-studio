@@ -17,8 +17,6 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { formatRate } from "@/modules/bkn-project/components/draft/evidence";
-import { KnowledgeRefreshSection } from "@/modules/bkn-project/components/release/KnowledgeRefreshSection";
-import { IndexReadiness } from "@/modules/bkn-project/components/release/IndexReadiness";
 import { RegressionDrawer } from "@/modules/bkn-project/components/release/RegressionDrawer";
 import { ReleasePublish } from "@/modules/bkn-project/components/release/ReleasePublish";
 import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
@@ -497,7 +495,6 @@ export function ProjectReleasePage({
         outdated={status.stale.includes("check_outdated")}
         projectId={project.id}
       />
-      <IndexReadiness canRun={canRun} onSettled={() => void load()} projectId={project.id} />
       <ReleaseVersions
         inUseNetworkId={status.release?.inUse ? status.release.networkId : null}
         onOpenRegression={({ networkId, version }) => setRegressionOf({ networkId, version })}
@@ -505,7 +502,6 @@ export function ProjectReleasePage({
         projectId={project.id}
         releases={releases}
       />
-      <KnowledgeRefreshSection lineageId={project.knId} />
       {regressionOf ? (
         <RegressionDrawer
           canRun={canRun}

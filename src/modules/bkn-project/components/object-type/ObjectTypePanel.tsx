@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { extensionProjectObjectDocumentFields } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
@@ -114,6 +115,9 @@ export function ObjectTypePanel({
   review?: CandidateReview;
 }) {
   const { t } = useTranslation();
+  // The professional edition brings its own editor for document fields; until it does, the
+  // built-in one stays.
+  const DocumentFields = extensionProjectObjectDocumentFields() ?? DocumentFieldsEditor;
   const { message, modal } = useAppServices();
   const [basicForm] = Form.useForm<BasicValues>();
   const editorRef = useRef<ObjectTypeDataAttributeEditorHandle>(null);
@@ -505,7 +509,7 @@ export function ObjectTypePanel({
                       onSaved(next);
                     }}
                   />
-                  <DocumentFieldsEditor
+                  <DocumentFields
                     key={`${objectTypeId}-${base.draft.updateTime}`}
                     object={base.objectType}
                     draft={base.draft}

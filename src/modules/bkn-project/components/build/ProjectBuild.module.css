@@ -1,0 +1,18 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/* One kind of build to a tab, on the page's own sheet. */
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
