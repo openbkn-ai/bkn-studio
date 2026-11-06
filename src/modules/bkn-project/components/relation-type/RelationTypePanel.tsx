@@ -171,7 +171,7 @@ export function RelationTypePanel({
     setProblem(null);
     if (next) {
       const start = {
-        aliases: next.relation?.aliases ?? [],
+        aliases: next.relation?.aliases,
         description: next.relation?.description ?? "",
         name: next.relation?.name ?? "",
       };
