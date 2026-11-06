@@ -32,6 +32,7 @@ const removeItemMock = vi.hoisted(() => vi.fn());
 const resolveConflictMock = vi.hoisted(() => vi.fn());
 const decideChoiceMock = vi.hoisted(() => vi.fn());
 const setConceptMappingMock = vi.hoisted(() => vi.fn());
+const getLogicNeedsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: messageMock, modal: { confirm: confirmMock } }),
@@ -40,6 +41,10 @@ vi.mock("@/framework/context/use-app-services", () => ({
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
   getDraft: getDraftMock,
+}));
+
+vi.mock("@/modules/bkn-project/services/kinetic.service", () => ({
+  getLogicNeeds: getLogicNeedsMock,
 }));
 
 vi.mock("@/modules/bkn-project/services/requirements.service", async (importOriginal) => ({
@@ -98,6 +103,39 @@ const documents: RequirementDocument[] = [
     uploaderId: "me",
   },
 ];
+
+const implementation = {
+  available: false,
+  description: "",
+  name: "延误率",
+  ownerObjectTypeId: "sales_order",
+  ownerObjectTypeName: "销售订单",
+  reason: "",
+  status: "published",
+  version: "1",
+};
+
+function logicNeed(
+  extra: Partial<Requirements["spec"]["logicNeeds"][number]>,
+): Requirements["spec"]["logicNeeds"][number] {
+  return {
+    accepted: true,
+    citations: [],
+    conceptIds: [],
+    definition: "",
+    edited: false,
+    id: "n1",
+    kind: "metric",
+    name: "延误率",
+    objectTypeIds: ["sales_order"],
+    properties: [],
+    scenarioIds: [],
+    source: "analysis",
+    suggestedMetricType: "atomic",
+    supplementReason: "",
+    ...extra,
+  };
+}
 
 const quote = { block_id: "b2", document_id: "d1", end: 15, quote: "哪些订单晚了", start: 9 };
 
@@ -170,7 +208,6 @@ function requirements(extra: Partial<Requirements> = {}): Requirements {
       scenarios: [
         {
           actor: "销售经理",
-          capabilities: [{ kind: "metric", name: "延误率" }],
           decision: "先联系谁",
           id: "s1",
           knowledge: ["订单与承诺日期"],
@@ -227,6 +264,7 @@ describe("ProjectRequirements", () => {
     await i18n.changeLanguage("zh-CN");
     listDocumentsMock.mockResolvedValue(documents);
     getRequirementsMock.mockResolvedValue(requirements());
+    getLogicNeedsMock.mockResolvedValue({ needs: [], networkId: "n", reason: "", updateTime: 1 });
     getDraftMock.mockResolvedValue({
       items: {
         objectTypes: [
@@ -284,7 +322,6 @@ describe("ProjectRequirements", () => {
 
     fireEvent.click(screen.getByText(/^业务场景/));
     expect(screen.getByText("销售经理")).toBeInTheDocument();
-    expect(screen.getByText("指标：延误率")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText(/^候选概念/));
     expect(screen.getByText("实体")).toBeInTheDocument();
@@ -762,6 +799,83 @@ describe("ProjectRequirements", () => {
       expect(await saves[0].current()).toBe(false);
       expect(editItemMock).not.toHaveBeenCalled();
       expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("names the kinetic needs a question rests on, with whether each is implemented", async () => {
+      const spec = requirements();
+      spec.spec.logicNeeds = [
+        logicNeed({ id: "n1", name: "延误率" }),
+        logicNeed({ id: "n2", kind: "skill", name: "催单排序" }),
+      ];
+      spec.spec.questions[0].logicNeedIds = ["n1", "n2", "n9"];
+      getRequirementsMock.mockResolvedValue(spec);
+      getLogicNeedsMock.mockResolvedValue({
+        needs: [
+          {
+            ...spec.spec.logicNeeds[0],
+            implementation: { ...implementation, available: true },
+            link: { at: 1, boxId: "", byId: "me", id: "m1", type: "object_metric" },
+            liveObjectTypeIds: ["sales_order"],
+          },
+          {
+            ...spec.spec.logicNeeds[1],
+            implementation: null,
+            link: null,
+            liveObjectTypeIds: ["sales_order"],
+          },
+        ],
+        networkId: "n",
+        reason: "",
+        updateTime: 1,
+      });
+      renderPage();
+
+      expect(await screen.findByText("动力需求")).toBeInTheDocument();
+      expect(screen.getByText("延误率")).toBeInTheDocument();
+      expect(await screen.findByText("已实现")).toBeInTheDocument();
+      expect(screen.getByText("催单排序")).toBeInTheDocument();
+      expect(screen.getByText("未实现")).toBeInTheDocument();
+      expect(screen.getByText("已删除的动力需求")).toBeInTheDocument();
+    });
+
+    it("names the kinetic needs without their state when the live network cannot be read", async () => {
+      const spec = requirements();
+      spec.spec.logicNeeds = [logicNeed({ id: "n1", name: "延误率" })];
+      spec.spec.questions[0].logicNeedIds = ["n1"];
+      getRequirementsMock.mockResolvedValue(spec);
+      getLogicNeedsMock.mockRejectedValue(new Error("down"));
+      renderPage();
+
+      expect(await screen.findByText("延误率")).toBeInTheDocument();
+      expect(screen.queryByText("已实现")).toBeNull();
+      expect(screen.queryByText("未实现")).toBeNull();
+    });
+
+    it("sets the kinetic needs a question rests on, sent only when changed", async () => {
+      const spec = requirements();
+      spec.spec.logicNeeds = [logicNeed({ id: "n1", name: "延误率" })];
+      getRequirementsMock.mockResolvedValue(spec);
+      editItemMock.mockResolvedValue(spec);
+      renderPage();
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "编辑「某个客户哪些订单晚了？」" }),
+      );
+      const dialog = within(await screen.findByRole("dialog"));
+      expect(dialog.getByText("选了动力需求，这个问题就算能力层。")).toBeInTheDocument();
+      fireEvent.mouseDown(dialog.getByLabelText("用到的动力需求"));
+      fireEvent.click(await screen.findByTitle("延误率"));
+      fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
+
+      await waitFor(() =>
+        expect(editItemMock).toHaveBeenCalledWith(
+          "p1",
+          "questions",
+          "q1",
+          expect.objectContaining({ logicNeedIds: ["n1"] }),
+          1,
+        ),
+      );
     });
 
     it("sends changed inputs, and shows the server's refusal on the input it names", async () => {

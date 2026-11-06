@@ -17,8 +17,8 @@ import { describeInput } from "@/modules/bkn-project/components/requirements/inp
 import { QuestionDevPanel } from "@/modules/bkn-project/components/requirements/QuestionDevPanel";
 import type { DraftedItem } from "@/modules/bkn-project/components/requirements/RequirementDialogs";
 import { Citing, Editing } from "@/modules/bkn-project/components/requirements/citing";
+import { needState } from "@/modules/bkn-project/components/kinetic/needs";
 import {
-  capabilityKindText,
   categoryText,
   compilesToText,
   conflictKindText,
@@ -27,6 +27,7 @@ import {
   rejectedKindText,
   rejectedReasonText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
+import type { LogicNeedView } from "@/modules/bkn-project/types/kinetic";
 import type {
   RequirementChoice,
   RequirementConflict,
@@ -173,11 +174,14 @@ function EditedTag({ edited }: { edited: boolean }) {
 export function QuestionsView({
   drafted,
   itemName,
+  logicNeeds,
   projectId,
   spec,
 }: {
   drafted: DraftedItem[];
   itemName: ItemName;
+  /** The kinetic needs with what implements them; null when they could not be read. */
+  logicNeeds: LogicNeedView[] | null;
   projectId: string;
   spec: RequirementSpec;
 }) {
@@ -230,6 +234,11 @@ export function QuestionsView({
                   )
                 : ""}
             </Field>
+            {question.logicNeedIds.length ? (
+              <Field label={t(`${PREFIX}.questions.logicNeeds`)}>
+                <QuestionLogicNeeds logicNeeds={logicNeeds} question={question} spec={spec} />
+              </Field>
+            ) : null}
           </div>
           <Citations citations={question.citations} supplementReason={question.supplementReason} />
           <Collapse
@@ -353,16 +362,6 @@ export function ScenariosView({ spec }: { spec: RequirementSpec }) {
             <Field label={t(`${PREFIX}.scenarios.decision`)}>{scenario.decision}</Field>
             <Field label={t(`${PREFIX}.scenarios.knowledge`)}>
               {scenario.knowledge.join(t("bknProject.listSeparator"))}
-            </Field>
-            <Field label={t(`${PREFIX}.scenarios.capabilities`)}>
-              {scenario.capabilities
-                .map((capability) =>
-                  t(`${PREFIX}.scenarios.capability`, {
-                    kind: capabilityKindText(t, capability.kind),
-                    name: capability.name,
-                  }),
-                )
-                .join(t("bknProject.listSeparator"))}
             </Field>
           </div>
           <Citations citations={scenario.citations} supplementReason={scenario.supplementReason} />
@@ -572,6 +571,41 @@ export function RejectedNote({ spec }: { spec: RequirementSpec }) {
       ]}
       size="small"
     />
+  );
+}
+
+/**
+ * The kinetic needs a question rests on, by name, each with whether it is implemented in the
+ * live network; without the live read, only their names.
+ */
+function QuestionLogicNeeds({
+  logicNeeds,
+  question,
+  spec,
+}: {
+  logicNeeds: LogicNeedView[] | null;
+  question: RequirementSpec["questions"][number];
+  spec: RequirementSpec;
+}) {
+  const { t } = useTranslation();
+  return (
+    <span className={styles.stack}>
+      {question.logicNeedIds.map((id) => {
+        const need = spec.logicNeeds.find((item) => item.id === id);
+        const view = logicNeeds?.find((item) => item.id === id);
+        const implemented = view ? needState(view) === "implemented" : null;
+        return (
+          <span className={styles.row} key={id}>
+            <span>{need?.name ?? t(`${PREFIX}.questions.logicNeedMissing`)}</span>
+            {implemented === null ? null : (
+              <LightStatusTag tone={implemented ? "success" : "warning"}>
+                {t(`${PREFIX}.questions.logicNeedState.${implemented ? "implemented" : "open"}`)}
+              </LightStatusTag>
+            )}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
