@@ -13,7 +13,10 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
-import { extensionProjectConceptSource } from "@/framework/extension/registry";
+import {
+  extensionProjectConceptSource,
+  extensionProjectKnowledgeBaseModel,
+} from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
@@ -46,6 +49,7 @@ import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
 
+import { conceptsInModel, modelVerdict } from "./inModel";
 import styles from "./ProjectConcepts.module.css";
 
 const PREFIX = "bknProject.concepts";
@@ -71,11 +75,6 @@ const VERDICTS_OF: Record<"none" | NonNullable<Concept["item"]>["kind"], Concept
   relation_types: ["relation", "none"],
   value_types: ["values", "property", "none"],
 };
-
-/** Whether the verdict makes the concept's item part of the concept model. */
-function modelVerdict(verdict: ConceptVerdict) {
-  return ["object", "event", "relation", "values"].includes(verdict);
-}
 
 /** The code drafting gave for its suggestion, as the page words it. */
 function becauseKey(code: string) {
@@ -127,6 +126,8 @@ export function ProjectConcepts({
   const { message, modal } = useAppServices();
   const kbMode = useBknProjectKbMode();
   const ConceptSource = extensionProjectConceptSource();
+  // Extracting a model from the knowledge-base files, where the edition has it.
+  const KnowledgeBaseModel = extensionProjectKnowledgeBaseModel();
   const [concepts, setConcepts] = useState<Concepts | undefined>(undefined);
   const [draft, setDraft] = useState<Draft | null | undefined>(undefined);
   // The specification, for the run extracting the documents' concepts; null when unread.
@@ -343,6 +344,23 @@ export function ProjectConcepts({
     return seen;
   }, [list]);
 
+  // The knowledge-base files are a concept source: extracting from them is started here.
+  const documentSource =
+    ConceptSource && kbMode === "enabled" ? (
+      <BknProjectKbSlot>
+        <ConceptSource canEdit={canEdit} onChanged={() => void load()} projectId={project.id} />
+      </BknProjectKbSlot>
+    ) : KnowledgeBaseModel ? (
+      <BknProjectKbSlot>
+        <KnowledgeBaseModel
+          canEdit={canEdit && !drafting && busy === null}
+          draftUpdateTime={draft?.updateTime ?? 0}
+          onChanged={() => void load()}
+          projectId={project.id}
+        />
+      </BknProjectKbSlot>
+    ) : null;
+
   if (loadError && concepts === undefined) {
     return (
       <Alert
@@ -367,15 +385,18 @@ export function ProjectConcepts({
   }
   if (!concepts.concepts.length && !drafting) {
     return (
-      <EmptyStatePanel
-        action={
-          <AppButton onClick={onGoToResources} type="primary">
-            {t(`${PREFIX}.empty.action`)}
-          </AppButton>
-        }
-        description={t(`${PREFIX}.empty.description`)}
-        title={t(`${PREFIX}.empty.title`)}
-      />
+      <div className={styles.page}>
+        {documentSource}
+        <EmptyStatePanel
+          action={
+            <AppButton onClick={onGoToResources} type="primary">
+              {t(`${PREFIX}.empty.action`)}
+            </AppButton>
+          }
+          description={t(`${PREFIX}.empty.description`)}
+          title={t(`${PREFIX}.empty.title`)}
+        />
+      </div>
     );
   }
 
@@ -391,6 +412,7 @@ export function ProjectConcepts({
   const shown =
     filter === "all" ? concepts.concepts : concepts.concepts.filter((c) => c.state === filter);
   const standing = concepts.concepts;
+  const inModel = conceptsInModel(concepts.concepts);
 
   const destination = (concept: Concept) => {
     if (concept.state === "blocked" && concept.blocked) {
@@ -490,11 +512,27 @@ export function ProjectConcepts({
     },
     {
       key: "reason",
-      render: (_value, concept) => (
-        <span className={styles.muted}>
-          {concept.reason || t(`${PREFIX}.because.${becauseKey(concept.suggestedBecause)}`)}
-        </span>
-      ),
+      render: (_value, concept) => {
+        const because = t(`${PREFIX}.because.${becauseKey(concept.suggestedBecause)}`);
+        // Drafting found it but left it out: say so, and what it could be judged instead.
+        const leftOut =
+          concept.state === "pending" &&
+          concept.item &&
+          !concept.item.adopted &&
+          concept.verdict === "none" &&
+          concept.suggested !== "none";
+        return (
+          <span className={styles.muted}>
+            {concept.reason ||
+              (leftOut
+                ? t(`${PREFIX}.notAdopted`, {
+                    because,
+                    verdict: t(`${PREFIX}.verdict.${concept.suggested}`),
+                  })
+                : because)}
+          </span>
+        );
+      },
       title: t(`${PREFIX}.columns.reason`),
     },
     {
@@ -608,9 +646,15 @@ export function ProjectConcepts({
             </div>
           ),
         )}
+        {/* As the modeling page counts it: what drafting adopted is in until someone takes it out. */}
         <div className={styles.stat}>
           <dt>{t(`${PREFIX}.stats.inModel`)}</dt>
-          <dd>{concepts.counts.in_model ?? 0}</dd>
+          <dd>{inModel.count}</dd>
+          {inModel.unconfirmed ? (
+            <span className={styles.muted}>
+              {t(`${PREFIX}.stats.inModelPending`, { count: inModel.unconfirmed })}
+            </span>
+          ) : null}
         </div>
       </dl>
 
@@ -658,11 +702,7 @@ export function ProjectConcepts({
         />
       ) : null}
 
-      {ConceptSource && kbMode === "enabled" ? (
-        <BknProjectKbSlot>
-          <ConceptSource canEdit={canEdit} onChanged={() => void load()} projectId={project.id} />
-        </BknProjectKbSlot>
-      ) : null}
+      {documentSource}
 
       <Segmented<Filter>
         onChange={setFilter}

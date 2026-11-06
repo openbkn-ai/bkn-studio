@@ -41,12 +41,14 @@ import { DataSourceHealth } from "@/modules/bkn-project/components/DataSourceHea
 import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftConceptGraph";
 import { draftGraph } from "@/modules/bkn-project/components/draft/graph";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
-import { DRAFT_POLL_MS, getDraft } from "@/modules/bkn-project/services/draft.service";
+import { conceptsInModel } from "@/modules/bkn-project/components/concepts/inModel";
+import { DRAFT_POLL_MS, getConcepts, getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getOntologyIndex } from "@/modules/bkn-project/services/publish.service";
 import { getNetworkInUse } from "@/modules/bkn-project/services/release.service";
 import { needState } from "@/modules/bkn-project/components/kinetic/needs";
 import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
+import type { Concepts } from "@/modules/bkn-project/types/concepts";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
 import type { ProjectIndex } from "@/modules/bkn-project/types/publish";
@@ -214,6 +216,21 @@ export function ProjectOverview({
     };
   }, [project.id]);
 
+  // The concepts, read again once drafting ends; undefined while unread or when unreadable.
+  const [concepts, setConcepts] = useState<Concepts | undefined>(undefined);
+  useEffect(() => {
+    if (drafting) {
+      return undefined;
+    }
+    let active = true;
+    getConcepts(project.id)
+      .then((next) => active && setConcepts(next))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [drafting, project.id]);
+
   const ready = draft?.status === "ready" ? draft : null;
   const graph = useMemo(() => (ready ? draftGraph(ready) : null), [ready]);
   const pending = ready
@@ -265,7 +282,16 @@ export function ProjectOverview({
           ? "bknProject.overview.tiles.conceptsSubCore"
           : "bknProject.overview.tiles.conceptsSub",
       ),
-      value: PLACEHOLDER,
+      ...(concepts?.concepts.length
+        ? {
+            note: t("bknProject.overview.tiles.conceptsInModel", {
+              count: conceptsInModel(concepts.concepts).count,
+            }),
+          }
+        : {}),
+      value: concepts
+        ? t("bknProject.overview.tiles.conceptsValue", { count: concepts.concepts.length })
+        : PLACEHOLDER,
     },
     {
       // What waits is listed first on the changes tab, each with the action that settles it.

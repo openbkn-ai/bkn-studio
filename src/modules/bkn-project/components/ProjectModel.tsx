@@ -71,7 +71,6 @@ import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 import styles from "./ProjectModel.module.css";
 import { extensionProjectKnowledgeBaseModel } from "@/framework/extension/registry";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
-import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 
 const TABS = ["changes", "excluded", "objects", "relations", "valueTypes"] as const;
 type Tab = (typeof TABS)[number];
@@ -464,16 +463,6 @@ export function ProjectModel({
   const preparation = draft?.datasetPreparation;
   const notices = (
     <>
-      {KnowledgeBaseModel && (
-        <BknProjectKbSlot>
-          <KnowledgeBaseModel
-            projectId={project.id}
-            draftUpdateTime={draft?.updateTime ?? 0}
-            canEdit={ownerIsCaller && !project.archived && !drafting && !generating}
-            onChanged={() => void loadDraft()}
-          />
-        </BknProjectKbSlot>
-      )}
       {preparation && (
         <Alert
           message={t(`bknProject.model.preparation.${preparation.state}`, {
