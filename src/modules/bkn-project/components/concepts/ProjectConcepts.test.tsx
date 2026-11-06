@@ -527,7 +527,7 @@ describe("ProjectConcepts", () => {
     await screen.findByText("bknProject.concepts.sourceChanged");
 
     const reads = service.getConcepts.mock.calls.length;
-    await act(async () => {
+    act(() => {
       polls.splice(0).forEach((poll) => poll());
     });
     await waitFor(() => expect(service.getConcepts.mock.calls.length).toBeGreaterThan(reads));
