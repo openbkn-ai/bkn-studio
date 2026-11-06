@@ -7,6 +7,7 @@
 
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
+import type { ReactElement } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Concept, Concepts } from "@/modules/bkn-project/types/concepts";
@@ -58,6 +59,16 @@ vi.mock("@/modules/bkn-project/services/requirements.service", async (importOrig
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
   ...service,
+}));
+
+// The edition's panel for extracting a model from the knowledge-base files.
+const slots = vi.hoisted(() => ({
+  kbModel: null as null | ((props: { canEdit: boolean; draftUpdateTime: number }) => ReactElement),
+}));
+vi.mock("@/framework/extension/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/framework/extension/registry")>()),
+  extensionProjectConceptSource: () => undefined,
+  extensionProjectKnowledgeBaseModel: () => slots.kbModel ?? undefined,
 }));
 
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
@@ -179,6 +190,7 @@ describe("ProjectConcepts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     kb.mode = "hidden";
+    slots.kbModel = null;
     service.getConcepts.mockResolvedValue(concepts());
     requirements.getRequirements.mockResolvedValue(null);
     service.getDraft.mockResolvedValue({
@@ -487,6 +499,62 @@ describe("ProjectConcepts", () => {
     expect(await screen.findByText("bknProject.concepts.readOnly")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.queryByRole("button", { name: "bknProject.concepts.acceptAll" })).toBeNull();
+  });
+
+  it("counts what is in the model as the modeling page does, confirmed or not", async () => {
+    renderConcepts();
+
+    // Orders, adopted by drafting and not yet confirmed, and Currency, confirmed.
+    const stat = (await screen.findByText("bknProject.concepts.stats.inModel")).closest(
+      "div",
+    ) as HTMLElement;
+    expect(within(stat).getByText("2")).toBeInTheDocument();
+    expect(
+      within(stat).getByText('bknProject.concepts.stats.inModelPending:{"count":1}'),
+    ).toBeInTheDocument();
+  });
+
+  it("says when drafting found a concept but left it out, and what it could be judged", async () => {
+    const base = concepts();
+    service.getConcepts.mockResolvedValue({
+      ...base,
+      concepts: [
+        ...base.concepts,
+        concept({
+          item: { adopted: false, id: "orders_to_products", kind: "relation_types" },
+          key: "relation_types/orders_to_products",
+          name: "Products of order",
+          suggested: "relation",
+          suggestedBecause: "name_match",
+          verdict: "none",
+        }),
+      ],
+    });
+    renderConcepts();
+
+    expect(
+      (await row("Products of order")).getByText(
+        'bknProject.concepts.notAdopted:{"because":"bknProject.concepts.because.name_match","verdict":"bknProject.concepts.verdict.relation"}',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("starts extracting from the knowledge-base files here, also before any concept", async () => {
+    kb.mode = "enabled";
+    slots.kbModel = ({ canEdit, draftUpdateTime }) => (
+      <span>{`kb-model:${canEdit}:${draftUpdateTime}`}</span>
+    );
+    service.getConcepts.mockResolvedValue({
+      concepts: [],
+      counts: {},
+      draftUpdateTime: 0,
+      requirementUpdateTime: 0,
+    });
+    service.getDraft.mockResolvedValue(null);
+    renderConcepts();
+
+    expect(await screen.findByText("kb-model:true:0")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.concepts.empty.title")).toBeInTheDocument();
   });
 
   it("leads to the sources while there is nothing to extract from", async () => {

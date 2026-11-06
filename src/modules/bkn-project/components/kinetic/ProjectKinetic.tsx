@@ -311,6 +311,7 @@ export function ProjectKinetic({
         implementation: null,
         link: null,
         liveObjectTypeIds: [],
+        unconnected: [],
       })),
     [logic, spec],
   );
@@ -488,6 +489,9 @@ export function ProjectKinetic({
           {live ? (
             <LightStatusTag tone={needStateTone(state)}>{needStateText(t, state)}</LightStatusTag>
           ) : null}
+          {need.unconnected.length ? (
+            <LightStatusTag tone="warning">{t(`${KINETIC}.unconnectedMark`)}</LightStatusTag>
+          ) : null}
           {need.accepted ? null : (
             <LightStatusTag tone="warning">{t(`${KINETIC}.review.pending`)}</LightStatusTag>
           )}
@@ -639,6 +643,10 @@ export function ProjectKinetic({
             type="success"
           />
         ) : null}
+        {/* Before the first release nothing is implemented live: that is not a failure. */}
+        {logic && !logic.released ? (
+          <Alert message={t(`${KINETIC}.beforeRelease`)} showIcon type="info" />
+        ) : null}
         {!live || logic?.reason ? (
           <Alert message={t(`${KINETIC}.liveUnavailable`)} showIcon type="warning" />
         ) : null}
@@ -703,6 +711,7 @@ export function ProjectKinetic({
             networkId={networkId}
             objectName={objectName}
             onClose={() => setOpenId(null)}
+            onGoToModel={onGoToModel}
             onImplement={implement}
             onLink={link}
             onUnlink={unlink}

@@ -23,7 +23,6 @@ import {
 import type {
   QuestionInput,
   RequirementChoice,
-  RequirementConcept,
   RequirementConflict,
   RequirementItemKind,
   RequirementItemRef,
@@ -460,61 +459,6 @@ export function ChoiceDialog({
           onChange={(event) => setBasis(event.target.value)}
           placeholder={t(`${PREFIX}.choice.basis`)}
           value={basis}
-        />
-      </div>
-    </Modal>
-  );
-}
-
-/** Points a concept at the drafted item it is, or at none. */
-export function MappingDialog({
-  concept,
-  drafted,
-  onCancel,
-  onSave,
-  saving,
-}: Saving & {
-  concept: RequirementConcept;
-  drafted: DraftedItem[];
-  onSave: (mapsTo: RequirementItemRef | null) => void;
-}) {
-  const { t } = useTranslation();
-  const [value, setValue] = useState<string | undefined>(
-    concept.mapsTo ? refKey(concept.mapsTo) : undefined,
-  );
-  return (
-    <Modal
-      cancelText={t("common.cancel")}
-      confirmLoading={saving}
-      destroyOnHidden
-      okText={t("common.save")}
-      onCancel={onCancel}
-      onOk={() => onSave(value ? fromKey(value) : null)}
-      open
-      title={t(`${PREFIX}.mapping.title`, { term: concept.term })}
-    >
-      <div className={styles.stack}>
-        <p className={styles.muted}>
-          {t(`${PREFIX}.${drafted.length ? "mapping.hint" : "fields.nothingDrafted"}`)}
-        </p>
-        <Select
-          allowClear
-          disabled={!drafted.length}
-          aria-label={t(`${PREFIX}.mapping.label`)}
-          onChange={(next?: string) => setValue(next)}
-          optionFilterProp="label"
-          options={drafted.map((item) => ({
-            label: t(
-              `${PREFIX}.mapping.option.${item.kind === "relation_type" ? "relation" : "object"}`,
-              {
-                name: item.name,
-              },
-            ),
-            value: refKey(item),
-          }))}
-          placeholder={t(`${PREFIX}.mapping.none`)}
-          showSearch
-          value={value}
         />
       </div>
     </Modal>

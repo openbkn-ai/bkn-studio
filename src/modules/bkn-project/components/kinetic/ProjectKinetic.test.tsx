@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   link: vi.fn(),
   listDocuments: vi.fn(),
   message: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
+  onGoToModel: vi.fn(),
   removeItem: vi.fn(),
   reviewRequirements: vi.fn(),
   snapshot: { current: null as { capabilities: string[]; extensions: string[] } | null },
@@ -152,6 +153,7 @@ const view = (item: Need, extra: Partial<LogicNeedView> = {}): LogicNeedView => 
   implementation: null,
   link: null,
   liveObjectTypeIds: item.objectTypeIds.filter((id) => id !== "bom"),
+  unconnected: [],
   ...extra,
 });
 
@@ -174,6 +176,7 @@ function logicNeeds(): LogicNeeds {
     ],
     networkId: "net",
     reason: "",
+    released: true,
     updateTime: 9,
   };
 }
@@ -195,7 +198,7 @@ function renderPage(state?: unknown, owner = true) {
           element={
             <>
               <ProjectKinetic
-                onGoToModel={vi.fn()}
+                onGoToModel={mocks.onGoToModel}
                 onGoToRelease={vi.fn()}
                 ownerIsCaller={owner}
                 project={project}
@@ -320,6 +323,88 @@ describe("ProjectKinetic", () => {
     expect(screen.getByText("催单排序")).toBeInTheDocument();
     expect(screen.queryByText("没有符合筛选条件的动力需求。")).toBeNull();
     expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  });
+
+  it("says implementations wait for the first release, not that the network is unreadable", async () => {
+    mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), released: false });
+    renderPage();
+
+    expect(
+      await screen.findByText("首次发布后才能查看和连接实现。现在可以先分析和记录动力需求。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/线上知识网络暂时读不到/)).toBeNull();
+  });
+
+  it("warns as well before the first release when the network could not be read", async () => {
+    mocks.getLogicNeeds.mockResolvedValue({
+      ...logicNeeds(),
+      reason: "unavailable",
+      released: false,
+    });
+    renderPage();
+
+    expect(await screen.findByText(/首次发布后才能查看和连接实现/)).toBeInTheDocument();
+    expect(screen.getByText(/线上知识网络暂时读不到/)).toBeInTheDocument();
+  });
+
+  it("warns when the live read itself fails", async () => {
+    mocks.getLogicNeeds.mockRejectedValue(new Error("down"));
+    renderPage();
+
+    expect(await screen.findByText(/线上知识网络暂时读不到/)).toBeInTheDocument();
+    expect(screen.queryByText(/首次发布后才能查看和连接实现/)).toBeNull();
+  });
+
+  it("shows the empty list, not an error, before there is a specification", async () => {
+    mocks.getRequirements.mockResolvedValue(null);
+    mocks.getLogicNeeds.mockResolvedValue({
+      needs: [],
+      networkId: "",
+      reason: "",
+      released: false,
+      updateTime: 0,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        "还没有动力需求。分析后会列出需要的指标、函数和 Skill，也可以手工添加。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("动力需求暂时读取不到")).toBeNull();
+    expect(screen.queryByText(/线上知识网络暂时读不到/)).toBeNull();
+    expect(screen.getByRole("button", { name: "分析动力需求" })).toBeEnabled();
+  });
+
+  it("warns, by name, of object types the model does not relate, and leads to modeling", async () => {
+    const read = logicNeeds();
+    read.needs[0] = { ...read.needs[0], unconnected: [{ from: "orders", to: "bom" }] };
+    mocks.getLogicNeeds.mockResolvedValue(read);
+    renderPage();
+
+    const row = (await screen.findByText("延误率")).closest("tr")!;
+    expect(within(row).getByText("对象间缺关系")).toBeInTheDocument();
+    const other = screen.getByText("催单排序").closest("tr")!;
+    expect(within(other).queryByText("对象间缺关系")).toBeNull();
+
+    const panel = await openNeed("延误率", "匹配或实现");
+    expect(
+      panel.getByText(
+        "关联对象之间在模型里没有关系：销售订单 — 物料清单。实现时可能取不到数据，可以先在概念建模里补上关系。",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(panel.getByRole("button", { name: "去概念建模" }));
+    expect(mocks.onGoToModel).toHaveBeenCalledTimes(1);
+  });
+
+  it("names an object type the draft lacks by its id", async () => {
+    const read = logicNeeds();
+    read.needs[0] = { ...read.needs[0], unconnected: [{ from: "orders", to: "gone" }] };
+    mocks.getLogicNeeds.mockResolvedValue(read);
+    renderPage();
+
+    const panel = await openNeed("延误率", "匹配或实现");
+    expect(panel.getByText(/销售订单 — gone/)).toBeInTheDocument();
   });
 
   it("cannot analyse before the model is confirmed, and says so", async () => {
