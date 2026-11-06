@@ -162,6 +162,15 @@ function renderConcepts(ownerIsCaller = true) {
 const row = async (name: string) =>
   within((await screen.findByText(name)).closest("tr") as HTMLElement);
 
+/** The alert a text is shown in. */
+function alertOf(text: HTMLElement) {
+  const alert = text.closest<HTMLElement>('[role="alert"]');
+  if (!alert) {
+    throw new Error("not in an alert");
+  }
+  return alert;
+}
+
 function conflict(code: string) {
   return new AxiosError(code, "ERR_BAD_REQUEST", undefined, undefined, {
     data: { description: code, error_code: `BknProject.Draft.${code}` },
@@ -468,18 +477,51 @@ describe("ProjectConcepts", () => {
     );
   });
 
-  it("reads again when someone changed the model meanwhile, without replaying the judgment", async () => {
+  it("keeps a stale refusal on the page and reads again only when asked", async () => {
     service.judgeConcept.mockRejectedValue(conflict("Stale"));
     renderConcepts();
 
     fireEvent.mouseDown((await row("Orders")).getByRole("combobox", { name: /verdictOf.*Orders/ }));
     fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
 
-    await waitFor(() =>
-      expect(messageMock.warning).toHaveBeenCalledWith("bknProject.concepts.stale"),
-    );
-    expect(service.getConcepts).toHaveBeenCalledTimes(2);
+    const alert = alertOf(await screen.findByText("bknProject.concepts.stale"));
+    expect(messageMock.warning).not.toHaveBeenCalled();
+    expect(service.getConcepts).toHaveBeenCalledTimes(1);
     expect(service.judgeConcept).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(within(alert).getByRole("button", { name: "bknProject.concepts.reload" }));
+    await waitFor(() => expect(service.getConcepts).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByText("bknProject.concepts.stale")).toBeNull());
+    expect(service.judgeConcept).toHaveBeenCalledTimes(1);
+  });
+
+  it("says a concept of a knowledge-base selection no longer in use cannot be judged, offering no reload", async () => {
+    service.judgeConcept.mockRejectedValue(conflict("DocumentSourceChanged"));
+    renderConcepts();
+
+    fireEvent.mouseDown((await row("Orders")).getByRole("combobox", { name: /verdictOf.*Orders/ }));
+    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
+
+    const alert = alertOf(await screen.findByText("bknProject.concepts.sourceChanged"));
+    // Reading again would be refused the same way.
+    expect(within(alert).queryByRole("button", { name: "bknProject.concepts.reload" })).toBeNull();
+  });
+
+  it("keeps a refused merge on the page in the server's words", async () => {
+    service.mergeConcept.mockRejectedValue(
+      new AxiosError("bad", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { description: "合并没有保存", error_code: "BknProject.Draft.InvalidRequestBody" },
+        status: 400,
+      } as AxiosResponse),
+    );
+    renderConcepts();
+
+    fireEvent.mouseDown(
+      (await row("Orders")).getByRole("combobox", { name: /mergeIntoOf.*Orders/ }),
+    );
+    fireEvent.click(await screen.findByTitle("Visits"));
+
+    expect(alertOf(await screen.findByText("合并没有保存"))).toBeInTheDocument();
   });
 
   it("asks before extracting again over decisions, and discards them only when told", async () => {

@@ -180,7 +180,11 @@ export const bknProjectEnUS = {
       drafting: "Extracting concepts…",
       loadFailed: "The concepts cannot be read right now",
       judgeFailed: "The judgment was not saved. Try again later.",
-      stale: "Someone just changed the model. It was read again; judge once more.",
+      stale:
+        "The model changed after this page was opened, so the judgment was not saved. Reload, then judge again.",
+      sourceChanged:
+        "This concept comes from a knowledge-base selection that is no longer in use, so the judgment was not saved. Choose the knowledge bases again and extract concepts, then judge it.",
+      reload: "Reload",
       columns: {
         concept: "Concept",
         sources: "Sources",
