@@ -64,6 +64,8 @@ export type ReleaseReview = {
     existing: ReleaseItem[];
     onlyAdditions: boolean;
     orphans: (ReleaseItem & { orphans: number })[];
+    /** The kinetic needs linked to no implementation, applications aside; they never block. */
+    unimplementedNeeds: { id: string; kind: string; name: string }[];
   };
   /** Stands for what the review was read from; publishing refuses another. */
   signature: string;

@@ -26,6 +26,7 @@ const CHECKS = new Set([
   "check",
   "index",
   "baseline",
+  "metric_owners",
 ]);
 const REASONS = new Set([
   "knowledge_base_not_ready",
@@ -47,6 +48,7 @@ const REASONS = new Set([
   "index_not_ready",
   "index_unreadable",
   "branch_behind",
+  "metric_owner_missing",
 ]);
 const ACCEPTS = new Set(["similar_names", "check_partial", "index_not_ready"]);
 const REFUSALS = new Set([
@@ -109,6 +111,9 @@ export function checkReasonText(t: TFunction, check: ReleaseCheck): string {
     const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
     return t(`${PREFIX}.reason.index_not_ready`, { ready: counts.ready ?? 0, total });
   }
+  if (reason === "metric_owner_missing" && Array.isArray(details)) {
+    return t(`${PREFIX}.reason.metric_owner_missing`, { count: details.length });
+  }
   if (reason === "branch_behind" && details && typeof details === "object") {
     const base = (details as { base_version?: string }).base_version;
     if (base) {
@@ -119,7 +124,12 @@ export function checkReasonText(t: TFunction, check: ReleaseCheck): string {
 }
 
 /** Business details of a check, including the confirmed originals scope. */
-export function checkDetailRows(t: TFunction, check: ReleaseCheck): string[] {
+export function checkDetailRows(
+  t: TFunction,
+  check: ReleaseCheck,
+  /** Names an object type by id, as the review's changes name it. */
+  itemName: (id: string) => string = (id) => id,
+): string[] {
   if (
     check.code === "knowledge_base" &&
     check.passed &&
@@ -131,6 +141,14 @@ export function checkDetailRows(t: TFunction, check: ReleaseCheck): string[] {
       return [t(`${PREFIX}.originalDocuments`, { count })];
     }
   }
+  if (!check.passed && check.reason === "metric_owner_missing" && Array.isArray(check.details)) {
+    return (check.details as MetricOwner[]).map((metric) =>
+      t(`${PREFIX}.reason.metricOwnerItem`, {
+        name: metric.name || metric.id,
+        owner: itemName(metric.owner_object_type_id),
+      }),
+    );
+  }
   if (check.passed || check.reason !== "table_missing" || !Array.isArray(check.details)) {
     return [];
   }
@@ -140,6 +158,9 @@ export function checkDetailRows(t: TFunction, check: ReleaseCheck): string[] {
 }
 
 type NamePair = { added: ReleaseItem; other: ReleaseItem };
+
+/** A metric of the branch whose object type the release lacks. */
+type MetricOwner = { id: string; name?: string; owner_object_type_id: string };
 
 /** The words for what the owner accepts in publishing anyway. */
 export const acceptText = (t: TFunction, accept: string) =>

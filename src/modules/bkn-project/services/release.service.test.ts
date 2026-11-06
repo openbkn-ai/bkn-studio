@@ -74,7 +74,13 @@ const backendReview = {
     network_name: "Supply · 1.0.3",
     tag: "v1.0.3",
   },
-  risks: { copies: 1, existing: null, only_additions: true, orphans: null },
+  risks: {
+    copies: 1,
+    existing: null,
+    only_additions: true,
+    orphans: null,
+    unimplemented_needs: [{ id: "n2", kind: "skill", name: "Triage" }],
+  },
   signature: "sig",
   version: "1.0.3",
 };
@@ -139,7 +145,13 @@ describe("release.service", () => {
       },
       refusals: [],
       release: { baseVersion: "1.0.2", networkId: "n_v1_0_3", networkName: "Supply · 1.0.3" },
-      risks: { copies: 1, existing: [], onlyAdditions: true, orphans: [] },
+      risks: {
+        copies: 1,
+        existing: [],
+        onlyAdditions: true,
+        orphans: [],
+        unimplementedNeeds: [{ id: "n2", kind: "skill", name: "Triage" }],
+      },
       signature: "sig",
       version: "1.0.3",
     });
