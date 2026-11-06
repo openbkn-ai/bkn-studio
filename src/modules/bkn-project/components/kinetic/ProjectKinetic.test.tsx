@@ -152,6 +152,7 @@ const view = (item: Need, extra: Partial<LogicNeedView> = {}): LogicNeedView => 
   implementation: null,
   link: null,
   liveObjectTypeIds: item.objectTypeIds.filter((id) => id !== "bom"),
+  unconnected: [],
   ...extra,
 });
 
@@ -174,6 +175,7 @@ function logicNeeds(): LogicNeeds {
     ],
     networkId: "net",
     reason: "",
+    released: true,
     updateTime: 9,
   };
 }

@@ -311,6 +311,7 @@ export function ProjectKinetic({
         implementation: null,
         link: null,
         liveObjectTypeIds: [],
+        unconnected: [],
       })),
     [logic, spec],
   );

@@ -28,6 +28,7 @@ const need = (extra: Partial<LogicNeedView>): LogicNeedView => ({
   kind: "metric",
   link: null,
   liveObjectTypeIds: ["o"],
+  unconnected: [],
   name: "Late rate",
   objectTypeIds: ["o"],
   properties: [],
