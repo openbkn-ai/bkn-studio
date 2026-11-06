@@ -45,6 +45,16 @@ const service = vi.hoisted(() => ({
   judgeConcept: vi.fn(),
   mergeConcept: vi.fn(),
 }));
+const requirements = vi.hoisted(() => ({
+  editItem: vi.fn(),
+  extractRequirementConcepts: vi.fn(),
+  getRequirements: vi.fn(),
+}));
+vi.mock("@/modules/bkn-project/services/requirements.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/requirements.service")>()),
+  ...requirements,
+}));
+
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
   ...service,
@@ -115,10 +125,12 @@ function concepts(extra: Partial<Concepts> = {}): Concepts {
     ],
     counts: { blocked: 1, in_model: 1, judged: 1, pending: 1, "verdict:object": 2 },
     draftUpdateTime: 5,
+    requirementUpdateTime: 9,
     ...extra,
   };
 }
 
+const onGoToKinetic = vi.fn();
 const onGoToModel = vi.fn();
 const onGoToResources = vi.fn();
 const onOpenItem = vi.fn();
@@ -126,6 +138,7 @@ const onOpenItem = vi.fn();
 function renderConcepts(ownerIsCaller = true) {
   return renderWithoutAntdStyles(
     <ProjectConcepts
+      onGoToKinetic={onGoToKinetic}
       onGoToModel={onGoToModel}
       onGoToResources={onGoToResources}
       onOpenItem={onOpenItem}
@@ -167,11 +180,95 @@ describe("ProjectConcepts", () => {
     vi.clearAllMocks();
     kb.mode = "hidden";
     service.getConcepts.mockResolvedValue(concepts());
+    requirements.getRequirements.mockResolvedValue(null);
     service.getDraft.mockResolvedValue({
       items: { decisions: [] },
       status: "ready",
       updateTime: 5,
     });
+  });
+
+  const withRun = (run: { error?: string; extracted: boolean; stale?: boolean; status: string }) =>
+    requirements.getRequirements.mockResolvedValue({
+      spec: { conceptsRun: { error: "", stale: false, ...run } },
+    });
+
+  it("judges a requirement concept in the specification, as its category", async () => {
+    requirements.editItem.mockResolvedValue({});
+    renderConcepts();
+
+    const rate = await row("On-time rate");
+    fireEvent.mouseDown(rate.getByRole("combobox", { name: /verdictOf.*On-time rate/ }));
+    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
+
+    await waitFor(() =>
+      expect(requirements.editItem).toHaveBeenCalledWith(
+        "p1",
+        "concepts",
+        "k3",
+        { category: "not_ontology" },
+        9,
+      ),
+    );
+    // Not through the draft: the kinetic needs read the specification.
+    expect(service.judgeConcept).not.toHaveBeenCalled();
+    await waitFor(() => expect(service.getConcepts).toHaveBeenCalledTimes(2));
+  });
+
+  it("leads from a kinetic concept to kinetic modeling", async () => {
+    renderConcepts();
+
+    fireEvent.click(
+      (await row("On-time rate")).getByRole("button", {
+        name: "bknProject.concepts.destination.kinetic",
+      }),
+    );
+    expect(onGoToKinetic).toHaveBeenCalled();
+  });
+
+  it("extracts the requirement documents' concepts, and says when there are no documents", async () => {
+    requirements.extractRequirementConcepts.mockRejectedValueOnce(
+      new AxiosError("no", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { description: "no", error_code: "BknProject.Requirement.NoDocuments" },
+        status: 400,
+      } as AxiosResponse),
+    );
+    renderConcepts();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknProject.concepts.requirements.extract" }),
+    );
+    await waitFor(() =>
+      expect(messageMock.error).toHaveBeenCalledWith(
+        "bknProject.concepts.requirements.noDocuments",
+      ),
+    );
+
+    requirements.extractRequirementConcepts.mockResolvedValue({
+      spec: { conceptsRun: { error: "", extracted: false, stale: false, status: "running" } },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknProject.concepts.requirements.extract" }),
+    );
+    expect(await screen.findByText("bknProject.concepts.requirements.running")).toBeInTheDocument();
+    // While it runs, its concepts wait: none is judged meanwhile.
+    expect((await row("On-time rate")).queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
+  });
+
+  it("keeps the last extracted concepts when extracting again failed, and says so", async () => {
+    withRun({ extracted: true, status: "failed" });
+    renderConcepts();
+
+    expect(
+      await screen.findByText("bknProject.concepts.requirements.failedKept"),
+    ).toBeInTheDocument();
+  });
+
+  it("says when the requirement documents changed since their concepts were extracted", async () => {
+    withRun({ extracted: true, stale: true, status: "ready" });
+    renderConcepts();
+
+    expect(await screen.findByText("bknProject.concepts.requirements.stale")).toBeInTheDocument();
   });
 
   it("says what the concepts come from, without knowledge-base wording in the community image", async () => {
@@ -393,7 +490,12 @@ describe("ProjectConcepts", () => {
   });
 
   it("leads to the sources while there is nothing to extract from", async () => {
-    service.getConcepts.mockResolvedValue({ concepts: [], counts: {}, draftUpdateTime: 0 });
+    service.getConcepts.mockResolvedValue({
+      concepts: [],
+      counts: {},
+      draftUpdateTime: 0,
+      requirementUpdateTime: 0,
+    });
     service.getDraft.mockResolvedValue(null);
     renderConcepts();
 

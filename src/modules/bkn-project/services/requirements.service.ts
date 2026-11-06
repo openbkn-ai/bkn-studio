@@ -72,6 +72,10 @@ type BackendReviewed = { accepted?: boolean };
 
 type BackendSpec = {
   catalogs_unlisted?: string[] | null;
+  runs?: Record<
+    string,
+    { error?: string; inputs?: unknown; stale?: boolean; status: string } | null | undefined
+  > | null;
   choices?:
     | {
         citations?: BackendCitation[] | null;
@@ -191,8 +195,20 @@ const cited = (item: BackendCited) => ({
 });
 
 export function mapSpec(spec: BackendSpec): RequirementSpec {
+  const concepts = spec.runs?.concepts;
   return {
     catalogsUnlisted: spec.catalogs_unlisted ?? [],
+    ...(concepts
+      ? {
+          conceptsRun: {
+            error: concepts.error ?? "",
+            // Extracted once a run ended ready: a run failing after it keeps those concepts.
+            extracted: concepts.inputs !== undefined && concepts.inputs !== null,
+            stale: concepts.stale ?? false,
+            status: concepts.status,
+          },
+        }
+      : {}),
     choices: (spec.choices ?? []).map((choice) => ({
       citations: (choice.citations ?? []).map(mapCitation),
       decision: choice.decision
@@ -442,6 +458,22 @@ export async function draftRequirements(
   const response = await http.post<BackendRequirements>(
     `${requirementsPath(projectId)}:draft`,
     discardDecisions ? { discard_decisions: true } : undefined,
+    { skipErrorToast: true },
+  );
+  return mapRequirements(response.data);
+}
+
+/**
+ * Extracts the concepts of the requirement documents, in the background, without a concept model:
+ * the concepts a person edited are kept. Replies the specification, its concepts run going.
+ */
+export async function extractRequirementConcepts(projectId: string): Promise<Requirements> {
+  if (useMock) {
+    return wait(mockRequirementsNow()!);
+  }
+  const response = await http.post<BackendRequirements>(
+    `${requirementsPath(projectId)}:extract-concepts`,
+    undefined,
     { skipErrorToast: true },
   );
   return mapRequirements(response.data);
