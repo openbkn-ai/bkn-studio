@@ -112,7 +112,7 @@ function review(extra: Partial<ReleaseReview> = {}): ReleaseReview {
     },
     refusals: [],
     release: { baseVersion: "1.0.2", networkId: "n_v1_0_3", networkName: "供应链 · 1.0.3" },
-    risks: { copies: 0, existing: [], onlyAdditions: true, orphans: [] },
+    risks: { copies: 0, existing: [], onlyAdditions: true, orphans: [], unimplementedNeeds: [] },
     signature: "sig-1",
     version: "1.0.3",
     ...extra,
@@ -439,6 +439,77 @@ describe("ReleasePublish", () => {
     expect(view.queryByText(/ot_customer|table_missing/)).toBeNull();
     expect(view.queryByRole("checkbox")).toBeNull();
     expect(publishButton()).toBeDisabled();
+  });
+
+  it("names the metrics whose object types the release lacks, which no one can accept", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        blocked: true,
+        changes: {
+          added: [],
+          changed: [],
+          other: 0,
+          removed: [{ id: "ot_order", kind: "object_type", name: "订单" }],
+        },
+        checks: [
+          {
+            code: "metric_owners",
+            details: [{ id: "m1", name: "延误率", owner_object_type_id: "ot_order" }],
+            passed: false,
+            reason: "metric_owner_missing",
+          },
+        ],
+      }),
+    );
+    renderPublish();
+
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(await view.findByText("指标所属对象")).toBeInTheDocument();
+    expect(view.getByText(/有 1 个指标所属的对象类不在这次发布里/)).toBeInTheDocument();
+    expect(view.getByText("指标「延误率」所属的对象类「订单」")).toBeInTheDocument();
+    expect(view.queryByText(/ot_order|metric_owner/)).toBeNull();
+    expect(view.queryByRole("checkbox")).toBeNull();
+    expect(publishButton()).toBeDisabled();
+  });
+
+  it("counts the kinetic needs nothing implements, without stopping the release", async () => {
+    const onGoToKinetic = vi.fn();
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        risks: {
+          copies: 0,
+          existing: [],
+          onlyAdditions: true,
+          orphans: [],
+          unimplementedNeeds: [
+            { id: "n1", kind: "metric", name: "延误率" },
+            { id: "n2", kind: "skill", name: "催单排序" },
+          ],
+        },
+      }),
+    );
+    renderWithoutAntdStyles(
+      <ReleasePublish
+        baseNetworkId="n"
+        canPublish
+        onChanged={onChanged}
+        onGoToKinetic={onGoToKinetic}
+        onOpenRegression={onOpenRegression}
+        projectId="p1"
+        status={status()}
+        versionOf={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(/还有 2 项动力需求没有实现，依赖它们的问题可能答不上来/),
+    ).toBeInTheDocument();
+    fireEvent.click(view.getByRole("button", { name: "去动力建模" }));
+    expect(onGoToKinetic).toHaveBeenCalledTimes(1);
   });
 
   it("offers to roll back once consumers use the release, and opens what it would do", async () => {

@@ -125,6 +125,15 @@ vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal)
   getOntologyIndex: getOntologyIndexMock,
 }));
 
+// Kinetic modeling is tested on its own.
+vi.mock("@/modules/bkn-project/components/kinetic/ProjectKinetic", () => ({
+  ProjectKinetic: ({ onGoToRelease }: { onGoToRelease: () => void }) => (
+    <button onClick={onGoToRelease} type="button">
+      kinetic page
+    </button>
+  ),
+}));
+
 // The concept extraction page is tested on its own.
 vi.mock("@/modules/bkn-project/components/concepts/ProjectConcepts", () => ({
   ProjectConcepts: ({
@@ -600,6 +609,13 @@ describe("ProjectWorkspaceScene", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /bknProject\.workspace\.nextStep/ }));
     expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/build");
+  });
+
+  it("shows kinetic modeling, which leads to the release page", async () => {
+    renderScene("kinetic");
+
+    fireEvent.click(await screen.findByRole("button", { name: "kinetic page" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/release");
   });
 
   it("opens a concept's item on the concept modeling page", async () => {

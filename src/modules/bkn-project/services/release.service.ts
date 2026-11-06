@@ -70,6 +70,7 @@ type BackendReview = {
     existing: BackendItem[] | null;
     only_additions: boolean;
     orphans: (BackendItem & { orphans: number })[] | null;
+    unimplemented_needs?: { id: string; kind: string; name: string }[] | null;
   };
   signature: string;
   version: string;
@@ -175,6 +176,11 @@ export function mapReview(review: BackendReview): ReleaseReview {
       orphans: (review.risks.orphans ?? []).map((orphan) => ({
         ...items([orphan])[0],
         orphans: orphan.orphans,
+      })),
+      unimplementedNeeds: (review.risks.unimplemented_needs ?? []).map(({ id, kind, name }) => ({
+        id,
+        kind,
+        name,
       })),
     },
     signature: review.signature,
@@ -554,7 +560,13 @@ async function mockReview(projectId: string, version: string): Promise<ReleaseRe
       networkId: `supply_chain_v${version.replaceAll(".", "_")}`,
       networkName: `Supply Chain · ${version}`,
     },
-    risks: { copies: 0, existing: [], onlyAdditions: true, orphans: [] },
+    risks: {
+      copies: 0,
+      existing: [],
+      onlyAdditions: true,
+      orphans: [],
+      unimplementedNeeds: [{ id: "n2", kind: "skill", name: "Late order triage" }],
+    },
     signature: `mock-${draft?.updateTime ?? 0}-${mockReleases.length}`,
     version,
   };

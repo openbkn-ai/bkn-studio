@@ -40,6 +40,7 @@ export function ReleasePublish({
   canPublish,
   onChanged,
   onGoToBuild,
+  onGoToKinetic,
   onOpenRegression,
   projectId,
   status,
@@ -54,6 +55,8 @@ export function ReleasePublish({
   /** Opens how the scenario questions did on the project's release. */
   /** Opens the build page, where indexes not ready yet are built. */
   onGoToBuild?: () => void;
+  /** Opens kinetic modeling, where needs not implemented yet are implemented. */
+  onGoToKinetic?: () => void;
   onOpenRegression: () => void;
   projectId: string;
   status: ProjectStatus;
@@ -196,6 +199,7 @@ export function ReleasePublish({
           canPublish={canPublish}
           onCancel={() => setReviewing(false)}
           onGoToBuild={onGoToBuild}
+          onGoToKinetic={onGoToKinetic}
           onPublished={() => {
             setReviewing(false);
             onChanged();

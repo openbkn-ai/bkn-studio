@@ -341,6 +341,7 @@ function CheckSection({
  */
 export function ProjectReleasePage({
   onGoToBuild,
+  onGoToKinetic,
   onGoToModel,
   onReleaseChanged,
   ownerIsCaller,
@@ -348,6 +349,8 @@ export function ProjectReleasePage({
 }: {
   /** Opens the build page, where the local indexes are built. */
   onGoToBuild?: () => void;
+  /** Opens kinetic modeling, where needs not implemented yet are implemented. */
+  onGoToKinetic?: () => void;
   onGoToModel: () => void;
   /** Something was published, switched or rolled back: the workspace header reads it again. */
   onReleaseChanged?: () => void;
@@ -475,6 +478,7 @@ export function ProjectReleasePage({
         baseNetworkId={project.knId}
         canPublish={canRun}
         onGoToBuild={onGoToBuild}
+        onGoToKinetic={onGoToKinetic}
         onChanged={() => {
           void load();
           void loadReleases();

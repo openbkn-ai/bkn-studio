@@ -13,6 +13,11 @@ export type {
 } from "@/modules/knowledge-network/contracts/scenes";
 export { KnowledgeNetworkListScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkListScene";
 export {
+  actionTypeCreatedState,
+  readActionTypeContext,
+} from "@/modules/knowledge-network/lib/action-type-context";
+export type { ActionTypeNavigationContext } from "@/modules/knowledge-network/lib/action-type-context";
+export {
   objectMetricCreatedState,
   readObjectMetricContext,
 } from "@/modules/knowledge-network/lib/object-metric-context";

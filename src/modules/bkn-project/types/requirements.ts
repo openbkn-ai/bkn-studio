@@ -40,10 +40,10 @@ export type RequirementCitation = {
 };
 
 /** The kinds of item a person adds, edits and removes, as the routes name them. */
-export type RequirementItemKind = "concepts" | "questions" | "rules" | "scenarios";
+export type RequirementItemKind = "concepts" | "logic_needs" | "questions" | "rules" | "scenarios";
 
 /** The kinds of item a person accepts or takes back after AI generated them. */
-export type ReviewedKind = "questions" | "scenarios";
+export type ReviewedKind = "logic_needs" | "questions" | "scenarios";
 
 /** A drafted object type or relation type, by its draft item id. */
 export type RequirementItemRef = { id: string; kind: string };
@@ -66,7 +66,6 @@ export type RequirementScenario = Cited &
     /** One of its questions may no longer fit the ontology. */
     ontologyChanged: boolean;
     actor: string;
-    capabilities: { definition: string; kind: string; name: string }[];
     decision: string;
     id: string;
     knowledge: string[];
@@ -108,6 +107,8 @@ export type RequirementQuestion = Cited &
     inputs: QuestionInput[] | null;
     /** `knowledge` (the ontology answers it) or `capability` (another team builds what it needs). */
     layer: string;
+    /** The kinetic needs it rests on, by id. */
+    logicNeedIds: string[];
     needs: RequirementItemRef[];
     /** `concepts` when the needs follow its concepts, `person` when someone set them. */
     needsSource: string;
@@ -125,6 +126,42 @@ export type RequirementQuestion = Cited &
     text: string;
     type: string;
   };
+
+/**
+ * What the model needs computed or done beyond what it stores: a metric, function, Skill, MCP
+ * tool, API, application or action type, with the object types it is on, the one it belongs to
+ * first.
+ */
+export type RequirementLogicNeed = Cited &
+  Reviewed & {
+    conceptIds: string[];
+    definition: string;
+    id: string;
+    /** `metric`, `function`, `skill`, `mcp_tool`, `api`, `app` or `action_type`. */
+    kind: string;
+    name: string;
+    objectTypeIds: string[];
+    properties: { objectTypeId: string; property: string }[];
+    scenarioIds: string[];
+    /** `documents`, `analysis`, `scenarios` (read from an older specification) or `person`. */
+    source: string;
+    /** `atomic`, `derived` or `composite`, a metric only. */
+    suggestedMetricType: string;
+  };
+
+/** A background run on the specification: extracting concepts or analysing kinetic needs. */
+export type RequirementRun = {
+  byId: string;
+  /** Why it failed, as a code; drafting's codes. */
+  error: string;
+  retried: boolean;
+  startTime: number;
+  /** The documents or their types changed since it ran. */
+  stale: boolean;
+  /** `running`, `ready` or `failed`. */
+  status: string;
+  updateTime: number;
+};
 
 export type RequirementRule = Omit<Cited, "supplementReason"> & {
   compilesTo: string;
@@ -175,10 +212,13 @@ export type RequirementSpec = {
   choices: RequirementChoice[];
   concepts: RequirementConcept[];
   conflicts: RequirementConflict[];
+  logicNeeds: RequirementLogicNeed[];
   questions: RequirementQuestion[];
   /** Drafted items the checks dropped, with why. */
   rejected: { kind: string; reason: string; text: string }[];
   rules: RequirementRule[];
+  /** The runs that write it besides drafting; null for one never run. */
+  runs: { concepts: RequirementRun | null; kinetic: RequirementRun | null };
   scenarios: RequirementScenario[];
   tablesOmitted: number;
 };

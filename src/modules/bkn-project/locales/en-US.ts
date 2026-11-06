@@ -1147,6 +1147,9 @@ export const bknProjectEnUS = {
         conceptsSubCore: "Concepts drawn from tables and requirement documents",
         conceptsAction: "Judge them",
         kineticSub: "How far metrics, functions, skills and the like are implemented",
+        kineticValue: "{{linked}} / {{total}}",
+        kineticOpen: "{{count}} to implement",
+        kineticDone: "All implemented",
         kineticAction: "View the kinetic model",
         buildSub: "Structured indexes and unstructured instances",
         buildSubCore: "Indexes of structured objects",
@@ -1514,6 +1517,200 @@ export const bknProjectEnUS = {
         loadFailed: "The requirement documents cannot be read right now.",
       },
     },
+    kinetic: {
+      intro:
+        "Find what the concept model needs computed or done beyond what it stores: metrics, functions, Skills, and action types with the APIs and MCP tools they run. Link what the knowledge network already has; metrics and action types can be built in the knowledge network and are linked when you come back.",
+      liveNote:
+        "Metrics and action types can be created once their object types are in the live knowledge network: a new project records them first and implements them after its first release. After creating something live, commit the live changes before the next release.",
+      analyze: "Analyze kinetic needs",
+      reanalyze: "Analyze again",
+      startOver: "Start over",
+      startOverTitle: "Analyze everything again?",
+      startOverContent:
+        "Needs you accepted, changed or linked are not kept, only those scenario questions rest on, and the analysis starts again. To refresh only what nobody accepted, use Analyze again.",
+      modelNotConfirmed: "The concept model is not confirmed; confirm it to analyze kinetic needs.",
+      goToModel: "Go to concept modeling",
+      running:
+        "Analyzing which metrics, functions and Skills the concept model and the requirement documents need; this usually takes a minute or two.",
+      failed: "The kinetic needs could not be analyzed: {{reason}}",
+      runError: {
+        agent_rejected: "the request was refused; check the documents and try again.",
+        agent_unavailable: "the analysis is unavailable right now; analyze again later.",
+        agent_failed: "the analysis did not finish; analyze again.",
+        agent_timeout: "the analysis took too long; analyze again.",
+        output_invalid: "the result was incomplete; analyze again.",
+        interrupted: "the needs were changed while it ran; analyze again.",
+        other: "analyze again.",
+      },
+      runStale:
+        "The requirement documents or their types changed since the last analysis; analyze again.",
+      loadFailed: "The kinetic needs cannot be read right now",
+      liveUnavailable:
+        "The live knowledge network cannot be read right now; what is implemented may be incomplete.",
+      none: "No kinetic needs yet. Analyzing lists the metrics, functions and Skills needed; you can also add them.",
+      noneFiltered: "No kinetic need matches the filters.",
+      stats: {
+        implemented: "Implemented",
+        pending: "To implement",
+        waitingRelease: "After the first release",
+      },
+      filter: {
+        kind: "Kind",
+        state: "State",
+        all: "All",
+      },
+      columns: {
+        name: "Name",
+        kind: "Kind",
+        source: "Basis",
+        objects: "Object types",
+        state: "Implementation",
+        actions: "Actions",
+      },
+      kind: {
+        metric: "Metric",
+        function: "Function",
+        skill: "Skill",
+        mcp_tool: "MCP tool",
+        api: "API",
+        app: "Application",
+        action_type: "Action type",
+        other: "Other",
+      },
+      source: {
+        documents: "Requirement documents",
+        documentsFrom: "From {{name}}",
+        analysis: "AI analysis",
+        scenarios: "Business scenarios",
+        person: "Added by hand",
+        other: "Other",
+      },
+      state: {
+        implemented: "Implemented",
+        broken: "Implementation gone",
+        pending: "To implement",
+        waitingRelease: "Awaits first release",
+        recordOnly: "Recorded only",
+      },
+      cta: {
+        view: "View",
+        match: "Match or implement",
+        rematch: "Match again",
+      },
+      review: {
+        pending: "AI generated, to review",
+        accept: "Accept",
+        acceptItem: "Accept {{name}}",
+        unaccept: "Unaccept",
+        unacceptItem: "Unaccept {{name}}",
+        acceptAll: "Accept all ({{count}})",
+        acceptAll_one: "Accept all ({{count}})",
+        acceptAll_other: "Accept all ({{count}})",
+      },
+      editing: {
+        add: "Add kinetic need",
+        addTitle: "Add a kinetic need",
+        editTitle: "Edit the kinetic need",
+        edit: "Edit",
+        remove: "Remove",
+        editItem: "Edit {{name}}",
+        removeItem: "Remove {{name}}",
+        removeTitle: "Remove {{name}}?",
+        removeConfirm:
+          "Scenario questions no longer rest on it. Its implementation in the knowledge network stays.",
+        required: "Fill this in",
+        stale:
+          "Someone just changed the kinetic needs; they were read again, make the change once more.",
+      },
+      fields: {
+        name: "Name",
+        kind: "Kind",
+        definition: "Business definition",
+        objects: "Object types",
+        objectsHint: "The first is the one it belongs to.",
+        nothingDrafted:
+          "The ontology draft has no object type to choose yet; draft it in concept modeling first.",
+        metricType: "Metric type",
+      },
+      metricType: {
+        atomic: "Atomic metric",
+        derived: "Derived metric",
+        composite: "Composite metric",
+        other: "Other",
+      },
+      panel: {
+        definition: "Business definition",
+        objects: "Object types",
+        usedBy: "Used by {{count}} scenario questions",
+        usedBy_one: "Used by {{count}} scenario question",
+        usedBy_other: "Used by {{count}} scenario questions",
+        implementation: "Current implementation",
+        status: "Status: {{status}}",
+        version: "Version: {{version}}",
+        owner: "Belongs to: {{name}}",
+        view: "View",
+        viewItem: "View {{name}}",
+        unlink: "Unlink",
+        unlinkTitle: "Unlink {{name}}?",
+        unlinkContent:
+          "The need goes back to be implemented. The implementation in the knowledge network stays.",
+        unlinked: "Unlinked",
+        implementationReason: {
+          missing: "The knowledge network no longer has this implementation; match it again.",
+          forbidden: "You may not view this implementation.",
+          unavailable: "This implementation cannot be read right now.",
+          other: "This implementation cannot be read right now.",
+        },
+        candidates: "Close matches the knowledge network has",
+        candidatesNone: "No close match found.",
+        candidatesFailed: "Close matches cannot be read right now",
+        candidateReason: {
+          same_name: "Same name",
+          similar_name: "Similar name",
+          same_object_type: "Same object type",
+          other: "Related",
+        },
+        connect: "Link",
+        connectItem: "Link {{name}}",
+        guide: {
+          metric:
+            "Opens the knowledge network's metric assistant with the name, business definition and object types filled in. Save it and come back: it is linked for you.",
+          action_type:
+            "Opens the knowledge network's action type form with the name, object type and description filled in; choose the API tool or MCP tool it runs. Action types have no AI assistant. Save it and come back: it is linked for you.",
+          function:
+            "A place to develop functions comes later. Record the need now, or link one that exists.",
+          skill:
+            "A place to develop Skills comes later. Record the need now, or link one that exists.",
+          mcp_tool:
+            "Choose from the MCP tools the knowledge network has. A place to develop them comes later.",
+          api: "Choose from the APIs the knowledge network has. A place to develop them comes later.",
+          app: "An application is recorded only; it links to no implementation.",
+          other: "Choose its kind first, then implement it.",
+        },
+        waitingRelease:
+          "Its object types are not in the knowledge network yet. Record it now; it can be implemented after the first release.",
+        noObjects: "Give it an object type before implementing it.",
+        metricHidden: "This edition has no metrics; you can record the need.",
+        metricLocked:
+          "Metrics come with the Professional edition; upgrade to implement them. You can record the need now.",
+        upgrade: "About upgrading",
+        close: "Close",
+        implement: {
+          metric: "Implement the metric",
+          action_type: "Set up the action type",
+        },
+      },
+      handOff: {
+        title: "The project needs {{name}}",
+        returnLabel: "Back to kinetic modeling",
+        metricPrompt: "Create the metric {{name}}: {{definition}} Object types: {{objects}}.",
+        metricPromptShort: "Create the metric {{name}}. Object types: {{objects}}.",
+      },
+      linked: "Linked {{name}}",
+      commitHint:
+        "The live knowledge network has new changes. Before the next release, commit the live changes on the release page first.",
+      goToRelease: "Go to release",
+    },
     requirements: {
       export: {
         button: "Export",
@@ -1784,6 +1981,10 @@ export const bknProjectEnUS = {
           needsHint:
             "Once changed, you set what this question needs; it no longer follows its concepts.",
           followConcepts: "Follow the concepts again",
+          logicNeeds: "Kinetic needs it uses",
+          logicNeedsHint:
+            "A question that uses kinetic needs is answered only with these calculations or operations.",
+          noLogicNeeds: "No kinetic needs to choose yet; analyze or add them in kinetic modeling.",
           nothingDrafted:
             "The ontology draft has no object type or relation type to choose yet; draft it in concept modeling first.",
         },
@@ -1853,6 +2054,12 @@ export const bknProjectEnUS = {
         InvalidDocumentType: "That document type is not valid.",
         TooManyDocuments: "A project holds at most 20 documents.",
         DocumentTooLarge: "The file is too large; each file can be at most 1 MB.",
+        ModelNotConfirmed: "The concept model is not confirmed; confirm it and try again.",
+        ConceptsNotExtracted:
+          "The concepts of the requirement documents are not extracted yet; extract them first.",
+        ImplementationUnavailable:
+          "The knowledge network cannot be reached right now; try again later.",
+        InvalidItem: "What was filled in cannot be used; check it and save again.",
         other: "That did not work; try again later.",
       },
       docType: {
@@ -1927,6 +2134,12 @@ export const bknProjectEnUS = {
           concepts: "{{names}} (from the concepts)",
           person: "{{names}} (set by hand)",
         },
+        logicNeeds: "Kinetic needs",
+        logicNeedState: {
+          implemented: "Implemented",
+          open: "Not implemented",
+        },
+        logicNeedMissing: "A removed kinetic need",
       },
       layer: {
         knowledge: "Knowledge",
@@ -1951,15 +2164,6 @@ export const bknProjectEnUS = {
         trigger: "When",
         decision: "Decision",
         knowledge: "Knowledge needed",
-        capabilities: "Capabilities needed",
-        capability: "{{kind}}: {{name}}",
-      },
-      capabilityKind: {
-        metric: "Metric",
-        function: "Function",
-        skill: "Skill",
-        app: "App",
-        other: "Capability",
       },
       concepts: {
         none: "No candidate concepts yet.",
@@ -2097,6 +2301,7 @@ export const bknProjectEnUS = {
           check: "Data check",
           index: "Local indexes",
           baseline: "Live base version",
+          metric_owners: "Metric object types",
           other: "Another check",
         },
         reason: {
@@ -2134,6 +2339,13 @@ export const bknProjectEnUS = {
           branch_behind: "A newer version is live; bring it into the project first.",
           branch_behind_version:
             "v{{version}} is live and the project is based on an earlier version; bring it in first.",
+          metric_owner_missing:
+            "The object types of {{count}} metrics are not in this release, so the knowledge network refuses to import them. Bring those object types back, or change the metrics in the knowledge network.",
+          metric_owner_missing_one:
+            "The object type of {{count}} metric is not in this release, so the knowledge network refuses to import it. Bring that object type back, or change the metric in the knowledge network.",
+          metric_owner_missing_other:
+            "The object types of {{count}} metrics are not in this release, so the knowledge network refuses to import them. Bring those object types back, or change the metrics in the knowledge network.",
+          metricOwnerItem: "Metric {{name}} belongs to object type {{owner}}",
           other: "This check did not pass.",
         },
         accept: {
@@ -2177,6 +2389,13 @@ export const bknProjectEnUS = {
         noChanges: "No object type or relation type changes against the live version.",
         risksTitle: "Effect on what is live",
         onlyAdditions: "This release only adds content; nothing live is changed.",
+        unimplementedNeeds:
+          "{{count}} kinetic needs are not implemented; questions resting on them may go unanswered. This does not stop the release.",
+        unimplementedNeeds_one:
+          "{{count}} kinetic need is not implemented; questions resting on it may go unanswered. This does not stop the release.",
+        unimplementedNeeds_other:
+          "{{count}} kinetic needs are not implemented; questions resting on them may go unanswered. This does not stop the release.",
+        goToKinetic: "Go to kinetic modeling",
         existing: "Live content changed or removed",
         orphans: "{{count}} records of relation type {{name}} do not find their record.",
         orphans_one: "{{count}} record of relation type {{name}} does not find its record.",

@@ -39,6 +39,7 @@ import {
 } from "@/modules/bkn-project/components/requirements/RequirementSpecViews";
 import { RequirementsExport } from "@/modules/bkn-project/components/requirements/RequirementsExport";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
+import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
 import {
   projectErrorCode,
   projectErrorDetails,
@@ -56,6 +57,7 @@ import {
   reviewRequirements,
   setConceptMapping,
 } from "@/modules/bkn-project/services/requirements.service";
+import type { LogicNeedView } from "@/modules/bkn-project/types/kinetic";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type {
   RequirementChoice,
@@ -106,6 +108,8 @@ export function ProjectRequirements({
   // undefined while loading, null before the first drafting.
   const [requirements, setRequirements] = useState<Requirements | null | undefined>(undefined);
   const [documents, setDocuments] = useState<RequirementDocument[]>([]);
+  // The kinetic needs as the live network implements them; null when they could not be read.
+  const [logicNeeds, setLogicNeeds] = useState<LogicNeedView[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [drafting, setDrafting] = useState(false);
   // Generating was refused because no object type is adopted yet.
@@ -150,6 +154,17 @@ export function ProjectRequirements({
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Read once: which needs are implemented changes in the live network, not on this page.
+  useEffect(() => {
+    let active = true;
+    getLogicNeeds(project.id)
+      .then((next) => active && setLogicNeeds(next.needs))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [project.id]);
 
   // Needs and concepts name drafted items by id; the draft gives the names people know.
   useEffect(() => {
@@ -500,6 +515,7 @@ export function ProjectRequirements({
                 <QuestionsView
                   drafted={drafted}
                   itemName={itemName}
+                  logicNeeds={logicNeeds}
                   projectId={project.id}
                   spec={spec}
                 />
