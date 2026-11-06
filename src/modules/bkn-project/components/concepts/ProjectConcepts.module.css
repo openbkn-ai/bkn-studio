@@ -1,0 +1,85 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* The funnel's figures on one row, wrapping at narrow widths. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.stat {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.stat dt {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.stat dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.name {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.verdict {
+  min-width: 112px;
+}
+
+.merge {
+  min-width: 140px;
+}
+
+.nowrap {
+  white-space: nowrap;
+}

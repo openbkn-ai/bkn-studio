@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RelationSuggestion, RelationSuggestions } from "@/modules/bkn-project/types/draft";
@@ -77,11 +77,12 @@ function renderEntry(editable = true) {
   return handlers;
 }
 
+/** Opens the suggestions of the customers from the notice of objects nothing connects. */
 async function openCustomers() {
-  fireEvent.click(
-    await screen.findByRole("button", { name: 'bknProject.relationSuggestions.entry:{"count":1}' }),
-  );
-  fireEvent.click(await screen.findByRole("button", { name: "Customer" }));
+  expect(
+    await screen.findByText('bknProject.relationSuggestions.gap:{"count":1}'),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Customer" }));
 }
 
 const originalMatchMedia = window.matchMedia;
@@ -185,18 +186,17 @@ describe("RelationSuggestionsEntry", () => {
     ]);
     mocks.ask.mockImplementationOnce(() => new Promise(() => undefined));
     renderEntry();
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: 'bknProject.relationSuggestions.entry:{"count":2}',
-      }),
-    );
-    fireEvent.click(await screen.findByRole("button", { name: "Customer" }));
+    expect(
+      await screen.findByText('bknProject.relationSuggestions.gap:{"count":2}'),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Customer" }));
     fireEvent.click(
       await screen.findByRole("button", { name: "bknProject.relationSuggestions.ask" }),
     );
     expect(await screen.findByText("bknProject.relationSuggestions.asking")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Order" }));
+    // Another object, chosen in the drawer.
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Order" }));
     expect(
       await screen.findByRole("button", { name: "bknProject.relationSuggestions.ask" }),
     ).toBeEnabled();

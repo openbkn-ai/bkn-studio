@@ -17,6 +17,7 @@ import { isRequestNotFound } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ProjectBuild } from "@/modules/bkn-project/components/build/ProjectBuild";
+import { ProjectConcepts } from "@/modules/bkn-project/components/concepts/ProjectConcepts";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { ProjectKinetic } from "@/modules/bkn-project/components/kinetic/ProjectKinetic";
 import { ProjectModel } from "@/modules/bkn-project/components/ProjectModel";
@@ -36,6 +37,7 @@ import {
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
 import {
   nextProjectSection,
+  projectObjectTypePath,
   projectResourcesPath,
   projectSectionPath,
   type ProjectSection,
@@ -244,6 +246,20 @@ export function ProjectWorkspaceScene({
                   onGoToKinetic={() => go("kinetic")}
                   onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
                   onReleaseChanged={() => void load()}
+                  ownerIsCaller={ownerIsCaller}
+                  project={project}
+                />
+              ) : section === "concepts" ? (
+                <ProjectConcepts
+                  onGoToModel={() => go("model")}
+                  onGoToResources={() => goToResources()}
+                  onOpenItem={(item) =>
+                    void navigate(
+                      item.kind === "object_types"
+                        ? projectObjectTypePath(project.id, item.id)
+                        : `${projectSectionPath(project.id, "model")}?tab=${item.kind === "relation_types" ? "relations" : "valueTypes"}`,
+                    )
+                  }
                   ownerIsCaller={ownerIsCaller}
                   project={project}
                 />

@@ -20,7 +20,7 @@ import {
   documentObjectPreview,
 } from "@/modules/bkn-project/components/ai/document-revisions";
 import { applyObjectRevisions, objectPreview } from "@/modules/bkn-project/components/ai/revisions";
-import { adoptBlocker, draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
+import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import {
   draftSave,
   editorDataSource,
@@ -54,7 +54,6 @@ import styles from "./ObjectTypePanel.module.css";
 import { DeriveDocumentObject } from "./DeriveDocumentObject";
 import { DocumentFieldsEditor } from "./DocumentFieldsEditor";
 import { documentSave } from "./document-values";
-import { ReviewActions, type CandidateReview } from "./ReviewActions";
 
 const PREFIX = "bknProject.objectEditor";
 const DESCRIPTION_MAX_LENGTH = 1000;
@@ -101,7 +100,6 @@ export function ObjectTypePanel({
   onReload,
   onSaved,
   project,
-  review,
 }: {
   /** The draft the panel opens on; later reads of it do not reset what is being edited. */
   draft: Draft;
@@ -112,7 +110,6 @@ export function ObjectTypePanel({
   onSaved: (draft: Draft) => void;
   project: Project;
   /** Going through the candidates: confirming this one, then the next. */
-  review?: CandidateReview;
 }) {
   const { t } = useTranslation();
   // The professional edition brings its own editor for document fields; until it does, the
@@ -362,17 +359,6 @@ export function ObjectTypePanel({
   // Leaving the project's page with changes not saved asks first, and can save them here.
   useUnsavedChanges(changed, async () => (await save()) !== null);
 
-  // Before deciding on the candidate, what was changed here is saved; the decision follows it.
-  const prepare = async () => {
-    if (!base) {
-      return null;
-    }
-    if (!changed) {
-      return base.draft.updateTime;
-    }
-    return (await save())?.updateTime ?? null;
-  };
-
   const reload = async () => {
     const next = await onReload();
     if (next) {
@@ -427,15 +413,6 @@ export function ObjectTypePanel({
         <span className={styles.title}>{base?.objectType.name ?? t(`${PREFIX}.title`)}</span>
         {changed ? <span className={styles.unsaved}>{t(`${PREFIX}.unsaved`)}</span> : null}
         <span className={styles.actions}>
-          {review && base ? (
-            <ReviewActions
-              prepare={prepare}
-              review={review}
-              adoptDisabled={
-                adoptBlocker(base.draft, "object_types", base.objectType) === "relationNeedsRepair"
-              }
-            />
-          ) : null}
           {base ? (
             <AppButton aria-pressed={asking} onClick={() => setAsking(!asking)}>
               {t(`${PREFIX}.ask`)}

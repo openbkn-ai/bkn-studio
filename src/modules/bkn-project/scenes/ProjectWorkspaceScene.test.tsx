@@ -134,6 +134,24 @@ vi.mock("@/modules/bkn-project/components/kinetic/ProjectKinetic", () => ({
   ),
 }));
 
+// The concept extraction page is tested on its own.
+vi.mock("@/modules/bkn-project/components/concepts/ProjectConcepts", () => ({
+  ProjectConcepts: ({
+    onOpenItem,
+  }: {
+    onOpenItem: (item: { id: string; kind: string }) => void;
+  }) => (
+    <>
+      <button onClick={() => onOpenItem({ id: "orders", kind: "object_types" })} type="button">
+        open object
+      </button>
+      <button onClick={() => onOpenItem({ id: "r1", kind: "relation_types" })} type="button">
+        open relation
+      </button>
+    </>
+  ),
+}));
+
 // The build page's tabs are tested on their own.
 vi.mock("@/modules/bkn-project/components/build/ProjectBuild", () => ({
   ProjectBuild: () => <div>build page</div>,
@@ -598,6 +616,20 @@ describe("ProjectWorkspaceScene", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "kinetic page" }));
     expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/release");
+  });
+
+  it("opens a concept's item on the concept modeling page", async () => {
+    renderScene("concepts");
+
+    fireEvent.click(await screen.findByRole("button", { name: "open object" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/model?object=orders");
+  });
+
+  it("opens a concept's relation on the modeling page's relations", async () => {
+    renderScene("concepts");
+
+    fireEvent.click(await screen.findByRole("button", { name: "open relation" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/model?tab=relations");
   });
 
   it("shows the build page, which goes on to the release", async () => {

@@ -22,6 +22,7 @@ import {
   originPhrase,
   relationsWithUnadoptedEnds,
   verificationPhrase,
+  relationBasis,
 } from "./evidence";
 
 const P = "bknProject.model.evidence";
@@ -166,5 +167,23 @@ describe("left-out reasons", () => {
     expect(propertyTypeKey("string")).toBe("bknProject.model.propertyType.text");
     expect(propertyTypeKey("timestamp")).toBe("bknProject.model.propertyType.datetime");
     expect(propertyTypeKey("geo_hash")).toBe("bknProject.model.propertyType.other");
+  });
+});
+
+describe("relationBasis", () => {
+  it("reads a document relation by how its documents map it before its origin", () => {
+    expect(
+      relationBasis({ document: {}, documentMapping: { mode: "linking" }, origin: "document" }),
+    ).toBe("business_identity");
+    expect(
+      relationBasis({ document: {}, documentMapping: { mode: "same_document" }, origin: "manual" }),
+    ).toBe("same_document");
+    expect(relationBasis({ document: {}, origin: "document" })).toBe("document");
+  });
+
+  it("reads a table relation by its origin, and an origin it does not know as another basis", () => {
+    expect(relationBasis({ origin: "foreign_key" })).toBe("foreign_key");
+    expect(relationBasis({ documentMapping: null, origin: "link_table" })).toBe("link_table");
+    expect(relationBasis({ origin: "something_new" })).toBe("other");
   });
 });

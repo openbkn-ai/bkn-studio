@@ -363,6 +363,114 @@ export const bknProjectEnUS = {
       comingSoon: "This page is under construction",
       comingSoonDescription: "A later version brings the full feature here.",
     },
+    concepts: {
+      summary:
+        "Concepts drawn from {{tables}} tables, {{documents}} knowledge-base files and {{requirements}} requirement concepts.",
+      summaryCore:
+        "Concepts drawn from {{tables}} tables and {{requirements}} requirement concepts.",
+      reextract: "Extract again",
+      stats: {
+        sources: "Sources",
+        concepts: "Candidate concepts",
+        inModel: "In the model",
+      },
+      verdict: {
+        object: "Object",
+        event: "Event",
+        property: "Property",
+        values: "Value list",
+        relation: "Relation",
+        kinetic: "Kinetic",
+        none: "Not included",
+      },
+      state: {
+        pending: "To confirm",
+        blocked: "Needs action",
+        judged: "Confirmed",
+        in_model: "In the model",
+      },
+      filter: {
+        all: "All",
+      },
+      pending:
+        "{{count}} concepts to confirm. Judge them one by one or accept all suggestions; you can change a judgment later.",
+      pending_one:
+        "{{count}} concept to confirm. Judge it or accept the suggestion; you can change a judgment later.",
+      pending_other:
+        "{{count}} concepts to confirm. Judge them one by one or accept all suggestions; you can change a judgment later.",
+      pendingAdopted:
+        "Those already adopted but not confirmed are written as they are when the model is confirmed; judge any you do not want as not included.",
+      acceptAll: "Accept all suggestions",
+      acceptTitle: "Accept all suggestions?",
+      acceptContent:
+        "Every concept to confirm is judged as suggested when extracting: those suggested in are adopted, the others left out. Those without an identity or with an end not adopted are skipped for you. You can still change each judgment later.",
+      accepted: "Accepted {{count}} suggestions",
+      acceptedSkipped: "Accepted {{accepted}} suggestions; {{count}} need you",
+      goToModel: "Go to concept modeling",
+      empty: {
+        title: "No concepts yet",
+        description:
+          "Concepts are drawn from the requirements and sources. Set up the sources first, then extract the concepts.",
+        action: "Go to requirements and sources",
+      },
+      drafting: "Extracting concepts…",
+      loadFailed: "The concepts cannot be read right now",
+      judgeFailed: "The judgment was not saved. Try again later.",
+      stale: "Someone just changed the model. It was read again; judge once more.",
+      columns: {
+        concept: "Concept",
+        sources: "Sources",
+        verdict: "Judgment",
+        reason: "Why",
+        destination: "Goes to",
+        state: "Status",
+        actions: "Actions",
+      },
+      source: {
+        table: "Table: {{name}}",
+        document: "Knowledge-base file",
+        requirement: "Requirement: {{name}}",
+      },
+      because: {
+        table_entity: "From a business table",
+        code_table: "A code table: it only gives values, used by fields",
+        foreign_key: "A relation the tables declare",
+        name_match: "Suggested by fields of the same name",
+        stem_match: "Suggested by fields of similar names",
+        link_table: "Through a link table",
+        manual: "Made by you",
+        document: "Found in knowledge-base files",
+        requirement: "Named in the requirement documents",
+        other: "Suggested when extracting",
+      },
+      destination: {
+        model: "Into the concept model",
+        property: "As a property of an object",
+        kinetic: "Into the kinetic model",
+        none: "Not into the model",
+        noItem: "No data source yet",
+      },
+      blocked: {
+        needs_identity: "Choose its identity first",
+        end_not_adopted: "Adopt the objects at both ends first",
+        repair: "Fix this relation first",
+        action: "Fix it",
+      },
+      merged: "Merged: {{names}}",
+      confirm: "Confirm",
+      confirmOf: "Confirm the judgment of “{{name}}”",
+      mergeInto: "Merge into…",
+      unmerge: "Take out “{{name}}”",
+      verdictOf: "Judgment of “{{name}}”",
+      mergeIntoOf: "Merge “{{name}}” into",
+      mergeFailed: "The merge was not saved. Try again later.",
+      readOnly: "Only the project owner can judge concepts",
+      history: {
+        judge: "Judged the concept “{{name}}” as {{verdict}}",
+        merge: "Merged the concept “{{name}}” into “{{into}}”",
+        unmerge: "Took the concept “{{name}}” out of its merge",
+      },
+    },
     build: {
       tabs: {
         structured: "Structured index build",
@@ -626,66 +734,14 @@ export const bknProjectEnUS = {
           "{{count}} relation types are adopted although an object type they connect is not. Unadopt them, or adopt the object types at both ends first.",
       },
       candidates: {
-        catalog: "Filter by catalog",
-        allCatalogs: "All catalogs",
-        acceptSuggestions: "Accept all suggestions",
-        acceptTitle: "Confirm every candidate as drafting suggested?",
-        acceptContent:
-          "Candidates nobody confirmed are confirmed as drafting suggested them: adopted where it suggested adopting, left out where it did not. Object types that need an identifier and relations whose ends are not adopted are skipped, for you to settle.",
-        accepted: "Confirmed {{count}} candidates.",
-        accepted_one: "Confirmed {{count}} candidate.",
-        accepted_other: "Confirmed {{count}} candidates.",
-        acceptedSkipped: "Confirmed {{accepted}}; skipped {{count}} that need you to settle them.",
-        acceptedSkipped_one:
-          "Confirmed {{accepted}}; skipped {{count}} that needs you to settle it.",
-        acceptedSkipped_other:
-          "Confirmed {{accepted}}; skipped {{count}} that need you to settle them.",
-        allReviewed: "Every candidate is confirmed.",
-        concept: "Concept: {{term}}",
-        source: "{{name}} · {{rows}} rows",
-        loadFailed: "Failed to load the candidates",
-        columns: {
-          name: "Candidate",
-          state: "State",
-          marks: "Marks",
-          source: "Source table",
-        },
-        kind: {
-          object_types: "Object type",
-          relation_types: "Relation type",
-        },
-        state: {
-          pending: "To confirm",
-          adopted: "Adopted",
-          excluded: "Left out",
-        },
-        mark: {
-          repair: "Needs relationship repair",
-          needed: "Needed by requirements",
-          added: "Added catalog",
-          identity: "Needs an identifier",
-          ends: "Ends not adopted",
-        },
-        review: {
-          adoptNext: "Adopt and next",
-          excludeNext: "Leave out and next",
-          next: "Next",
-          excludeTitle: "Leave out “{{name}}”",
-          reason: "Reason (optional)",
-          reasonPlaceholder: "For example: this table is a log, not a business object",
-          confirm: "Leave out",
-        },
         unreviewed:
-          "{{count}} candidates were not confirmed one by one; confirming the draft takes them as they are adopted now.",
+          "{{count}} concepts are not confirmed yet; confirming the model takes them as they are adopted now.",
         unreviewed_one:
-          "{{count}} candidate was not confirmed one by one; confirming the draft takes it as it is adopted now.",
+          "{{count}} concept is not confirmed yet; confirming the model takes it as it is adopted now.",
         unreviewed_other:
-          "{{count}} candidates were not confirmed one by one; confirming the draft takes them as they are adopted now.",
+          "{{count}} concepts are not confirmed yet; confirming the model takes them as they are adopted now.",
       },
       tabs: {
-        review: "To confirm {{count}}",
-        review_one: "To confirm {{count}}",
-        review_other: "To confirm {{count}}",
         objects: "Object types {{count}}",
         objects_one: "Object type {{count}}",
         objects_other: "Object types {{count}}",
@@ -714,7 +770,8 @@ export const bknProjectEnUS = {
         relationType: "Relation type",
         ends: "Source → Target",
         cardinality: "Correspondence",
-        evidence: "Evidence",
+        basis: "Basis",
+        confidence: "Confidence",
         valueType: "Value type",
         baseType: "Base type",
         values: "Values",
@@ -724,6 +781,18 @@ export const bknProjectEnUS = {
         reason: "Reason",
         table: "Table",
       },
+      basis: {
+        foreign_key: "Foreign key",
+        name_match: "Same field name",
+        stem_match: "Similar field names",
+        link_table: "Link table",
+        manual: "Made by you",
+        business_identity: "Same business number",
+        same_document: "Within one document",
+        document: "Found in documents",
+        other: "Other basis",
+      },
+      basisThrough: "Through {{table}}",
       identityPending: "Waiting for you",
       cardinality: {
         oneToOne: "One to one",
@@ -1101,9 +1170,11 @@ export const bknProjectEnUS = {
       },
     },
     relationSuggestions: {
-      entry: "Unconnected objects {{count}}",
-      entry_one: "Unconnected object {{count}}",
-      entry_other: "Unconnected objects {{count}}",
+      gap: "{{count}} adopted objects have no relation yet, so questions across objects may go unanswered. Choose one to see how to connect it:",
+      gap_one:
+        "{{count}} adopted object has no relation yet, so questions across objects may go unanswered. Choose it to see how to connect it:",
+      gap_other:
+        "{{count}} adopted objects have no relation yet, so questions across objects may go unanswered. Choose one to see how to connect it:",
       allConnected: "Every adopted object is connected",
       title: "Connect unconnected objects",
       hint: "These objects are adopted, but no adopted relation connects them yet. Choose one to see how it could be connected.",
