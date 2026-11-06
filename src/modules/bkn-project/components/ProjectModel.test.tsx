@@ -242,6 +242,8 @@ describe("ProjectModel", () => {
       getDraftMock.mockResolvedValue(null);
       renderModel({ catalogIds: [] }, owner);
       expect(await screen.findByText(key)).toBeInTheDocument();
+      // Extracting from documents starts on the concepts page, not here.
+      expect(screen.queryByText("document modeling extension")).not.toBeInTheDocument();
       if (mode !== "enabled" || !owner)
         expect(screen.queryByText("bknProject.documentEditor.sourcesHint")).not.toBeInTheDocument();
     },
