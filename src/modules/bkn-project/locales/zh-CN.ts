@@ -1463,6 +1463,7 @@ export const bknProjectZhCN = {
         value_not_in_text: "问法里没有写出资料给的值",
         value_outside_slot: "问法里出现了没有依据的数字、日期或编码",
         check_timeout: "核对超时",
+        data_not_built: "文档数据还没构建，构建完成后再核对",
         table_missing: "测试所问的数据表已被删除",
         other: "没有通过核对",
       },

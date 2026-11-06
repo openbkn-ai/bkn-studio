@@ -1582,6 +1582,7 @@ export const bknProjectEnUS = {
         value_not_in_text: "The test question does not say a value the documents gave",
         value_outside_slot: "The test question says a number, date or code with no basis",
         check_timeout: "The check took too long",
+        data_not_built: "The document data is not built yet; check again after the build",
         table_missing: "The table this test asks about was deleted",
         other: "It did not pass the check",
       },
