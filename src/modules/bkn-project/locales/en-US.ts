@@ -1205,6 +1205,7 @@ export const bknProjectEnUS = {
         undecidedTitle_other:
           "{{count}} items were not adopted in drafting and nobody decided on them",
         undecidedAccept: "Leave these items out for now",
+        undecidedItem: "{{name}}: {{because}}",
         neededBy: "Left out, these questions cannot be answered:",
         partialTitle: "{{count}} tables could not be read, so drafting left them out",
         partialTitle_one: "{{count}} table could not be read, so drafting left it out",

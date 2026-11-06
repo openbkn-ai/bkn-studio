@@ -293,7 +293,14 @@ export function ConfirmDraft({
                 </div>
                 <ul className={styles.confirmList}>
                   {undecided.map((item) => (
-                    <li className={styles.confirmItem} key={`${item.kind}/${item.itemId}`}>
+                    <li
+                      aria-label={t("bknProject.confirm.dialog.undecidedItem", {
+                        because: pendingBecauseText(t, item.because),
+                        name: item.name,
+                      })}
+                      className={styles.confirmItem}
+                      key={`${item.kind}/${item.itemId}`}
+                    >
                       <span>{item.name}</span>
                       <span className={styles.confirmMeta}>
                         <span>
