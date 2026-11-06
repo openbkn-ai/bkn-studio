@@ -564,7 +564,7 @@ export function ProjectModel({
           }
           description={t(
             noCatalogs && KnowledgeBaseModel && kbMode === "enabled" && ownerIsCaller
-              ? "bknProject.documentEditor.sourcesHint"
+              ? "bknProject.model.empty.knowledgeBaseSources"
               : noCatalogs
                 ? ownerIsCaller
                   ? "bknProject.model.empty.noCatalogs"

@@ -20,6 +20,20 @@ import {
   type RelationTypeMappingFormValues,
 } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor";
 
+// Keys must not end in _one: i18next would read them as plural forms.
+const CARDINALITIES: Record<string, string> = {
+  many_to_many: "manyToMany",
+  many_to_one: "manyToOne",
+  one_to_many: "oneToMany",
+  one_to_one: "oneToOne",
+};
+
+/** Translation key of a relation's cardinality, or undefined for one the page has no word for. */
+export function cardinalityKey(value: string): string | undefined {
+  const known = CARDINALITIES[value];
+  return known ? `bknProject.model.cardinality.${known}` : undefined;
+}
+
 /*
  * A draft relation type as the knowledge network's relation mapping takes it, and back. Through a
  * link table, the draft keeps the source's mapping to the table and the table's to the target

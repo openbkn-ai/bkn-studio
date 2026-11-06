@@ -13,7 +13,6 @@ import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode
 import { BknProjectKbBadge, BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 import { extensionProjectKnowledgeBaseBuilds } from "@/framework/extension/registry";
 import { IndexReadiness } from "@/modules/bkn-project/components/release/IndexReadiness";
-import { KnowledgeRefreshSection } from "@/modules/bkn-project/components/release/KnowledgeRefreshSection";
 import type { Project } from "@/modules/bkn-project/types/project";
 import { BUILD_TABS, type BuildTab } from "@/modules/bkn-project/types/workspace";
 
@@ -73,11 +72,12 @@ export function ProjectBuild({
                         <p className={styles.muted}>{t(`${PREFIX}.unstructured.preview`)}</p>
                       }
                     >
-                      {/* One mask for the tab while licensed away: the refresh sits inside it. */}
+                      {/* One mask for the tab while licensed away; the knowledge-base data refresh comes with the builds. */}
                       {KnowledgeBaseBuilds ? (
                         <KnowledgeBaseBuilds
                           canEdit={canRun}
                           canManageBuilds={ownerIsCaller}
+                          lineageId={project.knId}
                           projectId={project.id}
                           // The build tasks and the instances they made are one tab now; the
                           // instances' preview comes with it.
@@ -86,7 +86,6 @@ export function ProjectBuild({
                       ) : (
                         <p className={styles.muted}>{t(`${PREFIX}.unstructured.comingSoon`)}</p>
                       )}
-                      <KnowledgeRefreshSection lineageId={project.knId} />
                     </BknProjectKbSlot>
                   </div>
                 ),

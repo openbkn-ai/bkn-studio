@@ -5,8 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { TFunction } from "i18next";
+import { createInstance, type TFunction } from "i18next";
 import { describe, expect, it } from "vitest";
+
+import { bknProjectEnUS } from "@/modules/bkn-project/locales/en-US";
+import { bknProjectZhCN } from "@/modules/bkn-project/locales/zh-CN";
 
 import {
   relationEditorValues,
@@ -133,3 +136,32 @@ describe("Ask AI revisions", () => {
     );
   });
 });
+
+it.each(["en-US", "zh-CN"])(
+  "uses a real cardinality translation in %s document previews",
+  async (language) => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: language,
+      fallbackLng: false,
+      resources: {
+        "en-US": { translation: bknProjectEnUS },
+        "zh-CN": { translation: bknProjectZhCN },
+      },
+    });
+    const names: EndNames = {
+      object: (id) => id,
+      property: (_id, name) => name,
+      table: (id) => id,
+    };
+    const line = endsText(i18n.t, names, {
+      source: "contract_doc",
+      target: "order",
+      mapping: [],
+      documentMapping: { mode: "linking", mentionProperty: "number", identityProperty: "id" },
+      cardinality: "many_to_one",
+    });
+    expect(line).toContain(i18n.t("bknProject.model.cardinality.manyToOne"));
+    expect(line).not.toContain("bknProject.");
+  },
+);

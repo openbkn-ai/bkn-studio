@@ -7,260 +7,6 @@
 
 export const bknProjectEnUS = {
   bknProject: {
-    knowledgeRefresh: {
-      title: "Knowledge-base data updates",
-      description:
-        "Update the version in use with its confirmed model. Batches needing a decision appear here.",
-      preview: "Review directory changes, exceptional batches and the latest update.",
-      check: "Check for changes",
-      release: "Release this batch",
-      discard: "Discard this batch",
-      discardTitle: "Discard this unapplied batch?",
-      discardBody:
-        "Keep existing network data and release this batch’s retained source versions. A later check can propose a fresh batch.",
-      confirmTitle: "Process this update batch?",
-      confirmBody:
-        "Use the current model for the selected new or updated files and retire data for removed files.",
-      accepted: "Request accepted. Follow the update progress here.",
-      actionFailed: "The update could not continue. Read the latest status and try again.",
-      loadFailed: "Update status could not be read.",
-      updated: "Last checked: {{time}}",
-      changed: "To update: {{value}}",
-      removed: "To retire: {{value}}",
-      reused: "Reused: {{value}}",
-      completed: "Verified: {{completed}} / {{total}}",
-      durationUnknown: "Estimated extraction time is not yet available.",
-      durationNone: "No extraction is required.",
-      duration: "Estimated extraction: {{minutes}} min",
-      pending: "Needs review — links: {{links}}, fields: {{fields}}, facts: {{facts}}.",
-      limits:
-        "Owner review is required above {{changed}}% new/updated files, {{removed}}% removals, or {{minutes}} min estimated extraction. Unknown estimates also need review.",
-      state: {
-        idle: "Up to date",
-        running: "Reading and extracting",
-        ready: "Checking results",
-        applying: "Updating network data",
-        finishing: "Completing update",
-        discarding: "Discarding unapplied batch",
-        attention: "Owner review needed",
-        unknown: "Update status needs checking",
-      },
-      review: {
-        changes_large: "The proportion of new or updated files exceeds the automatic limit.",
-        removals_large: "The proportion of removed files exceeds the automatic limit.",
-        duration_unknown: "A reliable extraction-time estimate is not available yet.",
-        duration_large: "Estimated extraction time exceeds the automatic limit.",
-        other: "This batch needs review.",
-      },
-      reason: {
-        batch_review_required: "Review this batch before it starts.",
-        submission_unknown:
-          "The extraction request has no confirmed task receipt. Check it before starting another batch.",
-        source_or_publication_changed:
-          "Source access or the version in use changed. Check before continuing.",
-        source_access_changed: "Source access changed. Ask the owner to restore access.",
-        source_unavailable: "The source file version could not be read.",
-        source_hold_unavailable: "The source version could not be retained for this update.",
-        unsupported_content:
-          "A file has no supported readable text. Check its content before continuing.",
-        invalid_evidence: "The source location could not be verified.",
-        invalid_extraction: "The extracted result needs correction before it can be applied.",
-        extraction_failed: "Extraction did not finish. Check the file and assistant configuration.",
-        execution_changed:
-          "The configured extraction model or rules changed. Review the model version.",
-        execution_unknown: "The actual extraction version could not be verified.",
-        task_unavailable: "The extraction task could not be read.",
-        write_set_changed: "The validated results changed. Review this batch again.",
-        write_plan_changed: "The planned update changed. Review this batch again.",
-        write_plan_unavailable: "The update could not be rechecked.",
-        dataset_write_unavailable:
-          "Network data could not be updated. The same update will be resumed.",
-        hold_release_unavailable: "The update needs its source-version cleanup completed.",
-        discard_requested: "Releasing source versions retained for the discarded batch.",
-        previous_version_update: "An update from the previously used version needs to be settled.",
-        other: "The update needs checking before it can continue.",
-      },
-    },
-    sourceFields: {
-      undoClear: "Undo clearing",
-      pendingSave: "Selected for confirmation; save the model to apply",
-
-      title: "Dual-source field list",
-      help: "Review placement and authority using the extracted models. The system keeps its table binding; this phase creates identity links without a fused projection.",
-      systemConnection: "System and text identity relation",
-      chooseConnection: "Choose the corresponding relation",
-      mainFile: "File model for the main document",
-      chooseFile: "Choose the main-document model",
-      verifyFirst:
-        "Confirm the relation identifier first. A business number requires full-table verification.",
-      field: "Field",
-      placement: "Field category",
-      authority: "Authority",
-      destination: "Placement",
-      chooseFact: "Choose a fact or event model",
-      placementHelp:
-        "Shared current values remain in the system. The text object keeps its unique attributes and business identifier; changing values belong in facts or events. Adjust those models before confirming.",
-      priority:
-        "Fusion compares effective time, evidence strength and recorded time in that order. Other sources only contribute checks.",
-      confirm: "Confirm this field list when saving",
-      clear: "Clear field list",
-      clearPending:
-        "Saving will clear this list. An adopted same-business relation still requires a confirmed list.",
-      changedField: "Changed field",
-      changedDestination: "Placement changed; choose again",
-      unnamedModel: "Unnamed model",
-      addTemporal: "Add a field from an existing fact or event",
-      remove: "Remove",
-      state: {
-        proposed: "Field list awaits confirmation",
-        confirmed: "Field list confirmed",
-        stale: "Models changed; review and confirm the field list again",
-      },
-      category: {
-        system_only: "System only",
-        both: "Both sources",
-        text_only: "Text only",
-        temporal: "Changes over time",
-      },
-      authorityKind: {
-        table: "System table",
-        document: "Main document",
-        fusion: "Knowledge fusion",
-      },
-    },
-    documentDerivation: {
-      open: "Complete source objects",
-      create: "Add to pending review",
-      help: "Derive from saved fields and verified sources. Save current edits first, then choose field placement. No new attributes, quotes, links or adoption are added. Confirm links and field authority separately.",
-      role: "Object purpose",
-      entity: "Current text object",
-      file: "File claim object",
-      name: "Object name",
-      fields: "Existing fields to include",
-      identity: "Global business number",
-      confirm:
-        "I confirm the identifier and field placement. Review this object individually before adoption.",
-    },
-    documentEditor: {
-      factResolution: "Current fact rule",
-      factResolutionHelp:
-        "Choose the fact value and its entity relationship. Unique choices are suggestions; only confirmation enables time-based status decisions. Unconfirmed or conflicting facts stay pending review.",
-      factSingleValueRequired:
-        "Split independent business values into separate facts before confirming this rule.",
-      factSubjectRequired: "First adopt an identifier relationship from this fact to an entity.",
-      factSubject: "Applies to entity through",
-      factValue: "Fact value",
-      factResolutionStale:
-        "The confirmed fields or relationship changed. Review and confirm again.",
-      confirmFactResolution: "Confirm these choices for current fact decisions",
-      clearFactResolution: "Remove current fact rule",
-
-      fieldAuthority: "Value authority",
-      authorityDocument: "Document",
-      authorityFusion: "Knowledge fusion",
-      fieldAuthorityHelp:
-        "Use fusion rules to resolve differences across files. Document-owned conflicts require review.",
-
-      clearFilePeriod: "Leave the effective period unspecified",
-      filePeriod: "File effective period (optional)",
-      filePeriodHelp:
-        "Choose existing extracted effective and expiry date fields, then confirm. File timestamps and field names never decide validity; conflicts with unknown dates need review.",
-      effectiveDate: "Effective date",
-      expiryDate: "Expiry date",
-      confirmFilePeriod: "I confirm these fields describe the file's effective period",
-
-      sentenceKey: "Within-sentence identity (optional)",
-      sentenceKeyHelp:
-        "No setting is needed for one record per sentence. For multiple records, confirm stable fields that distinguish them within that sentence. Global uniqueness is not required; missing or duplicate keys require review.",
-      confirmSentenceKey: "Confirm these fields distinguish records within the same sentence",
-      fileNumber: "Business number",
-      fileNumberHelp:
-        "Choose the existing business number that identifies what this file describes. It keeps records stable when the file is extracted again; the system record identity stays unchanged.",
-      fileNumberInherited: "Uses the entity number from the confirmed field-authority list.",
-      confirmFileNumber: "I confirm this is the business number for these file records",
-      unnamedField: "Unnamed field",
-      repairRequired: "Relationship needs repair",
-      repairHelp:
-        "Correct the target identity or document scope and save before adopting. Object roles and cardinality are never changed automatically.",
-      businessIdentityHelp:
-        "A business number can connect the same object. Verify it is unique and nonempty across the full table when saving; the system primary key stays unchanged.",
-      businessIdentityVerified:
-        "Last verified across {{rows}} records. Confirmation and building check it again.",
-      verifyBusinessIdentity: "Verify this business identifier when saving",
-
-      recordIdentity: "Stable record identity, maintained by the system",
-      managedRelation: "This source relationship is maintained by the system.",
-      sourcesHint:
-        "Select knowledge-base directories and debug files on Requirements and sources, then extract models on Concept extraction. You can also add structured data catalogs.",
-      incomplete:
-        "Complete each business field name, valid API name, extraction instruction and at least one verified example.",
-      relationHelp: "Connect objects by global identity or names in the same document.",
-      sameDocumentScope:
-        "Same-document links connect files, objects within a document, facts and events. Connect business objects by their business identifiers.",
-      sourceObject: "Source object",
-      targetObject: "Target object",
-      connection: "Connect by",
-      linking: "Identity link",
-      same_document: "Same document",
-      mention: "Mention field",
-      targetIdentity: "Target identity",
-      sourceName: "Source name field",
-      targetName: "Target name field",
-      cardinality: "Cardinality",
-      oneToOne: "One to one",
-      oneToMany: "One to many",
-      manyToOne: "Many to one",
-      manyToMany: "Many to many",
-      documentRelation: "Relation from documents",
-      roles: {
-        entity: "Business object",
-        file: "File",
-        in_document: "Object in a document",
-        fact: "Fact",
-        event: "Event",
-        relation: "Business relation",
-        evidence_document: "Original document",
-        evidence_block: "Original passage",
-        evidence_media: "Image resource",
-        evidence_image: "Original image",
-        evidence_relation: "Evidence relation",
-      },
-      source: "Model from documents",
-      original: "Open original {{number}}",
-      identity: "Unique identity",
-      display: "Display field",
-      time: "Event time",
-      participants: "Participants",
-      managed: "Managed provenance field · read only",
-      newField: "New field",
-      remove: "Remove",
-      fieldName: "Field name",
-      apiName: "API name",
-      type: "Value type",
-      description: "Description",
-      instruction: "What to extract",
-      examples: "Verified examples",
-      selectExample: "Choose an example",
-      add: "Add field",
-      debugOnly: "Only the confirmed debug files are shown. Acceptance files are kept separate.",
-      fragment: "{{file}} · excerpt {{number}}",
-      quote: "Copy the exact example from the excerpt",
-      invalidExample: "Use a unique excerpt of up to 4,000 characters from the selected passage.",
-      types: {
-        string: "Short text",
-        text: "Long text",
-        integer: "Integer",
-        "unsigned integer": "Non-negative integer",
-        float: "Number",
-        decimal: "Decimal",
-        boolean: "Yes or no",
-        date: "Date",
-        time: "Time",
-        datetime: "Date and time",
-        timestamp: "Timestamp",
-        json: "Structured content",
-      },
-    },
     title: "Projects",
     description:
       "Each project brings requirements, ontology and releases together for one business knowledge network.",
@@ -729,6 +475,8 @@ export const bknProjectEnUS = {
           "The project has no data catalogs; select the catalogs that hold its structured data first.",
         noCatalogsAskOwner:
           "The project has no data catalogs yet. Ask the project owner to choose them.",
+        knowledgeBaseSources:
+          "Select knowledge-base directories and debug files on Requirements and sources, then extract models on Concept extraction. You can also add structured data catalogs.",
       },
       drafting: {
         title: "AI is drafting the ontology from the table structure",
@@ -817,6 +565,7 @@ export const bknProjectEnUS = {
       identityPending: "Waiting for you",
       cardinality: {
         oneToOne: "One to one",
+        oneToMany: "One to many",
         manyToOne: "Many to one",
         manyToMany: "Many to many",
       },
@@ -947,7 +696,6 @@ export const bknProjectEnUS = {
           other: "A change",
         },
         preview: {
-          extractionInstruction: "extraction instruction: {{value}}",
           linking: "by business identity: {{rules}}",
           sameDocument: "within the same document: {{rules}}",
 

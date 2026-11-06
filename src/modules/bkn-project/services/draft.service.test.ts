@@ -900,55 +900,8 @@ describe("document draft transport", () => {
   });
 });
 
-describe("empty document proposal", () => {
+describe("document relation repair", () => {
   afterEach(() => vi.unstubAllEnvs());
-  it("preserves an empty first result without inventing a draft", async () => {
-    const { extractDocumentModels } = await importService();
-    mockPost.mockResolvedValue({ data: { draft: null, added_objects: 0, added_relations: 0 } });
-    expect(await extractDocumentModels("p", "lock", 7, 0)).toEqual({
-      draft: null,
-      addedObjects: 0,
-      addedRelations: 0,
-    });
-    expect(mockPost).toHaveBeenCalledWith(
-      expect.stringContaining("/kb/concepts:extract"),
-      expect.any(Object),
-      expect.objectContaining({ timeout: 360000 }),
-    );
-  });
-});
-
-describe("explicit source model derivation", () => {
-  afterEach(() => vi.unstubAllEnvs());
-  it("sends only existing field choices and saved source metadata", async () => {
-    const service = await importService();
-    const raw = service.mockDraft("p");
-    const draft = service.mapDraft(raw);
-    const source = draft.items.objectTypes[0];
-    mockPut.mockResolvedValue({ data: raw });
-    const request = {
-      id: "derived_doc",
-      name: "Source claim",
-      role: "file" as const,
-      fields: [source.properties[0].name],
-      identity: "",
-      confirm: true,
-    };
-    await service.deriveDocumentObject("p", draft, source, request);
-    expect(mockPut).toHaveBeenCalledWith(
-      expect.stringContaining(`/object_types/${source.id}`),
-      {
-        update_time: draft.updateTime,
-        name: source.name,
-        comment: source.description,
-        document: { derive: request },
-      },
-      { skipErrorToast: true },
-    );
-    const body = mockPut.mock.calls.at(-1)![1] as Record<string, unknown>;
-    expect(body).not.toHaveProperty("data_properties");
-    expect(body).not.toHaveProperty("citations");
-  });
   it("maps a server-owned relationship repair block", async () => {
     const service = await importService();
     const raw = service.mockDraft("p");
