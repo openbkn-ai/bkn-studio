@@ -9,29 +9,45 @@
 export const PROJECT_SECTIONS = [
   "overview",
   "resources",
+  "concepts",
   "model",
+  "kinetic",
   "scenarios",
-  "instances",
+  "build",
   "release",
-  "builds",
+  "terms",
 ] as const;
 
 export type ProjectSection = (typeof PROJECT_SECTIONS)[number];
 
 /** Pages of the professional knowledge-base extension: hidden in the community image. */
-export const KNOWLEDGE_BASE_SECTIONS: readonly ProjectSection[] = ["instances", "builds"];
+export const KNOWLEDGE_BASE_SECTIONS: readonly ProjectSection[] = ["terms"];
 
 export function isProjectSection(value: string | undefined): value is ProjectSection {
   return (PROJECT_SECTIONS as readonly string[]).includes(value ?? "");
 }
 
+/** The tabs of the build page, as they appear in its URL. */
+export const BUILD_TABS = ["structured", "unstructured"] as const;
+
+export type BuildTab = (typeof BUILD_TABS)[number];
+
+/** The build page, on a tab or on the structured index. */
+export function projectBuildPath(projectId: string, tab?: BuildTab) {
+  const path = projectSectionPath(projectId, "build");
+  return tab ? `${path}?tab=${tab}` : path;
+}
+
 /**
  * Pages that moved, by the address they had: links and bookmarks to them open where their content
- * is now. The requirements page held the scenarios and their documents; the documents moved to
- * the requirements and resources page.
+ * is now, on the tab that holds it. The requirements page held the scenarios and their documents;
+ * the documents moved to the requirements and sources page. The knowledge-base builds and their
+ * tasks are one tab of the build page.
  */
-export const MOVED_SECTIONS: Readonly<Record<string, ProjectSection>> = {
-  requirements: "scenarios",
+export const MOVED_SECTIONS: Readonly<Record<string, { section: ProjectSection; tab?: string }>> = {
+  builds: { section: "build", tab: "unstructured" },
+  instances: { section: "build", tab: "unstructured" },
+  requirements: { section: "scenarios" },
 };
 
 /** What a link to the modeling page asks it to show: the update field an object type waits for. */
@@ -57,22 +73,24 @@ export function projectResourcesPath(projectId: string, tab?: ResourceTab) {
 }
 
 /**
- * The page a project goes on to, in the order it is built: its inputs, the ontology, the scenarios
- * that test it, the knowledge base where the edition has one, then the release. None past the end.
+ * The pages a project is built through, in order: its inputs, the concepts drawn from them, the
+ * concept model, what has to be computed or done on it, the scenarios that test it, the build and
+ * the release.
  */
-export function nextProjectSection(
-  section: ProjectSection,
-  knowledgeBaseEnabled: boolean,
-): ProjectSection | null {
-  const order: ProjectSection[] = [
-    "resources",
-    "model",
-    "scenarios",
-    ...(knowledgeBaseEnabled ? (["instances"] as const) : []),
-    "release",
-  ];
-  const index = order.indexOf(section);
-  return index < 0 ? null : (order[index + 1] ?? null);
+export const FLOW_SECTIONS: readonly ProjectSection[] = [
+  "resources",
+  "concepts",
+  "model",
+  "kinetic",
+  "scenarios",
+  "build",
+  "release",
+];
+
+/** The page a project goes on to in the order it is built; none past the end or off the flow. */
+export function nextProjectSection(section: ProjectSection): ProjectSection | null {
+  const index = FLOW_SECTIONS.indexOf(section);
+  return index < 0 ? null : (FLOW_SECTIONS[index + 1] ?? null);
 }
 
 export function projectSectionPath(projectId: string, section: ProjectSection) {

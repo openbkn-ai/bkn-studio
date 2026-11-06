@@ -12,6 +12,12 @@ import type { RouteObject } from "react-router-dom";
 import { RequireCapability } from "@/framework/entitlement/RequireCapability";
 import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import type { SupportedLocale } from "@/framework/runtime/types";
+import type {
+  Draft,
+  DraftObjectType,
+  DraftObjectTypeSave,
+  DraftRelationType,
+} from "@/modules/bkn-project/types/draft";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 
 /**
@@ -56,12 +62,85 @@ export type StudioExtension = {
   projectKnowledgeBaseResources?: ComponentType<ProjectKnowledgeBaseResourceProps>;
   /** Embedded in the existing modeling page; the core owns draft refresh. */
   projectKnowledgeBaseModel?: ComponentType<ProjectKnowledgeBaseModelProps>;
-  /** Build progress and evidence previews, inside the existing project pages. */
+  /** Build progress and evidence previews, on the build page's unstructured tab. */
   projectKnowledgeBaseBuilds?: ComponentType<ProjectKnowledgeBaseBuildProps>;
+  /** The term library page, under governance in the project navigation. */
+  projectTermLibrary?: ComponentType<ProjectTermLibraryProps>;
+  /** Concepts drawn from knowledge-base documents, on the concept extraction page. */
+  projectConceptSource?: ComponentType<ProjectConceptSourceProps>;
+  /** The document fields of an object type, in its editing panel. */
+  projectObjectDocumentFields?: ComponentType<ProjectObjectDocumentFieldsProps>;
+  /** What a relation drawn from documents rests on, in the model's relation basis column. */
+  projectRelationBasis?: ComponentType<ProjectRelationBasisProps>;
+  /** Picks requirement documents from knowledge-base files, beside uploading them. */
+  projectRequirementDocumentPicker?: ComponentType<ProjectRequirementDocumentPickerProps>;
+  /** The knowledge-base block on the project overview, under the stat cards. */
+  projectOverviewKnowledgeBase?: ComponentType<ProjectOverviewKnowledgeBaseProps>;
 };
+
+/** The project an extension's page or panel is for, and what the person may do there. */
+type ProjectSlotProps = {
+  projectId: string;
+  /** Owner of an open project: may change what the panel holds. */
+  canEdit: boolean;
+};
+
+export type ProjectTermLibraryProps = ProjectSlotProps & {
+  /** The lineage the project publishes to, which the term library is kept for. */
+  lineageId: string;
+};
+
+export type ProjectConceptSourceProps = ProjectSlotProps & {
+  /** Something the panel did changed the concepts: the page reads them again. */
+  onChanged: () => void;
+};
+
+export type ProjectObjectDocumentFieldsProps = {
+  projectId: string;
+  draft: Draft;
+  object: DraftObjectType;
+  /** What the panel is about to save, with the document fields the editor changes. */
+  value: DraftObjectTypeSave;
+  onChange: (value: DraftObjectTypeSave) => void;
+};
+
+export type ProjectRelationBasisProps = {
+  projectId: string;
+  relation: DraftRelationType;
+};
+
+export type ProjectRequirementDocumentPickerProps = ProjectSlotProps & {
+  /** Documents were added: the list reads them again. */
+  onPicked: () => void;
+};
+
+export type ProjectOverviewKnowledgeBaseProps = {
+  projectId: string;
+};
+
+/** The installed knowledge-base extension's component for one project slot, if it has one. */
+function projectSlot<K extends keyof StudioExtension>(key: K): StudioExtension[K] | undefined {
+  return installed.find(
+    (extension) => extension.capability === "knowledge_base" && extension[key],
+  )?.[key];
+}
+
+export const extensionProjectTermLibrary = () => projectSlot("projectTermLibrary");
+export const extensionProjectConceptSource = () => projectSlot("projectConceptSource");
+export const extensionProjectObjectDocumentFields = () =>
+  projectSlot("projectObjectDocumentFields");
+export const extensionProjectRelationBasis = () => projectSlot("projectRelationBasis");
+export const extensionProjectRequirementDocumentPicker = () =>
+  projectSlot("projectRequirementDocumentPicker");
+export const extensionProjectOverviewKnowledgeBase = () =>
+  projectSlot("projectOverviewKnowledgeBase");
 
 export type ProjectKnowledgeBaseBuildProps = {
   projectId: string;
+  /**
+   * Kept for extensions built against the two pages these were on: the build page passes
+   * "instances", which also offers the instances' preview.
+   */
   section: "instances" | "builds";
   canEdit: boolean;
   canManageBuilds: boolean;

@@ -17,7 +17,8 @@ export const COMMUNITY_FORBIDDEN = [
   /专业版/,
   /知识库/,
   /对象存储/,
-  /抽取/,
+  // Concepts are extracted in every edition; extracting from documents is professional.
+  /文档抽取|从文档抽取|抽取实例|实例抽取/,
   /表述类型/,
   /合并规则/,
   /证据强度/,
@@ -28,7 +29,7 @@ export const COMMUNITY_FORBIDDEN = [
   /\bprofessional\b/i,
   /\bknowledge[ -]?bases?\b/i,
   /\bobject storage\b/i,
-  /\bextraction\b/i,
+  /\b(?:document|instance) extraction\b|\bextract(?:s|ed|ing)? (?:from documents|instances)\b/i,
   /\bmerge rules?\b/i,
   /\bdocument versions?\b/i,
 ];

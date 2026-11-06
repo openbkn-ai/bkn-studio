@@ -31,7 +31,18 @@ export function ProjectWorkspacePage() {
 
   const moved = section ? MOVED_SECTIONS[section] : undefined;
   if (moved) {
-    return <Navigate replace to={`${projectSectionPath(projectId, moved)}${search}`} />;
+    // The query goes along, with the tab that now holds the page's content.
+    const query = new URLSearchParams(search);
+    if (moved.tab) {
+      query.set("tab", moved.tab);
+    }
+    const rest = query.toString();
+    return (
+      <Navigate
+        replace
+        to={`${projectSectionPath(projectId, moved.section)}${rest ? `?${rest}` : ""}`}
+      />
+    );
   }
   if (!isProjectSection(section)) {
     return <Navigate replace to={projectSectionPath(projectId, "overview")} />;

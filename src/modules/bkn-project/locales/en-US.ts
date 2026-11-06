@@ -191,7 +191,7 @@ export const bknProjectEnUS = {
       recordIdentity: "Stable record identity, maintained by the system",
       managedRelation: "This source relationship is maintained by the system.",
       sourcesHint:
-        "Select knowledge-base directories and debug files on Requirements and resources, then extract models. You can also add structured data catalogs.",
+        "Select knowledge-base directories and debug files on Requirements and sources, then extract models. You can also add structured data catalogs.",
       incomplete:
         "Complete each business field name, valid API name, extraction instruction and at least one verified example.",
       relationHelp: "Connect objects by global identity or names in the same document.",
@@ -338,16 +338,19 @@ export const bknProjectEnUS = {
       title: "Project workspace",
       description: "Requirements, ontology and releases of a project.",
       navLabel: "Project navigation",
-      groupBuild: "Build",
-      groupRelease: "Release and run",
+      groupModeling: "Modeling",
+      groupRelease: "Build and release",
+      groupGovernance: "Governance",
       sections: {
         overview: "Overview",
-        resources: "Requirements and resources",
-        model: "Ontology modeling",
+        resources: "Requirements and sources",
+        concepts: "Concept extraction",
+        model: "Concept modeling",
+        kinetic: "Kinetic modeling",
         scenarios: "Business scenarios",
-        instances: "Knowledge base build",
-        release: "Confirm and release",
-        builds: "Build tasks",
+        build: "Build",
+        release: "Release",
+        terms: "Term library",
       },
       backToList: "Back to projects",
       targetNetwork: "Target network {{name}}",
@@ -359,6 +362,23 @@ export const bknProjectEnUS = {
       nextStep: "Next: {{section}}",
       comingSoon: "This page is under construction",
       comingSoonDescription: "A later version brings the full feature here.",
+    },
+    build: {
+      tabs: {
+        structured: "Structured index build",
+        unstructured: "Unstructured instance build",
+      },
+      structured: {
+        description:
+          "Structured objects are queried from their source tables. This builds the indexes search needs and leaves the tables unchanged. It starts when the model is confirmed.",
+      },
+      unstructured: {
+        description:
+          "Extracts instances of document objects from knowledge-base files. Accept a sample first; the full run opens once it passes.",
+        preview:
+          "The professional edition extracts instances of document objects from knowledge-base files, accepts a sample before the full run, and records every update.",
+        comingSoon: "This version cannot build unstructured instances yet.",
+      },
     },
     model: {
       preparation: {
@@ -1009,7 +1029,6 @@ export const bknProjectEnUS = {
         id: "ID",
       },
       tiles: {
-        questions: "Scenario questions",
         questionsSub: "Shown once the requirements are drafted",
         questionsAction: "View business scenarios",
         questionsReadySub: "Requirements version {{version}}",
@@ -1020,7 +1039,6 @@ export const bknProjectEnUS = {
           drafting: "Drafting",
           failed: "Drafting failed",
         },
-        ontology: "Ontology",
         ontologySub: "Shown once drafted from tables",
         ontologyAction: "Go to modeling",
         ontologyValue: "{{count}} object types",
@@ -1033,27 +1051,34 @@ export const bknProjectEnUS = {
         ontologyPendingSub: "Adopted so far · {{count}} items wait for you",
         ontologyPendingSub_one: "Adopted so far · {{count}} item waits for you",
         ontologyPendingSub_other: "Adopted so far · {{count}} items wait for you",
-        sources: "Data sources",
         sourcesValue: "{{count}} catalogs",
         sourcesValue_one: "{{count}} catalog",
         sourcesValue_other: "{{count}} catalogs",
         sourcesSub: "Referenced, never copied",
         sourcesAction: "Manage catalogs and documents",
         sourcesChoose: "Choose data catalogs",
-        instances: "Instances",
-        instancesValue: "Not counted here",
-        instancesSub: "See the records in the published knowledge network",
+        conceptsSub: "Concepts drawn from tables, knowledge-base samples and requirement documents",
+        conceptsSubCore: "Concepts drawn from tables and requirement documents",
+        conceptsAction: "Judge them",
+        kineticSub: "How far metrics, functions, skills and the like are implemented",
+        kineticAction: "View the kinetic model",
+        buildSub: "Structured indexes and unstructured instances",
+        buildSubCore: "Indexes of structured objects",
+        buildValue: "{{ready}} / {{total}} tables",
+        buildAction: "View the build",
+        releaseSub: "The latest released version",
+        releaseAction: "View releases",
       },
       model: {
-        title: "Ontology concept model",
-        open: "Open in ontology modeling",
+        title: "Concept model",
+        open: "Open in concept modeling",
         empty: "No ontology draft yet",
         emptyDescription:
           "Once the ontology is drafted from tables, its object and relation types show here.",
         draftingDescription:
           "AI is drafting from the tables; the concept model shows here when it is done.",
         failedDescription:
-          "This draft did not finish. Open ontology modeling to see why and draft again.",
+          "This draft did not finish. Open concept modeling to see why and draft again.",
         loadFailed: "The ontology draft cannot be read right now",
       },
       changes: {
@@ -1308,7 +1333,7 @@ export const bknProjectEnUS = {
         replaces:
           "Replaces what the last confirmation wrote; the project's other definitions stay as they are.",
         after:
-          "After confirming, the data is checked and the tables get local indexes. See the results in “Confirm and release”.",
+          "After confirming, the data is checked and the tables get local indexes. See the data check under “Release” and the indexes under “Build”.",
         undecidedTitle: "{{count}} items were not adopted in drafting and nobody decided on them",
         undecidedTitle_one: "{{count}} item was not adopted in drafting and nobody decided on it",
         undecidedTitle_other:
@@ -1341,7 +1366,7 @@ export const bknProjectEnUS = {
         end_not_adopted: "An object type at one end is still undecided",
         other: "Not adopted in drafting",
       },
-      done: "Draft confirmed. Next, check the business scenarios; the data check and local indexes are on the release page.",
+      done: "Draft confirmed. Next, work out the kinetic model; the data check is on the release page and the local indexes on the build page.",
       failed: "The draft could not be confirmed. Try again later.",
     },
     resources: {
@@ -1357,7 +1382,7 @@ export const bknProjectEnUS = {
         gone_other: "{{count}} selected data catalogs no longer exist. Change the data catalogs.",
         unnamed: "Unknown catalog",
         nameUnread: "—",
-        goToModel: "Go to ontology modeling",
+        goToModel: "Go to concept modeling",
       },
       tables: {
         name: "Table",
@@ -1373,7 +1398,7 @@ export const bknProjectEnUS = {
         description:
           "Concept models drawn from documents add object types, properties and relations; instances are extracted afterwards.",
         preview:
-          "With knowledge-base catalogs chosen, ontology modeling also draws on the business concepts in their documents.",
+          "With knowledge-base catalogs chosen, concept modeling also draws on the business concepts in their documents.",
         comingSoon: "Choosing knowledge-base catalogs is coming soon.",
       },
       tabs: {
@@ -1416,7 +1441,7 @@ export const bknProjectEnUS = {
       noDocuments:
         "Requirement documents are optional; once uploaded, generating reads and quotes them.",
       goToDocuments: "Manage documents",
-      goToModel: "Go to ontology modeling",
+      goToModel: "Go to concept modeling",
       startOver: "Start over",
       startOverTitle: "Generate everything again?",
       startOverContent:
@@ -1654,7 +1679,7 @@ export const bknProjectEnUS = {
             "Once changed, you set what this question needs; it no longer follows its concepts.",
           followConcepts: "Follow the concepts again",
           nothingDrafted:
-            "The ontology draft has no object type or relation type to choose yet; draft it in ontology modeling first.",
+            "The ontology draft has no object type or relation type to choose yet; draft it in concept modeling first.",
         },
         conflict: {
           open: "Rule on it",
@@ -1713,9 +1738,9 @@ export const bknProjectEnUS = {
         ProjectArchived: "The project is archived; its requirements cannot change.",
         NoDocuments: "There are no requirement documents; upload some first.",
         NoCatalogs:
-          "The project has no data catalogs; choose them under Requirements and resources first.",
+          "The project has no data catalogs; choose them under Requirements and sources first.",
         NoAdoptedOntology:
-          "Adopt object types in ontology modeling first, then generate the business scenarios.",
+          "Adopt object types in concept modeling first, then generate the business scenarios.",
         InputsTooLarge: "The documents are more than drafting can read; trim them and draft again.",
         Drafting: "Drafting is running; wait for it to finish.",
         DocumentNotFound: "This document no longer exists.",
@@ -1906,8 +1931,9 @@ export const bknProjectEnUS = {
       loadFailed: "The confirmation could not be loaded",
       empty: {
         title: "The draft is not confirmed yet",
-        description: "Once the draft is confirmed, the data check and local indexes show here.",
-        action: "Go to ontology modeling",
+        description:
+          "Once the draft is confirmed, the data check shows here and it can be released.",
+        action: "Go to concept modeling",
       },
       confirmed: "Confirmed {{time}}",
       outdated: "The draft changed after it was confirmed; those changes are not confirmed.",
@@ -1954,6 +1980,7 @@ export const bknProjectEnUS = {
         originalDocuments_other:
           "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         checksTitle: "Release checks",
+        goToBuild: "Build the indexes on the build page",
         check: {
           knowledge_base: "Knowledge-base build and source access",
           confirmed: "Draft confirmation",

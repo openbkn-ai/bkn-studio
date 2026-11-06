@@ -339,9 +339,9 @@ describe("ProjectRequirements", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "生成业务场景" }));
     expect(
-      await screen.findByText("先在本体建模中采纳对象类，再生成业务场景。"),
+      await screen.findByText("先在概念建模中采纳对象类，再生成业务场景。"),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "去本体建模" }));
+    fireEvent.click(screen.getByRole("button", { name: "去概念建模" }));
     expect(onGoToModel).toHaveBeenCalled();
     expect(messageMock.error).not.toHaveBeenCalled();
   });
@@ -635,7 +635,7 @@ describe("ProjectRequirements", () => {
       fireEvent.click(screen.getByRole("button", { name: "改对应" }));
       dialog = within(await screen.findByRole("dialog"));
       expect(
-        dialog.getByText("本体草稿里还没有对象类或关系类可选，先在本体建模中起草。"),
+        dialog.getByText("本体草稿里还没有对象类或关系类可选，先在概念建模中起草。"),
       ).toBeInTheDocument();
       expect(dialog.getByRole("combobox", { name: "对应本体" })).toBeDisabled();
     });

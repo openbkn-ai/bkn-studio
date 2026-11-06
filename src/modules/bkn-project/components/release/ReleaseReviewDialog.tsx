@@ -50,6 +50,7 @@ const VERSION = /^\d+\.\d+\.\d+$/;
 export function ReleaseReviewDialog({
   canPublish,
   onCancel,
+  onGoToBuild,
   onPublished,
   projectId,
   suggestedVersion,
@@ -57,6 +58,8 @@ export function ReleaseReviewDialog({
   /** The owner of an unarchived project; others read the review. */
   canPublish: boolean;
   onCancel: () => void;
+  /** Opens the build page, where indexes not ready yet are built. */
+  onGoToBuild?: () => void;
   onPublished: (version: string) => void;
   projectId: string;
   suggestedVersion: string;
@@ -216,6 +219,7 @@ export function ReleaseReviewDialog({
             busy={busy}
             canPublish={canPublish}
             notes={notes}
+            onGoToBuild={onGoToBuild}
             onAccept={(accept, checked) =>
               setAccepted((current) =>
                 checked ? [...current, accept] : current.filter((item) => item !== accept),
@@ -245,6 +249,7 @@ function ReviewBody({
   busy,
   canPublish,
   notes,
+  onGoToBuild,
   onAccept,
   onNotes,
   onSettle,
@@ -254,6 +259,7 @@ function ReviewBody({
   busy: boolean;
   canPublish: boolean;
   notes: string;
+  onGoToBuild?: () => void;
   onAccept: (accept: string, checked: boolean) => void;
   onNotes: (notes: string) => void;
   onSettle: (action: "commitDrift" | "sync") => void;
@@ -289,6 +295,7 @@ function ReviewBody({
               check={check}
               key={check.code}
               onAccept={onAccept}
+              onGoToBuild={onGoToBuild}
               onSettle={onSettle}
             />
           ))}
@@ -388,6 +395,7 @@ function CheckRow({
   canPublish,
   check,
   onAccept,
+  onGoToBuild,
   onSettle,
 }: {
   accepted: boolean;
@@ -395,6 +403,7 @@ function CheckRow({
   canPublish: boolean;
   check: ReleaseCheck;
   onAccept: (accept: string, checked: boolean) => void;
+  onGoToBuild?: () => void;
   onSettle: (action: "commitDrift" | "sync") => void;
 }) {
   const { t } = useTranslation();
@@ -434,6 +443,14 @@ function CheckRow({
         >
           {acceptText(t, check.accept)}
         </Checkbox>
+      ) : null}
+      {/* The indexes are built on the build page: the way there, not a dead end. */}
+      {!check.passed && check.reason === "index_not_ready" && onGoToBuild ? (
+        <span className={styles.indent}>
+          <AppButton onClick={onGoToBuild} size="small" type="link">
+            {t(`${PREFIX}.goToBuild`)}
+          </AppButton>
+        </span>
       ) : null}
       {settle && canPublish ? (
         <span className={styles.indent}>
