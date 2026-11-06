@@ -1969,6 +1969,8 @@ export const bknProjectEnUS = {
         reason: {
           knowledge_base_not_ready:
             "Complete and review the full knowledge-base build for the current model.",
+          knowledge_base_originals_changed:
+            "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
           knowledge_base_permission:
             "Check source query access and permission to configure the target knowledge network.",
           knowledge_base_unavailable:
@@ -2072,6 +2074,8 @@ export const bknProjectEnUS = {
         error: {
           KnowledgeBaseNotReady:
             "Complete and review the full knowledge-base build for the current model.",
+          OriginalsChanged:
+            "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
           SourcePermission:
             "Check source query access and permission to configure the target knowledge network.",
           KnowledgeBaseUnavailable:
