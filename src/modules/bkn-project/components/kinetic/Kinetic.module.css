@@ -1,0 +1,138 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.intro {
+  flex: 1 1 360px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+}
+
+.statValue {
+  color: var(--color-text-primary);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter {
+  min-width: 160px;
+}
+
+.name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 600;
+}
+
+.definition {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.block p {
+  margin: 0;
+}
+
+.blockTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+}

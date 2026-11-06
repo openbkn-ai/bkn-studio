@@ -18,6 +18,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ProjectBuild } from "@/modules/bkn-project/components/build/ProjectBuild";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
+import { ProjectKinetic } from "@/modules/bkn-project/components/kinetic/ProjectKinetic";
 import { ProjectModel } from "@/modules/bkn-project/components/ProjectModel";
 import { ProjectOverview } from "@/modules/bkn-project/components/ProjectOverview";
 import { ProjectRequirements } from "@/modules/bkn-project/components/requirements/ProjectRequirements";
@@ -216,6 +217,13 @@ export function ProjectWorkspaceScene({
                   ownerIsCaller={ownerIsCaller}
                   project={project}
                 />
+              ) : section === "kinetic" ? (
+                <ProjectKinetic
+                  onGoToModel={() => go("model")}
+                  onGoToRelease={() => go("release")}
+                  ownerIsCaller={ownerIsCaller}
+                  project={project}
+                />
               ) : section === "resources" ? (
                 <ProjectResources
                   onGoToModel={() => go("model")}
@@ -233,6 +241,7 @@ export function ProjectWorkspaceScene({
               ) : section === "release" ? (
                 <ProjectReleasePage
                   onGoToBuild={() => go("build")}
+                  onGoToKinetic={() => go("kinetic")}
                   onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
                   onReleaseChanged={() => void load()}
                   ownerIsCaller={ownerIsCaller}

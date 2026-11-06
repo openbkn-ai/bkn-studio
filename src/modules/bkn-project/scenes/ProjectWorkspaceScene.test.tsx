@@ -125,6 +125,15 @@ vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal)
   getOntologyIndex: getOntologyIndexMock,
 }));
 
+// Kinetic modeling is tested on its own.
+vi.mock("@/modules/bkn-project/components/kinetic/ProjectKinetic", () => ({
+  ProjectKinetic: ({ onGoToRelease }: { onGoToRelease: () => void }) => (
+    <button onClick={onGoToRelease} type="button">
+      kinetic page
+    </button>
+  ),
+}));
+
 // The build page's tabs are tested on their own.
 vi.mock("@/modules/bkn-project/components/build/ProjectBuild", () => ({
   ProjectBuild: () => <div>build page</div>,
@@ -582,6 +591,13 @@ describe("ProjectWorkspaceScene", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /bknProject\.workspace\.nextStep/ }));
     expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/build");
+  });
+
+  it("shows kinetic modeling, which leads to the release page", async () => {
+    renderScene("kinetic");
+
+    fireEvent.click(await screen.findByRole("button", { name: "kinetic page" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/release");
   });
 
   it("shows the build page, which goes on to the release", async () => {
