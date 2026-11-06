@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { cleanAliases } from "@/modules/bkn-project/components/draft/aliases";
 import type {
   AskEnds,
   Draft,
@@ -73,11 +74,12 @@ export function relationEditorValues(
 
 /** What saving sends for the editor's values, the rows left half filled dropped. */
 export function relationSave(
-  basic: { description: string; name: string },
+  basic: { aliases?: string[]; description: string; name: string },
   values: RelationTypeMappingFormValues,
 ): DraftRelationTypeSave {
   const { mappingMode, mappingRules } = normalizeRelationTypeMappingValues(values);
   const base = {
+    ...(basic.aliases ? { aliases: cleanAliases(basic.aliases) } : {}),
     description: basic.description.trim(),
     name: basic.name.trim(),
     source: mappingRules.sourceObjectTypeId,

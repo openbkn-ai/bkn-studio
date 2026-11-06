@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { cleanAliases } from "@/modules/bkn-project/components/draft/aliases";
 import type { DraftObjectType, DraftObjectTypeSave } from "@/modules/bkn-project/types/draft";
 import type {
   ObjectTypeDataProperty,
@@ -43,11 +44,13 @@ export function editorProperties(objectType: DraftObjectType): ObjectTypeDataPro
  */
 export function draftSave(
   objectType: DraftObjectType,
-  basic: { description: string; name: string },
+  basic: { aliases?: string[]; description: string; name: string },
   properties: ObjectTypeDataProperty[],
 ): DraftObjectTypeSave {
   const names = new Set(properties.map((property) => property.name));
   return {
+    // A property's aliases are not sent: bkn-project keeps them, less one its new name repeats.
+    ...(basic.aliases ? { aliases: cleanAliases(basic.aliases) } : {}),
     description: basic.description.trim(),
     displayKey: properties.find((property) => property.displayKey)?.name ?? "",
     incrementalKey: names.has(objectType.incrementalKey) ? objectType.incrementalKey : "",

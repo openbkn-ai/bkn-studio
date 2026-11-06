@@ -591,6 +591,7 @@ export const bknProjectZhCN = {
           unadopt: "取消采纳了{{kind}}「{{name}}」",
           rename: "把{{kind}}「{{before}}」改名为「{{after}}」",
           describe: "修改了{{kind}}「{{name}}」的描述",
+          aliases: "修改了{{kind}}「{{name}}」的别名",
           identity: "为「{{name}}」选择了唯一标识 {{properties}}",
           restore: "把字段 {{field}} 恢复为「{{name}}」的属性 {{property}}",
           other: "修改了{{kind}}「{{name}}」",
@@ -620,6 +621,7 @@ export const bknProjectZhCN = {
           other: "确认草稿时做了一项决定",
         },
         empty: "无",
+        aliasSeparator: "、",
         beforeAfter: "改前：{{before}}　改后：{{after}}",
         byAt: "{{who}} · {{time}}",
         you: "你",
@@ -1123,6 +1125,21 @@ export const bknProjectZhCN = {
       through: "经由 {{table}}：{{pairs}}",
       adopt: "采纳",
       open: "打开并确认",
+    },
+    aliases: {
+      label: "别名",
+      placeholder: "输入一个说法后按回车，可加多个",
+      help: "简称、旧称、英文名等其他叫法，帮助智能体听懂问题、找到这一项。最多 {{max}} 个，每个不超过 {{length}} 个字。",
+      too_many: "别名最多 {{max}} 个，请删掉一些。",
+      too_long: "别名「{{alias}}」超过 {{max}} 个字，请缩短。",
+      comma: "别名「{{alias}}」里有逗号。一个别名只写一种说法，多种说法请分开添加。",
+      repeated: "别名「{{alias}}」重复了。",
+      own_name: "别名「{{alias}}」和名称一样，不用再加。",
+      other_name: "「{{alias}}」已是「{{other}}」的名称，用作别名会让智能体分不清，请换一个。",
+      alias_of_other:
+        "「{{alias}}」已是「{{other}}」的别名。要用它作名称，请先从「{{other}}」的别名里删掉。",
+      document_item: "从文档里抽取的对象和关系暂不能设置别名。",
+      other: "别名不符合要求，请检查后再保存。",
     },
     relationEditor: {
       sourceSuggestions: {

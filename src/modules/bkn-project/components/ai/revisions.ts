@@ -22,7 +22,7 @@ import type { RevisionPreview } from "./AskAiSidebar";
 
 const PREFIX = "bknProject.model.ask";
 
-type Basic = { description: string; name: string };
+type Basic = { aliases?: string[]; description: string; name: string };
 
 export type ObjectValues = { basic: Basic; properties: ObjectTypeDataProperty[] };
 export type RelationValues = { basic: Basic; values: RelationTypeMappingFormValues };
