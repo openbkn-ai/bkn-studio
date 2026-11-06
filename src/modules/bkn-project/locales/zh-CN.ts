@@ -990,7 +990,7 @@ export const bknProjectZhCN = {
         sourcesAction: "管理数据目录和文档",
         sourcesChoose: "去选择数据目录",
         conceptsSub: "从表、知识库样本和需求文档抽取的概念",
-        conceptsSubCore: "从表和需求文档抽取的概念",
+        conceptsSubCore: "从表和需求文档中抽取的概念",
         conceptsAction: "去判定",
         kineticSub: "指标、函数、Skill 等的实现进度",
         kineticAction: "查看动力模型",
@@ -1845,6 +1845,7 @@ export const bknProjectZhCN = {
         originalDocuments_other:
           "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
         checksTitle: "发布检查",
+        goToBuild: "去构建页处理索引",
         check: {
           knowledge_base: "知识库构建与来源权限",
           confirmed: "草稿确认",

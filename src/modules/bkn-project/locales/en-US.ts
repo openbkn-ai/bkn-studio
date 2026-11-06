@@ -1980,6 +1980,7 @@ export const bknProjectEnUS = {
         originalDocuments_other:
           "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         checksTitle: "Release checks",
+        goToBuild: "Build the indexes on the build page",
         check: {
           knowledge_base: "Knowledge-base build and source access",
           confirmed: "Draft confirmation",

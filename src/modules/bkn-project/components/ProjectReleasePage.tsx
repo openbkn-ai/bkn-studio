@@ -340,11 +340,14 @@ function CheckSection({
  * check found and whether each table's local index is ready.
  */
 export function ProjectReleasePage({
+  onGoToBuild,
   onGoToModel,
   onReleaseChanged,
   ownerIsCaller,
   project,
 }: {
+  /** Opens the build page, where the local indexes are built. */
+  onGoToBuild?: () => void;
   onGoToModel: () => void;
   /** Something was published, switched or rolled back: the workspace header reads it again. */
   onReleaseChanged?: () => void;
@@ -471,6 +474,7 @@ export function ProjectReleasePage({
         // The lineage is named after the network it started from.
         baseNetworkId={project.knId}
         canPublish={canRun}
+        onGoToBuild={onGoToBuild}
         onChanged={() => {
           void load();
           void loadReleases();

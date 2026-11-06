@@ -39,6 +39,7 @@ export function ReleasePublish({
   baseNetworkId,
   canPublish,
   onChanged,
+  onGoToBuild,
   onOpenRegression,
   projectId,
   status,
@@ -51,6 +52,8 @@ export function ReleasePublish({
   /** Something was published or switched: the page reads the status and versions again. */
   onChanged: () => void;
   /** Opens how the scenario questions did on the project's release. */
+  /** Opens the build page, where indexes not ready yet are built. */
+  onGoToBuild?: () => void;
   onOpenRegression: () => void;
   projectId: string;
   status: ProjectStatus;
@@ -192,6 +195,7 @@ export function ReleasePublish({
         <ReleaseReviewDialog
           canPublish={canPublish}
           onCancel={() => setReviewing(false)}
+          onGoToBuild={onGoToBuild}
           onPublished={() => {
             setReviewing(false);
             onChanged();
