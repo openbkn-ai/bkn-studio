@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import type { ReactElement } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -505,6 +505,34 @@ describe("ProjectConcepts", () => {
     const alert = alertOf(await screen.findByText("bknProject.concepts.sourceChanged"));
     // Reading again would be refused the same way.
     expect(within(alert).queryByRole("button", { name: "bknProject.concepts.reload" })).toBeNull();
+  });
+
+  it("keeps a refusal while the page reads itself again during an extraction", async () => {
+    withRun({ extracted: true, status: "running" });
+    const polls: Array<() => void> = [];
+    const realSetTimeout = window.setTimeout.bind(window);
+    const setTimeoutSpy = vi.spyOn(window, "setTimeout");
+    setTimeoutSpy.mockImplementation(((handler: () => void, delay?: number) => {
+      if (delay === 5000) {
+        polls.push(handler);
+        return 0;
+      }
+      return realSetTimeout(handler, delay);
+    }) as typeof window.setTimeout);
+    service.judgeConcept.mockRejectedValue(conflict("DocumentSourceChanged"));
+    renderConcepts();
+
+    fireEvent.mouseDown((await row("Orders")).getByRole("combobox", { name: /verdictOf.*Orders/ }));
+    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
+    await screen.findByText("bknProject.concepts.sourceChanged");
+
+    const reads = service.getConcepts.mock.calls.length;
+    await act(async () => {
+      polls.splice(0).forEach((poll) => poll());
+    });
+    await waitFor(() => expect(service.getConcepts.mock.calls.length).toBeGreaterThan(reads));
+    expect(screen.getByText("bknProject.concepts.sourceChanged")).toBeInTheDocument();
+    setTimeoutSpy.mockRestore();
   });
 
   it("keeps a refused merge on the page in the server's words", async () => {

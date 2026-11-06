@@ -155,7 +155,6 @@ export function ProjectConcepts({
       setConcepts(next);
       setRequirements(nextRequirements);
       setLoadError(null);
-      setRefusal(null);
     } catch (error) {
       setLoadError(requestFailureText(t, error));
     } finally {
@@ -218,6 +217,7 @@ export function ProjectConcepts({
           { category: categoryOf(verdict) },
           concepts.requirementUpdateTime,
         );
+        setRefusal(null);
         await load();
       } catch (error) {
         refused(error, "judgeFailed");
@@ -302,6 +302,7 @@ export function ProjectConcepts({
           ? t(`${PREFIX}.acceptedSkipped`, { accepted, count: skipped })
           : t(`${PREFIX}.accepted`, { count: accepted }),
       );
+      setRefusal(null);
       await load();
     } catch (error) {
       refused(error, "judgeFailed");
@@ -642,7 +643,11 @@ export function ProjectConcepts({
         <Alert
           action={
             refusal.reload ? (
-              <AppButton onClick={() => void load()} size="small">
+              <AppButton
+                // Polling reads the page too: only reading it on request settles the refusal.
+                onClick={() => void load().then(() => setRefusal(null))}
+                size="small"
+              >
                 {t(`${PREFIX}.reload`)}
               </AppButton>
             ) : undefined
