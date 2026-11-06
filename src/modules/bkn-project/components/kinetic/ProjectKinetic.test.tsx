@@ -324,6 +324,57 @@ describe("ProjectKinetic", () => {
     expect(screen.getAllByRole("combobox")).toHaveLength(1);
   });
 
+  it("says implementations wait for the first release, not that the network is unreadable", async () => {
+    mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), released: false });
+    renderPage();
+
+    expect(
+      await screen.findByText("首次发布后才能查看和连接实现。现在可以先分析和记录动力需求。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/线上知识网络暂时读不到/)).toBeNull();
+  });
+
+  it("warns as well before the first release when the network could not be read", async () => {
+    mocks.getLogicNeeds.mockResolvedValue({
+      ...logicNeeds(),
+      reason: "unavailable",
+      released: false,
+    });
+    renderPage();
+
+    expect(await screen.findByText(/首次发布后才能查看和连接实现/)).toBeInTheDocument();
+    expect(screen.getByText(/线上知识网络暂时读不到/)).toBeInTheDocument();
+  });
+
+  it("warns when the live read itself fails", async () => {
+    mocks.getLogicNeeds.mockRejectedValue(new Error("down"));
+    renderPage();
+
+    expect(await screen.findByText(/线上知识网络暂时读不到/)).toBeInTheDocument();
+    expect(screen.queryByText(/首次发布后才能查看和连接实现/)).toBeNull();
+  });
+
+  it("shows the empty list, not an error, before there is a specification", async () => {
+    mocks.getRequirements.mockResolvedValue(null);
+    mocks.getLogicNeeds.mockResolvedValue({
+      needs: [],
+      networkId: "",
+      reason: "",
+      released: false,
+      updateTime: 0,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        "还没有动力需求。分析后会列出需要的指标、函数和 Skill，也可以手工添加。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("动力需求暂时读取不到")).toBeNull();
+    expect(screen.queryByText(/线上知识网络暂时读不到/)).toBeNull();
+    expect(screen.getByRole("button", { name: "分析动力需求" })).toBeEnabled();
+  });
+
   it("cannot analyse before the model is confirmed, and says so", async () => {
     mocks.getStatus.mockResolvedValue({ confirmation: null });
     renderPage();

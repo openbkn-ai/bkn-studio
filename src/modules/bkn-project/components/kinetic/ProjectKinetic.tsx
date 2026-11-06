@@ -640,6 +640,10 @@ export function ProjectKinetic({
             type="success"
           />
         ) : null}
+        {/* Before the first release nothing is implemented live: that is not a failure. */}
+        {logic && !logic.released ? (
+          <Alert message={t(`${KINETIC}.beforeRelease`)} showIcon type="info" />
+        ) : null}
         {!live || logic?.reason ? (
           <Alert message={t(`${KINETIC}.liveUnavailable`)} showIcon type="warning" />
         ) : null}

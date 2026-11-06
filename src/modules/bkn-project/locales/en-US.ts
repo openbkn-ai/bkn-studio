@@ -1547,6 +1547,8 @@ export const bknProjectEnUS = {
       loadFailed: "The kinetic needs cannot be read right now",
       liveUnavailable:
         "The live knowledge network cannot be read right now; what is implemented may be incomplete.",
+      beforeRelease:
+        "Implementations can be seen and linked after the first release. You can analyse and record kinetic needs now.",
       none: "No kinetic needs yet. Analyzing lists the metrics, functions and Skills needed; you can also add them.",
       noneFiltered: "No kinetic need matches the filters.",
       stats: {

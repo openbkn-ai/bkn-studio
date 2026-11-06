@@ -1433,6 +1433,7 @@ export const bknProjectZhCN = {
       runStale: "需求文档或文档类型在上次分析之后有变化，建议重新分析。",
       loadFailed: "动力需求暂时读取不到",
       liveUnavailable: "线上知识网络暂时读不到，实现情况可能不完整。",
+      beforeRelease: "首次发布后才能查看和连接实现。现在可以先分析和记录动力需求。",
       none: "还没有动力需求。分析后会列出需要的指标、函数和 Skill，也可以手工添加。",
       noneFiltered: "没有符合筛选条件的动力需求。",
       stats: {
