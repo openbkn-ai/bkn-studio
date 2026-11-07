@@ -44,14 +44,15 @@ function regression(extra: Partial<Regression> = {}): Regression {
     questions: [
       {
         id: "q1",
+        noRecord: false,
         tests: [
           { expect: "exists", id: "t1", text: "客户 CUST-10001 最近 30 天下了哪些订单？" },
           { expect: "not_exists", id: "t3", text: "客户 CUST-99999 最近 30 天下了哪些订单？" },
         ],
         text: "某个客户最近 30 天下了哪些销售订单？",
       },
-      { id: "q7", tests: [], text: "哪些采购订单需要采购经理审批？" },
-      { id: "q8", tests: [], text: "哪些产品用到了 P-100？" },
+      { id: "q7", noRecord: false, tests: [], text: "哪些采购订单需要采购经理审批？" },
+      { id: "q8", noRecord: false, tests: [], text: "哪些产品用到了 P-100？" },
     ],
     results: [
       {
@@ -177,6 +178,21 @@ describe("RegressionDrawer", () => {
     fireEvent.click(drawer.getAllByText("查看回答")[0]);
     expect(await drawer.findByText("6")).toBeInTheDocument();
     expect(drawer.getByText("回答时查询了 3 次，其中 1 次没有成功")).toBeInTheDocument();
+  });
+
+  it("says a question the data had no record for was not asked", async () => {
+    const base = regression();
+    getRegressionMock.mockResolvedValue({
+      ...base,
+      questions: [{ id: "q9", noRecord: true, tests: [], text: "给定产品的单价是多少？" }],
+      results: [{ ...base.results[2], outcome: "needs_values", questionId: "q9", reason: "" }],
+      status: "needs_values",
+    });
+    renderDrawer();
+
+    const drawer = within(await screen.findByRole("dialog"));
+    expect(await drawer.findByText("数据里没有可用来提问的记录，未提问")).toBeInTheDocument();
+    expect(drawer.queryByText("按原问题提问")).toBeNull();
   });
 
   it("follows a running regression the owner started again until it ends", async () => {

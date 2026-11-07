@@ -6,7 +6,7 @@
  */
 
 import { QuestionCircleOutlined } from "@ant-design/icons";
-import { Alert, Col, Collapse, Form, Input, Row, Select, Spin, Tooltip } from "antd";
+import { Alert, Button, Col, Collapse, Form, Input, Row, Select, Spin, Tooltip } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -38,6 +38,10 @@ import {
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
+import {
+  actionTypeCreatedState,
+  readActionTypeContext,
+} from "@/modules/knowledge-network/lib/action-type-context";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   RESOURCE_IDENTIFIER_PATTERN,
@@ -114,6 +118,18 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
 
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
   const returnPath = knowledgeNetworkReturnPath(networkId, location.state, listPath);
+  // Another page opened the form for a need of its own: it states the need, fills the form and
+  // gets the new action type back. Only on create.
+  const [navigationContext] = useState(() =>
+    mode === "create" ? readActionTypeContext(location.state) : undefined,
+  );
+  const prefillObjectTypeId = navigationContext?.prefill?.objectTypeId;
+  const leave = (state?: Record<string, unknown>) =>
+    navigationContext
+      ? void navigate(navigationContext.returnTo, {
+          state: state ?? navigationContext.returnState,
+        })
+      : void navigate(returnPath);
   const watchedObjectTypeId = Form.useWatch("objectTypeId", basicForm);
   const watchedCondition = Form.useWatch("condition", basicForm);
   const conditionObjectTypeId = watchedCondition?.objectTypeId || watchedObjectTypeId;
@@ -216,6 +232,13 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           setExecutionValue(detail.executionConfig);
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
+        } else if (
+          prefillObjectTypeId &&
+          !nextObjectTypes.some((item) => item.id === prefillObjectTypeId)
+        ) {
+          // The object type the form starts with may lie past the first page.
+          const prefilled = await getKnowledgeNetworkObjectType(networkId, prefillObjectTypeId);
+          nextObjectTypes = prefilled ? [...nextObjectTypes, prefilled] : nextObjectTypes;
         }
         setObjectTypes(nextObjectTypes);
       } catch (error) {
@@ -226,7 +249,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     };
 
     void loadData();
-  }, [actionTypeId, basicForm, mode, networkId, t]);
+  }, [actionTypeId, basicForm, mode, networkId, prefillObjectTypeId, t]);
 
   const steps = useMemo(() => [{ title: t("knowledgeNetwork.actionTypeConfigStep") }], [t]);
 
@@ -236,9 +259,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       content: t("knowledgeNetwork.objectTypeUnsavedLeaveDescription"),
       cancelText: t("common.cancel"),
       okText: t("knowledgeNetwork.objectTypeUnsavedLeaveOk"),
-      onOk: () => {
-        void navigate(returnPath);
-      },
+      onOk: () => leave(),
     });
   };
 
@@ -297,14 +318,19 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
 
     setSubmitting(true);
     try {
+      let createdId: string | undefined;
       if (mode === "edit" && actionTypeId) {
         await updateKnowledgeNetworkActionType(networkId, actionTypeId, payload);
       } else {
-        await createKnowledgeNetworkActionType(networkId, payload);
+        createdId = (await createKnowledgeNetworkActionType(networkId, payload))?.id;
       }
 
       void message.success(t("common.success"));
-      void navigate(returnPath);
+      leave(
+        navigationContext && createdId
+          ? actionTypeCreatedState(navigationContext, createdId)
+          : undefined,
+      );
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
@@ -321,8 +347,9 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           initialValues={{
             actionKind: "create",
             color: DEFAULT_RESOURCE_COLOR,
-            description: "",
-            name: "",
+            description: navigationContext?.prefill?.description ?? "",
+            name: navigationContext?.prefill?.name ?? "",
+            ...(prefillObjectTypeId ? { objectTypeId: prefillObjectTypeId } : {}),
             tags: [],
           }}
           layout="vertical"
@@ -602,6 +629,20 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     >
       {loadError ? (
         <Alert className={styles.loadError} message={loadError} showIcon type="error" />
+      ) : null}
+      {navigationContext && !loadError ? (
+        <Alert
+          action={
+            <Button onClick={() => leave()} size="small">
+              {navigationContext.returnLabel}
+            </Button>
+          }
+          className={styles.contextAlert}
+          description={navigationContext.description}
+          message={navigationContext.title}
+          showIcon
+          type="info"
+        />
       ) : null}
       {loadError ? null : renderStepContent()}
     </ResourceFormStepsShell>

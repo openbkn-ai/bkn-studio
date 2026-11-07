@@ -10,12 +10,16 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { extensionProjectKnowledgeBaseBuilds } from "@/framework/extension/registry";
+import { extensionProjectTermLibrary } from "@/framework/extension/registry";
 import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage, isRequestNotFound } from "@/framework/request/error-message";
+import { isRequestNotFound } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { ProjectBuild } from "@/modules/bkn-project/components/build/ProjectBuild";
+import { ProjectConcepts } from "@/modules/bkn-project/components/concepts/ProjectConcepts";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
+import { ProjectKinetic } from "@/modules/bkn-project/components/kinetic/ProjectKinetic";
 import { ProjectModel } from "@/modules/bkn-project/components/ProjectModel";
 import { ProjectOverview } from "@/modules/bkn-project/components/ProjectOverview";
 import { ProjectRequirements } from "@/modules/bkn-project/components/requirements/ProjectRequirements";
@@ -32,9 +36,12 @@ import {
 } from "@/modules/bkn-project/services/project.service";
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
 import {
-  KNOWLEDGE_BASE_SECTIONS,
+  nextProjectSection,
+  projectObjectTypePath,
+  projectResourcesPath,
   projectSectionPath,
   type ProjectSection,
+  type ResourceTab,
 } from "@/modules/bkn-project/types/workspace";
 
 // The knowledge network workspace's layout: the project's pages sit as a network's do.
@@ -57,7 +64,7 @@ export function ProjectWorkspaceScene({
   section: ProjectSection;
 }) {
   const { t } = useTranslation();
-  const KnowledgeBaseBuilds = extensionProjectKnowledgeBaseBuilds();
+  const TermLibrary = extensionProjectTermLibrary();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { runtimeConfig } = useAppServices();
@@ -81,10 +88,10 @@ export function ProjectWorkspaceScene({
       if (isRequestNotFound(error)) {
         setNotFound(true);
       } else {
-        setLoadError(extractRequestErrorMessage(error));
+        setLoadError(requestFailureText(t, error));
       }
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   useEffect(() => {
     void load();
@@ -162,6 +169,15 @@ export function ProjectWorkspaceScene({
   const setProject = (next: Project) =>
     setLoaded((current) => (current ? { ...current, project: next } : current));
   const go = (to: ProjectSection) => void navigate(projectSectionPath(project.id, to));
+  const goToResources = (tab?: ResourceTab) => void navigate(projectResourcesPath(project.id, tab));
+  const next = nextProjectSection(section);
+  const ownerIsCaller = project.owner.id === runtimeConfig.currentUser.id;
+  const comingSoon = (
+    <EmptyStatePanel
+      description={t("bknProject.workspace.comingSoonDescription")}
+      title={t("bknProject.workspace.comingSoon")}
+    />
+  );
 
   // No heading of its own: the navigation names the page, as in a network's workspace. The
   // overview lays panels on the page's grey; every other page is one white sheet.
@@ -187,7 +203,7 @@ export function ProjectWorkspaceScene({
                   latestRelease={latestRelease}
                   networkName={networkName}
                   onProjectChange={setProject}
-                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  ownerIsCaller={ownerIsCaller}
                   project={project}
                 />
               ) : section === "model" ? (
@@ -195,54 +211,85 @@ export function ProjectWorkspaceScene({
                   focus={searchParams.get("focus")}
                   initialObject={searchParams.get("object")}
                   initialTab={searchParams.get("tab")}
-                  // The check and the local indexes of a confirmation show on the release page.
-                  onConfirmed={() => go("release")}
-                  onGoToResources={() => go("resources")}
-                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  // Confirming goes on in the order a project is built, to what has to be computed
+                  // or done on the model; the check a confirmation started stays a link away.
+                  onConfirmed={() => go("kinetic")}
+                  onGoToResources={goToResources}
+                  onViewConfirmation={() => go("release")}
+                  ownerIsCaller={ownerIsCaller}
+                  project={project}
+                />
+              ) : section === "kinetic" ? (
+                <ProjectKinetic
+                  onGoToModel={() => go("model")}
+                  onGoToRelease={() => go("release")}
+                  ownerIsCaller={ownerIsCaller}
                   project={project}
                 />
               ) : section === "resources" ? (
                 <ProjectResources
                   onGoToModel={() => go("model")}
                   onProjectChange={setProject}
-                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  ownerIsCaller={ownerIsCaller}
                   project={project}
                 />
               ) : section === "scenarios" ? (
                 <ProjectRequirements
                   onGoToModel={() => go("model")}
-                  onGoToResources={() => go("resources")}
-                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  onGoToResources={goToResources}
+                  ownerIsCaller={ownerIsCaller}
                   project={project}
                 />
               ) : section === "release" ? (
                 <ProjectReleasePage
+                  onGoToBuild={() => go("build")}
+                  onGoToKinetic={() => go("kinetic")}
                   onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
                   onReleaseChanged={() => void load()}
-                  ownerIsCaller={project.owner.id === runtimeConfig.currentUser.id}
+                  ownerIsCaller={ownerIsCaller}
                   project={project}
                 />
-              ) : KNOWLEDGE_BASE_SECTIONS.includes(section) ? (
+              ) : section === "concepts" ? (
+                <ProjectConcepts
+                  onGoToKinetic={() => go("kinetic")}
+                  onGoToModel={() => go("model")}
+                  onGoToResources={() => goToResources()}
+                  onOpenItem={(item) =>
+                    void navigate(
+                      item.kind === "object_types"
+                        ? projectObjectTypePath(project.id, item.id)
+                        : `${projectSectionPath(project.id, "model")}?tab=${item.kind === "relation_types" ? "relations" : "valueTypes"}`,
+                    )
+                  }
+                  ownerIsCaller={ownerIsCaller}
+                  project={project}
+                />
+              ) : section === "build" ? (
+                <ProjectBuild ownerIsCaller={ownerIsCaller} project={project} />
+              ) : section === "terms" ? (
                 <BknProjectKbSlot>
-                  {KnowledgeBaseBuilds && (section === "instances" || section === "builds") ? (
-                    <KnowledgeBaseBuilds
+                  {TermLibrary ? (
+                    <TermLibrary
+                      canEdit={ownerIsCaller && !project.archived}
+                      lineageId={project.knId}
                       projectId={project.id}
-                      section={section}
-                      canEdit={
-                        project.owner.id === runtimeConfig.currentUser.id && !project.archived
-                      }
-                      canManageBuilds={project.owner.id === runtimeConfig.currentUser.id}
                     />
                   ) : (
-                    <EmptyStatePanel title={t("bknProject.workspace.comingSoon")} />
+                    comingSoon
                   )}
                 </BknProjectKbSlot>
               ) : (
-                <EmptyStatePanel
-                  description={t("bknProject.workspace.comingSoonDescription")}
-                  title={t("bknProject.workspace.comingSoon")}
-                />
+                comingSoon
               )}
+              {next ? (
+                <div className={styles.nextStep}>
+                  <AppButton onClick={() => go(next)} type="link">
+                    {t("bknProject.workspace.nextStep", {
+                      section: t(`bknProject.workspace.sections.${next}`),
+                    })}
+                  </AppButton>
+                </div>
+              ) : null}
             </div>
           </main>
         </div>

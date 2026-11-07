@@ -7,8 +7,10 @@
 
 import type { TFunction } from "i18next";
 
-import { documentCardinalityKey } from "@/modules/bkn-project/components/object-type/document-values";
-import { endsEditorValues } from "@/modules/bkn-project/components/relation-type/relation-values";
+import {
+  cardinalityKey,
+  endsEditorValues,
+} from "@/modules/bkn-project/components/relation-type/relation-values";
 import type { AskEnds, AskRevision, DraftTable } from "@/modules/bkn-project/types/draft";
 import type { RelationTypeMappingFormValues } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor";
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
@@ -22,7 +24,7 @@ import type { RevisionPreview } from "./AskAiSidebar";
 
 const PREFIX = "bknProject.model.ask";
 
-type Basic = { description: string; name: string };
+type Basic = { aliases?: string[]; description: string; name: string };
 
 export type ObjectValues = { basic: Basic; properties: ObjectTypeDataProperty[] };
 export type RelationValues = { basic: Basic; values: RelationTypeMappingFormValues };
@@ -215,9 +217,8 @@ export function endsText(t: TFunction, names: EndNames, ends: AskEnds): string {
     source: end(ends.source),
     target: end(ends.target),
   });
-  return document && ends.cardinality
-    ? `${line}${separator}${t(documentCardinalityKey(ends.cardinality))}`
-    : line;
+  const cardinality = document && ends.cardinality ? cardinalityKey(ends.cardinality) : undefined;
+  return cardinality ? `${line}${separator}${t(cardinality)}` : line;
 }
 
 /** How a revision of a relation type reads, its ends against the ends being edited. */

@@ -21,5 +21,9 @@ describe("testCheckReasonText", () => {
     );
     expect(testCheckReasonText(zh, "query_failed: vega-backend 500")).toBe("查询数据没有成功");
     expect(testCheckReasonText(zh, "something_new")).toBe("没有通过核对");
+    expect(testCheckReasonText(zh, "data_not_built")).toBe("文档数据还没构建，构建完成后再核对");
+    expect(testCheckReasonText(en, "data_not_built")).toBe(
+      "The document data is not built yet; check again after the build",
+    );
   });
 });

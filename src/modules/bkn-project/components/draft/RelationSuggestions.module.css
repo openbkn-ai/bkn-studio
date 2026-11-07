@@ -57,3 +57,16 @@
 .reason {
   color: var(--color-text-primary);
 }
+
+/* The notice of objects nothing connects takes the row's room, beside the actions. */
+.gap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gapLine {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}

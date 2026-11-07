@@ -15,6 +15,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
+  extensionProjectConceptSource,
+  extensionKnowledgeNetworkResourcePanel,
+  extensionProjectObjectSourceEditor,
+  extensionProjectRelationSourceEditor,
+  extensionProjectOverviewKnowledgeBase,
+  extensionProjectRelationBasis,
+  extensionProjectRequirementDocumentPicker,
+  extensionProjectTermLibrary,
   extensionProjectKnowledgeBaseResources,
   extensionProjectKnowledgeBaseModel,
   extensionProjectKnowledgeBaseBuilds,
@@ -96,6 +104,29 @@ describe("extension registry", () => {
     });
     expect(extensionProjectKnowledgeBaseResources()).toBe(Panel);
   });
+  it("offers each project slot of the modeling flow only from the knowledge-base extension", () => {
+    const Panel = () => <p>panel</p>;
+    const slots = {
+      projectConceptSource: extensionProjectConceptSource,
+      knowledgeNetworkResourcePanel: extensionKnowledgeNetworkResourcePanel,
+      projectObjectSourceEditor: extensionProjectObjectSourceEditor,
+      projectRelationSourceEditor: extensionProjectRelationSourceEditor,
+      projectOverviewKnowledgeBase: extensionProjectOverviewKnowledgeBase,
+      projectRelationBasis: extensionProjectRelationBasis,
+      projectRequirementDocumentPicker: extensionProjectRequirementDocumentPicker,
+      projectTermLibrary: extensionProjectTermLibrary,
+    } as const;
+    const all = Object.fromEntries(Object.keys(slots).map((key) => [key, Panel]));
+    registerExtension({ id: "unrelated", capability: "other", ...all });
+    for (const read of Object.values(slots)) {
+      expect(read()).toBeUndefined();
+    }
+    registerExtension({ id: "kb", capability: "knowledge_base", ...all });
+    for (const read of Object.values(slots)) {
+      expect(read()).toBe(Panel);
+    }
+  });
+
   it("renders an extension page where the server reports its capability", () => {
     registerDemo();
     renderStandalone(

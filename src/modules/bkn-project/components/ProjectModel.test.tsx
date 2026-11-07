@@ -28,7 +28,6 @@ const getProjectStatusMock = vi.hoisted(() => vi.fn());
 const generateDraftMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
 const editDraftItemMock = vi.hoisted(() => vi.fn());
-const getCandidatesMock = vi.hoisted(() => vi.fn());
 const acceptSuggestionsMock = vi.hoisted(() => vi.fn());
 const chooseIdentityMock = vi.hoisted(() => vi.fn());
 const restoreFieldMock = vi.hoisted(() => vi.fn());
@@ -71,7 +70,6 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
   acceptDraftSuggestions: acceptSuggestionsMock,
   addDraftCatalogs: addDraftCatalogsMock,
   chooseIdentity: chooseIdentityMock,
-  getCandidates: getCandidatesMock,
   editDraftItem: editDraftItemMock,
   restoreField: restoreFieldMock,
   generateDraft: generateDraftMock,
@@ -192,6 +190,7 @@ function renderModel(
       <ProjectModel
         initialTab={initialTab}
         onConfirmed={vi.fn()}
+        onViewConfirmation={vi.fn()}
         onGoToResources={onGoToResources}
         ownerIsCaller={ownerIsCaller}
         project={{ ...project, ...override }}
@@ -206,10 +205,6 @@ describe("ProjectModel", () => {
     kbModel.mode = "hidden";
     kbModel.installed = false;
     vi.clearAllMocks();
-    getCandidatesMock.mockResolvedValue({
-      counts: { adopted: 0, excluded: 0, pending: 0 },
-      items: [],
-    });
     // Ant Design's table reads breakpoints, which jsdom lacks.
     vi.stubGlobal(
       "matchMedia",
@@ -237,7 +232,7 @@ describe("ProjectModel", () => {
   it.each([
     ["hidden", true, "bknProject.model.empty.noCatalogs"],
     ["locked", true, "bknProject.model.empty.noCatalogs"],
-    ["enabled", true, "bknProject.documentEditor.sourcesHint"],
+    ["enabled", true, "bknProject.model.empty.knowledgeBaseSources"],
     ["enabled", false, "bknProject.model.empty.noCatalogsAskOwner"],
   ] as const)(
     "keeps source guidance aligned with mode %s and owner %s",
@@ -247,8 +242,12 @@ describe("ProjectModel", () => {
       getDraftMock.mockResolvedValue(null);
       renderModel({ catalogIds: [] }, owner);
       expect(await screen.findByText(key)).toBeInTheDocument();
+      // Extracting from documents starts on the concepts page, not here.
+      expect(screen.queryByText("document modeling extension")).not.toBeInTheDocument();
       if (mode !== "enabled" || !owner)
-        expect(screen.queryByText("bknProject.documentEditor.sourcesHint")).not.toBeInTheDocument();
+        expect(
+          screen.queryByText("bknProject.model.empty.knowledgeBaseSources"),
+        ).not.toBeInTheDocument();
     },
   );
 
@@ -431,7 +430,7 @@ describe("ProjectModel", () => {
     expect(screen.getAllByText(/bknProject.model.evidence.joinCount/)[0]).toHaveTextContent(
       '"rate":"99.5%"',
     );
-    expect(screen.getByText(/bknProject.model.evidence.origin.name_match/)).toBeInTheDocument();
+    expect(screen.getByText("bknProject.model.basis.name_match")).toBeInTheDocument();
   });
 
   it("reports catalogs that are gone, and nothing when the catalogs cannot be listed", async () => {
@@ -507,143 +506,6 @@ describe("ProjectModel", () => {
     expect(within(opened).getByDisplayValue(relation.name)).toBeInTheDocument();
   });
 
-  it("goes through the candidates in turn from the list, deciding on each over the draft", async () => {
-    const draft = ready();
-    getDraftMock.mockResolvedValue(draft);
-    const item = (id: string, name: string) => ({
-      addedByCatalog: "",
-      adopted: false,
-      excludeReason: "",
-      id,
-      kind: "object_types" as const,
-      name,
-      neededBy: null,
-      reviewed: null,
-      state: "pending" as const,
-      table: null,
-    });
-    getCandidatesMock.mockResolvedValue({
-      counts: { adopted: 0, excluded: 0, pending: 2 },
-      items: [item("customers", "customers"), item("sales_orders", "sales_orders")],
-    });
-    editDraftItemMock.mockResolvedValue(draft);
-    renderModel(undefined, undefined, "review");
-
-    // The graph lists the types too; the candidates' row is the last, once they are read.
-    await screen.findAllByText("bknProject.model.candidates.state.pending");
-    fireEvent.click(screen.getAllByRole("button", { name: "customers" }).at(-1)!);
-    const panel = await screen.findByRole("region", { name: "bknProject.objectEditor.title" });
-    fireEvent.click(
-      within(panel).getByRole("button", { name: "bknProject.model.candidates.review.adoptNext" }),
-    );
-    await waitFor(() =>
-      expect(editDraftItemMock).toHaveBeenCalledWith(
-        "p1",
-        "object_types",
-        "customers",
-        draft.updateTime,
-        { adopted: true },
-      ),
-    );
-    // The next in the list's order opens in its place.
-    expect(
-      await within(
-        await screen.findByRole("region", { name: "bknProject.objectEditor.title" }),
-      ).findByDisplayValue("sales_orders"),
-    ).toBeInTheDocument();
-  });
-
-  it("opens the panel again on the draft read after a decision found it changed", async () => {
-    const draft = ready();
-    const moved = { ...ready(), updateTime: draft.updateTime + 5 };
-    getDraftMock.mockResolvedValueOnce(draft).mockResolvedValue(moved);
-    getCandidatesMock.mockResolvedValue({
-      counts: { adopted: 0, excluded: 0, pending: 1 },
-      items: [
-        {
-          addedByCatalog: "",
-          adopted: false,
-          excludeReason: "",
-          id: "customers",
-          kind: "object_types",
-          name: "customers",
-          neededBy: null,
-          reviewed: null,
-          state: "pending",
-          table: null,
-        },
-      ],
-    });
-    editDraftItemMock.mockRejectedValueOnce(conflict("Stale")).mockResolvedValue(moved);
-    renderModel(undefined, undefined, "review");
-
-    await screen.findAllByText("bknProject.model.candidates.state.pending");
-    fireEvent.click(screen.getAllByRole("button", { name: "customers" }).at(-1)!);
-    const adopt = async () =>
-      fireEvent.click(
-        within(
-          await screen.findByRole("region", { name: "bknProject.objectEditor.title" }),
-        ).getByRole("button", { name: "bknProject.model.candidates.review.adoptNext" }),
-      );
-    await adopt();
-    await waitFor(() => expect(messageMock.warning).toHaveBeenCalled());
-    await adopt();
-    await waitFor(() =>
-      expect(editDraftItemMock).toHaveBeenLastCalledWith(
-        "p1",
-        "object_types",
-        "customers",
-        moved.updateTime,
-        { adopted: true },
-      ),
-    );
-  });
-
-  it("keeps the latest read of the candidates, and counts the whole draft on the tab", async () => {
-    getDraftMock.mockResolvedValue(ready());
-    let answerAll: (value: unknown) => void = () => undefined;
-    const counts = (pending: number) => ({ adopted: 0, excluded: 0, pending });
-    getCandidatesMock.mockImplementation((_id: string, catalog = "") =>
-      catalog
-        ? Promise.resolve({ counts: counts(1), items: [] })
-        : new Promise((resolve) => (answerAll = resolve)),
-    );
-    renderModel({ catalogIds: ["cat-001", "cat-2"] }, undefined, "review");
-    await waitFor(() => expect(getCandidatesMock).toHaveBeenCalled());
-    const first = answerAll;
-
-    // Kept to a catalog: the list reads it, and the whole draft for the tab's count.
-    fireEvent.mouseDown(
-      await screen.findByRole("combobox", { name: "bknProject.model.candidates.catalog" }),
-    );
-    fireEvent.click(await screen.findByTitle("cat-2"));
-    await waitFor(() => expect(getCandidatesMock).toHaveBeenCalledWith("p1", "cat-2"));
-    answerAll({ counts: counts(4), items: [] });
-    // The first read for all catalogs answers last, and is dropped.
-    first({ counts: counts(9), items: [] });
-    expect(await screen.findByText('bknProject.model.tabs.review:{"count":4}')).toBeInTheDocument();
-  });
-
-  it("accepts the suggestions over the draft, saying how many wait for a person", async () => {
-    const draft = ready();
-    getDraftMock.mockResolvedValue(draft);
-    getCandidatesMock.mockResolvedValue({
-      counts: { adopted: 0, excluded: 0, pending: 3 },
-      items: [],
-    });
-    acceptSuggestionsMock.mockResolvedValue({ accepted: 1, draft, skipped: 2 });
-    renderModel(undefined, undefined, "review");
-
-    fireEvent.click(
-      await screen.findByRole("button", { name: "bknProject.model.candidates.acceptSuggestions" }),
-    );
-    await confirmMock.mock.lastCall![0].onOk();
-    expect(acceptSuggestionsMock).toHaveBeenCalledWith("p1", draft.updateTime);
-    expect(messageMock.info).toHaveBeenCalledWith(
-      `bknProject.model.candidates.acceptedSkipped:${JSON.stringify({ count: 2, accepted: 1 })}`,
-    );
-  });
-
   it("opens the object type a link asked for in the panel, and drops the link on closing", async () => {
     getDraftMock.mockResolvedValue(ready());
     renderWithoutAntdStyles(
@@ -651,6 +513,7 @@ describe("ProjectModel", () => {
         <ProjectModel
           initialObject="customers"
           onConfirmed={vi.fn()}
+          onViewConfirmation={vi.fn()}
           onGoToResources={onGoToResources}
           ownerIsCaller
           project={project}

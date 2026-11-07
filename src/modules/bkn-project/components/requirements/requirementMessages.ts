@@ -52,8 +52,6 @@ export const questionTypeText = word("questionType", [
   "metric",
 ]);
 
-export const capabilityKindText = word("capabilityKind", ["metric", "function", "skill", "app"]);
-
 export const compilesToText = word("compilesTo", [
   "constraint",
   "metric_definition",
@@ -141,6 +139,10 @@ export function requirementErrorText(t: TFunction, code: string | undefined) {
     "InvalidDocumentType",
     "TooManyDocuments",
     "DocumentTooLarge",
+    "ModelNotConfirmed",
+    "ConceptsNotExtracted",
+    "ImplementationUnavailable",
+    "InvalidItem",
   ])(t, name);
 }
 
@@ -184,6 +186,7 @@ const checkReasonWord = word("testCheckReason", [
   "value_outside_slot",
   "check_timeout",
   "table_missing",
+  "data_not_built",
 ]);
 
 /**

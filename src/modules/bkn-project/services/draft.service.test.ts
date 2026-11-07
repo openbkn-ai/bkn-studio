@@ -679,6 +679,42 @@ describe("draft.service", () => {
     );
   });
 
+  it("judges concepts in the mock as bkn-project does: adopting, blocking, and asking before redrafting", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const { generateDraft, getConcepts, judgeConcept } =
+      await import("@/modules/bkn-project/services/draft.service");
+    vi.useFakeTimers();
+    try {
+      const settle = async <T>(promise: Promise<T>) => {
+        await vi.runAllTimersAsync();
+        return promise;
+      };
+      const first = await settle(getConcepts("p-001"));
+      expect(first.counts.pending).toBe(first.concepts.length);
+      expect(first.concepts.some((concept) => concept.verdict === "values")).toBe(true);
+      const waiting = first.concepts.find((concept) => concept.item?.id === "material_bom")!;
+
+      const blocked = await settle(
+        judgeConcept("p-001", first.draftUpdateTime, {
+          key: waiting.key,
+          reason: "",
+          verdict: "object",
+        }),
+      );
+      const bom = blocked.concepts.find((concept) => concept.key === waiting.key)!;
+      expect(bom.state).toBe("blocked");
+      expect(bom.blocked).toBe("needs_identity");
+
+      // A judgment is a decision: drafting again asks first.
+      await expect(generateDraft("p-001")).rejects.toMatchObject({
+        response: { data: { error_code: "BknProject.Draft.HasDecisions" } },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("confirms candidates in the mock as people decide, and as suggested where it can", async () => {
     vi.stubEnv("VITE_USE_MOCK", "true");
     vi.resetModules();
@@ -864,55 +900,8 @@ describe("document draft transport", () => {
   });
 });
 
-describe("empty document proposal", () => {
+describe("document relation repair", () => {
   afterEach(() => vi.unstubAllEnvs());
-  it("preserves an empty first result without inventing a draft", async () => {
-    const { extractDocumentModels } = await importService();
-    mockPost.mockResolvedValue({ data: { draft: null, added_objects: 0, added_relations: 0 } });
-    expect(await extractDocumentModels("p", "lock", 7, 0)).toEqual({
-      draft: null,
-      addedObjects: 0,
-      addedRelations: 0,
-    });
-    expect(mockPost).toHaveBeenCalledWith(
-      expect.stringContaining("/kb/concepts:extract"),
-      expect.any(Object),
-      expect.objectContaining({ timeout: 360000 }),
-    );
-  });
-});
-
-describe("explicit source model derivation", () => {
-  afterEach(() => vi.unstubAllEnvs());
-  it("sends only existing field choices and saved source metadata", async () => {
-    const service = await importService();
-    const raw = service.mockDraft("p");
-    const draft = service.mapDraft(raw);
-    const source = draft.items.objectTypes[0];
-    mockPut.mockResolvedValue({ data: raw });
-    const request = {
-      id: "derived_doc",
-      name: "Source claim",
-      role: "file" as const,
-      fields: [source.properties[0].name],
-      identity: "",
-      confirm: true,
-    };
-    await service.deriveDocumentObject("p", draft, source, request);
-    expect(mockPut).toHaveBeenCalledWith(
-      expect.stringContaining(`/object_types/${source.id}`),
-      {
-        update_time: draft.updateTime,
-        name: source.name,
-        comment: source.description,
-        document: { derive: request },
-      },
-      { skipErrorToast: true },
-    );
-    const body = mockPut.mock.calls.at(-1)![1] as Record<string, unknown>;
-    expect(body).not.toHaveProperty("data_properties");
-    expect(body).not.toHaveProperty("citations");
-  });
   it("maps a server-owned relationship repair block", async () => {
     const service = await importService();
     const raw = service.mockDraft("p");

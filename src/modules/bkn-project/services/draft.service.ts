@@ -20,7 +20,6 @@ import type {
   DraftDocumentMapping,
   DualSourceChoice,
   SourceFieldRule,
-  SamplePreview,
   Candidate,
   Candidates,
   Draft,
@@ -35,6 +34,12 @@ import type {
   DraftValueType,
   SourceChanges,
 } from "@/modules/bkn-project/types/draft";
+import type {
+  Concept,
+  ConceptBlocker,
+  Concepts,
+  ConceptVerdict,
+} from "@/modules/bkn-project/types/concepts";
 
 const API_PREFIX = "/bkn-project/v1/projects";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -59,7 +64,8 @@ type BackendKey = {
   source: string;
 };
 
-type BackendCitation = {
+/** A citation as bkn-project sends it; the knowledge-base pages read samples with it too. */
+export type BackendCitation = {
   knowledge_base_id: string;
   file_id: string;
   content_version_id: string;
@@ -142,7 +148,7 @@ type BackendDocumentMapping = {
   source_name_property?: string;
   target_name_property?: string;
 };
-const mapCitation = (q: BackendCitation): DraftSourceCitation => ({
+export const mapCitation = (q: BackendCitation): DraftSourceCitation => ({
   knowledgeBaseId: q.knowledge_base_id,
   fileId: q.file_id,
   contentVersionId: q.content_version_id,
@@ -245,6 +251,7 @@ const documentMappingBody = (m: DraftDocumentMapping): BackendDocumentMapping =>
 });
 
 type BackendObjectType = {
+  aliases?: string[] | null;
   document?: BackendDocument;
   adopted: boolean;
   description: string;
@@ -257,6 +264,7 @@ type BackendObjectType = {
   primary_keys: string[] | null;
   properties:
     | {
+        aliases?: string[] | null;
         extraction?: BackendExtraction;
         read_only?: boolean;
         description: string;
@@ -275,6 +283,7 @@ type BackendObjectType = {
 type BackendMapping = { source_property: string; target_property: string };
 
 type BackendRelationType = {
+  aliases?: string[] | null;
   document_repair?: string;
   document?: BackendDocument;
   document_mapping?: BackendDocumentMapping;
@@ -328,6 +337,7 @@ export type BackendDraft = {
       by: BackendAccount;
       item_id: string;
       kind: string;
+      reason?: string;
       time: number;
     }[];
     excluded: { field: string; keyword?: string; object_type: string; reason: string }[] | null;
@@ -362,6 +372,7 @@ const mapKey = (key: BackendKey): DraftKeyEvidence => ({
 const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
   ...(item.document ? { document: mapDocument(item.document) } : {}),
   adopted: item.adopted,
+  aliases: item.aliases ?? [],
   description: item.description,
   displayKey: item.display_key,
   id: item.id,
@@ -373,6 +384,7 @@ const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
   properties: (item.properties ?? []).map((property) => ({
     ...(property.extraction ? { extraction: mapExtraction(property.extraction) } : {}),
     ...(property.read_only ? { readOnly: true } : {}),
+    ...(property.aliases?.length ? { aliases: property.aliases } : {}),
     description: property.description,
     displayName: property.display_name,
     mappedField: property.mapped_field,
@@ -395,6 +407,7 @@ const mapRelationType = (item: BackendRelationType): DraftRelationType => ({
   ...(item.document ? { document: mapDocument(item.document) } : {}),
   ...(item.document_mapping ? { documentMapping: mapDocumentMapping(item.document_mapping) } : {}),
   adopted: item.adopted,
+  aliases: item.aliases ?? [],
   cardinality: item.cardinality,
   description: item.description,
   evidence: {
@@ -901,6 +914,9 @@ function saveMockObjectType(
   item.needs_identity = value.primaryKeys.length === 0;
   item.display_key = value.displayKey;
   item.incremental_key = value.incrementalKey;
+  if (value.aliases) {
+    item.aliases = value.aliases;
+  }
   draft.update_time = now;
   return draft;
 }
@@ -1053,6 +1069,7 @@ function saveMockRelationType(
   if (existing) {
     Object.assign(existing, joined, {
       adopted: existing.adopted && adopted,
+      ...(value.aliases ? { aliases: value.aliases } : {}),
       description: value.description,
       name: value.name,
     });
@@ -1060,6 +1077,7 @@ function saveMockRelationType(
     relations.push({
       ...joined,
       adopted,
+      aliases: value.aliases ?? [],
       cardinality: "many_to_one",
       description: value.description,
       // Counted only for a single property within one catalog; the mock counts none.
@@ -1406,6 +1424,7 @@ export async function editDraftItem(
     `${draftPath(projectId)}/items/${kind}/${encodeURIComponent(itemId)}`,
     {
       adopted: edit.adopted,
+      aliases: edit.aliases,
       description: edit.description,
       incremental_key: edit.incrementalKey,
       name: edit.name,
@@ -1518,6 +1537,7 @@ export function objectTypeBody(value: DraftObjectTypeSave) {
     incremental_key: value.incrementalKey,
     name: value.name,
     primary_keys: value.primaryKeys,
+    ...(value.aliases ? { aliases: value.aliases } : {}),
   };
 }
 
@@ -1554,6 +1574,7 @@ export function relationBody(value: DraftRelationTypeSave, updateTime?: number, 
     }));
   return {
     ...(id ? { id } : {}),
+    ...(value.aliases ? { aliases: value.aliases } : {}),
     comment: value.description,
     ...(value.documentMapping
       ? {
@@ -1803,72 +1824,306 @@ export async function draftSourceChanges(projectId: string, signature: string): 
   return mapDraft(response.data);
 }
 
-/** Explicit debug-fragment read; never cached or persisted in browser storage. */
-export async function readDocumentSamples(
-  projectId: string,
-  selectionId: string,
-  selectionRevision: number,
-): Promise<SamplePreview> {
-  const { data } = await http.get<{
-    selection_id: string;
-    selection_revision: number;
-    fragments: { text: string; file_name: string; citation: BackendCitation }[];
-  }>(`${API_PREFIX}/${encodeURIComponent(projectId)}/kb/samples`, {
-    params: { selection_id: selectionId, selection_revision: selectionRevision },
-    skipErrorToast: true,
-  });
+type BackendConcept = {
+  blocked?: string;
+  description?: string;
+  item?: Concept["item"];
+  judged?: Concept["judged"];
+  key: string;
+  merged?: { key: string; name: string }[] | null;
+  name: string;
+  reason?: string;
+  sources?:
+    | {
+        document_ids?: string[] | null;
+        id?: string;
+        kind: Concept["sources"][number]["kind"];
+        name?: string;
+      }[]
+    | null;
+  state: Concept["state"];
+  suggested: ConceptVerdict;
+  suggested_because?: string;
+  verdict: ConceptVerdict;
+};
+
+type BackendConcepts = {
+  concepts?: BackendConcept[] | null;
+  counts?: Record<string, number> | null;
+  draft_update_time?: number;
+  requirement_update_time?: number;
+};
+
+function mapConcepts(data: BackendConcepts): Concepts {
   return {
-    selectionId: data.selection_id,
-    selectionRevision: data.selection_revision,
-    fragments: (data.fragments ?? []).map((f) => ({
-      text: f.text,
-      fileName: f.file_name,
-      citation: mapCitation(f.citation),
+    concepts: (data.concepts ?? []).map((concept) => ({
+      blocked: (concept.blocked as ConceptBlocker | undefined) || null,
+      description: concept.description ?? "",
+      item: concept.item ?? null,
+      judged: concept.judged ?? null,
+      key: concept.key,
+      merged: concept.merged ?? [],
+      name: concept.name,
+      reason: concept.reason ?? "",
+      sources: (concept.sources ?? []).map((source) => ({
+        documentIds: source.document_ids ?? [],
+        id: source.id ?? "",
+        kind: source.kind,
+        name: source.name ?? "",
+      })),
+      state: concept.state,
+      suggested: concept.suggested,
+      suggestedBecause: concept.suggested_because ?? "",
+      verdict: concept.verdict,
     })),
-  };
-}
-export async function extractDocumentModels(
-  projectId: string,
-  selectionId: string,
-  selectionRevision: number,
-  draftUpdateTime: number,
-): Promise<{ draft: Draft | null; addedObjects: number; addedRelations: number }> {
-  const { data } = await http.post<{
-    draft: BackendDraft | null;
-    added_objects: number;
-    added_relations: number;
-  }>(
-    `${API_PREFIX}/${encodeURIComponent(projectId)}/kb/concepts:extract`,
-    {
-      selection_id: selectionId,
-      selection_revision: selectionRevision,
-      draft_update_time: draftUpdateTime,
-    },
-    { skipErrorToast: true, timeout: 360000 },
-  );
-  return {
-    draft: data.draft ? mapDraft(data.draft) : null,
-    addedObjects: data.added_objects ?? 0,
-    addedRelations: data.added_relations ?? 0,
+    counts: data.counts ?? {},
+    draftUpdateTime: data.draft_update_time ?? 0,
+    requirementUpdateTime: data.requirement_update_time ?? 0,
   };
 }
 
-/** Creates a separate pending candidate. No unsaved fields or citations are sent. */
-export async function deriveDocumentObject(
+/**
+ * The mock's judgments and merges, read from its draft's decisions as bkn-project keeps them, so
+ * drafting again asks before discarding them.
+ */
+function mockConceptDecisions(draft: BackendDraft | undefined) {
+  const judgments = new Map<string, { reason: string; time: number; verdict: ConceptVerdict }>();
+  const merges = new Map<string, string>();
+  for (const decision of draft?.items.decisions ?? []) {
+    if (decision.kind !== "concepts") {
+      continue;
+    }
+    if (decision.action === "judge") {
+      judgments.set(decision.item_id, {
+        reason: decision.reason ?? "",
+        time: decision.time,
+        verdict: decision.after as ConceptVerdict,
+      });
+    } else if (decision.action === "merge") {
+      merges.set(decision.item_id, decision.after as string);
+    } else if (decision.action === "unmerge") {
+      merges.delete(decision.item_id);
+    }
+  }
+  return { judgments, merges };
+}
+
+function recordMockConceptDecision(
+  draft: BackendDraft,
+  action: string,
+  key: string,
+  after: unknown,
+  reason = "",
+) {
+  (draft.items.decisions ??= []).push({
+    action,
+    after,
+    before: null,
+    by: mockDrafter,
+    item_id: key,
+    kind: "concepts",
+    reason,
+    time: Date.now(),
+  });
+  draft.update_time = Math.max(Date.now(), draft.update_time + 1);
+}
+
+/** The mock's concepts: one per draft item, judged as the mock recorded. */
+function mockConcepts(projectId: string): Concepts {
+  const draft = mockDrafts[projectId];
+  const { judgments, merges } = mockConceptDecisions(draft);
+  const reviews = mockReviews[projectId] ?? new Map<string, { reason: string; time: number }>();
+  const all: Concept[] =
+    draft?.status === "ready"
+      ? [
+          ...(draft.items.object_types ?? []).map((item) => ({
+            blocker: item.needs_identity ? ("needs_identity" as const) : null,
+            item: { adopted: item.adopted, id: item.id, kind: "object_types" as const },
+            name: item.name,
+            description: item.description,
+            source: item.table.name,
+            resource: item.table.resource_id,
+            suggested: "object" as const,
+            because: "table_entity",
+          })),
+          ...(draft.items.relation_types ?? []).map((item) => ({
+            blocker: null,
+            item: { adopted: item.adopted, id: item.id, kind: "relation_types" as const },
+            name: item.name,
+            description: item.description,
+            // A relation without a table of its own is found in its source's table.
+            source:
+              item.link_table?.name ??
+              draft.items.object_types?.find((entry) => entry.id === item.source)?.table.name ??
+              item.source,
+            resource:
+              item.link_table?.resource_id ??
+              draft.items.object_types?.find((entry) => entry.id === item.source)?.table
+                .resource_id ??
+              item.source,
+            suggested: "relation" as const,
+            because: item.origin,
+          })),
+          ...(draft.items.value_types ?? []).map((item) => ({
+            blocker: null,
+            item: { adopted: item.adopted, id: item.id, kind: "value_types" as const },
+            name: item.name,
+            description: item.description,
+            source: item.code_table.name,
+            resource: item.code_table.resource_id,
+            suggested: "values" as const,
+            because: "code_table",
+          })),
+        ].map((entry) => {
+          const key = `${entry.item.kind}/${entry.item.id}`;
+          const judgment = judgments.get(key);
+          const review = reviews.get(key);
+          const verdict: ConceptVerdict =
+            judgment?.verdict ?? (review && !entry.item.adopted ? "none" : entry.suggested);
+          const modelItem =
+            (entry.item.kind === "object_types" && (verdict === "object" || verdict === "event")) ||
+            (entry.item.kind === "relation_types" && verdict === "relation") ||
+            (entry.item.kind === "value_types" && verdict === "values");
+          const judged = judgment ?? review;
+          const state: Concept["state"] = !judged
+            ? "pending"
+            : modelItem && entry.item.adopted
+              ? "in_model"
+              : modelItem && entry.blocker
+                ? "blocked"
+                : "judged";
+          return {
+            blocked: state === "blocked" ? entry.blocker : null,
+            description: entry.description,
+            item: entry.item,
+            judged: judged ? { by: mockDrafter, time: judged.time } : null,
+            key,
+            merged: [],
+            name: entry.name,
+            reason: judgment?.reason ?? review?.reason ?? "",
+            sources: [
+              { documentIds: [], id: entry.resource, kind: "table" as const, name: entry.source },
+            ],
+            state,
+            suggested: entry.suggested,
+            suggestedBecause: entry.because,
+            verdict,
+          };
+        })
+      : [];
+  const byKey = new Map(all.map((concept) => [concept.key, concept]));
+  for (const [key, into] of merges) {
+    const target = byKey.get(into);
+    const merged = byKey.get(key);
+    if (target && merged) {
+      target.merged.push({ key, name: merged.name });
+      target.sources.push(...merged.sources);
+    }
+  }
+  const rank = { blocked: 1, in_model: 3, judged: 2, pending: 0 };
+  const concepts = all
+    .filter((concept) => !merges.has(concept.key))
+    .sort((a, b) => rank[a.state] - rank[b.state]);
+  const counts: Record<string, number> = {};
+  for (const concept of concepts) {
+    counts[concept.state] = (counts[concept.state] ?? 0) + 1;
+    counts[`verdict:${concept.verdict}`] = (counts[`verdict:${concept.verdict}`] ?? 0) + 1;
+  }
+  return {
+    concepts,
+    counts,
+    draftUpdateTime: draft?.status === "ready" ? draft.update_time : 0,
+    // The mock lists no requirement concept of its own.
+    requirementUpdateTime: 0,
+  };
+}
+
+/**
+ * The project's concepts: one per draft item, with the requirement concepts that are it, then the
+ * requirement concepts no item is, each with what it is judged to be and where it stands.
+ */
+export async function getConcepts(projectId: string): Promise<Concepts> {
+  if (useMock) {
+    return wait(mockConcepts(projectId));
+  }
+  const response = await http.get<BackendConcepts>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/concepts`,
+    { skipErrorToast: true },
+  );
+  return mapConcepts(response.data);
+}
+
+/**
+ * Judges a concept over the draft made at `updateTime`: its item goes into the model or out of it
+ * in the same write. An item that cannot go in yet keeps the judgment and is blocked.
+ */
+export async function judgeConcept(
   projectId: string,
-  draft: Draft,
-  source: DraftObjectType,
-  derive: import("@/modules/bkn-project/types/draft").DocumentDerivation,
-): Promise<Draft> {
-  const response = await http.put<BackendDraft>(
-    `${draftPath(projectId)}/object_types/${encodeURIComponent(source.id)}`,
+  updateTime: number,
+  judgment: { key: string; reason: string; verdict: ConceptVerdict },
+): Promise<Concepts> {
+  if (useMock) {
+    const draft = mockDrafts[projectId];
+    if (!draft || draft.update_time !== updateTime) {
+      throw mockConflict("Stale", "The draft changed since it was read; reload it.");
+    }
+    const concept = mockConcepts(projectId).concepts.find((item) => item.key === judgment.key);
+    const item = concept?.item;
+    if (item) {
+      const adopted =
+        (item.kind === "object_types" &&
+          (judgment.verdict === "object" || judgment.verdict === "event")) ||
+        (item.kind === "relation_types" && judgment.verdict === "relation") ||
+        (item.kind === "value_types" && judgment.verdict === "values");
+      // An object type without an identity cannot go in yet: the judgment waits.
+      const blocked =
+        adopted &&
+        item.kind === "object_types" &&
+        Boolean(
+          (draft.items.object_types ?? []).find((entry) => entry.id === item.id)?.needs_identity,
+        );
+      if (!blocked) {
+        editMockDraft(projectId, item.kind, item.id, updateTime, {
+          adopted,
+          reason: judgment.reason,
+        });
+      }
+    }
+    recordMockConceptDecision(draft, "judge", judgment.key, judgment.verdict, judgment.reason);
+    return wait(mockConcepts(projectId));
+  }
+  const response = await http.post<BackendConcepts>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/concepts:judge`,
     {
-      update_time: draft.updateTime,
-      name: source.name,
-      comment: source.description,
-      document: { derive },
+      key: judgment.key,
+      reason: judgment.reason,
+      update_time: updateTime,
+      verdict: judgment.verdict,
     },
     { skipErrorToast: true },
   );
-  return mapDraft(response.data);
+  return mapConcepts(response.data);
+}
+
+/** Merges a concept into another over the draft made at `updateTime`, or takes it out (no `into`). */
+export async function mergeConcept(
+  projectId: string,
+  updateTime: number,
+  key: string,
+  into = "",
+): Promise<Concepts> {
+  if (useMock) {
+    const draft = mockDrafts[projectId];
+    if (!draft || draft.update_time !== updateTime) {
+      throw mockConflict("Stale", "The draft changed since it was read; reload it.");
+    }
+    recordMockConceptDecision(draft, into ? "merge" : "unmerge", key, into || null);
+    return wait(mockConcepts(projectId));
+  }
+  const response = await http.post<BackendConcepts>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/concepts:merge`,
+    { into, key, update_time: updateTime },
+    { skipErrorToast: true },
+  );
+  return mapConcepts(response.data);
 }

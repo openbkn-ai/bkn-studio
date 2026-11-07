@@ -23,6 +23,8 @@ import type {
   RequirementItemRef,
   RequirementDocument,
   RequirementDocumentContent,
+  RequirementLogicNeed,
+  RequirementRun,
   Requirements,
   RequirementSpec,
   ReviewedKind,
@@ -69,6 +71,32 @@ type BackendCited = {
 };
 
 type BackendReviewed = { accepted?: boolean };
+
+export type BackendLogicNeed = BackendCited &
+  BackendReviewed & {
+    concept_ids?: string[] | null;
+    definition?: string;
+    id: string;
+    kind: string;
+    name: string;
+    object_type_ids?: string[] | null;
+    properties?: { object_type_id: string; property: string }[] | null;
+    scenario_ids?: string[] | null;
+    source?: string;
+    suggested_metric_type?: string;
+  };
+
+type BackendRun = {
+  by?: { id: string } | null;
+  error?: string;
+  /** What the last run that ended ready read; absent until one did. */
+  inputs?: unknown;
+  retried?: boolean;
+  stale?: boolean;
+  start_time?: number;
+  status: string;
+  update_time?: number;
+};
 
 type BackendSpec = {
   catalogs_unlisted?: string[] | null;
@@ -125,6 +153,7 @@ type BackendSpec = {
               }[]
             | null;
           layer: string;
+          logic_need_ids?: string[] | null;
           needs?: { id: string; kind: string }[] | null;
           needs_source: string;
           notes?: string[] | null;
@@ -136,13 +165,14 @@ type BackendSpec = {
           type: string;
         })[]
     | null;
+  logic_needs?: BackendLogicNeed[] | null;
   rejected?: { kind: string; reason: string; text: string }[] | null;
   rules?: (BackendCited & { compiles_to: string; id: string; statement: string })[] | null;
+  runs?: { concepts?: BackendRun | null; kinetic?: BackendRun | null } | null;
   scenarios?:
     | (BackendCited &
         BackendReviewed & {
           actor: string;
-          capabilities?: { definition?: string; kind: string; name: string }[] | null;
           decision: string;
           id: string;
           knowledge?: string[] | null;
@@ -154,7 +184,7 @@ type BackendSpec = {
   tables_omitted?: number;
 };
 
-type BackendRequirements = {
+export type BackendRequirements = {
   error?: string;
   ontology_uncovered?: { id: string; kind: string; name: string }[] | null;
   spec: BackendSpec;
@@ -190,9 +220,52 @@ const cited = (item: BackendCited) => ({
   supplementReason: item.supplement_reason ?? "",
 });
 
+export const mapLogicNeed = (need: BackendLogicNeed): RequirementLogicNeed => ({
+  ...cited(need),
+  accepted: need.accepted ?? false,
+  conceptIds: need.concept_ids ?? [],
+  definition: need.definition ?? "",
+  id: need.id,
+  kind: need.kind,
+  name: need.name,
+  objectTypeIds: need.object_type_ids ?? [],
+  properties: (need.properties ?? []).map((property) => ({
+    objectTypeId: property.object_type_id,
+    property: property.property,
+  })),
+  scenarioIds: need.scenario_ids ?? [],
+  source: need.source ?? "",
+  suggestedMetricType: need.suggested_metric_type ?? "",
+});
+
+const mapRun = (run: BackendRun | null | undefined): RequirementRun | null =>
+  run
+    ? {
+        byId: run.by?.id ?? "",
+        error: run.error ?? "",
+        retried: run.retried ?? false,
+        startTime: run.start_time ?? 0,
+        stale: run.stale ?? false,
+        status: run.status,
+        updateTime: run.update_time ?? 0,
+      }
+    : null;
+
 export function mapSpec(spec: BackendSpec): RequirementSpec {
+  const concepts = spec.runs?.concepts;
   return {
     catalogsUnlisted: spec.catalogs_unlisted ?? [],
+    ...(concepts
+      ? {
+          conceptsRun: {
+            error: concepts.error ?? "",
+            // Extracted once a run ended ready: a run failing after it keeps those concepts.
+            extracted: concepts.inputs !== undefined && concepts.inputs !== null,
+            stale: concepts.stale ?? false,
+            status: concepts.status,
+          },
+        }
+      : {}),
     choices: (spec.choices ?? []).map((choice) => ({
       citations: (choice.citations ?? []).map(mapCitation),
       decision: choice.decision
@@ -254,6 +327,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
           }))
         : null,
       layer: question.layer,
+      logicNeedIds: question.logic_need_ids ?? [],
       needs: (question.needs ?? []).map(({ id, kind }) => ({ id, kind })),
       needsSource: question.needs_source,
       notes: question.notes ?? [],
@@ -264,6 +338,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
       text: question.text,
       type: question.type,
     })),
+    logicNeeds: (spec.logic_needs ?? []).map(mapLogicNeed),
     rejected: spec.rejected ?? [],
     rules: (spec.rules ?? []).map((rule) => ({
       citations: (rule.citations ?? []).map(mapCitation),
@@ -272,15 +347,11 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
       id: rule.id,
       statement: rule.statement,
     })),
+    runs: { concepts: mapRun(spec.runs?.concepts), kinetic: mapRun(spec.runs?.kinetic) },
     scenarios: (spec.scenarios ?? []).map((scenario) => ({
       ...cited(scenario),
       accepted: scenario.accepted ?? false,
       actor: scenario.actor,
-      capabilities: (scenario.capabilities ?? []).map((capability) => ({
-        definition: capability.definition ?? "",
-        kind: capability.kind,
-        name: capability.name,
-      })),
       decision: scenario.decision,
       id: scenario.id,
       knowledge: scenario.knowledge ?? [],
@@ -291,6 +362,10 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
     tablesOmitted: spec.tables_omitted ?? 0,
   };
 }
+
+/** The items of a kind, as the specification holds them. */
+export const specItems = (spec: RequirementSpec, kind: RequirementItemKind): { id: string }[] =>
+  kind === "logic_needs" ? spec.logicNeeds : spec[kind];
 
 export const mapRequirements = (requirements: BackendRequirements): Requirements => ({
   error: requirements.error ?? "",
@@ -447,6 +522,49 @@ export async function draftRequirements(
   return mapRequirements(response.data);
 }
 
+/**
+ * Analyses the confirmed model with the documents for what it needs computed or done, in the
+ * background. Needs people accepted, changed or linked are kept; `discardDecisions` keeps only
+ * what questions rest on.
+ */
+export async function analyzeKinetic(
+  projectId: string,
+  discardDecisions = false,
+): Promise<Requirements> {
+  if (useMock) {
+    if (!mockCurrent) {
+      mockRequirementsNow();
+    }
+    mockKineticStart = Date.now();
+    if (mockCurrent) {
+      mockCurrent.updateTime = mockKineticStart;
+    }
+    return wait(mockRequirementsNow()!);
+  }
+  const response = await http.post<BackendRequirements>(
+    `${requirementsPath(projectId)}:analyze-kinetic`,
+    discardDecisions ? { discard_decisions: true } : undefined,
+    { skipErrorToast: true },
+  );
+  return mapRequirements(response.data);
+}
+
+/**
+ * Extracts the concepts of the requirement documents, in the background, without a concept model:
+ * the concepts a person edited are kept. Replies the specification, its concepts run going.
+ */
+export async function extractRequirementConcepts(projectId: string): Promise<Requirements> {
+  if (useMock) {
+    return wait(mockRequirementsNow()!);
+  }
+  const response = await http.post<BackendRequirements>(
+    `${requirementsPath(projectId)}:extract-concepts`,
+    undefined,
+    { skipErrorToast: true },
+  );
+  return mapRequirements(response.data);
+}
+
 /* --------------------------- Test questions and guidance --------------------------- */
 
 /** How often guidance being generated is read again. */
@@ -596,11 +714,19 @@ export type RequirementItemFields = {
   inputs?: QuestionInput[];
   knowledge?: string[];
   layer?: string;
+  /** A kinetic need's kind: `metric`, `function`, `skill`, `mcp_tool`, `api`, `app`, `action_type`. */
+  logicKind?: string;
+  /** The kinetic needs a question rests on. */
+  logicNeedIds?: string[];
   name?: string;
   needs?: RequirementItemRef[];
+  /** A kinetic need's object types, the one it belongs to first. */
+  objectTypeIds?: string[];
   relativeWindow?: boolean;
   scenarioIds?: string[];
   statement?: string;
+  /** A metric need's type: `atomic`, `derived` or `composite`. */
+  suggestedMetricType?: string;
   template?: string;
   term?: string;
   text?: string;
@@ -626,11 +752,17 @@ const itemBody = (fields: RequirementItemFields) => ({
       }),
   ...(fields.knowledge === undefined ? {} : { knowledge: fields.knowledge }),
   ...(fields.layer === undefined ? {} : { layer: fields.layer }),
+  ...(fields.logicKind === undefined ? {} : { logic_kind: fields.logicKind }),
+  ...(fields.logicNeedIds === undefined ? {} : { logic_need_ids: fields.logicNeedIds }),
   ...(fields.name === undefined ? {} : { name: fields.name }),
   ...(fields.needs === undefined ? {} : { needs: fields.needs }),
+  ...(fields.objectTypeIds === undefined ? {} : { object_type_ids: fields.objectTypeIds }),
   ...(fields.relativeWindow === undefined ? {} : { relative_window: fields.relativeWindow }),
   ...(fields.scenarioIds === undefined ? {} : { scenario_ids: fields.scenarioIds }),
   ...(fields.statement === undefined ? {} : { statement: fields.statement }),
+  ...(fields.suggestedMetricType === undefined
+    ? {}
+    : { suggested_metric_type: fields.suggestedMetricType }),
   ...(fields.template === undefined ? {} : { template: fields.template }),
   ...(fields.term === undefined ? {} : { term: fields.term }),
   ...(fields.text === undefined ? {} : { text: fields.text }),
@@ -692,7 +824,7 @@ export async function removeItem(
   if (useMock) {
     return wait(
       mockEdit(updateTime, (spec) => {
-        const list = spec[kind] as { id: string }[];
+        const list = specItems(spec, kind);
         list.splice(
           list.findIndex((item) => item.id === itemId),
           1,
@@ -709,7 +841,7 @@ export async function removeItem(
 }
 
 /**
- * Accepts or takes back scenarios and questions AI generated, several at once, on the
+ * Accepts or takes back scenarios, questions and kinetic needs AI generated, several at once, on the
  * specification read at `updateTime`.
  */
 export async function reviewRequirements(
@@ -726,7 +858,7 @@ export async function reviewRequirements(
           [unaccept, false],
         ] as const) {
           for (const { id, kind } of items) {
-            const item = (spec[kind] as { accepted: boolean; id: string }[]).find(
+            const item = (specItems(spec, kind) as { accepted: boolean; id: string }[]).find(
               (entry) => entry.id === id,
             );
             if (!item) {
@@ -884,6 +1016,8 @@ let mockDocuments: RequirementDocumentContent[] = [
 ];
 
 let mockDraftStart = Date.parse("2026-10-25T09:05:00Z");
+/** When the mock's kinetic needs were last analysed; before any drafting means never. */
+let mockKineticStart = 0;
 let mockVersion = 1;
 const MOCK_DRAFT_MS = 3000;
 
@@ -977,6 +1111,7 @@ const mockSpec = (): RequirementSpec => ({
       accepted: true,
       ontologyChanged: false,
       layer: "knowledge",
+      logicNeedIds: [],
       needs: [
         { id: "sales_orders", kind: "object_type" },
         { id: "customers", kind: "object_type" },
@@ -1003,6 +1138,7 @@ const mockSpec = (): RequirementSpec => ({
         { conceptId: "c1", name: "as_of", property: "signed_at", role: "reference_time" },
       ],
       layer: "knowledge",
+      logicNeedIds: [],
       needs: [{ id: "sales_orders", kind: "object_type" }],
       needsSource: "concepts",
       notes: [],
@@ -1022,6 +1158,7 @@ const mockSpec = (): RequirementSpec => ({
       ontologyChanged: false,
       inputs: [],
       layer: "capability",
+      logicNeedIds: ["n1"],
       needs: [],
       needsSource: "concepts",
       notes: ["capability_without_basis"],
@@ -1042,6 +1179,7 @@ const mockSpec = (): RequirementSpec => ({
       // Drafted before questions had inputs: nothing is said about them.
       inputs: null,
       layer: "knowledge",
+      logicNeedIds: [],
       needs: [{ id: "sales_orders", kind: "object_type" }],
       needsSource: "person",
       notes: [],
@@ -1051,6 +1189,72 @@ const mockSpec = (): RequirementSpec => ({
       template: "",
       text: "Which orders shipped late last week?",
       type: "filter",
+    },
+  ],
+  logicNeeds: [
+    {
+      accepted: true,
+      citations: [quote("d2", "ships after its promised date")],
+      conceptIds: ["c2"],
+      definition: "The share of orders shipped after their promised date.",
+      edited: false,
+      id: "n1",
+      kind: "metric",
+      name: "Late order rate",
+      objectTypeIds: ["sales_orders"],
+      properties: [{ objectTypeId: "sales_orders", property: "promised_at" }],
+      scenarioIds: ["s1"],
+      source: "documents",
+      suggestedMetricType: "atomic",
+      supplementReason: "",
+    },
+    {
+      accepted: false,
+      citations: [],
+      conceptIds: [],
+      definition: "Ranks a customer's late orders by how much they are worth.",
+      edited: false,
+      id: "n2",
+      kind: "skill",
+      name: "Late order triage",
+      objectTypeIds: ["sales_orders", "customers"],
+      properties: [],
+      scenarioIds: [],
+      source: "analysis",
+      suggestedMetricType: "",
+      supplementReason: "Sales decides whom to call first.",
+    },
+    {
+      accepted: true,
+      citations: [],
+      conceptIds: [],
+      definition: "Moves an order's promised date when the customer agrees.",
+      edited: false,
+      id: "n3",
+      kind: "action_type",
+      name: "Reschedule order",
+      objectTypeIds: ["sales_orders"],
+      properties: [],
+      scenarioIds: [],
+      source: "person",
+      suggestedMetricType: "",
+      supplementReason: "",
+    },
+    {
+      accepted: true,
+      citations: [],
+      conceptIds: [],
+      definition: "How many parts a bill of materials lists.",
+      edited: false,
+      id: "n4",
+      kind: "metric",
+      name: "Part count",
+      objectTypeIds: ["material_bom"],
+      properties: [],
+      scenarioIds: [],
+      source: "analysis",
+      suggestedMetricType: "atomic",
+      supplementReason: "",
     },
   ],
   rejected: [{ kind: "rule", reason: "quote_not_found", text: "Orders ship in two days." }],
@@ -1063,10 +1267,10 @@ const mockSpec = (): RequirementSpec => ({
       statement: "An order is late when it ships after its promised date.",
     },
   ],
+  runs: { concepts: null, kinetic: null },
   scenarios: [
     {
       actor: "Sales manager",
-      capabilities: [{ definition: "", kind: "metric", name: "Late order rate" }],
       citations: [quote("d1", "which orders of a customer are late")],
       decision: "Whom to call first",
       edited: false,
@@ -1104,10 +1308,22 @@ function mockRequirementsNow(): Requirements | null {
     mockCurrent = { draftStart: mockDraftStart, spec: mockSpec(), updateTime: mockDraftStart };
   }
   const { spec, updateTime } = mockCurrent;
+  const analysing = Date.now() - mockKineticStart < MOCK_DRAFT_MS;
+  const kinetic = mockKineticStart
+    ? {
+        byId: mockUploader,
+        error: "",
+        retried: false,
+        stale: false,
+        startTime: mockKineticStart,
+        status: analysing ? "running" : "ready",
+        updateTime: analysing ? mockKineticStart : mockKineticStart + MOCK_DRAFT_MS,
+      }
+    : null;
   return {
     error: "",
     ontologyUncovered: [{ id: "material_bom", kind: "object_type", name: "material_bom" }],
-    spec: structuredClone(spec),
+    spec: { ...structuredClone(spec), runs: { ...spec.runs, kinetic } },
     stale: false,
     status: "ready",
     undecidedChoices: spec.choices.filter((choice) => !choice.decision).length,
@@ -1120,7 +1336,12 @@ function mockRequirementsNow(): Requirements | null {
 /** Applies an edit to the mock's specification read at `updateTime`, as bkn-project would. */
 function mockEdit(updateTime: number, apply: (spec: RequirementSpec) => void): Requirements {
   const now = mockRequirementsNow();
-  if (!now || now.status !== "ready" || !mockCurrent) {
+  if (
+    !now ||
+    now.status !== "ready" ||
+    !mockCurrent ||
+    now.spec.runs.kinetic?.status === "running"
+  ) {
     throw refused(409, "Requirement.Drafting");
   }
   if (updateTime !== mockCurrent.updateTime) {
@@ -1142,7 +1363,6 @@ function mockAdd(spec: RequirementSpec, kind: RequirementItemKind, fields: Requi
       accepted: true,
       ontologyChanged: false,
       actor: fields.actor ?? "",
-      capabilities: [],
       decision: fields.decision ?? "",
       id: nextId("s", spec.scenarios),
       knowledge: fields.knowledge ?? [],
@@ -1159,6 +1379,21 @@ function mockAdd(spec: RequirementSpec, kind: RequirementItemKind, fields: Requi
       notOntologyReason: "",
       term: fields.term ?? "",
     });
+  } else if (kind === "logic_needs") {
+    spec.logicNeeds.push({
+      ...base,
+      accepted: true,
+      conceptIds: [],
+      definition: fields.definition ?? "",
+      id: nextId("n", spec.logicNeeds),
+      kind: fields.logicKind ?? "metric",
+      name: fields.name ?? "",
+      objectTypeIds: fields.objectTypeIds ?? [],
+      properties: [],
+      scenarioIds: [],
+      source: "person",
+      suggestedMetricType: fields.suggestedMetricType ?? "",
+    });
   } else if (kind === "questions") {
     spec.questions.push({
       ...base,
@@ -1166,7 +1401,8 @@ function mockAdd(spec: RequirementSpec, kind: RequirementItemKind, fields: Requi
       answerShape: fields.answerShape ?? "",
       id: nextId("q", spec.questions),
       inputs: fields.inputs ?? null,
-      layer: fields.layer ?? "knowledge",
+      layer: fields.layer ?? (fields.logicNeedIds?.length ? "capability" : "knowledge"),
+      logicNeedIds: fields.logicNeedIds ?? [],
       needs: fields.needs ?? [],
       needsSource: fields.needs ? "person" : "concepts",
       notes: [],
@@ -1194,15 +1430,18 @@ function mockChange(
   itemId: string,
   fields: RequirementItemFields,
 ) {
-  const item = (spec[kind] as { id: string }[]).find((entry) => entry.id === itemId);
+  const item = specItems(spec, kind).find((entry) => entry.id === itemId);
   if (!item) {
     throw refused(404, "Requirement.ItemNotFound");
   }
-  const { followConcepts, ...rest } = fields;
+  const { followConcepts, logicKind, ...rest } = fields;
   // An item a person edited counts as accepted, as bkn-project has it.
   Object.assign(item, rest, {
     edited: true,
-    ...(kind === "questions" || kind === "scenarios" ? { accepted: true } : {}),
+    ...(logicKind === undefined ? {} : { kind: logicKind }),
+    ...(kind === "questions" || kind === "scenarios" || kind === "logic_needs"
+      ? { accepted: true }
+      : {}),
   });
   if (kind === "questions" && (fields.needs || followConcepts)) {
     Object.assign(item, { needsSource: followConcepts ? "concepts" : "person" });

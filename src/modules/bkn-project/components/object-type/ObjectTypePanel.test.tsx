@@ -5,11 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { forwardRef, useEffect, useImperativeHandle } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  registerExtension,
+  resetExtensionsForTesting,
+  type ProjectObjectSourceEditor,
+} from "@/framework/extension/registry";
 import { AskError } from "@/modules/bkn-project/services/ask.service";
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -303,6 +308,56 @@ describe("ObjectTypePanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("edits the object type's aliases, saving them and saying a refusal on their field", async () => {
+    const draft = mapDraft(mockDraft("p1"));
+    draft.items.objectTypes.find((item) => item.id === "customers")!.aliases = ["Clients"];
+    renderPanel(draft);
+    expect(screen.getByText("Clients")).toBeInTheDocument();
+
+    const aliases = screen.getByRole("combobox", { name: "bknProject.aliases.label" });
+    fireEvent.change(aliases, { target: { value: "Buyers" } });
+    fireEvent.keyDown(aliases, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+    expect(await screen.findByText("Buyers")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.objectEditor.unsaved")).toBeInTheDocument();
+
+    mocks.save.mockRejectedValueOnce(
+      refusal(400, "InvalidAliases", {
+        alias: "Buyers",
+        item: "customers",
+        other: "Buyers",
+        reason: "other_name",
+      }),
+    );
+    save();
+    await waitFor(() =>
+      expect(mocks.save).toHaveBeenCalledWith(
+        "p1",
+        "customers",
+        draft.updateTime,
+        expect.objectContaining({ aliases: ["Clients", "Buyers"] }),
+      ),
+    );
+    expect(
+      await screen.findByText(
+        `bknProject.aliases.other_name:${JSON.stringify({ alias: "Buyers", max: 10, other: "Buyers" })}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("refuses an alias that repeats the name before sending", async () => {
+    renderPanel();
+    const aliases = screen.getByRole("combobox", { name: "bknProject.aliases.label" });
+    fireEvent.change(aliases, { target: { value: "customers" } });
+    fireEvent.keyDown(aliases, { code: "Enter", key: "Enter", keyCode: 13, which: 13 });
+    save();
+    expect(
+      await screen.findByText(
+        `bknProject.aliases.own_name:${JSON.stringify({ alias: "customers" })}`,
+      ),
+    ).toBeInTheDocument();
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
   it("names the properties that map no column, without sending", async () => {
     const draft = mapDraft(mockDraft("p1"));
     draft.items.objectTypes.find((item) => item.id === "customers")!.properties[1].mappedField = "";
@@ -502,204 +557,77 @@ describe("ObjectTypePanel", () => {
     renderPanel(undefined, "missing");
     expect(screen.getByText("bknProject.objectEditor.notFound")).toBeInTheDocument();
   });
-
-  it("goes through candidates: adopts or leaves out over the draft as it is, saving changes first", async () => {
-    const draft = mapDraft(mockDraft("p1"));
-    const saved = structuredClone(draft);
-    saved.updateTime = draft.updateTime + 1;
-    mocks.save.mockResolvedValue(saved);
-    const review = {
-      name: "customers",
-      onAdopt: vi.fn().mockResolvedValue(undefined),
-      onExclude: vi.fn().mockResolvedValue(undefined),
-      onNext: vi.fn(),
-    };
-    renderWithoutAntdStyles(
-      <ObjectTypePanel
-        draft={draft}
-        objectTypeId="customers"
-        onClose={vi.fn()}
-        onReload={vi.fn()}
-        onSaved={vi.fn()}
-        project={project}
-        review={review}
-      />,
-    );
-    const button = (name: string) =>
-      screen.getByRole("button", { name: `bknProject.model.candidates.review.${name}` });
-
-    // Nothing changed: the decision is made on the draft as read.
-    fireEvent.click(button("adoptNext"));
-    await waitFor(() => expect(review.onAdopt).toHaveBeenCalledWith(draft.updateTime));
-    expect(mocks.save).not.toHaveBeenCalled();
-
-    // A change is saved first, and the decision follows the draft saved.
-    fireEvent.change(nameBox(), { target: { value: "Clients" } });
-    fireEvent.click(button("adoptNext"));
-    await waitFor(() => expect(review.onAdopt).toHaveBeenLastCalledWith(saved.updateTime));
-    expect(mocks.save).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(button("excludeNext"));
-    const asked = mocks.confirm.mock.lastCall![0] as { onOk: () => Promise<void>; title: string };
-    expect(asked.title).toBe(
-      `bknProject.model.candidates.review.excludeTitle:${JSON.stringify({ name: "customers" })}`,
-    );
-    await asked.onOk();
-    expect(review.onExclude).toHaveBeenCalledWith(saved.updateTime, "");
-
-    fireEvent.click(button("next"));
-    expect(review.onNext).toHaveBeenCalled();
-  });
 });
 
-describe("document object panel", () => {
-  it("edits extraction instructions in the existing panel without a table mapping", async () => {
+describe("an edition's source editor", () => {
+  // Owns the items with a document, saves no properties and refuses an empty title.
+  const editor: ProjectObjectSourceEditor = {
+    appliesTo: (object) => Boolean(object.document),
+    toSave: (object) => ({
+      description: object.description,
+      displayKey: object.displayKey,
+      incrementalKey: "",
+      name: object.name,
+      primaryKeys: [...object.primaryKeys],
+      properties: [],
+    }),
+    check: (value) => (value.displayKey ? null : "edition.titleNeeded"),
+    applyRevisions: (value) => value,
+    preview: () => ({ after: "", before: "", label: "" }),
+    describe: () => ({ propertyColumn: "", source: "" }),
+    Property: () => null,
+    Editor: ({ onChange, value }) => (
+      <button onClick={() => onChange({ ...value, displayKey: "" })} type="button">
+        clear the title
+      </button>
+    ),
+  };
+  beforeAll(() => {
+    registerExtension({
+      capability: "knowledge_base",
+      id: "edition",
+      projectObjectSourceEditor: editor,
+    });
+  });
+  afterAll(() => resetExtensionsForTesting());
+
+  it("edits an item it owns with its editor, saving only what it allows", async () => {
     vi.clearAllMocks();
     const draft = mapDraft(mockDraft("p1"));
     const object = draft.items.objectTypes[0];
-    const proof = {
-      knowledgeBaseId: "1",
-      fileId: "41",
-      contentVersionId: "8",
-      blockId: "b1",
-      start: 0,
-      end: 9,
-    };
     object.document = {
-      role: "entity",
+      citations: [],
       layer: "business",
-      reason: "Explicit order",
-      citations: [proof],
-      selectionId: "lock",
-      selectionRevision: 7,
-      timeProperty: "",
       participantRelations: [],
+      reason: "",
+      role: "entity",
+      selectionId: "lock",
+      selectionRevision: 1,
+      timeProperty: "",
     };
-    object.properties = [
-      {
-        name: "number",
-        displayName: "Order number",
-        description: "Business identity",
-        type: "string",
-        mappedField: "",
-        missingDescription: false,
-        sourceOfRecord: "",
-        extraction: { instruction: "Read the explicit order number", examples: [proof] },
-      },
-      {
-        name: "document_id",
-        displayName: "Original document",
-        description: "Source",
-        type: "string",
-        mappedField: "",
-        missingDescription: false,
-        sourceOfRecord: "",
-        readOnly: true,
-      },
-    ];
-    object.primaryKeys = ["number"];
-    object.displayKey = "number";
     mocks.save.mockResolvedValue({ ...draft, updateTime: draft.updateTime + 1 });
     renderPanel(draft, object.id);
     expect(screen.queryByText("property editor")).not.toBeInTheDocument();
-    mocks.ask.mockResolvedValue({
-      answer: "Read only the explicit number.",
-      dropped: [],
-      revisions: [
-        {
-          field: "data_property",
-          reason: "Avoid inference",
-          value: { name: "number", extractionInstruction: "Read only the printed contract number" },
-        },
-      ],
-    });
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
-      target: { value: "Improve extraction" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
-    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.ask.apply" }));
-    expect(
-      screen.getByRole("textbox", { name: /bknProject.documentEditor.instruction/ }),
-    ).toHaveValue("Read only the printed contract number");
-    expect(mocks.save).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.undo" }));
-    expect(
-      screen.getByRole("textbox", { name: /bknProject.documentEditor.instruction/ }),
-    ).toHaveValue("Read the explicit order number");
-    const apiName = screen.getByRole("textbox", { name: "bknProject.documentEditor.apiName" });
-    fireEvent.change(apiName, { target: { value: "" } });
-    fireEvent.change(apiName, { target: { value: "contract_no" } });
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.documentEditor.add" }));
-    const added = screen.getAllByRole("textbox", { name: "bknProject.documentEditor.apiName" })[1];
-    fireEvent.change(added, { target: { value: "document_id" } });
-    expect(
-      screen.getAllByRole("textbox", { name: "bknProject.documentEditor.apiName" }),
-    ).toHaveLength(2);
-    fireEvent.change(added, { target: { value: "scratch" } });
-    const card = added.closest(".ant-card");
-    if (!(card instanceof HTMLElement)) throw new Error("missing editable field card");
-    fireEvent.click(within(card).getByRole("button", { name: "bknProject.documentEditor.remove" }));
-    expect(
-      screen.getAllByRole("textbox", { name: "bknProject.documentEditor.apiName" }),
-    ).toHaveLength(1);
-    fireEvent.change(
-      screen.getByRole("textbox", { name: /bknProject.documentEditor.instruction/ }),
-      { target: { value: "Use the printed business number only" } },
-    );
+    // Aliases are the table mapping's.
+    expect(screen.queryByRole("combobox", { name: /aliases/i })).toBeNull();
+    fireEvent.change(nameBox(), { target: { value: "Renamed" } });
     save();
-    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
-    expect(mocks.save.mock.calls[0][3]).toMatchObject({
-      primaryKeys: ["contract_no"],
-      displayKey: "contract_no",
-      properties: [
-        {
-          name: "contract_no",
-          extraction: { instruction: "Use the printed business number only", examples: [proof] },
-        },
-        { name: "document_id" },
-      ],
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
+    expect(mocks.save.mock.calls[0][3]).toEqual({
+      ...editor.toSave(object),
+      description: object.description,
+      name: "Renamed",
     });
-    expect(mocks.editorProps).not.toHaveBeenCalled();
-    expect(mocks.listFields).not.toHaveBeenCalled();
-  });
-});
 
-it("disables event adoption in individual review while a participant requires repair", () => {
-  const draft = mapDraft(mockDraft("p1"));
-  const event = draft.items.objectTypes.find((o) => o.id === "customers")!;
-  event.adopted = false;
-  const relation = draft.items.relationTypes[0];
-  relation.documentRepair = "target_identity";
-  event.document = {
-    role: "event",
-    layer: "fact",
-    reason: "Confirmed source",
-    citations: [],
-    selectionId: "lock",
-    selectionRevision: 1,
-    timeProperty: "occurred_at",
-    participantRelations: [relation.id],
-  };
-  const review = { name: event.name, onAdopt: vi.fn(), onExclude: vi.fn(), onNext: vi.fn() };
-  renderWithoutAntdStyles(
-    <ObjectTypePanel
-      draft={draft}
-      objectTypeId={event.id}
-      onClose={vi.fn()}
-      onReload={vi.fn()}
-      onSaved={vi.fn()}
-      project={project}
-      review={review}
-    />,
-  );
-  const adopt = screen.getByRole("button", {
-    name: "bknProject.model.candidates.review.adoptNext",
+    fireEvent.click(screen.getByRole("button", { name: "clear the title" }));
+    save();
+    expect(await screen.findByText("edition.titleNeeded")).toBeInTheDocument();
+    expect(mocks.save).toHaveBeenCalledTimes(1);
   });
-  expect(adopt).toBeDisabled();
-  fireEvent.click(adopt);
-  expect(review.onAdopt).not.toHaveBeenCalled();
-  expect(
-    screen.getByRole("button", { name: "bknProject.model.candidates.review.excludeNext" }),
-  ).toBeEnabled();
+
+  it("leaves the items it does not own to the table mapping", () => {
+    renderPanel();
+    expect(screen.getByText("property editor")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "clear the title" })).toBeNull();
+  });
 });

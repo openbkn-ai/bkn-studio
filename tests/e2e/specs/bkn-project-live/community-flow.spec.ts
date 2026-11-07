@@ -122,17 +122,21 @@ test("community image: from tables and requirements to a published, switched rel
     const nav = page.getByRole("navigation", { name: "项目导航" });
     await expect(nav.getByRole("button")).toHaveText([
       "项目概览",
-      "需求与资源",
-      "本体建模",
+      "需求与来源",
+      "概念抽取",
+      "概念建模",
+      "动力建模",
       "业务场景",
-      "确认与发布",
+      "构建",
+      "发布",
     ]);
     await expectNoForbiddenWords(page, "overview");
   });
 
   await test.step("4. upload a Markdown requirements document", async () => {
-    // The documents are on the requirements and resources page.
-    await openSection(page, "需求与资源");
+    // The documents have a tab on the requirements and sources page.
+    await openSection(page, "需求与来源");
+    await page.getByRole("tab", { name: /需求文档与规范/ }).click();
     await page.getByRole("button", { name: "上传文档" }).click();
     const dialog = page.getByRole("dialog");
     // Markdown and plain text only: PDF / DOCX belong to the extension and are not offered.
@@ -156,7 +160,7 @@ test("community image: from tables and requirements to a published, switched rel
 
   let decided = "";
   await test.step("8. draft the ontology from the catalog's tables", async () => {
-    await openSection(page, "本体建模");
+    await openSection(page, "概念建模");
     await page.getByRole("button", { name: "按表结构起草" }).click();
     await expect(page.getByText(/^已按项目数据目录的表结构起草/)).toBeVisible(BACKGROUND);
     await page.getByText(/^关系类 \d+$/).click();
@@ -283,8 +287,8 @@ test("community image: from tables and requirements to a published, switched rel
   });
 
   await test.step("11. confirm the draft, accepting what is left undecided", async () => {
-    await openSection(page, "本体建模");
-    await page.getByRole("button", { name: "确认草稿" }).click();
+    await openSection(page, "概念建模");
+    await page.getByRole("button", { name: "确认模型" }).click();
     const dialog = page.getByRole("dialog");
     await expect(
       dialog.getByText(/^将把已采纳的 \d+ 个对象类和 \d+ 个关系类写入项目。$/),
@@ -300,15 +304,20 @@ test("community image: from tables and requirements to a published, switched rel
     ).toBeVisible();
     await acceptAll(page);
     await ok.click();
-    await expect(page).toHaveURL(/\/release$/);
+    // Confirming goes on to kinetic modeling; the check shows on the release page and the
+    // indexes on the build page.
+    await expect(page).toHaveURL(/\/kinetic$/);
+    await openSection(page, "构建");
+    const indexes = page.getByRole("region", { name: "本地索引" });
+    await expect(indexes.getByText(/^\d+ \/ \d+ 张表的索引可用$/)).toBeVisible();
+    await expectNoForbiddenWords(page, "build page");
+    await openSection(page, "发布");
     await expect(page.getByText(/^已于 .+ 确认$/)).toBeVisible();
   });
 
-  await test.step("12. the data check and the local indexes run on their own", async () => {
+  await test.step("12. the data check runs on its own", async () => {
     const check = page.getByRole("region", { name: "数据校验" });
     await expect(check.getByText(/^已核对 \d+ \/ \d+ 项$/)).toBeVisible(BACKGROUND);
-    const indexes = page.getByRole("region", { name: "本地索引" });
-    await expect(indexes.getByText(/^\d+ \/ \d+ 张表的索引可用$/)).toBeVisible();
     await expectNoForbiddenWords(page, "release page");
   });
 
@@ -373,11 +382,11 @@ test("community licence: knowledge-base entries are badged and masked, the core 
 
   await page.goto(`${projectUrl}/overview`);
   const nav = page.getByRole("navigation", { name: "项目导航" });
-  const kb = nav.getByRole("button", { name: /知识库构建/ });
-  // The entry is shown with its professional badge, and the scan sees both words.
+  const kb = nav.getByRole("button", { name: /术语库/ });
+  // The entry is shown with its professional badge, and the scan sees it.
   await expect(kb).toContainText("专业版");
   expect(forbiddenHits(await visibleTexts(page))).toEqual(
-    expect.arrayContaining([expect.stringMatching(/知识库构建/)]),
+    expect.arrayContaining([expect.stringMatching(/术语库专业版|专业版/)]),
   );
   // Same as Studio: a badge, never a lock icon.
   await expect(page.locator(".anticon-lock")).toHaveCount(0);
@@ -388,7 +397,16 @@ test("community licence: knowledge-base entries are badged and masked, the core 
   await expect(page.getByText("这一页还在建设中")).toHaveCount(0);
 
   // The core sections carry no mask and keep working.
-  for (const section of ["项目概览", "需求与资源", "本体建模", "业务场景", "确认与发布"]) {
+  for (const section of [
+    "项目概览",
+    "需求与来源",
+    "概念抽取",
+    "概念建模",
+    "动力建模",
+    "业务场景",
+    "构建",
+    "发布",
+  ]) {
     await openSection(page, section);
     await expect(page.getByRole("heading", { name: section, exact: true })).toBeVisible();
     await expect(page.locator(".console-upgrade-mask")).toHaveCount(0);

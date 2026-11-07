@@ -50,6 +50,8 @@ const VERSION = /^\d+\.\d+\.\d+$/;
 export function ReleaseReviewDialog({
   canPublish,
   onCancel,
+  onGoToBuild,
+  onGoToKinetic,
   onPublished,
   projectId,
   suggestedVersion,
@@ -57,6 +59,10 @@ export function ReleaseReviewDialog({
   /** The owner of an unarchived project; others read the review. */
   canPublish: boolean;
   onCancel: () => void;
+  /** Opens the build page, where indexes not ready yet are built. */
+  onGoToBuild?: () => void;
+  /** Opens kinetic modeling, where needs not implemented yet are implemented. */
+  onGoToKinetic?: () => void;
   onPublished: (version: string) => void;
   projectId: string;
   suggestedVersion: string;
@@ -216,6 +222,8 @@ export function ReleaseReviewDialog({
             busy={busy}
             canPublish={canPublish}
             notes={notes}
+            onGoToBuild={onGoToBuild}
+            onGoToKinetic={onGoToKinetic}
             onAccept={(accept, checked) =>
               setAccepted((current) =>
                 checked ? [...current, accept] : current.filter((item) => item !== accept),
@@ -245,6 +253,8 @@ function ReviewBody({
   busy,
   canPublish,
   notes,
+  onGoToBuild,
+  onGoToKinetic,
   onAccept,
   onNotes,
   onSettle,
@@ -254,6 +264,8 @@ function ReviewBody({
   busy: boolean;
   canPublish: boolean;
   notes: string;
+  onGoToBuild?: () => void;
+  onGoToKinetic?: () => void;
   onAccept: (accept: string, checked: boolean) => void;
   onNotes: (notes: string) => void;
   onSettle: (action: "commitDrift" | "sync") => void;
@@ -262,6 +274,10 @@ function ReviewBody({
   const { t } = useTranslation();
   const { changes, questions, release, risks } = review;
   const changed = changes.added.length + changes.changed.length + changes.removed.length;
+  // A check names object types by id; the changes name them as people know them.
+  const itemName = (id: string) =>
+    [...changes.added, ...changes.changed, ...changes.removed].find((item) => item.id === id)
+      ?.name || id;
 
   return (
     <>
@@ -287,8 +303,10 @@ function ReviewBody({
               busy={busy}
               canPublish={canPublish}
               check={check}
+              itemName={itemName}
               key={check.code}
               onAccept={onAccept}
+              onGoToBuild={onGoToBuild}
               onSettle={onSettle}
             />
           ))}
@@ -325,6 +343,17 @@ function ReviewBody({
             {t(`${PREFIX}.orphans`, { count: orphan.orphans, name: orphan.name || orphan.id })}
           </p>
         ))}
+        {/* Needs nothing implements yet never block: the way to them, not a dead end. */}
+        {risks.unimplementedNeeds.length ? (
+          <p className={styles.muted}>
+            {t(`${PREFIX}.unimplementedNeeds`, { count: risks.unimplementedNeeds.length })}
+            {onGoToKinetic ? (
+              <AppButton onClick={onGoToKinetic} size="small" type="link">
+                {t(`${PREFIX}.goToKinetic`)}
+              </AppButton>
+            ) : null}
+          </p>
+        ) : null}
         {review.capabilities.length ? (
           <ul className={styles.list}>
             {review.capabilities.map((capability) => (
@@ -387,19 +416,23 @@ function CheckRow({
   busy,
   canPublish,
   check,
+  itemName,
   onAccept,
+  onGoToBuild,
   onSettle,
 }: {
   accepted: boolean;
   busy: boolean;
   canPublish: boolean;
   check: ReleaseCheck;
+  itemName: (id: string) => string;
   onAccept: (accept: string, checked: boolean) => void;
+  onGoToBuild?: () => void;
   onSettle: (action: "commitDrift" | "sync") => void;
 }) {
   const { t } = useTranslation();
   // The items a check names, such as those whose tables are gone: a few at first.
-  const details = useCollapsedList(checkDetailRows(t, check));
+  const details = useCollapsedList(checkDetailRows(t, check, itemName));
   const icon = check.passed ? (
     <CheckCircleFilled className={styles.passed} />
   ) : check.accept ? (
@@ -434,6 +467,14 @@ function CheckRow({
         >
           {acceptText(t, check.accept)}
         </Checkbox>
+      ) : null}
+      {/* The indexes are built on the build page: the way there, not a dead end. */}
+      {!check.passed && check.reason === "index_not_ready" && onGoToBuild ? (
+        <span className={styles.indent}>
+          <AppButton onClick={onGoToBuild} size="small" type="link">
+            {t(`${PREFIX}.goToBuild`)}
+          </AppButton>
+        </span>
       ) : null}
       {settle && canPublish ? (
         <span className={styles.indent}>

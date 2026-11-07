@@ -5,13 +5,23 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import i18n from "i18next";
+import i18n, { type TFunction } from "i18next";
 import { createElement, type ComponentType, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import { RequireCapability } from "@/framework/entitlement/RequireCapability";
 import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import type { SupportedLocale } from "@/framework/runtime/types";
+import type { RevisionPreview } from "@/modules/bkn-project/components/ai/AskAiSidebar";
+import type {
+  AskRevision,
+  Draft,
+  DraftObjectType,
+  DraftObjectTypeSave,
+  DraftProperty,
+  DraftRelationType,
+  DraftRelationTypeSave,
+} from "@/modules/bkn-project/types/draft";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 
 /**
@@ -56,13 +66,172 @@ export type StudioExtension = {
   projectKnowledgeBaseResources?: ComponentType<ProjectKnowledgeBaseResourceProps>;
   /** Embedded in the existing modeling page; the core owns draft refresh. */
   projectKnowledgeBaseModel?: ComponentType<ProjectKnowledgeBaseModelProps>;
-  /** Build progress and evidence previews, inside the existing project pages. */
+  /** Build progress and evidence previews, on the build page's unstructured tab. */
   projectKnowledgeBaseBuilds?: ComponentType<ProjectKnowledgeBaseBuildProps>;
+  /** The term library page, under governance in the project navigation. */
+  projectTermLibrary?: ComponentType<ProjectTermLibraryProps>;
+  /** Concepts drawn from knowledge-base documents, on the concept extraction page. */
+  projectConceptSource?: ComponentType<ProjectConceptSourceProps>;
+  /**
+   * Object types drawn from somewhere other than a table (documents, in the professional
+   * edition): how the editing panel saves and checks them, its form for them, and how the model
+   * names them. Without one such items do not exist, and the panel only edits table mappings.
+   */
+  projectObjectSourceEditor?: ProjectObjectSourceEditor;
+  /** The same for relation types, including making one of them from the relation panel. */
+  projectRelationSourceEditor?: ProjectRelationSourceEditor;
+  /** The knowledge-bases section of the knowledge-network workspace. */
+  knowledgeNetworkResourcePanel?: ComponentType<KnowledgeNetworkResourcePanelProps>;
+  /** What a relation drawn from documents rests on, in the model's relation basis column. */
+  projectRelationBasis?: ComponentType<ProjectRelationBasisProps>;
+  /** Picks requirement documents from knowledge-base files, beside uploading them. */
+  projectRequirementDocumentPicker?: ComponentType<ProjectRequirementDocumentPickerProps>;
+  /** The knowledge-base block on the project overview, under the stat cards. */
+  projectOverviewKnowledgeBase?: ComponentType<ProjectOverviewKnowledgeBaseProps>;
 };
+
+/** The project an extension's page or panel is for, and what the person may do there. */
+type ProjectSlotProps = {
+  projectId: string;
+  /** Owner of an open project: may change what the panel holds. */
+  canEdit: boolean;
+};
+
+export type ProjectTermLibraryProps = ProjectSlotProps & {
+  /** The lineage the project publishes to, which the term library is kept for. */
+  lineageId: string;
+};
+
+export type ProjectConceptSourceProps = ProjectSlotProps & {
+  /** Something the panel did changed the concepts: the page reads them again. */
+  onChanged: () => void;
+};
+
+/**
+ * The part of an object or relation editing panel an edition supplies for items it owns. The
+ * panel keeps what it edits for such an item as one value (`Save`, what saving sends) and leaves
+ * reading, checking and changing that value to the editor; name and description stay the panel's.
+ */
+export type ProjectSourceEditor<Item, Save, EditorItem = Item> = {
+  /** Whether the item is one this editor owns; the panel edits the others as table mappings. */
+  appliesTo: (item: Item) => boolean;
+  /** What saving the item unchanged sends, to start editing from and to tell changes. */
+  toSave: (item: Item) => Save;
+  /** Ask AI's revisions put into the value being edited, as if made by hand. */
+  applyRevisions: (value: Save, revisions: AskRevision[], item: EditorItem) => Save;
+  /** The form under name and description. */
+  Editor: ComponentType<ProjectSourceEditorProps<EditorItem, Save>>;
+};
+
+export type ProjectSourceEditorProps<Item, Save> = {
+  projectId: string;
+  /** The draft the panel edits on. */
+  draft: Draft;
+  item: Item;
+  value: Save;
+  onChange: (value: Save) => void;
+};
+
+export type ProjectObjectSourceEditor = ProjectSourceEditor<
+  DraftObjectType,
+  DraftObjectTypeSave
+> & {
+  /** Translation key of why the value cannot be saved yet, or null when it can. */
+  check: (value: DraftObjectTypeSave, item: DraftObjectType) => string | null;
+  /** How one of Ask AI's revisions reads against the value being edited. */
+  preview: (t: TFunction, value: DraftObjectTypeSave, revision: AskRevision) => RevisionPreview;
+  /** Over the form: makes a further object type from this one, saved at once. */
+  Derive?: ComponentType<ProjectObjectDeriveProps>;
+  /** How the model's tables and the item's detail name what it is drawn from. */
+  describe: (t: TFunction, item: DraftObjectType) => ProjectObjectSourceDescription;
+  /** A property's cell in the item's detail, in place of the mapped column. */
+  Property: ComponentType<{ property: DraftProperty }>;
+};
+
+export type ProjectObjectDeriveProps = {
+  projectId: string;
+  draft: Draft;
+  item: DraftObjectType;
+  /** Something is not saved or is running: deriving waits. */
+  disabled: boolean;
+  /** The draft with the derived object type in it. */
+  onDerived: (draft: Draft) => void;
+};
+
+export type ProjectObjectSourceDescription = {
+  /** The model's source column, in place of the table. */
+  source: string;
+  /** Said in the identity column in place of the primary keys, when they are not the business's. */
+  identity?: string;
+  /** Title of the detail's property column, in place of the mapped column. */
+  propertyColumn: string;
+};
+
+/** A relation being made has no item yet: the editor gets null. */
+export type ProjectRelationSourceEditor = ProjectSourceEditor<
+  DraftRelationType,
+  DraftRelationTypeSave,
+  DraftRelationType | null
+> & {
+  /** Making a relation of this kind from the relation panel, by a switch over the mapping. */
+  newItem: {
+    /** Translation key of the switch's label. */
+    labelKey: string;
+    /** Whether the draft has what such a relation joins. */
+    offered: (draft: Draft) => boolean;
+    /** What the relation starts from, with the name and description typed so far. */
+    start: (basic: { description: string; name: string }) => DraftRelationTypeSave;
+  };
+};
+
+export type KnowledgeNetworkResourcePanelProps = {
+  networkId: string;
+  canModify: boolean;
+};
+
+export type ProjectRelationBasisProps = {
+  projectId: string;
+  relation: DraftRelationType;
+};
+
+export type ProjectRequirementDocumentPickerProps = ProjectSlotProps & {
+  /** Documents were added: the list reads them again. */
+  onPicked: () => void;
+};
+
+export type ProjectOverviewKnowledgeBaseProps = {
+  projectId: string;
+};
+
+/** The installed knowledge-base extension's component for one project slot, if it has one. */
+function projectSlot<K extends keyof StudioExtension>(key: K): StudioExtension[K] | undefined {
+  return installed.find(
+    (extension) => extension.capability === "knowledge_base" && extension[key],
+  )?.[key];
+}
+
+export const extensionProjectTermLibrary = () => projectSlot("projectTermLibrary");
+export const extensionProjectConceptSource = () => projectSlot("projectConceptSource");
+export const extensionProjectObjectSourceEditor = () => projectSlot("projectObjectSourceEditor");
+export const extensionProjectRelationSourceEditor = () =>
+  projectSlot("projectRelationSourceEditor");
+export const extensionKnowledgeNetworkResourcePanel = () =>
+  projectSlot("knowledgeNetworkResourcePanel");
+export const extensionProjectRelationBasis = () => projectSlot("projectRelationBasis");
+export const extensionProjectRequirementDocumentPicker = () =>
+  projectSlot("projectRequirementDocumentPicker");
+export const extensionProjectOverviewKnowledgeBase = () =>
+  projectSlot("projectOverviewKnowledgeBase");
 
 export type ProjectKnowledgeBaseBuildProps = {
   projectId: string;
+  /**
+   * Kept for extensions built against the two pages these were on: the build page passes
+   * "instances", which also offers the instances' preview.
+   */
   section: "instances" | "builds";
+  /** The lineage the project publishes to, whose knowledge-base data the tab also refreshes. */
+  lineageId: string;
   canEdit: boolean;
   canManageBuilds: boolean;
 };
@@ -88,6 +257,15 @@ export type ProjectKnowledgeBaseResourceProps = {
   canEdit: boolean;
   /** Owner, including archived projects: may finish retention cleanup. */
   canManageHolds: boolean;
+  /** What the page's tab says of the panel: reported once read, and whenever it changes. */
+  onStatusChange?: (status: ProjectKnowledgeBaseResourceStatus) => void;
+};
+
+export type ProjectKnowledgeBaseResourceStatus = {
+  /** The files in scope; null before any are chosen or while they cannot be read. */
+  fileCount: number | null;
+  /** Something waits for the person, such as source changes or a selection not saved. */
+  needsAttention: boolean;
 };
 
 export function extensionProjectKnowledgeBaseResources() {

@@ -172,7 +172,7 @@ describe("QuestionDevPanel", () => {
     getQuestionDevMock.mockResolvedValueOnce(dev({ ontologyChanged: true }));
     renderPanel();
     expect(
-      await screen.findByText("问题用到的本体在生成之后有变化，建议重新生成。"),
+      await screen.findByText("问题用到的概念模型在生成之后有变化，建议重新生成。"),
     ).toBeInTheDocument();
   });
 

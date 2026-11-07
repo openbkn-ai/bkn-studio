@@ -69,6 +69,7 @@ function refusal(code: string, details?: unknown) {
 }
 
 const onConfirmed = vi.fn();
+const onViewConfirmation = vi.fn();
 const onShowPending = vi.fn();
 const onStale = vi.fn();
 const onSendingChange = vi.fn();
@@ -78,6 +79,7 @@ function renderConfirm() {
     <ConfirmDraft
       draft={draft}
       onConfirmed={onConfirmed}
+      onViewConfirmation={onViewConfirmation}
       onSendingChange={onSendingChange}
       onShowPending={onShowPending}
       onStale={onStale}
@@ -126,9 +128,13 @@ describe("ConfirmDraft", () => {
     confirmDraftMock.mockResolvedValue(draft);
     renderConfirm();
 
-    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     const dialog = within(await screen.findByRole("dialog"));
     expect(await dialog.findByText("订单到仓库")).toBeInTheDocument();
+    // Each item is named for assistive technology by what it is and why it waits.
+    expect(
+      dialog.getByRole("listitem", { name: "「订单到仓库」：字段取值太少，关联可能是巧合" }),
+    ).toBeInTheDocument();
     expect(dialog.getByText("字段取值太少，关联可能是巧合")).toBeInTheDocument();
     // Leaving it out leaves the question it is needed by unanswered.
     expect(dialog.getByText("不纳入的话，这些问题答不上来：")).toBeInTheDocument();
@@ -150,7 +156,7 @@ describe("ConfirmDraft", () => {
         updateTime: draft.updateTime,
       }),
     );
-    expect(messageMock.success).toHaveBeenCalledWith("草稿已确认");
+    expect(messageMock.success).toHaveBeenCalledWith(expect.stringContaining("草稿已确认"));
     expect(onConfirmed).toHaveBeenCalled();
     expect(onSendingChange.mock.calls).toEqual([[true], [false]]);
   });
@@ -162,7 +168,7 @@ describe("ConfirmDraft", () => {
     confirmDraftMock.mockResolvedValue(draft);
     renderConfirm();
 
-    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     const dialog = within(await screen.findByRole("dialog"));
     expect(okButton()).toBeDisabled();
     fireEvent.click(dialog.getByText("还有 2 个需求冲突没有裁决，仍然确认"));
@@ -176,13 +182,13 @@ describe("ConfirmDraft", () => {
     );
   });
 
-  it("reminds of candidates nobody confirmed, without holding confirming back", async () => {
+  it("reminds of concepts nobody confirmed, without holding confirming back", async () => {
     getProjectStatusMock.mockResolvedValue(status({}, { unreviewed: 2 }));
     renderConfirm();
 
-    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     const dialog = within(await screen.findByRole("dialog"));
-    expect(dialog.getByText(/^还有 2 个候选没有逐个确认/)).toBeInTheDocument();
+    expect(dialog.getByText(/^还有 2 个概念没有确认/)).toBeInTheDocument();
     expect(okButton()).toBeEnabled();
   });
 
@@ -193,13 +199,13 @@ describe("ConfirmDraft", () => {
       .mockResolvedValue(draft);
     renderConfirm();
 
-    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     const dialog = within(await screen.findByRole("dialog"));
     fireEvent.click(okButton());
     // The dialog stays open with what to accept, rather than "try again later".
     expect(await dialog.findByText("还有 1 个需求冲突没有裁决，仍然确认")).toBeInTheDocument();
     expect(messageMock.warning).toHaveBeenCalledWith(
-      "还有需求冲突没有裁决。勾选下方的「仍然确认」后再确认草稿。",
+      "还有需求冲突没有裁决。勾选下方的「仍然确认」后再确认模型。",
     );
     expect(messageMock.error).not.toHaveBeenCalled();
     await waitFor(() => expect(okButton()).toBeDisabled());
@@ -220,13 +226,13 @@ describe("ConfirmDraft", () => {
     confirmDraftMock.mockRejectedValueOnce(refusal("Draft.ConflictsNotAccepted", ["k1", "k2"]));
     renderConfirm();
 
-    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     fireEvent.click(okButton());
     expect(await screen.findByText("还有 2 个需求冲突没有裁决，仍然确认")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /取\s*消/ }));
 
     // Ruled on meanwhile: the status no longer asks, so neither does the dialog.
-    fireEvent.click(screen.getByRole("button", { name: "确认草稿" }));
+    fireEvent.click(screen.getByRole("button", { name: "确认模型" }));
     await screen.findByRole("dialog");
     await waitFor(() => expect(okButton()).toBeEnabled());
     expect(screen.queryByText(/需求冲突没有裁决/)).toBeNull();
@@ -241,7 +247,7 @@ describe("ConfirmDraft", () => {
     );
     renderConfirm();
 
-    const button = await screen.findByRole("button", { name: "确认草稿" });
+    const button = await screen.findByRole("button", { name: "确认模型" });
     expect(button).toBeDisabled();
     fireEvent.mouseEnter(button.parentElement!);
     expect(await screen.findByText("2 个已采纳的对象类还需要选定唯一标识")).toBeInTheDocument();
@@ -264,9 +270,10 @@ describe("ConfirmDraft", () => {
     renderConfirm();
     // A draft confirmed as it is says so, and leads to the confirmation's results.
     const confirmed = await screen.findByRole("button", { name: /^已于 .+ 确认$/ });
-    expect(screen.queryByRole("button", { name: /确认草稿|重新确认/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /确认模型|重新确认/ })).toBeNull();
     fireEvent.click(confirmed);
-    expect(onConfirmed).toHaveBeenCalled();
+    expect(onViewConfirmation).toHaveBeenCalled();
+    expect(onConfirmed).not.toHaveBeenCalled();
   });
 
   it("says when it cannot tell whether the draft may be confirmed, and reads again", async () => {
@@ -274,11 +281,11 @@ describe("ConfirmDraft", () => {
     renderConfirm();
 
     const retry = await screen.findByRole("button", { name: /重\s*试/ });
-    expect(screen.getByRole("button", { name: "确认草稿" })).toBeDisabled();
-    fireEvent.mouseEnter(screen.getByRole("button", { name: "确认草稿" }).parentElement!);
+    expect(screen.getByRole("button", { name: "确认模型" })).toBeDisabled();
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "确认模型" }).parentElement!);
     expect(await screen.findByText("确认情况暂时读取不到")).toBeInTheDocument();
     fireEvent.click(retry);
-    await waitFor(() => expect(screen.getByRole("button", { name: "确认草稿" })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "确认模型" })).toBeEnabled());
   });
 
   it("keeps only the newest status when reads answer out of order", async () => {
@@ -296,17 +303,18 @@ describe("ConfirmDraft", () => {
       <ConfirmDraft
         draft={{ ...draft, updateTime: draft.updateTime + 1 }}
         onConfirmed={onConfirmed}
+        onViewConfirmation={onViewConfirmation}
         onShowPending={onShowPending}
         onStale={onStale}
         projectId="p1"
       />,
     );
-    expect(await screen.findByRole("button", { name: "确认草稿" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "确认模型" })).toBeEnabled();
 
     // The read for the older draft answers last: it no longer counts.
     answerFirst(status({ allowed: false, reason: "not_owner" }));
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(screen.getByRole("button", { name: "确认草稿" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "确认模型" })).toBeEnabled();
   });
 
   it("leads to the items to settle, or reloads a changed draft", async () => {
@@ -314,7 +322,7 @@ describe("ConfirmDraft", () => {
     confirmDraftMock.mockRejectedValueOnce(refusal("Draft.HasPending", { needs_identity: ["a"] }));
     renderConfirm();
 
-    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     await screen.findByRole("dialog");
     fireEvent.click(okButton());
     await waitFor(() => expect(onShowPending).toHaveBeenCalled());
@@ -323,7 +331,7 @@ describe("ConfirmDraft", () => {
     );
 
     confirmDraftMock.mockRejectedValueOnce(refusal("Draft.Stale"));
-    fireEvent.click(screen.getByRole("button", { name: "确认草稿" }));
+    fireEvent.click(screen.getByRole("button", { name: "确认模型" }));
     await screen.findByRole("dialog");
     fireEvent.click(okButton());
     await waitFor(() => expect(onStale).toHaveBeenCalled());
@@ -333,7 +341,7 @@ describe("ConfirmDraft", () => {
     getProjectStatusMock.mockResolvedValue(status({}));
     confirmDraftMock.mockRejectedValueOnce(refusal("Draft.DocumentDataNotReady"));
     renderConfirm();
-    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     await screen.findByRole("dialog");
     fireEvent.click(okButton());
     await waitFor(() => expect(onStale).toHaveBeenCalled());
@@ -352,7 +360,7 @@ describe("ConfirmDraft", () => {
       .mockRejectedValueOnce(refusal("Lineage.DefinitionsExist", ["object_types/customers.bkn"]));
     renderConfirm();
 
-    fireEvent.click(await screen.findByRole("button", { name: "确认草稿" }));
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     const dialog = within(await screen.findByRole("dialog"));
     fireEvent.click(okButton());
     // The dialog stays open with what to accept now.

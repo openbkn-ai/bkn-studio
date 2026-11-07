@@ -18,7 +18,7 @@ test("bkn project: understand the data, confirm the draft, and see its check and
 
   await page.goto("/studio/bkn-project");
   await page.getByText("Delivery Delay Warning").first().click();
-  await page.getByRole("button", { name: "本体建模", exact: true }).click();
+  await page.getByRole("button", { name: "概念建模", exact: true }).click();
 
   // Semantic understanding names the tables drafting reads; it runs one table at a time.
   await expect(page.getByText("还没有运行过语义理解")).toBeVisible();
@@ -31,7 +31,7 @@ test("bkn project: understand the data, confirm the draft, and see its check and
   await expect(page.getByText("语义理解已完成", { exact: true })).toBeVisible();
 
   // An adopted relation waits for the object type at its end, so confirming waits too.
-  const confirm = page.getByRole("button", { name: "确认草稿" });
+  const confirm = page.getByRole("button", { name: "确认模型" });
   await expect(confirm).toBeDisabled();
   await page.getByRole("button", { name: "为material_bom选择唯一标识" }).click();
   const identity = page.getByRole("dialog");
@@ -50,11 +50,17 @@ test("bkn project: understand the data, confirm the draft, and see its check and
   await dialog.getByText("知道这些表没有参与起草，仍然确认").click();
   await ok.click();
 
-  // Confirming leads to the release page, where the check and the builds run in the background.
+  // Confirming goes on to kinetic modeling; the check runs in the background, on the release page,
+  // and the indexes on the build page.
+  await expect(page).toHaveURL(/\/bkn-project\/p-001\/kinetic$/);
+  const nav = page.getByRole("navigation", { name: "项目导航" });
+  await nav.getByRole("button", { name: "发布", exact: true }).click();
   await expect(page).toHaveURL(/\/bkn-project\/p-001\/release$/);
   await expect(page.getByText(/^已于 .+ 确认$/)).toBeVisible();
   const check = page.getByRole("region", { name: "数据校验" });
   await expect(check.getByText(/^已核对 \d+ \/ \d+ 项$/)).toBeVisible();
+  await nav.getByRole("button", { name: "构建", exact: true }).click();
+  await expect(page).toHaveURL(/\/bkn-project\/p-001\/build$/);
   const indexes = page.getByRole("region", { name: "本地索引" });
   // The state tag itself, not the summary line, which says "可用" too.
   await expect(indexes.getByText("可用", { exact: true }).first()).toBeVisible();
