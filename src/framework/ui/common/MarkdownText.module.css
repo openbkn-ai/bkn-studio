@@ -186,3 +186,14 @@
 .dark th {
   background: color-mix(in srgb, var(--color-text-inverse) 10%, transparent);
 }
+
+/* A ```mermaid block drawn as a diagram: as wide as the text at most, scrolled when wider. */
+.mermaid {
+  margin: 0 0 8px;
+  overflow-x: auto;
+}
+.mermaid svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}

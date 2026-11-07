@@ -6,11 +6,30 @@
  */
 
 import { memo, useMemo } from "react";
-import Markdown from "react-markdown";
+import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
+import { MermaidDiagram } from "./MermaidDiagram";
 import styles from "./MarkdownText.module.css";
+
+type HastNode = { type: string; value?: string; children?: HastNode[] };
+
+function textOf(node: HastNode): string {
+  return node.value ?? (node.children ?? []).map(textOf).join("");
+}
+
+/** A ```mermaid block drawn as a diagram; any other code block stays as it is. */
+const DIAGRAMS: Components = {
+  pre({ node, children, ...rest }) {
+    const code = node?.children[0];
+    const classes =
+      code?.type === "element" && code.tagName === "code" ? code.properties.className : undefined;
+    if (Array.isArray(classes) && classes.includes("language-mermaid") && code)
+      return <MermaidDiagram source={textOf(code).replace(/\n$/, "")} />;
+    return <pre {...rest}>{children}</pre>;
+  },
+};
 
 type MarkdownTextProps = {
   className?: string;
@@ -30,13 +49,21 @@ type MarkdownTextProps = {
   streaming?: boolean;
 };
 
-/** One Markdown block. memo keeps stable blocks from reparsing while text streams in. */
-const MarkdownBlock = memo(function MarkdownBlock({ text }: { text: string }) {
-  return <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>;
+/**
+ * One Markdown block. memo keeps stable blocks from reparsing while text streams in; the block
+ * still arriving shows a diagram's source until it is complete.
+ */
+const MarkdownBlock = memo(function MarkdownBlock({ text, open }: { text: string; open: boolean }) {
+  return (
+    <Markdown remarkPlugins={[remarkGfm]} {...(open ? {} : { components: DIAGRAMS })}>
+      {text}
+    </Markdown>
+  );
 });
 
 /**
- * The one Markdown renderer across the app (GFM), for descriptions and streamed answers alike. Its styles are self-contained and do not
+ * The one Markdown renderer across the app (GFM, ```mermaid blocks drawn as diagrams), for
+ * descriptions and streamed answers alike. Its styles are self-contained and do not
  * depend on agent-chat theme variables, so it works in cards, tooltips, detail overviews, and more.
  */
 export const MarkdownText = memo(function MarkdownText({
@@ -64,9 +91,13 @@ export const MarkdownText = memo(function MarkdownText({
   return (
     <div className={classes}>
       {blocks === null ? (
-        <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+        <Markdown remarkPlugins={[remarkGfm]} components={DIAGRAMS}>
+          {text}
+        </Markdown>
       ) : (
-        blocks.map((block, index) => <MarkdownBlock key={index} text={block} />)
+        blocks.map((block, index) => (
+          <MarkdownBlock key={index} text={block} open={index === blocks.length - 1} />
+        ))
       )}
     </div>
   );
