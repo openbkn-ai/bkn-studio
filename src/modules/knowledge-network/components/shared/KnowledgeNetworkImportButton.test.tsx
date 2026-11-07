@@ -6,9 +6,11 @@
  */
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { AxiosError, AxiosHeaders } from "axios";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DeclarationsWouldBeClearedError } from "@/modules/knowledge-network/services/shared/declaration-errors";
 import {
   KnowledgeNetworkImportBindingError,
   KnowledgeNetworkImportConflictError,
@@ -201,6 +203,17 @@ vi.mock(
 
 import { KnowledgeNetworkImportButton } from "./KnowledgeNetworkImportButton";
 
+/** A backend refusal as the request client rejects it. */
+function backendRefusal(data: Record<string, unknown>) {
+  return new AxiosError("Request failed with status code 400", undefined, undefined, undefined, {
+    config: { headers: new AxiosHeaders() },
+    data,
+    headers: {},
+    status: 400,
+    statusText: "Bad Request",
+  });
+}
+
 describe("KnowledgeNetworkImportButton", () => {
   beforeEach(() => {
     mocks.form.resetFields.mockReset();
@@ -279,6 +292,7 @@ describe("KnowledgeNetworkImportButton", () => {
         "normal",
         "detach",
         false,
+        false,
       );
     });
   });
@@ -301,6 +315,7 @@ describe("KnowledgeNetworkImportButton", () => {
         "ignore",
         "preserve",
         true,
+        false,
       );
     });
     expect(mocks.messageSuccess).toHaveBeenCalledWith("knowledgeNetwork.importSuccess");
@@ -333,7 +348,131 @@ describe("KnowledgeNetworkImportButton", () => {
       "overwrite",
       "preserve",
       false,
+      false,
     );
+  });
+
+  describe("an overwrite that would clear declarations", () => {
+    const refusal = () =>
+      new DeclarationsWouldBeClearedError("The overwrite would clear declarations", [
+        { fields: ["aliases"], id: "lab_order", kind: "object_type" },
+      ]);
+
+    beforeEach(() => {
+      vi.stubGlobal(
+        "FileReader",
+        class {
+          onload: ((event: { target: { result: string } }) => void) | null = null;
+
+          readAsText() {
+            this.onload?.({
+              target: {
+                result: JSON.stringify({
+                  id: "orders",
+                  name: "Orders",
+                  object_types: [{ id: "lab_order", name: "Lab order" }],
+                }),
+              },
+            });
+          }
+        },
+      );
+    });
+
+    const overwrite = async ({ strict = false } = {}) => {
+      fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.click(screen.getByDisplayValue("overwrite"));
+      if (strict) {
+        fireEvent.click(
+          within(dialog).getByRole("switch", { name: "knowledgeNetwork.importStrictModeTitle" }),
+        );
+      }
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "knowledgeNetwork.importButton" }),
+      );
+      const confirmation = mocks.modalConfirm.mock.calls[0]?.[0] as { onOk?: () => Promise<void> };
+      await confirmation.onOk?.();
+    };
+
+    it("lists them, named from the file, and resends with only the confirmation added", async () => {
+      mocks.importKnowledgeNetwork.mockReset();
+      mocks.importKnowledgeNetwork
+        .mockRejectedValueOnce(refusal())
+        .mockResolvedValueOnce(undefined);
+      const onImported = vi.fn();
+      render(<KnowledgeNetworkImportButton onImported={onImported} />);
+
+      await overwrite({ strict: true });
+
+      const list = await screen.findByRole("region", { name: "Lab order" });
+      expect(
+        within(list).getByText(
+          'knowledgeNetwork.declarations.cleared.definition:{"kind":"knowledgeNetwork.declarations.kind.object_type","name":"Lab order"}',
+        ),
+      ).toBeInTheDocument();
+      // The import settings stay open under the list.
+      expect(screen.getAllByRole("dialog")).toHaveLength(2);
+      expect(mocks.messageError).not.toHaveBeenCalled();
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "knowledgeNetwork.declarations.cleared.confirm" }),
+      );
+
+      await waitFor(() => expect(mocks.importKnowledgeNetwork).toHaveBeenCalledTimes(2));
+      expect(mocks.importKnowledgeNetwork).toHaveBeenLastCalledWith(
+        expect.objectContaining({ id: "orders" }),
+        "overwrite",
+        "preserve",
+        true,
+        true,
+      );
+      await waitFor(() => expect(onImported).toHaveBeenCalled());
+    });
+
+    it("returns to the import settings, nothing sent, when the list is cancelled", async () => {
+      mocks.importKnowledgeNetwork.mockReset();
+      mocks.importKnowledgeNetwork.mockRejectedValueOnce(refusal());
+      render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);
+
+      await overwrite();
+      await screen.findByRole("region", { name: "Lab order" });
+      fireEvent.click(
+        within(screen.getAllByRole("dialog")[1]).getByRole("button", {
+          name: "common.cancel",
+        }),
+      );
+
+      expect(screen.queryByRole("region", { name: "Lab order" })).not.toBeInTheDocument();
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+      expect(mocks.importKnowledgeNetwork).toHaveBeenCalledTimes(1);
+      expect(screen.getByDisplayValue("overwrite")).toBeInTheDocument();
+    });
+
+    it("resends a package with the same options, listed by id", async () => {
+      mocks.uploadFileName = "orders.tar";
+      mocks.importKnowledgeNetworkPackage.mockRejectedValueOnce(refusal()).mockResolvedValueOnce({
+        bound: 0,
+        skipped: [],
+      });
+      render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);
+
+      await overwrite();
+      await screen.findByRole("region", { name: "lab_order" });
+      fireEvent.click(
+        screen.getByRole("button", { name: "knowledgeNetwork.declarations.cleared.confirm" }),
+      );
+
+      await waitFor(() =>
+        expect(mocks.importKnowledgeNetworkPackage).toHaveBeenLastCalledWith(
+          expect.objectContaining({ name: "orders.tar" }),
+          "overwrite",
+          "preserve",
+          false,
+          true,
+        ),
+      );
+    });
   });
 
   it("shows loading only on the conflict action being submitted", async () => {
@@ -468,6 +607,7 @@ describe("KnowledgeNetworkImportButton", () => {
           "ignore",
           "preserve",
           false,
+          false,
         ),
       );
       expect(readAsText).not.toHaveBeenCalled();
@@ -524,6 +664,52 @@ describe("KnowledgeNetworkImportButton", () => {
       ).toBeInTheDocument();
       expect(within(result).queryByText(/brand_new/)).toBeNull();
       expect(mocks.messageSuccess).not.toHaveBeenCalled();
+    });
+
+    it("keeps the place a refused package breaks its spec in the dialog, without a toast", async () => {
+      const located =
+        "action_types/refund_order.bkn: `Tool ID` is not a 3.0 column name; write `ToolID`";
+      mocks.importKnowledgeNetworkPackage.mockRejectedValueOnce(
+        backendRefusal({
+          description: "Invalid parameter",
+          error_code: "BknBackend.KnowledgeNetwork.InvalidParameter",
+          error_details: located,
+        }),
+      );
+      render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "knowledgeNetwork.importButton" }),
+      );
+
+      expect(await within(dialog).findByText("Invalid parameter")).toBeInTheDocument();
+      expect(within(dialog).getByText(located)).toBeInTheDocument();
+      expect(mocks.messageError).not.toHaveBeenCalled();
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    });
+
+    it("still reports a refusal with nothing more to show in a toast", async () => {
+      mocks.importKnowledgeNetworkPackage.mockRejectedValueOnce(
+        backendRefusal({
+          description: "The archive could not be read",
+          error_code: "BknBackend.KnowledgeNetwork.InvalidParameter",
+        }),
+      );
+      render(<KnowledgeNetworkImportButton onImported={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
+      fireEvent.click(
+        within(await screen.findByRole("dialog")).getByRole("button", {
+          name: "knowledgeNetwork.importButton",
+        }),
+      );
+
+      await waitFor(() =>
+        expect(mocks.messageError).toHaveBeenCalledWith("The archive could not be read"),
+      );
+      expect(screen.queryByText("The archive could not be read")).toBeNull();
     });
 
     it("offers no copy under a new name on a conflict, as a package cannot be renamed", async () => {

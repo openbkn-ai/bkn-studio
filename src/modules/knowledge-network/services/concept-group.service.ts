@@ -39,6 +39,7 @@ import {
   useMock,
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
+import { CONFIRM_CLEAR_DECLARATIONS_PARAM } from "@/modules/knowledge-network/services/shared/declaration-errors";
 
 const CONCEPT_GROUP_ICON = "icon-dip-fenzu";
 const KNOWLEDGE_NETWORK_BRANCH = "main";
@@ -350,10 +351,16 @@ export async function removeObjectTypesFromKnowledgeNetworkConceptGroup(
   );
 }
 
+/**
+ * Imports a concept group from its JSON export. An ID or name in use rejects with a conflict, and an
+ * overwrite that would clear stored declarations with `DeclarationsWouldBeClearedError`, until it is
+ * resent with `confirmClearDeclarations`.
+ */
 export async function importKnowledgeNetworkConceptGroup(
   networkId: string,
   payload: Record<string, unknown>,
   importMode?: KnowledgeNetworkImportMode,
+  confirmClearDeclarations = false,
 ) {
   const requestBody = { ...payload, validate_dependency: false };
 
@@ -452,7 +459,10 @@ export async function importKnowledgeNetworkConceptGroup(
       params: {
         import_mode: importMode,
         validate_dependency: false,
+        ...(confirmClearDeclarations ? { [CONFIRM_CLEAR_DECLARATIONS_PARAM]: true } : {}),
       },
+      // The import button shows every refusal itself, as a conflict, a list or a message.
+      skipErrorToast: true,
     });
   } catch (error) {
     rethrowImportConflict(error);

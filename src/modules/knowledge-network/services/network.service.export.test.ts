@@ -97,6 +97,7 @@ describe("exportKnowledgeNetwork", () => {
     expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/knowledge-networks/kn-1", {
       params: { mode: "export" },
       responseType: "blob",
+      skipErrorToast: true,
       timeout: 60_000,
     });
     expect(downloads).toHaveLength(1);
@@ -129,8 +130,10 @@ describe("exportKnowledgeNetwork", () => {
 
     await exportKnowledgeNetwork("kn-1", "bkn");
 
+    // No bkn_spec: the backend picks 3.0 or 2.x from what the network holds.
     expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/bkns/kn-1", {
       responseType: "blob",
+      skipErrorToast: true,
       timeout: 60_000,
     });
     expect(downloads).toHaveLength(1);
@@ -147,6 +150,132 @@ describe("exportKnowledgeNetwork", () => {
     await exportKnowledgeNetwork("kn-1", "bkn");
 
     expect(downloads[0]?.name).toBe("kn-1.tar");
+  });
+
+  it("asks for a 2.x package when the user chose it after a refusal", async () => {
+    captureDownloads();
+    getMock.mockResolvedValue({ data: new Blob(["tar-bytes"]), headers: {} });
+    const { exportKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
+
+    await exportKnowledgeNetwork("kn-1", "bkn", { bknSpec: "2.0" });
+
+    expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/bkns/kn-1", {
+      params: { bkn_spec: "2.0" },
+      responseType: "blob",
+      skipErrorToast: true,
+      timeout: 60_000,
+    });
+  });
+
+  it("reads a network-check refusal into the check result", async () => {
+    const downloads = captureDownloads();
+    getMock.mockRejectedValue({
+      response: {
+        data: {
+          description: "The network check found parameters to fix",
+          error_code: "BknBackend.KnowledgeNetwork.ExportNeedsNetworkCheck",
+          error_details: {
+            invalid_parameters: [
+              { action_type_id: "urge", current: { value_from: "context" }, parameter: "who" },
+            ],
+            misplaced_parameters: [
+              {
+                action_type_id: "urge",
+                conflict: false,
+                current: { source: "property", value: "order_no" },
+                parameter: "order_no",
+                suggested: { value: "order_no", value_from: "property" },
+              },
+              {
+                conflict: true,
+                current: { source: "input" },
+                logic_property: "turnaround",
+                object_type_id: "lab_order",
+                parameter: "dept",
+                suggested: { value_from: "input" },
+              },
+            ],
+          },
+        },
+        status: 400,
+      },
+    });
+    const { exportKnowledgeNetwork, KnowledgeNetworkExportRefusedError } =
+      await import("@/modules/knowledge-network/services/knowledge-network.service");
+
+    const error = await exportKnowledgeNetwork("kn-1", "bkn").catch((reason: unknown) => reason);
+
+    expect(error).toBeInstanceOf(KnowledgeNetworkExportRefusedError);
+    expect((error as InstanceType<typeof KnowledgeNetworkExportRefusedError>).refusal).toEqual({
+      check: {
+        invalidParameters: [
+          {
+            actionTypeId: "urge",
+            current: { source: undefined, value: undefined, valueFrom: "context" },
+            logicProperty: undefined,
+            objectTypeId: undefined,
+            parameter: "who",
+          },
+        ],
+        misplacedParameters: [
+          {
+            actionTypeId: "urge",
+            conflict: false,
+            current: { source: "property", value: "order_no", valueFrom: undefined },
+            logicProperty: undefined,
+            objectTypeId: undefined,
+            parameter: "order_no",
+            suggested: { source: undefined, value: "order_no", valueFrom: "property" },
+          },
+          {
+            actionTypeId: undefined,
+            conflict: true,
+            current: { source: "input", value: undefined, valueFrom: undefined },
+            logicProperty: "turnaround",
+            objectTypeId: "lab_order",
+            parameter: "dept",
+            suggested: { source: undefined, value: undefined, valueFrom: "input" },
+          },
+        ],
+      },
+      kind: "network_check",
+    });
+    // Studio never falls back to 2.x by itself.
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect(downloads).toHaveLength(0);
+  });
+
+  it("reads a 3.0 read-back refusal with its reason", async () => {
+    getMock.mockRejectedValue({
+      response: {
+        data: {
+          error_code: "BknBackend.KnowledgeNetwork.ExportNotReadableAsV3",
+          error_details: "object type lab_order: semantic end_time needs event_time",
+        },
+      },
+    });
+    const { exportKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/knowledge-network.service");
+
+    await expect(exportKnowledgeNetwork("kn-1", "bkn")).rejects.toMatchObject({
+      message: "BknBackend.KnowledgeNetwork.ExportNotReadableAsV3",
+      refusal: {
+        kind: "not_readable_as_v3",
+        reason: "object type lab_order: semantic end_time needs event_time",
+      },
+    });
+  });
+
+  it("rethrows any other export failure as it came", async () => {
+    const failure = {
+      response: { data: { error_code: "BknBackend.KnowledgeNetwork.NotFound" }, status: 404 },
+    };
+    getMock.mockRejectedValue(failure);
+    const { exportKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
+
+    await expect(exportKnowledgeNetwork("kn-1", "bkn")).rejects.toBe(failure);
   });
 });
 

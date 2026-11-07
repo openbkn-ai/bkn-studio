@@ -18,3 +18,8 @@ export {
   KnowledgeNetworkImportBindingError,
   KnowledgeNetworkImportConflictError,
 } from "@/modules/knowledge-network/services/shared/runtime";
+export {
+  DeclarationsWouldBeClearedError,
+  KnowledgeNetworkExportRefusedError,
+} from "@/modules/knowledge-network/services/shared/declaration-errors";
+export type { KnowledgeNetworkExportRefusal } from "@/modules/knowledge-network/services/shared/declaration-errors";

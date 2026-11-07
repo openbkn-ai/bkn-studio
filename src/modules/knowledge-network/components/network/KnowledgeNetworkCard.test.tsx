@@ -70,6 +70,7 @@ describe("getKnowledgeNetworkCardMenuKeys", () => {
     expect(getKnowledgeNetworkCardMenuKeys(createRecord(["view_detail"]))).toEqual([
       "view",
       "export",
+      "check",
       "request-permission",
     ]);
   });
@@ -77,7 +78,7 @@ describe("getKnowledgeNetworkCardMenuKeys", () => {
   it("shows edit and delete only when record operations allow them", () => {
     expect(
       getKnowledgeNetworkCardMenuKeys(createRecord(["view_detail", "modify", "delete"])),
-    ).toEqual(["view", "edit", "export", "request-permission", "delete"]);
+    ).toEqual(["view", "edit", "export", "check", "request-permission", "delete"]);
   });
 
   it("hides permission request when every business operation is already granted", () => {
@@ -85,13 +86,14 @@ describe("getKnowledgeNetworkCardMenuKeys", () => {
       getKnowledgeNetworkCardMenuKeys(
         createRecord(["view_detail", "create", "modify", "delete", "execute", "query_data"]),
       ),
-    ).toEqual(["view", "edit", "export", "delete"]);
+    ).toEqual(["view", "edit", "export", "check", "delete"]);
   });
 
   it("hides permission request for a super administrator", () => {
     expect(getKnowledgeNetworkCardMenuKeys(createRecord(["view_detail"]), false)).toEqual([
       "view",
       "export",
+      "check",
     ]);
   });
 
@@ -129,6 +131,7 @@ describe("KnowledgeNetworkCard export menu interaction", () => {
   function renderCard() {
     const handlers = {
       onAuthorize: vi.fn(),
+      onCheck: vi.fn(),
       onDelete: vi.fn(),
       onEdit: vi.fn(),
       onExport: vi.fn(),
@@ -151,6 +154,16 @@ describe("KnowledgeNetworkCard export menu interaction", () => {
 
     expect(onOpen).not.toHaveBeenCalled();
     expect(onExport).not.toHaveBeenCalled();
+  });
+
+  it("runs the network check without opening the workspace", async () => {
+    const { onCheck, onOpen, view } = renderCard();
+
+    fireEvent.click(view.container.querySelector("button") as HTMLButtonElement);
+    fireEvent.click(await screen.findByText("knowledgeNetwork.declarations.networkCheck.action"));
+
+    expect(onCheck).toHaveBeenCalledWith(expect.objectContaining({ id: "network-1" }));
+    expect(onOpen).not.toHaveBeenCalled();
   });
 
   it("exports in the format picked from the submenu", async () => {
