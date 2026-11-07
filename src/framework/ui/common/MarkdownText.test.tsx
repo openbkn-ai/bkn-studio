@@ -85,16 +85,29 @@ describe("MarkdownText 里的 mermaid", () => {
     expect(mermaid.parse).not.toHaveBeenCalled();
   });
 
+  // Drawn diagrams are kept for the page, so each test below draws a source of its own.
   it("流式中还没写完的尾块只显示原文，写完的块才画图", async () => {
+    const source = "graph LR\n  A --> C";
     const { container, rerender } = render(
       <MarkdownText text={"## 流程\n\n```mermaid\ngraph LR\n  A -->"} streaming />,
     );
     expect(container.querySelector("pre code")?.textContent).toContain("A -->");
     expect(mermaid.parse).not.toHaveBeenCalled();
     rerender(
-      <MarkdownText text={"## 流程\n\n```mermaid\n" + DIAGRAM + "\n```\n\n说明"} streaming />,
+      <MarkdownText text={"## 流程\n\n```mermaid\n" + source + "\n```\n\n说明"} streaming />,
     );
     expect(await screen.findByTestId("diagram")).toBeInTheDocument();
     expect(mermaid.parse).toHaveBeenCalledTimes(1);
+  });
+
+  it("流式结束改为整体渲染时，已画好的图直接保留，不退回原文、不重画", async () => {
+    const text = "## 流程\n\n```mermaid\ngraph LR\n  A --> D\n```\n\n说明";
+    const { container, rerender } = render(<MarkdownText text={text} streaming />);
+    expect(await screen.findByTestId("diagram")).toBeInTheDocument();
+    rerender(<MarkdownText text={text} />);
+    expect(screen.getByTestId("diagram")).toBeInTheDocument();
+    expect(container.querySelector("pre code.language-mermaid")).toBeNull();
+    await Promise.resolve();
+    expect(mermaid.render).toHaveBeenCalledTimes(1);
   });
 });
