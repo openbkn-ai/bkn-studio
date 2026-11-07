@@ -5,10 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 const mocks = vi.hoisted(() => ({
   confirm: vi.fn(),
@@ -128,7 +130,7 @@ function choose(label: string, option: string) {
 function renderForm(props: Partial<Parameters<typeof ValueTypeFormDrawer>[0]> = {}) {
   const onSaved = vi.fn();
   const onClose = vi.fn();
-  render(
+  renderWithoutAntdStyles(
     <MemoryRouter>
       <ValueTypeFormDrawer networkId="kn-1" onClose={onClose} onSaved={onSaved} open {...props} />
     </MemoryRouter>,
@@ -297,7 +299,7 @@ describe("ValueTypeFormDrawer", () => {
 
 describe("ValueTypeListDrawer", () => {
   function renderList(canModify = true) {
-    render(
+    renderWithoutAntdStyles(
       <MemoryRouter>
         <ValueTypeListDrawer canModify={canModify} networkId="kn-1" onClose={vi.fn()} open />
       </MemoryRouter>,

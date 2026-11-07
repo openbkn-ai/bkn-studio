@@ -5,9 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 // Keys only, except that a value type a message names is shown after its key.
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -97,7 +99,7 @@ const context = (
 
 function renderDrawer(value: ObjectTypeDataProperty, declarationContext = context()) {
   const onSubmit = vi.fn();
-  render(
+  renderWithoutAntdStyles(
     <ObjectTypeDataAttributeFormDrawer
       declarationContext={declarationContext}
       onClose={vi.fn()}
@@ -153,7 +155,7 @@ describe("PropertyDeclarationsSection", () => {
   });
 
   it("is absent where the drawer edits a mask rule", () => {
-    render(
+    renderWithoutAntdStyles(
       <ObjectTypeDataAttributeFormDrawer
         declarationContext={context()}
         mode="mask-rule"
