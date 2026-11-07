@@ -27,6 +27,8 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import type { KnowledgeNetworkListSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkCard } from "@/modules/knowledge-network/components/network/KnowledgeNetworkCard";
+import { KnowledgeNetworkCheckDialog } from "@/modules/knowledge-network/components/network/KnowledgeNetworkCheckDialog";
+import { KnowledgeNetworkExportRefusedDialog } from "@/modules/knowledge-network/components/network/KnowledgeNetworkExportRefusedDialog";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
@@ -42,12 +44,16 @@ import {
   createKnowledgeNetwork,
   deleteKnowledgeNetwork,
   exportKnowledgeNetwork,
+  KnowledgeNetworkExportRefusedError,
   listKnowledgeNetworks,
   listKnowledgeNetworkTags,
   updateKnowledgeNetwork,
+  type KnowledgeNetworkExportOptions,
+  type KnowledgeNetworkExportRefusal,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { logServiceFallback } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
+  KnowledgeNetworkExportFormat,
   KnowledgeNetworkMutationPayload,
   KnowledgeNetworkRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -84,10 +90,16 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
     initialListLocation.sortDirection,
   );
   const [authorizingRecord, setAuthorizingRecord] = useState<KnowledgeNetworkRecord | null>(null);
+  const [checkingRecord, setCheckingRecord] = useState<KnowledgeNetworkRecord | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<KnowledgeNetworkRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [permissionRequestRecord, setPermissionRequestRecord] =
     useState<KnowledgeNetworkRecord | null>(null);
+  const [exportRefusal, setExportRefusal] = useState<{
+    networkId: string;
+    refusal: KnowledgeNetworkExportRefusal;
+  } | null>(null);
+  const [exportingV2, setExportingV2] = useState(false);
 
   const hasActiveFilter = useMemo(
     () => Boolean(pageState.keyword.trim()) || selectedTag !== "all",
@@ -184,6 +196,41 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
     void navigate(`/knowledge-network/workspace/${record.id}/overview`, {
       state: knowledgeNetworkListReturnState(listReturnPath),
     });
+  };
+
+  /** Exports a network; resolves to whether the file was downloaded. */
+  const runExport = async (
+    networkId: string,
+    format: KnowledgeNetworkExportFormat,
+    options?: KnowledgeNetworkExportOptions,
+  ) => {
+    try {
+      await exportKnowledgeNetwork(networkId, format, options);
+      void message.success(t("knowledgeNetwork.exportSuccess"));
+      return true;
+    } catch (error) {
+      if (error instanceof KnowledgeNetworkExportRefusedError) {
+        setExportRefusal({ networkId, refusal: error.refusal });
+      } else {
+        void message.error(extractRequestErrorMessage(error));
+      }
+      return false;
+    }
+  };
+
+  const exportAsV2 = async () => {
+    if (!exportRefusal) {
+      return;
+    }
+
+    setExportingV2(true);
+    try {
+      if (await runExport(exportRefusal.networkId, "bkn", { bknSpec: "2.0" })) {
+        setExportRefusal(null);
+      }
+    } finally {
+      setExportingV2(false);
+    }
   };
 
   const openDelete = (record: KnowledgeNetworkRecord) => {
@@ -392,12 +439,11 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
                   <KnowledgeNetworkCard
                     key={record.id}
                     onAuthorize={setAuthorizingRecord}
+                    onCheck={setCheckingRecord}
                     onDelete={openDelete}
                     onEdit={openEdit}
                     onExport={(nextRecord, format) => {
-                      void exportKnowledgeNetwork(nextRecord.id, format).then(() => {
-                        void message.success(t("knowledgeNetwork.exportSuccess"));
-                      });
+                      void runExport(nextRecord.id, format);
                     }}
                     onOpen={openWorkspace}
                     canRequestPermission={canRequestPermission}
@@ -436,6 +482,24 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
         open={formOpen}
         record={editingRecord}
       />
+      {checkingRecord ? (
+        <KnowledgeNetworkCheckDialog
+          key={checkingRecord.id}
+          network={checkingRecord}
+          onClose={() => setCheckingRecord(null)}
+        />
+      ) : null}
+      {exportRefusal ? (
+        <KnowledgeNetworkExportRefusedDialog
+          exporting={exportingV2}
+          networkId={exportRefusal.networkId}
+          onCancel={() => setExportRefusal(null)}
+          onExportV2={() => {
+            void exportAsV2();
+          }}
+          refusal={exportRefusal.refusal}
+        />
+      ) : null}
       <ObjectAuthorizeDrawer
         objectAuthorized={hasKnowledgeNetworkRecordOperation(authorizingRecord, "authorize")}
         objId={authorizingRecord?.id ?? ""}

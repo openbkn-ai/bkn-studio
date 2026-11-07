@@ -80,8 +80,13 @@ export function WorkspaceResourceSection({
             );
             void message.success(t("common.success"));
           }}
-          onImport={(payload, importMode) =>
-            importKnowledgeNetworkConceptGroup(networkId, payload, importMode)
+          onImport={(payload, importMode, confirmClearDeclarations) =>
+            importKnowledgeNetworkConceptGroup(
+              networkId,
+              payload,
+              importMode,
+              confirmClearDeclarations,
+            )
           }
         />
       );

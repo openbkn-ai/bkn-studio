@@ -32,6 +32,7 @@ import styles from "./KnowledgeNetworkCard.module.css";
 
 type KnowledgeNetworkCardProps = {
   onAuthorize: (record: KnowledgeNetworkRecord) => void;
+  onCheck: (record: KnowledgeNetworkRecord) => void;
   onDelete: (record: KnowledgeNetworkRecord) => void;
   onEdit: (record: KnowledgeNetworkRecord) => void;
   onExport: (record: KnowledgeNetworkRecord, format: KnowledgeNetworkExportFormat) => void;
@@ -43,6 +44,7 @@ type KnowledgeNetworkCardProps = {
 
 export function KnowledgeNetworkCard({
   onAuthorize,
+  onCheck,
   onDelete,
   onEdit,
   onExport,
@@ -67,11 +69,13 @@ export function KnowledgeNetworkCard({
           ? t("common.edit")
           : key === "export"
             ? t("knowledgeNetwork.export")
-            : key === "authorize"
-              ? t("knowledgeNetwork.authorizeAction")
-              : key === "request-permission"
-                ? t("knowledgeNetwork.requestPermission")
-                : t("common.delete"),
+            : key === "check"
+              ? t("knowledgeNetwork.declarations.networkCheck.action")
+              : key === "authorize"
+                ? t("knowledgeNetwork.authorizeAction")
+                : key === "request-permission"
+                  ? t("knowledgeNetwork.requestPermission")
+                  : t("common.delete"),
     // Export is the one entry that fans out: the same network leaves either as
     // the JSON view or as the BKN package, so the format is picked here rather
     // than in a dialog after the click.
@@ -131,6 +135,11 @@ export function KnowledgeNetworkCard({
 
               if (exportFormat) {
                 onExport(record, exportFormat);
+                return;
+              }
+
+              if (key === "check") {
+                onCheck(record);
                 return;
               }
 

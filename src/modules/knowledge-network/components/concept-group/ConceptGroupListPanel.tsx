@@ -30,7 +30,10 @@ import { ConceptGroupGraphPanel } from "@/modules/knowledge-network/components/c
 import { ConceptGroupGraphSidebar } from "@/modules/knowledge-network/components/concept-group/ConceptGroupGraphSidebar";
 import type { ObjectTypeGraphSelectedResource } from "@/modules/knowledge-network/components/object-type/ObjectTypeResourceGraph";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
-import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
+import {
+  JsonResourceImportButton,
+  type JsonResourceImport,
+} from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
@@ -49,10 +52,7 @@ import {
 } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import { getKnowledgeNetworkConceptGroup } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { listKnowledgeNetworkConceptGroupPage } from "@/modules/knowledge-network/services/concept-group.service";
-import type {
-  ConceptGroupRecord,
-  KnowledgeNetworkImportMode,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import type { ConceptGroupRecord } from "@/modules/knowledge-network/types/knowledge-network";
 import { downloadConceptGroupExport } from "@/modules/knowledge-network/utils/concept-group-export";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
@@ -65,10 +65,7 @@ type ConceptGroupListPanelProps = {
   networkId: string;
   networkName: string;
   onDelete: (records: ConceptGroupRecord[]) => Promise<void>;
-  onImport: (
-    payload: Record<string, unknown>,
-    importMode?: KnowledgeNetworkImportMode,
-  ) => Promise<void>;
+  onImport: JsonResourceImport;
 };
 
 function readSortBy(value: string | null): "name" | "updateTime" {

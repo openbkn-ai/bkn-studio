@@ -7,13 +7,15 @@
 
 import { UploadOutlined } from "@ant-design/icons";
 import { Alert, Form, Input, Modal, Radio, Space, Switch, Typography, Upload } from "antd";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { ClearedDeclarationsDialog } from "@/modules/knowledge-network/components/shared/ClearedDeclarationsDialog";
 import {
+  DeclarationsWouldBeClearedError,
   KnowledgeNetworkImportBindingError,
   importKnowledgeNetwork,
   importKnowledgeNetworkPackage,
@@ -26,6 +28,7 @@ import {
 } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
   CapabilityImportReport,
+  ClearedDeclaration,
   KnowledgeNetworkBindingPolicy,
   KnowledgeNetworkImportMode,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -33,6 +36,7 @@ import {
   capabilitySkipReasonKey,
   capabilitySkipTypeKey,
 } from "@/modules/knowledge-network/utils/capability-import-skip";
+import { definitionNamesFromPayload } from "@/modules/knowledge-network/utils/declaration-labels";
 
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import styles from "./KnowledgeNetworkImportButton.module.css";
@@ -49,6 +53,18 @@ type ImportSubmitAction = "create" | "ignore" | "import" | "overwrite";
  * package, which also brings the capabilities it declares and reports the ones it could not bind.
  */
 type ImportSource = { kind: "json"; payload: ImportPayload } | { file: File; kind: "package" };
+/** An overwrite the backend refused because it would clear these declarations, kept to resend. */
+type ClearedDeclarationsRefusal = {
+  action: ImportSubmitAction;
+  cleared: ClearedDeclaration[];
+  importMode: KnowledgeNetworkImportMode;
+  source: ImportSource;
+};
+/**
+ * A refusal kept in the dialog with the backend's details: bindings it could not resolve, or where
+ * a package breaks its declared spec (file, section, row or field, and the accepted spelling).
+ */
+type ImportRefusal = { details?: string; message: string };
 
 /** Files the import accepts: a JSON export, or a BKN package as studio exports it. */
 const IMPORT_ACCEPT = ".json,.tar,.tar.gz,.tgz,.zip";
@@ -83,19 +99,29 @@ export function KnowledgeNetworkImportButton({
   const [strictMode, setStrictMode] = useState(false);
   const [bindingPolicy, setBindingPolicy] = useState<KnowledgeNetworkBindingPolicy>("preserve");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [bindingError, setBindingError] = useState<KnowledgeNetworkImportBindingError | null>(null);
+  const [refusal, setRefusal] = useState<ImportRefusal | null>(null);
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const [submittingAction, setSubmittingAction] = useState<ImportSubmitAction | null>(null);
   const [pendingSource, setPendingSource] = useState<ImportSource | null>(null);
   // Shown after a package import that could not bind every capability it declared.
   const [skipReport, setSkipReport] = useState<CapabilityImportReport | null>(null);
+  const [clearedRefusal, setClearedRefusal] = useState<ClearedDeclarationsRefusal | null>(null);
   const isSubmitting = submittingAction !== null;
+  // A JSON export names its definitions; a BKN package is not read here, so it lists ids only.
+  const clearedNames = useMemo(
+    () =>
+      clearedRefusal?.source.kind === "json"
+        ? definitionNamesFromPayload(clearedRefusal.source.payload)
+        : undefined,
+    [clearedRefusal],
+  );
 
   const closeImportDialog = () => {
     setImportDialogOpen(false);
-    setBindingError(null);
+    setRefusal(null);
     setConflictMessage(null);
     setPendingSource(null);
+    setClearedRefusal(null);
     setImportMode("normal");
     setStrictMode(false);
     setBindingPolicy("preserve");
@@ -106,6 +132,7 @@ export function KnowledgeNetworkImportButton({
     source: ImportSource,
     selectedImportMode: KnowledgeNetworkImportMode,
     action: ImportSubmitAction = "import",
+    confirmClearDeclarations = false,
   ) => {
     setSubmittingAction(action);
 
@@ -116,6 +143,7 @@ export function KnowledgeNetworkImportButton({
           selectedImportMode,
           bindingPolicy,
           strictMode,
+          confirmClearDeclarations,
         );
         if (report.skipped.length) {
           setSkipReport(report);
@@ -127,14 +155,32 @@ export function KnowledgeNetworkImportButton({
           );
         }
       } else {
-        await importKnowledgeNetwork(source.payload, selectedImportMode, bindingPolicy, strictMode);
+        await importKnowledgeNetwork(
+          source.payload,
+          selectedImportMode,
+          bindingPolicy,
+          strictMode,
+          confirmClearDeclarations,
+        );
         void message.success(t("knowledgeNetwork.importSuccess"));
       }
       closeImportDialog();
       await onImported();
     } catch (error) {
+      // The import dialog stays as it is under the list, so cancelling returns to its settings.
+      if (error instanceof DeclarationsWouldBeClearedError) {
+        setRefusal(null);
+        setClearedRefusal({
+          action,
+          cleared: error.cleared,
+          importMode: selectedImportMode,
+          source,
+        });
+        return;
+      }
+
       if (error instanceof KnowledgeNetworkImportConflictError) {
-        setBindingError(null);
+        setRefusal(null);
         setPendingSource(source);
         setConflictMessage(error.message);
         if (source.kind === "json") {
@@ -150,13 +196,19 @@ export function KnowledgeNetworkImportButton({
       }
 
       if (error instanceof KnowledgeNetworkImportBindingError) {
-        setBindingError(error);
+        setRefusal({ details: error.details, message: error.message });
         return;
       }
 
-      setBindingError(null);
       setConflictMessage(null);
-      void message.error(extractRequestErrorMessage(error));
+      const { description, details } = extractRequestErrorDetails(error);
+      if (details) {
+        setRefusal({ details, message: description });
+        return;
+      }
+
+      setRefusal(null);
+      void message.error(description);
     } finally {
       setSubmittingAction(null);
     }
@@ -190,7 +242,7 @@ export function KnowledgeNetworkImportButton({
     setImportMode("normal");
     setStrictMode(false);
     setBindingPolicy("preserve");
-    setBindingError(null);
+    setRefusal(null);
     setConflictMessage(null);
     form.resetFields();
     setImportDialogOpen(true);
@@ -336,7 +388,7 @@ export function KnowledgeNetworkImportButton({
 
             if (isKnowledgeNetworkImportMode(nextImportMode)) {
               setImportMode(nextImportMode);
-              setBindingError(null);
+              setRefusal(null);
               setConflictMessage(null);
             }
           }}
@@ -402,7 +454,7 @@ export function KnowledgeNetworkImportButton({
 
             if (isKnowledgeNetworkBindingPolicy(nextBindingPolicy)) {
               setBindingPolicy(nextBindingPolicy);
-              setBindingError(null);
+              setRefusal(null);
             }
           }}
           value={bindingPolicy}
@@ -426,13 +478,15 @@ export function KnowledgeNetworkImportButton({
             </Radio>
           </Space>
         </Radio.Group>
-        {bindingError ? (
+        {refusal ? (
           <Alert
             description={
               <Space direction="vertical" size={4}>
-                <Typography.Text strong>{bindingError.message}</Typography.Text>
-                {bindingError.details ? (
-                  <Typography.Text>{bindingError.details}</Typography.Text>
+                <Typography.Text strong>{refusal.message}</Typography.Text>
+                {refusal.details ? (
+                  <Typography.Text className={styles.refusalDetails}>
+                    {refusal.details}
+                  </Typography.Text>
                 ) : null}
               </Space>
             }
@@ -469,6 +523,20 @@ export function KnowledgeNetworkImportButton({
           </>
         ) : null}
       </Modal>
+
+      {clearedRefusal ? (
+        <ClearedDeclarationsDialog
+          cleared={clearedRefusal.cleared}
+          names={clearedNames}
+          onCancel={() => setClearedRefusal(null)}
+          onConfirm={() => {
+            const { action, importMode: refusedImportMode, source } = clearedRefusal;
+            setClearedRefusal(null);
+            void finishImport(source, refusedImportMode, action, true);
+          }}
+          open
+        />
+      ) : null}
 
       {skipReport ? (
         <Modal

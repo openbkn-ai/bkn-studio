@@ -23,6 +23,8 @@ export function getKnowledgeNetworkCardMenuKeys(
     "view",
     ...(hasKnowledgeNetworkRecordOperation(record, "modify") ? ["edit"] : []),
     "export",
+    // Reads definitions only, so anyone who can open the network can run it.
+    "check",
     ...(canRequestPermission && getMissingKnowledgeNetworkBusinessOperations(record).length > 0
       ? ["request-permission"]
       : []),
