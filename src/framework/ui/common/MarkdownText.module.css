@@ -100,6 +100,11 @@
   background: var(--color-hover);
   font-weight: 600;
 }
+.md hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: 12px 0;
+}
 
 /* Full documents (such as skill-package SKILL.md files): card-description sizing is too dense for
    a screen of body text, so body copy and headings are each one size larger and spacing expands

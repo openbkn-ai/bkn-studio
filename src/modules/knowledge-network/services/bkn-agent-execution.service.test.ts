@@ -168,6 +168,28 @@ describe("startExecution", () => {
     });
   });
 
+  it("names the chosen model only when the caller picks one", async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(streamResponse([sse("terminal", { status: "succeeded", sequence: 1 })])),
+    );
+    const params = {
+      base: "https://platform.example.com",
+      tokenProvider,
+      agentId: "graph_explorer",
+      knId: "kn-1",
+      message: "问题",
+      clientRequestId: "req-1",
+      onEvent: () => undefined,
+    };
+
+    await startExecution({ ...params, modelId: "model-7" });
+    await startExecution(params);
+
+    const [[, picked], [, platform]] = fetchMock.mock.calls;
+    expect(JSON.parse(picked?.body as string)).toMatchObject({ model_id: "model-7" });
+    expect(JSON.parse(platform?.body as string)).not.toHaveProperty("model_id");
+  });
+
   it("sends extra context beside the network, which stays the caller's kn_id", async () => {
     fetchMock.mockResolvedValue(
       streamResponse([sse("terminal", { status: "succeeded", sequence: 1 })]),

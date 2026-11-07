@@ -246,6 +246,7 @@ export function KnowledgeNetworkWorkspaceScene({
   );
 
   const extensionEntries = visibleWorkspaceExtensionEntries(hiddenNavigation);
+  const analysisEntries = visibleWorkspaceExtensionEntries(hiddenNavigation, "analysis");
   // A group whose entries are all hidden loses its divider and title too.
   const hasAbilityVerification =
     experienceNavItems.length > 0 ||
@@ -374,6 +375,21 @@ export function KnowledgeNetworkWorkspaceScene({
                   collapsed={sideCollapsed}
                   hiddenKeys={hiddenNavigation}
                   networkId={activeNetworkId}
+                />
+              </>
+            ) : null}
+            {/* Shown only while another build lists an entry there. */}
+            {analysisEntries.items.length > 0 ? (
+              <>
+                <div className={styles.sideDivider} />
+                {sideCollapsed ? null : (
+                  <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceAnalysis")}</div>
+                )}
+                <WorkspaceExtensionNavItems
+                  collapsed={sideCollapsed}
+                  hiddenKeys={hiddenNavigation}
+                  networkId={activeNetworkId}
+                  section="analysis"
                 />
               </>
             ) : null}

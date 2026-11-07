@@ -22,9 +22,8 @@ import {
 import { Alert, Button, Collapse, Dropdown, Segmented, Spin, Tag, Tooltip, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
+import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import type { FrameGraphSettings } from "@/modules/knowledge-network/cypher/graph-style";
 import { CypherGraphView } from "@/modules/knowledge-network/components/cypher/CypherGraphView";
 import { CypherPlanView } from "@/modules/knowledge-network/components/cypher/CypherPlanView";
@@ -516,9 +515,7 @@ export function CypherFrameCard({
                 <Alert message={frame.explanation.text} showIcon type="warning" />
               ) : frame.explanation.text ? (
                 <div className={styles.answer}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {frame.explanation.text}
-                  </ReactMarkdown>
+                  <MarkdownText text={frame.explanation.text} />
                 </div>
               ) : null}
             </div>
@@ -533,7 +530,7 @@ export function CypherFrameCard({
                   label: t("knowledgeNetwork.cypherQuery.frames.answer"),
                   children: (
                     <div className={styles.answer}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{frame.ai.answer}</ReactMarkdown>
+                      <MarkdownText text={frame.ai.answer} />
                     </div>
                   ),
                 },
