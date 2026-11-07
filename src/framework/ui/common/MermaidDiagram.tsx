@@ -27,9 +27,31 @@ function loadMermaid(): Promise<Mermaid> {
 let queue: Promise<unknown> = Promise.resolve();
 let sequence = 0;
 
+// Drawn SVGs by theme and source, so a diagram that renders again shows at once: a streamed
+// answer is parsed whole when it completes, which mounts its diagrams anew.
+const KEPT = 50;
+const drawnSvgs = new Map<string, string>();
+
+function keep(key: string, svg: string) {
+  drawnSvgs.delete(key);
+  drawnSvgs.set(key, svg);
+  for (const oldest of drawnSvgs.keys()) {
+    if (drawnSvgs.size <= KEPT) break;
+    drawnSvgs.delete(oldest);
+  }
+}
+
+function diagramKey(source: string, dark: boolean): string {
+  return `${dark ? "dark" : "light"}:${source}`;
+}
+
 /** A diagram's SVG, drawn in the page's theme; rejects when the source is not valid. */
 function draw(source: string, dark: boolean): Promise<string> {
+  const key = diagramKey(source, dark);
   const next = queue.then(async () => {
+    // Asked for again while it was waiting its turn.
+    const kept = drawnSvgs.get(key);
+    if (kept !== undefined) return kept;
     const mermaid = await loadMermaid();
     // strict: text stays text (no HTML labels, no click handlers), and the SVG is sanitized.
     mermaid.initialize({
@@ -40,7 +62,9 @@ function draw(source: string, dark: boolean): Promise<string> {
     await mermaid.parse(source);
     const id = `bkn-mermaid-${(sequence += 1)}`;
     try {
-      return (await mermaid.render(id, source)).svg;
+      const { svg } = await mermaid.render(id, source);
+      keep(key, svg);
+      return svg;
     } finally {
       // A failed render can leave its scratch element in the page.
       document.getElementById(`d${id}`)?.remove();
@@ -57,13 +81,15 @@ function draw(source: string, dark: boolean): Promise<string> {
 export function MermaidDiagram({ source }: { source: string }) {
   const dark = useResolvedTheme() === "dark";
   const [drawn, setDrawn] = useState<{ key: string; svg: string } | null>(null);
-  const key = `${dark ? "dark" : "light"}:${source}`;
+  const key = diagramKey(source, dark);
+  const svg = drawn?.key === key ? drawn.svg : drawnSvgs.get(key);
 
   useEffect(() => {
+    if (drawnSvgs.has(key)) return;
     let live = true;
     draw(source, dark).then(
-      (svg) => {
-        if (live) setDrawn({ key, svg });
+      (drawnSvg) => {
+        if (live) setDrawn({ key, svg: drawnSvg });
       },
       () => {
         if (live) setDrawn(null);
@@ -74,7 +100,7 @@ export function MermaidDiagram({ source }: { source: string }) {
     };
   }, [dark, key, source]);
 
-  if (drawn?.key !== key)
+  if (svg === undefined)
     return (
       <pre>
         <code className="language-mermaid">{source}</code>
@@ -85,7 +111,7 @@ export function MermaidDiagram({ source }: { source: string }) {
       className={styles.mermaid}
       role="img"
       // The SVG comes from Mermaid in strict mode, which sanitizes what it outputs.
-      dangerouslySetInnerHTML={{ __html: drawn.svg }}
+      dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
 }
