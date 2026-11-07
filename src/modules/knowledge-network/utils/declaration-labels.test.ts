@@ -43,6 +43,31 @@ describe("declarationFieldKey", () => {
 });
 
 describe("groupClearedDeclarations", () => {
+  it("lists a property split over several entries once, with each field once", () => {
+    expect(
+      groupClearedDeclarations([
+        { fields: ["semantic"], id: "lab_order", kind: "object_type", property: "ordered_at" },
+        { fields: ["aliases"], id: "lab_order", kind: "object_type", property: "status" },
+        {
+          fields: ["constraints", "semantic"],
+          id: "lab_order",
+          kind: "object_type",
+          property: "ordered_at",
+        },
+      ]),
+    ).toEqual([
+      {
+        id: "lab_order",
+        kind: "object_type",
+        ownFields: [],
+        properties: [
+          { fields: ["semantic", "constraints"], name: "ordered_at" },
+          { fields: ["aliases"], name: "status" },
+        ],
+      },
+    ]);
+  });
+
   it("groups by definition in the order the backend listed them", () => {
     expect(
       groupClearedDeclarations([

@@ -60,7 +60,15 @@ export function groupClearedDeclarations(cleared: ClearedDeclaration[]): Cleared
     groups.set(key, group);
 
     if (entry.property) {
-      group.properties.push({ fields: entry.fields, name: entry.property });
+      // One property split over several entries is still one row.
+      const property = group.properties.find((item) => item.name === entry.property) ?? {
+        fields: [],
+        name: entry.property,
+      };
+      if (!group.properties.includes(property)) {
+        group.properties.push(property);
+      }
+      property.fields.push(...entry.fields.filter((field) => !property.fields.includes(field)));
     } else {
       group.ownFields.push(...entry.fields.filter((field) => !group.ownFields.includes(field)));
     }
