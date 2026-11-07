@@ -1,0 +1,27 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.sectionTitle {
+  display: block;
+  margin: 16px 0 8px;
+}
+
+.mono {
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.parameter {
+  white-space: nowrap;
+}
+
+.hint {
+  margin: 8px 0 0 !important;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
