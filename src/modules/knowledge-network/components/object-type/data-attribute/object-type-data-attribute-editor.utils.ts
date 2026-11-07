@@ -10,6 +10,7 @@ import type {
   ObjectTypeDataSource,
   ObjectTypeResourceField,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { arePropertyDeclarationsEqual } from "@/modules/knowledge-network/utils/property-declarations";
 
 import { canBeDisplayKey, canBePrimaryKey, DATA_PROPERTY_COMMENT_MAX_LENGTH } from "./constants";
 
@@ -332,7 +333,8 @@ export function areDataPropertiesEqual(
       item.primaryKey === other.primaryKey &&
       item.type === other.type &&
       JSON.stringify(item.maskRule) === JSON.stringify(other.maskRule) &&
-      areMappedFieldsEqual(item.mappedField, other.mappedField)
+      areMappedFieldsEqual(item.mappedField, other.mappedField) &&
+      arePropertyDeclarationsEqual(item.declarations, other.declarations)
     );
   });
 }

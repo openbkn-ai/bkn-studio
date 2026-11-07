@@ -273,9 +273,11 @@ describe("object-type.service · validateKnowledgeNetworkObjectType", () => {
       tags: [],
     });
 
+    // The form shows the refusal itself, so the request skips the global toast.
     expect(postMock).toHaveBeenCalledWith(
       "/bkn-backend/v1/knowledge-networks/kn-1/object-types/validation",
       expect.any(Object),
+      { skipErrorToast: true },
     );
     const firstCall: unknown = postMock.mock.calls[0];
     expect(Array.isArray(firstCall)).toBe(true);

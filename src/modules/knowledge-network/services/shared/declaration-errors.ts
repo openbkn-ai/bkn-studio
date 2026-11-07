@@ -169,3 +169,34 @@ export function throwIfExportRefused(error: unknown) {
     });
   }
 }
+
+const DECLARATIONS_INVALID_CODE =
+  /^BknBackend\.(ActionType|ObjectType|RelationType)\.InvalidParameter\.Declarations$/;
+
+// The backend names a data property this way, until its details are structured
+// (openbkn-ai/bkn-foundry#2991): `data property "x"`, `data properties "x" and "y"` or
+// `property constraints "x"`.
+const PROPERTY_IN_DETAILS = /(?:data propert(?:y|ies)|property constraints) "([^"]+)"/;
+
+/** A save refused for its declarations: the backend's description, its details, and the property. */
+export type DeclarationRefusal = {
+  description: string;
+  details?: string;
+  property?: string;
+};
+
+/** Reads a refusal of the declarations of a save; undefined for any other error. */
+export function readDeclarationRefusal(error: unknown): DeclarationRefusal | undefined {
+  const code = readErrorCode(error);
+  if (!code || !DECLARATIONS_INVALID_CODE.test(code)) {
+    return undefined;
+  }
+  const details = readErrorDetails(error);
+  const text = typeof details === "string" && details.trim() ? details.trim() : undefined;
+  const property = text ? PROPERTY_IN_DETAILS.exec(text)?.[1] : undefined;
+  return {
+    description: errorDescription(error, code),
+    ...(text ? { details: text } : {}),
+    ...(property ? { property } : {}),
+  };
+}

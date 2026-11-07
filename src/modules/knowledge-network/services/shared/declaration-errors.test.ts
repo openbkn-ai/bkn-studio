@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseClearedDeclarations,
   parseNetworkCheckResult,
+  readDeclarationRefusal,
 } from "@/modules/knowledge-network/services/shared/declaration-errors";
 
 describe("parseClearedDeclarations", () => {
@@ -94,5 +95,46 @@ describe("parseNetworkCheckResult", () => {
       value: { days: 7 },
       valueFrom: "env",
     });
+  });
+});
+
+describe("readDeclarationRefusal", () => {
+  const refusal = (data: Record<string, unknown>) => ({ response: { data, status: 400 } });
+
+  it.each([
+    ['data property "status": semantic status needs type string, keyword or integer', "status"],
+    ['data properties "lat" and "lon": crs differs', "lat"],
+    ['property constraints "fee": value type amount_cny is based on decimal', "fee"],
+    ["aliases: too many", undefined],
+  ])("reads %s as a refusal of property %s", (details, property) => {
+    expect(
+      readDeclarationRefusal(
+        refusal({
+          description: "Invalid declarations",
+          error_code: "BknBackend.ObjectType.InvalidParameter.Declarations",
+          error_details: details,
+        }),
+      ),
+    ).toEqual({
+      description: "Invalid declarations",
+      details,
+      ...(property ? { property } : {}),
+    });
+  });
+
+  it("falls back to the code when the backend gives no description or details", () => {
+    expect(
+      readDeclarationRefusal(
+        refusal({ error_code: "BknBackend.RelationType.InvalidParameter.Declarations" }),
+      ),
+    ).toEqual({ description: "BknBackend.RelationType.InvalidParameter.Declarations" });
+  });
+
+  it.each([
+    ["another refusal", refusal({ error_code: "BknBackend.ObjectType.InvalidParameter" })],
+    ["no backend reply", new Error("Network Error")],
+    ["nothing", undefined],
+  ])("reads %s as no declaration refusal", (_, error) => {
+    expect(readDeclarationRefusal(error)).toBeUndefined();
   });
 });

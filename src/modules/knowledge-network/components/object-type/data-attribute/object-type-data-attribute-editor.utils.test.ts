@@ -444,6 +444,24 @@ describe("areDataPropertiesEqual", () => {
 
     expect(areDataPropertiesEqual(left, right)).toBe(false);
   });
+
+  it("returns false when only the declarations change", () => {
+    const left = [createProperty({ declarations: { aliases: ["Phone"] }, name: "mobile" })];
+    const right = [
+      createProperty({ declarations: { aliases: ["Phone", "Cell"] }, name: "mobile" }),
+    ];
+
+    expect(areDataPropertiesEqual(left, right)).toBe(false);
+  });
+
+  it("treats empty declarations as none", () => {
+    const left = [createProperty({ name: "mobile" })];
+    const right = [
+      createProperty({ declarations: { aliases: [], required: false }, name: "mobile" }),
+    ];
+
+    expect(areDataPropertiesEqual(left, right)).toBe(true);
+  });
 });
 
 describe("areDataSourcesEqual", () => {

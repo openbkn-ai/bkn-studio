@@ -1,0 +1,65 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.mono {
+  font-family: var(--font-family-mono);
+}
+
+.unit {
+  max-width: 240px;
+}
+
+.enumTable {
+  margin-bottom: 16px;
+}
+
+.enumRow {
+  display: grid;
+  grid-template-columns: minmax(72px, 1fr) minmax(96px, 1.4fr) 48px minmax(96px, 1.6fr) 32px;
+  gap: 8px;
+  align-items: start;
+}
+
+.enumRow :global(.ant-form-item) {
+  margin-bottom: 8px;
+}
+
+.enumHeader {
+  padding-bottom: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.enumAdd {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .enumRow {
+    grid-template-columns: minmax(64px, 1fr) minmax(80px, 1.2fr) 32px 32px;
+  }
+
+  .enumRow > :nth-child(4) {
+    display: none;
+  }
+}

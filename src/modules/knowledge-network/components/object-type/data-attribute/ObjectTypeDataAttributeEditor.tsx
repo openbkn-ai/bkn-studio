@@ -47,6 +47,10 @@ import type {
   ObjectTypeDataSource,
   ObjectTypeResourceField,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  checkPropertyDeclarations,
+  type PropertyDeclarationIssue,
+} from "@/modules/knowledge-network/utils/property-declarations";
 
 import {
   canBeDisplayKey,
@@ -55,6 +59,11 @@ import {
   validateObjectTypeDataProperties,
 } from "./constants";
 import { ObjectTypeDataAttributeFormDrawer } from "./ObjectTypeDataAttributeFormDrawer";
+import {
+  PropertyDeclarationIssues,
+  type PropertyDeclarationRefusal,
+} from "./PropertyDeclarationIssues";
+import type { PropertyDeclarationContext } from "./PropertyDeclarationsSection";
 import styles from "./ObjectTypeDataAttributeEditor.module.css";
 import { ObjectTypeDataAttributePickModal } from "./ObjectTypeDataAttributePickModal";
 import { ObjectTypeResourceDescriptionFillModal } from "./ObjectTypeResourceDescriptionFillModal";
@@ -86,10 +95,18 @@ type ObjectTypeBasicInfo = {
   name: string;
 };
 
+/** What the BKN spec 3.0 declarations of the properties are edited against. */
+export type ObjectTypeDeclarationEditing = Omit<PropertyDeclarationContext, "otherProperties"> & {
+  /** A backend refusal of the declarations of the last save. */
+  refusal?: PropertyDeclarationRefusal | null;
+};
+
 type ObjectTypeDataAttributeEditorProps = {
   basicValue: ObjectTypeBasicInfo;
   dataProperties: ObjectTypeDataProperty[];
   dataSource?: ObjectTypeDataSource;
+  /** Edits the declarations of the properties as well; absent, they pass through unchanged. */
+  declarations?: ObjectTypeDeclarationEditing;
   logicPropertyNames?: string[];
   networkId: string;
   /**
@@ -328,6 +345,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     basicValue,
     dataProperties,
     dataSource,
+    declarations,
     logicPropertyNames = [],
     networkId,
     onChange,
@@ -351,6 +369,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const [mappingFilter, setMappingFilter] = useState<MappingFilter>("all");
   const [connections, setConnections] = useState<ConnectionPoint[]>([]);
   const [alertMessage, setAlertMessage] = useState("");
+  const [declarationIssues, setDeclarationIssues] = useState<PropertyDeclarationIssue[]>([]);
   // The resource whose fields could not be read: the page says so instead of an empty list.
   const [fieldsFailedId, setFieldsFailedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -691,6 +710,13 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             return;
           }
 
+          const issues = declarations ? checkPropertyDeclarations(result.value) : [];
+          setDeclarationIssues(issues);
+          if (issues.length) {
+            reject(new Error("propertyDeclarationIssues"));
+            return;
+          }
+
           setAlertMessage("");
           resolve({
             dataProperties: result.value,
@@ -698,7 +724,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
           });
         }),
     }),
-    [dataProperties, dataSource, t],
+    [dataProperties, dataSource, declarations, t],
   );
 
   const handleSelectResource = async (view: ObjectTypeDataSource) => {
@@ -787,6 +813,36 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     );
     void message.success(t("knowledgeNetwork.objectTypeMappingCleared"));
   };
+
+  const openPropertyByName = (name: string) => {
+    const property = dataProperties.find((item) => item.name === name);
+    if (property && !logicNameSet.has(property.name)) {
+      setEditingProperty(property);
+      setDrawerOpen(true);
+    }
+  };
+
+  const declarationContext = useMemo<PropertyDeclarationContext | undefined>(
+    () =>
+      declarations
+        ? {
+            canModifyValueTypes: declarations.canModifyValueTypes,
+            networkId: declarations.networkId,
+            otherProperties: dataProperties.filter((item) => item.name !== editingProperty?.name),
+            reloadValueTypes: declarations.reloadValueTypes,
+            valueTypes: declarations.valueTypes,
+            valueTypesFailed: declarations.valueTypesFailed,
+          }
+        : undefined,
+    [dataProperties, declarations, editingProperty?.name],
+  );
+
+  // Once shown, the problems follow the edits, so a fixed one goes away.
+  useEffect(() => {
+    setDeclarationIssues((current) =>
+      current.length ? checkPropertyDeclarations(dataProperties) : current,
+    );
+  }, [dataProperties]);
 
   const editPropertyFromRow = (property: ObjectTypeDataProperty, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -1195,6 +1251,13 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             setAlertMessage("");
           }}
           type={alertMessage === t("knowledgeNetwork.objectTypeClickToConnect") ? "info" : "error"}
+        />
+      ) : null}
+      {declarations ? (
+        <PropertyDeclarationIssues
+          issues={declarationIssues}
+          onEditProperty={openPropertyByName}
+          refusal={declarations.refusal}
         />
       ) : null}
 
@@ -1712,6 +1775,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       </div>
 
       <ObjectTypeDataAttributeFormDrawer
+        declarationContext={declarationContext}
         onClose={() => {
           setDrawerOpen(false);
           setEditingProperty(undefined);
