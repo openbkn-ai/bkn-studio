@@ -214,6 +214,8 @@ export type StartExecutionParams = {
   /** Idempotency key: reuse it only to retry the same request. */
   clientRequestId: string;
   threadId?: string;
+  /** A chat model the caller may use, instead of the Agent's own; fixed for a thread. */
+  modelId?: string;
   /** More request context beside kn_id, for an Agent that needs it (the graph explorer's canvas). */
   context?: Record<string, unknown>;
   signal?: AbortSignal;
@@ -237,6 +239,7 @@ export async function startExecution(
       message: params.message,
       client_request_id: params.clientRequestId,
       ...(params.threadId ? { thread_id: params.threadId } : {}),
+      ...(params.modelId ? { model_id: params.modelId } : {}),
       context: { ...params.context, kn_id: params.knId },
     }),
     signal: params.signal,

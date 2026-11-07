@@ -11,7 +11,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
-import type { WorkspaceNavEntry } from "@/framework/extension/registry";
+import type { WorkspaceNavEntry, WorkspaceNavSection } from "@/framework/extension/registry";
 import { buildReturnToState } from "@/modules/execution-factory/utils/back-navigation";
 import {
   visibleWorkspaceExtensionEntries,
@@ -22,20 +22,22 @@ import { capabilityMinEdition } from "@/modules/subscription/capability-catalog"
 import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
 
 /**
- * Sidebar entries another build registered for this network (see registry.ts), listed under
- * ability verification after the Q&A and MCP entries, followed by the paid pages this build
- * does not have.
+ * Sidebar entries another build registered for this network (see registry.ts). Under ability
+ * verification they follow the Q&A and MCP entries, and the paid pages this build does not have
+ * follow them; the analysis group lists only what was registered there.
  */
 export function WorkspaceExtensionNavItems({
   collapsed,
   hiddenKeys,
   networkId,
+  section = "verification",
 }: {
   collapsed: boolean;
   hiddenKeys?: readonly string[];
   networkId: string;
+  section?: WorkspaceNavSection;
 }) {
-  const { items, upgrades } = visibleWorkspaceExtensionEntries(hiddenKeys);
+  const { items, upgrades } = visibleWorkspaceExtensionEntries(hiddenKeys, section);
   return (
     <>
       {items.map((item) => (
