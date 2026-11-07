@@ -5,10 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MarkdownText } from "./MarkdownText";
+
+const mermaid = vi.hoisted(() => ({
+  initialize: vi.fn(),
+  parse: vi.fn(),
+  render: vi.fn(),
+}));
+
+vi.mock("mermaid", () => ({ default: mermaid }));
 
 describe("MarkdownText", () => {
   it("多块正文渲染成真正的块级元素（不是一坨纯文本）", () => {
@@ -42,5 +50,51 @@ describe("MarkdownText", () => {
     const { container } = render(<MarkdownText text={"查询：\n\n```sql\nSELECT 1"} streaming />);
     expect(container.querySelector("pre code")?.textContent?.trim()).toBe("SELECT 1");
     expect(container.textContent).not.toContain("```");
+  });
+});
+
+describe("MarkdownText 里的 mermaid", () => {
+  const DIAGRAM = "graph LR\n  A --> B";
+
+  beforeEach(() => {
+    mermaid.initialize.mockReset();
+    mermaid.parse.mockReset().mockResolvedValue({ diagramType: "flowchart" });
+    mermaid.render.mockReset().mockResolvedValue({ svg: '<svg data-testid="diagram"></svg>' });
+  });
+
+  it("mermaid 代码块画成图，用 strict 安全级别", async () => {
+    render(<MarkdownText text={"```mermaid\n" + DIAGRAM + "\n```"} />);
+    expect(await screen.findByTestId("diagram")).toBeInTheDocument();
+    expect(mermaid.render).toHaveBeenCalledWith(expect.any(String), DIAGRAM);
+    expect(mermaid.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({ securityLevel: "strict", startOnLoad: false }),
+    );
+  });
+
+  it("不是合法的图时保留原文", async () => {
+    mermaid.parse.mockRejectedValue(new Error("Parse error on line 1"));
+    const { container } = render(<MarkdownText text={"```mermaid\nnot a diagram\n```"} />);
+    await waitFor(() => expect(mermaid.parse).toHaveBeenCalled());
+    expect(mermaid.render).not.toHaveBeenCalled();
+    expect(container.querySelector("pre code")?.textContent).toBe("not a diagram");
+  });
+
+  it("其他代码块不受影响", () => {
+    const { container } = render(<MarkdownText text={"```sql\nselect 1\n```"} />);
+    expect(container.querySelector("pre code.language-sql")?.textContent).toBe("select 1\n");
+    expect(mermaid.parse).not.toHaveBeenCalled();
+  });
+
+  it("流式中还没写完的尾块只显示原文，写完的块才画图", async () => {
+    const { container, rerender } = render(
+      <MarkdownText text={"## 流程\n\n```mermaid\ngraph LR\n  A -->"} streaming />,
+    );
+    expect(container.querySelector("pre code")?.textContent).toContain("A -->");
+    expect(mermaid.parse).not.toHaveBeenCalled();
+    rerender(
+      <MarkdownText text={"## 流程\n\n```mermaid\n" + DIAGRAM + "\n```\n\n说明"} streaming />,
+    );
+    expect(await screen.findByTestId("diagram")).toBeInTheDocument();
+    expect(mermaid.parse).toHaveBeenCalledTimes(1);
   });
 });
