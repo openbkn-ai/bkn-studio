@@ -17,18 +17,31 @@ import {
   ObjectTypePropertyTableColumns,
 } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTableColumns";
 import { useObjectTypePropertyTableState } from "@/modules/knowledge-network/components/object-type/useObjectTypePropertyTableState";
+import { ValueTypeEnumItems } from "@/modules/knowledge-network/components/value-type/ValueTypeEnumItems";
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
+import type { ValueType } from "@/modules/knowledge-network/types/value-type";
+
+import { PropertyDeclarationTags } from "./PropertyDeclarationTags";
 
 import styles from "./ObjectTypePropertyTable.module.css";
 
 export type ObjectTypePropertyTableState = ReturnType<typeof useObjectTypePropertyTableState>;
 
+const NO_VALUE_TYPES: readonly ValueType[] = [];
+
 type ObjectTypePropertyTableProps = {
+  /**
+   * Shows the BKN spec 3.0 declarations column; set when any property of the object type has
+   * declarations, so an object type without them looks as it always did.
+   */
+  declarationsShown?: boolean;
   properties: ObjectTypeDataProperty[];
   rowIndexOffset?: number;
   showToolbar?: boolean;
   tableState?: ObjectTypePropertyTableState;
   toolbarExtra?: ReactNode;
+  /** The network's value types, to name the ones properties reference and list enum items. */
+  valueTypes?: readonly ValueType[];
 };
 
 type ObjectTypePropertyTableColumnSettingsProps = {
@@ -71,11 +84,13 @@ export function ObjectTypePropertyTableColumnSettings({
 }
 
 export function ObjectTypePropertyTable({
+  declarationsShown = false,
   properties,
   rowIndexOffset = 0,
   showToolbar = true,
   tableState: externalTableState,
   toolbarExtra,
+  valueTypes = NO_VALUE_TYPES,
 }: ObjectTypePropertyTableProps) {
   const { t } = useTranslation();
   const internalTableState = useObjectTypePropertyTableState();
@@ -83,8 +98,21 @@ export function ObjectTypePropertyTable({
   const { tableColumns, handleTableChange } = tableState;
 
   const columns = useMemo<ColumnsType<ObjectTypeDataProperty>>(() => {
-    const dataColumns: ColumnsType<ObjectTypeDataProperty> = tableColumns.map((column) => {
+    const shownColumns = declarationsShown
+      ? tableColumns
+      : tableColumns.filter((column) => column.key !== "declarations");
+    const dataColumns: ColumnsType<ObjectTypeDataProperty> = shownColumns.map((column) => {
       switch (column.key) {
+        case "declarations":
+          return {
+            key: "declarations",
+            dataIndex: "declarations",
+            title: t("knowledgeNetwork.propertyDeclarations.column"),
+            width: 280,
+            render: (value: ObjectTypeDataProperty["declarations"]) => (
+              <PropertyDeclarationTags declarations={value} valueTypes={valueTypes} />
+            ),
+          };
         case "name":
           return {
             key: "name",
@@ -230,7 +258,12 @@ export function ObjectTypePropertyTable({
       },
       ...dataColumns,
     ];
-  }, [rowIndexOffset, t, tableColumns]);
+  }, [declarationsShown, rowIndexOffset, t, tableColumns, valueTypes]);
+
+  const enumItemsOf = (property: ObjectTypeDataProperty) => {
+    const valueTypeId = property.declarations?.constraints?.valueType;
+    return valueTypeId ? valueTypes.find((item) => item.id === valueTypeId)?.enum : undefined;
+  };
 
   const visibleColumnKeys = useMemo(() => columns.map((column) => String(column.key)), [columns]);
 
@@ -253,6 +286,20 @@ export function ObjectTypePropertyTable({
         className={styles.table}
         columns={columns}
         dataSource={properties}
+        expandable={
+          declarationsShown
+            ? {
+                expandedRowRender: (property) => (
+                  <ValueTypeEnumItems
+                    items={enumItemsOf(property) ?? []}
+                    label={t("knowledgeNetwork.propertyDeclarations.enumItems")}
+                    variant="tags"
+                  />
+                ),
+                rowExpandable: (property) => Boolean(enumItemsOf(property)?.length),
+              }
+            : undefined
+        }
         onChange={handleTableChange}
         pagination={false}
         rowKey="name"

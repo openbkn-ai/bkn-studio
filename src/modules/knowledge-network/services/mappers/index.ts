@@ -12,6 +12,7 @@ import type {
   ConceptGroupRecord,
   ConceptGroupRelatedItem,
   ConceptGroupRelatedResourceRef,
+  DataPropertyDeclarationBaseline,
   KnowledgeNetworkObjectTypeMutationPayload,
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRecord,
@@ -40,6 +41,7 @@ import type {
   BackendSmallModel,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
+import { mapPropertyDeclarations, propertyDeclarationPatch } from "./declarations";
 import { mapRelationTypeMappingsFromBackend } from "./relation-type.mapper";
 
 export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNetworkRecord {
@@ -126,9 +128,11 @@ export function mapDataProperty(
 ): ObjectTypeDataProperty {
   const name = item.name ?? item.original_name ?? item.display_name ?? "";
   const displayName = item.display_name ?? name;
+  const declarations = mapPropertyDeclarations(item);
 
   return {
     comment: item.comment,
+    ...(declarations ? { declarations } : {}),
     displayKey: name === meta.displayKey,
     displayName,
     incrementalKey: false,
@@ -256,8 +260,20 @@ export function mapObjectTypeDetail(item: BackendObjectType): ObjectTypeDetail {
   };
 }
 
-export function toBackendDataProperty(property: ObjectTypeDataProperty): BackendDataProperty {
+/**
+ * A data property as a save sends it. Its declarations are sent only against a baseline, and then
+ * only those that changed; without one, the backend keeps the stored declarations.
+ */
+export function toBackendDataProperty(
+  property: ObjectTypeDataProperty,
+  baseline?: DataPropertyDeclarationBaseline,
+): BackendDataProperty {
   return {
+    ...(baseline
+      ? propertyDeclarationPatch(property.declarations, baseline.get(property.name), {
+          primaryKey: property.primaryKey,
+        })
+      : {}),
     comment: property.comment,
     display_name: property.displayName,
     mask_rule: mapMaskRuleToBackend(property.maskRule),
@@ -326,7 +342,9 @@ export function buildBackendObjectTypePayload(
       id: group.id,
       name: group.name,
     })),
-    data_properties: dataProperties.map(toBackendDataProperty),
+    data_properties: dataProperties.map((property) =>
+      toBackendDataProperty(property, input.declarationBaseline),
+    ),
     data_source: input.dataSource
       ? {
           type: "resource",

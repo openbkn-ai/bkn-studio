@@ -27,6 +27,7 @@ import { getRuntimeConfig } from "@/framework/runtime/config";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ObjectMetricTrialDrawer } from "@/modules/knowledge-network/components/object-metric/ObjectMetricTrialDrawer";
+import { ValueTypeListDrawer } from "@/modules/knowledge-network/components/value-type/ValueTypeListDrawer";
 import {
   ObjectTypeResourceGraph,
   type ObjectTypeGraphSelectedResource,
@@ -125,6 +126,7 @@ export function ObjectTypeListPanel({
       : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [valueTypesOpen, setValueTypesOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"graph" | "list">(() =>
     searchParams.get("view") === "list" ? "list" : "graph",
   );
@@ -808,6 +810,9 @@ export function ObjectTypeListPanel({
               ) : null}
             </div>
             <div className={styles.toolbarRight}>
+              <AppButton className={styles.toolbarButton} onClick={() => setValueTypesOpen(true)}>
+                {t("knowledgeNetwork.valueTypes.button")}
+              </AppButton>
               <Input
                 allowClear
                 className={styles.searchInput}
@@ -1154,6 +1159,12 @@ export function ObjectTypeListPanel({
           open
         />
       ) : null}
+      <ValueTypeListDrawer
+        canModify={canModify}
+        networkId={networkId}
+        onClose={() => setValueTypesOpen(false)}
+        open={valueTypesOpen}
+      />
     </>
   );
 }

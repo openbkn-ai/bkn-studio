@@ -17,3 +17,4 @@ export { inferObjectMetricOutputShapeV1 } from "./object-metric";
 export type * from "./property-authorization";
 export type * from "./row-filter-authorization";
 export type * from "./relation-type";
+export type * from "./value-type";

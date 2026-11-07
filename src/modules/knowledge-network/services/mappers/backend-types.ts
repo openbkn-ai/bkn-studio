@@ -44,7 +44,11 @@ export type BackendKnowledgeNetwork = {
 };
 
 export type BackendDataProperty = {
+  /** BKN spec 3.0 declaration; in a request, null clears it and leaving it out keeps it. */
+  aliases?: string[] | null;
   comment?: string;
+  /** BKN spec 3.0 declaration: value_type, range, length, pattern, unit, unique, crs, timezone. */
+  constraints?: Record<string, unknown> | null;
   display_name?: string;
   mapped_field?: {
     comment?: string;
@@ -70,6 +74,8 @@ export type BackendDataProperty = {
     | { kind: "round"; step: number }
     | { kind: "date_granularity"; granularity: "year" | "month" | "day" | "hour" };
   original_name?: string;
+  required?: boolean | null;
+  semantic?: string | null;
   type?: string;
 };
 
@@ -260,4 +266,28 @@ export type BackendActionType = {
 export type BackendListResponse<T> = {
   entries: T[];
   total_count: number;
+};
+
+export type BackendValueTypeEnumItem = {
+  deprecated?: boolean;
+  description?: string;
+  display?: string;
+  value?: string;
+};
+
+export type BackendValueType = {
+  base_type?: string;
+  color?: string;
+  comment?: string;
+  enum?: BackendValueTypeEnumItem[] | null;
+  icon?: string;
+  id: string;
+  length?: { max?: number; min?: number } | null;
+  name?: string;
+  pattern?: string;
+  range?: { max?: unknown; min?: unknown } | null;
+  tags?: string[] | null;
+  unit?: string;
+  update_time?: number;
+  updater?: BackendAccountInfo;
 };
