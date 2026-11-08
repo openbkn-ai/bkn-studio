@@ -522,7 +522,7 @@ export function ProjectRequirements({
                   spec={spec}
                 />
               ) : activeTab === "scenarios" ? (
-                <ScenariosView spec={spec} />
+                <ScenariosView logicNeeds={logicNeeds} spec={spec} />
               ) : (
                 <RulesView spec={spec} />
               )}

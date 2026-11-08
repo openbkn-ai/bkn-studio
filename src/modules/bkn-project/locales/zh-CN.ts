@@ -1802,6 +1802,7 @@ export const bknProjectZhCN = {
         trigger: "触发",
         decision: "要做的决策",
         knowledge: "需要的知识",
+        logicNeeds: "用到的动力需求",
       },
       concepts: {
         none: "还没有候选概念。",
