@@ -1836,16 +1836,18 @@ export const bknProjectEnUS = {
         other: "That did not work; try again later.",
       },
       docType: {
-        prd: "Product requirements",
+        prd: "Business requirements",
         policy: "Policy",
         standard: "Standard",
+        skill: "Skill document",
+        api: "API description",
         other: "Other",
       },
       documents: {
         title: "Requirement and policy documents",
         description:
-          "Drafting reads these documents. A document's type decides which prevails in a conflict: a standard over a policy, a policy over product requirements.",
-        none: "No documents yet. Upload product requirements, policies or standards.",
+          "Drafting reads these documents. A document's type decides which prevails in a conflict: a standard over a policy, a policy over business requirements. Skill documents and API descriptions say how kinetic items work and settle no conflict.",
+        none: "No documents yet. Upload business requirements, policies, standards, Skill documents or API descriptions.",
         upload: "Upload documents",
         uploadTitle: "Upload requirement and policy documents",
         uploadSelected: "Upload selected",
