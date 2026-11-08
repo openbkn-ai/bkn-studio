@@ -1397,6 +1397,14 @@ export const bknProjectEnUS = {
         nothingDrafted:
           "The ontology draft has no object type to choose yet; draft it in concept modeling first.",
         metricType: "Metric type",
+        executedBy: "Carried out by",
+        executedByHint:
+          "The API or MCP tool that carries out this action, chosen from the API and MCP tool needs recorded.",
+        noExecutors: "No API or MCP tool need to choose yet; add one first.",
+      },
+      execution: {
+        api: "Calls the {{name}} API",
+        mcp_tool: "Uses the MCP tool {{name}}",
       },
       metricType: {
         atomic: "Atomic metric",
@@ -1407,6 +1415,8 @@ export const bknProjectEnUS = {
       panel: {
         definition: "Business definition",
         objects: "Object types",
+        executedBy: "Carried out by",
+        executedByNone: "Not chosen yet; choose the API or MCP tool when editing.",
         usedBy: "Used by {{count}} scenario questions",
         usedBy_one: "Used by {{count}} scenario question",
         usedBy_other: "Used by {{count}} scenario questions",
@@ -1475,6 +1485,8 @@ export const bknProjectEnUS = {
         returnLabel: "Back to kinetic modeling",
         metricPrompt: "Create the metric {{name}}: {{definition}} Object types: {{objects}}.",
         metricPromptShort: "Create the metric {{name}}. Object types: {{objects}}.",
+        executorPending:
+          "{{name}}, which carries out this action, is not implemented yet. Implement it first, then come back to choose how this action is carried out.",
       },
       linked: "Linked {{name}}",
       commitHint:

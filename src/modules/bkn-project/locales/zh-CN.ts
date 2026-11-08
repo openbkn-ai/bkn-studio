@@ -1298,6 +1298,13 @@ export const bknProjectZhCN = {
         objectsHint: "第一个是它所属的对象。",
         nothingDrafted: "本体草稿里还没有对象类可选，先在概念建模中起草。",
         metricType: "指标类型",
+        executedBy: "执行方式",
+        executedByHint: "执行这个行动类的接口或 MCP 工具，从已记录的 API、MCP 工具需求里选。",
+        noExecutors: "还没有 API 或 MCP 工具需求可选，先添加一条。",
+      },
+      execution: {
+        api: "调用「{{name}}」接口",
+        mcp_tool: "调用 MCP 工具「{{name}}」",
       },
       metricType: {
         atomic: "原子指标",
@@ -1308,6 +1315,8 @@ export const bknProjectZhCN = {
       panel: {
         definition: "业务定义",
         objects: "关联对象",
+        executedBy: "执行方式",
+        executedByNone: "还没指定由哪个接口或 MCP 工具执行，可以在编辑里选择。",
         usedBy: "用在 {{count}} 个场景问题里",
         usedBy_one: "用在 {{count}} 个场景问题里",
         usedBy_other: "用在 {{count}} 个场景问题里",
@@ -1370,6 +1379,7 @@ export const bknProjectZhCN = {
         returnLabel: "回到动力建模",
         metricPrompt: "创建指标「{{name}}」：{{definition}} 关联对象：{{objects}}。",
         metricPromptShort: "创建指标「{{name}}」。关联对象：{{objects}}。",
+        executorPending: "执行方式要用的「{{name}}」还没实现，需要先实现它，再回来选择执行方式。",
       },
       linked: "已连上「{{name}}」",
       commitHint: "线上知识网络有了新的修改。下次发布前，请先在发布页“提交线上的修改”，再发布。",

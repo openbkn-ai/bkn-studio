@@ -22,6 +22,7 @@ import {
   logicKindText,
   needStateText,
   needStateTone,
+  executionText,
 } from "@/modules/bkn-project/components/kinetic/kineticMessages";
 import {
   IMPLEMENTED_HERE,
@@ -48,6 +49,7 @@ const PANEL = `${KINETIC}.panel`;
  */
 export function KineticNeedPanel({
   canEdit,
+  executor,
   metricsMode,
   need,
   networkId,
@@ -70,6 +72,8 @@ export function KineticNeedPanel({
   onClose: () => void;
   /** Opens the live network's form for a metric or action type. */
   onImplement: (need: LogicNeedView) => void;
+  /** An action type's: the need that carries it out, when it names one. */
+  executor?: LogicNeedView;
   onLink: (need: LogicNeedView, target: LogicNeedTarget, name: string) => void;
   /** Opens concept modeling, where the missing relations are added. */
   onGoToModel?: () => void;
@@ -145,6 +149,21 @@ export function KineticNeedPanel({
           <section className={styles.block}>
             <h4 className={styles.blockTitle}>{t(`${PANEL}.definition`)}</h4>
             <p>{need.definition}</p>
+          </section>
+        ) : null}
+        {need.kind === "action_type" ? (
+          <section className={styles.block}>
+            <h4 className={styles.blockTitle}>{t(`${PANEL}.executedBy`)}</h4>
+            {executor ? (
+              <span className={styles.row}>
+                <span>{executionText(t, executor)}</span>
+                <LightStatusTag tone={needStateTone(needState(executor))}>
+                  {needStateText(t, needState(executor))}
+                </LightStatusTag>
+              </span>
+            ) : (
+              <p className={styles.muted}>{t(`${PANEL}.executedByNone`)}</p>
+            )}
           </section>
         ) : null}
         {need.objectTypeIds.length ? (

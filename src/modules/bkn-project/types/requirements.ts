@@ -147,6 +147,8 @@ export type RequirementLogicNeed = Cited &
     source: string;
     /** `atomic`, `derived` or `composite`, a metric only. */
     suggestedMetricType: string;
+    /** An action type's: the api or mcp_tool need that carries it out; empty when none is named. */
+    executedBy: string;
   };
 
 /** A background run on the specification: extracting concepts or analysing kinetic needs. */

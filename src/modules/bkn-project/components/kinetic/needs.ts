@@ -10,6 +10,7 @@ import { capabilityState } from "@/framework/entitlement/capability-state";
 import type { EntitlementView } from "@/framework/entitlement/types";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import type { LogicNeedLink, LogicNeedView } from "@/modules/bkn-project/types/kinetic";
+import type { ActionTypeExecutionPrefill } from "@/modules/knowledge-network";
 
 /** The kinds of kinetic need, in the order the page lists them. */
 export const LOGIC_KINDS = [
@@ -59,6 +60,28 @@ export const linkTypeOf = (kind: string) =>
     metric: "object_metric",
     skill: "skill",
   })[kind] ?? "";
+
+/** Kinds of needs that carry out an action type. */
+export const canExecute = (kind: string) => kind === "api" || kind === "mcp_tool";
+
+/**
+ * What the action type form starts its execution with, from the implementation the need that
+ * carries the action out is linked to; none until that need is implemented.
+ */
+export function executionPrefill(executor: LogicNeedView): ActionTypeExecutionPrefill | undefined {
+  const link = executor.link;
+  if (!link || needState(executor) !== "implemented" || !link.boxId) {
+    return undefined;
+  }
+  const toolName = executor.implementation?.name || undefined;
+  if (link.type === "function") {
+    return { boxId: link.boxId, toolId: link.id, toolName, type: "tool" };
+  }
+  if (link.type === "mcp_tool") {
+    return { mcpId: link.boxId, toolId: link.id, toolName, type: "mcp" };
+  }
+  return undefined;
+}
 
 /** Kinds implemented from this page in the live network: they open its own forms. */
 export const IMPLEMENTED_HERE = ["metric", "action_type"];

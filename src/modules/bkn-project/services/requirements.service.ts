@@ -84,6 +84,7 @@ export type BackendLogicNeed = BackendCited &
     scenario_ids?: string[] | null;
     source?: string;
     suggested_metric_type?: string;
+    executed_by?: string;
   };
 
 type BackendRun = {
@@ -236,6 +237,7 @@ export const mapLogicNeed = (need: BackendLogicNeed): RequirementLogicNeed => ({
   scenarioIds: need.scenario_ids ?? [],
   source: need.source ?? "",
   suggestedMetricType: need.suggested_metric_type ?? "",
+  executedBy: need.executed_by ?? "",
 });
 
 const mapRun = (run: BackendRun | null | undefined): RequirementRun | null =>
@@ -727,6 +729,8 @@ export type RequirementItemFields = {
   statement?: string;
   /** A metric need's type: `atomic`, `derived` or `composite`. */
   suggestedMetricType?: string;
+  /** An action type need's api or mcp_tool need that carries it out; "" for none. */
+  executedBy?: string;
   template?: string;
   term?: string;
   text?: string;
@@ -739,6 +743,7 @@ const itemBody = (fields: RequirementItemFields) => ({
   ...(fields.category === undefined ? {} : { category: fields.category }),
   ...(fields.decision === undefined ? {} : { decision: fields.decision }),
   ...(fields.definition === undefined ? {} : { definition: fields.definition }),
+  ...(fields.executedBy === undefined ? {} : { executed_by: fields.executedBy }),
   ...(fields.followConcepts ? { follow_concepts: true } : {}),
   ...(fields.inputs === undefined
     ? {}
@@ -1206,6 +1211,7 @@ const mockSpec = (): RequirementSpec => ({
       scenarioIds: ["s1"],
       source: "documents",
       suggestedMetricType: "atomic",
+      executedBy: "",
       supplementReason: "",
     },
     {
@@ -1222,6 +1228,7 @@ const mockSpec = (): RequirementSpec => ({
       scenarioIds: [],
       source: "analysis",
       suggestedMetricType: "",
+      executedBy: "",
       supplementReason: "Sales decides whom to call first.",
     },
     {
@@ -1238,6 +1245,7 @@ const mockSpec = (): RequirementSpec => ({
       scenarioIds: [],
       source: "person",
       suggestedMetricType: "",
+      executedBy: "",
       supplementReason: "",
     },
     {
@@ -1254,6 +1262,7 @@ const mockSpec = (): RequirementSpec => ({
       scenarioIds: [],
       source: "analysis",
       suggestedMetricType: "atomic",
+      executedBy: "",
       supplementReason: "",
     },
   ],
@@ -1393,6 +1402,7 @@ function mockAdd(spec: RequirementSpec, kind: RequirementItemKind, fields: Requi
       scenarioIds: [],
       source: "person",
       suggestedMetricType: fields.suggestedMetricType ?? "",
+      executedBy: fields.executedBy ?? "",
     });
   } else if (kind === "questions") {
     spec.questions.push({
