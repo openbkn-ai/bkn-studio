@@ -16,7 +16,7 @@ const PREFIX = "bknProject.requirements";
 const word = (group: string, values: readonly string[]) => (t: TFunction, value: string) =>
   t(`${PREFIX}.${group}.${values.includes(value) ? value : "other"}`);
 
-export const DOC_TYPES = ["prd", "policy", "standard", "other"] as const;
+export const DOC_TYPES = ["prd", "policy", "standard", "skill", "api", "other"] as const;
 
 export const docTypeText = word("docType", DOC_TYPES);
 

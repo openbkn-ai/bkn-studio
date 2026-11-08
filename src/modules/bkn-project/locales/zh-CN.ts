@@ -1713,16 +1713,18 @@ export const bknProjectZhCN = {
         other: "操作没有成功，请稍后重试。",
       },
       docType: {
-        prd: "产品需求",
+        prd: "业务需求",
         policy: "制度规范",
         standard: "标准",
+        skill: "Skill 文档",
+        api: "API 描述",
         other: "其他",
       },
       documents: {
         title: "需求与规范文档",
         description:
-          "起草需求规格时读取这些文档。文档类型决定冲突时以谁为准：标准优先于制度规范，制度规范优先于产品需求。",
-        none: "还没有文档。上传产品需求、制度规范或标准文档。",
+          "起草需求规格时读取这些文档。文档类型决定冲突时以谁为准：标准优先于制度规范，制度规范优先于业务需求。Skill 文档和 API 描述说明动力项怎么做，不参与冲突判断。",
+        none: "还没有文档。上传业务需求、制度规范、标准、Skill 文档或 API 描述。",
         upload: "上传文档",
         uploadTitle: "上传需求与规范文档",
         uploadSelected: "上传所选",
@@ -1810,6 +1812,7 @@ export const bknProjectZhCN = {
         trigger: "触发",
         decision: "要做的决策",
         knowledge: "需要的知识",
+        logicNeeds: "用到的动力需求",
       },
       concepts: {
         none: "还没有候选概念。",

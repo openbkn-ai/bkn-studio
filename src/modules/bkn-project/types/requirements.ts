@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/** `prd`, `policy`, `standard` or `other`: it decides which side prevails in a conflict. */
+/**
+ * `prd`, `policy` or `standard`, which decide which side prevails in a conflict; `skill` or `api`,
+ * which describe kinetic items; or `other`.
+ */
 export type RequirementDocType = string;
 
 /** A requirement document the owner uploaded; lists leave out its content. */
