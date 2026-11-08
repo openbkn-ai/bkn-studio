@@ -859,6 +859,57 @@ describe("ProjectRequirements", () => {
       expect(screen.getByText("已删除的动力需求")).toBeInTheDocument();
     });
 
+    it("names on a scenario the kinetic needs its questions use, with whether each is implemented", async () => {
+      const spec = requirements();
+      spec.spec.logicNeeds = [
+        logicNeed({ id: "n1", name: "延误率", scenarioIds: ["s1"] }),
+        logicNeed({ id: "n2", kind: "skill", name: "催单排序", scenarioIds: ["s1"] }),
+        logicNeed({ id: "n3", name: "退货率", scenarioIds: ["s9"] }),
+      ];
+      getRequirementsMock.mockResolvedValue(spec);
+      getLogicNeedsMock.mockResolvedValue({
+        needs: [
+          {
+            ...spec.spec.logicNeeds[0],
+            implementation: { ...implementation, available: true },
+            link: { at: 1, boxId: "", byId: "me", id: "m1", type: "object_metric" },
+            liveObjectTypeIds: ["sales_order"],
+            unconnected: [],
+          },
+          {
+            ...spec.spec.logicNeeds[1],
+            implementation: null,
+            link: null,
+            liveObjectTypeIds: ["sales_order"],
+            unconnected: [],
+          },
+        ],
+        networkId: "n",
+        reason: "",
+        released: true,
+        updateTime: 1,
+      });
+      renderPage();
+      await screen.findByText("某个客户哪些订单晚了？");
+
+      fireEvent.click(screen.getByText(/^业务场景/));
+      expect(await screen.findByText("用到的动力需求")).toBeInTheDocument();
+      expect(screen.getByText("延误率")).toBeInTheDocument();
+      expect(await screen.findByText("已实现")).toBeInTheDocument();
+      expect(screen.getByText("催单排序")).toBeInTheDocument();
+      expect(screen.getByText("未实现")).toBeInTheDocument();
+      // Another scenario's need is not this one's.
+      expect(screen.queryByText("退货率")).toBeNull();
+    });
+
+    it("leaves the kinetic needs off a scenario none of whose questions uses one", async () => {
+      renderPage();
+      await screen.findByText("某个客户哪些订单晚了？");
+      fireEvent.click(screen.getByText(/^业务场景/));
+      expect(screen.getByText("销售经理")).toBeInTheDocument();
+      expect(screen.queryByText("用到的动力需求")).toBeNull();
+    });
+
     it("names the kinetic needs without their state when the live network cannot be read", async () => {
       const spec = requirements();
       spec.spec.logicNeeds = [logicNeed({ id: "n1", name: "延误率" })];
