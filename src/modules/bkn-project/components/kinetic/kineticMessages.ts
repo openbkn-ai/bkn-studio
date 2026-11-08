@@ -56,6 +56,12 @@ export const guideText = word("panel.guide", LOGIC_KINDS);
 
 export const needStateText = (t: TFunction, state: NeedState) => t(`${KINETIC}.state.${state}`);
 
+/** How an action type is carried out, by the api or mcp_tool need that does it. */
+export const executionText = (t: TFunction, executor: { kind: string; name: string }) =>
+  t(`${KINETIC}.execution.${executor.kind === "mcp_tool" ? "mcp_tool" : "api"}`, {
+    name: executor.name,
+  });
+
 const STATE_TONES: Record<NeedState, LightStatusTone> = {
   broken: "error",
   implemented: "success",

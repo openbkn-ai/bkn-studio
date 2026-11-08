@@ -43,6 +43,36 @@ describe("action type navigation context", () => {
     });
   });
 
+  it("reads what carries the action out, and a notice", () => {
+    const execution = (value: unknown) =>
+      readActionTypeContext({
+        actionTypeContext: {
+          ...context,
+          notice: "Implement it first",
+          prefill: { execution: value },
+        },
+      });
+    expect(execution({ boxId: "b", toolId: "f", toolName: "Lookup", type: "tool" })).toMatchObject({
+      notice: "Implement it first",
+      prefill: { execution: { boxId: "b", toolId: "f", toolName: "Lookup", type: "tool" } },
+    });
+    expect(execution({ mcpId: "m", toolId: "t", type: "mcp" })?.prefill?.execution).toEqual({
+      mcpId: "m",
+      toolId: "t",
+      toolName: undefined,
+      type: "mcp",
+    });
+    // Without the ids it takes, or of another kind, it fills nothing.
+    for (const value of [
+      { toolId: "f", type: "tool" },
+      { mcpId: "m", type: "mcp" },
+      { boxId: "b", toolId: "f", type: "manual" },
+      "tool",
+    ]) {
+      expect(execution(value)?.prefill?.execution).toBeUndefined();
+    }
+  });
+
   it.each([
     ["no state", null],
     ["no context", { knowledgeNetworkReturnTo: "/x" }],

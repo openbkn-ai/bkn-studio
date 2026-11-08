@@ -201,6 +201,7 @@ describe("requirements.service", () => {
         scenarioIds: [],
         source: "documents",
         suggestedMetricType: "atomic",
+        executedBy: "",
         supplementReason: "",
       },
     ]);

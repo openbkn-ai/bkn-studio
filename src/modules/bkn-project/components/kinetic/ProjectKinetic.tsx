@@ -27,6 +27,8 @@ import {
 import { KineticNeedDialog } from "@/modules/bkn-project/components/kinetic/KineticNeedDialog";
 import { KineticNeedPanel } from "@/modules/bkn-project/components/kinetic/KineticNeedPanel";
 import {
+  canExecute,
+  executionPrefill,
   LOGIC_KINDS,
   METRIC_TYPES,
   NEED_STATES,
@@ -353,9 +355,21 @@ export function ProjectKinetic({
         state: { objectMetricContext },
       });
     } else if (need.kind === "action_type") {
+      // What carries it out fills the form once it is implemented; until then the form says so.
+      const executor = needs.find((item) => item.id === need.executedBy && canExecute(item.kind));
+      const execution = executor ? executionPrefill(executor) : undefined;
       const actionTypeContext: ActionTypeNavigationContext = {
         description: need.definition || undefined,
-        prefill: { description: need.definition, name: need.name, objectTypeId },
+        notice:
+          executor && !execution
+            ? t(`${KINETIC}.handOff.executorPending`, { name: executor.name })
+            : undefined,
+        prefill: {
+          description: need.definition,
+          ...(execution ? { execution } : {}),
+          name: need.name,
+          objectTypeId,
+        },
         returnLabel,
         returnState: { needId: need.id },
         returnTo: kinetic,
@@ -706,6 +720,9 @@ export function ProjectKinetic({
         {openNeed ? (
           <KineticNeedPanel
             canEdit={editable}
+            executor={needs.find(
+              (item) => item.id === openNeed.executedBy && canExecute(item.kind),
+            )}
             metricsMode={metricsMode}
             need={openNeed}
             networkId={networkId}
@@ -727,6 +744,9 @@ export function ProjectKinetic({
                 ? (spec?.logicNeeds.find((need) => need.id === dialog.needId) ?? null)
                 : null
             }
+            executors={(spec?.logicNeeds ?? []).filter(
+              (need) => canExecute(need.kind) && need.id !== dialog.needId,
+            )}
             objectTypes={objectTypes}
             onCancel={() => setDialog(null)}
             onSave={(fields) =>

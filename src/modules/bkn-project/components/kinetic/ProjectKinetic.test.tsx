@@ -109,6 +109,7 @@ const need = (extra: Partial<Need>): Need => ({
   scenarioIds: [],
   source: "analysis",
   suggestedMetricType: "atomic",
+  executedBy: "",
   supplementReason: "",
   ...extra,
 });
@@ -585,6 +586,125 @@ describe("ProjectKinetic", () => {
         9,
       ),
     );
+  });
+
+  describe("what carries out an action type", () => {
+    // 改期 is carried out by the API 改期接口, implemented by a function of the toolbox box.
+    const api = need({ id: "n8", kind: "api", name: "改期接口", objectTypeIds: [] });
+    const withExecutor = (implemented: boolean) => {
+      const specNeeds = NEEDS.map((item) =>
+        item.id === "n3" ? { ...item, executedBy: "n8" } : item,
+      );
+      mocks.getRequirements.mockResolvedValue(requirements({ logicNeeds: [...specNeeds, api] }));
+      const live = logicNeeds();
+      live.needs = [
+        ...live.needs.map((item) => (item.id === "n3" ? { ...item, executedBy: "n8" } : item)),
+        view(
+          api,
+          implemented
+            ? {
+                implementation: { ...implementation, name: "reschedule" },
+                link: { at: 1, boxId: "box", byId: "me", id: "f8", type: "function" },
+              }
+            : {},
+        ),
+      ];
+      mocks.getLogicNeeds.mockResolvedValue(live);
+    };
+    const handedOff = async () => {
+      const panel = await openNeed("改期", "匹配或实现");
+      fireEvent.click(panel.getByRole("button", { name: "去配置行动类" }));
+      await waitFor(() => expect(location()).toContain("/action-types/create"));
+      return (
+        JSON.parse(location().slice(location().indexOf(" ") + 1)) as {
+          actionTypeContext: { notice?: string; prefill: Record<string, unknown> };
+        }
+      ).actionTypeContext;
+    };
+
+    it("says on the panel which API carries it out, and whether that is implemented", async () => {
+      withExecutor(false);
+      renderPage();
+
+      const panel = await openNeed("改期", "匹配或实现");
+      expect(panel.getByText("执行方式")).toBeInTheDocument();
+      const execution = panel.getByText("调用「改期接口」接口").parentElement!;
+      expect(within(execution).getByText("待实现")).toBeInTheDocument();
+    });
+
+    it("says when none is chosen yet", async () => {
+      renderPage();
+
+      const panel = await openNeed("改期", "匹配或实现");
+      expect(
+        panel.getByText("还没指定由哪个接口或 MCP 工具执行，可以在编辑里选择。"),
+      ).toBeInTheDocument();
+    });
+
+    it("fills the form's execution with the implemented API", async () => {
+      withExecutor(true);
+      renderPage();
+
+      const context = await handedOff();
+      expect(context.prefill.execution).toEqual({
+        boxId: "box",
+        toolId: "f8",
+        toolName: "reschedule",
+        type: "tool",
+      });
+      expect(context.notice).toBeUndefined();
+    });
+
+    it("fills nothing for an API not implemented yet, and says to implement it first", async () => {
+      withExecutor(false);
+      renderPage();
+
+      const context = await handedOff();
+      expect(context.prefill).not.toHaveProperty("execution");
+      expect(context.notice).toBe(
+        "执行方式要用的「改期接口」还没实现，需要先实现它，再回来选择执行方式。",
+      );
+    });
+
+    it("chooses it among the API and MCP tool needs when editing, sent only when changed", async () => {
+      mocks.editItem.mockResolvedValue(requirements());
+      mocks.getRequirements.mockResolvedValue(requirements({ logicNeeds: [...NEEDS, api] }));
+      renderPage();
+
+      fireEvent.click(await screen.findByRole("button", { name: "编辑「改期」" }));
+      const dialog = within(await screen.findByRole("dialog"));
+      fireEvent.mouseDown(dialog.getByRole("combobox", { name: "执行方式" }));
+      // Only APIs and MCP tools carry out an action.
+      expect(await screen.findByTitle("调用 MCP 工具「查物流」")).toBeInTheDocument();
+      expect(screen.queryByTitle(/算运费/)).toBeNull();
+      fireEvent.click(await screen.findByTitle("调用「改期接口」接口"));
+      fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
+
+      await waitFor(() =>
+        expect(mocks.editItem).toHaveBeenCalledWith(
+          "p1",
+          "logic_needs",
+          "n3",
+          expect.objectContaining({ executedBy: "n8" }),
+          9,
+        ),
+      );
+    });
+
+    it("leaves it out of an unchanged edit, and off needs that are not action types", async () => {
+      mocks.editItem.mockResolvedValue(requirements());
+      renderPage();
+
+      fireEvent.click(await screen.findByRole("button", { name: "编辑「改期」" }));
+      let dialog = within(await screen.findByRole("dialog"));
+      fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
+      await waitFor(() => expect(mocks.editItem).toHaveBeenCalled());
+      expect(mocks.editItem.mock.calls[0][3]).not.toHaveProperty("executedBy");
+
+      fireEvent.click(await screen.findByRole("button", { name: "编辑「延误率」" }));
+      dialog = within(await screen.findByRole("dialog"));
+      expect(dialog.queryByText("执行方式")).toBeNull();
+    });
   });
 
   it("shows the implementation as read live, opens it in a new tab, and unlinks it", async () => {

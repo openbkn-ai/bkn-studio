@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
+  executionText,
   KINETIC,
   logicKindText,
   metricTypeText,
@@ -21,6 +22,7 @@ import type { RequirementLogicNeed } from "@/modules/bkn-project/types/requireme
 
 type Values = {
   definition?: string;
+  executedBy?: string;
   kind: string;
   name?: string;
   objectTypeIds?: string[];
@@ -29,12 +31,15 @@ type Values = {
 
 /** Adds a kinetic need a person writes, or edits one: its kind, name, definition and objects. */
 export function KineticNeedDialog({
+  executors,
   need,
   objectTypes,
   onCancel,
   onSave,
   saving,
 }: {
+  /** The api and mcp_tool needs that may carry out an action type. */
+  executors: RequirementLogicNeed[];
   /** null to add one. */
   need: RequirementLogicNeed | null;
   /** The draft's object types to choose from. */
@@ -58,6 +63,10 @@ export function KineticNeedDialog({
     ...(values.kind === "metric" &&
     (values.suggestedMetricType ?? "") !== (need?.suggestedMetricType ?? "")
       ? { suggestedMetricType: values.suggestedMetricType ?? "" }
+      : {}),
+    // Likewise what carries out an action type.
+    ...(values.kind === "action_type" && (values.executedBy ?? "") !== (need?.executedBy ?? "")
+      ? { executedBy: values.executedBy ?? "" }
       : {}),
   });
   useUnsavedChanges(typed, async () => {
@@ -87,6 +96,7 @@ export function KineticNeedDialog({
                 name: need.name,
                 objectTypeIds: need.objectTypeIds,
                 suggestedMetricType: need.suggestedMetricType || undefined,
+                executedBy: need.executedBy || undefined,
               }
             : { kind: "metric", objectTypeIds: [] }
         }
@@ -126,6 +136,24 @@ export function KineticNeedDialog({
             <Select
               allowClear
               options={METRIC_TYPES.map((value) => ({ label: metricTypeText(t, value), value }))}
+            />
+          </Form.Item>
+        ) : null}
+        {kind === "action_type" ? (
+          <Form.Item
+            extra={t(`${KINETIC}.fields.${executors.length ? "executedByHint" : "noExecutors"}`)}
+            label={t(`${KINETIC}.fields.executedBy`)}
+            name="executedBy"
+          >
+            <Select
+              allowClear
+              disabled={!executors.length}
+              optionFilterProp="label"
+              options={executors.map((executor) => ({
+                label: executionText(t, executor),
+                value: executor.id,
+              }))}
+              showSearch
             />
           </Form.Item>
         ) : null}

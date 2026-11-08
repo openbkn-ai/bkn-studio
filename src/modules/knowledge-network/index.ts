@@ -16,7 +16,10 @@ export {
   actionTypeCreatedState,
   readActionTypeContext,
 } from "@/modules/knowledge-network/lib/action-type-context";
-export type { ActionTypeNavigationContext } from "@/modules/knowledge-network/lib/action-type-context";
+export type {
+  ActionTypeExecutionPrefill,
+  ActionTypeNavigationContext,
+} from "@/modules/knowledge-network/lib/action-type-context";
 export {
   objectMetricCreatedState,
   readObjectMetricContext,

@@ -132,6 +132,7 @@ function logicNeed(
     scenarioIds: [],
     source: "analysis",
     suggestedMetricType: "atomic",
+    executedBy: "",
     supplementReason: "",
     ...extra,
   };

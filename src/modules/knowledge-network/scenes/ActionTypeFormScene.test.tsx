@@ -13,12 +13,14 @@ type StepAction = { onClick: () => void; text: string };
 
 const mocks = vi.hoisted(() => {
   const locationState: { current: unknown } = { current: null };
+  const executionValue: { current: unknown } = { current: undefined };
   const routeParams: { current: Record<string, string> } = {
     current: { networkId: "network-1" },
   };
   return {
     confirm: vi.fn(),
     createActionType: vi.fn(),
+    executionValue,
     getActionTypeDetail: vi.fn(),
     getObjectType: vi.fn(),
     listObjectTypePage: vi.fn(),
@@ -62,7 +64,10 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
 // The execution and condition editors are tested on their own; here they accept anything.
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor", () => ({
   ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY: "tool-required",
-  ActionTypeExecutionEditor: () => null,
+  ActionTypeExecutionEditor: ({ value }: { value: unknown }) => {
+    mocks.executionValue.current = value;
+    return null;
+  },
   createDefaultActionTypeExecutionConfig: () => ({}),
   normalizeActionTypeExecutionConfig: (value: unknown) => value,
   validateActionTypeExecutionConfig: () => null,
@@ -203,6 +208,34 @@ describe("ActionTypeFormScene navigation context", () => {
     await waitFor(() => expect(mocks.getObjectType).toHaveBeenCalledWith("network-1", "late"));
     expect(await openTrigger()).toHaveValue("late");
     expect(screen.getByRole("option", { name: "Late orders" })).toBeInTheDocument();
+  });
+
+  it("starts the execution with what the caller says carries the action out, and says its notice", async () => {
+    mocks.locationState.current = {
+      actionTypeContext: {
+        ...context,
+        notice: "Implement Reschedule API first.",
+        prefill: {
+          ...context.prefill,
+          execution: { mcpId: "mcp-1", toolId: "reschedule", toolName: "Reschedule", type: "mcp" },
+        },
+      },
+    };
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    expect(await screen.findByText("Implement Reschedule API first.")).toBeInTheDocument();
+    expect(
+      screen.getByText(context.description, { selector: ".ant-alert-description div" }),
+    ).toBeInTheDocument();
+    fireEvent.click(await screen.findByText("knowledgeNetwork.actionTypeExecutionTool"));
+    await waitFor(() =>
+      expect(mocks.executionValue.current).toMatchObject({
+        actionSource: { mcpId: "mcp-1", toolId: "reschedule", toolName: "Reschedule", type: "mcp" },
+        sourceName: "Reschedule",
+        sourceType: "mcp",
+      }),
+    );
   });
 
   it("leaves to the caller with its state, from the alert and from the unsaved-leave confirm", async () => {

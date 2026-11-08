@@ -101,9 +101,20 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   const [conditionPropertyOptions, setConditionPropertyOptions] = useState<
     RelationTypePropertyOption[]
   >([]);
-  const [executionValue, setExecutionValue] = useState<ActionTypeExecutionConfig>(
-    createDefaultActionTypeExecutionConfig(),
-  );
+  // A page that opened the form for a need may say what carries the action out: the form starts
+  // with it, and reads its parameters as for one chosen here.
+  const [executionValue, setExecutionValue] = useState<ActionTypeExecutionConfig>(() => {
+    const execution =
+      mode === "create" ? readActionTypeContext(location.state)?.prefill?.execution : undefined;
+    return execution
+      ? {
+          ...createDefaultActionTypeExecutionConfig(),
+          actionSource: { ...execution },
+          sourceName: execution.toolName ?? "",
+          sourceType: execution.type,
+        }
+      : createDefaultActionTypeExecutionConfig();
+  });
   const [executionSchemaState, setExecutionSchemaState] =
     useState<ActionTypeExecutionParameterSchemaState>({
       loaded: false,
@@ -638,7 +649,16 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             </Button>
           }
           className={styles.contextAlert}
-          description={navigationContext.description}
+          description={
+            navigationContext.notice ? (
+              <>
+                {navigationContext.description ? <div>{navigationContext.description}</div> : null}
+                <div>{navigationContext.notice}</div>
+              </>
+            ) : (
+              navigationContext.description
+            )
+          }
           message={navigationContext.title}
           showIcon
           type="info"

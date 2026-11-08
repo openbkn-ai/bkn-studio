@@ -35,6 +35,7 @@ const need = (extra: Partial<LogicNeedView>): LogicNeedView => ({
   scenarioIds: [],
   source: "analysis",
   suggestedMetricType: "",
+  executedBy: "",
   supplementReason: "",
   ...extra,
 });
