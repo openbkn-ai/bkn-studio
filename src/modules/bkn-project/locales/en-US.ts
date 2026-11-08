@@ -1937,6 +1937,7 @@ export const bknProjectEnUS = {
         trigger: "When",
         decision: "Decision",
         knowledge: "Knowledge needed",
+        logicNeeds: "Kinetic needs it uses",
       },
       concepts: {
         none: "No candidate concepts yet.",

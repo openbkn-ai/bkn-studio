@@ -235,7 +235,7 @@ export function QuestionsView({
             </Field>
             {question.logicNeedIds.length ? (
               <Field label={t(`${PREFIX}.questions.logicNeeds`)}>
-                <QuestionLogicNeeds logicNeeds={logicNeeds} question={question} spec={spec} />
+                <LogicNeedList ids={question.logicNeedIds} logicNeeds={logicNeeds} spec={spec} />
               </Field>
             ) : null}
           </div>
@@ -335,37 +335,57 @@ function TemplateText({
   );
 }
 
-export function ScenariosView({ spec }: { spec: RequirementSpec }) {
+/** The scenarios, each with the kinetic needs its questions use and whether they are implemented. */
+export function ScenariosView({
+  logicNeeds,
+  spec,
+}: {
+  logicNeeds: LogicNeedView[] | null;
+  spec: RequirementSpec;
+}) {
   const { t } = useTranslation();
   return (
     <div className={styles.stack}>
       <AddItem kind="scenarios" />
       {spec.scenarios.length ? null : <Empty text={t(`${PREFIX}.scenarios.none`)} />}
-      {spec.scenarios.map((scenario) => (
-        <section className={styles.card} key={scenario.id}>
-          <div className={styles.row}>
-            <h4 className={styles.cardTitle}>{scenario.name}</h4>
-            <EditedTag edited={scenario.edited} />
-            <ReviewTags accepted={scenario.accepted} stale={scenario.ontologyChanged} />
-            <ItemActions itemId={scenario.id} kind="scenarios" label={scenario.name} />
-            <ReviewAction
-              accepted={scenario.accepted}
-              itemId={scenario.id}
-              kind="scenarios"
-              label={scenario.name}
+      {spec.scenarios.map((scenario) => {
+        const needIds = spec.logicNeeds
+          .filter((need) => need.scenarioIds.includes(scenario.id))
+          .map((need) => need.id);
+        return (
+          <section className={styles.card} key={scenario.id}>
+            <div className={styles.row}>
+              <h4 className={styles.cardTitle}>{scenario.name}</h4>
+              <EditedTag edited={scenario.edited} />
+              <ReviewTags accepted={scenario.accepted} stale={scenario.ontologyChanged} />
+              <ItemActions itemId={scenario.id} kind="scenarios" label={scenario.name} />
+              <ReviewAction
+                accepted={scenario.accepted}
+                itemId={scenario.id}
+                kind="scenarios"
+                label={scenario.name}
+              />
+            </div>
+            <div className={styles.field}>
+              <Field label={t(`${PREFIX}.scenarios.actor`)}>{scenario.actor}</Field>
+              <Field label={t(`${PREFIX}.scenarios.trigger`)}>{scenario.trigger}</Field>
+              <Field label={t(`${PREFIX}.scenarios.decision`)}>{scenario.decision}</Field>
+              <Field label={t(`${PREFIX}.scenarios.knowledge`)}>
+                {scenario.knowledge.join(t("bknProject.listSeparator"))}
+              </Field>
+              {needIds.length ? (
+                <Field label={t(`${PREFIX}.scenarios.logicNeeds`)}>
+                  <LogicNeedList ids={needIds} logicNeeds={logicNeeds} spec={spec} />
+                </Field>
+              ) : null}
+            </div>
+            <Citations
+              citations={scenario.citations}
+              supplementReason={scenario.supplementReason}
             />
-          </div>
-          <div className={styles.field}>
-            <Field label={t(`${PREFIX}.scenarios.actor`)}>{scenario.actor}</Field>
-            <Field label={t(`${PREFIX}.scenarios.trigger`)}>{scenario.trigger}</Field>
-            <Field label={t(`${PREFIX}.scenarios.decision`)}>{scenario.decision}</Field>
-            <Field label={t(`${PREFIX}.scenarios.knowledge`)}>
-              {scenario.knowledge.join(t("bknProject.listSeparator"))}
-            </Field>
-          </div>
-          <Citations citations={scenario.citations} supplementReason={scenario.supplementReason} />
-        </section>
-      ))}
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -535,22 +555,22 @@ export function RejectedNote({ spec }: { spec: RequirementSpec }) {
 }
 
 /**
- * The kinetic needs a question rests on, by name, each with whether it is implemented in the
- * live network; without the live read, only their names.
+ * Kinetic needs by name, each with whether it is implemented in the live network; without the
+ * live read, only their names.
  */
-function QuestionLogicNeeds({
+function LogicNeedList({
+  ids,
   logicNeeds,
-  question,
   spec,
 }: {
+  ids: string[];
   logicNeeds: LogicNeedView[] | null;
-  question: RequirementSpec["questions"][number];
   spec: RequirementSpec;
 }) {
   const { t } = useTranslation();
   return (
     <span className={styles.stack}>
-      {question.logicNeedIds.map((id) => {
+      {ids.map((id) => {
         const need = spec.logicNeeds.find((item) => item.id === id);
         const view = logicNeeds?.find((item) => item.id === id);
         const implemented = view ? needState(view) === "implemented" : null;
