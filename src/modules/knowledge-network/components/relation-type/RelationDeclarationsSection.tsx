@@ -17,6 +17,7 @@ import type {
   RelationEnd,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import {
+  CARDINALITY_LABEL_KEYS,
   type ClearedRelationDeclaration,
   fitRelationDeclarations,
   hasSameEnds,
@@ -216,7 +217,7 @@ export function RelationDeclarationsSection({
             onChange={(next?: RelationDeclarations["cardinality"]) => update({ cardinality: next })}
             options={(symmetric ? SYMMETRIC_CARDINALITIES : RELATION_CARDINALITIES).map(
               (cardinality) => ({
-                label: t(`${PREFIX}.cardinalityOption.${cardinality}`),
+                label: t(`${PREFIX}.cardinalityOption.${CARDINALITY_LABEL_KEYS[cardinality]}`),
                 value: cardinality,
               }),
             )}

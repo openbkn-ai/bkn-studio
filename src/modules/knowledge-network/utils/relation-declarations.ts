@@ -22,6 +22,17 @@ export const RELATION_CARDINALITIES: readonly RelationCardinality[] = [
   "many_to_many",
 ];
 
+/**
+ * The locale key of each cardinality under `cardinalityOption`. The values themselves end in
+ * `_one` or `_many`, which i18next reads as plural forms, so they cannot be keys.
+ */
+export const CARDINALITY_LABEL_KEYS: Readonly<Record<RelationCardinality, string>> = {
+  many_to_many: "manyToMany",
+  many_to_one: "manyToOne",
+  one_to_many: "oneToMany",
+  one_to_one: "oneToOne",
+};
+
 /** The cardinalities a symmetric relation can declare: it reads the same from either end. */
 export const SYMMETRIC_CARDINALITIES: readonly RelationCardinality[] = [
   "one_to_one",

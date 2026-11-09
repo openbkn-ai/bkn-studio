@@ -13,6 +13,7 @@ import type {
   RelationDeclarations,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import {
+  CARDINALITY_LABEL_KEYS,
   fallbackPathsFor,
   hasSameEnds,
   normalizeRelationDeclarations,
@@ -76,7 +77,9 @@ export function RelationDeclarationsSummary({
       {item(
         t(`${PREFIX}.cardinality`),
         declarations?.cardinality ? (
-          <strong>{t(`${PREFIX}.cardinalityOption.${declarations.cardinality}`)}</strong>
+          <strong>
+            {t(`${PREFIX}.cardinalityOption.${CARDINALITY_LABEL_KEYS[declarations.cardinality]}`)}
+          </strong>
         ) : (
           notDeclared
         ),

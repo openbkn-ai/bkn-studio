@@ -9,10 +9,10 @@ export const relationDeclarationsPart = {
   relationDeclarations: {
     cardinality: "基数",
     cardinalityOption: {
-      many_to_many: "多对多",
-      many_to_one: "多对一",
-      one_to_many: "一对多",
-      one_to_one: "一对一",
+      manyToMany: "多对多",
+      manyToOne: "多对一",
+      oneToMany: "一对多",
+      oneToOne: "一对一",
     },
     characteristic: {
       symmetric: "对称",
@@ -65,12 +65,16 @@ export const relationDeclarationsPart = {
       unconfirmed: "规则推测",
     },
     mappingChange: {
-      resourceKept: "{{count}} 个关系属性按列名读取。更换后，它们读取「{{resource}}」中的同名列。",
+      resourceKept_one:
+        "{{count}} 个关系属性按列名读取。更换后，它读取「{{resource}}」中的同名列。",
+      resourceKept_other:
+        "{{count}} 个关系属性按列名读取。更换后，它们读取「{{resource}}」中的同名列。",
       resourceMissing:
         "关系属性 {{names}} 读取的列在「{{resource}}」中没有，保存会被拒绝。关系属性暂不能在 Studio 中编辑。",
       resourceOk: "更换",
       resourceTitle: "更换中间资源？",
-      toDirect: "这个关系有 {{count}} 个关系属性，改为直接关系后将被删除。",
+      toDirect_one: "这个关系有 {{count}} 个关系属性，改为直接关系后将被删除。",
+      toDirect_other: "这个关系有 {{count}} 个关系属性，改为直接关系后将被删除。",
       toDirectOk: "改为直接关系",
       toDirectTitle: "改为直接关系？",
     },
@@ -78,7 +82,8 @@ export const relationDeclarationsPart = {
     note: "BKN 3.0 · 都可以不填",
     refusalOpen: "查看 {{name}}",
     refusalTitle: "后端没有接受关系声明：{{description}}",
-    relationProperties: "关系属性：{{count}} 个",
+    relationProperties_one: "关系属性：{{count}} 个",
+    relationProperties_other: "关系属性：{{count}} 个",
     relationPropertiesHint: "关系属性暂不能在 Studio 中编辑，保存关系类时保持不变。",
     requiredBoth: "两端都至少有一个对端",
     requiredEnd: {

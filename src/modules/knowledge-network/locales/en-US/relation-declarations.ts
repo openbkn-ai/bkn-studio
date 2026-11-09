@@ -9,10 +9,10 @@ export const relationDeclarationsPart = {
   relationDeclarations: {
     cardinality: "Cardinality",
     cardinalityOption: {
-      many_to_many: "Many to many",
-      many_to_one: "Many to one",
-      one_to_many: "One to many",
-      one_to_one: "One to one",
+      manyToMany: "Many to many",
+      manyToOne: "Many to one",
+      oneToMany: "One to many",
+      oneToOne: "One to one",
     },
     characteristic: {
       symmetric: "Symmetric",
@@ -67,14 +67,18 @@ export const relationDeclarationsPart = {
       unconfirmed: "Inferred",
     },
     mappingChange: {
-      resourceKept:
+      resourceKept_one:
+        "{{count}} relation property reads its column by name. After the change, it reads the column of the same name in “{{resource}}”.",
+      resourceKept_other:
         "{{count}} relation properties read columns by name. After the change, they read the columns of the same name in “{{resource}}”.",
       resourceMissing:
         "The columns that relation properties {{names}} read are not in “{{resource}}”, so saving will be refused. Relation properties cannot be edited in Studio yet.",
       resourceOk: "Change",
       resourceTitle: "Change the backing resource?",
-      toDirect:
-        "This relation has {{count}} relation properties. They are deleted once it is direct.",
+      toDirect_one:
+        "This relation has {{count}} relation property. It is deleted once the relation is direct.",
+      toDirect_other:
+        "This relation has {{count}} relation properties. They are deleted once the relation is direct.",
       toDirectOk: "Make it direct",
       toDirectTitle: "Make it a direct relation?",
     },
@@ -82,7 +86,8 @@ export const relationDeclarationsPart = {
     note: "BKN 3.0 · all optional",
     refusalOpen: "View {{name}}",
     refusalTitle: "The backend did not accept the relation declarations: {{description}}",
-    relationProperties: "Relation properties: {{count}}",
+    relationProperties_one: "{{count}} relation property",
+    relationProperties_other: "{{count}} relation properties",
     relationPropertiesHint:
       "Relation properties cannot be edited in Studio yet. Saving the relation type keeps them.",
     requiredBoth: "Both ends have at least one counterpart",
