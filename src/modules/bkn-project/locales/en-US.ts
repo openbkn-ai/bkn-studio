@@ -2278,6 +2278,8 @@ export const bknProjectEnUS = {
           ValidationFailed:
             "The network's content did not pass validation and was not published. Check it in modeling and prepare again.",
           NotReady: "Publishing is not available right now. Try again later.",
+          PublishPending:
+            "This version was sent for publishing and no answer came back. Publish again to finish it instead of preparing it anew.",
           other: "Could not publish; try again later.",
         },
       },

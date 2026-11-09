@@ -741,6 +741,10 @@ describe("ReleasePublish", () => {
     ["Release.RunningChanged", "运行版本刚刚有变化。请重新准备发布。"],
     ["Release.ValidationFailed", "网络里的内容没有通过校验，没能发布。请回到建模检查后重新准备。"],
     ["Release.NotReady", "暂时发布不了，请稍后重试。"],
+    [
+      "Release.PublishPending",
+      "这个版本已经发出发布，但没有收到结果。请先再次点击发布完成它，不要重新准备。",
+    ],
   ])("explains %s when publishing, in plain words", async (code, text) => {
     getRegressionMock.mockResolvedValue(regression(["passed"]));
     publishReleaseMock.mockRejectedValue(refusal(code));

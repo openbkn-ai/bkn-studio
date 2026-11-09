@@ -2111,6 +2111,8 @@ export const bknProjectZhCN = {
           NothingToPublish: "网络没有变化。确认的内容与运行版本相同，不需要发布。",
           ValidationFailed: "网络里的内容没有通过校验，没能发布。请回到建模检查后重新准备。",
           NotReady: "暂时发布不了，请稍后重试。",
+          PublishPending:
+            "这个版本已经发出发布，但没有收到结果。请先再次点击发布完成它，不要重新准备。",
           other: "没能发布，请稍后重试。",
         },
       },

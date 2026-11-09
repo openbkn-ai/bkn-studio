@@ -90,6 +90,7 @@ const PUBLISH_ERRORS = new Set([
   "NothingToPublish",
   "ValidationFailed",
   "NotReady",
+  "PublishPending",
 ]);
 const CAPABILITY_REASONS = new Set(["changed", "network_id"]);
 
