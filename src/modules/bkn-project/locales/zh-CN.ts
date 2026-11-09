@@ -2277,6 +2277,8 @@ export const bknProjectZhCN = {
         runError: {
           interrupted: "回归被中断了，可以重新运行。",
           definitions_unreadable: "读不到这个版本的本体定义，没能回归。",
+          draft_changed: "回归期间网络被修改，请重新准备。",
+          index_not_ready: "网络的检索还没准备好，没能回归，可以重新运行。",
           other: "回归没能跑完，可以重新运行。",
         },
         outcome: {

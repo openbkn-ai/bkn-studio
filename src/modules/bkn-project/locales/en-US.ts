@@ -2459,6 +2459,10 @@ export const bknProjectEnUS = {
           interrupted: "The regression was interrupted; it can be run again.",
           definitions_unreadable:
             "This version's ontology could not be read, so nothing was asked.",
+          draft_changed:
+            "The network was changed during the regression; prepare the release again.",
+          index_not_ready:
+            "The network's search was not ready, so nothing was asked; it can be run again.",
           other: "The regression did not finish; it can be run again.",
         },
         outcome: {

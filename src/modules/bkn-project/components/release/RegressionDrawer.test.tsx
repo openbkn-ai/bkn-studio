@@ -236,6 +236,14 @@ describe("RegressionDrawer", () => {
     expect(screen.getByText("没能跑完")).toBeInTheDocument();
   });
 
+  it("asks to prepare again when the network was changed during the regression", async () => {
+    getRegressionMock.mockResolvedValueOnce(
+      regression({ error: "draft_changed", results: [], status: "failed" }),
+    );
+    renderDrawer();
+    expect(await screen.findByText("回归期间网络被修改，请重新准备。")).toBeInTheDocument();
+  });
+
   it("says which questions were not asked because their tables are gone", async () => {
     const base = regression();
     getRegressionMock.mockResolvedValue(

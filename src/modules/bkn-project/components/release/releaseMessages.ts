@@ -235,7 +235,12 @@ const REGRESSION_STATUSES = new Set([
   "no_questions",
   "data_source_missing",
 ]);
-const REGRESSION_ERRORS = new Set(["interrupted", "definitions_unreadable"]);
+const REGRESSION_ERRORS = new Set([
+  "interrupted",
+  "definitions_unreadable",
+  "draft_changed",
+  "index_not_ready",
+]);
 const OUTCOMES = new Set([
   "passed",
   "missing",

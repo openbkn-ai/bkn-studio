@@ -170,7 +170,7 @@ export type RegressionResult = {
 /** How the project's scenario questions did once a release was written into the network. */
 export type Regression = {
   attempt: number;
-  /** Why a run failed as a whole: `interrupted`, `definitions_unreadable`. */
+  /** Why a run failed as a whole: `interrupted`, `definitions_unreadable`, `draft_changed`, `index_not_ready`. */
   error: string;
   finishTime: number;
   questions: RegressionQuestion[];
