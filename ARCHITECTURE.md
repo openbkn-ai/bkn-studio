@@ -179,7 +179,7 @@ src/framework/runtime/
 
 ### 5. 构建期扩展（企业版前端）
 
-企业版独有的前端扩展代码放在 `openbkn-ee/studio/`。企业版把本仓当 submodule 引入，构建出 `bkn-studio-ee` 镜像；社区镜像里物理上没有这些扩展代码。付费能力也可以把页面放在社区 Studio，例如知识网络的 Eval：社区构建包含页面，但路由按版本门控，正式业务 API 由企业服务提供并在服务端校验许可和权限。
+付费能力的前端代码不在本仓，而在企业版仓（openbkn-ee 的 `studio/`）。企业版把本仓当 submodule 引入，构建出 `bkn-studio-ee` 镜像；社区镜像里物理上没有这些代码。
 
 ```text
 src/framework/extension/registry.ts   注册表：路由、入口按钮、文案、能力门控
@@ -195,7 +195,6 @@ src/app/extensions/installed.ts       唯一的注册点；社区构建为空
 - 扩展文案按 locale 合进 i18n 资源，不覆盖已有 key
 - 数据资源知识网络的知识库入口在社区版保留，显示 Beta 与专业版标签并打开许可说明；有效专业版、企业版许可只显示 Beta。未安装知识库扩展时由社区提示路由承接，已安装时不遮蔽实际扩展路由；服务端能力守卫继续控制实际功能，未授权时不挂载知识库实现。
 - BKN 项目资源页的知识库区域通过 `projectKnowledgeBaseResources` 注册嵌入组件，传入项目编号、可编辑状态和可清理保留登记状态。区域继续由现有 `BknProjectKbSlot` 门控；未授权时不挂载组件。具体来源操作由专业版实现，社区仓不引入专业版代码。
-- 工作区侧栏入口使用 `workspaceNavItems`；默认新标签页打开，`openIn: "workspace"` 使用当前页路由并高亮选中项。扩展路由可复用 `KnowledgeNetworkWorkspaceScene` 的 `section="extension"` 与 `children` 插槽，在保留知识网络导航的同时呈现扩展内容；路由仍由注册表统一挂载能力守卫。
 - 扩展用到的本仓内部接口（服务、框架件）改动时，要想到企业版构建会跟着断；企业版 CI 每天拿本仓 main 构建一次来发现漂移
 
 ## 标准模块结构

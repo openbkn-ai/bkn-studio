@@ -32,10 +32,18 @@ export const evalPart = {
         unknownField: "{{path}} contains an unknown field: {{field}}",
         array: "{{path}} must be an array",
         minItems: "{{path}} must contain at least {{count}} items",
+        minItems_one: "{{path}} must contain at least {{count}} item",
+        minItems_other: "{{path}} must contain at least {{count}} items",
         maxItems: "{{path}} may contain at most {{count}} items",
+        maxItems_one: "{{path}} may contain at most {{count}} item",
+        maxItems_other: "{{path}} may contain at most {{count}} items",
         text: "{{path}} must be text",
         minLength: "{{path}} must contain at least {{count}} characters",
+        minLength_one: "{{path}} must contain at least {{count}} character",
+        minLength_other: "{{path}} must contain at least {{count}} characters",
         maxLength: "{{path}} may contain at most {{count}} characters",
+        maxLength_one: "{{path}} may contain at most {{count}} character",
+        maxLength_other: "{{path}} may contain at most {{count}} characters",
         boolean: "{{path}} must be a boolean",
         number: "{{path}} has an incorrect type; a number is required",
         finite: "{{path}} must be a finite number",
@@ -149,7 +157,11 @@ export const evalPart = {
           resources: "Available resources: {{value}}",
           rules: "Enabled rules: {{value}}",
           retryCount:
-            "Correct the previous result: the user requested exactly {{count}} scenarios, but the previous result contained {{previous}} valid suggestions. Return exactly {{count}} distinct suggestions referencing real resources and compatible rules.",
+            "Correct the previous result: the user requested exactly {{count}} scenarios, but the previous valid suggestion count was {{previous}}. Return exactly {{count}} distinct suggestions referencing real resources and compatible rules.",
+          retryCount_one:
+            "Correct the previous result: the user requested exactly {{count}} scenario, but the previous valid suggestion count was {{previous}}. Return exactly {{count}} distinct suggestion referencing real resources and compatible rules.",
+          retryCount_other:
+            "Correct the previous result: the user requested exactly {{count}} scenarios, but the previous valid suggestion count was {{previous}}. Return exactly {{count}} distinct suggestions referencing real resources and compatible rules.",
           responseLanguage:
             "Use English for user-visible answers, explanations and proposals. Preserve protocol fields, enum values, real names and input/output values verbatim.",
         },
@@ -164,6 +176,10 @@ export const evalPart = {
         skeletonReason:
           'Scenario skeleton: verify "{{rule}}" for "{{resource}}". Independent input samples, expected results and an evidence checklist are required before execution.',
         skeletonSummary:
+          "Prepared {{count}} non-runnable scenario skeletons from current real resources. Add independent inputs, expectations and evidence before generating runnable cases.",
+        skeletonSummary_one:
+          "Prepared {{count}} non-runnable scenario skeleton from current real resources. Add independent inputs, expectations and evidence before generating runnable cases.",
+        skeletonSummary_other:
           "Prepared {{count}} non-runnable scenario skeletons from current real resources. Add independent inputs, expectations and evidence before generating runnable cases.",
       },
     },
@@ -241,11 +257,13 @@ export const evalPart = {
       countLimit: "Association count limit",
       requiredAssociation: "Required associations",
       notDeclared: "Not declared",
-      one_to_one: "At most one counterpart at either end",
-      one_to_many: "Each target has at most one source",
-      many_to_one: "Each source has at most one target",
-      many_to_many: "No upper count limit",
+      oneToOne: "At most one counterpart at either end",
+      oneToMany: "Each target has at most one source",
+      manyToOne: "Each source has at most one target",
+      manyToMany: "No upper count limit",
       inapplicable: "Inapplicable checks ({{count}})",
+      inapplicable_one: "Inapplicable check ({{count}})",
+      inapplicable_other: "Inapplicable checks ({{count}})",
       inapplicableHelp:
         "These checks require corresponding relation declarations. Inapplicable does not mean an incomplete case or failed evaluation. Configure actual business requirements, then refresh.",
 
@@ -364,6 +382,8 @@ export const evalPart = {
       excludedHelp: "This resource is outside the assessment scope",
       pendingHelp: "Some cases are incomplete or have only declaration checks",
       viewFailed: "View {{count}} failed cases for {{name}}",
+      viewFailed_one: "View {{count}} failed case for {{name}}",
+      viewFailed_other: "View {{count}} failed cases for {{name}}",
       viewProblems: "View issues",
       viewResult: "View results",
       goResource: "Open resource",
@@ -389,6 +409,10 @@ export const evalPart = {
       rerunSelected: "Reassess ({{count}})",
       rerunTitle: "Reassess “{{name}}”?",
       rerunHelp:
+        "The platform will execute {{count}} cases using their current configuration. This creates a new run, separate from previous participant results.",
+      rerunHelp_one:
+        "The platform will execute {{count}} case using its current configuration. This creates a new run, separate from previous participant results.",
+      rerunHelp_other:
         "The platform will execute {{count}} cases using their current configuration. This creates a new run, separate from previous participant results.",
       rerunFailed:
         "Cannot reassess now. Check execution permission, case state, and read-only execution configuration.",
@@ -710,7 +734,11 @@ export const evalPart = {
       collapseAll: "Collapse all",
       content: "Scrollable content",
       items: "{{count}} items",
+      items_one: "{{count}} item",
+      items_other: "{{count}} items",
       fields: "{{count}} fields",
+      fields_one: "{{count}} field",
+      fields_other: "{{count}} fields",
       more: "Show full text",
       less: "Collapse text",
       loadMore: "Show more ({{count}} remaining)",
@@ -803,15 +831,25 @@ export const evalPart = {
       summary: {
         target: "{{name}}: ",
         sample: "{{target}}Sampled {{count}} records",
-        sampleFrom: "{{target}}Sampled {{count}} of {{total}} visible records",
+        sample_one: "{{target}}Sampled {{count}} record",
+        sample_other: "{{target}}Sampled {{count}} records",
+        sampleFrom: "{{target}}Sampled {{count}} records (visible total: {{total}})",
+        sampleFrom_one: "{{target}}Sampled {{count}} record (visible total: {{total}})",
+        sampleFrom_other: "{{target}}Sampled {{count}} records (visible total: {{total}})",
         all: "{{target}}Checked {{count}} records visible to the requester",
+        all_one: "{{target}}Checked {{count}} record visible to the requester",
+        all_other: "{{target}}Checked {{count}} records visible to the requester",
         ruleFields: "; checked fields \u201c{{fields}}\u201d against \u201c{{rule}}\u201d",
         rule: "; checked \u201c{{rule}}\u201d",
         fields: "; checked fields \u201c{{fields}}\u201d",
         moreFields: "{{fields}} and others ({{count}} fields in total)",
+        moreFields_one: "{{fields}} ({{count}} field in total)",
+        moreFields_other: "{{fields}} and others ({{count}} fields in total)",
         listSeparator: ", ",
         noViolations: "; no violations found.",
         violations: "; found {{count}} violations.",
+        violations_one: "; found {{count}} violation.",
+        violations_other: "; found {{count}} violations.",
         otherCriteriaFailed: " The case still failed; inspect the evaluation criteria for details.",
         statisticsUnavailable:
           "Check statistics are incomplete. A reliable summary is unavailable; inspect execution details.",
@@ -853,7 +891,11 @@ export const evalPart = {
       emptyOutput: "Empty output",
       structuredValue: "Structured data; see original output",
       violationCount: "{{count}} violations",
+      violationCount_one: "{{count}} violation",
+      violationCount_other: "{{count}} violations",
       days: "{{count}} days",
+      days_one: "{{count}} day",
+      days_other: "{{count}} days",
       evidenceComplete: "Evidence complete",
       evidenceIncomplete: "Evidence incomplete or unavailable",
       resourceConfirmed: "Target resource call verified",
@@ -893,6 +935,10 @@ export const evalPart = {
       recordKey: "Record primary key",
       recordKeyUnavailable: "Key not returned or inaccessible",
       examplesLimited:
+        "Up to {{count}} violation examples are retained; the total count is unchanged.",
+      examplesLimited_one:
+        "Up to {{count}} violation example is retained; the total count is unchanged.",
+      examplesLimited_other:
         "Up to {{count}} violation examples are retained; the total count is unchanged.",
       violationSamplesUnavailable:
         "Only violation counts were saved. No individual violation examples are available.",
@@ -1086,6 +1132,8 @@ export const evalPart = {
       enable: "Enable",
       delete: "Delete",
       deleteTitle: "Delete the {{count}} selected cases?",
+      deleteTitle_one: "Delete the {{count}} selected case?",
+      deleteTitle_other: "Delete the {{count}} selected cases?",
       deleteDescription:
         "Cases will be removed from the case library. Existing run history will remain. This action cannot be undone.",
       summary: "{{action}} completed: {{success}} succeeded, {{failed}} failed.",
@@ -1131,9 +1179,13 @@ export const evalPart = {
       rules: "Select rules",
       resourceSearch: "Search resource name or ID",
       selectedResources: "{{count}} resources selected (up to 200)",
+      selectedResources_one: "{{count}} resource selected (up to 200)",
+      selectedResources_other: "{{count}} resources selected (up to 200)",
       resource: "$t(knowledgeNetwork.eval.terms.assessmentTarget)",
       resourceType: "Resource type",
       selectedSamples: "{{count}} samples selected (up to 50)",
+      selectedSamples_one: "{{count}} sample selected (up to 50)",
+      selectedSamples_other: "{{count}} samples selected (up to 50)",
       draftOnly: "New cases are disabled by default",
       targetSearch: "Search target or rule",
       refreshPreview: "Validate configuration",
@@ -1188,7 +1240,11 @@ export const evalPart = {
       passedCases: "Passed cases",
       changes: "Pass changes vs baseline",
       gainedCount: "New passes {{count}}",
+      gainedCount_one: "New pass {{count}}",
+      gainedCount_other: "New passes {{count}}",
       lostCount: "Lost passes {{count}}",
+      lostCount_one: "Lost pass {{count}}",
+      lostCount_other: "Lost passes {{count}}",
       unique: "Exclusive passes",
       uniqueHelp: "Only this run passed. Other runs did not pass, including inconclusive outcomes.",
       changesHelp:
@@ -1198,8 +1254,16 @@ export const evalPart = {
         "P50 and P90 describe the median and slower portion of valid timings. Missing values are excluded.",
       timingSample:
         "Valid timings {{count}} / {{total}}. Includes solving, tools and submission, not model-only latency.",
+      timingSample_one:
+        "Valid timing {{count}} / {{total}}. Includes solving, tools and submission, not model-only latency.",
+      timingSample_other:
+        "Valid timings {{count}} / {{total}}. Includes solving, tools and submission, not model-only latency.",
       validTimings: "Valid timings {{count}} / {{total}}",
+      validTimings_one: "Valid timing {{count}} / {{total}}",
+      validTimings_other: "Valid timings {{count}} / {{total}}",
       drilldown: "View {{metric}} cases from {{agent}} ({{count}})",
+      drilldown_one: "View {{metric}} case from {{agent}} ({{count}})",
+      drilldown_other: "View {{metric}} cases from {{agent}} ({{count}})",
       uniqueAgent: "Only column {{index}} passed",
       allFailed: "All failed",
       sameOutcome: "Same outcome",
@@ -1219,7 +1283,11 @@ export const evalPart = {
       notProvided: "Not provided",
       showOutput: "Expand JSON output",
       allAssertionsPassed: "All {{count}} assertions passed",
+      allAssertionsPassed_one: "The {{count}} assertion passed",
+      allAssertionsPassed_other: "All {{count}} assertions passed",
       allAssertions: "All assertions ({{count}})",
+      allAssertions_one: "Assertion ({{count}})",
+      allAssertions_other: "All assertions ({{count}})",
       viewTrace: "View execution evidence",
       caseComparison: "Case comparison · {{title}}",
       testInput: "$t(knowledgeNetwork.eval.terms.testInput)",
@@ -1268,7 +1336,9 @@ export const evalPart = {
       version: "Suite version",
       casesUnit: "cases",
       selectRuns: "Select runs",
-      selectionCount: "Selected {{count}} / {{max}} runs",
+      selectionCount: "Selected {{count}} runs (limit: {{max}})",
+      selectionCount_one: "Selected {{count}} run (limit: {{max}})",
+      selectionCount_other: "Selected {{count}} runs (limit: {{max}})",
       compare: "Compare",
       search: "Search agent, model or run ID",
       date: "Run dates",
@@ -1290,6 +1360,8 @@ export const evalPart = {
       inconclusive: "Inconclusive",
       review_required: "Review required",
       totalRuns: "{{count}} runs",
+      totalRuns_one: "{{count}} run",
+      totalRuns_other: "{{count}} runs",
       loadFailed: "Unable to load evaluation data. Refresh and try again.",
       compareFailed: "Unable to compare. Select completed runs from the same test set and cases.",
       compatibilityWarning: "Evaluation conditions differ",
@@ -1299,6 +1371,10 @@ export const evalPart = {
       rateHelp: "Pass rate = passed cases / all cases",
       meanDuration: "Mean case duration",
       durationHelp:
+        "Based on {{count}} timings. Includes solving, tool calls and submission; not model-only latency.",
+      durationHelp_one:
+        "Based on {{count}} timing. Includes solving, tool calls and submission; not model-only latency.",
+      durationHelp_other:
         "Based on {{count}} timings. Includes solving, tool calls and submission; not model-only latency.",
       matrix: "Per-case comparison",
       caseFilter: "Case filter",
@@ -1477,6 +1553,10 @@ export const evalPart = {
       cancelled: "Cancelled",
       declarationOnly:
         "{{count}} cases have declaration checks only, with no business evaluation. View cases",
+      declarationOnly_one:
+        "{{count}} case has declaration checks only, with no business evaluation. View case",
+      declarationOnly_other:
+        "{{count}} cases have declaration checks only, with no business evaluation. View cases",
       readiness: "Run readiness",
       readinessHelp:
         "Current configuration for enabled, in-scope cases. Ready cases can be submitted; execution still checks current permissions and service availability. Readiness is independent of past evaluation results.",
@@ -1484,6 +1564,8 @@ export const evalPart = {
       runnable: "Run configuration ready",
       notRunnable: "Run conditions unmet",
       excluded: "Another {{count}} cases are outside the evaluation scope.",
+      excluded_one: "Another {{count}} case is outside the evaluation scope.",
+      excluded_other: "Another {{count}} cases are outside the evaluation scope.",
       viewScope: "View evaluation scope",
     },
     caseResources: {
@@ -1516,6 +1598,8 @@ export const evalPart = {
       scope: "Check scope",
       allRows: "All accessible rows",
       sample: "Sample up to {{count}} rows",
+      sample_one: "Sample up to {{count}} row",
+      sample_other: "Sample up to {{count}} rows",
       expected: "Expected output",
       goldHidden: "Expected output requires case management permission.",
       source: "Expectation source",
@@ -1543,9 +1627,13 @@ export const evalPart = {
 
       tagList: "All tags",
       moreTags: "View all {{count}} tags",
+      moreTags_one: "View the {{count}} tag",
+      moreTags_other: "View all {{count}} tags",
       descriptionCount: "Description character count",
       selectedMembersLabel: "Selected cases",
       selectedMembers: "Selected cases ({{count}})",
+      selectedMembers_one: "Selected case ({{count}})",
+      selectedMembers_other: "Selected cases ({{count}})",
       libraryHelp: "About the case library",
       libraryHelpText:
         "Manage reusable evaluation cases, including inputs, criteria and execution settings. Add cases to test sets as needed.",
@@ -1601,6 +1689,8 @@ export const evalPart = {
       conceptGroup: "Concept model",
       modelGroup: "Dynamic models",
       ruleCount: "{{count}} rules",
+      ruleCount_one: "{{count}} rule",
+      ruleCount_other: "{{count}} rules",
       kinds: {
         objectType: "Object type",
         objectProperty: "Object property",

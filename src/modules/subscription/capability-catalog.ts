@@ -109,6 +109,15 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.2.1",
   },
   {
+    // Studio provides the page; bkn-backend-ee enforces the Professional license.
+    // bkn-safe does not report Eval, so endpoint absence is not an installation verdict.
+    category: "semantic",
+    key: CAPABILITIES.EVAL,
+    reportedByEndpoint: false,
+    minEdition: "professional",
+    sinceVersion: "0.2.2",
+  },
+  {
     // 页面在企业版前端镜像,服务是 openbkn-ee 的 workshop;bkn-safe-ee 登记进装配表,端点报得出。
     category: "semantic",
     key: CAPABILITIES.WORKSHOP,

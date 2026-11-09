@@ -93,8 +93,11 @@ describe("semantic colors", () => {
       readFileSync(resolve(process.cwd(), relativePath), "utf8");
     const businessTemplate = readStyle("src/framework/ui/common/BusinessPageTemplate.module.css");
     const adminTemplate = readStyle("src/modules/system-admin/scenes/admin.module.css");
+    const conversation = readStyle(
+      "src/modules/knowledge-network/components/shared/AiConversationPanel.module.css",
+    );
     const objectMetricForm = readStyle(
-      "src/modules/knowledge-network/scenes/ObjectMetricFormScene.module.css",
+      "src/modules/knowledge-network/scenes/ObjectMetricFormScene.tsx",
     );
     const jsonEditor = readStyle("src/modules/execution-factory/components/JsonEditor.module.css");
     const resourceDetail = readStyle(
@@ -106,8 +109,10 @@ describe("semantic colors", () => {
       "--business-color-selection: var(--color-selection-accent);",
     );
     expect(adminTemplate).toContain("--admin-color-primary: var(--color-selection-accent);");
-    expect(objectMetricForm).toContain("background: var(--color-action-primary);");
-    expect(objectMetricForm).toContain("color: var(--color-action-primary-text);");
+    expect(objectMetricForm).toContain("<AiConversationPanel");
+    expect(conversation).toContain("background: var(--color-action-primary);");
+    expect(conversation).toContain("color: var(--color-action-primary-text);");
+    expect(conversation).not.toMatch(/#[0-9a-f]{3,8}\b|data-theme/i);
     expect(jsonEditor).toContain("border-color: var(--color-focus-ring);");
     expect(resourceDetail.match(/border-color: var\(--color-focus-ring\);/g)).toHaveLength(2);
   });

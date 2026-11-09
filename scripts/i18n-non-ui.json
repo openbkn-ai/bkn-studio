@@ -13,5 +13,10 @@
     "path": "src/modules/knowledge-network/eval/eval-case-designer.service.ts",
     "source": "const matched = goal.match(/(?:生成|提炼|设计|梳理)?\\s*(\\d{1,2})\\s*条[^。；\\n]*(?:场景|用例)/);",
     "reason": "Natural-language quantity recognition pattern; input recognition must accept Chinese independently of the UI locale."
+  },
+  {
+    "path": "src/modules/knowledge-network/eval/EvalTemplateGenerationDrawer.tsx",
+    "source": "/(?:采样|全量|证据|运行.*(?:详情|明细|结果)|分析.*运行)|\\b(?:sampl(?:e|es|ed|ing)|full(?:[-\\s]+(?:scan|dataset|coverage))?|evidence|run.*(?:details?|results?)|analy[sz](?:e|ing).*\\bruns?\\b)\\b/i.test(",
+    "reason": "Bilingual user-intent recognition pattern; both languages must remain accepted regardless of the UI locale."
   }
 ]

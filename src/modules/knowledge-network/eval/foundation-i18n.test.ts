@@ -95,3 +95,59 @@ it("resolves messages at call time without changing stored regression tags or re
     expect(readableEvalText(prefix + "case-run-1", [{ id: "case-run-1", label }])).toBe(label);
   }
 });
+
+it.each([0, 1, 2])("uses natural English count nouns for count=%i", async (count) => {
+  await i18n.changeLanguage("en-US");
+  const item = count === 1 ? "item" : "items";
+  const character = count === 1 ? "character" : "characters";
+  const field = count === 1 ? "field" : "fields";
+  const resource = count === 1 ? "resource" : "resources";
+  const sample = count === 1 ? "sample" : "samples";
+  const record = count === 1 ? "record" : "records";
+  const scenario = count === 1 ? "scenario" : "scenarios";
+  const suggestion = count === 1 ? "suggestion" : "suggestions";
+  const text = (key: string, values?: Record<string, unknown>) =>
+    i18n.t(`knowledgeNetwork.eval.${key}`, { ...values, count });
+
+  expect(() =>
+    validateCaseArguments(JSON.stringify({ items: Array.from({ length: count + 1 }, () => 0) }), {
+      type: "object",
+      properties: { items: { type: "array", maxItems: count } },
+    }),
+  ).toThrow(`Parameters.items may contain at most ${count} ${item}`);
+  expect(() =>
+    validateCaseArguments(JSON.stringify({ name: "x".repeat(count + 1) }), {
+      type: "object",
+      properties: { name: { type: "string", maxLength: count } },
+    }),
+  ).toThrow(`Parameters.name may contain at most ${count} ${character}`);
+  expect(text("foundation.caseModel.minLength", { path: "Name" })).toBe(
+    `Name must contain at least ${count} ${character}`,
+  );
+  expect(text("resultValueUi.fields")).toBe(`${count} ${field}`);
+  expect(text("ruleApplication.selectedResources")).toBe(
+    `${count} ${resource} selected (up to 200)`,
+  );
+  expect(text("ruleApplication.selectedSamples")).toBe(`${count} ${sample} selected (up to 50)`);
+  expect(text("resultUi.summary.sampleFrom", { target: "Orders: ", total: 1 })).toBe(
+    `Orders: Sampled ${count} ${record} (visible total: 1)`,
+  );
+  expect(text("foundation.assistant.skeletonSummary")).toBe(
+    `Prepared ${count} non-runnable scenario ${count === 1 ? "skeleton" : "skeletons"} from current real resources. Add independent inputs, expectations and evidence before generating runnable cases.`,
+  );
+  expect(text("foundation.assistant.prompts.retryCount", { previous: 1 })).toBe(
+    `Correct the previous result: the user requested exactly ${count} ${scenario}, but the previous valid suggestion count was 1. Return exactly ${count} distinct ${suggestion} referencing real resources and compatible rules.`,
+  );
+});
+
+it.each([
+  ["zh-CN", "两端各自最多关联一个对象", "不限制关联数量上限"],
+  ["en-US", "At most one counterpart at either end", "No upper count limit"],
+])("keeps cardinality labels separate from plural suffixes in %s", async (language, one, many) => {
+  await i18n.changeLanguage(language);
+  expect(i18n.t("knowledgeNetwork.eval.relationChecks.oneToOne")).toBe(one);
+  expect(i18n.t("knowledgeNetwork.eval.relationChecks.manyToMany")).toBe(many);
+  for (const key of ["oneToOne", "oneToMany", "manyToOne", "manyToMany"]) {
+    expect(i18n.exists(`knowledgeNetwork.eval.relationChecks.${key}`)).toBe(true);
+  }
+});
