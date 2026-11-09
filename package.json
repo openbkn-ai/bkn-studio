@@ -24,7 +24,9 @@
     "test:execution-factory:agent-at": "echo Run Agent AT from tests/execution-factory/agent-at — see LOCAL_SETUP.md",
     "check": "npm run license:check && npm run format:check && npm run lint:types && npm run test -- --run && npm run build",
     "license:check": "node scripts/check-license-headers.mjs",
-    "license:fix": "node scripts/check-license-headers.mjs --fix"
+    "license:fix": "node scripts/check-license-headers.mjs --fix",
+    "test:eval": "vitest run --config vitest.eval.config.ts",
+    "test:eval:coverage": "vitest run --config vitest.eval.config.ts --coverage"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.1",
@@ -79,6 +81,7 @@
     "@types/react-dom": "^19.2.2",
     "@types/three": "0.180.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/coverage-istanbul": "4.1.11",
     "eslint": "^9.38.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.24",

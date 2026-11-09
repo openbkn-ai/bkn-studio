@@ -416,6 +416,7 @@ export function AskAiSidebar({
           placeholder={t(`${PREFIX}.placeholder.${topic}`)}
           promptRequest={promptRequest}
           sendLabel={t(`${PREFIX}.submit`)}
+          stopLabel={t(`${PREFIX}.stop`)}
         />
       </div>
     </aside>

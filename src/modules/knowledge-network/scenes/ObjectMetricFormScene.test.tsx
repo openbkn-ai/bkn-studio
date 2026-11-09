@@ -300,8 +300,7 @@ describe("ObjectMetricFormScene object properties", () => {
 
     render(<ObjectMetricFormScene mode="create" />);
     await screen.findByText("平台默认模型");
-    const modelSelect = document.querySelector<HTMLInputElement>("#metric-ai-model");
-    if (!modelSelect) throw new Error("expected model select");
+    const modelSelect = screen.getByRole<HTMLInputElement>("combobox", { name: "回答模型" });
     await waitFor(() => expect(mocks.listObjectMetricAnswerModels).toHaveBeenCalled());
     fireEvent.mouseDown(modelSelect);
     fireEvent.click(await screen.findByText("测试对话模型"));

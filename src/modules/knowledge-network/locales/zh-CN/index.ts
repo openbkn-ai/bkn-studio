@@ -25,6 +25,7 @@ import { cypherQueryPart } from "./cypher-query";
 import { graphOverviewPart } from "./graph-overview";
 import { sampleExperiencePart } from "./sample-experience";
 import { appDevelopmentPart } from "./app-development";
+import { evalPart } from "@/modules/knowledge-network/eval/locales/zh-CN";
 
 export const knowledgeNetworkZhCN = {
   knowledgeNetwork: {
@@ -48,5 +49,6 @@ export const knowledgeNetworkZhCN = {
     ...graphOverviewPart,
     ...sampleExperiencePart,
     ...appDevelopmentPart,
+    ...evalPart,
   },
 } as const;

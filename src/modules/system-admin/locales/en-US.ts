@@ -1315,6 +1315,7 @@ export const systemAdminEnUS = {
         "bkn-project-concept-extraction": "Project - Concept Extraction",
         graph_explorer: "Graph Explorer",
         studio_smart_qa: "Studio Smart Q&A",
+        eval_assistant: "Quality Evaluation Assistant",
         cypher_generation: "Cypher Generation",
         business_provenance_claim_attribution: "Business Provenance Claim Attribution",
         business_provenance_optimizer: "Knowledge Network Optimizer",
@@ -1325,6 +1326,8 @@ export const systemAdminEnUS = {
         "bkn-project-ontology-ask": "Project - Ontology Assistant",
       },
       builtinDescriptions: {
+        eval_assistant:
+          "Helps inspect evaluation rules, cases, suites, run results and findings, and proposes controlled actions for confirmation.",
         "bkn-project-document-extraction":
           "Extracts file records, objects within documents, facts and events from confirmed models, keeping source evidence for review.",
         "bkn-project-concept-extraction":

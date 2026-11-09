@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { createPendingRequest } from "@/framework/request/pending-request";
 import type { KnowledgeNetworkOverviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
 import {
@@ -80,6 +81,8 @@ function mapOverviewGraph(value: BackendOverviewGraph): KnowledgeNetworkOverview
   };
 }
 
+const pendingGraph = createPendingRequest<KnowledgeNetworkOverviewGraph>();
+
 export async function getKnowledgeNetworkOverviewGraph(
   networkId: string,
   query: KnowledgeNetworkOverviewGraphQuery = {},
@@ -144,18 +147,19 @@ export async function getKnowledgeNetworkOverviewGraph(
     });
   }
 
-  const response = await http.get<BackendOverviewGraph>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}/overview-graph`,
-    {
-      params: {
-        concept_group_id: query.conceptGroupId,
-        cursor: query.cursor,
-        edge_limit: query.edgeLimit ?? 120,
-        expand_depth: query.expandDepth,
-        focus_object_type_id: query.focusObjectTypeId,
-        node_limit: query.nodeLimit ?? 60,
-      },
-    },
-  );
-  return mapOverviewGraph(response.data);
+  const params = {
+    concept_group_id: query.conceptGroupId,
+    cursor: query.cursor,
+    edge_limit: query.edgeLimit ?? 120,
+    expand_depth: query.expandDepth,
+    focus_object_type_id: query.focusObjectTypeId,
+    node_limit: query.nodeLimit ?? 60,
+  };
+  return pendingGraph(JSON.stringify([networkId, params]), async () => {
+    const response = await http.get<BackendOverviewGraph>(
+      `/bkn-backend/v1/knowledge-networks/${networkId}/overview-graph`,
+      { params },
+    );
+    return mapOverviewGraph(response.data);
+  });
 }

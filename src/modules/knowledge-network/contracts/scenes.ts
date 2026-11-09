@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { ReactNode } from "react";
+
 export type KnowledgeNetworkListSceneProps = {
   onOpenWorkspace?: (networkId: string) => void;
 };
@@ -15,6 +17,7 @@ export type KnowledgeNetworkWorkspaceSection =
   | "experience-agent"
   | "experience-mcp"
   | "experience-cypher"
+  | "evals"
   | "concept-groups"
   | "object-types"
   | "relation-types"
@@ -33,4 +36,6 @@ export type KnowledgeNetworkWorkspaceSceneProps = {
   section: KnowledgeNetworkWorkspaceSection;
   /** With section "extension": the sidebar entry whose page is shown, by key. */
   extensionKey?: string;
+  /** Inline workspace content for built-in, capability-gated pages such as Eval. */
+  children?: ReactNode;
 };

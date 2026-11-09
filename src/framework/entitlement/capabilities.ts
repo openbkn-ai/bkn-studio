@@ -46,6 +46,8 @@ export const CAPABILITIES = {
    * 报得出它,入口照常按 `capabilityState()` 判。
    */
   GRAPH_EXPLORER: "graph_explorer",
+  /** Eval 质量评测。专业档起；页面由社区 Studio 提供，执行服务由企业版提供。 */
+  EVAL: "eval",
   /** 对象指标的定义、版本、发布、绑定、查询与试算。专业档起。 */
   OBJECT_METRICS: "object_metrics",
   /**
