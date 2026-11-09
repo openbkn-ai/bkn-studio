@@ -72,31 +72,66 @@ export type ReleaseReview = {
   version: string;
 };
 
-export type PublishInput = {
+/** Preparing a release: the review read, what the owner accepts of the checks that did not pass. */
+export type PrepareInput = {
   accepts: string[];
-  notes: string;
+  /** Drops edits made to the network that were never published. */
+  overwriteDraftChanges: boolean;
   signature: string;
   version: string;
 };
 
-/** A release of a network's lineage, by this project or another. */
-export type LineageRelease = {
-  createTime: number;
-  networkId: string;
+/** Publishing the prepared release. */
+export type PublishInput = {
+  /** The owner confirmed bringing back what a rollback took out. */
+  allowOutdatedBase: boolean;
   notes: string;
-  projectId: string;
-  publisherId: string;
-  /** `live` for the newest release, `archived` for earlier ones. */
-  state: string;
   version: string;
 };
 
-/** What switching consumers to a network would move: the active schedules of the one in use. */
-export type SwitchPlan = {
-  fromNetworkId: string;
-  schedules: { id: string; name: string }[];
-  toNetworkId: string;
+/** The project's release written into the network's draft and not published yet. */
+export type PreparedRelease = {
+  publisherId: string;
+  /** When it was written into the network. */
+  updateTime: number;
+  version: string;
 };
+
+/**
+ * A version of the project's network. `status`: `running`, `history`, `deprecated` or `purged`.
+ * `origin`: `project`, `other_project` or `workspace`. `release` is the version of the release
+ * that published it, when a release did.
+ */
+export type NetworkVersion = {
+  baseVersion: number;
+  createTime: number;
+  label: string;
+  notes: string;
+  origin: string;
+  publisherId: string;
+  release: string;
+  status: string;
+  version: number;
+};
+
+/**
+ * The versions of the project's network, newest first. `fullHistory` is false in the community
+ * edition, which keeps only the running and the previous version.
+ */
+export type ProjectVersions = {
+  entries: NetworkVersion[];
+  prepared: PreparedRelease | null;
+  versioning: {
+    /** The network's draft: the version it started from, and whether it was rolled back past. */
+    draft: { baseVersion: number; hasChanges: boolean; outdated: boolean };
+    fullHistory: boolean;
+    previousVersion: number;
+    runningVersion: number;
+  };
+};
+
+/** What publishing did: the version it made, and the one the community edition dropped (0 for none). */
+export type PublishResult = { knVersion: number; purgedVersion: number };
 
 /** A test question asked in its scenario question's place, and what it expects of the data. */
 export type RegressionTest = { expect: string; id: string; text: string };
@@ -132,13 +167,12 @@ export type RegressionResult = {
   toolStatuses: string[];
 };
 
-/** How the project's scenario questions did on the network a release created. */
+/** How the project's scenario questions did once a release was written into the network. */
 export type Regression = {
   attempt: number;
   /** Why a run failed as a whole: `interrupted`, `definitions_unreadable`. */
   error: string;
   finishTime: number;
-  networkId: string;
   questions: RegressionQuestion[];
   results: RegressionResult[];
   runnerId: string;
@@ -148,23 +182,21 @@ export type Regression = {
   version: string;
 };
 
-/** A network of the lineage: a release's, by its version, or the network it started from. */
-export type RollbackNetwork = { base: boolean; networkId: string; version: string };
+/** A version of the network a rollback reads: its number, label and the release that published it. */
+export type RollbackVersion = { knVersion: number; label: string; version: string };
 
 /**
- * What rolling consumers back would do: the network in use and the one before it, the schedules
- * that move back, the consumers whose owners switch them, and the scenario questions it changes.
+ * What switching the network's running version back to `to` would do: the scenario questions it
+ * changes, and why it cannot go, if it cannot.
  */
 export type RollbackPlan = {
-  /** Kinds of consumer their owners switch back themselves: `agents`, `mcp`, `workshop`, `eval`. */
-  consumers: string[];
-  from: RollbackNetwork;
+  from: RollbackVersion;
+  fullHistory: boolean;
   questions: ReleaseReview["questions"];
-  /** Why rolling back cannot go, such as `Rollback.NoPrevious`. */
+  /** Why switching back cannot go, such as `Rollback.NoPrevious`. */
   refusals: string[];
-  schedules: { id: string; name: string }[];
-  /** Stands for the plan; rolling back refuses a plan that no longer stands. */
+  /** Stands for the plan; switching refuses a plan that no longer stands. */
   signature: string;
-  /** null when there is no network before the one in use. */
-  to: RollbackNetwork | null;
+  /** null when there is no version to go back to. */
+  to: RollbackVersion | null;
 };

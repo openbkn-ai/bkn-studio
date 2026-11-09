@@ -226,7 +226,7 @@ describe("publish.service", () => {
             suggested_version: "1.0.3",
           },
         ],
-        release: { in_use: false, network_id: "n_v1_0_2", version: "1.0.2" },
+        release: { kn_version: 3, network_id: "n", version: "1.0.2" },
         stage: "published",
         stale: [],
         undecided: 0,
@@ -234,7 +234,13 @@ describe("publish.service", () => {
     });
 
     const status = await getProjectStatus("p/1");
-    expect(status.release).toEqual({ inUse: false, networkId: "n_v1_0_2", version: "1.0.2" });
+    expect(status.release).toEqual({
+      knVersion: 3,
+      networkId: "n",
+      rolledBack: false,
+      running: null,
+      version: "1.0.2",
+    });
     expect(status.nextActions[0]).toMatchObject({
       action: "review_release",
       suggestedVersion: "1.0.3",

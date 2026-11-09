@@ -6,6 +6,7 @@
  */
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { AxiosError, type AxiosResponse } from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createProjectMock = vi.hoisted(() => vi.fn());
@@ -25,6 +26,21 @@ import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 import { NewProjectModal } from "./NewProjectModal";
 
 const networks = [{ id: "orders", name: "Orders network" }];
+
+const refusal = (status: number, code: string) =>
+  new AxiosError(code, "ERR_BAD_REQUEST", undefined, undefined, {
+    data: { description: code, error_code: `BknProject.${code}` },
+    status,
+  } as AxiosResponse);
+
+/** Fills the dialog for a project of the existing network and submits it. */
+function submitExisting() {
+  fireEvent.change(screen.getByPlaceholderText("bknProject.create.namePlaceholder"), {
+    target: { value: "Orders" },
+  });
+  pickOption("bknProject.create.networkPlaceholder", "Orders network");
+  fireEvent.click(screen.getByText("bknProject.create.submit"));
+}
 
 function renderModal(onCreated = vi.fn(), catalogsError: string | null = null) {
   // Ant Design's injected styles make each jsdom query slow enough to time out under load.
@@ -138,6 +154,38 @@ describe("NewProjectModal", () => {
     await waitFor(() => expect(createProjectMock).toHaveBeenCalled());
     expect(onCreated).not.toHaveBeenCalled();
     expect(screen.getByText("bknProject.create.title")).toBeInTheDocument();
+  });
+
+  it("asks to turn on versioning for a network without it, then creates the project", async () => {
+    const created = { id: "p1" };
+    createProjectMock
+      .mockRejectedValueOnce(refusal(409, "Project.VersioningRequired"))
+      .mockResolvedValueOnce(created);
+    const onCreated = renderModal();
+    submitExisting();
+
+    expect(await screen.findByText("bknProject.create.versioningTitle")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.create.versioningDescription")).toBeInTheDocument();
+    expect(onCreated).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("bknProject.create.versioningConfirm"));
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(created));
+    expect(createProjectMock).toHaveBeenLastCalledWith({
+      catalogIds: [],
+      enableVersioning: true,
+      knId: "orders",
+      name: "Orders",
+    });
+  });
+
+  it("says who can turn versioning on when the caller cannot", async () => {
+    createProjectMock.mockRejectedValue(refusal(403, "Project.VersioningForbidden"));
+    const onCreated = renderModal();
+    submitExisting();
+
+    expect(await screen.findByText("bknProject.create.versioningForbidden")).toBeInTheDocument();
+    expect(screen.queryByText("bknProject.create.versioningTitle")).toBeNull();
+    expect(onCreated).not.toHaveBeenCalled();
   });
 
   it("shows why the catalogs could not be loaded", () => {

@@ -25,7 +25,6 @@ import {
   listProjects,
   setProjectArchived,
 } from "@/modules/bkn-project/services/project.service";
-import { getNetworkInUse } from "@/modules/bkn-project/services/release.service";
 import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
 import { networkWorkspacePath, projectSectionPath } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
@@ -206,32 +205,8 @@ export function ProjectListScene() {
       width: 260,
       render: (value: string, record) => (
         <div className={styles.stack}>
-          {/*
-           * A click opens the network consumers use now: the base one until a release is switched
-           * to. Opening it elsewhere (a modifier or the middle button) follows the link, to the
-           * lineage's base network the name stands for.
-           */}
-          <Link
-            onClick={(event) => {
-              if (
-                event.button !== 0 ||
-                event.metaKey ||
-                event.ctrlKey ||
-                event.shiftKey ||
-                event.altKey
-              ) {
-                return;
-              }
-              event.preventDefault();
-              getNetworkInUse(record.id).then(
-                ({ networkId }) => void navigate(networkWorkspacePath(networkId)),
-                () => void message.error(t("bknProject.list.networkInUseFailed")),
-              );
-            }}
-            to={networkWorkspacePath(value)}
-          >
-            {networkNames[value] ?? value}
-          </Link>
+          {/* The project's network keeps its versions under one id: the link opens it. */}
+          <Link to={networkWorkspacePath(value)}>{networkNames[value] ?? value}</Link>
           <code className={styles.id}>{value}</code>
           {record.otherProjects > 0 ? (
             <Tag color="warning">
