@@ -1,0 +1,49 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.panel {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.summary :global(.ant-descriptions-item-content) {
+  overflow-wrap: anywhere;
+}
+.summary :global(.ant-descriptions-view table) {
+  table-layout: fixed;
+}
+.summary :global(.ant-descriptions-item-label) {
+  width: 144px;
+}
+.caseName {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  text-align: start;
+  font-weight: 500;
+}
+.caseName > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.resultLink {
+  height: auto;
+  padding-inline: 0;
+}
+.inspection {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 12px;
+}
+.inspection > button {
+  align-self: flex-start;
+}
