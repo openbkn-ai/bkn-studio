@@ -14,6 +14,11 @@
 export const subscriptionEnUS = {
   subscription: {
     capabilities: {
+      eval: {
+        description:
+          "Manage cases from templates, run evaluations, and review diagnostics and regression results.",
+        name: "Eval quality evaluation",
+      },
       business_provenance: {
         bullets: {
           b1: "Timeline",

@@ -617,6 +617,7 @@ export const bknProjectZhCN = {
           relation_types: "描述你想怎么改这个关系类，或继续提问…",
         },
         submit: "发送",
+        stop: "停止生成",
         asking: "正在理解并给出建议…",
         settling: "正在整理修改建议…",
         onlySuggestions: "AI 给出了以下建议。",

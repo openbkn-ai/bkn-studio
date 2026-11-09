@@ -7,6 +7,8 @@
 
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import os from "node:os";
+import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const scriptPath = path.resolve("scripts/scan-hardcoded-zh.mjs");
@@ -61,5 +63,33 @@ describe("hardcoded i18n scanner", () => {
 
   it("allows URLs, protocols, code, and stable technical terms", () => {
     expect(scanFixture("allowed").summary.active).toBe(0);
+  });
+  it("allows only the documented exact protocol literals and still flags nearby UI text", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "bkn-i18n-protocol-"));
+    try {
+      const entries = JSON.parse(
+        fs.readFileSync(path.resolve("scripts/i18n-non-ui.json"), "utf8"),
+      ) as Array<{ path: string; source: string }>;
+      for (const entry of entries) {
+        const file = path.join(root, entry.path);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, `${entry.source}\nconst label = "用户界面文案";\n`);
+      }
+      const output = execFileSync(process.execPath, [scriptPath, "--json"], {
+        cwd: root,
+        encoding: "utf8",
+      });
+      const result = JSON.parse(output) as { findings: Array<{ text: string }> };
+      expect(result.findings).toHaveLength(entries.length);
+      expect(result.findings.every((finding) => finding.text.includes("用户界面文案"))).toBe(true);
+      const file = path.join(root, entries[0].path);
+      fs.writeFileSync(file, entries[0].source.replace("回归", "其他中文"));
+      const changed = JSON.parse(
+        execFileSync(process.execPath, [scriptPath, "--json"], { cwd: root, encoding: "utf8" }),
+      ) as { findings: Array<{ text: string }> };
+      expect(changed.findings.some((finding) => finding.text.includes("其他中文"))).toBe(true);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

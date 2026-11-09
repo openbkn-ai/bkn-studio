@@ -14,10 +14,12 @@ import {
 import { Button, Input, Select, Tooltip } from "antd";
 import { useEffect, useState } from "react";
 
-import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
-import type { ObjectMetricAnswerModel } from "@/modules/knowledge-network/services/object-metric-models.service";
-
 import styles from "./AiPromptComposer.module.css";
+
+export interface AiPromptModelOption {
+  id: string;
+  name: string;
+}
 
 /**
  * The input of an AI conversation pane: the prompt, the answer model, and send or stop. Shared by
@@ -33,6 +35,7 @@ export function AiPromptComposer({
   placeholder,
   promptRequest,
   sendLabel,
+  stopLabel,
 }: {
   checking: boolean;
   generating: boolean;
@@ -44,8 +47,14 @@ export function AiPromptComposer({
     loading: boolean;
     locked: boolean;
     onChange: (modelId?: string) => void;
-    options: ObjectMetricAnswerModel[];
+    options: AiPromptModelOption[];
     unavailable: boolean;
+    /** Accessible name of the model selector. */
+    ariaLabel: string;
+    /** Label of the empty value that delegates model choice to the platform. */
+    defaultLabel: string;
+    /** Tooltip shown while the model list is unavailable. */
+    unavailableLabel: string;
   };
   onStop: () => void;
   onSubmit: (prompt: string) => void;
@@ -53,6 +62,7 @@ export function AiPromptComposer({
   /** Sets the input, as an example clicked does. */
   promptRequest?: { revision: number; value: string };
   sendLabel: string;
+  stopLabel: string;
 }) {
   const [prompt, setPrompt] = useState("");
 
@@ -89,14 +99,11 @@ export function AiPromptComposer({
       <div className={styles.aiComposerFooter}>
         <div className={styles.aiComposerActions}>
           {model ? (
-            <Tooltip
-              title={model.unavailable ? objectMetricText("aiModelListUnavailable") : undefined}
-            >
+            <Tooltip title={model.unavailable ? model.unavailableLabel : undefined}>
               <Select
-                aria-label={objectMetricText("aiAnswerModel")}
+                aria-label={model.ariaLabel}
                 className={styles.aiModelSelect}
                 disabled={generating || checking || model.locked}
-                id="metric-ai-model"
                 loading={model.loading}
                 onChange={(value: string) => model.onChange(value || undefined)}
                 options={[
@@ -104,7 +111,7 @@ export function AiPromptComposer({
                     label: (
                       <span className={styles.aiModelOption}>
                         <CodeSandboxOutlined aria-hidden="true" />
-                        <span>{objectMetricText("aiPlatformDefaultModel")}</span>
+                        <span>{model.defaultLabel}</span>
                       </span>
                     ),
                     value: "",
@@ -126,7 +133,7 @@ export function AiPromptComposer({
             </Tooltip>
           ) : null}
           <Button
-            aria-label={generating ? objectMetricText("mca4d973c0b00") : sendLabel}
+            aria-label={generating ? stopLabel : sendLabel}
             className={styles.aiComposerSubmit}
             danger={generating}
             disabled={!generating && (checking || !prompt.trim())}

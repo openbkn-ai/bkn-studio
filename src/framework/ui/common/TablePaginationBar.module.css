@@ -7,6 +7,8 @@
 
 .bar {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   justify-content: flex-end;
   margin-top: 12px;
   padding-top: 0;
@@ -14,7 +16,23 @@
 
 .bar :global(.ant-pagination) {
   align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
   gap: 2px;
+}
+
+.bar :global(.ant-pagination > li) {
+  flex-shrink: 0;
+}
+
+.bar :global(.ant-pagination-simple-pager) {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  margin-inline-end: 0;
+  font-size: 12px;
+  line-height: 28px;
+  white-space: nowrap;
 }
 
 .bar :global(.ant-pagination-total-text) {

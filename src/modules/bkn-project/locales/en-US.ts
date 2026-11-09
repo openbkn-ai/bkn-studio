@@ -671,6 +671,7 @@ export const bknProjectEnUS = {
           relation_types: "Describe how to change this relation type, or ask more…",
         },
         submit: "Send",
+        stop: "Stop generating",
         asking: "Reading it and suggesting changes…",
         settling: "Putting the suggested changes together…",
         onlySuggestions: "AI suggested the changes below.",

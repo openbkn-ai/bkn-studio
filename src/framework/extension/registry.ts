@@ -296,9 +296,12 @@ export type WorkspaceAction = {
  * highlighted. Without it, the page is a standalone route of the extension's, without the
  * workspace sidebar, so the entry hands it the workspace page in location state (`returnTo`, see
  * back-navigation.ts) for its back button. Like a workspace action, it is shown whatever the
- * licence says and the page carries the guard.
+ * licence says and the page carries the guard. Entries may explicitly request a new tab
+ * or in-workspace navigation through openIn.
  */
 export type WorkspaceNavEntry = {
+  /** Override the default standalone-page navigation behavior. */
+  openIn?: "new-tab" | "workspace";
   /** Unique within the extension. */
   id: string;
   icon?: ReactNode;

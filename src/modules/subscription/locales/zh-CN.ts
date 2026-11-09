@@ -18,6 +18,10 @@
 export const subscriptionZhCN = {
   subscription: {
     capabilities: {
+      eval: {
+        description: "基于评测模板管理 Case、执行评测并查看诊断与回归结果。",
+        name: "Eval 质量评测",
+      },
       business_provenance: {
         bullets: {
           b1: "时间链",

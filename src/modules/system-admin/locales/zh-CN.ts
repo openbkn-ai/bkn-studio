@@ -1217,6 +1217,7 @@ export const systemAdminZhCN = {
         "bkn-project-concept-extraction": "项目管理 - 概念抽取",
         graph_explorer: "图探索",
         studio_smart_qa: "Studio智能问答",
+        eval_assistant: "质量评测助手",
         cypher_generation: "Cypher生成",
         business_provenance_claim_attribution: "业务溯源结论识别",
         business_provenance_optimizer: "知识网络优化",
@@ -1227,6 +1228,8 @@ export const systemAdminZhCN = {
         "bkn-project-ontology-ask": "项目管理 - 本体建模助手",
       },
       builtinDescriptions: {
+        eval_assistant:
+          "协助查询质量评测规则、用例、测试集、运行结果和问题记录，并在确认后提出受控操作建议。",
         "bkn-project-document-extraction":
           "按已确认模型逐份抽取文件记录、文档内对象、事实和事件，保留原文证据供核对。",
         "bkn-project-concept-extraction":
