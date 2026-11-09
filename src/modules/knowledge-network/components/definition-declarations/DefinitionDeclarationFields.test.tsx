@@ -6,7 +6,7 @@
  */
 
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
-import { Form, type FormInstance } from "antd";
+import { Form, type FormInstance, Input } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -89,10 +89,12 @@ function renderFields(stored?: DefinitionDeclarations) {
         form={instance}
         initialValues={{ name: "患者", ...toDefinitionDeclarationForm(stored) }}
       >
-        <Form.Item name="name" noStyle />
+        <Form.Item name="name" noStyle>
+          <Input aria-label="name" />
+        </Form.Item>
         <DefinitionDeclarationFields
           definitionId="patient"
-          ownNames={["患者"]}
+          ownNameFields={["name"]}
           resolveReplacement={resolve}
           searchReplacements={search}
         />
@@ -155,6 +157,12 @@ describe("DefinitionDeclarationFields", () => {
     });
     expect(await screen.findByText(`${PREFIX}.aliasProblem.ownName {"alias":"患者"}`)).toBeTruthy();
   });
+
+  it("refuses an alias as soon as the name is changed to it", async () => {
+    renderFields({ aliases: ["病人"] });
+    fireEvent.change(screen.getByLabelText("name"), { target: { value: "病人" } });
+    expect(await screen.findByText(`${PREFIX}.aliasProblem.ownName {"alias":"病人"}`)).toBeTruthy();
+  });
 });
 
 describe("DeprecatedBanner and DeprecatedName", () => {
@@ -176,6 +184,8 @@ describe("DeprecatedBanner and DeprecatedName", () => {
     expect(link.getAttribute("href")).toBe(
       "/knowledge-network/workspace/clinic/relation-types/order_by_doctor/detail",
     );
+    // A replacement gone or hidden reads as unnamed, without an error toast of its own.
+    expect(mocks.read).toHaveBeenCalledWith("clinic", "order_by_doctor", { skipErrorToast: true });
   });
 
   it("shows nothing for a definition in use", () => {

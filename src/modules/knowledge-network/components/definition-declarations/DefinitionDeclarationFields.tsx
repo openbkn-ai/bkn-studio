@@ -34,8 +34,11 @@ export type ReplacementOption = {
 type DefinitionDeclarationFieldsProps = {
   /** The definition edited; absent while creating. It cannot replace itself. */
   definitionId?: string;
-  /** Its own names, which an alias may not repeat. */
-  ownNames: readonly string[];
+  /**
+   * The fields of the enclosing form that hold its own names, which an alias may not repeat. They
+   * are read when the aliases are checked, so a name just typed counts.
+   */
+  ownNameFields: readonly string[];
   /** Reads one definition of the same kind, for the name of the stored replacement. */
   resolveReplacement: (id: string) => Promise<ReplacementOption | undefined>;
   /** Searches definitions of the same kind by name. */
@@ -49,7 +52,7 @@ type DefinitionDeclarationFieldsProps = {
  */
 export function DefinitionDeclarationFields({
   definitionId,
-  ownNames,
+  ownNameFields,
   resolveReplacement,
   searchReplacements,
 }: DefinitionDeclarationFieldsProps) {
@@ -61,7 +64,7 @@ export function DefinitionDeclarationFields({
   return (
     <>
       <Form.Item
-        dependencies={["name"]}
+        dependencies={[...ownNameFields]}
         extra={t(`${PREFIX}.aliasesHint`, {
           length: MAX_ALIAS_LENGTH,
           max: MAX_PROPERTY_ALIASES,
@@ -71,6 +74,9 @@ export function DefinitionDeclarationFields({
         rules={[
           {
             validator: (_, value: string[] | undefined) => {
+              const ownNames = ownNameFields.map((field) =>
+                String(form.getFieldValue(field) ?? ""),
+              );
               const problem = definitionAliasProblem(value, ownNames);
               return problem
                 ? Promise.reject(
@@ -132,7 +138,7 @@ export function DefinitionDeclarationFields({
   );
 }
 
-type ReplacementSelectProps = Omit<DefinitionDeclarationFieldsProps, "ownNames"> & {
+type ReplacementSelectProps = Omit<DefinitionDeclarationFieldsProps, "ownNameFields"> & {
   onChange?: (value: string | undefined) => void;
   value?: string;
 };

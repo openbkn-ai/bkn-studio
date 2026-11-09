@@ -198,7 +198,11 @@ export async function listKnowledgeNetworkActionTypePage(
   };
 }
 
-export async function getKnowledgeNetworkActionType(networkId: string, actionTypeId: string) {
+export async function getKnowledgeNetworkActionType(
+  networkId: string,
+  actionTypeId: string,
+  options: { skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
     return wait(
       (() => {
@@ -210,6 +214,7 @@ export async function getKnowledgeNetworkActionType(networkId: string, actionTyp
 
   const response = await http.get<SingleEntryResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
+    { skipErrorToast: options.skipErrorToast },
   );
 
   const record = unwrapSingleEntryResponse(response.data);

@@ -132,7 +132,6 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
   // A refusal of the aliases or lifecycle, shown in the basic info.
   const [definitionRefusal, setDefinitionRefusal] = useState<DeclarationRefusal | null>(null);
   const definitionBaseline = useRef<DefinitionDeclarations | undefined>(undefined);
-  const watchedName = Form.useWatch("name", basicForm);
   // What the declarations were when the object type was read; a save sends only what changed.
   const declarationBaseline = useRef<DataPropertyDeclarationBaseline>(new Map());
   const [pageTitle, setPageTitle] = useState(
@@ -575,7 +574,9 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     [networkId],
   );
   const resolveReplacement = useCallback(
-    async (id: string) => (await getKnowledgeNetworkObjectType(networkId, id)) ?? undefined,
+    // The select says itself when the replacement is gone or hidden; no error toast.
+    async (id: string) =>
+      (await getKnowledgeNetworkObjectType(networkId, id, { skipErrorToast: true })) ?? undefined,
     [networkId],
   );
 
@@ -666,7 +667,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             </Form.Item>
             <DefinitionDeclarationFields
               definitionId={mode === "edit" ? objectTypeId : undefined}
-              ownNames={[watchedName ?? ""]}
+              ownNameFields={["name"]}
               resolveReplacement={resolveReplacement}
               searchReplacements={searchReplacements}
             />

@@ -156,7 +156,6 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
         })
       : void navigate(returnPath);
   const watchedObjectTypeId = Form.useWatch("objectTypeId", basicForm);
-  const watchedName = Form.useWatch("name", basicForm);
   // What the aliases and lifecycle were when the action type was read; a save sends what changed.
   const definitionBaseline = useRef<DefinitionDeclarations | undefined>(undefined);
   const [definitionRefusal, setDefinitionRefusal] = useState<DeclarationRefusal | null>(null);
@@ -396,7 +395,9 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     [networkId],
   );
   const resolveReplacement = useCallback(
-    async (id: string) => (await getKnowledgeNetworkActionType(networkId, id)) ?? undefined,
+    // The select says itself when the replacement is gone or hidden; no error toast.
+    async (id: string) =>
+      (await getKnowledgeNetworkActionType(networkId, id, { skipErrorToast: true })) ?? undefined,
     [networkId],
   );
 
@@ -511,7 +512,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             </Form.Item>
             <DefinitionDeclarationFields
               definitionId={mode === "edit" ? actionTypeId : undefined}
-              ownNames={[watchedName ?? ""]}
+              ownNameFields={["name"]}
               resolveReplacement={resolveReplacement}
               searchReplacements={searchReplacements}
             />

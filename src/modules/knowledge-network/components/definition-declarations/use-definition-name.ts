@@ -14,15 +14,18 @@ import {
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { DeclarationDefinitionKind } from "@/modules/knowledge-network/types/knowledge-network";
 
+// A definition that is gone or hidden from the user reads as unnamed; no error toast.
+const SILENT = { skipErrorToast: true };
+
 /** Reads one definition of the kind given; looked up when called, so tests can mock the service. */
 function readDefinition(networkId: string, kind: DeclarationDefinitionKind, id: string) {
   switch (kind) {
     case "action_type":
-      return getKnowledgeNetworkActionType(networkId, id);
+      return getKnowledgeNetworkActionType(networkId, id, SILENT);
     case "object_type":
-      return getKnowledgeNetworkObjectType(networkId, id);
+      return getKnowledgeNetworkObjectType(networkId, id, SILENT);
     case "relation_type":
-      return getKnowledgeNetworkRelationType(networkId, id);
+      return getKnowledgeNetworkRelationType(networkId, id, SILENT);
   }
 }
 

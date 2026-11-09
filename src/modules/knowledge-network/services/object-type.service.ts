@@ -255,7 +255,11 @@ export async function listKnowledgeNetworkObjectTypePage(
   };
 }
 
-export async function getKnowledgeNetworkObjectType(networkId: string, objectTypeId: string) {
+export async function getKnowledgeNetworkObjectType(
+  networkId: string,
+  objectTypeId: string,
+  options: { skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
     const record = (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId);
     return wait(record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null);
@@ -263,6 +267,7 @@ export async function getKnowledgeNetworkObjectType(networkId: string, objectTyp
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}`,
+    { skipErrorToast: options.skipErrorToast },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
