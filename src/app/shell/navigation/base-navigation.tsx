@@ -77,6 +77,15 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         permission: systemAdminPermissions.license,
       },
       {
+        key: "sso-management",
+        labelKey: "systemAdmin.sso.title",
+        icon: <SafetyCertificateOutlined />,
+        path: "/system/sso",
+        permission: systemAdminPermissions.accessOrigins,
+        paidCapability: CAPABILITIES.SSO,
+        paidEdition: "professional",
+      },
+      {
         key: "access-address-management",
         labelKey: "shell.items.accessAddressManagement",
         icon: <GlobalOutlined />,

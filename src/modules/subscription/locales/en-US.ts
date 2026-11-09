@@ -14,6 +14,11 @@
 export const subscriptionEnUS = {
   subscription: {
     capabilities: {
+      sso: {
+        name: "Single sign-on",
+        description: "Manage identity providers, browser sign-in and API token exchange.",
+        bullets: { b1: "OIDC / Casdoor" },
+      },
       eval: {
         description:
           "Manage cases from templates, run evaluations, and review diagnostics and regression results.",
