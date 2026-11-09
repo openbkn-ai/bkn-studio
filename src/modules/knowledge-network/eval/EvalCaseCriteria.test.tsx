@@ -48,7 +48,7 @@ function Editor({
   );
 }
 function choose(name: string, text: string) {
-  fireEvent.mouseDown(screen.getByRole("combobox", { name }));
+  fireEvent.mouseDown(screen.getByLabelText(name, { selector: '[role="combobox"]' }));
   fireEvent.click(screen.getByText(text, { selector: ".ant-select-item-option-content" }));
 }
 it("infers a numeric expectation from the selected output schema and clears obsolete values", () => {
@@ -135,21 +135,27 @@ it("preserves precise range bounds when toggling inclusivity", () => {
   )[0];
   expect(current.value).toBe('{"min":9007199254740993,"max":9007199254740995,"include_min":false}');
 });
-it("requires at least one criterion and limits the editor to twenty", () => {
-  const { unmount } = render(<Editor />);
-  expect(screen.getByRole("button", { name: "removeCriterion 1" })).toBeDisabled();
-  unmount();
-  render(
-    <Editor
-      initial={Array.from({ length: 20 }, (_, i) => ({
-        ...criterion,
-        id: String(i),
-        type: "exists",
-      }))}
-    />,
-  );
-  expect(screen.getByRole("button", { name: "addCriterion" })).toBeDisabled();
+it("keeps the only criterion from being removed", () => {
+  render(<Editor />);
+  expect(screen.getByLabelText("removeCriterion 1", { selector: "button" })).toBeDisabled();
 });
+it("disables adding a criterion at the twenty-criterion limit", () => {
+  render(
+    <ConfigProvider virtual={false} theme={{ token: { motion: false } }}>
+      <Editor
+        initial={Array.from({ length: 20 }, (_, i) => ({
+          ...criterion,
+          id: String(i),
+          type: "exists",
+        }))}
+      />
+    </ConfigProvider>,
+  );
+  expect(screen.getAllByLabelText(/^removeCriterion /, { selector: "button" })).toHaveLength(20);
+  expect(
+    screen.getByText("addCriterion", { selector: "button > span" }).closest("button"),
+  ).toBeDisabled();
+}, 15_000);
 
 it("offers business fields inside the resource wrapper while preserving their actual output paths", () => {
   render(

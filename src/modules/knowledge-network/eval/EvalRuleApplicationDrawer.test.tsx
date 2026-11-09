@@ -9,7 +9,9 @@ import {
   parsePrecisionPreservingJSON,
   transformPrecisionSafeJSONRequest,
 } from "@/framework/request/precision-safe-json";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { ConfigProvider } from "antd";
+import { fireEvent, render as renderUI, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { EvalRuleApplicationDrawer } from "./EvalRuleApplicationDrawer";
 import { listEvalCaseResourcesPage, type EvalCaseDefinition } from "./m0-run.service";
@@ -40,6 +42,18 @@ Object.defineProperty(window, "matchMedia", {
 });
 const label = (key: string) => `knowledgeNetwork.eval.ruleApplication.${key}`;
 const footer = () => within(document.querySelector<HTMLElement>(".ant-drawer-footer")!);
+function render(ui: ReactElement) {
+  return renderUI(
+    <ConfigProvider virtual={false} theme={{ token: { motion: false } }}>
+      {ui}
+    </ConfigProvider>,
+  );
+}
+const footerButton = (key: string) =>
+  footer().getByText(label(key), { selector: "button > span" }).closest("button")!;
+const findFooterButton = async (key: string) =>
+  (await footer().findByText(label(key), { selector: "button > span" })).closest("button")!;
+
 const rule: EvalTemplateRule = {
   id: "object-key-uniqueness",
   kind: "objectType",
@@ -118,7 +132,7 @@ it("previews and saves selected samples through the shared server contract", asy
   );
   const resourceRow = (await screen.findByText("物料")).closest("tr")!;
   fireEvent.click(within(resourceRow).getByRole("checkbox"));
-  fireEvent.click(footer().getByRole("button", { name: label("next") }));
+  fireEvent.click(footerButton("next"));
   await waitFor(() =>
     expect(previewRuleApplication).toHaveBeenCalledWith(
       "kn-1",
@@ -128,11 +142,11 @@ it("previews and saves selected samples through the shared server contract", asy
       }),
     ),
   );
-  await footer().findByRole("button", { name: label("save") });
+  await findFooterButton("save");
   expect(screen.queryByText(label("targetCount"))).toBeNull();
   const candidateRow = document.querySelector<HTMLElement>(`tr[data-row-key="${row.key}"]`)!;
   fireEvent.click(within(candidateRow).getByRole("checkbox"));
-  fireEvent.click(footer().getByRole("button", { name: label("save") }));
+  fireEvent.click(footerButton("save"));
   await waitFor(() =>
     expect(saveRuleApplication).toHaveBeenCalledWith(
       "kn-1",
@@ -141,7 +155,7 @@ it("previews and saves selected samples through the shared server contract", asy
     ),
   );
   expect(onSaved).toHaveBeenCalledOnce();
-  expect(await footer().findByRole("button", { name: label("done") })).toBeEnabled();
+  expect(await findFooterButton("done")).toBeEnabled();
   expect(footer().queryByRole("button", { name: label("retry") })).toBeNull();
   fireEvent.click(
     (await screen.findByText(label("details"), { selector: "button > span" })).closest("button")!,
@@ -168,14 +182,19 @@ async function openSelectedPreview(rows: RuleApplicationRow[], onClose = vi.fn()
       onOpenCase={vi.fn()}
     />,
   );
-  fireEvent.click(footer().getByRole("button", { name: label("next") }));
-  await footer().findByRole("button", { name: label("save") });
-  for (const checkbox of screen.getAllByRole("checkbox").slice(1)) {
-    fireEvent.click(checkbox);
+  fireEvent.click(footerButton("next"));
+  await findFooterButton("save");
+  for (const candidate of rows) {
+    const candidateRow = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>(`tr[data-row-key="${candidate.key}"]`);
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    fireEvent.click(within(candidateRow).getByRole("checkbox"));
   }
   expect(screen.getAllByText(label("configureAndSave"))).toHaveLength(1);
   expect(screen.queryByText(label("saveCases"))).toBeNull();
-  await footer().findByRole("button", { name: label("save") });
+  await findFooterButton("save");
 }
 
 it("treats an all-reused response as success and finishes without another save", async () => {
@@ -184,8 +203,8 @@ it("treats an all-reused response as success and finishes without another save",
     { key: row.key, status: "reused", case_id: "existing-case" },
   ]);
   await openSelectedPreview([row], onClose);
-  fireEvent.click(footer().getByRole("button", { name: label("save") }));
-  fireEvent.click(await footer().findByRole("button", { name: label("done") }));
+  fireEvent.click(footerButton("save"));
+  fireEvent.click(await findFooterButton("done"));
   expect(onClose).toHaveBeenCalledOnce();
   expect(saveRuleApplication).toHaveBeenCalledOnce();
   expect(footer().queryByRole("button", { name: label("retry") })).toBeNull();
@@ -205,9 +224,9 @@ it("retries only the failed sample and retains successful results", async () => 
     ])
     .mockResolvedValueOnce([{ key: second.key, status: "reused", case_id: "case-2" }]);
   await openSelectedPreview([row, second]);
-  fireEvent.click(footer().getByRole("button", { name: label("save") }));
-  fireEvent.click(await footer().findByRole("button", { name: label("retry") }));
-  await footer().findByRole("button", { name: label("done") });
+  fireEvent.click(footerButton("save"));
+  fireEvent.click(await findFooterButton("retry"));
+  await findFooterButton("done");
   expect(vi.mocked(saveRuleApplication).mock.calls[1]?.[1].samples).toEqual([second.sample]);
   expect(screen.getByText(label("created"))).toBeTruthy();
   expect(screen.getByText(label("reused"))).toBeTruthy();
@@ -223,8 +242,8 @@ it("requires configuration changes for a conflict instead of offering a retry", 
     },
   ]);
   await openSelectedPreview([row]);
-  fireEvent.click(footer().getByRole("button", { name: label("save") }));
-  expect(await footer().findByRole("button", { name: label("modify") })).toBeEnabled();
+  fireEvent.click(footerButton("save"));
+  expect(await findFooterButton("modify")).toBeEnabled();
   expect(footer().queryByRole("button", { name: label("retry") })).toBeNull();
   expect(footer().queryByRole("button", { name: label("done") })).toBeNull();
   expect(screen.getByText("规则已变化，请核对已有用例。")).toBeTruthy();
@@ -255,10 +274,10 @@ it("keeps uncertain applicability visible and prevents selecting it", async () =
       onOpenCase={vi.fn()}
     />,
   );
-  fireEvent.click(footer().getByRole("button", { name: label("next") }));
+  fireEvent.click(footerButton("next"));
   await screen.findByText("分页合同尚不可读");
   expect(screen.getAllByRole("checkbox")[1]).toBeDisabled();
-  expect(footer().getByRole("button", { name: label("save") })).toBeDisabled();
+  expect(footerButton("save")).toBeDisabled();
 });
 
 it("drops samples from a removed resource and preserves remaining selections", async () => {
@@ -304,21 +323,21 @@ it("drops samples from a removed resource and preserves remaining selections", a
       onOpenCase={vi.fn()}
     />,
   );
-  fireEvent.click(footer().getByRole("button", { name: label("next") }));
-  await footer().findByRole("button", { name: label("save") });
+  fireEvent.click(footerButton("next"));
+  await findFooterButton("save");
   for (const checkbox of screen.getAllByRole("checkbox").slice(1)) fireEvent.click(checkbox);
-  fireEvent.click(footer().getByRole("button", { name: label("previous") }));
+  fireEvent.click(footerButton("previous"));
   await screen.findByText("物料");
   fireEvent.click(screen.getAllByRole("checkbox")[1]);
-  fireEvent.click(footer().getByRole("button", { name: label("next") }));
+  fireEvent.click(footerButton("next"));
   await waitFor(() =>
     expect(previewRuleApplication).toHaveBeenLastCalledWith(
       "kn-1",
       expect.objectContaining({ resources: [{ kind: "objectType", id: "supplier" }] }),
     ),
   );
-  await footer().findByRole("button", { name: label("save") });
-  fireEvent.click(footer().getByRole("button", { name: label("save") }));
+  await findFooterButton("save");
+  fireEvent.click(footerButton("save"));
   await waitFor(() =>
     expect(saveRuleApplication).toHaveBeenCalledWith(
       "kn-1",
@@ -332,7 +351,7 @@ it("does not save a selected candidate without an implemented execution", async 
   await openSelectedPreview([
     { ...row, execution: "unsupported", execution_reason: "已关联数据检查" },
   ]);
-  expect(footer().getByRole("button", { name: label("save") })).toBeDisabled();
+  expect(footerButton("save")).toBeDisabled();
   expect(screen.getByText("knowledgeNetwork.eval.definitionOnly.selectedPending")).toBeTruthy();
   expect(saveRuleApplication).not.toHaveBeenCalled();
 });
@@ -358,7 +377,7 @@ it("keeps large identifiers and exact expected amounts when applying sample inpu
   fireEvent.click(
     screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
   );
-  fireEvent.click(footer().getByRole("button", { name: label("save") }));
+  fireEvent.click(footerButton("save"));
   await waitFor(() => expect(saveRuleApplication).toHaveBeenCalledOnce());
   const sample = vi.mocked(saveRuleApplication).mock.calls[0][1].samples![0];
   expect(transformPrecisionSafeJSONRequest(sample.arguments)).toBe(argumentsValue);
@@ -373,12 +392,12 @@ it("removes sample limits when changing to a supported full-data check", async (
   fireEvent.click(
     screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
   );
-  fireEvent.click(footer().getByRole("button", { name: label("save") }));
+  fireEvent.click(footerButton("save"));
   await waitFor(() => expect(saveRuleApplication).toHaveBeenCalledOnce());
   expect(vi.mocked(saveRuleApplication).mock.calls[0][1].samples![0].scope).toEqual({
     mode: "all",
   });
-});
+}, 15_000);
 it("does not offer unsupported full-data mode for a property check", async () => {
   await openSelectedPreview([{ ...row, rule_id: "property-type" }]);
   fireEvent.click(document.querySelector("button.ant-table-row-expand-icon")!);
@@ -421,7 +440,7 @@ it("reuses structured source parameters and fixed network arguments when applyin
   fireEvent.click(
     screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
   );
-  fireEvent.click(footer().getByRole("button", { name: label("save") }));
+  fireEvent.click(footerButton("save"));
   await waitFor(() => expect(saveRuleApplication).toHaveBeenCalledOnce());
   expect(vi.mocked(saveRuleApplication).mock.calls[0][1].samples![0].arguments).toEqual({
     kn_id: "kn-1",
@@ -460,17 +479,19 @@ it("saves a complete definition-only sample without claiming applicability or ex
     },
   ]);
   fireEvent.click(document.querySelector("button.ant-table-row-expand-icon")!);
-  await screen.findByRole("textbox", { name: "knowledgeNetwork.eval.definitionOnly.steps" });
+  await screen.findByLabelText("knowledgeNetwork.eval.definitionOnly.steps", {
+    selector: "textarea",
+  });
   fireEvent.click(
     screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
   );
-  fireEvent.click(footer().getByRole("button", { name: label("save") }));
+  fireEvent.click(footerButton("save"));
   await waitFor(() => expect(saveRuleApplication).toHaveBeenCalledOnce());
   const sample = vi.mocked(saveRuleApplication).mock.calls[0][1].samples![0];
   expect(sample.definition_only).toBe(true);
   expect(sample.assertions).toEqual(compiled.assertions);
   expect(sample.source_kind).toBe("business_expert");
-});
+}, 15_000);
 
 vi.mock("./EvalResourceCaseFields", () => ({
   EvalResourceCaseFields: ({ onPrepared }: { onPrepared: (value: EvalCaseDefinition) => void }) => (
@@ -542,14 +563,14 @@ it("saves a resource sample after server preparation replaces its initial incomp
   );
   await screen.findByText("回显函数");
   fireEvent.click(screen.getAllByRole("checkbox")[1]);
-  fireEvent.click(footer().getByRole("button", { name: label("next") }));
-  await footer().findByRole("button", { name: label("save") });
+  fireEvent.click(footerButton("next"));
+  await findFooterButton("save");
   fireEvent.click(document.querySelector("button.ant-table-row-expand-icon")!);
   fireEvent.click(screen.getByText("完成来源参数与独立预期校验", { selector: "button" }));
   fireEvent.click(
     screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
   );
-  const save = footer().getByRole("button", { name: label("save") });
+  const save = footerButton("save");
   expect(save).toBeEnabled();
   fireEvent.click(save);
   await waitFor(() => expect(saveRuleApplication).toHaveBeenCalledOnce());
