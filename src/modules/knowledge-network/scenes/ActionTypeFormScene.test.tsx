@@ -190,7 +190,8 @@ afterEach(() => {
 /** Opens the trigger rule, where the object type is chosen. */
 async function openTrigger() {
   fireEvent.click(await screen.findByText("knowledgeNetwork.actionTypeTriggerRule"));
-  return screen.findByLabelText("object type");
+  // The impact declaration has an object type select of its own, after this one.
+  return (await screen.findAllByLabelText("object type"))[0];
 }
 
 describe("ActionTypeFormScene navigation context", () => {
@@ -331,5 +332,61 @@ describe("ActionTypeFormScene navigation context", () => {
       ),
     );
     await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith(listPath));
+  });
+});
+
+describe("ActionTypeFormScene rule panels", () => {
+  it("keeps what the collapsed rule panels hold when saving without opening them", async () => {
+    mocks.routeParams.current = { actionTypeId: "a-1", networkId: "network-1" };
+    const condition = { field: "status", objectTypeId: "orders", operation: "==", value: "open" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "modify",
+      affect: { comment: "Closes the order", objectTypeId: "orders" },
+      color: "#1677ff",
+      condition,
+      description: "Existing",
+      executionConfig: {},
+      id: "a-1",
+      name: "Existing action",
+      objectTypeId: "orders",
+      tags: [],
+    });
+    mocks.updateActionType.mockResolvedValue(undefined);
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    expect(await screen.findByDisplayValue("Existing action")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    await waitFor(() =>
+      expect(mocks.updateActionType).toHaveBeenCalledWith(
+        "network-1",
+        "a-1",
+        expect.objectContaining({
+          actionKind: "modify",
+          affect: { comment: "Closes the order", objectTypeId: "orders" },
+          condition: expect.objectContaining({ field: "status", value: "open" }) as unknown,
+          objectTypeId: "orders",
+        }),
+      ),
+    );
+  });
+
+  it("opens the trigger rule when its object type is missing on save", async () => {
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    fireEvent.change((await screen.findAllByPlaceholderText("knowledgeNetwork.pleaseInput"))[0], {
+      target: { value: "Cancel order" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    expect(await screen.findByText("knowledgeNetwork.actionTypeObjectRequired")).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        expanded: true,
+        name: /knowledgeNetwork.actionTypeTriggerRule/,
+      }),
+    ).toBeInTheDocument();
+    expect(mocks.createActionType).not.toHaveBeenCalled();
   });
 });
