@@ -33,6 +33,27 @@ describe("createAppRouter", () => {
     expect(shell?.children?.at(-1)?.path).toBe("*");
   });
 
+  it("routes a sidebar entry's workspace page beside the standalone routes", () => {
+    registerExtension({
+      capability: "demo_capability",
+      id: "demo",
+      workspaceNavItems: [
+        {
+          id: "list",
+          labelKey: "list",
+          page: { component: () => null, route: "/knowledge-network/workspace/:networkId/list" },
+          path: (networkId) => `/knowledge-network/workspace/${networkId}/list`,
+        },
+      ],
+    });
+
+    const router = createAppRouter();
+
+    expect(
+      router.routes.some((route) => route.path === "/knowledge-network/workspace/:networkId/list"),
+    ).toBe(true);
+  });
+
   it("builds the community routes when nothing is installed", () => {
     const router = createAppRouter();
 

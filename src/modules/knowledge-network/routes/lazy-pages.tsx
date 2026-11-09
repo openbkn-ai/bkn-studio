@@ -32,7 +32,9 @@ export const KnowledgeNetworkWorkspaceStandalonePage = lazy(async () => {
   const module =
     await import("@/modules/knowledge-network/pages/KnowledgeNetworkWorkspaceStandalonePage");
   return { default: module.KnowledgeNetworkWorkspaceStandalonePage };
-}) as LazyExoticComponent<ComponentType<{ section: KnowledgeNetworkWorkspaceSection }>>;
+}) as LazyExoticComponent<
+  ComponentType<{ extensionKey?: string; section: KnowledgeNetworkWorkspaceSection }>
+>;
 
 // Lazy, so the graph engines load only on this page.
 export const GraphOverviewPage = lazyNamedExport(
@@ -132,4 +134,11 @@ export const MetricDetailPage = lazyNamedExport(
 
 export function workspaceSectionPage(section: KnowledgeNetworkWorkspaceSection) {
   return <KnowledgeNetworkWorkspaceStandalonePage section={section} />;
+}
+
+/** The workspace around the page of another build's sidebar entry, by the entry's key. */
+export function workspaceExtensionPage(extensionKey: string) {
+  return (
+    <KnowledgeNetworkWorkspaceStandalonePage extensionKey={extensionKey} section="extension" />
+  );
 }
