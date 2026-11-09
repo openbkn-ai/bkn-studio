@@ -1,0 +1,112 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.assistantPanel {
+  min-width: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--color-border-secondary);
+  box-shadow: -8px 0 20px rgb(2 8 23 / 6%);
+}
+
+.assistantNavigation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 6px;
+  background: var(--color-bg-page);
+}
+
+.assistantNavigation > span {
+  margin-right: 4px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.assistantNavigation .assistantNavigationItem {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--color-text-secondary);
+}
+
+.assistantNavigation .assistantNavigationItem[aria-current="page"],
+.assistantNavigation .assistantNavigationItem[aria-current="page"]:hover,
+.assistantNavigation .assistantNavigationItem[aria-current="page"]:focus-visible {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-bg);
+  color: var(--color-primary-700);
+  font-weight: 600;
+}
+
+.assistantActions {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 6px;
+  background: var(--color-bg-surface);
+}
+
+.assistantActions > div:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  display: grid;
+  gap: 3px;
+}
+
+.assistantActions span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.proposal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+}
+
+.proposalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.proposalHeader > div:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  display: grid;
+  gap: 3px;
+}
+
+.proposalHeader span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.proposalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .proposalHeader {
+    flex-direction: column;
+  }
+}

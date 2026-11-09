@@ -1,0 +1,36 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.table {
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
+}
+.table :global(.ant-table-thead > tr > th) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.table :global(.ant-table-tbody > tr > td) {
+  overflow-wrap: anywhere;
+}
+
+.headerText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Wide tables scroll inside their own surface, never the page or drawer. */
+.table :global(.ant-table-content) {
+  overflow-x: auto;
+}
+.table :global(.ant-table-cell > .ant-btn-link) {
+  min-width: 0;
+  max-width: 100%;
+}

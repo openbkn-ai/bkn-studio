@@ -1,0 +1,242 @@
+/*
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License. See LICENSE for the full text.
+ */
+
+.layout {
+  --suite-field-label-width: 88px;
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.metadata {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: var(--suite-field-label-width) minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.field > :first-child {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.field > :last-child {
+  min-width: 0;
+  width: 100%;
+}
+
+.tagsField {
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+
+.fieldLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.descriptionField {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: var(--suite-field-label-width) minmax(0, 1fr);
+  align-items: flex-start;
+  min-width: 0;
+  gap: 12px;
+}
+
+.descriptionField > :first-child {
+  flex-shrink: 0;
+  padding-top: 5px;
+  white-space: nowrap;
+}
+
+.descriptionField > :last-child {
+  min-width: 0;
+  width: 100%;
+}
+
+.descriptionControl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.descriptionCount {
+  display: block;
+  min-height: 20px;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: right;
+}
+
+.membersSection {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tagHelp {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ant-color-text-secondary);
+  font: inherit;
+  cursor: help;
+}
+
+.tags {
+  width: 100%;
+}
+
+.caseToolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.search {
+  flex: 0 1 360px;
+  width: 320px;
+  max-width: 100%;
+  min-width: 160px;
+}
+
+.selectionHeading:global(.ant-typography) {
+  flex-shrink: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.selectedActions {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.selectedActions > :global(.ant-btn) {
+  flex-shrink: 0;
+}
+
+.tableArea {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.selectorWorkspace {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.selectorResources {
+  min-width: 0;
+}
+.selectorBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-top: 12px;
+}
+
+.selectorToolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.selectorSearch {
+  width: 360px;
+  max-width: 100%;
+}
+
+.selectorTable {
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .selectorWorkspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(140px, 28%) minmax(0, 1fr);
+  }
+  .selectorResources {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .metadata {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .caseToolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .field,
+  .tagsField,
+  .descriptionField {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .descriptionField > :first-child {
+    padding-top: 0;
+  }
+
+  .search {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .selectedActions {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .selectorToolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .selectorSearch {
+    width: 100%;
+  }
+}
