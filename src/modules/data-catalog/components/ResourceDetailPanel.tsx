@@ -82,7 +82,7 @@ export function ResourceDetailPanel({
     isResourceIndexReadOnly(catalog) || !canEdit || resource.category === "logical_view";
   const schemaOffset = (schemaPage - 1) * schemaPageSize;
   const rowCount = resource.rowCount ?? resource.estimatedRowCount;
-  const fixedFilter = parseFilterCondition(resource.logicDefinition?.filterCondition);
+  const fixedFilter = parseFilterCondition(resource.logicalViewDefinition?.filterCondition);
   const rowCountDisplay =
     rowCount === null || rowCount === undefined
       ? "-"
@@ -114,7 +114,7 @@ export function ResourceDetailPanel({
   }, [resource.id]);
 
   useEffect(() => {
-    const sourceId = resource.logicDefinition?.sourceResourceId;
+    const sourceId = resource.logicalViewDefinition?.sourceResourceId;
     let cancelled = false;
     setFilterSourceFields([]);
     if (resource.category === "logical_view" && sourceId) {
@@ -129,7 +129,7 @@ export function ResourceDetailPanel({
     return () => {
       cancelled = true;
     };
-  }, [resource.category, resource.logicDefinition?.sourceResourceId]);
+  }, [resource.category, resource.logicalViewDefinition?.sourceResourceId]);
 
   useEffect(() => {
     setEditing(false);
@@ -380,7 +380,7 @@ export function ResourceDetailPanel({
         </div>
       ) : null}
 
-      {resource.category === "logical_view" && resource.logicType !== "derived" ? (
+      {resource.category === "logical_view" && resource.logicalType !== "derived" ? (
         <Alert message={t("dataCatalog.resource.logicalViewReadOnly")} showIcon type="info" />
       ) : null}
 
@@ -411,11 +411,11 @@ export function ResourceDetailPanel({
                 </AppButton>
               </>
             ) : resource.category === "logical_view" &&
-              resource.logicType === "derived" &&
+              resource.logicalType === "derived" &&
               !catalog?.builtin &&
               canEdit &&
               canManageDerivedViews(snapshot) &&
-              resource.logicDefinition?.sourceResourceId ? (
+              resource.logicalViewDefinition?.sourceResourceId ? (
               <AppButton
                 onClick={() => {
                   void navigate(`/data-catalog/resource/${resource.id}/edit`);
@@ -675,17 +675,17 @@ export function ResourceDetailPanel({
                   {t("dataCatalog.resource.viewSource")}
                 </span>
                 <span className={styles.basicInfoValue}>
-                  {resource.logicDefinition?.sourceResourceId ? (
+                  {resource.logicalViewDefinition?.sourceResourceId ? (
                     <button
                       className={styles.textLink}
                       onClick={() => {
                         void navigate(
-                          `/data-catalog/resource/${resource.logicDefinition?.sourceResourceId}`,
+                          `/data-catalog/resource/${resource.logicalViewDefinition?.sourceResourceId}`,
                         );
                       }}
                       type="button"
                     >
-                      {resource.logicDefinition.sourceResourceId}
+                      {resource.logicalViewDefinition.sourceResourceId}
                     </button>
                   ) : (
                     "-"
@@ -846,7 +846,7 @@ export function ResourceDetailPanel({
           <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.viewFixedFilter")}</h3>
           {fixedFilter?.children.length ? (
             <FilterTreeEditor fields={filterSourceFields} readOnly value={fixedFilter} />
-          ) : resource.logicDefinition?.filterCondition ? (
+          ) : resource.logicalViewDefinition?.filterCondition ? (
             <Alert
               message={t("dataCatalog.resource.filterUnsupported")}
               description={
@@ -855,7 +855,9 @@ export function ResourceDetailPanel({
                   aria-label={t("dataCatalog.resource.viewFixedFilter")}
                   autoSize={{ minRows: 3, maxRows: 12 }}
                   value={formatPrecisionSafeJSON(
-                    transformPrecisionSafeJSONRequest(resource.logicDefinition.filterCondition),
+                    transformPrecisionSafeJSONRequest(
+                      resource.logicalViewDefinition.filterCondition,
+                    ),
                   )}
                 />
               }

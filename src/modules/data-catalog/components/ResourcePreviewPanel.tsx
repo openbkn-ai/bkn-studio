@@ -190,11 +190,11 @@ function ResourcePreviewContent({
     resource.category === "table" &&
     resource.localIndexStatus === "available" &&
     Boolean(resource.localIndexName);
-  const isDerivedView = resource.category === "logical_view" && resource.logicType === "derived";
-  const sourceId = resource.logicDefinition?.sourceResourceId;
+  const isDerivedView = resource.category === "logical_view" && resource.logicalType === "derived";
+  const sourceId = resource.logicalViewDefinition?.sourceResourceId;
   const invalidViewMetadata =
     resource.category === "logical_view" &&
-    ((resource.logicType !== "derived" && resource.logicType !== "composite") ||
+    ((resource.logicalType !== "derived" && resource.logicalType !== "composite") ||
       (isDerivedView &&
         (typeof sourceId !== "string" ||
           !sourceId.trim() ||
@@ -202,7 +202,7 @@ function ResourcePreviewContent({
             resource.sourceMetadata?.sourceCategory !== "index"))));
   const isTableView = isDerivedView && resource.sourceMetadata?.sourceCategory === "table";
   const sourceBlockReason = isTableView
-    ? fixedFilterSourceBlockReason(resource.logicDefinition?.filterCondition)
+    ? fixedFilterSourceBlockReason(resource.logicalViewDefinition?.filterCondition)
     : null;
   const canSwitchSource =
     hasLocalIndex ||
@@ -458,7 +458,7 @@ function ResourcePreviewContent({
   const fetched = offset + rows.length;
   const totalUnreliable =
     !appliedFilter.children.length &&
-    !resource.logicDefinition?.filterCondition &&
+    !resource.logicalViewDefinition?.filterCondition &&
     rows.length === pageSize &&
     resourceCountAsBigInt(backendTotal) < BigInt(fetched);
   const total = totalUnreliable

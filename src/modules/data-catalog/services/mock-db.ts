@@ -192,14 +192,14 @@ const querySourceDemoViews = [
     name,
     catalogId: "cat-001",
     category: "logical_view",
-    logicType: "derived",
+    logicalType: "derived",
     sourceIdentifier: id,
     sourceMetadata: {
       sourceCategory: "table",
       objectType: "table",
       originalName: source.sourceIdentifier,
     },
-    logicDefinition: { sourceResourceId: source.id, filterCondition },
+    logicalViewDefinition: { sourceResourceId: source.id, filterCondition },
     description,
     tags: ["demo", "query-source"],
     status: "active",
@@ -386,14 +386,14 @@ export const mockResources: CatalogResource[] = [
     catalogId: "cat-001",
     name: "high_value_orders",
     category: "logical_view",
-    logicType: "derived",
+    logicalType: "derived",
     sourceIdentifier: "res-high-value-orders-view",
     sourceMetadata: {
       sourceCategory: "table",
       objectType: "table",
       originalName: "crm_core.orders",
     },
-    logicDefinition: {
+    logicalViewDefinition: {
       sourceResourceId: "res-orders",
       filterCondition: {
         operation: "and",

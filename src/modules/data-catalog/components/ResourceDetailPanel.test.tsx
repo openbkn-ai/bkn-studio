@@ -472,8 +472,8 @@ describe("ResourceDetailPanel", () => {
           resource={{
             ...resource,
             category: "logical_view",
-            logicType: "derived",
-            logicDefinition: {
+            logicalType: "derived",
+            logicalViewDefinition: {
               sourceResourceId: "source-orders",
               filterCondition: {
                 operation: "and",
@@ -530,9 +530,9 @@ describe("ResourceDetailPanel", () => {
           resource={{
             ...resource,
             category: "logical_view",
-            logicType: "derived",
+            logicalType: "derived",
             schema: [{ name: "score_alias", displayName: "Output Score", type: "string" }],
-            logicDefinition: {
+            logicalViewDefinition: {
               sourceResourceId: "source-orders",
               filterCondition: { field: "internal_score", operation: ">", value: 10 },
             },

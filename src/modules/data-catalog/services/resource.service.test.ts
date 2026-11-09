@@ -299,8 +299,8 @@ describe("resource.service · previewCatalogResource", () => {
     const index = mockResources.findIndex((item) => item.id === "res-query-source-fulltext-view");
     const original = mockResources[index];
     const view = await getCatalogResource(original.id);
-    const source = await getCatalogResource(view.logicDefinition!.sourceResourceId);
-    const parsed = parseFilterCondition(view.logicDefinition!.filterCondition, "local_index");
+    const source = await getCatalogResource(view.logicalViewDefinition!.sourceResourceId);
+    const parsed = parseFilterCondition(view.logicalViewDefinition!.filterCondition, "local_index");
     expect(parsed).not.toBeNull();
     try {
       await updateDerivedView(original.id, {
@@ -332,9 +332,9 @@ describe("resource.service · previewCatalogResource", () => {
     const { mockResources } = await import("./mock-db");
     const view = mockResources.find((item) => item.id === "res-query-source-fulltext-view")!;
     expect(view).toBeDefined();
-    const original = view.logicDefinition;
+    const original = view.logicalViewDefinition;
     try {
-      view.logicDefinition = {
+      view.logicalViewDefinition = {
         sourceResourceId: "res-query-source-table",
         filterCondition: { field: "content", operation: "match", value: "beta" },
       };
@@ -344,7 +344,7 @@ describe("resource.service · previewCatalogResource", () => {
         },
       );
     } finally {
-      view.logicDefinition = original;
+      view.logicalViewDefinition = original;
     }
   });
 
@@ -493,7 +493,7 @@ describe("resource.service · previewCatalogResource", () => {
 
     try {
       const saved = await getCatalogResource(created.id);
-      const parsed = parseFilterCondition(saved?.logicDefinition?.filterCondition);
+      const parsed = parseFilterCondition(saved?.logicalViewDefinition?.filterCondition);
       expect(parsed?.children[0]).toMatchObject({ value: "9007199254740993" });
 
       const updatedFilter = filterToBackend(
@@ -518,7 +518,7 @@ describe("resource.service · previewCatalogResource", () => {
         tags: [],
       });
       expect(
-        parseFilterCondition(updated?.logicDefinition?.filterCondition)?.children[0],
+        parseFilterCondition(updated?.logicalViewDefinition?.filterCondition)?.children[0],
       ).toMatchObject({ value: "9007199254740995" });
     } finally {
       await deleteCatalogResource(created.id);
@@ -610,7 +610,7 @@ describe("resource.service · previewCatalogResource", () => {
       await import("@/modules/data-catalog/services/resource.service");
     const { mockResources } = await import("@/modules/data-catalog/services/mock-db");
     const resource = mockResources.find((item) => item.id === "res-high-value-orders-view")!;
-    const originalDefinition = resource.logicDefinition;
+    const originalDefinition = resource.logicalViewDefinition;
     const source = mockResources.find((item) => item.id === originalDefinition?.sourceResourceId)!;
     const originalCount = source.rowCount;
     source.rowCount = 1;
@@ -618,7 +618,7 @@ describe("resource.service · previewCatalogResource", () => {
       const unsupported = { field: "created_at", operation: "current", value: "day" };
       const excludesAll = { field: "amount", operation: "<", value: 0 };
       for (const fixedUnsupported of [true, false]) {
-        resource.logicDefinition = {
+        resource.logicalViewDefinition = {
           ...originalDefinition!,
           filterCondition: fixedUnsupported ? unsupported : excludesAll,
         };
@@ -633,7 +633,7 @@ describe("resource.service · previewCatalogResource", () => {
         });
       }
     } finally {
-      resource.logicDefinition = originalDefinition;
+      resource.logicalViewDefinition = originalDefinition;
       source.rowCount = originalCount;
     }
   });
@@ -769,7 +769,7 @@ describe("resource.service · previewCatalogResource", () => {
     async (operation) => {
       const rawResponse =
         '{"entries":[{"id":"view-1","catalog_id":"catalog-1","name":"view",' +
-        '"category":"logical_view","logic_type":"derived","logic_definition":{' +
+        '"category":"logical_view","logical_type":"derived","logical_view_definition":{' +
         '"source_resource_id":"source-1","filter_condition":{' +
         `"field":"id","operation":"${operation}","value":[9007199254740993,"9007199254740995"]}}}]}`;
       getMock.mockImplementation(
@@ -783,15 +783,15 @@ describe("resource.service · previewCatalogResource", () => {
 
       const view = await getCatalogResource("view-1");
 
-      expect(transformPrecisionSafeJSONRequest(view?.logicDefinition?.filterCondition)).toContain(
-        '"value":[9007199254740993,"9007199254740995"]',
-      );
+      expect(
+        transformPrecisionSafeJSONRequest(view?.logicalViewDefinition?.filterCondition),
+      ).toContain('"value":[9007199254740993,"9007199254740995"]');
     },
   );
 
   it("round-trips extreme Decimal literals through resource detail decoding", async () => {
     const rawResponse =
-      '{"entries":[{"id":"view-1","catalog_id":"cat-1","name":"view","category":"logical_view","logic_type":"derived","logic_definition":{"source_resource_id":"source-1","filter_condition":{"field":"amount","operation":"in","value":[1e-1000,1e309,"1e309"]}}}]}';
+      '{"entries":[{"id":"view-1","catalog_id":"cat-1","name":"view","category":"logical_view","logical_type":"derived","logical_view_definition":{"source_resource_id":"source-1","filter_condition":{"field":"amount","operation":"in","value":[1e-1000,1e309,"1e309"]}}}]}';
     getMock.mockImplementation(
       (_url: string, config: { transformResponse?: (data: unknown) => unknown }) =>
         Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
@@ -800,9 +800,9 @@ describe("resource.service · previewCatalogResource", () => {
     const { transformPrecisionSafeJSONRequest } =
       await import("@/framework/request/precision-safe-json");
     const view = await getCatalogResource("view-1");
-    expect(transformPrecisionSafeJSONRequest(view?.logicDefinition?.filterCondition)).toContain(
-      '"value":[1e-1000,1e+309,"1e309"]',
-    );
+    expect(
+      transformPrecisionSafeJSONRequest(view?.logicalViewDefinition?.filterCondition),
+    ).toContain('"value":[1e-1000,1e+309,"1e309"]');
   });
 
   it("requests Binary content only when the caller forces the original source", async () => {
@@ -933,8 +933,8 @@ describe("resource.service · derived view contract", () => {
             category: "logical_view",
             id: "view-1",
             name: "orders_view",
-            logic_type: "derived",
-            logic_definition: { source_resource_id: "source-1" },
+            logical_type: "derived",
+            logical_view_definition: { source_resource_id: "source-1" },
             schema_definition: [
               { name: "order_id", original_name: "id", type: "integer", display_name: "Order ID" },
             ],
@@ -959,19 +959,21 @@ describe("resource.service · derived view contract", () => {
       catalog_id: "cat-1",
       category: "logical_view",
       enabled: false,
-      logic_type: "derived",
-      logic_definition: { source_resource_id: "source-1" },
+      logical_type: "derived",
+      logical_view_definition: { source_resource_id: "source-1" },
       tags: ["orders"],
       schema_definition: [
         { name: "order_id", original_name: "id", type: "integer", display_name: "Order ID" },
       ],
     });
     expect(postMock.mock.calls[0]?.[1]).not.toHaveProperty("source_identifier");
+    expect(postMock.mock.calls[0]?.[1]).not.toHaveProperty("logic_definition");
+    expect(postMock.mock.calls[0]?.[1]).not.toHaveProperty("logic_type");
     const createPayload = postMock.mock.calls[0]?.[1] as {
       schema_definition: Array<Record<string, unknown>>;
     };
     expect(createPayload.schema_definition[0]).not.toHaveProperty("features");
-    expect(created.logicDefinition?.sourceResourceId).toBe("source-1");
+    expect(created.logicalViewDefinition?.sourceResourceId).toBe("source-1");
     expect(created.schema[0]?.displayName).toBe("Order ID");
   });
 
@@ -985,8 +987,8 @@ describe("resource.service · derived view contract", () => {
             category: "logical_view",
             id: "view-1",
             name: "orders_view",
-            logic_type: "derived",
-            logic_definition: { source_resource_id: "source-1" },
+            logical_type: "derived",
+            logical_view_definition: { source_resource_id: "source-1" },
           },
         ],
       },
@@ -1022,11 +1024,13 @@ describe("resource.service · derived view contract", () => {
 
     expect(putMock.mock.calls[0]?.[1]).toMatchObject({
       expected_update_time: 123,
-      logic_definition: { source_resource_id: "source-1", filter_condition: filter },
+      logical_view_definition: { source_resource_id: "source-1", filter_condition: filter },
       schema_definition: [
         { name: "order_id", original_name: "id", display_name: "Order ID", features: [] },
       ],
     });
+    expect(putMock.mock.calls[0]?.[1]).not.toHaveProperty("logic_definition");
+    expect(putMock.mock.calls[0]?.[1]).not.toHaveProperty("logic_type");
   });
 
   it("keeps Index as a real source category", async () => {

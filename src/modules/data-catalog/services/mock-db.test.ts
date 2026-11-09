@@ -102,7 +102,7 @@ describe("data catalog discover-status mocks", () => {
     const source = mockResources.find((item) => item.id === "res-orders");
     const view = mockResources.find((item) => item.id === "res-high-value-orders-view");
 
-    expect(view?.logicDefinition?.sourceResourceId).toBe(source?.id);
+    expect(view?.logicalViewDefinition?.sourceResourceId).toBe(source?.id);
     for (const field of view?.schema ?? []) {
       const sourceField = source?.schema.find((item) => item.originalName === field.originalName);
       expect(sourceField?.displayName).toBeTruthy();
@@ -164,14 +164,14 @@ describe("data catalog discover-status mocks", () => {
   it("provides a derived view with valid source bindings and a nested fixed filter", () => {
     const view = mockResources.find((item) => item.id === "res-high-value-orders-view");
     const source = mockResources.find(
-      (item) => item.id === view?.logicDefinition?.sourceResourceId,
+      (item) => item.id === view?.logicalViewDefinition?.sourceResourceId,
     );
 
     expect(view).toMatchObject({
       catalogId: "cat-001",
       category: "logical_view",
       enabled: true,
-      logicType: "derived",
+      logicalType: "derived",
       operations: ["view_detail", "query_data", "delete"],
       status: "active",
       sourceIdentifier: "res-high-value-orders-view",
@@ -194,7 +194,7 @@ describe("data catalog discover-status mocks", () => {
       expect(sourceField?.type).toBe(field.type);
       expect(field.displayName).toBeTruthy();
     }
-    const filter = parseFilterCondition(view?.logicDefinition?.filterCondition);
+    const filter = parseFilterCondition(view?.logicalViewDefinition?.filterCondition);
     expect(filter).not.toBeNull();
     expect(
       filter?.children.some((child) => child.kind === "group" && child.operation === "or"),
@@ -210,14 +210,14 @@ describe("data catalog discover-status mocks", () => {
     const view = mockResources.find((item) => item.id === id)!;
     expect(view).toBeDefined();
     const source = mockResources.find(
-      (item) => item.id === view.logicDefinition?.sourceResourceId,
+      (item) => item.id === view.logicalViewDefinition?.sourceResourceId,
     )!;
     expect(source).toBeDefined();
     expect(resourceQueryBlockReason(view)).toBeNull();
     expect(resourceQueryBlockReason(source)).toBeNull();
     expect(view).toMatchObject({
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       sourceMetadata: { sourceCategory: "table" },
     });
     expect(source.localIndexStatus).toBe(indexed ? "available" : "unavailable");
@@ -228,14 +228,16 @@ describe("data catalog discover-status mocks", () => {
     }
     expect(view.schema.some((field) => field.originalName === "eligible")).toBe(false);
     const filter = parseFilterCondition(
-      view.logicDefinition?.filterCondition,
+      view.logicalViewDefinition?.filterCondition,
       indexed ? "local_index" : "source",
     );
     expect(filter).not.toBeNull();
     expect(
       filterValidationError(filter!, source.schema, indexed ? "local_index" : "source"),
     ).toBeNull();
-    expect(fixedFilterSourceBlockReason(view.logicDefinition?.filterCondition)).toBe(sourceBlock);
+    expect(fixedFilterSourceBlockReason(view.logicalViewDefinition?.filterCondition)).toBe(
+      sourceBlock,
+    );
   });
 
   it("provides a non-dataset resource with view-detail-only permissions", () => {

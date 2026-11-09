@@ -573,10 +573,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
       ...fields,
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
@@ -595,11 +595,11 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
       schema: [{ ...source.schema[0], name: "a".repeat(256) }],
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : source),
@@ -617,10 +617,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     let sourceReads = 0;
     getResourceMock.mockImplementation((id: string) => {
@@ -641,10 +641,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     let sourceReads = 0;
     getResourceMock.mockImplementation((id: string) => {
@@ -669,10 +669,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : { ...source, catalogId: "cat-other" }),
@@ -704,13 +704,13 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       enabled: false,
       name: "orders_view",
       tags: ["orders"],
       expectedUpdateTime: 42,
       schema: [{ ...source.schema[0], features: [] }],
-      logicDefinition: { sourceResourceId: "source-1", filterCondition: filter },
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: filter },
     } as CatalogResource;
     const sourceWithoutDistinctDisplayName = {
       ...source,
@@ -779,9 +779,9 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: "source-1",
         filterCondition: { field: "id", operation: "==", value: 1 },
       },
@@ -810,11 +810,11 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
       schema: [{ ...source.schema[0], displayName: undefined, features: [] }],
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : source),
@@ -895,10 +895,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: "source-1",
         filterCondition: {
           operation: "and",
@@ -959,10 +959,10 @@ describe("ViewEditorScene", () => {
         ...source,
         id: "view-1",
         category: "logical_view",
-        logicType: "derived",
+        logicalType: "derived",
         name: "orders_view",
         expectedUpdateTime: 42,
-        logicDefinition: {
+        logicalViewDefinition: {
           sourceResourceId: source.id,
           filterCondition: {
             field: "at",
@@ -1007,10 +1007,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "text_view",
       expectedUpdateTime: 42,
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: source.id,
         filterCondition: { field: "body", operation: "prefix", value: "word" },
       },
@@ -1077,10 +1077,10 @@ describe("ViewEditorScene", () => {
         ...source,
         id: "view-1",
         category: "logical_view",
-        logicType: "derived",
+        logicalType: "derived",
         name: "orders_view",
         expectedUpdateTime: 42,
-        logicDefinition: { sourceResourceId: "source-1", filterCondition },
+        logicalViewDefinition: { sourceResourceId: "source-1", filterCondition },
       };
       getResourceMock.mockImplementation((id: string) =>
         Promise.resolve(id === "view-1" ? view : indexedSource),
@@ -1119,10 +1119,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1", filterCondition },
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition },
     };
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : stringSource),
@@ -1149,10 +1149,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1", filterCondition: filter },
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: filter },
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : source),
@@ -1184,11 +1184,11 @@ describe("ViewEditorScene", () => {
         ...source,
         id: "view-1",
         category: "logical_view",
-        logicType: "derived",
+        logicalType: "derived",
         name: "orders_view",
         expectedUpdateTime: 42,
         schema,
-        logicDefinition: {
+        logicalViewDefinition: {
           sourceResourceId: "source-1",
           filterCondition: { field: "wide", operation: "==", value: " -09007199254740993 " },
         },
@@ -1231,10 +1231,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       schema: [{ name: "notes", originalName: "notes", type: "text", displayName: "Notes" }],
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: "source-1",
         filterCondition: { field: "notes", operation: "==", value: "open" },
       },
@@ -1276,10 +1276,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: "source-1",
         filterCondition: { field: "id", operation: "knn_vector", value: [1, 2] },
       },

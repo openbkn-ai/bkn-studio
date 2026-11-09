@@ -118,9 +118,9 @@ const tableView: CatalogResource = {
   ...resource,
   id: "table-view",
   category: "logical_view",
-  logicType: "derived",
+  logicalType: "derived",
   sourceMetadata: { sourceCategory: "table" },
-  logicDefinition: {
+  logicalViewDefinition: {
     sourceResourceId: "source-1",
     // Fixed conditions can reference fields that the view does not publish.
     filterCondition: { field: "hidden_id", operation: ">", value: 3 },
@@ -131,7 +131,7 @@ const tableView: CatalogResource = {
 const viewResource: CatalogResource = {
   ...tableView,
   id: resource.id,
-  logicDefinition: { sourceResourceId: "source-1" },
+  logicalViewDefinition: { sourceResourceId: "source-1" },
 };
 
 describe("ResourcePreviewPanel", () => {
@@ -191,7 +191,7 @@ describe("ResourcePreviewPanel", () => {
       offset: 0,
     });
     expect(previewCatalogResourceMock).toHaveBeenCalledTimes(5);
-    expect(tableView.logicDefinition?.filterCondition).toEqual({
+    expect(tableView.logicalViewDefinition?.filterCondition).toEqual({
       field: "hidden_id",
       operation: ">",
       value: 3,
@@ -264,7 +264,7 @@ describe("ResourcePreviewPanel", () => {
       limit: 10,
       offset: 0,
     });
-    expect(tableView.logicDefinition?.filterCondition).toEqual({
+    expect(tableView.logicalViewDefinition?.filterCondition).toEqual({
       field: "hidden_id",
       operation: ">",
       value: 3,
@@ -284,7 +284,7 @@ describe("ResourcePreviewPanel", () => {
           active
           resource={{
             ...tableView,
-            logicDefinition: {
+            logicalViewDefinition: {
               sourceResourceId: "source-1",
               filterCondition: {
                 operation: "and",
@@ -366,7 +366,7 @@ describe("ResourcePreviewPanel", () => {
     render(
       <ResourcePreviewPanel
         active
-        resource={{ ...tableView, logicDefinition: { sourceResourceId: "source-1" } }}
+        resource={{ ...tableView, logicalViewDefinition: { sourceResourceId: "source-1" } }}
       />,
     );
     await screen.findByText("dataCatalog.preview.dataSourceIndex");
@@ -440,10 +440,13 @@ describe("ResourcePreviewPanel", () => {
   });
 
   it.each([
-    { name: "view type", change: { logicType: undefined } },
+    { name: "view type", change: { logicalType: undefined } },
     { name: "source category", change: { sourceMetadata: undefined } },
-    { name: "source reference", change: { logicDefinition: undefined } },
-    { name: "nonempty source reference", change: { logicDefinition: { sourceResourceId: " " } } },
+    { name: "source reference", change: { logicalViewDefinition: undefined } },
+    {
+      name: "nonempty source reference",
+      change: { logicalViewDefinition: { sourceResourceId: " " } },
+    },
   ] as const)(
     "reports incomplete view details when $name is missing without querying rows",
     async ({ change }) => {
@@ -571,7 +574,7 @@ describe("ResourcePreviewPanel", () => {
         resource={{
           ...tableView,
           schema: [{ name: "published", originalName: "wide", type: "large_integer" }],
-          logicDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
+          logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
         }}
       />,
     );
@@ -623,7 +626,7 @@ describe("ResourcePreviewPanel", () => {
           resource={{
             ...tableView,
             schema: [{ name: "published", originalName, type: "large_integer" }],
-            logicDefinition: {
+            logicalViewDefinition: {
               sourceResourceId: "source-1",
               filterCondition: fixed,
             },
@@ -677,7 +680,7 @@ describe("ResourcePreviewPanel", () => {
             { name: "number_alias", originalName: "CODE", type: "large_integer" },
             { name: "text_alias", originalName: "LABEL", type: "string" },
           ],
-          logicDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
+          logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
         }}
       />,
     );
@@ -1696,7 +1699,7 @@ describe("ResourcePreviewPanel", () => {
         resource={{
           ...viewResource,
           columnCount: 1,
-          logicDefinition: {
+          logicalViewDefinition: {
             sourceResourceId: "source-1",
             filterCondition: { field: "id", operation: ">", value: 10 },
           },
@@ -2426,7 +2429,7 @@ describe("ResourcePreviewPanel", () => {
             ...tableView,
             sourceMetadata: { sourceCategory },
             schema: [{ name: "status", type: "string" }],
-            logicDefinition: {
+            logicalViewDefinition: {
               sourceResourceId: "source-1",
               filterCondition: { field: "status", operation, value: "long value" },
             },
