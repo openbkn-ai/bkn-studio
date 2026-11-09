@@ -200,3 +200,60 @@ export function readDeclarationRefusal(error: unknown): DeclarationRefusal | und
     ...(property ? { property } : {}),
   };
 }
+
+const STILL_REFERENCED_CODE = /^BknBackend\.(ActionType|ObjectType|RelationType)\.StillReferenced$/;
+
+// The backend names the referring relation this way, until its details are structured
+// (openbkn-ai/bkn-foundry#2991): `relation type "p" is the fallback_for of relation type "f"`.
+const REFERRING_RELATION = /of relation type "([^"]+)"/;
+
+/** A delete refused because other definitions still refer to the one deleted. */
+export type StillReferencedRefusal = {
+  description: string;
+  /** Each reference as the backend words it. */
+  references: string[];
+  /** The relation types that refer to it, as far as the references name them. */
+  referringRelationTypeIds: string[];
+};
+
+/** Reads a delete refused with `StillReferenced`; undefined for any other error. */
+export function readStillReferencedRefusal(error: unknown): StillReferencedRefusal | undefined {
+  const code = readErrorCode(error);
+  if (!code || !STILL_REFERENCED_CODE.test(code)) {
+    return undefined;
+  }
+  const references = (() => {
+    const value = asRecord(readErrorDetails(error))?.references;
+    return Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === "string" && item.trim() !== "")
+      : [];
+  })();
+  const referring = references
+    .map((reference) => REFERRING_RELATION.exec(reference)?.[1])
+    .filter((id): id is string => Boolean(id));
+  return {
+    description: errorDescription(error, code),
+    referringRelationTypeIds: [...new Set(referring)],
+    references,
+  };
+}
+
+/** A relation type delete refused because other definitions still refer to it. */
+export class RelationTypeStillReferencedError extends Error {
+  constructor(
+    readonly relationTypeId: string,
+    readonly refusal: StillReferencedRefusal,
+  ) {
+    super(refusal.description);
+    this.name = "RelationTypeStillReferencedError";
+  }
+}
+
+// Relation types a refusal names, until its details are structured (openbkn-ai/bkn-foundry#2991):
+// `relation type "f" fallback_for "p": …` or `… relation type "p" is already its fallback path`.
+const RELATION_TYPES_IN_DETAILS = /(?:relation type|fallback_for) "([^"]+)"/g;
+
+/** The relation types a refusal's details name, once each, in the order they appear. */
+export function relationTypesInDetails(details: string | undefined): string[] {
+  return [...new Set([...(details ?? "").matchAll(RELATION_TYPES_IN_DETAILS)].map((m) => m[1]))];
+}

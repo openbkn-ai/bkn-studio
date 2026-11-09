@@ -108,6 +108,37 @@ export type PropertyDeclarations = {
   semantic?: PropertySemantic;
 };
 
+/** How many counterparts an instance of each end has, read from source to target. */
+export type RelationCardinality = "many_to_many" | "many_to_one" | "one_to_many" | "one_to_one";
+
+/** An end of a relation. */
+export type RelationEnd = "source" | "target";
+
+/** A characteristic of a relation from an object type to itself. */
+export type RelationCharacteristic = "symmetric" | "transitive";
+
+/** Whether a relation joins on real identifiers (`confirmed`) or on inferred rules. */
+export type RelationVerification = "confirmed" | "unconfirmed";
+
+/**
+ * A relation type's BKN spec 3.0 declarations (§7.6), aliases and lifecycle aside. A declaration
+ * the relation does not make is left out: `importance` is here only when it is `secondary`, and an
+ * empty text or list never appears.
+ */
+export type RelationDeclarations = {
+  cardinality?: RelationCardinality;
+  characteristics?: RelationCharacteristic[];
+  /** Keys of the relation's `constraints` this release does not know, written back unchanged. */
+  constraintsPassthrough?: Record<string, DeclarationPassthroughValue>;
+  /** On a secondary relation, the ID of the primary relation it stands in for. */
+  fallbackFor?: string;
+  importance?: "secondary";
+  /** The ends whose every instance has at least one counterpart. */
+  requiredEnds?: RelationEnd[];
+  reverseName?: string;
+  verification?: RelationVerification;
+};
+
 /**
  * A definition that is no longer in use (spec §4.3): why, and optionally the definition of the
  * same kind to use instead. An active definition has no lifecycle.

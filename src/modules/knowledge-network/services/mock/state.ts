@@ -701,6 +701,32 @@ export const mockRelationTypes: Record<string, KnowledgeNetworkRelationTypeRecor
       tags: ["association"],
       updateTime: "2026-06-04 15:20:00",
       updaterName: "Knowledge Team",
+      declarations: {
+        cardinality: "many_to_one",
+        requiredEnds: ["source"],
+        reverseName: "Bound Orders",
+        verification: "confirmed",
+      },
+    },
+    {
+      id: "rt-risk-bind-by-ip",
+      name: "Bind Relation by IP",
+      description: "Matches an order without a device ID to the device it was placed from, by IP.",
+      color: "#7c3aed",
+      mappingMode: "direct",
+      sourceObjectTypeId: "ot-risk-order",
+      sourceObjectTypeName: "Risk Order",
+      targetObjectTypeId: "ot-risk-device",
+      targetObjectTypeName: "Risk Device",
+      tags: ["association"],
+      updateTime: "2026-06-04 15:30:00",
+      updaterName: "Knowledge Team",
+      declarations: {
+        cardinality: "many_to_one",
+        fallbackFor: "rt-risk-bind",
+        importance: "secondary",
+        verification: "unconfirmed",
+      },
     },
   ],
   "kn-domain-supply": [
@@ -731,6 +757,12 @@ export const mockRelationTypeMappings: Record<
       {
         sourcePropertyName: "order_id",
         targetPropertyName: "device_id",
+      },
+    ],
+    "rt-risk-bind-by-ip": [
+      {
+        sourcePropertyName: "order_ip",
+        targetPropertyName: "device_ip",
       },
     ],
   },

@@ -199,10 +199,12 @@ export type BackendConceptGroup = {
   updater_name?: string;
 };
 
-export type BackendRelationType = {
+export type BackendRelationType = import("./declarations").BackendRelationDeclarationFields & {
   color?: string;
   comment?: string;
   id: string;
+  /** BKN spec 3.0; absent for an active relation type. */
+  lifecycle?: { reason?: string; replaced_by?: string; status?: string } | null;
   mapping_mode?: "direct" | "indirect";
   mapping_rules?: import("./relation-type.mapper").BackendRelationTypeMappingRules;
   name: string;

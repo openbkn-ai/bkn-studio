@@ -121,9 +121,12 @@ describe("overview-graph.service", () => {
     });
 
     expect(result.objectTypeTotal).toBe(2);
-    expect(result.relationTypeTotal).toBe(1);
+    expect(result.relationTypeTotal).toBe(2);
     expect(result.graph.nodes.map((node) => node.id)).toEqual(["ot-risk-order", "ot-risk-device"]);
-    expect(result.graph.edges.map((edge) => edge.id)).toEqual(["rt-risk-bind"]);
+    expect(result.graph.edges.map((edge) => edge.id)).toEqual([
+      "rt-risk-bind",
+      "rt-risk-bind-by-ip",
+    ]);
     expect(result.truncated).toBe(false);
   });
 });
