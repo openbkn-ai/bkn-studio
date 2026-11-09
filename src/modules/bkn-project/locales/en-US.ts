@@ -2105,7 +2105,20 @@ export const bknProjectEnUS = {
           knowledge_base_not_ready:
             "Complete and review the full knowledge-base build for the current model.",
           knowledge_base_review_items:
-            "The knowledge base still has items to review: {{links}} links, {{values}} current values and {{conflicts}} differences from the business system. Review them on the build page, or accept publishing with them.",
+            "The knowledge base still has items to review: {{items}}. Review them on the build page, or accept publishing with them.",
+          reviewItems: {
+            uncounted:
+              "The knowledge base still has items to review. Review them on the build page, or accept publishing with them.",
+            links: "{{count}} links",
+            links_one: "{{count}} link",
+            links_other: "{{count}} links",
+            values: "{{count}} current values",
+            values_one: "{{count}} current value",
+            values_other: "{{count}} current values",
+            conflicts: "{{count}} differences from the business system",
+            conflicts_one: "{{count}} difference from the business system",
+            conflicts_other: "{{count}} differences from the business system",
+          },
           knowledge_base_review_not_applied:
             "Some review decisions are not applied yet. Save links and current values on the build page, then review again.",
           knowledge_base_originals_changed:

@@ -1963,7 +1963,19 @@ export const bknProjectZhCN = {
           knowledge_base_permission: "请确认来源知识库的查询权限和目标知识网络的配置权限。",
           knowledge_base_unavailable: "暂时无法核对知识库发布条件，请稍后重新审核。",
           knowledge_base_review_items:
-            "知识库还有未处理的待核实条目：关联待核查 {{links}} 条、当前值待核查 {{values}} 条、与业务系统不一致 {{conflicts}} 条。可以在构建页逐条处理，或确认后带着它们发布。",
+            "知识库还有未处理的待核实条目：{{items}}。可以在构建页逐条处理，或确认后带着它们发布。",
+          reviewItems: {
+            uncounted: "知识库还有未处理的待核实条目。可以在构建页逐条处理，或确认后带着它们发布。",
+            links_one: "关联待核查 {{count}} 条",
+            links_other: "关联待核查 {{count}} 条",
+            values_one: "当前值待核查 {{count}} 条",
+            values_other: "当前值待核查 {{count}} 条",
+            conflicts_one: "与业务系统不一致 {{count}} 条",
+            conflicts_other: "与业务系统不一致 {{count}} 条",
+            links: "关联待核查 {{count}} 条",
+            values: "当前值待核查 {{count}} 条",
+            conflicts: "与业务系统不一致 {{count}} 条",
+          },
           knowledge_base_review_not_applied:
             "有逐条核实的决定还没应用，请先在构建页“保存关联与当前值”，再重新审核。",
           not_confirmed: "草稿还没有确认。",

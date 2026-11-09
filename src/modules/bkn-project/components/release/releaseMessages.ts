@@ -120,17 +120,23 @@ export function checkReasonText(t: TFunction, check: ReleaseCheck): string {
     const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
     return t(`${PREFIX}.reason.index_not_ready`, { ready: counts.ready ?? 0, total });
   }
-  if (reason === "knowledge_base_review_items" && details && typeof details === "object") {
-    const counts = details as Record<string, unknown>;
-    const count = (key: string) => {
-      const value = counts[key];
-      return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0;
-    };
-    return t(`${PREFIX}.reason.knowledge_base_review_items`, {
-      conflicts: count("review_conflicts"),
-      links: count("review_links"),
-      values: count("review_values"),
+  if (reason === "knowledge_base_review_items") {
+    // Only the kinds the edition counted, and only those with items: no count is made up.
+    const counts = (details && typeof details === "object" ? details : {}) as Record<
+      string,
+      unknown
+    >;
+    const parts = (["links", "values", "conflicts"] as const).flatMap((kind) => {
+      const value = counts[`review_${kind}`];
+      return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+        ? [t(`${PREFIX}.reason.reviewItems.${kind}`, { count: value })]
+        : [];
     });
+    return parts.length
+      ? t(`${PREFIX}.reason.knowledge_base_review_items`, {
+          items: parts.join(t("bknProject.listSeparator")),
+        })
+      : t(`${PREFIX}.reason.reviewItems.uncounted`);
   }
   if (reason === "metric_owner_missing" && Array.isArray(details)) {
     return t(`${PREFIX}.reason.metric_owner_missing`, { count: details.length });

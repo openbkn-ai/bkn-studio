@@ -280,7 +280,7 @@ describe("ReleasePublish", () => {
     const view = await dialog();
     expect(
       await view.findByText(
-        "知识库还有未处理的待核实条目：关联待核查 2 条、当前值待核查 0 条、与业务系统不一致 1 条。可以在构建页逐条处理，或确认后带着它们发布。",
+        "知识库还有未处理的待核实条目：关联待核查 2 条、与业务系统不一致 1 条。可以在构建页逐条处理，或确认后带着它们发布。",
       ),
     ).toBeInTheDocument();
     expect(view.queryByText(/review_|knowledge_base/)).toBeNull();
