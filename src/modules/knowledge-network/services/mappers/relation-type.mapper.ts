@@ -10,7 +10,10 @@ import type {
   RelationTypeResourceRowMapping,
   RelationTypeMappingConfig,
   RelationTypePropertyMapping,
+  StoredRelationProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
+
+import { type BackendRelationDeclarationFields, relationDeclarationPatch } from "./declarations";
 
 export type BackendRelationPropertyMapping = {
   source_property?: {
@@ -34,11 +37,20 @@ export type BackendRelationTypeMappingRules =
         name?: string;
         type?: string;
       };
+      /** BKN spec 3.0 relation properties. Studio counts them and never sends them. */
+      properties?: BackendRelationProperty[] | null;
       source_mapping_rules?: BackendRelationPropertyMapping[];
       target_mapping_rules?: BackendRelationPropertyMapping[];
     };
 
-export type BackendRelationTypeCreateEntry = {
+/** A relation property as the backend sends it; Studio reads only what names it. */
+export type BackendRelationProperty = {
+  display_name?: string;
+  mapped_field?: { name?: string } | null;
+  name?: string;
+};
+
+export type BackendRelationTypeCreateEntry = BackendRelationDeclarationFields & {
   branch: "main";
   color?: string;
   comment?: string;
@@ -166,6 +178,26 @@ export function mapRelationTypeMappingsFromBackend(
   };
 }
 
+/** The relation properties an indirect relation stores, by name; none for a direct one. */
+export function mapStoredRelationProperties(
+  mappingRules?: BackendRelationTypeMappingRules,
+): StoredRelationProperty[] {
+  if (!mappingRules || Array.isArray(mappingRules)) {
+    return [];
+  }
+  return (mappingRules.properties ?? []).flatMap((item) =>
+    item.name
+      ? [
+          {
+            name: item.name,
+            ...(item.display_name ? { displayName: item.display_name } : {}),
+            ...(item.mapped_field?.name ? { mappedField: item.mapped_field.name } : {}),
+          },
+        ]
+      : [],
+  );
+}
+
 function appendMappingRules(
   payload: BackendRelationTypeCreateEntry,
   input: KnowledgeNetworkRelationTypeMutationPayload,
@@ -214,7 +246,11 @@ export function toBackendRelationTypeCreateEntry(
     type: mappingMode,
   };
 
-  return appendMappingRules(payload, input);
+  const declarations = input.declarationEdit
+    ? relationDeclarationPatch(input.declarationEdit.current, input.declarationEdit.baseline)
+    : {};
+
+  return { ...appendMappingRules(payload, input), ...declarations };
 }
 
 export function toBackendRelationTypeUpdatePayload(

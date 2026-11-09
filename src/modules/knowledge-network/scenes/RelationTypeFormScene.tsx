@@ -7,7 +7,7 @@
 
 import { ShareAltOutlined } from "@ant-design/icons";
 import { Alert, Form, Input, Spin } from "antd";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -20,6 +20,9 @@ import {
   validateRelationTypeMappingValues,
   type RelationTypeMappingFormValues,
 } from "@/modules/knowledge-network/components/relation-type/mapping-utils";
+import { RelationDeclarationRefusal } from "@/modules/knowledge-network/components/relation-type/RelationDeclarationRefusal";
+import { RelationDeclarationsSection } from "@/modules/knowledge-network/components/relation-type/RelationDeclarationsSection";
+import { useRelationPropertyGuard } from "@/modules/knowledge-network/components/relation-type/relation-property-guard";
 import { DEFAULT_RESOURCE_COLOR } from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
 import { ResourceFormStepsShell } from "@/modules/knowledge-network/components/shared/ResourceFormStepsShell";
 import {
@@ -40,9 +43,15 @@ import {
   listKnowledgeNetworkObjectTypePage,
   updateKnowledgeNetworkRelationType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import {
+  type DeclarationRefusal,
+  readDeclarationRefusal,
+} from "@/modules/knowledge-network/services/shared/declaration-errors";
 import type {
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRelationTypeMutationPayload,
+  RelationDeclarations,
+  StoredRelationProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectTypeFormScene.module.css";
@@ -85,6 +94,12 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
   const [mappingValue, setMappingValue] = useState<RelationTypeMappingFormValues>(
     createDefaultRelationTypeMappingValues(),
   );
+  const [declarations, setDeclarations] = useState<RelationDeclarations | undefined>();
+  // What the declarations were when read: a save sends only the ones that changed.
+  const declarationBaseline = useRef<RelationDeclarations | undefined>(undefined);
+  const [relationProperties, setRelationProperties] = useState<StoredRelationProperty[]>([]);
+  const [refusal, setRefusal] = useState<DeclarationRefusal | null>(null);
+  const confirmRelationPropertyChange = useRelationPropertyGuard();
   const [pageTitle, setPageTitle] = useState(
     mode === "edit"
       ? t("knowledgeNetwork.relationTypeEditTitle")
@@ -163,6 +178,9 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
 
           setBasicValue(nextBasic);
           setMappingValue(nextMapping);
+          declarationBaseline.current = detail.declarations;
+          setDeclarations(detail.declarations);
+          setRelationProperties(detail.relationProperties ?? []);
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
           setDoneStep(1);
@@ -294,9 +312,11 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       sourceObjectTypeId: normalizedMapping.mappingRules.sourceObjectTypeId,
       tags: resolvedBasic.tags,
       targetObjectTypeId: normalizedMapping.mappingRules.targetObjectTypeId,
+      declarationEdit: { baseline: declarationBaseline.current, current: declarations },
     };
 
     setSubmitting(true);
+    setRefusal(null);
     try {
       if (mode === "edit" && relationTypeId) {
         await updateKnowledgeNetworkRelationType(networkId, relationTypeId, payload);
@@ -307,11 +327,19 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       void message.success(t("common.success"));
       void navigate(returnPath);
     } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
+      const declarationRefusal = readDeclarationRefusal(error);
+      if (declarationRefusal) {
+        // Shown with the declarations it concerns, not as a toast.
+        setRefusal(declarationRefusal);
+      } else {
+        void message.error(extractRequestErrorMessage(error));
+      }
     } finally {
       setSubmitting(false);
     }
   };
+
+  const objectTypeName = (id: string) => objectTypes.find((item) => item.id === id)?.name ?? id;
 
   const renderRelationInfoBar = () => {
     if (!basicValue || currentStep === 0) {
@@ -433,12 +461,34 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             }
           >
             <RelationTypeMappingEditor
+              confirmRelationPropertyChange={confirmRelationPropertyChange}
               networkId={networkId}
               objectTypes={objectTypes}
               onChange={setMappingValue}
+              relationProperties={
+                mappingValue.mappingMode === "resource" ? relationProperties : undefined
+              }
               value={mappingValue}
             />
           </Suspense>
+          {refusal ? (
+            <RelationDeclarationRefusal
+              networkId={networkId}
+              refusal={refusal}
+              relationTypeId={mode === "edit" ? relationTypeId : basicValue?.id}
+            />
+          ) : null}
+          <RelationDeclarationsSection
+            ends={mappingValue.mappingRules}
+            networkId={networkId}
+            onChange={setDeclarations}
+            refused={Boolean(refusal)}
+            relationName={basicValue?.name ?? ""}
+            relationTypeId={mode === "edit" ? relationTypeId : undefined}
+            sourceName={objectTypeName(mappingValue.mappingRules.sourceObjectTypeId)}
+            targetName={objectTypeName(mappingValue.mappingRules.targetObjectTypeId)}
+            value={declarations}
+          />
         </div>
       </>
     );
