@@ -6,7 +6,7 @@
  */
 
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
-import type { PropsWithChildren, ReactNode } from "react";
+import { type PropsWithChildren, type ReactNode, useEffect } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 type StepAction = { onClick: () => void; text: string };
@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => {
     translate: (key: string) => key,
     routeParams,
     updateActionType: vi.fn(),
+    validateExecution: vi.fn<(...args: unknown[]) => string | null>(() => null),
   };
 });
 
@@ -64,13 +65,24 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
 // The execution and condition editors are tested on their own; here they accept anything.
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor", () => ({
   ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY: "tool-required",
-  ActionTypeExecutionEditor: ({ value }: { value: unknown }) => {
+  ActionTypeExecutionEditor: ({
+    onParameterSchemaStateChange,
+    value,
+  }: {
+    onParameterSchemaStateChange?: (state: { loaded: boolean; parameterCount: number }) => void;
+    value: unknown;
+  }) => {
     mocks.executionValue.current = value;
+    // A tool without parameters, as the real editor reports once it has read the tool.
+    useEffect(
+      () => onParameterSchemaStateChange?.({ loaded: true, parameterCount: 0 }),
+      [onParameterSchemaStateChange],
+    );
     return null;
   },
   createDefaultActionTypeExecutionConfig: () => ({}),
   normalizeActionTypeExecutionConfig: (value: unknown) => value,
-  validateActionTypeExecutionConfig: () => null,
+  validateActionTypeExecutionConfig: (...args: unknown[]) => mocks.validateExecution(...args),
 }));
 
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor", () => ({
@@ -190,7 +202,8 @@ afterEach(() => {
 /** Opens the trigger rule, where the object type is chosen. */
 async function openTrigger() {
   fireEvent.click(await screen.findByText("knowledgeNetwork.actionTypeTriggerRule"));
-  return screen.findByLabelText("object type");
+  // The impact declaration has an object type select of its own, after this one.
+  return (await screen.findAllByLabelText("object type"))[0];
 }
 
 describe("ActionTypeFormScene navigation context", () => {
@@ -331,5 +344,87 @@ describe("ActionTypeFormScene navigation context", () => {
       ),
     );
     await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith(listPath));
+  });
+});
+
+describe("ActionTypeFormScene rule panels", () => {
+  it("keeps what the collapsed rule panels hold when saving without opening them", async () => {
+    mocks.routeParams.current = { actionTypeId: "a-1", networkId: "network-1" };
+    const condition = { field: "status", objectTypeId: "orders", operation: "==", value: "open" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "modify",
+      affect: { comment: "Closes the order", objectTypeId: "orders" },
+      color: "#1677ff",
+      condition,
+      description: "Existing",
+      executionConfig: {},
+      id: "a-1",
+      name: "Existing action",
+      objectTypeId: "orders",
+      tags: [],
+    });
+    mocks.updateActionType.mockResolvedValue(undefined);
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    expect(await screen.findByDisplayValue("Existing action")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    await waitFor(() =>
+      expect(mocks.updateActionType).toHaveBeenCalledWith(
+        "network-1",
+        "a-1",
+        expect.objectContaining({
+          actionKind: "modify",
+          affect: { comment: "Closes the order", objectTypeId: "orders" },
+          condition: expect.objectContaining({ field: "status", value: "open" }) as unknown,
+          objectTypeId: "orders",
+        }),
+      ),
+    );
+  });
+
+  it("knows the tool takes no parameters when saving without opening the execution unit", async () => {
+    mocks.routeParams.current = { actionTypeId: "a-1", networkId: "network-1" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "modify",
+      color: "#1677ff",
+      condition: null,
+      description: "Existing",
+      executionConfig: {},
+      id: "a-1",
+      name: "Existing action",
+      objectTypeId: "orders",
+      tags: [],
+    });
+    mocks.updateActionType.mockResolvedValue(undefined);
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    expect(await screen.findByDisplayValue("Existing action")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    await waitFor(() => expect(mocks.updateActionType).toHaveBeenCalled());
+    expect(mocks.validateExecution).toHaveBeenCalledWith(expect.anything(), {
+      allowEmptyParameters: true,
+    });
+  });
+
+  it("opens the trigger rule when its object type is missing on save", async () => {
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    fireEvent.change((await screen.findAllByPlaceholderText("knowledgeNetwork.pleaseInput"))[0], {
+      target: { value: "Cancel order" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    expect(await screen.findByText("knowledgeNetwork.actionTypeObjectRequired")).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        expanded: true,
+        name: /knowledgeNetwork.actionTypeTriggerRule/,
+      }),
+    ).toBeInTheDocument();
+    expect(mocks.createActionType).not.toHaveBeenCalled();
   });
 });

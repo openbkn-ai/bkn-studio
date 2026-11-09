@@ -84,6 +84,28 @@ type ActionTypeFormSceneProps = {
   mode: "create" | "edit";
 };
 
+// The rule panel each form field of a collapsed panel sits in.
+const RULE_PANEL_OF_FIELD: Readonly<Record<string, string>> = {
+  actionKind: "trigger",
+  affectComment: "impact",
+  affectObjectTypeId: "impact",
+  condition: "trigger",
+  objectTypeId: "trigger",
+};
+
+/** The rule panels holding a field that failed validation. */
+function rulePanelsOf(error: unknown): string[] {
+  const fields = (error as { errorFields?: { name: (string | number)[] }[] } | null)?.errorFields;
+  return Array.from(
+    new Set(
+      (fields ?? []).flatMap((field) => {
+        const panel = RULE_PANEL_OF_FIELD[String(field.name[0])];
+        return panel ? [panel] : [];
+      }),
+    ),
+  );
+}
+
 export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   const { t } = useTranslation();
   const location = useLocation();
@@ -121,6 +143,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       parameterCount: 0,
     });
   const [executionSourceError, setExecutionSourceError] = useState<string | null>(null);
+  const [openRulePanels, setOpenRulePanels] = useState<string[]>([]);
   const [pageTitle, setPageTitle] = useState(
     mode === "edit"
       ? t("knowledgeNetwork.actionTypeEditTitle")
@@ -281,7 +304,12 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
         setPageTitle(values.name.trim() || t("knowledgeNetwork.actionTypeEditTitle"));
       }
       return values;
-    } catch {
+    } catch (error) {
+      // Opens the rule panels holding a field that failed, so the message can be seen.
+      const failed = rulePanelsOf(error);
+      if (failed.length) {
+        setOpenRulePanels((open) => Array.from(new Set([...open, ...failed])));
+      }
       return null;
     }
   };
@@ -301,6 +329,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       setExecutionSourceError(
         validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY ? validationError : null,
       );
+      setOpenRulePanels((open) => (open.includes("execution") ? open : [...open, "execution"]));
       void message.error(validationError);
       return;
     }
@@ -449,9 +478,13 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             <Collapse
               bordered={false}
               className={styles.ruleCollapse}
-              defaultActiveKey={[]}
+              activeKey={openRulePanels}
               items={[
                 {
+                  // Rendered while collapsed too: a field only reaches the saved values once it
+                  // is mounted, so a save without opening the panel would drop it. The same
+                  // holds for the other two panels.
+                  forceRender: true,
                   key: "trigger",
                   label: (
                     <span className={styles.ruleHeader}>
@@ -520,6 +553,9 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                   ),
                 },
                 {
+                  // Mounted while collapsed as well, so it reports whether the tool takes
+                  // parameters before a save checks them.
+                  forceRender: true,
                   key: "execution",
                   label: (
                     <span className={styles.ruleHeader}>
@@ -553,6 +589,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                   ),
                 },
                 {
+                  forceRender: true,
                   key: "impact",
                   label: (
                     <span className={styles.ruleHeader}>
@@ -588,6 +625,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                   ),
                 },
               ]}
+              onChange={(keys) => setOpenRulePanels(Array.isArray(keys) ? keys : [keys])}
             />
           </section>
         </Form>
