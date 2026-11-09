@@ -253,6 +253,48 @@ describe("ReleasePublish", () => {
     expect(onChanged).toHaveBeenCalled();
   });
 
+  it("publishes with items left to review only once the owner accepts them, by kind", async () => {
+    publishReleaseMock.mockResolvedValue(undefined);
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: ["knowledge_base_review_items"],
+        blocked: false,
+        checks: [
+          {
+            accept: "knowledge_base_review_items",
+            code: "knowledge_base",
+            details: {
+              original_documents: 0,
+              review_conflicts: 1,
+              review_links: 2,
+              review_values: 0,
+            },
+            passed: false,
+            reason: "knowledge_base_review_items",
+          },
+        ],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        "知识库还有未处理的待核实条目：关联待核查 2 条、当前值待核查 0 条、与业务系统不一致 1 条。可以在构建页逐条处理，或确认后带着它们发布。",
+      ),
+    ).toBeInTheDocument();
+    expect(view.queryByText(/review_|knowledge_base/)).toBeNull();
+    expect(publishButton()).toBeDisabled();
+    fireEvent.click(view.getByText("知道还有未处理的待核实条目，带着它们发布"));
+    fireEvent.click(publishButton());
+    await waitFor(() =>
+      expect(publishReleaseMock).toHaveBeenCalledWith(
+        "p1",
+        expect.objectContaining({ accepts: ["knowledge_base_review_items"] }),
+      ),
+    );
+  });
+
   it("leads to the build page from indexes that are not ready", async () => {
     renderPublish();
     fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
@@ -712,6 +754,10 @@ describe("ReleasePublish", () => {
     ],
     ["knowledge_base_permission", "请确认来源知识库的查询权限和目标知识网络的配置权限。"],
     ["knowledge_base_unavailable", "暂时无法核对知识库发布条件，请稍后重新审核。"],
+    [
+      "knowledge_base_review_not_applied",
+      "有逐条核实的决定还没应用，请先在构建页“保存关联与当前值”，再重新审核。",
+    ],
   ])("blocks knowledge-base publication in business language: %s", async (reason, message) => {
     getReleaseReviewMock.mockResolvedValue(
       review({

@@ -33,6 +33,8 @@ const REASONS = new Set([
   "knowledge_base_originals_changed",
   "knowledge_base_permission",
   "knowledge_base_unavailable",
+  "knowledge_base_review_items",
+  "knowledge_base_review_not_applied",
   "not_confirmed",
   "confirmation_outdated",
   "mapping_missing",
@@ -51,7 +53,12 @@ const REASONS = new Set([
   "branch_behind",
   "metric_owner_missing",
 ]);
-const ACCEPTS = new Set(["similar_names", "check_partial", "index_not_ready"]);
+const ACCEPTS = new Set([
+  "similar_names",
+  "check_partial",
+  "index_not_ready",
+  "knowledge_base_review_items",
+]);
 const REFUSALS = new Set([
   "VersionExists",
   "NetworkExists",
@@ -112,6 +119,18 @@ export function checkReasonText(t: TFunction, check: ReleaseCheck): string {
     const counts = details as Record<string, number>;
     const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
     return t(`${PREFIX}.reason.index_not_ready`, { ready: counts.ready ?? 0, total });
+  }
+  if (reason === "knowledge_base_review_items" && details && typeof details === "object") {
+    const counts = details as Record<string, unknown>;
+    const count = (key: string) => {
+      const value = counts[key];
+      return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0;
+    };
+    return t(`${PREFIX}.reason.knowledge_base_review_items`, {
+      conflicts: count("review_conflicts"),
+      links: count("review_links"),
+      values: count("review_values"),
+    });
   }
   if (reason === "metric_owner_missing" && Array.isArray(details)) {
     return t(`${PREFIX}.reason.metric_owner_missing`, { count: details.length });

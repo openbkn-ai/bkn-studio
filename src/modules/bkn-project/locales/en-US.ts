@@ -2095,6 +2095,10 @@ export const bknProjectEnUS = {
         reason: {
           knowledge_base_not_ready:
             "Complete and review the full knowledge-base build for the current model.",
+          knowledge_base_review_items:
+            "The knowledge base still has items to review: {{links}} links, {{values}} current values and {{conflicts}} differences from the business system. Review them on the build page, or accept publishing with them.",
+          knowledge_base_review_not_applied:
+            "Some review decisions are not applied yet. Save links and current values on the build page, then review again.",
           knowledge_base_originals_changed:
             "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
           knowledge_base_permission:
@@ -2140,12 +2144,14 @@ export const bknProjectEnUS = {
           similar_names: "I know the names are close; publish anyway",
           check_partial: "I know part of the data was not checked; publish anyway",
           index_not_ready: "I know some indexes are not ready; publish anyway",
+          knowledge_base_review_items: "I know some items are not reviewed; publish with them",
           other: "I know this did not pass; publish anyway",
         },
         accepted: {
           similar_names: "names close to existing content",
           check_partial: "part of the data not checked",
           index_not_ready: "some local indexes not ready",
+          knowledge_base_review_items: "items not reviewed",
           other: "a check that did not pass",
         },
         refusal: {

@@ -1953,6 +1953,10 @@ export const bknProjectZhCN = {
             "确认模型后，文件是否保留原文的设置已改，请重新确认模型。",
           knowledge_base_permission: "请确认来源知识库的查询权限和目标知识网络的配置权限。",
           knowledge_base_unavailable: "暂时无法核对知识库发布条件，请稍后重新审核。",
+          knowledge_base_review_items:
+            "知识库还有未处理的待核实条目：关联待核查 {{links}} 条、当前值待核查 {{values}} 条、与业务系统不一致 {{conflicts}} 条。可以在构建页逐条处理，或确认后带着它们发布。",
+          knowledge_base_review_not_applied:
+            "有逐条核实的决定还没应用，请先在构建页“保存关联与当前值”，再重新审核。",
           not_confirmed: "草稿还没有确认。",
           confirmation_outdated: "确认之后草稿又有修改，需要重新确认。",
           mapping_missing: "这些对象类还没有完整对应到数据表：{{names}}",
@@ -1991,12 +1995,14 @@ export const bknProjectZhCN = {
           similar_names: "知道名称相近，仍然发布",
           check_partial: "知道有部分数据没有核对，仍然发布",
           index_not_ready: "知道部分索引还没就绪，仍然发布",
+          knowledge_base_review_items: "知道还有未处理的待核实条目，带着它们发布",
           other: "知道这项没有通过，仍然发布",
         },
         accepted: {
           similar_names: "名称与已有内容相近",
           check_partial: "部分数据没有核对",
           index_not_ready: "部分本地索引没有就绪",
+          knowledge_base_review_items: "带着未处理的待核实条目",
           other: "有检查没有通过",
         },
         refusal: {
