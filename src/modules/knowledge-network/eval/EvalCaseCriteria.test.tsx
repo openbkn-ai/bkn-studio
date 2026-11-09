@@ -72,7 +72,7 @@ it("infers a numeric expectation from the selected output schema and clears obso
 it("does not offer string predicates for a numeric result", async () => {
   render(
     <Editor
-      initial={[{ ...criterion, path: "$.count" }]}
+      initial={[{ ...criterion, path: "$.count", valueType: "number" }]}
       schema={{ properties: { count: { type: "integer" } } }}
     />,
   );

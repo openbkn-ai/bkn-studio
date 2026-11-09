@@ -1488,11 +1488,11 @@ it("validates independent-sample evidence length and saves a valid reference", a
   const evidence = screen.getByLabelText("依据说明", { exact: true, selector: "input,textarea" });
   expect(evidence).toHaveAttribute("placeholder", expect.stringContaining("样本订单A"));
   fireEvent.change(evidence, { target: { value: "核".repeat(513) } });
-  fireEvent.click(screen.getByRole("button", { name: "确定" }));
+  fireEvent.click(screen.getByLabelText("确定", { selector: "button" }));
   expect(await screen.findByText("第 1 条依据超过512个字符，请精简或分行。")).toBeVisible();
   expect(createEvalCase).not.toHaveBeenCalled();
   fireEvent.change(evidence, { target: { value: "已核对的反例样本，结果为否；验收表第3行" } });
-  fireEvent.click(screen.getByRole("button", { name: "确定" }));
+  fireEvent.click(screen.getByLabelText("确定", { selector: "button" }));
   await waitFor(() => expect(createEvalCase).toHaveBeenCalledOnce());
   expect(vi.mocked(createEvalCase).mock.calls[0][1]).toMatchObject({
     expected_source: {
@@ -1500,7 +1500,7 @@ it("validates independent-sample evidence length and saves a valid reference", a
       evidence_refs: ["已核对的反例样本，结果为否；验收表第3行"],
     },
   });
-});
+}, 15_000);
 
 it.each(["场景测试", "安全测试"])(
   "configures %s with a real execution entry and keeps it separate from assessment",

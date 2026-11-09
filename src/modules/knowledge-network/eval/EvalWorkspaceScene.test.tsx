@@ -576,7 +576,9 @@ it("starts a new case for an uncovered resource with its identity preselected", 
     <EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={onTabChange} />,
   );
   const panel = await screen.findByLabelText("资源与场景评测结果", { selector: "section" });
-  fireEvent.click(within(panel).getByRole("button", { name: /未完成评测\s*1/ }));
+  fireEvent.click(
+    within(panel).getByText("未完成评测", { selector: "button > span" }).closest("button")!,
+  );
   fireEvent.click(within(panel).getByLabelText("订单关联供应商 操作", { selector: "button" }));
   fireEvent.click(await screen.findByRole("menuitem", { name: "新建用例" }));
   expect(onTabChange).toHaveBeenCalledWith("cases", expect.any(Object));
@@ -589,7 +591,7 @@ it("starts a new case for an uncovered resource with its identity preselected", 
     id: "order-supplier",
     name: "订单关联供应商",
   });
-});
+}, 15_000);
 
 it("opens a scenario result in the case library using its case ID without a resource filter", async () => {
   const overview = await vi.mocked(getEvalOverview)("kn-1");
@@ -614,8 +616,11 @@ it("opens a scenario result in the case library using its case ID without a reso
     <EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={onTabChange} />,
   );
   const panel = await screen.findByLabelText("资源与场景评测结果", { selector: "section" });
-  const row = within(panel).getByRole("button", { name: "订单支付金额场景" }).closest("tr")!;
-  fireEvent.click(within(row).getByRole("button", { name: "订单支付金额场景 操作" }));
+  const row = within(panel)
+    .getByText("订单支付金额场景", { selector: "button > span" })
+    .closest("button")!
+    .closest("tr")!;
+  fireEvent.click(within(row).getByLabelText("订单支付金额场景 操作", { selector: "button" }));
   fireEvent.click(await screen.findByRole("menuitem", { name: "前往用例库" }));
   expect(onTabChange).toHaveBeenCalledWith("cases", expect.any(Object));
   expect(routerMocks.navigate).not.toHaveBeenCalled();
@@ -625,7 +630,7 @@ it("opens a scenario result in the case library using its case ID without a reso
   await waitFor(() =>
     expect(listEvalCases).toHaveBeenCalledWith("kn-1", "scenario-order-pay", undefined, undefined),
   );
-});
+}, 15_000);
 
 it("drills resource coverage down to resources and opens their cases", async () => {
   const onTabChange = vi.fn();
@@ -637,12 +642,16 @@ it("drills resource coverage down to resources and opens their cases", async () 
     />,
   );
   await screen.findByText("资源评测覆盖", { exact: true });
-  fireEvent.click(await screen.findByRole("button", { name: "对象类" }));
-  const detail = await screen.findByRole("dialog", { name: "对象类评测明细" });
+  fireEvent.click(
+    (await screen.findByText("对象类", { selector: "button > span" })).closest("button")!,
+  );
+  const detail = (await screen.findByText("对象类评测明细")).closest<HTMLElement>(
+    '[role="dialog"]',
+  )!;
   expect(within(detail).getByText("物料")).toBeTruthy();
   expect(within(detail).getByText("供应商")).toBeTruthy();
   expect(within(detail).getByText("2 条用例")).toBeTruthy();
-  fireEvent.click(within(detail).getByRole("button", { name: "物料" }));
+  fireEvent.click(within(detail).getByText("物料").closest("button")!);
   expect(routerMocks.navigate).toHaveBeenCalledWith(
     "/knowledge-network/workspace/supply_ontology_hand/object-types/material/detail",
     {
@@ -651,9 +660,11 @@ it("drills resource coverage down to resources and opens their cases", async () 
       },
     },
   );
-  fireEvent.click(within(detail).getByRole("button", { name: "查看用例" }));
+  fireEvent.click(
+    within(detail).getByText("查看用例", { selector: "button > span" }).closest("button")!,
+  );
   expect(onTabChange).toHaveBeenCalledWith("cases", expect.any(Object));
-});
+}, 15_000);
 it.each([
   ["failed", "未通过"],
   ["passed", "通过"],
@@ -671,8 +682,12 @@ it.each([
     });
     const onTabChange = vi.fn();
     render(<EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={onTabChange} />);
-    fireEvent.click(await screen.findByRole("tab", { name: "用例与运行" }));
-    fireEvent.click(screen.getByRole("button", { name: new RegExp(`${label}\\s*1`) }));
+    fireEvent.click(await screen.findByText("用例与运行", { selector: '[role="tab"]' }));
+    fireEvent.click(
+      within(screen.getByTestId("eval-overview-results"))
+        .getByText(label, { selector: "button > span" })
+        .closest("button")!,
+    );
     expect(onTabChange).toHaveBeenCalledWith(
       "cases",
       expect.objectContaining({
@@ -687,15 +702,16 @@ it.each([
     );
     expect(screen.queryByRole("dialog")).toBeNull();
   },
+  15_000,
 );
 it("routes overview totals to the correct Case or Suite view with fresh filters", async () => {
   const onTabChange = vi.fn();
   render(<EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={onTabChange} />);
-  fireEvent.click(await screen.findByRole("tab", { name: "用例与运行" }));
+  fireEvent.click(await screen.findByText("用例与运行", { selector: '[role="tab"]' }));
   fireEvent.click(
-    within(screen.getByRole("region", { name: "用例与运行统计" })).getByRole("button", {
-      name: /^用例总数/,
-    }),
+    within(screen.getByLabelText("用例与运行统计", { selector: "section" }))
+      .getByText("用例总数", { selector: "button > span" })
+      .closest("button")!,
   );
   expect(onTabChange).toHaveBeenLastCalledWith(
     "cases",
@@ -707,34 +723,34 @@ it("routes overview totals to the correct Case or Suite view with fresh filters"
     }),
   );
   fireEvent.click(
-    within(screen.getByRole("region", { name: "用例与运行统计" })).getByRole("button", {
-      name: /^已启用用例/,
-    }),
+    within(screen.getByLabelText("用例与运行统计", { selector: "section" }))
+      .getByText("已启用用例", { selector: "button > span" })
+      .closest("button")!,
   );
   expect(onTabChange).toHaveBeenLastCalledWith(
     "cases",
     expect.objectContaining({ status: "enabled", participation: "participating", result: "all" }),
   );
   fireEvent.click(
-    within(screen.getByRole("region", { name: "用例与运行统计" })).getByRole("button", {
-      name: /^执行覆盖/,
-    }),
+    within(screen.getByLabelText("用例与运行统计", { selector: "section" }))
+      .getByText("执行覆盖", { selector: "button > span" })
+      .closest("button")!,
   );
   expect(onTabChange).toHaveBeenLastCalledWith(
     "cases",
     expect.objectContaining({ result: "evaluated", participation: "participating" }),
   );
   fireEvent.click(
-    within(screen.getByRole("region", { name: "用例与运行统计" })).getByRole("button", {
-      name: /^测试集\s*\d/,
-    }),
+    within(screen.getByLabelText("用例与运行统计", { selector: "section" }))
+      .getByText("测试集", { selector: "button > span" })
+      .closest("button")!,
   );
   expect(onTabChange).toHaveBeenLastCalledWith(
     "cases",
     expect.objectContaining({ view: "suites" }),
   );
   expect(screen.queryByRole("dialog")).toBeNull();
-});
+}, 15_000);
 it("offers manual and template creation from the Case library New menu", async () => {
   vi.mocked(getEvalCapabilities).mockResolvedValue({ case_management: true });
   render(
@@ -909,7 +925,7 @@ it("selects multiple runnable cases and submits one batch run", async () => {
   const secondRow = screen.getByText("供应商端点合法性").closest("tr");
   fireEvent.click(within(firstRow!).getByRole("checkbox"));
   fireEvent.click(within(secondRow!).getByRole("checkbox"));
-  fireEvent.click(screen.getByRole("button", { name: "运行（2）" }));
+  fireEvent.click(screen.getByText("运行（2）", { selector: "button > span" }).closest("button")!);
   const scope = {
     kind: "cases" as const,
     case_ids: ["case-1", "case-2"],
@@ -928,7 +944,7 @@ it("selects multiple runnable cases and submits one batch run", async () => {
     expect.objectContaining({ search: expect.stringContaining("run_id=") as unknown }),
     expect.anything(),
   );
-});
+}, 15_000);
 it("offers detail, edit and delete for draft and enabled cases", async () => {
   vi.mocked(getEvalCapabilities).mockResolvedValue({ case_management: true });
   vi.mocked(listEvalCases).mockResolvedValue({

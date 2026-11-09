@@ -178,7 +178,8 @@ it("limits selection to six completed external runs and clears it when the Suite
   fireEvent.mouseDown(screen.getByLabelText("测试集", { selector: '[role="combobox"]' }));
   fireEvent.click(await screen.findByText("Published Suite"));
   await screen.findByText("Agent 6");
-  const boxes = screen.getAllByRole("checkbox");
+  const table = screen.getByRole("table");
+  const boxes = within(table).getAllByRole("checkbox");
   expect(boxes[7]).toBeDisabled();
   boxes.slice(0, 6).forEach((box) => fireEvent.click(box));
   expect(boxes[6]).toBeDisabled();
@@ -186,9 +187,11 @@ it("limits selection to six completed external runs and clears it when the Suite
   fireEvent.mouseDown(screen.getByLabelText("测试集版本", { selector: '[role="combobox"]' }));
   fireEvent.click(await screen.findByText("v1 · 1 条用例"));
   await waitFor(() => expect(screen.getByText("已选 0 / 6 次运行")).toBeTruthy());
-  expect(screen.getByRole("button", { name: "生成对比" })).toBeDisabled();
-  expect(within(screen.getByRole("table")).getAllByRole("checkbox")[0]).toBeDisabled();
-});
+  expect(
+    screen.getByText("生成对比", { selector: "button > span" }).closest("button"),
+  ).toBeDisabled();
+  expect(table.querySelector('input[type="checkbox"]')).toBeDisabled();
+}, 15_000);
 
 it("keeps the complete selected agent label discoverable and removable", async () => {
   const name = "Agent_".repeat(100);

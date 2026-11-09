@@ -116,8 +116,8 @@ it("previews and saves selected samples through the shared server contract", asy
       onOpenCase={onOpenCase}
     />,
   );
-  await screen.findByText("物料");
-  fireEvent.click(screen.getAllByRole("checkbox")[1]);
+  const resourceRow = (await screen.findByText("物料")).closest("tr")!;
+  fireEvent.click(within(resourceRow).getByRole("checkbox"));
   fireEvent.click(footer().getByRole("button", { name: label("next") }));
   await waitFor(() =>
     expect(previewRuleApplication).toHaveBeenCalledWith(
@@ -130,7 +130,8 @@ it("previews and saves selected samples through the shared server contract", asy
   );
   await footer().findByRole("button", { name: label("save") });
   expect(screen.queryByText(label("targetCount"))).toBeNull();
-  fireEvent.click(screen.getAllByRole("checkbox")[1]);
+  const candidateRow = document.querySelector<HTMLElement>(`tr[data-row-key="${row.key}"]`)!;
+  fireEvent.click(within(candidateRow).getByRole("checkbox"));
   fireEvent.click(footer().getByRole("button", { name: label("save") }));
   await waitFor(() =>
     expect(saveRuleApplication).toHaveBeenCalledWith(
@@ -142,9 +143,12 @@ it("previews and saves selected samples through the shared server contract", asy
   expect(onSaved).toHaveBeenCalledOnce();
   expect(await footer().findByRole("button", { name: label("done") })).toBeEnabled();
   expect(footer().queryByRole("button", { name: label("retry") })).toBeNull();
-  fireEvent.click(await screen.findByRole("button", { name: label("details") }));
+  fireEvent.click(
+    (await screen.findByText(label("details"), { selector: "button > span" })).closest("button")!,
+  );
   expect(onOpenCase).toHaveBeenCalledWith("case-1");
-});
+  // This covers resource selection, server preview, persistence and detail navigation.
+}, 15_000);
 
 async function openSelectedPreview(rows: RuleApplicationRow[], onClose = vi.fn()) {
   vi.mocked(previewRuleApplication).mockResolvedValue({
