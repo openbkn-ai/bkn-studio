@@ -2071,6 +2071,15 @@ export const bknProjectEnUS = {
         target: "Creates the new version {{name}}, based on live v{{version}}.",
         targetFirst: "Creates the first version, {{name}}.",
         join: "; ",
+        keptDocument:
+          "{{count}} fields were decided as the documents have them right. The published data still uses the business system's values and the release records the differences; correct them in the business system:",
+        keptDocument_one:
+          "{{count}} field was decided as the documents have it right. The published data still uses the business system's value and the release records the difference; correct it in the business system:",
+        keptDocument_other:
+          "{{count}} fields were decided as the documents have them right. The published data still uses the business system's values and the release records the differences; correct them in the business system:",
+        keptDocumentItem:
+          "“{{field}}” of {{object}}: the document says “{{document}}”, the business system “{{system}}”",
+        keptDocumentReason: "{{row}} (reason: {{reason}})",
         originalDocuments:
           "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         originalDocuments_one:

@@ -151,16 +151,30 @@ export function checkDetailRows(
   /** Names an object type by id, as the review's changes name it. */
   itemName: (id: string) => string = (id) => id,
 ): string[] {
-  if (
-    check.code === "knowledge_base" &&
-    check.passed &&
-    check.details &&
-    typeof check.details === "object"
-  ) {
+  if (check.code === "knowledge_base" && check.details && typeof check.details === "object") {
+    const rows: string[] = [];
     const count = (check.details as { original_documents?: unknown }).original_documents;
-    if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0) {
-      return [t(`${PREFIX}.originalDocuments`, { count })];
+    if (check.passed && typeof count === "number" && Number.isSafeInteger(count) && count >= 0) {
+      rows.push(t(`${PREFIX}.originalDocuments`, { count }));
     }
+    // Fields decided as the documents have them right: the release keeps the business system's.
+    const kept = (check.details as { kept_document?: unknown }).kept_document;
+    if (Array.isArray(kept) && kept.length) {
+      rows.push(t(`${PREFIX}.keptDocument`, { count: kept.length }));
+      for (const field of kept as KeptField[]) {
+        const values = Array.isArray(field.document_values) ? field.document_values : [];
+        const row = t(`${PREFIX}.keptDocumentItem`, {
+          document: values.map(shownValue).join(t("bknProject.listSeparator")),
+          field: field.field ?? "",
+          object: [field.object, shownValue(field.record)].filter(Boolean).join(" "),
+          system: shownValue(field.system_value),
+        });
+        rows.push(
+          field.reason ? t(`${PREFIX}.keptDocumentReason`, { reason: field.reason, row }) : row,
+        );
+      }
+    }
+    return rows;
   }
   if (!check.passed && check.reason === "metric_owner_missing" && Array.isArray(check.details)) {
     return (check.details as MetricOwner[]).map((metric) =>
@@ -179,6 +193,27 @@ export function checkDetailRows(
 }
 
 type NamePair = { added: ReleaseItem; other: ReleaseItem };
+
+/** A shared field the professional edition's review decided as the documents have it right. */
+type KeptField = {
+  object?: string;
+  record?: unknown;
+  field?: string;
+  document_values?: unknown[];
+  system_value?: unknown;
+  reason?: string;
+};
+
+/** A business value as people read it: text as it is, a record by its key values. */
+function shownValue(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) return value.map(shownValue).join(" ");
+  if (typeof value === "object") return Object.values(value).map(shownValue).join(" ");
+  return "";
+}
 
 /** A metric of the branch whose object type the release lacks. */
 type MetricOwner = { id: string; name?: string; owner_object_type_id: string };

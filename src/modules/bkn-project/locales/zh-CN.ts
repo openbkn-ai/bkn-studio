@@ -1928,6 +1928,15 @@ export const bknProjectZhCN = {
         target: "将创建新版本「{{name}}」，基于线上的 v{{version}}。",
         targetFirst: "将创建第一个版本「{{name}}」。",
         join: "；",
+        keptDocument:
+          "{{count}} 个字段判定为文档说法正确。发布的数据仍按业务系统的值，这些不一致会写进发布记录，请到业务系统里更正：",
+        keptDocument_one:
+          "{{count}} 个字段判定为文档说法正确。发布的数据仍按业务系统的值，这些不一致会写进发布记录，请到业务系统里更正：",
+        keptDocument_other:
+          "{{count}} 个字段判定为文档说法正确。发布的数据仍按业务系统的值，这些不一致会写进发布记录，请到业务系统里更正：",
+        keptDocumentItem:
+          "{{object}} 的「{{field}}」：文档为「{{document}}」，业务系统为「{{system}}」",
+        keptDocumentReason: "{{row}}（理由：{{reason}}）",
         originalDocuments: "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
         originalDocuments_one: "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
         originalDocuments_other:

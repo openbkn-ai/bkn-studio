@@ -295,6 +295,47 @@ describe("ReleasePublish", () => {
     );
   });
 
+  it("lists, field by field, what the release keeps from the business system against the documents", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        checks: [
+          {
+            code: "knowledge_base",
+            details: {
+              kept_document: [
+                {
+                  document_values: ["45 日"],
+                  field: "付款账期",
+                  object: "合同",
+                  reason: "补充协议更新",
+                  record: { number: "HT-031" },
+                  system_value: "60 日",
+                },
+              ],
+              original_documents: 0,
+            },
+            passed: true,
+          },
+        ],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        "1 个字段判定为文档说法正确。发布的数据仍按业务系统的值，这些不一致会写进发布记录，请到业务系统里更正：",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      view.getByText(
+        "合同 HT-031 的「付款账期」：文档为「45 日」，业务系统为「60 日」（理由：补充协议更新）",
+      ),
+    ).toBeInTheDocument();
+    expect(view.queryByText(/kept_document|document_values/)).toBeNull();
+  });
+
   it("leads to the build page from indexes that are not ready", async () => {
     renderPublish();
     fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
