@@ -221,7 +221,7 @@ describe("ObjectMetricDetailScene actions", () => {
           purpose: "qualify_root",
           steps: [
             {
-              direction: "outgoing",
+              direction: "forward",
               relation_type_id: "relation-1",
               target_object_type_id: "related",
             },

@@ -99,7 +99,7 @@ function metric(id: string, relationId?: string): ObjectMetricRecordV1 {
                 purpose: "qualify_root",
                 steps: [
                   {
-                    direction: "outgoing",
+                    direction: "forward",
                     relation_type_id: relationId,
                     target_object_type_id: "related",
                   },

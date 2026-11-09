@@ -28,11 +28,11 @@ describe("rootRelationTypeIds", () => {
               purpose: "qualify_root",
               steps: [
                 {
-                  direction: "outgoing",
+                  direction: "forward",
                   relation_type_id: "order",
                   target_object_type_id: "order",
                 },
-                { direction: "outgoing", relation_type_id: "item", target_object_type_id: "item" },
+                { direction: "forward", relation_type_id: "item", target_object_type_id: "item" },
               ],
             },
           },

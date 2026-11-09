@@ -64,6 +64,36 @@ describe("object metric lifecycle", () => {
     expect(draft.definition.code).toMatch(/^m_[a-z0-9]+$/);
   });
 
+  it("normalizes legacy relation directions at the service boundary", async () => {
+    const networkId = `kn-${crypto.randomUUID()}`;
+    const definition = createObjectMetricDefinitionV1("derived", "product");
+    if (definition.specification.kind !== "derived") throw new Error("expected derived metric");
+    definition.specification.business_qualifiers.relation_path = {
+      alias: "orders",
+      cardinality_policy: "preserve_root",
+      purpose: "qualify_root",
+      quantifier: "exists",
+      steps: [
+        {
+          direction: "incoming" as "backward",
+          relation_type_id: "sales-order-product",
+          target_object_type_id: "sales-order",
+        },
+      ],
+    };
+    const relationPath = definition.specification.business_qualifiers.relation_path;
+
+    const draft = await createObjectMetricDraftV1(networkId, definition);
+
+    expect(relationPath.steps[0]?.direction).toBe("incoming");
+    if (draft.definition.specification.kind !== "derived") {
+      throw new Error("expected derived metric draft");
+    }
+    expect(
+      draft.definition.specification.business_qualifiers.relation_path?.steps[0]?.direction,
+    ).toBe("backward");
+  });
+
   it("persists validation before allowing publication", async () => {
     const networkId = `kn-${crypto.randomUUID()}`;
     const definition = createObjectMetricDefinitionV1("atomic", "order");

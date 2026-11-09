@@ -26,9 +26,18 @@ import {
 } from "@/modules/knowledge-network/types/object-metric";
 import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
 import { serializeObjectMetricBody } from "@/modules/knowledge-network/lib/object-metric-numeric";
+import { normalizeObjectMetricDefinitionRelationDirectionsV1 } from "@/modules/knowledge-network/lib/object-metric-relation-path";
 
 function clone<T>(value: T): T {
   return structuredClone(value);
+}
+
+function normalizeObjectMetricRecordV1<T extends ObjectMetricRecordV1 | undefined>(record: T): T {
+  if (!record) return record;
+  return {
+    ...record,
+    definition: normalizeObjectMetricDefinitionRelationDirectionsV1(record.definition),
+  };
 }
 
 function mockGeneratedMetricCode(id: string): string {
@@ -94,7 +103,9 @@ export async function listObjectMetricsV1(
     const offset = query.offset ?? 0;
     const limit = query.limit ?? 20;
     return wait({
-      entries: clone(filtered.slice(offset, offset + limit)),
+      entries: clone(filtered.slice(offset, offset + limit)).map((record) =>
+        normalizeObjectMetricRecordV1(record),
+      ),
       total_count: filtered.length,
     });
   }
@@ -113,7 +124,10 @@ export async function listObjectMetricsV1(
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
-  return response.data;
+  return {
+    ...response.data,
+    entries: response.data.entries.map((record) => normalizeObjectMetricRecordV1(record)),
+  };
 }
 export async function getObjectMetricV1(
   networkId: string,
@@ -126,7 +140,11 @@ export async function getObjectMetricV1(
       (item) =>
         item.definition.id === metricId && (!version || item.definition.version === version),
     );
-    return wait(clone(records.sort((a, b) => b.definition.version - a.definition.version)[0]));
+    return wait(
+      normalizeObjectMetricRecordV1(
+        clone(records.sort((a, b) => b.definition.version - a.definition.version)[0]),
+      ),
+    );
   }
   const response = await http.get<ObjectMetricRecordV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}`,
@@ -136,13 +154,14 @@ export async function getObjectMetricV1(
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
-  return response.data;
+  return normalizeObjectMetricRecordV1(response.data);
 }
 
 export async function createObjectMetricDraftV1(
   networkId: string,
   definition: ObjectMetricDefinitionV1,
 ) {
+  const canonicalDefinition = normalizeObjectMetricDefinitionRelationDirectionsV1(definition);
   if (useMock) {
     const now = Date.now();
     const id = crypto.randomUUID();
@@ -151,10 +170,10 @@ export async function createObjectMetricDraftV1(
       create_time: now,
       creator: { id: "local-admin", type: "user" },
       definition: {
-        ...clone(definition),
-        code: definition.code.trim() || mockGeneratedMetricCode(id),
+        ...clone(canonicalDefinition),
+        code: canonicalDefinition.code.trim() || mockGeneratedMetricCode(id),
         id,
-        lifecycle: { ...definition.lifecycle, published_at: undefined, status: "draft" },
+        lifecycle: { ...canonicalDefinition.lifecycle, published_at: undefined, status: "draft" },
         version: 1,
       },
       kn_id: networkId,
@@ -167,13 +186,13 @@ export async function createObjectMetricDraftV1(
   }
   const response = await http.post<ObjectMetricRecordV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics`,
-    definition,
+    canonicalDefinition,
     {
       transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
-  return response.data;
+  return normalizeObjectMetricRecordV1(response.data);
 }
 
 export async function updateObjectMetricDraftV1(
@@ -181,16 +200,20 @@ export async function updateObjectMetricDraftV1(
   metricId: string,
   definition: ObjectMetricDefinitionV1,
 ) {
+  const canonicalDefinition = normalizeObjectMetricDefinitionRelationDirectionsV1(definition);
   if (useMock) {
     let updated: ObjectMetricRecordV1 | undefined;
     mockObjectMetrics[networkId] = (mockObjectMetrics[networkId] ?? []).map((record) => {
-      if (record.definition.id !== metricId || record.definition.version !== definition.version) {
+      if (
+        record.definition.id !== metricId ||
+        record.definition.version !== canonicalDefinition.version
+      ) {
         return record;
       }
       if (!["draft", "validated"].includes(record.definition.lifecycle.status)) {
         throw new Error("Published object metric versions are immutable");
       }
-      const nextDefinition = clone(definition);
+      const nextDefinition = clone(canonicalDefinition);
       nextDefinition.code = record.definition.code;
       nextDefinition.lifecycle.status = "draft";
       nextDefinition.lifecycle.published_at = undefined;
@@ -201,13 +224,13 @@ export async function updateObjectMetricDraftV1(
   }
   const response = await http.put<ObjectMetricRecordV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}`,
-    definition,
+    canonicalDefinition,
     {
       transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
-  return response.data;
+  return normalizeObjectMetricRecordV1(response.data);
 }
 
 function mockObjectMetricVersionDeletionCheck(
@@ -310,7 +333,7 @@ export async function createNextObjectMetricDraftV1(networkId: string, metricId:
   const response = await http.post<ObjectMetricRecordV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/versions`,
   );
-  return response.data;
+  return normalizeObjectMetricRecordV1(response.data);
 }
 
 export async function listObjectMetricVersionsV1(
@@ -324,7 +347,7 @@ export async function listObjectMetricVersionsV1(
         (mockObjectMetrics[networkId] ?? [])
           .filter((item) => item.definition.id === metricId)
           .sort((left, right) => right.definition.version - left.definition.version),
-      ),
+      ).map((record) => normalizeObjectMetricRecordV1(record)),
     );
   }
   const response = await http.get<ObjectMetricRecordV1[]>(
@@ -334,19 +357,20 @@ export async function listObjectMetricVersionsV1(
       transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
-  return response.data;
+  return response.data.map((record) => normalizeObjectMetricRecordV1(record));
 }
 
 export async function validateObjectMetricV1(
   networkId: string,
   definition: ObjectMetricDefinitionV1,
 ) {
+  const canonicalDefinition = normalizeObjectMetricDefinitionRelationDirectionsV1(definition);
   if (useMock) {
-    return wait(mockValidation(definition));
+    return wait(mockValidation(canonicalDefinition));
   }
   const response = await http.post<ObjectMetricValidationResultV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/validate`,
-    definition,
+    canonicalDefinition,
     { transformRequest: serializeObjectMetricBody },
   );
   return response.data;
@@ -386,20 +410,21 @@ export async function validateObjectMetricVersionV1(
     undefined,
     { params: { version } },
   );
-  return response.data;
+  return normalizeObjectMetricRecordV1(response.data);
 }
 
 export async function previewObjectMetricV1(
   networkId: string,
   definition: ObjectMetricDefinitionV1,
 ) {
+  const canonicalDefinition = normalizeObjectMetricDefinitionRelationDirectionsV1(definition);
   if (useMock) {
-    const validation = mockValidation(definition);
+    const validation = mockValidation(canonicalDefinition);
     const preview: ObjectMetricPreviewV1 = {
       output_schema: {
-        dimensions: definition.result_semantics.statistical_grain.group_by_dimensions,
+        dimensions: canonicalDefinition.result_semantics.statistical_grain.group_by_dimensions,
         shape: validation.output_shape,
-        value: definition.result_semantics.value,
+        value: canonicalDefinition.result_semantics.value,
       },
       validation,
     };
@@ -407,7 +432,7 @@ export async function previewObjectMetricV1(
   }
   const response = await http.post<ObjectMetricPreviewV1>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-metrics/preview`,
-    definition,
+    canonicalDefinition,
     { transformRequest: serializeObjectMetricBody },
   );
   return response.data;
@@ -454,16 +479,17 @@ export async function trialObjectMetricDataV1(
   definition: ObjectMetricDefinitionV1,
   query: ObjectMetricQueryRequestV1 = {},
 ) {
+  const canonicalDefinition = normalizeObjectMetricDefinitionRelationDirectionsV1(definition);
   if (useMock) {
     const data: ObjectMetricDataV1 = {
       entries: [],
       model: {
-        metric_id: definition.id || "trial",
-        name: definition.name,
-        output_shape: inferObjectMetricOutputShapeV1(definition),
-        owner_object_type_id: definition.owner_object_type_id,
-        value: definition.result_semantics.value,
-        version: definition.version,
+        metric_id: canonicalDefinition.id || "trial",
+        name: canonicalDefinition.name,
+        output_shape: inferObjectMetricOutputShapeV1(canonicalDefinition),
+        owner_object_type_id: canonicalDefinition.owner_object_type_id,
+        value: canonicalDefinition.result_semantics.value,
+        version: canonicalDefinition.version,
       },
       overall_ms: 0,
       status: "no_data",
@@ -472,7 +498,7 @@ export async function trialObjectMetricDataV1(
   }
   const response = await http.post<ObjectMetricDataV1>(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/trial`,
-    { definition, query },
+    { definition: canonicalDefinition, query },
     {
       params: { branch: "main" },
       skipErrorToast: true,
@@ -511,9 +537,10 @@ export async function trialObjectMetricDrillThroughV1(
   bucketKey: string,
   cursor?: string,
 ): Promise<ObjectMetricDrillThroughV1> {
+  const canonicalDefinition = normalizeObjectMetricDefinitionRelationDirectionsV1(definition);
   const response = await http.post<ObjectMetricDrillThroughV1>(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/trial/drill-through`,
-    { definition, query, bucket_key: bucketKey, page_size: 100, cursor },
+    { definition: canonicalDefinition, query, bucket_key: bucketKey, page_size: 100, cursor },
     {
       params: { branch: "main" },
       skipErrorToast: true,
@@ -551,7 +578,7 @@ export async function publishObjectMetricV1(networkId: string, metricId: string,
     undefined,
     { params: { version } },
   );
-  return response.data;
+  return normalizeObjectMetricRecordV1(response.data);
 }
 
 export async function deprecateObjectMetricV1(
@@ -582,7 +609,7 @@ export async function deprecateObjectMetricV1(
     undefined,
     { params: { version } },
   );
-  return response.data;
+  return normalizeObjectMetricRecordV1(response.data);
 }
 
 export async function getObjectMetricCapabilitiesV1() {

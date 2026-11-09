@@ -21,9 +21,11 @@ export type ObjectMetricRefV1 = {
   version: number;
 };
 
+export type ObjectMetricRelationDirectionV1 = "forward" | "backward";
+
 export type ObjectMetricRelationStepV1 = {
   relation_type_id: string;
-  direction: "outgoing" | "incoming";
+  direction: ObjectMetricRelationDirectionV1;
   target_object_type_id: string;
 };
 

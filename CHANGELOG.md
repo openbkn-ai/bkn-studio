@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Align object-metric relationship paths with the shared `forward`/`backward` graph-query contract while continuing to read persisted legacy directions. (bkn-foundry#2984)
+
 - Complete document candidate review with visible relationship repair blocks and explicit derivation of current-text/file-claim objects from saved, verified fields. Derived candidates remain pending individual review. (bkn-foundry#2840)
 
 - Explain bounded Trace list summary loading in localized, actionable language without exposing internal reason codes or conflating it with execution failure or missing Spans. Keep detail diagnostics separate. (bkn-foundry#2882)

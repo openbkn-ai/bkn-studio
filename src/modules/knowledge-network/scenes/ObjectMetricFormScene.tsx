@@ -62,7 +62,10 @@ import {
 import { objectMetricQueryCapabilities } from "@/modules/knowledge-network/lib/object-metric-query-capabilities";
 import { derivedBaseMetricFormPatch } from "@/modules/knowledge-network/lib/object-metric-derived-base";
 import { presentObjectMetricValidationIssue } from "@/modules/knowledge-network/lib/object-metric-validation-presentation";
-import { availableRelationTypesFrom } from "@/modules/knowledge-network/lib/object-metric-relation-path";
+import {
+  availableRelationTypesFrom,
+  normalizeObjectMetricRelationStepsV1,
+} from "@/modules/knowledge-network/lib/object-metric-relation-path";
 import {
   buildObjectMetricTimeWindow,
   DEFAULT_OBJECT_METRIC_TIMEZONE,
@@ -2499,7 +2502,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 ?.related_filters,
             );
             setRelationSteps(
-              nextRecord.definition.specification.business_qualifiers.relation_path?.steps ?? [],
+              normalizeObjectMetricRelationStepsV1(
+                nextRecord.definition.specification.business_qualifiers.relation_path?.steps ?? [],
+              ),
             );
           } else {
             aiSkipCompositeInferenceRef.current = true;
@@ -3636,11 +3641,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                 (item) => item.id === relationTypeId,
                               );
                               if (!relation) return;
-                              const outgoing = relation.sourceObjectTypeId === sourceObjectTypeId;
+                              const forward = relation.sourceObjectTypeId === sourceObjectTypeId;
                               const nextStep: ObjectMetricRelationStepV1 = {
-                                direction: outgoing ? "outgoing" : "incoming",
+                                direction: forward ? "forward" : "backward",
                                 relation_type_id: relation.id,
-                                target_object_type_id: outgoing
+                                target_object_type_id: forward
                                   ? relation.targetObjectTypeId
                                   : relation.sourceObjectTypeId,
                               };
@@ -3695,7 +3700,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         setRelationSteps((current) => [
                           ...current,
                           {
-                            direction: "outgoing",
+                            direction: "forward",
                             relation_type_id: "",
                             target_object_type_id: "",
                           },
