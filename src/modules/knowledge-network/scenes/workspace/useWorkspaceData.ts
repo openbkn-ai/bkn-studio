@@ -115,11 +115,13 @@ const EMPTY_CAPABILITY_RESULT: CapabilityBindingListResult = {
   totalCount: 0,
 };
 
-function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
+type WorkspaceDataSection = KnowledgeNetworkWorkspaceSection | "extension";
+
+function sectionCacheKey(networkId: string, section: WorkspaceDataSection) {
   return `${networkId}:${section}`;
 }
 
-export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
+export function useWorkspaceData(networkId: string, section: WorkspaceDataSection) {
   const objectMetricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
   const [detail, setDetail] = useState<KnowledgeNetworkRecord | null>(null);
   const [recentObjects, setRecentObjects] = useState<KnowledgeNetworkRecentObject[]>([]);
@@ -253,7 +255,7 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
   }, []);
 
   const loadSectionData = useCallback(
-    async (targetSection: KnowledgeNetworkWorkspaceSection, options?: { force?: boolean }) => {
+    async (targetSection: WorkspaceDataSection, options?: { force?: boolean }) => {
       if (!networkId) {
         return;
       }

@@ -20,7 +20,7 @@ import {
 } from "@ant-design/icons";
 import { Empty, Spin, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHref, useNavigate } from "react-router-dom";
 
@@ -31,7 +31,6 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
-import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/preview/OverviewOntologyBlock";
 import { WorkspaceGraphOverviewAction } from "@/modules/knowledge-network/scenes/workspace/WorkspaceGraphOverviewAction";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
@@ -42,6 +41,12 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
+
+// Authorization management is only needed after the user opens its drawer.
+const ObjectAuthorizeDrawer = lazy(async () => ({
+  default: (await import("@/modules/system-admin/components/ObjectAuthorizeDrawer"))
+    .ObjectAuthorizeDrawer,
+}));
 
 type WorkspaceOverviewSectionProps = {
   canModify: boolean;
@@ -72,6 +77,7 @@ export function WorkspaceOverviewSection({
   const navigate = useNavigate();
   const { message } = useAppServices();
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
+  const [authorizeRequested, setAuthorizeRequested] = useState(false);
   // Judged on the record's own operations, not on a platform permission point. bkn-backend writes
   // `authorize` to whoever created the network, so this is what "I made it, I may share it" looks
   // like; admin-authz:grant is a platform-administrator capability that a builder never holds, and
@@ -192,7 +198,13 @@ export function WorkspaceOverviewSection({
               ))}
               <WorkspaceGraphOverviewAction networkId={networkId} />
               {detail && canAuthorize ? (
-                <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
+                <AppButton
+                  icon={<KeyOutlined />}
+                  onClick={() => {
+                    setAuthorizeRequested(true);
+                    setAuthorizeOpen(true);
+                  }}
+                >
                   {t("knowledgeNetwork.authorizeAction")}
                 </AppButton>
               ) : null}
@@ -372,15 +384,17 @@ export function WorkspaceOverviewSection({
         ) : null}
       </div>
 
-      {detail ? (
-        <ObjectAuthorizeDrawer
-          objectAuthorized={canAuthorize}
-          objId={networkId}
-          objName={detail.name}
-          objType="knowledge_network"
-          onClose={() => setAuthorizeOpen(false)}
-          open={authorizeOpen && canAuthorize}
-        />
+      {detail && authorizeRequested ? (
+        <Suspense fallback={null}>
+          <ObjectAuthorizeDrawer
+            objectAuthorized={canAuthorize}
+            objId={networkId}
+            objName={detail.name}
+            objType="knowledge_network"
+            onClose={() => setAuthorizeOpen(false)}
+            open={authorizeOpen && canAuthorize}
+          />
+        </Suspense>
       ) : null}
     </div>
   );

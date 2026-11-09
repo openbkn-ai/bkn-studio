@@ -12,6 +12,7 @@ import type { WorkspaceNavEntry, WorkspaceNavPage } from "@/framework/extension/
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { RequireCapability } from "@/framework/entitlement/RequireCapability";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import {
   ActionTypeCreatePage,
   ActionTypeDetailPage,
@@ -21,6 +22,7 @@ import {
   ConceptGroupDetailPage,
   ConceptGroupEditPage,
   GraphOverviewPage,
+  EvalRoutePage,
   MetricCreatePage,
   MetricDetailPage,
   MetricEditPage,
@@ -84,6 +86,20 @@ export function workspaceExtensionPageRoute(
 }
 
 export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
+  createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/evals",
+    {
+      descriptionKey: "knowledgeNetwork.eval.description",
+      titleKey: "knowledgeNetwork.eval.title",
+    },
+    <RequireEdition
+      capability={CAPABILITIES.EVAL}
+      minEdition="professional"
+      mountLockedContent={false}
+    >
+      <EvalRoutePage />
+    </RequireEdition>,
+  ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/overview",
     {
