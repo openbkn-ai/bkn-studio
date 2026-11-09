@@ -31,6 +31,8 @@ import {
   extensionRoutes,
   extensionStandaloneRoutes,
   extensionWorkspaceActions,
+  extensionWorkspacePage,
+  extensionWorkspacePageRoutes,
   freezeExtensions,
   registerExtension,
   resetExtensionsForTesting,
@@ -227,6 +229,62 @@ describe("extension registry", () => {
         standaloneRoutes: [{ lazy: () => Promise.resolve({ element: <p /> }), path: "/demo" }],
       }),
     ).toThrow(/without an element/);
+  });
+
+  it("routes only the sidebar entries that bring a page, behind the extension's capability", () => {
+    const Page = () => <p>analysis list</p>;
+    registerExtension({
+      capability: "demo_capability",
+      id: "demo",
+      workspaceNavItems: [
+        {
+          id: "list",
+          labelKey: "list",
+          page: { component: Page, route: "/kn/:networkId/list" },
+          path: (networkId) => `/kn/${networkId}/list`,
+        },
+        { id: "standalone", labelKey: "standalone", path: (networkId) => `/kn/${networkId}/x` },
+      ],
+    });
+
+    const routes = extensionWorkspacePageRoutes((entry) => ({
+      element: <entry.page.component />,
+      path: entry.page.route,
+    }));
+    expect(routes.map((route) => route.path)).toEqual(["/kn/:networkId/list"]);
+    expect(extensionWorkspacePage("demo:list")?.page.component).toBe(Page);
+    expect(extensionWorkspacePage("demo:standalone")).toBeUndefined();
+
+    const show = (snapshot: Entitlement) => {
+      const router = createMemoryRouter(routes, { initialEntries: ["/kn/n1/list"] });
+      return render(
+        <EntitlementContext.Provider value={{ loading: false, refresh: async () => {}, snapshot }}>
+          <RouterProvider router={router} />
+        </EntitlementContext.Provider>,
+      );
+    };
+    const locked = show(entitlement({ extensions: ["demo_capability"] }));
+    expect(screen.queryByText("analysis list")).not.toBeInTheDocument();
+    locked.unmount();
+    show(entitlement({ capabilities: ["demo_capability"], extensions: ["demo_capability"] }));
+    expect(screen.getByText("analysis list")).toBeInTheDocument();
+  });
+
+  it("rejects a workspace page whose route does not take the network", () => {
+    expect(() =>
+      registerExtension({
+        capability: "demo_capability",
+        id: "demo",
+        workspaceNavItems: [
+          {
+            id: "list",
+            labelKey: "list",
+            page: { component: () => null, route: "/kn/list" },
+            path: () => "/kn/list",
+          },
+        ],
+      }),
+    ).toThrow(/:networkId/);
   });
 
   // Two extensions may each name their button after themselves; the React key must not collide.

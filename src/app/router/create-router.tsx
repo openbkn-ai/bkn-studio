@@ -18,7 +18,12 @@ import { NotFoundPage } from "@/app/router/NotFoundPage";
 import { RouteErrorPage } from "@/app/router/RouteErrorPage";
 import { RouteLoading } from "@/app/router/RouteLoading";
 import { knowledgeBaseLicenseRoutes } from "@/modules/data-catalog/routes";
-import { extensionRoutes, extensionStandaloneRoutes } from "@/framework/extension/registry";
+import {
+  extensionRoutes,
+  extensionStandaloneRoutes,
+  extensionWorkspacePageRoutes,
+} from "@/framework/extension/registry";
+import { workspaceExtensionPageRoute } from "@/modules/knowledge-network/routes";
 
 const AppShell = lazy(async () => {
   const module = await import("@/app/router/shell");
@@ -28,7 +33,11 @@ const AppShell = lazy(async () => {
 export function createAppRouter(basename?: string) {
   return createBrowserRouter(
     [
-      ...[...standaloneModuleRoutes, ...extensionStandaloneRoutes()].map((route) => ({
+      ...[
+        ...standaloneModuleRoutes,
+        ...extensionStandaloneRoutes(),
+        ...extensionWorkspacePageRoutes(workspaceExtensionPageRoute),
+      ].map((route) => ({
         ...route,
         errorElement: <RouteErrorPage />,
       })),

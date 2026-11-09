@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import type { Entitlement } from "@/framework/entitlement/types";
+import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
 
 const mocks = vi.hoisted(() => ({
@@ -271,5 +272,47 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     mocks.extensionEntries = { items: [], upgrades: [] };
     renderScene(entitlement());
     expect(screen.queryByText("knowledgeNetwork.workspaceAbilityVerification")).toBeNull();
+  });
+});
+
+describe("KnowledgeNetworkWorkspaceScene extension pages", () => {
+  beforeEach(() => {
+    resetExtensionsForTesting();
+    mocks.extensionEntries = { items: [], upgrades: [] };
+  });
+
+  it("shows the page of the entry it is opened for, beside the sidebar", () => {
+    registerExtension({
+      capability: "graph_explorer",
+      id: "analysis-canvas",
+      workspaceNavItems: [
+        {
+          id: "analyses",
+          labelKey: "analyses",
+          page: {
+            component: () => <p>analysis list</p>,
+            route: "/knowledge-network/workspace/:networkId/analyses",
+          },
+          path: (networkId) => `/knowledge-network/workspace/${networkId}/analyses`,
+          section: "analysis",
+        },
+      ],
+    });
+    render(
+      <EntitlementContext.Provider
+        value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+      >
+        <KnowledgeNetworkWorkspaceScene
+          extensionKey="analysis-canvas:analyses"
+          networkId="network-1"
+          section="extension"
+        />
+      </EntitlementContext.Provider>,
+    );
+
+    expect(screen.getByText("analysis list")).toBeTruthy();
+    // The workspace's own entries are still there.
+    expect(screen.getByRole("button", { name: /workspaceObjectTypes/ })).toBeTruthy();
+    resetExtensionsForTesting();
   });
 });

@@ -292,9 +292,11 @@ export type WorkspaceAction = {
 
 /**
  * A sidebar entry that opens one of the extension's pages for the network on screen, in place.
- * Such a page stands on its own, without the workspace sidebar, so the entry hands it the
- * workspace page in location state (`returnTo`, see back-navigation.ts) for its back button. Like
- * a workspace action, it is shown whatever the licence says and the page carries the guard.
+ * With `page`, the page is shown inside the workspace, the sidebar kept and the entry
+ * highlighted. Without it, the page is a standalone route of the extension's, without the
+ * workspace sidebar, so the entry hands it the workspace page in location state (`returnTo`, see
+ * back-navigation.ts) for its back button. Like a workspace action, it is shown whatever the
+ * licence says and the page carries the guard.
  */
 export type WorkspaceNavEntry = {
   /** Unique within the extension. */
@@ -309,9 +311,27 @@ export type WorkspaceNavEntry = {
    * after ability verification that the sidebar shows only while some entry is listed there.
    */
   section?: WorkspaceNavSection;
+  /** A page shown inside the workspace; see WorkspaceNavPage. */
+  page?: WorkspaceNavPage;
 };
 
 export type WorkspaceNavSection = "verification" | "analysis";
+
+/**
+ * A sidebar entry's page, shown inside the knowledge-network workspace. Studio registers its
+ * route, behind the extension's capability like the extension's own routes; the extension does
+ * not list it again in `standaloneRoutes`.
+ */
+export type WorkspaceNavPage = {
+  /**
+   * The route of `path`, with the network as `:networkId`, for example
+   * `/knowledge-network/workspace/:networkId/analyses`. The page reads the network from it.
+   */
+  route: string;
+  component: ComponentType;
+  /** Translation key of the route's description; the entry label stands in when absent. */
+  descriptionKey?: string;
+};
 
 /**
  * A button on the graph overview that opens one of the extension's pages, in a new tab, with the
@@ -371,6 +391,13 @@ export function registerExtension(extension: StudioExtension) {
       );
     }
   }
+  for (const item of extension.workspaceNavItems ?? []) {
+    if (item.page && !item.page.route.includes(":networkId")) {
+      throw new Error(
+        `Extension "${extension.id}" has a workspace page without :networkId in its route (${item.page.route}).`,
+      );
+    }
+  }
   installed.push(extension);
   addExtensionLocales(extension.locales);
 }
@@ -417,6 +444,31 @@ export function extensionWorkspaceNavItems(
         key: `${extension.id}:${item.id}`,
       })),
   );
+}
+
+/**
+ * The routes of the sidebar entries that open inside the workspace. `toRoute` makes the route
+ * from an entry (the workspace around its page); each is gated by its extension's capability.
+ */
+export function extensionWorkspacePageRoutes(
+  toRoute: (entry: WorkspaceNavEntry & { key: string; page: WorkspaceNavPage }) => RouteObject,
+): RouteObject[] {
+  return installed.flatMap((extension) =>
+    gated(
+      extension,
+      (extension.workspaceNavItems ?? []).flatMap((item) =>
+        item.page ? [toRoute({ ...item, key: `${extension.id}:${item.id}`, page: item.page })] : [],
+      ),
+    ),
+  );
+}
+
+/** The sidebar entry, by key (`<extension id>:<entry id>`), whose page is shown in the workspace. */
+export function extensionWorkspacePage(
+  key: string,
+): (WorkspaceNavEntry & { key: string; page: WorkspaceNavPage }) | undefined {
+  const item = extensionWorkspaceNavItems().find((entry) => entry.key === key);
+  return item?.page ? { ...item, page: item.page } : undefined;
 }
 
 export function extensionInstanceHandOvers(): (InstanceHandOver & { key: string })[] {

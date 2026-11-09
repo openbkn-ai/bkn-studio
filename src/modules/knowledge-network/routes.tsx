@@ -13,7 +13,10 @@ import {
   KnowledgeNetworkListPage,
 } from "@/modules/knowledge-network/routes/lazy-pages";
 import { createKnowledgeNetworkRoute } from "@/modules/knowledge-network/routes/route-factory";
-import { knowledgeNetworkStandaloneRoutes } from "@/modules/knowledge-network/routes/standalone-routes";
+import {
+  knowledgeNetworkStandaloneRoutes,
+  workspaceExtensionPageRoute,
+} from "@/modules/knowledge-network/routes/standalone-routes";
 
 export const knowledgeNetworkRoutes: RouteObject[] = [
   createKnowledgeNetworkRoute(
@@ -35,7 +38,7 @@ export const knowledgeNetworkRoutes: RouteObject[] = [
   ),
 ];
 
-export { knowledgeNetworkStandaloneRoutes };
+export { knowledgeNetworkStandaloneRoutes, workspaceExtensionPageRoute };
 
 export const knowledgeNetworkRouteContribution: AppRouteContribution = {
   moduleId: "knowledge-network",
