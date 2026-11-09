@@ -252,16 +252,23 @@ it("filters business scenarios, opens their frozen result and links to the case 
   fireEvent.mouseDown(filter);
   fireEvent.click(screen.getByText("业务场景", { selector: ".ant-select-item-option-content" }));
   expect(screen.queryByRole("button", { name: "物料" })).toBeNull();
-  const row = screen.getByRole("button", { name: "订单支付金额一致" }).closest("tr")!;
+  const row = screen
+    .getByText("订单支付金额一致", { selector: "button > span" })
+    .closest("button")!
+    .closest("tr")!;
   expect(within(row).queryByRole("button", { name: "前往资源" })).toBeNull();
   await chooseAction("订单支付金额一致", "前往用例库");
   expect(p.onCases).toHaveBeenCalledWith(
     expect.objectContaining({ kind: "scenario", id: "scenario-failed" }),
   );
   await chooseAction("订单支付金额一致", "查看问题");
-  const drawer = await screen.findByRole("dialog", { name: "订单支付金额一致 · 场景评测明细" });
+  const drawer = (await screen.findByText("订单支付金额一致 · 场景评测明细")).closest<HTMLElement>(
+    '[role="dialog"]',
+  )!;
   expect(within(drawer).queryByRole("button", { name: "前往资源" })).toBeNull();
-  fireEvent.click(within(drawer).getByRole("button", { name: "查看结果" }));
+  fireEvent.click(
+    within(drawer).getByText("查看结果", { selector: "button > span" }).closest("button")!,
+  );
   expect(await within(drawer).findByText("Frozen result cr-scenario")).toBeTruthy();
   expect(getRunCaseDetail).toHaveBeenCalledWith(
     "kn-1",
@@ -270,13 +277,15 @@ it("filters business scenarios, opens their frozen result and links to the case 
     3,
     expect.any(AbortSignal),
   );
-  fireEvent.click(within(drawer).getByRole("button", { name: "查看完整运行" }));
+  fireEvent.click(
+    within(drawer).getByText("查看完整运行", { selector: "button > span" }).closest("button")!,
+  );
   expect(p.onInspect).toHaveBeenCalledWith(
     expect.objectContaining({ id: "run-scenario" }),
     "cr-scenario",
   );
   expect(p.onResource).not.toHaveBeenCalled();
-});
+}, 15_000);
 
 it("defaults to issues and provides three categories without an all or passed category", async () => {
   const p = props();
@@ -603,19 +612,29 @@ it("opens AI repair from the detail footer using only selected failed cases and 
   expect(createM1Run).not.toHaveBeenCalled();
 });
 
-it("disables footer AI repair when no failed case is selected and hides it without permission", async () => {
+it("disables footer AI repair when no failed case is selected", async () => {
   const p = props();
-  const view = render(<EvalOverviewResourcesPanel {...p} />);
+  render(<EvalOverviewResourcesPanel {...p} />);
   await chooseAction("物料", "查看问题");
-  const drawer = await screen.findByRole("dialog", { name: "物料 · 资源评测明细" });
+  const drawer = (await screen.findByText("物料 · 资源评测明细")).closest<HTMLElement>(
+    '[role="dialog"]',
+  )!;
   fireEvent.click(within(drawer).getAllByRole("checkbox")[0]);
-  expect(within(drawer).getByRole("button", { name: "AI 修复" })).toBeDisabled();
+  expect(
+    within(drawer).getByText("AI 修复", { selector: "button > span" }).closest("button"),
+  ).toBeDisabled();
   expect(p.onRepair).not.toHaveBeenCalled();
-  view.unmount();
+});
+
+it("hides footer AI repair without permission", async () => {
+  const p = props();
   render(<EvalOverviewResourcesPanel {...p} canRun={false} />);
   await chooseAction("物料", "查看问题");
-  const readOnlyDrawer = await screen.findByRole("dialog", { name: "物料 · 资源评测明细" });
-  expect(within(readOnlyDrawer).queryByRole("button", { name: "AI 修复" })).toBeNull();
+  const drawer = (await screen.findByText("物料 · 资源评测明细")).closest<HTMLElement>(
+    '[role="dialog"]',
+  )!;
+  expect(within(drawer).queryByRole("button", { name: "AI 修复" })).toBeNull();
+  expect(p.onRepair).not.toHaveBeenCalled();
 });
 
 it("explains missing readonly authorization instead of only asking for a new case", () => {

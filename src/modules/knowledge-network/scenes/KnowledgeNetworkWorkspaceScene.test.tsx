@@ -20,6 +20,9 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
 }));
 
+vi.mock("../eval/useEvalAccess", () => ({
+  useEvalAccess: () => ({ status: "allowed", retry: vi.fn() }),
+}));
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>();
 
@@ -33,6 +36,7 @@ vi.mock("react-i18next", async (importOriginal) => {
           "knowledgeNetwork.workspaceExperienceAgent": "智能问答",
           "knowledgeNetwork.workspaceExperienceCypher": "数据查询",
           "knowledgeNetwork.workspaceExperienceMcp": "MCP 调试",
+          "knowledgeNetwork.eval.title": "质量评测",
           "knowledgeNetwork.workspaceFunctions": "函数",
           "knowledgeNetwork.workspaceKnowledgeBases": "知识库",
           "knowledgeNetwork.workspaceMcpTools": "MCP 资源",
@@ -66,7 +70,7 @@ vi.mock("@/modules/knowledge-network/components/network/KnowledgeNetworkFormModa
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/ExperienceScene", () => ({
-  ExperienceScene: () => null,
+  ExperienceScene: () => <div data-testid="experience-content" />,
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems", () => ({
@@ -82,7 +86,7 @@ vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection",
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection", () => ({
-  WorkspaceResourceSection: () => <div />,
+  WorkspaceResourceSection: () => <div data-testid="resource-content" />,
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/useWorkspaceData", () => ({
@@ -241,6 +245,7 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     renderScene(entitlement());
 
     expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /质量评测/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /函数/ })).toBeTruthy();
   });
 
@@ -263,7 +268,7 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
   });
 
   it("keeps the ability verification title while an extension entry is still shown", () => {
-    mocks.hiddenNavigation = ["experience-agent", "experience-cypher"];
+    mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "evals"];
     mocks.extensionEntries = { items: [], upgrades: [{ capability: "graph_explorer" }] };
     renderScene(entitlement());
     expect(screen.getByText("knowledgeNetwork.workspaceAbilityVerification")).toBeTruthy();
@@ -310,9 +315,44 @@ describe("KnowledgeNetworkWorkspaceScene extension pages", () => {
       </EntitlementContext.Provider>,
     );
 
-    expect(screen.getByText("analysis list")).toBeTruthy();
+    const page = screen.getByText("analysis list");
+    expect(page.parentElement?.className).toMatch(/workspaceSectionPage/);
+    expect(page.parentElement?.className).toMatch(/workspaceSectionFlush/);
     // The workspace's own entries are still there.
     expect(screen.getByRole("button", { name: /workspaceObjectTypes/ })).toBeTruthy();
     resetExtensionsForTesting();
   });
+});
+
+it.each(["object-types", "experience-agent"] as const)(
+  "loads the %s section after navigation",
+  async (section) => {
+    render(
+      <EntitlementContext.Provider
+        value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+      >
+        <KnowledgeNetworkWorkspaceScene networkId="network-1" section={section} />
+      </EntitlementContext.Provider>,
+    );
+    expect(
+      await screen.findByTestId(
+        section === "object-types" ? "resource-content" : "experience-content",
+      ),
+    ).toBeTruthy();
+  },
+);
+
+it("lets embedded Eval content own its layout while retaining workspace navigation", () => {
+  mocks.hiddenNavigation = [];
+  render(
+    <EntitlementContext.Provider
+      value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+    >
+      <KnowledgeNetworkWorkspaceScene networkId="network-1" section="extension" evalAccessAllowed>
+        <div data-testid="embedded-eval">Eval content</div>
+      </KnowledgeNetworkWorkspaceScene>
+    </EntitlementContext.Provider>,
+  );
+  expect(screen.getByTestId("embedded-eval").parentElement?.tagName).toBe("MAIN");
+  expect(screen.getByTitle("质量评测")).toBeTruthy();
 });

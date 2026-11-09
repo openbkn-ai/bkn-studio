@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useHref, useLocation, useMatch, useNavigate } from "react-router-dom";
 
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
@@ -113,22 +113,27 @@ function ExtensionNavItem({
 }) {
   const { t } = useTranslation();
   const location = useLocation();
+  const href = useHref(item.path(networkId));
   const navigate = useNavigate();
+  const match = useMatch({ path: item.path(networkId), end: false });
+  const isActive = active || (item.openIn === "workspace" && Boolean(match));
   const label = t(item.labelKey);
 
   return (
     <button
-      aria-current={active ? "page" : undefined}
-      className={active ? styles.sideItemActive : styles.sideItem}
+      aria-current={isActive ? "page" : undefined}
+      className={isActive ? styles.sideItemActive : styles.sideItem}
       data-testid={`workspace-nav-${item.id}`}
-      // A page shown in the workspace keeps this sidebar. A standalone page has none, so the way
-      // back to this page goes with it.
-      onClick={() =>
-        void navigate(
-          item.path(networkId),
-          item.page ? undefined : { state: buildReturnToState(location) },
-        )
-      }
+      onClick={() => {
+        if (item.page || item.openIn === "workspace") {
+          void navigate(item.path(networkId));
+        } else if (item.openIn === "new-tab") {
+          window.open(href, "_blank", "noopener,noreferrer");
+        } else {
+          // Standalone pages replace the workspace and receive the route used by their back button.
+          void navigate(item.path(networkId), { state: buildReturnToState(location) });
+        }
+      }}
       title={label}
       type="button"
     >

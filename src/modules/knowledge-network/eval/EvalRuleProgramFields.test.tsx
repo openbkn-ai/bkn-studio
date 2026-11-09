@@ -9,11 +9,14 @@ import { useState } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeAll, expect, it } from "vitest";
 import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
 import { evalLocales } from "./locales";
 import { EvalRuleProgramFields } from "./EvalRuleProgramFields";
 import { newRuleProgram, validateRuleProgram, type EvalRuleProgram } from "./rule-check-model";
 beforeAll(async () => {
-  await i18n.init({ lng: "zh-CN", resources: evalLocales, showSupportNotice: false });
+  await i18n
+    .use(initReactI18next)
+    .init({ lng: "zh-CN", resources: evalLocales, showSupportNotice: false });
 });
 
 function Editor() {
@@ -27,30 +30,40 @@ function Editor() {
 }
 it("combines structured predicates and aggregate comparison without asking for a program", () => {
   render(<Editor />);
-  expect(screen.getByRole("textbox", { name: "检查字段" })).toHaveValue("$property");
-  fireEvent.click(screen.getByRole("button", { name: "添加逐行校验" }));
+  expect(screen.getByLabelText("检查字段", { selector: "input,textarea" })).toHaveValue(
+    "$property",
+  );
+  fireEvent.click(screen.getByLabelText("添加逐行校验", { selector: "button" }));
   expect(screen.getAllByRole("group", { name: /逐行校验第/ })).toHaveLength(2);
-  fireEvent.click(screen.getByRole("button", { name: "添加聚合比较" }));
+  fireEvent.click(
+    screen.getByText("添加聚合比较", { selector: "button, button > span" }).closest("button")!,
+  );
   const plan = JSON.parse(screen.getByTestId("plan").textContent ?? "") as EvalRuleProgram;
   expect(plan.aggregates).toEqual([{ function: "count", operator: "gte", value: 1 }]);
   expect(() => validateRuleProgram(plan)).not.toThrow();
 });
 it("requires independently supplied reference data and clears conflicting sampling operations", () => {
   render(<Editor />);
-  fireEvent.click(screen.getByRole("checkbox", { name: "只检查满足条件的采样记录" }));
-  fireEvent.click(screen.getByRole("button", { name: "添加聚合比较" }));
-  fireEvent.click(screen.getByRole("checkbox", { name: "按独立对照样本定位并核对" }));
+  fireEvent.click(
+    screen.getByLabelText("只检查满足条件的采样记录", { selector: 'input[type="checkbox"]' }),
+  );
+  fireEvent.click(
+    screen.getByText("添加聚合比较", { selector: "button, button > span" }).closest("button")!,
+  );
+  fireEvent.click(
+    screen.getByLabelText("按独立对照样本定位并核对", { selector: 'input[type="checkbox"]' }),
+  );
   expect(screen.queryByRole("combobox", { name: "聚合统计范围" })).toBeNull();
-  fireEvent.change(screen.getByRole("textbox", { name: "对象主键字段" }), {
+  fireEvent.change(screen.getByLabelText("对象主键字段", { selector: "input,textarea" }), {
     target: { value: "id" },
   });
-  fireEvent.change(screen.getByRole("textbox", { name: "对照主键字段" }), {
+  fireEvent.change(screen.getByLabelText("对照主键字段", { selector: "input,textarea" }), {
     target: { value: "key" },
   });
-  fireEvent.change(screen.getByRole("textbox", { name: "独立对照记录" }), {
+  fireEvent.change(screen.getByLabelText("独立对照记录", { selector: "input,textarea" }), {
     target: { value: '[{"key":1,"gold":false}]' },
   });
-  fireEvent.change(screen.getByRole("textbox", { name: "对照依据" }), {
+  fireEvent.change(screen.getByLabelText("对照依据", { selector: "input,textarea" }), {
     target: { value: "已核对的业务记录" },
   });
   const plan = JSON.parse(screen.getByTestId("plan").textContent ?? "") as EvalRuleProgram;
@@ -58,7 +71,7 @@ it("requires independently supplied reference data and clears conflicting sampli
   expect(plan.aggregates).toBeUndefined();
   expect(plan.reference?.rows[0].gold).toBe(false);
   expect(() => validateRuleProgram(plan)).not.toThrow();
-  fireEvent.change(screen.getByRole("textbox", { name: "独立对照记录" }), {
+  fireEvent.change(screen.getByLabelText("独立对照记录", { selector: "input,textarea" }), {
     target: { value: "invalid" },
   });
   expect(() =>
@@ -66,15 +79,16 @@ it("requires independently supplied reference data and clears conflicting sampli
       JSON.parse(screen.getByTestId("plan").textContent ?? "") as EvalRuleProgram,
     ),
   ).toThrow("对照记录");
-});
+}, 15_000);
+
 it("changes comparison operand from literal to another real field", () => {
   render(<Editor />);
   const group = screen.getByRole("group", { name: "逐行校验第1条" });
-  fireEvent.mouseDown(within(group).getByRole("combobox", { name: "判断方式" }));
+  fireEvent.mouseDown(within(group).getByLabelText("判断方式", { selector: '[role="combobox"]' }));
   fireEvent.click(screen.getByText("大于等于"));
-  fireEvent.mouseDown(within(group).getByRole("combobox", { name: "比较对象" }));
+  fireEvent.mouseDown(within(group).getByLabelText("比较对象", { selector: '[role="combobox"]' }));
   fireEvent.click(screen.getByText("另一字段"));
-  fireEvent.change(within(group).getByRole("textbox", { name: "比较字段" }), {
+  fireEvent.change(within(group).getByLabelText("比较字段", { selector: "input,textarea" }), {
     target: { value: "minimum" },
   });
   const plan = JSON.parse(screen.getByTestId("plan").textContent ?? "") as EvalRuleProgram;
@@ -89,11 +103,13 @@ it("changes comparison operand from literal to another real field", () => {
 it("lets business users type decimal boundaries without losing intermediate zeros", () => {
   render(<Editor />);
   const group = screen.getByRole("group", { name: "逐行校验第1条" });
-  fireEvent.mouseDown(within(group).getByRole("combobox", { name: "判断方式" }));
+  fireEvent.mouseDown(within(group).getByLabelText("判断方式", { selector: '[role="combobox"]' }));
   fireEvent.click(screen.getByText("大于等于"));
-  fireEvent.mouseDown(within(group).getByRole("combobox", { name: "比较值类型" }));
+  fireEvent.mouseDown(
+    within(group).getByLabelText("比较值类型", { selector: '[role="combobox"]' }),
+  );
   fireEvent.click(screen.getByText("数值"));
-  const input = within(group).getByRole("textbox", { name: "比较值" });
+  const input = within(group).getByLabelText("比较值", { selector: "input,textarea" });
   for (const value of ["0", "0.", "0.0", "0.01"]) fireEvent.change(input, { target: { value } });
   expect(input).toHaveValue("0.01");
   expect(

@@ -308,3 +308,21 @@ service 不负责：
 - `pnpm build`
 
 如果无法执行，需要在提交说明里写清原因。
+
+### Eval 模块的单元测试与覆盖率
+
+修改质量评测模块后，运行 `pnpm test:eval`；需要覆盖率时运行
+`pnpm test:eval:coverage`。这两个命令只收集 Eval 测试，默认使用一半 CPU
+核心，复用应用的 Vite、jsdom 与测试初始化配置。
+
+覆盖率统计包含 `src/modules/knowledge-network/eval` 中尚未被测试导入的源码，
+仅排除测试文件和纯类型定义。HTML 报告位于 `coverage/eval/index.html`，
+机器可读报告为同目录的 `coverage-summary.json` 和 `coverage-final.json`。
+报告生成目录已被 Git 忽略。新增测试不能通过缩小统计范围隐藏缺口。
+
+后端在 `openbkn-ee` 仓库的 `adp/bkn/bkn-backend` 目录运行
+`GOWORK=off go test ./eval/... ./cmd/eval-init -count=1 -coverprofile=coverage.out`，使用
+`go tool cover -func=coverage.out` 查看函数覆盖率。
+需要检查并发访问时，单独运行 `GOWORK=off go test -race ./eval/... ./cmd/eval-init -count=1`。
+单元测试中的 SQL mock 不等同于真实数据库验证；迁移、行锁、事务隔离及真实
+MCP/Trace 联调仍需分别执行集成测试，不能以单测通过替代。

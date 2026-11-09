@@ -6,23 +6,16 @@
  */
 
 import {
-  ApiOutlined,
-  ApartmentOutlined,
   AppstoreOutlined,
-  CloudServerOutlined,
-  CodeOutlined,
-  DatabaseOutlined,
+  ExperimentOutlined,
   FileTextOutlined,
-  ForkOutlined,
-  LineChartOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
   NodeIndexOutlined,
-  ReadOutlined,
-  ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Alert } from "antd";
+import { useEvalAccess } from "../eval/useEvalAccess";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -42,14 +35,12 @@ import type {
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
-import { SkillsSparkIcon } from "@/modules/knowledge-network/components/shared/SkillsSparkIcon";
+import { KnowledgeResourceIcon } from "@/modules/knowledge-network/components/shared/KnowledgeResourceIcon";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
-import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 import { WorkspaceDevelopSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceDevelopSection";
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
 import { visibleWorkspaceExtensionEntries } from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
-import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { KnowledgeNetworkMutationPayload } from "@/modules/knowledge-network/types/knowledge-network";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
@@ -60,6 +51,15 @@ import styles from "./KnowledgeNetworkWorkspaceScene.module.css";
 const CypherQueryScene = lazy(async () => ({
   default: (await import("@/modules/knowledge-network/components/cypher/CypherQueryScene"))
     .CypherQueryScene,
+}));
+
+// Keep chat and resource editors off the overview's initial dependency path.
+const ExperienceScene = lazy(async () => ({
+  default: (await import("@/modules/knowledge-network/scenes/ExperienceScene")).ExperienceScene,
+}));
+const WorkspaceResourceSection = lazy(async () => ({
+  default: (await import("@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection"))
+    .WorkspaceResourceSection,
 }));
 
 type WorkspaceNavItem = {
@@ -83,6 +83,8 @@ function formatNavCount(count?: number) {
 
 export function KnowledgeNetworkWorkspaceScene({
   extensionKey,
+  children,
+  evalAccessAllowed,
   networkId,
   section,
 }: KnowledgeNetworkWorkspaceSceneProps) {
@@ -93,6 +95,8 @@ export function KnowledgeNetworkWorkspaceScene({
   const { hiddenNavigation } = useRuntimeConfig();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
+  const evalAccess = useEvalAccess(evalAccessAllowed === undefined ? activeNetworkId : "");
+  const showEval = evalAccessAllowed ?? evalAccess.status === "allowed";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
   const kbMode = useBknProjectKbMode();
   const workspaceData = useWorkspaceData(activeNetworkId, section);
@@ -144,33 +148,40 @@ export function KnowledgeNetworkWorkspaceScene({
         path: `/knowledge-network/workspace/${activeNetworkId}/experience/cypher`,
       },
       {
+        key: "evals",
+        label: t("knowledgeNetwork.eval.title"),
+        icon: <ExperimentOutlined />,
+        path: `/knowledge-network/workspace/${activeNetworkId}/evals`,
+        paidEdition: "professional",
+      },
+      {
         key: "concept-groups",
         label: t("knowledgeNetwork.workspaceConceptGroups"),
-        icon: <ApartmentOutlined />,
+        icon: <KnowledgeResourceIcon kind="conceptGroup" />,
         count: detail?.statistics.conceptGroupsTotal ?? 0,
       },
       {
         key: "object-types",
         label: t("knowledgeNetwork.workspaceObjectTypes"),
-        icon: <DatabaseOutlined />,
+        icon: <KnowledgeResourceIcon kind="objectType" />,
         count: detail?.statistics.objectTypesTotal ?? 0,
       },
       {
         key: "relation-types",
         label: t("knowledgeNetwork.workspaceRelationTypes"),
-        icon: <ApiOutlined />,
+        icon: <KnowledgeResourceIcon kind="relationType" />,
         count: detail?.statistics.relationTypesTotal ?? 0,
       },
       {
         key: "action-types",
         label: t("knowledgeNetwork.workspaceActionTypes"),
-        icon: <ThunderboltOutlined />,
+        icon: <KnowledgeResourceIcon kind="action" />,
         count: detail?.statistics.actionTypesTotal ?? 0,
       },
       {
         key: "metrics",
         label: t("knowledgeNetwork.workspaceMetrics"),
-        icon: <LineChartOutlined />,
+        icon: <KnowledgeResourceIcon kind="metric" />,
         count: detail?.statistics.metricsTotal ?? 0,
         paidCapability: CAPABILITIES.OBJECT_METRICS,
         paidCapabilityState: objectMetricsCapability,
@@ -179,27 +190,26 @@ export function KnowledgeNetworkWorkspaceScene({
       {
         key: "functions",
         label: t("knowledgeNetwork.workspaceFunctions"),
-        icon: <CodeOutlined />,
+        icon: <KnowledgeResourceIcon kind="function" />,
         count: detail?.statistics.functionsTotal ?? 0,
       },
       {
         key: "apis",
-        // Not ApiOutlined: relation types already own that icon in the group above.
         label: t("knowledgeNetwork.workspaceApis"),
-        icon: <CloudServerOutlined />,
+        icon: <KnowledgeResourceIcon kind="api" />,
         count: detail?.statistics.apisTotal ?? 0,
       },
       {
         key: "mcp",
         label: t("knowledgeNetwork.workspaceMcpTools"),
-        icon: <ForkOutlined />,
+        icon: <KnowledgeResourceIcon kind="mcp" />,
         // Backend counts these on its own: mcp_tool is a capability type of its own, so no split.
         count: detail?.statistics.mcpToolsTotal ?? 0,
       },
       {
         key: "skills",
         label: t("knowledgeNetwork.workspaceSkills"),
-        icon: <SkillsSparkIcon />,
+        icon: <KnowledgeResourceIcon kind="skill" />,
         count: detail?.statistics.skillsTotal ?? 0,
       },
       // Professional edition. Not in the community image at all; without the license the section
@@ -210,23 +220,24 @@ export function KnowledgeNetworkWorkspaceScene({
             {
               key: "knowledge-bases" as const,
               label: t("knowledgeNetwork.workspaceKnowledgeBases"),
-              icon: <ReadOutlined />,
+              icon: <KnowledgeResourceIcon kind="knowledgeBase" />,
               paidEdition: "professional" as const,
             },
           ]),
     ];
 
     // Entries for services this deployment does not run (RuntimeConfig.hiddenNavigation).
-    return hiddenNavigation.length > 0
-      ? items.filter((item) => !hiddenNavigation.includes(item.key))
-      : items;
-  }, [activeNetworkId, detail, hiddenNavigation, kbMode, objectMetricsCapability, t]);
+    return items.filter(
+      (item) => !hiddenNavigation.includes(item.key) && (item.key !== "evals" || showEval),
+    );
+  }, [activeNetworkId, detail, hiddenNavigation, kbMode, objectMetricsCapability, showEval, t]);
 
   const primaryNavItems = navigationItems.filter(
     (item) => item.key === "overview" || item.key === "develop",
   );
   const experienceNavItems = navigationItems.filter(
-    (item) => item.key === "experience-agent" || item.key === "experience-cypher",
+    (item) =>
+      item.key === "experience-agent" || item.key === "experience-cypher" || item.key === "evals",
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>
@@ -330,11 +341,19 @@ export function KnowledgeNetworkWorkspaceScene({
       const initialMode = section === "experience-mcp" ? "mcp" : "agent";
 
       return (
-        <ExperienceScene embedded initialMode={initialMode} lockMode network={experienceNetwork} />
+        <Suspense fallback={null}>
+          <ExperienceScene
+            embedded
+            initialMode={initialMode}
+            lockMode
+            network={experienceNetwork}
+          />
+        </Suspense>
       );
     }
 
     if (section === "extension") {
+      if (children !== undefined) return children;
       const ExtensionPage = extensionKey
         ? extensionWorkspacePage(extensionKey)?.page.component
         : undefined;
@@ -358,14 +377,16 @@ export function KnowledgeNetworkWorkspaceScene({
     }
 
     return (
-      <WorkspaceResourceSection
-        canDelete={canDelete}
-        canModify={canModify}
-        data={workspaceData}
-        networkId={activeNetworkId}
-        networkName={detail?.name ?? activeNetworkId}
-        section={section}
-      />
+      <Suspense fallback={null}>
+        <WorkspaceResourceSection
+          canDelete={canDelete}
+          canModify={canModify}
+          data={workspaceData}
+          networkId={activeNetworkId}
+          networkName={detail?.name ?? activeNetworkId}
+          section={section}
+        />
+      </Suspense>
     );
   };
   return (
@@ -384,13 +405,18 @@ export function KnowledgeNetworkWorkspaceScene({
                     {t("knowledgeNetwork.workspaceAbilityVerification")}
                   </div>
                 )}
-                {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+                {experienceNavItems
+                  .filter((item) => item.key !== "evals")
+                  .map((item) => renderSideNavItem(item, { showCount: false }))}
                 <WorkspaceExtensionNavItems
                   activeKey={activeExtensionKey}
                   collapsed={sideCollapsed}
                   hiddenKeys={hiddenNavigation}
                   networkId={activeNetworkId}
                 />
+                {experienceNavItems
+                  .filter((item) => item.key === "evals")
+                  .map((item) => renderSideNavItem(item, { showCount: false }))}
               </>
             ) : null}
             {/* Shown only while another build lists an entry there. */}
@@ -462,7 +488,7 @@ export function KnowledgeNetworkWorkspaceScene({
               type="warning"
             />
           ) : null}
-          {section === "overview" ? (
+          {section === "overview" || (section === "extension" && children !== undefined) ? (
             renderSectionContent()
           ) : (
             <div
