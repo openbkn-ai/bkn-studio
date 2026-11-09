@@ -7,16 +7,24 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
 import { EvalRoutePage } from "./EvalRoutePage";
 import type { EvalTab } from "./types";
 import { defaultCaseFilters, type EvalCaseFilters } from "./eval-case-navigation";
 
-const access = vi.hoisted(() => ({ status: "allowed" }));
+const access = vi.hoisted(() => ({ status: "allowed", ids: [] as string[], retry: vi.fn() }));
+beforeEach(() => {
+  access.status = "allowed";
+  access.ids = [];
+  access.retry.mockReset();
+});
 vi.mock("./useEvalAccess", () => ({
-  useEvalAccess: () => ({ status: access.status, retry: vi.fn() }),
+  useEvalAccess: (networkId: string) => {
+    access.ids.push(networkId);
+    return { status: access.status, retry: access.retry };
+  },
 }));
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -217,4 +225,25 @@ it("does not mount Eval content when backend admission denies the current user",
   expect(screen.getByText("knowledgeNetwork.eval.access.denied")).toBeTruthy();
   expect(screen.queryByTitle("knowledgeNetwork.eval.title")).toBeNull();
   access.status = "allowed";
+});
+
+it("shares page admission with navigation and synchronizes both after retry", () => {
+  access.status = "failed";
+  const page = () => (
+    <MemoryRouter initialEntries={["/knowledge-network/workspace/supply/evals"]}>
+      <Routes>
+        <Route path="/knowledge-network/workspace/:networkId/evals" element={<EvalRoutePage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+  const { rerender } = render(page());
+  expect(access.ids).toEqual(["supply", ""]);
+  expect(screen.queryByTitle("knowledgeNetwork.eval.title")).toBeNull();
+  fireEvent.click(screen.getByText("knowledgeNetwork.eval.access.retry"));
+  expect(access.retry).toHaveBeenCalledOnce();
+  access.status = "allowed";
+  rerender(page());
+  expect(screen.getByText("Eval content: supply")).toBeTruthy();
+  expect(screen.getByTitle("knowledgeNetwork.eval.title")).toBeTruthy();
+  expect(access.ids).toEqual(["supply", "", "supply", ""]);
 });

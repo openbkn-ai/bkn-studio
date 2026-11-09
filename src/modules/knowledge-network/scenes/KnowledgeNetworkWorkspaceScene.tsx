@@ -84,6 +84,7 @@ function formatNavCount(count?: number) {
 export function KnowledgeNetworkWorkspaceScene({
   extensionKey,
   children,
+  evalAccessAllowed,
   networkId,
   section,
 }: KnowledgeNetworkWorkspaceSceneProps) {
@@ -94,7 +95,8 @@ export function KnowledgeNetworkWorkspaceScene({
   const { hiddenNavigation } = useRuntimeConfig();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
-  const evalAccess = useEvalAccess(activeNetworkId);
+  const evalAccess = useEvalAccess(evalAccessAllowed === undefined ? activeNetworkId : "");
+  const showEval = evalAccessAllowed ?? evalAccess.status === "allowed";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
   const kbMode = useBknProjectKbMode();
   const workspaceData = useWorkspaceData(activeNetworkId, section);
@@ -226,19 +228,9 @@ export function KnowledgeNetworkWorkspaceScene({
 
     // Entries for services this deployment does not run (RuntimeConfig.hiddenNavigation).
     return items.filter(
-      (item) =>
-        !hiddenNavigation.includes(item.key) &&
-        (item.key !== "evals" || evalAccess.status === "allowed"),
+      (item) => !hiddenNavigation.includes(item.key) && (item.key !== "evals" || showEval),
     );
-  }, [
-    activeNetworkId,
-    detail,
-    hiddenNavigation,
-    kbMode,
-    objectMetricsCapability,
-    evalAccess.status,
-    t,
-  ]);
+  }, [activeNetworkId, detail, hiddenNavigation, kbMode, objectMetricsCapability, showEval, t]);
 
   const primaryNavItems = navigationItems.filter(
     (item) => item.key === "overview" || item.key === "develop",
@@ -496,13 +488,14 @@ export function KnowledgeNetworkWorkspaceScene({
               type="warning"
             />
           ) : null}
-          {section === "overview" || section === "extension" ? (
+          {section === "overview" || (section === "extension" && children !== undefined) ? (
             renderSectionContent()
           ) : (
             <div
               className={
                 section === "experience-agent" ||
                 section === "experience-cypher" ||
+                section === "extension" ||
                 section === "metrics" ||
                 section === "object-types" ||
                 section === "relation-types" ||

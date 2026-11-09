@@ -36,6 +36,8 @@ export type KnowledgeNetworkWorkspaceSceneProps = {
   section: KnowledgeNetworkWorkspaceSection;
   /** With section "extension": the sidebar entry whose page is shown, by key. */
   extensionKey?: string;
+  /** Reuse admission already obtained by an embedded Eval page; other pages probe admission. */
+  evalAccessAllowed?: boolean;
   /** Inline workspace content for built-in, capability-gated pages such as Eval. */
   children?: ReactNode;
 };

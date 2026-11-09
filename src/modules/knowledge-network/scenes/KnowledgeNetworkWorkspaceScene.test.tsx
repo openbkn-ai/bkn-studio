@@ -315,7 +315,9 @@ describe("KnowledgeNetworkWorkspaceScene extension pages", () => {
       </EntitlementContext.Provider>,
     );
 
-    expect(screen.getByText("analysis list")).toBeTruthy();
+    const page = screen.getByText("analysis list");
+    expect(page.parentElement?.className).toMatch(/workspaceSectionPage/);
+    expect(page.parentElement?.className).toMatch(/workspaceSectionFlush/);
     // The workspace's own entries are still there.
     expect(screen.getByRole("button", { name: /workspaceObjectTypes/ })).toBeTruthy();
     resetExtensionsForTesting();
@@ -339,3 +341,18 @@ it.each(["object-types", "experience-agent"] as const)(
     ).toBeTruthy();
   },
 );
+
+it("lets embedded Eval content own its layout while retaining workspace navigation", () => {
+  mocks.hiddenNavigation = [];
+  render(
+    <EntitlementContext.Provider
+      value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+    >
+      <KnowledgeNetworkWorkspaceScene networkId="network-1" section="extension" evalAccessAllowed>
+        <div data-testid="embedded-eval">Eval content</div>
+      </KnowledgeNetworkWorkspaceScene>
+    </EntitlementContext.Provider>,
+  );
+  expect(screen.getByTestId("embedded-eval").parentElement?.tagName).toBe("MAIN");
+  expect(screen.getByTitle("质量评测")).toBeTruthy();
+});

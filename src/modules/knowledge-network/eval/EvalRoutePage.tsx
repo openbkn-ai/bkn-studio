@@ -40,7 +40,11 @@ export function EvalRoutePage() {
   return (
     <KnowledgeNetworkResourceConfigStandalonePage>
       <div className={styles.routeHost}>
-        <KnowledgeNetworkWorkspaceScene networkId={networkId} section="extension">
+        <KnowledgeNetworkWorkspaceScene
+          networkId={networkId}
+          section="extension"
+          evalAccessAllowed={status === "allowed"}
+        >
           {status === "allowed" ? (
             <EvalWorkspaceScene
               key={networkId}
