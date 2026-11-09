@@ -18,6 +18,7 @@ const BUILTIN_AGENT_IDS: readonly string[] = [
   "bkn-project-requirements",
   "bkn-project-answer-judge",
   "bkn-project-ontology-ask",
+  "bkn-project-document-ask",
   "bkn-project-concept-extraction",
   "bkn-project-document-extraction",
 ];
@@ -30,6 +31,7 @@ const LEGACY_BUILTIN_IDS: readonly string[] = [
   "bkn-project-requirements",
   "bkn-project-answer-judge",
   "bkn-project-ontology-ask",
+  "bkn-project-document-ask",
   "bkn-project-concept-extraction",
   "bkn-project-document-extraction",
 ];

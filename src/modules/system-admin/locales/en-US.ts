@@ -1307,6 +1307,7 @@ export const systemAdminEnUS = {
         "bkn-project-requirements": "BKNProjectRequirements",
         "bkn-project-answer-judge": "BKNProjectAnswerJudge",
         "bkn-project-ontology-ask": "BKNProjectOntologyAsk",
+        "bkn-project-document-ask": "BKNProjectDocumentAsk",
         "bkn-project-concept-extraction": "BKNProjectConceptExtraction",
         "bkn-project-document-extraction": "BKNProjectDocumentExtraction",
       },
@@ -1323,6 +1324,7 @@ export const systemAdminEnUS = {
         "bkn-project-requirements": "Project - Requirements",
         "bkn-project-answer-judge": "Project - Regression Judge",
         "bkn-project-ontology-ask": "Project - Ontology Assistant",
+        "bkn-project-document-ask": "Project - Document Ontology Assistant",
       },
       builtinDescriptions: {
         "bkn-project-document-extraction":
@@ -1335,6 +1337,8 @@ export const systemAdminEnUS = {
           "After a project release, judges whether each answer on the new knowledge network answers its scenario question, for the regression.",
         "bkn-project-ontology-ask":
           "Answers questions about an object type or relation type being modelled, and proposes changes the modeller can review and save.",
+        "bkn-project-document-ask":
+          "Used when a project includes knowledge-base documents: answers questions about an object type or relation type being modelled, including those extracted from documents, and proposes changes the modeller can review and save.",
       },
       intro:
         "This configuration is shared by every knowledge network. Network settings and personal preferences can only add instructions or narrow tools and limits on top of it.",

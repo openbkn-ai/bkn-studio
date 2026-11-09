@@ -1209,6 +1209,7 @@ export const systemAdminZhCN = {
         "bkn-project-requirements": "BKNProjectRequirements",
         "bkn-project-answer-judge": "BKNProjectAnswerJudge",
         "bkn-project-ontology-ask": "BKNProjectOntologyAsk",
+        "bkn-project-document-ask": "BKNProjectDocumentAsk",
         "bkn-project-concept-extraction": "BKNProjectConceptExtraction",
         "bkn-project-document-extraction": "BKNProjectDocumentExtraction",
       },
@@ -1225,6 +1226,7 @@ export const systemAdminZhCN = {
         "bkn-project-requirements": "项目管理 - 需求起草",
         "bkn-project-answer-judge": "项目管理 - 回归判答",
         "bkn-project-ontology-ask": "项目管理 - 本体建模助手",
+        "bkn-project-document-ask": "项目管理 - 文档本体建模助手",
       },
       builtinDescriptions: {
         "bkn-project-document-extraction":
@@ -1237,6 +1239,8 @@ export const systemAdminZhCN = {
           "项目发布后，判断新知识网络上的回答是否答到了对应的场景问题，用于回归测试。",
         "bkn-project-ontology-ask":
           "回答正在建模的对象类或关系类的相关问题，并提出修改建议，由建模人审核后保存。",
+        "bkn-project-document-ask":
+          "项目里有知识库文档时使用：回答正在建模的对象类或关系类（包括从文档抽取的）的相关问题，并提出修改建议，由建模人审核后保存。",
       },
       intro:
         "这里是所有知识网络共用的配置。各网络的配置和用户个人偏好只能在此基础上追加提示词、收窄工具和限制。",

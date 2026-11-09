@@ -106,6 +106,12 @@ it.each([
     "项目管理 - 本体建模助手",
     "Project - Ontology Assistant",
   ],
+  [
+    "bkn-project-document-ask",
+    "BKNProjectDocumentAsk",
+    "项目管理 - 文档本体建模助手",
+    "Project - Document Ontology Assistant",
+  ],
 ])("names the project Agent %s, seeded as %s, in either language", (agent_id, stored, zh, en) => {
   for (const name of [stored, zh, en]) {
     expect(agentDisplayName({ agent_id, name }, i18n.getFixedT("zh-CN"))).toBe(zh);
@@ -125,6 +131,15 @@ it("describes the project Agents in either language, and no other Agent", () => 
   expect(en).toContain("object type or relation type");
   expect(agentDescription({ agent_id: "graph_explorer" }, i18n.getFixedT("en-US"))).toBe("");
   expect(agentDescription({ agent_id: "custom-agent" }, i18n.getFixedT("en-US"))).toBe("");
+});
+
+it("describes the document ontology assistant by when it is used", () => {
+  expect(
+    agentDescription({ agent_id: "bkn-project-document-ask" }, i18n.getFixedT("zh-CN")),
+  ).toContain("知识库文档");
+  expect(
+    agentDescription({ agent_id: "bkn-project-document-ask" }, i18n.getFixedT("en-US")),
+  ).toContain("knowledge-base documents");
 });
 
 it("describes concept extraction as proposals from samples requiring confirmation", () => {
