@@ -200,8 +200,8 @@ export function ViewEditorScene({
         const currentView = resourceId ? await getCatalogResource(resourceId) : null;
         const targetId = currentView?.catalogId ?? catalogId;
         const target = targetId ? await getCatalog(targetId, { skipErrorToast: true }) : null;
-        const currentSource = currentView?.logicDefinition?.sourceResourceId
-          ? await getCatalogResource(currentView.logicDefinition.sourceResourceId)
+        const currentSource = currentView?.logicalViewDefinition?.sourceResourceId
+          ? await getCatalogResource(currentView.logicalViewDefinition.sourceResourceId)
           : null;
         if (cancelled) return;
         setCatalog(target);
@@ -217,7 +217,7 @@ export function ViewEditorScene({
             displayName: field.displayName || field.name,
           })) ?? [];
         setFields(viewFields);
-        const existingFilter = currentView?.logicDefinition?.filterCondition;
+        const existingFilter = currentView?.logicalViewDefinition?.filterCondition;
         const parsed = parseFilterCondition(existingFilter, sourceFilterQueryPath(currentSource));
         const cannotEditFilter = Boolean(existingFilter) && parsed === null;
         const existingFilterError =
@@ -495,7 +495,7 @@ export function ViewEditorScene({
         })),
         sourceResourceId: source.id,
         filterCondition: unsupportedFilter
-          ? view?.logicDefinition?.filterCondition
+          ? view?.logicalViewDefinition?.filterCondition
           : filterToBackend(filter, latestSource.schema, sourceFilterQueryPath(latestSource)),
         tags: tags.map(normalizeVegaTag),
       };
@@ -540,8 +540,8 @@ export function ViewEditorScene({
     resourceId &&
     (!view ||
       view.category !== "logical_view" ||
-      view.logicType !== "derived" ||
-      !view.logicDefinition)
+      view.logicalType !== "derived" ||
+      !view.logicalViewDefinition)
   ) {
     return (
       <section className={styles.page}>
@@ -965,7 +965,7 @@ export function ViewEditorScene({
                             autoSize={{ minRows: 3, maxRows: 12 }}
                             value={formatPrecisionSafeJSON(
                               transformPrecisionSafeJSONRequest(
-                                view?.logicDefinition?.filterCondition,
+                                view?.logicalViewDefinition?.filterCondition,
                               ),
                             )}
                           />

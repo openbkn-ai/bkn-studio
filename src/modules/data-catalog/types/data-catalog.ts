@@ -90,9 +90,9 @@ export type CatalogResource = {
   localIndexName?: string;
   /** Authoritative query availability of the Resource's local index. */
   localIndexStatus: ResourceLocalIndexStatus;
-  /** Present on a logic view detail response. List results may only carry logicType. */
-  logicDefinition?: DerivedLogicDefinition;
-  logicType?: "derived" | "composite";
+  /** Present on a logic view detail response. List results may only carry logicalType. */
+  logicalViewDefinition?: DerivedLogicalViewDefinition;
+  logicalType?: "derived" | "composite";
   name: string;
   /** Effective operations for the current account on this Resource. */
   operations?: string[];
@@ -146,7 +146,7 @@ export type ResourceUpdateInput = ResourceCreateInput & {
   expectedUpdateTime: number;
 };
 
-export type DerivedLogicDefinition = {
+export type DerivedLogicalViewDefinition = {
   sourceResourceId: string;
   filterCondition?: Record<string, unknown> | null;
 };
