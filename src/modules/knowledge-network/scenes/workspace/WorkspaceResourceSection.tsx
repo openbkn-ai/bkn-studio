@@ -16,6 +16,7 @@ import { ConceptGroupListPanel } from "@/modules/knowledge-network/components/co
 import { ObjectMetricListPanel } from "@/modules/knowledge-network/components/object-metric/ObjectMetricListPanel";
 import { ObjectTypeListPanel } from "@/modules/knowledge-network/components/object-type/ObjectTypeListPanel";
 import { RelationTypeListPanel } from "@/modules/knowledge-network/components/relation-type/RelationTypeListPanel";
+import { useRelationTypeDeleteRefusal } from "@/modules/knowledge-network/components/relation-type/relation-type-delete-refusal";
 import {
   deleteKnowledgeNetworkActionType,
   deleteKnowledgeNetworkConceptGroup,
@@ -65,6 +66,7 @@ export function WorkspaceResourceSection({
 }: WorkspaceResourceSectionProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
+  const showRelationTypeDeleteError = useRelationTypeDeleteRefusal();
 
   switch (section) {
     case "concept-groups":
@@ -113,9 +115,14 @@ export function WorkspaceResourceSection({
           networkId={networkId}
           networkName={networkName}
           onDelete={async (records) => {
-            await Promise.all(
-              records.map((record) => deleteKnowledgeNetworkRelationType(networkId, record.id)),
-            );
+            try {
+              await Promise.all(
+                records.map((record) => deleteKnowledgeNetworkRelationType(networkId, record.id)),
+              );
+            } catch (error) {
+              showRelationTypeDeleteError(error, records);
+              return;
+            }
             void message.success(t("common.success"));
           }}
         />

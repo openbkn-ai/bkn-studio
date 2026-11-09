@@ -21,6 +21,7 @@ import {
   validateRelationTypeMappingValues,
   type RelationTypeMappingFormValues,
 } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor";
+import { useRelationPropertyGuard } from "@/modules/knowledge-network/components/relation-type/relation-property-guard";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
@@ -45,6 +46,7 @@ export function RelationTypeMappingScene() {
     relationTypeId: string;
   }>();
   const [detail, setDetail] = useState<RelationTypeDetail | null>(null);
+  const confirmRelationPropertyChange = useRelationPropertyGuard();
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [mappingValue, setMappingValue] = useState<RelationTypeMappingFormValues>(
     createDefaultRelationTypeMappingValues(),
@@ -152,9 +154,13 @@ export function RelationTypeMappingScene() {
       ) : (
         <div className={styles.mappingFormPanel}>
           <RelationTypeMappingEditor
+            confirmRelationPropertyChange={confirmRelationPropertyChange}
             networkId={networkId}
             objectTypes={objectTypes}
             onChange={setMappingValue}
+            relationProperties={
+              mappingValue.mappingMode === "resource" ? detail?.relationProperties : undefined
+            }
             value={mappingValue}
           />
         </div>

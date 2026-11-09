@@ -16,6 +16,7 @@ import { capabilityPart } from "./capability";
 import { packageImportPart } from "./package-import";
 import { declarationsPart } from "./declarations";
 import { propertyDeclarationsPart } from "./property-declarations";
+import { relationDeclarationsPart } from "./relation-declarations";
 import { valueTypesPart } from "./value-types";
 import { knowledgeBasePart } from "./knowledge-base";
 import { propertyAuthorizationPart } from "./property-authorization";
@@ -39,6 +40,7 @@ export const knowledgeNetworkEnUS = {
     ...packageImportPart,
     ...declarationsPart,
     ...propertyDeclarationsPart,
+    ...relationDeclarationsPart,
     ...valueTypesPart,
     ...knowledgeBasePart,
     ...propertyAuthorizationPart,

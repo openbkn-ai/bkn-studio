@@ -42,7 +42,11 @@ import type {
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import { mapPropertyDeclarations, propertyDeclarationPatch } from "./declarations";
-import { mapRelationTypeMappingsFromBackend } from "./relation-type.mapper";
+import { mapRelationDeclarations } from "./declarations";
+import {
+  mapRelationTypeMappingsFromBackend,
+  mapStoredRelationProperties,
+} from "./relation-type.mapper";
 
 export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNetworkRecord {
   return {
@@ -485,12 +489,24 @@ export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRela
     tags: item.tags ?? [],
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
+    ...withRelationDeclarations(item),
+  };
+}
+
+function withRelationDeclarations(
+  item: BackendRelationType,
+): Pick<KnowledgeNetworkRelationTypeRecord, "declarations" | "deprecated"> {
+  const declarations = mapRelationDeclarations(item);
+  return {
+    ...(declarations ? { declarations } : {}),
+    ...(item.lifecycle?.status === "deprecated" ? { deprecated: true } : {}),
   };
 }
 
 export function mapRelationTypeDetail(item: BackendRelationType): RelationTypeDetail {
   const record = mapRelationType(item);
   const mappings = mapRelationTypeMappingsFromBackend(item.mapping_rules, record.mappingMode);
+  const relationProperties = mapStoredRelationProperties(item.mapping_rules);
 
   return {
     ...record,
@@ -498,6 +514,7 @@ export function mapRelationTypeDetail(item: BackendRelationType): RelationTypeDe
     backingDataSourceName: mappings.backingDataSourceName,
     resourceMappings: mappings.resourceMappings,
     propertyMappings: mappings.propertyMappings,
+    ...(relationProperties.length ? { relationProperties } : {}),
   };
 }
 

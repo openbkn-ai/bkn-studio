@@ -30,6 +30,7 @@ import {
   ObjectTypeResourceGraph,
   type ObjectTypeGraphSelectedResource,
 } from "@/modules/knowledge-network/components/object-type/ObjectTypeResourceGraph";
+import { RelationDeclarationName } from "@/modules/knowledge-network/components/relation-type/RelationDeclarationTags";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
@@ -421,7 +422,9 @@ export function RelationTypeListPanel({
           <span className={styles.objectIconSquare} style={{ backgroundColor: "#5381DF" }}>
             <ApartmentOutlined />
           </span>
-          <span className={styles.objectName}>{value}</span>
+          <RelationDeclarationName declarations={record.declarations} relationTypes={items}>
+            <span className={styles.objectName}>{value}</span>
+          </RelationDeclarationName>
         </div>
       ),
     },

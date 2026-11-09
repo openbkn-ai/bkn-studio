@@ -39,11 +39,27 @@ import {
   syncKnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/services/mock/state";
 import {
+  readStillReferencedRefusal,
+  RelationTypeStillReferencedError,
+} from "@/modules/knowledge-network/services/shared/declaration-errors";
+import {
   formatTimestamp,
   rethrowImportConflict,
   useMock,
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
+import { normalizeRelationDeclarations } from "@/modules/knowledge-network/utils/relation-declarations";
+
+/** What a mock save stores: the declarations it edits, or the ones the relation had. */
+function withMockDeclarations(
+  item: KnowledgeNetworkRelationTypeRecord | undefined,
+  input: KnowledgeNetworkRelationTypeMutationPayload,
+): Pick<KnowledgeNetworkRelationTypeRecord, "declarations"> {
+  const declarations = input.declarationEdit
+    ? normalizeRelationDeclarations(input.declarationEdit.current)
+    : item?.declarations;
+  return { declarations };
+}
 
 function resolveRelationTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
   if (typeof fallbackId === "string" && fallbackId.trim()) {
@@ -177,9 +193,10 @@ export async function listKnowledgeNetworkRelationTypePage(
       return query.direction === "asc" ? result : -result;
     });
     return wait({
-      entries: sorted
-        .slice(query.offset, query.offset + query.limit)
-        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      entries: (query.limit < 0
+        ? sorted
+        : sorted.slice(query.offset, query.offset + query.limit)
+      ).map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
       totalCount: sorted.length,
     });
   }
@@ -297,6 +314,7 @@ export async function createKnowledgeNetworkRelationType(
       tags: input.tags,
       updateTime: formatTimestamp(Date.now()),
       updaterName: "Local Admin",
+      ...withMockDeclarations(undefined, input),
     };
 
     mockRelationTypes[networkId] = [nextItem, ...(mockRelationTypes[networkId] ?? [])];
@@ -308,9 +326,12 @@ export async function createKnowledgeNetworkRelationType(
 
   const response = await http.post<
     SingleEntryResponse<BackendRelationType> | Array<{ id?: string }>
-  >(`/bkn-backend/v1/knowledge-networks/${networkId}/relation-types`, {
-    entries: [toBackendRelationTypeCreateEntry(input)],
-  });
+  >(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/relation-types`,
+    { entries: [toBackendRelationTypeCreateEntry(input)] },
+    // The callers say why a save failed, a refusal of its declarations in place.
+    { skipErrorToast: true },
+  );
 
   const record = unwrapSingleEntryResponse(response.data);
   if (isBackendRelationTypeRecord(record)) {
@@ -348,6 +369,7 @@ export async function updateKnowledgeNetworkRelationType(
             tags: input.tags,
             updateTime: formatTimestamp(Date.now()),
             updaterName: "Local Admin",
+            ...withMockDeclarations(item, input),
           }
         : item,
     );
@@ -362,6 +384,8 @@ export async function updateKnowledgeNetworkRelationType(
   const response = await http.put<SingleEntryResponse<BackendRelationType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/relation-types/${relationTypeId}`,
     toBackendRelationTypeUpdatePayload(input),
+    // The callers say why a save failed, a refusal of its declarations in place.
+    { skipErrorToast: true },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -385,9 +409,16 @@ export async function deleteKnowledgeNetworkRelationType(
     return;
   }
 
-  await http.delete(
-    `/bkn-backend/v1/knowledge-networks/${networkId}/relation-types/${relationTypeId}`,
-  );
+  try {
+    await http.delete(
+      `/bkn-backend/v1/knowledge-networks/${networkId}/relation-types/${relationTypeId}`,
+      { skipErrorToast: true },
+    );
+  } catch (error) {
+    const refusal = readStillReferencedRefusal(error);
+    // The callers show the definitions that refer to it, or say why else the delete failed.
+    throw refusal ? new RelationTypeStillReferencedError(relationTypeId, refusal) : error;
+  }
 }
 
 export async function importKnowledgeNetworkRelationTypes(
