@@ -137,14 +137,18 @@ describe("mapRelationDeclarations", () => {
     ).toEqual({ constraintsPassthrough: { acyclic: true }, requiredEnds: ["source", "target"] });
   });
 
-  it("reads a deprecated relation as deprecated", () => {
-    expect(
-      mapRelationType({
-        id: "order_by_legacy_doctor",
-        lifecycle: { reason: "Old codes", status: "deprecated" },
-        name: "开单医生（旧编码）",
-      }).deprecated,
-    ).toBe(true);
+  it("reads the aliases and lifecycle apart from the relation's own declarations", () => {
+    const record = mapRelationType({
+      aliases: ["开单人"],
+      id: "order_by_legacy_doctor",
+      lifecycle: { reason: "Old codes", replaced_by: "order_by_doctor", status: "deprecated" },
+      name: "开单医生（旧编码）",
+    });
+    expect(record.definitionDeclarations).toEqual({
+      aliases: ["开单人"],
+      lifecycle: { reason: "Old codes", replacedBy: "order_by_doctor", status: "deprecated" },
+    });
+    expect(record.declarations).toBeUndefined();
   });
 
   it("reads the relation properties an indirect relation stores, by name", () => {
@@ -245,6 +249,37 @@ describe("relation type save", () => {
         save({ declarationEdit: { baseline, current: { ...baseline, reverseName: "医生" } } }),
       ),
     ).toMatchObject({ reverse_name: "医生" });
+  });
+
+  it("sends no alias or lifecycle for a relation saved with them unchanged", () => {
+    const stored = { aliases: ["所属科室"] };
+    expect(
+      toBackendRelationTypeUpdatePayload(
+        save({
+          definitionDeclarationEdit: { baseline: stored, current: { aliases: ["所属科室"] } },
+        }),
+      ),
+    ).toEqual(toBackendRelationTypeUpdatePayload(save()));
+  });
+
+  it("sends the lifecycle whole when deprecated, and null when set back in use", () => {
+    const lifecycle = {
+      reason: "改用新编码",
+      replacedBy: "doctor_in_dept_v2",
+      status: "deprecated",
+    } as const;
+    expect(
+      toBackendRelationTypeUpdatePayload(
+        save({ definitionDeclarationEdit: { current: { lifecycle } } }),
+      ),
+    ).toMatchObject({
+      lifecycle: { reason: "改用新编码", replaced_by: "doctor_in_dept_v2", status: "deprecated" },
+    });
+    const body = toBackendRelationTypeUpdatePayload(
+      save({ definitionDeclarationEdit: { baseline: { lifecycle }, current: undefined } }),
+    );
+    expect(body).toHaveProperty("lifecycle", null);
+    expect(body).not.toHaveProperty("aliases");
   });
 
   it("never sends the relation properties, so the backend keeps them", () => {

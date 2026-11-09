@@ -5,7 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { RelationDeclarations } from "./declarations";
+import type {
+  DefinitionDeclarationEdit,
+  DefinitionDeclarations,
+  RelationDeclarations,
+} from "./declarations";
 
 export type RelationTypePropertyMapping = {
   sourcePropertyName: string;
@@ -38,8 +42,11 @@ export type KnowledgeNetworkRelationTypeRecord = {
   color: string;
   /** BKN spec 3.0 declarations; absent when the relation type makes none. */
   declarations?: RelationDeclarations;
-  /** BKN spec 3.0 lifecycle `deprecated`. A deprecated relation is no fallback path's primary. */
-  deprecated?: boolean;
+  /**
+   * Its aliases and lifecycle, which every kind of definition has; absent when it declares
+   * neither. A deprecated relation is no fallback path's primary.
+   */
+  definitionDeclarations?: DefinitionDeclarations;
   description: string;
   id: string;
   mappingMode: "direct" | "resource";
@@ -87,6 +94,8 @@ export type KnowledgeNetworkRelationTypeMutationPayload = {
    * sends no declaration and the backend keeps the stored ones.
    */
   declarationEdit?: RelationDeclarationEdit;
+  /** Present on a save that edits the aliases or lifecycle, as `declarationEdit` is. */
+  definitionDeclarationEdit?: DefinitionDeclarationEdit;
   description: string;
   id?: string;
   mappingMode: "direct" | "resource";

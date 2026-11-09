@@ -689,6 +689,7 @@ export const mockObjectTypeResourceFields: Record<
 export const mockRelationTypes: Record<string, KnowledgeNetworkRelationTypeRecord[]> = {
   "kn-domain-risk": [
     {
+      definitionDeclarations: { aliases: ["风险绑定"] },
       id: "rt-risk-bind",
       name: "Bind Relation",
       description: "Association between a risk account and a device.",

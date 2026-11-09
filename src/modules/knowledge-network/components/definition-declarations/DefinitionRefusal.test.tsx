@@ -19,7 +19,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
-import { RelationDeclarationRefusal } from "./RelationDeclarationRefusal";
+import { DefinitionRefusal } from "./DefinitionRefusal";
 
 afterEach(cleanup);
 
@@ -30,14 +30,14 @@ const refusal = {
     'relation type "order_for_patient_by_phone" fallback_for "order_for_patient": relation type "order_for_patient_by_id_card" is already its fallback path; a primary relation has one',
 };
 
-describe("RelationDeclarationRefusal", () => {
-  it("links each other relation type the details name, but not the one saved", () => {
+describe("DefinitionRefusal", () => {
+  it("links each other definition the details name, but not the one saved", () => {
     renderWithoutAntdStyles(
       <MemoryRouter>
-        <RelationDeclarationRefusal
+        <DefinitionRefusal
           networkId="clinic"
           refusal={refusal}
-          relationTypeId="order_for_patient_by_phone"
+          saved={{ id: "order_for_patient_by_phone", kind: "relation_type" }}
         />
       </MemoryRouter>,
     );
@@ -48,5 +48,24 @@ describe("RelationDeclarationRefusal", () => {
       "/knowledge-network/workspace/clinic/relation-types/order_for_patient_by_id_card/detail",
     ]);
     expect(screen.getByText(refusal.details)).toBeTruthy();
+  });
+
+  it("links the definitions of other kinds an alias refusal names", () => {
+    renderWithoutAntdStyles(
+      <MemoryRouter>
+        <DefinitionRefusal
+          networkId="clinic"
+          refusal={{
+            description: "Invalid declarations",
+            details: 'relation type "treats" alias "主治" is the name of object type "doctor"',
+          }}
+          saved={{ id: "treats", kind: "relation_type" }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link").getAttribute("href")).toBe(
+      "/knowledge-network/workspace/clinic/object-types/doctor/detail",
+    );
   });
 });

@@ -13,7 +13,12 @@ import type {
   StoredRelationProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { type BackendRelationDeclarationFields, relationDeclarationPatch } from "./declarations";
+import {
+  type BackendDefinitionDeclarationFields,
+  type BackendRelationDeclarationFields,
+  definitionDeclarationPatch,
+  relationDeclarationPatch,
+} from "./declarations";
 
 export type BackendRelationPropertyMapping = {
   source_property?: {
@@ -50,19 +55,20 @@ export type BackendRelationProperty = {
   name?: string;
 };
 
-export type BackendRelationTypeCreateEntry = BackendRelationDeclarationFields & {
-  branch: "main";
-  color?: string;
-  comment?: string;
-  id?: string;
-  mapping_mode?: "direct" | "indirect";
-  mapping_rules?: BackendRelationTypeMappingRules;
-  name: string;
-  source_object_type_id: string;
-  tags?: string[];
-  target_object_type_id: string;
-  type?: "direct" | "indirect";
-};
+export type BackendRelationTypeCreateEntry = BackendRelationDeclarationFields &
+  BackendDefinitionDeclarationFields & {
+    branch: "main";
+    color?: string;
+    comment?: string;
+    id?: string;
+    mapping_mode?: "direct" | "indirect";
+    mapping_rules?: BackendRelationTypeMappingRules;
+    name: string;
+    source_object_type_id: string;
+    tags?: string[];
+    target_object_type_id: string;
+    type?: "direct" | "indirect";
+  };
 
 export type BackendRelationTypeUpdatePayload = BackendRelationTypeCreateEntry;
 
@@ -249,8 +255,14 @@ export function toBackendRelationTypeCreateEntry(
   const declarations = input.declarationEdit
     ? relationDeclarationPatch(input.declarationEdit.current, input.declarationEdit.baseline)
     : {};
+  const definitionDeclarations = input.definitionDeclarationEdit
+    ? definitionDeclarationPatch(
+        input.definitionDeclarationEdit.current,
+        input.definitionDeclarationEdit.baseline,
+      )
+    : {};
 
-  return { ...appendMappingRules(payload, input), ...declarations };
+  return { ...appendMappingRules(payload, input), ...declarations, ...definitionDeclarations };
 }
 
 export function toBackendRelationTypeUpdatePayload(

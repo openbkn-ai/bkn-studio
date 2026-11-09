@@ -508,11 +508,12 @@ export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRela
 
 function withRelationDeclarations(
   item: BackendRelationType,
-): Pick<KnowledgeNetworkRelationTypeRecord, "declarations" | "deprecated"> {
+): Pick<KnowledgeNetworkRelationTypeRecord, "declarations" | "definitionDeclarations"> {
   const declarations = mapRelationDeclarations(item);
+  const definitionDeclarations = mapDefinitionDeclarations(item);
   return {
     ...(declarations ? { declarations } : {}),
-    ...(item.lifecycle?.status === "deprecated" ? { deprecated: true } : {}),
+    ...(definitionDeclarations ? { definitionDeclarations } : {}),
   };
 }
 

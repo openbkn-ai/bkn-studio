@@ -29,6 +29,11 @@ export const relationDeclarationsPart = {
       ends: "起点与终点不再是同一对象类，清除了特性。",
       symmetric: "对称关系没有方向，清除了{{names}}。",
     },
+    clearedOnSave: {
+      content: "起点与终点不再是同一对象类，保存时会一并清除这条关系声明的特性（对称、传递）。",
+      ok: "清除并保存",
+      title: "保存会清除特性",
+    },
     clearedName: {
       cardinality: "一对多或多对一的基数",
       characteristics: "特性",
@@ -41,10 +46,6 @@ export const relationDeclarationsPart = {
       exactlyOne: "每个{{from}}恰好对应一个{{to}}",
       oneOrMore: "每个{{from}}对应一个或多个{{to}}",
       several: "一个{{from}}可以有多个{{to}}",
-    },
-    deleteRefused: {
-      references: "引用它的定义",
-      title: "不能删除「{{name}}」",
     },
     fallbackFor: "替代路径",
     fallbackForHint:
@@ -80,8 +81,6 @@ export const relationDeclarationsPart = {
     },
     notDeclared: "未声明",
     note: "BKN 3.0 · 都可以不填",
-    refusalOpen: "查看 {{name}}",
-    refusalTitle: "后端没有接受关系声明：{{description}}",
     relationProperties_one: "关系属性：{{count}} 个",
     relationProperties_other: "关系属性：{{count}} 个",
     relationPropertiesHint: "关系属性暂不能在 Studio 中编辑，保存关系类时保持不变。",

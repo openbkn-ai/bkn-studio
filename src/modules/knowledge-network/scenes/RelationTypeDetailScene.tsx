@@ -14,9 +14,11 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { DefinitionAliases } from "@/modules/knowledge-network/components/definition-declarations/DefinitionAliases";
+import { useDefinitionDeleteRefusal } from "@/modules/knowledge-network/components/definition-declarations/definition-delete-refusal";
+import { DeprecatedBanner } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedBanner";
 import { RelationDeclarationsSummary } from "@/modules/knowledge-network/components/relation-type/RelationDeclarationsSummary";
 import { RelationTypeMappingConfigTable } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingConfigTable";
-import { useRelationTypeDeleteRefusal } from "@/modules/knowledge-network/components/relation-type/relation-type-delete-refusal";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
@@ -55,7 +57,7 @@ export function RelationTypeDetailScene() {
   const [sameEndRelationTypes, setSameEndRelationTypes] = useState<
     KnowledgeNetworkRelationTypeRecord[]
   >([]);
-  const showDeleteError = useRelationTypeDeleteRefusal();
+  const showDeleteError = useDefinitionDeleteRefusal();
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
@@ -192,6 +194,11 @@ export function RelationTypeDetailScene() {
         title={detail.name}
       >
         <div className={styles.page}>
+          <DeprecatedBanner
+            declarations={detail.definitionDeclarations}
+            kind="relation_type"
+            networkId={networkId}
+          />
           <section className={styles.summaryCard}>
             <div className={styles.summaryHead}>
               <span className={styles.objectIconSquare} style={{ backgroundColor: detail.color }}>
@@ -210,6 +217,14 @@ export function RelationTypeDetailScene() {
               ) : (
                 <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
               )}
+            </div>
+            <div className={styles.tagRow}>
+              <span>{t("knowledgeNetwork.definitionDeclarations.aliases")}:</span>
+              <DefinitionAliases
+                aliases={detail.definitionDeclarations?.aliases}
+                emptyClassName={styles.placeholder}
+                rowClassName={styles.tagRow}
+              />
             </div>
             <div className={styles.metaRow}>
               <span>ID: {detail.id}</span>

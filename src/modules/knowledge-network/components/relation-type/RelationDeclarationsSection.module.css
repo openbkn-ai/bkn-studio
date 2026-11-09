@@ -64,33 +64,3 @@
     display: none;
   }
 }
-
-.refusal {
-  margin: 24px auto 0;
-  max-width: 1000px;
-}
-
-.refusalDetails {
-  margin: 0 0 4px;
-  word-break: break-word;
-}
-
-.refusalLinks {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-}
-
-.deleteRefusal p {
-  margin: 0 0 8px;
-}
-
-.deleteRefusal ul {
-  margin: 0;
-  padding-left: 20px;
-  word-break: break-word;
-}
-
-.deleteRefusalHeading {
-  color: var(--color-text-secondary);
-}
