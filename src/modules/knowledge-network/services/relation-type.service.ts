@@ -223,7 +223,11 @@ export async function listKnowledgeNetworkRelationTypePage(
   };
 }
 
-export async function getKnowledgeNetworkRelationType(networkId: string, relationTypeId: string) {
+export async function getKnowledgeNetworkRelationType(
+  networkId: string,
+  relationTypeId: string,
+  options: { skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
     return wait(
       (() => {
@@ -237,6 +241,7 @@ export async function getKnowledgeNetworkRelationType(networkId: string, relatio
 
   const response = await http.get<SingleEntryResponse<BackendRelationType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/relation-types/${relationTypeId}`,
+    { skipErrorToast: options.skipErrorToast },
   );
 
   const record = unwrapSingleEntryResponse(response.data);

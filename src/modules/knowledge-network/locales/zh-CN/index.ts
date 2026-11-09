@@ -16,6 +16,7 @@ import { capabilityPart } from "./capability";
 import { packageImportPart } from "./package-import";
 import { declarationsPart } from "./declarations";
 import { propertyDeclarationsPart } from "./property-declarations";
+import { definitionDeclarationsPart } from "./definition-declarations";
 import { relationDeclarationsPart } from "./relation-declarations";
 import { valueTypesPart } from "./value-types";
 import { knowledgeBasePart } from "./knowledge-base";
@@ -40,6 +41,7 @@ export const knowledgeNetworkZhCN = {
     ...packageImportPart,
     ...declarationsPart,
     ...propertyDeclarationsPart,
+    ...definitionDeclarationsPart,
     ...relationDeclarationsPart,
     ...valueTypesPart,
     ...knowledgeBasePart,

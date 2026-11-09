@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { DefinitionDeclarationEdit, DefinitionDeclarations } from "./declarations";
+
 export type KnowledgeNetworkActionTypeKind = "create" | "update" | "delete" | "notify";
 
 export type ActionTypeConditionOperation =
@@ -71,6 +73,8 @@ export type ActionTypeExecutionConfig = {
 export type KnowledgeNetworkActionTypeRecord = {
   actionKind: KnowledgeNetworkActionTypeKind;
   color: string;
+  /** Its aliases and lifecycle; absent when it declares neither. */
+  declarations?: DefinitionDeclarations;
   description: string;
   id: string;
   name: string;
@@ -93,6 +97,8 @@ export type KnowledgeNetworkActionTypeMutationPayload = {
   affect?: ActionTypeAffect;
   color: string;
   condition?: ActionTypeCondition;
+  /** The aliases and lifecycle the form edits; absent on a save that does not edit them. */
+  definitionDeclarationEdit?: DefinitionDeclarationEdit;
   description: string;
   executionConfig?: ActionTypeExecutionConfig;
   id?: string;

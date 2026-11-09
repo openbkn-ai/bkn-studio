@@ -7,7 +7,7 @@
 
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { Alert, Button, Col, Collapse, Form, Input, Row, Select, Spin, Tooltip } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -22,6 +22,8 @@ import {
 } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
+import { DefinitionDeclarationFields } from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
+import { DefinitionRefusal } from "@/modules/knowledge-network/components/definition-declarations/DefinitionRefusal";
 import {
   getActionSourceDisplayName,
   normalizeActionTypeCondition,
@@ -51,15 +53,27 @@ import {
 } from "@/modules/knowledge-network/lib/resource-constraints";
 import {
   createKnowledgeNetworkActionType,
+  getKnowledgeNetworkActionType,
   getKnowledgeNetworkActionTypeDetail,
+  listKnowledgeNetworkActionTypePage,
   getKnowledgeNetworkObjectTypeDetail,
   getKnowledgeNetworkObjectType,
   listKnowledgeNetworkObjectTypePage,
   updateKnowledgeNetworkActionType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import {
+  type DeclarationRefusal,
+  readDeclarationRefusal,
+} from "@/modules/knowledge-network/services/shared/declaration-errors";
+import {
+  type DefinitionDeclarationFormValues,
+  fromDefinitionDeclarationForm,
+  toDefinitionDeclarationForm,
+} from "@/modules/knowledge-network/utils/definition-declarations";
 import type {
   ActionTypeCondition,
   ActionTypeExecutionConfig,
+  DefinitionDeclarations,
   KnowledgeNetworkActionTypeKind,
   KnowledgeNetworkActionTypeMutationPayload,
   KnowledgeNetworkObjectTypeRecord,
@@ -67,7 +81,7 @@ import type {
 
 import styles from "./ActionTypeFormScene.module.css";
 
-type BasicFormValues = {
+type BasicFormValues = DefinitionDeclarationFormValues & {
   actionKind: KnowledgeNetworkActionTypeKind;
   affectComment?: string;
   affectObjectTypeId?: string;
@@ -165,6 +179,9 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
         })
       : void navigate(returnPath);
   const watchedObjectTypeId = Form.useWatch("objectTypeId", basicForm);
+  // What the aliases and lifecycle were when the action type was read; a save sends what changed.
+  const definitionBaseline = useRef<DefinitionDeclarations | undefined>(undefined);
+  const [definitionRefusal, setDefinitionRefusal] = useState<DeclarationRefusal | null>(null);
   const watchedCondition = Form.useWatch("condition", basicForm);
   const conditionObjectTypeId = watchedCondition?.objectTypeId || watchedObjectTypeId;
 
@@ -248,7 +265,11 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             name: detail.name,
             objectTypeId: detail.objectTypeId,
             tags: detail.tags,
+            ...toDefinitionDeclarationForm(detail.declarations),
           };
+          definitionBaseline.current = detail.declarations
+            ? structuredClone(detail.declarations)
+            : undefined;
           const selectedObjectTypes = await Promise.all(
             Array.from(
               new Set([nextBasic.objectTypeId, nextBasic.affectObjectTypeId].filter(Boolean)),
@@ -354,9 +375,14 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       name: resolvedBasic.name,
       objectTypeId: resolvedBasic.objectTypeId,
       tags: resolvedBasic.tags,
+      definitionDeclarationEdit: {
+        baseline: definitionBaseline.current,
+        current: fromDefinitionDeclarationForm(resolvedBasic),
+      },
     };
 
     setSubmitting(true);
+    setDefinitionRefusal(null);
     try {
       let createdId: string | undefined;
       if (mode === "edit" && actionTypeId) {
@@ -372,20 +398,61 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           : undefined,
       );
     } catch (error) {
+      const refusal = readDeclarationRefusal(error);
+      if (refusal) {
+        // Shown above the basic info, where the aliases and lifecycle are.
+        setDefinitionRefusal(refusal);
+        return;
+      }
       void message.error(extractRequestErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const searchReplacements = useCallback(
+    async (keyword: string) =>
+      (
+        await listKnowledgeNetworkActionTypePage(networkId, {
+          direction: "asc",
+          limit: 20,
+          namePattern: keyword || undefined,
+          offset: 0,
+          sort: "name",
+        })
+      ).entries,
+    [networkId],
+  );
+  const resolveReplacement = useCallback(
+    // The select says itself when the replacement is gone or hidden; no error toast.
+    async (id: string) =>
+      (await getKnowledgeNetworkActionType(networkId, id, { skipErrorToast: true })) ?? undefined,
+    [networkId],
+  );
+
   const renderStepContent = () => {
     return (
       <div className={styles.basicForm}>
+        {definitionRefusal ? (
+          <DefinitionRefusal
+            networkId={networkId}
+            refusal={definitionRefusal}
+            saved={{
+              id:
+                mode === "edit"
+                  ? actionTypeId
+                  : (basicForm.getFieldValue("id") as string | undefined),
+              kind: "action_type",
+            }}
+          />
+        ) : null}
         <Form
           colon={false}
           form={basicForm}
           initialValues={{
             actionKind: "create",
+            aliases: [],
+            lifecycleStatus: "active",
             color: DEFAULT_RESOURCE_COLOR,
             description: navigationContext?.prefill?.description ?? "",
             name: navigationContext?.prefill?.name ?? "",
@@ -472,6 +539,12 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                 showCount
               />
             </Form.Item>
+            <DefinitionDeclarationFields
+              definitionId={mode === "edit" ? actionTypeId : undefined}
+              ownNameFields={["name"]}
+              resolveReplacement={resolveReplacement}
+              searchReplacements={searchReplacements}
+            />
           </section>
           <section className={styles.formSection}>
             <h3>{t("knowledgeNetwork.actionTypeRuleConfig")}</h3>

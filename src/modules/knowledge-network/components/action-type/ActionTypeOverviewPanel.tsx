@@ -18,6 +18,7 @@ import type {
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
+import { DefinitionAliases } from "@/modules/knowledge-network/components/definition-declarations/DefinitionAliases";
 import styles from "./ActionTypeOverviewPanel.module.css";
 
 type ActionTypeOverviewPanelProps = {
@@ -127,6 +128,14 @@ export function ActionTypeOverviewPanel({
                     <span className={styles.emptyValue}>{t("knowledgeNetwork.noTags")}</span>
                   )}
                 </div>
+              </div>
+              <div>
+                <span>{t("knowledgeNetwork.definitionDeclarations.aliases")}</span>
+                <DefinitionAliases
+                  aliases={detail.declarations?.aliases}
+                  emptyClassName={styles.emptyValue}
+                  rowClassName={styles.tagRow}
+                />
               </div>
               <div>
                 <span>{t("knowledgeNetwork.color")}</span>

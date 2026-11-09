@@ -114,27 +114,28 @@ export type BackendLogicProperty = {
   type?: string;
 };
 
-export type BackendObjectTypeMutation = {
-  branch?: string;
-  color?: string;
-  comment?: string;
-  concept_groups?: Array<{
-    id: string;
-    name?: string;
-  }>;
-  data_properties?: BackendDataProperty[];
-  data_source?: BackendDataSource;
-  display_key?: string;
-  icon?: string;
-  id?: string;
-  incremental_key?: string;
-  logic_properties?: BackendLogicProperty[];
-  name: string;
-  primary_keys?: string[];
-  tags?: string[];
-};
+export type BackendObjectTypeMutation =
+  import("./declarations").BackendDefinitionDeclarationFields & {
+    branch?: string;
+    color?: string;
+    comment?: string;
+    concept_groups?: Array<{
+      id: string;
+      name?: string;
+    }>;
+    data_properties?: BackendDataProperty[];
+    data_source?: BackendDataSource;
+    display_key?: string;
+    icon?: string;
+    id?: string;
+    incremental_key?: string;
+    logic_properties?: BackendLogicProperty[];
+    name: string;
+    primary_keys?: string[];
+    tags?: string[];
+  };
 
-export type BackendObjectType = {
+export type BackendObjectType = import("./declarations").BackendDefinitionDeclarationFields & {
   color?: string;
   comment?: string;
   concept_groups?: Array<{
@@ -224,7 +225,7 @@ export type BackendRelationType = import("./declarations").BackendRelationDeclar
   updater?: BackendAccountInfo;
 };
 
-export type BackendActionType = {
+export type BackendActionType = import("./declarations").BackendDefinitionDeclarationFields & {
   action_source?: {
     box_id?: string;
     mcp_id?: string;
