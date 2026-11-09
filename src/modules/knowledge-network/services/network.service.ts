@@ -22,6 +22,7 @@ import type {
   KnowledgeNetworkMutationPayload,
   KnowledgeNetworkRecord,
   KnowledgeNetworkStatistics,
+  NetworkCheckResult,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type {
   BackendKnowledgeNetwork,
@@ -33,6 +34,11 @@ import {
   toBackendKnowledgeNetworkCreatePayload,
   toBackendKnowledgeNetworkUpdatePayload,
 } from "@/modules/knowledge-network/services/mappers/network.mapper";
+import {
+  MOCK_DECLARED_NETWORK_ID,
+  mockClearedDeclarations,
+  mockNetworkCheckResult,
+} from "@/modules/knowledge-network/services/mock/declaration-refusals";
 import {
   mockActionTypes,
   mockConceptGroups,
@@ -53,6 +59,14 @@ import {
   useMock,
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
+import {
+  CONFIRM_CLEAR_DECLARATIONS_PARAM,
+  DeclarationsWouldBeClearedError,
+  KnowledgeNetworkExportRefusedError,
+  parseNetworkCheckResult,
+  throwIfDeclarationsWouldBeCleared,
+  throwIfExportRefused,
+} from "@/modules/knowledge-network/services/shared/declaration-errors";
 
 // Whole-network import and export can outlast the client's 30s default while
 // the backend processes a large model. Keep both operations on an explicit
@@ -307,14 +321,36 @@ export async function listKnowledgeNetworkRecentObjects(networkId: string) {
   return response.data.entries.map(mapRecentObject);
 }
 
+export type KnowledgeNetworkExportOptions = {
+  /**
+   * `2.0` writes a 2.x BKN package, which leaves BKN spec 3.0 declarations out. Left out, the
+   * backend writes 3.0 for a network holding a declaration only 3.0 can carry, and 2.x otherwise.
+   */
+  bknSpec?: "2.0";
+};
+
+/**
+ * Downloads a network as a JSON export or a BKN package. A 3.0 package the backend refuses to
+ * write rejects with `KnowledgeNetworkExportRefusedError`; errors are not toasted here, the caller
+ * shows them.
+ */
 export async function exportKnowledgeNetwork(
   networkId: string,
   format: KnowledgeNetworkExportFormat = "json",
+  options: KnowledgeNetworkExportOptions = {},
 ) {
   if (useMock) {
     const record = mockKnowledgeNetworks.find((item) => item.id === networkId);
     if (!record) {
       throw new Error("Knowledge network not found");
+    }
+
+    if (format === "bkn" && !options.bknSpec && networkId === MOCK_DECLARED_NETWORK_ID) {
+      await wait(undefined);
+      throw new KnowledgeNetworkExportRefusedError(
+        "BknBackend.KnowledgeNetwork.ExportNeedsNetworkCheck",
+        { check: mockNetworkCheckResult, kind: "network_check" },
+      );
     }
 
     // The BKN package is assembled by the backend, so mock mode can only ever
@@ -330,9 +366,28 @@ export async function exportKnowledgeNetwork(
     return;
   }
 
-  if (format === "bkn") {
-    const response = await http.get<Blob>(`/bkn-backend/v1/bkns/${networkId}`, {
+  try {
+    if (format === "bkn") {
+      const response = await http.get<Blob>(`/bkn-backend/v1/bkns/${networkId}`, {
+        ...(options.bknSpec ? { params: { bkn_spec: options.bknSpec } } : {}),
+        responseType: "blob",
+        skipErrorToast: true,
+        timeout: KNOWLEDGE_NETWORK_EXPORT_TIMEOUT_MS,
+      });
+
+      triggerBrowserDownload(
+        response.data,
+        parseContentDispositionFilename(
+          response.headers["content-disposition"] as string | undefined,
+        ) ?? `${networkId}.tar`,
+      );
+      return;
+    }
+
+    const response = await http.get<Blob>(`/bkn-backend/v1/knowledge-networks/${networkId}`, {
+      params: { mode: "export" },
       responseType: "blob",
+      skipErrorToast: true,
       timeout: KNOWLEDGE_NETWORK_EXPORT_TIMEOUT_MS,
     });
 
@@ -340,23 +395,56 @@ export async function exportKnowledgeNetwork(
       response.data,
       parseContentDispositionFilename(
         response.headers["content-disposition"] as string | undefined,
-      ) ?? `${networkId}.tar`,
+      ) ?? `${networkId}.json`,
     );
-    return;
+  } catch (error) {
+    throwIfExportRefused(error);
+    throw error;
+  }
+}
+
+/**
+ * Runs the network check: the action type and logic property parameters whose value source
+ * execution drops and a 3.0 export refuses. It reads definitions only, on any network, 2.x
+ * included, and changes nothing.
+ */
+export async function checkKnowledgeNetwork(networkId: string): Promise<NetworkCheckResult> {
+  if (useMock) {
+    return wait(
+      networkId === MOCK_DECLARED_NETWORK_ID
+        ? mockNetworkCheckResult
+        : { invalidParameters: [], misplacedParameters: [] },
+    );
   }
 
-  const response = await http.get<Blob>(`/bkn-backend/v1/knowledge-networks/${networkId}`, {
-    params: { mode: "export" },
-    responseType: "blob",
-    timeout: KNOWLEDGE_NETWORK_EXPORT_TIMEOUT_MS,
+  const response = await http.get<unknown>(`/bkn-backend/v1/bkns/${networkId}/check`, {
+    skipErrorToast: true,
   });
+  return parseNetworkCheckResult(response.data);
+}
 
-  triggerBrowserDownload(
-    response.data,
-    parseContentDispositionFilename(
-      response.headers["content-disposition"] as string | undefined,
-    ) ?? `${networkId}.json`,
-  );
+/** Sent only once the user confirmed, so an unconfirmed import sends what it always has. */
+function confirmClearDeclarationsParam(confirmClearDeclarations: boolean) {
+  return confirmClearDeclarations ? { [CONFIRM_CLEAR_DECLARATIONS_PARAM]: true } : {};
+}
+
+/** Mock mode refuses an unconfirmed overwrite of the network that holds declarations. */
+async function refuseMockOverwrite(
+  identifier: string,
+  importMode: KnowledgeNetworkImportMode,
+  confirmClearDeclarations: boolean,
+) {
+  if (
+    importMode === "overwrite" &&
+    !confirmClearDeclarations &&
+    identifier === MOCK_DECLARED_NETWORK_ID
+  ) {
+    await wait(undefined);
+    throw new DeclarationsWouldBeClearedError(
+      "BknBackend.ObjectType.DeclarationsWouldBeCleared",
+      mockClearedDeclarations,
+    );
+  }
 }
 
 export async function importKnowledgeNetwork(
@@ -364,12 +452,14 @@ export async function importKnowledgeNetwork(
   importMode: KnowledgeNetworkImportMode = "normal",
   bindingPolicy: KnowledgeNetworkBindingPolicy = "preserve",
   strictMode = false,
+  confirmClearDeclarations = false,
 ) {
   if (useMock) {
     const identifier = stringFromUnknown(
       payload.id,
       stringFromUnknown(payload.code, crypto.randomUUID()),
     );
+    await refuseMockOverwrite(identifier, importMode, confirmClearDeclarations);
     const exists = mockKnowledgeNetworks.some(
       (item) => item.id === identifier || item.identifier === identifier,
     );
@@ -417,6 +507,7 @@ export async function importKnowledgeNetwork(
         binding_policy: bindingPolicy,
         import_mode: importMode,
         strict_mode: strictMode,
+        ...confirmClearDeclarationsParam(confirmClearDeclarations),
       },
       skipErrorToast: true,
       timeout: KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS,
@@ -428,10 +519,13 @@ export async function importKnowledgeNetwork(
 
 /**
  * Reads bkn-backend's refusal of a network import, from a JSON body or a BKN package alike: a
- * name or id already in use becomes a conflict the dialog resolves, an invalid binding target
- * keeps its details, and anything else is rethrown as is.
+ * declaration the overwrite would clear becomes `DeclarationsWouldBeClearedError`, a name or id
+ * already in use becomes a conflict the dialog resolves, an invalid binding target keeps its
+ * details, and anything else is rethrown as is.
  */
 function rethrowImportError(error: unknown): never {
+  throwIfDeclarationsWouldBeCleared(error);
+
   const response = (
     error as {
       response?: {
@@ -502,9 +596,11 @@ export async function importKnowledgeNetworkPackage(
   importMode: KnowledgeNetworkImportMode = "normal",
   bindingPolicy: KnowledgeNetworkBindingPolicy = "preserve",
   strictMode = false,
+  confirmClearDeclarations = false,
 ): Promise<CapabilityImportReport> {
   if (useMock) {
     const identifier = file.name.replace(/\.(tar\.gz|tgz|tar|zip)$/i, "");
+    await refuseMockOverwrite(identifier, importMode, confirmClearDeclarations);
     if (!mockKnowledgeNetworks.some((item) => item.id === identifier)) {
       mockKnowledgeNetworks.unshift({
         color: "#1677ff",
@@ -549,6 +645,7 @@ export async function importKnowledgeNetworkPackage(
           binding_policy: bindingPolicy,
           import_mode: importMode,
           strict_mode: strictMode,
+          ...confirmClearDeclarationsParam(confirmClearDeclarations),
         },
         skipErrorToast: true,
         timeout: KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS,

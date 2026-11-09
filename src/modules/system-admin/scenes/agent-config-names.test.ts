@@ -83,6 +83,12 @@ it.each([
     "Project - Concept Extraction",
   ],
   [
+    "bkn-project-document-extraction",
+    "BKNProjectDocumentExtraction",
+    "项目管理 - 文档抽取",
+    "Project - Document Extraction",
+  ],
+  [
     "bkn-project-requirements",
     "BKNProjectRequirements",
     "项目管理 - 需求起草",

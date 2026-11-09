@@ -1257,7 +1257,7 @@ describe("ViewEditorScene", () => {
     expect(sourcePicker).not.toBeDisabled();
     const saveButton = screen.getByRole("button", { name: "dataCatalog.viewEditor.save" });
     fireEvent.click(saveButton);
-    expect(await screen.findByText("dataCatalog.filter.errors.invalidField")).toBeTruthy();
+    expect(await screen.findByText("dataCatalog.filter.errors.unsupportedOperation")).toBeTruthy();
     expect(updateViewMock).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeRule" }));

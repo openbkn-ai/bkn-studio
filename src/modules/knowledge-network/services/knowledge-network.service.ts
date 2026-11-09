@@ -14,7 +14,13 @@ export * from "@/modules/knowledge-network/services/action-type.service";
 export * from "@/modules/knowledge-network/services/object-type-logic-property-trial.service";
 export * from "@/modules/knowledge-network/services/overview-graph.service";
 export * from "@/modules/knowledge-network/services/object-metric.service";
+export * from "@/modules/knowledge-network/services/value-type.service";
 export {
   KnowledgeNetworkImportBindingError,
   KnowledgeNetworkImportConflictError,
 } from "@/modules/knowledge-network/services/shared/runtime";
+export {
+  DeclarationsWouldBeClearedError,
+  KnowledgeNetworkExportRefusedError,
+} from "@/modules/knowledge-network/services/shared/declaration-errors";
+export type { KnowledgeNetworkExportRefusal } from "@/modules/knowledge-network/services/shared/declaration-errors";

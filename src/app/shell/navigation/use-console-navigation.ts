@@ -11,6 +11,7 @@ import {
   consoleNavigation,
   filterConsoleNavigation,
   filterNavByCapability,
+  filterNavByHiddenKeys,
   filterNavByInstalledPages,
   filterNavByPermission,
 } from "@/app/shell/console-navigation";
@@ -21,8 +22,8 @@ import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeat
 import { isMarketCatalogEnabled } from "@/modules/execution-factory/utils/market-catalog";
 
 /**
- * Apply four independent filters: pages this build carries, local feature flags, user
- * permissions, and cluster capabilities. Capability availability is calculated by the server; the client does not infer
+ * Apply five independent filters: pages this build carries, entries the deployment hides, local
+ * feature flags, user permissions, and cluster capabilities. Capability availability is calculated by the server; the client does not infer
  * it from edition ordering.
  */
 export function useConsoleNavigation(): ConsoleNavItem[] {
@@ -34,14 +35,20 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
     () =>
       filterNavByCapability(
         filterNavByPermission(
-          filterConsoleNavigation(filterNavByInstalledPages(consoleNavigation), {
-            hideCatalog: !features.catalog,
-            // Keep the execution-factory menu visible; it no longer follows the capabilities-lab
-            // hide_legacy_execution_factory_menu flag.
-            hideLegacyExecutionFactory: false,
-            // The market catalog is not enabled yet and overlaps with Execution Unit Management.
-            hideMarketCatalog: !isMarketCatalogEnabled(),
-          }),
+          filterConsoleNavigation(
+            filterNavByHiddenKeys(
+              filterNavByInstalledPages(consoleNavigation),
+              runtimeConfig.hiddenNavigation,
+            ),
+            {
+              hideCatalog: !features.catalog,
+              // Keep the execution-factory menu visible; it no longer follows the capabilities-lab
+              // hide_legacy_execution_factory_menu flag.
+              hideLegacyExecutionFactory: false,
+              // The market catalog is not enabled yet and overlaps with Execution Unit Management.
+              hideMarketCatalog: !isMarketCatalogEnabled(),
+            },
+          ),
           runtimeConfig.currentUser.permissions,
           runtimeConfig.currentUser.isSuperAdmin,
         ),
@@ -51,6 +58,7 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
       features.catalog,
       runtimeConfig.currentUser.isSuperAdmin,
       runtimeConfig.currentUser.permissions,
+      runtimeConfig.hiddenNavigation,
       snapshot,
     ],
   );

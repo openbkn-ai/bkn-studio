@@ -22,10 +22,13 @@ const mocks = vi.hoisted(() => {
   };
   return {
     createObjectMetricDraftV1: vi.fn(),
+    updateObjectMetricDraftV1: vi.fn(),
     trialObjectMetricDataV1: vi.fn(),
     validateObjectMetricV1:
       vi.fn<(networkId: string, definition: ObjectMetricDefinitionV1) => Promise<unknown>>(),
     previewObjectMetricV1: vi.fn(),
+    publishObjectMetricV1: vi.fn(),
+    validateObjectMetricVersionV1: vi.fn(),
     listObjectMetricsV1: vi.fn(),
     runObjectMetricDesigner:
       vi.fn<(params: RunObjectMetricDesignParams) => Promise<ObjectMetricDesignResult>>(),
@@ -33,7 +36,7 @@ const mocks = vi.hoisted(() => {
     getKnowledgeNetworkObjectTypeDetail: vi.fn(),
     getObjectMetricCapabilitiesV1: vi.fn(),
     getObjectMetricV1: vi.fn(),
-    locationState: { current: null as { knowledgeNetworkReturnTo?: string } | null },
+    locationState: { current: null as Record<string, unknown> | null },
     message: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
     navigate: vi.fn(),
     routeParams,
@@ -66,9 +69,12 @@ vi.mock(
       typeof import("@/modules/knowledge-network/services/knowledge-network.service")
     >()),
     createObjectMetricDraftV1: mocks.createObjectMetricDraftV1,
+    updateObjectMetricDraftV1: mocks.updateObjectMetricDraftV1,
     trialObjectMetricDataV1: mocks.trialObjectMetricDataV1,
     validateObjectMetricV1: mocks.validateObjectMetricV1,
     previewObjectMetricV1: mocks.previewObjectMetricV1,
+    publishObjectMetricV1: mocks.publishObjectMetricV1,
+    validateObjectMetricVersionV1: mocks.validateObjectMetricVersionV1,
     getObjectMetricCapabilitiesV1: mocks.getObjectMetricCapabilitiesV1,
     getObjectMetricV1: mocks.getObjectMetricV1,
     listKnowledgeNetworkObjectTypes: vi.fn().mockResolvedValue([]),
@@ -169,6 +175,7 @@ beforeEach(() => {
   mocks.getObjectMetricCapabilitiesV1.mockResolvedValue(undefined);
   mocks.listObjectMetricAnswerModels.mockResolvedValue([{ id: "model-1", name: "测试对话模型" }]);
   mocks.createObjectMetricDraftV1.mockResolvedValue(undefined);
+  mocks.updateObjectMetricDraftV1.mockResolvedValue(undefined);
   mocks.listObjectMetricsV1.mockResolvedValue({ entries: [], total_count: 0 });
   mocks.validateObjectMetricV1.mockResolvedValue({
     valid: true,
@@ -193,6 +200,69 @@ beforeEach(() => {
 });
 
 describe("ObjectMetricFormScene object properties", () => {
+  it("defaults distinct counts to allowing approximation and exposes an exact option", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      dataProperties: [{ displayName: "订单 ID", name: "order_id", type: "int64" }],
+    });
+    render(<ObjectMetricFormScene mode="create" />);
+    fireEvent.mouseDown(await screen.findByLabelText("聚合方式"));
+    fireEvent.click(await screen.findByText("去重计数"));
+    fireEvent.mouseDown(await screen.findByLabelText("取值属性", { selector: "input" }));
+    fireEvent.click(await screen.findByText("订单 ID · order_id"));
+    const checkbox = await screen.findByLabelText("允许近似计算");
+    expect(checkbox).toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+    fireEvent.change(screen.getByLabelText("对象指标名称"), { target: { value: "去重订单数" } });
+    fireEvent.change(screen.getByLabelText("业务定义"), {
+      target: { value: "统计不同订单 ID，要求精确结果。" },
+    });
+    fireEvent.click(getButtonByText("保存草稿"));
+    await waitFor(() => expect(mocks.createObjectMetricDraftV1).toHaveBeenCalled());
+    expect(mocks.createObjectMetricDraftV1.mock.lastCall?.[1]).toMatchObject({
+      specification: { measure: { aggregation: "count_distinct", allow_approximate: false } },
+    });
+  });
+  it("preserves an exact distinct requirement when editing and saving a draft", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.id = "metric-1";
+    definition.name = "去重订单数";
+    definition.description = "统计不同订单 ID，要求精确结果。";
+    definition.specification = {
+      kind: "atomic",
+      measure: {
+        aggregation: "count_distinct",
+        allow_approximate: false,
+        expression: {
+          node_type: "property",
+          property_ref: { object_type_id: "order", property_name: "order_id" },
+        },
+      },
+    };
+    definition.result_semantics.value = { physical_type: "int64", semantic_type: "count" };
+    mocks.getObjectMetricV1.mockResolvedValue({ definition });
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      dataProperties: [{ displayName: "订单 ID", name: "order_id", type: "int64" }],
+    });
+
+    render(<ObjectMetricFormScene mode="edit" />);
+
+    const checkbox = await screen.findByLabelText("允许近似计算");
+    expect(checkbox).not.toBeChecked();
+    expect(await screen.findByText("订单 ID · order_id")).toBeInTheDocument();
+    fireEvent.click(getButtonByText("保存草稿"));
+    await waitFor(() => expect(mocks.updateObjectMetricDraftV1).toHaveBeenCalled());
+    expect(mocks.updateObjectMetricDraftV1.mock.lastCall?.slice(0, 2)).toEqual([
+      "network-1",
+      "metric-1",
+    ]);
+    expect(mocks.updateObjectMetricDraftV1.mock.lastCall?.[2]).toMatchObject({
+      specification: { measure: { aggregation: "count_distinct", allow_approximate: false } },
+    });
+    expect(mocks.createObjectMetricDraftV1).not.toHaveBeenCalled();
+  });
   it.each(["atomic", "composite"] as const)(
     "removes the redundant result-form section from the %s editor",
     async (metricType) => {
@@ -1594,4 +1664,158 @@ describe("ObjectMetricFormScene edit loading", () => {
       expect(mocks.navigate).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("ObjectMetricFormScene navigation context", () => {
+  const context = {
+    title: "项目需要：订单数",
+    description: "用于每周经营复盘",
+    prompt: "统计每个客户的订单数",
+    returnTo: "/projects/project-1/logic",
+    returnLabel: "回到项目",
+    returnState: { needId: "need-1" },
+  };
+
+  function draftDefinition() {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    definition.id = "metric-1";
+    definition.name = "订单数";
+    definition.description = "统计订单数。";
+    definition.specification = {
+      kind: "atomic",
+      measure: {
+        aggregation: "count_distinct",
+        allow_approximate: false,
+        expression: {
+          node_type: "property",
+          property_ref: { object_type_id: "order", property_name: "order_id" },
+        },
+      },
+    };
+    definition.result_semantics.value = { physical_type: "int64", semantic_type: "count" };
+    return definition;
+  }
+
+  beforeEach(() => {
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      dataProperties: [{ displayName: "订单 ID", name: "order_id", type: "int64" }],
+    });
+  });
+
+  it("states the need and fills the assistant input on create without sending it", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
+    mocks.locationState.current = { objectMetricContext: context };
+
+    render(<ObjectMetricFormScene mode="create" />);
+
+    expect(await screen.findByText(context.title)).toBeInTheDocument();
+    expect(screen.getByText(context.description)).toBeInTheDocument();
+    expect(await screen.findByLabelText("描述要创建的对象指标")).toHaveValue(context.prompt);
+    expect(queryButtonByText(context.returnLabel)).toBeNull();
+    expect(mocks.runObjectMetricDesigner).not.toHaveBeenCalled();
+  });
+
+  it("leaves to the caller's address with its state", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
+    mocks.locationState.current = { objectMetricContext: context };
+
+    render(<ObjectMetricFormScene mode="create" />);
+
+    fireEvent.click(await screen.findByLabelText(context.returnLabel));
+    expect(mocks.navigate).toHaveBeenCalledWith(context.returnTo, {
+      state: context.returnState,
+    });
+  });
+
+  it("keeps the context after saving a new draft and returns with its id", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
+    mocks.locationState.current = { objectMetricContext: context };
+    mocks.createObjectMetricDraftV1.mockResolvedValue({ definition: draftDefinition() });
+
+    render(<ObjectMetricFormScene mode="create" />);
+    fireEvent.mouseDown(await screen.findByLabelText("聚合方式"));
+    fireEvent.click(await screen.findByText("去重计数"));
+    fireEvent.mouseDown(await screen.findByLabelText("取值属性", { selector: "input" }));
+    fireEvent.click(await screen.findByText("订单 ID · order_id"));
+    fireEvent.change(screen.getByLabelText("对象指标名称"), { target: { value: "订单数" } });
+    fireEvent.change(screen.getByLabelText("业务定义"), { target: { value: "统计订单数。" } });
+    fireEvent.click(getButtonByText("保存草稿"));
+
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith(
+        "/knowledge-network/workspace/network-1/metrics/metric-1/edit",
+        {
+          replace: true,
+          state: {
+            knowledgeNetworkReturnTo:
+              "/knowledge-network/workspace/network-1/metrics?objectTypeId=order",
+            objectMetricContext: context,
+          },
+        },
+      ),
+    );
+    fireEvent.click(await findButtonByText(context.returnLabel));
+    expect(mocks.navigate).toHaveBeenLastCalledWith(context.returnTo, {
+      state: { needId: "need-1", objectMetricCreated: { id: "metric-1" } },
+    });
+    // The back arrow brings the draft too, so leaving that way never loses it.
+    mocks.navigate.mockClear();
+    fireEvent.click(screen.getByLabelText(context.returnLabel));
+    expect(mocks.navigate).toHaveBeenLastCalledWith(context.returnTo, {
+      state: { needId: "need-1", objectMetricCreated: { id: "metric-1" } },
+    });
+  });
+
+  it("returns to the caller with the metric id once published", async () => {
+    mocks.locationState.current = { objectMetricContext: context };
+    const definition = draftDefinition();
+    mocks.getObjectMetricV1.mockResolvedValue({ definition });
+    mocks.updateObjectMetricDraftV1.mockResolvedValue({ definition });
+    mocks.validateObjectMetricVersionV1.mockResolvedValue({ definition });
+    mocks.publishObjectMetricV1.mockResolvedValue(undefined);
+
+    render(<ObjectMetricFormScene mode="edit" />);
+
+    expect(await screen.findByText("订单 ID · order_id")).toBeInTheDocument();
+    fireEvent.click(getButtonByText("发布对象指标"));
+    await waitFor(() => expect(mocks.publishObjectMetricV1).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith(context.returnTo, {
+        state: { needId: "need-1", objectMetricCreated: { id: "metric-1" } },
+      }),
+    );
+    expect(mocks.navigate).not.toHaveBeenCalledWith(
+      expect.stringContaining("/detail"),
+      expect.anything(),
+    );
+  });
+
+  it("publishes to the detail page as before without a context", async () => {
+    const definition = draftDefinition();
+    mocks.getObjectMetricV1.mockResolvedValue({ definition });
+    mocks.updateObjectMetricDraftV1.mockResolvedValue({ definition });
+    mocks.validateObjectMetricVersionV1.mockResolvedValue({ definition });
+    mocks.publishObjectMetricV1.mockResolvedValue(undefined);
+
+    render(<ObjectMetricFormScene mode="edit" />);
+
+    expect(await screen.findByText("订单 ID · order_id")).toBeInTheDocument();
+    expect(screen.queryByText(context.title)).not.toBeInTheDocument();
+    fireEvent.click(getButtonByText("发布对象指标"));
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith(
+        "/knowledge-network/workspace/network-1/metrics/metric-1/detail",
+        {
+          state: {
+            justPublished: true,
+            knowledgeNetworkReturnTo:
+              "/knowledge-network/workspace/network-1/metrics?objectTypeId=order",
+          },
+        },
+      ),
+    );
+  });
 });

@@ -51,8 +51,64 @@ export type DraftSourceCitation = {
   quote?: string;
 };
 export type DraftExtractionField = { instruction: string; examples: DraftSourceCitation[] };
-export type DraftDocumentSettings = { timeProperty: string; participantRelations: string[] };
-export type DraftDocumentModel = DraftDocumentSettings & {
+export type SourceFieldRule = {
+  name: string;
+  category: "system_only" | "both" | "text_only" | "temporal";
+  sourceOfRecord: "table" | "document" | "fusion";
+  destinationObjectTypeId: string;
+  evidenceOrder?: string[];
+};
+export type DualSourceChoice = {
+  systemObjectTypeId: string;
+  fileObjectTypeId: string;
+  relationTypeId: string;
+  fields: SourceFieldRule[];
+};
+export type DualSourceDecision = DualSourceChoice & { confirm: boolean; clear?: boolean };
+export type DualSourcePlan = DualSourceChoice & {
+  confirmedAt: number;
+  state?: "proposed" | "confirmed" | "stale";
+};
+export type FactResolutionChoice = {
+  valueProperty?: string;
+  subjectRelationId?: string;
+  confirm: boolean;
+  clear?: boolean;
+};
+export type DraftDocumentSettings = {
+  factResolution?: FactResolutionChoice;
+  fieldSources?: {
+    property: string;
+    sourceOfRecord: "document" | "fusion";
+    confirm: boolean;
+    type?: string;
+  }[];
+  filePeriod?: { from?: string; until?: string; confirm: boolean; clear?: boolean };
+  fileIdentity?: { property: string; confirm: boolean; clear?: boolean };
+  sentenceIdentity?: { properties: string[]; confirm: boolean; clear?: boolean };
+  timeProperty: string;
+  participantRelations: string[];
+  dualSource?: DualSourceDecision;
+};
+export type DraftDocumentModel = Omit<
+  DraftDocumentSettings,
+  | "dualSource"
+  | "fileIdentity"
+  | "sentenceIdentity"
+  | "filePeriod"
+  | "fieldSources"
+  | "factResolution"
+> & {
+  factResolution?: {
+    valueProperty: string;
+    subjectRelationId: string;
+    confirmedAt: number;
+    state?: "proposed" | "confirmed" | "stale";
+  };
+  filePeriod?: { from?: string; until?: string; confirmedAt: number };
+  fileIdentity?: { property: string; confirmedAt: number };
+  sentenceIdentity?: { properties: string[]; confirmedAt: number };
+  dualSource?: DualSourcePlan;
   role: string;
   layer: string;
   reason: string;
@@ -61,6 +117,13 @@ export type DraftDocumentModel = DraftDocumentSettings & {
   selectionRevision: number;
 };
 export type DraftDocumentMapping = {
+  businessIdentity?: {
+    rows: number;
+    distinct: number;
+    nulls: number;
+    blanks: number;
+    checkedAt: number;
+  };
   mode: string;
   mentionProperty?: string;
   identityProperty?: string;
@@ -74,6 +137,8 @@ export type SamplePreview = {
 };
 
 export type DraftProperty = {
+  /** Other names agents search and understand it by; absent when none. */
+  aliases?: string[];
   extraction?: DraftExtractionField;
   readOnly?: boolean;
   description: string;
@@ -89,6 +154,8 @@ export type DraftProperty = {
 export type DraftObjectType = {
   document?: DraftDocumentModel;
   adopted: boolean;
+  /** Other names agents search and understand it by; empty when none. */
+  aliases: string[];
   description: string;
   displayKey: string;
   id: string;
@@ -123,6 +190,9 @@ export type DraftJoinEvidence = {
 };
 
 export type DraftRelationType = {
+  /** Other names agents search and understand it by; empty when none. */
+  aliases: string[];
+  documentRepair?: string;
   document?: DraftDocumentModel;
   documentMapping?: DraftDocumentMapping;
   adopted: boolean;
@@ -189,6 +259,11 @@ export type DraftItems = {
 };
 
 export type Draft = {
+  datasetPreparation?: {
+    state: "pending" | "preparing" | "ready" | "failed" | "stale";
+    ready: number;
+    total: number;
+  };
   createTime: number;
   drafter: ProjectAccount;
   /** interrupted, timeout, or vega-backend's reply; only when failed. */
@@ -205,6 +280,8 @@ export type DraftItemKind = "object_types" | "relation_types" | "value_types";
 /** A person's edit of one draft item; fields left out stay as they are. */
 export type DraftItemEdit = {
   adopted?: boolean;
+  /** Object and relation types only; replaces their aliases, empty clears them. */
+  aliases?: string[];
   description?: string;
   /** Object types only; empty clears it. */
   incrementalKey?: string;
@@ -222,6 +299,7 @@ export type CandidateState = "adopted" | "excluded" | "pending";
 
 /** An object or relation type of the draft, as the list of candidates to confirm shows it. */
 export type Candidate = {
+  documentRepair?: string;
   source?: string;
   document?: DraftDocumentModel;
   /** The catalog whose adding drafted it; empty for one the draft was made with. */
@@ -255,6 +333,8 @@ export type Candidates = {
  * left out is removed.
  */
 export type DraftObjectTypeSave = {
+  /** Replaces the object type's aliases; absent keeps them. Not for a document item. */
+  aliases?: string[];
   document?: DraftDocumentSettings;
   description: string;
   displayKey: string;
@@ -278,6 +358,9 @@ export type DraftObjectTypeSave = {
  * fields each end's properties map.
  */
 export type DraftRelationTypeSave = {
+  /** Replaces the relation type's aliases; absent keeps them. Not for a document item. */
+  aliases?: string[];
+  verifyBusinessIdentity?: boolean;
   documentMapping?: DraftDocumentMapping;
   cardinality?: string;
   description: string;
@@ -397,4 +480,14 @@ export type RelationSuggestions = {
   answer: string;
   candidates: RelationSuggestion[];
   objectType: IsolatedObjectType;
+};
+
+/** Explicitly derives an unadopted view from saved, verified source fields. */
+export type DocumentDerivation = {
+  id: string;
+  name: string;
+  role: "entity" | "file";
+  fields: string[];
+  identity: string;
+  confirm: boolean;
 };

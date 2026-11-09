@@ -332,7 +332,7 @@ describe("publish.service", () => {
     expect(mockPost).toHaveBeenCalledWith(
       `${prefix}/ontology/draft:confirm`,
       expect.objectContaining({ accept_unresolved_conflicts: true }),
-      { skipErrorToast: true },
+      { skipErrorToast: true, timeout: 360_000 },
     );
   });
 
@@ -351,7 +351,7 @@ describe("publish.service", () => {
         accept_unresolved_conflicts: false,
         update_time: 30,
       },
-      { skipErrorToast: true },
+      { skipErrorToast: true, timeout: 360_000 },
     );
     expect(draft.status).toBe("ready");
   });

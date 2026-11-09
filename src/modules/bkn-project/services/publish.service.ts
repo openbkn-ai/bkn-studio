@@ -859,7 +859,7 @@ export async function confirmDraft(projectId: string, input: ConfirmDraftInput):
       accept_unresolved_conflicts: input.acceptUnresolvedConflicts ?? false,
       update_time: input.updateTime,
     },
-    { skipErrorToast: true },
+    { skipErrorToast: true, timeout: 360_000 },
   );
   return mapDraft(response.data);
 }

@@ -9,7 +9,7 @@ export const integrationPart = {
   integration: {
     title: "Integrate OpenBKN capabilities",
     description:
-      "Provide a unified integration entry for agent platforms and business systems. MCP is for agent tool calls, CLI is for terminals and agents, and SDK is for Node.js services.",
+      "Provide a unified integration entry for agent platforms and business systems. MCP is for agent tool calls, CLI is for terminals and agents, and SDK is for building apps on a knowledge network.",
     descriptionHelpLabel: "View integration method help",
     modeLabel: "Integration method",
     tabsAriaLabel: "Knowledge network integration methods",
@@ -24,21 +24,25 @@ export const integrationPart = {
         connect: "Client setup",
         debug: "Tool debugging",
       },
+      guide: {
+        heading: "Debug MCP tools online",
+        description:
+          "Call the MCP tools the platform offers agents, and see each tool's parameters, request and result. Before connecting a client, check here that the tools work on this knowledge network.",
+        steps: {
+          pick: "Pick the knowledge network to debug on the right. Its tools load.",
+          tool: "Pick a tool in the list on the left and read its API doc. Auto-fill builds a request from the network's actual structure and sample rows.",
+          run: "Run it to see the result. Request debug has this call's cURL command, to repeat it in a terminal.",
+        },
+        eyebrow: "MCP tools/call",
+        title: "Choose a knowledge network",
+        open: "Start debugging",
+      },
       networkLabel: "Knowledge network",
       networkLoading: "Loading knowledge networks…",
-      networkPlaceholder: "Select a knowledge network",
-      networkNoMatch: "No matching knowledge networks",
       openNetwork: "View knowledge network",
       retry: "Retry",
       loadFailedTitle: "Failed to load knowledge networks",
       loadFailedDescription: "The available knowledge networks could not be loaded. Please retry.",
-      selectNetworkTitle: "Select a knowledge network to debug",
-      selectNetworkDescription:
-        "MCP tool calls require an explicit knowledge-network context. Selecting one loads the tools available for that network.",
-      noNetworksTitle: "No knowledge networks available for debugging",
-      noNetworksDescription:
-        "Create a knowledge network first, or ask an administrator for access to one.",
-      networkUnavailableTitle: "The original knowledge network is unavailable",
       networkUnavailableDescription:
         "The knowledge network in this link does not exist or is not accessible to the current account. Select another network.",
     },
@@ -105,74 +109,30 @@ openbkn help all`,
         },
       },
     },
+    // The knowledge network picker shared by the SDK tab and tool debugging.
+    networkPicker: {
+      searchPlaceholder: "Search knowledge networks by name",
+      loading: "Loading knowledge networks…",
+      loadFailed: "Could not load knowledge networks.",
+      retry: "Retry",
+      noNetworks: "No knowledge networks yet.",
+      noMatch: "No matching knowledge networks.",
+    },
+    // The SDK tab only links on: SDK examples are generated per network, on its App development page.
     sdk: {
-      guideTitle: "Integrate OpenBKN with the SDK",
+      guideTitle: "Build apps on a knowledge network",
       guideDescription:
-        "Use this for Node.js server-side projects. The SDK establishes and refreshes OAuth sessions with account credentials, and wraps platform requests, MCP sessions, JSON-RPC calls, and response parsing.",
+        "SDK examples are generated from each knowledge network's actual structure, on its App development page: object types, relations, actions, functions and more, each in Python, TypeScript and REST.",
       steps: {
-        install: "Install @openbkn/bkn-sdk.",
-        token:
-          "Configure an OpenBKN account and password; the SDK establishes a refreshable OAuth session.",
-        client: "Create an authenticated client asynchronously with the platform URL.",
-        tools:
-          "Get a knowledge network ID first, then call bkn, resource, vega, or context capabilities as permitted by the account.",
+        pick: "Pick a knowledge network on the right and open its App development page.",
+        start:
+          "On its App development page, get a token, install the SDK and generate the network's ontology SDK.",
+        examples:
+          "Copy the example for each capability, or download the full Q&A web app example. The whole page also exports as Markdown for a developer or a coding agent.",
       },
-      installSuccessMessage: "SDK install command copied",
-      installTitle: "Install SDK",
-      title: "SDK examples",
-      ariaLabel: "SDK examples",
-      successMessage: "SDK example copied",
-      examples: {
-        "quick-start": {
-          label: "Quick start",
-          title:
-            "Create an authenticated client with account credentials and search knowledge models",
-          code: `import { createAuthenticatedClient } from "@openbkn/bkn-sdk";
-
-const bkn = await createAuthenticatedClient({
-  baseUrl: process.env.BKN_BASE_URL!,
-  auth: {
-    username: process.env.BKN_USERNAME!,
-    password: process.env.BKN_PASSWORD!,
-  },
-});
-
-// Configure the knowledge network ID for the service.
-const knId = process.env.BKN_KN_ID!;
-
-const result = await bkn.context.searchSchema(
-  knId,
-  "Find order-related objects and relations",
-  { searchScope: ["object", "relation"], maxConcepts: 10 },
-);`,
-        },
-        "instance-query": {
-          label: "Query instances",
-          title: "Query object instances by object type and conditions",
-          code: `const result = await bkn.context.queryObjectInstance(knId, {
-  ot_id: "order",
-  condition: {
-    operation: "and",
-    sub_conditions: [
-      { field: "status", operation: "==", value_from: "const", value: "paid" },
-    ],
-  },
-  limit: 20,
-});`,
-        },
-        "dynamic-tool": {
-          label: "Dynamic tools",
-          title: "Discover and call MCP tools exposed by the current knowledge network",
-          code: `// Step 1: Discover tools exposed by the knowledge network
-const tools = await bkn.context.tools(knId);
-
-// Step 2: Call the selected tool
-const result = await bkn.context.toolCall(knId, "search_schema", {
-  query: "Find order-related objects and relations",
-  response_format: "json",
-});`,
-        },
-      },
+      eyebrow: "Python / TypeScript / REST",
+      open: "Open app development",
+      title: "Choose a knowledge network",
     },
   },
 } as const;

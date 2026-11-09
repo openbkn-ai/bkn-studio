@@ -12,6 +12,19 @@ export type {
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
 export { KnowledgeNetworkListScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkListScene";
+export {
+  actionTypeCreatedState,
+  readActionTypeContext,
+} from "@/modules/knowledge-network/lib/action-type-context";
+export type {
+  ActionTypeExecutionPrefill,
+  ActionTypeNavigationContext,
+} from "@/modules/knowledge-network/lib/action-type-context";
+export {
+  objectMetricCreatedState,
+  readObjectMetricContext,
+} from "@/modules/knowledge-network/lib/object-metric-context";
+export type { ObjectMetricNavigationContext } from "@/modules/knowledge-network/lib/object-metric-context";
 export { ObjectMetricDetailScene } from "@/modules/knowledge-network/scenes/ObjectMetricDetailScene";
 export { ObjectMetricFormScene } from "@/modules/knowledge-network/scenes/ObjectMetricFormScene";
 export { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";

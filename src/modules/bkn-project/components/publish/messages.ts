@@ -8,6 +8,7 @@
 import type { TFunction } from "i18next";
 
 import type { LightStatusTone } from "@/framework/ui/common/LightStatusTag";
+import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import {
   projectErrorCode,
   projectErrorDetails,
@@ -27,6 +28,20 @@ import type {
  * reasons and outcomes map to the module's copy, never to the backend's own text.
  */
 
+/**
+ * A failed request in the server's own words. A reply that says nothing readable, or a failure that
+ * never reached the server, reads as the given text: a person never sees a code or a transport
+ * message.
+ */
+export function requestFailureText(
+  t: TFunction,
+  error: unknown,
+  fallbackKey = "bknProject.errors.generic",
+) {
+  const { code, description, descriptionSource } = extractRequestErrorDetails(error);
+  return descriptionSource === "response" && description !== code ? description : t(fallbackKey);
+}
+
 /** The refusals the pages explain; any other falls back to the action's own failure text. */
 export const KNOWN_REFUSALS = [
   "Draft.UndecidedNotAccepted",
@@ -34,6 +49,11 @@ export const KNOWN_REFUSALS = [
   "Draft.HasPending",
   "Draft.Stale",
   "Draft.NotReady",
+  "Draft.DocumentDataNotReady",
+  "Draft.DualSourceNotConfirmed",
+  "Draft.BusinessIdentityNotVerified",
+  "Draft.BusinessIdentityNotUnique",
+  "Draft.BusinessIdentityUnavailable",
   "Draft.NothingAdopted",
   "Draft.ProjectArchived",
   "Draft.NotOwner",
@@ -161,6 +181,7 @@ export const CHECK_STATUS_TONE: Record<CheckStatus, LightStatusTone> = {
 };
 
 const CHECK_REASONS = new Set([
+  "knowledge_base_build",
   "cross_catalog",
   "no_key",
   "query_failed",

@@ -7,11 +7,13 @@
 
 import {
   ApartmentOutlined,
+  BookOutlined,
   BuildOutlined,
-  DatabaseOutlined,
+  BulbOutlined,
   FileSearchOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
+  FunctionOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   RocketOutlined,
@@ -34,23 +36,26 @@ type NavGroup = { sections: ProjectSection[]; titleKey?: string };
 
 const NAV_GROUPS: NavGroup[] = [
   { sections: ["overview"] },
-  // In the order a project is built: its inputs, the ontology, the scenarios that test it, then
-  // the knowledge base drawn by the ontology.
+  // In the order a project is built: its inputs, the concepts drawn from them, the concept and
+  // kinetic models, and the scenarios that test them; then the build and the release.
   {
-    sections: ["resources", "model", "scenarios", "instances"],
-    titleKey: "bknProject.workspace.groupBuild",
+    sections: ["resources", "concepts", "model", "kinetic", "scenarios"],
+    titleKey: "bknProject.workspace.groupModeling",
   },
-  { sections: ["release", "builds"], titleKey: "bknProject.workspace.groupRelease" },
+  { sections: ["build", "release"], titleKey: "bknProject.workspace.groupRelease" },
+  { sections: ["terms"], titleKey: "bknProject.workspace.groupGovernance" },
 ];
 
 const ICONS: Record<ProjectSection, ReactNode> = {
-  builds: <BuildOutlined />,
-  instances: <DatabaseOutlined />,
+  build: <BuildOutlined />,
+  concepts: <BulbOutlined />,
+  kinetic: <FunctionOutlined />,
   model: <ApartmentOutlined />,
   overview: <FileTextOutlined />,
   release: <RocketOutlined />,
   resources: <FolderOpenOutlined />,
   scenarios: <FileSearchOutlined />,
+  terms: <BookOutlined />,
 };
 
 /**
@@ -80,6 +85,10 @@ export function ProjectWorkspaceNav({
           const sections = group.sections.filter(
             (section) => kbMode !== "hidden" || !KNOWLEDGE_BASE_SECTIONS.includes(section),
           );
+          // A group the edition leaves empty goes with its title.
+          if (!sections.length) {
+            return null;
+          }
           return (
             <Fragment key={group.titleKey ?? "top"}>
               {index ? <div className={kn.sideDivider} /> : null}

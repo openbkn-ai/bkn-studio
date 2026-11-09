@@ -109,6 +109,26 @@ describe("IndexConfigFormPanel", () => {
     }));
   });
 
+  it("marks a resource with an unknown decimal declaration as not buildable", async () => {
+    const decimalResource: CatalogResource = {
+      ...resource,
+      indexConfig: { incrementalFields: ["id"], primaryKeyFields: ["id"] },
+      schema: [
+        { name: "id", type: "integer" },
+        { name: "title", type: "string", features: [{ featureType: "keyword" }] },
+        { name: "price", type: "decimal", originalType: "numeric" },
+      ],
+    };
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={decimalResource} />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("dataCatalog.build.decimalSchemaUnsupported")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.build.configCannotBuild")).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.build.configCanBuildYes")).toBeNull();
+  });
+
   it("preserves analyzer capabilities when the same resource is refreshed", async () => {
     const { rerender } = render(
       <MemoryRouter>

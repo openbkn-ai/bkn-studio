@@ -6,7 +6,9 @@
  */
 
 import { triggerBrowserDownload } from "@/framework/download/file-download";
+import { readErrorCode } from "@/framework/request/error-message";
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import { throwIfDeclarationsWouldBeCleared } from "@/modules/knowledge-network/services/shared/declaration-errors";
 import type {
   KnowledgeNetworkListQuery,
   KnowledgeNetworkRecord,
@@ -234,13 +236,27 @@ export function throwImportConflict(message: string): never {
   throw new KnowledgeNetworkImportConflictError(message);
 }
 
-export function rethrowImportConflict(error: unknown): never {
-  const response = (
-    error as { response?: { data?: { error_code?: string; description?: string } } }
-  ).response?.data;
+/**
+ * The ID and name conflicts a definition import reports, from bkn-backend or the legacy ontology
+ * manager. Only these are offered overwrite or ignore: any other refusal, resent unchanged, would
+ * only be refused again.
+ */
+const DEFINITION_IMPORT_CONFLICT_CODE =
+  /^(BknBackend|OntologyManager)\.(ConceptGroup|ObjectType|RelationType|ActionType)\.\w+(ID|Name)Existed$/;
 
-  if (response?.error_code) {
-    throwImportConflict(response.description?.trim() || response.error_code);
+/**
+ * Reads the refusal of a concept group or definition import: a declaration the overwrite would
+ * clear becomes `DeclarationsWouldBeClearedError`, an ID or name in use becomes a conflict, and
+ * anything else is rethrown as is.
+ */
+export function rethrowImportConflict(error: unknown): never {
+  throwIfDeclarationsWouldBeCleared(error);
+
+  const code = readErrorCode(error);
+  if (code && DEFINITION_IMPORT_CONFLICT_CODE.test(code)) {
+    const description = (error as { response?: { data?: { description?: unknown } } }).response
+      ?.data?.description;
+    throwImportConflict((typeof description === "string" && description.trim()) || code);
   }
 
   throw error;

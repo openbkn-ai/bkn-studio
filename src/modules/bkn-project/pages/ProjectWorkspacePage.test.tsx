@@ -6,7 +6,7 @@
  */
 
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
@@ -26,12 +26,18 @@ vi.mock("@/framework/entitlement/use-entitlement", () => ({
 
 vi.mock("@/app/shell/TopBar", () => ({ TopBar: () => <header>top bar</header> }));
 
-vi.mock("@/modules/bkn-project/scenes/ProjectWorkspaceScene", () => ({
-  ProjectWorkspaceScene: ({ projectId, section }: { projectId: string; section: string }) => (
+function SceneStub({ projectId, section }: { projectId: string; section: string }) {
+  const { search } = useLocation();
+  return (
     <div>
       scene {projectId} {section}
+      {search}
     </div>
-  ),
+  );
+}
+
+vi.mock("@/modules/bkn-project/scenes/ProjectWorkspaceScene", () => ({
+  ProjectWorkspaceScene: SceneStub,
 }));
 
 import { ProjectWorkspacePage } from "./ProjectWorkspacePage";
@@ -71,26 +77,42 @@ describe("ProjectWorkspacePage", () => {
     expect(screen.getByText("scene p1 scenarios")).toBeInTheDocument();
   });
 
+  it("opens the knowledge-base builds on the build page's unstructured tab", () => {
+    renderAt("/bkn-project/p1/instances?file=f1");
+    expect(screen.getByText("scene p1 build?file=f1&tab=unstructured")).toBeInTheDocument();
+  });
+
+  it("opens the build tasks on the same tab, in every edition", () => {
+    // The build page is in the community image too; its unstructured tab follows the edition.
+    renderAt("/bkn-project/p1/builds?tab=old");
+    expect(screen.getByText("scene p1 build?tab=unstructured")).toBeInTheDocument();
+  });
+
   it("opens the overview for an unknown page", () => {
+    renderAt("/bkn-project/p1/networks");
+    expect(screen.getByText("scene p1 overview")).toBeInTheDocument();
+  });
+
+  it("opens the overview for the term library in the community image", () => {
     renderAt("/bkn-project/p1/terms");
     expect(screen.getByText("scene p1 overview")).toBeInTheDocument();
   });
 
-  it("opens the overview for a knowledge-base page in the community image", () => {
-    renderAt("/bkn-project/p1/instances");
-    expect(screen.getByText("scene p1 overview")).toBeInTheDocument();
-  });
-
-  it("waits for the entitlement before leaving a knowledge-base page", () => {
+  it("waits for the entitlement before leaving the term library", () => {
     kb.loading = true;
-    renderAt("/bkn-project/p1/instances");
+    renderAt("/bkn-project/p1/terms");
 
     expect(screen.queryByText(/scene p1/)).toBeNull();
   });
 
-  it("keeps a knowledge-base page when it is only licensed away", () => {
+  it("keeps the term library when it is only licensed away", () => {
     kb.mode = "locked";
-    renderAt("/bkn-project/p1/builds");
-    expect(screen.getByText("scene p1 builds")).toBeInTheDocument();
+    renderAt("/bkn-project/p1/terms");
+    expect(screen.getByText("scene p1 terms")).toBeInTheDocument();
+  });
+
+  it("opens the new pages of the flow", () => {
+    renderAt("/bkn-project/p1/kinetic");
+    expect(screen.getByText("scene p1 kinetic")).toBeInTheDocument();
   });
 });

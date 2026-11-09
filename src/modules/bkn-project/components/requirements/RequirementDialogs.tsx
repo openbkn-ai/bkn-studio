@@ -16,11 +16,13 @@ import {
   categoryText,
   layerText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
-import type { RequirementItemFields } from "@/modules/bkn-project/services/requirements.service";
+import {
+  type RequirementItemFields,
+  specItems,
+} from "@/modules/bkn-project/services/requirements.service";
 import type {
   QuestionInput,
   RequirementChoice,
-  RequirementConcept,
   RequirementConflict,
   RequirementItemKind,
   RequirementItemRef,
@@ -41,6 +43,8 @@ export type DraftedItem = RequirementItemRef & {
 const CATEGORIES = ["object", "event", "property", "relation", "evidence", "not_ontology"];
 const LAYERS = ["knowledge", "capability"];
 const refKey = (item: RequirementItemRef) => `${item.kind}/${item.id}`;
+const sameIds = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((id) => b.includes(id));
 const fromKey = (key: string): RequirementItemRef => {
   const [kind, ...id] = key.split("/");
   return { id: id.join("/"), kind };
@@ -75,9 +79,7 @@ export function ItemDialog({
   const [form] = Form.useForm();
   // Typed in since the dialog opened: leaving the page then asks first.
   const [typed, setTyped] = useState(false);
-  const current = itemId
-    ? (spec[kind] as { id: string }[]).find((item) => item.id === itemId)
-    : undefined;
+  const current = itemId ? specItems(spec, kind).find((item) => item.id === itemId) : undefined;
   const question = kind === "questions" ? (current as RequirementSpec["questions"][number]) : null;
   const [followConcepts, setFollowConcepts] = useState(false);
   // Inputs are sent only when the person changed them, as needs are.
@@ -137,6 +139,13 @@ export function ItemDialog({
                 ...(relativeWindow === (question?.relativeWindow ?? false)
                   ? {}
                   : { relativeWindow }),
+                // Sent only when changed: setting them also sets the question's layer.
+                ...(sameIds(
+                  (values.logicNeedIds as string[] | undefined) ?? [],
+                  question?.logicNeedIds ?? [],
+                )
+                  ? {}
+                  : { logicNeedIds: (values.logicNeedIds as string[] | undefined) ?? [] }),
                 ...(followConcepts
                   ? { followConcepts: true }
                   : neededChanged(values.needs as string[] | undefined)
@@ -265,6 +274,20 @@ export function ItemDialog({
                 mode="multiple"
                 optionFilterProp="label"
                 options={drafted.map((item) => ({ label: item.name, value: refKey(item) }))}
+              />
+            </Form.Item>
+            <Form.Item
+              extra={t(
+                `${PREFIX}.fields.${spec.logicNeeds.length ? "logicNeedsHint" : "noLogicNeeds"}`,
+              )}
+              label={t(`${PREFIX}.fields.logicNeeds`)}
+              name="logicNeedIds"
+            >
+              <Select
+                disabled={!spec.logicNeeds.length}
+                mode="multiple"
+                optionFilterProp="label"
+                options={spec.logicNeeds.map((need) => ({ label: need.name, value: need.id }))}
               />
             </Form.Item>
             <Form.Item label={t(`${PREFIX}.fields.inputs`)}>
@@ -436,61 +459,6 @@ export function ChoiceDialog({
           onChange={(event) => setBasis(event.target.value)}
           placeholder={t(`${PREFIX}.choice.basis`)}
           value={basis}
-        />
-      </div>
-    </Modal>
-  );
-}
-
-/** Points a concept at the drafted item it is, or at none. */
-export function MappingDialog({
-  concept,
-  drafted,
-  onCancel,
-  onSave,
-  saving,
-}: Saving & {
-  concept: RequirementConcept;
-  drafted: DraftedItem[];
-  onSave: (mapsTo: RequirementItemRef | null) => void;
-}) {
-  const { t } = useTranslation();
-  const [value, setValue] = useState<string | undefined>(
-    concept.mapsTo ? refKey(concept.mapsTo) : undefined,
-  );
-  return (
-    <Modal
-      cancelText={t("common.cancel")}
-      confirmLoading={saving}
-      destroyOnHidden
-      okText={t("common.save")}
-      onCancel={onCancel}
-      onOk={() => onSave(value ? fromKey(value) : null)}
-      open
-      title={t(`${PREFIX}.mapping.title`, { term: concept.term })}
-    >
-      <div className={styles.stack}>
-        <p className={styles.muted}>
-          {t(`${PREFIX}.${drafted.length ? "mapping.hint" : "fields.nothingDrafted"}`)}
-        </p>
-        <Select
-          allowClear
-          disabled={!drafted.length}
-          aria-label={t(`${PREFIX}.mapping.label`)}
-          onChange={(next?: string) => setValue(next)}
-          optionFilterProp="label"
-          options={drafted.map((item) => ({
-            label: t(
-              `${PREFIX}.mapping.option.${item.kind === "relation_type" ? "relation" : "object"}`,
-              {
-                name: item.name,
-              },
-            ),
-            value: refKey(item),
-          }))}
-          placeholder={t(`${PREFIX}.mapping.none`)}
-          showSearch
-          value={value}
         />
       </div>
     </Modal>

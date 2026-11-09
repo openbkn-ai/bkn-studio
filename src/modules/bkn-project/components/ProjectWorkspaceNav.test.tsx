@@ -82,31 +82,39 @@ describe("ProjectWorkspaceNav", () => {
     expect(itemLabels()).toEqual([
       "bknProject.workspace.sections.overview",
       "bknProject.workspace.sections.resources",
+      "bknProject.workspace.sections.concepts",
       "bknProject.workspace.sections.model",
+      "bknProject.workspace.sections.kinetic",
       "bknProject.workspace.sections.scenarios",
+      "bknProject.workspace.sections.build",
       "bknProject.workspace.sections.release",
     ]);
-    expect(screen.getByText("bknProject.workspace.groupBuild")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.workspace.groupModeling")).toBeInTheDocument();
     expect(screen.getByText("bknProject.workspace.groupRelease")).toBeInTheDocument();
+    // The governance group holds only the term library: it goes with it.
+    expect(screen.queryByText("bknProject.workspace.groupGovernance")).toBeNull();
     expect(screen.queryByText("professional")).toBeNull();
     expect(screen.getAllByRole("button").every((button) => !button.hasAttribute("disabled"))).toBe(
       true,
     );
   });
 
-  it("shows the knowledge-base pages with a badge when they are only licensed away", () => {
+  it("shows the term library with a badge when it is only licensed away", () => {
     kb.mode = "locked";
     renderNav();
 
     expect(itemLabels()).toEqual([
       "bknProject.workspace.sections.overview",
       "bknProject.workspace.sections.resources",
+      "bknProject.workspace.sections.concepts",
       "bknProject.workspace.sections.model",
+      "bknProject.workspace.sections.kinetic",
       "bknProject.workspace.sections.scenarios",
-      "bknProject.workspace.sections.instancesprofessional",
+      "bknProject.workspace.sections.build",
       "bknProject.workspace.sections.release",
-      "bknProject.workspace.sections.buildsprofessional",
+      "bknProject.workspace.sections.termsprofessional",
     ]);
+    expect(screen.getByText("bknProject.workspace.groupGovernance")).toBeInTheDocument();
   });
 
   it("marks the active page and opens another one", () => {

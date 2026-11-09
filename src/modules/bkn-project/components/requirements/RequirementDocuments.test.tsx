@@ -120,10 +120,15 @@ describe("RequirementDocuments", () => {
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "「ward-prd.md」的文档类型" }));
     fireEvent.click(await screen.findByTitle("标准"));
     await waitFor(() => expect(setDocumentTypeMock).toHaveBeenCalledWith("p1", "d1", "standard"));
+    // A Skill document and an API description are types of their own.
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "「ward-prd.md」的文档类型" }));
+    expect(await screen.findByTitle("Skill 文档")).toBeInTheDocument();
+    fireEvent.click(await screen.findByTitle("API 描述"));
+    await waitFor(() => expect(setDocumentTypeMock).toHaveBeenCalledWith("p1", "d1", "api"));
     view.unmount();
 
     renderDocuments(false);
-    expect(screen.getByText("产品需求")).toBeInTheDocument();
+    expect(screen.getByText("业务需求")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "上传文档" })).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
   });

@@ -5,24 +5,48 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CheckOutlined, DatabaseOutlined, FileTextOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, FileTextOutlined } from "@ant-design/icons";
 import { Empty, Input, Select, Tabs } from "antd";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { DataSourceFamilyKey } from "@/modules/data-connect/lib/connector-template";
 import {
   filterConnectorTypes,
+  getConnectorRequiredEdition,
   getConnectorTemplateMeta,
   getConnectorTypeTags,
   getPrimaryDataSourceFamilies,
 } from "@/modules/data-connect/lib/connector-template";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
-import { atLeast } from "@/framework/entitlement/edition";
+import { atLeast, type Edition } from "@/framework/entitlement/edition";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { AppButton } from "@/framework/ui/common/AppButton";
+import dorisLogo from "@/modules/data-connect/assets/connectors/doris.svg";
+import hanaLogo from "@/modules/data-connect/assets/connectors/hana.png";
+import mariadbLogo from "@/modules/data-connect/assets/connectors/mariadb.png";
+import mysqlLogo from "@/modules/data-connect/assets/connectors/mysql.png";
+import opensearchLogo from "@/modules/data-connect/assets/connectors/opensearch.png";
+import oracleLogo from "@/modules/data-connect/assets/connectors/oracle.png";
+import postgresqlLogo from "@/modules/data-connect/assets/connectors/postgresql.png";
+import sqlserverLogo from "@/modules/data-connect/assets/connectors/sqlserver.png";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 import styles from "./ConnectorTypePicker.module.css";
+
+// Assets are copied from a pinned DBeaver revision; unknown types keep the generic icon.
+const CONNECTOR_LOGOS = new Map([
+  ["doris", dorisLogo],
+  ["hana", hanaLogo],
+  ["mariadb", mariadbLogo],
+  ["mysql", mysqlLogo],
+  ["opensearch", opensearchLogo],
+  ["oracle", oracleLogo],
+  ["postgresql", postgresqlLogo],
+  ["sqlserver", sqlserverLogo],
+]);
 
 type ConnectorTypePickerProps = {
   onChange: (value: string) => void;
@@ -32,9 +56,11 @@ type ConnectorTypePickerProps = {
 
 export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypePickerProps) {
   const { t } = useTranslation();
+  const descriptionIdPrefix = useId();
   const [nameKeyword, setNameKeyword] = useState("");
   const [tag, setTag] = useState<string>();
   const [family, setFamily] = useState<DataSourceFamilyKey>("structured");
+  const [upgradeDialogEdition, setUpgradeDialogEdition] = useState<Edition>();
   const { snapshot } = useEntitlementContext();
 
   const familyOptions = getPrimaryDataSourceFamilies().filter((item) => item.key === "structured");
@@ -106,23 +132,26 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
           <div className={styles.grid}>
             {filtered.map((item) => {
               /*
-                `available` 是 Vega 在当前二进制与授权下的可用性，`enabled` 是管理员停用
-                开关；两者都为 true 才允许选择，前端不以授权快照覆盖它。
-                `requiredEdition` 是 Vega 为本连接器声明的最低档位：已拿到快照且当前档位
-                不足时显示；快照未知或后端未声明时不作推断，避免首屏加载时闪出错误提示。
+                Server availability and administrator enablement determine selection.
+                Product edition metadata only explains the requirement; an unknown snapshot
+                must not be treated as confirmed edition insufficiency.
               */
-              const requiredEditionBadge =
-                item.requiredEdition !== undefined &&
+              const requiredEdition = getConnectorRequiredEdition(item);
+              const upgradeEdition =
+                requiredEdition !== undefined &&
                 snapshot !== null &&
-                !atLeast(snapshot.edition, item.requiredEdition)
-                  ? item.requiredEdition
+                !atLeast(snapshot.edition, requiredEdition)
+                  ? requiredEdition
                   : undefined;
               const selectable = item.available && item.enabled;
               const active = selectable && item.type === value;
               const templateMeta = getConnectorTemplateMeta(item);
+              const description = templateMeta.description || item.description || "-";
+              const logo = CONNECTOR_LOGOS.get(item.type);
+              const descriptionId = `${descriptionIdPrefix}-${item.type}`;
 
               return (
-                <button
+                <div
                   className={[
                     styles.card,
                     active ? styles.cardActive : "",
@@ -130,45 +159,56 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  disabled={!selectable}
                   key={item.type}
-                  onClick={() => onChange(item.type)}
-                  type="button"
                 >
-                  <div className={styles.cardHeader}>
-                    {/* 档位徽标跟在连接器名后面:它说的是「这个连接器要哪一档」,右侧那组
-                        标签说的是「它属于哪类数据源」,两件事别挤在同一排。 */}
-                    <strong className={styles.cardName}>
-                      {item.name}
-                      {requiredEditionBadge ? (
-                        <EditionBadge alwaysShow edition={requiredEditionBadge} />
-                      ) : null}
-                    </strong>
-                    <span className={styles.badgeGroup}>
-                      {!item.available ? (
-                        <span className={styles.disabledBadge}>
-                          {t("dataConnect.connectorTypeUnavailable")}
+                  <button
+                    aria-describedby={descriptionId}
+                    aria-pressed={active}
+                    className={styles.cardSelect}
+                    disabled={!selectable}
+                    onClick={() => onChange(item.type)}
+                    title={`${item.name}\n${description}`}
+                    type="button"
+                  >
+                    <div className={styles.cardHeader}>
+                      <div className={styles.identity}>
+                        <span aria-hidden className={styles.logo}>
+                          {logo ? <img alt="" src={logo} /> : <DatabaseOutlined />}
                         </span>
-                      ) : !item.enabled ? (
-                        <span className={styles.disabledBadge}>
-                          {t("dataConnect.connectorTypeDisabled")}
-                        </span>
-                      ) : null}
-                      <span className={styles.badge}>{templateMeta.label}</span>
-                      <span
-                        aria-hidden
-                        className={[styles.checkMark, active ? "" : styles.checkMarkPlaceholder]
-                          .filter(Boolean)
-                          .join(" ")}
-                      >
-                        {active ? <CheckOutlined /> : null}
+                        <strong className={styles.cardName}>{item.name}</strong>
+                      </div>
+                      <span className={styles.badgeGroup}>
+                        {!item.isPlaceholder && !item.enabled ? (
+                          <span className={styles.disabledBadge}>
+                            {t("dataConnect.connectorTypeDisabled")}
+                          </span>
+                        ) : !item.available ? (
+                          <span className={styles.disabledBadge}>
+                            {t("dataConnect.connectorTypeUnavailable")}
+                          </span>
+                        ) : null}
+                        <span className={styles.badge}>{templateMeta.label}</span>
                       </span>
-                    </span>
+                    </div>
+                  </button>
+                  <div className={styles.cardFooter}>
+                    <p className={styles.cardDescription} id={descriptionId}>
+                      {description}
+                    </p>
+                    {upgradeEdition ? (
+                      <AppButton
+                        aria-haspopup="dialog"
+                        aria-label={`${t("dataConnect.connectorTypeUnlock")} ${t(`common.entitlement.editionsShort.${upgradeEdition}`)}`}
+                        className={styles.editionAction}
+                        onClick={() => setUpgradeDialogEdition(upgradeEdition)}
+                        type="primary"
+                      >
+                        {t("dataConnect.connectorTypeUnlock")}
+                        <EditionBadge alwaysShow edition={upgradeEdition} />
+                      </AppButton>
+                    ) : null}
                   </div>
-                  <p className={styles.cardDescription}>
-                    {templateMeta.description || item.description || "-"}
-                  </p>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -178,6 +218,16 @@ export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypeP
           </div>
         )}
       </div>
+      {upgradeDialogEdition &&
+      snapshot !== null &&
+      !atLeast(snapshot.edition, upgradeDialogEdition) ? (
+        <CapabilityUpgradeDialog
+          capability={CAPABILITIES.CONNECTOR_CERTIFIED}
+          minEdition={upgradeDialogEdition}
+          onClose={() => setUpgradeDialogEdition(undefined)}
+          open
+        />
+      ) : null}
     </div>
   );
 }

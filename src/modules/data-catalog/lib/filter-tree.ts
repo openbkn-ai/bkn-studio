@@ -53,6 +53,7 @@ type FilterError =
   | "emptyGroup"
   | "tooMany"
   | "invalidField"
+  | "unsupportedOperation"
   | "missingValue"
   | "invalidNumber"
   | "invalidDate"
@@ -257,8 +258,9 @@ export function filterValidationError(
       return null;
     }
     const field = fieldMap.get(node.field);
-    if (!field || !filterOperationsForField(field, path).includes(node.operation))
-      return "invalidField";
+    if (!field) return "invalidField";
+    if (!filterOperationsForField(field, path).includes(node.operation))
+      return "unsupportedOperation";
     const kind = filterValueKind(node.operation);
     if (node.valueFrom === "field") {
       if (node.value === node.field) return "sameField";

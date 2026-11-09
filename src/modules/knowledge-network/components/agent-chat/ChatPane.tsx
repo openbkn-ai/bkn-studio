@@ -15,7 +15,6 @@
 import { DownOutlined, RightOutlined, ThunderboltFilled } from "@ant-design/icons";
 import {
   forwardRef,
-  memo,
   type RefObject,
   useCallback,
   useEffect,
@@ -24,10 +23,11 @@ import {
   useRef,
   useState,
 } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
+import { CodePayloadPreview } from "@/framework/code-preview/CodePayloadPreview";
+import { getCodePayload } from "@/framework/code-preview/code-payload";
 
+import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
 import type { NormalizedAgentError } from "@/modules/knowledge-network/services/agent-error";
 import {
@@ -43,7 +43,6 @@ import {
 import type { ContextLoaderEnv } from "@/modules/knowledge-network/services/context-loader.service";
 
 import styles from "./AgentChat.module.css";
-import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
 
 const FALLBACK_SUGGESTION_KEYS = [
   "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.relations",
@@ -175,41 +174,6 @@ function formatArgs(args: unknown): string {
   }
 }
 
-/** One Markdown block. memo keeps stable blocks from reparsing during streaming. */
-const MarkdownBlock = memo(function MarkdownBlock({ text }: { text: string }) {
-  return <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>;
-});
-
-/**
- * Markdown rendering with GFM. Streaming renders by block and completes the
- * active tail to avoid reparsing the entire body on every token.
- */
-export const MarkdownView = memo(function MarkdownView({
-  text,
-  streaming = false,
-}: {
-  text: string;
-  streaming?: boolean;
-}) {
-  const blocks = useMemo(() => {
-    // Non-streaming text is complete, so parse the whole body to preserve constructs
-    // that can span blocks, such as reference links and footnotes.
-    if (!streaming) return null;
-    const bs = splitMarkdownBlocks(text);
-    if (bs.length === 0) return bs;
-    return [...bs.slice(0, -1), closeOpenMarkdown(bs[bs.length - 1])];
-  }, [text, streaming]);
-  return (
-    <div className={styles.md}>
-      {blocks === null ? (
-        <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
-      ) : (
-        blocks.map((b, i) => <MarkdownBlock key={i} text={b} />)
-      )}
-    </div>
-  );
-});
-
 /**
  * A call that did not go through. History saved before the backend reported error_kind has
  * failures without it; those keep the red "failed" they were shown with then.
@@ -283,6 +247,7 @@ function ToolCallCard({
   const requestLabel = call.clientBlocked
     ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlockedRequest", { name: call.name })
     : t("knowledgeNetwork.agentChat.chatPane.toolCall.request", { name: call.name });
+  const codePayload = call.name === "run_code" ? getCodePayload(call.args, "python") : null;
   return (
     <div className={`${styles.call} ${open ? styles.callOpen : ""}`}>
       <button
@@ -300,7 +265,11 @@ function ToolCallCard({
         <div className={styles.callBody}>
           <div className={styles.callSec}>
             <div className={styles.callLbl}>{requestLabel}</div>
-            <pre className={styles.callPre}>{formatArgs(call.args)}</pre>
+            {codePayload ? (
+              <CodePayloadPreview {...codePayload} rawText={formatArgs(call.args)} />
+            ) : (
+              <pre className={styles.callPre}>{formatArgs(call.args)}</pre>
+            )}
           </div>
           <div className={styles.callSec}>
             <div className={styles.callLbl}>
@@ -970,8 +939,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                             t={t}
                           />
                         ) : (
-                          // During streaming, MarkdownView reparses only the tail block.
-                          <MarkdownView
+                          // During streaming, MarkdownText reparses only the tail block.
+                          <MarkdownText
                             key={pi}
                             text={part.text}
                             streaming={busy && isLast && pi === renderParts.length - 1}

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-// Aligned with bkn-safe `/api/safe/v1/admin/*`, the unified admin API after ISF retirement.
+// Aligned with bkn-safe `/api/safe/v1/admin/*`, the unified admin API after the legacy identity service was retired.
 // Note: the backend does not yet support freezing/unfreezing or writing user-to-department
 // membership, so those operations are excluded from write paths pending backend support.
 

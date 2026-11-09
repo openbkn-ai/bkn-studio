@@ -9,6 +9,7 @@ import type {
   BuildTask,
   CatalogResource,
   CatalogDiscoverRecord,
+  ResourceSchemaField,
 } from "@/modules/data-catalog/types/data-catalog";
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 
@@ -86,6 +87,132 @@ function makeResource(
     updateTime: formatMockTimestamp(input.expectedUpdateTime),
   };
 }
+
+export const mockQuerySourceRows: Record<string, unknown>[] = [
+  { id: 1, content: "alpha excluded", label: "a", eligible: false },
+  { id: 2, content: "beta excluded", label: "b", eligible: false },
+  { id: 3, content: "alpha excluded", label: "c", eligible: false },
+  { id: 4, content: null, label: "d", eligible: true },
+  { id: 5, content: "alpha searchable", label: "e", eligible: true },
+  { id: 6, content: "beta searchable", label: "f", eligible: true },
+];
+
+const querySourceDemoFields: ResourceSchemaField[] = [
+  { name: "id", displayName: "记录 ID", type: "integer", description: "源记录编号" },
+  {
+    name: "content",
+    displayName: "内容",
+    type: "text",
+    description: "含 NULL 和全文检索样例内容",
+    features: [
+      { featureType: "keyword" },
+      { featureType: "fulltext", config: { analyzer: "standard" } },
+    ],
+  },
+  { name: "label", displayName: "标签", type: "string", description: "记录标签" },
+  {
+    name: "eligible",
+    displayName: "符合条件",
+    type: "boolean",
+    description: "视图固定过滤使用的未公开字段",
+  },
+];
+const querySourceDemoSchema = querySourceDemoFields.map((field) => ({
+  ...field,
+  originalName: field.name,
+  originalType: field.type,
+  originalDescription: field.description ?? "",
+}));
+const querySourceFixedFilter = { field: "eligible", operation: "==", value: true };
+const querySourceFulltextFilter = {
+  operation: "and",
+  sub_conditions: [
+    querySourceFixedFilter,
+    { field: "content", operation: "match", value: "alpha" },
+  ],
+};
+
+// Known index hits for this exact saved filter, not a simulated full-text engine.
+export const mockQuerySourceFulltext = {
+  fixedFilterJSON: JSON.stringify(querySourceFulltextFilter),
+  rowIds: [5],
+};
+
+const querySourceDemoTables = [
+  { id: "res-query-source-table", name: "query_source_demo", indexed: true },
+  { id: "res-query-source-unindexed-table", name: "query_source_no_index_demo", indexed: false },
+].map(({ id, name, indexed }) =>
+  makeResource({
+    id,
+    name,
+    catalogId: "cat-001",
+    category: "table",
+    sourceIdentifier: `crm_core.${name}`,
+    description: "查询通道验收源表：六条记录，eligible=true 的记录为 4、5、6。",
+    tags: ["demo", "query-source"],
+    status: "active",
+    lastDiscoverStatus: "unchanged",
+    localIndexName: indexed ? "idx_query_source_demo" : undefined,
+    localIndexStatus: indexed ? "available" : "unavailable",
+    schema: querySourceDemoSchema.map((field) => ({ ...field })),
+    rowCount: mockQuerySourceRows.length,
+    expectedUpdateTime: minutesAgo(1),
+  }),
+);
+
+const querySourceDemoViews = [
+  {
+    id: "res-query-source-switch-view",
+    name: "query_source_switch_view",
+    source: querySourceDemoTables[0],
+    filterCondition: querySourceFixedFilter,
+    rowCount: 3,
+    description:
+      "支持索引与源查询切换；固定过滤保留记录 4、5、6，可追加 record_id=4 核对 NULL 与标签 d。",
+  },
+  {
+    id: "res-query-source-fulltext-view",
+    name: "query_source_fulltext_view",
+    source: querySourceDemoTables[0],
+    filterCondition: querySourceFulltextFilter,
+    rowCount: 1,
+    description: "固定过滤依赖全文索引，源查询开关禁用；预置索引命中记录 5。",
+  },
+  {
+    id: "res-query-source-no-index-view",
+    name: "query_source_no_index_view",
+    source: querySourceDemoTables[1],
+    filterCondition: querySourceFixedFilter,
+    rowCount: 3,
+    description: "源表未建索引，保留记录 4、5、6；原始数据查询选项禁用，提示当前已直接查询源数据。",
+  },
+].map(({ id, name, source, filterCondition, rowCount, description }) =>
+  makeResource({
+    id,
+    name,
+    catalogId: "cat-001",
+    category: "logical_view",
+    logicType: "derived",
+    sourceIdentifier: id,
+    sourceMetadata: {
+      sourceCategory: "table",
+      objectType: "table",
+      originalName: source.sourceIdentifier,
+    },
+    logicDefinition: { sourceResourceId: source.id, filterCondition },
+    description,
+    tags: ["demo", "query-source"],
+    status: "active",
+    rowCount,
+    schema: querySourceDemoSchema
+      .filter((field) => field.name !== "eligible")
+      .map((field) => ({
+        ...field,
+        name: field.name === "id" ? "record_id" : field.name,
+      })),
+    expectedUpdateTime: minutesAgo(1),
+  }),
+);
 
 export const mockResources: CatalogResource[] = [
   makeResource({
@@ -262,6 +389,7 @@ export const mockResources: CatalogResource[] = [
     logicType: "derived",
     sourceIdentifier: "res-high-value-orders-view",
     sourceMetadata: {
+      sourceCategory: "table",
       objectType: "table",
       originalName: "crm_core.orders",
     },
@@ -329,6 +457,8 @@ export const mockResources: CatalogResource[] = [
     rowCount: 256,
     expectedUpdateTime: minutesAgo(9),
   }),
+  ...querySourceDemoTables,
+  ...querySourceDemoViews,
   makeResource({
     id: "res-permission-limited-orders",
     catalogId: "cat-008",

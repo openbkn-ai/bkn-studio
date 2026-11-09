@@ -10,6 +10,7 @@ import type {
   DataConnectConnectorType,
 } from "@/modules/data-connect/types/data-connect";
 import i18n from "@/app/locales/i18n";
+import type { Edition } from "@/framework/entitlement/edition";
 import { getConnectorOptionDefinitions } from "./connector-options";
 
 export type DataSourceFamilyKey = "structured" | "unstructured";
@@ -81,10 +82,10 @@ const CATEGORY_TO_TEMPLATE_FALLBACKS: Record<string, { description: string; labe
 
 const TYPE_TO_TEMPLATE_FALLBACKS: Record<string, { description?: string; label?: string }> = {
   mariadb: {
-    description: "Connect MariaDB-compatible relational databases.",
+    description: "Connect MariaDB relational databases.",
   },
   mysql: {
-    description: "Connect MySQL-compatible relational databases.",
+    description: "Connect MySQL relational databases.",
   },
   postgresql: {
     description: "Connect PostgreSQL relational databases.",
@@ -115,6 +116,15 @@ const KNOWN_CONNECTOR_TYPES: DataConnectConnectorType[] = [
   knownConnectorType("hana", "SAP HANA", "table"),
   knownConnectorType("opensearch", "OpenSearch", "index"),
 ];
+
+// Product metadata for local implementations omitted from Community binaries.
+// Backend requirements take precedence; this fallback never grants availability.
+const LOCAL_CONNECTOR_REQUIRED_EDITIONS = new Map<string, Edition>([
+  ["sqlserver", "professional"],
+  ["oracle", "professional"],
+  ["doris", "professional"],
+  ["hana", "enterprise"],
+]);
 
 const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
   mariadb: {
@@ -469,6 +479,15 @@ export function matchesDataSourceFamily(
   return resolveDataSourceFamily(connector) === family;
 }
 
+export function getConnectorRequiredEdition(
+  connector: Pick<DataConnectConnectorType, "mode" | "requiredEdition" | "type">,
+) {
+  return (
+    connector.requiredEdition ??
+    (connector.mode === "local" ? LOCAL_CONNECTOR_REQUIRED_EDITIONS.get(connector.type) : undefined)
+  );
+}
+
 export function getConnectorTemplateMeta(
   connector: Pick<DataConnectConnectorType, "category" | "description" | "name" | "type">,
 ) {
@@ -545,6 +564,7 @@ function knownConnectorType(
     description: "",
     enabled: false,
     fieldConfig: {},
+    isPlaceholder: true,
     mode: "local",
     name,
     type,

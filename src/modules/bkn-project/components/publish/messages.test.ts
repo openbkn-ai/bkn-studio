@@ -21,6 +21,7 @@ import {
   missingFieldsText,
   pendingBecauseText,
   refusalText,
+  requestFailureText,
   understandingMinutesLeft,
 } from "@/modules/bkn-project/components/publish/messages";
 import type { IndexItem } from "@/modules/bkn-project/types/publish";
@@ -133,6 +134,8 @@ describe("publish messages", () => {
     }
     expect(checkReasonText(zh, "cross_catalog")).toBe("两张表在不同的数据目录，无法核对");
     expect(checkReasonText(en, "new_reason")).toBe("Not checked");
+    expect(checkReasonText(zh, "knowledge_base_build")).toBe("由知识库构建检查负责");
+    expect(checkReasonText(en, "knowledge_base_build")).toBe("Checked by the knowledge-base build");
     for (const status of CHECK_STATUSES) {
       expect.soft(translated(zh(`bknProject.release.check.status.${status}`))).toBe(true);
     }
@@ -191,5 +194,35 @@ describe("publish messages", () => {
   it("joins a list with the language's separator", () => {
     expect(listText(zh, ["a", "b"])).toBe("a、b");
     expect(listText(en, ["a", "b"])).toBe("a, b");
+  });
+});
+
+describe("requestFailureText", () => {
+  const failure = (data: unknown, status = 400) =>
+    new AxiosError("Request failed with status code", "ERR", undefined, undefined, {
+      data,
+      status,
+    } as AxiosResponse);
+
+  it("says the server's reason", () => {
+    expect(requestFailureText(en, failure({ description: "The draft changed." }))).toBe(
+      "The draft changed.",
+    );
+  });
+
+  it("never shows a code or a transport message", () => {
+    const generic = en("bknProject.errors.generic");
+    expect(requestFailureText(en, failure({ error_code: "BknProject.Draft.Stale" }))).toBe(generic);
+    expect(requestFailureText(en, failure("<html>Bad gateway</html>", 502))).toBe(generic);
+    expect(requestFailureText(en, new Error("Network Error"))).toBe(generic);
+  });
+});
+
+describe("the module's copy", () => {
+  it("has no development words or sample terms, in either language", async () => {
+    const { bknProjectZhCN: zhCN } = await import("@/modules/bkn-project/locales/zh-CN");
+    const { bknProjectEnUS: enUS } = await import("@/modules/bkn-project/locales/en-US");
+    expect(JSON.stringify(zhCN)).not.toMatch(/交期|原生证据|保留登记|文档块|manifest/i);
+    expect(JSON.stringify(enUS)).not.toMatch(/delivery|native evidence|manifest/i);
   });
 });

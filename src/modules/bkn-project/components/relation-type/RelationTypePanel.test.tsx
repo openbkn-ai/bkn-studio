@@ -9,6 +9,11 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  registerExtension,
+  resetExtensionsForTesting,
+  type ProjectRelationSourceEditor,
+} from "@/framework/extension/registry";
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -203,6 +208,8 @@ describe("RelationTypePanel", () => {
     mocks.create.mockResolvedValue(made);
     const { onSaved } = renderPanel(draft);
     expect(screen.getByText("bknProject.relationEditor.newTitle")).toBeInTheDocument();
+    // Nothing typed yet is nothing unsaved, aliases included.
+    expect(screen.queryByText("bknProject.objectEditor.unsaved")).toBeNull();
     // A drafted end's properties come from the draft.
     const readers = (mocks.editorProps.mock.lastCall![0] as { readers: RelationTypeMappingReaders })
       .readers;
@@ -335,6 +342,18 @@ describe("RelationTypePanel", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
+  it.each([
+    "BusinessIdentityNotVerified",
+    "BusinessIdentityNotUnique",
+    "BusinessIdentityUnavailable",
+  ])("explains %s without backend text", async (code) => {
+    const draft = mapDraft(mockDraft("p1"));
+    renderPanel(draft, draft.items.relationTypes[0].id);
+    mocks.save.mockRejectedValueOnce(refusal(409, code));
+    save();
+    expect(await screen.findByText(`bknProject.objectEditor.errors.${code}`)).toBeInTheDocument();
+  });
+
   it("words a refused relation by its reason, in the names people know", async () => {
     const draft = mapDraft(mockDraft("p1"));
     renderPanel(draft, draft.items.relationTypes[0].id);
@@ -394,70 +413,75 @@ describe("RelationTypePanel", () => {
   });
 });
 
-describe("document relation assistant", () => {
-  it("applies document rules, supports undo and waits for an explicit save", async () => {
+describe("an edition's source editor", () => {
+  // Offers its kind of relation on every draft and edits its ends with one button.
+  const editor: ProjectRelationSourceEditor = {
+    appliesTo: (relation) => Boolean(relation.document),
+    toSave: (relation) => ({
+      cardinality: relation.cardinality,
+      description: relation.description,
+      mapping: [],
+      name: relation.name,
+      source: relation.source,
+      target: relation.target,
+    }),
+    applyRevisions: (value) => value,
+    Editor: ({ onChange, value }) => (
+      <button
+        onClick={() => onChange({ ...value, source: "sales_orders", target: "customers" })}
+        type="button"
+      >
+        choose the ends
+      </button>
+    ),
+    newItem: {
+      labelKey: "edition.newRelation",
+      offered: () => true,
+      start: ({ description, name }) => ({
+        cardinality: "many_to_one",
+        description,
+        mapping: [],
+        name,
+        source: "",
+        target: "",
+      }),
+    },
+  };
+  beforeAll(() => {
+    registerExtension({
+      capability: "knowledge_base",
+      id: "edition",
+      projectRelationSourceEditor: editor,
+    });
+  });
+  afterAll(() => resetExtensionsForTesting());
+
+  it("makes a relation of its kind by the switch, with its editor instead of the mapping", async () => {
     vi.clearAllMocks();
     const draft = mapDraft(mockDraft("p1"));
-    const relation = draft.items.relationTypes[0];
-    relation.document = {
-      role: "relation",
-      layer: "business",
-      reason: "Printed order",
-      citations: [],
-      selectionId: "lock",
-      selectionRevision: 7,
-      timeProperty: "",
-      participantRelations: [],
-    };
-    relation.documentMapping = {
-      mode: "linking",
-      mentionProperty: "customer_id",
-      identityProperty: "customer_id",
-    };
-    relation.cardinality = "many_to_one";
-    const revision = {
-      field: "ends",
-      reason: "Same file",
-      value: {
-        source: relation.source,
-        target: relation.target,
-        mapping: [],
-        documentMapping: {
-          mode: "same_document",
-          sourceNameProperty: "customer_id",
-          targetNameProperty: "customer_id",
-        },
-        cardinality: "one_to_many",
-      },
-    };
-    mocks.ask.mockResolvedValue({
-      answer: "Use the same document.",
-      dropped: [],
-      revisions: [revision],
-    });
-    mocks.save.mockResolvedValue(draft);
-    renderPanel(draft, relation.id);
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.objectEditor.ask" }));
-    const ask = () => {
-      fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
-        target: { value: "Connect these" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
-    };
-    ask();
-    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.ask.apply" }));
-    expect(mocks.save).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.undo" }));
-    expect(mocks.message.success).toHaveBeenCalledWith("bknProject.model.ask.undone");
-    ask();
-    fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.ask.apply" }));
+    mocks.create.mockResolvedValue(madeDraft(draft));
+    renderPanel(draft);
+    fireEvent.change(nameBox(), { target: { value: "Mentions" } });
+    fireEvent.click(screen.getByRole("switch"));
+    expect(screen.queryByRole("button", { name: "map the ends" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "choose the ends" }));
     save();
-    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
-    expect(mocks.save.mock.calls[0][3]).toMatchObject({
-      documentMapping: revision.value.documentMapping,
-      cardinality: "one_to_many",
-      mapping: [],
-    });
-    expect(mocks.editorProps).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mocks.create).toHaveBeenCalledWith("p1", draft.updateTime, {
+        cardinality: "many_to_one",
+        description: "",
+        mapping: [],
+        name: "Mentions",
+        source: "sales_orders",
+        target: "customers",
+      }),
+    );
+  });
+
+  it("offers no switch for a relation that exists", () => {
+    const draft = mapDraft(mockDraft("p1"));
+    renderPanel(draft, draft.items.relationTypes[0].id);
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.getByRole("button", { name: "map the ends" })).toBeInTheDocument();
   });
 });

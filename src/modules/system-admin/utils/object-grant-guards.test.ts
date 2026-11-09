@@ -13,9 +13,12 @@ import {
   grantCreatorUserId,
   isRoleGrantSubject,
   isUserDirectorySubject,
-  PUBLIC_ACCESSOR_ID,
   isDelegateProtectedGrant,
   isSelfAuthorizeLockout,
+  managedObjectGrantOperations,
+  managedObjectGrantSources,
+  objectGrantMatchesSubject,
+  PUBLIC_ACCESSOR_ID,
 } from "@/modules/system-admin/utils/object-grant-guards";
 
 const source = (createdBy?: string): GrantRecord => ({
@@ -226,6 +229,61 @@ describe("isRoleGrantSubject", () => {
         grants: [{ ...source(), inherited: true, policySource: "role_permission" }],
       }),
     ).toBe(false);
+  });
+});
+
+describe("object grant editor source selection", () => {
+  it("matches equal user and role identifiers by subject type", () => {
+    const user = { ...grant("shared-id", ["view_detail"]), accessorType: "user" as const };
+    const role = { ...grant("shared-id", ["view_detail"]), accessorType: "role" as const };
+
+    expect(objectGrantMatchesSubject(user, "shared-id", "user")).toBe(true);
+    expect(objectGrantMatchesSubject(user, "shared-id", "role")).toBe(false);
+    expect(objectGrantMatchesSubject(role, "shared-id", "role")).toBe(true);
+    expect(objectGrantMatchesSubject(role, "shared-id", "user")).toBe(false);
+    expect(
+      objectGrantMatchesSubject(
+        grant(PUBLIC_ACCESSOR_ID, ["view_detail"]),
+        PUBLIC_ACCESSOR_ID,
+        "user",
+      ),
+    ).toBe(false);
+  });
+
+  it("returns only the caller-owned direct Professional allow slice and deduplicates operations", () => {
+    const ownView = { ...source("u-admin"), authoritySource: "admin_authz" as const };
+    const selectedGrant: ObjectGrant = {
+      ...grant("u-mate", ["view_detail", "modify", "delete", "execute"]),
+      grants: [
+        ownView,
+        { ...ownView, grantId: "grant-view-duplicate" },
+        { ...ownView, active: false, grantId: "grant-inactive", operation: "modify" },
+        { ...ownView, grantId: "grant-inherited", inherited: true, operation: "delete" },
+        { ...ownView, effect: "deny", grantId: "grant-deny", operation: "execute" },
+        {
+          ...ownView,
+          authoritySource: "owner_delegate",
+          grantId: "grant-owner",
+          operation: "modify",
+        },
+        { ...ownView, createdBy: "u-other", grantId: "grant-other", operation: "delete" },
+        {
+          ...ownView,
+          grantId: "grant-bundle",
+          operation: "execute",
+          policySource: "community_bundle",
+        },
+      ],
+    };
+    const input = {
+      authoritySource: "admin_authz" as const,
+      createdBy: "u-admin",
+      grant: selectedGrant,
+    };
+
+    expect(managedObjectGrantSources(input)).toEqual([ownView, selectedGrant.grants?.[1]]);
+    expect(managedObjectGrantOperations(input)).toEqual(["view_detail"]);
+    expect(managedObjectGrantOperations({ ...input, createdBy: undefined })).toEqual([]);
   });
 });
 

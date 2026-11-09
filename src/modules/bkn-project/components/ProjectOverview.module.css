@@ -208,3 +208,10 @@
   overflow-y: auto;
   overflow-wrap: anywhere;
 }
+
+/* The flow's steps as the network's stat cards, wrapped onto rows; each card keeps its margin. */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  column-gap: 12px;
+}

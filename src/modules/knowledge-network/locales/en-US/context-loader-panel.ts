@@ -237,16 +237,36 @@ export const contextLoaderPanelPart = {
         "The config holds only the address. Sign in to this platform in the browser on first connect; the client renews access by itself.",
       apiKeyHint:
         "Send a long-lived bak_ key in a header. For scripts, services, or clients that cannot sign in.",
-      stepCopy:
-        "Pick your client and copy the config: in WorkBuddy, paste it under Connect → Custom connection → Configure MCP (~/.workbuddy/mcp.json); in Claude Code, run the command; in Cursor, write it to ~/.cursor/mcp.json.",
-      stepSignIn:
-        "Click Connect or Authorize in the client. The browser opens this platform's sign-in page; sign in and approve.",
       stepRenew:
         "The client then renews access by itself. To see or disconnect connected clients, go to Connected clients on the API keys page in Account Center.",
       connectedClients: "View connected clients ->",
-      workbuddyHint:
-        "In WorkBuddy, open Connect → Custom connection → Configure MCP and paste the config below, or write it to ~/.workbuddy/mcp.json.",
       copiedWorkbuddy: "WorkBuddy config copied",
+    },
+    // Connect steps for the client selected on the right. `copy` serves both connect modes;
+    // `signIn` only the sign-in mode, and {{name}} is the server name the config registers.
+    // The WorkBuddy labels follow its 5.9.3 English UI.
+    mcpClientSteps: {
+      heading: "{{client}} setup",
+      claude: {
+        copy: "Run the command on the right (all projects), or write the config to .mcp.json at the project root (that project only).",
+        signIn:
+          "In Claude Code, run /mcp and pick {{name}} to sign in. The browser opens this platform's sign-in page; sign in and approve.",
+      },
+      cursor: {
+        copy: "Write the config to ~/.cursor/mcp.json (all projects) or to .cursor/mcp.json in the project.",
+        signIn:
+          "In Cursor settings, find {{name}} in the MCP list and follow its sign-in prompt. The browser opens this platform's sign-in page; sign in and approve.",
+      },
+      workbuddy: {
+        copy: "In WorkBuddy, paste the config under Connectors → Custom connectors → Configure MCP (~/.workbuddy/mcp.json).",
+        signIn:
+          "When {{name}} shows Needs authentication, click Connect. The browser opens this platform's sign-in page; sign in and approve.",
+      },
+      generic: {
+        copy: "Copy the full config into the client's MCP server settings.",
+        signIn:
+          "Click Connect or Authorize in the client. The browser opens this platform's sign-in page; sign in and approve.",
+      },
     },
     mcpConnect: {
       title: "Let agents call OpenBKN capabilities",
@@ -254,8 +274,6 @@ export const contextLoaderPanelPart = {
         "This page generates MCP integration config. After copying it into an agent platform, the agent can access OpenBKN retrieval, query, and action capabilities through MCP tools.",
       stepIssueKey:
         "Issue an API key in Account Center and put the long-lived bak_ key into the Bearer key on the right.",
-      stepCopyConfig:
-        "Choose the agent platform type, then copy the full config into the matching MCP service configuration.",
       stepUseAgent:
         "Save it, return to the agent chat, ask directly, and let the agent use MCP tools for retrieval, query, or action calls.",
       genericTab: "Generic mcp.json",

@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { PropertyDeclarations } from "./declarations";
+
 export type KnowledgeNetworkObjectTypeRecord = {
   color: string;
   conceptGroupIds: string[];
@@ -126,6 +128,8 @@ export type ObjectTypeMaskRule =
 
 export type ObjectTypeDataProperty = {
   comment?: string;
+  /** BKN spec 3.0 declarations; absent when the property makes none. */
+  declarations?: PropertyDeclarations;
   displayKey: boolean;
   displayName: string;
   incrementalKey: boolean;
@@ -173,10 +177,22 @@ export type ObjectTypeLogicProperty = {
   type?: string;
 };
 
+/**
+ * The declarations the data properties had when the object type was read, by property name. A
+ * save sends only the declarations that differ from them; a property without an entry, new or
+ * without declarations, sends the declarations it has.
+ */
+export type DataPropertyDeclarationBaseline = ReadonlyMap<string, PropertyDeclarations>;
+
 export type KnowledgeNetworkObjectTypeMutationPayload = {
   color: string;
   conceptGroupIds: string[];
   dataProperties?: ObjectTypeDataProperty[];
+  /**
+   * Present on a save that edits declarations; empty for a new object type. A save without it,
+   * such as a mask rule save, sends no declaration and the backend keeps the stored ones.
+   */
+  declarationBaseline?: DataPropertyDeclarationBaseline;
   dataSource?: ObjectTypeDataSource;
   description: string;
   icon?: string;

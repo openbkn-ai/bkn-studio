@@ -5,8 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectFormScene";
@@ -771,7 +772,7 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it(
-    "社区版显示 SQL Server 的专业版标签,并服从服务端 available 禁用选择",
+    "社区版显示 SQL Server 版本提示,并服从服务端 available 禁用选择",
     async () => {
       permissionState.values = new Set(["catalog:create"]);
       entitlementState.snapshot = {
@@ -781,22 +782,28 @@ describe("DataConnectFormScene · connection preflight", () => {
       };
       listDataConnectConnectorTypesMock.mockResolvedValue([sqlServerConnectorType(true, false)]);
 
-      render(<DataConnectFormScene mode="create" />);
+      render(
+        <MemoryRouter>
+          <DataConnectFormScene mode="create" />
+        </MemoryRouter>,
+      );
 
       const sqlServerButton = await findConnectorCard("SQL Server");
 
       expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
       expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
       expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeDisabled");
-      expect(sqlServerButton.textContent).toContain(
-        "common.entitlement.editionsShort.professional",
-      );
+      expect(
+        within(sqlServerButton.parentElement!).getByRole("button", {
+          name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
+        }),
+      ).toHaveAttribute("aria-haspopup", "dialog");
     },
     HEAVY_SCENE_TIMEOUT_MS,
   );
 
   it(
-    "专业版及以上隐藏 SQL Server 的专业版标签",
+    "专业版及以上隐藏 SQL Server 的升级提示",
     async () => {
       permissionState.values = new Set(["catalog:create"]);
       entitlementState.snapshot = {
@@ -806,14 +813,20 @@ describe("DataConnectFormScene · connection preflight", () => {
       };
       listDataConnectConnectorTypesMock.mockResolvedValue([sqlServerConnectorType(true, true)]);
 
-      render(<DataConnectFormScene mode="create" />);
+      render(
+        <MemoryRouter>
+          <DataConnectFormScene mode="create" />
+        </MemoryRouter>,
+      );
 
       const sqlServerButton = await findConnectorCard("SQL Server");
 
       expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
-      expect(sqlServerButton.textContent).not.toContain(
-        "common.entitlement.editionsShort.professional",
-      );
+      expect(
+        within(sqlServerButton.parentElement!).queryByRole("button", {
+          name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
+        }),
+      ).not.toBeInTheDocument();
     },
     HEAVY_SCENE_TIMEOUT_MS,
   );
@@ -841,14 +854,26 @@ describe("DataConnectFormScene · connection preflight", () => {
         },
       ]);
 
-      render(<DataConnectFormScene mode="create" />);
+      render(
+        <MemoryRouter>
+          <DataConnectFormScene mode="create" />
+        </MemoryRouter>,
+      );
       const hanaButton = await findConnectorCard("SAP HANA");
       expect(hanaButton.hasAttribute("disabled")).toBe(!available);
       if (available) {
-        expect(hanaButton.textContent).not.toContain("common.entitlement.editionsShort.enterprise");
+        expect(
+          within(hanaButton.parentElement!).queryByRole("button", {
+            name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
+          }),
+        ).not.toBeInTheDocument();
         expect(hanaButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
       } else {
-        expect(hanaButton.textContent).toContain("common.entitlement.editionsShort.enterprise");
+        expect(
+          within(hanaButton.parentElement!).getByRole("button", {
+            name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
+          }),
+        ).toHaveAttribute("aria-haspopup", "dialog");
         expect(hanaButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
       }
     },
@@ -856,7 +881,7 @@ describe("DataConnectFormScene · connection preflight", () => {
   );
 
   it(
-    "SQL Server 停用时服从服务端 enabled,不弹前端升级引导",
+    "SQL Server 停用状态与版本不足提示独立展示",
     async () => {
       permissionState.values = new Set(["catalog:create"]);
       entitlementState.snapshot = {
@@ -866,22 +891,28 @@ describe("DataConnectFormScene · connection preflight", () => {
       };
       listDataConnectConnectorTypesMock.mockResolvedValue([sqlServerConnectorType(false, true)]);
 
-      render(<DataConnectFormScene mode="create" />);
+      render(
+        <MemoryRouter>
+          <DataConnectFormScene mode="create" />
+        </MemoryRouter>,
+      );
 
       const sqlServerButton = await findConnectorCard("SQL Server");
 
       expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
       expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeDisabled");
       expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
-      expect(sqlServerButton.textContent).toContain(
-        "common.entitlement.editionsShort.professional",
-      );
+      expect(
+        within(sqlServerButton.parentElement!).getByRole("button", {
+          name: /^dataConnect\.connectorTypeUnlock common\.entitlement\.editionsShort\./,
+        }),
+      ).toHaveAttribute("aria-haspopup", "dialog");
     },
     HEAVY_SCENE_TIMEOUT_MS,
   );
 
   it(
-    "连接器同时不可用且停用时只显示不可用标签",
+    "连接器同时不可用且停用时优先显示停用标签",
     async () => {
       permissionState.values = new Set(["catalog:create"]);
       entitlementState.snapshot = {
@@ -891,13 +922,17 @@ describe("DataConnectFormScene · connection preflight", () => {
       };
       listDataConnectConnectorTypesMock.mockResolvedValue([sqlServerConnectorType(false, false)]);
 
-      render(<DataConnectFormScene mode="create" />);
+      render(
+        <MemoryRouter>
+          <DataConnectFormScene mode="create" />
+        </MemoryRouter>,
+      );
 
       const sqlServerButton = await findConnectorCard("SQL Server");
 
       expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
-      expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
-      expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeDisabled");
+      expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
+      expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeDisabled");
     },
     HEAVY_SCENE_TIMEOUT_MS,
   );
@@ -1241,7 +1276,7 @@ describe("DataConnectFormScene · connection preflight", () => {
           content: "dataConnect.changeConnectorDescription",
         }),
       );
-      expect((await findConnectorCard("SAP HANA")).className).toContain("cardActive");
+      expect(await findConnectorCard("SAP HANA")).toHaveAttribute("aria-pressed", "true");
 
       const onOk = modalConfirmMock.mock.calls[0]?.[0]?.onOk;
       if (!onOk) throw new Error("Expected connector change confirmation");

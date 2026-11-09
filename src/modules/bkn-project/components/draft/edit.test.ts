@@ -165,3 +165,25 @@ describe("draft edits", () => {
     }
   });
 });
+
+it("blocks relationship repair and dependent events before adoption", () => {
+  const current = draft();
+  const relation = current.items.relationTypes[0];
+  relation.adopted = false;
+  relation.documentRepair = "target_identity";
+  expect(adoptBlocker(current, "relation_types", relation)).toBe("relationNeedsRepair");
+  const event = current.items.objectTypes[0];
+  event.adopted = false;
+  event.needsIdentity = false;
+  event.document = {
+    role: "event",
+    layer: "fact",
+    reason: "Confirmed",
+    citations: [],
+    selectionId: "lock",
+    selectionRevision: 1,
+    timeProperty: "date",
+    participantRelations: [relation.id],
+  };
+  expect(adoptBlocker(current, "object_types", event)).toBe("relationNeedsRepair");
+});

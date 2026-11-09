@@ -26,6 +26,11 @@ import type {
   ObjectTypeMaskRule,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import {
+  fitDeclarationsToType,
+  hasDeclarations,
+  normalizeDeclarations,
+} from "@/modules/knowledge-network/utils/property-declarations";
+import {
   createDefaultMaskRule,
   defaultMaskPreviewInput,
   isMaskRuleValid,
@@ -43,8 +48,15 @@ import {
   DATA_PROPERTY_TYPES,
 } from "./constants";
 import styles from "./ObjectTypeDataAttributeFormDrawer.module.css";
+import {
+  PropertyDeclarationsSection,
+  type ClearedByTypeChange,
+  type PropertyDeclarationContext,
+} from "./PropertyDeclarationsSection";
 
 type ObjectTypeDataAttributeFormDrawerProps = {
+  /** Shows the BKN spec 3.0 declarations to edit; absent, they pass through unchanged. */
+  declarationContext?: PropertyDeclarationContext;
   mode?: "attribute" | "mask-rule";
   onClose: () => void;
   onSubmit: (value: ObjectTypeDataProperty) => Promise<void> | void;
@@ -53,6 +65,7 @@ type ObjectTypeDataAttributeFormDrawerProps = {
 };
 
 export function ObjectTypeDataAttributeFormDrawer({
+  declarationContext,
   mode = "attribute",
   onClose,
   onSubmit,
@@ -70,6 +83,10 @@ export function ObjectTypeDataAttributeFormDrawer({
   const isDisplayNameManuallyEdited = useRef(false);
   const [previewInput, setPreviewInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const primaryKey = Form.useWatch("primaryKey", { form, preserve: true }) as boolean | undefined;
+  const editsDeclarations = Boolean(declarationContext) && !isMaskRuleMode;
+  const [declarationsOpen, setDeclarationsOpen] = useState(false);
+  const [clearedByTypeChange, setClearedByTypeChange] = useState<ClearedByTypeChange | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -77,6 +94,8 @@ export function ObjectTypeDataAttributeFormDrawer({
     }
 
     setSubmitting(false);
+    setDeclarationsOpen(hasDeclarations(property?.declarations));
+    setClearedByTypeChange(null);
 
     isDisplayNameManuallyEdited.current = Boolean(property);
 
@@ -114,6 +133,17 @@ export function ObjectTypeDataAttributeFormDrawer({
       form.setFieldValue("displayKey", false);
     }
     setPreviewInput(defaultMaskPreviewInput(nextType));
+    if (declarationContext) {
+      const fitted = fitDeclarationsToType(
+        form.getFieldValue("declarations") as ObjectTypeDataProperty["declarations"],
+        nextType,
+        declarationContext.valueTypes,
+      );
+      form.setFieldValue("declarations", fitted.declarations);
+      setClearedByTypeChange(
+        fitted.cleared.length ? { names: fitted.cleared, type: nextType } : null,
+      );
+    }
   };
 
   const handleMaskKindChange = (kind: "none" | ObjectTypeMaskRuleKind) => {
@@ -288,7 +318,11 @@ export function ObjectTypeDataAttributeFormDrawer({
           : undefined;
       const firstInvalidField = errorFields?.[0]?.name;
       if (firstInvalidField) {
-        form.scrollToField(firstInvalidField, { block: "center" });
+        // A declaration field can be folded away; open the group before scrolling to it.
+        if (firstInvalidField[0] === "declarations") {
+          setDeclarationsOpen(true);
+        }
+        window.setTimeout(() => form.scrollToField(firstInvalidField, { block: "center" }), 0);
         return;
       }
       void message.error(extractRequestErrorMessage(error));
@@ -303,6 +337,14 @@ export function ObjectTypeDataAttributeFormDrawer({
     ) {
       void message.error(t("knowledgeNetwork.objectTypeMaskRuleIncomplete"));
       return;
+    }
+
+    if (editsDeclarations) {
+      const declarations = normalizeDeclarations(values.declarations);
+      values = { ...values, declarations };
+      if (!declarations) {
+        delete values.declarations;
+      }
     }
 
     setSubmitting(true);
@@ -520,6 +562,17 @@ export function ObjectTypeDataAttributeFormDrawer({
               </Form.Item>
             </div>
           </div>
+        ) : null}
+        {editsDeclarations && declarationContext ? (
+          <PropertyDeclarationsSection
+            cleared={clearedByTypeChange}
+            context={declarationContext}
+            form={form}
+            onOpenChange={setDeclarationsOpen}
+            open={declarationsOpen}
+            primaryKey={Boolean(primaryKey)}
+            propertyType={propertyType}
+          />
         ) : null}
       </Form>
     </Drawer>

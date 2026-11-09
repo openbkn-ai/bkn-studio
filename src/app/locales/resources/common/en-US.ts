@@ -15,6 +15,21 @@ export const commonEnUS = {
     copy: "Copy",
     copySuccess: "Copied",
     copyFailed: "Copy failed",
+    codePreview: {
+      code: "Code",
+      raw: "Raw parameters",
+      views: "Request parameter views",
+      copyCode: "Copy code",
+      copyParameters: "Copy parameters",
+      wrap: "Wrap lines",
+      expand: "Expand",
+      empty: "This call has no code content",
+      completeParameters: "Complete original parameters",
+      lines: "{{count}} source lines",
+      lines_one: "{{count}} source line",
+      lines_other: "{{count}} source lines",
+      readOnly: "Read-only preview · Copy preserves the source",
+    },
     viewDetails: "View details",
     hideDetails: "Hide details",
     back: "Back",
@@ -111,6 +126,14 @@ export const commonEnUS = {
         industry: "Industry",
       },
       upgrade: "Upgrade",
+      knowledgeBaseLicense: {
+        title: "Professional licence required for knowledge bases",
+        description:
+          "Activate a Professional or Enterprise licence to use knowledge bases. Contact your administrator to enable this feature.",
+        enableTitle: "Enable knowledge bases",
+        enableDescription:
+          "Your licence includes knowledge bases. Contact your administrator to enable them in this deployment.",
+      },
       knowledgeBaseUnavailable: {
         title: "Knowledge base management required",
         description:

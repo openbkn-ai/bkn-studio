@@ -76,7 +76,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     name: "MariaDB",
     category: "table",
     mode: "local",
-    description: "Connect MariaDB / MySQL-compatible databases.",
+    description: "Connect MariaDB relational databases.",
     enabled: true,
     field_config: {
       host: mockField("Host", "Database host address", "string", true),
@@ -92,7 +92,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     name: "MySQL",
     category: "table",
     mode: "local",
-    description: "Connect MySQL-compatible databases.",
+    description: "Connect MySQL relational databases.",
     enabled: false,
     field_config: {
       host: mockField("Host", "Database host address", "string", true),
@@ -174,6 +174,24 @@ const mockConnectorTypes: MockConnectorType[] = [
         "object",
         false,
       ),
+    },
+  },
+  {
+    type: "doris",
+    name: "Doris",
+    category: "table",
+    mode: "local",
+    description: "Connect Apache Doris databases.",
+    enabled: true,
+    required_edition: "professional",
+    field_config: {
+      host: mockField("Host", "Doris FE host address", "string", true),
+      port: mockField("Port", "Doris MySQL protocol port", "integer", true),
+      username: mockField("Username", "Doris login username", "string", true),
+      password: mockField("Password", "Doris login password", "string", false, true),
+      source_catalog: mockField("Source catalog", "Doris catalog name", "string", false),
+      databases: mockField("Database list", "Optional database names", "array", false),
+      options: mockField("Connection options", "Driver connection options", "object", false),
     },
   },
   {

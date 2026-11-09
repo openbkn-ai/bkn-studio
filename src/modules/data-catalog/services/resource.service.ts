@@ -16,7 +16,11 @@ import {
   transformPrecisionSafeJSONResponse,
 } from "@/framework/request/precision-safe-json";
 import BigNumber from "bignumber.js";
-import { isNumericFilterType, isTemporalFilterType } from "@/modules/data-catalog/lib/filter-tree";
+import {
+  isNumericFilterType,
+  isTemporalFilterType,
+  parseFilterCondition,
+} from "@/modules/data-catalog/lib/filter-tree";
 import { temporalFilterValue } from "@/modules/data-catalog/lib/filter-temporal";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
@@ -30,6 +34,8 @@ import {
   mockDiscoveringCatalogs,
   mockSlug,
   mockStartScan,
+  mockQuerySourceRows,
+  mockQuerySourceFulltext,
 } from "@/modules/data-catalog/services/mock-db";
 import type {
   CatalogResource,
@@ -255,6 +261,7 @@ type BackendResourceDetailFields = {
     filter_condition?: Record<string, unknown> | null;
   } | null;
   source_metadata?: {
+    columns?: Array<{ name: string; num_precision?: number; num_scale?: number }>;
     description?: string;
     foreign_keys?: unknown[];
     indices?: unknown[];
@@ -372,6 +379,15 @@ function mapSourceMetadata(
     source?.category === "table" || source?.category === "index" ? source.category : undefined;
 
   return {
+    ...(metadata.columns
+      ? {
+          columns: metadata.columns.map((column) => ({
+            name: column.name,
+            numPrecision: column.num_precision ?? 0,
+            numScale: column.num_scale ?? 0,
+          })),
+        }
+      : {}),
     sourceCategory,
     foreignKeyCount: metadata.foreign_keys?.length,
     indexCount: metadata.indices?.length,
@@ -1019,6 +1035,12 @@ function mockResourcePreviewCell(
   query: ResourcePreviewQuery,
   usesLocalIndex: boolean,
 ) {
+  if (
+    resource.id === "res-query-source-table" ||
+    resource.id === "res-query-source-unindexed-table"
+  ) {
+    return mockQuerySourceRows[row]?.[field.name] ?? null;
+  }
   if (resource.id === "res-orders" && field.name === "customer_id") {
     return 101 + (row % 2);
   }
@@ -1192,7 +1214,18 @@ export async function previewCatalogResource(
       usesLocalIndex;
     const fixed = resource.logicDefinition?.filterCondition;
     const dynamic = query.filterCondition;
-    assertMockFilterSupported(fixed);
+    const fulltextDemo =
+      resource.id === "res-query-source-fulltext-view" &&
+      source?.id === "res-query-source-table" &&
+      usesLocalIndex &&
+      JSON.stringify(parseFilterCondition(fixed, "local_index")) ===
+        JSON.stringify(
+          parseFilterCondition(
+            parsePrecisionPreservingJSON(mockQuerySourceFulltext.fixedFilterJSON),
+            "local_index",
+          ),
+        );
+    if (!fulltextDemo) assertMockFilterSupported(fixed);
     assertMockFilterSupported(dynamic);
     const total = resourceCountForPagination(source?.rowCount ?? resource.rowCount);
     const makeRow = (rowIndex: number) => {
@@ -1228,12 +1261,14 @@ export async function previewCatalogResource(
       for (let rowIndex = 0; rowIndex < total; rowIndex++) {
         const { row, sourceRow } = makeRow(rowIndex);
         if (
-          !mockFilterMatches(
-            fixed,
-            sourceRow ?? row,
-            source?.schema ?? resource.schema,
-            usesIndexFilters,
-          ) ||
+          !(fulltextDemo
+            ? mockQuerySourceFulltext.rowIds.includes(Number(sourceRow?.id))
+            : mockFilterMatches(
+                fixed,
+                sourceRow ?? row,
+                source?.schema ?? resource.schema,
+                usesIndexFilters,
+              )) ||
           !mockFilterMatches(dynamic, row, resource.schema, usesIndexFilters)
         )
           continue;

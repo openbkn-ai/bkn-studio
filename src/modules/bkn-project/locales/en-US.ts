@@ -7,77 +7,6 @@
 
 export const bknProjectEnUS = {
   bknProject: {
-    documentEditor: {
-      recordIdentity: "Stable record identity, maintained by the system",
-      managedRelation: "This source relationship is maintained by the system.",
-      sourcesHint:
-        "Select knowledge-base directories and debug files on Requirements and resources, then extract models. You can also add structured data catalogs.",
-      incomplete:
-        "Complete each business field name, valid API name, extraction instruction and at least one verified example.",
-      relationHelp: "Connect objects by global identity or names in the same document.",
-      sourceObject: "Source object",
-      targetObject: "Target object",
-      connection: "Connect by",
-      linking: "Identity link",
-      same_document: "Same document",
-      mention: "Mention field",
-      targetIdentity: "Target identity",
-      sourceName: "Source name field",
-      targetName: "Target name field",
-      cardinality: "Cardinality",
-      oneToOne: "One to one",
-      oneToMany: "One to many",
-      manyToOne: "Many to one",
-      manyToMany: "Many to many",
-      documentRelation: "Relation from documents",
-      roles: {
-        entity: "Business object",
-        file: "File",
-        in_document: "Object in a document",
-        fact: "Fact",
-        event: "Event",
-        relation: "Business relation",
-        evidence_document: "Original document",
-        evidence_block: "Original passage",
-        evidence_image: "Original image",
-        evidence_relation: "Evidence relation",
-      },
-      source: "Model from documents",
-      original: "Open original {{number}}",
-      identity: "Unique identity",
-      display: "Display field",
-      time: "Event time",
-      participants: "Participants",
-      managed: "Managed provenance field · read only",
-      newField: "New field",
-      remove: "Remove",
-      fieldName: "Field name",
-      apiName: "API name",
-      type: "Value type",
-      description: "Description",
-      instruction: "What to extract",
-      examples: "Verified examples",
-      selectExample: "Choose an example",
-      add: "Add field",
-      debugOnly: "Only the confirmed debug files are shown. Acceptance files are kept separate.",
-      fragment: "{{file}} · excerpt {{number}}",
-      quote: "Copy the exact example from the excerpt",
-      invalidExample: "Use a unique excerpt of up to 4,000 characters from the selected passage.",
-      types: {
-        string: "Short text",
-        text: "Long text",
-        integer: "Integer",
-        "unsigned integer": "Non-negative integer",
-        float: "Number",
-        decimal: "Decimal",
-        boolean: "Yes or no",
-        date: "Date",
-        time: "Time",
-        datetime: "Date and time",
-        timestamp: "Timestamp",
-        json: "Structured content",
-      },
-    },
     title: "Projects",
     description:
       "Each project brings requirements, ontology and releases together for one business knowledge network.",
@@ -131,7 +60,7 @@ export const bknProjectEnUS = {
       success: "Project created",
       failed: "Failed to create the project",
       name: "Project name",
-      namePlaceholder: "For example: Delivery delay warning",
+      namePlaceholder: "For example: Business exception warning",
       nameRequired: "Enter a project name",
       nameTooLong: "The project name must be at most {{max}} characters",
       target: "Target knowledge network",
@@ -143,7 +72,7 @@ export const bknProjectEnUS = {
       newNetwork: "New knowledge network",
       newNetworkDescription: "Start from an empty network; the first release is v1.0.0",
       newNetworkName: "Network name",
-      newNetworkNamePlaceholder: "For example: Delivery management",
+      newNetworkNamePlaceholder: "For example: Business management",
       newNetworkNameRequired: "Enter a network name",
       catalogs: "Data sources",
       catalogsHint:
@@ -155,16 +84,19 @@ export const bknProjectEnUS = {
       title: "Project workspace",
       description: "Requirements, ontology and releases of a project.",
       navLabel: "Project navigation",
-      groupBuild: "Build",
-      groupRelease: "Release and run",
+      groupModeling: "Modeling",
+      groupRelease: "Build and release",
+      groupGovernance: "Governance",
       sections: {
         overview: "Overview",
-        resources: "Requirements and resources",
-        model: "Ontology modeling",
+        resources: "Requirements and sources",
+        concepts: "Concept extraction",
+        model: "Concept modeling",
+        kinetic: "Kinetic modeling",
         scenarios: "Business scenarios",
-        instances: "Knowledge base build",
-        release: "Confirm and release",
-        builds: "Build tasks",
+        build: "Build",
+        release: "Release",
+        terms: "Term library",
       },
       backToList: "Back to projects",
       targetNetwork: "Target network {{name}}",
@@ -173,10 +105,167 @@ export const bknProjectEnUS = {
       notFound: "Project not found",
       notFoundDescription: "The project does not exist, or you cannot see its knowledge network.",
       loadFailed: "Failed to load the project",
+      nextStep: "Next: {{section}}",
       comingSoon: "This page is under construction",
       comingSoonDescription: "A later version brings the full feature here.",
     },
+    concepts: {
+      summary:
+        "Concepts drawn from {{tables}} tables, {{documents}} knowledge-base files and {{requirements}} requirement concepts.",
+      summaryCore:
+        "Concepts drawn from {{tables}} tables and {{requirements}} requirement concepts.",
+      reextract: "Extract again",
+      requirements: {
+        extract: "Extract requirement concepts",
+        started: "Extracting concepts from the requirement documents",
+        running:
+          "Extracting concepts from the requirement documents; the ones you edited are kept…",
+        failed:
+          "No concepts could be extracted from the requirement documents this time. Try again later.",
+        failedKept:
+          "Extracting again did not finish; these are still the concepts extracted from the requirement documents last time.",
+        stale:
+          "The requirement documents changed. You can extract their concepts again; the ones you edited are kept.",
+        noDocuments:
+          "There are no requirement documents yet. Upload them under Requirements and sources first.",
+        busy: "The requirements are being processed. Try again shortly.",
+      },
+      stats: {
+        sources: "Sources",
+        concepts: "Candidate concepts",
+        inModel: "In the model",
+        inModelPending: "{{count}} adopted by drafting, not yet confirmed",
+        inModelPending_one: "{{count}} adopted by drafting, not yet confirmed",
+        inModelPending_other: "{{count}} adopted by drafting, not yet confirmed",
+      },
+      verdict: {
+        object: "Object",
+        event: "Event",
+        property: "Property",
+        values: "Value list",
+        relation: "Relation",
+        kinetic: "Kinetic",
+        none: "Not included",
+      },
+      state: {
+        pending: "To confirm",
+        blocked: "Needs action",
+        judged: "Confirmed",
+        in_model: "In the model",
+      },
+      filter: {
+        all: "All",
+      },
+      pending:
+        "{{count}} concepts to confirm. Judge them one by one or accept all suggestions; you can change a judgment later.",
+      pending_one:
+        "{{count}} concept to confirm. Judge it or accept the suggestion; you can change a judgment later.",
+      pending_other:
+        "{{count}} concepts to confirm. Judge them one by one or accept all suggestions; you can change a judgment later.",
+      pendingAdopted:
+        "Those already adopted but not confirmed are written as they are when the model is confirmed; judge any you do not want as not included.",
+      acceptAll: "Accept all suggestions",
+      acceptTitle: "Accept all suggestions?",
+      acceptContent:
+        "Every concept to confirm is judged as suggested when extracting: those suggested in are adopted, the others left out. Those without an identity or with an end not adopted are skipped for you. You can still change each judgment later.",
+      accepted: "Accepted {{count}} suggestions",
+      acceptedSkipped: "Accepted {{accepted}} suggestions; {{count}} need you",
+      goToModel: "Go to concept modeling",
+      empty: {
+        title: "No concepts yet",
+        description:
+          "Concepts are drawn from the requirements and sources. Set up the sources first, then extract the concepts.",
+        action: "Go to requirements and sources",
+      },
+      drafting: "Extracting concepts…",
+      loadFailed: "The concepts cannot be read right now",
+      judgeFailed: "The judgment was not saved. Try again later.",
+      stale:
+        "The model changed after this page was opened, so the judgment was not saved. Reload, then judge again.",
+      sourceChanged:
+        "This concept comes from a knowledge-base selection that is no longer in use, so the judgment was not saved. Choose the knowledge bases again and extract concepts, then judge it.",
+      reload: "Reload",
+      columns: {
+        concept: "Concept",
+        sources: "Sources",
+        verdict: "Judgment",
+        reason: "Why",
+        destination: "Goes to",
+        state: "Status",
+        actions: "Actions",
+      },
+      source: {
+        table: "Table: {{name}}",
+        document: "Knowledge-base file",
+        requirement: "Requirement: {{name}}",
+      },
+      because: {
+        table_entity: "From a business table",
+        code_table: "A code table: it only gives values, used by fields",
+        foreign_key: "A relation the tables declare",
+        name_match: "Suggested by fields of the same name",
+        stem_match: "Suggested by fields of similar names",
+        link_table: "Through a link table",
+        manual: "Made by you",
+        document: "Found in knowledge-base files",
+        requirement: "Named in the requirement documents",
+        other: "Suggested when extracting",
+      },
+      destination: {
+        model: "Into the concept model",
+        property: "As a property of an object",
+        kinetic: "Into the kinetic model",
+        none: "Not into the model",
+        noItem: "No data source yet",
+      },
+      blocked: {
+        needs_identity: "Choose its identity first",
+        end_not_adopted: "Adopt the objects at both ends first",
+        repair: "Fix this relation first",
+        action: "Fix it",
+      },
+      merged: "Merged: {{names}}",
+      notAdopted: "{{because}}; not adopted when drafting. You can still judge it “{{verdict}}”",
+      confirm: "Confirm",
+      confirmOf: "Confirm the judgment of “{{name}}”",
+      mergeInto: "Merge into…",
+      unmerge: "Take out “{{name}}”",
+      verdictOf: "Judgment of “{{name}}”",
+      mergeIntoOf: "Merge “{{name}}” into",
+      mergeFailed: "The merge was not saved. Try again later.",
+      readOnly: "Only the project owner can judge concepts",
+      history: {
+        judge: "Judged the concept “{{name}}” as {{verdict}}",
+        merge: "Merged the concept “{{name}}” into “{{into}}”",
+        unmerge: "Took the concept “{{name}}” out of its merge",
+      },
+    },
+    build: {
+      tabs: {
+        structured: "Structured index build",
+        unstructured: "Unstructured instance build",
+      },
+      structured: {
+        description:
+          "Structured objects are queried from their source tables. This builds the indexes search needs and leaves the tables unchanged. It starts when the model is confirmed.",
+      },
+      unstructured: {
+        description:
+          "Extracts instances of document objects from knowledge-base files. Accept a sample first; the full run opens once it passes.",
+        preview:
+          "The professional edition extracts instances of document objects from knowledge-base files, accepts a sample before the full run, and records every update.",
+        comingSoon: "This version cannot build unstructured instances yet.",
+      },
+    },
     model: {
+      preparation: {
+        pending: "Data storage preparation has not started.",
+        preparing: "Preparing data storage: {{ready}} / {{total}}.",
+        ready: "Data storage is ready: {{total}} items.",
+        failed:
+          "Data storage preparation stopped at {{ready}} / {{total}}. Confirm the model again to resume.",
+        stale: "The model or sources changed. Confirm the model again to prepare its data storage.",
+      },
       graph: {
         title: "Concept model",
         emptyDescription: "The draft has no object types yet.",
@@ -210,6 +299,7 @@ export const bknProjectEnUS = {
         ok: "Discard and draft again",
       },
       adoptBlocked: {
+        relationNeedsRepair: "Repair and save the relationship first.",
         needsIdentity: "Choose its identity before adopting it",
         endsNotAdopted: "Adopt the object types it connects before adopting it",
         archived: "The project is archived and cannot be changed",
@@ -312,10 +402,12 @@ export const bknProjectEnUS = {
           value_types: "value type",
         },
         action: {
+          derive: "Derived {{kind}} {{name}} for individual review.",
           adopt: "Adopted {{kind}} {{name}}",
           unadopt: "Unadopted {{kind}} {{name}}",
           rename: "Renamed {{kind}} {{before}} to {{after}}",
           describe: "Changed the description of {{kind}} {{name}}",
+          aliases: "Changed the aliases of {{kind}} {{name}}",
           identity: "Chose {{properties}} as the identity of {{name}}",
           restore: "Restored field {{field}} as property {{property}} of {{name}}",
           other: "Changed {{kind}} {{name}}",
@@ -333,22 +425,23 @@ export const bknProjectEnUS = {
             "Drafting the tables of {{count}} added data catalogs failed; they can be added again",
         },
         confirmation: {
-          accept_partial: "Confirmed the draft without {{count}} tables that could not be read",
-          accept_partial_one: "Confirmed the draft without {{count}} table that could not be read",
+          accept_partial: "Confirmed the model without {{count}} tables that could not be read",
+          accept_partial_one: "Confirmed the model without {{count}} table that could not be read",
           accept_partial_other:
-            "Confirmed the draft without {{count}} tables that could not be read",
-          accept_undecided: "Confirmed the draft leaving out {{count}} undecided items",
-          accept_undecided_one: "Confirmed the draft leaving out {{count}} undecided item",
-          accept_undecided_other: "Confirmed the draft leaving out {{count}} undecided items",
+            "Confirmed the model without {{count}} tables that could not be read",
+          accept_undecided: "Confirmed the model leaving out {{count}} undecided items",
+          accept_undecided_one: "Confirmed the model leaving out {{count}} undecided item",
+          accept_undecided_other: "Confirmed the model leaving out {{count}} undecided items",
           accept_unresolved_conflicts:
-            "Confirmed the draft with {{count}} requirement conflicts not resolved",
+            "Confirmed the model with {{count}} requirement conflicts not resolved",
           accept_unresolved_conflicts_one:
-            "Confirmed the draft with {{count}} requirement conflict not resolved",
+            "Confirmed the model with {{count}} requirement conflict not resolved",
           accept_unresolved_conflicts_other:
-            "Confirmed the draft with {{count}} requirement conflicts not resolved",
-          other: "Made a decision when confirming the draft",
+            "Confirmed the model with {{count}} requirement conflicts not resolved",
+          other: "Made a decision when confirming the model",
         },
         empty: "none",
+        aliasSeparator: ", ",
         beforeAfter: "Before: {{before}}  After: {{after}}",
         byAt: "{{who}} · {{time}}",
         you: "You",
@@ -381,11 +474,13 @@ export const bknProjectEnUS = {
       empty: {
         title: "No ontology draft yet",
         description:
-          "AI drafts object types, relation types and value types from the structure of the tables; nothing is adopted until you confirm the draft.",
+          "AI drafts object types, relation types and value types from the structure of the tables; nothing is adopted until you confirm the model.",
         noCatalogs:
           "The project has no data catalogs; select the catalogs that hold its structured data first.",
         noCatalogsAskOwner:
           "The project has no data catalogs yet. Ask the project owner to choose them.",
+        knowledgeBaseSources:
+          "Select knowledge-base directories and debug files on Requirements and sources, then extract models on Concept extraction. You can also add structured data catalogs.",
       },
       drafting: {
         title: "AI is drafting the ontology from the table structure",
@@ -412,65 +507,14 @@ export const bknProjectEnUS = {
           "{{count}} relation types are adopted although an object type they connect is not. Unadopt them, or adopt the object types at both ends first.",
       },
       candidates: {
-        catalog: "Filter by catalog",
-        allCatalogs: "All catalogs",
-        acceptSuggestions: "Accept all suggestions",
-        acceptTitle: "Confirm every candidate as drafting suggested?",
-        acceptContent:
-          "Candidates nobody confirmed are confirmed as drafting suggested them: adopted where it suggested adopting, left out where it did not. Object types that need an identifier and relations whose ends are not adopted are skipped, for you to settle.",
-        accepted: "Confirmed {{count}} candidates.",
-        accepted_one: "Confirmed {{count}} candidate.",
-        accepted_other: "Confirmed {{count}} candidates.",
-        acceptedSkipped: "Confirmed {{accepted}}; skipped {{count}} that need you to settle them.",
-        acceptedSkipped_one:
-          "Confirmed {{accepted}}; skipped {{count}} that needs you to settle it.",
-        acceptedSkipped_other:
-          "Confirmed {{accepted}}; skipped {{count}} that need you to settle them.",
-        allReviewed: "Every candidate is confirmed.",
-        concept: "Concept: {{term}}",
-        source: "{{name}} · {{rows}} rows",
-        loadFailed: "Failed to load the candidates",
-        columns: {
-          name: "Candidate",
-          state: "State",
-          marks: "Marks",
-          source: "Source table",
-        },
-        kind: {
-          object_types: "Object type",
-          relation_types: "Relation type",
-        },
-        state: {
-          pending: "To confirm",
-          adopted: "Adopted",
-          excluded: "Left out",
-        },
-        mark: {
-          needed: "Needed by requirements",
-          added: "Added catalog",
-          identity: "Needs an identifier",
-          ends: "Ends not adopted",
-        },
-        review: {
-          adoptNext: "Adopt and next",
-          excludeNext: "Leave out and next",
-          next: "Next",
-          excludeTitle: "Leave out “{{name}}”",
-          reason: "Reason (optional)",
-          reasonPlaceholder: "For example: this table is a log, not a business object",
-          confirm: "Leave out",
-        },
         unreviewed:
-          "{{count}} candidates were not confirmed one by one; confirming the draft takes them as they are adopted now.",
+          "{{count}} concepts are not confirmed yet; confirming the model takes them as they are adopted now.",
         unreviewed_one:
-          "{{count}} candidate was not confirmed one by one; confirming the draft takes it as it is adopted now.",
+          "{{count}} concept is not confirmed yet; confirming the model takes it as it is adopted now.",
         unreviewed_other:
-          "{{count}} candidates were not confirmed one by one; confirming the draft takes them as they are adopted now.",
+          "{{count}} concepts are not confirmed yet; confirming the model takes them as they are adopted now.",
       },
       tabs: {
-        review: "To confirm {{count}}",
-        review_one: "To confirm {{count}}",
-        review_other: "To confirm {{count}}",
         objects: "Object types {{count}}",
         objects_one: "Object type {{count}}",
         objects_other: "Object types {{count}}",
@@ -499,7 +543,8 @@ export const bknProjectEnUS = {
         relationType: "Relation type",
         ends: "Source → Target",
         cardinality: "Correspondence",
-        evidence: "Evidence",
+        basis: "Basis",
+        confidence: "Confidence",
         valueType: "Value type",
         baseType: "Base type",
         values: "Values",
@@ -509,9 +554,22 @@ export const bknProjectEnUS = {
         reason: "Reason",
         table: "Table",
       },
+      basis: {
+        foreign_key: "Foreign key",
+        name_match: "Same field name",
+        stem_match: "Similar field names",
+        link_table: "Link table",
+        manual: "Made by you",
+        business_identity: "Same business number",
+        same_document: "Within one document",
+        document: "Found in documents",
+        other: "Other basis",
+      },
+      basisThrough: "Through {{table}}",
       identityPending: "Waiting for you",
       cardinality: {
         oneToOne: "One to one",
+        oneToMany: "One to many",
         manyToOne: "Many to one",
         manyToMany: "Many to many",
       },
@@ -642,7 +700,6 @@ export const bknProjectEnUS = {
           other: "A change",
         },
         preview: {
-          extractionInstruction: "extraction instruction: {{value}}",
           linking: "by business identity: {{rules}}",
           sameDocument: "within the same document: {{rules}}",
 
@@ -814,7 +871,6 @@ export const bknProjectEnUS = {
         id: "ID",
       },
       tiles: {
-        questions: "Scenario questions",
         questionsSub: "Shown once the requirements are drafted",
         questionsAction: "View business scenarios",
         questionsReadySub: "Requirements version {{version}}",
@@ -825,7 +881,6 @@ export const bknProjectEnUS = {
           drafting: "Drafting",
           failed: "Drafting failed",
         },
-        ontology: "Ontology",
         ontologySub: "Shown once drafted from tables",
         ontologyAction: "Go to modeling",
         ontologyValue: "{{count}} object types",
@@ -838,27 +893,43 @@ export const bknProjectEnUS = {
         ontologyPendingSub: "Adopted so far · {{count}} items wait for you",
         ontologyPendingSub_one: "Adopted so far · {{count}} item waits for you",
         ontologyPendingSub_other: "Adopted so far · {{count}} items wait for you",
-        sources: "Data sources",
         sourcesValue: "{{count}} catalogs",
         sourcesValue_one: "{{count}} catalog",
         sourcesValue_other: "{{count}} catalogs",
         sourcesSub: "Referenced, never copied",
         sourcesAction: "Manage catalogs and documents",
         sourcesChoose: "Choose data catalogs",
-        instances: "Instances",
-        instancesValue: "Not counted here",
-        instancesSub: "See the records in the published knowledge network",
+        conceptsSub: "Concepts drawn from tables, knowledge-base samples and requirement documents",
+        conceptsSubCore: "Concepts drawn from tables and requirement documents",
+        conceptsAction: "Judge them",
+        conceptsValue: "{{count}} concepts",
+        conceptsValue_one: "{{count}} concept",
+        conceptsValue_other: "{{count}} concepts",
+        conceptsInModel: "{{count}} in the model",
+        conceptsInModel_one: "{{count}} in the model",
+        conceptsInModel_other: "{{count}} in the model",
+        kineticSub: "How far metrics, functions, skills and the like are implemented",
+        kineticValue: "{{linked}} / {{total}}",
+        kineticOpen: "{{count}} to implement",
+        kineticDone: "All implemented",
+        kineticAction: "View the kinetic model",
+        buildSub: "Structured indexes and unstructured instances",
+        buildSubCore: "Indexes of structured objects",
+        buildValue: "{{ready}} / {{total}} tables",
+        buildAction: "View the build",
+        releaseSub: "The latest released version",
+        releaseAction: "View releases",
       },
       model: {
-        title: "Ontology concept model",
-        open: "Open in ontology modeling",
+        title: "Concept model",
+        open: "Open in concept modeling",
         empty: "No ontology draft yet",
         emptyDescription:
           "Once the ontology is drafted from tables, its object and relation types show here.",
         draftingDescription:
           "AI is drafting from the tables; the concept model shows here when it is done.",
         failedDescription:
-          "This draft did not finish. Open ontology modeling to see why and draft again.",
+          "This draft did not finish. Open concept modeling to see why and draft again.",
         loadFailed: "The ontology draft cannot be read right now",
       },
       changes: {
@@ -878,9 +949,11 @@ export const bknProjectEnUS = {
       },
     },
     relationSuggestions: {
-      entry: "Unconnected objects {{count}}",
-      entry_one: "Unconnected object {{count}}",
-      entry_other: "Unconnected objects {{count}}",
+      gap: "{{count}} adopted objects have no relation yet, so questions across objects may go unanswered. Choose one to see how to connect it:",
+      gap_one:
+        "{{count}} adopted object has no relation yet, so questions across objects may go unanswered. Choose it to see how to connect it:",
+      gap_other:
+        "{{count}} adopted objects have no relation yet, so questions across objects may go unanswered. Choose one to see how to connect it:",
       allConnected: "Every adopted object is connected",
       title: "Connect unconnected objects",
       hint: "These objects are adopted, but no adopted relation connects them yet. Choose one to see how it could be connected.",
@@ -907,6 +980,23 @@ export const bknProjectEnUS = {
       through: "through {{table}}: {{pairs}}",
       adopt: "Adopt",
       open: "Open and check",
+    },
+    aliases: {
+      label: "Aliases",
+      placeholder: "Type one name and press Enter; add as many as needed",
+      help: "Other names such as abbreviations, former names or names in another language, so agents understand questions and find this item. Up to {{max}}, each up to {{length}} characters.",
+      too_many: "An item has at most {{max}} aliases. Remove some.",
+      too_long: "Alias \u201c{{alias}}\u201d is longer than {{max}} characters. Shorten it.",
+      comma:
+        "Alias \u201c{{alias}}\u201d holds a comma. Write one name per alias and add the others separately.",
+      repeated: "Alias \u201c{{alias}}\u201d appears twice.",
+      own_name: "Alias \u201c{{alias}}\u201d is the same as the name. No need to add it.",
+      other_name:
+        "\u201c{{alias}}\u201d is already the name of \u201c{{other}}\u201d. As an alias it would confuse agents; choose another.",
+      alias_of_other:
+        "\u201c{{alias}}\u201d is already an alias of \u201c{{other}}\u201d. To use it as the name, remove it from the aliases of \u201c{{other}}\u201d first.",
+      document_item: "Objects and relations extracted from documents cannot have aliases yet.",
+      other: "The aliases are not valid. Check them and save again.",
     },
     relationEditor: {
       sourceSuggestions: {
@@ -984,6 +1074,16 @@ export const bknProjectEnUS = {
           "Properties you removed are still used: {{uses}}. Change the relations first, or keep the properties.",
         InvalidPropertyUnnamed:
           "A property's column does not exist, is mapped by another property, or has another type.",
+        DualSourceNotConfirmed:
+          "Confirm the dual-source field list and adopt its file and fact models first.",
+        InvalidSourceFields:
+          "The field list differs from the current models. Check names, placement and authority, then confirm again.",
+        BusinessIdentityNotVerified:
+          "Verify and save the business identifier in the relationship settings first. The system primary key stays unchanged.",
+        BusinessIdentityNotUnique:
+          "The business identifier has duplicate or empty values. Resolve them and verify again; the system primary key is unchanged.",
+        BusinessIdentityUnavailable:
+          "The full-table business identifier check could not finish. Check source access and try again.",
         InvalidIdentity: "The identifier needs properties that tell every record apart.",
         NeedsIdentity: "Choose an identifier for the object type.",
         FieldNotFound: "The object type\u2019s table cannot be read right now; try again later.",
@@ -1070,7 +1170,7 @@ export const bknProjectEnUS = {
       },
     },
     confirm: {
-      button: "Confirm draft",
+      button: "Confirm model",
       buttonAgain: "Confirm again",
       blocked: {
         network_missing: "The knowledge network has been deleted",
@@ -1097,18 +1197,19 @@ export const bknProjectEnUS = {
         other: "The draft cannot be confirmed yet",
       },
       dialog: {
-        title: "Confirm the draft",
+        title: "Confirm the model",
         summary:
           "Writes the adopted object types ({{objects}}) and relation types ({{relations}}) to the project.",
         replaces:
           "Replaces what the last confirmation wrote; the project's other definitions stay as they are.",
         after:
-          "After confirming, the data is checked and the tables get local indexes. See the results in “Confirm and release”.",
+          "After confirming, the data is checked and the tables get local indexes. See the data check under “Release” and the indexes under “Build”.",
         undecidedTitle: "{{count}} items were not adopted in drafting and nobody decided on them",
         undecidedTitle_one: "{{count}} item was not adopted in drafting and nobody decided on it",
         undecidedTitle_other:
           "{{count}} items were not adopted in drafting and nobody decided on them",
         undecidedAccept: "Leave these items out for now",
+        undecidedItem: "{{name}}: {{because}}",
         neededBy: "Left out, these questions cannot be answered:",
         partialTitle: "{{count}} tables could not be read, so drafting left them out",
         partialTitle_one: "{{count}} table could not be read, so drafting left it out",
@@ -1136,7 +1237,7 @@ export const bknProjectEnUS = {
         end_not_adopted: "An object type at one end is still undecided",
         other: "Not adopted in drafting",
       },
-      done: "Draft confirmed",
+      done: "Model confirmed. Next, work out the kinetic model; the data check is on the release page and the local indexes on the build page.",
       failed: "The draft could not be confirmed. Try again later.",
     },
     resources: {
@@ -1147,8 +1248,12 @@ export const bknProjectEnUS = {
         description:
           "The ontology finds its object and relation types in these catalogs' tables, and released instances are read from them.",
         empty: "No data catalogs chosen yet",
-        gone: "{{name}} (no longer exists)",
-        goToModel: "Go to ontology modeling",
+        gone: "{{count}} selected data catalogs no longer exist. Change the data catalogs.",
+        gone_one: "{{count}} selected data catalog no longer exists. Change the data catalogs.",
+        gone_other: "{{count}} selected data catalogs no longer exist. Change the data catalogs.",
+        unnamed: "Unknown catalog",
+        nameUnread: "—",
+        goToModel: "Go to concept modeling",
       },
       tables: {
         name: "Table",
@@ -1160,16 +1265,233 @@ export const bknProjectEnUS = {
         loadFailed: "The tables' semantic understanding cannot be read right now.",
       },
       knowledgeBases: {
-        title: "Knowledge-base catalogs",
+        title: "Knowledge bases",
         description:
           "Concept models drawn from documents add object types, properties and relations; instances are extracted afterwards.",
         preview:
-          "With knowledge-base catalogs chosen, ontology modeling also draws on the business concepts in their documents.",
+          "With knowledge-base catalogs chosen, concept modeling also draws on the business concepts in their documents.",
         comingSoon: "Choosing knowledge-base catalogs is coming soon.",
+      },
+      tabs: {
+        documents: "Requirement documents and regulations",
+        needsAttention: "Needs attention",
       },
       documents: {
         loadFailed: "The requirement documents cannot be read right now.",
       },
+    },
+    kinetic: {
+      intro:
+        "Find what the concept model needs computed or done beyond what it stores: metrics, functions, Skills, and action types with the APIs and MCP tools they run. Link what the knowledge network already has; metrics and action types can be built in the knowledge network and are linked when you come back.",
+      liveNote:
+        "Metrics and action types can be created once their object types are in the live knowledge network: a new project records them first and implements them after its first release. After creating something live, commit the live changes before the next release.",
+      analyze: "Analyze kinetic needs",
+      reanalyze: "Analyze again",
+      startOver: "Start over",
+      startOverTitle: "Analyze everything again?",
+      startOverContent:
+        "Needs you accepted, changed or linked are not kept, only those scenario questions rest on, and the analysis starts again. To refresh only what nobody accepted, use Analyze again.",
+      modelNotConfirmed: "The concept model is not confirmed; confirm it to analyze kinetic needs.",
+      goToModel: "Go to concept modeling",
+      running:
+        "Analyzing which metrics, functions and Skills the concept model and the requirement documents need; this usually takes a minute or two.",
+      failed: "The kinetic needs could not be analyzed: {{reason}}",
+      runError: {
+        agent_rejected: "the request was refused; check the documents and try again.",
+        agent_unavailable: "the analysis is unavailable right now; analyze again later.",
+        agent_failed: "the analysis did not finish; analyze again.",
+        agent_timeout: "the analysis took too long; analyze again.",
+        output_invalid: "the result was incomplete; analyze again.",
+        interrupted: "the needs were changed while it ran; analyze again.",
+        other: "analyze again.",
+      },
+      runStale:
+        "The requirement documents or their types changed since the last analysis; analyze again.",
+      loadFailed: "The kinetic needs cannot be read right now",
+      liveUnavailable:
+        "The live knowledge network cannot be read right now; what is implemented may be incomplete.",
+      beforeRelease:
+        "Implementations can be seen and linked after the first release. You can analyse and record kinetic needs now.",
+      none: "No kinetic needs yet. Analyzing lists the metrics, functions and Skills needed; you can also add them.",
+      noneFiltered: "No kinetic need matches the filters.",
+      stats: {
+        implemented: "Implemented",
+        pending: "To implement",
+        waitingRelease: "After the first release",
+      },
+      filter: {
+        kind: "Kind",
+        state: "State",
+        all: "All",
+      },
+      columns: {
+        name: "Name",
+        kind: "Kind",
+        source: "Basis",
+        objects: "Object types",
+        state: "Implementation",
+        actions: "Actions",
+      },
+      kind: {
+        metric: "Metric",
+        function: "Function",
+        skill: "Skill",
+        mcp_tool: "MCP tool",
+        api: "API",
+        app: "Application",
+        action_type: "Action type",
+        other: "Other",
+      },
+      source: {
+        documents: "Requirement documents",
+        documentsFrom: "From {{name}}",
+        analysis: "AI analysis",
+        scenarios: "Business scenarios",
+        person: "Added by hand",
+        other: "Other",
+      },
+      state: {
+        implemented: "Implemented",
+        broken: "Implementation gone",
+        pending: "To implement",
+        waitingRelease: "Awaits first release",
+        recordOnly: "Recorded only",
+      },
+      unconnectedMark: "Objects not related",
+      cta: {
+        view: "View",
+        match: "Match or implement",
+        rematch: "Match again",
+      },
+      review: {
+        pending: "AI generated, to review",
+        accept: "Accept",
+        acceptItem: "Accept {{name}}",
+        unaccept: "Unaccept",
+        unacceptItem: "Unaccept {{name}}",
+        acceptAll: "Accept all ({{count}})",
+        acceptAll_one: "Accept all ({{count}})",
+        acceptAll_other: "Accept all ({{count}})",
+      },
+      editing: {
+        add: "Add kinetic need",
+        addTitle: "Add a kinetic need",
+        editTitle: "Edit the kinetic need",
+        edit: "Edit",
+        remove: "Remove",
+        editItem: "Edit {{name}}",
+        removeItem: "Remove {{name}}",
+        removeTitle: "Remove {{name}}?",
+        removeConfirm:
+          "Scenario questions no longer rest on it. Its implementation in the knowledge network stays.",
+        required: "Fill this in",
+        stale:
+          "Someone just changed the kinetic needs; they were read again, make the change once more.",
+      },
+      fields: {
+        name: "Name",
+        kind: "Kind",
+        definition: "Business definition",
+        objects: "Object types",
+        objectsHint: "The first is the one it belongs to.",
+        nothingDrafted:
+          "The ontology draft has no object type to choose yet; draft it in concept modeling first.",
+        metricType: "Metric type",
+        executedBy: "Carried out by",
+        executedByHint:
+          "The API or MCP tool that carries out this action, chosen from the API and MCP tool needs recorded.",
+        noExecutors: "No API or MCP tool need to choose yet; add one first.",
+      },
+      execution: {
+        api: "Calls the {{name}} API",
+        mcp_tool: "Uses the MCP tool {{name}}",
+      },
+      metricType: {
+        atomic: "Atomic metric",
+        derived: "Derived metric",
+        composite: "Composite metric",
+        other: "Other",
+      },
+      panel: {
+        definition: "Business definition",
+        objects: "Object types",
+        executedBy: "Carried out by",
+        executedByNone: "Not chosen yet; choose the API or MCP tool when editing.",
+        usedBy: "Used by {{count}} scenario questions",
+        usedBy_one: "Used by {{count}} scenario question",
+        usedBy_other: "Used by {{count}} scenario questions",
+        implementation: "Current implementation",
+        status: "Status: {{status}}",
+        version: "Version: {{version}}",
+        owner: "Belongs to: {{name}}",
+        view: "View",
+        viewItem: "View {{name}}",
+        unlink: "Unlink",
+        unlinkTitle: "Unlink {{name}}?",
+        unlinkContent:
+          "The need goes back to be implemented. The implementation in the knowledge network stays.",
+        unlinked: "Unlinked",
+        implementationReason: {
+          missing: "The knowledge network no longer has this implementation; match it again.",
+          forbidden: "You may not view this implementation.",
+          unavailable: "This implementation cannot be read right now.",
+          other: "This implementation cannot be read right now.",
+        },
+        candidates: "Close matches the knowledge network has",
+        candidatesNone: "No close match found.",
+        candidatesFailed: "Close matches cannot be read right now",
+        candidateReason: {
+          same_name: "Same name",
+          similar_name: "Similar name",
+          same_object_type: "Same object type",
+          other: "Related",
+        },
+        connect: "Link",
+        connectItem: "Link {{name}}",
+        guide: {
+          metric:
+            "Opens the knowledge network's metric assistant with the name, business definition and object types filled in. Save it and come back: it is linked for you.",
+          action_type:
+            "Opens the knowledge network's action type form with the name, object type and description filled in; choose the API tool or MCP tool it runs. Action types have no AI assistant. Save it and come back: it is linked for you.",
+          function:
+            "A place to develop functions comes later. Record the need now, or link one that exists.",
+          skill:
+            "A place to develop Skills comes later. Record the need now, or link one that exists.",
+          mcp_tool:
+            "Choose from the MCP tools the knowledge network has. A place to develop them comes later.",
+          api: "Choose from the APIs the knowledge network has. A place to develop them comes later.",
+          app: "An application is recorded only; it links to no implementation.",
+          other: "Choose its kind first, then implement it.",
+        },
+        waitingRelease:
+          "Its object types are not in the knowledge network yet. Record it now; it can be implemented after the first release.",
+        noObjects: "Give it an object type before implementing it.",
+        metricHidden: "This edition has no metrics; you can record the need.",
+        metricLocked:
+          "Metrics come with the Professional edition; upgrade to implement them. You can record the need now.",
+        upgrade: "About upgrading",
+        close: "Close",
+        unconnected:
+          "Its object types have no relation between them in the model: {{pairs}}. Implementing it may find no data; add the relations in concept modeling first.",
+        unconnectedPair: "{{from}} — {{to}}",
+        goToModel: "Go to concept modeling",
+        implement: {
+          metric: "Implement the metric",
+          action_type: "Set up the action type",
+        },
+      },
+      handOff: {
+        title: "The project needs {{name}}",
+        returnLabel: "Back to kinetic modeling",
+        metricPrompt: "Create the metric {{name}}: {{definition}} Object types: {{objects}}.",
+        metricPromptShort: "Create the metric {{name}}. Object types: {{objects}}.",
+        executorPending:
+          "{{name}}, which carries out this action, is not implemented yet. Implement it first, then come back to choose how this action is carried out.",
+      },
+      linked: "Linked {{name}}",
+      commitHint:
+        "The live knowledge network has new changes. Before the next release, commit the live changes on the release page first.",
+      goToRelease: "Go to release",
     },
     requirements: {
       export: {
@@ -1197,13 +1519,15 @@ export const bknProjectEnUS = {
       draft: "Generate business scenarios",
       redraft: "Generate again",
       notDrafted:
-        "No business scenarios yet. AI generates scenarios and questions from the adopted ontology, then you review them.",
+        "No business scenarios yet. Once the concept model is confirmed, AI generates scenarios and questions from the concept model and the kinetic model, then you review them.",
       notDraftedDocuments:
-        "Generating also reads the uploaded requirement documents and quotes them.",
+        "Generating also reads the requirement documents and quotes them; with requirement documents, extract their concepts on the concept extraction page first.",
+      modelNotConfirmed:
+        "Confirm the model in concept modeling first, then generate the business scenarios.",
       noDocuments:
         "Requirement documents are optional; once uploaded, generating reads and quotes them.",
       goToDocuments: "Manage documents",
-      goToModel: "Go to ontology modeling",
+      goToModel: "Go to concept modeling",
       startOver: "Start over",
       startOverTitle: "Generate everything again?",
       startOverContent:
@@ -1224,19 +1548,19 @@ export const bknProjectEnUS = {
           "{{count}} item AI generated waits for your review: accept it if it looks right; edit it if it needs changes, which accepts it.",
         waiting_other:
           "{{count}} items AI generated wait for your review: accept those that look right; edit those that need changes, which accepts them.",
-        outdated: "The ontology changed; some scenarios may be outdated",
+        outdated: "The concept model changed; some scenarios may be outdated",
         outdatedDetail:
-          "The ontology {{count}} questions use changed in structure. Generating again keeps what was accepted.",
+          "The concept model {{count}} questions use changed in structure. Generating again keeps what was accepted.",
         outdatedDetail_one:
-          "The ontology {{count}} question uses changed in structure. Generating again keeps what was accepted.",
+          "The concept model {{count}} question uses changed in structure. Generating again keeps what was accepted.",
         outdatedDetail_other:
-          "The ontology {{count}} questions use changed in structure. Generating again keeps what was accepted.",
+          "The concept model {{count}} questions use changed in structure. Generating again keeps what was accepted.",
         uncovered: "{{count}} object types have no scenario yet: {{names}}",
         uncovered_one: "{{count}} object type has no scenario yet: {{names}}",
         uncovered_other: "{{count}} object types have no scenario yet: {{names}}",
       },
       drafting:
-        "Generating the business scenarios and questions from the adopted ontology; this usually takes a minute or two.",
+        "Generating the business scenarios and questions from the concept model and the kinetic model; this usually takes a minute or two.",
       stale:
         "The documents, their types, the data catalogs or the naming language changed after drafting; draft again.",
       waiting: {
@@ -1291,7 +1615,8 @@ export const bknProjectEnUS = {
           "The test questions changed just now; they were read again, so make the change once more.",
         notCurrent:
           "The requirements were drafted again or the question changed; the regression will not ask these test questions. Generate again.",
-        ontologyChanged: "What this question needs in the ontology changed since; generate again.",
+        ontologyChanged:
+          "What this question needs in the concept model changed since; generate again.",
         noTests: "No test questions were written: {{reason}}",
         leftOut: "Generating left out {{count}} test questions that did not qualify",
         leftOut_one: "Generating left out {{count}} test question that did not qualify",
@@ -1311,7 +1636,7 @@ export const bknProjectEnUS = {
       },
       inputReason: {
         input_unknown_concept: "The requirements have no such concept",
-        input_concept_not_mapped: "The concept does not map to the ontology yet",
+        input_concept_not_mapped: "The concept does not map to the concept model yet",
         input_unknown_property: "The concept's object type has no such property",
         input_not_in_template: "The question template does not use this input",
         input_not_time: "A reference time takes a date or time property",
@@ -1352,7 +1677,7 @@ export const bknProjectEnUS = {
         different_records: "The two ways of naming are different records",
         no_values: "The test question has no value to check",
         unknown_concept: "A concept it uses is not in the requirements",
-        concept_not_mapped: "A concept it uses is not mapped to the ontology yet",
+        concept_not_mapped: "A concept it uses is not mapped to the concept model yet",
         item_not_drafted: "An object type it needs is not in the draft",
         unknown_property: "A property it uses does not exist",
         property_not_mapped: "A property it uses has no field",
@@ -1369,6 +1694,7 @@ export const bknProjectEnUS = {
         value_not_in_text: "The test question does not say a value the documents gave",
         value_outside_slot: "The test question says a number, date or code with no basis",
         check_timeout: "The check took too long",
+        data_not_built: "The document data is not built yet; check again after the build",
         table_missing: "The table this test asks about was deleted",
         other: "It did not pass the check",
       },
@@ -1379,7 +1705,7 @@ export const bknProjectEnUS = {
           concept: "Concept",
           property: "Property",
           role: "Role",
-          noConcepts: "No concept maps to the ontology yet",
+          noConcepts: "No concept maps to the concept model yet",
           add: "Add input",
           remove: "Remove",
           removeOne: "Remove input {{name}}",
@@ -1436,12 +1762,16 @@ export const bknProjectEnUS = {
           scenarios: "Scenarios",
           template: "Template",
           answerShape: "Answer",
-          needs: "Ontology needed",
+          needs: "Object and relation types used",
           needsHint:
             "Once changed, you set what this question needs; it no longer follows its concepts.",
           followConcepts: "Follow the concepts again",
+          logicNeeds: "Kinetic needs it uses",
+          logicNeedsHint:
+            "A question that uses kinetic needs is answered only with these calculations or operations.",
+          noLogicNeeds: "No kinetic needs to choose yet; analyze or add them in kinetic modeling.",
           nothingDrafted:
-            "The ontology draft has no object type or relation type to choose yet; draft it in ontology modeling first.",
+            "The concept model has no object type or relation type to choose yet; draft it in concept modeling first.",
         },
         conflict: {
           open: "Rule on it",
@@ -1500,28 +1830,36 @@ export const bknProjectEnUS = {
         ProjectArchived: "The project is archived; its requirements cannot change.",
         NoDocuments: "There are no requirement documents; upload some first.",
         NoCatalogs:
-          "The project has no data catalogs; choose them under Requirements and resources first.",
+          "The project has no data catalogs; choose them under Requirements and sources first.",
         NoAdoptedOntology:
-          "Adopt object types in ontology modeling first, then generate the business scenarios.",
+          "Adopt object types in concept modeling first, then generate the business scenarios.",
         InputsTooLarge: "The documents are more than drafting can read; trim them and draft again.",
         Drafting: "Drafting is running; wait for it to finish.",
         DocumentNotFound: "This document no longer exists.",
         InvalidDocumentType: "That document type is not valid.",
         TooManyDocuments: "A project holds at most 20 documents.",
         DocumentTooLarge: "The file is too large; each file can be at most 1 MB.",
+        ModelNotConfirmed: "The concept model is not confirmed; confirm it and try again.",
+        ConceptsNotExtracted:
+          "The concepts of the requirement documents are not extracted yet; extract them first.",
+        ImplementationUnavailable:
+          "The knowledge network cannot be reached right now; try again later.",
+        InvalidItem: "What was filled in cannot be used; check it and save again.",
         other: "That did not work; try again later.",
       },
       docType: {
-        prd: "Product requirements",
+        prd: "Business requirements",
         policy: "Policy",
         standard: "Standard",
+        skill: "Skill document",
+        api: "API description",
         other: "Other",
       },
       documents: {
         title: "Requirement and policy documents",
         description:
-          "Drafting reads these documents. A document's type decides which prevails in a conflict: a standard over a policy, a policy over product requirements.",
-        none: "No documents yet. Upload product requirements, policies or standards.",
+          "Drafting reads these documents. A document's type decides which prevails in a conflict: a standard over a policy, a policy over business requirements. Skill documents and API descriptions say how kinetic items work and settle no conflict.",
+        none: "No documents yet. Upload business requirements, policies, standards, Skill documents or API descriptions.",
         upload: "Upload documents",
         uploadTitle: "Upload requirement and policy documents",
         uploadSelected: "Upload selected",
@@ -1564,7 +1902,7 @@ export const bknProjectEnUS = {
         noInputs: "Asked about no given record",
         slot: "<{{name}}>",
         hasWarnings: "Needs attention",
-        propertyGone: "The ontology has no such property",
+        propertyGone: "The concept model has no such property",
         relativeWindow:
           "Counts the latest period up to the reference time; the question says how long",
         capabilityWithoutBasis:
@@ -1578,11 +1916,17 @@ export const bknProjectEnUS = {
         scenarios: "Scenarios",
         template: "Template",
         answerShape: "Answer",
-        needs: "Ontology needed",
+        needs: "Object and relation types used",
         needsBy: {
           concepts: "{{names}} (from the concepts)",
           person: "{{names}} (set by hand)",
         },
+        logicNeeds: "Kinetic needs",
+        logicNeedState: {
+          implemented: "Implemented",
+          open: "Not implemented",
+        },
+        logicNeedMissing: "A removed kinetic need",
       },
       layer: {
         knowledge: "Knowledge",
@@ -1607,15 +1951,7 @@ export const bknProjectEnUS = {
         trigger: "When",
         decision: "Decision",
         knowledge: "Knowledge needed",
-        capabilities: "Capabilities needed",
-        capability: "{{kind}}: {{name}}",
-      },
-      capabilityKind: {
-        metric: "Metric",
-        function: "Function",
-        skill: "Skill",
-        app: "App",
-        other: "Capability",
+        logicNeeds: "Kinetic needs it uses",
       },
       concepts: {
         none: "No candidate concepts yet.",
@@ -1693,8 +2029,9 @@ export const bknProjectEnUS = {
       loadFailed: "The confirmation could not be loaded",
       empty: {
         title: "The draft is not confirmed yet",
-        description: "Once the draft is confirmed, the data check and local indexes show here.",
-        action: "Go to ontology modeling",
+        description:
+          "Once the draft is confirmed, the data check shows here and it can be released.",
+        action: "Go to concept modeling",
       },
       confirmed: "Confirmed {{time}}",
       outdated: "The draft changed after it was confirmed; those changes are not confirmed.",
@@ -1734,9 +2071,17 @@ export const bknProjectEnUS = {
         target: "Creates the new version {{name}}, based on live v{{version}}.",
         targetFirst: "Creates the first version, {{name}}.",
         join: "; ",
+        originalDocuments:
+          "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
+        originalDocuments_one:
+          "Originals from {{count}} document will be included in network search. Other documents retain evidence locations only.",
+        originalDocuments_other:
+          "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         checksTitle: "Release checks",
+        goToBuild: "Build the indexes on the build page",
         check: {
-          confirmed: "Draft confirmation",
+          knowledge_base: "Knowledge-base build and source access",
+          confirmed: "Model confirmation",
           mapped: "Table mapping",
           data_source: "Data source",
           names: "Repeated names",
@@ -1744,9 +2089,18 @@ export const bknProjectEnUS = {
           check: "Data check",
           index: "Local indexes",
           baseline: "Live base version",
+          metric_owners: "Metric object types",
           other: "Another check",
         },
         reason: {
+          knowledge_base_not_ready:
+            "Complete and review the full knowledge-base build for the current model.",
+          knowledge_base_originals_changed:
+            "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
+          knowledge_base_permission:
+            "Check source query access and permission to configure the target knowledge network.",
+          knowledge_base_unavailable:
+            "Knowledge-base publication cannot be verified right now. Review again shortly.",
           not_confirmed: "The draft is not confirmed yet.",
           confirmation_outdated: "The draft changed after it was confirmed; confirm it again.",
           mapping_missing: "These object types do not fully map to a table yet: {{names}}",
@@ -1773,6 +2127,13 @@ export const bknProjectEnUS = {
           branch_behind: "A newer version is live; bring it into the project first.",
           branch_behind_version:
             "v{{version}} is live and the project is based on an earlier version; bring it in first.",
+          metric_owner_missing:
+            "The object types of {{count}} metrics are not in this release, so the knowledge network refuses to import them. Bring those object types back, or change the metrics in the knowledge network.",
+          metric_owner_missing_one:
+            "The object type of {{count}} metric is not in this release, so the knowledge network refuses to import it. Bring that object type back, or change the metric in the knowledge network.",
+          metric_owner_missing_other:
+            "The object types of {{count}} metrics are not in this release, so the knowledge network refuses to import them. Bring those object types back, or change the metrics in the knowledge network.",
+          metricOwnerItem: "Metric {{name}} belongs to object type {{owner}}",
           other: "This check did not pass.",
         },
         accept: {
@@ -1816,6 +2177,13 @@ export const bknProjectEnUS = {
         noChanges: "No object type or relation type changes against the live version.",
         risksTitle: "Effect on what is live",
         onlyAdditions: "This release only adds content; nothing live is changed.",
+        unimplementedNeeds:
+          "{{count}} kinetic needs are not implemented; questions resting on them may go unanswered. This does not stop the release.",
+        unimplementedNeeds_one:
+          "{{count}} kinetic need is not implemented; questions resting on it may go unanswered. This does not stop the release.",
+        unimplementedNeeds_other:
+          "{{count}} kinetic needs are not implemented; questions resting on them may go unanswered. This does not stop the release.",
+        goToKinetic: "Go to kinetic modeling",
         existing: "Live content changed or removed",
         orphans: "{{count}} records of relation type {{name}} do not find their record.",
         orphans_one: "{{count}} record of relation type {{name}} does not find its record.",
@@ -1844,6 +2212,14 @@ export const bknProjectEnUS = {
         regressionHint:
           "After publishing, the scenario questions are asked once as a regression; its result does not affect the release.",
         error: {
+          KnowledgeBaseNotReady:
+            "Complete and review the full knowledge-base build for the current model.",
+          OriginalsChanged:
+            "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
+          SourcePermission:
+            "Check source query access and permission to configure the target knowledge network.",
+          KnowledgeBaseUnavailable:
+            "Knowledge-base publication cannot be verified right now. Try again shortly.",
           NotOwner: "Only the project owner can publish.",
           ProjectArchived: "The project is archived and cannot be published.",
           ReviewOutdated:
@@ -1968,6 +2344,7 @@ export const bknProjectEnUS = {
         asking: "Asking",
         noResult: "No result",
         asItself: "Asked as written",
+        noRecord: "Not asked: the data has no record to ask about",
         missing: "Missing from the ontology: {{names}}",
         missingTables: 'Not asked: the tables of "{{names}}" no longer exist',
         dataSourceMissing:
@@ -2072,6 +2449,7 @@ export const bknProjectEnUS = {
           issue: "Repeated or empty values",
         },
         reason: {
+          knowledge_base_build: "Checked by the knowledge-base build",
           cross_catalog: "The two tables are in different data catalogs and cannot be checked",
           several_fields: "Made of several fields; not checked yet",
           unmapped: "Not mapped to a field of the table",
@@ -2137,10 +2515,21 @@ export const bknProjectEnUS = {
     errors: {
       generic: "That did not go through. Try again later.",
       Draft: {
+        DocumentDataNotReady:
+          "Document data preparation is incomplete. Reload the draft and confirm again to resume; reviewed candidates are kept.",
+        DualSourceNotConfirmed:
+          "Confirm the dual-source field list and adopt its selected file and fact models first.",
+        BusinessIdentityNotVerified:
+          "Verify and save the business identifier in the relationship settings before confirming the model.",
+        BusinessIdentityNotUnique:
+          "The business identifier has duplicate or empty values. Resolve them and verify again.",
+        BusinessIdentityUnavailable:
+          "The business identifier check could not finish. Check source access and try again.",
+
         UndecidedNotAccepted: "New items are undecided. Review them, then confirm.",
         PartialNotAccepted: "Some tables could not be read in drafting. Review them, then confirm.",
         ConflictsNotAccepted:
-          "Some requirement conflicts are not resolved. Select “Confirm anyway” below, then confirm the draft again.",
+          "Some requirement conflicts are not resolved. Select “Confirm anyway” below, then confirm the model again.",
         HasPending: "Some items need attention first. Settle them in Changes, then confirm.",
         Stale: "The draft just changed and was reloaded. Review it, then confirm.",
         NotReady: "The draft is not ready yet. Try again shortly.",

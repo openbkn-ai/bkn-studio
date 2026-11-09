@@ -79,6 +79,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("overview"),
   ),
   createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/develop",
+    {
+      descriptionKey: "knowledgeNetwork.appDevelopment.description",
+      titleKey: "knowledgeNetwork.appDevelopment.title",
+    },
+    workspaceSectionPage("develop"),
+  ),
+  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/experience",
     {
       descriptionKey: "knowledgeNetwork.experienceDescription",

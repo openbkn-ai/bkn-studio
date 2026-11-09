@@ -151,6 +151,71 @@ describe("importKnowledgeNetwork", () => {
     });
     expect(error).not.toHaveProperty("solution");
   });
+  it("adds the confirmation only on the resend the user confirmed", async () => {
+    const { importKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
+
+    await importKnowledgeNetwork({ id: "orders" }, "overwrite", "detach", true, true);
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/bkn-backend/v1/knowledge-networks",
+      { id: "orders" },
+      {
+        params: {
+          binding_policy: "detach",
+          confirm_clear_declarations: true,
+          import_mode: "overwrite",
+          strict_mode: true,
+        },
+        skipErrorToast: true,
+        timeout: 60_000,
+      },
+    );
+  });
+
+  it.each([
+    "BknBackend.ObjectType.DeclarationsWouldBeCleared",
+    "BknBackend.RelationType.DeclarationsWouldBeCleared",
+    "BknBackend.ActionType.DeclarationsWouldBeCleared",
+  ])("lists what %s would clear instead of reporting a conflict", async (errorCode) => {
+    postMock.mockRejectedValue({
+      response: {
+        data: {
+          description: "The overwrite would clear declarations",
+          error_code: errorCode,
+          error_details: {
+            cleared: [
+              { fields: ["aliases"], object_type_id: "lab_order" },
+              { fields: ["semantic", "required"], object_type_id: "lab_order", property: "at" },
+              { fields: ["cardinality"], relation_type_id: "order_for_patient" },
+              { action_type_id: "revoke", fields: ["lifecycle"] },
+            ],
+            confirm_with: "confirm_clear_declarations=true",
+          },
+        },
+        status: 409,
+      },
+    });
+    const { importKnowledgeNetwork, DeclarationsWouldBeClearedError } =
+      await import("@/modules/knowledge-network/services/knowledge-network.service");
+
+    const error = await importKnowledgeNetwork({ id: "orders" }, "overwrite").catch(
+      (reason: unknown) => reason,
+    );
+
+    expect(error).toBeInstanceOf(DeclarationsWouldBeClearedError);
+    expect(error).not.toHaveProperty("isConflict");
+    expect(error).toMatchObject({
+      cleared: [
+        { fields: ["aliases"], id: "lab_order", kind: "object_type" },
+        { fields: ["semantic", "required"], id: "lab_order", kind: "object_type", property: "at" },
+        { fields: ["cardinality"], id: "order_for_patient", kind: "relation_type" },
+        { fields: ["lifecycle"], id: "revoke", kind: "action_type" },
+      ],
+      message: "The overwrite would clear declarations",
+    });
+  });
+
   it.each([undefined, "", "  "])(
     "preserves the code when an import error description is %j",
     async (description) => {
@@ -262,6 +327,40 @@ describe("importKnowledgeNetworkPackage", () => {
     await expect(
       importKnowledgeNetworkPackage(new File(["tar"], "orders.tar")),
     ).rejects.toBeInstanceOf(KnowledgeNetworkImportConflictError);
+  });
+
+  it("lists what an overwrite would clear, and resends the same package once confirmed", async () => {
+    postMock.mockRejectedValueOnce({
+      response: {
+        data: {
+          error_code: "BknBackend.ObjectType.DeclarationsWouldBeCleared",
+          error_details: { cleared: [{ fields: ["aliases"], object_type_id: "lab_order" }] },
+        },
+      },
+    });
+    postMock.mockResolvedValueOnce({ data: { kn_id: "orders" } });
+    const { importKnowledgeNetworkPackage, DeclarationsWouldBeClearedError } =
+      await import("@/modules/knowledge-network/services/knowledge-network.service");
+    const file = new File(["tar"], "orders.tar");
+
+    await expect(
+      importKnowledgeNetworkPackage(file, "overwrite", "preserve", false),
+    ).rejects.toBeInstanceOf(DeclarationsWouldBeClearedError);
+    await importKnowledgeNetworkPackage(file, "overwrite", "preserve", false, true);
+
+    const configs = postMock.mock.calls.map((call) => call[2] as { params: unknown });
+    expect(configs[0]?.params).toEqual({
+      binding_policy: "preserve",
+      import_mode: "overwrite",
+      strict_mode: false,
+    });
+    expect(configs[1]?.params).toEqual({
+      binding_policy: "preserve",
+      confirm_clear_declarations: true,
+      import_mode: "overwrite",
+      strict_mode: false,
+    });
+    expect((postMock.mock.calls[1]?.[1] as FormData).get("file")).toBe(file);
   });
 });
 

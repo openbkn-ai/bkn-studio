@@ -74,7 +74,13 @@ const backendReview = {
     network_name: "Supply · 1.0.3",
     tag: "v1.0.3",
   },
-  risks: { copies: 1, existing: null, only_additions: true, orphans: null },
+  risks: {
+    copies: 1,
+    existing: null,
+    only_additions: true,
+    orphans: null,
+    unimplemented_needs: [{ id: "n2", kind: "skill", name: "Triage" }],
+  },
   signature: "sig",
   version: "1.0.3",
 };
@@ -139,7 +145,13 @@ describe("release.service", () => {
       },
       refusals: [],
       release: { baseVersion: "1.0.2", networkId: "n_v1_0_3", networkName: "Supply · 1.0.3" },
-      risks: { copies: 1, existing: [], onlyAdditions: true, orphans: [] },
+      risks: {
+        copies: 1,
+        existing: [],
+        onlyAdditions: true,
+        orphans: [],
+        unimplementedNeeds: [{ id: "n2", kind: "skill", name: "Triage" }],
+      },
       signature: "sig",
       version: "1.0.3",
     });
@@ -266,7 +278,7 @@ describe("release.service", () => {
             tests: [{ expect: "exists", id: "t1", text: "C-1?" }],
             text: "Q1",
           },
-          { id: "q7", needs: [], text: "Q7" },
+          { id: "q7", needs: [], no_record: true, text: "Q7" },
         ],
         results: [
           {
@@ -299,8 +311,13 @@ describe("release.service", () => {
       finishTime: 9,
       networkId: "n_v1_0_2",
       questions: [
-        { id: "q1", tests: [{ expect: "exists", id: "t1", text: "C-1?" }], text: "Q1" },
-        { id: "q7", tests: [], text: "Q7" },
+        {
+          id: "q1",
+          noRecord: false,
+          tests: [{ expect: "exists", id: "t1", text: "C-1?" }],
+          text: "Q1",
+        },
+        { id: "q7", noRecord: true, tests: [], text: "Q7" },
       ],
       results: [
         {

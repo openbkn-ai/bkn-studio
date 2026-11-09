@@ -61,6 +61,7 @@ import {
   getObjectTypeSampleData,
   listKnowledgeNetworkActionTypePage,
   listKnowledgeNetworkRelationTypePage,
+  listKnowledgeNetworkValueTypes,
   listObjectMetricsV1,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
@@ -69,7 +70,9 @@ import type {
   ObjectTypeDetail,
   ObjectTypeLogicProperty,
   ObjectTypeResourcePreview,
+  ValueType,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { hasDeclarations } from "@/modules/knowledge-network/utils/property-declarations";
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
@@ -785,6 +788,33 @@ export function ObjectTypeDetailScene() {
     relatedRequestKeyword,
     shouldLoadRelatedRelations,
   ]);
+
+  const declarationsShown = useMemo(
+    () => detail?.dataProperties.some((item) => hasDeclarations(item.declarations)) ?? false,
+    [detail],
+  );
+  const referencesValueTypes = useMemo(
+    () => detail?.dataProperties.some((item) => item.declarations?.constraints?.valueType) ?? false,
+    [detail],
+  );
+  const [valueTypes, setValueTypes] = useState<ValueType[]>([]);
+
+  // Read only for an object type whose properties name value types; without them a property
+  // shows the value type by its ID.
+  useEffect(() => {
+    if (!referencesValueTypes) {
+      return;
+    }
+    let current = true;
+    listKnowledgeNetworkValueTypes(networkId)
+      .then((list) => {
+        if (current) setValueTypes(list);
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [networkId, referencesValueTypes]);
 
   const filteredDataProperties = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -1535,10 +1565,12 @@ export function ObjectTypeDetailScene() {
             ) : (
               <>
                 <ObjectTypePropertyTable
+                  declarationsShown={declarationsShown}
                   properties={pagedDataProperties}
                   rowIndexOffset={(dataPage - 1) * dataPageSize}
                   showToolbar={false}
                   tableState={propertyTableState}
+                  valueTypes={valueTypes}
                 />
                 <div className={styles.paginationBar}>
                   <TablePaginationBar

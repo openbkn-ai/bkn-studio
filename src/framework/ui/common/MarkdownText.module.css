@@ -100,6 +100,11 @@
   background: var(--color-hover);
   font-weight: 600;
 }
+.md hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: 12px 0;
+}
 
 /* Full documents (such as skill-package SKILL.md files): card-description sizing is too dense for
    a screen of body text, so body copy and headings are each one size larger and spacing expands
@@ -180,4 +185,15 @@
 }
 .dark th {
   background: color-mix(in srgb, var(--color-text-inverse) 10%, transparent);
+}
+
+/* A ```mermaid block drawn as a diagram: as wide as the text at most, scrolled when wider. */
+.mermaid {
+  margin: 0 0 8px;
+  overflow-x: auto;
+}
+.mermaid svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }

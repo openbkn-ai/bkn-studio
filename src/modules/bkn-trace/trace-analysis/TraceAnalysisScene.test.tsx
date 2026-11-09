@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import type { EditorProps } from "@monaco-editor/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TraceAnalysisScene } from "@/modules/bkn-trace/trace-analysis/TraceAnalysisScene";
@@ -46,6 +47,9 @@ vi.mock("./SpanBrowser", () => ({
 }));
 
 const writeTextMock = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/framework/monaco/MonacoEditor", () => ({
+  MonacoEditor: ({ value }: EditorProps) => <pre data-testid="trace-code-editor">{value}</pre>,
+}));
 
 describe("TraceAnalysisScene", () => {
   beforeAll(() => {
@@ -274,6 +278,33 @@ describe("TraceAnalysisScene", () => {
     },
   );
 
+  it.each([
+    ["projection_scan_cap_reached", "listProjectionLimit", "completed"],
+    ["projection_scan_cap_reached", "listProjectionLimit", "error"],
+    ["unknown_future_reason", "listPartialOther", "completed"],
+  ])(
+    "explains list truncation without exposing %s as missing Trace data",
+    async (reason, copyKey, status) => {
+      vi.mocked(listTechnicalTraces).mockResolvedValue({
+        entries: [{ traceId: "budget-trace", status, spanCount: 10 }],
+        page: 1,
+        pageSize: 20,
+        partial: true,
+        partialReasons: [reason],
+        total: 1,
+        truncated: true,
+      });
+      renderWithoutAntdStyles(<TraceAnalysisScene />);
+      expect(await screen.findByText("bknTrace.traceWorkspace.listPartial")).toBeInTheDocument();
+      expect(screen.getByText(`bknTrace.traceWorkspace.${copyKey}`)).toBeInTheDocument();
+      expect(screen.queryByText(reason)).not.toBeInTheDocument();
+      expect(screen.queryByText("bknTrace.traceWorkspace.partial")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "budget-trace" })).toBeInTheDocument();
+      expect(screen.getByText(status)).toBeInTheDocument();
+      expect(getTechnicalTrace).not.toHaveBeenCalled();
+    },
+  );
+
   it("localizes legacy truncation without inventing total metadata or enabling browsing", async () => {
     const detail = await vi.mocked(getTechnicalTrace).getMockImplementation()!("trace");
     detail.partialReasons = ["trace_query_truncated"];
@@ -399,6 +430,54 @@ describe("TraceAnalysisScene", () => {
     await waitFor(() => expect(getTechnicalTrace).toHaveBeenCalledTimes(2));
     expect(screen.queryByText(reason)).not.toBeInTheDocument();
   });
+
+  it.each(["inline", "referenced"] as const)(
+    "run_code %s 输入预览代码，输出保持原始载荷",
+    async (mode) => {
+      const original = await vi.mocked(getTechnicalTrace).getMockImplementation()?.("trace-code");
+      if (!original) throw new Error("Missing trace fixture");
+      const code = String.raw`print("a\nb"); print("中文")`;
+      original.operations[0].fact.toolName = "run_code";
+      original.operations[0].fact.input = {
+        byteLength: code.length,
+        mediaType: "application/json",
+        mode,
+        ...(mode === "inline"
+          ? { inline: { code, language: "python", timeout: 30 } }
+          : { ref: "code-reference" }),
+      };
+      original.operations[0].fact.output = {
+        byteLength: 1,
+        mediaType: "application/json",
+        mode: "inline",
+        inline: { code: "这是执行结果，不是待执行代码" },
+      };
+      vi.mocked(getTechnicalTrace).mockResolvedValue(original);
+      vi.mocked(getReferencedPayload).mockResolvedValue({ code, language: "python", timeout: 30 });
+      renderWithoutAntdStyles(<TraceAnalysisScene />);
+      fireEvent.click(await screen.findByRole("button", { name: original.summary.traceId }));
+      fireEvent.click(await screen.findByRole("button", { name: /run_code/ }));
+      if (mode === "referenced") {
+        expect(screen.queryByTestId("trace-code-editor")).toBeNull();
+        fireEvent.click(
+          screen.getByRole("button", { name: "bknTrace.traceWorkspace.loadReferencedPayload" }),
+        );
+      }
+      expect((await screen.findByTestId("trace-code-editor")).textContent).toBe(code);
+      fireEvent.click(screen.getByRole("tab", { name: "bknTrace.traceWorkspace.output" }));
+      expect(screen.getByText(/这是执行结果/)).toBeInTheDocument();
+      expect(
+        within(
+          screen.getByRole("tabpanel", { name: "bknTrace.traceWorkspace.output" }),
+        ).queryByTestId("trace-code-editor"),
+      ).toBeNull();
+      if (mode === "referenced")
+        expect(getReferencedPayload).toHaveBeenCalledWith(
+          "code-reference",
+          original.operations[0].fact.interactionId,
+        );
+    },
+  );
 
   it("opens a real technical Trace into summary, execution chain and raw detail", async () => {
     const { container } = renderWithoutAntdStyles(<TraceAnalysisScene />);

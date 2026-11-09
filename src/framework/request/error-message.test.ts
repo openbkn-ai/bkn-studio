@@ -13,6 +13,8 @@ import {
   extractRequestErrorMessage,
   isRequestConflict,
   isRequestNotFound,
+  readErrorCode,
+  readErrorDetails,
 } from "./error-message";
 
 function createAxiosLikeError(data: unknown) {
@@ -276,5 +278,30 @@ describe("independent Trace HTTP errors", () => {
     { error_code: "INVALID_ARGUMENT", code: "INVALID_ARGUMENT", message: "", trace_id: "" },
   ])("retains code fallback for %j", (data) => {
     expect(extractRequestErrorMessage(createAxiosLikeError(data))).toBe("INVALID_ARGUMENT");
+  });
+});
+
+describe("readErrorDetails", () => {
+  it("returns the backend's details as they came, so callers can read their structure", () => {
+    const details = { cleared: [{ fields: ["aliases"], object_type_id: "lab_order" }] };
+    const error = createAxiosLikeError({ error_code: "X.Y", error_details: details });
+
+    expect(readErrorDetails(error)).toBe(details);
+    expect(readErrorCode(error)).toBe("X.Y");
+  });
+
+  it.each([
+    null,
+    undefined,
+    new Error("network down"),
+    { response: {} },
+    { response: { data: null } },
+  ])("reads nothing from %j", (error) => {
+    expect(readErrorDetails(error)).toBeUndefined();
+    expect(readErrorCode(error)).toBeUndefined();
+  });
+
+  it("reads a blank error code as none", () => {
+    expect(readErrorCode(createAxiosLikeError({ error_code: "  " }))).toBeUndefined();
   });
 });

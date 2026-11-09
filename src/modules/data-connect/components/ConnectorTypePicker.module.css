@@ -7,6 +7,8 @@
 
 .picker {
   display: grid;
+  container: connector-picker / inline-size;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 }
 
@@ -119,15 +121,19 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
   gap: 14px;
 }
 
 .card {
   position: relative;
   display: grid;
-  gap: 10px;
-  min-height: 112px;
-  padding: 18px 16px;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  height: 168px;
+  padding: 14px 16px;
   border: 1px solid var(--color-border);
   border-radius: 0;
   background: var(--color-bg-surface);
@@ -148,6 +154,59 @@
   transform: translateY(-1px);
 }
 
+.cardSelect {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  align-self: start;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: inherit;
+}
+
+.cardSelect::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.cardSelect:focus-visible {
+  outline: none;
+}
+
+.card:has(.cardSelect:focus-visible) {
+  outline: 2px solid var(--color-text-link);
+  outline-offset: 2px;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: 10px 12px;
+  min-width: 0;
+}
+
+.editionAction {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  gap: 4px;
+  max-width: 100%;
+  margin-left: auto;
+  padding-inline: 8px;
+}
+
+.editionAction:focus-visible {
+  outline: 2px solid var(--color-text-link);
+  outline-offset: 2px;
+}
+
 .cardDisabled,
 .cardDisabled:hover {
   border-color: var(--color-border);
@@ -155,16 +214,21 @@
   box-shadow: none;
   color: var(--color-text-tertiary);
   cursor: not-allowed;
-  opacity: 0.72;
   transform: none;
 }
 
-.cardDisabled .cardHeader strong,
+.cardDisabled .cardSelect,
+.cardDisabled .cardDescription {
+  opacity: 0.72;
+}
+
+.cardDisabled .cardName,
 .cardDisabled .cardDescription {
   color: var(--color-text-tertiary);
 }
 
-.cardActive {
+.cardActive,
+.cardActive:hover {
   border-color: var(--color-primary-600);
   background: linear-gradient(180deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
   box-shadow:
@@ -172,41 +236,64 @@
     0 8px 18px rgba(37, 99, 235, 0.1);
 }
 
-.checkMark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 0;
-  background: var(--color-primary-600);
-  color: var(--color-text-inverse);
-  font-size: 11px;
-}
-
-.checkMarkPlaceholder {
-  visibility: hidden;
-}
-
 .cardHeader {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(72px, 1fr) minmax(0, 120px);
   align-items: flex-start;
-  justify-content: space-between;
   gap: 10px;
 }
 
-.cardHeader strong {
+.cardName {
+  max-width: 100%;
   color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 650;
   line-height: 1.4;
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  min-width: 60px;
+  max-width: calc(100% - 12px);
+  margin-left: 12px;
+  text-align: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  color: var(--color-text-secondary);
+  font-size: 32px;
+}
+
+.logo:has(img) {
+  overflow: hidden;
+}
+
+.logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
-  height: 22px;
+  min-height: 22px;
+  max-width: 100%;
   padding: 0 8px;
   border: 1px solid var(--color-primary-border);
   border-radius: 0;
@@ -215,7 +302,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 20px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   flex-shrink: 0;
 }
 
@@ -225,7 +312,7 @@
   justify-content: flex-end;
   gap: 6px;
   flex-wrap: wrap;
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .cardActive .badge {
@@ -237,7 +324,8 @@
 .disabledBadge {
   display: inline-flex;
   align-items: center;
-  height: 22px;
+  min-height: 22px;
+  max-width: 100%;
   padding: 0 8px;
   border: 1px solid var(--color-border);
   border-radius: 0;
@@ -246,15 +334,38 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 20px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   flex-shrink: 0;
 }
 
 .cardDescription {
+  display: -webkit-box;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 3.2em;
+  max-height: 3.2em;
   margin: 0;
   color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@container connector-picker (max-width: 950px) {
+  .card {
+    height: 212px;
+  }
+
+  .cardFooter {
+    flex-wrap: wrap;
+  }
+
+  .cardDescription {
+    flex-basis: 140px;
+  }
 }
 
 .emptyWrap {
@@ -291,12 +402,4 @@
   .resultText {
     white-space: normal;
   }
-}
-
-/* 连接器名与档位徽标同排,名字长时徽标不被挤走。 */
-.cardName {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
 }

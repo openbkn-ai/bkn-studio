@@ -9,18 +9,22 @@
   --business-color-text: #111827;
   --business-color-heading: #172033;
   --business-color-secondary: #4b5563;
-  --business-color-muted: #6b7280;
-  --business-color-placeholder: #94a3b8;
+  --business-color-muted: var(--color-text-tertiary);
+  --business-color-placeholder: var(--color-text-placeholder);
   --business-color-border: #d9e0ea;
   --business-color-border-soft: #e8edf3;
   --business-color-surface: #ffffff;
   --business-color-surface-muted: #f3f6fa;
   --business-color-surface-hover: #f7faff;
   --business-color-surface-subtle: #f7f9fc;
-  --business-color-primary: #1e3a8a;
-  --business-color-link: #1d4ed8;
-  --business-color-link-hover: #1e40af;
-  --business-color-link-bg: #eff6ff;
+  --business-color-primary: var(--color-action-primary);
+  --business-color-primary-hover: var(--color-action-primary-hover);
+  --business-color-primary-active: var(--color-action-primary-active);
+  --business-color-primary-text: var(--color-action-primary-text);
+  --business-color-selection: var(--color-selection-accent);
+  --business-color-link: var(--color-link);
+  --business-color-link-hover: var(--color-link-hover);
+  --business-color-link-bg: var(--color-bg-selected);
   --business-color-link-border: #bfdbfe;
   --business-color-danger: #dc2626;
   --business-color-success: #15803d;
@@ -44,14 +48,18 @@
   --business-color-heading: var(--color-text-primary);
   --business-color-secondary: var(--color-text-secondary);
   --business-color-muted: var(--color-text-tertiary);
-  --business-color-placeholder: var(--color-text-faint);
+  --business-color-placeholder: var(--color-text-placeholder);
   --business-color-border: var(--color-border);
   --business-color-border-soft: var(--color-divider);
   --business-color-surface: var(--color-bg-surface);
   --business-color-surface-muted: var(--color-fill-secondary);
   --business-color-surface-hover: var(--color-hover);
   --business-color-surface-subtle: var(--color-bg-raised);
-  --business-color-primary: var(--color-primary-600);
+  --business-color-primary: var(--color-action-primary);
+  --business-color-primary-hover: var(--color-action-primary-hover);
+  --business-color-primary-active: var(--color-action-primary-active);
+  --business-color-primary-text: var(--color-action-primary-text);
+  --business-color-selection: var(--color-selection-accent);
   --business-color-link: var(--color-text-link);
   --business-color-link-hover: var(--color-text-link-hover);
   --business-color-link-bg: var(--color-primary-100);
@@ -106,12 +114,12 @@
 }
 
 .surface :global(.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: var(--business-color-primary);
+  color: var(--business-color-selection);
   font-weight: var(--business-font-weight-medium);
 }
 
 .surface :global(.ant-tabs-ink-bar) {
-  background: var(--business-color-primary);
+  background: var(--business-color-selection);
 }
 
 .overlay :global(.ant-modal-content),
@@ -302,11 +310,11 @@
 }
 
 .tableSurface :global(.ant-pagination-item-active) {
-  border-color: var(--business-color-primary);
+  border-color: var(--business-color-selection);
 }
 
 .tableSurface :global(.ant-pagination-item-active a) {
-  color: var(--business-color-primary);
+  color: var(--business-color-selection);
   font-weight: var(--business-font-weight-medium);
 }
 

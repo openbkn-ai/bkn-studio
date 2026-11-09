@@ -21,9 +21,11 @@ export type ObjectMetricRefV1 = {
   version: number;
 };
 
+export type ObjectMetricRelationDirectionV1 = "forward" | "backward";
+
 export type ObjectMetricRelationStepV1 = {
   relation_type_id: string;
-  direction: "outgoing" | "incoming";
+  direction: ObjectMetricRelationDirectionV1;
   target_object_type_id: string;
 };
 
@@ -164,6 +166,7 @@ export type ObjectMetricRelationPathV1 = {
 export type ObjectMetricAtomicSpecV1 = {
   kind: "atomic";
   measure: {
+    allow_approximate?: boolean;
     expression?: ObjectMetricExpressionV1;
     aggregation: "count_rows" | "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
   };
@@ -294,6 +297,7 @@ export type ObjectMetricDataEntryV1 = {
 };
 
 export type ObjectMetricDataV1 = {
+  is_approximate?: boolean;
   model: {
     metric_id: string;
     version: number;

@@ -9,7 +9,7 @@ import { Alert, Form, Modal, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { addDraftCatalogs } from "@/modules/bkn-project/services/draft.service";
 import { getProject, setProjectCatalogs } from "@/modules/bkn-project/services/project.service";
@@ -76,7 +76,7 @@ export function ProjectCatalogsModal({
       setError(
         code === "Drafting" || code === "Stale"
           ? t(`bknProject.model.catalogs.addRefused.${code}`)
-          : extractRequestErrorMessage(cause),
+          : requestFailureText(t, cause),
       );
     } finally {
       setSaving(false);

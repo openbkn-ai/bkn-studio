@@ -5,7 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
+import type {
+  GrantAuthoritySource,
+  GrantRecord,
+  ObjectGrant,
+} from "@/modules/system-admin/types/authz";
 
 /** The subject bkn-safe writes when the execution factory publishes something to everyone. */
 export const PUBLIC_ACCESSOR_ID = "00000000-0000-0000-0000-000000000000";
@@ -34,6 +38,56 @@ export function isRoleGrantSubject(grant: ObjectGrant) {
   return (grant.grants ?? []).some(
     (source) => source.policySource === "role_permission" && !source.inherited,
   );
+}
+
+export type ObjectGrantSubjectType = "user" | "role";
+
+/** Match one grouped grant without confusing equal user and role identifiers. */
+export function objectGrantMatchesSubject(
+  grant: ObjectGrant,
+  accessorId: string | undefined,
+  subjectType: ObjectGrantSubjectType,
+) {
+  if (!accessorId || grant.accessorId !== accessorId) return false;
+  if (subjectType === "role") return isRoleGrantSubject(grant);
+  return (
+    !isRoleGrantSubject(grant) &&
+    grant.accessorType !== "public" &&
+    grant.accessorId !== PUBLIC_ACCESSOR_ID
+  );
+}
+
+/**
+ * Sources replaced by one fine-grained object-grant write. Effective or inherited permissions and
+ * independently authored source slices must never be copied into this editable draft.
+ */
+export function managedObjectGrantSources({
+  authoritySource,
+  createdBy,
+  grant,
+}: {
+  authoritySource: GrantAuthoritySource;
+  createdBy: string | null | undefined;
+  grant: ObjectGrant | undefined;
+}) {
+  if (!createdBy) return [];
+  return (grant?.grants ?? []).filter(
+    (source) =>
+      source.active &&
+      !source.inherited &&
+      source.effect === "allow" &&
+      source.policySource === "professional_rule" &&
+      source.authoritySource === authoritySource &&
+      source.createdBy === createdBy,
+  );
+}
+
+export function managedObjectGrantOperations(input: {
+  authoritySource: GrantAuthoritySource;
+  createdBy: string | null | undefined;
+  grant: ObjectGrant | undefined;
+}) {
+  return [...new Set(managedObjectGrantSources(input).map((source) => source.operation))];
 }
 
 /** Only real users may be resolved through the user-directory API. */

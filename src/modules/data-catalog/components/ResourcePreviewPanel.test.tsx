@@ -11,7 +11,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dataCatalogEnUS } from "@/modules/data-catalog/locales/en-US";
 import { dataCatalogZhCN } from "@/modules/data-catalog/locales/zh-CN";
-import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import type {
+  CatalogResource,
+  ResourcePreviewResult,
+} from "@/modules/data-catalog/types/data-catalog";
 
 const previewCatalogResourceMock = vi.hoisted(() => vi.fn());
 const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
@@ -55,14 +58,30 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/framework/ui/common/TablePaginationBar", () => ({
-  TablePaginationBar: ({ total }: { total: number }) => (
-    <span data-testid="pagination-total">{total}</span>
+  TablePaginationBar: ({
+    total,
+    onChange,
+  }: {
+    total: number;
+    onChange: (page: number, size: number) => void;
+  }) => (
+    <>
+      <span data-testid="pagination-total">{total}</span>
+      <button onClick={() => onChange(2, 10)}>next-test-page</button>
+    </>
   ),
 }));
 
 vi.mock("@/modules/data-catalog/components/FilterTreeEditor", () => ({
-  FilterTreeEditor: ({ onChange }: { onChange: (value: unknown) => void }) => (
+  FilterTreeEditor: ({
+    onChange,
+    queryPath,
+  }: {
+    onChange: (value: unknown) => void;
+    queryPath: string;
+  }) => (
     <button
+      data-query-path={queryPath}
       onClick={() =>
         onChange({
           kind: "group",
@@ -95,10 +114,643 @@ const resource: CatalogResource = {
   expectedUpdateTime: 0,
 };
 
+const tableView: CatalogResource = {
+  ...resource,
+  id: "table-view",
+  category: "logical_view",
+  logicType: "derived",
+  sourceMetadata: { sourceCategory: "table" },
+  logicDefinition: {
+    sourceResourceId: "source-1",
+    // Fixed conditions can reference fields that the view does not publish.
+    filterCondition: { field: "hidden_id", operation: ">", value: 3 },
+  },
+  schema: [{ name: "id", type: "integer" }],
+};
+
+const viewResource: CatalogResource = {
+  ...tableView,
+  id: resource.id,
+  logicDefinition: { sourceResourceId: "source-1" },
+};
+
 describe("ResourcePreviewPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.assign(testFilterRule, { field: "id", operation: ">", value: "10" });
+  });
+
+  it("switches a table-derived view between index and source without losing its switch or fixed filter", async () => {
+    previewCatalogResourceMock.mockImplementation(
+      (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+        Promise.resolve({
+          rows: [{ id: 4 }],
+          total: 30,
+          querySource: query.ignoreLocalIndex ? "source" : "local_index",
+        }),
+    );
+    render(<ResourcePreviewPanel active resource={tableView} />);
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    const toggle = screen.getByRole("checkbox", {
+      name: "dataCatalog.preview.queryOriginalSource",
+    });
+    expect(toggle).toBeEnabled();
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+    await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+    const filterCondition = {
+      operation: "and",
+      sub_conditions: [{ field: "id", operation: ">", value: 10, value_from: "const" }],
+    };
+    fireEvent.click(screen.getByRole("button", { name: "next-test-page" }));
+    await waitFor(() =>
+      expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+        filterCondition,
+        limit: 10,
+        offset: 10,
+      }),
+    );
+    fireEvent.click(toggle);
+    await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+    expect(toggle).toBeChecked();
+    expect(toggle).toBeInTheDocument();
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+      filterCondition,
+      ignoreLocalIndex: true,
+      limit: 10,
+      offset: 0,
+    });
+    fireEvent.click(toggle);
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    expect(toggle).not.toBeChecked();
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+      filterCondition,
+      limit: 10,
+      offset: 0,
+    });
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(5);
+    expect(tableView.logicDefinition?.filterCondition).toEqual({
+      field: "hidden_id",
+      operation: ">",
+      value: 3,
+    });
+  });
+
+  it("changes a view's filter path before the source response arrives and keeps it after source errors", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: [],
+      total: 0,
+      querySource: "local_index",
+    });
+    render(<ResourcePreviewPanel active resource={tableView} />);
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    const editor = screen.getByRole("button", { name: "set-test-filter" });
+    expect(editor).toHaveAttribute("data-query-path", "local_index");
+    let rejectSource!: (error: Error) => void;
+    const sourcePreview = new Promise((_resolve, reject) => {
+      rejectSource = reject;
+    });
+    previewCatalogResourceMock.mockReturnValueOnce(sourcePreview);
+    const toggle = screen.getByRole("checkbox", {
+      name: "dataCatalog.preview.queryOriginalSource",
+    });
+    fireEvent.click(toggle);
+    expect(editor).toHaveAttribute("data-query-path", "source");
+    await act(async () => {
+      rejectSource(new Error("source unavailable"));
+      await expect(sourcePreview).rejects.toThrow("source unavailable");
+    });
+    expect(toggle).toBeChecked();
+    expect(toggle).toBeEnabled();
+    fireEvent.click(toggle);
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    expect(editor).toHaveAttribute("data-query-path", "local_index");
+  });
+
+  it("removes an unsupported additional filter when a view switches to source", async () => {
+    Object.assign(testFilterRule, { field: "title", operation: "match", value: "keep" });
+    previewCatalogResourceMock.mockImplementation(
+      (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+        Promise.resolve({
+          rows: [],
+          total: 0,
+          querySource: query.ignoreLocalIndex ? "source" : "local_index",
+        }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...tableView,
+          schema: [{ name: "title", type: "text", features: [{ featureType: "fulltext" }] }],
+        }}
+      />,
+    );
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+    await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "dataCatalog.preview.queryOriginalSource" }),
+    );
+    await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+    expect(screen.getByText("dataCatalog.preview.filterUnavailableForSource")).toBeInTheDocument();
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+      ignoreLocalIndex: true,
+      limit: 10,
+      offset: 0,
+    });
+    expect(tableView.logicDefinition?.filterCondition).toEqual({
+      field: "hidden_id",
+      operation: ">",
+      value: 3,
+    });
+  });
+
+  it.each(["match", "match_phrase", "multi_match", "knn_vector", "future_operation"])(
+    "disables source switching for a view with a nested %s fixed filter",
+    async (operation) => {
+      previewCatalogResourceMock.mockResolvedValue({
+        rows: [],
+        total: 0,
+        querySource: "local_index",
+      });
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...tableView,
+            logicDefinition: {
+              sourceResourceId: "source-1",
+              filterCondition: {
+                operation: "and",
+                sub_conditions: [{ operation, field: "hidden_title", value: "keep" }],
+              },
+            },
+          }}
+        />,
+      );
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      const toggle = screen.getByRole("checkbox", {
+        name: "dataCatalog.preview.queryOriginalSource",
+      });
+      expect(toggle).toBeDisabled();
+      fireEvent.mouseEnter(toggle.closest("span[tabindex]")!);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        operation === "future_operation"
+          ? "dataCatalog.preview.fixedFilterSourceUnknown"
+          : "dataCatalog.preview.fixedFilterRequiresIndex",
+      );
+      fireEvent.click(toggle);
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    {
+      name: "unindexed table",
+      sourceCategory: "table",
+      querySource: "source",
+      hint: "queryOriginalAlreadyActive",
+    },
+    {
+      name: "native index",
+      sourceCategory: "index",
+      querySource: "local_index",
+      hint: "queryOriginalUnavailable",
+    },
+  ] as const)(
+    "keeps source switching visible but disabled with a tooltip for a view with $name",
+    async ({ sourceCategory, querySource, hint }) => {
+      previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource });
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...tableView,
+            sourceMetadata: { sourceCategory },
+            localIndexName: "view-index",
+            localIndexStatus: "available",
+          }}
+        />,
+      );
+      await screen.findByText(
+        querySource === "local_index"
+          ? "dataCatalog.preview.dataSourceIndex"
+          : "dataCatalog.preview.dataSourceOriginal",
+      );
+      const toggle = screen.getByRole("checkbox", {
+        name: "dataCatalog.preview.queryOriginalSource",
+      });
+      expect(toggle).toBeDisabled();
+      fireEvent.mouseEnter(toggle.closest("span[tabindex]")!);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(`dataCatalog.preview.${hint}`);
+      fireEvent.click(toggle);
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("allows a table-derived view without a fixed filter to query its source", async () => {
+    previewCatalogResourceMock.mockImplementation(
+      (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+        Promise.resolve({
+          rows: [],
+          total: 0,
+          querySource: query.ignoreLocalIndex ? "source" : "local_index",
+        }),
+    );
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...tableView, logicDefinition: { sourceResourceId: "source-1" } }}
+      />,
+    );
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "dataCatalog.preview.queryOriginalSource" }),
+    );
+    await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+      ignoreLocalIndex: true,
+      limit: 10,
+      offset: 0,
+    });
+  });
+
+  it.each(["table", "dataset", "index"] as const)(
+    "keeps the source option disabled with a tooltip for a %s without a switchable channel",
+    async (category) => {
+      previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            category,
+            columnCount: 1,
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+      await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+      const toggle = screen.getByRole("checkbox", {
+        name: "dataCatalog.preview.queryOriginalSource",
+      });
+      expect(toggle).toBeDisabled();
+      fireEvent.focus(toggle.closest("span[tabindex]")!);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        category === "table"
+          ? "dataCatalog.preview.queryOriginalAlreadyActive"
+          : "dataCatalog.preview.queryOriginalUnavailable",
+      );
+      fireEvent.click(toggle);
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("shows a loading tooltip until a view's initial preview completes", async () => {
+    const response = { rows: [], total: 0, querySource: "local_index" };
+    let resolvePreview!: (value: typeof response) => void;
+    const preview = new Promise<typeof response>((resolve) => {
+      resolvePreview = resolve;
+    });
+    previewCatalogResourceMock.mockReturnValueOnce(preview);
+    render(<ResourcePreviewPanel active resource={tableView} />);
+    const toggle = screen.getByRole("checkbox", {
+      name: "dataCatalog.preview.queryOriginalSource",
+    });
+    expect(toggle).toBeDisabled();
+    const trigger = toggle.closest("span[tabindex]")!;
+    fireEvent.mouseEnter(trigger);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "dataCatalog.preview.queryOriginalLoading",
+    );
+    fireEvent.mouseLeave(trigger);
+    await act(async () => {
+      resolvePreview(response);
+      await preview;
+    });
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    expect(toggle).toBeEnabled();
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { name: "view type", change: { logicType: undefined } },
+    { name: "source category", change: { sourceMetadata: undefined } },
+    { name: "source reference", change: { logicDefinition: undefined } },
+    { name: "nonempty source reference", change: { logicDefinition: { sourceResourceId: " " } } },
+  ] as const)(
+    "reports incomplete view details when $name is missing without querying rows",
+    async ({ change }) => {
+      render(<ResourcePreviewPanel active resource={{ ...tableView, ...change }} />);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "dataCatalog.preview.invalidViewMetadata",
+      );
+      const toggle = screen.getByRole("checkbox", {
+        name: "dataCatalog.preview.queryOriginalSource",
+      });
+      expect(toggle).toBeDisabled();
+      fireEvent.focus(toggle.closest("span[tabindex]")!);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "dataCatalog.preview.invalidViewMetadata",
+      );
+      expect(previewCatalogResourceMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([undefined, "unexpected", ""])(
+    "rejects a derived preview response with querySource=%s",
+    async (querySource) => {
+      previewCatalogResourceMock.mockResolvedValue({ rows: [{ id: 123 }], total: 1, querySource });
+      render(<ResourcePreviewPanel active resource={tableView} />);
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "dataCatalog.preview.invalidQuerySource",
+      );
+      expect(screen.queryByRole("cell", { name: "123" })).not.toBeInTheDocument();
+      const toggle = screen.getByRole("checkbox", {
+        name: "dataCatalog.preview.queryOriginalSource",
+      });
+      expect(toggle).toBeDisabled();
+      fireEvent.focus(toggle.closest("span[tabindex]")!);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "dataCatalog.preview.queryOriginalFailed",
+      );
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("reports initial preview failure through the query error and allows an explicit retry", async () => {
+    const failure = Object.assign(new Error("source unavailable"), {
+      isAxiosError: true,
+      response: {
+        status: 500,
+        data: {
+          error_code: "VegaBackend.Resource.InternalError",
+          description: "source unavailable",
+        },
+      },
+    });
+    previewCatalogResourceMock
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValue({ rows: [], total: 0, querySource: "local_index" });
+    render(<ResourcePreviewPanel active resource={tableView} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("source unavailable");
+    const toggle = screen.getByRole("checkbox", {
+      name: "dataCatalog.preview.queryOriginalSource",
+    });
+    expect(toggle).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.clearFilter" }));
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    expect(toggle).toBeEnabled();
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the selected source on a malformed response and retries only when requested", async () => {
+    previewCatalogResourceMock
+      .mockResolvedValueOnce({ rows: [], total: 0, querySource: "local_index" })
+      .mockResolvedValueOnce({ rows: [{ id: 123 }], total: 1 })
+      .mockResolvedValue({ rows: [{ id: 4 }], total: 1, querySource: "source" });
+    render(<ResourcePreviewPanel active resource={tableView} />);
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    const toggle = screen.getByRole("checkbox", {
+      name: "dataCatalog.preview.queryOriginalSource",
+    });
+    fireEvent.click(toggle);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "dataCatalog.preview.invalidQuerySource",
+    );
+    expect(toggle).toBeDisabled();
+    expect(toggle).toBeChecked();
+    expect(screen.queryByRole("cell", { name: "123" })).not.toBeInTheDocument();
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+      ignoreLocalIndex: true,
+      limit: 10,
+      offset: 0,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.clearFilter" }));
+    await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+    expect(toggle).toBeEnabled();
+    expect(toggle).toBeChecked();
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3);
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+      ignoreLocalIndex: true,
+      limit: 10,
+      offset: 0,
+    });
+  });
+
+  it("allows a source-supported LARGEINT fixed range to bypass a failing initial index query", async () => {
+    const failure = Object.assign(new Error("index filter incompatible"), {
+      isAxiosError: true,
+      response: {
+        status: 400,
+        data: {
+          error_code: "VegaBackend.LogicalView.DefinitionInvalid",
+          description: "index filter incompatible",
+        },
+      },
+    });
+    previewCatalogResourceMock.mockImplementation(
+      (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+        query.ignoreLocalIndex
+          ? Promise.resolve({ rows: [{ published: "10" }], total: 1, querySource: "source" })
+          : Promise.reject(failure),
+    );
+    const fixed = { field: "wide", operation: "range", value: ["0", "20"] };
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...tableView,
+          schema: [{ name: "published", originalName: "wide", type: "large_integer" }],
+          logicDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
+        }}
+      />,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("index filter incompatible");
+    const toggle = screen.getByRole("checkbox", {
+      name: "dataCatalog.preview.queryOriginalSource",
+    });
+    expect(toggle).toBeEnabled();
+    fireEvent.click(toggle);
+    await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+    expect(screen.getByRole("cell", { name: "10" })).toBeInTheDocument();
+    expect(toggle).toBeEnabled();
+    expect(toggle).toBeChecked();
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+      ignoreLocalIndex: true,
+      limit: 10,
+      offset: 0,
+    });
+    expect(fixed).toEqual({ field: "wide", operation: "range", value: ["0", "20"] });
+  });
+
+  it.each([
+    { operation: "like", originalName: "wide" },
+    { operation: "prefix", originalName: "source_wide" },
+  ])(
+    "leaves $operation type validation to the backend when the published binding is $originalName",
+    async ({ operation, originalName }) => {
+      const failure = Object.assign(new Error("fixed filter incompatible with source type"), {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error_code: "VegaBackend.LogicalView.DefinitionInvalid",
+            description: "fixed filter incompatible with source type",
+          },
+        },
+      });
+      previewCatalogResourceMock.mockImplementation(
+        (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+          query.ignoreLocalIndex
+            ? Promise.reject(failure)
+            : Promise.resolve({ rows: [], total: 0, querySource: "local_index" }),
+      );
+      const fixed = { field: "wide", operation, value: "10" };
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...tableView,
+            schema: [{ name: "published", originalName, type: "large_integer" }],
+            logicDefinition: {
+              sourceResourceId: "source-1",
+              filterCondition: fixed,
+            },
+          }}
+        />,
+      );
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      const toggle = screen.getByRole("checkbox", {
+        name: "dataCatalog.preview.queryOriginalSource",
+      });
+      expect(toggle).toBeEnabled();
+      fireEvent.click(toggle);
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "fixed filter incompatible with source type",
+      );
+      expect(toggle).toBeChecked();
+      expect(toggle).toBeEnabled();
+      expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+        ignoreLocalIndex: true,
+        limit: 10,
+        offset: 0,
+      });
+      expect(fixed).toEqual({ field: "wide", operation, value: "10" });
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+      fireEvent.click(toggle);
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      expect(toggle).not.toBeChecked();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  it("does not infer a fixed field's type from another field's matching original name", async () => {
+    previewCatalogResourceMock.mockImplementation(
+      (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+        Promise.resolve({
+          rows: [{ number_alias: "10", text_alias: "alpha" }],
+          total: 1,
+          querySource: query.ignoreLocalIndex ? "source" : "local_index",
+        }),
+    );
+    // Source fields: code -> CODE (numeric), CODE -> LABEL (string).
+    // The fixed condition binds the logical name CODE, which is the string field.
+    const fixed = { field: "CODE", operation: "prefix", value: "alpha" };
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...tableView,
+          schema: [
+            { name: "number_alias", originalName: "CODE", type: "large_integer" },
+            { name: "text_alias", originalName: "LABEL", type: "string" },
+          ],
+          logicDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
+        }}
+      />,
+    );
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    const toggle = screen.getByRole("checkbox", {
+      name: "dataCatalog.preview.queryOriginalSource",
+    });
+    expect(toggle).toBeEnabled();
+    fireEvent.click(toggle);
+    await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+    expect(toggle).toBeChecked();
+    expect(screen.getByRole("cell", { name: "alpha" })).toBeInTheDocument();
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(tableView.id, {
+      ignoreLocalIndex: true,
+      limit: 10,
+      offset: 0,
+    });
+    expect(fixed).toEqual({ field: "CODE", operation: "prefix", value: "alpha" });
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("loads normally after incomplete view details are refreshed", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: [],
+      total: 0,
+      querySource: "local_index",
+    });
+    const { rerender } = render(
+      <ResourcePreviewPanel active resource={{ ...tableView, sourceMetadata: undefined }} />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("dataCatalog.preview.invalidViewMetadata");
+    expect(previewCatalogResourceMock).not.toHaveBeenCalled();
+    rerender(<ResourcePreviewPanel active resource={tableView} />);
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: "dataCatalog.preview.queryOriginalSource" }),
+    ).toBeEnabled();
+    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets a view's selected channel and ignores late results when navigating to another resource", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: [],
+      total: 0,
+      querySource: "local_index",
+    });
+    const { rerender } = render(<ResourcePreviewPanel active resource={tableView} />);
+    await screen.findByText("dataCatalog.preview.dataSourceIndex");
+    let resolveOld!: (result: unknown) => void;
+    const oldPreview = new Promise((resolve) => {
+      resolveOld = resolve;
+    });
+    previewCatalogResourceMock.mockReturnValueOnce(oldPreview);
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "dataCatalog.preview.queryOriginalSource" }),
+    );
+    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
+    rerender(<ResourcePreviewPanel active resource={{ ...tableView, id: "next-view" }} />);
+    await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith("next-view", {
+      limit: 10,
+      offset: 0,
+    });
+    expect(
+      screen.queryByRole("checkbox", { name: "dataCatalog.preview.queryOriginalSource" }),
+    ).toBeDisabled();
+    await act(async () => {
+      resolveOld({ rows: [{ id: 999 }], total: 1, querySource: "local_index" });
+      await oldPreview;
+    });
+    expect(screen.queryByRole("cell", { name: "999" })).not.toBeInTheDocument();
+    expect(screen.queryByText("dataCatalog.preview.dataSourceIndex")).not.toBeInTheDocument();
   });
 
   it.each(["source", "local_index"] as const)(
@@ -119,8 +771,7 @@ describe("ResourcePreviewPanel", () => {
         <ResourcePreviewPanel
           active
           resource={{
-            ...resource,
-            category: "logical_view",
+            ...viewResource,
             schema: [{ name: "wide", type: "large_integer" }],
           }}
         />,
@@ -234,7 +885,7 @@ describe("ResourcePreviewPanel", () => {
         <ResourcePreviewPanel
           active
           resource={{
-            ...resource,
+            ...(category === "logical_view" ? viewResource : resource),
             category,
             sourceMetadata: category === "logical_view" ? { sourceCategory: "index" } : undefined,
             localIndexName: "idx_dataset",
@@ -265,7 +916,9 @@ describe("ResourcePreviewPanel", () => {
           },
         });
       } else {
-        expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+        expect(
+          screen.getByText("dataCatalog.filter.errors.unsupportedOperation"),
+        ).toBeInTheDocument();
         expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
       }
     },
@@ -280,7 +933,7 @@ describe("ResourcePreviewPanel", () => {
         <ResourcePreviewPanel
           active
           resource={{
-            ...resource,
+            ...(category === "logical_view" ? viewResource : resource),
             category,
             sourceMetadata: category === "logical_view" ? { sourceCategory: "index" } : undefined,
             localIndexName: "idx_dataset",
@@ -304,20 +957,18 @@ describe("ResourcePreviewPanel", () => {
           ],
         },
       });
-      expect(
-        screen.queryByLabelText("dataCatalog.preview.queryOriginalSource"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("dataCatalog.preview.queryOriginalSource")).toBeDisabled();
     },
   );
 
   it("shows type, display name, and field name together in Table and View headers", () => {
-    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
+    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
     for (const category of ["table", "logical_view"] as const) {
       const { unmount } = render(
         <ResourcePreviewPanel
           active
           resource={{
-            ...resource,
+            ...(category === "logical_view" ? viewResource : resource),
             category,
             schema: [
               { name: "amount", displayName: "订单金额", type: "decimal(18,2)" },
@@ -354,7 +1005,11 @@ describe("ResourcePreviewPanel", () => {
       render(
         <ResourcePreviewPanel
           active
-          resource={{ ...resource, category, schema: [{ name: "at", type: "datetime" }] }}
+          resource={{
+            ...(category === "logical_view" ? viewResource : resource),
+            category,
+            schema: [{ name: "at", type: "datetime" }],
+          }}
         />,
       );
       fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
@@ -383,12 +1038,16 @@ describe("ResourcePreviewPanel", () => {
   );
 
   it("applies and clears a temporary filter for both Table and View previews", async () => {
-    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
+    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
     for (const category of ["table", "logical_view"] as const) {
       const { unmount } = render(
         <ResourcePreviewPanel
           active
-          resource={{ ...resource, category, schema: [{ name: "id", type: "integer" }] }}
+          resource={{
+            ...(category === "logical_view" ? viewResource : resource),
+            category,
+            schema: [{ name: "id", type: "integer" }],
+          }}
         />,
       );
       fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
@@ -421,6 +1080,140 @@ describe("ResourcePreviewPanel", () => {
       previewCatalogResourceMock.mockClear();
     }
   });
+
+  it.each(["source", "local_index"] as const)(
+    "retries the same failed %s filter until recovery without repeating successful queries",
+    async (querySource) => {
+      previewCatalogResourceMock.mockReset();
+      const failure = Object.assign(new Error("temporary failure"), {
+        isAxiosError: true,
+        response: {
+          status: 500,
+          data: {
+            error_code: "VegaBackend.Resource.InternalError",
+            description: "temporary failure",
+          },
+        },
+      });
+      Object.assign(testFilterRule, { field: "id", operation: "==", value: "3" });
+      previewCatalogResourceMock
+        .mockResolvedValue({ rows: [{ id: 3 }], total: 1, querySource })
+        .mockResolvedValueOnce({ rows: [], total: 0, querySource })
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure);
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            ...(querySource === "local_index"
+              ? { localIndexStatus: "available", localIndexName: "idx_orders" }
+              : {}),
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+      await screen.findByText("dataCatalog.preview.empty");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(apply);
+      await screen.findByText("temporary failure");
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+      const failedQuery = previewCatalogResourceMock.mock.lastCall?.[1] as unknown;
+      expect(failedQuery).toMatchObject({
+        filterCondition: {
+          operation: "and",
+          sub_conditions: [{ field: "id", operation: "==", value: 3, value_from: "const" }],
+        },
+        offset: 0,
+      });
+
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3));
+      await screen.findByText("temporary failure");
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toEqual(failedQuery);
+
+      fireEvent.click(apply);
+      await screen.findByRole("cell", { name: "3" });
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(4);
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toEqual(failedQuery);
+      expect(screen.queryByText("temporary failure")).not.toBeInTheDocument();
+
+      fireEvent.click(apply);
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(4);
+      Object.assign(testFilterRule, { value: "4" });
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(5));
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+        filterCondition: {
+          sub_conditions: [{ field: "id", operation: "==", value: 4, value_from: "const" }],
+        },
+        offset: 0,
+      });
+    },
+  );
+
+  it.each(["source", "local_index"] as const)(
+    "ignores a late failed %s retry after a newer filter succeeds",
+    async (querySource) => {
+      previewCatalogResourceMock.mockReset();
+      let rejectRetry: ((reason: Error) => void) | undefined;
+      const retryRequest = new Promise<ResourcePreviewResult>((_resolve, reject) => {
+        rejectRetry = reject;
+      });
+      previewCatalogResourceMock
+        .mockResolvedValue({ rows: [{ id: 4 }], total: 1, querySource })
+        .mockResolvedValueOnce({ rows: [], total: 0, querySource })
+        .mockRejectedValueOnce(new Error("temporary failure"))
+        .mockReturnValueOnce(retryRequest);
+      Object.assign(testFilterRule, { field: "id", operation: "==", value: "3" });
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            ...(querySource === "local_index"
+              ? { localIndexStatus: "available", localIndexName: "idx_orders" }
+              : {}),
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+      await screen.findByText("dataCatalog.preview.empty");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(apply);
+      await screen.findByText("temporary failure");
+
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3));
+      fireEvent.click(apply);
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3);
+
+      Object.assign(testFilterRule, { field: "missing" });
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(apply);
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3);
+
+      Object.assign(testFilterRule, { field: "id", value: "4" });
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(apply);
+      await screen.findByRole("cell", { name: "4" });
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(4);
+      if (!rejectRetry) throw new Error("expected the retry request to remain pending");
+      await act(async () => {
+        rejectRetry?.(new Error("late retry failure"));
+        await expect(retryRequest).rejects.toThrow("late retry failure");
+      });
+      expect(screen.getByRole("cell", { name: "4" })).toBeInTheDocument();
+      expect(screen.queryByText("late retry failure")).not.toBeInTheDocument();
+      expect(screen.queryByText("temporary failure")).not.toBeInTheDocument();
+    },
+  );
 
   it.each([
     {
@@ -482,6 +1275,235 @@ describe("ResourcePreviewPanel", () => {
       expect(
         await screen.findByText("dataCatalog.preview.filterUnavailableForSource"),
       ).toBeTruthy();
+    },
+  );
+
+  it.each(
+    (["match", "match_phrase"] as const).flatMap((operation) =>
+      [false, true].map((applyAtSource) => ({ operation, applyAtSource })),
+    ),
+  )(
+    "clears stale $operation errors after returning to the index (apply at source: $applyAtSource)",
+    async ({ operation, applyAtSource }) => {
+      Object.assign(testFilterRule, { field: "body", operation, value: "invoice copy" });
+      previewCatalogResourceMock.mockImplementation(
+        (_id: string, query: { ignoreLocalIndex?: boolean; filterCondition?: unknown }) =>
+          Promise.resolve({
+            querySource: query.ignoreLocalIndex ? "source" : "local_index",
+            rows: query.filterCondition
+              ? [
+                  { id: 9, body: "invoice copy" },
+                  { id: 1, body: "invoice copy" },
+                ]
+              : [{ id: 7, body: "other" }],
+            total: query.filterCondition ? 2 : 1,
+          }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            localIndexName: "idx_orders",
+            localIndexStatus: "available",
+            schema: [
+              { name: "id", type: "integer" },
+              { name: "body", type: "string", features: [{ featureType: "fulltext" }] },
+            ],
+          }}
+        />,
+      );
+      await screen.findByRole("cell", { name: "7" });
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(apply);
+      await screen.findByRole("cell", { name: "9" });
+      expect(screen.getByRole("row", { name: "2 1 invoice copy" })).toBeInTheDocument();
+      const filterCondition = {
+        operation: "and",
+        sub_conditions: [{ field: "body", operation, value: "invoice copy", value_from: "const" }],
+      };
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({ filterCondition });
+
+      const sourceToggle = screen.getByLabelText("dataCatalog.preview.queryOriginalSource");
+      fireEvent.click(sourceToggle);
+      await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+      expect(screen.getByRole("cell", { name: "7" })).toBeInTheDocument();
+      expect(
+        screen.getByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).toBeInTheDocument();
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).not.toHaveProperty("filterCondition");
+      if (applyAtSource) {
+        const requests = previewCatalogResourceMock.mock.calls.length;
+        fireEvent.click(apply);
+        expect(
+          screen.getByText("dataCatalog.filter.errors.unsupportedOperation"),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByText("dataCatalog.filter.errors.invalidField"),
+        ).not.toBeInTheDocument();
+        expect(previewCatalogResourceMock).toHaveBeenCalledTimes(requests);
+      }
+
+      fireEvent.click(sourceToggle);
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      expect(
+        screen.queryByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("dataCatalog.filter.errors.unsupportedOperation"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "dataCatalog.preview.filter" }),
+      ).toBeInTheDocument();
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).not.toHaveProperty("filterCondition");
+
+      fireEvent.click(apply);
+      await screen.findByRole("cell", { name: "9" });
+      expect(screen.getByRole("row", { name: "2 1 invoice copy" })).toBeInTheDocument();
+      expect(screen.getByTestId("pagination-total")).toHaveTextContent("2");
+      expect(
+        screen.getByRole("button", { name: "dataCatalog.preview.filter (1)" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toEqual({
+        filterCondition,
+        limit: 10,
+        offset: 0,
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "clears cancellation feedback when applying a valid draft on the same source (request fails: %s)",
+    async (requestFails) => {
+      Object.assign(testFilterRule, { field: "body", operation: "match_phrase", value: "invoice" });
+      previewCatalogResourceMock.mockImplementation(
+        (_id: string, query: { ignoreLocalIndex?: boolean; filterCondition?: unknown }) =>
+          query.ignoreLocalIndex && query.filterCondition && requestFails
+            ? Promise.reject(new Error("source unavailable"))
+            : Promise.resolve({
+                querySource: query.ignoreLocalIndex ? "source" : "local_index",
+                rows: [{ id: 9, body: "invoice" }],
+                total: 1,
+              }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            localIndexName: "idx_orders",
+            localIndexStatus: "available",
+            schema: [
+              { name: "id", type: "integer" },
+              { name: "body", type: "string", features: [{ featureType: "fulltext" }] },
+            ],
+          }}
+        />,
+      );
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      const edit = screen.getByRole("button", { name: "set-test-filter" });
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(edit);
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+
+      Object.assign(testFilterRule, { field: "id", operation: "==", value: "9" });
+      fireEvent.click(edit);
+      fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
+      await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+      expect(
+        screen.getByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).toBeInTheDocument();
+      fireEvent.click(apply);
+      await waitFor(() =>
+        expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+          ignoreLocalIndex: true,
+          filterCondition: { sub_conditions: [{ field: "id", operation: "==", value: 9 }] },
+        }),
+      );
+      if (requestFails) {
+        await screen.findByText("source unavailable");
+      } else {
+        await screen.findByRole("cell", { name: "9" });
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      }
+      expect(
+        screen.queryByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([false, true])(
+    "preserves equality filters and invalid draft errors across source changes (request fails: %s)",
+    async (requestFails) => {
+      Object.assign(testFilterRule, { field: "id", operation: "==", value: "9" });
+      previewCatalogResourceMock.mockImplementation(
+        (_id: string, query: { ignoreLocalIndex?: boolean }) =>
+          query.ignoreLocalIndex && requestFails
+            ? Promise.reject(new Error("source unavailable"))
+            : Promise.resolve({
+                querySource: query.ignoreLocalIndex ? "source" : "local_index",
+                rows: [{ id: 9 }],
+                total: 1,
+              }),
+      );
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            localIndexName: "idx_orders",
+            localIndexStatus: "available",
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+      await screen.findByRole("cell", { name: "9" });
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      const edit = screen.getByRole("button", { name: "set-test-filter" });
+      const apply = screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" });
+      fireEvent.click(edit);
+      fireEvent.click(apply);
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+
+      Object.assign(testFilterRule, { field: "missing" });
+      fireEvent.click(edit);
+      fireEvent.click(apply);
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      const sourceToggle = screen.getByLabelText("dataCatalog.preview.queryOriginalSource");
+      fireEvent.click(sourceToggle);
+      await screen.findByText(
+        requestFails ? "source unavailable" : "dataCatalog.preview.dataSourceOriginal",
+      );
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      expect(
+        screen.queryByText("dataCatalog.preview.filterUnavailableForSource"),
+      ).not.toBeInTheDocument();
+      expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+        ignoreLocalIndex: true,
+        filterCondition: { sub_conditions: [{ field: "id", operation: "==", value: 9 }] },
+      });
+
+      fireEvent.click(sourceToggle);
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      expect(screen.queryByText("source unavailable")).not.toBeInTheDocument();
+      Object.assign(testFilterRule, { field: "id" });
+      fireEvent.click(edit);
+      expect(screen.queryByText("dataCatalog.filter.errors.invalidField")).not.toBeInTheDocument();
+      Object.assign(testFilterRule, { field: "missing" });
+      fireEvent.click(edit);
+      fireEvent.click(apply);
+      expect(screen.getByText("dataCatalog.filter.errors.invalidField")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.clearFilter" }));
+      await waitFor(() =>
+        expect(previewCatalogResourceMock.mock.lastCall?.[1]).not.toHaveProperty("filterCondition"),
+      );
+      expect(screen.queryByText("dataCatalog.filter.errors.invalidField")).not.toBeInTheDocument();
     },
   );
 
@@ -663,6 +1685,7 @@ describe("ResourcePreviewPanel", () => {
 
   it("does not replace a derived view's fixed-filter total with its row count", async () => {
     previewCatalogResourceMock.mockResolvedValue({
+      querySource: "source",
       rows: Array.from({ length: 10 }, (_, index) => ({ id: index + 1 })),
       total: 10,
     });
@@ -671,8 +1694,7 @@ describe("ResourcePreviewPanel", () => {
       <ResourcePreviewPanel
         active
         resource={{
-          ...resource,
-          category: "logical_view",
+          ...viewResource,
           columnCount: 1,
           logicDefinition: {
             sourceResourceId: "source-1",
@@ -1208,7 +2230,7 @@ describe("ResourcePreviewPanel", () => {
         offset: 0,
       });
     });
-    expect(screen.queryByLabelText("dataCatalog.preview.queryOriginalSource")).toBeNull();
+    expect(screen.getByLabelText("dataCatalog.preview.queryOriginalSource")).toBeDisabled();
     expect(
       screen.getByLabelText("dataCatalog.preview.loadBinaryContent").getAttribute("disabled"),
     ).toBeNull();
@@ -1289,70 +2311,142 @@ describe("ResourcePreviewPanel", () => {
     }
   });
 
-  it("preserves an oversized filter when the user explicitly queries the source", async () => {
-    const value = "CLOSED" + "X".repeat(251);
-    const filterCondition = {
-      operation: "and",
-      sub_conditions: [{ field: "status", operation: "==", value, value_from: "const" }],
-    };
-    Object.assign(testFilterRule, { field: "status", operation: "==", value });
-    previewCatalogResourceMock
-      .mockResolvedValueOnce({ rows: [{ status: "OPEN" }], total: 1, querySource: "local_index" })
-      .mockRejectedValue(
+  it.each(["table", "logical_view"] as const)(
+    "preserves an oversized %s filter when the user explicitly queries the source",
+    async (category) => {
+      const value = "CLOSED" + "X".repeat(251);
+      const filterCondition = {
+        operation: "and",
+        sub_conditions: [{ field: "status", operation: "==", value, value_from: "const" }],
+      };
+      Object.assign(testFilterRule, { field: "status", operation: "==", value });
+      previewCatalogResourceMock
+        .mockResolvedValueOnce({ rows: [{ status: "OPEN" }], total: 1, querySource: "local_index" })
+        .mockRejectedValue(
+          Object.assign(new Error("rejected"), {
+            isAxiosError: true,
+            response: {
+              status: 400,
+              data: {
+                error_code: "VegaBackend.Resource.QueryValueExceedsKeywordLimit",
+                description: "Invalid resource parameter",
+                error_details: "private diagnostic",
+                metadata: { field: "status", limit: 256 },
+              },
+            },
+          }),
+        );
+      const previewResource: CatalogResource = {
+        ...(category === "logical_view" ? tableView : resource),
+        schema: [{ name: "status", type: "string" }],
+        localIndexStatus: "available",
+        localIndexName: "index",
+      };
+      render(<ResourcePreviewPanel active resource={previewResource} />);
+      await screen.findByText("OPEN");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      expect(
+        await screen.findByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("dataCatalog.preview.keywordLimitSourceHint")).toBeInTheDocument();
+      expect(screen.queryByText("private diagnostic")).not.toBeInTheDocument();
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+      expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(previewResource.id, {
+        filterCondition,
+        limit: 10,
+        offset: 0,
+      });
+      previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
+      fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
+      await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3));
+      expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(previewResource.id, {
+        filterCondition,
+        limit: 10,
+        offset: 0,
+        ignoreLocalIndex: true,
+      });
+      await waitFor(() =>
+        expect(
+          screen.queryByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
+        ).not.toBeInTheDocument(),
+      );
+    },
+  );
+
+  it.each([
+    {
+      name: "source-supported fixed filter",
+      sourceCategory: "table" as const,
+      operation: "==",
+      hint: "keywordLimitSourceHint",
+      switchable: true,
+    },
+    {
+      name: "fulltext fixed filter",
+      sourceCategory: "table" as const,
+      operation: "match",
+      hint: "keywordLimitShortenHint",
+      switchable: false,
+    },
+    {
+      name: "unrecognized fixed filter",
+      sourceCategory: "table" as const,
+      operation: "future_operation",
+      hint: "keywordLimitShortenHint",
+      switchable: false,
+    },
+    {
+      name: "native index source",
+      sourceCategory: "index" as const,
+      operation: "==",
+      hint: "keywordLimitShortenHint",
+      switchable: false,
+    },
+  ])(
+    "gives the correct keyword-limit recovery hint on initial failure with $name",
+    async ({ sourceCategory, operation, hint, switchable }) => {
+      previewCatalogResourceMock.mockRejectedValue(
         Object.assign(new Error("rejected"), {
           isAxiosError: true,
           response: {
             status: 400,
             data: {
               error_code: "VegaBackend.Resource.QueryValueExceedsKeywordLimit",
-              description: "Invalid resource parameter",
-              error_details: "private diagnostic",
               metadata: { field: "status", limit: 256 },
             },
           },
         }),
       );
-    render(
-      <ResourcePreviewPanel
-        active
-        resource={{
-          ...resource,
-          schema: [{ name: "status", type: "string" }],
-          localIndexStatus: "available",
-          localIndexName: "index",
-        }}
-      />,
-    );
-    await screen.findByText("OPEN");
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
-    fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
-    expect(
-      await screen.findByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("dataCatalog.preview.keywordLimitSourceHint")).toBeInTheDocument();
-    expect(screen.queryByText("private diagnostic")).not.toBeInTheDocument();
-    expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
-    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(resource.id, {
-      filterCondition,
-      limit: 10,
-      offset: 0,
-    });
-    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
-    fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
-    await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(3));
-    expect(previewCatalogResourceMock).toHaveBeenLastCalledWith(resource.id, {
-      filterCondition,
-      limit: 10,
-      offset: 0,
-      ignoreLocalIndex: true,
-    });
-    await waitFor(() =>
+      render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...tableView,
+            sourceMetadata: { sourceCategory },
+            schema: [{ name: "status", type: "string" }],
+            logicDefinition: {
+              sourceResourceId: "source-1",
+              filterCondition: { field: "status", operation, value: "long value" },
+            },
+          }}
+        />,
+      );
+      expect(await screen.findByRole("alert")).toHaveTextContent(`dataCatalog.preview.${hint}`);
       expect(
-        screen.queryByText("dataCatalog.preview.keywordLimitExceeded:status:256"),
-      ).not.toBeInTheDocument(),
-    );
-  });
+        screen.queryByText(
+          `dataCatalog.preview.${switchable ? "keywordLimitShortenHint" : "keywordLimitSourceHint"}`,
+        ),
+      ).not.toBeInTheDocument();
+      const toggle = screen.getByRole("checkbox", {
+        name: "dataCatalog.preview.queryOriginalSource",
+      });
+      if (switchable) expect(toggle).toBeEnabled();
+      else expect(toggle).toBeDisabled();
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it.each([
     undefined,
@@ -1538,7 +2632,7 @@ describe("ResourcePreviewPanel", () => {
         <ResourcePreviewPanel
           active
           resource={{
-            ...resource,
+            ...(category === "logical_view" ? viewResource : resource),
             category,
             sourceIdentifier: "APP.ORDERS",
             columnCount: 1,
@@ -1622,8 +2716,7 @@ describe("ResourcePreviewPanel", () => {
       <ResourcePreviewPanel
         active
         resource={{
-          ...resource,
-          category: "logical_view",
+          ...viewResource,
           name: "orders_view",
           sourceIdentifier: "logic-view-id",
           columnCount: 1,
@@ -1677,4 +2770,59 @@ describe("ResourcePreviewPanel", () => {
     expect(screen.getByText("dataCatalog.preview.noQueryPermission")).toBeTruthy();
     expect(previewCatalogResourceMock).not.toHaveBeenCalled();
   });
+
+  it.each([
+    { id: "res-query-source-switch-view", switchState: "enabled", total: 3, source: "local_index" },
+    {
+      id: "res-query-source-fulltext-view",
+      switchState: "disabled",
+      total: 1,
+      source: "local_index",
+    },
+    { id: "res-query-source-no-index-view", switchState: "disabled", total: 3, source: "source" },
+  ])(
+    "renders the real $id mock fixture with its expected channel controls",
+    async ({ id, switchState, total, source }) => {
+      const actual = await vi.importActual<
+        typeof import("@/modules/data-catalog/services/resource.service")
+      >("@/modules/data-catalog/services/resource.service");
+      const demo = await actual.getCatalogResource(id);
+      expect(demo).not.toBeNull();
+      previewCatalogResourceMock.mockImplementation(actual.previewCatalogResource);
+      try {
+        render(<ResourcePreviewPanel active resource={demo} />);
+        await screen.findByText(
+          source === "local_index"
+            ? "dataCatalog.preview.dataSourceIndex"
+            : "dataCatalog.preview.dataSourceOriginal",
+        );
+        expect(screen.getByTestId("pagination-total")).toHaveTextContent(String(total));
+        expect(screen.getAllByRole("row")).toHaveLength(total + 1);
+        expect(screen.queryByText("alpha excluded")).not.toBeInTheDocument();
+        const toggle = screen.queryByRole("checkbox", {
+          name: "dataCatalog.preview.queryOriginalSource",
+        });
+        if (switchState === "disabled") {
+          expect(toggle).toBeDisabled();
+          fireEvent.mouseEnter(toggle!.closest("span[tabindex]")!);
+          expect(await screen.findByRole("tooltip")).toHaveTextContent(
+            source === "source"
+              ? "dataCatalog.preview.queryOriginalAlreadyActive"
+              : "dataCatalog.preview.fixedFilterRequiresIndex",
+          );
+        } else {
+          expect(toggle).toBeEnabled();
+          fireEvent.click(toggle!);
+          await screen.findByText("dataCatalog.preview.dataSourceOriginal");
+          expect(toggle).toBeChecked();
+          expect(screen.getByRole("cell", { name: "NULL" })).toBeInTheDocument();
+          fireEvent.click(toggle!);
+          await screen.findByText("dataCatalog.preview.dataSourceIndex");
+          expect(toggle).not.toBeChecked();
+        }
+      } finally {
+        previewCatalogResourceMock.mockReset();
+      }
+    },
+  );
 });

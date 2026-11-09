@@ -193,7 +193,7 @@ describe("ProjectReleasePage", () => {
 
     expect(await screen.findByText("草稿还没有确认")).toBeInTheDocument();
     expect(getOntologyCheckMock).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "去本体建模" }));
+    fireEvent.click(screen.getByRole("button", { name: "去概念建模" }));
     expect(onGoToModel).toHaveBeenCalled();
   });
 

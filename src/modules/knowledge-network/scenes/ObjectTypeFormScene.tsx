@@ -16,6 +16,7 @@ import { ResourceFormStepsShell } from "@/modules/knowledge-network/components/s
 import {
   ObjectTypeDataAttributeEditor,
   type ObjectTypeDataAttributeEditorHandle,
+  type ObjectTypeDeclarationEditing,
 } from "@/modules/knowledge-network/components/object-type/data-attribute/ObjectTypeDataAttributeEditor";
 import {
   areDataPropertiesEqual,
@@ -38,6 +39,7 @@ import {
   ResourceTagsSelect,
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
+import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   RESOURCE_IDENTIFIER_PATTERN,
@@ -49,15 +51,22 @@ import {
   createKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkConceptGroups,
+  listKnowledgeNetworkValueTypes,
   updateKnowledgeNetworkObjectType,
   validateKnowledgeNetworkObjectType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import {
+  readDeclarationRefusal,
+  type DeclarationRefusal,
+} from "@/modules/knowledge-network/services/shared/declaration-errors";
 import type {
   ConceptGroupRecord,
+  DataPropertyDeclarationBaseline,
   KnowledgeNetworkObjectTypeMutationPayload,
   ObjectTypeDataProperty,
   ObjectTypeDataSource,
   ObjectTypeLogicProperty,
+  ValueType,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectTypeFormScene.module.css";
@@ -105,6 +114,12 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
   const [logicProperties, setLogicProperties] = useState<ObjectTypeLogicProperty[]>([]);
   const [logicValidationError, setLogicValidationError] =
     useState<ObjectTypeLogicAttributeExternalError | null>(null);
+  const canModifyNetwork = useKnowledgeNetworkCanModify(networkId);
+  const [valueTypes, setValueTypes] = useState<ValueType[]>([]);
+  const [valueTypesFailed, setValueTypesFailed] = useState(false);
+  const [declarationRefusal, setDeclarationRefusal] = useState<DeclarationRefusal | null>(null);
+  // What the declarations were when the object type was read; a save sends only what changed.
+  const declarationBaseline = useRef<DataPropertyDeclarationBaseline>(new Map());
   const [pageTitle, setPageTitle] = useState(
     mode === "edit"
       ? t("knowledgeNetwork.objectTypeEditTitle")
@@ -125,6 +140,24 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [t]);
+
+  const reloadValueTypes = useCallback(async () => {
+    try {
+      const list = await listKnowledgeNetworkValueTypes(networkId);
+      setValueTypes(list);
+      setValueTypesFailed(false);
+      return list;
+    } catch {
+      setValueTypesFailed(true);
+      return [];
+    }
+  }, [networkId]);
+
+  useEffect(() => {
+    if (networkId) {
+      void reloadValueTypes();
+    }
+  }, [networkId, reloadValueTypes]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -158,6 +191,11 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             detail.dataProperties.length > 0
               ? detail.dataProperties.map((item) => ({ ...item }))
               : [],
+          );
+          declarationBaseline.current = new Map(
+            detail.dataProperties.flatMap((item) =>
+              item.declarations ? [[item.name, structuredClone(item.declarations)] as const] : [],
+            ),
           );
           setDataSource(detail.dataSource);
           setLogicProperties(detail.logicProperties.map((item) => ({ ...item })));
@@ -204,6 +242,25 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
         value: item.id,
       })),
     [conceptGroups],
+  );
+
+  const declarationEditing = useMemo<ObjectTypeDeclarationEditing>(
+    () => ({
+      canModifyValueTypes: canModifyNetwork,
+      networkId,
+      refusal: declarationRefusal,
+      reloadValueTypes,
+      valueTypes,
+      valueTypesFailed,
+    }),
+    [
+      canModifyNetwork,
+      declarationRefusal,
+      networkId,
+      reloadValueTypes,
+      valueTypes,
+      valueTypesFailed,
+    ],
   );
 
   const dataAttributeBasicValue = useMemo(
@@ -385,6 +442,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       conceptGroupIds: normalizedBasicValue.conceptGroupIds,
       dataProperties: normalizedDataProperties,
       dataSource: normalizedDataSource,
+      declarationBaseline: declarationBaseline.current,
       description: normalizedBasicValue.description,
       icon: normalizedBasicValue.icon,
       id: normalizedBasicValue.id,
@@ -395,6 +453,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
 
     setSubmitting(true);
     setLogicValidationError(null);
+    setDeclarationRefusal(null);
     try {
       await validateKnowledgeNetworkObjectType(
         networkId,
@@ -410,6 +469,13 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       void message.success(t("common.success"));
       void navigate(returnPath);
     } catch (error) {
+      const refusal = readDeclarationRefusal(error);
+      if (refusal) {
+        // Shown above the data properties, at the property it names.
+        setDeclarationRefusal(refusal);
+        setCurrentStep(1);
+        return;
+      }
       const errorMessage = extractRequestErrorMessage(error);
       const logicPropertyName = extractLogicPropertyNameFromError(errorMessage);
       if (logicPropertyName) {
@@ -553,6 +619,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             basicValue={dataAttributeBasicValue}
             dataProperties={dataProperties}
             dataSource={dataSource}
+            declarations={declarationEditing}
             logicPropertyNames={logicPropertyNames}
             networkId={networkId}
             onChange={handleDataAttributeChange}

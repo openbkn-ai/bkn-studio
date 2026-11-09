@@ -11,4 +11,7 @@
 // e.g. disable the in-SPA OAuth gate when bkn-safe is NOT deployed, so studio
 // runs gate-less with the default local-admin user and no login:
 //   window.__BKN_STUDIO_RUNTIME__ = { mode: "hosted" };
+// A deployment that does not run some services can also leave their entries out
+// of the side navigation and the knowledge-network workspace, by key:
+//   window.__BKN_STUDIO_RUNTIME__ = { hiddenNavigation: ["bkn-project", "observability"] };
 window.__BKN_STUDIO_RUNTIME__ = window.__BKN_STUDIO_RUNTIME__ || {};

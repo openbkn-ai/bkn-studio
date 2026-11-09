@@ -133,3 +133,11 @@ BKN Studio is part of the OpenBKN project. The authoritative license for compone
 - BKN Foundry and BKN SDK are maintained in separate repositories and are governed by the license files distributed with those repositories.
 
 The license applicable to each file is stated in that file's header.
+
+### BKN-project fact status choices
+
+The existing fact editor confirms one business-value field and an adopted entity
+relationship. Unique candidates are prefilled as suggestions; they do not grant
+authority until a person confirms. Unfinished choices can be saved as pending,
+and field changes require reconfirmation. Existing evidence-based effective
+period extraction is reused. No new business attributes or configuration page.

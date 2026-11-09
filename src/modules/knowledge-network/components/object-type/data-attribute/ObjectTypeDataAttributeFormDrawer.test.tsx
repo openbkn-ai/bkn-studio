@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -212,29 +212,45 @@ describe("ObjectTypeDataAttributeFormDrawer modes", () => {
   });
 
   it("rejects a data-property display name over 128 Unicode code points", async () => {
-    const onSubmit = vi.fn();
+    vi.useFakeTimers();
+    try {
+      const onSubmit = vi.fn();
 
-    render(
-      <ObjectTypeDataAttributeFormDrawer
-        onClose={vi.fn()}
-        onSubmit={onSubmit}
-        open
-        property={property}
-      />,
-    );
+      render(
+        <ObjectTypeDataAttributeFormDrawer
+          onClose={vi.fn()}
+          onSubmit={onSubmit}
+          open
+          property={property}
+        />,
+      );
 
-    const displayNameInput = await screen.findByLabelText(
-      "knowledgeNetwork.objectTypePropertyDisplayName",
-    );
-    const oversizedDisplayName = "😀".repeat(129);
-    fireEvent.change(displayNameInput, { target: { value: oversizedDisplayName } });
-    expect(displayNameInput).toHaveValue(oversizedDisplayName);
-    fireEvent.click(screen.getByRole("button", { name: "common.ok" }));
+      const displayNameInput = screen.getByLabelText(
+        "knowledgeNetwork.objectTypePropertyDisplayName",
+      );
+      const oversizedDisplayName = "😀".repeat(129);
+      fireEvent.change(displayNameInput, { target: { value: oversizedDisplayName } });
+      expect(displayNameInput).toHaveValue(oversizedDisplayName);
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "common.ok" }));
+        await vi.runOnlyPendingTimersAsync();
+      });
 
-    expect(
-      await screen.findByText("knowledgeNetwork.objectTypePropertyDisplayNameMaxLength"),
-    ).not.toBeNull();
-    expect(onSubmit).not.toHaveBeenCalled();
+      // Form errors pass through multiple debounced renders before the message appears.
+      while (vi.getTimerCount() > 0) {
+        await act(async () => {
+          await vi.runOnlyPendingTimersAsync();
+        });
+      }
+
+      expect(
+        screen.getByText("knowledgeNetwork.objectTypePropertyDisplayNameMaxLength"),
+      ).toBeInTheDocument();
+      expect(onSubmit).not.toHaveBeenCalled();
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
   });
 
   it("keeps the drawer open and reports a rejected submission", async () => {

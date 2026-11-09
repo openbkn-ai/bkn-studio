@@ -92,15 +92,17 @@ describe("filterNavByCapability", () => {
     expect(result[1]?.lockedEdition).toBeUndefined();
   });
 
-  // 知识库页面只在企业版前端镜像里:社区镜像报不出能力,入口必须隐藏,不能指向一个不存在的路由。
-  it("知识库入口:没装隐藏,装了且授权则显示", () => {
+  // Community builds keep the licence entry; real knowledge base routes stay extension-gated.
+  it("knowledge base entry stays visible as a licence offer in community builds", () => {
     const kb =
       consoleNavigation
         .find((item) => item.key === "general-business-knowledge-network")
         ?.children?.filter((child) => child.key === "knowledge-base") ?? [];
     expect(kb).toHaveLength(1);
 
-    expect(filterNavByCapability(kb, snapshot())).toEqual([]);
+    expect(filterNavByCapability(kb, snapshot()).map((item) => item.key)).toEqual([
+      "knowledge-base",
+    ]);
 
     const available = filterNavByCapability(
       kb,
@@ -116,17 +118,17 @@ describe("filterNavByCapability", () => {
     expect(available[0]?.locked).toBeFalsy();
   });
 
-  // 页面不在本仓的入口:社区构建在授权快照到位前(或取不到时)也不能露出一个 404 入口。
-  it("知识库入口:构建里没有扩展就隐藏,与授权快照无关", () => {
+  // The community route provides licence guidance even without an entitlement snapshot.
+  it("knowledge base has a community fallback independently of extension installation", () => {
     const group = consoleNavigation.filter(
       (item) => item.key === "general-business-knowledge-network",
     );
     const childKeys = (items: typeof group) => (items[0]?.children ?? []).map((child) => child.key);
 
-    expect(childKeys(filterNavByInstalledPages(group))).not.toContain("knowledge-base");
+    expect(childKeys(filterNavByInstalledPages(group))).toContain("knowledge-base");
     expect(childKeys(filterNavByInstalledPages(group, () => true))).toContain("knowledge-base");
-    // Snapshot not loaded yet: capability filtering passes items through, so the build check is what hides it.
-    expect(childKeys(filterNavByCapability(filterNavByInstalledPages(group), null))).not.toContain(
+    // Unknown snapshots still expose the community licence route.
+    expect(childKeys(filterNavByCapability(filterNavByInstalledPages(group), null))).toContain(
       "knowledge-base",
     );
   });

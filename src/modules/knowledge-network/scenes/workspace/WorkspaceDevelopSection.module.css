@@ -1,0 +1,423 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1080px;
+  padding: 24px 28px 40px;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pageHeader > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exportActions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.pageTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pageDescription {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.blockHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.blockTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.blockDescription {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.headerActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.docsLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.subTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scenarios {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scenarios li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+}
+
+.scenarios strong {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scenarioExample {
+  color: var(--color-text-tertiary);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+.steps p {
+  margin: 0 0 8px;
+}
+
+.capability {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-surface);
+}
+
+.capabilityHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.capabilityTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.capabilityDescription {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.tryLink {
+  font-size: 13px;
+}
+
+.note {
+  margin: 10px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+}
+
+.notice {
+  margin-top: 12px;
+}
+
+.keyCode {
+  margin-top: 20px;
+}
+
+.keyCode .note {
+  margin-top: 4px;
+}
+
+.excerpt {
+  margin-top: 12px;
+}
+
+.excerptTitle {
+  margin: 0 0 6px;
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+}
+
+.excerptTitle strong {
+  margin-right: 6px;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.fullCodeToggle {
+  margin-top: 8px;
+  padding: 0;
+}
+
+.empty {
+  margin: 12px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.tab,
+.tabActive {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: var(--color-hover);
+}
+
+.tabActive {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+.codeBlock {
+  position: relative;
+  max-width: 100%;
+  margin-top: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.copyButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.copyButton:hover {
+  color: var(--color-primary-600);
+}
+
+.code {
+  margin: 0;
+  padding: 12px 96px 12px 16px;
+  overflow: auto;
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Token colors are theme tokens (VS Code light and dark), so samples read as in an editor. */
+.tkComment {
+  color: var(--color-interface-code-comment);
+}
+
+.tkKey {
+  color: var(--color-interface-code-key);
+}
+
+.tkString {
+  color: var(--color-interface-code-string);
+}
+
+.tkNumber {
+  color: var(--color-interface-code-number);
+}
+
+.tkKeyword {
+  color: var(--color-interface-code-keyword);
+}
+
+.tkVariable {
+  color: var(--color-interface-code-variable);
+}
+
+.tkType {
+  color: var(--color-interface-code-type);
+}
+
+.tryBox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+}
+
+.tryBox > :global(.ant-input-search) {
+  max-width: 560px;
+}
+
+.tryTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+}
+
+.monoInput {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(240px, 2fr) auto;
+  align-items: end;
+  gap: 10px;
+  width: 100%;
+}
+
+.tryError {
+  margin: 0;
+  color: var(--color-error-text);
+  font-size: 12.5px;
+}
+
+.tryResult {
+  width: 100%;
+}
+
+.tableWrap {
+  max-width: 100%;
+  margin-top: 6px;
+  overflow: auto;
+}
+
+.resultTable {
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.resultTable th,
+.resultTable td {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.resultTable th {
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.hitList {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.hitList li {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.hitType {
+  display: inline-block;
+  min-width: 96px;
+  margin-right: 10px;
+  color: var(--color-text-secondary);
+}

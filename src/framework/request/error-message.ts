@@ -121,6 +121,21 @@ export function extractRequestErrorMessage(error: unknown) {
   return extractRequestErrorDetails(error).description;
 }
 
+type ErrorResponseShape = { response?: { data?: BackendErrorResponseBody | null } };
+
+/** The backend's error code, or undefined when the error carries no backend reply. */
+export function readErrorCode(error: unknown): string | undefined {
+  return optionalString((error as ErrorResponseShape | null)?.response?.data?.error_code);
+}
+
+/**
+ * The backend's `error_details`, untouched. Its shape differs from one error to the next, so the
+ * caller checks it; `extractRequestErrorDetails` turns it into display text instead.
+ */
+export function readErrorDetails(error: unknown): unknown {
+  return (error as ErrorResponseShape | null)?.response?.data?.error_details;
+}
+
 export function isRequestConflict(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 409;
 }

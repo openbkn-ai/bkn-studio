@@ -371,7 +371,7 @@ describe("data-connect.service · test connection", () => {
       await import("@/modules/data-connect/services/data-connect.service");
 
     const connectorTypes = await listDataConnectConnectorTypes();
-    for (const type of ["sqlserver", "oracle"]) {
+    for (const type of ["sqlserver", "oracle", "doris"]) {
       expect(connectorTypes.find((connector) => connector.type === type)).toMatchObject({
         available: professionalAvailable,
         enabled: true,

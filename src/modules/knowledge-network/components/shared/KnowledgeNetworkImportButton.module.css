@@ -54,3 +54,9 @@
   flex-direction: column;
   gap: 2px;
 }
+
+/* A package refusal can name several places, one per line, with paths and spellings. */
+.refusalDetails {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

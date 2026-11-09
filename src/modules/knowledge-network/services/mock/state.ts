@@ -354,6 +354,10 @@ export const mockObjectTypeDataProperties: Record<
   "kn-domain-risk": {
     "ot-risk-order": [
       {
+        declarations: {
+          aliases: ["Order number"],
+          constraints: { pattern: "^RO\\d{8}$", unique: true },
+        },
         displayKey: false,
         displayName: "Order ID",
         incrementalKey: false,
@@ -487,6 +491,7 @@ export const mockObjectTypeLogicProperties: Record<
 export function cloneDataProperties(properties: ObjectTypeDataProperty[]) {
   return properties.map((item) => ({
     ...item,
+    declarations: item.declarations ? structuredClone(item.declarations) : undefined,
     mappedField: item.mappedField ? { ...item.mappedField } : undefined,
     maskRule: item.maskRule ? { ...item.maskRule } : undefined,
   }));

@@ -13,6 +13,8 @@ import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
+import { extensionProjectRequirementDocumentPicker } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
@@ -55,6 +57,8 @@ export function RequirementDocuments({
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const { openDocument } = useContext(Citing);
+  const kbMode = useBknProjectKbMode();
+  const DocumentPicker = extensionProjectRequirementDocumentPicker();
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -151,6 +155,10 @@ export function RequirementDocuments({
         {/* A project is built without them; they add the business background. */}
         <LightStatusTag tone="neutral">{t("bknProject.resources.optional")}</LightStatusTag>
         <span className={styles.spacer} />
+        {/* Choosing from knowledge-base files is professional: only where it is enabled. */}
+        {canEdit && DocumentPicker && kbMode === "enabled" ? (
+          <DocumentPicker canEdit={canEdit} onPicked={onChanged} projectId={projectId} />
+        ) : null}
         {canEdit ? (
           <AppButton onClick={() => setUploading(true)} type="primary">
             {t(`${PREFIX}.upload`)}

@@ -11,6 +11,11 @@ import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
+import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
+import {
+  extensionProjectObjectSourceEditor,
+  extensionProjectRelationBasis,
+} from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
@@ -19,7 +24,7 @@ import {
   keyCountPhrase,
   keySourcePhrase,
   keyWarnings,
-  originPhrase,
+  relationBasis,
   propertyTypeKey,
   excludedReasonText,
   say,
@@ -39,17 +44,11 @@ import type {
   DraftValueType,
 } from "@/modules/bkn-project/types/draft";
 
+import { cardinalityKey } from "@/modules/bkn-project/components/relation-type/relation-values";
+
 import styles from "./DraftTables.module.css";
-import { documentCardinalityKey } from "@/modules/bkn-project/components/object-type/document-values";
 
 const PAGE_SIZE = 50;
-
-// Keys must not end in _one: i18next would read them as plural forms.
-const CARDINALITY: Record<string, string> = {
-  many_to_many: "manyToMany",
-  many_to_one: "manyToOne",
-  one_to_one: "oneToOne",
-};
 
 export function AdoptionTag({ adopted }: { adopted: boolean }) {
   const { t } = useTranslation();
@@ -134,19 +133,20 @@ export function IdentityEvidence({
   objectType: DraftObjectType;
 }) {
   const { t } = useTranslation();
+  const sourceEditor = extensionProjectObjectSourceEditor();
   const { key } = objectType;
-  if (objectType.document)
+  // An object type from an edition's source has no table to count keys on.
+  if (sourceEditor?.appliesTo(objectType))
     return (
       <span>
         {objectType.needsIdentity
           ? t("bknProject.model.identityPending")
-          : objectType.document.role !== "entity"
-            ? t("bknProject.documentEditor.recordIdentity")
-            : objectType.primaryKeys
-                .map(
-                  (name) => objectType.properties.find((p) => p.name === name)?.displayName || name,
-                )
-                .join(t("bknProject.listSeparator"))}
+          : (sourceEditor.describe(t, objectType).identity ??
+            objectType.primaryKeys
+              .map(
+                (name) => objectType.properties.find((p) => p.name === name)?.displayName || name,
+              )
+              .join(t("bknProject.listSeparator")))}
       </span>
     );
   if (compact) {
@@ -234,6 +234,7 @@ export function DraftObjectsTable({
   onOpen: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const sourceEditor = extensionProjectObjectSourceEditor();
   const columns: ColumnsType<DraftObjectType> = [
     {
       title: t("bknProject.model.columns.objectType"),
@@ -296,13 +297,9 @@ export function DraftObjectsTable({
       title: t("bknProject.model.columns.source"),
       key: "source",
       render: (_value, record) =>
-        record.document ? (
-          <Tooltip title={record.document.reason}>
-            <span>
-              {t(`bknProject.documentEditor.roles.${record.document.role}`, {
-                defaultValue: t("bknProject.documentEditor.source"),
-              })}
-            </span>
+        sourceEditor?.appliesTo(record) ? (
+          <Tooltip title={record.document?.reason}>
+            <span>{sourceEditor.describe(t, record).source}</span>
           </Tooltip>
         ) : (
           <TableSource catalogNames={catalogNames} table={record.table} />
@@ -326,6 +323,7 @@ export function DraftRelationsTable({
   items,
   objectNames,
   onOpen,
+  projectId,
   unadoptedEnds,
 }: {
   actions: DraftItemActions;
@@ -333,10 +331,14 @@ export function DraftRelationsTable({
   objectNames: Record<string, string>;
   /** Opens a relation type where it is edited; its name is plain text without it. */
   onOpen?: (id: string) => void;
+  /** The project, for the professional edition's view of what a document relation rests on. */
+  projectId?: string;
   /** Relations adopted while an end is not, marked for people to unadopt. */
   unadoptedEnds: ReadonlySet<string>;
 }) {
   const { t } = useTranslation();
+  const kbMode = useBknProjectKbMode();
+  const DocumentBasis = extensionProjectRelationBasis();
   const columns: ColumnsType<DraftRelationType> = [
     {
       title: t("bknProject.model.columns.relationType"),
@@ -362,28 +364,47 @@ export function DraftRelationsTable({
       dataIndex: "cardinality",
       key: "cardinality",
       width: 110,
-      render: (value: string, record) =>
-        record.document
-          ? t(documentCardinalityKey(value))
-          : CARDINALITY[value]
-            ? t(`bknProject.model.cardinality.${CARDINALITY[value]}`)
-            : value,
+      render: (value: string) => {
+        const key = cardinalityKey(value);
+        return key ? t(key) : value;
+      },
     },
     {
-      title: t("bknProject.model.columns.evidence"),
-      key: "evidence",
+      title: t("bknProject.model.columns.basis"),
+      key: "basis",
       render: (_value, record) => {
-        if (record.document) return <span>{record.document.reason}</span>;
+        const basis = relationBasis(record);
         return (
           <div className={styles.evidence}>
-            <span>
-              {say(t, originPhrase(record.origin))} ·{" "}
-              {say(t, verificationPhrase(record.verification))}
-            </span>
-            <span className={styles.muted}>{say(t, joinCountPhrase(record.evidence))}</span>
+            <LightStatusTag tone="neutral">{t(`bknProject.model.basis.${basis}`)}</LightStatusTag>
+            {basis === "link_table" && record.linkTable ? (
+              <span className={styles.muted}>
+                {t("bknProject.model.basisThrough", { table: record.linkTable.name })}
+              </span>
+            ) : null}
           </div>
         );
       },
+    },
+    {
+      title: t("bknProject.model.columns.confidence"),
+      key: "confidence",
+      render: (_value, record) =>
+        record.document ? (
+          <div className={styles.evidence}>
+            <span className={styles.muted}>{record.document.reason}</span>
+            {/* What the professional edition can say of the documents behind it. */}
+            {DocumentBasis && projectId && kbMode === "enabled" ? (
+              <DocumentBasis projectId={projectId} relation={record} />
+            ) : null}
+          </div>
+        ) : (
+          // Counted when drafting, over the tables as they were then.
+          <div className={styles.evidence}>
+            <span>{say(t, joinCountPhrase(record.evidence))}</span>
+            <span className={styles.muted}>{say(t, verificationPhrase(record.verification))}</span>
+          </div>
+        ),
     },
     {
       title: t("bknProject.model.columns.state"),

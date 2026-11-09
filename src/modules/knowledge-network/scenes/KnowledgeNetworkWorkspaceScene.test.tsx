@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
@@ -14,6 +14,8 @@ import type { Entitlement } from "@/framework/entitlement/types";
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
 
 const mocks = vi.hoisted(() => ({
+  extensionEntries: { items: [] as unknown[], upgrades: [] as unknown[] },
+  hiddenNavigation: [] as string[],
   navigate: vi.fn(),
 }));
 
@@ -27,7 +29,10 @@ vi.mock("react-i18next", async (importOriginal) => {
         ({
           "common.entitlement.editions.professional": "专业版",
           "common.entitlement.editionsShort.professional": "专业版",
+          "knowledgeNetwork.workspaceExperienceAgent": "智能问答",
+          "knowledgeNetwork.workspaceExperienceCypher": "数据查询",
           "knowledgeNetwork.workspaceExperienceMcp": "MCP 调试",
+          "knowledgeNetwork.workspaceFunctions": "函数",
           "knowledgeNetwork.workspaceKnowledgeBases": "知识库",
           "knowledgeNetwork.workspaceMcpTools": "MCP 资源",
           "knowledgeNetwork.workspaceMetrics": "对象指标",
@@ -51,6 +56,10 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: { success: vi.fn() } }),
 }));
 
+vi.mock("@/framework/context/use-runtime-config", () => ({
+  useRuntimeConfig: () => ({ hiddenNavigation: mocks.hiddenNavigation }),
+}));
+
 vi.mock("@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal", () => ({
   KnowledgeNetworkFormModal: () => null,
 }));
@@ -61,6 +70,10 @@ vi.mock("@/modules/knowledge-network/scenes/ExperienceScene", () => ({
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems", () => ({
   WorkspaceExtensionNavItems: () => null,
+}));
+
+vi.mock("@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries", () => ({
+  visibleWorkspaceExtensionEntries: () => mocks.extensionEntries,
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection", () => ({
@@ -214,5 +227,49 @@ describe("KnowledgeNetworkWorkspaceScene MCP navigation", () => {
 
     expect(screen.queryByRole("button", { name: "MCP 调试" })).toBeNull();
     expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
+  });
+});
+
+describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
+  beforeEach(() => {
+    mocks.extensionEntries = { items: [], upgrades: [] };
+    mocks.hiddenNavigation = [];
+  });
+
+  it("shows every workspace entry by default", () => {
+    renderScene(entitlement());
+
+    expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /函数/ })).toBeTruthy();
+  });
+
+  it("leaves out the entries the deployment hides and keeps the rest", () => {
+    mocks.hiddenNavigation = ["experience-agent", "functions"];
+    renderScene(entitlement());
+
+    expect(screen.queryByRole("button", { name: /智能问答/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /函数/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /数据查询/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
+  });
+
+  it("drops the title of a group whose entries are all hidden", () => {
+    mocks.hiddenNavigation = ["concept-groups", "object-types", "relation-types", "action-types"];
+    renderScene(entitlement());
+
+    expect(screen.queryByText("knowledgeNetwork.workspaceConceptModel")).toBeNull();
+    expect(screen.getByText("knowledgeNetwork.workspaceAbilityVerification")).toBeTruthy();
+  });
+
+  it("keeps the ability verification title while an extension entry is still shown", () => {
+    mocks.hiddenNavigation = ["experience-agent", "experience-cypher"];
+    mocks.extensionEntries = { items: [], upgrades: [{ capability: "graph_explorer" }] };
+    renderScene(entitlement());
+    expect(screen.getByText("knowledgeNetwork.workspaceAbilityVerification")).toBeTruthy();
+
+    cleanup();
+    mocks.extensionEntries = { items: [], upgrades: [] };
+    renderScene(entitlement());
+    expect(screen.queryByText("knowledgeNetwork.workspaceAbilityVerification")).toBeNull();
   });
 });

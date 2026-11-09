@@ -95,7 +95,10 @@ function isBackendActionTypeRecord(value: unknown): value is BackendActionType {
   return typeof value === "object" && value !== null && "id" in value && "name" in value;
 }
 
-export async function listKnowledgeNetworkActionTypes(networkId: string) {
+export async function listKnowledgeNetworkActionTypes(
+  networkId: string,
+  options: { skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
     return wait(
       (mockActionTypes[networkId] ?? []).map((item) => ({
@@ -117,6 +120,7 @@ export async function listKnowledgeNetworkActionTypes(networkId: string) {
         offset: 0,
         sort: "update_time",
       },
+      skipErrorToast: options.skipErrorToast,
     },
   );
 
@@ -213,6 +217,7 @@ export async function getKnowledgeNetworkActionType(networkId: string, actionTyp
 export async function getKnowledgeNetworkActionTypeDetail(
   networkId: string,
   actionTypeId: string,
+  options: { skipErrorToast?: boolean } = {},
 ): Promise<ActionTypeDetail | null> {
   if (useMock) {
     const record = await getKnowledgeNetworkActionType(networkId, actionTypeId);
@@ -236,6 +241,7 @@ export async function getKnowledgeNetworkActionTypeDetail(
 
   const response = await http.get<SingleEntryResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
+    { skipErrorToast: options.skipErrorToast },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -247,6 +253,7 @@ export async function getKnowledgeNetworkActionTypeDetail(
     networkId,
     "action-types",
     mapActionTypeDetail(record),
+    options,
   );
 }
 

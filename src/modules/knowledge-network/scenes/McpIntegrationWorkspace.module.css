@@ -60,7 +60,7 @@
   gap: 8px;
 }
 
-.networkPicker label {
+.networkPicker > span {
   flex: 0 0 auto;
   color: var(--color-text-secondary);
   font-size: 13px;
@@ -138,6 +138,10 @@
   margin: 8px 0 0;
   font-size: 13px;
   line-height: 1.7;
+}
+
+.emptyState .retryButton {
+  margin-top: 14px;
 }
 
 @media (max-width: 900px) {

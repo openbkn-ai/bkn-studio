@@ -44,6 +44,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
     tokenManager: storageTokenManager,
   },
   currentUser: defaultDevRuntimeUser,
+  hiddenNavigation: [],
   locale: "zh-CN",
   mode: "standalone",
   router: {
@@ -89,6 +90,9 @@ export function createRuntimeConfig(runtimeInput: RuntimeInput = {}): RuntimeCon
       ...defaultRuntimeConfig.features,
       ...runtimeInput.features,
     },
+    hiddenNavigation: Array.isArray(runtimeInput.hiddenNavigation)
+      ? runtimeInput.hiddenNavigation.filter((key): key is string => typeof key === "string")
+      : defaultRuntimeConfig.hiddenNavigation,
   };
 }
 

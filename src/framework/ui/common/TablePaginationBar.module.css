@@ -49,7 +49,7 @@
 }
 
 .bar :global(.ant-pagination-item-active) {
-  border-color: #1e3a8a;
+  border-color: var(--color-selection-accent);
 }
 
 .bar :global(.ant-pagination-item-active a) {

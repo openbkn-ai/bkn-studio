@@ -34,6 +34,8 @@ import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CodePayloadPreview } from "@/framework/code-preview/CodePayloadPreview";
+import { getCodePayload } from "@/framework/code-preview/code-payload";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import {
@@ -331,8 +333,12 @@ export function TraceAnalysisScene() {
       ) : null}
       {partialReasons.length ? (
         <Alert
-          description={partialReasons.join(" · ")}
-          message={t("bknTrace.traceWorkspace.partial")}
+          description={t(
+            partialReasons.includes("projection_scan_cap_reached")
+              ? "bknTrace.traceWorkspace.listProjectionLimit"
+              : "bknTrace.traceWorkspace.listPartialOther",
+          )}
+          message={t("bknTrace.traceWorkspace.listPartial")}
           showIcon
           type="warning"
         />
@@ -632,7 +638,11 @@ function OperationPanel({
   const items = [
     {
       children: (
-        <PayloadView interactionId={operation.fact.interactionId} payload={operation.fact.input} />
+        <PayloadView
+          interactionId={operation.fact.interactionId}
+          payload={operation.fact.input}
+          toolName={operation.fact.toolName}
+        />
       ),
       key: "input",
       label: t("bknTrace.traceWorkspace.input"),
@@ -696,9 +706,11 @@ function OperationPanel({
 function PayloadView({
   interactionId,
   payload,
+  toolName,
 }: {
   interactionId: string;
   payload?: PayloadEnvelope;
+  toolName?: string;
 }) {
   const { t } = useTranslation();
   const [loaded, setLoaded] = useState<unknown>();
@@ -712,7 +724,7 @@ function PayloadView({
       />
     );
   if (payload.mode === "referenced") {
-    if (loaded !== undefined) return <InlinePayload value={loaded} />;
+    if (loaded !== undefined) return <InlinePayload value={loaded} toolName={toolName} />;
     return (
       <Alert
         action={
@@ -756,18 +768,20 @@ function PayloadView({
       />
     );
   }
-  return <InlinePayload value={payload.inline} />;
+  return <InlinePayload value={payload.inline} toolName={toolName} />;
 }
 
-function InlinePayload({ value }: { value: unknown }) {
+function InlinePayload({ value, toolName }: { value: unknown; toolName?: string }) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const content = JSON.stringify(value, null, 2) ?? "null";
+  const codePayload = toolName === "run_code" ? getCodePayload(value, "python") : null;
   const copyContent = () => {
     void writeTextToClipboard(content)
       .then(() => message.success(t("bknTrace.traceWorkspace.copySuccess")))
       .catch(() => message.error(t("bknTrace.traceWorkspace.copyFailed")));
   };
+  if (codePayload) return <CodePayloadPreview {...codePayload} rawText={content} />;
   return (
     <div className={styles.payloadBlock}>
       <Button icon={<CopyOutlined />} onClick={copyContent} size="small">

@@ -273,8 +273,8 @@
 }
 
 .descriptionInputDirty :global(.ant-input) {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgb(37 99 235 / 10%);
+  border-color: var(--color-focus-ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus-ring) 10%, transparent);
 }
 
 .detailGrid {
@@ -335,8 +335,8 @@
 }
 
 .inlineInputDirty :global(.ant-input) {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgb(37 99 235 / 10%);
+  border-color: var(--color-focus-ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus-ring) 10%, transparent);
 }
 
 .tableSurface {

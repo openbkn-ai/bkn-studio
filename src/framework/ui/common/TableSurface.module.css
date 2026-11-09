@@ -74,10 +74,10 @@
 }
 
 .surface :global(.ant-pagination-item-active) {
-  border-color: var(--business-color-primary);
+  border-color: var(--business-color-selection);
 }
 
 .surface :global(.ant-pagination-item-active a) {
-  color: var(--business-color-primary);
+  color: var(--business-color-selection);
   font-weight: 500;
 }

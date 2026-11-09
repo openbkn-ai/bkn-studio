@@ -70,6 +70,7 @@ type BackendReview = {
     existing: BackendItem[] | null;
     only_additions: boolean;
     orphans: (BackendItem & { orphans: number })[] | null;
+    unimplemented_needs?: { id: string; kind: string; name: string }[] | null;
   };
   signature: string;
   version: string;
@@ -93,6 +94,7 @@ type BackendRegression = {
   questions:
     | {
         id: string;
+        no_record?: boolean;
         tests?: { expect: string; id: string; text: string }[] | null;
         text: string;
       }[]
@@ -176,6 +178,11 @@ export function mapReview(review: BackendReview): ReleaseReview {
         ...items([orphan])[0],
         orphans: orphan.orphans,
       })),
+      unimplementedNeeds: (review.risks.unimplemented_needs ?? []).map(({ id, kind, name }) => ({
+        id,
+        kind,
+        name,
+      })),
     },
     signature: review.signature,
     version: review.version,
@@ -189,6 +196,7 @@ export const mapRegression = (regression: BackendRegression): Regression => ({
   networkId: regression.network_id,
   questions: (regression.questions ?? []).map((question) => ({
     id: question.id,
+    noRecord: question.no_record ?? false,
     tests: (question.tests ?? []).map(({ expect, id, text }) => ({ expect, id, text })),
     text: question.text,
   })),
@@ -554,7 +562,13 @@ async function mockReview(projectId: string, version: string): Promise<ReleaseRe
       networkId: `supply_chain_v${version.replaceAll(".", "_")}`,
       networkName: `Supply Chain · ${version}`,
     },
-    risks: { copies: 0, existing: [], onlyAdditions: true, orphans: [] },
+    risks: {
+      copies: 0,
+      existing: [],
+      onlyAdditions: true,
+      orphans: [],
+      unimplementedNeeds: [{ id: "n2", kind: "skill", name: "Late order triage" }],
+    },
     signature: `mock-${draft?.updateTime ?? 0}-${mockReleases.length}`,
     version,
   };
@@ -605,13 +619,14 @@ function mockRegression(networkId: string): Regression | null {
     questions: [
       {
         id: "q1",
+        noRecord: false,
         tests: [
           { expect: "exists", id: "t1", text: "Which orders of customer C-001 are late?" },
           { expect: "not_exists", id: "t2", text: "Which orders of customer C-999 are late?" },
         ],
         text: "Which orders of a customer are late?",
       },
-      { id: "q3", tests: [], text: "Which products use part P-100?" },
+      { id: "q3", noRecord: false, tests: [], text: "Which products use part P-100?" },
     ],
     results: running
       ? []

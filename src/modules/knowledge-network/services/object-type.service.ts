@@ -416,6 +416,8 @@ export async function createKnowledgeNetworkObjectType(
     {
       entries: [payload],
     },
+    // The form shows the refusal itself, next to the property a declaration refusal names.
+    { skipErrorToast: true },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -487,6 +489,7 @@ export async function updateKnowledgeNetworkObjectType(
   const response = await http.put<SingleEntryResponse<BackendObjectType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}`,
     payload,
+    { skipErrorToast: true },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -507,9 +510,11 @@ export async function validateKnowledgeNetworkObjectType(
 
   const conceptGroups = await resolveObjectTypeConceptGroups(networkId, input.conceptGroupIds);
   const payload = buildBackendObjectTypePayload(input, conceptGroups, objectTypeId);
-  await http.post(`/bkn-backend/v1/knowledge-networks/${networkId}/object-types/validation`, {
-    entries: [payload],
-  });
+  await http.post(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/validation`,
+    { entries: [payload] },
+    { skipErrorToast: true },
+  );
 }
 
 export async function deleteKnowledgeNetworkObjectType(networkId: string, objectTypeId: string) {

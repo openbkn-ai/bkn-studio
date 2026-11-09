@@ -25,6 +25,7 @@ export async function ensureKnowledgeNetworkChildOperations<T extends OperationR
   networkId: string,
   collection: KnowledgeNetworkChildCollection,
   record: T,
+  options: { skipErrorToast?: boolean } = {},
 ): Promise<T & { operations: string[] }> {
   if (record.operations !== undefined) {
     return record as T & { operations: string[] };
@@ -39,6 +40,7 @@ export async function ensureKnowledgeNetworkChildOperations<T extends OperationR
         offset: 0,
         sort: "update_time",
       },
+      skipErrorToast: options.skipErrorToast,
     },
   );
   const matchingRecord = response.data.entries.find((item) => item.id === record.id);

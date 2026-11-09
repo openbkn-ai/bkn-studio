@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { isIncrementalField, isPrimaryKeyField } from "@/modules/data-catalog/lib/build-guards";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
+import { fixedFilterSourceBlockReason } from "@/modules/data-catalog/lib/view-query-source";
 import {
   filterValidationError,
   parseFilterCondition,
@@ -174,9 +175,17 @@ describe("data catalog discover-status mocks", () => {
       operations: ["view_detail", "query_data", "delete"],
       status: "active",
       sourceIdentifier: "res-high-value-orders-view",
-      sourceMetadata: { objectType: "table", originalName: "crm_core.orders" },
+      sourceMetadata: {
+        sourceCategory: "table",
+        objectType: "table",
+        originalName: "crm_core.orders",
+      },
     });
-    expect(view?.sourceMetadata).toEqual({ objectType: "table", originalName: "crm_core.orders" });
+    expect(view?.sourceMetadata).toEqual({
+      sourceCategory: source?.category,
+      objectType: "table",
+      originalName: "crm_core.orders",
+    });
     expect(view?.lastDiscoverStatus).toBeUndefined();
     expect(source?.category).toBe("table");
     expect(view?.schema).toHaveLength(4);
@@ -191,6 +200,42 @@ describe("data catalog discover-status mocks", () => {
       filter?.children.some((child) => child.kind === "group" && child.operation === "or"),
     ).toBe(true);
     expect(filterValidationError(filter!, source?.schema ?? [])).toBeNull();
+  });
+
+  it.each([
+    { id: "res-query-source-switch-view", indexed: true, sourceBlock: null },
+    { id: "res-query-source-fulltext-view", indexed: true, sourceBlock: "indexRequired" },
+    { id: "res-query-source-no-index-view", indexed: false, sourceBlock: null },
+  ])("provides usable bindings and channel metadata for $id", ({ id, indexed, sourceBlock }) => {
+    const view = mockResources.find((item) => item.id === id)!;
+    expect(view).toBeDefined();
+    const source = mockResources.find(
+      (item) => item.id === view.logicDefinition?.sourceResourceId,
+    )!;
+    expect(source).toBeDefined();
+    expect(resourceQueryBlockReason(view)).toBeNull();
+    expect(resourceQueryBlockReason(source)).toBeNull();
+    expect(view).toMatchObject({
+      category: "logical_view",
+      logicType: "derived",
+      sourceMetadata: { sourceCategory: "table" },
+    });
+    expect(source.localIndexStatus).toBe(indexed ? "available" : "unavailable");
+    expect(Boolean(source.localIndexName)).toBe(indexed);
+    for (const field of view.schema) {
+      const sourceField = source.schema.find((item) => item.originalName === field.originalName);
+      expect(sourceField?.type).toBe(field.type);
+    }
+    expect(view.schema.some((field) => field.originalName === "eligible")).toBe(false);
+    const filter = parseFilterCondition(
+      view.logicDefinition?.filterCondition,
+      indexed ? "local_index" : "source",
+    );
+    expect(filter).not.toBeNull();
+    expect(
+      filterValidationError(filter!, source.schema, indexed ? "local_index" : "source"),
+    ).toBeNull();
+    expect(fixedFilterSourceBlockReason(view.logicDefinition?.filterCondition)).toBe(sourceBlock);
   });
 
   it("provides a non-dataset resource with view-detail-only permissions", () => {

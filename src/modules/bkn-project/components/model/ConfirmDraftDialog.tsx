@@ -49,12 +49,19 @@ function adoptedCounts(draft: Draft) {
 export function ConfirmDraft({
   draft,
   onConfirmed,
+  onViewConfirmation,
   onShowPending,
+  onSendingChange,
   onStale,
   projectId,
 }: {
   draft: Draft;
+  /** The draft was confirmed just now: the project goes on to its next step. */
   onConfirmed: () => void;
+  /** Shows what an earlier confirmation started: its data check and local indexes. */
+  onViewConfirmation: () => void;
+  /** Lets the model page follow preparation progress while confirmation runs. */
+  onSendingChange?: (sending: boolean) => void;
   /** Shows the items that wait for a decision, which have to be settled first. */
   onShowPending: () => void;
   /** Reloads a draft someone changed since it was read. */
@@ -157,7 +164,7 @@ export function ConfirmDraft({
   if (!action) {
     // A draft confirmed as it is: say so, and lead to what the confirmation started.
     return status.confirmation?.current ? (
-      <AppButton onClick={onConfirmed} type="link">
+      <AppButton onClick={onViewConfirmation} type="link">
         {t("bknProject.release.confirmed", { time: formatTime(status.confirmation.time) })}
       </AppButton>
     ) : null;
@@ -192,6 +199,7 @@ export function ConfirmDraft({
 
   const send = async () => {
     setSending(true);
+    onSendingChange?.(true);
     try {
       await confirmDraft(projectId, {
         ...(needsPartial ? { acceptPartial } : {}),
@@ -218,7 +226,7 @@ export function ConfirmDraft({
         setOpen(false);
         message.warning(refusalText(t, error));
         onShowPending();
-      } else if (code === "Draft.Stale") {
+      } else if (code === "Draft.Stale" || code === "Draft.DocumentDataNotReady") {
         setOpen(false);
         message.warning(refusalText(t, error));
         onStale();
@@ -227,6 +235,7 @@ export function ConfirmDraft({
       }
     } finally {
       setSending(false);
+      onSendingChange?.(false);
     }
   };
 
@@ -284,7 +293,14 @@ export function ConfirmDraft({
                 </div>
                 <ul className={styles.confirmList}>
                   {undecided.map((item) => (
-                    <li className={styles.confirmItem} key={`${item.kind}/${item.itemId}`}>
+                    <li
+                      aria-label={t("bknProject.confirm.dialog.undecidedItem", {
+                        because: pendingBecauseText(t, item.because),
+                        name: item.name,
+                      })}
+                      className={styles.confirmItem}
+                      key={`${item.kind}/${item.itemId}`}
+                    >
                       <span>{item.name}</span>
                       <span className={styles.confirmMeta}>
                         <span>

@@ -14,6 +14,9 @@ import { integrationPart } from "./integration";
 import { metricPart } from "./metric";
 import { capabilityPart } from "./capability";
 import { packageImportPart } from "./package-import";
+import { declarationsPart } from "./declarations";
+import { propertyDeclarationsPart } from "./property-declarations";
+import { valueTypesPart } from "./value-types";
 import { knowledgeBasePart } from "./knowledge-base";
 import { propertyAuthorizationPart } from "./property-authorization";
 import { agentChatPart } from "./agent-chat";
@@ -21,6 +24,7 @@ import { contextLoaderPanelPart } from "./context-loader-panel";
 import { cypherQueryPart } from "./cypher-query";
 import { graphOverviewPart } from "./graph-overview";
 import { sampleExperiencePart } from "./sample-experience";
+import { appDevelopmentPart } from "./app-development";
 
 export const knowledgeNetworkZhCN = {
   knowledgeNetwork: {
@@ -33,6 +37,9 @@ export const knowledgeNetworkZhCN = {
     ...metricPart,
     ...capabilityPart,
     ...packageImportPart,
+    ...declarationsPart,
+    ...propertyDeclarationsPart,
+    ...valueTypesPart,
     ...knowledgeBasePart,
     ...propertyAuthorizationPart,
     ...agentChatPart,
@@ -40,5 +47,6 @@ export const knowledgeNetworkZhCN = {
     ...cypherQueryPart,
     ...graphOverviewPart,
     ...sampleExperiencePart,
+    ...appDevelopmentPart,
   },
 } as const;

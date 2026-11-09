@@ -5,14 +5,19 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import type { Entitlement } from "@/framework/entitlement/types";
-import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
+import {
+  extensionWorkspaceNavItems,
+  registerExtension,
+  resetExtensionsForTesting,
+} from "@/framework/extension/registry";
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
+import { visibleWorkspaceExtensionEntries } from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 
 afterEach(() => {
   resetExtensionsForTesting();
@@ -84,6 +89,34 @@ describe("WorkspaceExtensionNavItems", () => {
     expect(dialog.textContent).not.toContain("common.entitlement.upgradeTo");
   });
 
+  it("leaves out the entries the deployment hides, by entry key and by capability", () => {
+    registerExtension({
+      capability: "graph_explorer",
+      id: "graph-explorer",
+      workspaceNavItems: [
+        {
+          id: "graph-explorer",
+          labelKey: "knowledgeNetwork.graphExplorer.openAction",
+          path: (networkId) => `/knowledge-network/workspace/${networkId}/graph-explorer`,
+        },
+      ],
+    });
+    render(
+      <MemoryRouter basename="/studio" initialEntries={["/studio"]}>
+        <WorkspaceExtensionNavItems
+          collapsed={false}
+          hiddenKeys={["graph-explorer:graph-explorer"]}
+          networkId="network-1"
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByTestId("workspace-nav-graph-explorer")).toBeNull();
+
+    resetExtensionsForTesting();
+    expect(visibleWorkspaceExtensionEntries(["graph_explorer"]).upgrades).toEqual([]);
+    expect(visibleWorkspaceExtensionEntries().upgrades).toHaveLength(1);
+  });
+
   it("leaves out overview buttons the extension did not also offer here", () => {
     registerExtension({
       capability: "graph_explorer",
@@ -138,6 +171,40 @@ describe("WorkspaceExtensionNavItems", () => {
 
     expect(screen.getByTestId("workspace-nav-graph-explorer")).toBeTruthy();
     expect(screen.queryByTestId("workspace-nav-upgrade-graph_explorer")).toBeNull();
+  });
+
+  it("lists an entry registered for analysis in that group alone, and the group only then", () => {
+    registerGraphExplorer();
+    expect(extensionWorkspaceNavItems("analysis")).toEqual([]);
+    registerExtension({
+      capability: "graph_explorer",
+      id: "analysis-canvas",
+      workspaceNavItems: [
+        {
+          id: "analyses",
+          labelKey: "knowledgeNetwork.graphExplorer.investigation.entry",
+          path: (networkId) => `/knowledge-network/workspace/${networkId}/analyses`,
+          section: "analysis",
+        },
+      ],
+    });
+    expect(extensionWorkspaceNavItems("analysis").map((item) => item.id)).toEqual(["analyses"]);
+
+    renderItems();
+    // Under ability verification: the explorer, not the analysis entry.
+    expect(screen.getByTestId("workspace-nav-graph-explorer")).toBeTruthy();
+    expect(screen.queryByTestId("workspace-nav-analyses")).toBeNull();
+    render(
+      <MemoryRouter basename="/studio" initialEntries={["/studio"]}>
+        <div data-testid="analysis-group">
+          <WorkspaceExtensionNavItems collapsed={false} networkId="network-1" section="analysis" />
+        </div>
+      </MemoryRouter>,
+    );
+    const group = screen.getByTestId("analysis-group");
+    expect(within(group).getByTestId("workspace-nav-analyses")).toBeTruthy();
+    expect(within(group).queryByTestId("workspace-nav-graph-explorer")).toBeNull();
+    expect(within(group).queryByTestId(/^workspace-nav-upgrade-/)).toBeNull();
   });
 
   it("keeps only the icon when the sidebar is collapsed", () => {

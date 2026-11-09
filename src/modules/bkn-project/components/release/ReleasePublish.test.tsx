@@ -112,7 +112,7 @@ function review(extra: Partial<ReleaseReview> = {}): ReleaseReview {
     },
     refusals: [],
     release: { baseVersion: "1.0.2", networkId: "n_v1_0_3", networkName: "供应链 · 1.0.3" },
-    risks: { copies: 0, existing: [], onlyAdditions: true, orphans: [] },
+    risks: { copies: 0, existing: [], onlyAdditions: true, orphans: [], unimplementedNeeds: [] },
     signature: "sig-1",
     version: "1.0.3",
     ...extra,
@@ -129,12 +129,15 @@ function refusal(code: string) {
 const onChanged = vi.fn();
 const onOpenRegression = vi.fn();
 
+const onGoToBuild = vi.fn();
+
 function renderPublish(projectStatus = status(), canPublish = true) {
   return renderWithoutAntdStyles(
     <ReleasePublish
       baseNetworkId="n"
       canPublish={canPublish}
       onChanged={onChanged}
+      onGoToBuild={onGoToBuild}
       onOpenRegression={onOpenRegression}
       projectId="p1"
       status={projectStatus}
@@ -173,6 +176,40 @@ describe("ReleasePublish", () => {
     await i18n.changeLanguage("zh-CN");
     getReleaseReviewMock.mockResolvedValue(review());
     getRegressionMock.mockResolvedValue(null);
+  });
+
+  it("shows the confirmed number of document originals included in search", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        checks: [{ code: "knowledge_base", passed: true, details: { original_documents: 5 } }],
+        accepts: [],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText("5 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。"),
+    ).toBeInTheDocument();
+    expect(view.queryByText(/original_documents|knowledge_base/)).not.toBeInTheDocument();
+  });
+
+  it("uses the English singular for one original document", async () => {
+    await i18n.changeLanguage("en-US");
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        checks: [{ code: "knowledge_base", passed: true, details: { original_documents: 1 } }],
+        accepts: [],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "Review release v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        "Originals from 1 document will be included in network search. Other documents retain evidence locations only.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("reviews the release in plain words, and publishes once the owner accepts what did not pass", async () => {
@@ -214,6 +251,15 @@ describe("ReleasePublish", () => {
     );
     expect(messageMock.success).toHaveBeenCalledWith("v1.0.3 已发布，场景问题的回归已在后台开始。");
     expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("leads to the build page from indexes that are not ready", async () => {
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+
+    fireEvent.click(await view.findByRole("button", { name: "去构建页处理索引" }));
+    expect(onGoToBuild).toHaveBeenCalledTimes(1);
   });
 
   it("keeps hundreds of changes and long names readable", async () => {
@@ -259,6 +305,24 @@ describe("ReleasePublish", () => {
     );
     await waitFor(() => expect(getReleaseReviewMock).toHaveBeenCalledTimes(2));
     expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["KnowledgeBaseNotReady", "请先完成当前模型的知识库全量构建和结果核对。"],
+    ["OriginalsChanged", "确认模型后，文件是否保留原文的设置已改，请重新确认模型。"],
+    ["SourcePermission", "请确认来源知识库的查询权限和目标知识网络的配置权限。"],
+    ["KnowledgeBaseUnavailable", "暂时无法核对知识库发布条件，请稍后重试。"],
+  ])("explains %s after a publication refusal and preserves the retry", async (code, text) => {
+    publishReleaseMock.mockRejectedValue(refusal(`Release.${code}`));
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    fireEvent.click(await view.findByText("知道部分索引还没就绪，仍然发布"));
+    fireEvent.click(publishButton());
+    expect(await view.findByText(text)).toBeInTheDocument();
+    expect(publishButton()).toBeEnabled();
+    expect(onChanged).not.toHaveBeenCalled();
+    expect(view.queryByText(code)).not.toBeInTheDocument();
   });
 
   it("keeps the dialog open on a failed publishing, says why and lets the owner try again", async () => {
@@ -375,6 +439,77 @@ describe("ReleasePublish", () => {
     expect(view.queryByText(/ot_customer|table_missing/)).toBeNull();
     expect(view.queryByRole("checkbox")).toBeNull();
     expect(publishButton()).toBeDisabled();
+  });
+
+  it("names the metrics whose object types the release lacks, which no one can accept", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        blocked: true,
+        changes: {
+          added: [],
+          changed: [],
+          other: 0,
+          removed: [{ id: "ot_order", kind: "object_type", name: "订单" }],
+        },
+        checks: [
+          {
+            code: "metric_owners",
+            details: [{ id: "m1", name: "延误率", owner_object_type_id: "ot_order" }],
+            passed: false,
+            reason: "metric_owner_missing",
+          },
+        ],
+      }),
+    );
+    renderPublish();
+
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(await view.findByText("指标所属对象")).toBeInTheDocument();
+    expect(view.getByText(/有 1 个指标所属的对象类不在这次发布里/)).toBeInTheDocument();
+    expect(view.getByText("指标「延误率」所属的对象类「订单」")).toBeInTheDocument();
+    expect(view.queryByText(/ot_order|metric_owner/)).toBeNull();
+    expect(view.queryByRole("checkbox")).toBeNull();
+    expect(publishButton()).toBeDisabled();
+  });
+
+  it("counts the kinetic needs nothing implements, without stopping the release", async () => {
+    const onGoToKinetic = vi.fn();
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        risks: {
+          copies: 0,
+          existing: [],
+          onlyAdditions: true,
+          orphans: [],
+          unimplementedNeeds: [
+            { id: "n1", kind: "metric", name: "延误率" },
+            { id: "n2", kind: "skill", name: "催单排序" },
+          ],
+        },
+      }),
+    );
+    renderWithoutAntdStyles(
+      <ReleasePublish
+        baseNetworkId="n"
+        canPublish
+        onChanged={onChanged}
+        onGoToKinetic={onGoToKinetic}
+        onOpenRegression={onOpenRegression}
+        projectId="p1"
+        status={status()}
+        versionOf={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(/还有 2 项动力需求没有实现，依赖它们的问题可能答不上来/),
+    ).toBeInTheDocument();
+    fireEvent.click(view.getByRole("button", { name: "去动力建模" }));
+    expect(onGoToKinetic).toHaveBeenCalledTimes(1);
   });
 
   it("offers to roll back once consumers use the release, and opens what it would do", async () => {
@@ -568,5 +703,30 @@ describe("ReleasePublish", () => {
     renderPublish(status({ nextActions: [], stage: "checking" }));
     expect(screen.getByText("数据校验通过后才能发布。")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /发布审核/ })).toBeNull();
+  });
+  it.each([
+    ["knowledge_base_not_ready", "请先完成当前模型的知识库全量构建和结果核对。"],
+    [
+      "knowledge_base_originals_changed",
+      "确认模型后，文件是否保留原文的设置已改，请重新确认模型。",
+    ],
+    ["knowledge_base_permission", "请确认来源知识库的查询权限和目标知识网络的配置权限。"],
+    ["knowledge_base_unavailable", "暂时无法核对知识库发布条件，请稍后重新审核。"],
+  ])("blocks knowledge-base publication in business language: %s", async (reason, message) => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        blocked: true,
+        checks: [{ code: "knowledge_base", passed: false, reason }],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "发布审核 v1.0.3" }));
+    const view = await dialog();
+    expect(await view.findByText("知识库构建与来源权限")).toBeInTheDocument();
+    expect(view.getByText(message)).toBeInTheDocument();
+    expect(publishButton()).toBeDisabled();
+    expect(view.queryByText(/knowledge_base/)).not.toBeInTheDocument();
+    expect(publishReleaseMock).not.toHaveBeenCalled();
   });
 });

@@ -80,4 +80,11 @@ describe("editor values", () => {
     expect(saved.incrementalKey).toBe("");
     expect(saved.properties[0]).not.toHaveProperty("mappedField");
   });
+
+  it("sends the object type's aliases trimmed, and leaves them out when none were edited", () => {
+    const objectType = mapDraft(mockDraft("p1")).items.objectTypes[0];
+    const basic = { description: "", name: objectType.name };
+    expect(draftSave(objectType, basic, []).aliases).toBeUndefined();
+    expect(draftSave(objectType, { ...basic, aliases: [" PO ", ""] }, []).aliases).toEqual(["PO"]);
+  });
 });

@@ -7,31 +7,50 @@
 
 import { UploadOutlined } from "@ant-design/icons";
 import { Upload } from "antd";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import type { KnowledgeNetworkImportMode } from "@/modules/knowledge-network/types/knowledge-network";
+import { ClearedDeclarationsDialog } from "@/modules/knowledge-network/components/shared/ClearedDeclarationsDialog";
+import type {
+  ClearedDeclaration,
+  KnowledgeNetworkImportMode,
+} from "@/modules/knowledge-network/types/knowledge-network";
+import { DeclarationsWouldBeClearedError } from "@/modules/knowledge-network/services/shared/declaration-errors";
 import {
   KnowledgeNetworkImportConflictError,
   readFileReaderText,
 } from "@/modules/knowledge-network/services/shared/runtime";
+import { definitionNamesFromPayload } from "@/modules/knowledge-network/utils/declaration-labels";
 
 export type ResourceImportConflictError = {
   isConflict: true;
   message: string;
 };
 
+/**
+ * Imports one JSON export. `confirmClearDeclarations` is set only on the resend after the user
+ * agreed to clear the declarations the first attempt listed.
+ */
+export type JsonResourceImport = (
+  payload: Record<string, unknown>,
+  importMode?: KnowledgeNetworkImportMode,
+  confirmClearDeclarations?: boolean,
+) => Promise<void>;
+
 type JsonResourceImportButtonProps = {
   className?: string;
   label?: string;
   onImported: () => void | Promise<void>;
-  onImport: (
-    payload: Record<string, unknown>,
-    importMode?: KnowledgeNetworkImportMode,
-  ) => Promise<void>;
+  onImport: JsonResourceImport;
+};
+
+type ClearedDeclarationsRefusal = {
+  cleared: ClearedDeclaration[];
+  importMode?: KnowledgeNetworkImportMode;
+  payload: Record<string, unknown>;
 };
 
 export function JsonResourceImportButton({
@@ -43,18 +62,29 @@ export function JsonResourceImportButton({
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [importing, setImporting] = useState(false);
+  const [clearedRefusal, setClearedRefusal] = useState<ClearedDeclarationsRefusal | null>(null);
+  const clearedNames = useMemo(
+    () => (clearedRefusal ? definitionNamesFromPayload(clearedRefusal.payload) : undefined),
+    [clearedRefusal],
+  );
 
   const finishImport = async (
     payload: Record<string, unknown>,
     importMode?: KnowledgeNetworkImportMode,
+    confirmClearDeclarations = false,
   ) => {
     setImporting(true);
 
     try {
-      await onImport(payload, importMode);
+      await onImport(payload, importMode, confirmClearDeclarations);
       void message.success(t("knowledgeNetwork.importSuccess"));
       await onImported();
     } catch (error) {
+      if (error instanceof DeclarationsWouldBeClearedError) {
+        setClearedRefusal({ cleared: error.cleared, importMode, payload });
+        return;
+      }
+
       if (error instanceof KnowledgeNetworkImportConflictError) {
         const modalContext = modal.info({
           title: t("knowledgeNetwork.importConflictTitle"),
@@ -138,29 +168,44 @@ export function JsonResourceImportButton({
   };
 
   return (
-    <Upload
-      accept=".json"
-      beforeUpload={(file) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const payload = JSON.parse(readFileReaderText(event.target?.result)) as Record<
-              string,
-              unknown
-            >;
-            void finishImport(payload);
-          } catch {
-            void message.error(t("knowledgeNetwork.importInvalidJson"));
-          }
-        };
-        reader.readAsText(file);
-        return false;
-      }}
-      showUploadList={false}
-    >
-      <AppButton className={className} icon={<UploadOutlined />} loading={importing}>
-        {label ?? t("common.import")}
-      </AppButton>
-    </Upload>
+    <>
+      <Upload
+        accept=".json"
+        beforeUpload={(file) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const payload = JSON.parse(readFileReaderText(event.target?.result)) as Record<
+                string,
+                unknown
+              >;
+              void finishImport(payload);
+            } catch {
+              void message.error(t("knowledgeNetwork.importInvalidJson"));
+            }
+          };
+          reader.readAsText(file);
+          return false;
+        }}
+        showUploadList={false}
+      >
+        <AppButton className={className} icon={<UploadOutlined />} loading={importing}>
+          {label ?? t("common.import")}
+        </AppButton>
+      </Upload>
+      {clearedRefusal ? (
+        <ClearedDeclarationsDialog
+          cleared={clearedRefusal.cleared}
+          names={clearedNames}
+          onCancel={() => setClearedRefusal(null)}
+          onConfirm={() => {
+            const { importMode, payload } = clearedRefusal;
+            setClearedRefusal(null);
+            void finishImport(payload, importMode, true);
+          }}
+          open
+        />
+      ) : null}
+    </>
   );
 }

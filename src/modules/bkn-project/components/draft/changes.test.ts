@@ -30,6 +30,30 @@ const decision = (change: Partial<DraftDecision>): DraftDecision => ({
 });
 
 describe("change log", () => {
+  it("words judging and merging a concept, by the name of its item", () => {
+    const judged = decision({
+      action: "judge",
+      after: "event",
+      itemId: "object_types/customers",
+      kind: "concepts",
+    });
+    expect(describeDecision(t, judged, names).text).toBe(
+      'bknProject.concepts.history.judge:{"name":"customers","verdict":"bknProject.concepts.verdict.event"}',
+    );
+    const merged = decision({
+      action: "merge",
+      after: "object_types/customers",
+      itemId: "requirement_concepts/k3",
+      kind: "concepts",
+    });
+    expect(describeDecision(t, merged, names).text).toBe(
+      'bknProject.concepts.history.merge:{"into":"customers","name":"k3"}',
+    );
+    expect(describeDecision(t, { ...merged, action: "unmerge" }, names).text).toBe(
+      'bknProject.concepts.history.unmerge:{"name":"k3"}',
+    );
+  });
+
   it("says what was adopted, by its kind and current name", () => {
     expect(describeDecision(t, decision({}), names).text).toBe(
       'bknProject.model.changes.action.adopt:{"kind":"bknProject.model.changes.kind.object_types","name":"customers"}',

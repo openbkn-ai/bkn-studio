@@ -89,12 +89,31 @@ describe("requirements.service", () => {
               topic: "Late",
             },
           ],
+          logic_needs: [
+            {
+              accepted: true,
+              citations: [citation],
+              definition: "Late orders over all orders",
+              id: "n1",
+              kind: "metric",
+              name: "Late rate",
+              object_type_ids: ["orders"],
+              properties: [{ object_type_id: "orders", property: "due_at" }],
+              source: "documents",
+              suggested_metric_type: "atomic",
+            },
+          ],
+          runs: {
+            concepts: null,
+            kinetic: { by: { id: "u1" }, start_time: 3, status: "running", update_time: 4 },
+          },
           questions: [
             {
               answer_shape: "A list",
               citations: [],
               id: "q1",
               layer: "knowledge",
+              logic_need_ids: ["n1"],
               needs: [{ id: "orders", kind: "object_type" }],
               needs_source: "concepts",
               scenario_ids: null,
@@ -111,7 +130,6 @@ describe("requirements.service", () => {
           scenarios: [
             {
               actor: "Sales",
-              capabilities: [{ kind: "metric", name: "Late rate" }],
               citations: [citation],
               decision: "Call",
               id: "s1",
@@ -168,9 +186,41 @@ describe("requirements.service", () => {
       sides: [{ documentId: "d1", position: "By customer" }],
       suggestedDocumentId: "",
     });
+    expect(spec.logicNeeds).toEqual([
+      {
+        accepted: true,
+        citations: [{ blockId: "b2", documentId: "d1", end: 20, quote: "late orders", start: 9 }],
+        conceptIds: [],
+        definition: "Late orders over all orders",
+        edited: false,
+        id: "n1",
+        kind: "metric",
+        name: "Late rate",
+        objectTypeIds: ["orders"],
+        properties: [{ objectTypeId: "orders", property: "due_at" }],
+        scenarioIds: [],
+        source: "documents",
+        suggestedMetricType: "atomic",
+        executedBy: "",
+        supplementReason: "",
+      },
+    ]);
+    expect(spec.runs).toEqual({
+      concepts: null,
+      kinetic: {
+        byId: "u1",
+        error: "",
+        retried: false,
+        startTime: 3,
+        stale: false,
+        status: "running",
+        updateTime: 4,
+      },
+    });
     expect(spec.questions[0]).toMatchObject({
       answerShape: "A list",
       edited: false,
+      logicNeedIds: ["n1"],
       needsSource: "concepts",
       scenarioIds: [],
       supplementReason: "Asked by sales",
@@ -182,10 +232,7 @@ describe("requirements.service", () => {
       id: "r1",
       statement: "Late is late",
     });
-    expect(spec.scenarios[0]).toMatchObject({
-      capabilities: [{ definition: "", kind: "metric", name: "Late rate" }],
-      knowledge: [],
-    });
+    expect(spec.scenarios[0]).toMatchObject({ knowledge: [] });
 
     mockGet.mockRejectedValueOnce(
       new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {

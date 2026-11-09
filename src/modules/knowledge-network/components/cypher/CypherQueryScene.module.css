@@ -402,17 +402,10 @@
   color: var(--color-text-secondary);
 }
 
+/* Code blocks in an answer take MarkdownText's style, as in every other Markdown answer. */
 .answer {
   font-size: 13px;
   color: var(--color-text-secondary);
-}
-
-.answer pre {
-  overflow-x: auto;
-  padding: 8px;
-  border-radius: 6px;
-  background: var(--color-interface-code-bg);
-  color: var(--color-interface-code-text);
 }
 
 /* ---------------- table ---------------- */
@@ -500,6 +493,15 @@
   background: var(--color-interface-code-bg);
   color: var(--color-interface-code-text);
   font-size: 12px;
+}
+
+.rawNotice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 .rawView {

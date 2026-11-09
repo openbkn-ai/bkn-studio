@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { cleanAliases } from "@/modules/bkn-project/components/draft/aliases";
 import type {
   AskEnds,
   Draft,
@@ -18,6 +19,20 @@ import {
   normalizeRelationTypeMappingValues,
   type RelationTypeMappingFormValues,
 } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor";
+
+// Keys must not end in _one: i18next would read them as plural forms.
+const CARDINALITIES: Record<string, string> = {
+  many_to_many: "manyToMany",
+  many_to_one: "manyToOne",
+  one_to_many: "oneToMany",
+  one_to_one: "oneToOne",
+};
+
+/** Translation key of a relation's cardinality, or undefined for one the page has no word for. */
+export function cardinalityKey(value: string): string | undefined {
+  const known = CARDINALITIES[value];
+  return known ? `bknProject.model.cardinality.${known}` : undefined;
+}
 
 /*
  * A draft relation type as the knowledge network's relation mapping takes it, and back. Through a
@@ -73,11 +88,12 @@ export function relationEditorValues(
 
 /** What saving sends for the editor's values, the rows left half filled dropped. */
 export function relationSave(
-  basic: { description: string; name: string },
+  basic: { aliases?: string[]; description: string; name: string },
   values: RelationTypeMappingFormValues,
 ): DraftRelationTypeSave {
   const { mappingMode, mappingRules } = normalizeRelationTypeMappingValues(values);
   const base = {
+    ...(basic.aliases ? { aliases: cleanAliases(basic.aliases) } : {}),
     description: basic.description.trim(),
     name: basic.name.trim(),
     source: mappingRules.sourceObjectTypeId,
